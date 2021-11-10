@@ -20,7 +20,7 @@ while getopts "geh" opt; do
   case "${opt}" in
     h)
       echo -e "Usage: ${0} [-m]
-Deploy weather_lookup: 
+Deploy weather_lookup:
   -g Generate and upload weather data
   -e Redeploy the Cloud Endpoint for weather lookup
   -h    Print Help (this message) and exit"
@@ -35,7 +35,7 @@ Deploy weather_lookup:
   esac
 done
 
-if [[ $generate_data == 1 ]]; then 
+if [[ $generate_data == 1 ]]; then
  # Generate and upload weather data
  ./scripts/generate_and_upload_lookup_data_weather
 fi
@@ -49,10 +49,11 @@ if [[ $redeploy_endpoint == 1 ]]; then
 fi
 
 # Find the Cloud Endpoints URL.
-readonly CLOUD_RUN_SERVICE_URL="$(gcloud beta run services describe "${CLOUD_RUN_SERVICE_NAME}" --project="${GCP_PROJECT_ID}" --region=europe-west2 --platform=managed --format='value(status.url)')" 
+readonly CLOUD_RUN_SERVICE_URL="$(gcloud beta run services describe "${CLOUD_RUN_SERVICE_NAME}" --project="${GCP_PROJECT_ID}" --region=europe-west2 --platform=managed --format='value(status.url)')"
 
 # Attempt to communicate with the newly deployed application.
+# Test request coordinates are defined in `oak_functions/lookup_data_generator/src/data.rs`.
 ./oak_functions/client/rust/target/x86_64-unknown-linux-gnu/release/oak_functions_client \
   --uri="${CLOUD_RUN_SERVICE_URL}" \
-  --request='{"lat":52,"lng":0}'
+  --request='{"lat":0,"lng":0}'
 )
