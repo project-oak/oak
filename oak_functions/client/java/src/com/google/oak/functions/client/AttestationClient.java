@@ -57,6 +57,10 @@ public class AttestationClient {
   private static final Logger logger = Logger.getLogger(AttestationClient.class.getName());
   // TODO(#1867): Add remote attestation support.
   private static final String TEST_TEE_MEASUREMENT = "Test TEE measurement";
+  // HTTP/gRPC header for Google API keys.
+  // https://cloud.google.com/apis/docs/system-parameters
+  // https://cloud.google.com/docs/authentication/api-keys
+  private static final String API_KEY_HEADER = "x-goog-api-key";
   private ManagedChannel channel;
   private StreamObserver<StreamingRequest> requestObserver;
   private BlockingQueue<StreamingResponse> messageQueue;
@@ -75,7 +79,12 @@ public class AttestationClient {
   /**
    * Creates a gRPC channel and creates an attested channel over it.
    *
-   * @param url must contain a protocol used for the connection ("https://" or "http://")
+   * @param url must contain a protocol used for the connection ("https://" or "http://").
+   * @param apiKey value of the API key used in gRPC requests. If the value is set to "", then
+   * the API key header is not included in requests.
+   * https://cloud.google.com/docs/authentication/api-keys
+   * @param verifier Checks that the ServerIdentity contains the expected attestation info as
+   * described in {@code ServerIdentityVerifier::verifyAttestationInfo}.
    */
   public void attest(String url, String apiKey, Predicate<ConfigurationInfo> verifier)
       throws GeneralSecurityException, IOException, InterruptedException, VerificationException {
@@ -236,7 +245,7 @@ public class AttestationClient {
     private final String apiKey;
 
     private static final Metadata.Key<String> API_KEY_HEADER =
-        Metadata.Key.of("x-goog-api-key", Metadata.ASCII_STRING_MARSHALLER);
+        Metadata.Key.of(API_KEY_HEADER, Metadata.ASCII_STRING_MARSHALLER);
 
     public Interceptor(String apiKey) {
       this.apiKey = apiKey;
