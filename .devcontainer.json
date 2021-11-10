@@ -3,8 +3,8 @@
 // - https://code.visualstudio.com/docs/remote/containers
 // - https://code.visualstudio.com/docs/remote/devcontainerjson-reference
 {
-  // Do not modify manually. This value is automatically updated by ./scripts/docker_build .
-  "image": "sha256:f71ebe2c5827ea559e4c5fd9bb668c7a23ed8d828a4344d8c3fec0714622188d",
+  // Do not modify manually. This value is automatically updated by ./scripts/docker_push .
+  "image": "gcr.io/oak-ci/oak@sha256:ff9eafaf9f64d6549039fd1e7c5a9163206d60495d0d232971c57fa5a52e7878",
   "extensions": [
     "bazelbuild.vscode-bazel",
     "bodil.prettier-toml",

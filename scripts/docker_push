@@ -22,3 +22,4 @@ docker push "${DOCKER_IMAGE_NAME}"
 # pulled easily.
 readonly NEW_DOCKER_IMAGE_REPO_DIGEST="$(docker inspect --format='{{index .RepoDigests 0}}' "${DOCKER_IMAGE_NAME}")"
 sed --in-place "s|readonly DOCKER_IMAGE_REPO_DIGEST=.*|readonly DOCKER_IMAGE_REPO_DIGEST='${NEW_DOCKER_IMAGE_REPO_DIGEST}'|" "${SCRIPTS_DIR}/common"
+sed --in-place "s|\"image\": .*|\"image\": \"${NEW_DOCKER_IMAGE_REPO_DIGEST}\",|" ./.devcontainer.json

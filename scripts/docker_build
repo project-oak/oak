@@ -15,4 +15,3 @@ readonly NEW_DOCKER_IMAGE_ID="$(docker images --format='{{.ID}}' --no-trunc "${D
 #
 # See https://blog.aquasec.com/docker-image-tags.
 sed --in-place "s|readonly DOCKER_IMAGE_ID=.*|readonly DOCKER_IMAGE_ID='${NEW_DOCKER_IMAGE_ID}'|" "${SCRIPTS_DIR}/common"
-sed --in-place "s|\"image\": .*|\"image\": \"${NEW_DOCKER_IMAGE_ID}\",|" ./.devcontainer.json
