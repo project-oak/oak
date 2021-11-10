@@ -159,6 +159,11 @@
 <span id="159">159</span>
 <span id="160">160</span>
 <span id="161">161</span>
+<span id="162">162</span>
+<span id="163">163</span>
+<span id="164">164</span>
+<span id="165">165</span>
+<span id="166">166</span>
 </pre><pre class="rust">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2021 The Project Oak Authors</span>
@@ -275,13 +280,18 @@
     <span class="kw">for</span> <span class="ident">i</span> <span class="kw">in</span> <span class="number">0</span>..<span class="ident">entries</span> {
         <span class="comment">// Fix the first point to ensure the default example can find at least one data point within</span>
         <span class="comment">// 40km.</span>
+        <span class="comment">// The first point is used in:</span>
+        <span class="comment">// - `oak_functions/load_test/src/main.rs`</span>
+        <span class="comment">// - `oak_functions/client/android/com/google/oak/functions/android/client/res/values/</span>
+        <span class="comment">//   strings.xml`</span>
+        <span class="comment">// - `oak_functions/examples/weather_lookup/scripts/cloud_run_deploy`</span>
         <span class="kw">let</span> <span class="ident">latitude_degrees</span> <span class="op">=</span> <span class="kw">if</span> <span class="ident">i</span> <span class="op">=</span><span class="op">=</span> <span class="number">0</span> {
-            <span class="number">52.1_f64</span>
+            <span class="number">0.0_f64</span>
         } <span class="kw">else</span> {
             <span class="ident">rng</span>.<span class="ident">sample</span>(<span class="ident">lat_dist</span>).<span class="ident">acos</span>().<span class="ident">to_degrees</span>()
         };
         <span class="kw">let</span> <span class="ident">longitude_degrees</span> <span class="op">=</span> <span class="kw">if</span> <span class="ident">i</span> <span class="op">=</span><span class="op">=</span> <span class="number">0</span> {
-            <span class="number">0.1_f64</span>
+            <span class="number">0.0_f64</span>
         } <span class="kw">else</span> {
             <span class="ident">rng</span>.<span class="ident">sample</span>(<span class="ident">lng_dist</span>).<span class="ident">to_degrees</span>()
         };
