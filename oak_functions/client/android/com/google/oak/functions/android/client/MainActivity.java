@@ -69,6 +69,7 @@ public class MainActivity extends Activity {
       AttestationClient client = new AttestationClient();
       client.attest(uri, getString(R.string.api_key), (config) -> !config.getMlInference());
       Response response = client.send(request);
+      client.finalize();
       StatusCode responseStatus = response.getStatus();
       if (responseStatus != StatusCode.SUCCESS) {
         throw new VerifyException(

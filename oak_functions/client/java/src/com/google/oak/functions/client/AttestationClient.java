@@ -206,6 +206,10 @@ public class AttestationClient {
     return true;
   }
 
+  /**
+   * Needs to be explicitly called so that Oak Functions server doesn't have to wait for Java
+   * garbage collector to stop a gRPC session.
+   */
   @Override
   public void finalize() {
     requestObserver.onCompleted();
