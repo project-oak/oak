@@ -80,7 +80,7 @@ public class AttestationClient {
    * Creates a gRPC channel and creates an attested channel over it.
    *
    * @param url must contain a protocol used for the connection ("https://" or "http://").
-   * @param apiKey value of the API key used in gRPC requests. If the value is set to "", then
+   * @param apiKey value of the API key used in gRPC requests. If the value is `null` or empty, then
    * the API key header is not included in requests.
    * https://cloud.google.com/docs/authentication/api-keys
    * @param verifier Checks that the ServerIdentity contains the expected attestation info as
@@ -91,7 +91,7 @@ public class AttestationClient {
     // Create gRPC channel.
     URL parsedUrl = new URL(url);
     ArrayList<ClientInterceptor> interceptors = new ArrayList<>();
-    if (!apiKey.isEmpty()) {
+    if (str != null && !apiKey.trim().isEmpty()) {
       interceptors.add(new Interceptor(apiKey));
     }
     if (parsedUrl.getProtocol().equals("https")) {
