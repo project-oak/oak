@@ -92,11 +92,11 @@ java_lite_proto_library(
 # Go libraries are used internally.
 go_proto_library(
     name = "server_go_proto",
-    deps = [":server_proto"],
+    importpath = "oak_functions/proto",
+    protos = [":server_proto"],
 )
 
 go_grpc_library(
     name = "server_go_grpc",
-    srcs = [":server_proto"],
     deps = [":server_go_proto"],
 )
