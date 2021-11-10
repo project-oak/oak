@@ -194,7 +194,7 @@ public class AttestationClient {
    * decrypts the response.
    *
    * This method can only be used after the {@code attest} method has been called successfully.
-   * */
+   */
   @SuppressWarnings("ProtoParseWithRegistry")
   public Response send(Request request)
       throws GeneralSecurityException, IOException, InterruptedException,
