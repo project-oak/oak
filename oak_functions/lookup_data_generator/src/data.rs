@@ -114,7 +114,6 @@ pub fn generate_and_serialize_sparse_weather_entries<R: Rng>(
         // Fix the first point to ensure the default example can find at least one data point within
         // 40km.
         // The first point is used in:
-        // - `oak_functions/examples/weather_lookup/module/src/tests.rs`
         // - `oak_functions/load_test/src/main.rs`
         // - `oak_functions/client/android/com/google/oak/functions/android/client/res/values/
         //   strings.xml`
