@@ -27,16 +27,18 @@ import oak.functions.invocation.Response;
 
 public class Main {
   private static Logger logger = Logger.getLogger(Main.class.getName());
+  private static String EMPTY_API_KEY = "";
   private static final String EXPECTED_RESPONSE_PATTERN =
       "\\{\"temperature_degrees_celsius\":.*\\}";
 
   public static void main(String[] args) throws Exception {
     AttestationClient client = new AttestationClient();
-    client.attest("http://localhost:8080", (config) -> !config.getMlInference());
+    client.attest("http://localhost:8080", EMPTY_API_KEY, (config) -> !config.getMlInference());
 
     byte[] requestBody = "{\"lat\":52,\"lng\":0}".getBytes(UTF_8);
     Request request = Request.newBuilder().setBody(ByteString.copyFrom(requestBody)).build();
     Response response = client.send(request);
+    client.finalize();
     ByteString responseBody = response.getBody().substring(0, (int) response.getLength());
     String decodedResponse = responseBody.toStringUtf8();
 
