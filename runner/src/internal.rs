@@ -57,6 +57,7 @@ pub enum Command {
     RunCargoDeny,
     RunCargoUdeps,
     RunCi,
+    RunCargoClean,
     #[structopt(about = "generate bash completion script to stdout")]
     Completion,
 }
