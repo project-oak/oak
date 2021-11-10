@@ -972,8 +972,9 @@ fn run_cargo_clean() -> Step {
     Step::Multiple {
         name: "cargo clean".to_string(),
         steps: crate_manifest_files()
+            .map(to_string)
             .map(|manifest_path| {
-                let manifest_path = manifest_path.to_str().unwrap();
+                let manifest_path = manifest_path.clone();
                 Step::Single {
                     name: manifest_path.to_string(),
                     command: Cmd::new(
