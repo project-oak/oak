@@ -16,6 +16,7 @@ fi
 # Give slack time for Envoy proxy to start in the background.
 sleep 1
 
+# Test request coordinates are defined in `oak_functions/lookup_data_generator/src/data.rs`.
 echo Running HTTP client
 curl \
   --fail \

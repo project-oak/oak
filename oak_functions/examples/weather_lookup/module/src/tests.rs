@@ -108,6 +108,7 @@ async fn test_server() {
         .await
     });
 
+    // Test request coordinates are defined in `oak_functions/lookup_data_generator/src/data.rs`.
     {
         // Exact key_0.
         let response = make_request(server_port, br#"{"lat":0.0,"lng":0.0}"#)

@@ -21,7 +21,8 @@ use std::time::Instant;
 
 // From https://pantheon.corp.google.com/api-gateway/gateway/weather-lookup-grpc/location/europe-west2?project=oak-ci.
 const URL: &str = "https://weather-lookup-grpc-8tk01hn7.nw.gateway.dev";
-const REQUEST: &[u8] = br#"{"lat":52,"lng":0}"#;
+// Test request coordinates are defined in `oak_functions/lookup_data_generator/src/data.rs`.
+const REQUEST: &[u8] = br#"{"lat":0,"lng":0}"#;
 const TOTAL_REQUESTS: usize = 50;
 
 #[tokio::main]
