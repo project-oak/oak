@@ -248,7 +248,7 @@ public class AttestationClient {
   private static final class Interceptor implements ClientInterceptor {
     private final String apiKey;
 
-    private static final Metadata.Key<String> API_KEY_HEADER =
+    private static final Metadata.Key<String> API_KEY_METADATA_HEADER =
         Metadata.Key.of(API_KEY_HEADER, Metadata.ASCII_STRING_MARSHALLER);
 
     public Interceptor(String apiKey) {
@@ -264,7 +264,7 @@ public class AttestationClient {
         @Override
         public void start(Listener<RespT> responseListener, Metadata headers) {
           if (apiKey != null && !apiKey.isEmpty()) {
-            headers.put(API_KEY_HEADER, apiKey);
+            headers.put(API_KEY_METADATA_HEADER, apiKey);
           }
           super.start(responseListener, headers);
         }
