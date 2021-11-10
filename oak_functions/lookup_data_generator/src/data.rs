@@ -116,7 +116,8 @@ pub fn generate_and_serialize_sparse_weather_entries<R: Rng>(
         // The first point is used in:
         // - `oak_functions/examples/weather_lookup/module/src/tests.rs`
         // - `oak_functions/load_test/src/main.rs`
-        // - `oak_functions/client/android/com/google/oak/functions/android/client/res/values/strings.xml`
+        // - `oak_functions/client/android/com/google/oak/functions/android/client/res/values/
+        //   strings.xml`
         // - `oak_functions/examples/weather_lookup/scripts/cloud_run_deploy`
         let latitude_degrees = if i == 0 {
             0.0_f64
