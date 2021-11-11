@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src&#x2F;examples.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>examples.rs - source</title><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../light.css"  id="themeStyle"><link rel="stylesheet" type="text/css" href="../../dark.css" disabled ><link rel="stylesheet" type="text/css" href="../../ayu.css" disabled ><script id="default-settings" ></script><script src="../../storage.js"></script><script src="../../crates.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"><style type="text/css">#crate-search{background-image:url("../../down-arrow.svg");}</style></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu" role="button">&#9776;</div><a href='../../runner/index.html'><div class='logo-container rust-logo'><img src='../../rust-logo.png' alt='logo'></div></a></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!" aria-haspopup="menu" title="themes"><img width="18" height="18" alt="Pick another theme!" src="../../brush.svg"></button><div id="theme-choices" role="menu"></div></div><nav class="sub"><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" disabled autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><button type="button" id="help-button" title="help">?</button><a id="settings-menu" href="../../settings.html" title="settings"><img width="18" height="18" alt="Change settings" src="../../wheel.svg"></a></div></form></nav><section id="main" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">   1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src&#x2F;examples.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>examples.rs - source</title><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../light.css"  id="themeStyle"><link rel="stylesheet" type="text/css" href="../../dark.css" disabled ><link rel="stylesheet" type="text/css" href="../../ayu.css" disabled ><script id="default-settings" ></script><script src="../../storage.js"></script><script src="../../crates.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"><style type="text/css">#crate-search{background-image:url("../../down-arrow.svg");}</style></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu" role="button">&#9776;</div><a href='../../runner/index.html'><div class='logo-container rust-logo'><img src='../../rust-logo.png' alt='logo'></div></a></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!" aria-haspopup="menu" title="themes"><img width="18" height="18" alt="Pick another theme!" src="../../brush.svg"></button><div id="theme-choices" role="menu"></div></div><nav class="sub"><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><button type="button" id="help-button" title="help">?</button><a id="settings-menu" href="../../settings.html" title="settings"><img width="18" height="18" alt="Change settings" src="../../wheel.svg"></a></div></form></nav><section id="main" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">   1</span>
 <span id="2">   2</span>
 <span id="3">   3</span>
 <span id="4">   4</span>
@@ -1022,8 +1022,7 @@
 <span id="1022">1022</span>
 <span id="1023">1023</span>
 <span id="1024">1024</span>
-</pre><pre class="rust">
-<span class="comment">//</span>
+</pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2021 The Project Oak Authors</span>
 <span class="comment">//</span>
 <span class="comment">// Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
@@ -1069,17 +1068,17 @@
 }
 
 <span class="kw">impl</span> <span class="ident">Example</span> {
-    <span class="kw">fn</span> <span class="ident">has_classic_app</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">bool</span> {
+    <span class="kw">fn</span> <span class="ident">has_classic_app</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">bool</span> {
         <span class="self">self</span>.<span class="ident">applications</span>.<span class="ident">values</span>().<span class="ident">any</span>(<span class="op">|</span><span class="ident">app</span><span class="op">|</span> <span class="kw">match</span> <span class="ident">app</span> {
-            <span class="ident">Application::Classic</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="bool-val">true</span>,
-            <span class="ident">Application::Functions</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="bool-val">false</span>,
+            <span class="ident">Application::Classic</span>(<span class="kw">_</span>) =&gt; <span class="bool-val">true</span>,
+            <span class="ident">Application::Functions</span>(<span class="kw">_</span>) =&gt; <span class="bool-val">false</span>,
         })
     }
 
-    <span class="kw">fn</span> <span class="ident">has_functions_app</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">bool</span> {
+    <span class="kw">fn</span> <span class="ident">has_functions_app</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">bool</span> {
         <span class="self">self</span>.<span class="ident">applications</span>.<span class="ident">values</span>().<span class="ident">any</span>(<span class="op">|</span><span class="ident">app</span><span class="op">|</span> <span class="kw">match</span> <span class="ident">app</span> {
-            <span class="ident">Application::Classic</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="bool-val">false</span>,
-            <span class="ident">Application::Functions</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="bool-val">true</span>,
+            <span class="ident">Application::Classic</span>(<span class="kw">_</span>) =&gt; <span class="bool-val">false</span>,
+            <span class="ident">Application::Functions</span>(<span class="kw">_</span>) =&gt; <span class="bool-val">true</span>,
         })
     }
 }
@@ -1152,7 +1151,7 @@
 }
 
 <span class="kw">impl</span> <span class="ident">ApplicationClassic</span> {
-    <span class="kw">fn</span> <span class="ident">construct_application_build_steps</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">example_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Step</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">construct_application_build_steps</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">example_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) -&gt; <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Step</span><span class="op">&gt;</span> {
         <span class="macro">vec!</span>[
             <span class="ident">Step::Multiple</span> {
                 <span class="ident">name</span>: <span class="string">&quot;build wasm modules&quot;</span>.<span class="ident">to_string</span>(),
@@ -1173,7 +1172,7 @@
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">example</span>: <span class="kw-2">&amp;</span><span class="ident">ClassicExample</span>,
         <span class="ident">run_clients</span>: <span class="ident">Step</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Step</span> {
+    ) -&gt; <span class="ident">Step</span> {
         <span class="kw">let</span> <span class="ident">opt</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">example</span>.<span class="ident">options</span>;
 
         <span class="kw">let</span> <span class="ident">run_server</span> <span class="op">=</span> <span class="ident">run_example_server</span>(
@@ -1184,7 +1183,7 @@
             <span class="kw-2">&amp;</span><span class="ident">opt</span>.<span class="ident">permissions_file</span>,
         );
 
-        <span class="kw">if</span> <span class="ident">opt</span>.<span class="ident">build_client</span>.<span class="ident">client_variant</span> <span class="op">=</span><span class="op">=</span> <span class="ident">NO_CLIENTS</span> {
+        <span class="kw">if</span> <span class="ident">opt</span>.<span class="ident">build_client</span>.<span class="ident">client_variant</span> <span class="op">==</span> <span class="ident">NO_CLIENTS</span> {
             <span class="ident">Step::Single</span> {
                 <span class="ident">name</span>: <span class="string">&quot;run server&quot;</span>.<span class="ident">to_string</span>(),
                 <span class="ident">command</span>: <span class="ident">run_server</span>,
@@ -1200,7 +1199,7 @@
 }
 
 <span class="kw">impl</span> <span class="ident">ApplicationFunctions</span> {
-    <span class="kw">fn</span> <span class="ident">construct_application_build_steps</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">example_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Step</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">construct_application_build_steps</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">example_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) -&gt; <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Step</span><span class="op">&gt;</span> {
         <span class="macro">vec!</span>[<span class="ident">build_wasm_module</span>(<span class="ident">example_name</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">target</span>, <span class="ident">example_name</span>)]
     }
 
@@ -1208,11 +1207,11 @@
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">example</span>: <span class="kw-2">&amp;</span><span class="ident">FunctionsExample</span>,
         <span class="ident">run_clients</span>: <span class="ident">Step</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Step</span> {
+    ) -&gt; <span class="ident">Step</span> {
         <span class="kw">let</span> <span class="ident">opt</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">example</span>.<span class="ident">options</span>;
         <span class="kw">let</span> <span class="ident">run_server</span> <span class="op">=</span> <span class="ident">run_functions_example_server</span>(<span class="kw-2">&amp;</span><span class="ident">example</span>.<span class="ident">example</span>.<span class="ident">server</span>, <span class="self">self</span>);
 
-        <span class="kw">if</span> <span class="ident">opt</span>.<span class="ident">build_client</span>.<span class="ident">client_variant</span> <span class="op">=</span><span class="op">=</span> <span class="ident">NO_CLIENTS</span> {
+        <span class="kw">if</span> <span class="ident">opt</span>.<span class="ident">build_client</span>.<span class="ident">client_variant</span> <span class="op">==</span> <span class="ident">NO_CLIENTS</span> {
             <span class="ident">Step::Single</span> {
                 <span class="ident">name</span>: <span class="string">&quot;run server&quot;</span>.<span class="ident">to_string</span>(),
                 <span class="ident">command</span>: <span class="ident">run_server</span>,
@@ -1228,18 +1227,18 @@
 }
 
 <span class="kw">trait</span> <span class="ident">OakExample</span> {
-    <span class="kw">fn</span> <span class="ident">get_backends</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">Executable</span><span class="op">&gt;</span>;
+    <span class="kw">fn</span> <span class="ident">get_backends</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">Executable</span><span class="op">&gt;</span>;
 
-    <span class="kw">fn</span> <span class="ident">get_build_client</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">BuildClient</span>;
+    <span class="kw">fn</span> <span class="ident">get_build_client</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="ident">BuildClient</span>;
 
     <span class="doccomment">/// Constructs application build steps.</span>
-    <span class="kw">fn</span> <span class="ident">construct_application_build_steps</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Step</span><span class="op">&gt;</span>;
+    <span class="kw">fn</span> <span class="ident">construct_application_build_steps</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Step</span><span class="op">&gt;</span>;
 
     <span class="doccomment">/// Constructs run step for the example server.</span>
-    <span class="kw">fn</span> <span class="ident">construct_example_server_run_step</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">run_clients</span>: <span class="ident">Step</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Step</span>;
+    <span class="kw">fn</span> <span class="ident">construct_example_server_run_step</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">run_clients</span>: <span class="ident">Step</span>) -&gt; <span class="ident">Step</span>;
 
     <span class="doccomment">/// Constructs build steps for the backends.</span>
-    <span class="kw">fn</span> <span class="ident">construct_backend_build_steps</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Step</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">construct_backend_build_steps</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Step</span><span class="op">&gt;</span> {
         <span class="self">self</span>.<span class="ident">get_backends</span>()
             .<span class="ident">iter</span>()
             .<span class="ident">map</span>(<span class="kw">move</span> <span class="op">|</span>(<span class="ident">name</span>, <span class="ident">backend</span>)<span class="op">|</span> <span class="ident">Step::Single</span> {
@@ -1250,7 +1249,7 @@
     }
 
     <span class="doccomment">/// Recursively constructs run steps for the backends.</span>
-    <span class="kw">fn</span> <span class="ident">construct_backend_run_steps</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">run_server_clients</span>: <span class="ident">Step</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Step</span> {
+    <span class="kw">fn</span> <span class="ident">construct_backend_run_steps</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">run_server_clients</span>: <span class="ident">Step</span>) -&gt; <span class="ident">Step</span> {
         <span class="self">self</span>.<span class="ident">get_backends</span>()
             .<span class="ident">iter</span>()
             <span class="comment">// First iteration includes `run_server_clients` as a foreground step.</span>
@@ -1271,17 +1270,17 @@
 }
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> <span class="ident">ClassicExample</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
-    <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">example</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">Example</span>, <span class="ident">options</span>: <span class="ident">RunExamples</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+    <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">example</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">Example</span>, <span class="ident">options</span>: <span class="ident">RunExamples</span>) -&gt; <span class="self">Self</span> {
         <span class="kw">let</span> <span class="ident">applications</span> <span class="op">=</span>
             <span class="ident">example</span>
                 .<span class="ident">applications</span>
                 .<span class="ident">iter</span>()
                 .<span class="ident">fold</span>(<span class="macro">hashmap!</span> {}, <span class="op">|</span><span class="kw-2">mut</span> <span class="ident">apps</span>, <span class="ident">app</span><span class="op">|</span> <span class="kw">match</span> <span class="ident">app</span> {
-                    (<span class="ident">name</span>, <span class="ident">Application::Classic</span>(<span class="kw-2">ref</span> <span class="ident">app</span>)) <span class="op">=</span><span class="op">&gt;</span> {
+                    (<span class="ident">name</span>, <span class="ident">Application::Classic</span>(<span class="kw-2">ref</span> <span class="ident">app</span>)) =&gt; {
                         <span class="ident">apps</span>.<span class="ident">insert</span>(<span class="ident">name</span>.<span class="ident">clone</span>(), <span class="ident">app</span>);
                         <span class="ident">apps</span>
                     }
-                    (<span class="ident">_name</span>, <span class="ident">Application::Functions</span>(<span class="ident">_app</span>)) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">apps</span>,
+                    (<span class="ident">_name</span>, <span class="ident">Application::Functions</span>(<span class="ident">_app</span>)) =&gt; <span class="ident">apps</span>,
                 });
 
         <span class="ident">ClassicExample</span> {
@@ -1293,27 +1292,27 @@
 }
 
 <span class="kw">impl</span> <span class="ident">OakExample</span> <span class="kw">for</span> <span class="ident">ClassicExample</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span> {
-    <span class="kw">fn</span> <span class="ident">get_backends</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">Executable</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">get_backends</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">Executable</span><span class="op">&gt;</span> {
         <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">example</span>.<span class="ident">backends</span>
     }
 
-    <span class="kw">fn</span> <span class="ident">get_build_client</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">BuildClient</span> {
+    <span class="kw">fn</span> <span class="ident">get_build_client</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="ident">BuildClient</span> {
         <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">options</span>.<span class="ident">build_client</span>
     }
 
-    <span class="kw">fn</span> <span class="ident">construct_application_build_steps</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Step</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">construct_application_build_steps</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Step</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">app_variant</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">options</span>.<span class="ident">application_variant</span>.<span class="ident">as_str</span>();
         <span class="kw">match</span> <span class="self">self</span>.<span class="ident">applications</span>.<span class="ident">get</span>(<span class="ident">app_variant</span>) {
-            <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">vec!</span>[],
-            <span class="prelude-val">Some</span>(<span class="ident">app</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">app</span>.<span class="ident">construct_application_build_steps</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">example</span>.<span class="ident">name</span>),
+            <span class="prelude-val">None</span> =&gt; <span class="macro">vec!</span>[],
+            <span class="prelude-val">Some</span>(<span class="ident">app</span>) =&gt; <span class="ident">app</span>.<span class="ident">construct_application_build_steps</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">example</span>.<span class="ident">name</span>),
         }
     }
 
-    <span class="kw">fn</span> <span class="ident">construct_example_server_run_step</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">run_clients</span>: <span class="ident">Step</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Step</span> {
+    <span class="kw">fn</span> <span class="ident">construct_example_server_run_step</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">run_clients</span>: <span class="ident">Step</span>) -&gt; <span class="ident">Step</span> {
         <span class="kw">let</span> <span class="ident">app_variant</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">options</span>.<span class="ident">application_variant</span>.<span class="ident">as_str</span>();
         <span class="kw">match</span> <span class="self">self</span>.<span class="ident">applications</span>.<span class="ident">get</span>(<span class="ident">app_variant</span>) {
-            <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">run_clients</span>,
-            <span class="prelude-val">Some</span>(<span class="ident">app</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">app</span>.<span class="ident">construct_example_server_run_step</span>(<span class="self">self</span>, <span class="ident">run_clients</span>),
+            <span class="prelude-val">None</span> =&gt; <span class="ident">run_clients</span>,
+            <span class="prelude-val">Some</span>(<span class="ident">app</span>) =&gt; <span class="ident">app</span>.<span class="ident">construct_example_server_run_step</span>(<span class="self">self</span>, <span class="ident">run_clients</span>),
         }
     }
 }
@@ -1325,14 +1324,14 @@
 }
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> <span class="ident">FunctionsExample</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
-    <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">example</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">Example</span>, <span class="ident">options</span>: <span class="ident">RunFunctionsExamples</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+    <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">example</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">Example</span>, <span class="ident">options</span>: <span class="ident">RunFunctionsExamples</span>) -&gt; <span class="self">Self</span> {
         <span class="kw">let</span> <span class="ident">applications</span> <span class="op">=</span>
             <span class="ident">example</span>
                 .<span class="ident">applications</span>
                 .<span class="ident">iter</span>()
                 .<span class="ident">fold</span>(<span class="macro">hashmap!</span> {}, <span class="op">|</span><span class="kw-2">mut</span> <span class="ident">apps</span>, <span class="ident">app</span><span class="op">|</span> <span class="kw">match</span> <span class="ident">app</span> {
-                    (<span class="ident">_name</span>, <span class="ident">Application::Classic</span>(<span class="ident">_app</span>)) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">apps</span>,
-                    (<span class="ident">name</span>, <span class="ident">Application::Functions</span>(<span class="kw-2">ref</span> <span class="ident">app</span>)) <span class="op">=</span><span class="op">&gt;</span> {
+                    (<span class="ident">_name</span>, <span class="ident">Application::Classic</span>(<span class="ident">_app</span>)) =&gt; <span class="ident">apps</span>,
+                    (<span class="ident">name</span>, <span class="ident">Application::Functions</span>(<span class="kw-2">ref</span> <span class="ident">app</span>)) =&gt; {
                         <span class="ident">apps</span>.<span class="ident">insert</span>(<span class="ident">name</span>.<span class="ident">clone</span>(), <span class="ident">app</span>);
                         <span class="ident">apps</span>
                     }
@@ -1347,32 +1346,32 @@
 }
 
 <span class="kw">impl</span> <span class="ident">OakExample</span> <span class="kw">for</span> <span class="ident">FunctionsExample</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span> {
-    <span class="kw">fn</span> <span class="ident">get_backends</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">Executable</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">get_backends</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">Executable</span><span class="op">&gt;</span> {
         <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">example</span>.<span class="ident">backends</span>
     }
 
-    <span class="kw">fn</span> <span class="ident">get_build_client</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">BuildClient</span> {
+    <span class="kw">fn</span> <span class="ident">get_build_client</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="ident">BuildClient</span> {
         <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">options</span>.<span class="ident">build_client</span>
     }
 
-    <span class="kw">fn</span> <span class="ident">construct_application_build_steps</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Step</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">construct_application_build_steps</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Step</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">app_variant</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">options</span>.<span class="ident">application_variant</span>.<span class="ident">as_str</span>();
         <span class="kw">match</span> <span class="self">self</span>.<span class="ident">applications</span>.<span class="ident">get</span>(<span class="ident">app_variant</span>) {
-            <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">vec!</span>[],
-            <span class="prelude-val">Some</span>(<span class="ident">app</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">app</span>.<span class="ident">construct_application_build_steps</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">example</span>.<span class="ident">name</span>),
+            <span class="prelude-val">None</span> =&gt; <span class="macro">vec!</span>[],
+            <span class="prelude-val">Some</span>(<span class="ident">app</span>) =&gt; <span class="ident">app</span>.<span class="ident">construct_application_build_steps</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">example</span>.<span class="ident">name</span>),
         }
     }
 
-    <span class="kw">fn</span> <span class="ident">construct_example_server_run_step</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">run_clients</span>: <span class="ident">Step</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Step</span> {
+    <span class="kw">fn</span> <span class="ident">construct_example_server_run_step</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">run_clients</span>: <span class="ident">Step</span>) -&gt; <span class="ident">Step</span> {
         <span class="kw">let</span> <span class="ident">app_variant</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">options</span>.<span class="ident">application_variant</span>.<span class="ident">as_str</span>();
         <span class="kw">match</span> <span class="self">self</span>.<span class="ident">applications</span>.<span class="ident">get</span>(<span class="ident">app_variant</span>) {
-            <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">run_clients</span>,
-            <span class="prelude-val">Some</span>(<span class="ident">app</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">app</span>.<span class="ident">construct_example_server_run_step</span>(<span class="self">self</span>, <span class="ident">run_clients</span>),
+            <span class="prelude-val">None</span> =&gt; <span class="ident">run_clients</span>,
+            <span class="prelude-val">Some</span>(<span class="ident">app</span>) =&gt; <span class="ident">app</span>.<span class="ident">construct_example_server_run_step</span>(<span class="self">self</span>, <span class="ident">run_clients</span>),
         }
     }
 }
 
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">run_examples</span>(<span class="ident">opt</span>: <span class="kw-2">&amp;</span><span class="ident">RunExamples</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Step</span> {
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">run_examples</span>(<span class="ident">opt</span>: <span class="kw-2">&amp;</span><span class="ident">RunExamples</span>) -&gt; <span class="ident">Step</span> {
     <span class="kw">let</span> <span class="ident">examples</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Example</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">example_toml_files</span>(<span class="kw-2">&amp;</span><span class="ident">opt</span>.<span class="ident">commits</span>)
         .<span class="ident">map</span>(<span class="op">|</span><span class="ident">path</span><span class="op">|</span> {
             <span class="ident">toml::from_str</span>(<span class="kw-2">&amp;</span><span class="ident">read_file</span>(<span class="kw-2">&amp;</span><span class="ident">path</span>)).<span class="ident">unwrap_or_else</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> {
@@ -1389,8 +1388,8 @@
         <span class="ident">steps</span>: <span class="ident">examples</span>
             .<span class="ident">iter</span>()
             .<span class="ident">filter</span>(<span class="op">|</span><span class="ident">example</span><span class="op">|</span> <span class="kw">match</span> <span class="kw-2">&amp;</span><span class="ident">opt</span>.<span class="ident">example_name</span> {
-                <span class="prelude-val">Some</span>(<span class="ident">example_name</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">example</span>.<span class="ident">name</span> <span class="op">=</span><span class="op">=</span> <span class="ident">example_name</span>,
-                <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="bool-val">true</span>,
+                <span class="prelude-val">Some</span>(<span class="ident">example_name</span>) =&gt; <span class="kw-2">&amp;</span><span class="ident">example</span>.<span class="ident">name</span> <span class="op">==</span> <span class="ident">example_name</span>,
+                <span class="prelude-val">None</span> =&gt; <span class="bool-val">true</span>,
             })
             .<span class="ident">filter</span>(<span class="op">|</span><span class="ident">example</span><span class="op">|</span> {
                 <span class="ident">example</span>.<span class="ident">applications</span>.<span class="ident">is_empty</span>()
@@ -1402,7 +1401,7 @@
     }
 }
 
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">run_functions_examples</span>(<span class="ident">opt</span>: <span class="kw-2">&amp;</span><span class="ident">RunFunctionsExamples</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Step</span> {
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">run_functions_examples</span>(<span class="ident">opt</span>: <span class="kw-2">&amp;</span><span class="ident">RunFunctionsExamples</span>) -&gt; <span class="ident">Step</span> {
     <span class="kw">let</span> <span class="ident">examples</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Example</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">example_toml_files</span>(<span class="kw-2">&amp;</span><span class="ident">opt</span>.<span class="ident">commits</span>)
         .<span class="ident">map</span>(<span class="op">|</span><span class="ident">path</span><span class="op">|</span> {
             <span class="ident">toml::from_str</span>(<span class="kw-2">&amp;</span><span class="ident">read_file</span>(<span class="kw-2">&amp;</span><span class="ident">path</span>)).<span class="ident">unwrap_or_else</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> {
@@ -1417,8 +1416,8 @@
         <span class="ident">steps</span>: <span class="ident">examples</span>
             .<span class="ident">iter</span>()
             .<span class="ident">filter</span>(<span class="op">|</span><span class="ident">example</span><span class="op">|</span> <span class="kw">match</span> <span class="kw-2">&amp;</span><span class="ident">opt</span>.<span class="ident">example_name</span> {
-                <span class="prelude-val">Some</span>(<span class="ident">example_name</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">example</span>.<span class="ident">name</span> <span class="op">=</span><span class="op">=</span> <span class="ident">example_name</span>,
-                <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="bool-val">true</span>,
+                <span class="prelude-val">Some</span>(<span class="ident">example_name</span>) =&gt; <span class="kw-2">&amp;</span><span class="ident">example</span>.<span class="ident">name</span> <span class="op">==</span> <span class="ident">example_name</span>,
+                <span class="prelude-val">None</span> =&gt; <span class="bool-val">true</span>,
             })
             .<span class="ident">map</span>(<span class="op">|</span><span class="ident">example</span><span class="op">|</span> <span class="ident">FunctionsExample::new</span>(<span class="ident">example</span>, <span class="ident">opt</span>.<span class="ident">clone</span>()))
             .<span class="ident">map</span>(<span class="op">|</span><span class="ident">example</span><span class="op">|</span> <span class="ident">run_functions_example</span>(<span class="kw-2">&amp;</span><span class="ident">example</span>))
@@ -1426,7 +1425,7 @@
     }
 }
 
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">build_server</span>(<span class="ident">opt</span>: <span class="kw-2">&amp;</span><span class="ident">BuildServer</span>, <span class="ident">additional_features</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Step</span> {
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">build_server</span>(<span class="ident">opt</span>: <span class="kw-2">&amp;</span><span class="ident">BuildServer</span>, <span class="ident">additional_features</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>) -&gt; <span class="ident">Step</span> {
     <span class="ident">Step::Multiple</span> {
         <span class="ident">name</span>: <span class="string">&quot;server&quot;</span>.<span class="ident">to_string</span>(),
         <span class="ident">steps</span>: <span class="macro">vec!</span>[
@@ -1438,7 +1437,7 @@
                 ),
             }],
             <span class="kw">match</span> <span class="ident">opt</span>.<span class="ident">server_variant</span> {
-                <span class="ident">ServerVariant::Unsafe</span> <span class="op">|</span> <span class="ident">ServerVariant::Coverage</span> <span class="op">|</span> <span class="ident">ServerVariant::Experimental</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">vec!</span>[<span class="ident">Step::Single</span> {
+                <span class="ident">ServerVariant::Unsafe</span> <span class="op">|</span> <span class="ident">ServerVariant::Coverage</span> <span class="op">|</span> <span class="ident">ServerVariant::Experimental</span> =&gt; <span class="macro">vec!</span>[<span class="ident">Step::Single</span> {
                     <span class="ident">name</span>: <span class="string">&quot;build introspection browser client&quot;</span>.<span class="ident">to_string</span>(),
                     <span class="ident">command</span>: <span class="ident">Cmd::new</span>(<span class="string">&quot;npm&quot;</span>,
                                       <span class="macro">vec!</span>[
@@ -1448,17 +1447,17 @@
                                           <span class="string">&quot;build&quot;</span>,
                                       ])
                 }],
-                <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">vec!</span>[]
+                <span class="kw">_</span> =&gt; <span class="macro">vec!</span>[]
             },
             <span class="macro">vec!</span>[
                 <span class="ident">build_rust_binary</span>(<span class="string">&quot;oak_loader&quot;</span>, <span class="ident">opt</span>, <span class="ident">additional_features</span>,
-                <span class="kw-2">&amp;</span><span class="kw">if</span> <span class="ident">opt</span>.<span class="ident">server_variant</span> <span class="op">=</span><span class="op">=</span> <span class="ident">ServerVariant::Coverage</span> {
+                <span class="kw-2">&amp;</span><span class="kw">if</span> <span class="ident">opt</span>.<span class="ident">server_variant</span> <span class="op">==</span> <span class="ident">ServerVariant::Coverage</span> {
                     <span class="macro">hashmap!</span> {
                         <span class="comment">// Build the Runtime server in coverage mode, as per https://github.com/mozilla/grcov</span>
-                        <span class="string">&quot;CARGO_INCREMENTAL&quot;</span>.<span class="ident">to_string</span>() <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;0&quot;</span>.<span class="ident">to_string</span>(),
-                        <span class="string">&quot;RUSTDOCFLAGS&quot;</span>.<span class="ident">to_string</span>() <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;-Cpanic=abort&quot;</span>.<span class="ident">to_string</span>(),
+                        <span class="string">&quot;CARGO_INCREMENTAL&quot;</span>.<span class="ident">to_string</span>() =&gt; <span class="string">&quot;0&quot;</span>.<span class="ident">to_string</span>(),
+                        <span class="string">&quot;RUSTDOCFLAGS&quot;</span>.<span class="ident">to_string</span>() =&gt; <span class="string">&quot;-Cpanic=abort&quot;</span>.<span class="ident">to_string</span>(),
                         <span class="comment">// grcov instructions suggest also including `-Cpanic=abort` in RUSTFLAGS, but this causes our build.rs scripts to fail.</span>
-                        <span class="string">&quot;RUSTFLAGS&quot;</span>.<span class="ident">to_string</span>() <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;-Zprofile -Ccodegen-units=1 -Copt-level=0 -Clink-dead-code -Coverflow-checks=off -Zpanic-abort_tests&quot;</span>.<span class="ident">to_string</span>(),
+                        <span class="string">&quot;RUSTFLAGS&quot;</span>.<span class="ident">to_string</span>() =&gt; <span class="string">&quot;-Zprofile -Ccodegen-units=1 -Copt-level=0 -Clink-dead-code -Coverflow-checks=off -Zpanic-abort_tests&quot;</span>.<span class="ident">to_string</span>(),
                     }
                 } <span class="kw">else</span> {
                     <span class="macro">hashmap!</span> {}
@@ -1473,7 +1472,7 @@
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">build_functions_server</span>(
     <span class="ident">opt</span>: <span class="kw-2">&amp;</span><span class="ident">BuildFunctionsServer</span>,
     <span class="ident">additional_features</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
-) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Step</span> {
+) -&gt; <span class="ident">Step</span> {
     <span class="ident">Step::Multiple</span> {
         <span class="ident">name</span>: <span class="string">&quot;server&quot;</span>.<span class="ident">to_string</span>(),
         <span class="ident">steps</span>: <span class="macro">vec!</span>[
@@ -1497,7 +1496,7 @@
     }
 }
 
-<span class="kw">fn</span> <span class="ident">run_example</span>(<span class="ident">example</span>: <span class="kw-2">&amp;</span><span class="ident">ClassicExample</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Step</span> {
+<span class="kw">fn</span> <span class="ident">run_example</span>(<span class="ident">example</span>: <span class="kw-2">&amp;</span><span class="ident">ClassicExample</span>) -&gt; <span class="ident">Step</span> {
     <span class="kw">let</span> <span class="ident">opt</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">example</span>.<span class="ident">options</span>;
 
     <span class="kw">let</span> <span class="ident">run_clients</span> <span class="op">=</span> <span class="ident">run_clients</span>(
@@ -1552,7 +1551,7 @@
     }
 }
 
-<span class="kw">fn</span> <span class="ident">run_functions_example</span>(<span class="ident">example</span>: <span class="kw-2">&amp;</span><span class="ident">FunctionsExample</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Step</span> {
+<span class="kw">fn</span> <span class="ident">run_functions_example</span>(<span class="ident">example</span>: <span class="kw-2">&amp;</span><span class="ident">FunctionsExample</span>) -&gt; <span class="ident">Step</span> {
     <span class="kw">let</span> <span class="ident">opt</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">example</span>.<span class="ident">options</span>;
 
     <span class="comment">// Build steps for running clients</span>
@@ -1602,7 +1601,7 @@
     }
 }
 
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">build_functions_example</span>(<span class="ident">opt</span>: <span class="kw-2">&amp;</span><span class="ident">RunFunctionsExamples</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Step</span> {
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">build_functions_example</span>(<span class="ident">opt</span>: <span class="kw-2">&amp;</span><span class="ident">RunFunctionsExamples</span>) -&gt; <span class="ident">Step</span> {
     <span class="kw">let</span> <span class="ident">example_name</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">opt</span>
         .<span class="ident">example_name</span>
         .<span class="ident">as_ref</span>()
@@ -1615,7 +1614,7 @@
                 <span class="macro">panic!</span>(<span class="string">&quot;could not parse example manifest file {:?}: {}&quot;</span>, <span class="ident">path</span>, <span class="ident">err</span>)
             })
         })
-        .<span class="ident">find</span>(<span class="op">|</span><span class="ident">example</span>: <span class="kw-2">&amp;</span><span class="ident">Example</span><span class="op">|</span> <span class="kw-2">&amp;</span><span class="ident">example</span>.<span class="ident">name</span> <span class="op">=</span><span class="op">=</span> <span class="ident">example_name</span>)
+        .<span class="ident">find</span>(<span class="op">|</span><span class="ident">example</span>: <span class="kw-2">&amp;</span><span class="ident">Example</span><span class="op">|</span> <span class="kw-2">&amp;</span><span class="ident">example</span>.<span class="ident">name</span> <span class="op">==</span> <span class="ident">example_name</span>)
         .<span class="ident">filter</span>(<span class="op">|</span><span class="ident">example</span><span class="op">|</span> <span class="ident">example</span>.<span class="ident">has_functions_app</span>())
         .<span class="ident">expect</span>(<span class="string">&quot;could not find the specified functions example&quot;</span>);
 
@@ -1626,8 +1625,8 @@
             .<span class="ident">clients</span>
             .<span class="ident">iter</span>()
             .<span class="ident">filter</span>(<span class="op">|</span>(<span class="ident">name</span>, <span class="kw">_</span>)<span class="op">|</span> <span class="kw">match</span> <span class="ident">opt</span>.<span class="ident">build_client</span>.<span class="ident">client_variant</span>.<span class="ident">as_str</span>() {
-                <span class="ident">ALL_CLIENTS</span> <span class="op">=</span><span class="op">&gt;</span> <span class="bool-val">true</span>,
-                <span class="ident">client</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw-2">*</span><span class="ident">name</span> <span class="op">=</span><span class="op">=</span> <span class="ident">client</span>,
+                <span class="ident">ALL_CLIENTS</span> =&gt; <span class="bool-val">true</span>,
+                <span class="ident">client</span> =&gt; <span class="kw-2">*</span><span class="ident">name</span> <span class="op">==</span> <span class="ident">client</span>,
             })
             .<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">name</span>, <span class="ident">client</span>)<span class="op">|</span> <span class="ident">Step::Single</span> {
                 <span class="ident">name</span>: <span class="macro">format!</span>(<span class="string">&quot;build{}&quot;</span>, <span class="ident">name</span>),
@@ -1662,12 +1661,12 @@
     }
 }
 
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">build_wasm_module</span>(<span class="ident">name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="ident">target</span>: <span class="kw-2">&amp;</span><span class="ident">Target</span>, <span class="ident">example_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Step</span> {
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">build_wasm_module</span>(<span class="ident">name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="ident">target</span>: <span class="kw-2">&amp;</span><span class="ident">Target</span>, <span class="ident">example_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) -&gt; <span class="ident">Step</span> {
     <span class="kw">match</span> <span class="ident">target</span> {
         <span class="ident">Target::Cargo</span> {
             <span class="ident">cargo_manifest</span>,
             <span class="ident">additional_build_args</span>,
-        } <span class="op">=</span><span class="op">&gt;</span> {
+        } =&gt; {
             <span class="kw">let</span> <span class="ident">metadata</span> <span class="op">=</span> <span class="ident">cargo_metadata::MetadataCommand::new</span>()
                 .<span class="ident">manifest_path</span>(<span class="ident">cargo_manifest</span>)
                 .<span class="ident">exec</span>()
@@ -1703,7 +1702,7 @@
         <span class="ident">Target::Bazel</span> {
             <span class="ident">bazel_target</span>,
             <span class="ident">config</span>,
-        } <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Step::Multiple</span> {
+        } =&gt; <span class="ident">Step::Multiple</span> {
             <span class="ident">name</span>: <span class="string">&quot;wasm&quot;</span>.<span class="ident">to_string</span>(),
             <span class="ident">steps</span>: <span class="macro">vec!</span>[
                 <span class="ident">Step::Single</span> {
@@ -1733,9 +1732,9 @@
                             <span class="macro">format!</span>(
                                 <span class="string">&quot;bazel-{}-bin/{}&quot;</span>,
                                 <span class="kw">match</span> <span class="ident">config</span>.<span class="ident">as_ref</span>() {
-                                    <span class="string">&quot;emscripten&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;emscripten&quot;</span>,
-                                    <span class="string">&quot;wasm32&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;wasm&quot;</span>,
-                                    <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">panic!</span>(<span class="string">&quot;unsupported Bazel config: {}&quot;</span>, <span class="ident">config</span>),
+                                    <span class="string">&quot;emscripten&quot;</span> =&gt; <span class="string">&quot;emscripten&quot;</span>,
+                                    <span class="string">&quot;wasm32&quot;</span> =&gt; <span class="string">&quot;wasm&quot;</span>,
+                                    <span class="kw">_</span> =&gt; <span class="macro">panic!</span>(<span class="string">&quot;unsupported Bazel config: {}&quot;</span>, <span class="ident">config</span>),
                                 },
                                 <span class="ident">bazel_target</span>.<span class="ident">replace</span>(<span class="string">&quot;//&quot;</span>, <span class="string">&quot;&quot;</span>).<span class="ident">replace</span>(<span class="string">&quot;:&quot;</span>, <span class="string">&quot;/&quot;</span>)
                             ),
@@ -1745,8 +1744,8 @@
                 },
             ],
         },
-        <span class="ident">Target::Npm</span> { .. } <span class="op">=</span><span class="op">&gt;</span> <span class="macro">todo!</span>(),
-        <span class="ident">Target::Shell</span> { .. } <span class="op">=</span><span class="op">&gt;</span> <span class="macro">todo!</span>(),
+        <span class="ident">Target::Npm</span> { .. } =&gt; <span class="macro">todo!</span>(),
+        <span class="ident">Target::Shell</span> { .. } =&gt; <span class="macro">todo!</span>(),
     }
 }
 
@@ -1756,7 +1755,7 @@
     <span class="ident">server_additional_args</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
     <span class="ident">application_file</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
     <span class="ident">permissions_file</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
-) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">Runnable</span><span class="op">&gt;</span> {
+) -&gt; <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">Runnable</span><span class="op">&gt;</span> {
     <span class="ident">Cmd::new_with_env</span>(
         <span class="string">&quot;oak_loader/bin/oak_loader&quot;</span>,
         <span class="macro">spread!</span>[
@@ -1768,20 +1767,20 @@
             <span class="macro">format!</span>(<span class="string">&quot;--application={}&quot;</span>, <span class="ident">application_file</span>),
             ...<span class="kw">match</span> <span class="ident">opt</span>.<span class="ident">server_variant</span> {
                 <span class="comment">// server variants that don&#39;t have `oak-unsafe` require a `permissions` file</span>
-                <span class="ident">ServerVariant::Base</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">vec!</span>[<span class="macro">format!</span>(<span class="string">&quot;--permissions={}&quot;</span>, <span class="ident">permissions_file</span>)],
+                <span class="ident">ServerVariant::Base</span> =&gt; <span class="macro">vec!</span>[<span class="macro">format!</span>(<span class="string">&quot;--permissions={}&quot;</span>, <span class="ident">permissions_file</span>)],
                 <span class="comment">// server variants that have `oak-unsafe` need to specify `root-tls-certificate`</span>
-                <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">vec!</span>[<span class="string">&quot;--root-tls-certificate=./examples/certs/local/ca.pem&quot;</span>.<span class="ident">to_string</span>()],
+                <span class="kw">_</span> =&gt; <span class="macro">vec!</span>[<span class="string">&quot;--root-tls-certificate=./examples/certs/local/ca.pem&quot;</span>.<span class="ident">to_string</span>()],
             },
             ...<span class="ident">example_server</span>.<span class="ident">additional_args</span>.<span class="ident">clone</span>(),
             ...<span class="ident">server_additional_args</span>,
         ],
-        <span class="kw-2">&amp;</span><span class="kw">if</span> <span class="ident">opt</span>.<span class="ident">server_variant</span> <span class="op">=</span><span class="op">=</span> <span class="ident">ServerVariant::Coverage</span> {
+        <span class="kw-2">&amp;</span><span class="kw">if</span> <span class="ident">opt</span>.<span class="ident">server_variant</span> <span class="op">==</span> <span class="ident">ServerVariant::Coverage</span> {
             <span class="macro">hashmap!</span> {
                 <span class="comment">// Build the Runtime server in coverage mode, as per https://github.com/mozilla/grcov</span>
-                <span class="string">&quot;CARGO_INCREMENTAL&quot;</span>.<span class="ident">to_string</span>() <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;0&quot;</span>.<span class="ident">to_string</span>(),
-                <span class="string">&quot;RUSTDOCFLAGS&quot;</span>.<span class="ident">to_string</span>() <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;-Cpanic=abort&quot;</span>.<span class="ident">to_string</span>(),
+                <span class="string">&quot;CARGO_INCREMENTAL&quot;</span>.<span class="ident">to_string</span>() =&gt; <span class="string">&quot;0&quot;</span>.<span class="ident">to_string</span>(),
+                <span class="string">&quot;RUSTDOCFLAGS&quot;</span>.<span class="ident">to_string</span>() =&gt; <span class="string">&quot;-Cpanic=abort&quot;</span>.<span class="ident">to_string</span>(),
                 <span class="comment">// grcov instructions suggest also including `-Cpanic=abort` in RUSTFLAGS, but this causes our build.rs scripts to fail.</span>
-                <span class="string">&quot;RUSTFLAGS&quot;</span>.<span class="ident">to_string</span>() <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;-Zprofile -Ccodegen-units=1 -Copt-level=0 -Clink-dead-code -Coverflow-checks=off -Zpanic-abort_tests&quot;</span>.<span class="ident">to_string</span>(),
+                <span class="string">&quot;RUSTFLAGS&quot;</span>.<span class="ident">to_string</span>() =&gt; <span class="string">&quot;-Zprofile -Ccodegen-units=1 -Copt-level=0 -Clink-dead-code -Coverflow-checks=off -Zpanic-abort_tests&quot;</span>.<span class="ident">to_string</span>(),
             }
         } <span class="kw">else</span> {
             <span class="macro">hashmap!</span> {}
@@ -1792,7 +1791,7 @@
 <span class="kw">fn</span> <span class="ident">run_functions_example_server</span>(
     <span class="ident">example_server</span>: <span class="kw-2">&amp;</span><span class="ident">ExampleServer</span>,
     <span class="ident">application</span>: <span class="kw-2">&amp;</span><span class="ident">ApplicationFunctions</span>,
-) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">Runnable</span><span class="op">&gt;</span> {
+) -&gt; <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">Runnable</span><span class="op">&gt;</span> {
     <span class="ident">Cmd::new_with_env</span>(
         <span class="string">&quot;oak_functions/loader/bin/oak_functions_loader&quot;</span>,
         <span class="macro">spread!</span>[
@@ -1807,15 +1806,15 @@
     <span class="ident">example</span>: <span class="kw-2">&amp;</span><span class="ident">Example</span>,
     <span class="ident">build_client</span>: <span class="kw-2">&amp;</span><span class="ident">BuildClient</span>,
     <span class="ident">client_additional_args</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
-) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Step</span> {
+) -&gt; <span class="ident">Step</span> {
     <span class="ident">Step::Multiple</span> {
         <span class="ident">name</span>: <span class="string">&quot;run clients&quot;</span>.<span class="ident">to_string</span>(),
         <span class="ident">steps</span>: <span class="ident">example</span>
             .<span class="ident">clients</span>
             .<span class="ident">iter</span>()
             .<span class="ident">filter</span>(<span class="op">|</span>(<span class="ident">name</span>, <span class="kw">_</span>)<span class="op">|</span> <span class="kw">match</span> <span class="ident">build_client</span>.<span class="ident">client_variant</span>.<span class="ident">as_str</span>() {
-                <span class="ident">ALL_CLIENTS</span> <span class="op">=</span><span class="op">&gt;</span> <span class="bool-val">true</span>,
-                <span class="ident">client</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw-2">*</span><span class="ident">name</span> <span class="op">=</span><span class="op">=</span> <span class="ident">client</span>,
+                <span class="ident">ALL_CLIENTS</span> =&gt; <span class="bool-val">true</span>,
+                <span class="ident">client</span> =&gt; <span class="kw-2">*</span><span class="ident">name</span> <span class="op">==</span> <span class="ident">client</span>,
             })
             .<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">name</span>, <span class="ident">client</span>)<span class="op">|</span> {
                 <span class="ident">run_client</span>(<span class="ident">name</span>, <span class="ident">client</span>, <span class="ident">build_client</span>, <span class="ident">client_additional_args</span>.<span class="ident">clone</span>())
@@ -1829,7 +1828,7 @@
     <span class="ident">executable</span>: <span class="kw-2">&amp;</span><span class="ident">Executable</span>,
     <span class="ident">opt</span>: <span class="kw-2">&amp;</span><span class="ident">BuildClient</span>,
     <span class="ident">additional_args</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
-) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Step</span> {
+) -&gt; <span class="ident">Step</span> {
     <span class="ident">Step::Multiple</span> {
         <span class="ident">name</span>: <span class="ident">name</span>.<span class="ident">to_string</span>(),
         <span class="ident">steps</span>: <span class="macro">vec!</span>[
@@ -1845,7 +1844,7 @@
     }
 }
 
-<span class="kw">fn</span> <span class="ident">build_application</span>(<span class="ident">application</span>: <span class="kw-2">&amp;</span><span class="ident">ApplicationClassic</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">Runnable</span><span class="op">&gt;</span> {
+<span class="kw">fn</span> <span class="ident">build_application</span>(<span class="ident">application</span>: <span class="kw-2">&amp;</span><span class="ident">ApplicationClassic</span>) -&gt; <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">Runnable</span><span class="op">&gt;</span> {
     <span class="ident">Cmd::new</span>(
         <span class="string">&quot;cargo&quot;</span>,
         <span class="macro">vec!</span>[
@@ -1857,7 +1856,7 @@
     )
 }
 
-<span class="kw">fn</span> <span class="ident">build_docker</span>(<span class="ident">example</span>: <span class="kw-2">&amp;</span><span class="ident">Example</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Step</span> {
+<span class="kw">fn</span> <span class="ident">build_docker</span>(<span class="ident">example</span>: <span class="kw-2">&amp;</span><span class="ident">Example</span>) -&gt; <span class="ident">Step</span> {
     <span class="ident">Step::Multiple</span> {
         <span class="ident">name</span>: <span class="string">&quot;docker&quot;</span>.<span class="ident">to_string</span>(),
         <span class="ident">steps</span>: <span class="macro">vec!</span>[
@@ -1907,12 +1906,12 @@
     }
 }
 
-<span class="kw">fn</span> <span class="ident">build</span>(<span class="ident">target</span>: <span class="kw-2">&amp;</span><span class="ident">Target</span>, <span class="ident">opt</span>: <span class="kw-2">&amp;</span><span class="ident">BuildClient</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">Runnable</span><span class="op">&gt;</span> {
+<span class="kw">fn</span> <span class="ident">build</span>(<span class="ident">target</span>: <span class="kw-2">&amp;</span><span class="ident">Target</span>, <span class="ident">opt</span>: <span class="kw-2">&amp;</span><span class="ident">BuildClient</span>) -&gt; <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">Runnable</span><span class="op">&gt;</span> {
     <span class="kw">match</span> <span class="ident">target</span> {
         <span class="ident">Target::Cargo</span> {
             <span class="ident">cargo_manifest</span>,
             <span class="ident">additional_build_args</span>,
-        } <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Cmd::new</span>(
+        } =&gt; <span class="ident">Cmd::new</span>(
             <span class="string">&quot;cargo&quot;</span>,
             <span class="macro">spread!</span>[
                 <span class="string">&quot;build&quot;</span>.<span class="ident">to_string</span>(),
@@ -1930,7 +1929,7 @@
         <span class="ident">Target::Bazel</span> {
             <span class="ident">bazel_target</span>,
             <span class="ident">config</span>,
-        } <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Cmd::new</span>(
+        } =&gt; <span class="ident">Cmd::new</span>(
             <span class="string">&quot;bazel&quot;</span>,
             <span class="macro">spread!</span>[
                 <span class="string">&quot;build&quot;</span>.<span class="ident">to_string</span>(),
@@ -1942,11 +1941,11 @@
                 <span class="ident">bazel_target</span>.<span class="ident">to_string</span>(),
             ],
         ),
-        <span class="ident">Target::Npm</span> { <span class="ident">package_directory</span> } <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Cmd::new</span>(
+        <span class="ident">Target::Npm</span> { <span class="ident">package_directory</span> } =&gt; <span class="ident">Cmd::new</span>(
             <span class="string">&quot;npm&quot;</span>,
             <span class="macro">vec!</span>[<span class="string">&quot;ci&quot;</span>.<span class="ident">to_string</span>(), <span class="macro">format!</span>(<span class="string">&quot;--prefix={}&quot;</span>, <span class="ident">package_directory</span>)],
         ),
-        <span class="ident">Target::Shell</span> { <span class="ident">script</span> } <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Cmd::new</span>(<span class="string">&quot;bash&quot;</span>, <span class="kw-2">&amp;</span>[<span class="ident">script</span>]),
+        <span class="ident">Target::Shell</span> { <span class="ident">script</span> } =&gt; <span class="ident">Cmd::new</span>(<span class="string">&quot;bash&quot;</span>, <span class="kw-2">&amp;</span>[<span class="ident">script</span>]),
     }
 }
 
@@ -1954,12 +1953,12 @@
     <span class="ident">executable</span>: <span class="kw-2">&amp;</span><span class="ident">Executable</span>,
     <span class="ident">opt</span>: <span class="kw-2">&amp;</span><span class="ident">BuildClient</span>,
     <span class="ident">additional_args</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
-) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">Runnable</span><span class="op">&gt;</span> {
+) -&gt; <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">Runnable</span><span class="op">&gt;</span> {
     <span class="kw">match</span> <span class="kw-2">&amp;</span><span class="ident">executable</span>.<span class="ident">target</span> {
         <span class="ident">Target::Cargo</span> {
             <span class="ident">cargo_manifest</span>,
             <span class="ident">additional_build_args</span>,
-        } <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Cmd::new</span>(
+        } =&gt; <span class="ident">Cmd::new</span>(
             <span class="string">&quot;cargo&quot;</span>,
             <span class="macro">spread!</span>[
                 <span class="string">&quot;run&quot;</span>.<span class="ident">to_string</span>(),
@@ -1975,7 +1974,7 @@
         <span class="ident">Target::Bazel</span> {
             <span class="ident">bazel_target</span>,
             <span class="ident">config</span>,
-        } <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Cmd::new</span>(
+        } =&gt; <span class="ident">Cmd::new</span>(
             <span class="string">&quot;bazel&quot;</span>,
             <span class="macro">spread!</span>[
                 <span class="string">&quot;run&quot;</span>.<span class="ident">to_string</span>(),
@@ -1991,14 +1990,14 @@
                 ...<span class="ident">additional_args</span>,
             ],
         ),
-        <span class="ident">Target::Npm</span> { <span class="ident">package_directory</span> } <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Cmd::new</span>(
+        <span class="ident">Target::Npm</span> { <span class="ident">package_directory</span> } =&gt; <span class="ident">Cmd::new</span>(
             <span class="string">&quot;npm&quot;</span>,
             <span class="macro">vec!</span>[
                 <span class="string">&quot;start&quot;</span>.<span class="ident">to_string</span>(),
                 <span class="macro">format!</span>(<span class="string">&quot;--prefix={}&quot;</span>, <span class="ident">package_directory</span>),
             ],
         ),
-        <span class="ident">Target::Shell</span> { <span class="ident">script</span> } <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Cmd::new</span>(<span class="string">&quot;bash&quot;</span>, <span class="kw-2">&amp;</span>[<span class="ident">script</span>]),
+        <span class="ident">Target::Shell</span> { <span class="ident">script</span> } =&gt; <span class="ident">Cmd::new</span>(<span class="string">&quot;bash&quot;</span>, <span class="kw-2">&amp;</span>[<span class="ident">script</span>]),
     }
 }
 
@@ -2007,10 +2006,10 @@
     <span class="ident">opt</span>: <span class="kw-2">&amp;</span><span class="ident">T</span>,
     <span class="ident">additional_features</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
     <span class="ident">env</span>: <span class="kw-2">&amp;</span><span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">String</span><span class="op">&gt;</span>,
-) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Step</span> {
+) -&gt; <span class="ident">Step</span> {
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">features</span> <span class="op">=</span> <span class="ident">additional_features</span>;
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">server_variant_features</span> <span class="op">=</span> <span class="ident">opt</span>.<span class="ident">features</span>().<span class="ident">iter</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">s</span><span class="op">|</span> <span class="ident">s</span>.<span class="ident">to_string</span>()).<span class="ident">collect</span>();
-    <span class="ident">features</span>.<span class="ident">append</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">server_variant_features</span>);
+    <span class="ident">features</span>.<span class="ident">append</span>(<span class="kw-2">&amp;mut</span> <span class="ident">server_variant_features</span>);
     <span class="kw">let</span> <span class="ident">features</span> <span class="op">=</span> <span class="kw">if</span> <span class="op">!</span><span class="ident">features</span>.<span class="ident">is_empty</span>() {
         <span class="ident">features</span>.<span class="ident">join</span>(<span class="string">&quot;,&quot;</span>)
     } <span class="kw">else</span> {
@@ -2026,8 +2025,8 @@
                     <span class="comment">// This overrides the toolchain used by `rustup` to invoke the actual</span>
                     <span class="comment">// `cargo` binary.</span>
                     <span class="comment">// See https://github.com/rust-lang/rustup#toolchain-override-shorthand</span>
-                    <span class="prelude-val">Some</span>(<span class="ident">server_rust_toolchain</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">vec!</span>[<span class="macro">format!</span>(<span class="string">&quot;+{}&quot;</span>, <span class="ident">server_rust_toolchain</span>)],
-                    <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">vec!</span>[],
+                    <span class="prelude-val">Some</span>(<span class="ident">server_rust_toolchain</span>) =&gt; <span class="macro">vec!</span>[<span class="macro">format!</span>(<span class="string">&quot;+{}&quot;</span>, <span class="ident">server_rust_toolchain</span>)],
+                    <span class="prelude-val">None</span> =&gt; <span class="macro">vec!</span>[],
                 },
                 <span class="string">&quot;build&quot;</span>.<span class="ident">to_string</span>(),
                 <span class="macro">format!</span>(<span class="string">&quot;--manifest-path={}/Cargo.toml&quot;</span>, <span class="ident">manifest_dir</span>),
@@ -2047,7 +2046,7 @@
         ),
     }
 }
-</pre></div>
+</code></pre></div>
 </section><section id="search" class="content hidden"></section><div id="rustdoc-vars" data-root-path="../../" data-current-crate="runner" data-search-index-js="../../search-index.js" data-search-js="../../search.js"></div>
     <script src="../../main.js"></script><script src="../../source-script.js"></script><script src="../../source-files.js"></script>
 </body></html>

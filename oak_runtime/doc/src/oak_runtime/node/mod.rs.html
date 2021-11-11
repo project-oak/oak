@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src&#x2F;node&#x2F;mod.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>mod.rs - source</title><link rel="stylesheet" type="text/css" href="../../../normalize.css"><link rel="stylesheet" type="text/css" href="../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../../light.css"  id="themeStyle"><link rel="stylesheet" type="text/css" href="../../../dark.css" disabled ><link rel="stylesheet" type="text/css" href="../../../ayu.css" disabled ><script id="default-settings" ></script><script src="../../../storage.js"></script><script src="../../../crates.js"></script><noscript><link rel="stylesheet" href="../../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../../favicon.svg"><style type="text/css">#crate-search{background-image:url("../../../down-arrow.svg");}</style></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu" role="button">&#9776;</div><a href='../../../oak_runtime/index.html'><div class='logo-container rust-logo'><img src='../../../rust-logo.png' alt='logo'></div></a></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!" aria-haspopup="menu" title="themes"><img width="18" height="18" alt="Pick another theme!" src="../../../brush.svg"></button><div id="theme-choices" role="menu"></div></div><nav class="sub"><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" disabled autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><button type="button" id="help-button" title="help">?</button><a id="settings-menu" href="../../../settings.html" title="settings"><img width="18" height="18" alt="Change settings" src="../../../wheel.svg"></a></div></form></nav><section id="main" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">  1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src&#x2F;node&#x2F;mod.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>mod.rs - source</title><link rel="stylesheet" type="text/css" href="../../../normalize.css"><link rel="stylesheet" type="text/css" href="../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../../light.css"  id="themeStyle"><link rel="stylesheet" type="text/css" href="../../../dark.css" disabled ><link rel="stylesheet" type="text/css" href="../../../ayu.css" disabled ><script id="default-settings" ></script><script src="../../../storage.js"></script><script src="../../../crates.js"></script><noscript><link rel="stylesheet" href="../../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../../favicon.svg"><style type="text/css">#crate-search{background-image:url("../../../down-arrow.svg");}</style></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu" role="button">&#9776;</div><a href='../../../oak_runtime/index.html'><div class='logo-container rust-logo'><img src='../../../rust-logo.png' alt='logo'></div></a></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!" aria-haspopup="menu" title="themes"><img width="18" height="18" alt="Pick another theme!" src="../../../brush.svg"></button><div id="theme-choices" role="menu"></div></div><nav class="sub"><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><button type="button" id="help-button" title="help">?</button><a id="settings-menu" href="../../../settings.html" title="settings"><img width="18" height="18" alt="Change settings" src="../../../wheel.svg"></a></div></form></nav><section id="main" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">  1</span>
 <span id="2">  2</span>
 <span id="3">  3</span>
 <span id="4">  4</span>
@@ -311,8 +311,7 @@
 <span id="311">311</span>
 <span id="312">312</span>
 <span id="313">313</span>
-</pre><pre class="rust">
-<span class="comment">//</span>
+</pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
 <span class="comment">//</span>
 <span class="comment">// Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
@@ -354,7 +353,7 @@
 <span class="doccomment">/// Trait encapsulating execution of a Node or pseudo-Node.</span>
 <span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">Node</span>: <span class="ident">Send</span> {
     <span class="doccomment">/// Returns a name for this type of Node.</span>
-    <span class="kw">fn</span> <span class="ident">node_type</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span>;
+    <span class="kw">fn</span> <span class="ident">node_type</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span>;
 
     <span class="doccomment">/// Returns a value indicating the isolation of a Node. If a Node is sandboxed (e.g. a Wasm</span>
     <span class="doccomment">/// node), the sandbox restricts external communcations. Uncontrolled nodes (e.g pseudo Nodes</span>
@@ -362,7 +361,7 @@
     <span class="doccomment">///</span>
     <span class="doccomment">/// Unless a node uses a trusted sandbox to restrict communications this function should always</span>
     <span class="doccomment">/// return [`NodeIsolation::Uncontrolled`]</span>
-    <span class="kw">fn</span> <span class="ident">isolation</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">NodeIsolation</span> {
+    <span class="kw">fn</span> <span class="ident">isolation</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">NodeIsolation</span> {
         <span class="ident">NodeIsolation::Uncontrolled</span>
     }
 
@@ -401,28 +400,28 @@
 }
 
 <span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">AddrParseError</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">ConfigurationError</span> {
-    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">error</span>: <span class="ident">AddrParseError</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">error</span>: <span class="ident">AddrParseError</span>) -&gt; <span class="self">Self</span> {
         <span class="ident">ConfigurationError::AddressParsingError</span>(<span class="ident">error</span>)
     }
 }
 
 <span class="kw">impl</span> <span class="ident">std::fmt::Display</span> <span class="kw">for</span> <span class="ident">ConfigurationError</span> {
-    <span class="kw">fn</span> <span class="ident">fmt</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">f</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">std::fmt::Formatter</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">std::fmt::Error</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">fmt</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">f</span>: <span class="kw-2">&amp;mut</span> <span class="ident">std::fmt::Formatter</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">std::fmt::Error</span><span class="op">&gt;</span> {
         <span class="kw">match</span> <span class="self">self</span> {
-            <span class="ident">ConfigurationError::AddressParsingError</span>(<span class="ident">e</span>) <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="ident">ConfigurationError::AddressParsingError</span>(<span class="ident">e</span>) =&gt; {
                 <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;Failed to parse an address: {}&quot;</span>, <span class="ident">e</span>)
             }
-            <span class="ident">ConfigurationError::IncorrectPort</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;Incorrect port (must be &gt; 1023)&quot;</span>),
-            <span class="ident">ConfigurationError::IncorrectURI</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;Incorrect URI&quot;</span>),
-            <span class="ident">ConfigurationError::NoHostElement</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;URI doesn&#39;t contain the Host element&quot;</span>),
-            <span class="ident">ConfigurationError::IncorrectWebAssemblyModuleName</span> <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="ident">ConfigurationError::IncorrectPort</span> =&gt; <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;Incorrect port (must be &gt; 1023)&quot;</span>),
+            <span class="ident">ConfigurationError::IncorrectURI</span> =&gt; <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;Incorrect URI&quot;</span>),
+            <span class="ident">ConfigurationError::NoHostElement</span> =&gt; <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;URI doesn&#39;t contain the Host element&quot;</span>),
+            <span class="ident">ConfigurationError::IncorrectWebAssemblyModuleName</span> =&gt; {
                 <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;Incorrect WebAssembly module name&quot;</span>)
             }
-            <span class="ident">ConfigurationError::InvalidNodeConfiguration</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;Invalid NodeConfiguration&quot;</span>),
-            <span class="ident">ConfigurationError::WasmiModuleInializationError</span>(<span class="ident">e</span>) <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="ident">ConfigurationError::InvalidNodeConfiguration</span> =&gt; <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;Invalid NodeConfiguration&quot;</span>),
+            <span class="ident">ConfigurationError::WasmiModuleInializationError</span>(<span class="ident">e</span>) =&gt; {
                 <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;Failed to initialize wasmi::Module: {}&quot;</span>, <span class="ident">e</span>)
             }
-            <span class="ident">ConfigurationError::NodeCreationNotPermitted</span> <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="ident">ConfigurationError::NodeCreationNotPermitted</span> =&gt; {
                 <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;Node creation not permitted&quot;</span>)
             }
         }
@@ -444,7 +443,7 @@
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">node_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
         <span class="ident">node_configuration</span>: <span class="kw-2">&amp;</span><span class="ident">NodeConfiguration</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">CreatedNode</span>, <span class="ident">ConfigurationError</span><span class="op">&gt;</span> {
+    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">CreatedNode</span>, <span class="ident">ConfigurationError</span><span class="op">&gt;</span> {
         <span class="kw">if</span> <span class="op">!</span><span class="self">self</span>
             .<span class="ident">permissions_configuration</span>
             .<span class="ident">allowed_creation</span>(<span class="ident">node_configuration</span>)
@@ -455,7 +454,7 @@
         }
 
         <span class="kw">match</span> <span class="kw-2">&amp;</span><span class="ident">node_configuration</span>.<span class="ident">config_type</span> {
-            <span class="prelude-val">Some</span>(<span class="ident">ConfigType::CryptoConfig</span>(<span class="ident">CryptoConfiguration</span> {})) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">CreatedNode</span> {
+            <span class="prelude-val">Some</span>(<span class="ident">ConfigType::CryptoConfig</span>(<span class="ident">CryptoConfiguration</span> {})) =&gt; <span class="prelude-val">Ok</span>(<span class="ident">CreatedNode</span> {
                 <span class="ident">instance</span>: <span class="ident">Box::new</span>(<span class="ident">crypto::CryptoNode::new</span>(
                     <span class="ident">node_name</span>,
                     <span class="self">self</span>.<span class="ident">kms_credentials</span>.<span class="ident">clone</span>(),
@@ -465,7 +464,7 @@
                 <span class="comment">// mean top_privilege() goes here).</span>
                 <span class="ident">privilege</span>: <span class="ident">NodePrivilege::default</span>(),
             }),
-            <span class="prelude-val">Some</span>(<span class="ident">ConfigType::LogConfig</span>(<span class="ident">LogConfiguration</span> {})) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">CreatedNode</span> {
+            <span class="prelude-val">Some</span>(<span class="ident">ConfigType::LogConfig</span>(<span class="ident">LogConfiguration</span> {})) =&gt; <span class="prelude-val">Ok</span>(<span class="ident">CreatedNode</span> {
                 <span class="ident">instance</span>: <span class="ident">Box::new</span>(<span class="ident">logger::LogNode::new</span>(<span class="ident">node_name</span>)),
 
                 <span class="comment">// Allow the logger Node to declassify log messages in debug builds only.</span>
@@ -476,7 +475,7 @@
                 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">not</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;oak-unsafe&quot;</span>))]</span>
                 <span class="ident">privilege</span>: <span class="ident">NodePrivilege::default</span>(),
             }),
-            <span class="prelude-val">Some</span>(<span class="ident">ConfigType::GrpcServerConfig</span>(<span class="ident">config</span>)) <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="prelude-val">Some</span>(<span class="ident">ConfigType::GrpcServerConfig</span>(<span class="ident">config</span>)) =&gt; {
                 <span class="kw">let</span> <span class="ident">grpc_configuration</span> <span class="op">=</span> <span class="self">self</span>
                     .<span class="ident">secure_server_configuration</span>
                     .<span class="ident">grpc_config</span>
@@ -500,7 +499,7 @@
                     <span class="ident">privilege</span>: <span class="ident">NodePrivilege::top_privilege</span>(),
                 })
             }
-            <span class="prelude-val">Some</span>(<span class="ident">ConfigType::WasmConfig</span>(<span class="ident">config</span>)) <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="prelude-val">Some</span>(<span class="ident">ConfigType::WasmConfig</span>(<span class="ident">config</span>)) =&gt; {
                 <span class="kw">let</span> <span class="ident">wasm_module_bytes</span> <span class="op">=</span> <span class="self">self</span>
                     .<span class="ident">application_configuration</span>
                     .<span class="ident">wasm_modules</span>
@@ -515,7 +514,7 @@
                     <span class="ident">privilege</span>: <span class="ident">wasm::get_privilege</span>(<span class="ident">wasm_module_bytes</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">signature_table</span>),
                 })
             }
-            <span class="prelude-val">Some</span>(<span class="ident">ConfigType::GrpcClientConfig</span>(<span class="ident">config</span>)) <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="prelude-val">Some</span>(<span class="ident">ConfigType::GrpcClientConfig</span>(<span class="ident">config</span>)) =&gt; {
                 <span class="kw">let</span> <span class="ident">grpc_client_root_tls_certificate</span> <span class="op">=</span> <span class="self">self</span>
                     .<span class="ident">secure_server_configuration</span>
                     .<span class="ident">clone</span>()
@@ -536,15 +535,15 @@
                     <span class="ident">privilege</span>: <span class="ident">grpc::client::get_privilege</span>(<span class="kw-2">&amp;</span><span class="ident">uri</span>),
                 })
             }
-            <span class="prelude-val">Some</span>(<span class="ident">ConfigType::RoughtimeClientConfig</span>(<span class="ident">config</span>)) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">CreatedNode</span> {
+            <span class="prelude-val">Some</span>(<span class="ident">ConfigType::RoughtimeClientConfig</span>(<span class="ident">config</span>)) =&gt; <span class="prelude-val">Ok</span>(<span class="ident">CreatedNode</span> {
                 <span class="ident">instance</span>: <span class="ident">Box::new</span>(<span class="ident">roughtime::RoughtimeClientNode::new</span>(<span class="ident">node_name</span>, <span class="ident">config</span>)),
                 <span class="ident">privilege</span>: <span class="ident">NodePrivilege::default</span>(),
             }),
-            <span class="prelude-val">Some</span>(<span class="ident">ConfigType::StorageConfig</span>(<span class="ident">_config</span>)) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">CreatedNode</span> {
+            <span class="prelude-val">Some</span>(<span class="ident">ConfigType::StorageConfig</span>(<span class="ident">_config</span>)) =&gt; <span class="prelude-val">Ok</span>(<span class="ident">CreatedNode</span> {
                 <span class="ident">instance</span>: <span class="ident">Box::new</span>(<span class="ident">storage::StorageNode::new</span>(<span class="ident">node_name</span>)),
                 <span class="ident">privilege</span>: <span class="ident">NodePrivilege::default</span>(),
             }),
-            <span class="prelude-val">Some</span>(<span class="ident">ConfigType::HttpServerConfig</span>(<span class="ident">config</span>)) <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="prelude-val">Some</span>(<span class="ident">ConfigType::HttpServerConfig</span>(<span class="ident">config</span>)) =&gt; {
                 <span class="kw">let</span> <span class="ident">tls_config</span> <span class="op">=</span> <span class="self">self</span>
                     .<span class="ident">secure_server_configuration</span>
                     .<span class="ident">http_config</span>
@@ -564,7 +563,7 @@
                     <span class="ident">privilege</span>: <span class="ident">NodePrivilege::top_privilege</span>(),
                 })
             }
-            <span class="prelude-val">Some</span>(<span class="ident">ConfigType::HttpClientConfig</span>(<span class="ident">config</span>)) <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="prelude-val">Some</span>(<span class="ident">ConfigType::HttpClientConfig</span>(<span class="ident">config</span>)) =&gt; {
                 <span class="kw">let</span> <span class="ident">http_client_root_tls_certificate</span> <span class="op">=</span> <span class="self">self</span>
                     .<span class="ident">secure_server_configuration</span>
                     .<span class="ident">http_config</span>
@@ -581,7 +580,7 @@
                     <span class="ident">privilege</span>: <span class="ident">http::client::get_privilege</span>(<span class="kw-2">&amp;</span><span class="ident">config</span>.<span class="ident">authority</span>),
                 })
             }
-            <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Err</span>(<span class="ident">ConfigurationError::InvalidNodeConfiguration</span>),
+            <span class="prelude-val">None</span> =&gt; <span class="prelude-val">Err</span>(<span class="ident">ConfigurationError::InvalidNodeConfiguration</span>),
         }
     }
 }
@@ -609,7 +608,7 @@
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">node_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
         <span class="ident">node_configuration</span>: <span class="kw-2">&amp;</span><span class="ident">T</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">CreatedNode</span>, <span class="ident">ConfigurationError</span><span class="op">&gt;</span>;
+    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">CreatedNode</span>, <span class="ident">ConfigurationError</span><span class="op">&gt;</span>;
 }
 
 <span class="comment">// the `linear-handles` feature makes [`Sender`] and [`Receiver`] non-`Copy`, so we must use `Clone`</span>
@@ -617,15 +616,15 @@
 <span class="comment">// have this simple function that always uses the appropriate impl for copying these types.</span>
 <span class="comment">// TODO(#1854): Remove this once linear-handles are the default.</span>
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">not</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;linear-handles&quot;</span>))]</span>
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">copy_or_clone</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Copy</span><span class="op">&gt;</span>(<span class="ident">t</span>: <span class="kw-2">&amp;</span><span class="ident">T</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">T</span> {
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">copy_or_clone</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Copy</span><span class="op">&gt;</span>(<span class="ident">t</span>: <span class="kw-2">&amp;</span><span class="ident">T</span>) -&gt; <span class="ident">T</span> {
     <span class="kw-2">*</span><span class="ident">t</span>
 }
 
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;linear-handles&quot;</span>)]</span>
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">copy_or_clone</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Clone</span><span class="op">&gt;</span>(<span class="ident">t</span>: <span class="kw-2">&amp;</span><span class="ident">T</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">T</span> {
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">copy_or_clone</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Clone</span><span class="op">&gt;</span>(<span class="ident">t</span>: <span class="kw-2">&amp;</span><span class="ident">T</span>) -&gt; <span class="ident">T</span> {
     <span class="ident">t</span>.<span class="ident">clone</span>()
 }
-</pre></div>
+</code></pre></div>
 </section><section id="search" class="content hidden"></section><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="oak_runtime" data-search-index-js="../../../search-index.js" data-search-js="../../../search.js"></div>
     <script src="../../../main.js"></script><script src="../../../source-script.js"></script><script src="../../../source-files.js"></script>
 </body></html>

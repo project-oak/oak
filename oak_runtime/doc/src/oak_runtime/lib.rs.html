@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src&#x2F;lib.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>lib.rs - source</title><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../light.css"  id="themeStyle"><link rel="stylesheet" type="text/css" href="../../dark.css" disabled ><link rel="stylesheet" type="text/css" href="../../ayu.css" disabled ><script id="default-settings" ></script><script src="../../storage.js"></script><script src="../../crates.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"><style type="text/css">#crate-search{background-image:url("../../down-arrow.svg");}</style></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu" role="button">&#9776;</div><a href='../../oak_runtime/index.html'><div class='logo-container rust-logo'><img src='../../rust-logo.png' alt='logo'></div></a></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!" aria-haspopup="menu" title="themes"><img width="18" height="18" alt="Pick another theme!" src="../../brush.svg"></button><div id="theme-choices" role="menu"></div></div><nav class="sub"><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" disabled autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><button type="button" id="help-button" title="help">?</button><a id="settings-menu" href="../../settings.html" title="settings"><img width="18" height="18" alt="Change settings" src="../../wheel.svg"></a></div></form></nav><section id="main" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">   1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src&#x2F;lib.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>lib.rs - source</title><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../light.css"  id="themeStyle"><link rel="stylesheet" type="text/css" href="../../dark.css" disabled ><link rel="stylesheet" type="text/css" href="../../ayu.css" disabled ><script id="default-settings" ></script><script src="../../storage.js"></script><script src="../../crates.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"><style type="text/css">#crate-search{background-image:url("../../down-arrow.svg");}</style></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu" role="button">&#9776;</div><a href='../../oak_runtime/index.html'><div class='logo-container rust-logo'><img src='../../rust-logo.png' alt='logo'></div></a></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!" aria-haspopup="menu" title="themes"><img width="18" height="18" alt="Pick another theme!" src="../../brush.svg"></button><div id="theme-choices" role="menu"></div></div><nav class="sub"><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><button type="button" id="help-button" title="help">?</button><a id="settings-menu" href="../../settings.html" title="settings"><img width="18" height="18" alt="Change settings" src="../../wheel.svg"></a></div></form></nav><section id="main" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">   1</span>
 <span id="2">   2</span>
 <span id="3">   3</span>
 <span id="4">   4</span>
@@ -1532,8 +1532,7 @@
 <span id="1532">1532</span>
 <span id="1533">1533</span>
 <span id="1534">1534</span>
-</pre><pre class="rust">
-<span class="comment">//</span>
+</pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
 <span class="comment">//</span>
 <span class="comment">// Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
@@ -1696,7 +1695,7 @@
 
 <span class="kw">impl</span> <span class="ident">NodeStopper</span> {
     <span class="doccomment">/// Sends a notification to the Node and joins its thread.</span>
-    <span class="kw">fn</span> <span class="ident">stop_node</span>(<span class="self">self</span>, <span class="ident">node_id</span>: <span class="ident">NodeId</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">thread::Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">stop_node</span>(<span class="self">self</span>, <span class="ident">node_id</span>: <span class="ident">NodeId</span>) -&gt; <span class="ident">thread::Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">node_debug_id</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">get_debug_id</span>(<span class="ident">node_id</span>);
         <span class="self">self</span>.<span class="ident">notify_sender</span>
             .<span class="ident">send</span>(())
@@ -1713,13 +1712,13 @@
 
     <span class="doccomment">/// Returns a unique debug_id used in the debug output, consisting out of</span>
     <span class="doccomment">/// the provided [`NodeId`], and the Node name.</span>
-    <span class="kw">fn</span> <span class="ident">get_debug_id</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">node_id</span>: <span class="ident">NodeId</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">String</span> {
+    <span class="kw">fn</span> <span class="ident">get_debug_id</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">node_id</span>: <span class="ident">NodeId</span>) -&gt; <span class="ident">String</span> {
         <span class="ident">construct_debug_id</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">node_name</span>, <span class="ident">node_id</span>)
     }
 }
 
 <span class="kw">impl</span> <span class="ident">std::fmt::Debug</span> <span class="kw">for</span> <span class="ident">NodeStopper</span> {
-    <span class="kw">fn</span> <span class="ident">fmt</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">f</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">std::fmt::Formatter</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">std::fmt::Result</span> {
+    <span class="kw">fn</span> <span class="ident">fmt</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">f</span>: <span class="kw-2">&amp;mut</span> <span class="ident">std::fmt::Formatter</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>) -&gt; <span class="ident">std::fmt::Result</span> {
         <span class="macro">write!</span>(
             <span class="ident">f</span>,
             <span class="string">&quot;{{node_name=&#39;{}&#39;, join_handle={:?}, notify_sender={:?}}}&quot;</span>,
@@ -1758,14 +1757,14 @@
 }
 
 <span class="doccomment">/// Returns a unique debug_id consisting out of the provided name and [`NodeId`].</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">construct_debug_id</span>(<span class="ident">name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="ident">node_id</span>: <span class="ident">NodeId</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">String</span> {
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">construct_debug_id</span>(<span class="ident">name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="ident">node_id</span>: <span class="ident">NodeId</span>) -&gt; <span class="ident">String</span> {
     <span class="macro">format!</span>(<span class="string">&quot;{}({})&quot;</span>, <span class="ident">name</span>, <span class="ident">node_id</span>.<span class="number">0</span>)
 }
 
 <span class="kw">impl</span> <span class="ident">NodeInfo</span> {
     <span class="doccomment">/// Returns a unique debug_id used to identify the node in the debug output,</span>
     <span class="doccomment">/// consisting out of the provided [`NodeId`], and the node&#39;s name.</span>
-    <span class="kw">fn</span> <span class="ident">get_debug_id</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">node_id</span>: <span class="ident">NodeId</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">String</span> {
+    <span class="kw">fn</span> <span class="ident">get_debug_id</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">node_id</span>: <span class="ident">NodeId</span>) -&gt; <span class="ident">String</span> {
         <span class="ident">construct_debug_id</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">name</span>, <span class="ident">node_id</span>)
     }
 }
@@ -1787,7 +1786,7 @@
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(
         <span class="ident">can_declassify_confidentiality_tags</span>: <span class="ident">HashSet</span><span class="op">&lt;</span><span class="ident">Tag</span><span class="op">&gt;</span>,
         <span class="ident">can_endorse_integrity_tags</span>: <span class="ident">HashSet</span><span class="op">&lt;</span><span class="ident">Tag</span><span class="op">&gt;</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+    ) -&gt; <span class="self">Self</span> {
         <span class="self">Self</span> {
             <span class="ident">can_declassify_confidentiality_tags</span>,
             <span class="ident">can_endorse_integrity_tags</span>,
@@ -1798,7 +1797,7 @@
     <span class="doccomment">///</span>
     <span class="doccomment">/// A Node with this privilege can downgrade any data regardless of its label. It should only</span>
     <span class="doccomment">/// be used by the trusted pseudo-nodes.</span>
-    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">top_privilege</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">top_privilege</span>() -&gt; <span class="self">Self</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">top_tag</span> <span class="op">=</span> <span class="ident">HashSet::new</span>();
         <span class="ident">top_tag</span>.<span class="ident">insert</span>(<span class="ident">top</span>());
         <span class="ident">NodePrivilege</span> {
@@ -1809,7 +1808,7 @@
 
     <span class="doccomment">/// Generates a new [`Label`] from `label` that is downgraded as much as possible using the</span>
     <span class="doccomment">/// current privilege.</span>
-    <span class="kw">fn</span> <span class="ident">downgrade_label</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">label</span>: <span class="kw-2">&amp;</span><span class="ident">Label</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Label</span> {
+    <span class="kw">fn</span> <span class="ident">downgrade_label</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">label</span>: <span class="kw-2">&amp;</span><span class="ident">Label</span>) -&gt; <span class="ident">Label</span> {
         <span class="kw">let</span> <span class="ident">has_top_privilege</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">can_declassify_confidentiality_tags</span>.<span class="ident">contains</span>(<span class="kw-2">&amp;</span><span class="ident">top</span>());
 
         <span class="kw">let</span> <span class="ident">confidentiality_tags</span> <span class="op">=</span> <span class="kw">if</span> <span class="ident">has_top_privilege</span> {
@@ -1851,7 +1850,7 @@
     <span class="doccomment">/// implied by integrity tags on the node label itself. Transparent endorsement means that the</span>
     <span class="doccomment">/// privilege to endorse integrity tags will be implied by confidentiality tags on the node</span>
     <span class="doccomment">/// label.</span>
-    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">privilege</span>: <span class="ident">NodePrivilege</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">privilege</span>: <span class="ident">NodePrivilege</span>) -&gt; <span class="self">Self</span> {
         <span class="ident">Label</span> {
             <span class="ident">confidentiality_tags</span>: <span class="ident">privilege</span>
                 .<span class="ident">can_declassify_confidentiality_tags</span>
@@ -1863,7 +1862,7 @@
 }
 
 <span class="kw">impl</span> <span class="ident">std::fmt::Debug</span> <span class="kw">for</span> <span class="ident">NodeInfo</span> {
-    <span class="kw">fn</span> <span class="ident">fmt</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">f</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">std::fmt::Formatter</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">std::fmt::Result</span> {
+    <span class="kw">fn</span> <span class="ident">fmt</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">f</span>: <span class="kw-2">&amp;mut</span> <span class="ident">std::fmt::Formatter</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>) -&gt; <span class="ident">std::fmt::Result</span> {
         <span class="macro">write!</span>(
             <span class="ident">f</span>,
             <span class="string">&quot;NodeInfo {{&#39;{}&#39;, label={:?}, node_stopper={:?}, handles=[&quot;</span>,
@@ -1926,7 +1925,7 @@
         <span class="ident">port</span>: <span class="ident">u16</span>,
         <span class="ident">runtime</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">Runtime</span><span class="op">&gt;</span>,
         <span class="ident">f</span>: <span class="ident">F</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+    ) -&gt; <span class="self">Self</span> {
         <span class="kw">let</span> (<span class="ident">termination_notification_sender</span>, <span class="ident">termination_notification_receiver</span>) <span class="op">=</span>
             <span class="ident">tokio::sync::oneshot::channel</span>::<span class="op">&lt;</span>()<span class="op">&gt;</span>();
         <span class="macro">info!</span>(<span class="string">&quot;spawning {} server on new thread&quot;</span>, <span class="ident">name</span>);
@@ -1945,7 +1944,7 @@
 <span class="kw">impl</span> <span class="ident">Drop</span> <span class="kw">for</span> <span class="ident">AuxServer</span> {
     <span class="doccomment">/// Dropping an auxiliary server involves notifying it that it should terminate,</span>
     <span class="doccomment">/// then joining its thread.</span>
-    <span class="kw">fn</span> <span class="ident">drop</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) {
+    <span class="kw">fn</span> <span class="ident">drop</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) {
         <span class="kw">let</span> <span class="ident">join_handle</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">join_handle</span>.<span class="ident">take</span>();
         <span class="kw">let</span> <span class="ident">termination_notification_sender</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">termination_notification_sender</span>.<span class="ident">take</span>();
         <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">termination_notification_sender</span>) <span class="op">=</span> <span class="ident">termination_notification_sender</span> {
@@ -1986,7 +1985,7 @@
 <span class="doccomment">/// Manual implementation of the [`Drop`] trait to ensure that all components of</span>
 <span class="doccomment">/// the [`Runtime`] are stopped before the object is dropped.</span>
 <span class="kw">impl</span> <span class="ident">Drop</span> <span class="kw">for</span> <span class="ident">Runtime</span> {
-    <span class="kw">fn</span> <span class="ident">drop</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) {
+    <span class="kw">fn</span> <span class="ident">drop</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) {
         <span class="self">self</span>.<span class="ident">stop</span>();
         <span class="macro">info!</span>(<span class="string">&quot;Runtime instance dropped&quot;</span>);
     }
@@ -1996,7 +1995,7 @@
 <span class="comment">// values.</span>
 <span class="kw">impl</span> <span class="ident">Runtime</span> {
     <span class="doccomment">/// Register a [`ChannelHalf`] with a Node, returning the new handle value for it.</span>
-    <span class="kw">fn</span> <span class="ident">new_abi_handle</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">node_id</span>: <span class="ident">NodeId</span>, <span class="ident">half</span>: <span class="ident">ChannelHalf</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">oak_abi::Handle</span> {
+    <span class="kw">fn</span> <span class="ident">new_abi_handle</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">node_id</span>: <span class="ident">NodeId</span>, <span class="ident">half</span>: <span class="ident">ChannelHalf</span>) -&gt; <span class="ident">oak_abi::Handle</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">node_infos</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">node_infos</span>.<span class="ident">write</span>().<span class="ident">unwrap</span>();
         <span class="kw">let</span> <span class="ident">node_info</span> <span class="op">=</span> <span class="ident">node_infos</span>.<span class="ident">get_mut</span>(<span class="kw-2">&amp;</span><span class="ident">node_id</span>).<span class="ident">expect</span>(<span class="string">&quot;Invalid node_id&quot;</span>);
         <span class="kw">loop</span> {
@@ -2014,8 +2013,8 @@
                     <span class="ident">handle</span>: <span class="ident">candidate</span>,
                     <span class="ident">channel_id</span>: <span class="ident">half</span>.<span class="ident">get_channel_id</span>(),
                     <span class="ident">direction</span>: <span class="kw">match</span> <span class="ident">half</span>.<span class="ident">direction</span> {
-                        <span class="ident">ChannelHalfDirection::Read</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Direction::Read</span> <span class="kw">as</span> <span class="ident">i32</span>,
-                        <span class="ident">ChannelHalfDirection::Write</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Direction::Write</span> <span class="kw">as</span> <span class="ident">i32</span>,
+                        <span class="ident">ChannelHalfDirection::Read</span> =&gt; <span class="ident">Direction::Read</span> <span class="kw">as</span> <span class="ident">i32</span>,
+                        <span class="ident">ChannelHalfDirection::Write</span> =&gt; <span class="ident">Direction::Write</span> <span class="kw">as</span> <span class="ident">i32</span>,
                     },
                 };
 
@@ -2028,25 +2027,25 @@
         }
     }
     <span class="doccomment">/// Remove the handle from the Node&#39;s handle table.</span>
-    <span class="kw">fn</span> <span class="ident">drop_abi_handle</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">node_id</span>: <span class="ident">NodeId</span>, <span class="ident">handle</span>: <span class="ident">oak_abi::Handle</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakStatus</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">drop_abi_handle</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">node_id</span>: <span class="ident">NodeId</span>, <span class="ident">handle</span>: <span class="ident">oak_abi::Handle</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakStatus</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">node_infos</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">node_infos</span>.<span class="ident">write</span>().<span class="ident">unwrap</span>();
         <span class="kw">let</span> <span class="ident">node_info</span> <span class="op">=</span> <span class="ident">node_infos</span>.<span class="ident">get_mut</span>(<span class="kw-2">&amp;</span><span class="ident">node_id</span>).<span class="ident">expect</span>(<span class="string">&quot;Invalid node_id&quot;</span>);
 
         <span class="kw">match</span> <span class="ident">node_info</span>.<span class="ident">abi_handles</span>.<span class="ident">remove</span>(<span class="kw-2">&amp;</span><span class="ident">handle</span>) {
-            <span class="prelude-val">Some</span>(<span class="ident">half</span>) <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="prelude-val">Some</span>(<span class="ident">half</span>) =&gt; {
                 <span class="self">self</span>.<span class="ident">introspection_event</span>(<span class="ident">EventDetails::HandleDestroyed</span>(<span class="ident">HandleDestroyed</span> {
                     <span class="ident">node_id</span>: <span class="ident">node_id</span>.<span class="number">0</span>,
                     <span class="ident">handle</span>,
                     <span class="ident">channel_id</span>: <span class="ident">half</span>.<span class="ident">get_channel_id</span>(),
                     <span class="ident">direction</span>: <span class="kw">match</span> <span class="ident">half</span>.<span class="ident">direction</span> {
-                        <span class="ident">ChannelHalfDirection::Read</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Direction::Read</span> <span class="kw">as</span> <span class="ident">i32</span>,
-                        <span class="ident">ChannelHalfDirection::Write</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Direction::Write</span> <span class="kw">as</span> <span class="ident">i32</span>,
+                        <span class="ident">ChannelHalfDirection::Read</span> =&gt; <span class="ident">Direction::Read</span> <span class="kw">as</span> <span class="ident">i32</span>,
+                        <span class="ident">ChannelHalfDirection::Write</span> =&gt; <span class="ident">Direction::Write</span> <span class="kw">as</span> <span class="ident">i32</span>,
                     },
                 }));
 
                 <span class="prelude-val">Ok</span>(())
             }
-            <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Err</span>(<span class="ident">OakStatus::ErrBadHandle</span>),
+            <span class="prelude-val">None</span> =&gt; <span class="prelude-val">Err</span>(<span class="ident">OakStatus::ErrBadHandle</span>),
         }
     }
     <span class="doccomment">/// Convert an ABI handle to an internal [`ChannelHalf`].</span>
@@ -2054,7 +2053,7 @@
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">node_id</span>: <span class="ident">NodeId</span>,
         <span class="ident">handle</span>: <span class="ident">oak_abi::Handle</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">ChannelHalf</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span> {
+    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">ChannelHalf</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">node_infos</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">node_infos</span>.<span class="ident">read</span>().<span class="ident">unwrap</span>();
         <span class="kw">let</span> <span class="ident">node_info</span> <span class="op">=</span> <span class="ident">node_infos</span>.<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">node_id</span>).<span class="ident">expect</span>(<span class="string">&quot;Invalid node_id&quot;</span>);
         <span class="kw">let</span> <span class="ident">half</span> <span class="op">=</span> <span class="ident">node_info</span>
@@ -2075,11 +2074,11 @@
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">node_id</span>: <span class="ident">NodeId</span>,
         <span class="ident">handle</span>: <span class="ident">oak_abi::Handle</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">ChannelHalf</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span> {
+    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">ChannelHalf</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">half</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">abi_to_half</span>(<span class="ident">node_id</span>, <span class="ident">handle</span>)<span class="question-mark">?</span>;
         <span class="kw">match</span> <span class="ident">half</span>.<span class="ident">direction</span> {
-            <span class="ident">ChannelHalfDirection::Read</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">half</span>),
-            <span class="ident">ChannelHalfDirection::Write</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Err</span>(<span class="ident">OakStatus::ErrBadHandle</span>),
+            <span class="ident">ChannelHalfDirection::Read</span> =&gt; <span class="prelude-val">Ok</span>(<span class="ident">half</span>),
+            <span class="ident">ChannelHalfDirection::Write</span> =&gt; <span class="prelude-val">Err</span>(<span class="ident">OakStatus::ErrBadHandle</span>),
         }
     }
     <span class="doccomment">/// Convert an ABI handle to an internal [`ChannelHalf`], but fail</span>
@@ -2088,11 +2087,11 @@
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">node_id</span>: <span class="ident">NodeId</span>,
         <span class="ident">handle</span>: <span class="ident">oak_abi::Handle</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">ChannelHalf</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span> {
+    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">ChannelHalf</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">half</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">abi_to_half</span>(<span class="ident">node_id</span>, <span class="ident">handle</span>)<span class="question-mark">?</span>;
         <span class="kw">match</span> <span class="ident">half</span>.<span class="ident">direction</span> {
-            <span class="ident">ChannelHalfDirection::Read</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Err</span>(<span class="ident">OakStatus::ErrBadHandle</span>),
-            <span class="ident">ChannelHalfDirection::Write</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">half</span>),
+            <span class="ident">ChannelHalfDirection::Read</span> =&gt; <span class="prelude-val">Err</span>(<span class="ident">OakStatus::ErrBadHandle</span>),
+            <span class="ident">ChannelHalfDirection::Write</span> =&gt; <span class="prelude-val">Ok</span>(<span class="ident">half</span>),
         }
     }
 
@@ -2101,13 +2100,13 @@
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">node_id</span>: <span class="ident">NodeId</span>,
         <span class="ident">handle</span>: <span class="ident">oak_abi::Handle</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">ChannelHalfDirection</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span> {
+    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">ChannelHalfDirection</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">half</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">abi_to_half</span>(<span class="ident">node_id</span>, <span class="ident">handle</span>)<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(<span class="ident">half</span>.<span class="ident">direction</span>)
     }
 
     <span class="doccomment">/// Return the accumulated metrics for the `Runtime`.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">gather_metrics</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">MetricFamily</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">gather_metrics</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">MetricFamily</span><span class="op">&gt;</span> {
         <span class="self">self</span>.<span class="ident">metrics_data</span>.<span class="ident">gather</span>()
     }
 }
@@ -2115,7 +2114,7 @@
 <span class="comment">// Methods which handle exposed Runtime functionality.</span>
 <span class="kw">impl</span> <span class="ident">Runtime</span> {
     <span class="doccomment">/// Return whether the [`Runtime`] is terminating.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">is_terminating</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">bool</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">is_terminating</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">bool</span> {
         <span class="self">self</span>.<span class="ident">terminating</span>.<span class="ident">load</span>(<span class="ident">SeqCst</span>)
     }
 
@@ -2152,7 +2151,7 @@
     }
 
     <span class="doccomment">/// Move all of the [`NodeStopper`] objects out of the `node_infos` tracker and return them.</span>
-    <span class="kw">fn</span> <span class="ident">take_node_stoppers</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Vec</span><span class="op">&lt;</span>(<span class="ident">NodeId</span>, <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">NodeStopper</span><span class="op">&gt;</span>)<span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">take_node_stoppers</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">Vec</span><span class="op">&lt;</span>(<span class="ident">NodeId</span>, <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">NodeStopper</span><span class="op">&gt;</span>)<span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">node_infos</span> <span class="op">=</span> <span class="self">self</span>
             .<span class="ident">node_infos</span>
             .<span class="ident">write</span>()
@@ -2186,7 +2185,7 @@
     <span class="doccomment">/// the scope of holding the lock on [`Runtime::node_infos`].</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// Panics if `node_id` is invalid.</span>
-    <span class="kw">fn</span> <span class="ident">get_node_label</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">node_id</span>: <span class="ident">NodeId</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Label</span> {
+    <span class="kw">fn</span> <span class="ident">get_node_label</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">node_id</span>: <span class="ident">NodeId</span>) -&gt; <span class="ident">Label</span> {
         <span class="kw">let</span> <span class="ident">node_infos</span> <span class="op">=</span> <span class="self">self</span>
             .<span class="ident">node_infos</span>
             .<span class="ident">read</span>()
@@ -2198,7 +2197,7 @@
     <span class="doccomment">/// Returns the least restrictive (i.e. least confidential, most trusted) label that this Node</span>
     <span class="doccomment">/// may downgrade `initial_label` to. This takes into account all the [downgrade</span>
     <span class="doccomment">/// privilege](NodeInfo::privilege) that the node possesses.</span>
-    <span class="kw">fn</span> <span class="ident">get_node_downgraded_label</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">node_id</span>: <span class="ident">NodeId</span>, <span class="ident">initial_label</span>: <span class="kw-2">&amp;</span><span class="ident">Label</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Label</span> {
+    <span class="kw">fn</span> <span class="ident">get_node_downgraded_label</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">node_id</span>: <span class="ident">NodeId</span>, <span class="ident">initial_label</span>: <span class="kw-2">&amp;</span><span class="ident">Label</span>) -&gt; <span class="ident">Label</span> {
         <span class="comment">// Retrieve the set of tags that the node may downgrade.</span>
         <span class="kw">let</span> <span class="ident">node_privilege</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">get_node_privilege</span>(<span class="ident">node_id</span>);
         <span class="ident">node_privilege</span>.<span class="ident">downgrade_label</span>(<span class="ident">initial_label</span>)
@@ -2211,15 +2210,15 @@
         <span class="ident">node_id</span>: <span class="ident">NodeId</span>,
         <span class="ident">initial_label</span>: <span class="kw-2">&amp;</span><span class="ident">Label</span>,
         <span class="ident">downgrade</span>: <span class="ident">Downgrading</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Label</span> {
+    ) -&gt; <span class="ident">Label</span> {
         <span class="kw">match</span> <span class="ident">downgrade</span> {
-            <span class="ident">Downgrading::Yes</span> <span class="op">=</span><span class="op">&gt;</span> <span class="self">self</span>.<span class="ident">get_node_downgraded_label</span>(<span class="ident">node_id</span>, <span class="ident">initial_label</span>),
-            <span class="ident">Downgrading::No</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">initial_label</span>.<span class="ident">to_owned</span>(),
+            <span class="ident">Downgrading::Yes</span> =&gt; <span class="self">self</span>.<span class="ident">get_node_downgraded_label</span>(<span class="ident">node_id</span>, <span class="ident">initial_label</span>),
+            <span class="ident">Downgrading::No</span> =&gt; <span class="ident">initial_label</span>.<span class="ident">to_owned</span>(),
         }
     }
 
     <span class="doccomment">/// Returns a clone of the [`NodePrivilege`] of the provided Node.</span>
-    <span class="kw">fn</span> <span class="ident">get_node_privilege</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">node_id</span>: <span class="ident">NodeId</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">NodePrivilege</span> {
+    <span class="kw">fn</span> <span class="ident">get_node_privilege</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">node_id</span>: <span class="ident">NodeId</span>) -&gt; <span class="ident">NodePrivilege</span> {
         <span class="kw">let</span> <span class="ident">node_infos</span> <span class="op">=</span> <span class="self">self</span>
             .<span class="ident">node_infos</span>
             .<span class="ident">read</span>()
@@ -2230,7 +2229,7 @@
 
     <span class="doccomment">/// Returns a unique debug_id used to identify the Node in the debug output,</span>
     <span class="doccomment">/// consisting out of the provided [`NodeId`], and the Node name.</span>
-    <span class="kw">fn</span> <span class="ident">get_node_debug_id</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">node_id</span>: <span class="ident">NodeId</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">String</span> {
+    <span class="kw">fn</span> <span class="ident">get_node_debug_id</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">node_id</span>: <span class="ident">NodeId</span>) -&gt; <span class="ident">String</span> {
         <span class="kw">let</span> <span class="ident">node_infos</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">node_infos</span>.<span class="ident">read</span>().<span class="ident">unwrap</span>();
         <span class="ident">node_infos</span>
             .<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">node_id</span>)
@@ -2241,14 +2240,14 @@
     <span class="doccomment">/// Returns a clone of the [`Label`] associated with the provided reader `channel_half`.</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// Returns an error if `channel_half` is not a valid read half.</span>
-    <span class="kw">fn</span> <span class="ident">get_reader_channel_label</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">channel_half</span>: <span class="kw-2">&amp;</span><span class="ident">ChannelHalf</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Label</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">get_reader_channel_label</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">channel_half</span>: <span class="kw-2">&amp;</span><span class="ident">ChannelHalf</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Label</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span> {
         <span class="ident">with_reader_channel</span>(<span class="ident">channel_half</span>, <span class="op">|</span><span class="ident">channel</span><span class="op">|</span> <span class="prelude-val">Ok</span>(<span class="ident">channel</span>.<span class="ident">label</span>.<span class="ident">clone</span>()))
     }
 
     <span class="doccomment">/// Returns a clone of the [`Label`] associated with the provided writer `channel_half`.</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// Returns an error if `channel_half` is not a valid write half.</span>
-    <span class="kw">fn</span> <span class="ident">get_writer_channel_label</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">channel_half</span>: <span class="kw-2">&amp;</span><span class="ident">ChannelHalf</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Label</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">get_writer_channel_label</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">channel_half</span>: <span class="kw-2">&amp;</span><span class="ident">ChannelHalf</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Label</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span> {
         <span class="ident">with_writer_channel</span>(<span class="ident">channel_half</span>, <span class="op">|</span><span class="ident">channel</span><span class="op">|</span> <span class="prelude-val">Ok</span>(<span class="ident">channel</span>.<span class="ident">label</span>.<span class="ident">clone</span>()))
     }
 
@@ -2261,7 +2260,7 @@
         <span class="ident">node_id</span>: <span class="ident">NodeId</span>,
         <span class="ident">handle</span>: <span class="ident">oak_abi::Handle</span>,
         <span class="ident">capacity</span>: <span class="ident">usize</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">LabelReadStatus</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span> {
+    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">LabelReadStatus</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">label</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">get_channel_label</span>(<span class="ident">node_id</span>, <span class="ident">handle</span>)<span class="question-mark">?</span>;
         <span class="ident">serialize_label</span>(<span class="ident">label</span>, <span class="ident">capacity</span>)
     }
@@ -2274,7 +2273,7 @@
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">node_id</span>: <span class="ident">NodeId</span>,
         <span class="ident">capacity</span>: <span class="ident">usize</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">LabelReadStatus</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span> {
+    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">LabelReadStatus</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span> {
         <span class="ident">serialize_label</span>(<span class="self">self</span>.<span class="ident">get_node_label</span>(<span class="ident">node_id</span>), <span class="ident">capacity</span>)
     }
 
@@ -2287,7 +2286,7 @@
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">node_id</span>: <span class="ident">NodeId</span>,
         <span class="ident">capacity</span>: <span class="ident">usize</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">LabelReadStatus</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span> {
+    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">LabelReadStatus</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span> {
         <span class="ident">serialize_label</span>(<span class="self">self</span>.<span class="ident">get_node_privilege</span>(<span class="ident">node_id</span>).<span class="ident">into</span>(), <span class="ident">capacity</span>)
     }
 
@@ -2296,11 +2295,11 @@
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">node_id</span>: <span class="ident">NodeId</span>,
         <span class="ident">handle</span>: <span class="ident">oak_abi::Handle</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Label</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span> {
+    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Label</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">half</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">abi_to_half</span>(<span class="ident">node_id</span>, <span class="ident">handle</span>)<span class="question-mark">?</span>;
         <span class="kw">match</span> <span class="ident">half</span>.<span class="ident">direction</span> {
-            <span class="ident">ChannelHalfDirection::Read</span> <span class="op">=</span><span class="op">&gt;</span> <span class="self">self</span>.<span class="ident">get_reader_channel_label</span>(<span class="kw-2">&amp;</span><span class="ident">half</span>),
-            <span class="ident">ChannelHalfDirection::Write</span> <span class="op">=</span><span class="op">&gt;</span> <span class="self">self</span>.<span class="ident">get_writer_channel_label</span>(<span class="kw-2">&amp;</span><span class="ident">half</span>),
+            <span class="ident">ChannelHalfDirection::Read</span> =&gt; <span class="self">self</span>.<span class="ident">get_reader_channel_label</span>(<span class="kw-2">&amp;</span><span class="ident">half</span>),
+            <span class="ident">ChannelHalfDirection::Write</span> =&gt; <span class="self">self</span>.<span class="ident">get_writer_channel_label</span>(<span class="kw-2">&amp;</span><span class="ident">half</span>),
         }
     }
 
@@ -2311,7 +2310,7 @@
         <span class="ident">node_id</span>: <span class="ident">NodeId</span>,
         <span class="ident">channel_half</span>: <span class="kw-2">&amp;</span><span class="ident">ChannelHalf</span>,
         <span class="ident">downgrade</span>: <span class="ident">Downgrading</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakStatus</span><span class="op">&gt;</span> {
+    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakStatus</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">channel_label</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">get_reader_channel_label</span>(<span class="ident">channel_half</span>)<span class="question-mark">?</span>;
         <span class="self">self</span>.<span class="ident">validate_can_read_from_label</span>(<span class="ident">node_id</span>, <span class="kw-2">&amp;</span><span class="ident">channel_label</span>, <span class="ident">downgrade</span>)
     }
@@ -2324,7 +2323,7 @@
         <span class="ident">node_id</span>: <span class="ident">NodeId</span>,
         <span class="ident">source_label</span>: <span class="kw-2">&amp;</span><span class="ident">Label</span>,
         <span class="ident">downgrade</span>: <span class="ident">Downgrading</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakStatus</span><span class="op">&gt;</span> {
+    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakStatus</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">target_label</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">get_node_label</span>(<span class="ident">node_id</span>);
         <span class="kw">let</span> <span class="ident">node_debug_id</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">get_node_debug_id</span>(<span class="ident">node_id</span>);
         <span class="macro">trace!</span>(
@@ -2356,7 +2355,7 @@
         <span class="ident">node_id</span>: <span class="ident">NodeId</span>,
         <span class="ident">channel_half</span>: <span class="kw-2">&amp;</span><span class="ident">ChannelHalf</span>,
         <span class="ident">downgrade</span>: <span class="ident">Downgrading</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakStatus</span><span class="op">&gt;</span> {
+    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakStatus</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">channel_label</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">get_writer_channel_label</span>(<span class="ident">channel_half</span>)<span class="question-mark">?</span>;
         <span class="self">self</span>.<span class="ident">validate_can_write_to_label</span>(<span class="ident">node_id</span>, <span class="kw-2">&amp;</span><span class="ident">channel_label</span>, <span class="ident">downgrade</span>)
     }
@@ -2368,7 +2367,7 @@
         <span class="ident">node_id</span>: <span class="ident">NodeId</span>,
         <span class="ident">target_label</span>: <span class="kw-2">&amp;</span><span class="ident">Label</span>,
         <span class="ident">downgrade</span>: <span class="ident">Downgrading</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakStatus</span><span class="op">&gt;</span> {
+    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakStatus</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">original_label</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">get_node_label</span>(<span class="ident">node_id</span>);
         <span class="kw">let</span> <span class="ident">node_debug_id</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">get_node_debug_id</span>(<span class="ident">node_id</span>);
         <span class="macro">trace!</span>(
@@ -2399,7 +2398,7 @@
         <span class="ident">name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
         <span class="ident">label</span>: <span class="kw-2">&amp;</span><span class="ident">Label</span>,
         <span class="ident">downgrade</span>: <span class="ident">Downgrading</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident">oak_abi::Handle</span>, <span class="ident">oak_abi::Handle</span>), <span class="ident">OakStatus</span><span class="op">&gt;</span> {
+    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident">oak_abi::Handle</span>, <span class="ident">oak_abi::Handle</span>), <span class="ident">OakStatus</span><span class="op">&gt;</span> {
         <span class="kw">if</span> <span class="self">self</span>.<span class="ident">is_terminating</span>() {
             <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">OakStatus::ErrTerminated</span>);
         }
@@ -2452,7 +2451,7 @@
         <span class="self">self</span>: <span class="kw-2">&amp;</span><span class="ident">Arc</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span>,
         <span class="ident">node_id</span>: <span class="ident">NodeId</span>,
         <span class="ident">handle</span>: <span class="ident">oak_abi::Handle</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">oak_abi::Handle</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span> {
+    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">oak_abi::Handle</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span> {
         <span class="kw">if</span> <span class="self">self</span>.<span class="ident">is_terminating</span>() {
             <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">OakStatus::ErrTerminated</span>);
         }
@@ -2467,7 +2466,7 @@
         <span class="ident">node_id</span>: <span class="ident">NodeId</span>,
         <span class="ident">readers</span>: <span class="kw-2">&amp;</span>[<span class="ident">ChannelHalf</span>],
         <span class="ident">downgrade</span>: <span class="ident">Downgrading</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">ChannelReadStatus</span><span class="op">&gt;</span> {
+    ) -&gt; <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">ChannelReadStatus</span><span class="op">&gt;</span> {
         <span class="ident">readers</span>
             .<span class="ident">iter</span>()
             .<span class="ident">map</span>(<span class="op">|</span><span class="ident">half</span><span class="op">|</span> {
@@ -2499,7 +2498,7 @@
         <span class="ident">node_id</span>: <span class="ident">NodeId</span>,
         <span class="ident">read_handles</span>: <span class="kw-2">&amp;</span>[<span class="ident">oak_abi::Handle</span>],
         <span class="ident">downgrade</span>: <span class="ident">Downgrading</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">ChannelReadStatus</span><span class="op">&gt;</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span> {
+    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">ChannelReadStatus</span><span class="op">&gt;</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span> {
         <span class="comment">// Accumulate both the valid channels and their original position.</span>
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">all_statuses</span> <span class="op">=</span> <span class="macro">vec!</span>[<span class="ident">ChannelReadStatus::InvalidChannel</span>; <span class="ident">read_handles</span>.<span class="ident">len</span>()];
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">reader_pos</span> <span class="op">=</span> <span class="ident">Vec::new</span>();
@@ -2541,7 +2540,7 @@
                 <span class="ident">all_statuses</span>[<span class="ident">reader_pos</span>[<span class="ident">i</span>]] <span class="op">=</span> <span class="ident">statuses</span>[<span class="ident">i</span>];
             }
 
-            <span class="kw">let</span> <span class="ident">all_not_ready</span> <span class="op">=</span> <span class="ident">statuses</span>.<span class="ident">iter</span>().<span class="ident">all</span>(<span class="op">|</span><span class="kw-2">&amp;</span><span class="ident">s</span><span class="op">|</span> <span class="ident">s</span> <span class="op">=</span><span class="op">=</span> <span class="ident">ChannelReadStatus::NotReady</span>);
+            <span class="kw">let</span> <span class="ident">all_not_ready</span> <span class="op">=</span> <span class="ident">statuses</span>.<span class="ident">iter</span>().<span class="ident">all</span>(<span class="op">|</span><span class="kw-2">&amp;</span><span class="ident">s</span><span class="op">|</span> <span class="ident">s</span> <span class="op">==</span> <span class="ident">ChannelReadStatus::NotReady</span>);
 
             <span class="kw">if</span> <span class="op">!</span><span class="ident">all_not_ready</span> <span class="op">|</span><span class="op">|</span> <span class="ident">read_handles</span>.<span class="ident">is_empty</span>() <span class="op">|</span><span class="op">|</span> <span class="ident">readers</span>.<span class="ident">len</span>() <span class="op">!</span><span class="op">=</span> <span class="ident">read_handles</span>.<span class="ident">len</span>() {
                 <span class="kw">return</span> <span class="prelude-val">Ok</span>(<span class="ident">all_statuses</span>);
@@ -2572,7 +2571,7 @@
         <span class="ident">write_handle</span>: <span class="ident">oak_abi::Handle</span>,
         <span class="ident">node_msg</span>: <span class="ident">NodeMessage</span>,
         <span class="ident">downgrade</span>: <span class="ident">Downgrading</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakStatus</span><span class="op">&gt;</span> {
+    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakStatus</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">half</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">abi_to_write_half</span>(<span class="ident">node_id</span>, <span class="ident">write_handle</span>)<span class="question-mark">?</span>;
         <span class="self">self</span>.<span class="ident">validate_can_write_to_channel</span>(<span class="ident">node_id</span>, <span class="kw-2">&amp;</span><span class="ident">half</span>, <span class="ident">downgrade</span>)<span class="question-mark">?</span>;
 
@@ -2600,7 +2599,7 @@
     }
 
     <span class="doccomment">/// Translate the Node-relative handles in the `NodeMessage` to channel halves.</span>
-    <span class="kw">fn</span> <span class="ident">message_from</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">node_msg</span>: <span class="ident">NodeMessage</span>, <span class="ident">node_id</span>: <span class="ident">NodeId</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Message</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">message_from</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">node_msg</span>: <span class="ident">NodeMessage</span>, <span class="ident">node_id</span>: <span class="ident">NodeId</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Message</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span> {
         <span class="prelude-val">Ok</span>(<span class="ident">Message</span> {
             <span class="ident">data</span>: <span class="ident">node_msg</span>.<span class="ident">bytes</span>,
             <span class="ident">channels</span>: <span class="ident">node_msg</span>
@@ -2618,13 +2617,13 @@
         <span class="ident">node_id</span>: <span class="ident">NodeId</span>,
         <span class="ident">read_handle</span>: <span class="ident">oak_abi::Handle</span>,
         <span class="ident">downgrade</span>: <span class="ident">Downgrading</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">NodeMessage</span><span class="op">&gt;</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span> {
+    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">NodeMessage</span><span class="op">&gt;</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">half</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">abi_to_read_half</span>(<span class="ident">node_id</span>, <span class="ident">read_handle</span>)<span class="question-mark">?</span>;
         <span class="self">self</span>.<span class="ident">validate_can_read_from_channel</span>(<span class="ident">node_id</span>, <span class="kw-2">&amp;</span><span class="ident">half</span>, <span class="ident">downgrade</span>)<span class="question-mark">?</span>;
         <span class="kw">match</span> <span class="ident">with_reader_channel</span>(<span class="kw-2">&amp;</span><span class="ident">half</span>, <span class="op">|</span><span class="ident">channel</span><span class="op">|</span> {
             <span class="kw">match</span> <span class="ident">channel</span>.<span class="ident">messages</span>.<span class="ident">write</span>().<span class="ident">unwrap</span>().<span class="ident">pop_front</span>() {
-                <span class="prelude-val">Some</span>(<span class="ident">m</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(<span class="ident">m</span>)),
-                <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="prelude-val">Some</span>(<span class="ident">m</span>) =&gt; <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(<span class="ident">m</span>)),
+                <span class="prelude-val">None</span> =&gt; {
                     <span class="kw">if</span> <span class="op">!</span><span class="ident">channel</span>.<span class="ident">has_writers</span>() {
                         <span class="prelude-val">Err</span>(<span class="ident">OakStatus::ErrChannelClosed</span>)
                     } <span class="kw">else</span> {
@@ -2633,9 +2632,9 @@
                 }
             }
         }) {
-            <span class="prelude-val">Err</span>(<span class="ident">status</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Err</span>(<span class="ident">status</span>),
-            <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>),
-            <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(<span class="ident">runtime_msg</span>)) <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="prelude-val">Err</span>(<span class="ident">status</span>) =&gt; <span class="prelude-val">Err</span>(<span class="ident">status</span>),
+            <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>) =&gt; <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>),
+            <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(<span class="ident">runtime_msg</span>)) =&gt; {
                 <span class="kw">let</span> <span class="ident">node_msg</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">node_message_from</span>(<span class="ident">runtime_msg</span>, <span class="ident">node_id</span>);
 
                 <span class="self">self</span>.<span class="ident">introspection_event</span>(<span class="ident">EventDetails::MessageDequeued</span>(<span class="ident">MessageDequeued</span> {
@@ -2662,7 +2661,7 @@
         <span class="ident">node_id</span>: <span class="ident">NodeId</span>,
         <span class="ident">half</span>: <span class="kw-2">&amp;</span><span class="ident">ChannelHalf</span>,
         <span class="ident">downgrade</span>: <span class="ident">Downgrading</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">ChannelReadStatus</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span> {
+    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">ChannelReadStatus</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span> {
         <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">OakStatus::ErrPermissionDenied</span>) <span class="op">=</span>
             <span class="self">self</span>.<span class="ident">validate_can_read_from_channel</span>(<span class="ident">node_id</span>, <span class="ident">half</span>, <span class="ident">downgrade</span>)
         {
@@ -2693,13 +2692,13 @@
         <span class="ident">bytes_capacity</span>: <span class="ident">usize</span>,
         <span class="ident">handles_capacity</span>: <span class="ident">usize</span>,
         <span class="ident">downgrade</span>: <span class="ident">Downgrading</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">NodeReadStatus</span><span class="op">&gt;</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span> {
+    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">NodeReadStatus</span><span class="op">&gt;</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">half</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">abi_to_read_half</span>(<span class="ident">node_id</span>, <span class="ident">handle</span>)<span class="question-mark">?</span>;
         <span class="self">self</span>.<span class="ident">validate_can_read_from_channel</span>(<span class="ident">node_id</span>, <span class="kw-2">&amp;</span><span class="ident">half</span>, <span class="ident">downgrade</span>)<span class="question-mark">?</span>;
         <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="ident">with_reader_channel</span>(<span class="kw-2">&amp;</span><span class="ident">half</span>, <span class="op">|</span><span class="ident">channel</span><span class="op">|</span> {
             <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">messages</span> <span class="op">=</span> <span class="ident">channel</span>.<span class="ident">messages</span>.<span class="ident">write</span>().<span class="ident">unwrap</span>();
             <span class="kw">match</span> <span class="ident">messages</span>.<span class="ident">front</span>() {
-                <span class="prelude-val">Some</span>(<span class="ident">front</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="prelude-val">Some</span>(<span class="ident">front</span>) =&gt; {
                     <span class="kw">let</span> <span class="ident">req_bytes_capacity</span> <span class="op">=</span> <span class="ident">front</span>.<span class="ident">data</span>.<span class="ident">len</span>();
                     <span class="kw">let</span> <span class="ident">req_handles_capacity</span> <span class="op">=</span> <span class="ident">front</span>.<span class="ident">channels</span>.<span class="ident">len</span>();
 
@@ -2716,7 +2715,7 @@
                         ))))
                     }
                 }
-                <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="prelude-val">None</span> =&gt; {
                     <span class="kw">if</span> <span class="op">!</span><span class="ident">channel</span>.<span class="ident">has_writers</span>() {
                         <span class="prelude-val">Err</span>(<span class="ident">OakStatus::ErrChannelClosed</span>)
                     } <span class="kw">else</span> {
@@ -2727,9 +2726,9 @@
         })<span class="question-mark">?</span>;
         <span class="comment">// Translate the result into the handle numbering space of this Node.</span>
         <span class="prelude-val">Ok</span>(<span class="kw">match</span> <span class="ident">result</span> {
-            <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">None</span>,
-            <span class="prelude-val">Some</span>(<span class="ident">ReadStatus::NeedsCapacity</span>(<span class="ident">z</span>, <span class="ident">c</span>)) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Some</span>(<span class="ident">NodeReadStatus::NeedsCapacity</span>(<span class="ident">z</span>, <span class="ident">c</span>)),
-            <span class="prelude-val">Some</span>(<span class="ident">ReadStatus::Success</span>(<span class="ident">msg</span>)) <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="prelude-val">None</span> =&gt; <span class="prelude-val">None</span>,
+            <span class="prelude-val">Some</span>(<span class="ident">ReadStatus::NeedsCapacity</span>(<span class="ident">z</span>, <span class="ident">c</span>)) =&gt; <span class="prelude-val">Some</span>(<span class="ident">NodeReadStatus::NeedsCapacity</span>(<span class="ident">z</span>, <span class="ident">c</span>)),
+            <span class="prelude-val">Some</span>(<span class="ident">ReadStatus::Success</span>(<span class="ident">msg</span>)) =&gt; {
                 <span class="kw">let</span> <span class="ident">message</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">node_message_from</span>(<span class="ident">msg</span>, <span class="ident">node_id</span>);
 
                 <span class="self">self</span>.<span class="ident">introspection_event</span>(<span class="ident">EventDetails::MessageDequeued</span>(<span class="ident">MessageDequeued</span> {
@@ -2745,7 +2744,7 @@
 
     <span class="doccomment">/// Translate a Message to include ABI handles (which are relative to this Node) rather than</span>
     <span class="doccomment">/// internal channel references.</span>
-    <span class="kw">fn</span> <span class="ident">node_message_from</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">msg</span>: <span class="ident">Message</span>, <span class="ident">node_id</span>: <span class="ident">NodeId</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">NodeMessage</span> {
+    <span class="kw">fn</span> <span class="ident">node_message_from</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">msg</span>: <span class="ident">Message</span>, <span class="ident">node_id</span>: <span class="ident">NodeId</span>) -&gt; <span class="ident">NodeMessage</span> {
         <span class="ident">NodeMessage</span> {
             <span class="ident">bytes</span>: <span class="ident">msg</span>.<span class="ident">data</span>,
             <span class="ident">handles</span>: <span class="ident">msg</span>
@@ -2757,14 +2756,14 @@
     }
 
     <span class="doccomment">/// Close an [`oak_abi::Handle`], potentially orphaning the underlying [`channel::Channel`].</span>
-    <span class="kw">fn</span> <span class="ident">channel_close</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">node_id</span>: <span class="ident">NodeId</span>, <span class="ident">handle</span>: <span class="ident">oak_abi::Handle</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakStatus</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">channel_close</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">node_id</span>: <span class="ident">NodeId</span>, <span class="ident">handle</span>: <span class="ident">oak_abi::Handle</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakStatus</span><span class="op">&gt;</span> {
         <span class="comment">// Remove the ABI handle -&gt; half mapping; half will be dropped at end of scope.</span>
         <span class="self">self</span>.<span class="ident">drop_abi_handle</span>(<span class="ident">node_id</span>, <span class="ident">handle</span>)<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(())
     }
 
     <span class="doccomment">/// Create a fresh [`NodeId`].</span>
-    <span class="kw">fn</span> <span class="ident">new_node_id</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">NodeId</span> {
+    <span class="kw">fn</span> <span class="ident">new_node_id</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">NodeId</span> {
         <span class="ident">NodeId</span>(<span class="self">self</span>.<span class="ident">next_node_id</span>.<span class="ident">fetch_add</span>(<span class="number">1</span>, <span class="ident">SeqCst</span>))
     }
 
@@ -2824,11 +2823,11 @@
             .<span class="ident">write</span>()
             .<span class="ident">expect</span>(<span class="string">&quot;could not acquire lock on node_infos&quot;</span>);
         <span class="kw">match</span> <span class="ident">node_infos</span>.<span class="ident">get_mut</span>(<span class="kw-2">&amp;</span><span class="ident">node_id</span>) {
-            <span class="prelude-val">Some</span>(<span class="ident">node_info</span>) <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="prelude-val">Some</span>(<span class="ident">node_info</span>) =&gt; {
                 <span class="macro">assert!</span>(<span class="ident">node_info</span>.<span class="ident">node_stopper</span>.<span class="ident">is_none</span>());
                 <span class="ident">node_info</span>.<span class="ident">node_stopper</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">node_stopper</span>);
             }
-            <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="prelude-val">None</span> =&gt; {
                 <span class="comment">// If the node thread terminated before this method is invoked, its NodeInfo entry</span>
                 <span class="comment">// may have already been deleted, in which case we just log a warning and continue.</span>
                 <span class="comment">// See https://github.com/project-oak/oak/issues/1762.</span>
@@ -2856,7 +2855,7 @@
         <span class="ident">label</span>: <span class="kw-2">&amp;</span><span class="ident">Label</span>,
         <span class="ident">initial_handle</span>: <span class="ident">oak_abi::Handle</span>,
         <span class="ident">downgrade</span>: <span class="ident">Downgrading</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakStatus</span><span class="op">&gt;</span> {
+    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakStatus</span><span class="op">&gt;</span> {
         <span class="comment">// This only creates a Node instance, but does not start it.</span>
         <span class="kw">let</span> <span class="ident">instance</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">node_factory</span>.<span class="ident">create_node</span>(<span class="ident">name</span>, <span class="ident">config</span>).<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> {
             <span class="macro">warn!</span>(<span class="string">&quot;could not create node: {:?}&quot;</span>, <span class="ident">err</span>);
@@ -2880,7 +2879,7 @@
         <span class="ident">label</span>: <span class="kw-2">&amp;</span><span class="ident">Label</span>,
         <span class="ident">initial_handle</span>: <span class="ident">oak_abi::Handle</span>,
         <span class="ident">downgrade</span>: <span class="ident">Downgrading</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakStatus</span><span class="op">&gt;</span> {
+    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakStatus</span><span class="op">&gt;</span> {
         <span class="kw">if</span> <span class="self">self</span>.<span class="ident">is_terminating</span>() {
             <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">OakStatus::ErrTerminated</span>);
         }
@@ -2902,7 +2901,7 @@
         <span class="comment">// should make sure that it has the privilege to downgrade its label to &quot;public untrusted&quot;</span>
         <span class="comment">// before registering and starting it.</span>
         <span class="kw">match</span> <span class="ident">instance</span>.<span class="ident">isolation</span>() {
-            <span class="ident">NodeIsolation::Uncontrolled</span> <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="ident">NodeIsolation::Uncontrolled</span> =&gt; {
                 <span class="kw">let</span> <span class="ident">downgraded_label</span> <span class="op">=</span> <span class="ident">node_privilege</span>.<span class="ident">downgrade_label</span>(<span class="ident">label</span>);
                 <span class="macro">debug!</span>(
                     <span class="string">&quot;Maximum downgraded label for node {}: {:?}&quot;</span>,
@@ -2916,7 +2915,7 @@
                     <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">OakStatus::ErrPermissionDenied</span>);
                 };
             }
-            <span class="ident">NodeIsolation::Sandboxed</span> <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="ident">NodeIsolation::Sandboxed</span> =&gt; {
                 <span class="macro">trace!</span>(
                     <span class="string">&quot;Node {} of type {} is sandboxed, so not checking privilege.&quot;</span>,
                     <span class="ident">node_name</span>,
@@ -2964,7 +2963,7 @@
         <span class="ident">node_instance</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident"><span class="kw">crate</span>::node::Node</span><span class="op">&gt;</span>,
         <span class="ident">node_proxy</span>: <span class="ident">RuntimeProxy</span>,
         <span class="ident">initial_handle</span>: <span class="ident">oak_abi::Handle</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">NodeStopper</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span> {
+    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">NodeStopper</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span> {
         <span class="comment">// Try to start the Node instance.</span>
         <span class="comment">//</span>
         <span class="comment">// In order for this to work correctly, the `NodeInfo` entry must already exist in</span>
@@ -3029,7 +3028,7 @@
 
     <span class="doccomment">/// Create a [`RuntimeProxy`] instance for a new Node, creating the new [`NodeId`]</span>
     <span class="doccomment">/// value along the way.</span>
-    <span class="kw">fn</span> <span class="ident">proxy_for_new_node</span>(<span class="self">self</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span>, <span class="ident">node_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">RuntimeProxy</span> {
+    <span class="kw">fn</span> <span class="ident">proxy_for_new_node</span>(<span class="self">self</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span>, <span class="ident">node_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) -&gt; <span class="ident">RuntimeProxy</span> {
         <span class="kw">let</span> <span class="ident">node_id</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">new_node_id</span>();
         <span class="ident">RuntimeProxy</span> {
             <span class="ident">runtime</span>: <span class="self">self</span>,
@@ -3052,22 +3051,22 @@
 <span class="doccomment">///</span>
 <span class="doccomment">/// If the serialized size is larger than the specified capacity, it will return a status</span>
 <span class="doccomment">/// indicating the required capacity.</span>
-<span class="kw">fn</span> <span class="ident">serialize_label</span>(<span class="ident">label</span>: <span class="ident">Label</span>, <span class="ident">capacity</span>: <span class="ident">usize</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">LabelReadStatus</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span> {
+<span class="kw">fn</span> <span class="ident">serialize_label</span>(<span class="ident">label</span>: <span class="ident">Label</span>, <span class="ident">capacity</span>: <span class="ident">usize</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">LabelReadStatus</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span> {
     <span class="kw">let</span> <span class="ident">size</span> <span class="op">=</span> <span class="ident">label</span>.<span class="ident">encoded_len</span>();
     <span class="kw">if</span> <span class="ident">size</span> <span class="op">&gt;</span> <span class="ident">capacity</span> {
         <span class="prelude-val">Ok</span>(<span class="ident">LabelReadStatus::NeedsCapacity</span>(<span class="ident">size</span>))
     } <span class="kw">else</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">encoded</span> <span class="op">=</span> <span class="ident">Vec::with_capacity</span>(<span class="ident">size</span>);
-        <span class="kw">match</span> <span class="ident">label</span>.<span class="ident">encode</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">encoded</span>) {
-            <span class="prelude-val">Err</span>(<span class="ident">error</span>) <span class="op">=</span><span class="op">&gt;</span> {
+        <span class="kw">match</span> <span class="ident">label</span>.<span class="ident">encode</span>(<span class="kw-2">&amp;mut</span> <span class="ident">encoded</span>) {
+            <span class="prelude-val">Err</span>(<span class="ident">error</span>) =&gt; {
                 <span class="macro">error!</span>(<span class="string">&quot;Could not encode label: {}&quot;</span>, <span class="ident">error</span>);
                 <span class="prelude-val">Err</span>(<span class="ident">OakStatus::ErrInternal</span>)
             }
-            <span class="prelude-val">Ok</span>(()) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">LabelReadStatus::Success</span>(<span class="ident">encoded</span>)),
+            <span class="prelude-val">Ok</span>(()) =&gt; <span class="prelude-val">Ok</span>(<span class="ident">LabelReadStatus::Success</span>(<span class="ident">encoded</span>)),
         }
     }
 }
-</pre></div>
+</code></pre></div>
 </section><section id="search" class="content hidden"></section><div id="rustdoc-vars" data-root-path="../../" data-current-crate="oak_runtime" data-search-index-js="../../search-index.js" data-search-js="../../search.js"></div>
     <script src="../../main.js"></script><script src="../../source-script.js"></script><script src="../../source-files.js"></script>
 </body></html>

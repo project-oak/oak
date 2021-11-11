@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src&#x2F;main.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>main.rs - source</title><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../light.css"  id="themeStyle"><link rel="stylesheet" type="text/css" href="../../dark.css" disabled ><link rel="stylesheet" type="text/css" href="../../ayu.css" disabled ><script id="default-settings" ></script><script src="../../storage.js"></script><script src="../../crates.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"><style type="text/css">#crate-search{background-image:url("../../down-arrow.svg");}</style></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu" role="button">&#9776;</div><a href='../../runner/index.html'><div class='logo-container rust-logo'><img src='../../rust-logo.png' alt='logo'></div></a></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!" aria-haspopup="menu" title="themes"><img width="18" height="18" alt="Pick another theme!" src="../../brush.svg"></button><div id="theme-choices" role="menu"></div></div><nav class="sub"><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" disabled autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><button type="button" id="help-button" title="help">?</button><a id="settings-menu" href="../../settings.html" title="settings"><img width="18" height="18" alt="Change settings" src="../../wheel.svg"></a></div></form></nav><section id="main" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">   1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src&#x2F;main.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>main.rs - source</title><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../light.css"  id="themeStyle"><link rel="stylesheet" type="text/css" href="../../dark.css" disabled ><link rel="stylesheet" type="text/css" href="../../ayu.css" disabled ><script id="default-settings" ></script><script src="../../storage.js"></script><script src="../../crates.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"><style type="text/css">#crate-search{background-image:url("../../down-arrow.svg");}</style></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu" role="button">&#9776;</div><a href='../../runner/index.html'><div class='logo-container rust-logo'><img src='../../rust-logo.png' alt='logo'></div></a></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!" aria-haspopup="menu" title="themes"><img width="18" height="18" alt="Pick another theme!" src="../../brush.svg"></button><div id="theme-choices" role="menu"></div></div><nav class="sub"><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><button type="button" id="help-button" title="help">?</button><a id="settings-menu" href="../../settings.html" title="settings"><img width="18" height="18" alt="Change settings" src="../../wheel.svg"></a></div></form></nav><section id="main" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">   1</span>
 <span id="2">   2</span>
 <span id="3">   3</span>
 <span id="4">   4</span>
@@ -1007,8 +1007,7 @@
 <span id="1007">1007</span>
 <span id="1008">1008</span>
 <span id="1009">1009</span>
-</pre><pre class="rust">
-<span class="comment">//</span>
+</pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
 <span class="comment">//</span>
 <span class="comment">// Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
@@ -1069,13 +1068,13 @@
 <span class="kw">static</span> <span class="ident">PROCESSES</span>: <span class="ident">Lazy</span><span class="op">&lt;</span><span class="ident">Mutex</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">i32</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Lazy::new</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">Mutex::new</span>(<span class="ident">Vec::new</span>()));
 
 <span class="attribute">#[<span class="ident">tokio::main</span>]</span>
-<span class="kw">async</span> <span class="kw">fn</span> <span class="ident">main</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">std::error::Error</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+<span class="kw">async</span> <span class="kw">fn</span> <span class="ident">main</span>() -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">std::error::Error</span><span class="op">&gt;</span><span class="op">&gt;</span> {
     <span class="ident">std::panic::set_hook</span>(<span class="ident">Box::new</span>(<span class="op">|</span><span class="ident">panic_info</span><span class="op">|</span> {
         <span class="kw">let</span> <span class="ident">msg</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">panic_info</span>.<span class="ident">payload</span>().<span class="ident">downcast_ref</span>::<span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span><span class="op">&gt;</span>() {
-            <span class="prelude-val">Some</span>(<span class="ident">s</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="kw-2">*</span><span class="ident">s</span>,
-            <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw">match</span> <span class="ident">panic_info</span>.<span class="ident">payload</span>().<span class="ident">downcast_ref</span>::<span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>() {
-                <span class="prelude-val">Some</span>(<span class="ident">s</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">s</span>[..],
-                <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;Box&lt;Any&gt;&quot;</span>,
+            <span class="prelude-val">Some</span>(<span class="ident">s</span>) =&gt; <span class="kw-2">*</span><span class="ident">s</span>,
+            <span class="prelude-val">None</span> =&gt; <span class="kw">match</span> <span class="ident">panic_info</span>.<span class="ident">payload</span>().<span class="ident">downcast_ref</span>::<span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>() {
+                <span class="prelude-val">Some</span>(<span class="ident">s</span>) =&gt; <span class="kw-2">&amp;</span><span class="ident">s</span>[..],
+                <span class="prelude-val">None</span> =&gt; <span class="string">&quot;Box&lt;Any&gt;&quot;</span>,
             },
         };
         <span class="macro">eprintln!</span>();
@@ -1087,29 +1086,29 @@
     <span class="kw">let</span> <span class="ident">opt</span> <span class="op">=</span> <span class="ident">Opt::from_args</span>();
 
     <span class="kw">if</span> <span class="kw">let</span> <span class="ident">Command::Completion</span> <span class="op">=</span> <span class="ident">opt</span>.<span class="ident">cmd</span> {
-        <span class="ident">Opt::clap</span>().<span class="ident">gen_completions_to</span>(<span class="string">&quot;runner&quot;</span>, <span class="ident">clap::Shell::Bash</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">std::io::stdout</span>());
+        <span class="ident">Opt::clap</span>().<span class="ident">gen_completions_to</span>(<span class="string">&quot;runner&quot;</span>, <span class="ident">clap::Shell::Bash</span>, <span class="kw-2">&amp;mut</span> <span class="ident">std::io::stdout</span>());
         <span class="ident">std::process::exit</span>(<span class="number">0</span>);
     };
 
     <span class="kw">let</span> <span class="ident">run</span> <span class="op">=</span> <span class="kw">async</span> <span class="kw">move</span> <span class="op">|</span><span class="op">|</span> {
         <span class="kw">let</span> <span class="ident">steps</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">opt</span>.<span class="ident">cmd</span> {
-            <span class="ident">Command::RunExamples</span>(<span class="kw-2">ref</span> <span class="ident">opt</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">run_examples</span>(<span class="ident">opt</span>),
-            <span class="ident">Command::RunFunctionsExamples</span>(<span class="kw-2">ref</span> <span class="ident">opt</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">run_functions_examples</span>(<span class="ident">opt</span>),
-            <span class="ident">Command::BuildFunctionsExample</span>(<span class="kw-2">ref</span> <span class="ident">opt</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">build_functions_example</span>(<span class="ident">opt</span>),
-            <span class="ident">Command::BuildServer</span>(<span class="kw-2">ref</span> <span class="ident">opt</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">build_server</span>(<span class="ident">opt</span>, <span class="macro">vec!</span>[]),
-            <span class="ident">Command::BuildFunctionsServer</span>(<span class="kw-2">ref</span> <span class="ident">opt</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">build_functions_server</span>(<span class="ident">opt</span>, <span class="macro">vec!</span>[]),
-            <span class="ident">Command::RunTests</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">run_tests</span>(),
-            <span class="ident">Command::RunCargoTests</span>(<span class="kw-2">ref</span> <span class="ident">opt</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">run_cargo_tests</span>(<span class="ident">opt</span>),
-            <span class="ident">Command::RunBazelTests</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">run_bazel_tests</span>(),
-            <span class="ident">Command::RunTestsTsan</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">run_tests_tsan</span>(),
-            <span class="ident">Command::RunCargoFuzz</span>(<span class="kw-2">ref</span> <span class="ident">opt</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">run_cargo_fuzz</span>(<span class="ident">opt</span>),
-            <span class="ident">Command::Format</span>(<span class="kw-2">ref</span> <span class="ident">commits</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">format</span>(<span class="ident">commits</span>),
-            <span class="ident">Command::CheckFormat</span>(<span class="kw-2">ref</span> <span class="ident">commits</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">check_format</span>(<span class="ident">commits</span>),
-            <span class="ident">Command::RunCi</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">run_ci</span>(),
-            <span class="ident">Command::Completion</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">panic!</span>(<span class="string">&quot;should have been handled above&quot;</span>),
-            <span class="ident">Command::RunCargoDeny</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">run_cargo_deny</span>(),
-            <span class="ident">Command::RunCargoUdeps</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">run_cargo_udeps</span>(),
-            <span class="ident">Command::RunCargoClean</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">run_cargo_clean</span>(),
+            <span class="ident">Command::RunExamples</span>(<span class="kw-2">ref</span> <span class="ident">opt</span>) =&gt; <span class="ident">run_examples</span>(<span class="ident">opt</span>),
+            <span class="ident">Command::RunFunctionsExamples</span>(<span class="kw-2">ref</span> <span class="ident">opt</span>) =&gt; <span class="ident">run_functions_examples</span>(<span class="ident">opt</span>),
+            <span class="ident">Command::BuildFunctionsExample</span>(<span class="kw-2">ref</span> <span class="ident">opt</span>) =&gt; <span class="ident">build_functions_example</span>(<span class="ident">opt</span>),
+            <span class="ident">Command::BuildServer</span>(<span class="kw-2">ref</span> <span class="ident">opt</span>) =&gt; <span class="ident">build_server</span>(<span class="ident">opt</span>, <span class="macro">vec!</span>[]),
+            <span class="ident">Command::BuildFunctionsServer</span>(<span class="kw-2">ref</span> <span class="ident">opt</span>) =&gt; <span class="ident">build_functions_server</span>(<span class="ident">opt</span>, <span class="macro">vec!</span>[]),
+            <span class="ident">Command::RunTests</span> =&gt; <span class="ident">run_tests</span>(),
+            <span class="ident">Command::RunCargoTests</span>(<span class="kw-2">ref</span> <span class="ident">opt</span>) =&gt; <span class="ident">run_cargo_tests</span>(<span class="ident">opt</span>),
+            <span class="ident">Command::RunBazelTests</span> =&gt; <span class="ident">run_bazel_tests</span>(),
+            <span class="ident">Command::RunTestsTsan</span> =&gt; <span class="ident">run_tests_tsan</span>(),
+            <span class="ident">Command::RunCargoFuzz</span>(<span class="kw-2">ref</span> <span class="ident">opt</span>) =&gt; <span class="ident">run_cargo_fuzz</span>(<span class="ident">opt</span>),
+            <span class="ident">Command::Format</span>(<span class="kw-2">ref</span> <span class="ident">commits</span>) =&gt; <span class="ident">format</span>(<span class="ident">commits</span>),
+            <span class="ident">Command::CheckFormat</span>(<span class="kw-2">ref</span> <span class="ident">commits</span>) =&gt; <span class="ident">check_format</span>(<span class="ident">commits</span>),
+            <span class="ident">Command::RunCi</span> =&gt; <span class="ident">run_ci</span>(),
+            <span class="ident">Command::Completion</span> =&gt; <span class="macro">panic!</span>(<span class="string">&quot;should have been handled above&quot;</span>),
+            <span class="ident">Command::RunCargoDeny</span> =&gt; <span class="ident">run_cargo_deny</span>(),
+            <span class="ident">Command::RunCargoUdeps</span> =&gt; <span class="ident">run_cargo_udeps</span>(),
+            <span class="ident">Command::RunCargoClean</span> =&gt; <span class="ident">run_cargo_clean</span>(),
         };
         <span class="comment">// TODO(#396): Add support for running individual commands via command line flags.</span>
         <span class="kw">let</span> <span class="ident">remaining_steps</span> <span class="op">=</span> <span class="ident">steps</span>.<span class="ident">len</span>();
@@ -1163,7 +1162,7 @@
     }
 }
 
-<span class="kw">fn</span> <span class="ident">run_tests</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Step</span> {
+<span class="kw">fn</span> <span class="ident">run_tests</span>() -&gt; <span class="ident">Step</span> {
     <span class="ident">Step::Multiple</span> {
         <span class="ident">name</span>: <span class="string">&quot;tests&quot;</span>.<span class="ident">to_string</span>(),
         <span class="ident">steps</span>: <span class="macro">vec!</span>[
@@ -1177,7 +1176,7 @@
     }
 }
 
-<span class="kw">fn</span> <span class="ident">run_cargo_tests</span>(<span class="ident">opt</span>: <span class="kw-2">&amp;</span><span class="ident">RunTestsOpt</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Step</span> {
+<span class="kw">fn</span> <span class="ident">run_cargo_tests</span>(<span class="ident">opt</span>: <span class="kw-2">&amp;</span><span class="ident">RunTestsOpt</span>) -&gt; <span class="ident">Step</span> {
     <span class="kw">let</span> <span class="ident">all_affected_crates</span> <span class="op">=</span> <span class="ident">all_affected_crates</span>(<span class="kw-2">&amp;</span><span class="ident">opt</span>.<span class="ident">commits</span>);
     <span class="ident">Step::Multiple</span> {
         <span class="ident">name</span>: <span class="string">&quot;cargo tests&quot;</span>.<span class="ident">to_string</span>(),
@@ -1189,21 +1188,21 @@
     }
 }
 
-<span class="kw">fn</span> <span class="ident">run_bazel_tests</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Step</span> {
+<span class="kw">fn</span> <span class="ident">run_bazel_tests</span>() -&gt; <span class="ident">Step</span> {
     <span class="ident">Step::Multiple</span> {
         <span class="ident">name</span>: <span class="string">&quot;bazel tests&quot;</span>.<span class="ident">to_string</span>(),
         <span class="ident">steps</span>: <span class="macro">vec!</span>[<span class="ident">run_bazel_build</span>(), <span class="ident">run_bazel_test</span>(), <span class="ident">run_clang_tidy</span>()],
     }
 }
 
-<span class="kw">fn</span> <span class="ident">run_tests_tsan</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Step</span> {
+<span class="kw">fn</span> <span class="ident">run_tests_tsan</span>() -&gt; <span class="ident">Step</span> {
     <span class="ident">Step::Multiple</span> {
         <span class="ident">name</span>: <span class="string">&quot;tests&quot;</span>.<span class="ident">to_string</span>(),
         <span class="ident">steps</span>: <span class="macro">vec!</span>[<span class="ident">run_cargo_test_tsan</span>()],
     }
 }
 
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">run_cargo_fuzz</span>(<span class="ident">opt</span>: <span class="kw-2">&amp;</span><span class="ident">RunCargoFuzz</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Step</span> {
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">run_cargo_fuzz</span>(<span class="ident">opt</span>: <span class="kw-2">&amp;</span><span class="ident">RunCargoFuzz</span>) -&gt; <span class="ident">Step</span> {
     <span class="kw">let</span> <span class="ident">steps</span> <span class="op">=</span> <span class="kw">if</span> <span class="ident">opt</span>.<span class="ident">build_deps</span> {
         <span class="macro">vec!</span>[<span class="ident">build_fuzz_dependencies</span>(<span class="ident">opt</span>), <span class="ident">run_fuzz_targets</span>(<span class="ident">opt</span>)]
     } <span class="kw">else</span> {
@@ -1216,16 +1215,16 @@
     }
 }
 
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">build_fuzz_dependencies</span>(<span class="ident">opt</span>: <span class="kw-2">&amp;</span><span class="ident">RunCargoFuzz</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Step</span> {
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">build_fuzz_dependencies</span>(<span class="ident">opt</span>: <span class="kw-2">&amp;</span><span class="ident">RunCargoFuzz</span>) -&gt; <span class="ident">Step</span> {
     <span class="kw">let</span> <span class="ident">fuzz_configs</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">FuzzConfig</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">fuzz_config_toml_files</span>()
         .<span class="ident">filter</span>(<span class="op">|</span><span class="ident">path</span><span class="op">|</span> <span class="kw">match</span> <span class="kw-2">&amp;</span><span class="ident">opt</span>.<span class="ident">crate_name</span> {
-            <span class="prelude-val">Some</span>(<span class="ident">crate_name</span>) <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="prelude-val">Some</span>(<span class="ident">crate_name</span>) =&gt; {
                 <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">crate_path</span> <span class="op">=</span> <span class="ident">path</span>.<span class="ident">clone</span>();
                 <span class="ident">crate_path</span>.<span class="ident">pop</span>();
                 <span class="ident">crate_path</span>.<span class="ident">pop</span>();
-                <span class="ident">crate_path</span>.<span class="ident">file_name</span>().<span class="ident">and_then</span>(<span class="op">|</span><span class="ident">s</span><span class="op">|</span> <span class="ident">s</span>.<span class="ident">to_str</span>()).<span class="ident">unwrap</span>() <span class="op">=</span><span class="op">=</span> <span class="ident">crate_name</span>.<span class="ident">as_str</span>()
+                <span class="ident">crate_path</span>.<span class="ident">file_name</span>().<span class="ident">and_then</span>(<span class="op">|</span><span class="ident">s</span><span class="op">|</span> <span class="ident">s</span>.<span class="ident">to_str</span>()).<span class="ident">unwrap</span>() <span class="op">==</span> <span class="ident">crate_name</span>.<span class="ident">as_str</span>()
             }
-            <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="bool-val">true</span>,
+            <span class="prelude-val">None</span> =&gt; <span class="bool-val">true</span>,
         })
         .<span class="ident">map</span>(<span class="op">|</span><span class="ident">path</span><span class="op">|</span> {
             <span class="ident">toml::from_str</span>(<span class="kw-2">&amp;</span><span class="ident">read_file</span>(<span class="kw-2">&amp;</span><span class="ident">path</span>)).<span class="ident">unwrap_or_else</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> {
@@ -1240,7 +1239,7 @@
     }
 }
 
-<span class="kw">fn</span> <span class="ident">run_fuzz_config</span>(<span class="ident">config</span>: <span class="kw-2">&amp;</span><span class="ident">FuzzConfig</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Step</span> {
+<span class="kw">fn</span> <span class="ident">run_fuzz_config</span>(<span class="ident">config</span>: <span class="kw-2">&amp;</span><span class="ident">FuzzConfig</span>) -&gt; <span class="ident">Step</span> {
     <span class="ident">Step::Multiple</span> {
         <span class="ident">name</span>: <span class="string">&quot;run&quot;</span>.<span class="ident">to_string</span>(),
         <span class="ident">steps</span>: <span class="ident">config</span>
@@ -1266,7 +1265,7 @@
     }
 }
 
-<span class="kw">fn</span> <span class="ident">copy_wasm_file</span>(<span class="ident">config</span>: <span class="kw-2">&amp;</span><span class="ident">FuzzableExample</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Step</span> {
+<span class="kw">fn</span> <span class="ident">copy_wasm_file</span>(<span class="ident">config</span>: <span class="kw-2">&amp;</span><span class="ident">FuzzableExample</span>) -&gt; <span class="ident">Step</span> {
     <span class="kw">let</span> <span class="ident">metadata</span> <span class="op">=</span> <span class="ident">cargo_metadata::MetadataCommand::new</span>()
         .<span class="ident">manifest_path</span>(<span class="kw-2">&amp;</span><span class="ident">config</span>.<span class="ident">manifest_path</span>)
         .<span class="ident">exec</span>()
@@ -1294,17 +1293,17 @@
     }
 }
 
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">run_fuzz_targets</span>(<span class="ident">opt</span>: <span class="kw-2">&amp;</span><span class="ident">RunCargoFuzz</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Step</span> {
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">run_fuzz_targets</span>(<span class="ident">opt</span>: <span class="kw-2">&amp;</span><span class="ident">RunCargoFuzz</span>) -&gt; <span class="ident">Step</span> {
     <span class="kw">let</span> <span class="ident">cargo_manifests</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">PathBuf</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">crate_manifest_files</span>()
         .<span class="ident">filter</span>(<span class="op">|</span><span class="ident">path</span><span class="op">|</span> <span class="ident">is_fuzzing_toml_file</span>(<span class="ident">path</span>))
         .<span class="ident">filter</span>(<span class="op">|</span><span class="ident">path</span><span class="op">|</span> <span class="kw">match</span> <span class="kw-2">&amp;</span><span class="ident">opt</span>.<span class="ident">crate_name</span> {
-            <span class="prelude-val">Some</span>(<span class="ident">crate_name</span>) <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="prelude-val">Some</span>(<span class="ident">crate_name</span>) =&gt; {
                 <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">crate_path</span> <span class="op">=</span> <span class="ident">path</span>.<span class="ident">clone</span>();
                 <span class="ident">crate_path</span>.<span class="ident">pop</span>();
                 <span class="ident">crate_path</span>.<span class="ident">pop</span>();
-                <span class="ident">crate_path</span>.<span class="ident">file_name</span>().<span class="ident">and_then</span>(<span class="op">|</span><span class="ident">s</span><span class="op">|</span> <span class="ident">s</span>.<span class="ident">to_str</span>()).<span class="ident">unwrap</span>() <span class="op">=</span><span class="op">=</span> <span class="ident">crate_name</span>.<span class="ident">as_str</span>()
+                <span class="ident">crate_path</span>.<span class="ident">file_name</span>().<span class="ident">and_then</span>(<span class="op">|</span><span class="ident">s</span><span class="op">|</span> <span class="ident">s</span>.<span class="ident">to_str</span>()).<span class="ident">unwrap</span>() <span class="op">==</span> <span class="ident">crate_name</span>.<span class="ident">as_str</span>()
             }
-            <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="bool-val">true</span>,
+            <span class="prelude-val">None</span> =&gt; <span class="bool-val">true</span>,
         })
         .<span class="ident">collect</span>();
 
@@ -1317,7 +1316,7 @@
     }
 }
 
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">run_fuzz_targets_in_crate</span>(<span class="ident">path</span>: <span class="kw-2">&amp;</span><span class="ident">Path</span>, <span class="ident">opt</span>: <span class="kw-2">&amp;</span><span class="ident">RunCargoFuzz</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Step</span> {
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">run_fuzz_targets_in_crate</span>(<span class="ident">path</span>: <span class="kw-2">&amp;</span><span class="ident">Path</span>, <span class="ident">opt</span>: <span class="kw-2">&amp;</span><span class="ident">RunCargoFuzz</span>) -&gt; <span class="ident">Step</span> {
     <span class="comment">// `cargo-fuzz` can only run in the crate that contains the `fuzz` crate. So we need to use</span>
     <span class="comment">// `Cmd::new_in_dir` to execute the command inside the crate&#39;s directory. Pop the two components</span>
     <span class="comment">// (i.e., `fuzz/Cargo.toml`) to get to the crate path.</span>
@@ -1334,8 +1333,8 @@
             .<span class="ident">bin</span>
             .<span class="ident">iter</span>()
             .<span class="ident">filter</span>(<span class="op">|</span><span class="ident">binary</span><span class="op">|</span> <span class="kw">match</span> <span class="kw-2">&amp;</span><span class="ident">opt</span>.<span class="ident">target_name</span> {
-                <span class="prelude-val">Some</span>(<span class="ident">target_name</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">binary</span>.<span class="ident">name</span> <span class="op">=</span><span class="op">=</span> <span class="ident">target_name</span>,
-                <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="bool-val">true</span>,
+                <span class="prelude-val">Some</span>(<span class="ident">target_name</span>) =&gt; <span class="kw-2">&amp;</span><span class="ident">binary</span>.<span class="ident">name</span> <span class="op">==</span> <span class="ident">target_name</span>,
+                <span class="prelude-val">None</span> =&gt; <span class="bool-val">true</span>,
             })
             .<span class="ident">map</span>(<span class="op">|</span><span class="ident">binary</span><span class="op">|</span> <span class="ident">Step::Single</span> {
                 <span class="ident">name</span>: <span class="ident">binary</span>.<span class="ident">name</span>.<span class="ident">clone</span>(),
@@ -1355,7 +1354,7 @@
     }
 }
 
-<span class="kw">fn</span> <span class="ident">format</span>(<span class="ident">commits</span>: <span class="kw-2">&amp;</span><span class="ident">Commits</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Step</span> {
+<span class="kw">fn</span> <span class="ident">format</span>(<span class="ident">commits</span>: <span class="kw-2">&amp;</span><span class="ident">Commits</span>) -&gt; <span class="ident">Step</span> {
     <span class="kw">let</span> <span class="ident">modified_crates</span> <span class="op">=</span> <span class="ident">directly_modified_crates</span>(<span class="ident">commits</span>);
     <span class="ident">Step::Multiple</span> {
         <span class="ident">name</span>: <span class="string">&quot;format&quot;</span>.<span class="ident">to_string</span>(),
@@ -1370,7 +1369,7 @@
     }
 }
 
-<span class="kw">fn</span> <span class="ident">check_format</span>(<span class="ident">commits</span>: <span class="kw-2">&amp;</span><span class="ident">Commits</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Step</span> {
+<span class="kw">fn</span> <span class="ident">check_format</span>(<span class="ident">commits</span>: <span class="kw-2">&amp;</span><span class="ident">Commits</span>) -&gt; <span class="ident">Step</span> {
     <span class="kw">let</span> <span class="ident">modified_files</span> <span class="op">=</span> <span class="ident">modified_files</span>(<span class="ident">commits</span>);
     <span class="kw">let</span> <span class="ident">modified_crates</span> <span class="op">=</span> <span class="ident">directly_modified_crates</span>(<span class="ident">commits</span>);
 
@@ -1394,7 +1393,7 @@
     }
 }
 
-<span class="kw">fn</span> <span class="ident">run_ci</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Step</span> {
+<span class="kw">fn</span> <span class="ident">run_ci</span>() -&gt; <span class="ident">Step</span> {
     <span class="ident">Step::Multiple</span> {
         <span class="ident">name</span>: <span class="string">&quot;ci&quot;</span>.<span class="ident">to_string</span>(),
         <span class="ident">steps</span>: <span class="macro">vec!</span>[
@@ -1552,7 +1551,7 @@
     <span class="ident">Fix</span>,
 }
 
-<span class="kw">fn</span> <span class="ident">run_buildifier</span>(<span class="ident">mode</span>: <span class="ident">FormatMode</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Step</span> {
+<span class="kw">fn</span> <span class="ident">run_buildifier</span>(<span class="ident">mode</span>: <span class="ident">FormatMode</span>) -&gt; <span class="ident">Step</span> {
     <span class="ident">Step::Multiple</span> {
         <span class="ident">name</span>: <span class="string">&quot;buildifier&quot;</span>.<span class="ident">to_string</span>(),
         <span class="ident">steps</span>: <span class="ident">source_files</span>()
@@ -1565,8 +1564,8 @@
                     <span class="kw-2">&amp;</span>[
                         <span class="string">&quot;-lint=warn&quot;</span>,
                         <span class="kw">match</span> <span class="ident">mode</span> {
-                            <span class="ident">FormatMode::Check</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;-mode=check&quot;</span>,
-                            <span class="ident">FormatMode::Fix</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;-mode=fix&quot;</span>,
+                            <span class="ident">FormatMode::Check</span> =&gt; <span class="string">&quot;-mode=check&quot;</span>,
+                            <span class="ident">FormatMode::Fix</span> =&gt; <span class="string">&quot;-mode=fix&quot;</span>,
                         },
                         <span class="kw-2">&amp;</span><span class="ident">entry</span>,
                     ],
@@ -1576,7 +1575,7 @@
     }
 }
 
-<span class="kw">fn</span> <span class="ident">run_prettier</span>(<span class="ident">mode</span>: <span class="ident">FormatMode</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Step</span> {
+<span class="kw">fn</span> <span class="ident">run_prettier</span>(<span class="ident">mode</span>: <span class="ident">FormatMode</span>) -&gt; <span class="ident">Step</span> {
     <span class="comment">// We run prettier as a single command on all the files at once instead of once per file,</span>
     <span class="comment">// because it takes a considerable time to start up for each invocation. See #1680.</span>
     <span class="kw">let</span> <span class="ident">files</span> <span class="op">=</span> <span class="ident">source_files</span>()
@@ -1596,8 +1595,8 @@
             <span class="string">&quot;prettier&quot;</span>,
             <span class="macro">spread!</span>[
                 <span class="kw">match</span> <span class="ident">mode</span> {
-                    <span class="ident">FormatMode::Check</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;--check&quot;</span>.<span class="ident">to_string</span>(),
-                    <span class="ident">FormatMode::Fix</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;--write&quot;</span>.<span class="ident">to_string</span>(),
+                    <span class="ident">FormatMode::Check</span> =&gt; <span class="string">&quot;--check&quot;</span>.<span class="ident">to_string</span>(),
+                    <span class="ident">FormatMode::Fix</span> =&gt; <span class="string">&quot;--write&quot;</span>.<span class="ident">to_string</span>(),
                 },
                 ...<span class="ident">files</span>
             ],
@@ -1605,7 +1604,7 @@
     }
 }
 
-<span class="kw">fn</span> <span class="ident">run_markdownlint</span>(<span class="ident">mode</span>: <span class="ident">FormatMode</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Step</span> {
+<span class="kw">fn</span> <span class="ident">run_markdownlint</span>(<span class="ident">mode</span>: <span class="ident">FormatMode</span>) -&gt; <span class="ident">Step</span> {
     <span class="ident">Step::Multiple</span> {
         <span class="ident">name</span>: <span class="string">&quot;markdownlint&quot;</span>.<span class="ident">to_string</span>(),
         <span class="ident">steps</span>: <span class="ident">source_files</span>()
@@ -1617,8 +1616,8 @@
                     <span class="string">&quot;markdownlint&quot;</span>,
                     <span class="macro">spread!</span>[
                         ...<span class="kw">match</span> <span class="ident">mode</span> {
-                            <span class="ident">FormatMode::Check</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">vec!</span>[],
-                            <span class="ident">FormatMode::Fix</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">vec!</span>[<span class="string">&quot;--fix&quot;</span>.<span class="ident">to_string</span>()],
+                            <span class="ident">FormatMode::Check</span> =&gt; <span class="macro">vec!</span>[],
+                            <span class="ident">FormatMode::Fix</span> =&gt; <span class="macro">vec!</span>[<span class="string">&quot;--fix&quot;</span>.<span class="ident">to_string</span>()],
                         },
                         <span class="ident">entry</span>,
                     ],
@@ -1628,7 +1627,7 @@
     }
 }
 
-<span class="kw">fn</span> <span class="ident">run_embedmd</span>(<span class="ident">mode</span>: <span class="ident">FormatMode</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Step</span> {
+<span class="kw">fn</span> <span class="ident">run_embedmd</span>(<span class="ident">mode</span>: <span class="ident">FormatMode</span>) -&gt; <span class="ident">Step</span> {
     <span class="ident">Step::Multiple</span> {
         <span class="ident">name</span>: <span class="string">&quot;embedmd&quot;</span>.<span class="ident">to_string</span>(),
         <span class="ident">steps</span>: <span class="ident">source_files</span>()
@@ -1640,8 +1639,8 @@
                     <span class="string">&quot;embedmd&quot;</span>,
                     <span class="kw-2">&amp;</span>[
                         <span class="kw">match</span> <span class="ident">mode</span> {
-                            <span class="ident">FormatMode::Check</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;-d&quot;</span>,
-                            <span class="ident">FormatMode::Fix</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;-w&quot;</span>,
+                            <span class="ident">FormatMode::Check</span> =&gt; <span class="string">&quot;-d&quot;</span>,
+                            <span class="ident">FormatMode::Fix</span> =&gt; <span class="string">&quot;-w&quot;</span>,
                         },
                         <span class="kw-2">&amp;</span><span class="ident">entry</span>,
                     ],
@@ -1653,7 +1652,7 @@
 
 <span class="comment">// TODO(#1304): Re-enable dead-code check, when re-run from GitHub is fixed.</span>
 <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">dead_code</span>)]</span>
-<span class="kw">fn</span> <span class="ident">run_liche</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Step</span> {
+<span class="kw">fn</span> <span class="ident">run_liche</span>() -&gt; <span class="ident">Step</span> {
     <span class="ident">Step::Multiple</span> {
         <span class="ident">name</span>: <span class="string">&quot;liche&quot;</span>.<span class="ident">to_string</span>(),
         <span class="ident">steps</span>: <span class="ident">source_files</span>()
@@ -1675,7 +1674,7 @@
     }
 }
 
-<span class="kw">fn</span> <span class="ident">run_hadolint</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Step</span> {
+<span class="kw">fn</span> <span class="ident">run_hadolint</span>() -&gt; <span class="ident">Step</span> {
     <span class="ident">Step::Multiple</span> {
         <span class="ident">name</span>: <span class="string">&quot;hadolint&quot;</span>.<span class="ident">to_string</span>(),
         <span class="ident">steps</span>: <span class="ident">source_files</span>()
@@ -1689,7 +1688,7 @@
     }
 }
 
-<span class="kw">fn</span> <span class="ident">run_shellcheck</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Step</span> {
+<span class="kw">fn</span> <span class="ident">run_shellcheck</span>() -&gt; <span class="ident">Step</span> {
     <span class="ident">Step::Multiple</span> {
         <span class="ident">name</span>: <span class="string">&quot;shellcheck&quot;</span>.<span class="ident">to_string</span>(),
         <span class="ident">steps</span>: <span class="ident">source_files</span>()
@@ -1703,9 +1702,9 @@
     }
 }
 
-<span class="kw">fn</span> <span class="ident">run_clang_format</span>(<span class="ident">mode</span>: <span class="ident">FormatMode</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Step</span> {
+<span class="kw">fn</span> <span class="ident">run_clang_format</span>(<span class="ident">mode</span>: <span class="ident">FormatMode</span>) -&gt; <span class="ident">Step</span> {
     <span class="kw">match</span> <span class="ident">mode</span> {
-        <span class="ident">FormatMode::Check</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Step::Single</span> {
+        <span class="ident">FormatMode::Check</span> =&gt; <span class="ident">Step::Single</span> {
             <span class="ident">name</span>: <span class="string">&quot;clang format&quot;</span>.<span class="ident">to_string</span>(),
             <span class="ident">command</span>: <span class="ident">Cmd::new</span>(
                 <span class="string">&quot;python&quot;</span>,
@@ -1719,7 +1718,7 @@
                 ],
             ),
         },
-        <span class="ident">FormatMode::Fix</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Step::Multiple</span> {
+        <span class="ident">FormatMode::Fix</span> =&gt; <span class="ident">Step::Multiple</span> {
             <span class="ident">name</span>: <span class="string">&quot;clang format&quot;</span>.<span class="ident">to_string</span>(),
             <span class="ident">steps</span>: <span class="ident">source_files</span>()
                 .<span class="ident">filter</span>(<span class="op">|</span><span class="ident">p</span><span class="op">|</span> <span class="ident">is_clang_format_file</span>(<span class="ident">p</span>))
@@ -1733,7 +1732,7 @@
     }
 }
 
-<span class="kw">fn</span> <span class="ident">run_check_license</span>(<span class="ident">modified_files</span>: <span class="kw-2">&amp;</span><span class="ident">ModifiedContent</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Step</span> {
+<span class="kw">fn</span> <span class="ident">run_check_license</span>(<span class="ident">modified_files</span>: <span class="kw-2">&amp;</span><span class="ident">ModifiedContent</span>) -&gt; <span class="ident">Step</span> {
     <span class="ident">Step::Multiple</span> {
         <span class="ident">name</span>: <span class="string">&quot;check license&quot;</span>.<span class="ident">to_string</span>(),
         <span class="ident">steps</span>: <span class="ident">source_files</span>()
@@ -1748,7 +1747,7 @@
     }
 }
 
-<span class="kw">fn</span> <span class="ident">run_check_build_licenses</span>(<span class="ident">modified_files</span>: <span class="kw-2">&amp;</span><span class="ident">ModifiedContent</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Step</span> {
+<span class="kw">fn</span> <span class="ident">run_check_build_licenses</span>(<span class="ident">modified_files</span>: <span class="kw-2">&amp;</span><span class="ident">ModifiedContent</span>) -&gt; <span class="ident">Step</span> {
     <span class="ident">Step::Multiple</span> {
         <span class="ident">name</span>: <span class="string">&quot;check BUILD licenses&quot;</span>.<span class="ident">to_string</span>(),
         <span class="ident">steps</span>: <span class="ident">source_files</span>()
@@ -1763,7 +1762,7 @@
     }
 }
 
-<span class="kw">fn</span> <span class="ident">run_check_todo</span>(<span class="ident">modified_files</span>: <span class="kw-2">&amp;</span><span class="ident">ModifiedContent</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Step</span> {
+<span class="kw">fn</span> <span class="ident">run_check_todo</span>(<span class="ident">modified_files</span>: <span class="kw-2">&amp;</span><span class="ident">ModifiedContent</span>) -&gt; <span class="ident">Step</span> {
     <span class="ident">Step::Multiple</span> {
         <span class="ident">name</span>: <span class="string">&quot;check todo&quot;</span>.<span class="ident">to_string</span>(),
         <span class="ident">steps</span>: <span class="ident">source_files</span>()
@@ -1778,7 +1777,7 @@
     }
 }
 
-<span class="kw">fn</span> <span class="ident">run_cargo_fmt</span>(<span class="ident">mode</span>: <span class="ident">FormatMode</span>, <span class="ident">modified_crates</span>: <span class="kw-2">&amp;</span><span class="ident">ModifiedContent</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Step</span> {
+<span class="kw">fn</span> <span class="ident">run_cargo_fmt</span>(<span class="ident">mode</span>: <span class="ident">FormatMode</span>, <span class="ident">modified_crates</span>: <span class="kw-2">&amp;</span><span class="ident">ModifiedContent</span>) -&gt; <span class="ident">Step</span> {
     <span class="ident">Step::Multiple</span> {
         <span class="ident">name</span>: <span class="string">&quot;cargo fmt&quot;</span>.<span class="ident">to_string</span>(),
         <span class="ident">steps</span>: <span class="ident">crate_manifest_files</span>()
@@ -1792,15 +1791,15 @@
                         <span class="string">&quot;fmt&quot;</span>,
                         <span class="macro">format!</span>(<span class="string">&quot;--manifest-path={}&quot;</span>, <span class="kw-2">&amp;</span><span class="ident">entry</span>).<span class="ident">as_ref</span>(),
                         ...<span class="kw">match</span> <span class="ident">mode</span> {
-                            <span class="ident">FormatMode::Check</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">vec!</span>[<span class="string">&quot;--&quot;</span>, <span class="string">&quot;--check&quot;</span>],
-                            <span class="ident">FormatMode::Fix</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">vec!</span>[],
+                            <span class="ident">FormatMode::Check</span> =&gt; <span class="macro">vec!</span>[<span class="string">&quot;--&quot;</span>, <span class="string">&quot;--check&quot;</span>],
+                            <span class="ident">FormatMode::Fix</span> =&gt; <span class="macro">vec!</span>[],
                         },
                     ],
                     <span class="kw-2">&amp;</span><span class="macro">hashmap!</span> {
                         <span class="comment">// rustfmt emits copious debug logs, leading to multi-minute</span>
                         <span class="comment">// runs if the user&#39;s env happens to have RUST_LOG=debug, so</span>
                         <span class="comment">// force a higher log level.</span>
-                        <span class="string">&quot;RUST_LOG&quot;</span>.<span class="ident">to_string</span>() <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;warn&quot;</span>.<span class="ident">to_string</span>(),
+                        <span class="string">&quot;RUST_LOG&quot;</span>.<span class="ident">to_string</span>() =&gt; <span class="string">&quot;warn&quot;</span>.<span class="ident">to_string</span>(),
                     },
                 ),
             })
@@ -1808,7 +1807,7 @@
     }
 }
 
-<span class="kw">fn</span> <span class="ident">run_cargo_test</span>(<span class="ident">opt</span>: <span class="kw-2">&amp;</span><span class="ident">RunTestsOpt</span>, <span class="ident">all_affected_crates</span>: <span class="kw-2">&amp;</span><span class="ident">ModifiedContent</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Step</span> {
+<span class="kw">fn</span> <span class="ident">run_cargo_test</span>(<span class="ident">opt</span>: <span class="kw-2">&amp;</span><span class="ident">RunTestsOpt</span>, <span class="ident">all_affected_crates</span>: <span class="kw-2">&amp;</span><span class="ident">ModifiedContent</span>) -&gt; <span class="ident">Step</span> {
     <span class="ident">Step::Multiple</span> {
         <span class="ident">name</span>: <span class="string">&quot;cargo test&quot;</span>.<span class="ident">to_string</span>(),
         <span class="ident">steps</span>: <span class="ident">crate_manifest_files</span>()
@@ -1862,7 +1861,7 @@
     }
 }
 
-<span class="kw">fn</span> <span class="ident">run_cargo_doc</span>(<span class="ident">all_affected_crates</span>: <span class="kw-2">&amp;</span><span class="ident">ModifiedContent</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Step</span> {
+<span class="kw">fn</span> <span class="ident">run_cargo_doc</span>(<span class="ident">all_affected_crates</span>: <span class="kw-2">&amp;</span><span class="ident">ModifiedContent</span>) -&gt; <span class="ident">Step</span> {
     <span class="ident">Step::Multiple</span> {
         <span class="ident">name</span>: <span class="string">&quot;cargo doc&quot;</span>.<span class="ident">to_string</span>(),
         <span class="ident">steps</span>: <span class="ident">crate_manifest_files</span>()
@@ -1881,14 +1880,14 @@
     }
 }
 
-<span class="kw">fn</span> <span class="ident">run_clang_tidy</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Step</span> {
+<span class="kw">fn</span> <span class="ident">run_clang_tidy</span>() -&gt; <span class="ident">Step</span> {
     <span class="ident">Step::Single</span> {
         <span class="ident">name</span>: <span class="string">&quot;clang tidy&quot;</span>.<span class="ident">to_string</span>(),
         <span class="ident">command</span>: <span class="ident">Cmd::new</span>(<span class="string">&quot;bash&quot;</span>, <span class="kw-2">&amp;</span>[<span class="string">&quot;./scripts/run_clang_tidy&quot;</span>]),
     }
 }
 
-<span class="kw">fn</span> <span class="ident">run_cargo_test_tsan</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Step</span> {
+<span class="kw">fn</span> <span class="ident">run_cargo_test_tsan</span>() -&gt; <span class="ident">Step</span> {
     <span class="ident">Step::Single</span> {
         <span class="ident">name</span>: <span class="string">&quot;cargo test (tsan)&quot;</span>.<span class="ident">to_string</span>(),
         <span class="ident">command</span>: <span class="ident">Cmd::new_with_env</span>(
@@ -1903,15 +1902,15 @@
                 <span class="string">&quot;--nocapture&quot;</span>,
             ],
             <span class="kw-2">&amp;</span><span class="macro">hashmap!</span> {
-                <span class="string">&quot;RUST_BACKTRACE&quot;</span>.<span class="ident">to_string</span>() <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;1&quot;</span>.<span class="ident">to_string</span>(),
-                <span class="string">&quot;RUSTFLAGS&quot;</span>.<span class="ident">to_string</span>() <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;-Z sanitizer=thread&quot;</span>.<span class="ident">to_string</span>(),
-                <span class="string">&quot;TSAN_OPTIONS&quot;</span>.<span class="ident">to_string</span>() <span class="op">=</span><span class="op">&gt;</span> <span class="macro">format!</span>(<span class="string">&quot;halt_on_error=1 report_atomic_races=0 suppressions={}/.tsan_suppress&quot;</span>, <span class="ident">std::env::current_dir</span>().<span class="ident">unwrap</span>().<span class="ident">display</span>()),
+                <span class="string">&quot;RUST_BACKTRACE&quot;</span>.<span class="ident">to_string</span>() =&gt; <span class="string">&quot;1&quot;</span>.<span class="ident">to_string</span>(),
+                <span class="string">&quot;RUSTFLAGS&quot;</span>.<span class="ident">to_string</span>() =&gt; <span class="string">&quot;-Z sanitizer=thread&quot;</span>.<span class="ident">to_string</span>(),
+                <span class="string">&quot;TSAN_OPTIONS&quot;</span>.<span class="ident">to_string</span>() =&gt; <span class="macro">format!</span>(<span class="string">&quot;halt_on_error=1 report_atomic_races=0 suppressions={}/.tsan_suppress&quot;</span>, <span class="ident">std::env::current_dir</span>().<span class="ident">unwrap</span>().<span class="ident">display</span>()),
             },
         ),
     }
 }
 
-<span class="kw">fn</span> <span class="ident">run_cargo_clippy</span>(<span class="ident">all_affected_crates</span>: <span class="kw-2">&amp;</span><span class="ident">ModifiedContent</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Step</span> {
+<span class="kw">fn</span> <span class="ident">run_cargo_clippy</span>(<span class="ident">all_affected_crates</span>: <span class="kw-2">&amp;</span><span class="ident">ModifiedContent</span>) -&gt; <span class="ident">Step</span> {
     <span class="ident">Step::Multiple</span> {
         <span class="ident">name</span>: <span class="string">&quot;cargo clippy&quot;</span>.<span class="ident">to_string</span>(),
         <span class="ident">steps</span>: <span class="ident">crate_manifest_files</span>()
@@ -1942,7 +1941,7 @@
     }
 }
 
-<span class="kw">fn</span> <span class="ident">run_cargo_deny</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Step</span> {
+<span class="kw">fn</span> <span class="ident">run_cargo_deny</span>() -&gt; <span class="ident">Step</span> {
     <span class="ident">Step::Multiple</span> {
         <span class="ident">name</span>: <span class="string">&quot;cargo deny&quot;</span>.<span class="ident">to_string</span>(),
         <span class="ident">steps</span>: <span class="ident">workspace_manifest_files</span>()
@@ -1958,7 +1957,7 @@
     }
 }
 
-<span class="kw">fn</span> <span class="ident">run_cargo_udeps</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Step</span> {
+<span class="kw">fn</span> <span class="ident">run_cargo_udeps</span>() -&gt; <span class="ident">Step</span> {
     <span class="ident">Step::Multiple</span> {
         <span class="ident">name</span>: <span class="string">&quot;cargo udeps&quot;</span>.<span class="ident">to_string</span>(),
         <span class="ident">steps</span>: <span class="ident">workspace_manifest_files</span>()
@@ -1979,7 +1978,7 @@
     }
 }
 
-<span class="kw">fn</span> <span class="ident">run_cargo_clean</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Step</span> {
+<span class="kw">fn</span> <span class="ident">run_cargo_clean</span>() -&gt; <span class="ident">Step</span> {
     <span class="ident">Step::Multiple</span> {
         <span class="ident">name</span>: <span class="string">&quot;cargo clean&quot;</span>.<span class="ident">to_string</span>(),
         <span class="ident">steps</span>: <span class="ident">crate_manifest_files</span>()
@@ -1995,14 +1994,14 @@
     }
 }
 
-<span class="kw">fn</span> <span class="ident">run_bazel_build</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Step</span> {
+<span class="kw">fn</span> <span class="ident">run_bazel_build</span>() -&gt; <span class="ident">Step</span> {
     <span class="ident">Step::Single</span> {
         <span class="ident">name</span>: <span class="string">&quot;bazel build&quot;</span>.<span class="ident">to_string</span>(),
         <span class="ident">command</span>: <span class="ident">Cmd::new</span>(<span class="string">&quot;bazel&quot;</span>, <span class="kw-2">&amp;</span>[<span class="string">&quot;build&quot;</span>, <span class="string">&quot;--&quot;</span>, <span class="string">&quot;//oak/...:all&quot;</span>]),
     }
 }
 
-<span class="kw">fn</span> <span class="ident">run_bazel_test</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Step</span> {
+<span class="kw">fn</span> <span class="ident">run_bazel_test</span>() -&gt; <span class="ident">Step</span> {
     <span class="ident">Step::Single</span> {
         <span class="ident">name</span>: <span class="string">&quot;bazel test&quot;</span>.<span class="ident">to_string</span>(),
         <span class="ident">command</span>: <span class="ident">Cmd::new</span>(
@@ -2017,7 +2016,7 @@
         ),
     }
 }
-</pre></div>
+</code></pre></div>
 </section><section id="search" class="content hidden"></section><div id="rustdoc-vars" data-root-path="../../" data-current-crate="runner" data-search-index-js="../../search-index.js" data-search-js="../../search.js"></div>
     <script src="../../main.js"></script><script src="../../source-script.js"></script><script src="../../source-files.js"></script>
 </body></html>

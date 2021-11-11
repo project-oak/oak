@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src&#x2F;diffs.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>diffs.rs - source</title><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../light.css"  id="themeStyle"><link rel="stylesheet" type="text/css" href="../../dark.css" disabled ><link rel="stylesheet" type="text/css" href="../../ayu.css" disabled ><script id="default-settings" ></script><script src="../../storage.js"></script><script src="../../crates.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"><style type="text/css">#crate-search{background-image:url("../../down-arrow.svg");}</style></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu" role="button">&#9776;</div><a href='../../runner/index.html'><div class='logo-container rust-logo'><img src='../../rust-logo.png' alt='logo'></div></a></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!" aria-haspopup="menu" title="themes"><img width="18" height="18" alt="Pick another theme!" src="../../brush.svg"></button><div id="theme-choices" role="menu"></div></div><nav class="sub"><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" disabled autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><button type="button" id="help-button" title="help">?</button><a id="settings-menu" href="../../settings.html" title="settings"><img width="18" height="18" alt="Change settings" src="../../wheel.svg"></a></div></form></nav><section id="main" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">  1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src&#x2F;diffs.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>diffs.rs - source</title><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../light.css"  id="themeStyle"><link rel="stylesheet" type="text/css" href="../../dark.css" disabled ><link rel="stylesheet" type="text/css" href="../../ayu.css" disabled ><script id="default-settings" ></script><script src="../../storage.js"></script><script src="../../crates.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"><style type="text/css">#crate-search{background-image:url("../../down-arrow.svg");}</style></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu" role="button">&#9776;</div><a href='../../runner/index.html'><div class='logo-container rust-logo'><img src='../../rust-logo.png' alt='logo'></div></a></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!" aria-haspopup="menu" title="themes"><img width="18" height="18" alt="Pick another theme!" src="../../brush.svg"></button><div id="theme-choices" role="menu"></div></div><nav class="sub"><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><button type="button" id="help-button" title="help">?</button><a id="settings-menu" href="../../settings.html" title="settings"><img width="18" height="18" alt="Change settings" src="../../wheel.svg"></a></div></form></nav><section id="main" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">  1</span>
 <span id="2">  2</span>
 <span id="3">  3</span>
 <span id="4">  4</span>
@@ -285,8 +285,7 @@
 <span id="285">285</span>
 <span id="286">286</span>
 <span id="287">287</span>
-</pre><pre class="rust">
-<span class="comment">//</span>
+</pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2021 The Project Oak Authors</span>
 <span class="comment">//</span>
 <span class="comment">// Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
@@ -322,7 +321,7 @@
 }
 
 <span class="kw">impl</span> <span class="ident">ModifiedContent</span> {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">contains</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">file_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">bool</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">contains</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">file_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) -&gt; <span class="ident">bool</span> {
         <span class="self">self</span>.<span class="ident">files</span>.<span class="ident">is_none</span>()
             <span class="op">|</span><span class="op">|</span> <span class="self">self</span>
                 .<span class="ident">files</span>
@@ -336,7 +335,7 @@
 <span class="comment">// new files, unless they are added to git. If present, `commits.commits` must be a positive number.</span>
 <span class="comment">// If it is zero or negative, only the last commit will be considered for finding the modified</span>
 <span class="comment">// files. If `commits.commits` is not present, all files will be considered.</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">modified_files</span>(<span class="ident">commits</span>: <span class="kw-2">&amp;</span><span class="ident">Commits</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">ModifiedContent</span> {
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">modified_files</span>(<span class="ident">commits</span>: <span class="kw-2">&amp;</span><span class="ident">Commits</span>) -&gt; <span class="ident">ModifiedContent</span> {
     <span class="kw">let</span> <span class="ident">files</span> <span class="op">=</span> <span class="ident">commits</span>.<span class="ident">commits</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">commits</span><span class="op">|</span> {
         <span class="kw">let</span> <span class="ident">vec</span> <span class="op">=</span> <span class="ident">Command::new</span>(<span class="string">&quot;git&quot;</span>)
             .<span class="ident">args</span>(<span class="kw-2">&amp;</span>[
@@ -360,7 +359,7 @@
 
 <span class="doccomment">/// Returns the list of paths to `Cargo.toml` files for all crates in which at least one file is</span>
 <span class="doccomment">/// modified.</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">directly_modified_crates</span>(<span class="ident">commits</span>: <span class="kw-2">&amp;</span><span class="ident">Commits</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">ModifiedContent</span> {
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">directly_modified_crates</span>(<span class="ident">commits</span>: <span class="kw-2">&amp;</span><span class="ident">Commits</span>) -&gt; <span class="ident">ModifiedContent</span> {
     <span class="kw">let</span> <span class="ident">files</span> <span class="op">=</span> <span class="ident">modified_files</span>(<span class="ident">commits</span>).<span class="ident">files</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">modified_files</span><span class="op">|</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">crates</span> <span class="op">=</span> <span class="macro">hashset!</span>[];
         <span class="kw">for</span> <span class="ident">str_path</span> <span class="kw">in</span> <span class="ident">modified_files</span> {
@@ -373,7 +372,7 @@
     <span class="ident">ModifiedContent</span> { <span class="ident">files</span> }
 }
 
-<span class="kw">fn</span> <span class="ident">find_crate_toml_file</span>(<span class="ident">str_path</span>: <span class="ident">String</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span> {
+<span class="kw">fn</span> <span class="ident">find_crate_toml_file</span>(<span class="ident">str_path</span>: <span class="ident">String</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span> {
     <span class="kw">if</span> <span class="ident">str_path</span>.<span class="ident">ends_with</span>(<span class="string">&quot;Cargo.toml&quot;</span>) {
         <span class="kw">return</span> <span class="prelude-val">Some</span>(<span class="ident">str_path</span>);
     } <span class="kw">else</span> <span class="kw">if</span> <span class="ident">str_path</span>.<span class="ident">ends_with</span>(<span class="string">&quot;.rs&quot;</span>) <span class="op">|</span><span class="op">|</span> <span class="ident">str_path</span>.<span class="ident">ends_with</span>(<span class="string">&quot;.lock&quot;</span>) {
@@ -391,7 +390,7 @@
 }
 
 <span class="doccomment">/// List of paths to all `.proto` files affected by the recent changes.</span>
-<span class="kw">fn</span> <span class="ident">affected_protos</span>(<span class="ident">commits</span>: <span class="kw-2">&amp;</span><span class="ident">Commits</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span> {
+<span class="kw">fn</span> <span class="ident">affected_protos</span>(<span class="ident">commits</span>: <span class="kw-2">&amp;</span><span class="ident">Commits</span>) -&gt; <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span> {
     <span class="ident">modified_files</span>(<span class="ident">commits</span>)
         .<span class="ident">files</span>
         .<span class="ident">map</span>(<span class="op">|</span><span class="ident">modified_files</span><span class="op">|</span> {
@@ -407,7 +406,7 @@
                     .<span class="ident">filter</span>(<span class="op">|</span><span class="ident">p</span><span class="op">|</span> <span class="ident">p</span>.<span class="ident">ends_with</span>(<span class="string">&quot;.proto&quot;</span>));
 
                 <span class="kw">for</span> <span class="ident">proto</span> <span class="kw">in</span> <span class="ident">all_protos</span> {
-                    <span class="ident">add_affected_protos</span>(<span class="ident">proto</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">affected_protos</span>);
+                    <span class="ident">add_affected_protos</span>(<span class="ident">proto</span>, <span class="kw-2">&amp;mut</span> <span class="ident">affected_protos</span>);
                 }
             }
 
@@ -418,7 +417,7 @@
 
 <span class="doccomment">/// Adds `proto_path` to the list of `affected_protos` if `proto_path` or any of its imported protos</span>
 <span class="doccomment">/// imports any of the proto files in `affected_protos`.</span>
-<span class="kw">fn</span> <span class="ident">add_affected_protos</span>(<span class="ident">proto_path</span>: <span class="ident">String</span>, <span class="ident">affected_protos</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>) {
+<span class="kw">fn</span> <span class="ident">add_affected_protos</span>(<span class="ident">proto_path</span>: <span class="ident">String</span>, <span class="ident">affected_protos</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>) {
     <span class="kw">if</span> <span class="ident">affected_protos</span>.<span class="ident">contains</span>(<span class="kw-2">&amp;</span><span class="ident">proto_path</span>) {
         <span class="kw">return</span>;
     }
@@ -437,7 +436,7 @@
 }
 
 <span class="doccomment">/// Returns paths to all `.proto` files that `proto_file_path` imports.</span>
-<span class="kw">fn</span> <span class="ident">imported_proto_files</span>(<span class="ident">proto_file_path</span>: <span class="ident">String</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span> {
+<span class="kw">fn</span> <span class="ident">imported_proto_files</span>(<span class="ident">proto_file_path</span>: <span class="ident">String</span>) -&gt; <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span> {
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">imported_protos</span> <span class="op">=</span> <span class="macro">vec!</span>[];
     <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Ok</span>(<span class="ident">file</span>) <span class="op">=</span> <span class="ident">std::fs::File::open</span>(<span class="ident">proto_file_path</span>) {
         <span class="kw">let</span> <span class="ident">lines</span> <span class="op">=</span> <span class="ident">BufReader::new</span>(<span class="ident">file</span>).<span class="ident">lines</span>();
@@ -457,7 +456,7 @@
 
 <span class="doccomment">/// Path to the `Cargo.toml` files for all crates that are either directly modified or have a</span>
 <span class="doccomment">/// dependency to a modified crate.</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">all_affected_crates</span>(<span class="ident">commits</span>: <span class="kw-2">&amp;</span><span class="ident">Commits</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">ModifiedContent</span> {
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">all_affected_crates</span>(<span class="ident">commits</span>: <span class="kw-2">&amp;</span><span class="ident">Commits</span>) -&gt; <span class="ident">ModifiedContent</span> {
     <span class="kw">let</span> <span class="ident">files</span> <span class="op">=</span> <span class="ident">directly_modified_crates</span>(<span class="ident">commits</span>)
         .<span class="ident">files</span>
         .<span class="ident">map</span>(<span class="op">|</span><span class="ident">modified_files</span><span class="op">|</span> {
@@ -472,13 +471,13 @@
 
             <span class="ident">crates_affected_by_protos</span>(<span class="kw-2">&amp;</span><span class="ident">affected_protos</span>(<span class="ident">commits</span>))
                 .<span class="ident">iter</span>()
-                .<span class="ident">fold</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">affected_crates</span>, <span class="op">|</span><span class="ident">affected_crates</span>, <span class="ident">toml_path</span><span class="op">|</span> {
+                .<span class="ident">fold</span>(<span class="kw-2">&amp;mut</span> <span class="ident">affected_crates</span>, <span class="op">|</span><span class="ident">affected_crates</span>, <span class="ident">toml_path</span><span class="op">|</span> {
                     <span class="ident">affected_crates</span>.<span class="ident">insert</span>(<span class="ident">toml_path</span>.<span class="ident">clone</span>(), <span class="bool-val">true</span>);
                     <span class="ident">affected_crates</span>
                 });
 
             <span class="kw">for</span> <span class="ident">crate_path</span> <span class="kw">in</span> <span class="ident">crate_manifest_files</span> {
-                <span class="ident">add_affected_crates</span>(<span class="ident">crate_path</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">affected_crates</span>);
+                <span class="ident">add_affected_crates</span>(<span class="ident">crate_path</span>, <span class="kw-2">&amp;mut</span> <span class="ident">affected_crates</span>);
             }
 
             <span class="comment">// Return `Cargo.toml` files of the crates that are affected by the changes</span>
@@ -493,7 +492,7 @@
 }
 
 <span class="doccomment">/// Returns the paths to `Cargo.toml` files of crates affected by the changed proto files.</span>
-<span class="kw">fn</span> <span class="ident">crates_affected_by_protos</span>(<span class="ident">affected_protos</span>: <span class="kw-2">&amp;</span>[<span class="ident">String</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">HashSet</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span> {
+<span class="kw">fn</span> <span class="ident">crates_affected_by_protos</span>(<span class="ident">affected_protos</span>: <span class="kw-2">&amp;</span>[<span class="ident">String</span>]) -&gt; <span class="ident">HashSet</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span> {
     <span class="ident">source_files</span>()
         .<span class="ident">filter</span>(<span class="op">|</span><span class="ident">path</span><span class="op">|</span> <span class="ident">to_string</span>(<span class="ident">path</span>.<span class="ident">clone</span>()).<span class="ident">ends_with</span>(<span class="string">&quot;build.rs&quot;</span>))
         .<span class="ident">filter</span>(<span class="op">|</span><span class="ident">path</span><span class="op">|</span> {
@@ -517,7 +516,7 @@
 <span class="doccomment">/// associated with a key is `true`, then the corresponding crate is affected by the changes.</span>
 <span class="kw">fn</span> <span class="ident">add_affected_crates</span>(
     <span class="ident">crate_toml_path</span>: <span class="ident">PathBuf</span>,
-    <span class="ident">affected_crates_toml_path</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">bool</span><span class="op">&gt;</span>,
+    <span class="ident">affected_crates_toml_path</span>: <span class="kw-2">&amp;mut</span> <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">bool</span><span class="op">&gt;</span>,
 ) {
     <span class="comment">// Return immediately, if the `crate_toml_path` is already visited.</span>
     <span class="kw">if</span> <span class="ident">affected_crates_toml_path</span>.<span class="ident">contains_key</span>(<span class="kw-2">&amp;</span><span class="ident">to_string</span>(<span class="ident">crate_toml_path</span>.<span class="ident">clone</span>())) {
@@ -541,7 +540,7 @@
 <span class="doccomment">/// Returns paths to `Cargo.toml` files of local crates (crates belonging to the Oak repo) that the</span>
 <span class="doccomment">/// given crate has a dependency to. Converts the relative dependency paths in `Cargo.toml` into</span>
 <span class="doccomment">/// paths relative to the repo&#39;s root.</span>
-<span class="kw">fn</span> <span class="ident">get_local_dependencies</span>(<span class="ident">toml_path</span>: <span class="kw-2">&amp;</span><span class="ident">Path</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span> {
+<span class="kw">fn</span> <span class="ident">get_local_dependencies</span>(<span class="ident">toml_path</span>: <span class="kw-2">&amp;</span><span class="ident">Path</span>) -&gt; <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span> {
     <span class="kw">let</span> <span class="ident">cargo_manifest</span>: <span class="ident">CargoManifest</span> <span class="op">=</span>
         <span class="ident">toml::from_str</span>(<span class="kw-2">&amp;</span><span class="ident">read_file</span>(<span class="ident">toml_path</span>)).<span class="ident">unwrap_or_else</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> {
             <span class="macro">panic!</span>(
@@ -554,14 +553,14 @@
     <span class="ident">cargo_manifest</span>
         .<span class="ident">all_dependencies_with_toml_path</span>()
         .<span class="ident">iter</span>()
-        .<span class="ident">fold</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">dependency_toml_paths</span>, <span class="op">|</span><span class="ident">paths</span>, <span class="ident">dep_path_str</span><span class="op">|</span> {
+        .<span class="ident">fold</span>(<span class="kw-2">&amp;mut</span> <span class="ident">dependency_toml_paths</span>, <span class="op">|</span><span class="ident">paths</span>, <span class="ident">dep_path_str</span><span class="op">|</span> {
             <span class="kw">let</span> <span class="ident">dep_path</span> <span class="op">=</span> <span class="ident">PathBuf::from</span>(<span class="ident">dep_path_str</span>);
             <span class="kw">let</span> <span class="ident">dep_path</span> <span class="op">=</span> <span class="ident">dep_path</span>.<span class="ident">as_path</span>();
             <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">canonical_dep_toml_path</span> <span class="op">=</span> <span class="ident">toml_path</span>.<span class="ident">to_path_buf</span>();
             <span class="ident">canonical_dep_toml_path</span>.<span class="ident">pop</span>();
             <span class="comment">// Change the path to be relative to the repo&#39;s root.</span>
             <span class="kw">for</span> <span class="ident">dir</span> <span class="kw">in</span> <span class="ident">dep_path</span>.<span class="ident">components</span>() {
-                <span class="kw">if</span> <span class="ident">dir</span> <span class="op">=</span><span class="op">=</span> <span class="ident">std::path::Component::ParentDir</span> {
+                <span class="kw">if</span> <span class="ident">dir</span> <span class="op">==</span> <span class="ident">std::path::Component::ParentDir</span> {
                     <span class="ident">canonical_dep_toml_path</span>.<span class="ident">pop</span>();
                 } <span class="kw">else</span> {
                     <span class="ident">canonical_dep_toml_path</span>.<span class="ident">push</span>(<span class="ident">dir</span>);
@@ -573,7 +572,7 @@
 
     <span class="ident">dependency_toml_paths</span>
 }
-</pre></div>
+</code></pre></div>
 </section><section id="search" class="content hidden"></section><div id="rustdoc-vars" data-root-path="../../" data-current-crate="runner" data-search-index-js="../../search-index.js" data-search-js="../../search.js"></div>
     <script src="../../main.js"></script><script src="../../source-script.js"></script><script src="../../source-files.js"></script>
 </body></html>
