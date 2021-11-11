@@ -35,7 +35,8 @@ public class Main {
     AttestationClient client = new AttestationClient();
     client.attest("http://localhost:8080", EMPTY_API_KEY, (config) -> !config.getMlInference());
 
-    byte[] requestBody = "{\"lat\":52,\"lng\":0}".getBytes(UTF_8);
+    // Test request coordinates are defined in `oak_functions/lookup_data_generator/src/data.rs`.
+    byte[] requestBody = "{\"lat\":0,\"lng\":0}".getBytes(UTF_8);
     Request request = Request.newBuilder().setBody(ByteString.copyFrom(requestBody)).build();
     Response response = client.send(request);
     client.finalize();
