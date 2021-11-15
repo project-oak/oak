@@ -768,12 +768,15 @@ dependencies = [
 name = "fuzzable"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
+ "log",
  "maplit",
  "oak_functions",
  "oak_functions_abi",
  "oak_functions_loader",
  "prost 0.9.0",
  "prost-build 0.9.0",
+ "rand 0.8.4",
  "test_utils",
  "tokio",
 ]

@@ -15,11 +15,14 @@ oak_functions = { path = "../../../sdk/oak_functions", features = [
 prost = "*"
 
 [dev-dependencies]
+anyhow = "*"
+log = "*"
+maplit = "*"
 oak_functions_loader = { path = "../../../loader", features = ["oak-unsafe"] }
 oak_functions_abi = { path = "../../../abi" }
+rand = "0.8.4"
 test_utils = { path = "../../../sdk/test_utils" }
 tokio = { version = "*", features = ["macros"] }
-maplit = "*"
 
 [build-dependencies]
 prost-build = "*"

@@ -85,12 +85,22 @@ lazy_static::lazy_static! {
     static ref RUNTIME: tokio::runtime::Runtime = tokio::runtime::Runtime::new().unwrap();
 }
 
+/// To avoid timeouts, allow executing a limited number of instructions. On oss-fuzz, the timeout is
+/// set to 25s. On average, the slowest instruction is ReadRequest. A maximum of 10_000 instructions
+/// should give a good margin to avoid timeouts.
+const MAX_INSTRUCTIONS_COUNT: usize = 10_000;
+
 // Generate a random list of `Instruction`s and send them to the Wasm module to run.
 fuzz_target!(|instruction_list: Vec<ArbitraryInstruction>| {
-    let instructions = instruction_list
+    let mut instructions: Vec<crate::proto::Instruction> = instruction_list
         .iter()
         .map(crate::proto::Instruction::from)
         .collect();
+
+    // To avoid timeouts, keep only the first MAX_INSTRUCTIONS_COUNT instructions.
+    if instructions.len() > MAX_INSTRUCTIONS_COUNT {
+        instructions.drain(MAX_INSTRUCTIONS_COUNT..);
+    }
     let instructions = Instructions { instructions };
 
     let mut body = vec![];

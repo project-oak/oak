@@ -18,6 +18,7 @@ use crate::proto::{
 };
 use maplit::hashmap;
 use oak_functions_abi::proto::{ServerPolicy, StatusCode};
+
 use oak_functions_loader::{
     grpc::{create_and_start_grpc_server, create_wasm_handler},
     logger::Logger,
@@ -30,6 +31,7 @@ use std::{
     net::{Ipv6Addr, SocketAddr},
     sync::Arc,
 };
+
 use test_utils::{get_config_info, make_request};
 
 #[tokio::test]
@@ -136,6 +138,119 @@ async fn test_server() {
     assert!(res.is_ok());
 }
 
+/// This is a slow test, intended for measuring and reporting the execution time of different types
+/// of instructions. Run manually.
+#[tokio::test]
+#[ignore]
+async fn large_wasm_invoke_test() {
+    use oak_functions_abi::proto::Request;
+    use oak_functions_loader::server::WasmHandler;
+    use rand::{distributions::Alphanumeric, thread_rng, Rng};
+
+    let logger = Logger::new(log::LevelFilter::Info);
+    let entries = hashmap! {
+        b"key_0".to_vec() => br#"value_0"#.to_vec(),
+    };
+    let lookup_data = Arc::new(LookupData::for_test(entries));
+    let mut manifest_path = std::env::current_dir().unwrap();
+    manifest_path.push("Cargo.toml");
+    let wasm_module_bytes =
+        test_utils::compile_rust_wasm(manifest_path.to_str().expect("Invalid target dir"), true)
+            .expect("Couldn't read Wasm module");
+
+    let metrics_factory = create_metrics_factory();
+    let wasm_handler = WasmHandler::create(
+        &wasm_module_bytes,
+        lookup_data,
+        vec![metrics_factory],
+        logger,
+    )
+    .expect("Couldn't create the server");
+
+    let response: Vec<u8> = thread_rng()
+        .sample_iter(&Alphanumeric)
+        .take(256)
+        .map(char::from)
+        .collect::<String>()
+        .into_bytes();
+    let message = response.clone();
+
+    let variants = vec![
+        InstructionVariant::Panic(crate::proto::Panic {}),
+        InstructionVariant::ReadRequest(crate::proto::ReadRequest {}),
+        InstructionVariant::WriteResponse(crate::proto::WriteResponse { response }),
+        InstructionVariant::WriteLogMessage(crate::proto::WriteLogMessage { message }),
+        InstructionVariant::StorageGetItem(crate::proto::StorageGetItem {
+            key: b"key".to_vec(),
+        }),
+        InstructionVariant::ReportEvent(crate::proto::ReportEvent {
+            label: b"label".to_vec(),
+        }),
+    ];
+
+    for variant in variants {
+        let mut instructions = vec![];
+
+        for _i in 0..50_000 {
+            let inst = crate::proto::Instruction {
+                instruction_variant: Some(variant.clone()),
+            };
+            instructions.push(inst);
+        }
+        let instructions = Instructions { instructions };
+
+        let mut request_bytes = vec![];
+        instructions
+            .encode(&mut request_bytes)
+            .expect("Couldn't encode instructions");
+
+        let request = Request {
+            body: request_bytes.clone(),
+        };
+        let now = std::time::Instant::now();
+        let response = wasm_handler.clone().handle_invoke(request).await.unwrap();
+        // The purpose of this test is to report some measurements about the execution time for each
+        // type of instruction.
+        println!(
+            "variant: {:?}, elapsed time: {:.0?}",
+            variant,
+            now.elapsed().as_secs()
+        );
+        assert_eq!(StatusCode::Success as i32, response.status);
+    }
+
+    for count in vec![10_000, 20_000, 30_000, 40_000, 50_000] {
+        let mut instructions = vec![];
+        for _i in 0..count {
+            let inst = crate::proto::Instruction {
+                instruction_variant: Some(InstructionVariant::ReadRequest(
+                    crate::proto::ReadRequest {},
+                )),
+            };
+            instructions.push(inst);
+        }
+        let instructions = Instructions { instructions };
+
+        let mut request_bytes = vec![];
+        instructions
+            .encode(&mut request_bytes)
+            .expect("Couldn't encode instructions");
+
+        let request = Request {
+            body: request_bytes.clone(),
+        };
+        let now = std::time::Instant::now();
+        let response = wasm_handler.clone().handle_invoke(request).await.unwrap();
+        // Report the execution time measurements.
+        println!(
+            "count: {:?}, elapsed time: {:.0?}",
+            count,
+            now.elapsed().as_secs()
+        );
+        assert_eq!(StatusCode::Success as i32, response.status);
+    }
+}
+
 fn create_metrics_factory() -> BoxedExtensionFactory {
     let metrics_config = PrivateMetricsConfig {
         epsilon: 1.0,
@@ -143,7 +258,8 @@ fn create_metrics_factory() -> BoxedExtensionFactory {
         buckets: hashmap! {"count".to_string() => BucketConfig::Count },
     };
 
-    let metrics_factory = PrivateMetricsProxyFactory::new(&metrics_config, Logger::for_test())
-        .expect("could not create PrivateMetricsProxyFactory");
+    let metrics_factory =
+        PrivateMetricsProxyFactory::new(&metrics_config, Logger::new(log::LevelFilter::Info))
+            .expect("could not create PrivateMetricsProxyFactory");
     Box::new(metrics_factory)
 }
