@@ -309,12 +309,9 @@ impl RustBinaryOptions for BuildServer {
         }
     }
     fn build_release(&self) -> bool {
-        match self.server_variant {
-            // For the coverage server variant, build debug artifacts
-            ServerVariant::Coverage => false,
-            // For all other server variants build the release artifacts
-            _ => true,
-        }
+        // For the coverage server variant, build debug artifacts
+        // For all other server variants build the release artifacts
+        !matches!(self.server_variant, ServerVariant::Coverage)
     }
 }
 
