@@ -393,6 +393,14 @@ fn run_ci() -> Step {
             run_cargo_udeps(),
             build_server(
                 &BuildServer {
+                    server_variant: ServerVariant::Unsafe,
+                    server_rust_toolchain: None,
+                    server_rust_target: None,
+                },
+                vec![],
+            ),
+            build_server(
+                &BuildServer {
                     server_variant: ServerVariant::Base,
                     server_rust_toolchain: None,
                     server_rust_target: None,
@@ -401,41 +409,39 @@ fn run_ci() -> Step {
             ),
             build_server(
                 &BuildServer {
-                    server_variant: ServerVariant::NoIntrospectionClient,
-                    server_rust_toolchain: None,
-                    server_rust_target: None,
-                },
-                vec![],
-            ),
-            build_server(
-                &BuildServer {
-                    server_variant: ServerVariant::Unsafe,
-                    server_rust_toolchain: None,
-                    server_rust_target: None,
-                },
-                vec![],
-            ),
-            build_server(
-                &BuildServer {
-                    server_variant: ServerVariant::Coverage,
-                    server_rust_toolchain: None,
-                    server_rust_target: None,
-                },
-                vec![],
-            ),
-            build_server(
-                &BuildServer {
                     server_variant: ServerVariant::Experimental,
                     server_rust_toolchain: None,
                     server_rust_target: None,
                 },
                 vec![],
             ),
-            run_tests(),
+            build_functions_server(
+                &BuildFunctionsServer {
+                    server_variant: FunctionsServerVariant::Unsafe,
+                    server_rust_toolchain: None,
+                    server_rust_target: None,
+                },
+                vec![],
+            ),
+            build_functions_server(
+                &BuildFunctionsServer {
+                    server_variant: FunctionsServerVariant::Base,
+                    server_rust_toolchain: None,
+                    server_rust_target: None,
+                },
+                vec![],
+            ),
+            run_cargo_tests(&RunTestsOpt {
+                cleanup: true,
+                benches: true,
+                commits: Commits::default(),
+            }),
+            run_bazel_tests(),
             run_tests_tsan(),
+            // ./scripts/runner run-examples --application-variant=rust
             run_examples(&RunExamples {
                 application_variant: "rust".to_string(),
-                permissions_file: "".to_string(),
+                permissions_file: "./examples/permissions/permissions.toml".to_string(),
                 example_name: None,
                 run_server: None,
                 client_additional_args: Vec::new(),
@@ -453,9 +459,10 @@ fn run_ci() -> Step {
                 },
                 commits: Commits::default(),
             }),
+            // ./scripts/runner run-examples --application-variant=cpp
             run_examples(&RunExamples {
                 application_variant: "cpp".to_string(),
-                permissions_file: "".to_string(),
+                permissions_file: "./examples/permissions/permissions.toml".to_string(),
                 example_name: None,
                 run_server: None,
                 client_additional_args: Vec::new(),
@@ -467,13 +474,37 @@ fn run_ci() -> Step {
                     client_rust_target: None,
                 },
                 build_server: BuildServer {
-                    server_variant: ServerVariant::Unsafe,
+                    server_variant: ServerVariant::Experimental,
+                    server_rust_toolchain: None,
+                    server_rust_target: None,
+                },
+                commits: Commits::default(),
+            }),
+            // ./scripts/runner run-examples --application-variant=rust --example-name=abitest
+            // --build-docker
+            run_examples(&RunExamples {
+                application_variant: "rust".to_string(),
+                permissions_file: "./examples/permissions/permissions.toml".to_string(),
+                example_name: Some("abitest".to_string()),
+                run_server: None,
+                client_additional_args: Vec::new(),
+                server_additional_args: Vec::new(),
+                build_docker: true,
+                build_client: BuildClient {
+                    client_variant: ALL_CLIENTS.to_string(),
+                    client_rust_toolchain: None,
+                    client_rust_target: None,
+                },
+                build_server: BuildServer {
+                    server_variant: ServerVariant::Experimental,
                     server_rust_toolchain: None,
                     server_rust_target: None,
                 },
                 commits: Commits::default(),
             }),
             // Package the Hello World application in a Docker image.
+            // ./scripts/runner run-examples --server-variant=base --application-variant=rust
+            // --example-name=hello_world --build-docker
             run_examples(&RunExamples {
                 application_variant: "rust".to_string(),
                 permissions_file: "./examples/permissions/permissions.toml".to_string(),
@@ -483,7 +514,7 @@ fn run_ci() -> Step {
                 server_additional_args: Vec::new(),
                 build_docker: true,
                 build_client: BuildClient {
-                    client_variant: NO_CLIENTS.to_string(),
+                    client_variant: ALL_CLIENTS.to_string(),
                     client_rust_toolchain: None,
                     client_rust_target: None,
                 },
@@ -494,26 +525,7 @@ fn run_ci() -> Step {
                 },
                 commits: Commits::default(),
             }),
-            run_examples(&RunExamples {
-                application_variant: "rust".to_string(),
-                permissions_file: "".to_string(),
-                example_name: Some("abitest".to_string()),
-                run_server: Some(false),
-                client_additional_args: Vec::new(),
-                server_additional_args: Vec::new(),
-                build_docker: true,
-                build_client: BuildClient {
-                    client_variant: NO_CLIENTS.to_string(),
-                    client_rust_toolchain: None,
-                    client_rust_target: None,
-                },
-                build_server: BuildServer {
-                    server_variant: ServerVariant::Unsafe,
-                    server_rust_toolchain: None,
-                    server_rust_target: None,
-                },
-                commits: Commits::default(),
-            }),
+            // ./scripts/runner run-functions-examples --application-variant=rust
             run_functions_examples(&RunFunctionsExamples {
                 application_variant: "rust".to_string(),
                 example_name: None,
@@ -527,11 +539,17 @@ fn run_ci() -> Step {
                     client_rust_target: None,
                 },
                 build_server: BuildFunctionsServer {
-                    server_variant: FunctionsServerVariant::Unsafe,
+                    server_variant: FunctionsServerVariant::Base,
                     server_rust_toolchain: None,
                     server_rust_target: None,
                 },
                 commits: Commits::default(),
+            }),
+            run_cargo_fuzz(&RunCargoFuzz {
+                crate_name: None,
+                target_name: None,
+                build_deps: true,
+                args: vec!["-max_total_time=2".to_string()],
             }),
         ],
     }

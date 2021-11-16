@@ -227,7 +227,7 @@ impl std::str::FromStr for FunctionsServerVariant {
     }
 }
 
-#[derive(StructOpt, Clone)]
+#[derive(StructOpt, Clone, Debug)]
 pub struct BuildFunctionsServer {
     #[structopt(long, help = "server variant: [base, unsafe]", default_value = "base")]
     pub server_variant: FunctionsServerVariant,
@@ -243,7 +243,7 @@ pub struct BuildFunctionsServer {
     pub server_rust_target: Option<String>,
 }
 
-#[derive(StructOpt, Clone)]
+#[derive(StructOpt, Clone, Debug)]
 pub struct RunTestsOpt {
     #[structopt(
         long,
@@ -315,7 +315,7 @@ impl RustBinaryOptions for BuildServer {
     }
 }
 
-#[derive(StructOpt, Clone)]
+#[derive(StructOpt, Clone, Debug)]
 pub struct RunCargoFuzz {
     #[structopt(
         long,
