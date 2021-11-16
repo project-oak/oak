@@ -40,7 +40,7 @@ pub struct Opt {
     pub cmd: Command,
 }
 
-#[derive(StructOpt, Clone)]
+#[derive(StructOpt, Clone, Debug)]
 pub enum Command {
     RunExamples(RunExamples),
     RunFunctionsExamples(RunFunctionsExamples),
@@ -101,7 +101,7 @@ pub struct RunExamples {
     pub commits: Commits,
 }
 
-#[derive(StructOpt, Clone)]
+#[derive(StructOpt, Clone, Debug)]
 pub struct RunFunctionsExamples {
     #[structopt(
         long,
