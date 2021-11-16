@@ -1087,9 +1087,6 @@
 <span id="1087">1087</span>
 <span id="1088">1088</span>
 <span id="1089">1089</span>
-<span id="1090">1090</span>
-<span id="1091">1091</span>
-<span id="1092">1092</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -1401,12 +1398,9 @@
         }
     }
     <span class="kw">fn</span> <span class="ident">build_release</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">bool</span> {
-        <span class="kw">match</span> <span class="self">self</span>.<span class="ident">server_variant</span> {
-            <span class="comment">// For the coverage server variant, build debug artifacts</span>
-            <span class="ident">ServerVariant::Coverage</span> =&gt; <span class="bool-val">false</span>,
-            <span class="comment">// For all other server variants build the release artifacts</span>
-            <span class="kw">_</span> =&gt; <span class="bool-val">true</span>,
-        }
+        <span class="comment">// For the coverage server variant, build debug artifacts</span>
+        <span class="comment">// For all other server variants build the release artifacts</span>
+        <span class="op">!</span><span class="macro">matches!</span>(<span class="self">self</span>.<span class="ident">server_variant</span>, <span class="ident">ServerVariant::Coverage</span>)
     }
 }
 
