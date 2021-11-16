@@ -1,6 +1,6 @@
 d9988747ff859d078bca5b715667ccc9ed5ac8ecdc43da0cae8217531fc52259  ./examples/bin/abitest_linear_handles.wasm
 e3122754992a7c2de11f315e7af86a07a10899393787d91daeaffe7b8b5a74d1  ./examples/bin/aggregator.wasm
-439d7491b2d1d9bbda3e4cdc2a44b5516527534ef4dd5ba22b3addf9bb8e0842  ./examples/bin/chat.wasm
+aa121cee3341ab1d8dcce9f4a51cb19a2d2be59993c438a2c83d81cd6bbb23e2  ./examples/bin/chat.wasm
 97877728ae78d9b08e76e819c80f6ddba510de02912c82f7ef6c6992bd38d814  ./examples/bin/hello_world.wasm
 b3493cf00f8ec72c596c553d9687d6e6ca273c63429ef807abc98748b5d82ebf  ./examples/bin/http_server.wasm
 a863ce7c5e4ef59e2be2d46c1c74a6ee08e2757a58d9194f76b5da1e07570e19  ./examples/bin/injection.wasm
