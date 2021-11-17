@@ -12,7 +12,6 @@ members = [
   "examples/weather_lookup/module",
   "load_test",
   "loader",
-  "loader/fuzz",
   "location_utils",
   "lookup_data_generator",
   "sdk/oak_functions",
