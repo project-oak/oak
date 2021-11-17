@@ -65,16 +65,6 @@
 <span id="65">65</span>
 <span id="66">66</span>
 <span id="67">67</span>
-<span id="68">68</span>
-<span id="69">69</span>
-<span id="70">70</span>
-<span id="71">71</span>
-<span id="72">72</span>
-<span id="73">73</span>
-<span id="74">74</span>
-<span id="75">75</span>
-<span id="76">76</span>
-<span id="77">77</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2021 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -102,9 +92,6 @@
 };
 <span class="kw">use</span> <span class="ident">prost::Message</span>;
 
-<span class="doccomment">/// To avoid timeouts, allow executing a limited number of instructions.</span>
-<span class="kw">const</span> <span class="ident">MAX_INSTRUCTIONS_COUNT</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">50_000</span>;
-
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
 <span class="kw">mod</span> <span class="ident">tests</span>;
 
@@ -113,44 +100,37 @@
     <span class="kw">let</span> <span class="ident">request</span> <span class="op">=</span> <span class="ident">oak_functions::read_request</span>().<span class="ident">expect</span>(<span class="string">&quot;Couldn&#39;t read request body.&quot;</span>);
     <span class="kw">let</span> <span class="ident">request</span> <span class="op">=</span> <span class="ident">Instructions::decode</span>(<span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="ident">request</span>).<span class="ident">expect</span>(<span class="string">&quot;Couldn&#39;t decode request.&quot;</span>);
 
-    <span class="comment">// If the request is too large, send a response and terminate.</span>
-    <span class="kw">if</span> <span class="ident">request</span>.<span class="ident">instructions</span>.<span class="ident">len</span>() <span class="op">&gt;</span> <span class="ident">MAX_INSTRUCTIONS_COUNT</span> {
-        <span class="ident">oak_functions::write_response</span>(<span class="string">br&quot;Too many instructions in the request.&quot;</span>)
-            .<span class="ident">expect</span>(<span class="string">&quot;Couldn&#39;t write response body.&quot;</span>);
-    } <span class="kw">else</span> {
-        <span class="comment">// Run all the instructions given in the request</span>
-        <span class="kw">for</span> <span class="ident">instruction</span> <span class="kw">in</span> <span class="ident">request</span>.<span class="ident">instructions</span> {
-            <span class="kw">match</span> <span class="ident">instruction</span>.<span class="ident">instruction_variant</span> {
-                <span class="prelude-val">Some</span>(<span class="ident">InstructionVariant::Panic</span>(<span class="ident">Panic</span> {})) =&gt; <span class="macro">panic!</span>(<span class="string">&quot;panic&quot;</span>),
-                <span class="prelude-val">Some</span>(<span class="ident">InstructionVariant::ReadRequest</span>(<span class="ident">ReadRequest</span> {})) =&gt; {
-                    <span class="kw">let</span> <span class="ident">_req</span> <span class="op">=</span> <span class="ident">oak_functions::read_request</span>().<span class="ident">expect</span>(<span class="string">&quot;Couldn&#39;t read request body.&quot;</span>);
-                }
-                <span class="prelude-val">Some</span>(<span class="ident">InstructionVariant::WriteResponse</span>(<span class="ident">WriteResponse</span> { <span class="ident">response</span> })) =&gt; {
-                    <span class="ident">oak_functions::write_response</span>(<span class="kw-2">&amp;</span><span class="ident">response</span>).<span class="ident">expect</span>(<span class="string">&quot;Couldn&#39;t write response body.&quot;</span>)
-                }
-                <span class="prelude-val">Some</span>(<span class="ident">InstructionVariant::StorageGetItem</span>(<span class="ident">StorageGetItem</span> { <span class="ident">key</span> })) =&gt; {
-                    <span class="kw">let</span> <span class="ident">_value</span> <span class="op">=</span> <span class="ident">oak_functions::storage_get_item</span>(<span class="kw-2">&amp;</span><span class="ident">key</span>)
-                        .<span class="ident">expect</span>(<span class="string">&quot;Couldn&#39;t find key in the storage&quot;</span>)
-                        .<span class="ident">unwrap_or_default</span>();
-                }
-                <span class="prelude-val">Some</span>(<span class="ident">InstructionVariant::WriteLogMessage</span>(<span class="ident">WriteLogMessage</span> { <span class="ident">message</span> })) =&gt; {
-                    <span class="ident">oak_functions::write_log_message</span>(
-                        <span class="ident">std::str::from_utf8</span>(<span class="kw-2">&amp;</span><span class="ident">message</span>).<span class="ident">expect</span>(<span class="string">&quot;Couldn&#39;t convert bytes to string&quot;</span>),
-                    )
-                    .<span class="ident">expect</span>(<span class="string">&quot;Couldn&#39;t write log message.&quot;</span>)
-                }
-                <span class="prelude-val">Some</span>(<span class="ident">InstructionVariant::ReportEvent</span>(<span class="ident">ReportEvent</span> { <span class="ident">label</span> })) =&gt; {
-                    <span class="ident">oak_functions::report_event</span>(
-                        <span class="ident">std::str::from_utf8</span>(<span class="kw-2">&amp;</span><span class="ident">label</span>).<span class="ident">expect</span>(<span class="string">&quot;Couldn&#39;t convert bytes to string&quot;</span>),
-                    )
-                    .<span class="ident">expect</span>(<span class="string">&quot;Couldn&#39;t report event.&quot;</span>)
-                }
-                <span class="prelude-val">None</span> =&gt; (),
+    <span class="comment">// Run all the instructions given in the request</span>
+    <span class="kw">for</span> <span class="ident">instruction</span> <span class="kw">in</span> <span class="ident">request</span>.<span class="ident">instructions</span> {
+        <span class="kw">match</span> <span class="ident">instruction</span>.<span class="ident">instruction_variant</span> {
+            <span class="prelude-val">Some</span>(<span class="ident">InstructionVariant::Panic</span>(<span class="ident">Panic</span> {})) =&gt; <span class="macro">panic!</span>(<span class="string">&quot;panic&quot;</span>),
+            <span class="prelude-val">Some</span>(<span class="ident">InstructionVariant::ReadRequest</span>(<span class="ident">ReadRequest</span> {})) =&gt; {
+                <span class="kw">let</span> <span class="ident">_req</span> <span class="op">=</span> <span class="ident">oak_functions::read_request</span>().<span class="ident">expect</span>(<span class="string">&quot;Couldn&#39;t read request body.&quot;</span>);
             }
+            <span class="prelude-val">Some</span>(<span class="ident">InstructionVariant::WriteResponse</span>(<span class="ident">WriteResponse</span> { <span class="ident">response</span> })) =&gt; {
+                <span class="ident">oak_functions::write_response</span>(<span class="kw-2">&amp;</span><span class="ident">response</span>).<span class="ident">expect</span>(<span class="string">&quot;Couldn&#39;t write response body.&quot;</span>)
+            }
+            <span class="prelude-val">Some</span>(<span class="ident">InstructionVariant::StorageGetItem</span>(<span class="ident">StorageGetItem</span> { <span class="ident">key</span> })) =&gt; {
+                <span class="kw">let</span> <span class="ident">_value</span> <span class="op">=</span> <span class="ident">oak_functions::storage_get_item</span>(<span class="kw-2">&amp;</span><span class="ident">key</span>)
+                    .<span class="ident">expect</span>(<span class="string">&quot;Couldn&#39;t find key in the storage&quot;</span>)
+                    .<span class="ident">unwrap_or_default</span>();
+            }
+            <span class="prelude-val">Some</span>(<span class="ident">InstructionVariant::WriteLogMessage</span>(<span class="ident">WriteLogMessage</span> { <span class="ident">message</span> })) =&gt; {
+                <span class="ident">oak_functions::write_log_message</span>(
+                    <span class="ident">std::str::from_utf8</span>(<span class="kw-2">&amp;</span><span class="ident">message</span>).<span class="ident">expect</span>(<span class="string">&quot;Couldn&#39;t convert bytes to string&quot;</span>),
+                )
+                .<span class="ident">expect</span>(<span class="string">&quot;Couldn&#39;t write log message.&quot;</span>)
+            }
+            <span class="prelude-val">Some</span>(<span class="ident">InstructionVariant::ReportEvent</span>(<span class="ident">ReportEvent</span> { <span class="ident">label</span> })) =&gt; {
+                <span class="ident">oak_functions::report_event</span>(
+                    <span class="ident">std::str::from_utf8</span>(<span class="kw-2">&amp;</span><span class="ident">label</span>).<span class="ident">expect</span>(<span class="string">&quot;Couldn&#39;t convert bytes to string&quot;</span>),
+                )
+                .<span class="ident">expect</span>(<span class="string">&quot;Couldn&#39;t report event.&quot;</span>)
+            }
+            <span class="prelude-val">None</span> =&gt; (),
         }
-
-        <span class="ident">oak_functions::write_response</span>(<span class="string">br&quot;Done fuzzing!&quot;</span>).<span class="ident">expect</span>(<span class="string">&quot;Couldn&#39;t write response body.&quot;</span>);
     }
+    <span class="ident">oak_functions::write_response</span>(<span class="string">br&quot;Done fuzzing!&quot;</span>).<span class="ident">expect</span>(<span class="string">&quot;Couldn&#39;t write response body.&quot;</span>);
 }
 </code></pre></div>
 </section><section id="search" class="content hidden"></section><div id="rustdoc-vars" data-root-path="../../" data-current-crate="fuzzable" data-search-index-js="../../search-index.js" data-search-js="../../search.js"></div>

@@ -12,7 +12,7 @@ sourcesIndex["oak_functions"] = {"name":"","files":["lib.rs"]};
 sourcesIndex["oak_functions_abi"] = {"name":"","files":["lib.rs"]};
 sourcesIndex["oak_functions_client"] = {"name":"","files":["attestation.rs","lib.rs"]};
 sourcesIndex["oak_functions_load_test"] = {"name":"","files":["main.rs"]};
-sourcesIndex["oak_functions_loader"] = {"name":"","files":["attestation.rs","grpc.rs","lib.rs","logger.rs","lookup.rs","metrics.rs","server.rs","tf.rs"]};
+sourcesIndex["oak_functions_loader"] = {"name":"","files":["attestation.rs","grpc.rs","lib.rs","logger.rs","lookup.rs","metrics.rs","server.rs"]};
 sourcesIndex["test_utils"] = {"name":"","files":["lib.rs"]};
 sourcesIndex["weather_lookup"] = {"name":"","files":["lib.rs"]};
 createSourceSidebar();
