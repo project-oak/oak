@@ -28,6 +28,7 @@
 use colored::*;
 use maplit::hashmap;
 use once_cell::sync::Lazy;
+use serde_yaml;
 use std::{
     path::{Path, PathBuf},
     sync::Mutex,
@@ -388,48 +389,30 @@ fn check_format(commits: &Commits) -> Step {
     }
 }
 
-fn simulate_call_from_cli(cmd: &mut Vec<&str>) -> Step {
-    let mut call = vec!["runner"];
-    call.append(cmd);
-    let opt = Opt::from_iter(call);
-    match_cmd(&opt)
-}
-
 fn run_ci() -> Step {
+    // parse cmds for ./scripts/runner from ci.yaml to keep them in sync
+    let path_to_ci_yaml = ".github/workflows/ci.yaml";
+    let file = std::fs::File::open(path_to_ci_yaml).expect("could not open file");
+    let contents: serde_yaml::Value =
+        serde_yaml::from_reader(file).expect("could not read file contents");
+    let mut ci_cmds = contents["jobs"]["runner"]["strategy"]["matrix"]["cmd"]
+        .as_sequence()
+        .unwrap()
+        .iter()
+        .map(|c| c.as_str().unwrap().split_whitespace().collect())
+        .collect::<Vec<Vec<&str>>>();
+
     Step::Multiple {
         name: "ci".to_string(),
-        steps: vec![
-            vec!["check-format"],
-            vec!["run-cargo-deny"],
-            vec!["run-cargo-udeps"],
-            vec!["build-server", "--server-variant=unsafe"],
-            vec!["build-server", "--server-variant=base"],
-            vec!["build-server", "--server-variant=experimental"],
-            vec!["build-functions-server", "--server-variant=unsafe"],
-            vec!["build-functions-server", "--server-variant=base"],
-            vec!["run-cargo-tests", "--cleanup", "--benches"],
-            vec!["run-bazel-tests"],
-            vec!["run-tests-tsan"],
-            vec!["run-examples", "--application-variant=rust"],
-            vec!["run-examples", "--application-variant=cpp"],
-            vec![
-                "run-examples",
-                "--application-variant=rust",
-                "--example-name=abitest",
-                "--build-docker",
-            ],
-            vec![
-                "run-examples",
-                "--server-variant=base",
-                "--application-variant=rust",
-                "--example-name=hello_world --build-docker",
-            ],
-            vec!["run-functions-examples", "--application-variant=rust"],
-            vec!["run-cargo-fuzz", "--build-deps", "--", "-max_total_time=2"],
-        ]
-        .iter_mut()
-        .map(|cmd| simulate_call_from_cli(cmd))
-        .collect(),
+        steps: ci_cmds
+            .iter_mut()
+            .map(|cmd| {
+                let mut call = vec!["runner"];
+                call.append(cmd);
+                let opt = Opt::from_iter(call);
+                match_cmd(&opt)
+            })
+            .collect(),
     }
 }
 
