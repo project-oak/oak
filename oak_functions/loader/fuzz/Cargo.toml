@@ -14,7 +14,7 @@ arbitrary = { version = "1", features = ["derive"] }
 lazy_static = "*"
 libfuzzer-sys = "*"
 maplit = "*"
-oak_functions_loader = { path = "..", features = ["oak-unsafe"] }
+oak_functions_loader = { path = "..", features = ["oak-metrics"] }
 oak_functions_abi = { path = "../../abi" }
 prost = "*"
 tokio = "*"

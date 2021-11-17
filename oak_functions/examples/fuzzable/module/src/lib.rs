@@ -25,9 +25,6 @@ use crate::proto::{
 };
 use prost::Message;
 
-/// To avoid timeouts, allow executing a limited number of instructions.
-const MAX_INSTRUCTIONS_COUNT: usize = 50_000;
-
 #[cfg(test)]
 mod tests;
 
@@ -36,42 +33,35 @@ pub extern "C" fn main() {
     let request = oak_functions::read_request().expect("Couldn't read request body.");
     let request = Instructions::decode(&*request).expect("Couldn't decode request.");
 
-    // If the request is too large, send a response and terminate.
-    if request.instructions.len() > MAX_INSTRUCTIONS_COUNT {
-        oak_functions::write_response(br"Too many instructions in the request.")
-            .expect("Couldn't write response body.");
-    } else {
-        // Run all the instructions given in the request
-        for instruction in request.instructions {
-            match instruction.instruction_variant {
-                Some(InstructionVariant::Panic(Panic {})) => panic!("panic"),
-                Some(InstructionVariant::ReadRequest(ReadRequest {})) => {
-                    let _req = oak_functions::read_request().expect("Couldn't read request body.");
-                }
-                Some(InstructionVariant::WriteResponse(WriteResponse { response })) => {
-                    oak_functions::write_response(&response).expect("Couldn't write response body.")
-                }
-                Some(InstructionVariant::StorageGetItem(StorageGetItem { key })) => {
-                    let _value = oak_functions::storage_get_item(&key)
-                        .expect("Couldn't find key in the storage")
-                        .unwrap_or_default();
-                }
-                Some(InstructionVariant::WriteLogMessage(WriteLogMessage { message })) => {
-                    oak_functions::write_log_message(
-                        std::str::from_utf8(&message).expect("Couldn't convert bytes to string"),
-                    )
-                    .expect("Couldn't write log message.")
-                }
-                Some(InstructionVariant::ReportEvent(ReportEvent { label })) => {
-                    oak_functions::report_event(
-                        std::str::from_utf8(&label).expect("Couldn't convert bytes to string"),
-                    )
-                    .expect("Couldn't report event.")
-                }
-                None => (),
+    // Run all the instructions given in the request
+    for instruction in request.instructions {
+        match instruction.instruction_variant {
+            Some(InstructionVariant::Panic(Panic {})) => panic!("panic"),
+            Some(InstructionVariant::ReadRequest(ReadRequest {})) => {
+                let _req = oak_functions::read_request().expect("Couldn't read request body.");
             }
+            Some(InstructionVariant::WriteResponse(WriteResponse { response })) => {
+                oak_functions::write_response(&response).expect("Couldn't write response body.")
+            }
+            Some(InstructionVariant::StorageGetItem(StorageGetItem { key })) => {
+                let _value = oak_functions::storage_get_item(&key)
+                    .expect("Couldn't find key in the storage")
+                    .unwrap_or_default();
+            }
+            Some(InstructionVariant::WriteLogMessage(WriteLogMessage { message })) => {
+                oak_functions::write_log_message(
+                    std::str::from_utf8(&message).expect("Couldn't convert bytes to string"),
+                )
+                .expect("Couldn't write log message.")
+            }
+            Some(InstructionVariant::ReportEvent(ReportEvent { label })) => {
+                oak_functions::report_event(
+                    std::str::from_utf8(&label).expect("Couldn't convert bytes to string"),
+                )
+                .expect("Couldn't report event.")
+            }
+            None => (),
         }
-
-        oak_functions::write_response(br"Done fuzzing!").expect("Couldn't write response body.");
     }
+    oak_functions::write_response(br"Done fuzzing!").expect("Couldn't write response body.");
 }

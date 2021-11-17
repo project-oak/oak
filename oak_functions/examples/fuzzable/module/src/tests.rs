@@ -18,6 +18,7 @@ use crate::proto::{
 };
 use maplit::hashmap;
 use oak_functions_abi::proto::{ServerPolicy, StatusCode};
+
 use oak_functions_loader::{
     grpc::{create_and_start_grpc_server, create_wasm_handler},
     logger::Logger,
@@ -30,6 +31,7 @@ use std::{
     net::{Ipv6Addr, SocketAddr},
     sync::Arc,
 };
+
 use test_utils::{get_config_info, make_request};
 
 #[tokio::test]
@@ -143,7 +145,8 @@ fn create_metrics_factory() -> BoxedExtensionFactory {
         buckets: hashmap! {"count".to_string() => BucketConfig::Count },
     };
 
-    let metrics_factory = PrivateMetricsProxyFactory::new(&metrics_config, Logger::for_test())
-        .expect("could not create PrivateMetricsProxyFactory");
+    let metrics_factory =
+        PrivateMetricsProxyFactory::new(&metrics_config, Logger::new(log::LevelFilter::Info))
+            .expect("could not create PrivateMetricsProxyFactory");
     Box::new(metrics_factory)
 }
