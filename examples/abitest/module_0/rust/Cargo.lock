@@ -337,7 +337,7 @@ dependencies = [
  "libc",
  "num-integer",
  "num-traits",
- "time 0.1.43",
+ "time",
  "winapi",
 ]
 
@@ -947,7 +947,7 @@ dependencies = [
  "ring",
  "serde",
  "serde_json",
- "simple_asn1 0.4.1",
+ "simple_asn1",
 ]
 
 [[package]]
@@ -1058,17 +1058,6 @@ name = "num-bigint"
 version = "0.2.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "090c7f9998ee0ff65aa5b723e4009f7b217707f1fb5ea551329cc4d6231fb304"
-dependencies = [
- "autocfg",
- "num-integer",
- "num-traits",
-]
-
-[[package]]
-name = "num-bigint"
-version = "0.4.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f93ab6289c7b344a8a9f60f88d80aa20032336fe78da341afc91c8a2341fc75f"
 dependencies = [
  "autocfg",
  "num-integer",
@@ -1263,7 +1252,7 @@ dependencies = [
  "pem 1.0.1",
  "ring",
  "sha2",
- "simple_asn1 0.6.0",
+ "simple_asn1",
  "structopt",
 ]
 
@@ -1563,15 +1552,6 @@ version = "0.8.0"
 dependencies = [
  "bytes",
  "prost",
-]
-
-[[package]]
-name = "quickcheck"
-version = "1.0.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "588f6378e4dd99458b60ec275b4477add41ce4fa9f64dcba6f15adccb19b50d6"
-dependencies = [
- "rand 0.8.4",
 ]
 
 [[package]]
@@ -1918,20 +1898,8 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "692ca13de57ce0613a363c8c2f1de925adebc81b04c923ac60c5488bb44abe4b"
 dependencies = [
  "chrono",
- "num-bigint 0.2.6",
+ "num-bigint",
  "num-traits",
-]
-
-[[package]]
-name = "simple_asn1"
-version = "0.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "69e392b68e8f171f7399608dabaa3a099525b7daca0fd1c8690bda08eb110355"
-dependencies = [
- "num-bigint 0.4.3",
- "num-traits",
- "thiserror",
- "time 0.3.4",
 ]
 
 [[package]]
@@ -2097,24 +2065,6 @@ dependencies = [
  "libc",
  "winapi",
 ]
-
-[[package]]
-name = "time"
-version = "0.3.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "99beeb0daeac2bd1e86ac2c21caddecb244b39a093594da1a661ec2060c7aedd"
-dependencies = [
- "itoa",
- "libc",
- "quickcheck",
- "time-macros",
-]
-
-[[package]]
-name = "time-macros"
-version = "0.2.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "25eb0ca3468fc0acc11828786797f6ef9aa1555e4a211a60d64cc8e4d1be47d6"
 
 [[package]]
 name = "tink-aead"
