@@ -1129,7 +1129,7 @@
     <span class="kw">pub</span> <span class="ident">cmd</span>: <span class="ident">Command</span>,
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">StructOpt</span>, <span class="ident">Clone</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">StructOpt</span>, <span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
 <span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">Command</span> {
     <span class="ident">RunExamples</span>(<span class="ident">RunExamples</span>),
     <span class="ident">RunFunctionsExamples</span>(<span class="ident">RunFunctionsExamples</span>),
@@ -1190,7 +1190,7 @@
     <span class="kw">pub</span> <span class="ident">commits</span>: <span class="ident">Commits</span>,
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">StructOpt</span>, <span class="ident">Clone</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">StructOpt</span>, <span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">RunFunctionsExamples</span> {
     <span class="attribute">#[<span class="ident">structopt</span>(
         <span class="ident">long</span>,
@@ -1316,7 +1316,7 @@
     }
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">StructOpt</span>, <span class="ident">Clone</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">StructOpt</span>, <span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">BuildFunctionsServer</span> {
     <span class="attribute">#[<span class="ident">structopt</span>(<span class="ident">long</span>, <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;server variant: [base, unsafe]&quot;</span>, <span class="ident">default_value</span> <span class="op">=</span> <span class="string">&quot;base&quot;</span>)]</span>
     <span class="kw">pub</span> <span class="ident">server_variant</span>: <span class="ident">FunctionsServerVariant</span>,
@@ -1332,7 +1332,7 @@
     <span class="kw">pub</span> <span class="ident">server_rust_target</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">StructOpt</span>, <span class="ident">Clone</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">StructOpt</span>, <span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">RunTestsOpt</span> {
     <span class="attribute">#[<span class="ident">structopt</span>(
         <span class="ident">long</span>,
@@ -1404,7 +1404,7 @@
     }
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">StructOpt</span>, <span class="ident">Clone</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">StructOpt</span>, <span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">RunCargoFuzz</span> {
     <span class="attribute">#[<span class="ident">structopt</span>(
         <span class="ident">long</span>,
