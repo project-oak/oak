@@ -28,6 +28,7 @@
 use colored::*;
 use maplit::hashmap;
 use once_cell::sync::Lazy;
+use serde_yaml;
 use std::{
     path::{Path, PathBuf},
     sync::Mutex,
@@ -82,25 +83,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
 
     let run = async move || {
-        let steps = match opt.cmd {
-            Command::RunExamples(ref opt) => run_examples(opt),
-            Command::RunFunctionsExamples(ref opt) => run_functions_examples(opt),
-            Command::BuildFunctionsExample(ref opt) => build_functions_example(opt),
-            Command::BuildServer(ref opt) => build_server(opt, vec![]),
-            Command::BuildFunctionsServer(ref opt) => build_functions_server(opt, vec![]),
-            Command::RunTests => run_tests(),
-            Command::RunCargoTests(ref opt) => run_cargo_tests(opt),
-            Command::RunBazelTests => run_bazel_tests(),
-            Command::RunTestsTsan => run_tests_tsan(),
-            Command::RunCargoFuzz(ref opt) => run_cargo_fuzz(opt),
-            Command::Format(ref commits) => format(commits),
-            Command::CheckFormat(ref commits) => check_format(commits),
-            Command::RunCi => run_ci(),
-            Command::Completion => panic!("should have been handled above"),
-            Command::RunCargoDeny => run_cargo_deny(),
-            Command::RunCargoUdeps => run_cargo_udeps(),
-            Command::RunCargoClean => run_cargo_clean(),
-        };
+        let steps = match_cmd(&opt);
         // TODO(#396): Add support for running individual commands via command line flags.
         let remaining_steps = steps.len();
         run_step(&Context::root(&opt), steps, Status::new(remaining_steps)).await
@@ -132,6 +115,28 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     Ok(())
+}
+
+fn match_cmd(opt: &Opt) -> Step {
+    match opt.cmd {
+        Command::RunExamples(ref opt) => run_examples(opt),
+        Command::RunFunctionsExamples(ref opt) => run_functions_examples(opt),
+        Command::BuildFunctionsExample(ref opt) => build_functions_example(opt),
+        Command::BuildServer(ref opt) => build_server(opt, vec![]),
+        Command::BuildFunctionsServer(ref opt) => build_functions_server(opt, vec![]),
+        Command::RunTests => run_tests(),
+        Command::RunCargoTests(ref opt) => run_cargo_tests(opt),
+        Command::RunBazelTests => run_bazel_tests(),
+        Command::RunTestsTsan => run_tests_tsan(),
+        Command::RunCargoFuzz(ref opt) => run_cargo_fuzz(opt),
+        Command::Format(ref commits) => format(commits),
+        Command::CheckFormat(ref commits) => check_format(commits),
+        Command::RunCi => run_ci(),
+        Command::Completion => panic!("should have been handled above"),
+        Command::RunCargoDeny => run_cargo_deny(),
+        Command::RunCargoUdeps => run_cargo_udeps(),
+        Command::RunCargoClean => run_cargo_clean(),
+    }
 }
 
 fn cleanup() {
@@ -385,155 +390,29 @@ fn check_format(commits: &Commits) -> Step {
 }
 
 fn run_ci() -> Step {
+    // parse cmds for ./scripts/runner from ci.yaml to keep them in sync
+    let path_to_ci_yaml = ".github/workflows/ci.yaml";
+    let file = std::fs::File::open(path_to_ci_yaml).expect("could not open file");
+    let contents: serde_yaml::Value =
+        serde_yaml::from_reader(file).expect("could not read file contents");
+    let mut ci_cmds = contents["jobs"]["runner"]["strategy"]["matrix"]["cmd"]
+        .as_sequence()
+        .unwrap()
+        .iter()
+        .map(|c| c.as_str().unwrap().split_whitespace().collect())
+        .collect::<Vec<Vec<&str>>>();
+
     Step::Multiple {
         name: "ci".to_string(),
-        steps: vec![
-            check_format(&Commits::default()),
-            run_cargo_deny(),
-            run_cargo_udeps(),
-            build_server(
-                &BuildServer {
-                    server_variant: ServerVariant::Base,
-                    server_rust_toolchain: None,
-                    server_rust_target: None,
-                },
-                vec![],
-            ),
-            build_server(
-                &BuildServer {
-                    server_variant: ServerVariant::NoIntrospectionClient,
-                    server_rust_toolchain: None,
-                    server_rust_target: None,
-                },
-                vec![],
-            ),
-            build_server(
-                &BuildServer {
-                    server_variant: ServerVariant::Unsafe,
-                    server_rust_toolchain: None,
-                    server_rust_target: None,
-                },
-                vec![],
-            ),
-            build_server(
-                &BuildServer {
-                    server_variant: ServerVariant::Coverage,
-                    server_rust_toolchain: None,
-                    server_rust_target: None,
-                },
-                vec![],
-            ),
-            build_server(
-                &BuildServer {
-                    server_variant: ServerVariant::Experimental,
-                    server_rust_toolchain: None,
-                    server_rust_target: None,
-                },
-                vec![],
-            ),
-            run_tests(),
-            run_tests_tsan(),
-            run_examples(&RunExamples {
-                application_variant: "rust".to_string(),
-                permissions_file: "".to_string(),
-                example_name: None,
-                run_server: None,
-                client_additional_args: Vec::new(),
-                server_additional_args: Vec::new(),
-                build_docker: false,
-                build_client: BuildClient {
-                    client_variant: ALL_CLIENTS.to_string(),
-                    client_rust_toolchain: None,
-                    client_rust_target: None,
-                },
-                build_server: BuildServer {
-                    server_variant: ServerVariant::Experimental,
-                    server_rust_toolchain: None,
-                    server_rust_target: None,
-                },
-                commits: Commits::default(),
-            }),
-            run_examples(&RunExamples {
-                application_variant: "cpp".to_string(),
-                permissions_file: "".to_string(),
-                example_name: None,
-                run_server: None,
-                client_additional_args: Vec::new(),
-                server_additional_args: Vec::new(),
-                build_docker: false,
-                build_client: BuildClient {
-                    client_variant: ALL_CLIENTS.to_string(),
-                    client_rust_toolchain: None,
-                    client_rust_target: None,
-                },
-                build_server: BuildServer {
-                    server_variant: ServerVariant::Unsafe,
-                    server_rust_toolchain: None,
-                    server_rust_target: None,
-                },
-                commits: Commits::default(),
-            }),
-            // Package the Hello World application in a Docker image.
-            run_examples(&RunExamples {
-                application_variant: "rust".to_string(),
-                permissions_file: "./examples/permissions/permissions.toml".to_string(),
-                example_name: Some("hello_world".to_string()),
-                run_server: Some(false),
-                client_additional_args: Vec::new(),
-                server_additional_args: Vec::new(),
-                build_docker: true,
-                build_client: BuildClient {
-                    client_variant: NO_CLIENTS.to_string(),
-                    client_rust_toolchain: None,
-                    client_rust_target: None,
-                },
-                build_server: BuildServer {
-                    server_variant: ServerVariant::Base,
-                    server_rust_toolchain: None,
-                    server_rust_target: None,
-                },
-                commits: Commits::default(),
-            }),
-            run_examples(&RunExamples {
-                application_variant: "rust".to_string(),
-                permissions_file: "".to_string(),
-                example_name: Some("abitest".to_string()),
-                run_server: Some(false),
-                client_additional_args: Vec::new(),
-                server_additional_args: Vec::new(),
-                build_docker: true,
-                build_client: BuildClient {
-                    client_variant: NO_CLIENTS.to_string(),
-                    client_rust_toolchain: None,
-                    client_rust_target: None,
-                },
-                build_server: BuildServer {
-                    server_variant: ServerVariant::Unsafe,
-                    server_rust_toolchain: None,
-                    server_rust_target: None,
-                },
-                commits: Commits::default(),
-            }),
-            run_functions_examples(&RunFunctionsExamples {
-                application_variant: "rust".to_string(),
-                example_name: None,
-                run_server: None,
-                client_additional_args: Vec::new(),
-                server_additional_args: Vec::new(),
-                build_docker: false,
-                build_client: BuildClient {
-                    client_variant: ALL_CLIENTS.to_string(),
-                    client_rust_toolchain: None,
-                    client_rust_target: None,
-                },
-                build_server: BuildFunctionsServer {
-                    server_variant: FunctionsServerVariant::Unsafe,
-                    server_rust_toolchain: None,
-                    server_rust_target: None,
-                },
-                commits: Commits::default(),
-            }),
-        ],
+        steps: ci_cmds
+            .iter_mut()
+            .map(|cmd| {
+                let mut call = vec!["runner"];
+                call.append(cmd);
+                let opt = Opt::from_iter(call);
+                match_cmd(&opt)
+            })
+            .collect(),
     }
 }
 

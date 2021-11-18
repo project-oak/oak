@@ -20,6 +20,7 @@ nix = "*"
 once_cell = "*"
 regex = "*"
 serde = { version = "*", features = ["derive"] }
+serde_yaml = "*"
 structopt = "*"
 tokio = { version = "*", features = [
   "fs",
