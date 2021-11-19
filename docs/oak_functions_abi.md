@@ -180,7 +180,7 @@ corresponding size to `value_len_ptr`. The Oak Functions runtime returns an
 In particular, if no item with the given key is found, the status is
 `ERR_STORAGE_ITEM_NOT_FOUND`.
 
-### `tf_model_infer(input_ptr: i32, input_len: i32, inference_ptr_ptr, inference_len_ptr: i32) : i32`
+### `tf_model_infer`
 
 - `param[0]: input_ptr: i32`: address of the input buffer.
 - `param[1]: input_len: i32`: number of bytes of the input buffer.
