@@ -28,6 +28,7 @@ use oak_functions_loader::{
     lookup::{parse_lookup_entries, LookupData, LookupDataAuth, LookupDataSource},
     server::WasmHandler,
 };
+use rand::{prelude::StdRng, SeedableRng};
 use std::{
     net::{Ipv6Addr, SocketAddr},
     sync::Arc,
@@ -195,7 +196,7 @@ fn bench_wasm_handler(bencher: &mut Bencher) {
     let wasm_module_bytes =
         test_utils::compile_rust_wasm(manifest_path.to_str().expect("Invalid target dir"), true)
             .expect("Couldn't read Wasm module");
-    let mut rng = rand::thread_rng();
+    let mut rng = StdRng::seed_from_u64(42);
     let buf = generate_and_serialize_sparse_weather_entries(&mut rng, entry_count).unwrap();
     let entries = parse_lookup_entries(buf).unwrap();
 
