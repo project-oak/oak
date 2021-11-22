@@ -59,7 +59,7 @@ pub enum Command {
     RunCi,
     RunCargoClean,
     #[structopt(about = "generate bash completion script to stdout")]
-    Completion,
+    Completion(Completion),
 }
 
 #[derive(StructOpt, Clone, Debug)]
@@ -99,6 +99,17 @@ pub struct RunExamples {
         help = "run the command only for files modified in the specified commits"
     )]
     pub commits: Commits,
+}
+
+#[derive(StructOpt, Clone, Debug)]
+pub struct Completion {
+    #[structopt(
+        long,
+        help = "dir to write bash_completion file; defaults to current directory",
+        default_value = "",
+        parse(from_os_str)
+    )]
+    pub out_dir: PathBuf,
 }
 
 #[derive(StructOpt, Clone, Debug)]

@@ -77,8 +77,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let opt = Opt::from_args();
 
-    if let Command::Completion = opt.cmd {
-        Opt::clap().gen_completions_to("runner", clap::Shell::Bash, &mut std::io::stdout());
+    if let Command::Completion(completion) = opt.cmd {
+        let mut out_dir = completion.out_dir;
+        out_dir.push(".bash_completion");
+        let mut file = std::fs::File::create(out_dir)?;
+        Opt::clap().gen_completions_to("runner", clap::Shell::Bash, &mut file);
         std::process::exit(0);
     };
 
@@ -132,7 +135,7 @@ fn match_cmd(opt: &Opt) -> Step {
         Command::Format(ref commits) => format(commits),
         Command::CheckFormat(ref commits) => check_format(commits),
         Command::RunCi => run_ci(),
-        Command::Completion => panic!("should have been handled above"),
+        Command::Completion(_) => panic!("should have been handled before"),
         Command::RunCargoDeny => run_cargo_deny(),
         Command::RunCargoUdeps => run_cargo_udeps(),
         Command::RunCargoClean => run_cargo_clean(),
