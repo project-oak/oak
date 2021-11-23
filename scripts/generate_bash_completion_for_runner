@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+
+runner completion --out-dir=$HOME
+
+echo "
+  Wrote the bash completion file for runner to ${HOME}.
+  Please source this file in your .bashrc, e.g., through
+  
+  echo \"#activate runner auto-complete
+    if [ -f ~/.runner_bash_completion ]; then
+      source ~/.runner_bash_completion
+    fi\" >> ~/.bashrc
+"
