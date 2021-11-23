@@ -14,5 +14,3 @@ assert_matches = "*"
 oak_functions = { path = "../../../sdk/oak_functions" }
 oak_functions_abi = { path = "../../../abi" }
 oak_functions_abitest_common = { path = "../common" }
-serde = { version = "*", features = ["derive"] }
-serde_json = "*"
