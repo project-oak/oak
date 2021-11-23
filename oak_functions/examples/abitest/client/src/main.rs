@@ -19,8 +19,8 @@
 use anyhow::Context;
 use log::debug;
 use oak_functions_abi::proto::{ConfigurationInfo, Request};
-use oak_functions_client::Client;
 use oak_functions_abitest_common::*;
+use oak_functions_client::Client;
 use structopt::StructOpt;
 
 #[derive(StructOpt, Clone)]
@@ -114,9 +114,9 @@ async fn send_request(uri: &str, body: &str) -> anyhow::Result<String> {
         .await
         .context("Couldn't invoke Oak Functions")?;
 
-    let response_body = std::str::from_utf8(
-        response.body().context("Couldn't get response message")?
-    ).context("Couldn't parse response message to string")?;
+    let response_body =
+        std::str::from_utf8(response.body().context("Couldn't get response message")?)
+            .context("Couldn't parse response message to string")?;
     Ok(response_body.to_string())
 }
 
