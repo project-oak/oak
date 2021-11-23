@@ -1,3 +1,5 @@
 (function() {var implementors = {};
 implementors["metrics_client"] = [{"text":"impl StructOpt for <a class=\"struct\" href=\"metrics_client/struct.Opt.html\" title=\"struct metrics_client::Opt\">Opt</a>","synthetic":false,"types":["metrics_client::Opt"]}];
+implementors["oak_functions_abitest_backend"] = [{"text":"impl StructOpt for <a class=\"struct\" href=\"oak_functions_abitest_backend/struct.Opt.html\" title=\"struct oak_functions_abitest_backend::Opt\">Opt</a>","synthetic":false,"types":["oak_functions_abitest_backend::Opt"]}];
+implementors["oak_functions_abitest_client"] = [{"text":"impl StructOpt for <a class=\"struct\" href=\"oak_functions_abitest_client/struct.Opt.html\" title=\"struct oak_functions_abitest_client::Opt\">Opt</a>","synthetic":false,"types":["oak_functions_abitest_client::Opt"]}];
 if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()
