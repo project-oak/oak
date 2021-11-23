@@ -1,0 +1,7 @@
+lookup_data = { Url = "http://localhost:8081" }
+lookup_data_download_period = "10m"
+worker_threads = 4
+
+[policy]
+constant_response_size_bytes = 90
+constant_processing_time = "20ms"

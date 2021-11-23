@@ -2,6 +2,9 @@
 members = [
   "abi",
   "client/rust/Cargo.toml",
+  "examples/abitest/backend",
+  "examples/abitest/client",
+  "examples/abitest/module",
   "examples/benchmark/module",
   "examples/fuzzable/module",
   "examples/key_value_lookup/module",

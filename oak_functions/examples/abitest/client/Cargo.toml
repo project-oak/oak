@@ -1,0 +1,24 @@
+[package]
+name = "oak_functions_abitest_client"
+version = "0.1.0"
+authors = ["Ivan Petrov <ivanpetrov@google.com>"]
+edition = "2018"
+license = "Apache-2.0"
+
+[dependencies]
+anyhow = "*"
+env_logger = "*"
+http = "*"
+hyper = { version = "*", features = ["client", "http1", "http2", "runtime"] }
+log = "*"
+oak_functions_abi = { path = "../../../abi" }
+oak_functions_abitest_common = { path = "../common" }
+oak_functions_client = { path = "../../../client/rust" }
+prost = "*"
+structopt = "*"
+tokio = { version = "*", features = [
+  "fs",
+  "macros",
+  "sync",
+  "rt-multi-thread"
+] }
