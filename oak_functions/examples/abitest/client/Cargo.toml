@@ -15,6 +15,7 @@ log = "*"
 maplit = "*"
 oak_functions_abi = { path = "../../../abi" }
 oak_functions_abitest_common = { path = "../common" }
+oak_functions_client = { path = "../../../client/rust" }
 prost = "*"
 structopt = "*"
 tokio = { version = "*", features = [

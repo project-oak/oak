@@ -17,10 +17,10 @@
 //! Oak Functions ABI test client.
 
 use anyhow::Context;
-use log::info;
-use oak_functions_abi::proto::{Response, StatusCode};
+use log::debug;
+use oak_functions_abi::proto::{ConfigurationInfo, Request};
+use oak_functions_client::Client;
 use oak_functions_abitest_common::*;
-use prost::Message;
 use structopt::StructOpt;
 
 #[derive(StructOpt, Clone)]
@@ -82,43 +82,42 @@ impl TestManager {
             .await
             .context("Couldn't send request")?;
         assert_eq!(response, expected_response);
-        info!("{} test is successful", test_name);
+        debug!("{} test is successful", test_name);
         Ok(())
     }
 }
 
 async fn send_request(uri: &str, body: &str) -> anyhow::Result<String> {
-    let http = hyper::client::HttpConnector::new();
-    let client: hyper::client::Client<_, hyper::Body> = hyper::client::Client::builder()
-        .http2_only(true)
-        .build(http);
+    // TODO(#2348): Replace with a more flexible specification of the verification logic.
+    // For the common client used in examples, we expect ML-inference and private metrics to be
+    // disabled.
+    let config_verifier = |config: ConfigurationInfo| {
+        if config.ml_inference {
+            anyhow::bail!("ML-inference support is enabled")
+        }
+        if config.metrics.is_some() {
+            anyhow::bail!("private metrics support is enabled")
+        }
+        Ok(())
+    };
 
-    let request = hyper::Request::builder()
-        .method(http::Method::POST)
-        .uri(uri)
-        .body(body.to_string().into())
-        .context("Couldn't create HTTP request")?;
+    let mut client = Client::new(uri, config_verifier)
+        .await
+        .context("Couldn't create Oak Functions client")?;
+
+    let request = Request {
+        body: body.as_bytes().to_vec(),
+    };
 
     let response = client
-        .request(request)
+        .invoke(request)
         .await
-        .context("Couldn't send request")?;
-    assert_eq!(response.status(), http::StatusCode::OK);
+        .context("Couldn't invoke Oak Functions")?;
 
-    let body = hyper::body::to_bytes(response.into_body())
-        .await
-        .context("Couldn't read response body")?;
-    let result = Response::decode(body).context("Couldn't decode response body")?;
-    assert_eq!(StatusCode::Success as i32, result.status);
-
-    let message = String::from_utf8(
-        result
-            .body()
-            .context("Couldn't get response message")?
-            .to_vec(),
-    )
-    .context("Couldn't parse response message to string")?;
-    Ok(message)
+    let response_body = std::str::from_utf8(
+        response.body().context("Couldn't get response message")?
+    ).context("Couldn't parse response message to string")?;
+    Ok(response_body.to_string())
 }
 
 #[tokio::main]

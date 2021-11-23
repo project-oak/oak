@@ -65,13 +65,12 @@ impl TestManager {
         Ok(())
     }
 
-    /// Tests that multiple calls to [`oak_functions_abi::read_request`] function all return the
-    /// same value.
+    /// Tests that a second call to [`oak_functions_abi::read_request`] returns the same value.
     fn test_double_read(request: &str) -> anyhow::Result<()> {
         let result = oak_functions::read_request();
         assert_matches!(result, Ok(_));
-        let second_request = result.unwrap();
-        assert_eq!(second_request, request.as_bytes());
+        let second_read_result = result.unwrap();
+        assert_eq!(second_read_result, request.as_bytes());
 
         let result = oak_functions::write_response(TEST_DOUBLE_READ_RESPONSE.as_bytes());
         assert_matches!(result, Ok(_));
