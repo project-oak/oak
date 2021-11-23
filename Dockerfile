@@ -319,3 +319,6 @@ ENV CARGO_INCREMENTAL false
 # uid of the host, therefore we need to first fix the uid before actually using the user. This is
 # done by /scripts/fix_docker_user_and_run .
 RUN useradd --shell=/bin/bash --create-home --user-group docker
+
+# To make the scripts available to call from everywhere.
+ENV PATH "/workspace/scripts:${PATH}" 
