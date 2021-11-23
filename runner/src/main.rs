@@ -79,7 +79,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     if let Command::Completion(completion) = opt.cmd {
         let mut out_dir = completion.out_dir;
-        out_dir.push(".bash_completion");
+        out_dir.push(".runner_bash_completion");
         let mut file = std::fs::File::create(out_dir)?;
         Opt::clap().gen_completions_to("runner", clap::Shell::Bash, &mut file);
         std::process::exit(0);

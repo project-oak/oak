@@ -105,7 +105,7 @@ pub struct RunExamples {
 pub struct Completion {
     #[structopt(
         long,
-        help = "dir to write bash_completion file; defaults to current directory",
+        help = "dir to write runner_bash_completion file; defaults to current directory",
         default_value = "",
         parse(from_os_str)
     )]
