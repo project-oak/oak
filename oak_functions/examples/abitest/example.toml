@@ -4,7 +4,7 @@ name = "oak_functions_abitest"
 
 [applications.rust]
 type = "Functions"
-wasm_path = "oak_functions/examples/bin/oak_functions_abitest.wasm"
+wasm_path = "oak_functions/bin/oak_functions_abitest.wasm"
 target = { Cargo = { cargo_manifest = "oak_functions/examples/abitest/module/Cargo.toml" } }
 
 [backends]
