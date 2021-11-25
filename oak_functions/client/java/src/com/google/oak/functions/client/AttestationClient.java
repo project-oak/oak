@@ -72,38 +72,26 @@ public class AttestationClient {
     }
   }
 
-  /** Creates an unattested AttestationClient instance. */
-  public AttestationClient() {}
-
   // TODO(#2356): Change the return type to `AttestationResult` instead of throwing exceptions.
   /**
-   * Creates a gRPC channel and creates an attested channel over it.
+   * Creates an attested channel over a gRPC channel.
    *
-   * @param url must contain a protocol used for the connection ("https://" or "http://").
+   * @param builder an instance of a {@code ManagedChannelBuilder} for a gRPC channel.
    * @param apiKey value of the API key used in gRPC requests. If the value is `null` or empty, then
    * the API key header is not included in requests.
    * https://cloud.google.com/docs/authentication/api-keys
    * @param verifier Checks that the ServerIdentity contains the expected attestation info as
    * described in {@code ServerIdentityVerifier::verifyAttestationInfo}.
    */
-  public void attest(String url, String apiKey, Predicate<ConfigurationInfo> verifier)
+  public void attest(
+      ManagedChannelBuilder builder, String apiKey, Predicate<ConfigurationInfo> verifier)
       throws GeneralSecurityException, IOException, InterruptedException, VerificationException {
     // Create gRPC channel.
-    URL parsedUrl = new URL(url);
     ArrayList<ClientInterceptor> interceptors = new ArrayList<>();
     if (apiKey != null && !apiKey.trim().isEmpty()) {
       interceptors.add(new Interceptor(apiKey));
     }
-    if (parsedUrl.getProtocol().equals("https")) {
-      channel = ManagedChannelBuilder.forAddress(parsedUrl.getHost(), parsedUrl.getPort())
-                    .intercept(interceptors)
-                    .build();
-    } else {
-      channel = ManagedChannelBuilder.forAddress(parsedUrl.getHost(), parsedUrl.getPort())
-                    .usePlaintext()
-                    .intercept(interceptors)
-                    .build();
-    }
+    channel = builder.intercept(interceptors).build();
     attest(channel, verifier);
   }
 

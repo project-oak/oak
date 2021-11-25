@@ -20,6 +20,8 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 
 import com.google.oak.functions.client.AttestationClient;
 import com.google.protobuf.ByteString;
+import io.grpc.ManagedChannelBuilder;
+import java.net.URL;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import oak.functions.invocation.Request;
@@ -27,13 +29,17 @@ import oak.functions.invocation.Response;
 
 public class Main {
   private static Logger logger = Logger.getLogger(Main.class.getName());
-  private static String EMPTY_API_KEY = "";
+  private static final String OAK_URL = "http://localhost:8080";
+  private static final String EMPTY_API_KEY = "";
   private static final String EXPECTED_RESPONSE_PATTERN =
       "\\{\"temperature_degrees_celsius\":.*\\}";
 
   public static void main(String[] args) throws Exception {
+    URL parsedUrl = new URL(OAK_URL);
+    ManagedChannelBuilder builder =
+        ManagedChannelBuilder.forAddress(parsedUrl.getHost(), parsedUrl.getPort()).usePlaintext();
     AttestationClient client = new AttestationClient();
-    client.attest("http://localhost:8080", EMPTY_API_KEY, (config) -> !config.getMlInference());
+    client.attest(builder, EMPTY_API_KEY, (config) -> !config.getMlInference());
 
     // Test request coordinates are defined in `oak_functions/lookup_data_generator/src/data.rs`.
     byte[] requestBody = "{\"lat\":0,\"lng\":0}".getBytes(UTF_8);
