@@ -28,6 +28,9 @@ import android.widget.TextView;
 import com.google.common.base.VerifyException;
 import com.google.oak.functions.client.AttestationClient;
 import com.google.protobuf.ByteString;
+import io.grpc.ManagedChannel;
+import io.grpc.ManagedChannelBuilder;
+import java.net.URL;
 import oak.functions.invocation.Request;
 import oak.functions.invocation.Response;
 import oak.functions.invocation.StatusCode;
@@ -66,10 +69,22 @@ public class MainActivity extends Activity {
 
     TextView resultTextView = findViewById(R.id.resultTextView);
     try {
+      // Create a gRPC channel.
+      URL parsedUrl = new URL(uri);
+      ManagedChannelBuilder builder =
+          ManagedChannelBuilder.forAddress(parsedUrl.getHost(), parsedUrl.getPort()).usePlaintext();
+      builder = AttestationClient.addApiKey(builder, getString(R.string.api_key));
+      ManagedChannel channel = builder.build();
+
+      // Attest a gRPC channel.
       AttestationClient client = new AttestationClient();
-      client.attest(uri, getString(R.string.api_key), (config) -> !config.getMlInference());
+      client.attest(channel, (config) -> !config.getMlInference());
+
+      // Send a request.
       Response response = client.send(request);
       client.finalize();
+
+      // Receive a response.
       StatusCode responseStatus = response.getStatus();
       if (responseStatus != StatusCode.SUCCESS) {
         throw new VerifyException(

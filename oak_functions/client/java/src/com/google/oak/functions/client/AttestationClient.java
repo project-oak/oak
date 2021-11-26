@@ -72,42 +72,32 @@ public class AttestationClient {
     }
   }
 
-  /** Creates an unattested AttestationClient instance. */
-  public AttestationClient() {}
-
-  // TODO(#2356): Change the return type to `AttestationResult` instead of throwing exceptions.
   /**
-   * Creates a gRPC channel and creates an attested channel over it.
+   * Adds a gRPC channel interceptor that inserts an API key header into every request.
    *
-   * @param url must contain a protocol used for the connection ("https://" or "http://").
+   * @param builder an instance of a {@code ManagedChannelBuilder} for a gRPC channel.
    * @param apiKey value of the API key used in gRPC requests. If the value is `null` or empty, then
    * the API key header is not included in requests.
    * https://cloud.google.com/docs/authentication/api-keys
-   * @param verifier Checks that the ServerIdentity contains the expected attestation info as
-   * described in {@code ServerIdentityVerifier::verifyAttestationInfo}.
+   *
+   * @return an updated instance of a {@code ManagedChannelBuilder}.
    */
-  public void attest(String url, String apiKey, Predicate<ConfigurationInfo> verifier)
-      throws GeneralSecurityException, IOException, InterruptedException, VerificationException {
-    // Create gRPC channel.
-    URL parsedUrl = new URL(url);
+  public static ManagedChannelBuilder addApiKey(ManagedChannelBuilder builder, String apiKey) {
     ArrayList<ClientInterceptor> interceptors = new ArrayList<>();
     if (apiKey != null && !apiKey.trim().isEmpty()) {
       interceptors.add(new Interceptor(apiKey));
     }
-    if (parsedUrl.getProtocol().equals("https")) {
-      channel = ManagedChannelBuilder.forAddress(parsedUrl.getHost(), parsedUrl.getPort())
-                    .intercept(interceptors)
-                    .build();
-    } else {
-      channel = ManagedChannelBuilder.forAddress(parsedUrl.getHost(), parsedUrl.getPort())
-                    .usePlaintext()
-                    .intercept(interceptors)
-                    .build();
-    }
-    attest(channel, verifier);
+    return builder.intercept(interceptors);
   }
 
-  /** Creates an attested channel over the gRPC {@code ManagedChannel}. */
+  // TODO(#2356): Change the return type to `AttestationResult` instead of throwing exceptions.
+  /**
+   * Creates an attested channel over the gRPC channel.
+   *
+   * @param channel an instance of a gRPC {@code ManagedChannel}.
+   * @param verifier checks that the ServerIdentity contains the expected attestation info as
+   * described in {@code ServerIdentityVerifier::verifyAttestationInfo}.
+   */
   public void attest(ManagedChannel channel, Predicate<ConfigurationInfo> verifier)
       throws GeneralSecurityException, IOException, InterruptedException, VerificationException {
     if (channel == null) {
