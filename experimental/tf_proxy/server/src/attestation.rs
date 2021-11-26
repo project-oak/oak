@@ -65,9 +65,13 @@ impl RequestHandler {
                 .context("couldn't execute prediction")?
                 .into_inner();
 
+            let wrapped_response = oak_functions_abi::proto::Response::create(
+                oak_functions_abi::proto::StatusCode::Success,
+                response.encode_to_vec(),
+            );
             let encrypted_response = self
                 .encryptor
-                .encrypt(&response.encode_to_vec())
+                .encrypt(&wrapped_response.encode_to_vec())
                 .context("couldn't encrypt response")?;
 
             Ok(Some(StreamingResponse {

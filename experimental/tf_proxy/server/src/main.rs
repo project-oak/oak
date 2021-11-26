@@ -21,13 +21,18 @@ pub mod proto {
 use crate::attestation::AttestationServer;
 use anyhow::Context;
 use proto::streaming_session_server::StreamingSessionServer;
-use std::net::{Ipv6Addr, SocketAddr};
+use std::{
+    fs::canonicalize,
+    net::{Ipv6Addr, SocketAddr},
+    path::PathBuf,
+};
 use structopt::StructOpt;
 use tonic::transport::Server;
 
 pub mod attestation;
 pub mod grpc;
 
+// The name of the UNIX domain socket for communicating with the TF model server.
 static SOCKET: &str = "/tmp/serving_uds";
 
 #[derive(StructOpt, Clone, Debug)]
@@ -60,6 +65,7 @@ pub struct Opt {
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+    env_logger::init();
     cleanup_socket_temp_file()?;
     let opt = Opt::from_args();
     launch_tf_model_server(&opt)?;
@@ -84,9 +90,15 @@ fn cleanup_socket_temp_file() -> anyhow::Result<()> {
 }
 
 fn launch_tf_model_server(opt: &Opt) -> anyhow::Result<()> {
+    let model_base_path = PathBuf::from(&opt.tf_model_base_path);
     let args = vec![
         format!("--grpc_socket_path={}", SOCKET),
-        format!("--model_base_path={}", opt.tf_model_base_path),
+        format!(
+            "--model_base_path={}",
+            canonicalize(model_base_path)
+                .context("invalid model base path")?
+                .display()
+        ),
         format!("--model_name={}", opt.tf_model_name),
     ];
     tokio::process::Command::new(&opt.tf_server_path)

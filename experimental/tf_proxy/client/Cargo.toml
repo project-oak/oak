@@ -1,22 +1,21 @@
 [package]
-name = "tensorflow_proxy"
+name = "tensorflow_client"
 version = "0.1.0"
 authors = ["Conrad Grobler <grobler@google.com>"]
 edition = "2018"
 license = "Apache-2.0"
 
 [dependencies]
-async-stream = "*"
 anyhow = "*"
 env_logger = "*"
-futures = "*"
+flate2 = "*"
 log = "*"
+maplit = "*"
 oak_functions_abi = { path = "../../../oak_functions/abi" }
-oak_remote_attestation = { path = "../../../remote_attestation/rust/" }
+oak_functions_client = { path = "../../../oak_functions/client/rust" }
 prost = "*"
-prost-types = "*"
+reqwest = "*"
 structopt = "*"
-sync_wrapper = "*"
 tokio = { version = "*", features = [
   "fs",
   "macros",
@@ -25,8 +24,6 @@ tokio = { version = "*", features = [
   "rt-multi-thread"
 ] }
 tonic = "*"
-tower = "*"
-pin-project-lite = "*"
 
 [build-dependencies]
 oak_utils = { path = "../../../oak_utils" }
