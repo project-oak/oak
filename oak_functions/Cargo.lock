@@ -1491,8 +1491,13 @@ dependencies = [
 name = "oak_functions"
 version = "0.1.0"
 dependencies = [
+ "lazy_static",
+ "maplit",
  "oak_functions_abi",
+ "oak_functions_loader",
  "prost 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "test_utils",
+ "tokio",
 ]
 
 [[package]]

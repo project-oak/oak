@@ -11,6 +11,14 @@ oak-unsafe = ["oak-tf", "oak-metrics"]
 oak-tf = []
 oak-metrics = []
 
+[dev-dependencies]
+test_utils = { path = "../test_utils" }
+oak_functions_loader = { path = "../../loader"}
+maplit = "*"
+lazy_static = "*"
+tokio = "*"
+
 [dependencies]
 oak_functions_abi = { path = "../../abi" }
 prost = "*"
+maplit = "*"
