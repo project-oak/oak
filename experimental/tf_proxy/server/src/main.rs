@@ -100,6 +100,7 @@ fn launch_tf_model_server(opt: &Opt) -> anyhow::Result<()> {
                 .display()
         ),
         format!("--model_name={}", opt.tf_model_name),
+        "--port=0".to_owned(),
     ];
     tokio::process::Command::new(&opt.tf_server_path)
         .args(&args)
