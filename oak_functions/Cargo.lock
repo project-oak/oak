@@ -1646,6 +1646,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "oak_functions_sdk_abi_test"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "assert_matches",
+ "oak_functions",
+ "oak_functions_abi",
+]
+
+[[package]]
 name = "oak_remote_attestation"
 version = "0.1.0"
 dependencies = [

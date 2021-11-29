@@ -19,5 +19,6 @@ members = [
   "location_utils",
   "lookup_data_generator",
   "sdk/oak_functions",
+  "sdk/oak_functions/tests/module",
   "sdk/test_utils",
 ]

@@ -23,7 +23,7 @@ use oak_functions_loader::{
 use std::{sync::Arc};
 use lazy_static;
 use tokio;
-use oak_functions_abi::proto::{Request};
+use oak_functions_abi::proto::{Request, Response};
 
 lazy_static::lazy_static! {
     static ref RUNTIME: tokio::runtime::Runtime = tokio::runtime::Runtime::new().unwrap();
@@ -31,7 +31,7 @@ lazy_static::lazy_static! {
 
 #[test]
 fn test_sdk() {
-    let manifest_path = "../../examples/abitest/module/Cargo.toml";
+    let manifest_path = "/workspace/oak_functions/sdk/oak_functions/tests/module/Cargo.toml";
 
     let wasm_module_bytes =
       test_utils::compile_rust_wasm(manifest_path, false)
@@ -60,11 +60,13 @@ fn test_sdk() {
         let request = Request {
             body: request_body.as_bytes().to_vec(),
         }; 
-        let response =  RUNTIME.block_on(wasm_handler.handle_invoke(request));
-        if response.is_err() {
-            panic!("Error: {:?}", response);
-        }
-        assert_eq!(response.unwrap().body, expected_response_body.as_bytes().to_vec());
+        let response : Result<Response, _> = RUNTIME.block_on(wasm_handler.handle_invoke(request));
+
+        let actual_response_body : String = { 
+            let rb = response.unwrap().body;
+            String::from_utf8(rb).unwrap()
+        };
+        assert_eq!(actual_response_body, expected_response_body);
     }
 }
 
