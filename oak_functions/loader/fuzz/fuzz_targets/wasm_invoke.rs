@@ -120,7 +120,7 @@ fuzz_target!(|instruction_list: Vec<ArbitraryInstruction>| {
         vec![metrics_factory],
         Logger::for_test(),
     )
-    .expect("Could instantiate WasmHandler");
+    .expect("Could not instantiate WasmHandler");
 
     let result = RUNTIME.block_on(wasm_handler.handle_invoke(request));
     assert!(!result.is_err(), "Error: {:?}", result);
