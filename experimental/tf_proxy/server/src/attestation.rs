@@ -29,20 +29,20 @@ use sync_wrapper::SyncWrapper;
 use tonic::{transport::Channel, Request, Response, Status, Streaming};
 
 struct RequestHandler {
-    /// Utility object for decrypting and encrypting messages using a Diffie-Hellman session key.
     encryptor: Encryptor,
     client: PredictionServiceClient<Channel>,
 }
 
 impl RequestHandler {
-    pub fn new(encryptor: Encryptor, client: PredictionServiceClient<Channel>) -> Self {
+    fn new(encryptor: Encryptor, client: PredictionServiceClient<Channel>) -> Self {
         Self { encryptor, client }
     }
 
-    /// Decrypts a client request, runs [`RequestHandler::handler`] on them and returns an encrypted
-    /// response.
+    /// Decrypts a client request, forwards it to the prediction service, encrypts the resopnse and
+    /// sends it back to the client.
+    ///
     /// Returns `Ok(None)` to indicate that the corresponding gRPC stream has ended.
-    pub async fn handle_request(
+    async fn handle_request(
         &mut self,
         request_stream: &mut Streaming<StreamingRequest>,
     ) -> anyhow::Result<Option<StreamingResponse>> {
@@ -104,6 +104,7 @@ impl<F: Future> Future for FutureSyncWrapper<F> {
 pub struct AttestationServer {
     /// PEM encoded X.509 certificate that signs TEE firmware key.
     tee_certificate: Vec<u8>,
+    /// gRPC connection to the predictions service.
     connection: BackendConnection,
 }
 
@@ -130,7 +131,7 @@ impl StreamingSession for AttestationServer {
         let client = self.connection.create_client();
         let response_stream = async_stream::try_stream! {
             let mut request_stream = request_stream.into_inner();
-            /// Attest a single gRPC streaming request.
+            // Perform attestation and key exchange.
             let mut handshaker = ServerHandshaker::new(
                 AttestationBehavior::create_self_attestation(&tee_certificate)
                     .map_err(|error| {
@@ -170,6 +171,7 @@ impl StreamingSession for AttestationServer {
                     Status::internal("")
                 })?;
 
+            // Handle subsequent messages on the stream.
             let mut handler = RequestHandler::new(encryptor, client);
             while let Some(response) = handler
                 .handle_request(&mut request_stream)

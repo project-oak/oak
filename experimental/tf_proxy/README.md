@@ -1,10 +1,12 @@
 # Attested TensorFlow Proxy
 
 This directory contains a proof-of-concept implementation of a remote
-atteststaion proxy that connects to a TensorFlow serving instance. It also
-contains a client to connect to the proxy and do inference against a model.
+attestation proxy that connects to a TensorFlow model server instance. It also
+contains a client to connect to the proxy and do inference against a model
+hosted on the model server.
 
-This example assumes that the TensorFlow Model Server binary is installed. See
+This example assumes that the TensorFlow model server binary is installed
+locally. See
 https://github.com/tensorflow/serving/blob/master/tensorflow_serving/g3doc/setup.md
 for more information.
 
@@ -23,3 +25,8 @@ It assumes that every subsequent message is a binary-serialised instance of a
 See
 https://github.com/tensorflow/serving/blob/master/tensorflow_serving/apis/predict.proto
 for the proto definitions.
+
+The client downloads MNIST test data for the trained model and caches it
+locally. The client connects to the proxy and completes the remote attestation
+handshake. It then runs inference tests on 100 of the test data items and
+reports the error rate.

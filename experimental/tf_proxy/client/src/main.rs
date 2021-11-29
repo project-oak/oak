@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-//! Sends a series of TensorFlow Prediction Requests via the proxy and check the response against
+//! Sends a series of TensorFlow Prediction Requests via the proxy and checks the response against
 //! the expected labels. Inspired by
 //! https://github.com/tensorflow/serving/blob/f3fbec59798e13cb1f7230fcf891c0ec4113331e/tensorflow_serving/example/mnist_client.py
 
@@ -77,6 +77,7 @@ async fn main() -> anyhow::Result<()> {
             output_filter: Vec::new(),
         };
         trace!("predict request: {:?}", predict_request);
+
         let request = Request {
             body: predict_request.encode_to_vec(),
         };
@@ -91,12 +92,14 @@ async fn main() -> anyhow::Result<()> {
         let predict_response =
             PredictResponse::decode(&*response_body).context("couldn't parse response")?;
         trace!("predict response: {:?}", predict_response);
+
         let scores = predict_response
             .outputs
             .get("scores")
             .ok_or(anyhow::anyhow!("no scores returned in result"))?;
-        let label = arg_max(&scores.float_val);
+        let label = arg_max(&scores.float_val).ok_or(anyhow::anyhow!("scores vector is empty"))?;
         debug!("predicted label:{}", label);
+
         count += 1;
         if label != item.label as usize {
             info!(
@@ -119,17 +122,15 @@ async fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
-fn arg_max(data: &[f32]) -> usize {
-    if data.len() == 0 {
-        return 0;
-    }
-    let mut result = 0;
-    let mut max = data[0];
-    for i in 1..data.len() {
-        if data[i] > max {
-            max = data[i];
-            result = i;
-        }
-    }
-    result
+fn arg_max(data: &[f32]) -> Option<usize> {
+    data.iter()
+        .enumerate()
+        .reduce(|(max_index, max_value), (index, value)| {
+            if value > max_value {
+                (index, value)
+            } else {
+                (max_index, max_value)
+            }
+        })
+        .map(|(max_index, _)| max_index)
 }

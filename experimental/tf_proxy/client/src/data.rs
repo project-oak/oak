@@ -85,7 +85,7 @@ impl std::iter::Iterator for Iter<'_> {
 }
 
 fn new_image_tensor_proto(image: &[u8], rows: usize, cols: usize) -> TensorProto {
-    // We need to convert the grayscale pixels from a u8 to an f32 between 0.0 and 1.0.
+    // We convert the grayscale pixels from a u8 to an f32 between 0.0 and 1.0.
     let float_val = image
         .iter()
         .map(|pixel| (*pixel as f32) / 255.)
@@ -128,8 +128,8 @@ fn new_image_tensor_proto(image: &[u8], rows: usize, cols: usize) -> TensorProto
     }
 }
 
-/// Gets the test data by prsing the test data files. It will first look for the data files in
-/// `work_dir`. If not there, it will download them and save copies in `work_dir`.
+/// Gets the test data by parsing the data files. It will first look for the data files in
+/// `work_dir`. If the files are not there, it will download them and save copies in `work_dir`.
 pub async fn get_test_data(work_dir: &str) -> anyhow::Result<DataSet> {
     let image_buffer = get_uncompressed(work_dir, TEST_IMAGES)
         .await
@@ -147,7 +147,7 @@ pub async fn get_test_data(work_dir: &str) -> anyhow::Result<DataSet> {
 
 fn parse_images(image_buffer: &[u8]) -> anyhow::Result<Images> {
     // The images file starts with 16 bytes that represent a magic number, the number of images,
-    // number of rows and number of columns each encoded as a big endian u32. The rest of bytes
+    // number of rows and number of columns, each encoded as a big endian u32. The rest of bytes
     // represent grayscale pixel brightness as a u8 arranged by row for each image.
     let magic = read_be_u32(&image_buffer[..4]).context("couldn't read magic number")? as usize;
     if magic != 2051 {

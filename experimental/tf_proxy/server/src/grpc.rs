@@ -30,11 +30,13 @@ use tokio::{
 use tonic::transport::{Channel, Endpoint, Uri};
 use tower::service_fn;
 
+/// Connection to the prediction service that can be used for creating new clients.
 pub struct BackendConnection {
     channel: Channel,
 }
 
 impl BackendConnection {
+    /// Connects to the prediction service over UDS and returns the wrapped channel.
     pub async fn connect() -> Self {
         wait_for_socket(super::SOCKET).await;
         // Ignore this uri because UDS do not use it, but Endpoint requires a valid uri.
@@ -49,6 +51,7 @@ impl BackendConnection {
         Self { channel }
     }
 
+    /// Creates a new client.
     pub fn create_client(&self) -> PredictionServiceClient<Channel> {
         PredictionServiceClient::new(self.channel.clone())
     }
