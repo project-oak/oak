@@ -18,6 +18,7 @@
 
 use anyhow::{anyhow, Context};
 use assert_matches::assert_matches;
+use maplit::hashmap;
 use std::collections::HashMap;
 
 type TestFn = fn(&str) -> anyhow::Result<()>;
@@ -28,23 +29,15 @@ struct TestManager<'a> {
 
 impl TestManager<'static> {
     fn new() -> Self {
-        let mut tests = HashMap::new();
-        tests.insert("ReadWrite", Self::test_read_write as TestFn);
-        tests.insert(
-            "DoubleRead",
-            Self::test_double_read as TestFn,
-        );
-        tests.insert(
-            "DoubleWrite",
-            Self::test_double_write as TestFn,
-        );
-        tests.insert("WriteLog", Self::test_write_log as TestFn);
-        tests.insert(
-            "StorageGet",
-            Self::test_storage_get as TestFn,
-        );
-
-        Self { tests }
+        Self {
+            tests: hashmap! [
+                "ReadWrite" => Self::test_read_write as TestFn,
+                "DoubleRead" => Self::test_double_read as TestFn,
+                "DoubleWrite" => Self::test_double_write as TestFn,
+                "WriteLog" => Self::test_write_log as TestFn,
+                "StorageGet" => Self::test_storage_get as TestFn,
+            ],
+        }
     }
 
     fn run_test(&self) -> anyhow::Result<()> {
