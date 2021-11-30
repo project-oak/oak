@@ -21,7 +21,7 @@ use assert_matches::assert_matches;
 use maplit::hashmap;
 use std::collections::HashMap;
 
-type TestFn = fn(&str) -> anyhow::Result<()>;
+type TestFn = fn(&str) -> ();
 
 struct TestManager<'a> {
     tests: HashMap<&'a str, TestFn>,
@@ -48,17 +48,17 @@ impl TestManager<'static> {
             .tests
             .get(&test_name as &str)
             .ok_or(anyhow!("Couldn't find test: {}", &test_name))?;
-        test(&test_name).context(format!("Couldn't run test: {}", &test_name))
-    }
-
-    fn test_read_write(_request: &str) -> anyhow::Result<()> {
-        let result = oak_functions::write_response(b"ReadWriteResponse");
-        assert_matches!(result, Ok(_));
+        test(&test_name);
         Ok(())
     }
 
+    fn test_read_write(_request: &str) {
+        let result = oak_functions::write_response(b"ReadWriteResponse");
+        assert_matches!(result, Ok(_));
+    }
+
     /// Tests that a second call to [`oak_functions_abi::read_request`] returns the same value.
-    fn test_double_read(request: &str) -> anyhow::Result<()> {
+    fn test_double_read(request: &str) {
         let result = oak_functions::read_request();
         assert_matches!(result, Ok(_));
         let second_read_result = result.unwrap();
@@ -66,32 +66,29 @@ impl TestManager<'static> {
 
         let result = oak_functions::write_response(b"DoubleReadResponse");
         assert_matches!(result, Ok(_));
-        Ok(())
     }
 
     /// Tests that multiple calls to [`oak_functions_abi::write_response`] will replace the earlier
     /// responses. Response value is checked on the client side.
-    fn test_double_write(_request: &str) -> anyhow::Result<()> {
+    fn test_double_write(_request: &str) {
         // First response is empty.
         let result = oak_functions::write_response("".as_bytes());
         assert_matches!(result, Ok(_));
 
         let result = oak_functions::write_response(b"DoubleWriteResponse");
         assert_matches!(result, Ok(_));
-        Ok(())
     }
 
-    fn test_write_log(request: &str) -> anyhow::Result<()> {
+    fn test_write_log(request: &str) {
         let result = oak_functions::write_log_message(request);
         assert_matches!(result, Ok(_));
         let result = oak_functions::write_response(b"WriteLogResponse");
         assert_matches!(result, Ok(_));
-        Ok(())
     }
 
     /// Tests the correctness of the data retrieved from the database.
     /// Response value is checked on the client side.
-    fn test_storage_get(request: &str) -> anyhow::Result<()> {
+    fn test_storage_get(request: &str) {
         let result = oak_functions::storage_get_item(request.as_bytes());
         assert_matches!(result, Ok(_));
         let data = result.unwrap();
@@ -99,7 +96,6 @@ impl TestManager<'static> {
 
         let result = oak_functions::write_response(&data.unwrap());
         assert_matches!(result, Ok(_));
-        Ok(())
     }
 }
 
