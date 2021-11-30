@@ -76,6 +76,7 @@ impl TestManager<'static> {
             .expect("Failed to write second response.");
     }
 
+    // TODO(#2417): Test logging of `write_log_message`
     fn test_write_log(request: &str) {
         let result = oak_functions::write_log_message(request);
         assert_matches!(result, Ok(_));
@@ -86,7 +87,7 @@ impl TestManager<'static> {
     /// Tests [`oak_functions_abi::storage_get_item`] when the key in the lookup data. The lookup
     /// data is set in the integration test. The value has to be checked in the integration
     /// test.
-    /// TODO(#2414): Add test for ERR_STORAGE_ITEM_NOT_FOUND
+    // TODO(#2414): Add test for ERR_STORAGE_ITEM_NOT_FOUND
     fn test_storage_get(key: &str) {
         let value = oak_functions::storage_get_item(key.as_bytes());
         assert_matches!(value, Ok(_));
@@ -95,6 +96,10 @@ impl TestManager<'static> {
 
         oak_functions::write_response(&value.unwrap()).expect("Failed to write response.");
     }
+
+    // TODO(#2415): Add tests for report_metric.
+
+    // TODO(#2416): Add tests for tf_model_infer.
 }
 
 #[cfg_attr(not(test), no_mangle)]
