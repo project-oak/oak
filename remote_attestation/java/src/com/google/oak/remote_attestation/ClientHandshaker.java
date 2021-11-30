@@ -189,6 +189,11 @@ public class ClientHandshaker {
    */
   private Boolean verifyAttestationInfo(Message.ServerIdentity serverIdentity) throws IOException {
     byte[] additionalInfo = serverIdentity.getAdditionalInfo();
+    // Ensure additional info was supplied.
+    if (additionalInfo == null || additionalInfo.length == 0) {
+      logger.log(Level.WARNING, "Configuration data cannot be empty");
+      return false;
+    }
 
     // Check the hash of the public key and additional info
     AttestationInfo attestationInfo = AttestationInfo.parseFrom(
