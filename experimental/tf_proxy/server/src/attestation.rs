@@ -21,6 +21,7 @@ use crate::{
 use anyhow::Context;
 use futures::{task::Poll, Stream, StreamExt};
 use log::warn;
+use oak_functions_abi::proto::ConfigurationInfo;
 use oak_remote_attestation::handshaker::{AttestationBehavior, Encryptor, ServerHandshaker};
 use pin_project_lite::pin_project;
 use prost::Message;
@@ -127,7 +128,15 @@ impl StreamingSession for AttestationServer {
         request_stream: Request<Streaming<StreamingRequest>>,
     ) -> Result<Response<Self::StreamStream>, Status> {
         let tee_certificate = self.tee_certificate.clone();
-        let additional_info = vec![];
+        // Create fake configuration info for now, as it cannot be empty for the attestation
+        // handshake.
+        let additional_info = ConfigurationInfo {
+            wasm_hash: vec![0, 1, 2, 3],
+            policy: None,
+            ml_inference: false,
+            metrics: None,
+        }
+        .encode_to_vec();
         let client = self.connection.create_client();
         let response_stream = async_stream::try_stream! {
             let mut request_stream = request_stream.into_inner();
