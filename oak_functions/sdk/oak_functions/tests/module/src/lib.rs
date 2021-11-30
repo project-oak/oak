@@ -86,6 +86,7 @@ impl TestManager<'static> {
     /// Tests [`oak_functions_abi::storage_get_item`] when the key in the lookup data. The lookup
     /// data is set in the integration test. The value has to be checked in the integration
     /// test.
+    /// TODO(#2414): Add test for ERR_STORAGE_ITEM_NOT_FOUND
     fn test_storage_get(key: &str) {
         let value = oak_functions::storage_get_item(key.as_bytes());
         assert_matches!(value, Ok(_));
