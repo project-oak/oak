@@ -14,16 +14,12 @@
 // limitations under the License.
 //
 
-use maplit::hashmap;
-use oak_functions_loader::{
-    logger::Logger, 
-    lookup::{LookupData},
-    server::{WasmHandler},
-};
-use std::{sync::Arc};
 use lazy_static;
-use tokio;
+use maplit::hashmap;
 use oak_functions_abi::proto::{Request, Response};
+use oak_functions_loader::{logger::Logger, lookup::LookupData, server::WasmHandler};
+use std::sync::Arc;
+use tokio;
 
 lazy_static::lazy_static! {
     static ref RUNTIME: tokio::runtime::Runtime = tokio::runtime::Runtime::new().unwrap();
@@ -34,19 +30,19 @@ fn test_sdk() {
     let manifest_path = "/workspace/oak_functions/sdk/oak_functions/tests/module/Cargo.toml";
 
     let wasm_module_bytes =
-      test_utils::compile_rust_wasm(manifest_path, false)
-              .expect("Could not read Wasm module");
-    
+        test_utils::compile_rust_wasm(manifest_path, false).expect("Could not read Wasm module");
+
     let entries = hashmap! {
-        b"StorageGet".to_vec() => b"StorageGetResponse".to_vec(),
-     };
+       b"StorageGet".to_vec() => b"StorageGetResponse".to_vec(),
+    };
 
     let wasm_handler = WasmHandler::create(
         &wasm_module_bytes,
         Arc::new(LookupData::for_test(entries)),
         vec![],
         Logger::for_test(),
-    ).expect("Could not instantiate WasmHandler.");
+    )
+    .expect("Could not instantiate WasmHandler.");
 
     let tests = hashmap! [
         "ReadWrite" => "ReadWriteResponse",
@@ -59,14 +55,13 @@ fn test_sdk() {
     for (request_body, expected_response_body) in tests {
         let request = Request {
             body: request_body.as_bytes().to_vec(),
-        }; 
-        let response : Result<Response, _> = RUNTIME.block_on(wasm_handler.handle_invoke(request));
+        };
+        let response: Result<Response, _> = RUNTIME.block_on(wasm_handler.handle_invoke(request));
 
-        let actual_response_body : String = { 
+        let actual_response_body: String = {
             let rb = response.unwrap().body;
             String::from_utf8(rb).unwrap()
         };
         assert_eq!(actual_response_body, expected_response_body);
     }
 }
-
