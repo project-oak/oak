@@ -40,7 +40,7 @@ pub struct Opt {
     #[structopt(
         long,
         default_value = "8080",
-        help = "Port number that the server listens on."
+        help = "Port number that the proxy listens on."
     )]
     port: u16,
     #[structopt(

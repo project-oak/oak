@@ -149,6 +149,7 @@ fn parse_images(image_buffer: &[u8]) -> anyhow::Result<Images> {
     // The images file starts with 16 bytes that represent a magic number, the number of images,
     // number of rows and number of columns, each encoded as a big endian u32. The rest of bytes
     // represent grayscale pixel brightness as a u8 arranged by row for each image.
+    // See https://deepai.org/dataset/mnist
     let magic = read_be_u32(&image_buffer[..4]).context("couldn't read magic number")? as usize;
     if magic != 2051 {
         anyhow::bail!("magic number is invalid; {}", magic);
@@ -178,6 +179,7 @@ fn parse_labels(label_buffer: &[u8]) -> anyhow::Result<Vec<u8>> {
     // The labels file starts with 8 bytes that represent a magic number and the number of labels,
     // each encoded as a big endian u32. The rest of the bytes represent a u8 value for each
     // example.
+    // See https://deepai.org/dataset/mnist
     let magic = read_be_u32(&label_buffer[..4]).context("couldn't read magic number")? as usize;
     if magic != 2049 {
         anyhow::bail!("magic number is invalid; {}", magic);
@@ -200,6 +202,7 @@ fn read_be_u32(buffer: &[u8]) -> anyhow::Result<u32> {
     Ok(u32::from_be_bytes(num_bytes))
 }
 
+/// Gets the data file and decompresses it. Data files are compressed using the gzip format.
 async fn get_uncompressed(work_dir: &str, file_name: &str) -> anyhow::Result<Vec<u8>> {
     let compressed_file = maybe_download(work_dir, file_name)
         .await
