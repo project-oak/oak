@@ -1509,57 +1509,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "oak_functions_abitest"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "assert_matches",
- "oak_functions",
- "oak_functions_abi",
- "oak_functions_abitest_common",
-]
-
-[[package]]
-name = "oak_functions_abitest_backend"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "env_logger",
- "futures",
- "futures-core",
- "futures-util",
- "http",
- "hyper",
- "log",
- "maplit",
- "oak_functions_abitest_common",
- "structopt",
- "test_utils",
- "tokio",
-]
-
-[[package]]
-name = "oak_functions_abitest_client"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "env_logger",
- "http",
- "hyper",
- "log",
- "oak_functions_abi",
- "oak_functions_abitest_common",
- "oak_functions_client",
- "prost 0.9.0",
- "structopt",
- "tokio",
-]
-
-[[package]]
-name = "oak_functions_abitest_common"
-version = "0.1.0"
-
-[[package]]
 name = "oak_functions_client"
 version = "0.1.0"
 dependencies = [
@@ -2712,9 +2661,7 @@ dependencies = [
  "memchr",
  "mio",
  "num_cpus",
- "once_cell",
  "pin-project-lite",
- "signal-hook-registry",
  "tokio-macros",
  "winapi",
 ]
