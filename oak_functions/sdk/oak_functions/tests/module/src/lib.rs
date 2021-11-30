@@ -58,25 +58,22 @@ impl TestManager<'static> {
     }
 
     /// Tests that a second call to [`oak_functions_abi::read_request`] returns the same value.
-    fn test_double_read(request: &str) {
-        let result = oak_functions::read_request();
-        assert_matches!(result, Ok(_));
-        let second_read_result = result.unwrap();
-        assert_eq!(second_read_result, request.as_bytes());
-
-        let result = oak_functions::write_response(b"DoubleReadResponse");
-        assert_matches!(result, Ok(_));
+    fn test_double_read(first_request_body: &str) {
+        let second_read_request =
+            oak_functions::read_request().expect("Failed to read second request.");
+        assert_eq!(second_read_request, first_request_body.as_bytes());
+        // If assert_eq fails then run_test will return with an empty response body.
+        oak_functions::write_response(b"DoubleReadResponse").expect("Failed to write response.")
     }
 
     /// Tests that multiple calls to [`oak_functions_abi::write_response`] will replace the earlier
-    /// responses. Response value is checked on the client side.
+    /// responses. The response body has to be checked in the integration test.
     fn test_double_write(_request: &str) {
-        // First response is empty.
-        let result = oak_functions::write_response("".as_bytes());
-        assert_matches!(result, Ok(_));
-
-        let result = oak_functions::write_response(b"DoubleWriteResponse");
-        assert_matches!(result, Ok(_));
+        // First response contains a different value.
+        oak_functions::write_response(b"FirstResponseInDoubleWrite")
+            .expect("Failed to write first response.");
+        oak_functions::write_response(b"DoubleWriteResponse")
+            .expect("Failed to write second response.");
     }
 
     fn test_write_log(request: &str) {
@@ -86,16 +83,16 @@ impl TestManager<'static> {
         assert_matches!(result, Ok(_));
     }
 
-    /// Tests the correctness of the data retrieved from the database.
-    /// Response value is checked on the client side.
-    fn test_storage_get(request: &str) {
-        let result = oak_functions::storage_get_item(request.as_bytes());
-        assert_matches!(result, Ok(_));
-        let data = result.unwrap();
-        assert_matches!(data, Some(_));
+    /// Tests [`oak_functions_abi::storage_get_item`] when the key in the lookup data. The lookup
+    /// data is set in the integration test. The value has to be checked in the integration
+    /// test.
+    fn test_storage_get(key: &str) {
+        let value = oak_functions::storage_get_item(key.as_bytes());
+        assert_matches!(value, Ok(_));
+        let value = value.unwrap();
+        assert_matches!(value, Some(_));
 
-        let result = oak_functions::write_response(&data.unwrap());
-        assert_matches!(result, Ok(_));
+        oak_functions::write_response(&value.unwrap()).expect("Failed to write response.");
     }
 }
 
