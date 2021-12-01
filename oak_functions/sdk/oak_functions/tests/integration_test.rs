@@ -62,12 +62,13 @@ fn test_sdk() {
         let request = Request {
             body: request_body.as_bytes().to_vec(),
         };
-        let response: Result<Response, _> = RUNTIME.block_on(wasm_handler.handle_invoke(request));
 
-        let actual_response_body: String = {
-            let rb = response.unwrap().body;
-            String::from_utf8(rb).unwrap()
-        };
+        let response: Response = RUNTIME
+            .block_on(wasm_handler.handle_invoke(request))
+            .unwrap();
+
+        let actual_response_body = std::str::from_utf8(response.body().unwrap()).unwrap();
+
         assert_eq!(actual_response_body, expected_response_body);
     }
 }
