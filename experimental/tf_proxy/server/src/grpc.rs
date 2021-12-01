@@ -34,11 +34,11 @@ pub struct BackendConnection {
 
 impl BackendConnection {
     /// Connects to the prediction service over UDS and returns the wrapped channel.
-    pub async fn connect(socket: String) -> Self {
+    pub async fn connect(socket: &'static str) -> Self {
         // Ignore this uri because UDS do not use it, but Endpoint requires a valid uri.
         let channel = Endpoint::try_from("http://[::]:50051")
             .expect("invalid uri")
-            .connect_with_connector(service_fn(|_: Uri| {
+            .connect_with_connector(service_fn(move |_: Uri| {
                 // Connect to a Unix Domain Socket
                 UnixStream::connect(socket)
             }))

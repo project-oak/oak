@@ -72,7 +72,7 @@ async fn main() -> anyhow::Result<()> {
     launch_tf_model_server(&opt)?;
     let address = SocketAddr::from((Ipv6Addr::UNSPECIFIED, opt.port));
     wait_for_socket(SOCKET).await?;
-    let backend = grpc::BackendConnection::connect(SOCKET.to_owned()).await;
+    let backend = grpc::BackendConnection::connect(SOCKET).await;
     let handler = AttestationServer::create(Vec::new(), backend)?;
     Server::builder()
         .add_service(StreamingSessionServer::new(handler))

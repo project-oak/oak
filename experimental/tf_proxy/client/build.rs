@@ -18,6 +18,8 @@ use oak_utils::{generate_grpc_code, CodegenOptions};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     generate_grpc_code(
+        // We would normally use `../../..` as the `proto_path`, but that would require modifying
+        // the import statements of the third party protos.
         "../../../third_party/google",
         &["tensorflow_serving/apis/predict.proto"],
         CodegenOptions {
