@@ -2,9 +2,6 @@
 members = [
   "abi",
   "client/rust/Cargo.toml",
-  "examples/abitest/backend",
-  "examples/abitest/client",
-  "examples/abitest/module",
   "examples/benchmark/module",
   "examples/fuzzable/module",
   "examples/key_value_lookup/module",
@@ -19,5 +16,6 @@ members = [
   "location_utils",
   "lookup_data_generator",
   "sdk/oak_functions",
+  "sdk/oak_functions/tests/module",
   "sdk/test_utils",
 ]

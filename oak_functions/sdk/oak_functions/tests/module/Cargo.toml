@@ -1,0 +1,16 @@
+[package]
+name = "oak_functions_sdk_abi_test"
+version = "0.1.0"
+authors = ["Maria Schett <mschett@google.com>"]
+edition = "2018"
+license = "Apache-2.0"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+anyhow = "*"
+maplit = "*"
+assert_matches = "*"
+oak_functions = { path = "../../../oak_functions" }
+oak_functions_abi = { path = "../../../../abi" }
