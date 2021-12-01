@@ -1,1 +1,0 @@
-initSidebarItems({"fn":[["main",""],["send_request",""]],"struct":[["Opt",""],["Test",""],["TestManager",""]]});
