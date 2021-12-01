@@ -14,54 +14,110 @@
 // limitations under the License.
 //
 
+use lazy_static::lazy_static;
 use maplit::hashmap;
 use oak_functions_abi::proto::{Request, Response};
 use oak_functions_loader::{logger::Logger, lookup::LookupData, server::WasmHandler};
 use std::sync::Arc;
 use tokio;
 
+lazy_static! {
+    static ref WASM_MODULE_BYTES: Vec<u8> = {
+        let mut manifest_path = std::env::current_dir().unwrap();
+        manifest_path.push("tests");
+        manifest_path.push("module");
+        manifest_path.push("Cargo.toml");
+
+        test_utils::compile_rust_wasm(manifest_path.to_str().unwrap(), false)
+            .expect("Could not read Wasm module")
+    };
+}
+
 #[tokio::test]
-async fn test_sdk() {
-    let mut manifest_path = std::env::current_dir().unwrap();
-    manifest_path.push("tests");
-    manifest_path.push("module");
-    manifest_path.push("Cargo.toml");
-
-    let wasm_module_bytes = test_utils::compile_rust_wasm(
-        manifest_path.to_str().expect("Cargo.toml not found."),
-        false,
+async fn test_read_write() {
+    let wasm_handler = WasmHandler::create(
+        &WASM_MODULE_BYTES,
+        Arc::new(LookupData::for_test(hashmap! {})),
+        vec![],
+        Logger::for_test(),
     )
-    .expect("Could not read Wasm module");
+    .expect("Could not instantiate WasmHandler.");
 
+    let request = Request {
+        body: b"ReadWrite".to_vec(),
+    };
+    let response: Response = wasm_handler.handle_invoke(request).await.unwrap();
+    assert_eq!(response.body().unwrap(), b"ReadWriteResponse");
+}
+
+#[tokio::test]
+async fn test_double_read() {
+    let wasm_handler = WasmHandler::create(
+        &WASM_MODULE_BYTES,
+        Arc::new(LookupData::for_test(hashmap! {})),
+        vec![],
+        Logger::for_test(),
+    )
+    .expect("Could not instantiate WasmHandler.");
+
+    let request = Request {
+        body: b"DoubleRead".to_vec(),
+    };
+    let response: Response = wasm_handler.handle_invoke(request).await.unwrap();
+    assert_eq!(response.body().unwrap(), b"DoubleReadResponse");
+}
+
+#[tokio::test]
+async fn test_double_write() {
+    let wasm_handler = WasmHandler::create(
+        &WASM_MODULE_BYTES,
+        Arc::new(LookupData::for_test(hashmap! {})),
+        vec![],
+        Logger::for_test(),
+    )
+    .expect("Could not instantiate WasmHandler.");
+
+    let request = Request {
+        body: b"DoubleWrite".to_vec(),
+    };
+    let response: Response = wasm_handler.handle_invoke(request).await.unwrap();
+    assert_eq!(response.body().unwrap(), b"DoubleWriteResponse");
+}
+
+#[tokio::test]
+async fn test_write_log() {
+    let wasm_handler = WasmHandler::create(
+        &WASM_MODULE_BYTES,
+        Arc::new(LookupData::for_test(hashmap! {})),
+        vec![],
+        Logger::for_test(),
+    )
+    .expect("Could not instantiate WasmHandler.");
+
+    let request = Request {
+        body: b"WriteLog".to_vec(),
+    };
+    let response: Response = wasm_handler.handle_invoke(request).await.unwrap();
+    assert_eq!(response.body().unwrap(), b"WriteLogResponse");
+}
+
+#[tokio::test]
+async fn test_storage_get_item() {
     let entries = hashmap! {
        b"StorageGet".to_vec() => b"StorageGetResponse".to_vec(),
     };
 
     let wasm_handler = WasmHandler::create(
-        &wasm_module_bytes,
+        &WASM_MODULE_BYTES,
         Arc::new(LookupData::for_test(entries)),
         vec![],
         Logger::for_test(),
     )
     .expect("Could not instantiate WasmHandler.");
 
-    let tests = hashmap! [
-        "ReadWrite" => "ReadWriteResponse",
-        "DoubleRead" => "DoubleReadResponse",
-        "DoubleWrite" => "DoubleWriteResponse",
-        "WriteLog" => "WriteLogResponse",
-        "StorageGet" => "StorageGetResponse",
-    ];
-
-    for (request_body, expected_response_body) in tests {
-        let request = Request {
-            body: request_body.as_bytes().to_vec(),
-        };
-
-        let response: Response = wasm_handler.handle_invoke(request).await.unwrap();
-
-        let actual_response_body = std::str::from_utf8(response.body().unwrap()).unwrap();
-
-        assert_eq!(actual_response_body, expected_response_body);
-    }
+    let request = Request {
+        body: b"StorageGet".to_vec(),
+    };
+    let response: Response = wasm_handler.handle_invoke(request).await.unwrap();
+    assert_eq!(response.body().unwrap(), b"StorageGetResponse");
 }
