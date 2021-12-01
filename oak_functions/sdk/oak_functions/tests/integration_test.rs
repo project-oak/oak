@@ -14,19 +14,14 @@
 // limitations under the License.
 //
 
-use lazy_static;
 use maplit::hashmap;
 use oak_functions_abi::proto::{Request, Response};
 use oak_functions_loader::{logger::Logger, lookup::LookupData, server::WasmHandler};
 use std::sync::Arc;
 use tokio;
 
-lazy_static::lazy_static! {
-    static ref RUNTIME: tokio::runtime::Runtime = tokio::runtime::Runtime::new().unwrap();
-}
-
-#[test]
-fn test_sdk() {
+#[tokio::test]
+async fn test_sdk() {
     let mut manifest_path = std::env::current_dir().unwrap();
     manifest_path.push("tests");
     manifest_path.push("module");
@@ -63,9 +58,7 @@ fn test_sdk() {
             body: request_body.as_bytes().to_vec(),
         };
 
-        let response: Response = RUNTIME
-            .block_on(wasm_handler.handle_invoke(request))
-            .unwrap();
+        let response: Response = wasm_handler.handle_invoke(request).await.unwrap();
 
         let actual_response_body = std::str::from_utf8(response.body().unwrap()).unwrap();
 
