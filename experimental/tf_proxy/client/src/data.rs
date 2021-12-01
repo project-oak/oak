@@ -32,17 +32,24 @@ static SOURCE_URL: &str = "https://storage.googleapis.com/cvdf-datasets/mnist/";
 static TEST_IMAGES: &str = "t10k-images-idx3-ubyte.gz";
 static TEST_LABELS: &str = "t10k-labels-idx1-ubyte.gz";
 
+/// Wrapper for linking an image to its expected label.
 pub struct DataItem {
     pub image: TensorProto,
     pub label: u8,
 }
 
+/// A collection of images that all have the same width and height.
 pub struct Images {
+    /// The data for each of the images. Each image is represented as a vector of grayscale pixel
+    /// values.
     items: Vec<Vec<u8>>,
+    /// The height of each of the images in pixels.
     rows: usize,
+    /// The width of each of the images in pixels.
     cols: usize,
 }
 
+/// An image data set used for testing.
 pub struct DataSet {
     images: Images,
     labels: Vec<u8>,
@@ -57,6 +64,7 @@ impl DataSet {
     }
 }
 
+/// Iterator to iterate over the items in the dataset.
 pub struct Iter<'a> {
     data: &'a DataSet,
     current_index: usize,
@@ -111,20 +119,8 @@ fn new_image_tensor_proto(image: &[u8], rows: usize, cols: usize) -> TensorProto
         dtype: DataType::DtFloat as i32,
         tensor_shape,
         version_number: 0,
-        tensor_content: Vec::new(),
-        half_val: Vec::new(),
         float_val,
-        double_val: Vec::new(),
-        int_val: Vec::new(),
-        string_val: Vec::new(),
-        scomplex_val: Vec::new(),
-        int64_val: Vec::new(),
-        bool_val: Vec::new(),
-        dcomplex_val: Vec::new(),
-        resource_handle_val: Vec::new(),
-        variant_val: Vec::new(),
-        uint32_val: Vec::new(),
-        uint64_val: Vec::new(),
+        ..Default::default()
     }
 }
 

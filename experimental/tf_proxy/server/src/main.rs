@@ -27,6 +27,7 @@ use std::{
     path::PathBuf,
 };
 use structopt::StructOpt;
+use tokio::time::{sleep, Duration};
 use tonic::transport::Server;
 
 pub mod attestation;
@@ -70,7 +71,8 @@ async fn main() -> anyhow::Result<()> {
     let opt = Opt::from_args();
     launch_tf_model_server(&opt)?;
     let address = SocketAddr::from((Ipv6Addr::UNSPECIFIED, opt.port));
-    let backend = grpc::BackendConnection::connect().await;
+    wait_for_socket(SOCKET).await?;
+    let backend = grpc::BackendConnection::connect(SOCKET.to_owned()).await;
     let handler = AttestationServer::create(Vec::new(), backend)?;
     Server::builder()
         .add_service(StreamingSessionServer::new(handler))
@@ -107,4 +109,16 @@ fn launch_tf_model_server(opt: &Opt) -> anyhow::Result<()> {
         .spawn()
         .context("couldn't spawn TF model server")?;
     Ok(())
+}
+
+async fn wait_for_socket(socket: &str) -> anyhow::Result<()> {
+    // Wait for up to 5 seconds for the socket to become visible after the model server has been
+    // started.
+    for _ in 0..50 {
+        if std::path::Path::new(socket).exists() {
+            return Ok(());
+        }
+        sleep(Duration::from_millis(100)).await;
+    }
+    Err(anyhow::anyhow!("socket not available in time"))
 }

@@ -130,6 +130,7 @@ impl StreamingSession for AttestationServer {
         let tee_certificate = self.tee_certificate.clone();
         // Create fake configuration info for now, as it cannot be empty for the attestation
         // handshake.
+        // TODO(#2420): Remove once Java client can work without the configuration info.
         let additional_info = ConfigurationInfo {
             wasm_hash: vec![0, 1, 2, 3],
             policy: None,

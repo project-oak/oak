@@ -23,10 +23,7 @@ pub mod proto {
 
 pub use proto::serving::{prediction_service_client::PredictionServiceClient, PredictRequest};
 use std::convert::TryFrom;
-use tokio::{
-    net::UnixStream,
-    time::{sleep, Duration},
-};
+use tokio::net::UnixStream;
 use tonic::transport::{Channel, Endpoint, Uri};
 use tower::service_fn;
 
@@ -37,14 +34,13 @@ pub struct BackendConnection {
 
 impl BackendConnection {
     /// Connects to the prediction service over UDS and returns the wrapped channel.
-    pub async fn connect() -> Self {
-        wait_for_socket(super::SOCKET).await;
+    pub async fn connect(socket: String) -> Self {
         // Ignore this uri because UDS do not use it, but Endpoint requires a valid uri.
         let channel = Endpoint::try_from("http://[::]:50051")
             .expect("invalid uri")
             .connect_with_connector(service_fn(|_: Uri| {
                 // Connect to a Unix Domain Socket
-                UnixStream::connect(super::SOCKET)
+                UnixStream::connect(socket)
             }))
             .await
             .expect("couldn't connect to backend socket");
@@ -55,15 +51,4 @@ impl BackendConnection {
     pub fn create_client(&self) -> PredictionServiceClient<Channel> {
         PredictionServiceClient::new(self.channel.clone())
     }
-}
-
-async fn wait_for_socket(socket: &str) {
-    // Wait for up to 5 seconds for the socket to become visible.
-    for _ in 0..50 {
-        if std::path::Path::new(socket).exists() {
-            return;
-        }
-        sleep(Duration::from_millis(100)).await;
-    }
-    panic!("socket not available in time");
 }
