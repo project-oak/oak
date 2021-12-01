@@ -27,10 +27,16 @@ lazy_static::lazy_static! {
 
 #[test]
 fn test_sdk() {
-    let manifest_path = "/workspace/oak_functions/sdk/oak_functions/tests/module/Cargo.toml";
+    let mut manifest_path = std::env::current_dir().unwrap();
+    manifest_path.push("tests");
+    manifest_path.push("module");
+    manifest_path.push("Cargo.toml");
 
-    let wasm_module_bytes =
-        test_utils::compile_rust_wasm(manifest_path, false).expect("Could not read Wasm module");
+    let wasm_module_bytes = test_utils::compile_rust_wasm(
+        manifest_path.to_str().expect("Cargo.toml not found."),
+        false,
+    )
+    .expect("Could not read Wasm module");
 
     let entries = hashmap! {
        b"StorageGet".to_vec() => b"StorageGetResponse".to_vec(),
