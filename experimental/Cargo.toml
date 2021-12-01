@@ -11,6 +11,8 @@ members = [
   "https_attestation",
   "gcp_api_gateway/client",
   "gcp_api_gateway/server",
+  "tf_proxy/client",
+  "tf_proxy/server",
 ]
 
 [patch.crates-io]

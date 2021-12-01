@@ -90,3 +90,6 @@ Makefile.conf
 # Secrets (e.g. tokens, credentials)
 
 *.secret
+
+# TensorFlow model server binary
+tensorflow_model_server

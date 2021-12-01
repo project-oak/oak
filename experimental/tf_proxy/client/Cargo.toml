@@ -1,0 +1,29 @@
+[package]
+name = "tensorflow_client"
+version = "0.1.0"
+authors = ["Conrad Grobler <grobler@google.com>"]
+edition = "2018"
+license = "Apache-2.0"
+
+[dependencies]
+anyhow = "*"
+env_logger = "*"
+flate2 = "*"
+log = "*"
+maplit = "*"
+oak_functions_abi = { path = "../../../oak_functions/abi" }
+oak_functions_client = { path = "../../../oak_functions/client/rust" }
+prost = "*"
+reqwest = "*"
+structopt = "*"
+tokio = { version = "*", features = [
+  "fs",
+  "macros",
+  "process",
+  "sync",
+  "rt-multi-thread"
+] }
+tonic = "*"
+
+[build-dependencies]
+oak_utils = { path = "../../../oak_utils" }

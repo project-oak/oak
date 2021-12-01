@@ -1,0 +1,32 @@
+[package]
+name = "tensorflow_proxy"
+version = "0.1.0"
+authors = ["Conrad Grobler <grobler@google.com>"]
+edition = "2018"
+license = "Apache-2.0"
+
+[dependencies]
+async-stream = "*"
+anyhow = "*"
+env_logger = "*"
+futures = "*"
+log = "*"
+oak_functions_abi = { path = "../../../oak_functions/abi" }
+oak_remote_attestation = { path = "../../../remote_attestation/rust/" }
+prost = "*"
+prost-types = "*"
+structopt = "*"
+sync_wrapper = "*"
+tokio = { version = "*", features = [
+  "fs",
+  "macros",
+  "process",
+  "sync",
+  "rt-multi-thread"
+] }
+tonic = "*"
+tower = "*"
+pin-project-lite = "*"
+
+[build-dependencies]
+oak_utils = { path = "../../../oak_utils" }
