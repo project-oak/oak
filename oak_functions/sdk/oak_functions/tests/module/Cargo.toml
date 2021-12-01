@@ -8,9 +8,6 @@ license = "Apache-2.0"
 [lib]
 crate-type = ["cdylib", "rlib"]
 
-[dev-dependencies]
-tokio = { version = "*" }
-
 [dependencies]
 anyhow = "*"
 maplit = "*"

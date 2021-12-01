@@ -1603,7 +1603,6 @@ dependencies = [
  "maplit",
  "oak_functions",
  "oak_functions_abi",
- "tokio",
 ]
 
 [[package]]
