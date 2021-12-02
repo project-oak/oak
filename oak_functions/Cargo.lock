@@ -51,24 +51,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "08abcc3b4e9339e33a3d0a5ed15d84a687350c05689d825e0f6655eef9e76a94"
 
 [[package]]
-<<<<<<< HEAD
-name = "arbitrary"
-version = "1.0.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "577b08a4acd7b99869f863c50011b01eb73424ccc798ecd996f2e24817adfca7"
-dependencies = [
- "derive_arbitrary",
-]
-
-[[package]]
 name = "assert_matches"
 version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9b34d609dfbaf33d6889b2b7106d3ca345eacad44200913df5ba02bfd31d2ba9"
 
 [[package]]
-=======
->>>>>>> a8b893712 (Make fuzz a workspace)
 name = "async-stream"
 version = "0.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1559,8 +1547,17 @@ dependencies = [
 ]
 
 [[package]]
-=======
->>>>>>> a8b893712 (Make fuzz a workspace)
+name = "oak_functions_sdk_abi_test"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "assert_matches",
+ "maplit",
+ "oak_functions",
+ "oak_functions_abi",
+]
+
+[[package]]
 name = "oak_remote_attestation"
 version = "0.1.0"
 dependencies = [
