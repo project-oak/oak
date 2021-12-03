@@ -13,7 +13,7 @@ Please source this file in your .bashrc, e.g., through
   
 echo \"
 #activate runner auto-complete
-if [ -f $BASH_COMPLETION_FILE ]; then
-  source $BASH_COMPLETION_FILE
+if [ -f "${BASH_COMPLETION_FILE}" ]; then
+  source "${BASH_COMPLETION_FILE}"
 fi\" >> ~/.bashrc
 "
