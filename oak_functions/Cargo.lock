@@ -1523,6 +1523,7 @@ dependencies = [
  "humantime-serde",
  "hyper",
  "hyper-rustls",
+ "lazy_static",
  "log",
  "lookup_data_generator",
  "maplit",
@@ -1547,6 +1548,37 @@ dependencies = [
 ]
 
 [[package]]
+<<<<<<< HEAD
+=======
+name = "oak_functions_loader-fuzz"
+version = "0.0.0"
+dependencies = [
+ "anyhow",
+ "arbitrary",
+ "lazy_static",
+ "libfuzzer-sys",
+ "maplit",
+ "oak_functions_abi",
+ "oak_functions_loader",
+ "prost 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "prost-build 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tokio",
+ "tonic",
+]
+
+[[package]]
+name = "oak_functions_loader_test"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "assert_matches",
+ "maplit",
+ "oak_functions",
+ "oak_functions_abi",
+]
+
+[[package]]
+>>>>>>> 19f5db7e0 (Add failing test for lookup data)
 name = "oak_functions_sdk_abi_test"
 version = "0.1.0"
 dependencies = [

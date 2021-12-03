@@ -12,6 +12,11 @@ members = [
   "examples/weather_lookup/module",
   "load_test",
   "loader",
+<<<<<<< HEAD
+=======
+  "loader/fuzz",
+  "loader/tests/module",
+>>>>>>> 19f5db7e0 (Add failing test for lookup data)
   "location_utils",
   "lookup_data_generator",
   "sdk/oak_functions",
