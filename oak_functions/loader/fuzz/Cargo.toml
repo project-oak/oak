@@ -16,12 +16,16 @@ libfuzzer-sys = "*"
 maplit = "*"
 oak_functions_loader = { path = "..", features = ["oak-metrics"] }
 oak_functions_abi = { path = "../../abi" }
-prost = "*"
+prost = "0.8.0"
 tokio = "*"
 tonic = "*"
 
 [build-dependencies]
-prost-build = "*"
+prost-build = "0.8.0"
+
+# Prevent this from interfering with workspaces
+[workspace]
+members = ["."]
 
 [[bin]]
 name = "apply_policy"
