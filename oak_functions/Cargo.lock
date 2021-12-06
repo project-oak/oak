@@ -1548,8 +1548,6 @@ dependencies = [
 ]
 
 [[package]]
-<<<<<<< HEAD
-=======
 name = "oak_functions_loader-fuzz"
 version = "0.0.0"
 dependencies = [
@@ -1578,7 +1576,6 @@ dependencies = [
 ]
 
 [[package]]
->>>>>>> 19f5db7e0 (Add failing test for lookup data)
 name = "oak_functions_sdk_abi_test"
 version = "0.1.0"
 dependencies = [
