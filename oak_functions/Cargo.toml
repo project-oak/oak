@@ -12,7 +12,6 @@ members = [
   "examples/weather_lookup/module",
   "load_test",
   "loader",
-  "loader/fuzz",
   "loader/tests/module",
   "location_utils",
   "lookup_data_generator",
