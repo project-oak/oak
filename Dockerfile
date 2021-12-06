@@ -319,3 +319,12 @@ ENV CARGO_INCREMENTAL false
 # uid of the host, therefore we need to first fix the uid before actually using the user. This is
 # done by /scripts/fix_docker_user_and_run .
 RUN useradd --shell=/bin/bash --create-home --user-group docker
+
+# To make the scripts available to call from everywhere.
+ENV PATH "/workspace/scripts:${PATH}" 
+
+# Add sourcing of runner_bash_completion file to .bashrc
+RUN echo -e "\n#activate runner auto-complete\nif [ -f /workspace/.runner_bash_completion ]; then\n  source /workspace/.runner_bash_completion \nfi" >> /home/docker/.bashrc
+
+# Define alias
+RUN echo -e "\nalias ll='ls -l'\n" >> /home/docker/.bashrc
