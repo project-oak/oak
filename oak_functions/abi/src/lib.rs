@@ -83,4 +83,37 @@ extern "C" {
         inference_ptr_ptr: *mut *mut u8,
         inference_len_ptr: *mut usize,
     ) -> u32;
+
+    /// Reads a message, i.e., `dest_buf_len_ptr` bytes, from the channel with `channel_handle` into
+    /// the buffer at `dest_buf_ptr_ptr`. After a successful call to `channel_read`
+    /// the buffer at `dest_buf_ptr_ptr` holds bytes encoding a message taken from the specified
+    /// channel.
+    ///
+    /// Returns a status code to indicate success. In particular, returns immediately
+    /// with an appropriate status code, if no message is available on the channel.
+    pub fn channel_read(
+        channel_handle: i32,
+        dest_buf_ptr_ptr: *mut *mut u8,
+        dest_buf_len_ptr: *mut usize,
+    ) -> u32;
+
+    /// Writes a message, i.e., `src_buf_len` bytes),from `scr_buf_ptr` into the channel with
+    /// `channel_handle`.
+    ///
+    /// Returns a status code to indicate success.
+    pub fn channel_write(channel_handle: i32, src_buf_ptr: *mut u8, src_buf_len: usize) -> u32;
+
+    /// Waits until at least one of the channels from the channel handles in the buffer at
+    /// `channel_handle_buf_ptr` has a message to read---or
+    /// until the `deadline_ms` expires. After a successful call to `channel_wait`, the buffer at
+    /// `ready_channel_handle_buf_ptr` holds the channel handles with at least one message to read.
+    ///
+    /// Returns a status code to indicate success or whether the deadline.
+    pub fn channel_wait(
+        channel_handle_buf_ptr: *mut i32,
+        channel_handle_buf_len: usize,
+        ready_channel_handle_buf_ptr: *mut *mut i32,
+        ready_channel_handle_buf_len: *mut usize,
+        deadline_ms: u32,
+    ) -> u32;
 }
