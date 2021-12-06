@@ -1087,6 +1087,17 @@
 <span id="1087">1087</span>
 <span id="1088">1088</span>
 <span id="1089">1089</span>
+<span id="1090">1090</span>
+<span id="1091">1091</span>
+<span id="1092">1092</span>
+<span id="1093">1093</span>
+<span id="1094">1094</span>
+<span id="1095">1095</span>
+<span id="1096">1096</span>
+<span id="1097">1097</span>
+<span id="1098">1098</span>
+<span id="1099">1099</span>
+<span id="1100">1100</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -1148,7 +1159,7 @@
     <span class="ident">RunCi</span>,
     <span class="ident">RunCargoClean</span>,
     <span class="attribute">#[<span class="ident">structopt</span>(<span class="ident">about</span> <span class="op">=</span> <span class="string">&quot;generate bash completion script to stdout&quot;</span>)]</span>
-    <span class="ident">Completion</span>,
+    <span class="ident">Completion</span>(<span class="ident">Completion</span>),
 }
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">StructOpt</span>, <span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
@@ -1188,6 +1199,17 @@
         <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;run the command only for files modified in the specified commits&quot;</span>
     )]</span>
     <span class="kw">pub</span> <span class="ident">commits</span>: <span class="ident">Commits</span>,
+}
+
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">StructOpt</span>, <span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Completion</span> {
+    <span class="attribute">#[<span class="ident">structopt</span>(
+        <span class="ident">long</span>,
+        <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;dir to write runner_bash_completion file; defaults to current directory&quot;</span>,
+        <span class="ident">default_value</span> <span class="op">=</span> <span class="string">&quot;&quot;</span>,
+        <span class="ident">parse</span>(<span class="ident">from_os_str</span>)
+    )]</span>
+    <span class="kw">pub</span> <span class="ident">out_dir</span>: <span class="ident">PathBuf</span>,
 }
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">StructOpt</span>, <span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
