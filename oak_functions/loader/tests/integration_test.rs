@@ -45,15 +45,16 @@ async fn test_consistent_lookup() {
     let temp_file = tempfile::NamedTempFile::new().unwrap();
     temp_file.as_file().write_all(&serialized_entries).unwrap();
 
-    let lookup_data = crate::LookupData::new_empty(
+    let lookup_data = Arc::new(crate::LookupData::new_empty(
         Some(LookupDataSource::File(temp_file.path().to_path_buf())),
         Logger::for_test(),
-    );
+    ));
+
     lookup_data.refresh().await.unwrap();
 
     let wasm_handler = WasmHandler::create(
         &WASM_MODULE_BYTES,
-        Arc::new(lookup_data),
+        lookup_data.clone(),
         vec![],
         Logger::for_test(),
     )
@@ -72,7 +73,7 @@ async fn test_consistent_lookup() {
     let serialized_entries = test_utils::serialize_entries(entries);
     temp_file.as_file().write_all(&serialized_entries).unwrap();
 
-    wasm_handler.refresh_lookup_data().await.unwrap();
+    lookup_data.refresh().await.unwrap();
 
     let request2 = Request {
         body: b"ConsistentLookup".to_vec(),

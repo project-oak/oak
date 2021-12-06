@@ -604,10 +604,6 @@ impl WasmHandler {
         })
     }
 
-    pub async fn refresh_lookup_data(&self) -> anyhow::Result<()> {
-        self.lookup_data.refresh().await
-    }
-
     pub async fn handle_invoke(&self, request: Request) -> anyhow::Result<Response> {
         let mut extensions_indices = HashMap::new();
         let mut extensions_metadata = HashMap::new();
