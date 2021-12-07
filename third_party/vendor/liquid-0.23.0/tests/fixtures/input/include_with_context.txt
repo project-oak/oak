@@ -1,0 +1,1 @@
+{% include 'tests/fixtures/input/include_with_val.txt' %}

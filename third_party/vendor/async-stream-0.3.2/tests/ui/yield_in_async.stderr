@@ -1,0 +1,75 @@
+error[E0658]: yield syntax is experimental
+ --> $DIR/yield_in_async.rs:6:13
+  |
+6 |             yield 123;
+  |             ^^^^^^^^^
+  |
+  = note: see issue #43122 <https://github.com/rust-lang/rust/issues/43122> for more information
+
+error[E0727]: `async` generators are not yet supported
+ --> $DIR/yield_in_async.rs:6:13
+  |
+6 |             yield 123;
+  |             ^^^^^^^^^
+
+error[E0271]: type mismatch resolving `<[static generator@$DIR/src/lib.rs:201:9: 201:67] as Generator<ResumeTy>>::Yield == ()`
+  --> $DIR/yield_in_async.rs:4:5
+   |
+4  | /     stream! {
+5  | |         let f = async {
+6  | |             yield 123;
+7  | |         };
+8  | |
+9  | |         let v = f.await;
+10 | |     };
+   | |______^ expected `()`, found integer
+   |
+   = note: this error originates in a macro (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error[E0698]: type inside `async` block must be known in this context
+ --> $DIR/yield_in_async.rs:6:19
+  |
+6 |             yield 123;
+  |                   ^^^ cannot infer type for type `{integer}`
+  |
+note: the type is part of the `async` block because of this `yield`
+ --> $DIR/yield_in_async.rs:6:13
+  |
+6 |             yield 123;
+  |             ^^^^^^^^^
+
+error[E0698]: type inside `async` block must be known in this context
+ --> $DIR/yield_in_async.rs:5:13
+  |
+5 |         let f = async {
+  |             ^ cannot infer type for type `{integer}`
+  |
+note: the type is part of the `async` block because of this `await`
+ --> $DIR/yield_in_async.rs:9:17
+  |
+9 |         let v = f.await;
+  |                 ^^^^^^^
+
+error[E0698]: type inside `async` block must be known in this context
+ --> $DIR/yield_in_async.rs:9:17
+  |
+9 |         let v = f.await;
+  |                 ^ cannot infer type for type `{integer}`
+  |
+note: the type is part of the `async` block because of this `await`
+ --> $DIR/yield_in_async.rs:9:17
+  |
+9 |         let v = f.await;
+  |                 ^^^^^^^
+
+error[E0698]: type inside `async` block must be known in this context
+ --> $DIR/yield_in_async.rs:9:17
+  |
+9 |         let v = f.await;
+  |                 ^^^^^^^ cannot infer type for type `{integer}`
+  |
+note: the type is part of the `async` block because of this `await`
+ --> $DIR/yield_in_async.rs:9:17
+  |
+9 |         let v = f.await;
+  |                 ^^^^^^^

@@ -1,0 +1,8 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc e025b1e5f5371224055cde0ab768fe2d918f44a37f2cd7a5c38f7a91563b96d5 # shrinks to pb = PermuteAxisProblem { shape: [2, 1], permutation: [1, 0] }
+cc 79d6b9e70d66e18f98d5350c3b9cf6201a2f1a8d641549c30ed9eb3b1163a7d6 # shrinks to pb = PermuteAxisProblem { shape: [2, 2], permutation: [1, 0] }

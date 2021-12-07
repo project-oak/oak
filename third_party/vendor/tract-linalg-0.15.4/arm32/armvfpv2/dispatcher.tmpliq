@@ -1,0 +1,32 @@
+// vim: ft=arm
+
+.non_linear:
+
+.non_linear_loop_entry:
+    sub     r0, #20
+
+.non_linear_loop:
+    add     r0, #20
+    ldm     r0, { r2, r3, r4, r5, r6 }
+    cmp     r2, #{{ jump_table | size }}
+    movgt   r2, #{{ jump_table | size }}
+    cmp     r2, #0
+    movlt   r2, #{{ jump_table | size }}
+
+    adr     r7, .jmp_table
+    ldr     pc, [r7, r2, lsl #2]
+
+.jmp_table:
+{% for j in jump_table %}
+    .word   .{{j}}
+{% endfor %}
+    .word     .unsupported
+
+.unsupported:
+    mov         r0,     #1
+    b           .return
+
+.done:
+    mov         r0,     #0
+    b           .return
+

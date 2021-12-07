@@ -1,0 +1,7 @@
+pre-release-commit-message = "chore: Release"
+no-dev-version = true
+tag-message = "{{tag_name}}"
+tag-name = "{{prefix}}v{{version}}"
+consolidate-commits = true
+consolidate-pushes = true
+allow-branch = ["master"]

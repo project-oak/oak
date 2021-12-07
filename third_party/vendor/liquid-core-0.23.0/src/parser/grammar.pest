@@ -1,0 +1,77 @@
+WHITESPACE = _{" " | NEWLINE }
+NON_WHITESPACE_CONTROL_HYPHEN = _{ !"-}}" ~ !"-%}" ~ "-" }
+// Lax liquid file won't raise errors. This allows blocks to override
+// liquid rules and parse their content on their own.
+LaxLiquidFile = ${ SOI ~ (Element | InvalidLiquid)* ~ EOI }
+LiquidFile = ${ SOI ~ Element* ~ EOI }
+
+// A token that could not be parsed as valid liquid
+InvalidLiquid = { !Expression ~ ANY }
+
+// Element-level parsing
+Element = _{ Expression | Tag | Raw }
+
+TagStart = _{ (WHITESPACE* ~ "{%-") | "{%" }
+TagEnd =   _{ ("-%}" ~ WHITESPACE*) | "%}" }
+TagInner = !{Identifier ~ TagToken*}
+ExpressionStart = _{ (WHITESPACE* ~ "{{-") | "{{" }
+ExpressionEnd =   _{ ("-}}" ~ WHITESPACE*) | "}}" }
+ExpressionInner = !{FilterChain}
+
+Tag = { TagStart ~ WHITESPACE* ~ TagInner ~ WHITESPACE* ~ TagEnd }
+Expression = { ExpressionStart ~ WHITESPACE* ~ ExpressionInner ~ WHITESPACE* ~ ExpressionEnd }
+// Not allowing Tag/Expression Start/End might become a problem
+// for {% raw %}, {% comment %} and other blocks that don't parse
+// the elements inside with liquid: unclosed delimiters won't be accepted
+Raw = @{ (!(TagStart | ExpressionStart) ~ ANY)+ }
+
+
+// Inner parsing
+Identifier = @{ (ASCII_ALPHA | "_" | NON_WHITESPACE_CONTROL_HYPHEN) ~ (ASCII_ALPHANUMERIC | "_" | NON_WHITESPACE_CONTROL_HYPHEN)* }
+
+Variable = ${ Identifier
+            ~ ( ("." ~ Identifier)
+              | ("[" ~ WHITESPACE* ~ Value ~ WHITESPACE* ~ "]")
+              )*
+            }
+Value = { Literal | Variable }
+Filter = { Identifier ~ (":" ~ FilterArgument ~ ("," ~ FilterArgument)*)? }
+FilterChain = { Value ~ ("|" ~ Filter)* }
+PositionalFilterArgument = {Value}
+KeywordFilterArgument = {Identifier ~ ":" ~ Value}
+FilterArgument = _{KeywordFilterArgument | PositionalFilterArgument }
+
+// Literals
+NilLiteral = @{ "nil" | "null" }
+EmptyLiteral = @{ "empty" }
+BlankLiteral = @{ "blank" }
+StringLiteral = @{ ("'" ~ (!"'" ~ ANY)* ~ "'")
+		        		 | ("\"" ~ (!"\"" ~ ANY)* ~ "\"") }
+
+IntegerLiteral = @{ ("+" | "-")? ~ ASCII_DIGIT+ }
+FloatLiteral = @{ ("+" | "-")? ~ ASCII_DIGIT+ ~ "." ~ ASCII_DIGIT+ }
+
+BooleanLiteral = @{ "true" | "false" }
+
+Literal = { NilLiteral | EmptyLiteral | BlankLiteral | StringLiteral | FloatLiteral | IntegerLiteral | BooleanLiteral }
+
+Range = { "(" ~ Value ~ ".." ~ Value ~ ")" }
+
+TagToken = _{ Range | FilterChain | DoubleCharSymbol | SingleCharSymbol }
+
+// DoubleCharSymbol must be tried first, otherwise it could be parsed as two SingleCharSymbol instead
+SingleCharSymbol = _{ GreaterThan | LesserThan | Assign | Comma | Colon }
+DoubleCharSymbol = _{ Equals | NotEquals | LesserThanGreaterThan | GreaterThanEquals | LesserThanEquals }
+
+// Symbols - Names must be given for better error messages
+GreaterThan = { ">" }
+LesserThan = { "<" }
+Assign = { "=" }
+Comma = { "," }
+Colon = { ":" }
+
+Equals = { "==" }
+NotEquals = { "!=" }
+LesserThanGreaterThan = { "<>" }
+GreaterThanEquals = { ">=" }
+LesserThanEquals = { "<=" }

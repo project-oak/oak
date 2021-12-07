@@ -1,0 +1,7 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc a315fdd02c2300011c10ef559a4014efd2163df0fce86ccde956d5912e376e24 # shrinks to pb = ComposeProblem { input: [1], ops: [Add(0)] }

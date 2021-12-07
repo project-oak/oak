@@ -26,3 +26,12 @@ rustflags = ["-C", "target-feature=+crt-static", "-C", "link-arg=-lgcc"]
 # See also https://doc.rust-lang.org/cargo/reference/config.html#httpmultiplexing
 [http]
 multiplexing = false
+
+[source.crates-io]
+replace-with = "vendored-sources"
+
+[source.vendored-sources]
+directory = "./third_party/vendor"
+
+[net]
+offline = true

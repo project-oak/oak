@@ -1,0 +1,124 @@
+use crate::internal::*;
+use std::fmt;
+
+mod lir;
+mod mir;
+
+pub use lir::LirScan;
+pub use mir::Scan;
+
+#[derive(Clone, new, Hash)]
+pub enum InputMapping {
+    Full { slot: usize },
+    State { initializer: StateInitializer },
+    Scan { slot: usize, axis: usize, chunk: isize },
+}
+
+impl InputMapping {
+    pub fn as_state(&self) -> Option<&StateInitializer> {
+        match self {
+            InputMapping::State { initializer } => Some(initializer),
+            _ => None,
+        }
+    }
+
+    pub fn as_scan(&self) -> Option<(usize, usize, isize)> {
+        match self {
+            InputMapping::Scan { slot, axis, chunk } => Some((*slot, *axis, *chunk)),
+            _ => None,
+        }
+    }
+
+    pub fn invisible(&self) -> bool {
+        if let InputMapping::State { initializer: StateInitializer::Value(_) } = self {
+            true
+        } else {
+            false
+        }
+    }
+
+    pub fn slot(&self) -> Option<usize> {
+        match self {
+            InputMapping::Full { slot } => Some(*slot),
+            InputMapping::Scan { slot, .. } => Some(*slot),
+            InputMapping::State { initializer } => match initializer {
+                StateInitializer::FromInput(slot) => Some(*slot),
+                _ => None,
+            },
+        }
+    }
+}
+
+impl fmt::Debug for InputMapping {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            InputMapping::Full { slot } => write!(fmt, "Full, inlet {}", slot),
+            InputMapping::State { initializer } => {
+                write!(fmt, "State initialized by {:?}", initializer)
+            }
+            InputMapping::Scan { slot, axis, chunk } => {
+                write!(fmt, "Scan inlet {}, axis: {}, chunk: {:?}.", slot, axis, chunk)
+            }
+        }
+    }
+}
+
+#[derive(Clone, new, Hash)]
+pub struct OutputMapping<F: Clone> {
+    pub full_slot: Option<usize>,
+    pub axis: usize,
+    pub chunk: isize,
+    pub full_dim_hint: Option<F>,
+    pub last_value_slot: Option<usize>,
+    pub state: bool,
+}
+
+impl<F: Clone> OutputMapping<F> {
+    pub fn invisible(&self) -> bool {
+        self.full_slot.is_none() && self.last_value_slot.is_none()
+    }
+}
+
+impl<F: Clone + DimLike> OutputMapping<F> {
+    pub fn concretize_dims(&self, values: &SymbolValues) -> TractResult<OutputMapping<F>> {
+        Ok(Self {
+            full_dim_hint: self.full_dim_hint.as_ref().map(|h| h.eval(values)),
+            ..self.clone()
+        })
+    }
+}
+
+impl<F: Clone + fmt::Display> fmt::Debug for OutputMapping<F> {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        if self.state {
+            write!(fmt, "State. ")?;
+        }
+        if let Some(last_value_slot) = self.last_value_slot {
+            write!(fmt, "Last value to outlet {}. ", last_value_slot)?;
+        }
+        if let Some(full_slot) = self.full_slot {
+            write!(fmt, "Full value to outlet {}. ", full_slot)?;
+        }
+        if let Some(full_dim_hint) = &self.full_dim_hint {
+            write!(fmt, "Full len {}. ", full_dim_hint)?;
+        }
+        write!(fmt, "Axis:{} ", self.axis)?;
+        Ok(())
+    }
+}
+
+#[derive(Clone, new, Hash)]
+pub enum StateInitializer {
+    FromInput(usize),
+    Value(Arc<Tensor>),
+}
+
+impl fmt::Debug for StateInitializer {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        use StateInitializer::*;
+        match self {
+            FromInput(i) => write!(fmt, "inlet {}", i),
+            Value(t) => write!(fmt, "tensor {:?}", t),
+        }
+    }
+}

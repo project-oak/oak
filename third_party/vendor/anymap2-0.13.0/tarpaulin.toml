@@ -1,0 +1,6 @@
+[default]
+ignore-tests = true
+
+[report]
+out = ["Html", "Xml"]
+output-dir = "target/tarpaulin"

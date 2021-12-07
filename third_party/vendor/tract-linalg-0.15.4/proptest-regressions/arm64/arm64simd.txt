@@ -1,0 +1,7 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc dd34c10c4dfbe1283a6e35b2ec2276dc4a6dfca5b82da7b3682400c0c8b1d127 # shrinks to pb = ConvProblem { ci: 16, co: 37, kt: 2, stride: 4, dilation: 1, filters: 37,32,F32 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0..., data: 16,8,F32 -0.461, -0.29, -0.519, 0.794, 0.004, 0.649, -0.152, -0.348, -0.532, -0.162, 0.582, 0.002..., phantom: PhantomData }

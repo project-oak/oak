@@ -1,0 +1,11 @@
+mod break_tag_test;
+mod continue_tag_test;
+mod for_tag_test;
+mod if_else_tag_test;
+mod include_tag_test;
+mod increment_tag_test;
+mod raw_tag_test;
+mod standard_tag_test;
+mod statements_test;
+mod table_row_test;
+mod unless_else_tag_test;
