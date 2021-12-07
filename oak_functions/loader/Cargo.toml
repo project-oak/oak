@@ -34,6 +34,7 @@ humantime-serde = "*"
 log = { version = "*", features = ["max_level_off", "release_max_level_off"] }
 oak_functions_abi = { path = "../abi" }
 oak_remote_attestation = { path = "../../remote_attestation/rust/" }
+once_cell = "*"
 prost = "*"
 rand = "*"
 serde = "*"

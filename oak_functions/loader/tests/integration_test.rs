@@ -14,7 +14,6 @@
 // limitations under the License.
 
 use futures::executor::block_on;
-use lazy_static::lazy_static;
 use maplit::hashmap;
 use oak_functions_abi::proto::{Request, Response};
 use oak_functions_loader::{
@@ -22,20 +21,19 @@ use oak_functions_loader::{
     lookup::{LookupData, LookupDataSource},
     server::WasmHandler,
 };
+use once_cell::sync::Lazy;
 use std::{io::Write, sync::Arc};
 use tokio;
 
-lazy_static! {
-    static ref WASM_MODULE_BYTES: Vec<u8> = {
-        let mut manifest_path = std::env::current_dir().unwrap();
-        manifest_path.push("tests");
-        manifest_path.push("module");
-        manifest_path.push("Cargo.toml");
+static WASM_MODULE_BYTES: Lazy<Vec<u8>> = Lazy::new(|| {
+    let mut manifest_path = std::env::current_dir().unwrap();
+    manifest_path.push("tests");
+    manifest_path.push("module");
+    manifest_path.push("Cargo.toml");
 
-        test_utils::compile_rust_wasm(manifest_path.to_str().unwrap(), false)
-            .expect("Could not read Wasm module")
-    };
-}
+    test_utils::compile_rust_wasm(manifest_path.to_str().unwrap(), false)
+        .expect("Could not read Wasm module")
+});
 
 #[tokio::test]
 async fn test_consistent_lookup() {
