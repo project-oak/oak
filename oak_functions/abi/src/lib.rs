@@ -86,10 +86,10 @@ extern "C" {
         inference_len_ptr: *mut usize,
     ) -> u32;
 
-    /// Reads a message, i.e., `dest_buf_len_ptr` bytes, from the channel with `channel_handle` into
-    /// the buffer at `dest_buf_ptr_ptr`. After a successful call to `channel_read`
-    /// the buffer at `dest_buf_ptr_ptr` holds bytes encoding a message taken from the specified
-    /// channel.
+    /// Allocates a buffer on the callers memory to write a message from the channel with
+    /// `channel_handle`. After a successful call `dest_buf_ptr_ptr` holds the address of the
+    /// buffer and `dest_buf_len_ptr` holds its length. The caller can then read
+    /// the message from `dest_buf_ptr_ptr`.
     ///
     /// Returns a status code to indicate success. In particular, returns immediately
     /// with an appropriate status code, if no message is available on the channel.
