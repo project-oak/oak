@@ -113,6 +113,8 @@ extern "C" {
     /// `channel_handle_buf_ptr` has a message to read, or
     /// until the `deadline_ms` expires. After a successful call to `channel_wait`, the buffer at
     /// `ready_channel_handle_buf_ptr` holds the channel handles with at least one message to read.
+    /// Both, `channel_handle_buf_len` and `ready_channel_handle_buf_len` hold the length of the
+    /// respective buffers in bytes.
     ///
     /// Returns a status code to indicate success or deadline expiration.
     pub fn channel_wait(
