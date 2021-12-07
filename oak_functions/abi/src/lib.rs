@@ -18,6 +18,7 @@
 //! binary interface (ABI).
 
 type ChannelHandle = u32;
+type StatusCode = u32;
 
 pub mod proto {
     include!(concat!(env!("OUT_DIR"), "/oak.functions.abi.rs"));
@@ -97,7 +98,7 @@ extern "C" {
         channel_handle: ChannelHandle,
         dest_buf_ptr_ptr: *mut *mut u8,
         dest_buf_len_ptr: *mut usize,
-    ) -> u32;
+    ) -> StatusCode;
 
     /// Writes a message, i.e., `src_buf_len` bytes, from `scr_buf_ptr` into the channel with
     /// `channel_handle`.
@@ -107,7 +108,7 @@ extern "C" {
         channel_handle: ChannelHandle,
         src_buf_ptr: *const u8,
         src_buf_len: usize,
-    ) -> u32;
+    ) -> StatusCode;
 
     /// Waits until at least one of the channels from the channel handles in the buffer at
     /// `channel_handle_buf_ptr` has a message to read, or
@@ -123,5 +124,5 @@ extern "C" {
         ready_channel_handle_buf_ptr: *mut *mut i32,
         ready_channel_handle_buf_len: *mut usize,
         deadline_ms: u32,
-    ) -> u32;
+    ) -> StatusCode;
 }
