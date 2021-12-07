@@ -17,6 +17,8 @@
 //! Type, constant and Wasm host function definitions for the Oak-Functions application
 //! binary interface (ABI).
 
+type ChannelHandle = u32;
+
 pub mod proto {
     include!(concat!(env!("OUT_DIR"), "/oak.functions.abi.rs"));
     include!(concat!(env!("OUT_DIR"), "/oak.functions.lookup_data.rs"));
@@ -92,7 +94,7 @@ extern "C" {
     /// Returns a status code to indicate success. In particular, returns immediately
     /// with an appropriate status code, if no message is available on the channel.
     pub fn channel_read(
-        channel_handle: i32,
+        channel_handle: ChannelHandle,
         dest_buf_ptr_ptr: *mut *mut u8,
         dest_buf_len_ptr: *mut usize,
     ) -> u32;
@@ -101,7 +103,11 @@ extern "C" {
     /// `channel_handle`.
     ///
     /// Returns a status code to indicate success.
-    pub fn channel_write(channel_handle: i32, src_buf_ptr: *mut u8, src_buf_len: usize) -> u32;
+    pub fn channel_write(
+        channel_handle: ChannelHandle,
+        src_buf_ptr: *mut u8,
+        src_buf_len: usize,
+    ) -> u32;
 
     /// Waits until at least one of the channels from the channel handles in the buffer at
     /// `channel_handle_buf_ptr` has a message to read, or
@@ -110,7 +116,7 @@ extern "C" {
     ///
     /// Returns a status code to indicate success or deadline expiration.
     pub fn channel_wait(
-        channel_handle_buf_ptr: *mut i32,
+        channel_handle_buf_ptr: *mut ChannelHandle,
         channel_handle_buf_len: usize,
         ready_channel_handle_buf_ptr: *mut *mut i32,
         ready_channel_handle_buf_len: *mut usize,
