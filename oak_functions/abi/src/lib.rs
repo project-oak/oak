@@ -99,7 +99,7 @@ extern "C" {
         dest_buf_len_ptr: *mut usize,
     ) -> u32;
 
-    /// Writes a message, i.e., `src_buf_len` bytes),from `scr_buf_ptr` into the channel with
+    /// Writes a message, i.e., `src_buf_len` bytes, from `scr_buf_ptr` into the channel with
     /// `channel_handle`.
     ///
     /// Returns a status code to indicate success.
