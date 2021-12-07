@@ -105,7 +105,7 @@ extern "C" {
     /// Returns a status code to indicate success.
     pub fn channel_write(
         channel_handle: ChannelHandle,
-        src_buf_ptr: *mut u8,
+        src_buf_ptr: *const u8,
         src_buf_len: usize,
     ) -> u32;
 
@@ -116,7 +116,7 @@ extern "C" {
     ///
     /// Returns a status code to indicate success or deadline expiration.
     pub fn channel_wait(
-        channel_handle_buf_ptr: *mut ChannelHandle,
+        channel_handle_buf_ptr: *const ChannelHandle,
         channel_handle_buf_len: usize,
         ready_channel_handle_buf_ptr: *mut *mut i32,
         ready_channel_handle_buf_len: *mut usize,
