@@ -347,7 +347,7 @@ _runner() {
             return 0
             ;;
         runner__run__cargo__tests)
-            opts=" -h -V  --cleanup --benches --help --version --commits  "
+            opts=" -h -V  --cleanup --help --version --commits  "
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
