@@ -722,6 +722,7 @@ dependencies = [
  "oak_functions_abi",
  "oak_remote_attestation",
  "oak_utils",
+ "once_cell",
  "prost 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand",
  "serde",
