@@ -261,8 +261,6 @@ pub struct RunTestsOpt {
         help = "remove generated files after running tests for each crate"
     )]
     pub cleanup: bool,
-    #[structopt(long, help = "run benchmarks")]
-    pub benches: bool,
     #[structopt(flatten, help = "run the command only for the specified diffs")]
     pub commits: Commits,
 }
