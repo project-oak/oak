@@ -13,6 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use futures::executor::block_on;
 use lazy_static::lazy_static;
 use maplit::hashmap;
 use oak_functions_abi::proto::{Request, Response};
@@ -50,7 +51,7 @@ async fn test_consistent_lookup() {
         Logger::for_test(),
     ));
 
-    lookup_data.refresh().await.unwrap();
+    let _ = block_on(lookup_data.refresh());
 
     let wasm_handler = WasmHandler::create(
         &WASM_MODULE_BYTES,
@@ -73,7 +74,7 @@ async fn test_consistent_lookup() {
     let serialized_entries = test_utils::serialize_entries(entries);
     temp_file.as_file().write_all(&serialized_entries).unwrap();
 
-    lookup_data.refresh().await.unwrap();
+    let _ = block_on(lookup_data.refresh());
 
     let request2 = Request {
         body: b"ConsistentLookup".to_vec(),
