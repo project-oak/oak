@@ -104,7 +104,7 @@ extern "C" {
     pub fn channel_write(channel_handle: i32, src_buf_ptr: *mut u8, src_buf_len: usize) -> u32;
 
     /// Waits until at least one of the channels from the channel handles in the buffer at
-    /// `channel_handle_buf_ptr` has a message to read---or
+    /// `channel_handle_buf_ptr` has a message to read, or
     /// until the `deadline_ms` expires. After a successful call to `channel_wait`, the buffer at
     /// `ready_channel_handle_buf_ptr` holds the channel handles with at least one message to read.
     ///
