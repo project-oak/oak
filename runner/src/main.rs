@@ -167,7 +167,6 @@ fn run_tests() -> Step {
         steps: vec![
             run_cargo_tests(&RunTestsOpt {
                 cleanup: false,
-                benches: true,
                 commits: Commits::default(),
             }),
             run_bazel_tests(),
@@ -707,7 +706,6 @@ fn run_cargo_test(opt: &RunTestsOpt, all_affected_crates: &ModifiedContent) -> S
                             // Compile and test for all features
                             features,
                             &format!("--manifest-path={}", &entry),
-                            if opt.benches { "--benches" } else { "" },
                         ],
                     ),
                 };
