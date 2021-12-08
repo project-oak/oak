@@ -15,7 +15,7 @@
 
 use futures::executor::block_on;
 use maplit::hashmap;
-use oak_functions_abi::proto::{Request, Response};
+use oak_functions_abi::proto::Request;
 use oak_functions_loader::{
     logger::Logger,
     lookup::{LookupData, LookupDataSource},
@@ -48,7 +48,6 @@ async fn test_consistent_lookup() {
         Some(LookupDataSource::File(temp_file.path().to_path_buf())),
         Logger::for_test(),
     ));
-
     let _ = block_on(lookup_data.refresh());
 
     let wasm_handler = WasmHandler::create(
@@ -63,23 +62,30 @@ async fn test_consistent_lookup() {
         body: b"ConsistentLookup".to_vec(),
     };
 
-    let response: Response = wasm_handler.handle_invoke(request).await.unwrap();
+    let response = wasm_handler.handle_invoke(request.clone()).await.unwrap();
     assert_eq!(response.body().unwrap(), b"Value1");
 
+    // Now we update the entries and refresh the lookup_data.
     let entries = hashmap! {
        b"ConsistentLookup".to_vec() => b"Value2".to_vec(),
     };
     let serialized_entries = test_utils::serialize_entries(entries);
     temp_file.as_file().write_all(&serialized_entries).unwrap();
-
     let _ = block_on(lookup_data.refresh());
 
-    let request2 = Request {
-        body: b"ConsistentLookup".to_vec(),
-    };
+    // A second Wasm module created at this point would expect the new lookup data.
+    let wasm_handler2 = WasmHandler::create(
+        &WASM_MODULE_BYTES,
+        lookup_data.clone(),
+        vec![],
+        Logger::for_test(),
+    )
+    .expect("Could not instantiate WasmHandler.");
+    let response = wasm_handler2.handle_invoke(request.clone()).await.unwrap();
+    assert_eq!(response.body().unwrap(), b"Value2");
 
-    // even though the lookup data was refreshed in the backgroud
-    // we expect the same in the wasm module
-    let response2: Response = wasm_handler.handle_invoke(request2).await.unwrap();
-    assert_eq!(response2.body().unwrap(), b"Value1");
+    // Even though the lookup data was refreshed in the background
+    // we expect the same result during the lifetime of the first Wasm module.
+    let response = wasm_handler.handle_invoke(request.clone()).await.unwrap();
+    assert_eq!(response.body().unwrap(), b"Value1");
 }
