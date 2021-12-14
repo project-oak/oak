@@ -35,6 +35,9 @@ const STORAGE_GET_ITEM: usize = 2;
 const WRITE_LOG_MESSAGE: usize = 3;
 const EXTENSION_INDEX_OFFSET: usize = 10;
 
+// Type alias for a message sent over a channel through the ABI.
+pub type AbiMessage = Vec<u8>;
+
 // Type aliases for positions and offsets in Wasm linear memory. Any future 64-bit version
 // of Wasm would use different types.
 pub type AbiPointer = u32;
