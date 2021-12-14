@@ -21,6 +21,20 @@ package oak.functions.abi;
 option java_multiple_files = true;
 option java_package = "oak.functions.abi";
 
+// ChannelStatus returned from a read, write, or wait on a channel.
+enum ChannelStatus {
+  CHANNEL_UNSPECIFIED = 0;
+  // Success.
+  CHANNEL_OK = 1;
+  // Channel is empty.
+  CHANNEL_EMPTY = 2;
+}
+
+enum ChannelHandle {
+  HANDLE_UNSPECIFIED = 0;
+  LOOKUP_DATA = 2;
+}
+
 // Status values exchanged as i32 values across the Node Wasm interface.
 enum OakStatus {
   UNSPECIFIED = 0;
