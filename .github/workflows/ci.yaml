@@ -65,6 +65,34 @@ jobs:
           ./scripts/docker_pull
           df --human-readable
 
+      # Store various common Rust folders to speed up future runs.
+      #
+      # The main cache key includes the combined hash of all Cargo.lock files in the repository, but
+      # falls back on a more generic prefix if an exact match is not found, so that there is at
+      # least some chance that some of the artifacts will be found there.
+      #
+      # We specify the `./cargo-cache` folder (as per `/scripts/docker_run`), as well as various
+      # `target` folders. This can probably be improved in a variety of ways over time.
+      #
+      # See https://doc.rust-lang.org/nightly/cargo/guide/cargo-home.html#caching-the-cargo-home-in-ci
+      - name: Cache Rust artifacts
+        uses: actions/cache@v2
+        with:
+          path: |
+            ./cargo-cache/bin
+            ./cargo-cache/registry/index
+            ./cargo-cache/registry/cache
+            ./cargo-cache/git/db
+            ./examples/target
+            ./oak_functions/target
+            ./oak_loader/target
+            ./runner/target
+          key: |
+            cargo-cache-${{ matrix.cmd }}-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            cargo-cache-${{ matrix.cmd }}-
+            cargo-cache-
+
       - name: Run command
         run: |
           ./scripts/docker_run ./scripts/runner --commands ${{ matrix.cmd }}
