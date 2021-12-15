@@ -20,7 +20,7 @@ use oak_functions_loader::{
     grpc::{create_and_start_grpc_server, create_wasm_handler},
     logger::Logger,
     lookup::{parse_lookup_entries, LookupData, LookupDataAuth, LookupDataSource},
-    server::{apply_policy, format_bytes},
+    server::{apply_policy, channel_create, format_bytes, EndPoint},
 };
 use prost::Message;
 use std::{
@@ -30,6 +30,7 @@ use std::{
     time::Duration,
 };
 use test_utils::{get_config_info, make_request};
+use tokio::sync::mpsc::error::TryRecvError;
 
 const MANIFEST_PATH: &str = "examples/key_value_lookup/module/Cargo.toml";
 
@@ -429,4 +430,38 @@ fn test_format_bytes() {
     assert_eq!("🚀oak⭐", format_bytes("🚀oak⭐".as_bytes()));
     // Incorrect UTF-8 bytes, as per https://doc.rust-lang.org/std/string/struct.String.html#examples-3.
     assert_eq!("[0, 159, 146, 150]", format_bytes(&[0, 159, 146, 150]));
+}
+
+#[test]
+fn test_start_from_empty_endpoints() {
+    let check_empty = |endpoint: &mut EndPoint| {
+        let receiver = &mut endpoint.receiver;
+        assert_eq!(TryRecvError::Empty, receiver.try_recv().unwrap_err());
+    };
+
+    let (mut module, mut runtime) = channel_create();
+    check_empty(&mut module);
+    check_empty(&mut runtime);
+}
+
+#[tokio::test]
+async fn test_crossed_write_read() {
+    let check_crossed_write_read = async move |endpoint1: EndPoint, mut endpoint2: EndPoint| {
+        let message = String::from("Message").into_bytes();
+        let sender = &endpoint1.sender;
+        let send_result = sender.send(message.clone()).await;
+        assert!(send_result.is_ok());
+
+        let receiver = &mut endpoint2.receiver;
+        let received_message = receiver.recv().await.unwrap();
+
+        assert_eq!(message, received_message);
+        (endpoint1, endpoint2)
+    };
+
+    let (module, runtime) = channel_create();
+    // Check from module endpoint to runtime endpoint.
+    let (module, runtime) = check_crossed_write_read(module, runtime).await;
+    // Check the other direction from runtime endpoint to module endpoint.
+    check_crossed_write_read(runtime, module).await;
 }

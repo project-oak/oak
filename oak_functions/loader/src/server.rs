@@ -22,6 +22,7 @@ use log::Level;
 use oak_functions_abi::proto::{OakStatus, Request, Response, ServerPolicy, StatusCode};
 use serde::Deserialize;
 use std::{collections::HashMap, convert::TryInto, str, sync::Arc, time::Duration};
+use tokio::sync::mpsc::{channel, Receiver, Sender};
 use wasmi::ValueType;
 
 const MAIN_FUNCTION_NAME: &str = "main";
@@ -716,4 +717,32 @@ pub fn format_bytes(v: &[u8]) -> String {
     std::str::from_utf8(v)
         .map(|s| s.to_string())
         .unwrap_or_else(|_| format!("{:?}", v))
+}
+
+// The EndPoint of a birectional channel. Sender and Receiver are exposed.
+pub struct EndPoint {
+    pub sender: Sender<AbiMessage>,
+    pub receiver: Receiver<AbiMessage>,
+}
+
+// Create a channel with two symmetrial endpoints.  The AbiMessage sent from one EndPoint are
+// received at the other EndPoint and vice versa by connecting two unidirectional
+// tokio::mpsc channels.
+//
+// In ASCII art:
+//  sender _____  ____ sender
+//              \/
+// receiver ____/\____ receiver
+pub fn channel_create() -> (EndPoint, EndPoint) {
+    let (tx0, rx0) = channel::<AbiMessage>(100);
+    let (tx1, rx1) = channel::<AbiMessage>(100);
+    let endpoint0 = EndPoint {
+        sender: tx0,
+        receiver: rx1,
+    };
+    let endpoint1 = EndPoint {
+        sender: tx1,
+        receiver: rx0,
+    };
+    (endpoint0, endpoint1)
 }
