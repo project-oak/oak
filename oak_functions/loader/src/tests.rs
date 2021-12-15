@@ -20,7 +20,7 @@ use oak_functions_loader::{
     grpc::{create_and_start_grpc_server, create_wasm_handler},
     logger::Logger,
     lookup::{parse_lookup_entries, LookupData, LookupDataAuth, LookupDataSource},
-    server::{apply_policy, channel_create, format_bytes, EndPoint},
+    server::{apply_policy, channel_create, format_bytes, Endpoint},
 };
 use prost::Message;
 use std::{
@@ -434,11 +434,10 @@ fn test_format_bytes() {
 
 #[test]
 fn test_start_from_empty_endpoints() {
-    let check_empty = |endpoint: &mut EndPoint| {
+    fn check_empty(endpoint: &mut Endpoint) -> () {
         let receiver = &mut endpoint.receiver;
         assert_eq!(TryRecvError::Empty, receiver.try_recv().unwrap_err());
-    };
-
+    }
     let (mut module, mut runtime) = channel_create();
     check_empty(&mut module);
     check_empty(&mut runtime);
@@ -446,7 +445,7 @@ fn test_start_from_empty_endpoints() {
 
 #[tokio::test]
 async fn test_crossed_write_read() {
-    let check_crossed_write_read = async move |endpoint1: EndPoint, mut endpoint2: EndPoint| {
+    async fn check_crossed_write_read(endpoint1: &mut Endpoint, endpoint2: &mut Endpoint) -> () {
         let message = String::from("Message").into_bytes();
         let sender = &endpoint1.sender;
         let send_result = sender.send(message.clone()).await;
@@ -456,12 +455,11 @@ async fn test_crossed_write_read() {
         let received_message = receiver.recv().await.unwrap();
 
         assert_eq!(message, received_message);
-        (endpoint1, endpoint2)
-    };
+    }
 
-    let (module, runtime) = channel_create();
+    let (mut module, mut runtime) = channel_create();
     // Check from module endpoint to runtime endpoint.
-    let (module, runtime) = check_crossed_write_read(module, runtime).await;
+    check_crossed_write_read(&mut module, &mut runtime).await;
     // Check the other direction from runtime endpoint to module endpoint.
-    check_crossed_write_read(runtime, module).await;
+    check_crossed_write_read(&mut runtime, &mut module).await;
 }

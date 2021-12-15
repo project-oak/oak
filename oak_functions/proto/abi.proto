@@ -23,7 +23,7 @@ option java_package = "oak.functions.abi";
 
 // ChannelStatus returned from a read, write, or wait on a channel.
 enum ChannelStatus {
-  CHANNEL_UNSPECIFIED = 0;
+  CHANNEL_STATUS_UNSPECIFIED = 0;
   // Success.
   CHANNEL_OK = 1;
   // Channel is empty.
@@ -31,7 +31,7 @@ enum ChannelStatus {
 }
 
 enum ChannelHandle {
-  HANDLE_UNSPECIFIED = 0;
+  CHANNEL_HANDLE_UNSPECIFIED = 0;
   LOOKUP_DATA = 2;
 }
 
