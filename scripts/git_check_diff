@@ -4,8 +4,15 @@ readonly SCRIPTS_DIR="$(dirname "$0")"
 # shellcheck source=scripts/common
 source "$SCRIPTS_DIR/common"
 
-# Check that any generated files match those that are checked in.
-if [[ $(git status --short) ]]; then
-    # One or more files are either modified or newly generated, exit with an error code
+# Changed files that are tracked by git.
+readonly GIT_STATUS=$(git status --short)
+# Changed files that are untracked/ignored by git.
+readonly GIT_CLEAN_STATUS=$(git clean --dry-run -x -d)
+
+if [[ "$GIT_STATUS" || "$GIT_CLEAN_STATUS" ]]; then
+    echo 'Please re-run this script from a clean commit.'
+    "$GIT_STATUS" && echo "The following tracked changes were present: $GIT_STATUS"
+    "$GIT_CLEAN_STATUS" && echo "The following untracked changes were present: $GIT_CLEAN_STATUS"
+
     exit 1
 fi

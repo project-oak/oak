@@ -17,8 +17,14 @@ source "$SCRIPTS_DIR/common"
 
 # Ensure that the working tree is clean.
 # Copied from /scripts/git_check_diff.
-if [[ $(git status --short) ]]; then
-    echo 'Please re-run this script from a clean commit'
+# Changed files that are tracked by git.
+readonly GIT_STATUS=$(git status --short)
+# Changed files that are untracked/ignored by git.
+readonly GIT_CLEAN_STATUS=$(git clean --dry-run -x -d)
+if [[ "$GIT_STATUS" || "$GIT_CLEAN_STATUS" ]]; then
+    echo 'Please re-run this script from a clean commit.'
+    "$GIT_STATUS" && echo "The following tracked changes were present: $GIT_STATUS"
+    "$GIT_CLEAN_STATUS" && echo "The following untracked changes were present: $GIT_CLEAN_STATUS"
     exit 1
 fi
 
