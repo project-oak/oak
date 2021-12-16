@@ -1,0 +1,29 @@
+[workspace]
+
+[package]
+name = "grpc_attestation"
+version = "0.1.0"
+authors = ["Conrad Grobler <grobler@google.com>"]
+edition = "2018"
+license = "Apache-2.0"
+
+[dependencies]
+async-stream = "*"
+anyhow = "*"
+futures = "*"
+oak_remote_attestation = { path = "../remote_attestation/rust/" }
+oak_functions_abi = { path = "../oak_functions/abi/" }
+prost = "*"
+prost-types = "*"
+tokio = { version = "*", features = [
+  "fs",
+  "macros",
+  "process",
+  "sync",
+  "rt-multi-thread"
+] }
+tonic = "*"
+tower = "*"
+
+[build-dependencies]
+oak_utils = { path = "../oak_utils" }
