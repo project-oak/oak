@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::{logger::Logger, lookup::LookupData};
+use crate::{logger::Logger, lookup_data::LookupData};
 
 use anyhow::Context;
 use byteorder::{ByteOrder, LittleEndian};
@@ -280,52 +280,7 @@ impl WasmState {
         Ok(())
     }
 
-    /// Corresponds to the host ABI function [`storage_get_item`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#storage_get_item).
-    pub fn storage_get_item(
-        &mut self,
-        key_ptr: AbiPointer,
-        key_len: AbiPointerOffset,
-        value_ptr_ptr: AbiPointer,
-        value_len_ptr: AbiPointer,
-    ) -> Result<(), OakStatus> {
-        let key = self
-            .get_memory()
-            .get(key_ptr, key_len as usize)
-            .map_err(|err| {
-                self.logger.log_sensitive(
-                    Level::Error,
-                    &format!(
-                        "storage_get_item(): Unable to read key from guest memory: {:?}",
-                        err
-                    ),
-                );
-                OakStatus::ErrInvalidArgs
-            })?;
-        self.logger.log_sensitive(
-            Level::Debug,
-            &format!("storage_get_item(): key: {}", format_bytes(&key)),
-        );
-        match self.lookup_data.get(&key) {
-            Some(value) => {
-                // Truncate value for logging.
-                let value_to_log = value.clone().into_iter().take(512).collect::<Vec<_>>();
-                self.logger.log_sensitive(
-                    Level::Debug,
-                    &format!("storage_get_item(): value: {}", format_bytes(&value_to_log)),
-                );
-                let dest_ptr = self.alloc(value.len() as u32);
-                self.write_buffer_to_wasm_memory(&value, dest_ptr)?;
-                self.write_u32_to_wasm_memory(dest_ptr, value_ptr_ptr)?;
-                self.write_u32_to_wasm_memory(value.len() as u32, value_len_ptr)?;
-                Ok(())
-            }
-            None => {
-                self.logger
-                    .log_sensitive(Level::Debug, "storage_get_item(): value not found");
-                Err(OakStatus::ErrStorageItemNotFound)
-            }
-        }
-    }
+
 
     pub fn alloc(&mut self, len: u32) -> AbiPointer {
         let result = self.instance.as_ref().unwrap().invoke_export(

@@ -26,7 +26,7 @@ use lookup_data_generator::data::generate_and_serialize_random_entries;
 use oak_functions_abi::proto::{Request, StatusCode};
 use oak_functions_loader::{
     logger::Logger,
-    lookup::{parse_lookup_entries, LookupData},
+    lookup_data::{parse_lookup_entries, LookupData},
     server::WasmHandler,
 };
 use prost::Message;

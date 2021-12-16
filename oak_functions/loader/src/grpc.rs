@@ -19,7 +19,7 @@
 use crate::{
     attestation::AttestationServer,
     logger::Logger,
-    lookup::LookupData,
+    lookup_data::LookupData,
     proto::streaming_session_server::StreamingSessionServer,
     server::{apply_policy, BoxedExtensionFactory, WasmHandler},
 };

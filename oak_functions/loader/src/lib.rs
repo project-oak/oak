@@ -23,7 +23,7 @@ pub mod proto {
 pub mod attestation;
 pub mod grpc;
 pub mod logger;
-pub mod lookup;
+pub mod lookup_data;
 #[cfg(feature = "oak-metrics")]
 pub mod metrics;
 pub mod server;

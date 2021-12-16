@@ -22,7 +22,7 @@ use oak_functions_abi::proto::{ServerPolicy, StatusCode};
 use oak_functions_loader::{
     grpc::{create_and_start_grpc_server, create_wasm_handler},
     logger::Logger,
-    lookup::LookupData,
+    lookup_data::LookupData,
     metrics::{BucketConfig, PrivateMetricsConfig, PrivateMetricsProxyFactory},
     server::BoxedExtensionFactory,
 };

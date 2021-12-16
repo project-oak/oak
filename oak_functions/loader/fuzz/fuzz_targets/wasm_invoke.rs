@@ -26,7 +26,7 @@ use maplit::hashmap;
 use oak_functions_abi::proto::Request;
 use oak_functions_loader::{
     logger::Logger,
-    lookup::LookupData,
+    lookup_data::LookupData,
     metrics::{BucketConfig, PrivateMetricsConfig, PrivateMetricsProxyFactory},
     server::{BoxedExtensionFactory, WasmHandler},
 };

@@ -19,8 +19,13 @@ use oak_functions_abi::proto::{Response, ServerPolicy, StatusCode};
 use oak_functions_loader::{
     grpc::{create_and_start_grpc_server, create_wasm_handler},
     logger::Logger,
+<<<<<<< HEAD
     lookup::{parse_lookup_entries, LookupData, LookupDataAuth, LookupDataSource},
     server::{apply_policy, channel_create, format_bytes, Endpoint},
+=======
+    lookup_data::{parse_lookup_entries, LookupData, LookupDataAuth, LookupDataSource},
+    server::{apply_policy, format_bytes},
+>>>>>>> f1e46daee (Rename to free name for actual lookup functionality)
 };
 use prost::Message;
 use std::{

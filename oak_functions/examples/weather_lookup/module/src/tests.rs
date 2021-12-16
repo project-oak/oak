@@ -25,7 +25,7 @@ use oak_functions_abi::proto::{Request, ServerPolicy, StatusCode};
 use oak_functions_loader::{
     grpc::{create_and_start_grpc_server, create_wasm_handler},
     logger::Logger,
-    lookup::{parse_lookup_entries, LookupData, LookupDataAuth, LookupDataSource},
+    lookup_data::{parse_lookup_entries, LookupData, LookupDataAuth, LookupDataSource},
     server::WasmHandler,
 };
 use rand::{prelude::StdRng, SeedableRng};
