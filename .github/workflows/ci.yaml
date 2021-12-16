@@ -6,6 +6,11 @@ on:
   pull_request:
     branches: [main]
 
+# See https://docs.github.com/en/actions/learn-github-actions/workflow-syntax-for-github-actions#example-using-concurrency-to-cancel-any-in-progress-job-or-run
+concurrency:
+  group: ${{ github.head_ref }}
+  cancel-in-progress: true
+
 jobs:
   runner:
     runs-on: ubuntu-20.04
