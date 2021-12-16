@@ -125,7 +125,6 @@
 <span id="125">125</span>
 <span id="126">126</span>
 <span id="127">127</span>
-<span id="128">128</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2021 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -145,8 +144,7 @@
 <span class="doccomment">//! Type, constant and Wasm host function definitions for the Oak-Functions application</span>
 <span class="doccomment">//! binary interface (ABI).</span>
 
-<span class="kw">type</span> <span class="ident">ChannelHandle</span> <span class="op">=</span> <span class="ident">u32</span>;
-<span class="kw">type</span> <span class="ident">StatusCode</span> <span class="op">=</span> <span class="ident">u32</span>;
+<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::proto</span>::{<span class="ident">ChannelHandle</span>, <span class="ident">ChannelStatus</span>};
 
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">proto</span> {
     <span class="macro">include!</span>(<span class="macro">concat!</span>(<span class="macro">env!</span>(<span class="string">&quot;OUT_DIR&quot;</span>), <span class="string">&quot;/oak.functions.abi.rs&quot;</span>));
@@ -226,7 +224,7 @@
         <span class="ident">channel_handle</span>: <span class="ident">ChannelHandle</span>,
         <span class="ident">dest_buf_ptr_ptr</span>: <span class="kw-2">*mut</span> <span class="kw-2">*mut</span> <span class="ident">u8</span>,
         <span class="ident">dest_buf_len_ptr</span>: <span class="kw-2">*mut</span> <span class="ident">usize</span>,
-    ) -&gt; <span class="ident">StatusCode</span>;
+    ) -&gt; <span class="ident">ChannelStatus</span>;
 
     <span class="doccomment">/// Writes a message, i.e., `src_buf_len` bytes, from `scr_buf_ptr` into the channel with</span>
     <span class="doccomment">/// `channel_handle`.</span>
@@ -236,7 +234,7 @@
         <span class="ident">channel_handle</span>: <span class="ident">ChannelHandle</span>,
         <span class="ident">src_buf_ptr</span>: <span class="kw-2">*const</span> <span class="ident">u8</span>,
         <span class="ident">src_buf_len</span>: <span class="ident">usize</span>,
-    ) -&gt; <span class="ident">StatusCode</span>;
+    ) -&gt; <span class="ident">ChannelStatus</span>;
 
     <span class="doccomment">/// Waits until at least one of the channels from the channel handles in the buffer at</span>
     <span class="doccomment">/// `channel_handle_buf_ptr` has a message to read, or</span>
@@ -252,7 +250,7 @@
         <span class="ident">ready_channel_handle_buf_ptr</span>: <span class="kw-2">*mut</span> <span class="kw-2">*mut</span> <span class="ident">i32</span>,
         <span class="ident">ready_channel_handle_buf_len</span>: <span class="kw-2">*mut</span> <span class="ident">usize</span>,
         <span class="ident">deadline_ms</span>: <span class="ident">u32</span>,
-    ) -&gt; <span class="ident">StatusCode</span>;
+    ) -&gt; <span class="ident">ChannelStatus</span>;
 }
 </code></pre></div>
 </section><section id="search" class="content hidden"></section><div id="rustdoc-vars" data-root-path="../../" data-current-crate="oak_functions_abi" data-search-index-js="../../search-index.js" data-search-js="../../search.js"></div>
