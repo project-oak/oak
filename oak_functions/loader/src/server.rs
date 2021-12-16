@@ -22,6 +22,7 @@ use log::Level;
 use oak_functions_abi::proto::{OakStatus, Request, Response, ServerPolicy, StatusCode};
 use serde::Deserialize;
 use std::{collections::HashMap, convert::TryInto, str, sync::Arc, time::Duration};
+use tokio::sync::mpsc::{channel, Receiver, Sender};
 use wasmi::ValueType;
 
 const MAIN_FUNCTION_NAME: &str = "main";
@@ -34,6 +35,14 @@ const WRITE_RESPONSE: usize = 1;
 const STORAGE_GET_ITEM: usize = 2;
 const WRITE_LOG_MESSAGE: usize = 3;
 const EXTENSION_INDEX_OFFSET: usize = 10;
+
+// Type alias for a message sent over a channel through the ABI.
+pub type AbiMessage = Vec<u8>;
+
+// Bound on the amount of [`AbiMessage`]s an [`Endpoint`] can hold on the sender and the
+// receiver individually. We fixed 100 arbitrarily, and it is the same for every Endpoint. We expect
+// AbiMessages to be processed fast and do not expect to exceed the bound.
+const ABI_CHANNEL_BOUND: usize = 100;
 
 // Type aliases for positions and offsets in Wasm linear memory. Any future 64-bit version
 // of Wasm would use different types.
@@ -713,4 +722,34 @@ pub fn format_bytes(v: &[u8]) -> String {
     std::str::from_utf8(v)
         .map(|s| s.to_string())
         .unwrap_or_else(|_| format!("{:?}", v))
+}
+
+// The Endpoint of a birectional channel. Sender and Receiver are exposed.
+pub struct Endpoint {
+    pub sender: Sender<AbiMessage>,
+    pub receiver: Receiver<AbiMessage>,
+}
+
+/// Create a channel with two symmetrial endpoints. The [`AbiMessage`] sent from one [`Endpoint`]
+/// are received at the other [`Endpoint`] and vice versa by connecting two unidirectional
+/// [tokio::mpsc channels](https://docs.rs/tokio/0.1.16/tokio/sync/mpsc/index.html).
+///
+/// In ASCII art:
+/// ```ignore
+///   sender ____  ____ sender
+///              \/
+/// receiver ____/\____ receiver
+/// ```
+pub fn channel_create() -> (Endpoint, Endpoint) {
+    let (tx0, rx0) = channel::<AbiMessage>(ABI_CHANNEL_BOUND);
+    let (tx1, rx1) = channel::<AbiMessage>(ABI_CHANNEL_BOUND);
+    let endpoint0 = Endpoint {
+        sender: tx0,
+        receiver: rx1,
+    };
+    let endpoint1 = Endpoint {
+        sender: tx1,
+        receiver: rx0,
+    };
+    (endpoint0, endpoint1)
 }
