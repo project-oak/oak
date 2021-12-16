@@ -66,7 +66,6 @@ translator_common = { path = "translator/common" }
 translator_grpc = { path = "translator/grpc" }
 trusted_database_client = { path = "trusted_database/client/rust" }
 # Third party.
-expect = { path = "../third_party/expect" }
 roughenough = { path = "../third_party/roughenough" }
 prost = { path = "../third_party/prost" }
 prost-build = { path = "../third_party/prost/prost-build" }

@@ -47,7 +47,7 @@ impl TestManager<'static> {
         let test = self
             .tests
             .get(&test_name as &str)
-            .ok_or(anyhow!("Couldn't find test: {}", &test_name))?;
+            .ok_or_else(|| anyhow!("Couldn't find test: {}", &test_name))?;
         test(&test_name);
         Ok(())
     }

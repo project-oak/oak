@@ -22,6 +22,7 @@ use ring::{
     rand,
     signature::{self, Ed25519KeyPair},
 };
+#[allow(unused_imports)]
 use simple_asn1::{ASN1Block, BigUint, OID};
 use std::{
     collections::HashMap,

@@ -29,6 +29,8 @@ use structopt::StructOpt;
 
 mod data;
 mod proto {
+    // Suppress warning: `all variants have the same prefix: `Dt``.
+    #![allow(clippy::enum_variant_names)]
     tonic::include_proto!("tensorflow");
     pub mod serving {
         tonic::include_proto!("tensorflow.serving");
@@ -96,8 +98,9 @@ async fn main() -> anyhow::Result<()> {
         let scores = predict_response
             .outputs
             .get("scores")
-            .ok_or(anyhow::anyhow!("no scores returned in result"))?;
-        let label = arg_max(&scores.float_val).ok_or(anyhow::anyhow!("scores vector is empty"))?;
+            .ok_or_else(|| anyhow::anyhow!("no scores returned in result"))?;
+        let label =
+            arg_max(&scores.float_val).ok_or_else(|| anyhow::anyhow!("scores vector is empty"))?;
         debug!("predicted label:{}", label);
 
         count += 1;

@@ -15,6 +15,8 @@
 //
 
 pub mod proto {
+    // Suppress warning: `large size difference between variants`.
+    #![allow(clippy::large_enum_variant)]
     tonic::include_proto!("tensorflow");
     pub mod serving {
         tonic::include_proto!("tensorflow.serving");

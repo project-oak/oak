@@ -3410,7 +3410,3 @@ dependencies = [
  "syn",
  "synstructure",
 ]
-
-[[patch.unused]]
-name = "expect"
-version = "0.1.0"

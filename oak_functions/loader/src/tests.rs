@@ -434,7 +434,7 @@ fn test_format_bytes() {
 
 #[test]
 fn test_start_from_empty_endpoints() {
-    fn check_empty(endpoint: &mut Endpoint) -> () {
+    fn check_empty(endpoint: &mut Endpoint) {
         let receiver = &mut endpoint.receiver;
         assert_eq!(TryRecvError::Empty, receiver.try_recv().unwrap_err());
     }
@@ -445,7 +445,7 @@ fn test_start_from_empty_endpoints() {
 
 #[tokio::test]
 async fn test_crossed_write_read() {
-    async fn check_crossed_write_read(endpoint1: &mut Endpoint, endpoint2: &mut Endpoint) -> () {
+    async fn check_crossed_write_read(endpoint1: &mut Endpoint, endpoint2: &mut Endpoint) {
         let message = String::from("Message").into_bytes();
         let sender = &endpoint1.sender;
         let send_result = sender.send(message.clone()).await;
