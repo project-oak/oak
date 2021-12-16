@@ -735,8 +735,8 @@ pub struct Endpoint {
 /// [tokio::mpsc channels](https://docs.rs/tokio/0.1.16/tokio/sync/mpsc/index.html).
 ///
 /// In ASCII art:
-/// ```no_run
-///  sender _____  ____ sender
+/// ```ignore
+///   sender ____  ____ sender
 ///              \/
 /// receiver ____/\____ receiver
 /// ```
