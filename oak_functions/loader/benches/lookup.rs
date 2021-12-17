@@ -25,8 +25,8 @@ use criterion::{
 use lookup_data_generator::data::generate_and_serialize_random_entries;
 use oak_functions_abi::proto::{Request, StatusCode};
 use oak_functions_loader::{
-    extensions::create_lookup_factory,
     logger::Logger,
+    lookup::LookupFactory,
     lookup_data::{parse_lookup_entries, LookupData},
     server::WasmHandler,
 };
@@ -133,7 +133,7 @@ fn run_benchmarks_with_input<M: Measurement>(
     let lookup_data = Arc::new(LookupData::for_test(lookup_entries));
     let logger = Logger::for_test();
     let lookup_factory = rt
-        .block_on(create_lookup_factory(lookup_data, logger.clone()))
+        .block_on(LookupFactory::create(lookup_data, logger.clone()))
         .unwrap();
 
     let wasm_handler = WasmHandler::create(wasm_module_bytes, vec![lookup_factory], logger)

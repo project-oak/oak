@@ -25,8 +25,8 @@ use libfuzzer_sys::fuzz_target;
 use maplit::hashmap;
 use oak_functions_abi::proto::Request;
 use oak_functions_loader::{
-    extensions::create_lookup_factory,
     logger::Logger,
+    lookup::LookupFactory,
     lookup_data::LookupData,
     metrics::{BucketConfig, PrivateMetricsConfig, PrivateMetricsProxyFactory},
     server::{BoxedExtensionFactory, WasmHandler},
@@ -119,7 +119,7 @@ fuzz_target!(|instruction_list: Vec<ArbitraryInstruction>| {
     let logger = Logger::for_test();
     let lookup_data = Arc::new(LookupData::for_test(entries));
     let lookup_factory = rt
-        .block_on(create_lookup_factory(lookup_data, logger.clone()))
+        .block_on(LookupFactory::create(lookup_data, logger.clone()))
         .unwrap();
     let metrics_factory = create_metrics_factory();
 

@@ -22,12 +22,12 @@ use oak_functions_abi::proto::{ConfigurationInfo, ServerPolicy};
 use oak_functions_loader::{
     grpc::{create_and_start_grpc_server, create_wasm_handler},
     logger::Logger,
+    lookup::LookupFactory,
     lookup_data::{LookupData, LookupDataAuth, LookupDataSource},
     server::Policy,
 };
-use oak_remote_attestation::crypto::get_sha256;
 
-use oak_functions_loader::extensions::create_lookup_factory;
+use oak_remote_attestation::crypto::get_sha256;
 
 #[cfg(feature = "oak-tf")]
 use oak_functions_loader::tf::{TensorFlowFactory, TensorFlowModelConfig};
@@ -172,7 +172,7 @@ async fn async_main(opt: Opt, config: Config, logger: Logger) -> anyhow::Result<
     #[allow(unused_mut)]
     let mut extensions = Vec::new();
 
-    let lookup_factory = create_lookup_factory(lookup_data, logger.clone()).await?;
+    let lookup_factory = LookupFactory::create(lookup_data, logger.clone()).await?;
     extensions.push(lookup_factory);
 
     #[cfg(feature = "oak-tf")]

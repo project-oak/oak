@@ -18,14 +18,13 @@ use crate::{
     logger::Logger,
     lookup_data::LookupData,
     server::{
-        format_bytes, AbiPointer, AbiPointerOffset, BoxedExtension, ExtensionFactory,
-        OakApiNativeExtension, WasmState, ABI_USIZE,
+        format_bytes, AbiPointer, AbiPointerOffset, BoxedExtension, BoxedExtensionFactory,
+        ExtensionFactory, OakApiNativeExtension, WasmState, ABI_USIZE,
     },
 };
 use log::Level;
 use oak_functions_abi::proto::OakStatus;
 use std::sync::Arc;
-
 use wasmi::ValueType;
 
 // Host function name for invoking lookup in lookup data.
@@ -42,11 +41,20 @@ pub struct LookupFactory {
 }
 
 impl LookupFactory {
-    pub fn new(lookup_data: Arc<LookupData>, logger: Logger) -> anyhow::Result<Self> {
+    fn new(lookup_data: Arc<LookupData>, logger: Logger) -> anyhow::Result<Self> {
         Ok(LookupFactory {
             lookup_data,
             logger,
         })
+    }
+    /// Create and return a lookup factory.
+    pub async fn create(
+        lookup_data: Arc<LookupData>,
+        logger: Logger,
+    ) -> anyhow::Result<BoxedExtensionFactory> {
+        let lookup_factory = LookupFactory::new(lookup_data, logger)?;
+        let lookup_factory: BoxedExtensionFactory = Box::new(lookup_factory);
+        Ok(lookup_factory)
     }
 }
 

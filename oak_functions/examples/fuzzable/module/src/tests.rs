@@ -20,9 +20,9 @@ use maplit::hashmap;
 use oak_functions_abi::proto::{ServerPolicy, StatusCode};
 
 use oak_functions_loader::{
-    extensions::create_lookup_factory,
     grpc::{create_and_start_grpc_server, create_wasm_handler},
     logger::Logger,
+    lookup::LookupFactory,
     lookup_data::LookupData,
     metrics::{BucketConfig, PrivateMetricsConfig, PrivateMetricsProxyFactory},
     server::BoxedExtensionFactory,
@@ -56,7 +56,7 @@ async fn test_server() {
     let logger = Logger::for_test();
 
     let lookup_data = Arc::new(LookupData::new_empty(None, logger.clone()));
-    let lookup_factory = create_lookup_factory(lookup_data, logger.clone())
+    let lookup_factory = LookupFactory::create(lookup_data, logger.clone())
         .await
         .unwrap();
     let metrics_factory = create_metrics_factory();

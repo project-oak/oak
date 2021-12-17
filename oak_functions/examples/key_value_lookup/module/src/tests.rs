@@ -18,9 +18,9 @@ extern crate test;
 use maplit::hashmap;
 use oak_functions_abi::proto::{Request, ServerPolicy, StatusCode};
 use oak_functions_loader::{
-    extensions::create_lookup_factory,
     grpc::{create_and_start_grpc_server, create_wasm_handler},
     logger::Logger,
+    lookup::LookupFactory,
     lookup_data::{LookupData, LookupDataAuth, LookupDataSource},
     server::WasmHandler,
 };
@@ -76,7 +76,7 @@ async fn test_server() {
         logger.clone(),
     ));
     lookup_data.refresh().await.unwrap();
-    let lookup_factory = create_lookup_factory(lookup_data, logger.clone())
+    let lookup_factory = LookupFactory::create(lookup_data, logger.clone())
         .await
         .unwrap();
 
@@ -140,7 +140,7 @@ fn bench_wasm_handler(bencher: &mut Bencher) {
     let rt = tokio::runtime::Runtime::new().unwrap();
     let lookup_data = Arc::new(LookupData::for_test(entries));
     let lookup_factory = rt
-        .block_on(create_lookup_factory(lookup_data.clone(), logger.clone()))
+        .block_on(LookupFactory::create(lookup_data.clone(), logger.clone()))
         .unwrap();
 
     let wasm_handler = WasmHandler::create(&wasm_module_bytes, vec![lookup_factory], logger)

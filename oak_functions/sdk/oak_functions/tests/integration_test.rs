@@ -18,7 +18,7 @@ use lazy_static::lazy_static;
 use maplit::hashmap;
 use oak_functions_abi::proto::{Request, Response};
 use oak_functions_loader::{
-    extensions::create_lookup_factory, logger::Logger, lookup_data::LookupData, server::WasmHandler,
+    logger::Logger, lookup::LookupFactory, lookup_data::LookupData, server::WasmHandler,
 };
 use std::sync::Arc;
 
@@ -38,7 +38,7 @@ lazy_static! {
 async fn test_read_write() {
     let logger = Logger::for_test();
     let lookup_data = Arc::new(LookupData::for_test(hashmap! {}));
-    let lookup_factory = create_lookup_factory(lookup_data, logger.clone())
+    let lookup_factory = LookupFactory::create(lookup_data, logger.clone())
         .await
         .unwrap();
 
@@ -56,7 +56,7 @@ async fn test_read_write() {
 async fn test_double_read() {
     let logger = Logger::for_test();
     let lookup_data = Arc::new(LookupData::for_test(hashmap! {}));
-    let lookup_factory = create_lookup_factory(lookup_data, logger.clone())
+    let lookup_factory = LookupFactory::create(lookup_data, logger.clone())
         .await
         .unwrap();
 
@@ -74,7 +74,7 @@ async fn test_double_read() {
 async fn test_double_write() {
     let logger = Logger::for_test();
     let lookup_data = Arc::new(LookupData::for_test(hashmap! {}));
-    let lookup_factory = create_lookup_factory(lookup_data, logger.clone())
+    let lookup_factory = LookupFactory::create(lookup_data, logger.clone())
         .await
         .unwrap();
 
@@ -92,7 +92,7 @@ async fn test_double_write() {
 async fn test_write_log() {
     let logger = Logger::for_test();
     let lookup_data = Arc::new(LookupData::for_test(hashmap! {}));
-    let lookup_factory = create_lookup_factory(lookup_data, logger.clone())
+    let lookup_factory = LookupFactory::create(lookup_data, logger.clone())
         .await
         .unwrap();
 
@@ -114,7 +114,7 @@ async fn test_storage_get_item() {
 
     let logger = Logger::for_test();
     let lookup_data = Arc::new(LookupData::for_test(entries));
-    let lookup_factory = create_lookup_factory(lookup_data, logger.clone())
+    let lookup_factory = LookupFactory::create(lookup_data, logger.clone())
         .await
         .unwrap();
 
