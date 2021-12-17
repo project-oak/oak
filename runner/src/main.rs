@@ -28,7 +28,6 @@
 use colored::*;
 use maplit::hashmap;
 use once_cell::sync::Lazy;
-use serde_yaml;
 use std::{
     path::{Path, PathBuf},
     sync::Mutex,
@@ -795,6 +794,8 @@ fn run_cargo_clippy(all_affected_crates: &ModifiedContent) -> Step {
                         "clippy",
                         "--all-targets",
                         &format!("--manifest-path={}", &entry),
+                        "--",
+                        "--deny=warnings",
                     ],
                 ),
             })

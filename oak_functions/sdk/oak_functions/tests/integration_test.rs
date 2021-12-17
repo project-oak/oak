@@ -19,7 +19,6 @@ use maplit::hashmap;
 use oak_functions_abi::proto::{Request, Response};
 use oak_functions_loader::{logger::Logger, lookup::LookupData, server::WasmHandler};
 use std::sync::Arc;
-use tokio;
 
 lazy_static! {
     static ref WASM_MODULE_BYTES: Vec<u8> = {

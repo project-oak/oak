@@ -159,7 +159,7 @@ fn parse_images(image_buffer: &[u8]) -> anyhow::Result<Images> {
     let cols = read_be_u32(&image_buffer[12..16])
         .context("couldn't read number of columns per image")? as usize;
     info!("number of cols: {}", cols);
-    if image_buffer.len() != num_images * rows * cols + 16 as usize {
+    if image_buffer.len() != num_images * rows * cols + 16_usize {
         anyhow::bail!("image buffer is invalid");
     }
 
@@ -183,7 +183,7 @@ fn parse_labels(label_buffer: &[u8]) -> anyhow::Result<Vec<u8>> {
     let num_labels =
         read_be_u32(&label_buffer[4..8]).context("couldn't read number of labels")? as usize;
     info!("number of labels: {}", num_labels);
-    if label_buffer.len() != num_labels + 8 as usize {
+    if label_buffer.len() != num_labels + 8_usize {
         anyhow::bail!("label buffer is invalid");
     }
     Ok(label_buffer[8..].to_vec())
