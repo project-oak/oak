@@ -152,7 +152,9 @@ where
     lookup_data.refresh().await.unwrap();
     let tee_certificate = vec![];
 
-    let lookup_factory = create_lookup_factory(lookup_data.clone(), logger.clone()).unwrap();
+    let lookup_factory = create_lookup_factory(lookup_data.clone(), logger.clone())
+        .await
+        .unwrap();
     let wasm_handler =
         create_wasm_handler(&wasm_module_bytes, vec![lookup_factory], logger.clone())
             .expect("could not create wasm_handler");

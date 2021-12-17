@@ -20,7 +20,7 @@ use crate::{
 use std::sync::Arc;
 
 /// Create and return a lookup factory.
-pub fn create_lookup_factory(
+pub async fn create_lookup_factory(
     lookup_data: Arc<LookupData>,
     logger: Logger,
 ) -> anyhow::Result<BoxedExtensionFactory> {

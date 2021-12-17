@@ -56,7 +56,9 @@ async fn test_server() {
     let logger = Logger::for_test();
 
     let lookup_data = Arc::new(LookupData::new_empty(None, logger.clone()));
-    let lookup_factory = create_lookup_factory(lookup_data, logger.clone()).unwrap();
+    let lookup_factory = create_lookup_factory(lookup_data, logger.clone())
+        .await
+        .unwrap();
     let metrics_factory = create_metrics_factory();
 
     let tee_certificate = vec![];

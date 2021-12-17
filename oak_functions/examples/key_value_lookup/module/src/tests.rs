@@ -76,7 +76,9 @@ async fn test_server() {
         logger.clone(),
     ));
     lookup_data.refresh().await.unwrap();
-    let lookup_factory = create_lookup_factory(lookup_data, logger.clone()).unwrap();
+    let lookup_factory = create_lookup_factory(lookup_data, logger.clone())
+        .await
+        .unwrap();
 
     let wasm_handler =
         create_wasm_handler(&wasm_module_bytes, vec![lookup_factory], logger.clone())
@@ -134,12 +136,16 @@ fn bench_wasm_handler(bencher: &mut Bencher) {
         b"key_1".to_vec() => br#"value_1"#.to_vec(),
         b"key_2".to_vec() => br#"value_2"#.to_vec(),
     };
+
+    let rt = tokio::runtime::Runtime::new().unwrap();
     let lookup_data = Arc::new(LookupData::for_test(entries));
-    let lookup_factory = create_lookup_factory(lookup_data.clone(), logger.clone()).unwrap();
+    let lookup_factory = rt
+        .block_on(create_lookup_factory(lookup_data.clone(), logger.clone()))
+        .unwrap();
 
     let wasm_handler = WasmHandler::create(&wasm_module_bytes, vec![lookup_factory], logger)
         .expect("Couldn't create the server");
-    let rt = tokio::runtime::Runtime::new().unwrap();
+
     let summary = bencher.bench(|bencher| {
         bencher.iter(|| {
             let request = Request {
