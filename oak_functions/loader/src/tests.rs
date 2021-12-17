@@ -17,6 +17,7 @@
 use maplit::hashmap;
 use oak_functions_abi::proto::{Response, ServerPolicy, StatusCode};
 use oak_functions_loader::{
+    extensions::create_lookup_factory,
     grpc::{create_and_start_grpc_server, create_wasm_handler},
     logger::Logger,
 <<<<<<< HEAD
@@ -150,8 +151,11 @@ where
     ));
     lookup_data.refresh().await.unwrap();
     let tee_certificate = vec![];
-    let wasm_handler = create_wasm_handler(&wasm_module_bytes, lookup_data, vec![], logger.clone())
-        .expect("could not create wasm_handler");
+
+    let lookup_factory = create_lookup_factory(lookup_data.clone(), logger.clone()).unwrap();
+    let wasm_handler =
+        create_wasm_handler(&wasm_module_bytes, vec![lookup_factory], logger.clone())
+            .expect("could not create wasm_handler");
 
     let server_background = test_utils::background(|term| async move {
         create_and_start_grpc_server(

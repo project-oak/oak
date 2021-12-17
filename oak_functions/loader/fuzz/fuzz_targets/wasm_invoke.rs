@@ -25,6 +25,7 @@ use libfuzzer_sys::fuzz_target;
 use maplit::hashmap;
 use oak_functions_abi::proto::Request;
 use oak_functions_loader::{
+    extensions::create_lookup_factory,
     logger::Logger,
     lookup_data::LookupData,
     metrics::{BucketConfig, PrivateMetricsConfig, PrivateMetricsProxyFactory},
@@ -112,13 +113,16 @@ fuzz_target!(|instruction_list: Vec<ArbitraryInstruction>| {
     let entries = hashmap! {
         FIXED_KEY.to_vec() => br"value".to_vec(),
     };
+
+    let logger = Logger::for_test();
+    let lookup_data = Arc::new(LookupData::for_test(entries));
+    let lookup_factory = create_lookup_factory(lookup_data, logger.clone()).unwrap();
     let metrics_factory = create_metrics_factory();
 
     let wasm_handler = WasmHandler::create(
         &WASM_MODULE_BYTES,
-        Arc::new(LookupData::for_test(entries)),
-        vec![metrics_factory],
-        Logger::for_test(),
+        vec![lookup_factory, metrics_factory],
+        logger,
     )
     .expect("Could not instantiate WasmHandler");
 

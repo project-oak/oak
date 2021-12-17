@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::{logger::Logger, lookup_data::LookupData};
+use crate::logger::Logger;
 
 use anyhow::Context;
 use byteorder::{ByteOrder, LittleEndian};
@@ -32,7 +32,6 @@ const ALLOC_FUNCTION_NAME: &str = "alloc";
 /// exposed to the Wasm client. See https://docs.rs/wasmi/0.6.2/wasmi/trait.Externals.html
 const READ_REQUEST: usize = 0;
 const WRITE_RESPONSE: usize = 1;
-const STORAGE_GET_ITEM: usize = 2;
 const WRITE_LOG_MESSAGE: usize = 3;
 const EXTENSION_INDEX_OFFSET: usize = 10;
 
@@ -149,7 +148,6 @@ pub type BoxedExtensionFactory = Box<dyn ExtensionFactory + Send + Sync>;
 pub struct WasmState {
     request_bytes: Vec<u8>,
     response_bytes: Vec<u8>,
-    lookup_data: Arc<LookupData>,
     instance: Option<wasmi::ModuleRef>,
     memory: Option<wasmi::MemoryRef>,
     logger: Logger,
@@ -280,8 +278,6 @@ impl WasmState {
         Ok(())
     }
 
-
-
     pub fn alloc(&mut self, len: u32) -> AbiPointer {
         let result = self.instance.as_ref().unwrap().invoke_export(
             ALLOC_FUNCTION_NAME,
@@ -321,12 +317,6 @@ impl wasmi::Externals for WasmState {
             WRITE_LOG_MESSAGE => {
                 map_host_errors(self.write_log_message(args.nth_checked(0)?, args.nth_checked(1)?))
             }
-            STORAGE_GET_ITEM => map_host_errors(self.storage_get_item(
-                args.nth_checked(0)?,
-                args.nth_checked(1)?,
-                args.nth_checked(2)?,
-                args.nth_checked(3)?,
-            )),
             _ => {
                 let mut extensions_indices = self
                     .extensions_indices
@@ -380,7 +370,6 @@ impl WasmState {
     fn new(
         module: &wasmi::Module,
         request_bytes: Vec<u8>,
-        lookup_data: Arc<LookupData>,
         logger: Logger,
         extensions_indices: HashMap<usize, BoxedExtension>,
         extensions_metadata: HashMap<String, (usize, wasmi::Signature)>,
@@ -388,7 +377,6 @@ impl WasmState {
         let mut abi = WasmState {
             request_bytes,
             response_bytes: vec![],
-            lookup_data,
             instance: None,
             memory: None,
             logger,
@@ -545,7 +533,6 @@ pub struct WasmHandler {
     // Wasm module to be served on each invocation. `Arc` is needed to make `WasmHandler`
     // cloneable.
     module: Arc<wasmi::Module>,
-    lookup_data: Arc<LookupData>,
     extension_factories: Arc<Vec<BoxedExtensionFactory>>,
     logger: Logger,
 }
@@ -553,7 +540,6 @@ pub struct WasmHandler {
 impl WasmHandler {
     pub fn create(
         wasm_module_bytes: &[u8],
-        lookup_data: Arc<LookupData>,
         extension_factories: Vec<BoxedExtensionFactory>,
         logger: Logger,
     ) -> anyhow::Result<Self> {
@@ -562,7 +548,6 @@ impl WasmHandler {
 
         Ok(WasmHandler {
             module: Arc::new(module),
-            lookup_data,
             extension_factories: Arc::new(extension_factories),
             logger,
         })
@@ -583,7 +568,6 @@ impl WasmHandler {
         let mut wasm_state = WasmState::new(
             &self.module,
             request_bytes,
-            self.lookup_data.clone(),
             self.logger.clone(),
             extensions_indices,
             extensions_metadata,
@@ -636,18 +620,6 @@ fn oak_functions_resolve_func(field_name: &str) -> Option<(usize, wasmi::Signatu
                 &[
                     ABI_USIZE, // buf_ptr
                     ABI_USIZE, // buf_len
-                ][..],
-                Some(ValueType::I32),
-            ),
-        ),
-        "storage_get_item" => (
-            STORAGE_GET_ITEM,
-            wasmi::Signature::new(
-                &[
-                    ABI_USIZE, // key_ptr
-                    ABI_USIZE, // key_len
-                    ABI_USIZE, // value_ptr_ptr
-                    ABI_USIZE, // value_len_ptr
                 ][..],
                 Some(ValueType::I32),
             ),

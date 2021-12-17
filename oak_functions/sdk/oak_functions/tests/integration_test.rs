@@ -17,7 +17,9 @@
 use lazy_static::lazy_static;
 use maplit::hashmap;
 use oak_functions_abi::proto::{Request, Response};
-use oak_functions_loader::{logger::Logger, lookup_data::LookupData, server::WasmHandler};
+use oak_functions_loader::{
+    extensions::create_lookup_factory, logger::Logger, lookup_data::LookupData, server::WasmHandler,
+};
 use std::sync::Arc;
 use tokio;
 
@@ -35,13 +37,12 @@ lazy_static! {
 
 #[tokio::test]
 async fn test_read_write() {
-    let wasm_handler = WasmHandler::create(
-        &WASM_MODULE_BYTES,
-        Arc::new(LookupData::for_test(hashmap! {})),
-        vec![],
-        Logger::for_test(),
-    )
-    .expect("Could not instantiate WasmHandler.");
+    let logger = Logger::for_test();
+    let lookup_data = Arc::new(LookupData::for_test(hashmap! {}));
+    let lookup_factory = create_lookup_factory(lookup_data, logger.clone()).unwrap();
+
+    let wasm_handler = WasmHandler::create(&WASM_MODULE_BYTES, vec![lookup_factory], logger)
+        .expect("Could not instantiate WasmHandler.");
 
     let request = Request {
         body: b"ReadWrite".to_vec(),
@@ -52,13 +53,12 @@ async fn test_read_write() {
 
 #[tokio::test]
 async fn test_double_read() {
-    let wasm_handler = WasmHandler::create(
-        &WASM_MODULE_BYTES,
-        Arc::new(LookupData::for_test(hashmap! {})),
-        vec![],
-        Logger::for_test(),
-    )
-    .expect("Could not instantiate WasmHandler.");
+    let logger = Logger::for_test();
+    let lookup_data = Arc::new(LookupData::for_test(hashmap! {}));
+    let lookup_factory = create_lookup_factory(lookup_data, logger.clone()).unwrap();
+
+    let wasm_handler = WasmHandler::create(&WASM_MODULE_BYTES, vec![lookup_factory], logger)
+        .expect("Could not instantiate WasmHandler.");
 
     let request = Request {
         body: b"DoubleRead".to_vec(),
@@ -69,13 +69,12 @@ async fn test_double_read() {
 
 #[tokio::test]
 async fn test_double_write() {
-    let wasm_handler = WasmHandler::create(
-        &WASM_MODULE_BYTES,
-        Arc::new(LookupData::for_test(hashmap! {})),
-        vec![],
-        Logger::for_test(),
-    )
-    .expect("Could not instantiate WasmHandler.");
+    let logger = Logger::for_test();
+    let lookup_data = Arc::new(LookupData::for_test(hashmap! {}));
+    let lookup_factory = create_lookup_factory(lookup_data, logger.clone()).unwrap();
+
+    let wasm_handler = WasmHandler::create(&WASM_MODULE_BYTES, vec![lookup_factory], logger)
+        .expect("Could not instantiate WasmHandler.");
 
     let request = Request {
         body: b"DoubleWrite".to_vec(),
@@ -86,13 +85,12 @@ async fn test_double_write() {
 
 #[tokio::test]
 async fn test_write_log() {
-    let wasm_handler = WasmHandler::create(
-        &WASM_MODULE_BYTES,
-        Arc::new(LookupData::for_test(hashmap! {})),
-        vec![],
-        Logger::for_test(),
-    )
-    .expect("Could not instantiate WasmHandler.");
+    let logger = Logger::for_test();
+    let lookup_data = Arc::new(LookupData::for_test(hashmap! {}));
+    let lookup_factory = create_lookup_factory(lookup_data, logger.clone()).unwrap();
+
+    let wasm_handler = WasmHandler::create(&WASM_MODULE_BYTES, vec![lookup_factory], logger)
+        .expect("Could not instantiate WasmHandler.");
 
     let request = Request {
         body: b"WriteLog".to_vec(),
@@ -107,13 +105,12 @@ async fn test_storage_get_item() {
        b"StorageGet".to_vec() => b"StorageGetResponse".to_vec(),
     };
 
-    let wasm_handler = WasmHandler::create(
-        &WASM_MODULE_BYTES,
-        Arc::new(LookupData::for_test(entries)),
-        vec![],
-        Logger::for_test(),
-    )
-    .expect("Could not instantiate WasmHandler.");
+    let logger = Logger::for_test();
+    let lookup_data = Arc::new(LookupData::for_test(entries));
+    let lookup_factory = create_lookup_factory(lookup_data, logger.clone()).unwrap();
+
+    let wasm_handler = WasmHandler::create(&WASM_MODULE_BYTES, vec![lookup_factory], logger)
+        .expect("Could not instantiate WasmHandler.");
 
     let request = Request {
         body: b"StorageGet".to_vec(),

@@ -14,20 +14,17 @@
 // limitations under the License.
 //
 
-#![feature(async_closure)]
+use crate::{
+    logger::Logger, lookup::LookupFactory, lookup_data::LookupData, server::BoxedExtensionFactory,
+};
+use std::sync::Arc;
 
-pub mod proto {
-    tonic::include_proto!("oak.session.stream.v1");
+/// Create and return a lookup factory.
+pub fn create_lookup_factory(
+    lookup_data: Arc<LookupData>,
+    logger: Logger,
+) -> anyhow::Result<BoxedExtensionFactory> {
+    let lookup_factory = LookupFactory::new(lookup_data, logger)?;
+    let lookup_factory: BoxedExtensionFactory = Box::new(lookup_factory);
+    Ok(lookup_factory)
 }
-
-pub mod attestation;
-pub mod extensions;
-pub mod grpc;
-pub mod logger;
-pub mod lookup;
-pub mod lookup_data;
-#[cfg(feature = "oak-metrics")]
-pub mod metrics;
-pub mod server;
-#[cfg(feature = "oak-tf")]
-pub mod tf;
