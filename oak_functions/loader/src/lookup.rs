@@ -24,21 +24,12 @@ use crate::{
 };
 use log::Level;
 use oak_functions_abi::proto::OakStatus;
-use serde::Deserialize;
 use std::sync::Arc;
 
 use wasmi::ValueType;
 
 // Host function name for invoking lookup in lookup data.
 const LOOKUP_ABI_FUNCTION_NAME: &str = "storage_get_item";
-
-#[derive(Deserialize, Debug, Default)]
-pub struct LookupConfig {
-    #[serde(default)]
-    pub key: Vec<u8>,
-    #[serde(default)]
-    pub value: Vec<u8>,
-}
 
 pub struct LookupExtension {
     lookup_data: Arc<LookupData>,
