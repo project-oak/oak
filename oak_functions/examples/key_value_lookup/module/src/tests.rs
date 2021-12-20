@@ -140,7 +140,7 @@ fn bench_wasm_handler(bencher: &mut Bencher) {
     let rt = tokio::runtime::Runtime::new().unwrap();
     let lookup_data = Arc::new(LookupData::for_test(entries));
     let lookup_factory = rt
-        .block_on(LookupFactory::create(lookup_data.clone(), logger.clone()))
+        .block_on(LookupFactory::create(lookup_data, logger.clone()))
         .unwrap();
 
     let wasm_handler = WasmHandler::create(&wasm_module_bytes, vec![lookup_factory], logger)
