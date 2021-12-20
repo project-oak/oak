@@ -6,8 +6,8 @@ edition = "2018"
 license = "Apache-2.0"
 
 [features]
-# Feature that allows logging of potentially sensitive content.
-# Should only be used for debugging purposes.
+# Feature that allows logging of potentially sensitive content, or using experimental features.
+# Should only be used for debugging purposes or enabling experimental features.
 oak-unsafe = ["oak-tf", "oak-metrics"]
 default = []
 oak-tf = ["tract-tensorflow"]
