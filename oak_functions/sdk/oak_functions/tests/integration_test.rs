@@ -38,9 +38,7 @@ lazy_static! {
 async fn test_read_write() {
     let logger = Logger::for_test();
     let lookup_data = Arc::new(LookupData::for_test(hashmap! {}));
-    let lookup_factory = LookupFactory::create(lookup_data, logger.clone())
-        .await
-        .unwrap();
+    let lookup_factory = LookupFactory::create(lookup_data, logger.clone()).unwrap();
 
     let wasm_handler = WasmHandler::create(&WASM_MODULE_BYTES, vec![lookup_factory], logger)
         .expect("Could not instantiate WasmHandler.");
@@ -56,9 +54,7 @@ async fn test_read_write() {
 async fn test_double_read() {
     let logger = Logger::for_test();
     let lookup_data = Arc::new(LookupData::for_test(hashmap! {}));
-    let lookup_factory = LookupFactory::create(lookup_data, logger.clone())
-        .await
-        .unwrap();
+    let lookup_factory = LookupFactory::create(lookup_data, logger.clone()).unwrap();
 
     let wasm_handler = WasmHandler::create(&WASM_MODULE_BYTES, vec![lookup_factory], logger)
         .expect("Could not instantiate WasmHandler.");
@@ -74,9 +70,7 @@ async fn test_double_read() {
 async fn test_double_write() {
     let logger = Logger::for_test();
     let lookup_data = Arc::new(LookupData::for_test(hashmap! {}));
-    let lookup_factory = LookupFactory::create(lookup_data, logger.clone())
-        .await
-        .unwrap();
+    let lookup_factory = LookupFactory::create(lookup_data, logger.clone()).unwrap();
 
     let wasm_handler = WasmHandler::create(&WASM_MODULE_BYTES, vec![lookup_factory], logger)
         .expect("Could not instantiate WasmHandler.");
@@ -92,9 +86,7 @@ async fn test_double_write() {
 async fn test_write_log() {
     let logger = Logger::for_test();
     let lookup_data = Arc::new(LookupData::for_test(hashmap! {}));
-    let lookup_factory = LookupFactory::create(lookup_data, logger.clone())
-        .await
-        .unwrap();
+    let lookup_factory = LookupFactory::create(lookup_data, logger.clone()).unwrap();
 
     let wasm_handler = WasmHandler::create(&WASM_MODULE_BYTES, vec![lookup_factory], logger)
         .expect("Could not instantiate WasmHandler.");
@@ -114,9 +106,7 @@ async fn test_storage_get_item() {
 
     let logger = Logger::for_test();
     let lookup_data = Arc::new(LookupData::for_test(entries));
-    let lookup_factory = LookupFactory::create(lookup_data, logger.clone())
-        .await
-        .unwrap();
+    let lookup_factory = LookupFactory::create(lookup_data, logger.clone()).unwrap();
 
     let wasm_handler = WasmHandler::create(&WASM_MODULE_BYTES, vec![lookup_factory], logger)
         .expect("Could not instantiate WasmHandler.");

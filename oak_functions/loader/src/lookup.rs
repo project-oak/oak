@@ -48,7 +48,7 @@ impl LookupFactory {
         })
     }
     /// Create and return a lookup factory.
-    pub async fn create(
+    pub fn create(
         lookup_data: Arc<LookupData>,
         logger: Logger,
     ) -> anyhow::Result<BoxedExtensionFactory> {

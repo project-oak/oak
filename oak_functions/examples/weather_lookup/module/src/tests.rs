@@ -95,9 +95,7 @@ async fn test_server() {
     ));
     lookup_data.refresh().await.unwrap();
 
-    let lookup_factory = LookupFactory::create(lookup_data, logger.clone())
-        .await
-        .unwrap();
+    let lookup_factory = LookupFactory::create(lookup_data, logger.clone()).unwrap();
 
     let wasm_handler =
         create_wasm_handler(&wasm_module_bytes, vec![lookup_factory], logger.clone())
@@ -207,16 +205,13 @@ fn bench_wasm_handler(bencher: &mut Bencher) {
     let buf = generate_and_serialize_sparse_weather_entries(&mut rng, entry_count).unwrap();
     let entries = parse_lookup_entries(buf).unwrap();
 
-    let rt = tokio::runtime::Runtime::new().unwrap();
-
     let lookup_data = Arc::new(LookupData::for_test(entries));
     let logger = Logger::for_test();
-    let lookup_factory = rt
-        .block_on(LookupFactory::create(lookup_data, logger.clone()))
-        .unwrap();
+    let lookup_factory = LookupFactory::create(lookup_data, logger.clone()).unwrap();
     let wasm_handler = WasmHandler::create(&wasm_module_bytes, vec![lookup_factory], logger)
         .expect("Couldn't create the server");
 
+    let rt = tokio::runtime::Runtime::new().unwrap();
     let summary = bencher.bench(|bencher| {
         bencher.iter(|| {
             let request = Request {

@@ -33,7 +33,6 @@ use oak_functions_loader::{
 };
 use prost::Message;
 use std::{convert::Into, sync::Arc};
-use tokio::runtime::Runtime;
 
 #[derive(Arbitrary, Debug, Clone, PartialEq)]
 enum ArbitraryInstruction {
@@ -115,12 +114,9 @@ fuzz_target!(|instruction_list: Vec<ArbitraryInstruction>| {
         FIXED_KEY.to_vec() => br"value".to_vec(),
     };
 
-    let rt = Runtime::new().unwrap();
     let logger = Logger::for_test();
     let lookup_data = Arc::new(LookupData::for_test(entries));
-    let lookup_factory = rt
-        .block_on(LookupFactory::create(lookup_data, logger.clone()))
-        .unwrap();
+    let lookup_factory = LookupFactory::create(lookup_data, logger.clone()).unwrap();
     let metrics_factory = create_metrics_factory();
 
     let wasm_handler = WasmHandler::create(

@@ -172,7 +172,7 @@ async fn async_main(opt: Opt, config: Config, logger: Logger) -> anyhow::Result<
     #[allow(unused_mut)]
     let mut extensions = Vec::new();
 
-    let lookup_factory = LookupFactory::create(lookup_data, logger.clone()).await?;
+    let lookup_factory = LookupFactory::create(lookup_data, logger.clone())?;
     extensions.push(lookup_factory);
 
     #[cfg(feature = "oak-tf")]

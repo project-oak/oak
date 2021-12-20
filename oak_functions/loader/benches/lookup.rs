@@ -132,9 +132,7 @@ fn run_benchmarks_with_input<M: Measurement>(
 ) {
     let lookup_data = Arc::new(LookupData::for_test(lookup_entries));
     let logger = Logger::for_test();
-    let lookup_factory = rt
-        .block_on(LookupFactory::create(lookup_data, logger.clone()))
-        .unwrap();
+    let lookup_factory = LookupFactory::create(lookup_data, logger.clone()).unwrap();
 
     let wasm_handler = WasmHandler::create(wasm_module_bytes, vec![lookup_factory], logger)
         .expect("Couldn't create the server");
