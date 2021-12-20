@@ -37,7 +37,6 @@ use std::{
 };
 use test::Bencher;
 use test_utils::{get_config_info, make_request};
-use tokio::runtime::Runtime;
 
 #[tokio::test]
 async fn test_server() {
