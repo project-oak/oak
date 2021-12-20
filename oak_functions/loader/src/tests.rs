@@ -19,8 +19,9 @@ use oak_functions_abi::proto::{Response, ServerPolicy, StatusCode};
 use oak_functions_loader::{
     grpc::{create_and_start_grpc_server, create_wasm_handler},
     logger::Logger,
+    lookup::LookupFactory,
     lookup_data::{parse_lookup_entries, LookupData, LookupDataAuth, LookupDataSource},
-    server::{apply_policy, format_bytes},
+    server::{apply_policy, channel_create, format_bytes, Endpoint},
 };
 use prost::Message;
 use std::{
@@ -145,8 +146,13 @@ where
     ));
     lookup_data.refresh().await.unwrap();
     let tee_certificate = vec![];
-    let wasm_handler = create_wasm_handler(&wasm_module_bytes, lookup_data, vec![], logger.clone())
-        .expect("could not create wasm_handler");
+
+    let lookup_factory = LookupFactory::create(lookup_data.clone(), logger.clone())
+        .await
+        .unwrap();
+    let wasm_handler =
+        create_wasm_handler(&wasm_module_bytes, vec![lookup_factory], logger.clone())
+            .expect("could not create wasm_handler");
 
     let server_background = test_utils::background(|term| async move {
         create_and_start_grpc_server(
