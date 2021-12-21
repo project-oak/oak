@@ -1,0 +1,1 @@
+initSidebarItems({"enum":[["LookupDataAuth",""],["LookupDataSource",""]],"fn":[["parse_lookup_entries",""]],"struct":[["LookupData","An in-memory lookup store instance that can refresh its internal entries from the provided data file URL."]]});
