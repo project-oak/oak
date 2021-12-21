@@ -221,9 +221,9 @@ pub struct BuildServer {
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum FunctionsServerVariant {
-    /// Production-like server variant, without any of the features enabled
+    /// Production-like server variant, without logging or any of the experimental features enabled
     Base,
-    /// Debug server with logging enabled
+    /// Debug server with logging and experimental features enabled
     Unsafe,
 }
 
