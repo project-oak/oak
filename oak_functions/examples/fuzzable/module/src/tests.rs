@@ -22,10 +22,12 @@ use oak_functions_abi::proto::{ServerPolicy, StatusCode};
 use oak_functions_loader::{
     grpc::{create_and_start_grpc_server, create_wasm_handler},
     logger::Logger,
-    lookup::LookupData,
+    lookup::LookupFactory,
+    lookup_data::LookupData,
     metrics::{BucketConfig, PrivateMetricsConfig, PrivateMetricsProxyFactory},
     server::BoxedExtensionFactory,
 };
+
 use prost::Message;
 use std::{
     net::{Ipv6Addr, SocketAddr},
@@ -46,20 +48,21 @@ async fn test_server() {
         test_utils::compile_rust_wasm(manifest_path.to_str().expect("Invalid target dir"), false)
             .expect("Couldn't read Wasm module");
 
-    let logger = Logger::for_test();
-
-    let lookup_data = Arc::new(LookupData::new_empty(None, logger.clone()));
-
     let policy = ServerPolicy {
         constant_response_size_bytes: 100,
         constant_processing_time_ms: 200,
     };
+
+    let logger = Logger::for_test();
+
+    let lookup_data = Arc::new(LookupData::new_empty(None, logger.clone()));
+    let lookup_factory = LookupFactory::create(lookup_data, logger.clone()).unwrap();
     let metrics_factory = create_metrics_factory();
+
     let tee_certificate = vec![];
     let wasm_handler = create_wasm_handler(
         &wasm_module_bytes,
-        lookup_data,
-        vec![metrics_factory],
+        vec![lookup_factory, metrics_factory],
         logger.clone(),
     )
     .expect("could not create wasm_handler");

@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::{logger::Logger, lookup::LookupData};
+use crate::logger::Logger;
 
 use anyhow::Context;
 use byteorder::{ByteOrder, LittleEndian};
@@ -32,7 +32,6 @@ const ALLOC_FUNCTION_NAME: &str = "alloc";
 /// exposed to the Wasm client. See https://docs.rs/wasmi/0.6.2/wasmi/trait.Externals.html
 const READ_REQUEST: usize = 0;
 const WRITE_RESPONSE: usize = 1;
-const STORAGE_GET_ITEM: usize = 2;
 const WRITE_LOG_MESSAGE: usize = 3;
 const EXTENSION_INDEX_OFFSET: usize = 10;
 
@@ -149,7 +148,6 @@ pub type BoxedExtensionFactory = Box<dyn ExtensionFactory + Send + Sync>;
 pub struct WasmState {
     request_bytes: Vec<u8>,
     response_bytes: Vec<u8>,
-    lookup_data: Arc<LookupData>,
     instance: Option<wasmi::ModuleRef>,
     memory: Option<wasmi::MemoryRef>,
     logger: Logger,
@@ -280,53 +278,6 @@ impl WasmState {
         Ok(())
     }
 
-    /// Corresponds to the host ABI function [`storage_get_item`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#storage_get_item).
-    pub fn storage_get_item(
-        &mut self,
-        key_ptr: AbiPointer,
-        key_len: AbiPointerOffset,
-        value_ptr_ptr: AbiPointer,
-        value_len_ptr: AbiPointer,
-    ) -> Result<(), OakStatus> {
-        let key = self
-            .get_memory()
-            .get(key_ptr, key_len as usize)
-            .map_err(|err| {
-                self.logger.log_sensitive(
-                    Level::Error,
-                    &format!(
-                        "storage_get_item(): Unable to read key from guest memory: {:?}",
-                        err
-                    ),
-                );
-                OakStatus::ErrInvalidArgs
-            })?;
-        self.logger.log_sensitive(
-            Level::Debug,
-            &format!("storage_get_item(): key: {}", format_bytes(&key)),
-        );
-        match self.lookup_data.get(&key) {
-            Some(value) => {
-                // Truncate value for logging.
-                let value_to_log = value.clone().into_iter().take(512).collect::<Vec<_>>();
-                self.logger.log_sensitive(
-                    Level::Debug,
-                    &format!("storage_get_item(): value: {}", format_bytes(&value_to_log)),
-                );
-                let dest_ptr = self.alloc(value.len() as u32);
-                self.write_buffer_to_wasm_memory(&value, dest_ptr)?;
-                self.write_u32_to_wasm_memory(dest_ptr, value_ptr_ptr)?;
-                self.write_u32_to_wasm_memory(value.len() as u32, value_len_ptr)?;
-                Ok(())
-            }
-            None => {
-                self.logger
-                    .log_sensitive(Level::Debug, "storage_get_item(): value not found");
-                Err(OakStatus::ErrStorageItemNotFound)
-            }
-        }
-    }
-
     pub fn alloc(&mut self, len: u32) -> AbiPointer {
         let result = self.instance.as_ref().unwrap().invoke_export(
             ALLOC_FUNCTION_NAME,
@@ -366,12 +317,6 @@ impl wasmi::Externals for WasmState {
             WRITE_LOG_MESSAGE => {
                 map_host_errors(self.write_log_message(args.nth_checked(0)?, args.nth_checked(1)?))
             }
-            STORAGE_GET_ITEM => map_host_errors(self.storage_get_item(
-                args.nth_checked(0)?,
-                args.nth_checked(1)?,
-                args.nth_checked(2)?,
-                args.nth_checked(3)?,
-            )),
             _ => {
                 let mut extensions_indices = self
                     .extensions_indices
@@ -425,7 +370,6 @@ impl WasmState {
     fn new(
         module: &wasmi::Module,
         request_bytes: Vec<u8>,
-        lookup_data: Arc<LookupData>,
         logger: Logger,
         extensions_indices: HashMap<usize, BoxedExtension>,
         extensions_metadata: HashMap<String, (usize, wasmi::Signature)>,
@@ -433,7 +377,6 @@ impl WasmState {
         let mut abi = WasmState {
             request_bytes,
             response_bytes: vec![],
-            lookup_data,
             instance: None,
             memory: None,
             logger,
@@ -590,7 +533,6 @@ pub struct WasmHandler {
     // Wasm module to be served on each invocation. `Arc` is needed to make `WasmHandler`
     // cloneable.
     module: Arc<wasmi::Module>,
-    lookup_data: Arc<LookupData>,
     extension_factories: Arc<Vec<BoxedExtensionFactory>>,
     logger: Logger,
 }
@@ -598,7 +540,6 @@ pub struct WasmHandler {
 impl WasmHandler {
     pub fn create(
         wasm_module_bytes: &[u8],
-        lookup_data: Arc<LookupData>,
         extension_factories: Vec<BoxedExtensionFactory>,
         logger: Logger,
     ) -> anyhow::Result<Self> {
@@ -607,7 +548,6 @@ impl WasmHandler {
 
         Ok(WasmHandler {
             module: Arc::new(module),
-            lookup_data,
             extension_factories: Arc::new(extension_factories),
             logger,
         })
@@ -628,7 +568,6 @@ impl WasmHandler {
         let mut wasm_state = WasmState::new(
             &self.module,
             request_bytes,
-            self.lookup_data.clone(),
             self.logger.clone(),
             extensions_indices,
             extensions_metadata,
@@ -681,18 +620,6 @@ fn oak_functions_resolve_func(field_name: &str) -> Option<(usize, wasmi::Signatu
                 &[
                     ABI_USIZE, // buf_ptr
                     ABI_USIZE, // buf_len
-                ][..],
-                Some(ValueType::I32),
-            ),
-        ),
-        "storage_get_item" => (
-            STORAGE_GET_ITEM,
-            wasmi::Signature::new(
-                &[
-                    ABI_USIZE, // key_ptr
-                    ABI_USIZE, // key_len
-                    ABI_USIZE, // value_ptr_ptr
-                    ABI_USIZE, // value_len_ptr
                 ][..],
                 Some(ValueType::I32),
             ),

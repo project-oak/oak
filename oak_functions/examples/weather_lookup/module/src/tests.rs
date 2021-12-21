@@ -25,7 +25,8 @@ use oak_functions_abi::proto::{Request, ServerPolicy, StatusCode};
 use oak_functions_loader::{
     grpc::{create_and_start_grpc_server, create_wasm_handler},
     logger::Logger,
-    lookup::{parse_lookup_entries, LookupData, LookupDataAuth, LookupDataSource},
+    lookup::LookupFactory,
+    lookup_data::{parse_lookup_entries, LookupData, LookupDataAuth, LookupDataSource},
     server::WasmHandler,
 };
 use rand::{prelude::StdRng, SeedableRng};
@@ -77,6 +78,12 @@ async fn test_server() {
 
     mock_static_server.set_response_body(test_utils::serialize_entries(lookup_data));
 
+    let policy = ServerPolicy {
+        constant_response_size_bytes: 100,
+        constant_processing_time_ms: 200,
+    };
+    let tee_certificate = vec![];
+
     let logger = Logger::for_test();
 
     let lookup_data = Arc::new(LookupData::new_empty(
@@ -88,13 +95,11 @@ async fn test_server() {
     ));
     lookup_data.refresh().await.unwrap();
 
-    let policy = ServerPolicy {
-        constant_response_size_bytes: 100,
-        constant_processing_time_ms: 200,
-    };
-    let tee_certificate = vec![];
-    let wasm_handler = create_wasm_handler(&wasm_module_bytes, lookup_data, vec![], logger.clone())
-        .expect("could not create wasm_handler");
+    let lookup_factory = LookupFactory::create(lookup_data, logger.clone()).unwrap();
+
+    let wasm_handler =
+        create_wasm_handler(&wasm_module_bytes, vec![lookup_factory], logger.clone())
+            .expect("could not create wasm_handler");
 
     let server_background = test_utils::background(|term| async move {
         create_and_start_grpc_server(
@@ -202,10 +207,11 @@ fn bench_wasm_handler(bencher: &mut Bencher) {
 
     let lookup_data = Arc::new(LookupData::for_test(entries));
     let logger = Logger::for_test();
-    let wasm_handler = WasmHandler::create(&wasm_module_bytes, lookup_data, vec![], logger)
+    let lookup_factory = LookupFactory::create(lookup_data, logger.clone()).unwrap();
+    let wasm_handler = WasmHandler::create(&wasm_module_bytes, vec![lookup_factory], logger)
         .expect("Couldn't create the server");
-    let rt = tokio::runtime::Runtime::new().unwrap();
 
+    let rt = tokio::runtime::Runtime::new().unwrap();
     let summary = bencher.bench(|bencher| {
         bencher.iter(|| {
             let request = Request {

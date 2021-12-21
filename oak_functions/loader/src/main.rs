@@ -22,9 +22,11 @@ use oak_functions_abi::proto::{ConfigurationInfo, ServerPolicy};
 use oak_functions_loader::{
     grpc::{create_and_start_grpc_server, create_wasm_handler},
     logger::Logger,
-    lookup::{LookupData, LookupDataAuth, LookupDataSource},
+    lookup::LookupFactory,
+    lookup_data::{LookupData, LookupDataAuth, LookupDataSource},
     server::Policy,
 };
+
 use oak_remote_attestation::crypto::get_sha256;
 
 #[cfg(feature = "oak-tf")]
@@ -170,6 +172,9 @@ async fn async_main(opt: Opt, config: Config, logger: Logger) -> anyhow::Result<
     #[allow(unused_mut)]
     let mut extensions = Vec::new();
 
+    let lookup_factory = LookupFactory::create(lookup_data, logger.clone())?;
+    extensions.push(lookup_factory);
+
     #[cfg(feature = "oak-tf")]
     if let Some(tf_model_factory) = create_tensorflow_factory(&config, logger.clone()).await? {
         extensions.push(tf_model_factory);
@@ -193,8 +198,7 @@ async fn async_main(opt: Opt, config: Config, logger: Logger) -> anyhow::Result<
     let address = SocketAddr::from((Ipv6Addr::UNSPECIFIED, opt.http_listen_port));
     let tee_certificate = vec![];
 
-    let wasm_handler =
-        create_wasm_handler(&wasm_module_bytes, lookup_data, extensions, logger.clone())?;
+    let wasm_handler = create_wasm_handler(&wasm_module_bytes, extensions, logger.clone())?;
 
     let config_info = get_config_info(&wasm_module_bytes, policy.clone(), &config)?;
 
