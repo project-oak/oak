@@ -203,7 +203,6 @@ public class AttestationClient {
   @Override
   public void finalize() {
     requestObserver.onCompleted();
-    channel.shutdownNow();
   }
 
   /**
