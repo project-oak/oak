@@ -22,6 +22,6 @@ members = [
 [patch.crates-io]
 # Provide cargo with version 0.15.9-pre, which includes our reproducibility
 # patch: https://github.com/sonos/tract/pull/601. Cargo will ignore this
-# once a later version is available from crates.io and which point this patch
-# can be removed.
+# once a later version is available from crates.io. Once that happened we should
+# remove this patch as well.
 tract-tensorflow = { git = 'https://github.com/sonos/tract.git', rev = '95afd8d834c1e5ea23bd8b5853476f46d1a219ca' }
