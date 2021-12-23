@@ -1319,9 +1319,9 @@
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">PartialEq</span>)]</span>
 <span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">FunctionsServerVariant</span> {
-    <span class="doccomment">/// Production-like server variant, without any of the features enabled</span>
+    <span class="doccomment">/// Production-like server variant, without logging or any of the experimental features enabled</span>
     <span class="ident">Base</span>,
-    <span class="doccomment">/// Debug server with logging enabled</span>
+    <span class="doccomment">/// Debug server with logging and experimental features enabled</span>
     <span class="ident">Unsafe</span>,
 }
 
