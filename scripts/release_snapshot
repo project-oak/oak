@@ -18,13 +18,15 @@ source "$SCRIPTS_DIR/common"
 # Ensure that the working tree is clean.
 # Changed files that are tracked by git.
 readonly GIT_STATUS=$(git status --short)
-# Changed files that are untracked/ignored by git.
-readonly GIT_CLEAN_STATUS=$(git clean --dry-run -x -d)
-if [[ "$GIT_STATUS" || "$GIT_CLEAN_STATUS" ]]; then
+if [[ "$GIT_STATUS" ]]; then
     echo 'Please re-run this script from a clean commit.'
     "$GIT_STATUS" && echo "The following tracked changes were present: $GIT_STATUS"
-    "$GIT_CLEAN_STATUS" && echo "The following untracked changes were present: $GIT_CLEAN_STATUS"
     exit 1
+fi
+readonly GIT_CLEAN_STATUS=$(git clean --force -x -d)
+if [[ "$GIT_CLEAN_STATUS" ]]; then
+    echo 'Removed the following elements present in the working tree but ignored by git.'
+    echo "$GIT_CLEAN_STATUS"
 fi
 
 # Before doing anything else, store the current commit id to a file, for future reference during the
