@@ -106,8 +106,8 @@ jobs:
       - name: Generate root CA certs
         run: ./scripts/docker_run ./scripts/generate_root_ca_certs
 
-      # Check whether any of the previous steps resulted in file diffs that were not checked in or
-      # ignored by git.
+        # Ensure that the previous steps did not modify our source-code and that
+        # relevant build artifacts are ignored by git.
       - name: Git check diff
         run: ./scripts/docker_run ./scripts/git_check_diff
 

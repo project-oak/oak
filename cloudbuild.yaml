@@ -46,8 +46,8 @@ steps:
     entrypoint: 'bash'
     args: ['./scripts/generate_root_ca_certs']
 
-  # Check whether any of the previous steps resulted in file diffs that were not checked in or
-  # ignored by git.
+  # Ensure that the previous steps did not modify our source-code and that
+  # relevant build artifacts are ignored by git.
   - name: 'gcr.io/oak-ci/oak:latest'
     id: git_check_diff
     waitFor: ['git_init', 'runner_ci', 'generate_root_ca_certs']
