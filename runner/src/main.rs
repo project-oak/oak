@@ -793,6 +793,7 @@ fn run_cargo_clippy(all_affected_crates: &ModifiedContent) -> Step {
                     &[
                         "clippy",
                         "--all-targets",
+                        "--all-features",
                         &format!("--manifest-path={}", &entry),
                         "--",
                         "--deny=warnings",
