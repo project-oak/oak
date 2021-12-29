@@ -45,6 +45,8 @@ jobs:
     steps:
       - name: Checkout branch
         uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
 
       # The runner comes with all this software pre-installed: https://github.com/actions/virtual-environments/blob/main/images/linux/Ubuntu2004-README.md
       # so we delete some large packages to make sure we have more space available.
