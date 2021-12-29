@@ -344,7 +344,8 @@ pub fn run_fuzz_targets_in_crate(path: &Path, opt: &RunCargoFuzz) -> Step {
 }
 
 fn format(commits: &Commits) -> Step {
-    let modified_crates = directly_modified_crates(commits);
+    let modified_files = modified_files(commits);
+    let modified_crates = directly_modified_crates(&modified_files);
     Step::Multiple {
         name: "format".to_string(),
         steps: vec![
@@ -360,7 +361,7 @@ fn format(commits: &Commits) -> Step {
 
 fn check_format(commits: &Commits) -> Step {
     let modified_files = modified_files(commits);
-    let modified_crates = directly_modified_crates(commits);
+    let modified_crates = directly_modified_crates(&modified_files);
 
     Step::Multiple {
         name: "format".to_string(),
@@ -787,7 +788,8 @@ fn run_cargo_test_tsan() -> Step {
 }
 
 fn run_cargo_clippy(commits: &Commits) -> Step {
-    let modified_crates = directly_modified_crates(commits);
+    let all_affected_crates = all_affected_crates(commits);
+    let modified_crates = directly_modified_crates(&all_affected_crates);
     Step::Multiple {
         name: "cargo clippy".to_string(),
         steps: crate_manifest_files()

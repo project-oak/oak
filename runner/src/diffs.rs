@@ -72,11 +72,11 @@ pub fn modified_files(commits: &Commits) -> ModifiedContent {
 
 /// Returns the list of paths to `Cargo.toml` files for all crates in which at least one file is
 /// modified.
-pub fn directly_modified_crates(commits: &Commits) -> ModifiedContent {
-    let files = modified_files(commits).files.map(|modified_files| {
+pub fn directly_modified_crates(files: &ModifiedContent) -> ModifiedContent {
+    let files = files.files.as_ref().map(|modified_files| {
         let mut crates = hashset![];
         for str_path in modified_files {
-            if let Some(crate_path) = find_crate_toml_file(str_path) {
+            if let Some(crate_path) = find_crate_toml_file(str_path.clone()) {
                 crates.insert(crate_path);
             }
         }
@@ -103,13 +103,15 @@ fn find_crate_toml_file(str_path: String) -> Option<String> {
 }
 
 /// List of paths to all `.proto` files affected by the recent changes.
-fn affected_protos(commits: &Commits) -> Vec<String> {
-    modified_files(commits)
+fn affected_protos(files: &ModifiedContent) -> Vec<String> {
+    files
         .files
+        .as_ref()
         .map(|modified_files| {
             let mut affected_protos: Vec<String> = modified_files
-                .into_iter()
+                .iter()
                 .filter(|p| p.ends_with(".proto"))
+                .cloned()
                 .collect();
 
             if !affected_protos.is_empty() {
@@ -170,36 +172,38 @@ fn imported_proto_files(proto_file_path: String) -> Vec<String> {
 /// Path to the `Cargo.toml` files for all crates that are either directly modified or have a
 /// dependency to a modified crate.
 pub fn all_affected_crates(commits: &Commits) -> ModifiedContent {
-    let files = directly_modified_crates(commits)
-        .files
-        .map(|modified_files| {
-            let crate_manifest_files = crate_manifest_files();
-            // A map of `Cargo.toml` files visited by the algorithm. If the value associated with a
-            // key is `true`, the crate is affected by the changes and should be included in the
-            // result.
-            let mut affected_crates: HashMap<String, bool> = modified_files
-                .into_iter()
-                .map(|path| (path, true))
-                .collect();
+    crates_affected_by_files(&modified_files(commits))
+}
 
-            crates_affected_by_protos(&affected_protos(commits))
-                .iter()
-                .fold(&mut affected_crates, |affected_crates, toml_path| {
-                    affected_crates.insert(toml_path.clone(), true);
-                    affected_crates
-                });
+fn crates_affected_by_files(files: &ModifiedContent) -> ModifiedContent {
+    let files = directly_modified_crates(files).files.map(|modified_files| {
+        let crate_manifest_files = crate_manifest_files();
+        // A map of `Cargo.toml` files visited by the algorithm. If the value associated with a
+        // key is `true`, the crate is affected by the changes and should be included in the
+        // result.
+        let mut affected_crates: HashMap<String, bool> = modified_files
+            .into_iter()
+            .map(|path| (path, true))
+            .collect();
 
-            for crate_path in crate_manifest_files {
-                add_affected_crates(crate_path, &mut affected_crates);
-            }
+        crates_affected_by_protos(&affected_protos(files))
+            .iter()
+            .fold(&mut affected_crates, |affected_crates, toml_path| {
+                affected_crates.insert(toml_path.clone(), true);
+                affected_crates
+            });
 
-            // Return `Cargo.toml` files of the crates that are affected by the changes
-            affected_crates
-                .iter()
-                .filter(|(_key, value)| **value)
-                .map(|(key, _value)| key.clone())
-                .collect()
-        });
+        for crate_path in crate_manifest_files {
+            add_affected_crates(crate_path, &mut affected_crates);
+        }
+
+        // Return `Cargo.toml` files of the crates that are affected by the changes
+        affected_crates
+            .iter()
+            .filter(|(_key, value)| **value)
+            .map(|(key, _value)| key.clone())
+            .collect()
+    });
 
     ModifiedContent { files }
 }
