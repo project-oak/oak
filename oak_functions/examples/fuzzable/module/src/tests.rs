@@ -56,7 +56,8 @@ async fn test_server() {
     let logger = Logger::for_test();
 
     let lookup_data = Arc::new(LookupData::new_empty(None, logger.clone()));
-    let lookup_factory = LookupFactory::create(lookup_data, logger.clone()).unwrap();
+    let lookup_factory =
+        LookupFactory::new_boxed_extension_factory(lookup_data, logger.clone()).unwrap();
     let metrics_factory = create_metrics_factory();
 
     let tee_certificate = vec![];
@@ -148,8 +149,9 @@ fn create_metrics_factory() -> BoxedExtensionFactory {
         buckets: hashmap! {"count".to_string() => BucketConfig::Count },
     };
 
-    let metrics_factory =
-        PrivateMetricsProxyFactory::new(&metrics_config, Logger::new(log::LevelFilter::Info))
-            .expect("could not create PrivateMetricsProxyFactory");
-    Box::new(metrics_factory)
+    PrivateMetricsProxyFactory::new_boxed_extension_factory(
+        &metrics_config,
+        Logger::new(log::LevelFilter::Info),
+    )
+    .expect("could not create PrivateMetricsProxyFactory")
 }

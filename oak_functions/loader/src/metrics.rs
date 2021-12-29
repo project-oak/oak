@@ -17,8 +17,8 @@
 use crate::{
     logger::Logger,
     server::{
-        AbiPointer, AbiPointerOffset, BoxedExtension, ExtensionFactory, OakApiNativeExtension,
-        WasmState, ABI_USIZE,
+        AbiPointer, AbiPointerOffset, BoxedExtension, BoxedExtensionFactory, ExtensionFactory,
+        OakApiNativeExtension, WasmState, ABI_USIZE,
     },
 };
 use oak_functions_abi::proto::OakStatus;
@@ -238,13 +238,17 @@ pub struct PrivateMetricsProxyFactory {
 }
 
 impl PrivateMetricsProxyFactory {
-    pub fn new(config: &PrivateMetricsConfig, logger: Logger) -> anyhow::Result<Self> {
+    pub fn new_boxed_extension_factory(
+        config: &PrivateMetricsConfig,
+        logger: Logger,
+    ) -> anyhow::Result<BoxedExtensionFactory> {
+        config.validate()?;
         let aggregator = PrivateMetricsAggregator::new(config)?;
-
-        Ok(Self {
+        let metrics_factory = Self {
             aggregator: Arc::new(Mutex::new(aggregator)),
             logger,
-        })
+        };
+        Ok(Box::new(metrics_factory))
     }
 }
 

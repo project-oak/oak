@@ -17,8 +17,8 @@
 use crate::{
     logger::Logger,
     server::{
-        AbiPointer, AbiPointerOffset, BoxedExtension, ExtensionFactory, OakApiNativeExtension,
-        WasmState, ABI_USIZE,
+        AbiPointer, AbiPointerOffset, BoxedExtension, BoxedExtensionFactory, ExtensionFactory,
+        OakApiNativeExtension, WasmState, ABI_USIZE,
     },
 };
 use anyhow::Context;
@@ -212,7 +212,11 @@ pub struct TensorFlowFactory {
 impl TensorFlowFactory {
     /// Creates an instance of TensorFlowFactory, by loading the model from the given byte array and
     /// optimizing it using the given shape.
-    pub fn new(bytes: Bytes, shape: Vec<u8>, logger: Logger) -> anyhow::Result<Self> {
+    pub fn new_boxed_extension_factory(
+        bytes: Bytes,
+        shape: Vec<u8>,
+        logger: Logger,
+    ) -> anyhow::Result<BoxedExtensionFactory> {
         use bytes::Buf;
 
         let dim = shape
@@ -233,11 +237,13 @@ impl TensorFlowFactory {
             // make the model runnable and fix its inputs and outputs
             .into_runnable()?;
 
-        Ok(TensorFlowFactory {
+        let tf_model_factory = Self {
             model: Arc::new(model),
             shape,
             logger,
-        })
+        };
+
+        Ok(Box::new(tf_model_factory))
     }
 }
 
