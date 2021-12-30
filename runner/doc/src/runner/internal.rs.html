@@ -1096,6 +1096,9 @@
 <span id="1096">1096</span>
 <span id="1097">1097</span>
 <span id="1098">1098</span>
+<span id="1099">1099</span>
+<span id="1100">1100</span>
+<span id="1101">1101</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -1194,7 +1197,7 @@
     <span class="kw">pub</span> <span class="ident">build_docker</span>: <span class="ident">bool</span>,
     <span class="attribute">#[<span class="ident">structopt</span>(
         <span class="ident">flatten</span>,
-        <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;run the command only for files modified in the specified commits&quot;</span>
+        <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;run the command only for files affected by the changes in the specified commits, including unstaged changes in tracked files&quot;</span>
     )]</span>
     <span class="kw">pub</span> <span class="ident">commits</span>: <span class="ident">Commits</span>,
 }
@@ -1238,7 +1241,7 @@
     <span class="kw">pub</span> <span class="ident">build_docker</span>: <span class="ident">bool</span>,
     <span class="attribute">#[<span class="ident">structopt</span>(
         <span class="ident">flatten</span>,
-        <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;run the command only for files modified in the specified commits&quot;</span>
+        <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;run the command only for files affected by the changes in the specified commits, including unstaged changes in tracked files&quot;</span>
     )]</span>
     <span class="kw">pub</span> <span class="ident">commits</span>: <span class="ident">Commits</span>,
 }
@@ -1359,7 +1362,10 @@
         <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;remove generated files after running tests for each crate&quot;</span>
     )]</span>
     <span class="kw">pub</span> <span class="ident">cleanup</span>: <span class="ident">bool</span>,
-    <span class="attribute">#[<span class="ident">structopt</span>(<span class="ident">flatten</span>, <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;run the command only for the specified diffs&quot;</span>)]</span>
+    <span class="attribute">#[<span class="ident">structopt</span>(
+        <span class="ident">flatten</span>,
+        <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;run the command only for files affected by the changes in the specified commits, including unstaged changes in tracked files&quot;</span>
+    )]</span>
     <span class="kw">pub</span> <span class="ident">commits</span>: <span class="ident">Commits</span>,
 }
 
