@@ -145,10 +145,20 @@ pub struct RunFunctionsExamples {
     pub commits: Commits,
 }
 
-#[derive(StructOpt, Clone, Debug, Default)]
+#[derive(StructOpt, Clone, Debug)]
 pub struct Commits {
-    #[structopt(long, help = "number of past commits to include in the diff")]
-    pub commits: Option<u8>,
+    #[structopt(
+        long,
+        help = "number of past commits to include in the diff",
+        default_value = "1"
+    )]
+    pub commits: u8,
+}
+
+impl Default for Commits {
+    fn default() -> Self {
+        Self { commits: 1 }
+    }
 }
 
 #[derive(StructOpt, Clone, Debug)]

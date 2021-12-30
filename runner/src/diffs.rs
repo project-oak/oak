@@ -49,7 +49,7 @@ impl ModifiedContent {
 // If it is zero or negative, only the last commit will be considered for finding the modified
 // files. If `commits.commits` is not present, all files will be considered.
 pub fn modified_files(commits: &Commits) -> ModifiedContent {
-    let files = commits.commits.map(|commits| {
+    let files = Some(commits.commits).map(|commits| {
         let vec = Command::new("git")
             .args(&[
                 "diff",
