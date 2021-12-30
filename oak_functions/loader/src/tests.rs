@@ -148,7 +148,8 @@ where
     let tee_certificate = vec![];
 
     let lookup_factory =
-        LookupFactory::new_boxed_extension_factory(lookup_data.clone(), logger.clone()).unwrap();
+        LookupFactory::new_boxed_extension_factory(lookup_data.clone(), logger.clone())
+            .expect("could not create LookupFactory");
     let wasm_handler =
         create_wasm_handler(&wasm_module_bytes, vec![lookup_factory], logger.clone())
             .expect("could not create wasm_handler");
