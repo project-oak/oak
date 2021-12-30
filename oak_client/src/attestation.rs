@@ -84,7 +84,7 @@ pub fn create_tls_attestation_config(
     config.set_protocols(&[b"http/1.1".to_vec(), b"h2".to_vec()]);
 
     // Add root TLS certificate.
-    let mut cc_reader = std::io::BufReader::new(&root_tls_certificate[..]);
+    let mut cc_reader = std::io::BufReader::new(root_tls_certificate);
     let certs = rustls::internal::pemfile::certs(&mut cc_reader)
         .map_err(|error| anyhow!("Couldn't parse TLS certificate: {:?}", error))?;
     for certificate in certs.iter() {

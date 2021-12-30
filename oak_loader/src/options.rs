@@ -324,7 +324,7 @@ async fn get_tls_identity(opt: &Opt) -> anyhow::Result<Identity> {
             let proxy_root_tls_certificate = read_to_string(proxy_root_tls_certificate_path)
                 .context("Couldn't read proxy TLS certificate")?;
 
-            get_tls_identity_from_proxy(&proxy_uri, &proxy_root_tls_certificate.as_bytes()).await
+            get_tls_identity_from_proxy(&proxy_uri, proxy_root_tls_certificate.as_bytes()).await
         }
         #[cfg(not(feature = "oak-attestation"))]
         (Some(_proxy_uri_string), Some(_proxy_root_tls_certificate_path)) => {

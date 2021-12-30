@@ -50,7 +50,7 @@ pub async fn get_tls_identity_from_proxy(
         "Sending certificate signing request to Proxy Attestation Service: {:?}",
         uri
     );
-    let mut client = create_proxy_client(&uri, &root_tls_certificate)
+    let mut client = create_proxy_client(uri, root_tls_certificate)
         .await
         .context("Couldn't create gRPC client")?;
     let request = Request::new(GetSignedCertificateRequest {
@@ -72,7 +72,7 @@ pub async fn get_tls_identity_from_proxy(
 /// TODO(#1869): Load certificate signing request from a PEM file.
 fn create_certificate_request(key_pair: &PKey<Private>) -> anyhow::Result<Vec<u8>> {
     let mut builder = X509ReqBuilder::new()?;
-    builder.set_pubkey(&key_pair)?;
+    builder.set_pubkey(key_pair)?;
 
     let mut name = X509NameBuilder::new()?;
     name.append_entry_by_text("O", "Oak")?;
@@ -91,7 +91,7 @@ fn create_certificate_request(key_pair: &PKey<Private>) -> anyhow::Result<Vec<u8
     extensions.push(subject_alt_name)?;
     builder.add_extensions(&extensions)?;
 
-    builder.sign(&key_pair, MessageDigest::sha256())?;
+    builder.sign(key_pair, MessageDigest::sha256())?;
     let request = builder.build();
     request
         .to_pem()

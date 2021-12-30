@@ -338,7 +338,7 @@ impl TinkWrapper {
         #[cfg(feature = "awskms")]
         if key_uri.starts_with(tink_awskms::AWS_PREFIX) {
             let g = if let Some(kms_creds) = &self.kms_credentials {
-                tink_awskms::AwsClient::new_with_credentials(key_uri, &kms_creds)?
+                tink_awskms::AwsClient::new_with_credentials(key_uri, kms_creds)?
             } else {
                 tink_awskms::AwsClient::new(key_uri)?
             };
@@ -349,7 +349,7 @@ impl TinkWrapper {
         #[cfg(feature = "gcpkms")]
         if key_uri.starts_with(tink_gcpkms::GCP_PREFIX) {
             let g = if let Some(kms_creds) = &self.kms_credentials {
-                tink_gcpkms::GcpClient::new_with_credentials(key_uri, &kms_creds)?
+                tink_gcpkms::GcpClient::new_with_credentials(key_uri, kms_creds)?
             } else {
                 tink_gcpkms::GcpClient::new(key_uri)?
             };

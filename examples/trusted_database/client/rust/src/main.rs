@@ -59,13 +59,13 @@ async fn main() -> anyhow::Result<()> {
         std::fs::read(&opt.root_tls_certificate).context("Couldn't load certificate file")?;
     let latitude = opt.latitude;
     ensure!(
-        latitude >= -90.0 && latitude <= 90.0,
+        (-90.0..=90.0).contains(&latitude),
         "Latitude must be a valid floating point number >=-90 and <= 90, found {}",
         latitude
     );
     let longitude = opt.longitude;
     ensure!(
-        longitude >= -180.0 && longitude <= 180.0,
+        (-180.0..=180.0).contains(&longitude),
         "Longitude must be a valid floating point number >= -180 and <= 180, found {}",
         longitude
     );
