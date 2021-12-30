@@ -96,7 +96,7 @@ pub struct RunExamples {
     pub build_docker: bool,
     #[structopt(
         flatten,
-        help = "run the command only for files modified in the specified commits"
+        help = "run the command only for files affected by the changes in the specified commits, including unstaged changes in tracked files"
     )]
     pub commits: Commits,
 }
@@ -140,7 +140,7 @@ pub struct RunFunctionsExamples {
     pub build_docker: bool,
     #[structopt(
         flatten,
-        help = "run the command only for files modified in the specified commits"
+        help = "run the command only for files affected by the changes in the specified commits, including unstaged changes in tracked files"
     )]
     pub commits: Commits,
 }
@@ -261,7 +261,10 @@ pub struct RunTestsOpt {
         help = "remove generated files after running tests for each crate"
     )]
     pub cleanup: bool,
-    #[structopt(flatten, help = "run the command only for the specified diffs")]
+    #[structopt(
+        flatten,
+        help = "run the command only for files affected by the changes in the specified commits, including unstaged changes in tracked files"
+    )]
     pub commits: Commits,
 }
 
