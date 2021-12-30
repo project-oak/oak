@@ -146,11 +146,6 @@
 <span id="146">146</span>
 <span id="147">147</span>
 <span id="148">148</span>
-<span id="149">149</span>
-<span id="150">150</span>
-<span id="151">151</span>
-<span id="152">152</span>
-<span id="153">153</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2021 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -194,20 +189,15 @@
 }
 
 <span class="kw">impl</span> <span class="ident">LookupFactory</span> {
-    <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">lookup_data</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">LookupData</span><span class="op">&gt;</span>, <span class="ident">logger</span>: <span class="ident">Logger</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
-        <span class="prelude-val">Ok</span>(<span class="ident">LookupFactory</span> {
-            <span class="ident">lookup_data</span>,
-            <span class="ident">logger</span>,
-        })
-    }
-    <span class="doccomment">/// Create and return a lookup factory.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">create</span>(
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new_boxed_extension_factory</span>(
         <span class="ident">lookup_data</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">LookupData</span><span class="op">&gt;</span>,
         <span class="ident">logger</span>: <span class="ident">Logger</span>,
     ) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">BoxedExtensionFactory</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">lookup_factory</span> <span class="op">=</span> <span class="ident">LookupFactory::new</span>(<span class="ident">lookup_data</span>, <span class="ident">logger</span>)<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">lookup_factory</span>: <span class="ident">BoxedExtensionFactory</span> <span class="op">=</span> <span class="ident">Box::new</span>(<span class="ident">lookup_factory</span>);
-        <span class="prelude-val">Ok</span>(<span class="ident">lookup_factory</span>)
+        <span class="kw">let</span> <span class="ident">lookup_factory</span> <span class="op">=</span> <span class="self">Self</span> {
+            <span class="ident">lookup_data</span>,
+            <span class="ident">logger</span>,
+        };
+        <span class="prelude-val">Ok</span>(<span class="ident">Box::new</span>(<span class="ident">lookup_factory</span>))
     }
 }
 
