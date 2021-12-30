@@ -651,13 +651,13 @@ pub fn format_bytes(v: &[u8]) -> String {
         .unwrap_or_else(|_| format!("{:?}", v))
 }
 
-// The Endpoint of a birectional channel. Sender and Receiver are exposed.
+// The Endpoint of a bidirectional channel. Sender and Receiver are exposed.
 pub struct Endpoint {
     pub sender: Sender<AbiMessage>,
     pub receiver: Receiver<AbiMessage>,
 }
 
-/// Create a channel with two symmetrial endpoints. The [`AbiMessage`] sent from one [`Endpoint`]
+/// Create a channel with two symmetrical endpoints. The [`AbiMessage`] sent from one [`Endpoint`]
 /// are received at the other [`Endpoint`] and vice versa by connecting two unidirectional
 /// [tokio::mpsc channels](https://docs.rs/tokio/0.1.16/tokio/sync/mpsc/index.html).
 ///
