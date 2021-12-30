@@ -119,6 +119,7 @@ fn match_cmd(opt: &Opt) -> Step {
         Command::BuildServer(ref opt) => build_server(opt, vec![]),
         Command::BuildFunctionsServer(ref opt) => build_functions_server(opt, vec![]),
         Command::RunTests => run_tests(),
+        Command::RunCargoClippy(ref commits) => run_cargo_clippy(commits),
         Command::RunCargoTests(ref opt) => run_cargo_tests(opt),
         Command::RunBazelTests => run_bazel_tests(),
         Command::RunTestsTsan => run_tests_tsan(),
@@ -170,7 +171,6 @@ fn run_cargo_tests(opt: &RunTestsOpt) -> Step {
     Step::Multiple {
         name: "cargo tests".to_string(),
         steps: vec![
-            run_cargo_clippy(&all_affected_crates),
             run_cargo_test(opt, &all_affected_crates),
             run_cargo_doc(&all_affected_crates),
         ],
@@ -786,12 +786,13 @@ fn run_cargo_test_tsan() -> Step {
     }
 }
 
-fn run_cargo_clippy(all_affected_crates: &ModifiedContent) -> Step {
+fn run_cargo_clippy(commits: &Commits) -> Step {
+    let modified_crates = directly_modified_crates(commits);
     Step::Multiple {
         name: "cargo clippy".to_string(),
         steps: crate_manifest_files()
             .map(to_string)
-            .filter(|path| all_affected_crates.contains(path))
+            .filter(|path| modified_crates.contains(path))
             .map(|entry| Step::Single {
                 name: entry.clone(),
                 command: Cmd::new(

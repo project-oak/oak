@@ -50,6 +50,7 @@ pub enum Command {
     Format(Commits),
     CheckFormat(Commits),
     RunTests,
+    RunCargoClippy(Commits),
     RunCargoTests(RunTestsOpt),
     RunBazelTests,
     RunTestsTsan,
