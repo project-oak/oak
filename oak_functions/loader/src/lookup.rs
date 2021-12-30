@@ -41,20 +41,15 @@ pub struct LookupFactory {
 }
 
 impl LookupFactory {
-    fn new(lookup_data: Arc<LookupData>, logger: Logger) -> anyhow::Result<Self> {
-        Ok(LookupFactory {
-            lookup_data,
-            logger,
-        })
-    }
-    /// Create and return a lookup factory.
-    pub fn create(
+    pub fn new_boxed_extension_factory(
         lookup_data: Arc<LookupData>,
         logger: Logger,
     ) -> anyhow::Result<BoxedExtensionFactory> {
-        let lookup_factory = LookupFactory::new(lookup_data, logger)?;
-        let lookup_factory: BoxedExtensionFactory = Box::new(lookup_factory);
-        Ok(lookup_factory)
+        let lookup_factory = Self {
+            lookup_data,
+            logger,
+        };
+        Ok(Box::new(lookup_factory))
     }
 }
 

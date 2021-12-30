@@ -76,7 +76,8 @@ async fn test_server() {
         logger.clone(),
     ));
     lookup_data.refresh().await.unwrap();
-    let lookup_factory = LookupFactory::create(lookup_data, logger.clone()).unwrap();
+    let lookup_factory = LookupFactory::new_boxed_extension_factory(lookup_data, logger.clone())
+        .expect("could not create LookupFactory");
 
     let wasm_handler =
         create_wasm_handler(&wasm_module_bytes, vec![lookup_factory], logger.clone())
@@ -136,7 +137,8 @@ fn bench_wasm_handler(bencher: &mut Bencher) {
     };
 
     let lookup_data = Arc::new(LookupData::for_test(entries));
-    let lookup_factory = LookupFactory::create(lookup_data, logger.clone()).unwrap();
+    let lookup_factory = LookupFactory::new_boxed_extension_factory(lookup_data, logger.clone())
+        .expect("could not create LookupFactory");
 
     let wasm_handler = WasmHandler::create(&wasm_module_bytes, vec![lookup_factory], logger)
         .expect("Couldn't create the server");

@@ -30,10 +30,10 @@ use oak_functions_loader::{
 use oak_remote_attestation::crypto::get_sha256;
 
 #[cfg(feature = "oak-tf")]
-use oak_functions_loader::tf::{TensorFlowFactory, TensorFlowModelConfig};
+use oak_functions_loader::tf::{read_model_from_path, TensorFlowFactory, TensorFlowModelConfig};
 
 #[cfg(feature = "oak-metrics")]
-use oak_functions_loader::metrics::PrivateMetricsConfig;
+use oak_functions_loader::metrics::{PrivateMetricsConfig, PrivateMetricsProxyFactory};
 
 use serde_derive::Deserialize;
 use std::{
@@ -172,16 +172,27 @@ async fn async_main(opt: Opt, config: Config, logger: Logger) -> anyhow::Result<
     #[allow(unused_mut)]
     let mut extensions = Vec::new();
 
-    let lookup_factory = LookupFactory::create(lookup_data, logger.clone())?;
+    let lookup_factory = LookupFactory::new_boxed_extension_factory(lookup_data, logger.clone())?;
     extensions.push(lookup_factory);
 
     #[cfg(feature = "oak-tf")]
-    if let Some(tf_model_factory) = create_tensorflow_factory(&config, logger.clone()).await? {
+    if let Some(tf_model_config) = &config.tf_model {
+        // Load the TensorFlow model from the given path in the config
+        let model = read_model_from_path(&tf_model_config.path).await?;
+        let tf_model_factory = TensorFlowFactory::new_boxed_extension_factory(
+            model,
+            tf_model_config.shape.clone(),
+            logger.clone(),
+        )?;
         extensions.push(tf_model_factory);
     }
 
     #[cfg(feature = "oak-metrics")]
-    if let Some(metrics_factory) = create_metrics_proxy_factory(&config, logger.clone()).await? {
+    if let Some(metrics_config) = &config.metrics {
+        let metrics_factory = PrivateMetricsProxyFactory::new_boxed_extension_factory(
+            metrics_config,
+            logger.clone(),
+        )?;
         extensions.push(metrics_factory);
     }
 
@@ -283,49 +294,6 @@ async fn load_lookup_data(config: &Config, logger: Logger) -> anyhow::Result<Arc
         };
     }
     Ok(lookup_data)
-}
-
-/// Load the TensorFlow model from the given path in the config, or return `None` if a path is not
-/// provided.
-#[cfg(feature = "oak-tf")]
-async fn create_tensorflow_factory(
-    config: &Config,
-    logger: Logger,
-) -> anyhow::Result<Option<oak_functions_loader::server::BoxedExtensionFactory>> {
-    match &config.tf_model {
-        Some(tf_model_config) => {
-            let model =
-                oak_functions_loader::tf::read_model_from_path(&tf_model_config.path).await?;
-            let tf_model_factory =
-                TensorFlowFactory::new(model, tf_model_config.shape.clone(), logger)?;
-            let tf_model_factory: oak_functions_loader::server::BoxedExtensionFactory =
-                Box::new(tf_model_factory);
-            Ok(Some(tf_model_factory))
-        }
-        None => Ok(None),
-    }
-}
-
-/// Create and return a metrics proxy factory if metrics configuration is provided, or return `None`
-/// otherwise.
-#[cfg(feature = "oak-metrics")]
-async fn create_metrics_proxy_factory(
-    config: &Config,
-    logger: Logger,
-) -> anyhow::Result<Option<oak_functions_loader::server::BoxedExtensionFactory>> {
-    match &config.metrics {
-        Some(metrics_config) => {
-            metrics_config.validate()?;
-            let metrics_factory = oak_functions_loader::metrics::PrivateMetricsProxyFactory::new(
-                metrics_config,
-                logger,
-            )?;
-            let metrics_factory: oak_functions_loader::server::BoxedExtensionFactory =
-                Box::new(metrics_factory);
-            Ok(Some(metrics_factory))
-        }
-        None => Ok(None),
-    }
 }
 
 #[allow(unused_variables)]

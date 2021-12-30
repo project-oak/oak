@@ -116,7 +116,8 @@ fuzz_target!(|instruction_list: Vec<ArbitraryInstruction>| {
 
     let logger = Logger::for_test();
     let lookup_data = Arc::new(LookupData::for_test(entries));
-    let lookup_factory = LookupFactory::create(lookup_data, logger.clone()).unwrap();
+    let lookup_factory = LookupFactory::new_boxed_extension_factory(lookup_data, logger.clone())
+        .expect("could not create LookupFactory");
     let metrics_factory = create_metrics_factory();
 
     let wasm_handler = WasmHandler::create(
@@ -174,7 +175,6 @@ fn create_metrics_factory() -> BoxedExtensionFactory {
         buckets: hashmap! {"count".to_string() => BucketConfig::Count },
     };
 
-    let metrics_factory = PrivateMetricsProxyFactory::new(&metrics_config, Logger::for_test())
-        .expect("could not create PrivateMetricsProxyFactory");
-    Box::new(metrics_factory)
+    PrivateMetricsProxyFactory::new_boxed_extension_factory(&metrics_config, Logger::for_test())
+        .expect("could not create PrivateMetricsProxyFactory")
 }
