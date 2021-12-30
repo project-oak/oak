@@ -331,6 +331,9 @@
 <span id="331">331</span>
 <span id="332">332</span>
 <span id="333">333</span>
+<span id="334">334</span>
+<span id="335">335</span>
+<span id="336">336</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -435,17 +438,20 @@
     }
 
     <span class="kw">fn</span> <span class="ident">clone_handle</span>(<span class="ident">handle</span>: <span class="ident">Handle</span>) -&gt; <span class="ident">Handle</span> {
-        <span class="kw">if</span> <span class="ident">handle</span> <span class="op">==</span> <span class="ident">oak_abi::INVALID_HANDLE</span> {
-            <span class="macro">panic!</span>(<span class="string">&quot;Cannot clone() INVALID_HANDLE&quot;</span>);
-        }
+        <span class="macro">assert!</span>(
+            <span class="op">!</span>(<span class="ident">handle</span> <span class="op">==</span> <span class="ident">oak_abi::INVALID_HANDLE</span>),
+            <span class="string">&quot;Cannot clone() INVALID_HANDLE&quot;</span>
+        );
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">cloned_handle</span> <span class="op">=</span> <span class="number">0</span>;
         <span class="kw">let</span> <span class="ident">status</span> <span class="op">=</span>
             <span class="kw">unsafe</span> { <span class="ident">oak_abi::handle_clone</span>(<span class="ident">handle</span>, <span class="kw-2">&amp;mut</span> <span class="ident">cloned_handle</span> <span class="kw">as</span> <span class="kw-2">*mut</span> <span class="ident">Handle</span>) <span class="kw">as</span> <span class="ident">i32</span> };
         <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="ident">OakStatus::from_i32</span>(<span class="ident">status</span>)
             .<span class="ident">unwrap_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="macro">panic!</span>(<span class="string">&quot;handle_clone returned invalid oak status: {}&quot;</span>, <span class="ident">status</span>));
-        <span class="kw">if</span> <span class="ident">result</span> <span class="op">!</span><span class="op">=</span> <span class="ident">OakStatus::Ok</span> {
-            <span class="macro">panic!</span>(<span class="string">&quot;Failed to clone handle: {}&quot;</span>, <span class="ident">result</span>);
-        }
+        <span class="macro">assert!</span>(
+            <span class="op">!</span>(<span class="ident">result</span> <span class="op">!</span><span class="op">=</span> <span class="ident">OakStatus::Ok</span>),
+            <span class="string">&quot;Failed to clone handle: {}&quot;</span>,
+            <span class="ident">result</span>
+        );
         <span class="ident">cloned_handle</span>
     }
 
