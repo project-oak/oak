@@ -48,7 +48,7 @@ tokio = { version = "*", features = [
 ] }
 toml = "*"
 tonic = "*"
-tract-tensorflow = { version = "*", optional = true }
+tract-tensorflow = { optional = true, git = 'https://github.com/sonos/tract.git', rev = '95afd8d834c1e5ea23bd8b5853476f46d1a219ca' }
 url = "*"
 # Use wasmi in `no_std` mode.
 wasmi = { version = "*", default-features = false, features = ["core"] }

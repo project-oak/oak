@@ -1309,7 +1309,7 @@ dependencies = [
  "oak_functions_client",
  "prost 0.9.0",
  "tokio",
- "tract-tensorflow",
+ "tract-tensorflow 0.15.4",
 ]
 
 [[package]]
@@ -1541,7 +1541,7 @@ dependencies = [
  "tokio",
  "toml",
  "tonic",
- "tract-tensorflow",
+ "tract-tensorflow 0.15.9-pre",
  "url",
  "wasmi",
 ]
@@ -2825,8 +2825,30 @@ dependencies = [
  "num-integer",
  "num-traits 0.2.14",
  "smallvec",
- "tract-data",
- "tract-linalg",
+ "tract-data 0.15.4",
+ "tract-linalg 0.15.4",
+]
+
+[[package]]
+name = "tract-core"
+version = "0.15.9-pre"
+source = "git+https://github.com/sonos/tract.git?rev=95afd8d834c1e5ea23bd8b5853476f46d1a219ca#95afd8d834c1e5ea23bd8b5853476f46d1a219ca"
+dependencies = [
+ "anyhow",
+ "bit-set",
+ "derive-new",
+ "downcast-rs",
+ "dyn-clone",
+ "educe",
+ "lazy_static",
+ "log",
+ "maplit",
+ "ndarray",
+ "num-integer",
+ "num-traits 0.2.14",
+ "smallvec",
+ "tract-data 0.15.9-pre",
+ "tract-linalg 0.15.9-pre",
 ]
 
 [[package]]
@@ -2834,6 +2856,24 @@ name = "tract-data"
 version = "0.15.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5da25dc8a11bdc829199b1bb776b7ad8a6e8b1ad4ad99e23baa93300ea8b9df0"
+dependencies = [
+ "anyhow",
+ "educe",
+ "half",
+ "itertools",
+ "lazy_static",
+ "maplit",
+ "ndarray",
+ "num-complex",
+ "num-integer",
+ "num-traits 0.2.14",
+ "smallvec",
+]
+
+[[package]]
+name = "tract-data"
+version = "0.15.9-pre"
+source = "git+https://github.com/sonos/tract.git?rev=95afd8d834c1e5ea23bd8b5853476f46d1a219ca#95afd8d834c1e5ea23bd8b5853476f46d1a219ca"
 dependencies = [
  "anyhow",
  "educe",
@@ -2857,7 +2897,18 @@ dependencies = [
  "derive-new",
  "educe",
  "log",
- "tract-core",
+ "tract-core 0.15.4",
+]
+
+[[package]]
+name = "tract-hir"
+version = "0.15.9-pre"
+source = "git+https://github.com/sonos/tract.git?rev=95afd8d834c1e5ea23bd8b5853476f46d1a219ca#95afd8d834c1e5ea23bd8b5853476f46d1a219ca"
+dependencies = [
+ "derive-new",
+ "educe",
+ "log",
+ "tract-core 0.15.9-pre",
 ]
 
 [[package]]
@@ -2879,7 +2930,29 @@ dependencies = [
  "num-traits 0.2.14",
  "paste",
  "smallvec",
- "tract-data",
+ "tract-data 0.15.4",
+ "unicode-normalization",
+ "walkdir",
+]
+
+[[package]]
+name = "tract-linalg"
+version = "0.15.9-pre"
+source = "git+https://github.com/sonos/tract.git?rev=95afd8d834c1e5ea23bd8b5853476f46d1a219ca#95afd8d834c1e5ea23bd8b5853476f46d1a219ca"
+dependencies = [
+ "cc",
+ "derive-new",
+ "downcast-rs",
+ "dyn-clone",
+ "educe",
+ "lazy_static",
+ "libc",
+ "liquid",
+ "log",
+ "num-traits 0.2.14",
+ "paste",
+ "smallvec",
+ "tract-data 0.15.9-pre",
  "unicode-normalization",
  "walkdir",
 ]
@@ -2895,7 +2968,21 @@ dependencies = [
  "log",
  "nom",
  "tar",
- "tract-core",
+ "tract-core 0.15.4",
+ "walkdir",
+]
+
+[[package]]
+name = "tract-nnef"
+version = "0.15.9-pre"
+source = "git+https://github.com/sonos/tract.git?rev=95afd8d834c1e5ea23bd8b5853476f46d1a219ca#95afd8d834c1e5ea23bd8b5853476f46d1a219ca"
+dependencies = [
+ "byteorder",
+ "flate2",
+ "log",
+ "nom",
+ "tar",
+ "tract-core 0.15.9-pre",
  "walkdir",
 ]
 
@@ -2907,7 +2994,17 @@ checksum = "7a1ef09c866b1595d09eda9be5194cad431299e2bed1d08c30e2a3e1728fc525"
 dependencies = [
  "downcast-rs",
  "lazy_static",
- "tract-pulse-opl",
+ "tract-pulse-opl 0.15.4",
+]
+
+[[package]]
+name = "tract-pulse"
+version = "0.15.9-pre"
+source = "git+https://github.com/sonos/tract.git?rev=95afd8d834c1e5ea23bd8b5853476f46d1a219ca#95afd8d834c1e5ea23bd8b5853476f46d1a219ca"
+dependencies = [
+ "downcast-rs",
+ "lazy_static",
+ "tract-pulse-opl 0.15.9-pre",
 ]
 
 [[package]]
@@ -2918,7 +3015,17 @@ checksum = "62e3c10e8ee7c2c9bfe60defd9cd39df099fab3f17304ecc006ac84d744888a7"
 dependencies = [
  "downcast-rs",
  "lazy_static",
- "tract-nnef",
+ "tract-nnef 0.15.4",
+]
+
+[[package]]
+name = "tract-pulse-opl"
+version = "0.15.9-pre"
+source = "git+https://github.com/sonos/tract.git?rev=95afd8d834c1e5ea23bd8b5853476f46d1a219ca#95afd8d834c1e5ea23bd8b5853476f46d1a219ca"
+dependencies = [
+ "downcast-rs",
+ "lazy_static",
+ "tract-nnef 0.15.9-pre",
 ]
 
 [[package]]
@@ -2935,8 +3042,25 @@ dependencies = [
  "prost 0.9.0",
  "prost-build 0.9.0",
  "prost-types 0.9.0",
- "tract-hir",
- "tract-pulse",
+ "tract-hir 0.15.4",
+ "tract-pulse 0.15.4",
+]
+
+[[package]]
+name = "tract-tensorflow"
+version = "0.15.9-pre"
+source = "git+https://github.com/sonos/tract.git?rev=95afd8d834c1e5ea23bd8b5853476f46d1a219ca#95afd8d834c1e5ea23bd8b5853476f46d1a219ca"
+dependencies = [
+ "bytes",
+ "derive-new",
+ "educe",
+ "log",
+ "mapr",
+ "prost 0.9.0",
+ "prost-build 0.9.0",
+ "prost-types 0.9.0",
+ "tract-hir 0.15.9-pre",
+ "tract-pulse 0.15.9-pre",
 ]
 
 [[package]]
