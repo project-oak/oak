@@ -51,7 +51,7 @@ jobs:
       # Build artifacts that are supposed to be reproducible.
       - name: Build Rust server
         run: |
-          ./scripts/docker_run ./scripts/runner build-server --server-variant=unsafe
+          ./scripts/docker_run ./scripts/runner build-server
 
       - name: Build examples
         run: |
@@ -59,7 +59,7 @@ jobs:
 
       - name: Build Functions server
         run: |
-          ./scripts/docker_run ./scripts/runner build-functions-server --server-variant=unsafe
+          ./scripts/docker_run ./scripts/runner build-functions-server
 
       # Generate an index of the hashes of the reproducible artifacts.
       - name: Generate Reproducibility Index
