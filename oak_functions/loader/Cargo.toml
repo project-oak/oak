@@ -48,7 +48,7 @@ tokio = { version = "*", features = [
 ] }
 toml = "*"
 tonic = "*"
-tract-tensorflow = { version = ">= 0.15.9-pre", optional = true }
+tract-tensorflow = { version = "*", optional = true }
 url = "*"
 # Use wasmi in `no_std` mode.
 wasmi = { version = "*", default-features = false, features = ["core"] }
