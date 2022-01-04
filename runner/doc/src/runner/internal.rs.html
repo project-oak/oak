@@ -1206,11 +1206,11 @@
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Completion</span> {
     <span class="attribute">#[<span class="ident">structopt</span>(
         <span class="ident">long</span>,
-        <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;dir to write runner_bash_completion file; defaults to current directory&quot;</span>,
-        <span class="ident">default_value</span> <span class="op">=</span> <span class="string">&quot;&quot;</span>,
+        <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;file name to write runner_bash_completion with full path; defaults to .runner_bash_completion in current directory&quot;</span>,
+        <span class="ident">default_value</span> <span class="op">=</span> <span class="string">&quot;.runner_bash_completion&quot;</span>,
         <span class="ident">parse</span>(<span class="ident">from_os_str</span>)
     )]</span>
-    <span class="kw">pub</span> <span class="ident">out_dir</span>: <span class="ident">PathBuf</span>,
+    <span class="kw">pub</span> <span class="ident">file_name</span>: <span class="ident">PathBuf</span>,
 }
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">StructOpt</span>, <span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>

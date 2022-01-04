@@ -882,6 +882,9 @@
 <span id="882">882</span>
 <span id="883">883</span>
 <span id="884">884</span>
+<span id="885">885</span>
+<span id="886">886</span>
+<span id="887">887</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -960,14 +963,6 @@
 
     <span class="kw">let</span> <span class="ident">opt</span> <span class="op">=</span> <span class="ident">Opt::from_args</span>();
 
-    <span class="kw">if</span> <span class="kw">let</span> <span class="ident">Command::Completion</span>(<span class="ident">completion</span>) <span class="op">=</span> <span class="ident">opt</span>.<span class="ident">cmd</span> {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">out_dir</span> <span class="op">=</span> <span class="ident">completion</span>.<span class="ident">out_dir</span>;
-        <span class="ident">out_dir</span>.<span class="ident">push</span>(<span class="string">&quot;.runner_bash_completion&quot;</span>);
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">file</span> <span class="op">=</span> <span class="ident">std::fs::File::create</span>(<span class="ident">out_dir</span>)<span class="question-mark">?</span>;
-        <span class="ident">Opt::clap</span>().<span class="ident">gen_completions_to</span>(<span class="string">&quot;runner&quot;</span>, <span class="ident">clap::Shell::Bash</span>, <span class="kw-2">&amp;mut</span> <span class="ident">file</span>);
-        <span class="ident">std::process::exit</span>(<span class="number">0</span>);
-    };
-
     <span class="kw">let</span> <span class="ident">run</span> <span class="op">=</span> <span class="kw">async</span> <span class="kw">move</span> <span class="op">|</span><span class="op">|</span> {
         <span class="kw">let</span> <span class="ident">steps</span> <span class="op">=</span> <span class="ident">match_cmd</span>(<span class="kw-2">&amp;</span><span class="ident">opt</span>);
         <span class="comment">// TODO(#396): Add support for running individual commands via command line flags.</span>
@@ -1018,7 +1013,7 @@
         <span class="ident">Command::Format</span>(<span class="kw-2">ref</span> <span class="ident">commits</span>) =&gt; <span class="ident">format</span>(<span class="ident">commits</span>),
         <span class="ident">Command::CheckFormat</span>(<span class="kw-2">ref</span> <span class="ident">commits</span>) =&gt; <span class="ident">check_format</span>(<span class="ident">commits</span>),
         <span class="ident">Command::RunCi</span> =&gt; <span class="ident">run_ci</span>(),
-        <span class="ident">Command::Completion</span>(<span class="kw">_</span>) =&gt; <span class="macro">panic!</span>(<span class="string">&quot;should have been handled before&quot;</span>),
+        <span class="ident">Command::Completion</span>(<span class="kw-2">ref</span> <span class="ident">opt</span>) =&gt; <span class="ident">run_completion</span>(<span class="ident">opt</span>),
         <span class="ident">Command::RunCargoDeny</span> =&gt; <span class="ident">run_cargo_deny</span>(),
         <span class="ident">Command::RunCargoUdeps</span> =&gt; <span class="ident">run_cargo_udeps</span>(),
         <span class="ident">Command::RunCargoClean</span> =&gt; <span class="ident">run_cargo_clean</span>(),
@@ -1271,6 +1266,17 @@
             <span class="ident">run_hadolint</span>(),
             <span class="ident">run_shellcheck</span>(),
         ],
+    }
+}
+
+<span class="kw">fn</span> <span class="ident">run_completion</span>(<span class="ident">completion</span>: <span class="kw-2">&amp;</span><span class="ident">Completion</span>) -&gt; <span class="ident">Step</span> {
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">file</span> <span class="op">=</span> <span class="ident">std::fs::File::create</span>(<span class="ident">completion</span>.<span class="ident">file_name</span>.<span class="ident">clone</span>()).<span class="ident">expect</span>(<span class="string">&quot;file not created&quot;</span>);
+    <span class="ident">Opt::clap</span>().<span class="ident">gen_completions_to</span>(<span class="string">&quot;runner&quot;</span>, <span class="ident">clap::Shell::Bash</span>, <span class="kw-2">&amp;mut</span> <span class="ident">file</span>);
+
+    <span class="comment">// Return an empty step. Otherwise we cannot call run_completion from match_cmd.</span>
+    <span class="ident">Step::Multiple</span> {
+        <span class="ident">name</span>: <span class="string">&quot;cargo completion&quot;</span>.<span class="ident">to_string</span>(),
+        <span class="ident">steps</span>: <span class="macro">vec!</span>[],
     }
 }
 
