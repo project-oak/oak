@@ -46,11 +46,32 @@ docker_run_flags=(
   # To do that, we map the socket from the host and add the right group
   '--volume=/var/run/docker.sock:/var/run/docker.sock'
   "--group-add=$HOST_DOCKER_GID"
+
+  # sccache flags.
+  '--env=RUSTC_WRAPPER=sccache'
+  # Disable cargo incremental compilation, as it conflicts with sccache: https://github.com/mozilla/sccache#rust
+  '--env=CARGO_INCREMENTAL=false'
+  '--env=SCCACHE_GCS_BUCKET=sccache-1'
+  # Enable logging for sccache. See https://github.com/mozilla/sccache#debugging
+  '--env=SCCACHE_ERROR_LOG=/workspace/sccache.log'
+  '--env=SCCACHE_LOG=info'
 )
 
 # Some CI systems (GitHub actions) do not run with an interactive TTY attached.
 if [[ -z "${CI:-}" ]]; then
-  docker_run_flags+=('--interactive')
+  # Local-only flags.
+  docker_run_flags+=(
+    '--interactive'
+    '--env=SCCACHE_GCS_RW_MODE=READ_WRITE'
+    '--env=SCCACHE_GCS_KEY_PATH=/workspace/.oak_remote_cache_key.json'
+  )
+else
+  # CI-only flags.
+  docker_run_flags+=(
+    # We do not have support for passing in a remote cache key, so we need to disable writing to the
+    # remote cache in CI.
+    '--env=SCCACHE_GCS_RW_MODE=READ_ONLY'
+  )
 fi
 
 # Create a new user with a fixed name but with the same uid and gid as the host user, and use that

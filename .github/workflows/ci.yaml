@@ -30,7 +30,7 @@ jobs:
           - build-server --server-variant=experimental
           - build-functions-server --server-variant=unsafe
           - build-functions-server --server-variant=base
-          - run-cargo-tests --cleanup
+          - run-cargo-tests
           - run-bazel-tests
           - run-tests-tsan
           - run-examples --application-variant=rust
@@ -104,6 +104,9 @@ jobs:
         run: |
           ./scripts/docker_run ./scripts/runner --commands ${{ matrix.cmd }}
           df --human-readable
+
+      - name: Print logs
+        run: cat ./sccache.log
 
       - name: Generate root CA certs
         run: ./scripts/docker_run ./scripts/generate_root_ca_certs

@@ -302,16 +302,6 @@ RUN mkdir --parents ${sccache_dir} \
   && curl --location ${sccache_location} | tar --extract --gzip --directory=${sccache_dir} --strip-components=1 \
   && chmod +x ${sccache_dir}/sccache
 
-ENV SCCACHE_GCS_BUCKET sccache-1
-ENV SCCACHE_GCS_KEY_PATH /workspace/.oak_remote_cache_key.json
-ENV SCCACHE_GCS_RW_MODE READ_WRITE
-
-# TODO(#2014): Re-enable sccache once runner runs backend binaries directly rather than using `cargo run`.
-# ENV RUSTC_WRAPPER sccache
-
-# Disable cargo incremental compilation, as it conflicts with sccache: https://github.com/mozilla/sccache#rust
-ENV CARGO_INCREMENTAL false
-
 # We use the `docker` user in order to maintain library paths on different
 # machines and to make Wasm modules reproducible.
 #
@@ -321,7 +311,7 @@ ENV CARGO_INCREMENTAL false
 RUN useradd --shell=/bin/bash --create-home --user-group docker
 
 # To make the scripts available to call from everywhere.
-ENV PATH "/workspace/scripts:${PATH}" 
+ENV PATH "/workspace/scripts:${PATH}"
 
 # Add sourcing of runner_bash_completion file to .bashrc
 RUN echo -e "\n#activate runner auto-complete\nif [ -f /workspace/.runner_bash_completion ]; then\n  source /workspace/.runner_bash_completion \nfi" >> /home/docker/.bashrc

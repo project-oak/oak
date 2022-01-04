@@ -681,7 +681,7 @@ fn run_cargo_fmt(mode: FormatMode, modified_crates: &ModifiedContent) -> Step {
     }
 }
 
-fn featues_excl_introspection_client(entry: &str) -> &str {
+fn features_excl_introspection_client(entry: &str) -> &str {
     // Manually exclude `oak-introspection-client` for `oak_loader` and `oak_runtime` to
     // avoid compile time errors.
     if entry.contains("oak_loader") {
@@ -709,7 +709,7 @@ fn run_cargo_test(opt: &RunTestsOpt, all_affected_crates: &ModifiedContent) -> S
                         &[
                             "test",
                             // Compile and test for all features
-                            featues_excl_introspection_client(&entry),
+                            features_excl_introspection_client(&entry),
                             &format!("--manifest-path={}", &entry),
                         ],
                     ),
@@ -800,7 +800,7 @@ fn run_cargo_clippy(commits: &Commits) -> Step {
                     &[
                         "clippy",
                         "--all-targets",
-                        featues_excl_introspection_client(&entry),
+                        features_excl_introspection_client(&entry),
                         &format!("--manifest-path={}", &entry),
                         "--",
                         "--deny=warnings",
