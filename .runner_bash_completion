@@ -12,7 +12,10 @@ _runner() {
             runner)
                 cmd="runner"
                 ;;
-
+            
+            build-functions-example)
+                cmd+="__build__functions__example"
+                ;;
             build-functions-server)
                 cmd+="__build__functions__server"
                 ;;
