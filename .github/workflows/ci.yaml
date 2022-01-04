@@ -41,7 +41,7 @@ jobs:
             --example-name=hello_world --build-docker
           - run-functions-examples --application-variant=rust
           - run-cargo-fuzz --build-deps -- -max_total_time=2
-
+          - completion
     steps:
       - name: Checkout branch
         uses: actions/checkout@v2

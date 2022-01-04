@@ -226,14 +226,14 @@ _runner() {
             return 0
             ;;
         runner__completion)
-            opts=" -h -V  --help --version --out-dir  "
+            opts=" -h -V  --help --version --file-name  "
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
             fi
             case "${prev}" in
                 
-                --out-dir)
+                --file-name)
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
                     ;;

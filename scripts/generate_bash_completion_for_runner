@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 
-
 readonly BASH_COMPLETION_DIR="$(realpath ".")"
 readonly BASH_COMPLETION_FILE=$BASH_COMPLETION_DIR/.runner_bash_completion 
 
-./scripts/runner completion --out-dir="$BASH_COMPLETION_DIR"
+# defaults to writing .runner_bash_completion in current directory
+./scripts/runner completion
 
 echo "
 Wrote the bash completion file for runner to ${BASH_COMPLETION_FILE}
