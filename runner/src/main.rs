@@ -383,9 +383,7 @@ fn check_format(commits: &Commits) -> Step {
 }
 
 fn run_completion(completion: &Completion) -> Step {
-    let mut out_dir = completion.out_dir.clone();
-    out_dir.push(".runner_bash_completion");
-    let mut file = std::fs::File::create(out_dir).expect("file not created");
+    let mut file = std::fs::File::create(completion.file_name.clone()).expect("file not created");
     Opt::clap().gen_completions_to("runner", clap::Shell::Bash, &mut file);
 
     // Return an empty step. Otherwise we cannot call run_completion from match_cmd.
