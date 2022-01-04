@@ -36,6 +36,7 @@ impl TestManager<'static> {
                 "DoubleWrite" => Self::test_double_write as TestFn,
                 "WriteLog" => Self::test_write_log as TestFn,
                 "StorageGet" => Self::test_storage_get as TestFn,
+                "StorageGetItemNotFound" => Self::test_storage_get_item_not_found as TestFn,
             ],
         }
     }
@@ -84,10 +85,9 @@ impl TestManager<'static> {
         assert_matches!(result, Ok(_));
     }
 
-    /// Tests [`oak_functions_abi::storage_get_item`] when the key in the lookup data. The lookup
+    /// Tests [`oak_functions_abi::storage_get_item`] when the key is in the lookup data. The lookup
     /// data is set in the integration test. The value has to be checked in the integration
     /// test.
-    // TODO(#2414): Add test for ERR_STORAGE_ITEM_NOT_FOUND
     fn test_storage_get(key: &str) {
         let value = oak_functions::storage_get_item(key.as_bytes());
         assert_matches!(value, Ok(_));
@@ -95,6 +95,23 @@ impl TestManager<'static> {
         assert_matches!(value, Some(_));
 
         oak_functions::write_response(&value.unwrap()).expect("Failed to write response.");
+    }
+
+    /// Tests [`oak_functions_abi::storage_get_item`] when the key is not in the lookup data. The
+    /// lookup data is set in the integration test. When no value is found,
+    /// `oak_functions::storage_get_item` returns None.
+    fn test_storage_get_item_not_found(key: &str) {
+        let value = oak_functions::storage_get_item(key.as_bytes());
+        let response_msg = match value {
+            Ok(None) => b"No item found".to_vec(),
+            Ok(Some(mut value)) => {
+                let mut msg = b"Unexpected item found: value: ".to_vec();
+                msg.append(&mut value);
+                msg
+            }
+            Err(_) => b"Unexpected error".to_vec(),
+        };
+        oak_functions::write_response(&response_msg).expect("Failed to write response.")
     }
 
     // TODO(#2415): Add tests for report_metric.
