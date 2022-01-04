@@ -1,0 +1,3 @@
+[build]
+target-dir = "/workspace/oak_functions/target/wasm"
+out-dir = "/workspace/oak_functions/bin"
