@@ -48,7 +48,10 @@ tokio = { version = "*", features = [
 ] }
 toml = "*"
 tonic = "*"
-tract-tensorflow = { version = "*", optional = true }
+# Provide cargo with version 0.15.9-pre, which includes our reproducibility
+# patch: https://github.com/sonos/tract/pull/601. Once 0.15.9 is released, we
+# should revert to loading this crate via crates.io
+tract-tensorflow = { optional = true, git = 'https://github.com/sonos/tract.git', rev = '95afd8d834c1e5ea23bd8b5853476f46d1a219ca' }
 url = "*"
 # Use wasmi in `no_std` mode.
 wasmi = { version = "*", default-features = false, features = ["core"] }
