@@ -40,6 +40,9 @@ _runner() {
             run-cargo-clean)
                 cmd+="__run__cargo__clean"
                 ;;
+            run-cargo-clippy)
+                cmd+="__run__cargo__clippy"
+                ;;
             run-cargo-deny)
                 cmd+="__run__cargo__deny"
                 ;;
@@ -74,7 +77,7 @@ _runner() {
 
     case "${cmd}" in
         runner)
-            opts=" -h -V  --dry-run --commands --logs --keep-going --help --version   run-examples run-functions-examples build-functions-example build-server build-functions-server format check-format run-tests run-cargo-tests run-bazel-tests run-tests-tsan run-cargo-fuzz run-cargo-deny run-cargo-udeps run-ci run-cargo-clean completion help"
+            opts=" -h -V  --dry-run --commands --logs --keep-going --help --version   run-examples run-functions-examples build-functions-example build-server build-functions-server format check-format run-tests run-cargo-clippy run-cargo-tests run-bazel-tests run-tests-tsan run-cargo-fuzz run-cargo-deny run-cargo-udeps run-ci run-cargo-clean completion help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 1 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -301,6 +304,25 @@ _runner() {
             fi
             case "${prev}" in
                 
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
+        runner__run__cargo__clippy)
+            opts=" -h -V  --help --version --commits  "
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                
+                --commits)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
                 *)
                     COMPREPLY=()
                     ;;
