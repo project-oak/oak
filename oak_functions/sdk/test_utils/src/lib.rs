@@ -246,3 +246,12 @@ pub fn get_config_info(
         metrics,
     }
 }
+
+// Assert that string value of the body of the given response matches the expected string.
+pub fn assert_response_body(response: Response, expected: &str) {
+    let body = response.body().unwrap();
+    assert_eq!(
+        std::str::from_utf8(body).expect("could not convert response body from utf8"),
+        expected
+    )
+}

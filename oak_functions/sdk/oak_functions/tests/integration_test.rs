@@ -48,7 +48,7 @@ async fn test_read_write() {
         body: b"ReadWrite".to_vec(),
     };
     let response: Response = wasm_handler.handle_invoke(request).await.unwrap();
-    assert_eq!(response.body().unwrap(), b"ReadWriteResponse");
+    test_utils::assert_response_body(response, "ReadWriteResponse");
 }
 
 #[tokio::test]
@@ -65,7 +65,7 @@ async fn test_double_read() {
         body: b"DoubleRead".to_vec(),
     };
     let response: Response = wasm_handler.handle_invoke(request).await.unwrap();
-    assert_eq!(response.body().unwrap(), b"DoubleReadResponse");
+    test_utils::assert_response_body(response, "DoubleReadResponse");
 }
 
 #[tokio::test]
@@ -82,7 +82,7 @@ async fn test_double_write() {
         body: b"DoubleWrite".to_vec(),
     };
     let response: Response = wasm_handler.handle_invoke(request).await.unwrap();
-    assert_eq!(response.body().unwrap(), b"DoubleWriteResponse");
+    test_utils::assert_response_body(response, "DoubleWriteResponse");
 }
 
 #[tokio::test]
@@ -99,7 +99,7 @@ async fn test_write_log() {
         body: b"WriteLog".to_vec(),
     };
     let response: Response = wasm_handler.handle_invoke(request).await.unwrap();
-    assert_eq!(response.body().unwrap(), b"WriteLogResponse");
+    test_utils::assert_response_body(response, "WriteLogResponse");
 }
 
 #[tokio::test]
@@ -120,5 +120,25 @@ async fn test_storage_get_item() {
         body: b"StorageGet".to_vec(),
     };
     let response: Response = wasm_handler.handle_invoke(request).await.unwrap();
-    assert_eq!(response.body().unwrap(), b"StorageGetResponse");
+    test_utils::assert_response_body(response, "StorageGetResponse");
+}
+
+#[tokio::test]
+async fn test_storage_get_item_not_found() {
+    // empty lookup data, no key will be found
+    let entries = hashmap! {};
+
+    let logger = Logger::for_test();
+    let lookup_data = Arc::new(LookupData::for_test(entries));
+    let lookup_factory = LookupFactory::new_boxed_extension_factory(lookup_data, logger.clone())
+        .expect("could not create LookupFactory");
+
+    let wasm_handler = WasmHandler::create(&WASM_MODULE_BYTES, vec![lookup_factory], logger)
+        .expect("Could not instantiate WasmHandler.");
+
+    let request = Request {
+        body: b"StorageGetItemNotFound".to_vec(),
+    };
+    let response: Response = wasm_handler.handle_invoke(request).await.unwrap();
+    test_utils::assert_response_body(response, "No item found");
 }
