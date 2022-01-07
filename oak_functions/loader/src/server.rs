@@ -19,7 +19,9 @@ use anyhow::Context;
 use byteorder::{ByteOrder, LittleEndian};
 use futures::future::FutureExt;
 use log::Level;
-use oak_functions_abi::proto::{OakStatus, Request, Response, ServerPolicy, StatusCode};
+use oak_functions_abi::proto::{
+    ChannelHandle, OakStatus, Request, Response, ServerPolicy, StatusCode,
+};
 use serde::Deserialize;
 use std::{collections::HashMap, convert::TryInto, str, sync::Arc, time::Duration};
 use tokio::sync::mpsc::{channel, Receiver, Sender};
@@ -145,6 +147,7 @@ pub type BoxedExtensionFactory = Box<dyn ExtensionFactory + Send + Sync>;
 /// single user request. The methods here correspond to the ABI host functions that allow the Wasm
 /// module to exchange the request and the response with the Oak functions server. These functions
 /// translate values between Wasm linear memory and Rust types.
+#[allow(dead_code)]
 pub struct WasmState {
     request_bytes: Vec<u8>,
     response_bytes: Vec<u8>,
@@ -155,6 +158,7 @@ pub struct WasmState {
     extensions_indices: Option<HashMap<usize, BoxedExtension>>,
     /// A mapping of host function names to metadata required for resolving the function.
     extensions_metadata: HashMap<String, (usize, wasmi::Signature)>,
+    pub channel_switchboard: ChannelSwitchboard,
 }
 
 impl WasmState {
@@ -373,6 +377,7 @@ impl WasmState {
         logger: Logger,
         extensions_indices: HashMap<usize, BoxedExtension>,
         extensions_metadata: HashMap<String, (usize, wasmi::Signature)>,
+        channel_switchboard: ChannelSwitchboard,
     ) -> anyhow::Result<WasmState> {
         let mut abi = WasmState {
             request_bytes,
@@ -382,6 +387,7 @@ impl WasmState {
             logger,
             extensions_indices: Some(extensions_indices),
             extensions_metadata,
+            channel_switchboard,
         };
 
         let instance = wasmi::ModuleInstance::new(
@@ -553,7 +559,7 @@ impl WasmHandler {
         })
     }
 
-    pub async fn handle_invoke(&self, request: Request) -> anyhow::Result<Response> {
+    pub fn init_wasm_state(&self, request_bytes: Vec<u8>) -> anyhow::Result<WasmState> {
         let mut extensions_indices = HashMap::new();
         let mut extensions_metadata = HashMap::new();
 
@@ -564,14 +570,32 @@ impl WasmHandler {
             extensions_metadata.insert(name, (ind + EXTENSION_INDEX_OFFSET, signature));
         }
 
-        let request_bytes = request.body;
-        let mut wasm_state = WasmState::new(
+        // hard-coded for now, but should eventually hold default channels, such as
+        // the channel to the client, and channels required by the extensions
+        let handles = vec![ChannelHandle::LookupData];
+
+        // keep switchboard1 for runtime, give the correspondng switchboard2 to the WasmHandler
+        let (_switchboard1, switchboard2) = ChannelSwitchboard::create(handles);
+        // expect eventually to use channels for all communication with the WasmState
+        // i.e.,
+        // _switchboard1.get(CLIENT).write(request_bytes)
+        // and after invoke()
+        // _switchboard1.get(CLIENT).read(request_bytes)
+
+        WasmState::new(
             &self.module,
             request_bytes,
             self.logger.clone(),
             extensions_indices,
             extensions_metadata,
-        )?;
+            switchboard2,
+        )
+    }
+
+    pub async fn handle_invoke(&self, request: Request) -> anyhow::Result<Response> {
+        let request_bytes = request.body;
+        let mut wasm_state = self.init_wasm_state(request_bytes)?;
+
         wasm_state.invoke();
         for mut extension in wasm_state
             .extensions_indices
@@ -679,4 +703,56 @@ pub fn channel_create() -> (Endpoint, Endpoint) {
         receiver: rx0,
     };
     (endpoint0, endpoint1)
+}
+
+pub struct ChannelSwitchboard(HashMap<ChannelHandle, Arc<Endpoint>>);
+
+impl ChannelSwitchboard {
+    pub fn create(handles: Vec<ChannelHandle>) -> (Self, Self) {
+        let mut m1 = HashMap::new();
+        let mut m2 = HashMap::new();
+
+        for handle in handles {
+            let (e1, e2) = channel_create();
+            m1.insert(handle.clone(), Arc::new(e1));
+            m2.insert(handle.clone(), Arc::new(e2));
+        }
+
+        (ChannelSwitchboard(m1), ChannelSwitchboard(m2))
+    }
+
+    pub fn get(&self, handle: &ChannelHandle) -> Option<Arc<Endpoint>> {
+        let endpoint = self.0.get(&handle)?;
+        Some(endpoint.clone())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{super::grpc::create_wasm_handler, *};
+
+    #[tokio::test]
+    async fn test_create_channel_switchboard_in_wasm_state() {
+        let lookup_factory = test_utils::create_empty_lookup_factory();
+
+        let wasm_module_bytes = test_utils::create_some_wasm_module_bytes();
+
+        let wasm_handler =
+            create_wasm_handler(&wasm_module_bytes, vec![lookup_factory], Logger::for_test())
+                .expect("could not create wasm_handler");
+
+        let wasm_state = wasm_handler
+            .init_wasm_state(b"".to_vec())
+            .expect("could not create wasm_state");
+
+        let channel_switchboard = wasm_state.channel_switchboard;
+
+        assert!(&channel_switchboard
+            .get(&ChannelHandle::Unspecified)
+            .is_none());
+
+        assert!(&channel_switchboard
+            .get(&ChannelHandle::LookupData)
+            .is_some());
+    }
 }

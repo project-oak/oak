@@ -11,7 +11,9 @@ cargo_metadata = "*"
 log = "*"
 http = "*"
 hyper = { version = "*", features = ["client", "http1", "runtime", "server"] }
+maplit = "*"
 oak_functions_abi = { path = "../../abi" }
+oak_functions_loader = { path = "../../loader" }
 oak_functions_client = { path = "../../client/rust" }
 oak_remote_attestation = { path = "../../../remote_attestation/rust/" }
 port_check = "*"

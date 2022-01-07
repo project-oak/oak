@@ -22,8 +22,12 @@ use hyper::{
     Body,
 };
 use log::info;
+use maplit::hashmap;
 use oak_functions_abi::proto::{
     ConfigurationInfo, PrivateMetricsConfig, Request, Response, ServerPolicy,
+};
+use oak_functions_loader::{
+    logger::Logger, lookup::LookupFactory, lookup_data::LookupData, server::BoxedExtensionFactory,
 };
 use oak_remote_attestation::crypto::get_sha256;
 use prost::Message;
@@ -254,4 +258,21 @@ pub fn assert_response_body(response: Response, expected: &str) {
         std::str::from_utf8(body).expect("could not convert response body from utf8"),
         expected
     )
+}
+
+// Create a lookup factory with empty lookup data
+pub fn create_empty_lookup_factory() -> BoxedExtensionFactory {
+    let logger = Logger::for_test();
+    let lookup_data = Arc::new(LookupData::for_test(hashmap! {}));
+    let lookup_factory = LookupFactory::new_boxed_extension_factory(lookup_data, logger.clone())
+        .expect("could not create LookupFactory");
+    lookup_factory
+}
+
+// Create some valid wasm bytecode
+pub fn create_some_wasm_module_bytes() -> Vec<u8> {
+    // TODO(mschett): Create a minimal wasm module for tests.
+    const MANIFEST_PATH: &str =
+        "/workspace/oak_functions/examples/key_value_lookup/module/Cargo.toml";
+    compile_rust_wasm(MANIFEST_PATH, false).expect("Couldn't read Wasm module")
 }
