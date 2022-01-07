@@ -259,8 +259,10 @@ pub fn assert_response_body(response: Response, expected: &str) {
 
 // Create some valid wasm bytecode
 pub fn create_some_wasm_module_bytes() -> Vec<u8> {
-    // TODO(mschett): Create a minimal wasm module for tests.
-    const MANIFEST_PATH: &str =
-        "/workspace/oak_functions/examples/key_value_lookup/module/Cargo.toml";
-    compile_rust_wasm(MANIFEST_PATH, false).expect("Couldn't read Wasm module")
+    let mut manifest_path = std::env::current_dir().unwrap();
+    manifest_path.pop();
+    // ramdonly picked one valid wasm module from examples
+    manifest_path.push("examples/key_value_lookup/module/Cargo.toml");
+    compile_rust_wasm(manifest_path.to_str().expect("Invalid target dir"), false)
+        .expect("Couldn't read Wasm module")
 }
