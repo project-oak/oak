@@ -158,7 +158,7 @@ pub struct WasmState {
     extensions_indices: Option<HashMap<usize, BoxedExtension>>,
     /// A mapping of host function names to metadata required for resolving the function.
     extensions_metadata: HashMap<String, (usize, wasmi::Signature)>,
-    pub channel_switchboard: ChannelSwitchboard,
+    channel_switchboard: ChannelSwitchboard,
 }
 
 impl WasmState {
@@ -559,7 +559,7 @@ impl WasmHandler {
         })
     }
 
-    pub fn init_wasm_state(&self, request_bytes: Vec<u8>) -> anyhow::Result<WasmState> {
+    fn init_wasm_state(&self, request_bytes: Vec<u8>) -> anyhow::Result<WasmState> {
         let mut extensions_indices = HashMap::new();
         let mut extensions_metadata = HashMap::new();
 
