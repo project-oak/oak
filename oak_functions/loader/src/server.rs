@@ -729,17 +729,24 @@ impl ChannelSwitchboard {
 
 #[cfg(test)]
 mod tests {
-    use super::{super::grpc::create_wasm_handler, *};
+    use super::{
+        super::{grpc::create_wasm_handler, lookup::LookupFactory, lookup_data::LookupData},
+        *,
+    };
+    use maplit::hashmap;
 
     #[tokio::test]
     async fn test_create_channel_switchboard_in_wasm_state() {
-        let lookup_factory = test_utils::create_empty_lookup_factory();
+        let logger = Logger::for_test();
+        let lookup_data = Arc::new(LookupData::for_test(hashmap! {}));
+        let lookup_factory =
+            LookupFactory::new_boxed_extension_factory(lookup_data, logger.clone())
+                .expect("could not create LookupFactory");
 
         let wasm_module_bytes = test_utils::create_some_wasm_module_bytes();
 
-        let wasm_handler =
-            create_wasm_handler(&wasm_module_bytes, vec![lookup_factory], Logger::for_test())
-                .expect("could not create wasm_handler");
+        let wasm_handler = create_wasm_handler(&wasm_module_bytes, vec![lookup_factory], logger)
+            .expect("could not create wasm_handler");
 
         let wasm_state = wasm_handler
             .init_wasm_state(b"".to_vec())
