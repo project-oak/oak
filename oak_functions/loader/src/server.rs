@@ -714,15 +714,15 @@ impl ChannelSwitchboard {
 
         for handle in handles {
             let (e1, e2) = channel_create();
-            m1.insert(handle.clone(), Arc::new(e1));
-            m2.insert(handle.clone(), Arc::new(e2));
+            m1.insert(handle, Arc::new(e1));
+            m2.insert(handle, Arc::new(e2));
         }
 
         (ChannelSwitchboard(m1), ChannelSwitchboard(m2))
     }
 
     pub fn get(&self, handle: &ChannelHandle) -> Option<Arc<Endpoint>> {
-        let endpoint = self.0.get(&handle)?;
+        let endpoint = self.0.get(handle)?;
         Some(endpoint.clone())
     }
 }
