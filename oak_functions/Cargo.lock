@@ -2832,7 +2832,7 @@ dependencies = [
 [[package]]
 name = "tract-core"
 version = "0.15.9-pre"
-source = "git+https://github.com/sonos/tract.git?rev=95afd8d834c1e5ea23bd8b5853476f46d1a219ca#95afd8d834c1e5ea23bd8b5853476f46d1a219ca"
+source = "git+https://github.com/sonos/tract.git?rev=124dc4c8d31f01ae73a2ec3cc02c0cf3db7a13d4#124dc4c8d31f01ae73a2ec3cc02c0cf3db7a13d4"
 dependencies = [
  "anyhow",
  "bit-set",
@@ -2873,7 +2873,7 @@ dependencies = [
 [[package]]
 name = "tract-data"
 version = "0.15.9-pre"
-source = "git+https://github.com/sonos/tract.git?rev=95afd8d834c1e5ea23bd8b5853476f46d1a219ca#95afd8d834c1e5ea23bd8b5853476f46d1a219ca"
+source = "git+https://github.com/sonos/tract.git?rev=124dc4c8d31f01ae73a2ec3cc02c0cf3db7a13d4#124dc4c8d31f01ae73a2ec3cc02c0cf3db7a13d4"
 dependencies = [
  "anyhow",
  "educe",
@@ -2903,7 +2903,7 @@ dependencies = [
 [[package]]
 name = "tract-hir"
 version = "0.15.9-pre"
-source = "git+https://github.com/sonos/tract.git?rev=95afd8d834c1e5ea23bd8b5853476f46d1a219ca#95afd8d834c1e5ea23bd8b5853476f46d1a219ca"
+source = "git+https://github.com/sonos/tract.git?rev=124dc4c8d31f01ae73a2ec3cc02c0cf3db7a13d4#124dc4c8d31f01ae73a2ec3cc02c0cf3db7a13d4"
 dependencies = [
  "derive-new",
  "educe",
@@ -2938,7 +2938,7 @@ dependencies = [
 [[package]]
 name = "tract-linalg"
 version = "0.15.9-pre"
-source = "git+https://github.com/sonos/tract.git?rev=95afd8d834c1e5ea23bd8b5853476f46d1a219ca#95afd8d834c1e5ea23bd8b5853476f46d1a219ca"
+source = "git+https://github.com/sonos/tract.git?rev=124dc4c8d31f01ae73a2ec3cc02c0cf3db7a13d4#124dc4c8d31f01ae73a2ec3cc02c0cf3db7a13d4"
 dependencies = [
  "cc",
  "derive-new",
@@ -2975,7 +2975,7 @@ dependencies = [
 [[package]]
 name = "tract-nnef"
 version = "0.15.9-pre"
-source = "git+https://github.com/sonos/tract.git?rev=95afd8d834c1e5ea23bd8b5853476f46d1a219ca#95afd8d834c1e5ea23bd8b5853476f46d1a219ca"
+source = "git+https://github.com/sonos/tract.git?rev=124dc4c8d31f01ae73a2ec3cc02c0cf3db7a13d4#124dc4c8d31f01ae73a2ec3cc02c0cf3db7a13d4"
 dependencies = [
  "byteorder",
  "flate2",
@@ -3000,7 +3000,7 @@ dependencies = [
 [[package]]
 name = "tract-pulse"
 version = "0.15.9-pre"
-source = "git+https://github.com/sonos/tract.git?rev=95afd8d834c1e5ea23bd8b5853476f46d1a219ca#95afd8d834c1e5ea23bd8b5853476f46d1a219ca"
+source = "git+https://github.com/sonos/tract.git?rev=124dc4c8d31f01ae73a2ec3cc02c0cf3db7a13d4#124dc4c8d31f01ae73a2ec3cc02c0cf3db7a13d4"
 dependencies = [
  "downcast-rs",
  "lazy_static",
@@ -3021,7 +3021,7 @@ dependencies = [
 [[package]]
 name = "tract-pulse-opl"
 version = "0.15.9-pre"
-source = "git+https://github.com/sonos/tract.git?rev=95afd8d834c1e5ea23bd8b5853476f46d1a219ca#95afd8d834c1e5ea23bd8b5853476f46d1a219ca"
+source = "git+https://github.com/sonos/tract.git?rev=124dc4c8d31f01ae73a2ec3cc02c0cf3db7a13d4#124dc4c8d31f01ae73a2ec3cc02c0cf3db7a13d4"
 dependencies = [
  "downcast-rs",
  "lazy_static",
@@ -3049,7 +3049,7 @@ dependencies = [
 [[package]]
 name = "tract-tensorflow"
 version = "0.15.9-pre"
-source = "git+https://github.com/sonos/tract.git?rev=95afd8d834c1e5ea23bd8b5853476f46d1a219ca#95afd8d834c1e5ea23bd8b5853476f46d1a219ca"
+source = "git+https://github.com/sonos/tract.git?rev=124dc4c8d31f01ae73a2ec3cc02c0cf3db7a13d4#124dc4c8d31f01ae73a2ec3cc02c0cf3db7a13d4"
 dependencies = [
  "bytes",
  "derive-new",
