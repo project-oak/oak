@@ -24,7 +24,7 @@ use std::{
 
 use crate::{
     files::*,
-    internal::{CargoManifest, Commits},
+    internal::{CargoManifest, FilesScope, Scope},
 };
 
 #[derive(Debug)]
@@ -44,17 +44,27 @@ impl ModifiedContent {
     }
 }
 
-// Get all the files that have been modified in the commits specified by `commits`. Does not include
+// Get all the files that have been modified in the given `scope`. Does not include
 // new files, unless they are added to git. If present, `commits.commits` must be a positive number.
 // If it is zero or negative, only the last commit will be considered for finding the modified
 // files. If `commits.commits` is not present, all files will be considered.
-pub fn modified_files(commits: &Commits) -> ModifiedContent {
-    let files = commits.commits.map(|commits| {
+pub fn modified_files(scope: &Scope) -> ModifiedContent {
+    let args = match (&scope.scope, &scope.commits) {
+        (None, Some(commits)) => Some(vec![format!("HEAD~{}", std::cmp::max(1, *commits))]),
+        (Some(ref files_scope), None) => match files_scope {
+            FilesScope::Affected => Some(vec!["main".to_owned()]),
+            FilesScope::All => None,
+        },
+        (None, None) => Some(vec!["main".to_owned()]),
+        _ => panic!("scope and commits cannot both be specified"),
+    };
+
+    let files = args.map(|args| {
         let vec = Command::new("git")
-            .args(&[
-                "diff",
-                "--name-only",
-                &format!("HEAD~{}", std::cmp::max(1, commits)),
+            .args(spread![
+                "diff".to_owned(),
+                "--name-only".to_owned(),
+                ...args,
             ])
             .output()
             .expect("could not get modified files")
@@ -171,8 +181,8 @@ fn imported_proto_files(proto_file_path: String) -> Vec<String> {
 
 /// Path to the `Cargo.toml` files for all crates that are either directly modified or have a
 /// dependency to a modified crate.
-pub fn all_affected_crates(commits: &Commits) -> ModifiedContent {
-    crates_affected_by_files(&modified_files(commits))
+pub fn all_affected_crates(scope: &Scope) -> ModifiedContent {
+    crates_affected_by_files(&modified_files(scope))
 }
 
 fn crates_affected_by_files(files: &ModifiedContent) -> ModifiedContent {

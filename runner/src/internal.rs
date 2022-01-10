@@ -47,10 +47,10 @@ pub enum Command {
     BuildFunctionsExample(RunFunctionsExamples),
     BuildServer(BuildServer),
     BuildFunctionsServer(BuildFunctionsServer),
-    Format(Commits),
-    CheckFormat(Commits),
+    Format(Scope),
+    CheckFormat(Scope),
     RunTests,
-    RunCargoClippy(Commits),
+    RunCargoClippy(Scope),
     RunCargoTests(RunTestsOpt),
     RunBazelTests,
     RunTestsTsan,
@@ -95,11 +95,8 @@ pub struct RunExamples {
     pub server_additional_args: Vec<String>,
     #[structopt(long, help = "build a Docker image for the examples")]
     pub build_docker: bool,
-    #[structopt(
-        flatten,
-        help = "run the command only for files affected by the changes in the specified commits, including unstaged changes in tracked files"
-    )]
-    pub commits: Commits,
+    #[structopt(flatten)]
+    pub scope: Scope,
 }
 
 #[derive(StructOpt, Clone, Debug)]
@@ -139,17 +136,51 @@ pub struct RunFunctionsExamples {
     pub server_additional_args: Vec<String>,
     #[structopt(long, help = "build a Docker image for the examples")]
     pub build_docker: bool,
-    #[structopt(
-        flatten,
-        help = "run the command only for files affected by the changes in the specified commits, including unstaged changes in tracked files"
-    )]
-    pub commits: Commits,
+    #[structopt(flatten)]
+    pub scope: Scope,
 }
 
-#[derive(StructOpt, Clone, Debug, Default)]
-pub struct Commits {
-    #[structopt(long, help = "number of past commits to include in the diff")]
+#[derive(StructOpt, Clone, Debug)]
+
+pub struct Scope {
+    #[structopt(
+        help = "run the command for specified scope [all, affected], defaults to affected; overrides the commits option"
+    )]
+    pub scope: Option<FilesScope>,
+    #[structopt(
+        long,
+        help = "run the command only for files affected by the changes in the specified commits, including unstaged changes in tracked files"
+    )]
     pub commits: Option<u8>,
+}
+
+impl Default for Scope {
+    fn default() -> Self {
+        Self {
+            scope: Some(FilesScope::Affected),
+            commits: None,
+        }
+    }
+}
+
+#[derive(StructOpt, Clone, Debug, PartialEq)]
+
+pub enum FilesScope {
+    // Run the command for all parts of the code based affected by the change.
+    Affected,
+    // Run the command for the entire code base.
+    All,
+}
+
+impl std::str::FromStr for FilesScope {
+    type Err = String;
+    fn from_str(scope: &str) -> Result<Self, Self::Err> {
+        match scope {
+            "affected" => Ok(FilesScope::Affected),
+            "all" => Ok(FilesScope::All),
+            _ => Err(format!("Failed to parse scope {}", scope)),
+        }
+    }
 }
 
 #[derive(StructOpt, Clone, Debug)]
@@ -262,11 +293,8 @@ pub struct RunTestsOpt {
         help = "remove generated files after running tests for each crate"
     )]
     pub cleanup: bool,
-    #[structopt(
-        flatten,
-        help = "run the command only for files affected by the changes in the specified commits, including unstaged changes in tracked files"
-    )]
-    pub commits: Commits,
+    #[structopt(flatten)]
+    pub scope: Scope,
 }
 
 pub trait RustBinaryOptions {

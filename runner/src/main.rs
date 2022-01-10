@@ -119,13 +119,13 @@ fn match_cmd(opt: &Opt) -> Step {
         Command::BuildServer(ref opt) => build_server(opt, vec![]),
         Command::BuildFunctionsServer(ref opt) => build_functions_server(opt, vec![]),
         Command::RunTests => run_tests(),
-        Command::RunCargoClippy(ref commits) => run_cargo_clippy(commits),
+        Command::RunCargoClippy(ref scope) => run_cargo_clippy(scope),
         Command::RunCargoTests(ref opt) => run_cargo_tests(opt),
         Command::RunBazelTests => run_bazel_tests(),
         Command::RunTestsTsan => run_tests_tsan(),
         Command::RunCargoFuzz(ref opt) => run_cargo_fuzz(opt),
-        Command::Format(ref commits) => format(commits),
-        Command::CheckFormat(ref commits) => check_format(commits),
+        Command::Format(ref scope) => format(scope),
+        Command::CheckFormat(ref scope) => check_format(scope),
         Command::RunCi => run_ci(),
         Command::Completion(ref opt) => run_completion(opt),
         Command::RunCargoDeny => run_cargo_deny(),
@@ -159,7 +159,7 @@ fn run_tests() -> Step {
         steps: vec![
             run_cargo_tests(&RunTestsOpt {
                 cleanup: false,
-                commits: Commits::default(),
+                scope: Scope::default(),
             }),
             run_bazel_tests(),
         ],
@@ -167,7 +167,7 @@ fn run_tests() -> Step {
 }
 
 fn run_cargo_tests(opt: &RunTestsOpt) -> Step {
-    let all_affected_crates = all_affected_crates(&opt.commits);
+    let all_affected_crates = all_affected_crates(&opt.scope);
     Step::Multiple {
         name: "cargo tests".to_string(),
         steps: vec![
@@ -343,8 +343,8 @@ pub fn run_fuzz_targets_in_crate(path: &Path, opt: &RunCargoFuzz) -> Step {
     }
 }
 
-fn format(commits: &Commits) -> Step {
-    let modified_files = modified_files(commits);
+fn format(scope: &Scope) -> Step {
+    let modified_files = modified_files(scope);
     let modified_crates = directly_modified_crates(&modified_files);
     Step::Multiple {
         name: "format".to_string(),
@@ -359,8 +359,8 @@ fn format(commits: &Commits) -> Step {
     }
 }
 
-fn check_format(commits: &Commits) -> Step {
-    let modified_files = modified_files(commits);
+fn check_format(scope: &Scope) -> Step {
+    let modified_files = modified_files(scope);
     let modified_crates = directly_modified_crates(&modified_files);
 
     Step::Multiple {
@@ -787,8 +787,8 @@ fn run_cargo_test_tsan() -> Step {
     }
 }
 
-fn run_cargo_clippy(commits: &Commits) -> Step {
-    let all_affected_crates = all_affected_crates(commits);
+fn run_cargo_clippy(scope: &Scope) -> Step {
+    let all_affected_crates = all_affected_crates(scope);
     let modified_crates = directly_modified_crates(&all_affected_crates);
     Step::Multiple {
         name: "cargo clippy".to_string(),
