@@ -20,6 +20,7 @@ bytes = "*"
 byteorder = { version = "*", default-features = false }
 chrono = "*"
 futures = "*"
+grpc_attestation = { path = "../../grpc_attestation/" }
 http = "*"
 hyper = { version = "*", features = [
   "client",

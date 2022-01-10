@@ -19,7 +19,8 @@
 use crate::grpc::handle_request;
 use anyhow::Context;
 use grpc_attestation::{
-    proto::streaming_session_server::StreamingSessionServer, server::AttestationServer,
+    proto::streaming_session_server::StreamingSessionServer,
+    server::{AttestationServer, LogError},
 };
 use log::warn;
 use oak_functions_abi::proto::ConfigurationInfo;
@@ -90,14 +91,13 @@ async fn main() -> anyhow::Result<()> {
 
     let request_handler = async move |request| handle_request(client.clone(), request).await;
 
-    let handler = AttestationServer::create(
-        Vec::new(),
-        request_handler,
-        additional_info,
-        log_attestation_error,
-    )?;
     Server::builder()
-        .add_service(StreamingSessionServer::new(handler))
+        .add_service(StreamingSessionServer::new(AttestationServer::create(
+            Vec::new(),
+            request_handler,
+            additional_info,
+            ErrorLogger {},
+        )?))
         .serve(address)
         .await
         .context("error executing server")?;
@@ -145,6 +145,11 @@ async fn wait_for_socket(socket: &str) -> anyhow::Result<()> {
     Err(anyhow::anyhow!("socket not available in time"))
 }
 
-fn log_attestation_error(error: &str) {
-    warn!("{}", error);
+#[derive(Clone)]
+struct ErrorLogger {}
+
+impl LogError for ErrorLogger {
+    fn log_error(&self, error: &str) {
+        warn!("{}", error);
+    }
 }

@@ -16,12 +16,6 @@
 
 #![feature(async_closure)]
 
-pub mod proto {
-    #![allow(clippy::return_self_not_must_use)]
-    tonic::include_proto!("oak.session.stream.v1");
-}
-
-pub mod attestation;
 pub mod grpc;
 pub mod logger;
 pub mod lookup;

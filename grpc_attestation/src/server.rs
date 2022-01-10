@@ -85,6 +85,11 @@ where
     }
 }
 
+/// Trait for logging error messages.
+pub trait LogError {
+    fn log_error(&self, error: &str);
+}
+
 /// gRPC Attestation Service implementation.
 pub struct AttestationServer<F, L> {
     /// PEM encoded X.509 certificate that signs TEE firmware key.
@@ -102,7 +107,7 @@ impl<F, S, L> AttestationServer<F, L>
 where
     F: Send + Sync + Clone + FnOnce(Vec<u8>) -> S,
     S: std::future::Future<Output = anyhow::Result<Vec<u8>>> + Send + Sync,
-    L: Send + Sync + Clone + Fn(&str),
+    L: Send + Sync + Clone + LogError,
 {
     pub fn create(
         tee_certificate: Vec<u8>,
@@ -124,7 +129,7 @@ impl<F, S, L> StreamingSession for AttestationServer<F, L>
 where
     F: 'static + Send + Sync + Clone + FnOnce(Vec<u8>) -> S,
     S: std::future::Future<Output = anyhow::Result<Vec<u8>>> + Send + Sync + 'static,
-    L: Send + Sync + Clone + Fn(&str) + 'static,
+    L: Send + Sync + Clone + LogError + 'static,
 {
     type StreamStream =
         Pin<Box<dyn Stream<Item = Result<StreamingResponse, Status>> + Send + Sync + 'static>>;
@@ -135,8 +140,8 @@ where
     ) -> Result<Response<Self::StreamStream>, Status> {
         let tee_certificate = self.tee_certificate.clone();
         let request_handler = self.request_handler.clone();
-        let error_logger = self.error_logger.clone();
         let additional_info = self.additional_info.clone();
+        let error_logger = self.error_logger.clone();
 
         let response_stream = async_stream::try_stream! {
             let mut request_stream = request_stream.into_inner();
@@ -144,7 +149,7 @@ where
             let mut handshaker = ServerHandshaker::new(
                 AttestationBehavior::create_self_attestation(&tee_certificate)
                     .map_err(|error| {
-                        error_logger(&format!("Couldn't create self attestation behavior: {:?}", error));
+                        error_logger.log_error(&format!("Couldn't create self attestation behavior: {:?}", error));
                         Status::internal("")
                     })?,
                     additional_info,
@@ -153,18 +158,18 @@ where
                 let incoming_message = request_stream.next()
                     .await
                     .ok_or_else(|| {
-                        error_logger("Stream stopped preemptively");
+                        error_logger.log_error("Stream stopped preemptively");
                         Status::internal("")
                     })?
                     .map_err(|error| {
-                        error_logger(&format!("Couldn't get next message: {:?}", error));
+                        error_logger.log_error(&format!("Couldn't get next message: {:?}", error));
                         Status::internal("")
                     })?;
 
                 let outgoing_message = handshaker
                     .next_step(&incoming_message.body)
                     .map_err(|error| {
-                        error_logger(&format!("Couldn't process handshake message: {:?}", error));
+                        error_logger.log_error(&format!("Couldn't process handshake message: {:?}", error));
                         Status::aborted("")
                     })?;
                 if let Some(outgoing_message) = outgoing_message {
@@ -176,7 +181,7 @@ where
             let encryptor = handshaker
                 .get_encryptor()
                 .map_err(|error| {
-                    error_logger(&format!("Couldn't get encryptor: {:?}", error));
+                    error_logger.log_error(&format!("Couldn't get encryptor: {:?}", error));
                     Status::internal("")
                 })?;
 
@@ -185,7 +190,7 @@ where
                 .handle_next_request()
                 .await
                 .map_err(|error| {
-                    error_logger(&format!("Couldn't handle request: {:?}", error));
+                    error_logger.log_error(&format!("Couldn't handle request: {:?}", error));
                     Status::aborted("")
                 })?
             {

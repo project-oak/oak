@@ -367,6 +367,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "grpc_attestation"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-stream",
+ "futures",
+ "oak_functions_abi",
+ "oak_remote_attestation",
+ "oak_utils",
+ "prost 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "prost-types 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tokio",
+ "tonic",
+ "tower",
+]
+
+[[package]]
 name = "h2"
 version = "0.3.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -714,6 +731,7 @@ dependencies = [
  "bytes",
  "chrono",
  "futures",
+ "grpc_attestation",
  "http",
  "humantime-serde",
  "hyper",
@@ -1373,7 +1391,9 @@ dependencies = [
  "memchr",
  "mio",
  "num_cpus",
+ "once_cell",
  "pin-project-lite",
+ "signal-hook-registry",
  "tokio-macros",
  "winapi",
 ]
