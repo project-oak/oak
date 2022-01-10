@@ -25,10 +25,7 @@ use oak_abi::{
 };
 use oak_client::interceptors::label::LabelInterceptor;
 use oak_sign::get_sha256;
-use std::{
-    collections::HashMap,
-    convert::{From, TryFrom},
-};
+use std::{collections::HashMap, convert::From};
 use tonic::{service::interceptor::InterceptedService, transport::Channel};
 
 const WASM_MODULE_MANIFEST: &str = "../../module/rust/Cargo.toml";

@@ -5,7 +5,12 @@
 This example requires a valid signature of the `handler` module. So, whenever
 the code is modified, the wasm module and the signature must be regenerated:
 
-1. Build the example, including the Wasm module
+1. Build the example, including the Wasm module:
+
+   ```bash
+   ./scripts/runner run-examples --example-name=private_set_intersection --run-server=false
+   ```
+
 1. Sign the module with the test key that is checked in the repository (only for
    test / debug use):
 

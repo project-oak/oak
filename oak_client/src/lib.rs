@@ -27,7 +27,7 @@ pub mod interceptors;
 /// Creates a TLS channel for connecting to Oak.
 pub async fn create_tls_channel(uri: &Uri, root_tls_certificate: &[u8]) -> anyhow::Result<Channel> {
     let tls_config =
-        ClientTlsConfig::new().ca_certificate(Certificate::from_pem(root_tls_certificate.to_vec()));
+        ClientTlsConfig::new().ca_certificate(Certificate::from_pem(root_tls_certificate));
     Channel::builder(uri.clone())
         .tls_config(tls_config)
         .context("Couldn't create TLS configuration")?

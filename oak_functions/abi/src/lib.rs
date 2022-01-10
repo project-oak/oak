@@ -42,8 +42,6 @@ pub mod proto {
         /// Uses the effective length of the body, in `self.length`, to remove the trailing 0s.
         /// Returns as error if `self.length` cannot be converted to `usize` due to an overflow.
         pub fn body(&self) -> Result<&[u8], std::num::TryFromIntError> {
-            use std::convert::TryFrom;
-
             let length = usize::try_from(self.length)?;
             Ok(&self.body.as_slice()[..length])
         }

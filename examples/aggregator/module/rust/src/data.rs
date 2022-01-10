@@ -16,10 +16,7 @@
 
 use crate::proto::oak::examples::aggregator::SerializedSparseVector;
 use aggregator_common::Monoid;
-use std::{
-    collections::HashMap,
-    convert::{From, TryFrom},
-};
+use std::{collections::HashMap, convert::From};
 
 // Sparse Vectors are stored as Hash Maps.
 #[derive(Clone, Debug, PartialEq)]

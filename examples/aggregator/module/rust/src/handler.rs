@@ -23,7 +23,7 @@ use crate::{
 use aggregator_common::{AggregatorResult, ThresholdAggregator};
 use log::{debug, error};
 use oak::{grpc, io::Sender};
-use std::{collections::HashMap, convert::TryFrom};
+use std::collections::HashMap;
 
 /// Currently threshold value is hardcoded.
 pub const SAMPLE_THRESHOLD: u64 = 5;

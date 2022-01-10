@@ -68,13 +68,10 @@ fn affected_example_toml_filles(affected_crates: Vec<String>) -> Box<dyn Iterato
 
     // Using the regular expression above, find paths to the root folders of all examples that are
     // affected by recent changes.
-    let modified_examples = affected_crates
-        .into_iter()
-        .map(move |path| {
-            re.captures(&path)
-                .map(|caps| format!("{}/examples/{}", &caps[1], &caps[2]))
-        })
-        .flatten();
+    let modified_examples = affected_crates.into_iter().filter_map(move |path| {
+        re.captures(&path)
+            .map(|caps| format!("{}/examples/{}", &caps[1], &caps[2]))
+    });
 
     // Iterate through all `example.toml` files and choose and return the ones that belong to the
     // affected examples

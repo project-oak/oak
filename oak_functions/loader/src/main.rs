@@ -304,16 +304,13 @@ fn get_config_info(
 ) -> anyhow::Result<ConfigurationInfo> {
     #[cfg(feature = "oak-metrics")]
     let metrics = match &config.metrics {
-        Some(ref metrics_config) => {
-            use std::convert::TryInto;
-            Some(oak_functions_abi::proto::PrivateMetricsConfig {
-                epsilon: metrics_config.epsilon,
-                batch_size: metrics_config
-                    .batch_size
-                    .try_into()
-                    .context("could not convert usize to u32")?,
-            })
-        }
+        Some(ref metrics_config) => Some(oak_functions_abi::proto::PrivateMetricsConfig {
+            epsilon: metrics_config.epsilon,
+            batch_size: metrics_config
+                .batch_size
+                .try_into()
+                .context("could not convert usize to u32")?,
+        }),
         None => None,
     };
     #[cfg(not(feature = "oak-metrics"))]

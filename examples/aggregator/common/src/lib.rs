@@ -22,6 +22,7 @@ mod tests;
 /// https://en.wikipedia.org/wiki/Monoid
 pub trait Monoid {
     fn identity() -> Self;
+    #[must_use]
     fn combine(&self, other: &Self) -> Self;
 }
 

@@ -17,6 +17,7 @@
 pub mod proto {
     // Suppress warning: `large size difference between variants`.
     #![allow(clippy::large_enum_variant)]
+    #![allow(clippy::return_self_not_must_use)]
     tonic::include_proto!("tensorflow");
     pub mod serving {
         tonic::include_proto!("tensorflow.serving");
@@ -24,7 +25,6 @@ pub mod proto {
 }
 
 pub use proto::serving::{prediction_service_client::PredictionServiceClient, PredictRequest};
-use std::convert::TryFrom;
 use tokio::net::UnixStream;
 use tonic::transport::{Channel, Endpoint, Uri};
 use tower::service_fn;

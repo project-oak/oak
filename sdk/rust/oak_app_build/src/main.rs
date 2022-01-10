@@ -136,7 +136,7 @@ fn get_output_file_path(manifest_dir: &Path, app_name: &str) -> PathBuf {
 fn get_sha256(data: &[u8]) -> String {
     let mut hasher = Sha256::new();
     hasher.update(data);
-    hex::encode(hasher.finalize().as_slice().to_vec())
+    hex::encode(hasher.finalize().as_slice())
 }
 
 /// Download file from `url`.

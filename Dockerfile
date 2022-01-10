@@ -139,9 +139,9 @@ RUN go get github.com/raviqqe/liche@3ac05a3 \
 # This will use the Node version installed by emscripten.
 # https://prettier.io/
 # https://github.com/igorshubovych/markdownlint-cli
-ARG prettier_version=2.4.1
+ARG prettier_version=2.5.1
 ARG prettier_plugin_toml_version=0.3.1
-ARG markdownlint_version=0.24.0
+ARG markdownlint_version=0.30.0
 RUN npm install --global \
   prettier@${prettier_version} \
   prettier-plugin-toml@${prettier_plugin_toml_version} \
@@ -151,8 +151,8 @@ RUN npm install --global \
 
 # Install hadolint.
 # https://github.com/hadolint/hadolint
-ARG hadolint_version=2.7.0
-ARG hadolint_sha256=cdd5ca6f07f72053e8f2d18a9390a7b7fc6e819b6a251835971411f300dab8e6
+ARG hadolint_version=2.8.0
+ARG hadolint_sha256=9dfc155139a1e1e9b3b28f3de9907736b9dfe7cead1c3a0ae7ff0158f3191674
 ARG hadolint_dir=/usr/local/hadolint/bin
 ARG hadolint_bin=${hadolint_dir}/hadolint
 ENV PATH "${hadolint_dir}:${PATH}"
@@ -202,7 +202,7 @@ RUN curl --location https://sh.rustup.rs > /tmp/rustup \
 # We currently need the nightly version in order to be able to compile some of the examples.
 # See https://rust-lang.github.io/rustup-components-history/ for how to pick a version that supports
 # the appropriate set of components.
-ARG rust_version=nightly-2021-11-02
+ARG rust_version=nightly-2022-01-09
 RUN rustup toolchain install ${rust_version} \
   && rustup default ${rust_version}
 
@@ -220,7 +220,7 @@ RUN rustup component add \
 
 # No binary available on Github, have to use cargo install.
 # https://github.com/deadlinks/cargo-deadlinks
-ARG deadlinks_version=0.8.0
+ARG deadlinks_version=0.8.1
 RUN cargo install --version=${deadlinks_version} cargo-deadlinks
 
 # Install cargo-fuzz.
@@ -249,14 +249,14 @@ RUN chmod +x ${install_dir}/cargo-crev
 
 # Install cargo-deny
 # https://github.com/EmbarkStudios/cargo-deny
-ARG deny_version=0.9.1
+ARG deny_version=0.11.0
 ARG deny_location=https://github.com/EmbarkStudios/cargo-deny/releases/download/${deny_version}/cargo-deny-${deny_version}-x86_64-unknown-linux-musl.tar.gz
 RUN curl --location ${deny_location} | tar --extract --gzip --directory=${install_dir} --strip-components=1
 RUN chmod +x ${install_dir}/cargo-deny
 
 # Install cargo-udeps
 # https://github.com/est31/cargo-udeps
-ARG udeps_version=v0.1.23
+ARG udeps_version=v0.1.25
 ARG udeps_dir=cargo-udeps-${udeps_version}-x86_64-unknown-linux-gnu
 ARG udeps_location=https://github.com/est31/cargo-udeps/releases/download/${udeps_version}/cargo-udeps-${udeps_version}-x86_64-unknown-linux-gnu.tar.gz
 RUN curl --location ${udeps_location} | tar --extract --gzip --directory=${install_dir} --strip-components=2 ./${udeps_dir}/cargo-udeps
@@ -264,7 +264,7 @@ RUN chmod +x ${install_dir}/cargo-udeps
 
 # Install rust-analyzer
 # https://github.com/rust-analyzer/rust-analyzer
-ARG rust_analyzer_version=2021-08-16
+ARG rust_analyzer_version=2022-01-10
 ARG rust_analyzer_location=https://github.com/rust-analyzer/rust-analyzer/releases/download/${rust_analyzer_version}/rust-analyzer-x86_64-unknown-linux-gnu.gz
 RUN curl --location ${rust_analyzer_location} | gzip --decompress "$@" > ${install_dir}/rust-analyzer
 RUN chmod +x ${install_dir}/rust-analyzer
@@ -321,7 +321,7 @@ ENV CARGO_INCREMENTAL false
 RUN useradd --shell=/bin/bash --create-home --user-group docker
 
 # To make the scripts available to call from everywhere.
-ENV PATH "/workspace/scripts:${PATH}" 
+ENV PATH "/workspace/scripts:${PATH}"
 
 # Add sourcing of runner_bash_completion file to .bashrc
 RUN echo -e "\n#activate runner auto-complete\nif [ -f /workspace/.runner_bash_completion ]; then\n  source /workspace/.runner_bash_completion \nfi" >> /home/docker/.bashrc
