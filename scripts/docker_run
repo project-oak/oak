@@ -17,6 +17,7 @@ fi
 
 mkdir -p './bazel-cache'
 mkdir -p './cargo-cache'
+mkdir -p './sccache-cache'
 
 # The default user for a Docker container has uid 0 (root). To avoid creating
 # root-owned files in the build directory we tell Docker to use the current user
@@ -39,6 +40,7 @@ docker_run_flags=(
   '--env=HOST_GID'
   "--volume=$PWD/bazel-cache:/home/docker/.cache/bazel"
   "--volume=$PWD/cargo-cache:/home/docker/.cargo"
+  "--volume=$PWD/sccache-cache:/home/docker/.cache/sccache"
   "--volume=$PWD:/workspace"
   '--workdir=/workspace'
   '--network=host'
