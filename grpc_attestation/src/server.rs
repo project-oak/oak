@@ -29,7 +29,7 @@ use tonic::{Request, Response, Status, Streaming};
 /// Handler for subsequent encrypted requests from the stream after the handshake is completed.
 struct EncryptedRequestHandler<F, S>
 where
-    F: Send + Sync + Clone + FnOnce(oak_functions_abi::proto::Request) -> S,
+    F: Send + Sync + Clone + FnOnce(Vec<u8>) -> S,
     S: std::future::Future<Output = anyhow::Result<Vec<u8>>> + Send + Sync,
 {
     /// The stream of incoming requests.
@@ -43,7 +43,7 @@ where
 
 impl<F, S> EncryptedRequestHandler<F, S>
 where
-    F: Send + Sync + Clone + FnOnce(oak_functions_abi::proto::Request) -> S,
+    F: Send + Sync + Clone + FnOnce(Vec<u8>) -> S,
     S: std::future::Future<Output = anyhow::Result<Vec<u8>>> + Send + Sync,
 {
     pub fn new(
@@ -70,10 +70,7 @@ where
                 .decrypt(&encrypted_request.body)
                 .context("Couldn't decrypt request")?;
 
-            let response = (self.cleartext_handler.clone())(oak_functions_abi::proto::Request {
-                body: decrypted_request,
-            })
-            .await?;
+            let response = (self.cleartext_handler.clone())(decrypted_request).await?;
             let encrypted_response = self
                 .encryptor
                 .encrypt(&response)
@@ -103,7 +100,7 @@ pub struct AttestationServer<F, L> {
 
 impl<F, S, L> AttestationServer<F, L>
 where
-    F: Send + Sync + Clone + FnOnce(oak_functions_abi::proto::Request) -> S,
+    F: Send + Sync + Clone + FnOnce(Vec<u8>) -> S,
     S: std::future::Future<Output = anyhow::Result<Vec<u8>>> + Send + Sync,
     L: Send + Sync + Clone + Fn(&str),
 {
@@ -125,7 +122,7 @@ where
 #[tonic::async_trait]
 impl<F, S, L> StreamingSession for AttestationServer<F, L>
 where
-    F: 'static + Send + Sync + Clone + FnOnce(oak_functions_abi::proto::Request) -> S,
+    F: 'static + Send + Sync + Clone + FnOnce(Vec<u8>) -> S,
     S: std::future::Future<Output = anyhow::Result<Vec<u8>>> + Send + Sync + 'static,
     L: Send + Sync + Clone + Fn(&str) + 'static,
 {

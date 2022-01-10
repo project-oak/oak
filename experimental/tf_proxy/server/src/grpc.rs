@@ -24,10 +24,13 @@ pub mod proto {
     }
 }
 
+use anyhow::Context;
+use futures::task::Poll;
+use pin_project_lite::pin_project;
+use prost::Message;
 pub use proto::serving::{prediction_service_client::PredictionServiceClient, PredictRequest};
 use tokio::net::UnixStream;
 use tonic::transport::{Channel, Endpoint, Uri};
-use tower::service_fn;
 
 /// Connection to the prediction service that can be used for creating new clients.
 pub struct BackendConnection {
@@ -52,5 +55,44 @@ impl BackendConnection {
     /// Creates a new client.
     pub fn create_client(&self) -> PredictionServiceClient<Channel> {
         PredictionServiceClient::new(self.channel.clone())
+    }
+}
+
+pub async fn handle_request(
+    mut client: PredictionServiceClient<Channel>,
+    cleartext_request: Vec<u8>,
+) -> anyhow::Result<Vec<u8>> {
+    let predict_request =
+        PredictRequest::decode(&*cleartext_request).context("couldn't parse decrypted request")?;
+    // Wrap the gRPC client call to make it `Sync`.
+    let sync_predict = FutureSyncWrapper {
+        inner: SyncWrapper::new(client.predict(predict_request)),
+    };
+    let response = sync_predict
+        .await
+        .context("couldn't execute prediction")?
+        .into_inner();
+
+    let wrapped_response = oak_functions_abi::proto::Response::create(
+        oak_functions_abi::proto::StatusCode::Success,
+        response.encode_to_vec(),
+    );
+    Ok(wrapped_response.encode_to_vec())
+}
+
+pin_project! {
+    /// Utility wrapper to implement `Sync` for `Future`s by wrapping the inner Future in a
+    /// `SyncWrapper`.
+    struct FutureSyncWrapper<F> {
+        #[pin]
+        inner: SyncWrapper<F>,
+    }
+}
+
+impl<F: Future> Future for FutureSyncWrapper<F> {
+    type Output = F::Output;
+
+    fn poll(self: Pin<&mut Self>, cx: &mut std::task::Context) -> Poll<Self::Output> {
+        self.project().inner.get_pin_mut().poll(cx)
     }
 }
