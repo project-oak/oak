@@ -25,6 +25,7 @@ use log::info;
 use oak_functions_abi::proto::{
     ConfigurationInfo, PrivateMetricsConfig, Request, Response, ServerPolicy,
 };
+
 use oak_remote_attestation::crypto::get_sha256;
 use prost::Message;
 use std::{
@@ -254,4 +255,14 @@ pub fn assert_response_body(response: Response, expected: &str) {
         std::str::from_utf8(body).expect("could not convert response body from utf8"),
         expected
     )
+}
+
+// Create some valid wasm bytecode
+pub fn create_some_wasm_module_bytes() -> Vec<u8> {
+    let mut manifest_path = std::env::current_dir().unwrap();
+    manifest_path.pop();
+    // ramdonly picked one valid wasm module from examples
+    manifest_path.push("examples/key_value_lookup/module/Cargo.toml");
+    compile_rust_wasm(manifest_path.to_str().expect("Invalid target dir"), false)
+        .expect("Couldn't read Wasm module")
 }

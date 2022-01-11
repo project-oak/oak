@@ -39,7 +39,7 @@ const MANIFEST_PATH: &str = "examples/key_value_lookup/module/Cargo.toml";
 async fn test_valid_policy() {
     // Policy values are large enough to allow successful serving of the request, and responding
     // with the actual response from the Wasm module.
-    let constant_processing_time = Duration::from_millis(200);
+    let constant_processing_time = Duration::from_millis(500);
     let policy = ServerPolicy {
         constant_response_size_bytes: 100,
         constant_processing_time_ms: constant_processing_time.as_millis() as u32,
