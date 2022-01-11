@@ -302,12 +302,9 @@ RUN mkdir --parents ${sccache_dir} \
   && curl --location ${sccache_location} | tar --extract --gzip --directory=${sccache_dir} --strip-components=1 \
   && chmod +x ${sccache_dir}/sccache
 
-ENV SCCACHE_GCS_BUCKET sccache-1
-ENV SCCACHE_GCS_KEY_PATH /workspace/.oak_remote_cache_key.json
-ENV SCCACHE_GCS_RW_MODE READ_WRITE
+# By default, sccache uses `~/.cache/sccache` locally: https://github.com/mozilla/sccache#local.
 
-# TODO(#2014): Re-enable sccache once runner runs backend binaries directly rather than using `cargo run`.
-# ENV RUSTC_WRAPPER sccache
+ENV RUSTC_WRAPPER sccache
 
 # Disable cargo incremental compilation, as it conflicts with sccache: https://github.com/mozilla/sccache#rust
 ENV CARGO_INCREMENTAL false

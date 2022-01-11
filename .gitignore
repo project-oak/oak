@@ -11,6 +11,7 @@
 
 # Cargo cache.
 /cargo-cache/
+/sccache-cache/
 
 # Cargo timing files.
 cargo-timing*.html
