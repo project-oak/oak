@@ -15,18 +15,18 @@
 //
 
 use futures_core::Stream;
+use proto::{
+    hello_world_server::{HelloWorld, HelloWorldServer},
+    HelloRequest, HelloResponse,
+};
 use std::pin::Pin;
 use tonic::{
     transport::{Identity, Server, ServerTlsConfig},
     Request, Response, Status, Streaming,
 };
 
-use proto::{
-    hello_world_server::{HelloWorld, HelloWorldServer},
-    HelloRequest, HelloResponse,
-};
-
 pub mod proto {
+    #![allow(clippy::return_self_not_must_use)]
     tonic::include_proto!("oak.examples.hello_world");
 }
 

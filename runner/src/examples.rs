@@ -712,7 +712,7 @@ pub fn build_wasm_module(name: &str, target: &Target, example_name: &str) -> Ste
                                     "wasm32" => "wasm",
                                     _ => panic!("unsupported Bazel config: {}", config),
                                 },
-                                bazel_target.replace("//", "").replace(":", "/")
+                                bazel_target.replace("//", "").replace(':', "/")
                             ),
                             format!("examples/{}/bin", example_name),
                         ],

@@ -7,7 +7,7 @@ authors = [
   "David Drysdale <drysdale@google.com>",
   "Ben Blaxill<benblaxill@google.com>"
 ]
-edition = "2018"
+edition = "2021"
 license = "Apache-2.0"
 
 [features]

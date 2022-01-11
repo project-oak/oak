@@ -40,6 +40,7 @@
 //! Where `--database-size` specifies the size (number of entries) of the generated database.
 
 mod proto {
+    #![allow(clippy::return_self_not_must_use)]
     tonic::include_proto!("oak.examples.trusted_database");
 }
 

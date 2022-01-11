@@ -30,7 +30,7 @@ impl From<&Response<Vec<u8>>> for HttpResponse {
     }
 }
 
-impl std::convert::TryFrom<HttpResponse> for Response<Vec<u8>> {
+impl TryFrom<HttpResponse> for Response<Vec<u8>> {
     type Error = OakStatus;
     fn try_from(response: HttpResponse) -> Result<Self, Self::Error> {
         let mut builder = Response::builder().status(
@@ -51,7 +51,7 @@ impl std::convert::TryFrom<HttpResponse> for Response<Vec<u8>> {
     }
 }
 
-impl std::convert::TryFrom<HttpRequest> for Request<Vec<u8>> {
+impl TryFrom<HttpRequest> for Request<Vec<u8>> {
     type Error = OakStatus;
     fn try_from(request: HttpRequest) -> Result<Self, Self::Error> {
         let mut builder = Request::builder()

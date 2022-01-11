@@ -103,7 +103,7 @@ mod linear_handles {
 
     fn clone_handle(handle: Handle) -> Handle {
         assert!(
-            !(handle == oak_abi::INVALID_HANDLE),
+            handle != oak_abi::INVALID_HANDLE,
             "Cannot clone() INVALID_HANDLE"
         );
         let mut cloned_handle = 0;
@@ -112,7 +112,7 @@ mod linear_handles {
         let result = OakStatus::from_i32(status)
             .unwrap_or_else(|| panic!("handle_clone returned invalid oak status: {}", status));
         assert!(
-            !(result != OakStatus::Ok),
+            result == OakStatus::Ok,
             "Failed to clone handle: {}",
             result
         );

@@ -14,6 +14,7 @@
 // limitations under the License.
 
 pub mod proto {
+    #![allow(clippy::return_self_not_must_use)]
     tonic::include_proto!("oak.session.stream.v1");
 }
 

@@ -16,17 +16,17 @@
 
 use futures_core::Stream;
 use futures_util::StreamExt;
+use proto::{
+    hello_world_server::{HelloWorld, HelloWorldServer},
+    HelloRequest, HelloResponse,
+};
 use std::pin::Pin;
 use tokio::sync::mpsc;
 use tokio_stream::wrappers::ReceiverStream;
 use tonic::{transport::Server, Request, Response, Status, Streaming};
 
-use proto::{
-    hello_world_server::{HelloWorld, HelloWorldServer},
-    HelloRequest, HelloResponse,
-};
-
 pub mod proto {
+    #![allow(clippy::return_self_not_must_use)]
     tonic::include_proto!("oak.examples.hello_world");
 }
 

@@ -104,7 +104,7 @@ async fn create_proxy_client(
     root_tls_certificate: &[u8],
 ) -> anyhow::Result<ProxyAttestationClient<Channel>> {
     let tls_config =
-        ClientTlsConfig::new().ca_certificate(Certificate::from_pem(root_tls_certificate.to_vec()));
+        ClientTlsConfig::new().ca_certificate(Certificate::from_pem(root_tls_certificate));
     let channel = Channel::builder(uri.clone())
         .tls_config(tls_config)
         .context("Couldn't create TLS configuration")?

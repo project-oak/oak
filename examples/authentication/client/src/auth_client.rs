@@ -19,6 +19,7 @@ use tonic::transport::{Certificate, Channel, ClientTlsConfig};
 use url::Url;
 
 pub mod proto {
+    #![allow(clippy::return_self_not_must_use)]
     tonic::include_proto!("oak.authentication");
 }
 

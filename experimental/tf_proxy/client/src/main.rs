@@ -31,6 +31,7 @@ mod data;
 mod proto {
     // Suppress warning: `all variants have the same prefix: `Dt``.
     #![allow(clippy::enum_variant_names)]
+    #![allow(clippy::return_self_not_must_use)]
     tonic::include_proto!("tensorflow");
     pub mod serving {
         tonic::include_proto!("tensorflow.serving");
