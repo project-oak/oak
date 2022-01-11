@@ -692,6 +692,10 @@ fn run_cargo_test(opt: &RunTestsOpt, all_affected_crates: &ModifiedContent) -> S
                             "test",
                             "--all-features",
                             &format!("--manifest-path={}", &entry),
+                            // Add host target as default for tests to overwrite wasm
+                            // default-targets in tests.
+                            // Assumes our host target triple is "x86_64-unknown-linux-gnu".
+                            "--target=x86_64-unknown-linux-gnu",
                         ],
                     ),
                 };
