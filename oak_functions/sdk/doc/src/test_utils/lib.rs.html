@@ -257,6 +257,17 @@
 <span id="255">255</span>
 <span id="256">256</span>
 <span id="257">257</span>
+<span id="258">258</span>
+<span id="259">259</span>
+<span id="260">260</span>
+<span id="261">261</span>
+<span id="262">262</span>
+<span id="263">263</span>
+<span id="264">264</span>
+<span id="265">265</span>
+<span id="266">266</span>
+<span id="267">267</span>
+<span id="268">268</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2021 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -284,6 +295,7 @@
 <span class="kw">use</span> <span class="ident">oak_functions_abi::proto</span>::{
     <span class="ident">ConfigurationInfo</span>, <span class="ident">PrivateMetricsConfig</span>, <span class="ident">Request</span>, <span class="ident">Response</span>, <span class="ident">ServerPolicy</span>,
 };
+
 <span class="kw">use</span> <span class="ident">oak_remote_attestation::crypto::get_sha256</span>;
 <span class="kw">use</span> <span class="ident">prost::Message</span>;
 <span class="kw">use</span> <span class="ident">std</span>::{
@@ -513,6 +525,16 @@
         <span class="ident">std::str::from_utf8</span>(<span class="ident">body</span>).<span class="ident">expect</span>(<span class="string">&quot;could not convert response body from utf8&quot;</span>),
         <span class="ident">expected</span>
     )
+}
+
+<span class="comment">// Create some valid wasm bytecode</span>
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">create_some_wasm_module_bytes</span>() -&gt; <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span> {
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">manifest_path</span> <span class="op">=</span> <span class="ident">std::env::current_dir</span>().<span class="ident">unwrap</span>();
+    <span class="ident">manifest_path</span>.<span class="ident">pop</span>();
+    <span class="comment">// ramdonly picked one valid wasm module from examples</span>
+    <span class="ident">manifest_path</span>.<span class="ident">push</span>(<span class="string">&quot;examples/key_value_lookup/module/Cargo.toml&quot;</span>);
+    <span class="ident">compile_rust_wasm</span>(<span class="ident">manifest_path</span>.<span class="ident">to_str</span>().<span class="ident">expect</span>(<span class="string">&quot;Invalid target dir&quot;</span>), <span class="bool-val">false</span>)
+        .<span class="ident">expect</span>(<span class="string">&quot;Couldn&#39;t read Wasm module&quot;</span>)
 }
 </code></pre></div>
 </section><section id="search" class="content hidden"></section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="test_utils" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.60.0-nightly (a7e2e3396 2022-01-08)" ></div>
