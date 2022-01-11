@@ -18,4 +18,4 @@ tokio = { version = "*", features = [
   "sync",
   "rt-multi-thread"
 ] }
-tract-tensorflow = "*"
+tract-tensorflow = { version = ">= 0.15.9-pre" }
