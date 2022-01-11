@@ -29,8 +29,11 @@ use futures::task::Poll;
 use pin_project_lite::pin_project;
 use prost::Message;
 pub use proto::serving::{prediction_service_client::PredictionServiceClient, PredictRequest};
+use std::{future::Future, pin::Pin};
+use sync_wrapper::SyncWrapper;
 use tokio::net::UnixStream;
 use tonic::transport::{Channel, Endpoint, Uri};
+use tower::service_fn;
 
 /// Connection to the prediction service that can be used for creating new clients.
 pub struct BackendConnection {
