@@ -6,6 +6,8 @@
 [![Slack](https://img.shields.io/badge/slack-project--oak-purple?logo=slack&style=for-the-badge)](https://join.slack.com/t/project-oak/shared_invite/zt-5hiliinq-f0fYZGwlzfH3kMrJuu3qlw)
 [![Mailing list](https://img.shields.io/badge/mailing_list-project--oak--discuss-red?logo=gmail&style=for-the-badge)](https://groups.google.com/g/project-oak-discuss)
 
+TEST
+
 The goal of Project Oak is to create a specification and a reference
 implementation for the secure transfer, storage and processing of data.
 
