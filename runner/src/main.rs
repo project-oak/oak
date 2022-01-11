@@ -122,14 +122,14 @@ fn match_cmd(opt: &Opt) -> Step {
         Command::RunCargoClippy(ref scope) => run_cargo_clippy(scope),
         Command::RunCargoTests(ref opt) => run_cargo_tests(opt),
         Command::RunBazelTests => run_bazel_tests(),
-        Command::RunTestsTsan => run_tests_tsan(),
+        Command::RunTestsTsan(ref scope) => run_tests_tsan(scope),
         Command::RunCargoFuzz(ref opt) => run_cargo_fuzz(opt),
         Command::Format(ref scope) => format(scope),
         Command::CheckFormat(ref scope) => check_format(scope),
         Command::RunCi => run_ci(),
         Command::Completion(ref opt) => run_completion(opt),
         Command::RunCargoDeny => run_cargo_deny(),
-        Command::RunCargoUdeps => run_cargo_udeps(),
+        Command::RunCargoUdeps(ref scope) => run_cargo_udeps(scope),
         Command::RunCargoClean => run_cargo_clean(),
     }
 }
@@ -184,10 +184,10 @@ fn run_bazel_tests() -> Step {
     }
 }
 
-fn run_tests_tsan() -> Step {
+fn run_tests_tsan(scope: &Scope) -> Step {
     Step::Multiple {
         name: "tests".to_string(),
-        steps: vec![run_cargo_test_tsan()],
+        steps: vec![run_cargo_test_tsan(scope)],
     }
 }
 
@@ -682,7 +682,7 @@ fn run_cargo_fmt(mode: FormatMode, modified_crates: &ModifiedContent) -> Step {
     }
 }
 
-fn featues_excl_introspection_client(entry: &str) -> &str {
+fn features_excl_introspection_client(entry: &str) -> &str {
     // Manually exclude `oak-introspection-client` for `oak_loader` and `oak_runtime` to
     // avoid compile time errors.
     if entry.contains("oak_loader") {
@@ -710,7 +710,7 @@ fn run_cargo_test(opt: &RunTestsOpt, all_affected_crates: &ModifiedContent) -> S
                         &[
                             "test",
                             // Compile and test for all features
-                            featues_excl_introspection_client(&entry),
+                            features_excl_introspection_client(&entry),
                             &format!("--manifest-path={}", &entry),
                         ],
                     ),
@@ -764,15 +764,20 @@ fn run_clang_tidy() -> Step {
     }
 }
 
-fn run_cargo_test_tsan() -> Step {
-    Step::Single {
-        name: "cargo test (tsan)".to_string(),
-        command: Cmd::new_with_env(
+fn run_cargo_test_tsan(scope: &Scope) -> Step {
+    let abitest_crate = "./examples/abitest/module_0/rust/Cargo.toml";
+    let all_affected_crates = all_affected_crates(scope);
+
+    eprintln!("The modified crates: {:?}", all_affected_crates);
+
+    let mut steps = vec![];
+    if all_affected_crates.contains(abitest_crate) {
+        let cmd = Cmd::new_with_env(
             "cargo",
             &[
                 "-Zbuild-std",
                 "test",
-                "--manifest-path=./examples/abitest/module_0/rust/Cargo.toml",
+                &format!("--manifest-path={}", abitest_crate),
                 "--target=x86_64-unknown-linux-gnu",
                 "--verbose",
                 "--",
@@ -783,18 +788,26 @@ fn run_cargo_test_tsan() -> Step {
                 "RUSTFLAGS".to_string() => "-Z sanitizer=thread".to_string(),
                 "TSAN_OPTIONS".to_string() => format!("halt_on_error=1 report_atomic_races=0 suppressions={}/.tsan_suppress", std::env::current_dir().unwrap().display()),
             },
-        ),
+        );
+        steps.push(Step::Single {
+            name: "abitest (tsan)".to_string(),
+            command: cmd,
+        });
+    }
+
+    Step::Multiple {
+        name: "cargo test (tsan)".to_string(),
+        steps,
     }
 }
 
 fn run_cargo_clippy(scope: &Scope) -> Step {
     let all_affected_crates = all_affected_crates(scope);
-    let modified_crates = directly_modified_crates(&all_affected_crates);
     Step::Multiple {
         name: "cargo clippy".to_string(),
         steps: crate_manifest_files()
             .map(to_string)
-            .filter(|path| modified_crates.contains(path))
+            .filter(|path| all_affected_crates.contains(path))
             .map(|entry| Step::Single {
                 name: entry.clone(),
                 command: Cmd::new(
@@ -802,7 +815,7 @@ fn run_cargo_clippy(scope: &Scope) -> Step {
                     &[
                         "clippy",
                         "--all-targets",
-                        featues_excl_introspection_client(&entry),
+                        features_excl_introspection_client(&entry),
                         &format!("--manifest-path={}", &entry),
                         "--no-deps",
                         "--",
@@ -830,11 +843,14 @@ fn run_cargo_deny() -> Step {
     }
 }
 
-fn run_cargo_udeps() -> Step {
+fn run_cargo_udeps(scope: &Scope) -> Step {
+    let all_affected_crates = all_affected_crates(scope);
+
     Step::Multiple {
         name: "cargo udeps".to_string(),
         steps: workspace_manifest_files()
             .map(to_string)
+            .filter(|path| all_affected_crates.contains(path))
             .map(|entry| Step::Single {
                 name: entry.clone(),
                 command: Cmd::new(

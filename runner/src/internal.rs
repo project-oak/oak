@@ -53,10 +53,10 @@ pub enum Command {
     RunCargoClippy(Scope),
     RunCargoTests(RunTestsOpt),
     RunBazelTests,
-    RunTestsTsan,
+    RunTestsTsan(Scope),
     RunCargoFuzz(RunCargoFuzz),
     RunCargoDeny,
-    RunCargoUdeps,
+    RunCargoUdeps(Scope),
     RunCi,
     RunCargoClean,
     #[structopt(about = "generate bash completion script to stdout")]
