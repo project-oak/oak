@@ -584,7 +584,7 @@ pub fn build_functions_example(opt: &RunFunctionsExamples) -> Step {
         .expect("--example-name must be specified")
         .clone();
 
-    let example: Example = example_toml_files(&Scope::default())
+    let example: Example = example_toml_files(&Scope::DiffToMain)
         .map(|path| {
             toml::from_str(&read_file(&path)).unwrap_or_else(|err| {
                 panic!("could not parse example manifest file {:?}: {}", path, err)

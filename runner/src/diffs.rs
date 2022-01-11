@@ -24,7 +24,7 @@ use std::{
 
 use crate::{
     files::*,
-    internal::{CargoManifest, FilesScope, Scope},
+    internal::{CargoManifest, Scope},
 };
 
 #[derive(Debug)]
@@ -49,14 +49,10 @@ impl ModifiedContent {
 // If it is zero or negative, only the last commit will be considered for finding the modified
 // files. If `commits.commits` is not present, all files will be considered.
 pub fn modified_files(scope: &Scope) -> ModifiedContent {
-    let args = match (&scope.scope, &scope.commits) {
-        (None, Some(commits)) => Some(vec![format!("HEAD~{}", std::cmp::max(1, *commits))]),
-        (Some(ref files_scope), None) => match files_scope {
-            FilesScope::Affected => Some(vec!["main".to_owned()]),
-            FilesScope::All => None,
-        },
-        (None, None) => Some(vec!["main".to_owned()]),
-        _ => panic!("scope and commits cannot both be specified"),
+    let args = match scope {
+        Scope::All => None,
+        Scope::Commits(commits) => Some(vec![format!("HEAD~{}", std::cmp::max(1, *commits))]),
+        Scope::DiffToMain => Some(vec!["main".to_owned()]),
     };
 
     let files = args.map(|args| {

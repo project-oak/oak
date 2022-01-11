@@ -93,7 +93,7 @@ _runner() {
             ;;
         
         runner__build__functions__example)
-            opts=" -h -V  --build-docker --help --version --application-variant --example-name --client-variant --client-rust-toolchain --client-rust-target --server-variant --server-rust-toolchain --server-rust-target --run-server --client-additional-args --server-additional-args --commits  "
+            opts=" -h -V  --build-docker --help --version --application-variant --example-name --client-variant --client-rust-toolchain --client-rust-target --server-variant --server-rust-toolchain --server-rust-target --run-server --client-additional-args --server-additional-args --scope  "
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -144,7 +144,7 @@ _runner() {
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
                     ;;
-                --commits)
+                --scope)
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
                     ;;
@@ -210,14 +210,14 @@ _runner() {
             return 0
             ;;
         runner__check__format)
-            opts=" -h -V  --help --version --commits  "
+            opts=" -h -V  --help --version --scope  "
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
             fi
             case "${prev}" in
                 
-                --commits)
+                --scope)
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
                     ;;
@@ -248,14 +248,14 @@ _runner() {
             return 0
             ;;
         runner__format)
-            opts=" -h -V  --help --version --commits  "
+            opts=" -h -V  --help --version --scope  "
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
             fi
             case "${prev}" in
                 
-                --commits)
+                --scope)
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
                     ;;
@@ -312,14 +312,14 @@ _runner() {
             return 0
             ;;
         runner__run__cargo__clippy)
-            opts=" -h -V  --help --version --commits  "
+            opts=" -h -V  --help --version --scope  "
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
             fi
             case "${prev}" in
                 
-                --commits)
+                --scope)
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
                     ;;
@@ -369,14 +369,14 @@ _runner() {
             return 0
             ;;
         runner__run__cargo__tests)
-            opts=" -h -V  --cleanup --help --version --commits  "
+            opts=" -h -V  --cleanup --help --version --scope  "
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
             fi
             case "${prev}" in
                 
-                --commits)
+                --scope)
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
                     ;;
@@ -388,13 +388,17 @@ _runner() {
             return 0
             ;;
         runner__run__cargo__udeps)
-            opts=" -h -V  --help --version  "
+            opts=" -h -V  --help --version --scope  "
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
             fi
             case "${prev}" in
                 
+                --scope)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
                 *)
                     COMPREPLY=()
                     ;;
@@ -418,7 +422,7 @@ _runner() {
             return 0
             ;;
         runner__run__examples)
-            opts=" -h -V  --build-docker --help --version --application-variant --permissions-file --example-name --client-variant --client-rust-toolchain --client-rust-target --server-variant --server-rust-toolchain --server-rust-target --run-server --client-additional-args --server-additional-args --commits  "
+            opts=" -h -V  --build-docker --help --version --application-variant --permissions-file --example-name --client-variant --client-rust-toolchain --client-rust-target --server-variant --server-rust-toolchain --server-rust-target --run-server --client-additional-args --server-additional-args --scope  "
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -473,7 +477,7 @@ _runner() {
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
                     ;;
-                --commits)
+                --scope)
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
                     ;;
@@ -485,7 +489,7 @@ _runner() {
             return 0
             ;;
         runner__run__functions__examples)
-            opts=" -h -V  --build-docker --help --version --application-variant --example-name --client-variant --client-rust-toolchain --client-rust-target --server-variant --server-rust-toolchain --server-rust-target --run-server --client-additional-args --server-additional-args --commits  "
+            opts=" -h -V  --build-docker --help --version --application-variant --example-name --client-variant --client-rust-toolchain --client-rust-target --server-variant --server-rust-toolchain --server-rust-target --run-server --client-additional-args --server-additional-args --scope  "
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -536,7 +540,7 @@ _runner() {
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
                     ;;
-                --commits)
+                --scope)
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
                     ;;
@@ -563,13 +567,17 @@ _runner() {
             return 0
             ;;
         runner__run__tests__tsan)
-            opts=" -h -V  --help --version  "
+            opts=" -h -V  --help --version --scope  "
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
             fi
             case "${prev}" in
                 
+                --scope)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
                 *)
                     COMPREPLY=()
                     ;;

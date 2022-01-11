@@ -119,17 +119,17 @@ fn match_cmd(opt: &Opt) -> Step {
         Command::BuildServer(ref opt) => build_server(opt, vec![]),
         Command::BuildFunctionsServer(ref opt) => build_functions_server(opt, vec![]),
         Command::RunTests => run_tests(),
-        Command::RunCargoClippy(ref scope) => run_cargo_clippy(scope),
+        Command::RunCargoClippy(ref scope) => run_cargo_clippy(&scope.scope),
         Command::RunCargoTests(ref opt) => run_cargo_tests(opt),
         Command::RunBazelTests => run_bazel_tests(),
-        Command::RunTestsTsan(ref scope) => run_tests_tsan(scope),
+        Command::RunTestsTsan(ref scope) => run_tests_tsan(&scope.scope),
         Command::RunCargoFuzz(ref opt) => run_cargo_fuzz(opt),
-        Command::Format(ref scope) => format(scope),
-        Command::CheckFormat(ref scope) => check_format(scope),
+        Command::Format(ref scope) => format(&scope.scope),
+        Command::CheckFormat(ref scope) => check_format(&scope.scope),
         Command::RunCi => run_ci(),
         Command::Completion(ref opt) => run_completion(opt),
         Command::RunCargoDeny => run_cargo_deny(),
-        Command::RunCargoUdeps(ref scope) => run_cargo_udeps(scope),
+        Command::RunCargoUdeps(ref scope) => run_cargo_udeps(&scope.scope),
         Command::RunCargoClean => run_cargo_clean(),
     }
 }
@@ -159,7 +159,7 @@ fn run_tests() -> Step {
         steps: vec![
             run_cargo_tests(&RunTestsOpt {
                 cleanup: false,
-                scope: Scope::default(),
+                scope: Scope::DiffToMain,
             }),
             run_bazel_tests(),
         ],

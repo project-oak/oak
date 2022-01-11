@@ -47,16 +47,16 @@ pub enum Command {
     BuildFunctionsExample(RunFunctionsExamples),
     BuildServer(BuildServer),
     BuildFunctionsServer(BuildFunctionsServer),
-    Format(Scope),
-    CheckFormat(Scope),
+    Format(ScopeOpt),
+    CheckFormat(ScopeOpt),
     RunTests,
-    RunCargoClippy(Scope),
+    RunCargoClippy(ScopeOpt),
     RunCargoTests(RunTestsOpt),
     RunBazelTests,
-    RunTestsTsan(Scope),
+    RunTestsTsan(ScopeOpt),
     RunCargoFuzz(RunCargoFuzz),
     RunCargoDeny,
-    RunCargoUdeps(Scope),
+    RunCargoUdeps(ScopeOpt),
     RunCi,
     RunCargoClean,
     #[structopt(about = "generate bash completion script to stdout")]
@@ -95,7 +95,11 @@ pub struct RunExamples {
     pub server_additional_args: Vec<String>,
     #[structopt(long, help = "build a Docker image for the examples")]
     pub build_docker: bool,
-    #[structopt(flatten)]
+    #[structopt(
+        long,
+        help = "scope of the command [all, commits:<count>, diff_to_main]; defaults to diff_to_main",
+        default_value = "diff_to_main"
+    )]
     pub scope: Scope,
 }
 
@@ -136,49 +140,46 @@ pub struct RunFunctionsExamples {
     pub server_additional_args: Vec<String>,
     #[structopt(long, help = "build a Docker image for the examples")]
     pub build_docker: bool,
-    #[structopt(flatten)]
+    #[structopt(
+        long,
+        help = "scope of the command [all, commits:<count>, diff_to_main]; defaults to diff_to_main",
+        default_value = "diff_to_main"
+    )]
     pub scope: Scope,
 }
 
-#[derive(StructOpt, Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 
-pub struct Scope {
-    #[structopt(
-        help = "run the command for specified scope [all, affected], defaults to affected; overrides the commits option"
-    )]
-    pub scope: Option<FilesScope>,
-    #[structopt(
-        long,
-        help = "run the command only for files affected by the changes in the specified commits, including unstaged changes in tracked files"
-    )]
-    pub commits: Option<u8>,
-}
-
-impl Default for Scope {
-    fn default() -> Self {
-        Self {
-            scope: Some(FilesScope::Affected),
-            commits: None,
-        }
-    }
-}
-
-#[derive(StructOpt, Clone, Debug, PartialEq)]
-
-pub enum FilesScope {
-    // Run the command for all parts of the code based affected by the change.
-    Affected,
-    // Run the command for the entire code base.
+pub enum Scope {
+    // The entire code base.
     All,
+    // Parts of the code base, affected by the changes in the diff between this branch and main.
+    DiffToMain,
+    // Parts of the code base, affected by the changes in the specified commits.
+    Commits(u8),
 }
 
-impl std::str::FromStr for FilesScope {
+impl std::str::FromStr for Scope {
     type Err = String;
     fn from_str(scope: &str) -> Result<Self, Self::Err> {
+        let commits_pattern = regex::Regex::new(r"commits:(\d+)").unwrap();
         match scope {
-            "affected" => Ok(FilesScope::Affected),
-            "all" => Ok(FilesScope::All),
-            _ => Err(format!("Failed to parse scope {}", scope)),
+            "all" => Ok(Self::All),
+            "diff_to_main" => Ok(Self::DiffToMain),
+            scope => match commits_pattern.captures(scope) {
+                Some(groups) => {
+                    let commits_count = groups
+                        .get(1)
+                        .ok_or(format!("Failed to parse commits {}", scope))?
+                        .as_str()
+                        .to_string();
+                    let count = commits_count
+                        .parse::<u8>()
+                        .map_err(|err| format!("Could not parse to u8 {:?}", err))?;
+                    Ok(Self::Commits(count))
+                }
+                None => Err(format!("Failed to parse scope {}", scope)),
+            },
         }
     }
 }
@@ -293,7 +294,21 @@ pub struct RunTestsOpt {
         help = "remove generated files after running tests for each crate"
     )]
     pub cleanup: bool,
-    #[structopt(flatten)]
+    #[structopt(
+        long,
+        help = "scope of the command [all, commits:<count>, diff_to_main]; defaults to diff_to_main",
+        default_value = "diff_to_main"
+    )]
+    pub scope: Scope,
+}
+
+#[derive(StructOpt, Clone, Debug)]
+pub struct ScopeOpt {
+    #[structopt(
+        long,
+        help = "scope of the command [all, commits:<count>, diff_to_main]; defaults to diff_to_main",
+        default_value = "diff_to_main"
+    )]
     pub scope: Scope,
 }
 
