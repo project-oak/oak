@@ -703,7 +703,7 @@ struct RuntimeEndpoints {
 struct ChannelSwitchboard(HashMap<ChannelHandle, Arc<Endpoint>>);
 
 impl ChannelSwitchboard {
-    pub fn create() -> (RuntimeEndpoints, Self) {
+    fn create() -> (RuntimeEndpoints, Self) {
         let mut channel_switchboard = HashMap::new();
 
         // Create endpoints for lookup extension
@@ -716,7 +716,8 @@ impl ChannelSwitchboard {
         )
     }
 
-    pub fn get(&self, handle: &ChannelHandle) -> Option<Arc<Endpoint>> {
+    #[allow(dead_code)]
+    fn get(&self, handle: &ChannelHandle) -> Option<Arc<Endpoint>> {
         let endpoint = self.0.get(handle)?;
         Some(endpoint.clone())
     }
