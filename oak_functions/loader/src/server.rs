@@ -700,7 +700,7 @@ pub fn channel_create() -> (Endpoint, Endpoint) {
 struct RuntimeEndpoints {
     lookup: Endpoint,
 }
-struct ChannelSwitchboard(HashMap<ChannelHandle, Arc<Endpoint>>);
+struct ChannelSwitchboard(HashMap<ChannelHandle, Endpoint>);
 
 impl ChannelSwitchboard {
     fn create() -> (RuntimeEndpoints, Self) {
@@ -708,7 +708,7 @@ impl ChannelSwitchboard {
 
         // Create endpoints for lookup extension
         let (lookup, e2) = channel_create();
-        channel_switchboard.insert(ChannelHandle::LookupData, Arc::new(e2));
+        channel_switchboard.insert(ChannelHandle::LookupData, e2);
 
         (
             RuntimeEndpoints { lookup },
@@ -717,9 +717,8 @@ impl ChannelSwitchboard {
     }
 
     #[allow(dead_code)]
-    fn get(&self, handle: &ChannelHandle) -> Option<Arc<Endpoint>> {
-        let endpoint = self.0.get(handle)?;
-        Some(endpoint.clone())
+    fn get(&self, handle: &ChannelHandle) -> Option<&Endpoint> {
+        self.0.get(handle)
     }
 }
 
