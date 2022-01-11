@@ -570,17 +570,8 @@ impl WasmHandler {
             extensions_metadata.insert(name, (ind + EXTENSION_INDEX_OFFSET, signature));
         }
 
-        // hard-coded for now, but should eventually hold default channels, such as
-        // the channel to the client, and channels required by the extensions
-        let handles = vec![ChannelHandle::LookupData];
-
-        // keep switchboard1 for runtime, give the correspondng switchboard2 to the WasmHandler
-        let (_switchboard1, switchboard2) = ChannelSwitchboard::create(handles);
-        // expect eventually to use channels for all communication with the WasmState
-        // i.e.,
-        // _switchboard1.get(CLIENT).write(request_bytes)
-        // and after invoke()
-        // _switchboard1.get(CLIENT).read(request_bytes)
+        // keep _endpoints for runtime, give the correspondng switchboard to the WasmHandler
+        let (_endpoints, switchboard) = ChannelSwitchboard::create();
 
         WasmState::new(
             &self.module,
@@ -588,7 +579,7 @@ impl WasmHandler {
             self.logger.clone(),
             extensions_indices,
             extensions_metadata,
-            switchboard2,
+            switchboard,
         )
     }
 
@@ -705,20 +696,24 @@ pub fn channel_create() -> (Endpoint, Endpoint) {
     (endpoint0, endpoint1)
 }
 
-pub struct ChannelSwitchboard(HashMap<ChannelHandle, Arc<Endpoint>>);
+#[allow(dead_code)]
+struct RuntimeEndpoints {
+    lookup: Endpoint,
+}
+struct ChannelSwitchboard(HashMap<ChannelHandle, Arc<Endpoint>>);
 
 impl ChannelSwitchboard {
-    pub fn create(handles: Vec<ChannelHandle>) -> (Self, Self) {
-        let mut m1 = HashMap::new();
-        let mut m2 = HashMap::new();
+    pub fn create() -> (RuntimeEndpoints, Self) {
+        let mut channel_switchboard = HashMap::new();
 
-        for handle in handles {
-            let (e1, e2) = channel_create();
-            m1.insert(handle, Arc::new(e1));
-            m2.insert(handle, Arc::new(e2));
-        }
+        // Create endpoints for lookup extension
+        let (lookup, e2) = channel_create();
+        channel_switchboard.insert(ChannelHandle::LookupData, Arc::new(e2));
 
-        (ChannelSwitchboard(m1), ChannelSwitchboard(m2))
+        (
+            RuntimeEndpoints { lookup },
+            ChannelSwitchboard(channel_switchboard),
+        )
     }
 
     pub fn get(&self, handle: &ChannelHandle) -> Option<Arc<Endpoint>> {
