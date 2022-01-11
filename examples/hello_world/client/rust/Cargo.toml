@@ -14,9 +14,9 @@ anyhow = "*"
 env_logger = "*"
 futures = "*"
 log = "*"
-oak_abi = "=0.1.0"
-oak_client = "=0.1.0"
-hello_world_grpc = "=0.1.0"
+oak_abi = { path = "../../../../oak_abi" }
+oak_client = { path = "../../../../oak_client" }
+hello_world_grpc = { path = "../../grpc" }
 prost = "*"
 structopt = "*"
 tokio = { version = "*", features = [
@@ -28,4 +28,4 @@ tokio = { version = "*", features = [
 tonic = { version = "*", features = ["tls"] }
 
 [build-dependencies]
-oak_utils = "*"
+oak_utils = { path = "../../../../oak_utils" }

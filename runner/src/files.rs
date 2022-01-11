@@ -14,12 +14,11 @@
 // limitations under the License.
 //
 
+use crate::{diffs::all_affected_crates, internal::Commits};
 use std::{
     io::Read,
     path::{Path, PathBuf},
 };
-
-use crate::{diffs::all_affected_crates, internal::Commits};
 
 pub fn read_file(path: &Path) -> String {
     let mut file = std::fs::File::open(path).expect("could not open file");

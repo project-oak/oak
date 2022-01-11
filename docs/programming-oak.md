@@ -397,7 +397,7 @@ restrictive one.
 The Oak Application is then started using the Oak Loader:
 
 ```bash
-./oak_loader/target/x86_64-unknown-linux-musl/release/oak_loader \
+./target/x86_64-unknown-linux-musl/release/oak_loader \
   --application=./examples/hello_world/bin/hello_world.oak \
   --permissions=./examples/permissions/permissions.toml
 ```

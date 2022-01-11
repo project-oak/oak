@@ -13,9 +13,9 @@ source "$EXPERIMENTAL_SCRIPTS_DIR/common.sh"
 # Copy binaries to `experimental` directory, because global `.dockerignore` ignores all the files.
 readonly EXPERIMENTAL_BIN=./experimental/oak_functions_with_envoy/bin
 mkdir --parents "${EXPERIMENTAL_BIN}"
-cp ./oak_functions/loader/target/x86_64-unknown-linux-musl/release/oak_functions_loader "${EXPERIMENTAL_BIN}"
+cp ./target/x86_64-unknown-linux-musl/release/oak_functions_loader "${EXPERIMENTAL_BIN}"
 cp ./oak_functions/examples/weather_lookup/config.toml "${EXPERIMENTAL_BIN}"
-cp ./oak_functions/examples/weather_lookup/bin/weather_lookup.wasm "${EXPERIMENTAL_BIN}"
+cp ./bin/weather_lookup.wasm "${EXPERIMENTAL_BIN}"
 
 docker build \
   --file="./experimental/oak_functions_with_envoy/client/client.Dockerfile" \

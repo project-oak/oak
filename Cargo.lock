@@ -206,15 +206,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "08abcc3b4e9339e33a3d0a5ed15d84a687350c05689d825e0f6655eef9e76a94"
 
 [[package]]
-name = "arbitrary"
-version = "1.0.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "510c76ecefdceada737ea728f4f9a84bd2e1ef29f1ba555e560940fe279954de"
-dependencies = [
- "derive_arbitrary",
-]
-
-[[package]]
 name = "assert_matches"
 version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -920,17 +911,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "derive_arbitrary"
-version = "1.0.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b24629208e87a2d8b396ff43b15c4afb0a69cea3fbbaa9ed9b92b7c02f0aed73"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn",
-]
-
-[[package]]
 name = "digest"
 version = "0.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1439,6 +1419,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "grpc_attestation"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-stream",
+ "futures",
+ "oak_functions_abi",
+ "oak_remote_attestation",
+ "oak_utils",
+ "prost 0.8.0",
+ "prost-types 0.8.0",
+ "tokio",
+ "tonic",
+ "tower",
+]
+
+[[package]]
 name = "h2"
 version = "0.3.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1928,17 +1925,6 @@ name = "libc"
 version = "0.2.112"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1b03d17f364a3a042d5e5d46b053bbbf82c92c9430c592dd4c064dc6ee997125"
-
-[[package]]
-name = "libfuzzer-sys"
-version = "0.4.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "36a9a84a6e8b55dfefb04235e55edb2b9a2a18488fcae777a6bdaa6f06f1deb3"
-dependencies = [
- "arbitrary",
- "cc",
- "once_cell",
-]
 
 [[package]]
 name = "libm"
@@ -2529,6 +2515,7 @@ dependencies = [
  "anyhow",
  "async-stream",
  "env_logger 0.9.0",
+ "grpc_attestation",
  "http",
  "log",
  "oak_functions_abi",
@@ -2564,6 +2551,7 @@ dependencies = [
  "chrono",
  "criterion",
  "futures",
+ "grpc_attestation",
  "http",
  "humantime-serde",
  "hyper",
@@ -2589,23 +2577,6 @@ dependencies = [
  "tract-tensorflow 0.15.9-pre",
  "url",
  "wasmi",
-]
-
-[[package]]
-name = "oak_functions_loader-fuzz"
-version = "0.0.0"
-dependencies = [
- "anyhow",
- "arbitrary",
- "lazy_static",
- "libfuzzer-sys",
- "maplit",
- "oak_functions_abi",
- "oak_functions_loader",
- "prost 0.8.0",
- "prost-build 0.8.0",
- "tokio",
- "tonic",
 ]
 
 [[package]]
@@ -4525,6 +4496,7 @@ dependencies = [
  "async-stream",
  "env_logger 0.9.0",
  "futures",
+ "grpc_attestation",
  "log",
  "oak_functions_abi",
  "oak_remote_attestation",

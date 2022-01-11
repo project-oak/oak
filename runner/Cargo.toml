@@ -1,5 +1,3 @@
-[workspace]
-
 [package]
 name = "runner"
 version = "0.1.0"

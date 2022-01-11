@@ -1,4 +1,4 @@
 name = "aggregator"
 
 [modules]
-app = { path = "examples/bin/aggregator.wasm" }
+app = { path = "bin/aggregator.wasm" }

@@ -10,9 +10,9 @@ anyhow = "*"
 env_logger = "*"
 hex = "*"
 log = "*"
-oak_abi = "=0.1.0"
-oak_sign = "=0.1.0"
-prost = "*"
+oak_abi = { path = "../../../oak_abi" }
+oak_sign = { path = "../../../oak_sign" }
+prost = { path = "../../../third_party/prost" }
 reqwest = "*"
 serde = "*"
 sha2 = "*"

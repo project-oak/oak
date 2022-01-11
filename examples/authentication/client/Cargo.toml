@@ -24,4 +24,4 @@ tonic = { version = "*", features = ["tls"] }
 url = "*"
 
 [build-dependencies]
-oak_utils = "*"
+oak_utils = { path = "../../../oak_utils" }

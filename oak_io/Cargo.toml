@@ -1,5 +1,3 @@
-[workspace]
-
 [package]
 name = "oak_io"
 version = "0.1.0"
@@ -17,20 +15,11 @@ linear-handles = []
 hex = "*"
 oak_abi = { path = "../oak_abi" }
 oak_derive = { path = "../oak_derive" }
-prost = "*"
-prost-types = "*"
+prost = { path = "../third_party/prost" }
+prost-types = { path = "../third_party/prost/prost-types" }
 either = "*"
 log = "*"
-
-[dev-dependencies]
-assert_matches = "*"
 
 [build-dependencies]
 oak_utils = { path = "../oak_utils" }
 prost-build = { path = "../third_party/prost/prost-build" }
-
-[patch.crates-io]
-prost = { path = "../third_party/prost" }
-prost-build = { path = "../third_party/prost/prost-build" }
-prost-derive = { path = "../third_party/prost/prost-derive" }
-prost-types = { path = "../third_party/prost/prost-types" }

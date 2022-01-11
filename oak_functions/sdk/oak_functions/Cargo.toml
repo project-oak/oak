@@ -14,11 +14,11 @@ oak-metrics = []
 [dev-dependencies]
 test_utils = { path = "../test_utils" }
 oak_functions_loader = { path = "../../loader" }
-maplit = "*"
 lazy_static = "*"
+maplit = "*"
 tokio = "*"
 
 [dependencies]
+maplit = "*"
 oak_functions_abi = { path = "../../abi" }
 prost = "*"
-maplit = "*"

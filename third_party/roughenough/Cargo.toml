@@ -13,7 +13,6 @@ edition = "2018"
 default = []
 
 [dependencies]
-base64 = "*"
 byteorder = "*"
 hex = "*"
 ring = "*"

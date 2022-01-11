@@ -2,7 +2,7 @@ FROM gcr.io/distroless/static@sha256:d2b0ec3141031720cf5eedef3493b8e129bc91935a4
 
 ARG oak_functions_loader_path=/oak_functions_loader
 
-COPY ./loader/target/x86_64-unknown-linux-musl/release/oak_functions_loader ${oak_functions_loader_path}
+COPY ./target/x86_64-unknown-linux-musl/release/oak_functions_loader ${oak_functions_loader_path}
 
 # We cannot use ARG values as part of ENTRPOINT, so we have to repeat them here.
 # https://docs.docker.com/engine/reference/builder/#environment-replacement

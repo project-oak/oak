@@ -9,16 +9,16 @@ source "$SCRIPTS_DIR/gcp_common"
 
 readonly BIN_OUTPUT_PATH='./experimental/gcp_api_gateway/bin'
 
-mkdir --parents "${DEBUG_OUTPUT_PATH}"
+mkdir --parents "${BIN_OUTPUT_PATH}"
 
 # Build the server
 cargo build \
   --manifest-path=./experimental/gcp_api_gateway/server/Cargo.toml \
   --release \
   --target=x86_64-unknown-linux-musl
-  
+
 cp \
-  ./experimental/target/x86_64-unknown-linux-musl/release/gcp_api_gateway_server \
+  ./target/x86_64-unknown-linux-musl/release/gcp_api_gateway_server \
   "${BIN_OUTPUT_PATH}/gcp_api_gateway_server" \
   --force
 
