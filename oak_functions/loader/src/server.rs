@@ -570,7 +570,7 @@ impl WasmHandler {
             extensions_metadata.insert(name, (ind + EXTENSION_INDEX_OFFSET, signature));
         }
 
-        // keep _endpoints for runtime, give the correspondng switchboard to the WasmHandler
+        // Keep _endpoints for runtime, give the corresponding switchboard to the WasmHandler.
         let (_endpoints, switchboard) = ChannelSwitchboard::create();
 
         WasmState::new(
