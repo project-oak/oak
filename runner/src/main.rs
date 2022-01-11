@@ -802,6 +802,7 @@ fn run_cargo_clippy(commits: &Commits) -> Step {
                         "--all-targets",
                         featues_excl_introspection_client(&entry),
                         &format!("--manifest-path={}", &entry),
+                        "--no-deps",
                         "--",
                         "--deny=warnings",
                     ],
