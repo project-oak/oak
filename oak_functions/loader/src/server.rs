@@ -20,7 +20,7 @@ use byteorder::{ByteOrder, LittleEndian};
 use futures::future::FutureExt;
 use log::Level;
 use oak_functions_abi::proto::{
-    ChannelHandle, OakStatus, Request, Response, ServerPolicy, StatusCode,
+    ChannelHandle, ChannelStatus, OakStatus, Request, Response, ServerPolicy, StatusCode,
 };
 use serde::Deserialize;
 use std::{collections::HashMap, convert::TryInto, str, sync::Arc, time::Duration};
@@ -35,6 +35,8 @@ const ALLOC_FUNCTION_NAME: &str = "alloc";
 const READ_REQUEST: usize = 0;
 const WRITE_RESPONSE: usize = 1;
 const WRITE_LOG_MESSAGE: usize = 3;
+const CHANNEL_READ: usize = 4;
+const CHANNEL_WRITE: usize = 5;
 const EXTENSION_INDEX_OFFSET: usize = 10;
 
 // Type alias for a message sent over a channel through the ABI.
@@ -245,6 +247,23 @@ impl WasmState {
                 OakStatus::ErrInvalidArgs
             })?;
         self.response_bytes = response;
+        Ok(())
+    }
+
+    // TODO(mschett) Comment
+    pub fn channel_read(
+        &mut self,
+        // TODO(mschett) Find appropriate types here
+        channel_handle: i32,
+        _dest_ptr_ptr: u32,
+        _dest_len_ptr: u32,
+    ) -> Result<(), ChannelStatus> {
+        let channel_handle =
+            ChannelHandle::from_i32(channel_handle).ok_or(ChannelStatus::ChannelHandleInvalid)?;
+        let _endpoint = self
+            .channel_switchboard
+            .get(&channel_handle)
+            .ok_or(ChannelStatus::ChannelHandleInvalid)?;
         Ok(())
     }
 
@@ -639,6 +658,30 @@ fn oak_functions_resolve_func(field_name: &str) -> Option<(usize, wasmi::Signatu
                 Some(ValueType::I32),
             ),
         ),
+        "channel_read" => (
+            CHANNEL_READ,
+            wasmi::Signature::new(
+                &[
+                    // TODO(mschett) check whether USIZE is appropriate
+                    ABI_USIZE, // channel_handle
+                    ABI_USIZE, // src_buf_ptr
+                    ABI_USIZE, // src_buf_len
+                ][..],
+                Some(ValueType::I32),
+            ),
+        ),
+        "channel_write" => (
+            CHANNEL_WRITE,
+            wasmi::Signature::new(
+                &[
+                    // TODO(mschet) check whether USIZE is appropriate
+                    ABI_USIZE, // channel_handle
+                    ABI_USIZE, // src_buf_ptr
+                    ABI_USIZE, // src_buf_len
+                ][..],
+                Some(ValueType::I32),
+            ),
+        ),
         _ => return None,
     };
 
@@ -730,8 +773,7 @@ mod tests {
     };
     use maplit::hashmap;
 
-    #[tokio::test]
-    async fn test_create_channel_switchboard_in_wasm_state() {
+    fn create_test_wasm_handler() -> WasmHandler {
         let logger = Logger::for_test();
         let lookup_data = Arc::new(LookupData::for_test(hashmap! {}));
         let lookup_factory =
@@ -740,13 +782,20 @@ mod tests {
 
         let wasm_module_bytes = test_utils::create_some_wasm_module_bytes();
 
-        let wasm_handler = create_wasm_handler(&wasm_module_bytes, vec![lookup_factory], logger)
-            .expect("could not create wasm_handler");
+        create_wasm_handler(&wasm_module_bytes, vec![lookup_factory], logger)
+            .expect("could not create wasm_handler")
+    }
 
-        let wasm_state = wasm_handler
+    fn create_test_wasm_state() -> WasmState {
+        let wasm_handler = create_test_wasm_handler();
+        wasm_handler
             .init_wasm_state(b"".to_vec())
-            .expect("could not create wasm_state");
+            .expect("could not create wasm_state")
+    }
 
+    #[tokio::test]
+    async fn test_create_channel_switchboard_in_wasm_state() {
+        let wasm_state = create_test_wasm_state();
         let channel_switchboard = wasm_state.channel_switchboard;
 
         assert!(&channel_switchboard
@@ -756,5 +805,22 @@ mod tests {
         assert!(&channel_switchboard
             .get(&ChannelHandle::LookupData)
             .is_some());
+    }
+
+    #[tokio::test]
+    async fn test_hosted_channel_read_from_handle_out_of_range() {
+        let mut wasm_state = create_test_wasm_state();
+        let result = wasm_state.channel_read(-1, 0, 0);
+        assert!(result.is_err());
+        assert_eq!(ChannelStatus::ChannelHandleInvalid, result.unwrap_err())
+    }
+
+    #[tokio::test]
+    async fn test_hosted_channel_read_from_handle_without_endpoint() {
+        let mut wasm_state = create_test_wasm_state();
+        // Assumes ChannelHandle 0 will never have an Endpoint.
+        let result = wasm_state.channel_read(0, 0, 0);
+        assert!(result.is_err());
+        assert_eq!(ChannelStatus::ChannelHandleInvalid, result.unwrap_err())
     }
 }

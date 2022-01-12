@@ -29,6 +29,8 @@ enum ChannelStatus {
   CHANNEL_OK = 1;
   // Channel is empty.
   CHANNEL_EMPTY = 2;
+  // TODO(mschett) Comment. Used if ChannelNumber not in range of ChannelHandle (cast fails) and if no channel endpoint is attached
+  CHANNEL_HANDLE_INVALID = 3;
 }
 
 // A ChannelHandle corresonds to a channel. The Endpoint which does not own the channel uses a
