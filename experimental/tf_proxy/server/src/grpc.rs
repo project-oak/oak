@@ -67,7 +67,10 @@ pub async fn handle_request(
 ) -> anyhow::Result<Vec<u8>> {
     let predict_request =
         PredictRequest::decode(&*cleartext_request).context("couldn't parse decrypted request")?;
-    // Wrap the gRPC client call to make it `Sync`.
+
+    // Send the prediction request (which wraps the input tensor) to the backend TensorFlow model
+    // server to execute the inference against the loaded model. We wrap the resulting future to
+    // make it `Sync`, as required by the trait bounds for the request handler.
     let sync_predict = FutureSyncWrapper {
         inner: SyncWrapper::new(client.predict(predict_request)),
     };
