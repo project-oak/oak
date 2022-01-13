@@ -27,12 +27,6 @@
 <span id="25">25</span>
 <span id="26">26</span>
 <span id="27">27</span>
-<span id="28">28</span>
-<span id="29">29</span>
-<span id="30">30</span>
-<span id="31">31</span>
-<span id="32">32</span>
-<span id="33">33</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2021 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -51,12 +45,6 @@
 
 <span class="attribute">#![<span class="ident">feature</span>(<span class="ident">async_closure</span>)]</span>
 
-<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">proto</span> {
-    <span class="attribute">#![<span class="ident">allow</span>(<span class="ident">clippy::return_self_not_must_use</span>)]</span>
-    <span class="macro">tonic::include_proto!</span>(<span class="string">&quot;oak.session.stream.v1&quot;</span>);
-}
-
-<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">attestation</span>;
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">grpc</span>;
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">logger</span>;
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">lookup</span>;

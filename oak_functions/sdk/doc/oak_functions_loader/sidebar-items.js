@@ -1,1 +1,1 @@
-initSidebarItems({"mod":[["attestation",""],["grpc","gRPC server for Oak Functions."],["logger",""],["lookup",""],["lookup_data",""],["metrics",""],["proto",""],["server",""]]});
+initSidebarItems({"mod":[["grpc","gRPC server for Oak Functions."],["logger",""],["lookup",""],["lookup_data",""],["metrics",""],["server",""]]});

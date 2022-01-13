@@ -1,1 +1,1 @@
-initSidebarItems({"struct":[["AttestationClient","gRPC Attestation Service client implementation."]],"type":[["ConfigurationVerifier",""]]});
+initSidebarItems({"fn":[["into_server_identity_verifier","Creates a [`ServerIdentityVerifier`] from the given `ConfigurationVerifier`."]],"type":[["ConfigurationVerifier",""]]});

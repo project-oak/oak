@@ -52,6 +52,11 @@
 <span id="50">50</span>
 <span id="51">51</span>
 <span id="52">52</span>
+<span id="53">53</span>
+<span id="54">54</span>
+<span id="55">55</span>
+<span id="56">56</span>
+<span id="57">57</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2021 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -74,8 +79,9 @@
 
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">attestation</span>;
 
-<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::attestation</span>::{<span class="ident">AttestationClient</span>, <span class="ident">ConfigurationVerifier</span>};
+<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::attestation</span>::{<span class="ident">into_server_identity_verifier</span>, <span class="ident">ConfigurationVerifier</span>};
 <span class="kw">use</span> <span class="ident">anyhow::Context</span>;
+<span class="kw">use</span> <span class="ident">grpc_attestation::client::AttestationClient</span>;
 <span class="kw">use</span> <span class="ident">oak_functions_abi::proto</span>::{<span class="ident">Request</span>, <span class="ident">Response</span>};
 <span class="kw">use</span> <span class="ident">prost::Message</span>;
 
@@ -88,9 +94,13 @@
 
 <span class="kw">impl</span> <span class="ident">Client</span> {
     <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">uri</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="ident">verifier</span>: <span class="ident">ConfigurationVerifier</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">inner</span> <span class="op">=</span> <span class="ident">AttestationClient::create</span>(<span class="ident">uri</span>, <span class="ident">TEE_MEASUREMENT</span>, <span class="ident">verifier</span>)
-            .<span class="kw">await</span>
-            .<span class="ident">context</span>(<span class="string">&quot;Could not create Oak Functions client&quot;</span>)<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">inner</span> <span class="op">=</span> <span class="ident">AttestationClient::create</span>(
+            <span class="ident">uri</span>,
+            <span class="ident">TEE_MEASUREMENT</span>,
+            <span class="ident">into_server_identity_verifier</span>(<span class="ident">verifier</span>),
+        )
+        .<span class="kw">await</span>
+        .<span class="ident">context</span>(<span class="string">&quot;Could not create Oak Functions client&quot;</span>)<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(<span class="ident">Client</span> { <span class="ident">inner</span> })
     }
     <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">invoke</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">request</span>: <span class="ident">Request</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">Response</span><span class="op">&gt;</span> {
