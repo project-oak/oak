@@ -903,7 +903,7 @@ mod tests {
     #[tokio::test]
     async fn test_read_from_endpoint() {
         let channel_handle = ChannelHandle::LookupData as i32;
-        let message: AbiMessage = b"A Test Message: Key".to_vec();
+        let message: AbiMessage = b"A Test Message: Value".to_vec();
         let mut wasm_state = create_test_wasm_state();
 
         // write message into Lookup endpoint
