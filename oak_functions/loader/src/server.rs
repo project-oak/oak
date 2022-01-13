@@ -24,7 +24,7 @@ use oak_functions_abi::proto::{
 };
 use serde::Deserialize;
 use std::{collections::HashMap, convert::TryInto, str, sync::Arc, time::Duration};
-use tokio::sync::mpsc::{channel, Receiver, Sender};
+use tokio::sync::mpsc::{channel, error::TryRecvError, Receiver, Sender};
 use wasmi::ValueType;
 
 const MAIN_FUNCTION_NAME: &str = "main";
@@ -161,6 +161,7 @@ pub struct WasmState {
     /// A mapping of host function names to metadata required for resolving the function.
     extensions_metadata: HashMap<String, (usize, wasmi::Signature)>,
     channel_switchboard: ChannelSwitchboard,
+    runtime_endpoints: RuntimeEndpoints,
 }
 
 impl WasmState {
@@ -260,10 +261,15 @@ impl WasmState {
     ) -> Result<(), ChannelStatus> {
         let channel_handle =
             ChannelHandle::from_i32(channel_handle).ok_or(ChannelStatus::ChannelHandleInvalid)?;
-        let _endpoint = self
+        let endpoint = self
             .channel_switchboard
-            .get(&channel_handle)
+            .get_mut(&channel_handle)
             .ok_or(ChannelStatus::ChannelHandleInvalid)?;
+        let receiver = &mut endpoint.receiver;
+        let _message = receiver.try_recv().map_err(|e| match e {
+            TryRecvError::Empty => ChannelStatus::ChannelEmpty,
+            TryRecvError::Disconnected => ChannelStatus::ChannelDisconnected,
+        })?;
         Ok(())
     }
 
@@ -397,6 +403,7 @@ impl WasmState {
         extensions_indices: HashMap<usize, BoxedExtension>,
         extensions_metadata: HashMap<String, (usize, wasmi::Signature)>,
         channel_switchboard: ChannelSwitchboard,
+        runtime_endpoints: RuntimeEndpoints,
     ) -> anyhow::Result<WasmState> {
         let mut abi = WasmState {
             request_bytes,
@@ -407,6 +414,7 @@ impl WasmState {
             extensions_indices: Some(extensions_indices),
             extensions_metadata,
             channel_switchboard,
+            runtime_endpoints,
         };
 
         let instance = wasmi::ModuleInstance::new(
@@ -589,8 +597,7 @@ impl WasmHandler {
             extensions_metadata.insert(name, (ind + EXTENSION_INDEX_OFFSET, signature));
         }
 
-        // Keep _endpoints for runtime, give the corresponding switchboard to the WasmHandler.
-        let (_endpoints, switchboard) = ChannelSwitchboard::create();
+        let (runtime_endpoints, switchboard) = ChannelSwitchboard::create();
 
         WasmState::new(
             &self.module,
@@ -599,6 +606,7 @@ impl WasmHandler {
             extensions_indices,
             extensions_metadata,
             switchboard,
+            runtime_endpoints,
         )
     }
 
@@ -674,7 +682,7 @@ fn oak_functions_resolve_func(field_name: &str) -> Option<(usize, wasmi::Signatu
             CHANNEL_WRITE,
             wasmi::Signature::new(
                 &[
-                    // TODO(mschet) check whether USIZE is appropriate
+                    // TODO(mschett) check whether USIZE is appropriate
                     ABI_USIZE, // channel_handle
                     ABI_USIZE, // src_buf_ptr
                     ABI_USIZE, // src_buf_len
@@ -763,6 +771,10 @@ impl ChannelSwitchboard {
     fn get(&self, handle: &ChannelHandle) -> Option<&Endpoint> {
         self.0.get(handle)
     }
+
+    fn get_mut(&mut self, handle: &ChannelHandle) -> Option<&mut Endpoint> {
+        self.0.get_mut(handle)
+    }
 }
 
 #[cfg(test)]
@@ -822,5 +834,27 @@ mod tests {
         let result = wasm_state.channel_read(0, 0, 0);
         assert!(result.is_err());
         assert_eq!(ChannelStatus::ChannelHandleInvalid, result.unwrap_err())
+    }
+
+    #[tokio::test]
+    async fn test_hosted_channel_read_no_message() {
+        let channel_handle = ChannelHandle::LookupData as i32;
+        let mut wasm_state = create_test_wasm_state();
+        // Assumes LookupData has a channel.
+        let result = wasm_state.channel_read(channel_handle, 0, 0);
+        assert!(result.is_err());
+        assert_eq!(ChannelStatus::ChannelEmpty, result.unwrap_err());
+    }
+
+    #[tokio::test]
+    async fn test_hosted_channel_read_channel_closed() {
+        let channel_handle = ChannelHandle::LookupData as i32;
+        let mut wasm_state = create_test_wasm_state();
+        // Assumes LookupData has a channel.
+        drop(&wasm_state.runtime_endpoints.lookup);
+        // TODO(mschett) Think of a way to drop the endpoint.
+        let result = wasm_state.channel_read(channel_handle, 0, 0);
+        assert!(result.is_err());
+        assert_eq!(ChannelStatus::ChannelDisconnected, result.unwrap_err());
     }
 }
