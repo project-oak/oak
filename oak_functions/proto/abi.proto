@@ -33,6 +33,8 @@ enum ChannelStatus {
   CHANNEL_HANDLE_INVALID = 3;
   // TODO(mschett) Comment. Used if Channel is closed
   CHANNEL_DISCONNECTED = 4;
+  // TODO(mschett) Comment. Used when writing to wasm memory fails
+  CHANNEL_INVALID_ARGS = 5;
 }
 
 // A ChannelHandle corresonds to a channel. The Endpoint which does not own the channel uses a

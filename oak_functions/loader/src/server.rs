@@ -256,9 +256,10 @@ impl WasmState {
         &mut self,
         // TODO(mschett) Find appropriate types here
         channel_handle: i32,
-        _dest_ptr_ptr: u32,
-        _dest_len_ptr: u32,
+        dest_ptr_ptr: u32,
+        dest_len_ptr: u32,
     ) -> Result<(), ChannelStatus> {
+        // read message from channel
         let channel_handle =
             ChannelHandle::from_i32(channel_handle).ok_or(ChannelStatus::ChannelHandleInvalid)?;
         let endpoint = self
@@ -266,10 +267,25 @@ impl WasmState {
             .get_mut(&channel_handle)
             .ok_or(ChannelStatus::ChannelHandleInvalid)?;
         let receiver = &mut endpoint.receiver;
-        let _message = receiver.try_recv().map_err(|e| match e {
+        let message = receiver.try_recv().map_err(|e| match e {
             TryRecvError::Empty => ChannelStatus::ChannelEmpty,
             TryRecvError::Disconnected => ChannelStatus::ChannelDisconnected,
         })?;
+        // write message to memory of wasm module
+        let dest_ptr = self.alloc(message.len() as u32);
+
+        let from_oak_status = |e| match e {
+            OakStatus::ErrInvalidArgs => ChannelStatus::ChannelInvalidArgs,
+            _ => ChannelStatus::Unspecified,
+        };
+
+        self.write_buffer_to_wasm_memory(&message, dest_ptr)
+            .map_err(from_oak_status)?;
+        self.write_u32_to_wasm_memory(dest_ptr, dest_ptr_ptr)
+            .map_err(from_oak_status)?;
+        self.write_u32_to_wasm_memory(message.len() as u32, dest_len_ptr)
+            .map_err(from_oak_status)?;
+
         Ok(())
     }
 
@@ -851,10 +867,41 @@ mod tests {
         let channel_handle = ChannelHandle::LookupData as i32;
         let mut wasm_state = create_test_wasm_state();
         // Assumes LookupData has a channel.
+        // TODO(mschett) Think of a way to drop the endpoint, which is not dropped right now,
+        // because it is only borrowed.
         drop(&wasm_state.runtime_endpoints.lookup);
-        // TODO(mschett) Think of a way to drop the endpoint.
         let result = wasm_state.channel_read(channel_handle, 0, 0);
         assert!(result.is_err());
         assert_eq!(ChannelStatus::ChannelDisconnected, result.unwrap_err());
+    }
+
+    #[tokio::test]
+    async fn test_read_from_endpoint() {
+        let channel_handle = ChannelHandle::LookupData as i32;
+        let message: AbiMessage = b"A Test Message: Key".to_vec();
+        let mut wasm_state = create_test_wasm_state();
+
+        // write message into Lookup endpoint
+        // TODO(mschett) check whether this should be wrapped by a channel_write to endpoint
+        // channel.
+        let endpoint = &wasm_state.runtime_endpoints.lookup;
+        let result = endpoint.sender.send(message.clone()).await;
+        assert!(result.is_ok());
+
+        let dest_ptr_ptr: AbiMessage = b"".to_vec();
+        let dest_len_ptr: usize = 0;
+
+        let result = wasm_state.channel_read(
+            channel_handle,
+            &dest_ptr_ptr as *const _ as u32,
+            &dest_len_ptr as *const _ as u32,
+        );
+
+        // TODO(mschett) Fix this test, the result not `is_ok`, but panics
+        assert!(result.is_ok());
+        // assert that dest_ptr_ptr holds pointer to the message
+        assert_eq!(*dest_ptr_ptr, message);
+        // assert dest_len_ptr holds pointer to length of message
+        assert_eq!(dest_len_ptr, message.len());
     }
 }
