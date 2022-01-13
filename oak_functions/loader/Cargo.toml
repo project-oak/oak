@@ -1,9 +1,12 @@
+cargo-features = ["per-package-target"]
+
 [package]
 name = "oak_functions_loader"
 version = "0.1.0"
 authors = ["Razieh Behjati <razieh@google.com>"]
 edition = "2021"
 license = "Apache-2.0"
+default-target = "x86_64-unknown-linux-musl"
 
 [features]
 # Feature that allows logging of potentially sensitive content, or using experimental features.
