@@ -20,8 +20,9 @@ pub mod proto {
 
 pub mod attestation;
 
-use crate::attestation::{AttestationClient, ConfigurationVerifier};
+use crate::attestation::{into_server_identity_verifier, ConfigurationVerifier};
 use anyhow::Context;
+use grpc_attestation::client::AttestationClient;
 use oak_functions_abi::proto::{Request, Response};
 use prost::Message;
 
@@ -34,9 +35,13 @@ pub struct Client {
 
 impl Client {
     pub async fn new(uri: &str, verifier: ConfigurationVerifier) -> anyhow::Result<Self> {
-        let inner = AttestationClient::create(uri, TEE_MEASUREMENT, verifier)
-            .await
-            .context("Could not create Oak Functions client")?;
+        let inner = AttestationClient::create(
+            uri,
+            TEE_MEASUREMENT,
+            into_server_identity_verifier(verifier),
+        )
+        .await
+        .context("Could not create Oak Functions client")?;
         Ok(Client { inner })
     }
     pub async fn invoke(&mut self, request: Request) -> anyhow::Result<Response> {

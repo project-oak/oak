@@ -14,14 +14,17 @@
 // limitations under the License.
 //
 
-pub mod proto {
-    #![allow(clippy::return_self_not_must_use)]
-    tonic::include_proto!("oak.session.stream.v1");
-}
+#![feature(async_closure)]
 
-use crate::attestation::AttestationServer;
+use crate::grpc::handle_request;
 use anyhow::Context;
-use proto::streaming_session_server::StreamingSessionServer;
+use grpc_attestation::{
+    proto::streaming_session_server::StreamingSessionServer,
+    server::{AttestationServer, LogError},
+};
+use log::warn;
+use oak_functions_abi::proto::ConfigurationInfo;
+use prost::Message;
 use std::{
     fs::canonicalize,
     net::{Ipv6Addr, SocketAddr},
@@ -31,7 +34,6 @@ use structopt::StructOpt;
 use tokio::time::{sleep, Duration};
 use tonic::transport::Server;
 
-pub mod attestation;
 pub mod grpc;
 
 // The name of the UNIX domain socket for communicating with the TF model server.
@@ -74,9 +76,28 @@ async fn main() -> anyhow::Result<()> {
     let address = SocketAddr::from((Ipv6Addr::UNSPECIFIED, opt.port));
     wait_for_socket(SOCKET).await?;
     let backend = grpc::BackendConnection::connect(SOCKET).await;
-    let handler = AttestationServer::create(Vec::new(), backend)?;
+    let client = backend.create_client();
+
+    // Create fake configuration info for now, as it cannot be empty for the attestation
+    // handshake.
+    // TODO(#2420): Remove once Java client can work without the configuration info.
+    let additional_info = ConfigurationInfo {
+        wasm_hash: vec![0, 1, 2, 3],
+        policy: None,
+        ml_inference: false,
+        metrics: None,
+    }
+    .encode_to_vec();
+
+    let request_handler = async move |request| handle_request(client.clone(), request).await;
+
     Server::builder()
-        .add_service(StreamingSessionServer::new(handler))
+        .add_service(StreamingSessionServer::new(AttestationServer::create(
+            Vec::new(),
+            request_handler,
+            additional_info,
+            ErrorLogger {},
+        )?))
         .serve(address)
         .await
         .context("error executing server")?;
@@ -122,4 +143,13 @@ async fn wait_for_socket(socket: &str) -> anyhow::Result<()> {
         sleep(Duration::from_millis(100)).await;
     }
     Err(anyhow::anyhow!("socket not available in time"))
+}
+
+#[derive(Clone)]
+struct ErrorLogger {}
+
+impl LogError for ErrorLogger {
+    fn log_error(&self, error: &str) {
+        warn!("{}", error);
+    }
 }

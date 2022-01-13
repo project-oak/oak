@@ -1,5 +1,5 @@
 //
-// Copyright 2021 The Project Oak Authors
+// Copyright 2022 The Project Oak Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,17 +14,11 @@
 // limitations under the License.
 //
 
-use oak_utils::{generate_grpc_code, CodegenOptions};
+//! Remote Attestation handshake protocol implemened using bidirectional streaming gRPC.
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
-    generate_grpc_code(
-        "../../",
-        &["oak_functions/proto/benchmark.proto"],
-        CodegenOptions {
-            build_client: false,
-            build_server: true,
-            extern_paths: vec![],
-        },
-    )?;
-    Ok(())
+pub mod proto {
+    #![allow(clippy::return_self_not_must_use)]
+    tonic::include_proto!("oak.session.stream.v1");
 }
+pub mod client;
+pub mod server;

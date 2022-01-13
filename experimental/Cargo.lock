@@ -819,6 +819,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "grpc_attestation"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-stream",
+ "futures",
+ "oak_functions_abi",
+ "oak_remote_attestation",
+ "oak_utils",
+ "prost",
+ "prost-types",
+ "tokio",
+ "tonic",
+ "tower",
+]
+
+[[package]]
 name = "h2"
 version = "0.3.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1383,6 +1400,7 @@ dependencies = [
  "anyhow",
  "async-stream",
  "env_logger 0.9.0",
+ "grpc_attestation",
  "http",
  "log",
  "oak_functions_abi",
@@ -2524,6 +2542,7 @@ dependencies = [
  "async-stream",
  "env_logger 0.9.0",
  "futures",
+ "grpc_attestation",
  "log",
  "oak_functions_abi",
  "oak_remote_attestation",

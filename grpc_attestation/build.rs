@@ -1,5 +1,5 @@
 //
-// Copyright 2021 The Project Oak Authors
+// Copyright 2022 The Project Oak Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,13 +18,14 @@ use oak_utils::{generate_grpc_code, CodegenOptions};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     generate_grpc_code(
-        "../../",
-        &["oak_functions/proto/benchmark.proto"],
+        "../",
+        &["oak_functions/proto/server.proto"],
         CodegenOptions {
-            build_client: false,
+            build_client: true,
             build_server: true,
-            extern_paths: vec![],
+            ..Default::default()
         },
     )?;
+
     Ok(())
 }
