@@ -289,6 +289,17 @@ impl WasmState {
         Ok(())
     }
 
+    // TODO(mschett) Comment
+    pub fn channel_write(
+        &mut self,
+        // TODO(mschett) Find appropriate types here
+        _channel_handle: i32,
+        _src_buf_ptr: u32,
+        _src_buf_len: u32,
+    ) -> Result<(), ChannelStatus> {
+        Err(ChannelStatus::Unspecified)
+    }
+
     /// Corresponds to the host ABI function [`write_log_message`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#write_log_message).
     pub fn write_log_message(
         &mut self,
@@ -362,6 +373,20 @@ impl wasmi::Externals for WasmState {
             WRITE_LOG_MESSAGE => {
                 map_host_errors(self.write_log_message(args.nth_checked(0)?, args.nth_checked(1)?))
             }
+            /* TODO(mschett)
+            // channel_read/channel_write returns ChannelStatus instead of OakStatus
+            // possibly unify ChannelStatus and OakStatus somehow, or remove distinction?
+            CHANNEL_READ => map_host_errors(self.channel_read(
+                args.nth_checked(0)?,
+                args.nth_checked(1)?,
+                args.nth_checked(2)?,
+            )),
+            CHANNEL_WRITE => map_host_errors(self.channel_write(
+                args.nth_checked(0)?,
+                args.nth_checked(1)?,
+                args.nth_checked(2)?,
+            )),
+            */
             _ => {
                 let mut extensions_indices = self
                     .extensions_indices
