@@ -30,7 +30,7 @@ jobs:
           - build-server --server-variant=experimental
           - build-functions-server --server-variant=unsafe
           - build-functions-server --server-variant=base
-          - run-cargo-tests --cleanup
+          - run-cargo-tests
           - run-bazel-tests
           - run-tests-tsan
           - run-examples --application-variant=rust
@@ -84,8 +84,6 @@ jobs:
       # See https://doc.rust-lang.org/nightly/cargo/guide/cargo-home.html#caching-the-cargo-home-in-ci
       - name: Cache Rust artifacts
         uses: actions/cache@v2
-        if: |
-          matrix.cmd == 'run-cargo-clippy' || matrix.cmd == 'run-examples --application-variant=rust' || matrix.cmd == 'run-examples --application-variant=cpp' || matrix.cmd == 'run-functions-examples --application-variant=rust'
         with:
           path: |
             ./cargo-cache/bin
