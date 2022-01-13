@@ -920,7 +920,6 @@ dependencies = [
  "tokio",
  "tokio-rustls 0.22.0",
  "webpki 0.21.4",
- "webpki-roots",
 ]
 
 [[package]]
@@ -934,6 +933,7 @@ dependencies = [
  "rustls 0.20.2",
  "tokio",
  "tokio-rustls 0.23.1",
+ "webpki-roots 0.22.2",
 ]
 
 [[package]]
@@ -1265,7 +1265,7 @@ dependencies = [
  "log",
  "openssl",
  "ring",
- "rustls 0.19.1",
+ "rustls 0.20.2",
  "serde",
  "serde_json",
  "sha2",
@@ -1312,7 +1312,7 @@ dependencies = [
  "oak_sign",
  "openssl",
  "prost",
- "rustls 0.19.1",
+ "rustls 0.20.2",
  "serde",
  "signal-hook",
  "structopt",
@@ -1355,7 +1355,7 @@ dependencies = [
  "hex",
  "http",
  "hyper",
- "hyper-rustls 0.22.1",
+ "hyper-rustls 0.23.0",
  "itertools",
  "jsonwebtoken",
  "lazy_static",
@@ -1374,7 +1374,7 @@ dependencies = [
  "regex",
  "reqwest",
  "roughenough",
- "rustls 0.19.1",
+ "rustls 0.20.2",
  "serde",
  "serde_json",
  "sha2",
@@ -1388,7 +1388,7 @@ dependencies = [
  "tink-proto",
  "tink-signature",
  "tokio",
- "tokio-rustls 0.22.0",
+ "tokio-rustls 0.23.1",
  "tokio-stream",
  "tonic",
  "wasmi",
@@ -1943,7 +1943,7 @@ dependencies = [
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "web-sys",
- "webpki-roots",
+ "webpki-roots 0.21.1",
  "winreg",
 ]
 
@@ -2711,9 +2711,9 @@ dependencies = [
 
 [[package]]
 name = "tokio-stream"
-version = "0.1.7"
+version = "0.1.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7b2f3f698253f03119ac0102beaa64f67a67e08074d03a22d18784104543727f"
+checksum = "50145484efff8818b5ccd256697f36863f587da82cf8b409c53adf1e840798e3"
 dependencies = [
  "futures-core",
  "pin-project-lite",
@@ -3103,6 +3103,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "aabe153544e473b775453675851ecc86863d2a81d786d741f6b76778f2a48940"
 dependencies = [
  "webpki 0.21.4",
+]
+
+[[package]]
+name = "webpki-roots"
+version = "0.22.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "552ceb903e957524388c4d3475725ff2c8b7960922063af6ce53c9a43da07449"
+dependencies = [
+ "webpki 0.22.0",
 ]
 
 [[package]]
