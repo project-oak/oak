@@ -813,6 +813,7 @@ impl ChannelSwitchboard {
         self.0.get(handle)
     }
 
+    // TODO(mschett) Merge get and get_mut.
     fn get_mut(&mut self, handle: &ChannelHandle) -> Option<&mut Endpoint> {
         self.0.get_mut(handle)
     }
@@ -906,7 +907,7 @@ mod tests {
         let message = b"A Test Message: Value";
         let mut wasm_state = create_test_wasm_state();
 
-        // write message into Lookup endpoint
+        // Write message into Lookup endpoint.
         // TODO(mschett) check whether this should be wrapped by a channel_write to endpoint
         // channel.
         let endpoint = &wasm_state.runtime_endpoints.lookup;
