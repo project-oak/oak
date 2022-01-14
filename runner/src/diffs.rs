@@ -184,7 +184,8 @@ pub fn all_affected_crates(scope: &Scope) -> ModifiedContent {
 }
 
 fn crates_affected_by_files(files: &ModifiedContent) -> ModifiedContent {
-    let files = directly_modified_crates(files).files.map(|modified_files| {
+    let modified_crates = directly_modified_crates(files);
+    let files = modified_crates.files.map(|modified_files| {
         let crate_manifest_files = crate_manifest_files();
         // A map of `Cargo.toml` files visited by the algorithm. If the value associated with a
         // key is `true`, the crate is affected by the changes and should be included in the
@@ -247,6 +248,7 @@ fn add_affected_crates(
     if affected_crates_toml_path.contains_key(&to_string(crate_toml_path.clone())) {
         return;
     }
+    affected_crates_toml_path.insert(to_string(crate_toml_path.clone()), false);
     let deps = get_local_dependencies(&crate_toml_path);
     for dep in deps {
         // If the dependency is not visited, visit it and its dependencies
@@ -259,7 +261,6 @@ fn add_affected_crates(
             return;
         }
     }
-    affected_crates_toml_path.insert(to_string(crate_toml_path), false);
 }
 
 /// Returns paths to `Cargo.toml` files of local crates (crates belonging to the Oak repo) that the
