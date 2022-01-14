@@ -628,7 +628,7 @@ impl WasmHandler {
         })
     }
 
-    fn init_wasm_state(&self, request_bytes: Vec<u8>) -> anyhow::Result<WasmState> {
+    fn init(&self, request_bytes: Vec<u8>) -> anyhow::Result<WasmState> {
         let mut extensions_indices = HashMap::new();
         let mut extensions_metadata = HashMap::new();
 
@@ -656,7 +656,7 @@ impl WasmHandler {
 
     pub async fn handle_invoke(&self, request: Request) -> anyhow::Result<Response> {
         let request_bytes = request.body;
-        let mut wasm_state = self.init_wasm_state(request_bytes)?;
+        let mut wasm_state = self.init(request_bytes)?;
 
         wasm_state.invoke();
         for mut extension in wasm_state
@@ -845,7 +845,7 @@ mod tests {
     fn create_test_wasm_state() -> WasmState {
         let wasm_handler = create_test_wasm_handler();
         wasm_handler
-            .init_wasm_state(b"".to_vec())
+            .init(b"".to_vec())
             .expect("could not create wasm_state")
     }
 
