@@ -259,7 +259,7 @@ impl WasmState {
         dest_ptr_ptr: u32,
         dest_len_ptr: u32,
     ) -> Result<(), ChannelStatus> {
-        // read message from channel
+        // Read message from channel at channel_handle.
         let channel_handle =
             ChannelHandle::from_i32(channel_handle).ok_or(ChannelStatus::ChannelHandleInvalid)?;
         let endpoint = self
@@ -271,7 +271,8 @@ impl WasmState {
             TryRecvError::Empty => ChannelStatus::ChannelEmpty,
             TryRecvError::Disconnected => ChannelStatus::ChannelDisconnected,
         })?;
-        // write message to memory of wasm module
+
+        // Write message to memory of wasm module.
         let dest_ptr = self.alloc(message.len() as u32);
 
         let from_oak_status = |e| match e {
@@ -631,6 +632,10 @@ impl WasmHandler {
         let mut extensions_indices = HashMap::new();
         let mut extensions_metadata = HashMap::new();
 
+        let mut channel_switchboard = ChannelSwitchboard::new();
+        // Register only lookup channel for now.
+        let lookup = channel_switchboard.register(ChannelHandle::LookupData);
+
         for (ind, factory) in self.extension_factories.iter().enumerate() {
             let extension = factory.create()?;
             let (name, signature) = extension.get_metadata();
@@ -638,16 +643,14 @@ impl WasmHandler {
             extensions_metadata.insert(name, (ind + EXTENSION_INDEX_OFFSET, signature));
         }
 
-        let (runtime_endpoints, switchboard) = ChannelSwitchboard::create();
-
         WasmState::new(
             &self.module,
             request_bytes,
             self.logger.clone(),
             extensions_indices,
             extensions_metadata,
-            switchboard,
-            runtime_endpoints,
+            channel_switchboard,
+            RuntimeEndpoints { lookup },
         )
     }
 
@@ -795,17 +798,16 @@ struct RuntimeEndpoints {
 struct ChannelSwitchboard(HashMap<ChannelHandle, Endpoint>);
 
 impl ChannelSwitchboard {
-    fn create() -> (RuntimeEndpoints, Self) {
-        let mut channel_switchboard = HashMap::new();
+    fn new() -> Self {
+        ChannelSwitchboard(HashMap::new())
+    }
 
-        // Create endpoints for lookup extension
-        let (lookup, e2) = channel_create();
-        channel_switchboard.insert(ChannelHandle::LookupData, e2);
-
-        (
-            RuntimeEndpoints { lookup },
-            ChannelSwitchboard(channel_switchboard),
-        )
+    // Creates a channel for `channel_handle`, adds one endpoint to the channel switchboard and
+    // returns the corresponding endpoint. Overwrites existing channels for `channel_handle`.
+    fn register(&mut self, channel_handle: ChannelHandle) -> Endpoint {
+        let (e1, e2) = channel_create();
+        self.0.insert(channel_handle, e2);
+        e1
     }
 
     #[allow(dead_code)]
