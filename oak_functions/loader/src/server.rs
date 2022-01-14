@@ -769,14 +769,10 @@ impl ChannelSwitchboard {
         e1
     }
 
-    #[allow(dead_code)]
-    fn get(&self, handle: &ChannelHandle) -> Option<&Endpoint> {
-        self.0.get(handle)
-    }
-
-    // TODO(mschett) Merge get and get_mut.
-    fn get_mut(&mut self, handle: &ChannelHandle) -> Option<&mut Endpoint> {
-        self.0.get_mut(handle)
+    // Get the endpoint registered for the channel_handle. To send to/receive from the endpoint, the
+    // endpoint has to be mutable.
+    fn get_mut(&mut self, channel_handle: &ChannelHandle) -> Option<&mut Endpoint> {
+        self.0.get_mut(channel_handle)
     }
 }
 
@@ -811,14 +807,14 @@ mod tests {
     #[tokio::test]
     async fn test_create_channel_switchboard_in_wasm_state() {
         let wasm_state = create_test_wasm_state();
-        let channel_switchboard = wasm_state.channel_switchboard;
+        let mut channel_switchboard = wasm_state.channel_switchboard;
 
         assert!(&channel_switchboard
-            .get(&ChannelHandle::Unspecified)
+            .get_mut(&ChannelHandle::Unspecified)
             .is_none());
 
         assert!(&channel_switchboard
-            .get(&ChannelHandle::LookupData)
+            .get_mut(&ChannelHandle::LookupData)
             .is_some());
     }
 
