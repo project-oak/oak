@@ -51,6 +51,8 @@ const ABI_CHANNEL_BOUND: usize = 100;
 // of Wasm would use different types.
 pub type AbiPointer = u32;
 pub type AbiPointerOffset = u32;
+// Type alias for the ChannelHandle type, which has to be casted into a ChannelHandle.
+pub type AbiChannelHandle = i32;
 /// Wasm type identifier for position/offset values in linear memory. Any future 64-bit version of
 /// Wasm would use a different value.
 pub const ABI_USIZE: ValueType = ValueType::I32;
@@ -253,10 +255,9 @@ impl WasmState {
 
     pub fn channel_read(
         &mut self,
-        // TODO(mschett) Find appropriate types here
-        channel_handle: i32,
-        dest_ptr_ptr: u32,
-        dest_len_ptr: u32,
+        channel_handle: AbiChannelHandle,
+        dest_ptr_ptr: AbiPointer,
+        dest_len_ptr: AbiPointer,
     ) -> Result<(), ChannelStatus> {
         // Read message from channel at channel_handle.
         let channel_handle =
@@ -690,7 +691,6 @@ fn oak_functions_resolve_func(field_name: &str) -> Option<(usize, wasmi::Signatu
             CHANNEL_READ,
             wasmi::Signature::new(
                 &[
-                    // TODO(mschett) check whether USIZE is appropriate
                     ABI_USIZE, // channel_handle
                     ABI_USIZE, // src_buf_ptr
                     ABI_USIZE, // src_buf_len
