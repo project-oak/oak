@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["DtypeAndShape","Protocol buffer representing a pair of (data type, tensor shape)."]]});

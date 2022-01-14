@@ -1,0 +1,1 @@
+initSidebarItems({"mod":[["chat_client","Generated client implementations."]],"struct":[["Message",""],["SendMessageRequest","The chat room is identified by the Oak Label provided as part of gRPC metadata."],["SubscribeRequest","The chat room is identified by the Oak Label provided as part of gRPC metadata."]]});

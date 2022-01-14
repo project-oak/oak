@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["TrustedDatabaseServer",""],["_Inner",""]],"trait":[["TrustedDatabase","Generated trait containing gRPC methods that should be implemented for use with TrustedDatabaseServer."]]});

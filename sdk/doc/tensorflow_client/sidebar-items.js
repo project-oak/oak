@@ -1,0 +1,1 @@
+initSidebarItems({"fn":[["arg_max",""],["main",""]],"mod":[["data","Utilities to fetch, parse and process MNIST data. Inspired by https://github.com/tensorflow/serving/blob/f3fbec59798e13cb1f7230fcf891c0ec4113331e/tensorflow_serving/example/mnist_input_data.py"],["proto",""]],"struct":[["Opt",""]]});

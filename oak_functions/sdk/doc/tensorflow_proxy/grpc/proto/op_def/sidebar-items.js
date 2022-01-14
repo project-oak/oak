@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["ArgDef","For describing inputs and outputs."],["AttrDef","Description of the graph-construction-time configuration of this Op.  That is to say, this describes the attr fields that will be specified in the NodeDef."]]});

@@ -1,0 +1,1 @@
+initSidebarItems({"enum":[["Encoding",""]],"struct":[["CompositeTensor","Generic encoding for composite tensors."],["CooSparse","For sparse tensors, The COO encoding stores a triple of values, indices, and shape."]]});

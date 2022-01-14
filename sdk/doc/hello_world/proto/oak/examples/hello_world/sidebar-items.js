@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["HelloRequest",""],["HelloResponse",""],["HelloWorldClient",""],["HelloWorldDispatcher",""],["Init","Init message for the handler Node, used only internally."]],"trait":[["HelloWorld",""]]});

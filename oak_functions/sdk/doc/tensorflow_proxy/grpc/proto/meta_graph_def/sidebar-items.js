@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["MetaInfoDef","Meta information regarding the graph to be exported.  To be used by users of this protocol buffer to encode information regarding their meta graph."]]});

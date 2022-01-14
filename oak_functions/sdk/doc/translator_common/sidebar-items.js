@@ -1,0 +1,1 @@
+initSidebarItems({"fn":[["translate",""]],"mod":[["proto",""]],"struct":[["TranslatorEntrypoint","Stub with a manual implementation of [`oak::WasmEntrypoint`], to be used by other nodes that want to instantiate a translator node. The manual implementation must be kept in sync with the auto-generated implementation from the translator module."]]});

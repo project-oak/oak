@@ -1,0 +1,1 @@
+initSidebarItems({"enum":[["JitCompile","Whether the function should be compiled by XLA."]]});

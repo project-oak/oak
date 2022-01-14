@@ -1,0 +1,1 @@
+initSidebarItems({"fn":[["handle_request",""]],"mod":[["proto",""]],"struct":[["BackendConnection","Connection to the prediction service that can be used for creating new clients."],["FutureSyncWrapper","Utility wrapper to implement `Sync` for `Future`s by wrapping the inner Future in a `SyncWrapper`."]]});

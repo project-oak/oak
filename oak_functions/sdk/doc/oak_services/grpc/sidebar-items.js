@@ -1,0 +1,1 @@
+initSidebarItems({"fn":[["encap_request","Encapsulate a protocol buffer message in a GrpcRequest wrapper using the given method name."]]});

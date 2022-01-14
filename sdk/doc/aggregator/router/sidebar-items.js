@@ -1,0 +1,1 @@
+initSidebarItems({"fn":[["router",""]],"struct":[["Router","A node that routes each incoming gRPC invocation to a Handler Node that can handle requests with the label of the incoming request."]]});

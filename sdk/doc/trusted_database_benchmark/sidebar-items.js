@@ -1,0 +1,1 @@
+initSidebarItems({"constant":[["NATIVE_APPLICATION_GRPC_PORT",""],["REQUEST_NUMBER",""]],"fn":[["main",""],["measure_request_time","Measures average request time in milliseconds."]],"mod":[["application",""],["database",""],["proto",""]],"struct":[["Opt",""]]});

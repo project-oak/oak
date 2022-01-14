@@ -1,0 +1,3 @@
+(function() {var implementors = {};
+implementors["oak_tls_attestation"] = [{"text":"impl Accept for <a class=\"struct\" href=\"oak_tls_attestation/server/struct.HyperAcceptor.html\" title=\"struct oak_tls_attestation::server::HyperAcceptor\">HyperAcceptor</a>&lt;'_&gt;","synthetic":false,"types":["oak_tls_attestation::server::HyperAcceptor"]}];
+if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

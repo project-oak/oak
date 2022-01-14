@@ -1,0 +1,1 @@
+initSidebarItems({"mod":[["aggregator_server","Generated server implementations."]],"struct":[["Sample","Message sent by clients."],["SerializedSparseVector","Data provided by clients is represented by Sparse Vectors: dictionaries with integer keys."]]});

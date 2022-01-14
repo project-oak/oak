@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["NamePart","The name of the uninterpreted option.  Each string represents a segment in a dot-separated name.  is_extension is true iff a segment represents an extension (denoted with parentheses in options specs in .proto files). E.g.,{ [“foo”, false], [“bar.baz”, true], [“qux”, false] } represents “foo.(bar.baz).qux”."]]});

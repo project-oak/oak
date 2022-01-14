@@ -1,0 +1,1 @@
+initSidebarItems({"constant":[["MAIN_ENTRYPOINT_NAME",""],["MAIN_MODULE_MANIFEST",""],["MAIN_MODULE_NAME",""]],"fn":[["build_wasm",""]],"struct":[["OakApplication",""]]});

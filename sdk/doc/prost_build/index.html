@@ -1,0 +1,89 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="`prost-build` compiles `.proto` files into Rust."><meta name="keywords" content="rust, rustlang, rust-lang, prost_build"><title>prost_build - Rust</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" type="text/css" href="../normalize.css"><link rel="stylesheet" type="text/css" href="../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../ayu.css" disabled><link rel="stylesheet" type="text/css" href="../dark.css" disabled><link rel="stylesheet" type="text/css" href="../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../storage.js"></script><script src="../crates.js"></script><script defer src="../main.js"></script>
+    <noscript><link rel="stylesheet" href="../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../favicon.svg"></head><body class="rustdoc mod crate"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu" role="button">&#9776;</div><a class="sidebar-logo" href="../prost_build/index.html"><div class="logo-container"><img class="rust-logo" src="../rust-logo.png" alt="logo"></div>
+        </a><h2 class="location">Crate prost_build</h2><div class="block version"><div class="narrow-helper"></div><p>Version 0.8.0</p></div><div class="sidebar-elems"><a id="all-types" href="all.html"><p>See all prost_build's items</p></a><div class="block items"><ul><li><a href="#structs">Structs</a></li><li><a href="#traits">Traits</a></li><li><a href="#functions">Functions</a></li></ul></div><div id="sidebar-vars" data-name="prost_build" data-ty="mod" data-relpath=""></div><script defer src="sidebar-items.js"></script></div></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../prost_build/index.html"><img class="rust-logo" src="../rust-logo.png" alt="logo"></a><nav class="sub"><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!" aria-haspopup="menu" title="themes"><img width="18" height="18" alt="Pick another theme!" src="../brush.svg"></button><div id="theme-choices" role="menu"></div></div><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><button type="button" id="help-button" title="help">?</button><a id="settings-menu" href="../settings.html" title="settings"><img width="18" height="18" alt="Change settings" src="../wheel.svg"></a></div></form></nav></div><section id="main-content" class="content"><h1 class="fqn"><span class="in-band">Crate <a class="mod" href="#">prost_build</a><button id="copy-path" onclick="copy_path(this)" title="Copy item path to clipboard"><img src="../clipboard.svg" width="19" height="18" alt="Copy item path"></button></span><span class="out-of-band"><span id="render-detail"><a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">[<span class="inner">&#x2212;</span>]</a></span><a class="srclink" href="../src/prost_build/lib.rs.html#1-1034" title="goto source code">[src]</a></span></h1><details class="rustdoc-toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p><code>prost-build</code> compiles <code>.proto</code> files into Rust.</p>
+<p><code>prost-build</code> is designed to be used for build-time code generation as part of a Cargo
+build-script.</p>
+<h3 id="example" class="section-header"><a href="#example">Example</a></h3>
+<p>Let’s create a small crate, <code>snazzy</code>, that defines a collection of
+snazzy new items in a protobuf file.</p>
+<div class="example-wrap"><pre class="language-bash"><code>$ cargo new snazzy &amp;&amp; cd snazzy</code></pre></div>
+<p>First, add <code>prost-build</code>, <code>prost</code> and its public dependencies to <code>Cargo.toml</code>
+(see <a href="https://crates.io/crates/prost">crates.io</a> for the current versions):</p>
+<div class="example-wrap"><pre class="language-toml"><code>[dependencies]
+bytes = &lt;bytes-version&gt;
+prost = &lt;prost-version&gt;
+
+[build-dependencies]
+prost-build = { version = &lt;prost-version&gt; }</code></pre></div>
+<p>Next, add <code>src/items.proto</code> to the project:</p>
+<div class="example-wrap"><pre class="language-proto"><code>syntax = &quot;proto3&quot;;
+
+package snazzy.items;
+
+// A snazzy new shirt!
+message Shirt {
+    enum Size {
+        SMALL = 0;
+        MEDIUM = 1;
+        LARGE = 2;
+    }
+
+    string color = 1;
+    Size size = 2;
+}</code></pre></div>
+<p>To generate Rust code from <code>items.proto</code>, we use <code>prost-build</code> in the crate’s
+<code>build.rs</code> build-script:</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">use</span> <span class="ident">std::io::Result</span>;
+<span class="kw">fn</span> <span class="ident">main</span>() -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+    <span class="ident">prost_build::compile_protos</span>(<span class="kw-2">&amp;</span>[<span class="string">&quot;src/items.proto&quot;</span>], <span class="kw-2">&amp;</span>[<span class="string">&quot;src/&quot;</span>])<span class="question-mark">?</span>;
+    <span class="prelude-val">Ok</span>(())
+}</code></pre></div>
+<p>And finally, in <code>lib.rs</code>, include the generated code:</p>
+
+<div class='information'><div class='tooltip ignore'>ⓘ</div></div><div class="example-wrap"><pre class="rust rust-example-rendered ignore"><code><span class="comment">// Include the `items` module, which is generated from items.proto.</span>
+<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">items</span> {
+    <span class="macro">include!</span>(<span class="macro">concat!</span>(<span class="macro">env!</span>(<span class="string">&quot;OUT_DIR&quot;</span>), <span class="string">&quot;/snazzy.items.rs&quot;</span>));
+}
+
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">create_large_shirt</span>(<span class="ident">color</span>: <span class="ident">String</span>) -&gt; <span class="ident">items::Shirt</span> {
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">shirt</span> <span class="op">=</span> <span class="ident">items::Shirt::default</span>();
+    <span class="ident">shirt</span>.<span class="ident">color</span> <span class="op">=</span> <span class="ident">color</span>;
+    <span class="ident">shirt</span>.<span class="ident">set_size</span>(<span class="ident">items::shirt::Size::Large</span>);
+    <span class="ident">shirt</span>
+}</code></pre></div>
+<p>That’s it! Run <code>cargo doc</code> to see documentation for the generated code. The full
+example project can be found on <a href="https://github.com/danburkert/snazzy">GitHub</a>.</p>
+<h3 id="sourcing-protoc" class="section-header"><a href="#sourcing-protoc">Sourcing <code>protoc</code></a></h3>
+<p><code>prost-build</code> depends on the Protocol Buffers compiler, <code>protoc</code>, to parse <code>.proto</code> files into
+a representation that can be transformed into Rust. If set, <code>prost-build</code> uses the <code>PROTOC</code> and
+<code>PROTOC_INCLUDE</code> environment variables for locating <code>protoc</code> and the Protobuf includes
+directory. For example, on a macOS system where Protobuf is installed with Homebrew, set the
+environment to:</p>
+<div class="example-wrap"><pre class="language-bash"><code>PROTOC=/usr/local/bin/protoc
+PROTOC_INCLUDE=/usr/local/include</code></pre></div>
+<p>and in a typical Linux installation:</p>
+<div class="example-wrap"><pre class="language-bash"><code>PROTOC=/usr/bin/protoc
+PROTOC_INCLUDE=/usr/include</code></pre></div>
+<p>If <code>PROTOC</code> is not found in the environment, then a pre-compiled <code>protoc</code> binary bundled in the
+prost-build crate is used. Pre-compiled <code>protoc</code> binaries exist for Linux (non-musl), macOS,
+and Windows systems. If no pre-compiled <code>protoc</code> is available for the host platform, then the
+<code>protoc</code> or <code>protoc.exe</code> binary on the <code>PATH</code> is used. If <code>protoc</code> is not available in any of
+these fallback locations, then the build fails.</p>
+<p>If <code>PROTOC_INCLUDE</code> is not found in the environment, then the Protobuf include directory
+bundled in the prost-build crate is be used.</p>
+<p>To force <code>prost-build</code> to use the <code>protoc</code> on the <code>PATH</code>, add <code>PROTOC=protoc</code> to the
+environment.</p>
+</div></details><h2 id="structs" class="small-section-header"><a href="#structs">Structs</a></h2>
+<div class="item-table"><div class="item-row"><div class="item-left module-item"><a class="struct" href="struct.Comments.html" title="prost_build::Comments struct">Comments</a></div><div class="item-right docblock-short"><p>Comments on a Protobuf item.</p>
+</div></div><div class="item-row"><div class="item-left module-item"><a class="struct" href="struct.Config.html" title="prost_build::Config struct">Config</a></div><div class="item-right docblock-short"><p>Configuration options for Protobuf code generation.</p>
+</div></div><div class="item-row"><div class="item-left module-item"><a class="struct" href="struct.Method.html" title="prost_build::Method struct">Method</a></div><div class="item-right docblock-short"><p>A service method descriptor.</p>
+</div></div><div class="item-row"><div class="item-left module-item"><a class="struct" href="struct.Service.html" title="prost_build::Service struct">Service</a></div><div class="item-right docblock-short"><p>A service descriptor.</p>
+</div></div></div><h2 id="traits" class="small-section-header"><a href="#traits">Traits</a></h2>
+<div class="item-table"><div class="item-row"><div class="item-left module-item"><a class="trait" href="trait.ServiceGenerator.html" title="prost_build::ServiceGenerator trait">ServiceGenerator</a></div><div class="item-right docblock-short"><p>A service generator takes a service descriptor and generates Rust code.</p>
+</div></div></div><h2 id="functions" class="small-section-header"><a href="#functions">Functions</a></h2>
+<div class="item-table"><div class="item-row"><div class="item-left module-item"><a class="fn" href="fn.compile_protos.html" title="prost_build::compile_protos fn">compile_protos</a></div><div class="item-right docblock-short"><p>Compile <code>.proto</code> files into Rust files during a Cargo build.</p>
+</div></div><div class="item-row"><div class="item-left module-item"><a class="fn" href="fn.protoc.html" title="prost_build::protoc fn">protoc</a></div><div class="item-right docblock-short"><p>Returns the path to the <code>protoc</code> binary.</p>
+</div></div><div class="item-row"><div class="item-left module-item"><a class="fn" href="fn.protoc_include.html" title="prost_build::protoc_include fn">protoc_include</a></div><div class="item-right docblock-short"><p>Returns the path to the Protobuf include directory.</p>
+</div></div></div></section><section id="search" class="content hidden"></section></div></main><div id="rustdoc-vars" data-root-path="../" data-current-crate="prost_build" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.60.0-nightly (a7e2e3396 2022-01-08)" ></div>
+</body></html>

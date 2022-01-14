@@ -1,0 +1,3 @@
+(function() {var implementors = {};
+implementors["aggregator"] = [{"text":"impl <a class=\"trait\" href=\"aggregator_common/trait.Monoid.html\" title=\"trait aggregator_common::Monoid\">Monoid</a> for <a class=\"struct\" href=\"aggregator/data/struct.SparseVector.html\" title=\"struct aggregator::data::SparseVector\">SparseVector</a>","synthetic":false,"types":["aggregator::data::SparseVector"]}];
+if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

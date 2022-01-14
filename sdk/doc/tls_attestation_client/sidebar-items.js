@@ -1,0 +1,1 @@
+initSidebarItems({"constant":[["EXAMPLE_MESSAGE",""],["INVALID_TEST_TEE_MEASUREMENT",""],["TEST_TEE_MEASUREMENT",""]],"fn":[["main",""],["send_request","Connect to the TEE application via HTTPS using the attested TLS channel."]],"struct":[["Opt",""]]});

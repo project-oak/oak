@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["Roughtime","Local representation of the connection to an external Roughtime service."]]});

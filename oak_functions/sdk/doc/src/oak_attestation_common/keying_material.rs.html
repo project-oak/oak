@@ -1,0 +1,289 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `experimental&#x2F;attestation_common&#x2F;src&#x2F;keying_material.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>keying_material.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../ayu.css" disabled><link rel="stylesheet" type="text/css" href="../../dark.css" disabled><link rel="stylesheet" type="text/css" href="../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../storage.js"></script><script src="../../crates.js"></script><script defer src="../../main.js"></script><script defer src="../../source-script.js"></script><script defer src="../../source-files.js"></script>
+    <noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu" role="button">&#9776;</div><a class="sidebar-logo" href="../../oak_attestation_common/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.png" alt="logo"></div>
+        </a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../oak_attestation_common/index.html"><img class="rust-logo" src="../../rust-logo.png" alt="logo"></a><nav class="sub"><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!" aria-haspopup="menu" title="themes"><img width="18" height="18" alt="Pick another theme!" src="../../brush.svg"></button><div id="theme-choices" role="menu"></div></div><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><button type="button" id="help-button" title="help">?</button><a id="settings-menu" href="../../settings.html" title="settings"><img width="18" height="18" alt="Change settings" src="../../wheel.svg"></a></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">  1</span>
+<span id="2">  2</span>
+<span id="3">  3</span>
+<span id="4">  4</span>
+<span id="5">  5</span>
+<span id="6">  6</span>
+<span id="7">  7</span>
+<span id="8">  8</span>
+<span id="9">  9</span>
+<span id="10"> 10</span>
+<span id="11"> 11</span>
+<span id="12"> 12</span>
+<span id="13"> 13</span>
+<span id="14"> 14</span>
+<span id="15"> 15</span>
+<span id="16"> 16</span>
+<span id="17"> 17</span>
+<span id="18"> 18</span>
+<span id="19"> 19</span>
+<span id="20"> 20</span>
+<span id="21"> 21</span>
+<span id="22"> 22</span>
+<span id="23"> 23</span>
+<span id="24"> 24</span>
+<span id="25"> 25</span>
+<span id="26"> 26</span>
+<span id="27"> 27</span>
+<span id="28"> 28</span>
+<span id="29"> 29</span>
+<span id="30"> 30</span>
+<span id="31"> 31</span>
+<span id="32"> 32</span>
+<span id="33"> 33</span>
+<span id="34"> 34</span>
+<span id="35"> 35</span>
+<span id="36"> 36</span>
+<span id="37"> 37</span>
+<span id="38"> 38</span>
+<span id="39"> 39</span>
+<span id="40"> 40</span>
+<span id="41"> 41</span>
+<span id="42"> 42</span>
+<span id="43"> 43</span>
+<span id="44"> 44</span>
+<span id="45"> 45</span>
+<span id="46"> 46</span>
+<span id="47"> 47</span>
+<span id="48"> 48</span>
+<span id="49"> 49</span>
+<span id="50"> 50</span>
+<span id="51"> 51</span>
+<span id="52"> 52</span>
+<span id="53"> 53</span>
+<span id="54"> 54</span>
+<span id="55"> 55</span>
+<span id="56"> 56</span>
+<span id="57"> 57</span>
+<span id="58"> 58</span>
+<span id="59"> 59</span>
+<span id="60"> 60</span>
+<span id="61"> 61</span>
+<span id="62"> 62</span>
+<span id="63"> 63</span>
+<span id="64"> 64</span>
+<span id="65"> 65</span>
+<span id="66"> 66</span>
+<span id="67"> 67</span>
+<span id="68"> 68</span>
+<span id="69"> 69</span>
+<span id="70"> 70</span>
+<span id="71"> 71</span>
+<span id="72"> 72</span>
+<span id="73"> 73</span>
+<span id="74"> 74</span>
+<span id="75"> 75</span>
+<span id="76"> 76</span>
+<span id="77"> 77</span>
+<span id="78"> 78</span>
+<span id="79"> 79</span>
+<span id="80"> 80</span>
+<span id="81"> 81</span>
+<span id="82"> 82</span>
+<span id="83"> 83</span>
+<span id="84"> 84</span>
+<span id="85"> 85</span>
+<span id="86"> 86</span>
+<span id="87"> 87</span>
+<span id="88"> 88</span>
+<span id="89"> 89</span>
+<span id="90"> 90</span>
+<span id="91"> 91</span>
+<span id="92"> 92</span>
+<span id="93"> 93</span>
+<span id="94"> 94</span>
+<span id="95"> 95</span>
+<span id="96"> 96</span>
+<span id="97"> 97</span>
+<span id="98"> 98</span>
+<span id="99"> 99</span>
+<span id="100">100</span>
+<span id="101">101</span>
+<span id="102">102</span>
+<span id="103">103</span>
+<span id="104">104</span>
+<span id="105">105</span>
+<span id="106">106</span>
+<span id="107">107</span>
+<span id="108">108</span>
+<span id="109">109</span>
+<span id="110">110</span>
+<span id="111">111</span>
+<span id="112">112</span>
+<span id="113">113</span>
+<span id="114">114</span>
+<span id="115">115</span>
+<span id="116">116</span>
+<span id="117">117</span>
+<span id="118">118</span>
+<span id="119">119</span>
+<span id="120">120</span>
+<span id="121">121</span>
+<span id="122">122</span>
+<span id="123">123</span>
+<span id="124">124</span>
+<span id="125">125</span>
+<span id="126">126</span>
+<span id="127">127</span>
+<span id="128">128</span>
+<span id="129">129</span>
+<span id="130">130</span>
+<span id="131">131</span>
+<span id="132">132</span>
+<span id="133">133</span>
+<span id="134">134</span>
+<span id="135">135</span>
+<span id="136">136</span>
+<span id="137">137</span>
+<span id="138">138</span>
+<span id="139">139</span>
+<span id="140">140</span>
+<span id="141">141</span>
+<span id="142">142</span>
+</pre><pre class="rust"><code><span class="comment">//</span>
+<span class="comment">// Copyright 2021 The Project Oak Authors</span>
+<span class="comment">//</span>
+<span class="comment">// Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
+<span class="comment">// you may not use this file except in compliance with the License.</span>
+<span class="comment">// You may obtain a copy of the License at</span>
+<span class="comment">//</span>
+<span class="comment">//     http://www.apache.org/licenses/LICENSE-2.0</span>
+<span class="comment">//</span>
+<span class="comment">// Unless required by applicable law or agreed to in writing, software</span>
+<span class="comment">// distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span class="comment">// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+<span class="comment">// See the License for the specific language governing permissions and</span>
+<span class="comment">// limitations under the License.</span>
+<span class="comment">//</span>
+
+<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::report</span>::{<span class="ident">AttestationInfo</span>, <span class="ident">Report</span>};
+<span class="kw">use</span> <span class="ident">anyhow</span>::{<span class="ident">anyhow</span>, <span class="ident">Context</span>};
+<span class="kw">use</span> <span class="ident">serde</span>::{<span class="ident">Deserialize</span>, <span class="ident">Serialize</span>};
+
+<span class="kw">const</span> <span class="ident">KEYING_MATERIAL_PURPOSE</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;TLSAttestationV1&quot;</span>;
+<span class="kw">const</span> <span class="ident">KEYING_MATERIAL_CLIENT_LABEL</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span>
+    <span class="string">&quot;EXPERIMENTAL Google Confidential Computing Client Attestation 1.0&quot;</span>;
+<span class="kw">const</span> <span class="ident">KEYING_MATERIAL_SERVER_LABEL</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span>
+    <span class="string">&quot;EXPERIMENTAL Google Confidential Computing Server Attestation 1.0&quot;</span>;
+<span class="kw">const</span> <span class="ident">KEYING_MATERIAL_LENGTH</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">128</span>;
+<span class="comment">// TODO(#2048): Implement multiple assertion types and assertion negotiation.</span>
+<span class="kw">const</span> <span class="ident">ASSERTION_TYPE</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;amd_sev_snp_report&quot;</span>;
+
+<span class="doccomment">/// Assertion used for remote attestation.</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Serialize</span>, <span class="ident">Deserialize</span>)]</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Assertion</span> {
+    <span class="ident">attestation_info</span>: <span class="ident">AttestationInfo</span>,
+}
+
+<span class="kw">impl</span> <span class="ident">Assertion</span> {
+    <span class="doccomment">/// Generates assertion by putting `keying_material` into a TEE report and attaching</span>
+    <span class="doccomment">/// `tee_certificate` used to verify the correctness of the TEE report.</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">generate</span>(
+        <span class="ident">tee_certificate</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>],
+        <span class="ident">keying_material</span>: <span class="ident">KeyingMaterial</span>,
+    ) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">serialized_keying_material</span> <span class="op">=</span> <span class="ident">serde_json::to_string</span>(<span class="kw-2">&amp;</span><span class="ident">keying_material</span>)
+            .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t serialize keying material&quot;</span>)<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">tee_report</span> <span class="op">=</span> <span class="ident">Report::new</span>(<span class="ident">serialized_keying_material</span>.<span class="ident">as_bytes</span>());
+        <span class="kw">let</span> <span class="ident">attestation_info</span> <span class="op">=</span> <span class="ident">AttestationInfo</span> {
+            <span class="ident">report</span>: <span class="ident">tee_report</span>,
+            <span class="ident">certificate</span>: <span class="ident">tee_certificate</span>.<span class="ident">to_vec</span>(),
+        };
+
+        <span class="prelude-val">Ok</span>(<span class="self">Self</span> { <span class="ident">attestation_info</span> })
+    }
+
+    <span class="doccomment">/// Verify remote attestation assertion by verifying the TEE report and checking that it</span>
+    <span class="doccomment">/// contains `expected_keying_material`.</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">verify</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">expected_keying_material</span>: <span class="kw-2">&amp;</span><span class="ident">KeyingMaterial</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+        <span class="self">self</span>.<span class="ident">attestation_info</span>
+            .<span class="ident">verify</span>()
+            .<span class="ident">context</span>(<span class="string">&quot;Incorrect attestation info&quot;</span>)<span class="question-mark">?</span>;
+
+        <span class="kw">let</span> <span class="ident">serialized_expected_keying_material</span> <span class="op">=</span> <span class="ident">serde_json::to_string</span>(<span class="ident">expected_keying_material</span>)
+            .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t serialize keying material&quot;</span>)<span class="question-mark">?</span>;
+        <span class="kw">if</span> <span class="ident">serialized_expected_keying_material</span>.<span class="ident">as_bytes</span>() <span class="op">==</span> <span class="self">self</span>.<span class="ident">attestation_info</span>.<span class="ident">report</span>.<span class="ident">data</span> {
+            <span class="prelude-val">Ok</span>(())
+        } <span class="kw">else</span> {
+            <span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">&quot;Incorrect keying material&quot;</span>))
+        }
+    }
+
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">from_string</span>(<span class="ident">input</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
+        <span class="ident">serde_json::from_str</span>(<span class="ident">input</span>).<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t deserialize assertion&quot;</span>)
+    }
+
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">to_string</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span> {
+        <span class="ident">serde_json::to_string</span>(<span class="kw-2">&amp;</span><span class="self">self</span>).<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t serialize assertion&quot;</span>)
+    }
+}
+
+<span class="doccomment">/// Value uniquely derived from the TLS master secret that is shared by both participants of the TLS</span>
+<span class="doccomment">/// session. Used to bind remote attestation to each TLS session independently.</span>
+<span class="doccomment">/// https://tools.ietf.org/html/rfc5705</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Serialize</span>, <span class="ident">Deserialize</span>, <span class="ident">PartialEq</span>)]</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">KeyingMaterial</span> {
+    <span class="doccomment">/// Value used to disambiguate the proper use of the `KeyingMaterial`.</span>
+    <span class="ident">purpose</span>: <span class="ident">String</span>,
+    <span class="doccomment">/// Pseudo-random value that is uniquely exported for an individual TLS session.</span>
+    <span class="ident">value</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
+}
+
+<span class="kw">impl</span> <span class="ident">KeyingMaterial</span> {
+    <span class="doccomment">/// Exports `KeyingMaterial` for a given TLS `session`.</span>
+    <span class="doccomment">/// https://tools.ietf.org/html/rfc5705#section-4</span>
+    <span class="kw">fn</span> <span class="ident">export</span>(
+        <span class="comment">// TLS session used to export `KeyingMaterial` from.</span>
+        <span class="ident">session</span>: <span class="kw-2">&amp;</span><span class="kw">dyn</span> <span class="ident">rustls::Session</span>,
+        <span class="comment">// Label value that is needed to distinguish between application level protocols that rely</span>
+        <span class="comment">// on `KeyingMaterial`.</span>
+        <span class="ident">label</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
+        <span class="comment">// Context value that is used to derive separate `KeyingMaterial` for different assertion</span>
+        <span class="comment">// types.</span>
+        <span class="ident">assertion_type</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
+    ) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">buffer</span> <span class="op">=</span> <span class="macro">vec!</span>[<span class="number">0</span>; <span class="ident">KEYING_MATERIAL_LENGTH</span>];
+        <span class="ident">session</span>
+            .<span class="ident">export_keying_material</span>(
+                <span class="kw-2">&amp;mut</span> <span class="ident">buffer</span>,
+                <span class="ident">label</span>.<span class="ident">as_bytes</span>(),
+                <span class="prelude-val">Some</span>(<span class="ident">assertion_type</span>.<span class="ident">as_bytes</span>()),
+            )
+            .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t export keying material&quot;</span>)<span class="question-mark">?</span>;
+        <span class="prelude-val">Ok</span>(<span class="self">Self</span> {
+            <span class="comment">// Purpose value is used to disambiguate the proper use of the `KeyingMaterial`. In this</span>
+            <span class="comment">// case the usage is remote attestation via TLS.</span>
+            <span class="ident">purpose</span>: <span class="ident">KEYING_MATERIAL_PURPOSE</span>.<span class="ident">to_string</span>(),
+            <span class="ident">value</span>: <span class="ident">buffer</span>,
+        })
+    }
+}
+
+<span class="doccomment">/// Convenience structure for exporting keying material with client and server labels.</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>)]</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">KeyingMaterialBundle</span> {
+    <span class="kw">pub</span> <span class="ident">client_keying_material</span>: <span class="ident">KeyingMaterial</span>,
+    <span class="kw">pub</span> <span class="ident">server_keying_material</span>: <span class="ident">KeyingMaterial</span>,
+}
+
+<span class="kw">impl</span> <span class="ident">KeyingMaterialBundle</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">export</span>(<span class="ident">session</span>: <span class="kw-2">&amp;</span><span class="kw">dyn</span> <span class="ident">rustls::Session</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
+        <span class="prelude-val">Ok</span>(<span class="self">Self</span> {
+            <span class="ident">client_keying_material</span>: <span class="ident">KeyingMaterial::export</span>(
+                <span class="ident">session</span>,
+                <span class="ident">KEYING_MATERIAL_CLIENT_LABEL</span>,
+                <span class="ident">ASSERTION_TYPE</span>,
+            )<span class="question-mark">?</span>,
+            <span class="ident">server_keying_material</span>: <span class="ident">KeyingMaterial::export</span>(
+                <span class="ident">session</span>,
+                <span class="ident">KEYING_MATERIAL_SERVER_LABEL</span>,
+                <span class="ident">ASSERTION_TYPE</span>,
+            )<span class="question-mark">?</span>,
+        })
+    }
+}
+</code></pre></div>
+</section><section id="search" class="content hidden"></section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="oak_attestation_common" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.60.0-nightly (a7e2e3396 2022-01-08)" ></div>
+</body></html>
