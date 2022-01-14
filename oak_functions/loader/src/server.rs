@@ -901,32 +901,43 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_read_from_endpoint() {
+    async fn test_hosted_channel_read_ok() {
         let channel_handle = ChannelHandle::LookupData as i32;
-        let message: AbiMessage = b"A Test Message: Value".to_vec();
+        let message = b"A Test Message: Value";
         let mut wasm_state = create_test_wasm_state();
 
         // write message into Lookup endpoint
         // TODO(mschett) check whether this should be wrapped by a channel_write to endpoint
         // channel.
         let endpoint = &wasm_state.runtime_endpoints.lookup;
-        let result = endpoint.sender.send(message.clone()).await;
+        let result = endpoint.sender.send(message.to_vec().clone()).await;
         assert!(result.is_ok());
 
-        let dest_ptr_ptr: AbiMessage = b"".to_vec();
-        let dest_len_ptr: usize = 0;
+        // Guess some memory addresses in linear Wasm memory.
+        let dest_ptr_ptr: AbiPointer = 100;
+        let dest_len_ptr: AbiPointer = 150;
 
-        let result = wasm_state.channel_read(
-            channel_handle,
-            &dest_ptr_ptr as *const _ as u32,
-            &dest_len_ptr as *const _ as u32,
+        let result = wasm_state.channel_read(channel_handle, dest_ptr_ptr, dest_len_ptr);
+        assert!(result.is_ok());
+
+        // Get dest_len from dest_len_ptr.
+        let dest_len: u32 =
+            LittleEndian::read_u32(&wasm_state.get_memory().get(dest_len_ptr, 4).unwrap());
+
+        // Assert that dest_len holds length of message.
+        assert_eq!(dest_len as usize, message.len());
+
+        // Get dest_ptr from dest_ptr_ptr.
+        let dest_ptr: u32 =
+            LittleEndian::read_u32(&wasm_state.get_memory().get(dest_ptr_ptr, 4).unwrap());
+
+        // Assert that dest_ptr holds message.
+        assert_eq!(
+            wasm_state
+                .get_memory()
+                .get(dest_ptr, message.len())
+                .unwrap(),
+            message
         );
-
-        // TODO(mschett) Fix this test, the result not `is_ok`, but panics
-        assert!(result.is_ok());
-        // assert that dest_ptr_ptr holds pointer to the message
-        assert_eq!(*dest_ptr_ptr, message);
-        // assert dest_len_ptr holds pointer to length of message
-        assert_eq!(dest_len_ptr, message.len());
     }
 }
