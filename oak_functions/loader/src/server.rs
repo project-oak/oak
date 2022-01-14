@@ -15,6 +15,7 @@
 
 use crate::logger::Logger;
 
+use crate::lookup::LOOKUP_ABI_FUNCTION_NAME;
 use anyhow::Context;
 use byteorder::{ByteOrder, LittleEndian};
 use futures::future::FutureExt;
@@ -161,7 +162,7 @@ pub struct WasmState {
     /// A mapping of host function names to metadata required for resolving the function.
     extensions_metadata: HashMap<String, (usize, wasmi::Signature)>,
     channel_switchboard: ChannelSwitchboard,
-    runtime_endpoints: RuntimeEndpoints,
+    extensions_endpoints: HashMap<String, Endpoint>,
 }
 
 impl WasmState {
@@ -445,7 +446,7 @@ impl WasmState {
         extensions_indices: HashMap<usize, BoxedExtension>,
         extensions_metadata: HashMap<String, (usize, wasmi::Signature)>,
         channel_switchboard: ChannelSwitchboard,
-        runtime_endpoints: RuntimeEndpoints,
+        extensions_endpoints: HashMap<String, Endpoint>,
     ) -> anyhow::Result<WasmState> {
         let mut abi = WasmState {
             request_bytes,
@@ -456,7 +457,7 @@ impl WasmState {
             extensions_indices: Some(extensions_indices),
             extensions_metadata,
             channel_switchboard,
-            runtime_endpoints,
+            extensions_endpoints,
         };
 
         let instance = wasmi::ModuleInstance::new(
@@ -631,10 +632,12 @@ impl WasmHandler {
     fn init(&self, request_bytes: Vec<u8>) -> anyhow::Result<WasmState> {
         let mut extensions_indices = HashMap::new();
         let mut extensions_metadata = HashMap::new();
+        let mut extensions_endpoints = HashMap::new();
 
         let mut channel_switchboard = ChannelSwitchboard::new();
-        // Register only lookup channel for now.
-        let lookup = channel_switchboard.register(ChannelHandle::LookupData);
+        // Register only lookup channel for now
+        let lookup_endpoint = channel_switchboard.register(ChannelHandle::LookupData);
+        extensions_endpoints.insert(LOOKUP_ABI_FUNCTION_NAME.to_string(), lookup_endpoint);
 
         for (ind, factory) in self.extension_factories.iter().enumerate() {
             let extension = factory.create()?;
@@ -650,7 +653,7 @@ impl WasmHandler {
             extensions_indices,
             extensions_metadata,
             channel_switchboard,
-            RuntimeEndpoints { lookup },
+            extensions_endpoints,
         )
     }
 
@@ -790,11 +793,6 @@ pub fn channel_create() -> (Endpoint, Endpoint) {
     };
     (endpoint0, endpoint1)
 }
-
-#[allow(dead_code)]
-struct RuntimeEndpoints {
-    lookup: Endpoint,
-}
 struct ChannelSwitchboard(HashMap<ChannelHandle, Endpoint>);
 
 impl ChannelSwitchboard {
@@ -895,9 +893,9 @@ mod tests {
         let channel_handle = ChannelHandle::LookupData as i32;
         let mut wasm_state = create_test_wasm_state();
         // Assumes LookupData has a channel.
-        // TODO(mschett) Think of a way to drop the endpoint, which is not dropped right now,
-        // because it is only borrowed.
-        drop(&wasm_state.runtime_endpoints.lookup);
+        let extension_endpoints = &mut wasm_state.extensions_endpoints;
+        // Remove the endpoint of the runtime closes one endpoint of the channel.
+        extension_endpoints.remove(&LOOKUP_ABI_FUNCTION_NAME.to_string());
         let result = wasm_state.channel_read(channel_handle, 0, 0);
         assert!(result.is_err());
         assert_eq!(ChannelStatus::ChannelDisconnected, result.unwrap_err());
@@ -912,7 +910,10 @@ mod tests {
         // Write message into Lookup endpoint.
         // TODO(mschett) check whether this should be wrapped by a channel_write to endpoint
         // channel.
-        let endpoint = &wasm_state.runtime_endpoints.lookup;
+        let endpoint = wasm_state
+            .extensions_endpoints
+            .get(&LOOKUP_ABI_FUNCTION_NAME.to_string())
+            .unwrap();
         let result = endpoint.sender.send(message.to_vec().clone()).await;
         assert!(result.is_ok());
 

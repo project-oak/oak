@@ -28,7 +28,7 @@ use std::sync::Arc;
 use wasmi::ValueType;
 
 // Host function name for invoking lookup in lookup data.
-const LOOKUP_ABI_FUNCTION_NAME: &str = "storage_get_item";
+pub const LOOKUP_ABI_FUNCTION_NAME: &str = "storage_get_item";
 
 pub struct LookupExtension {
     lookup_data: Arc<LookupData>,
