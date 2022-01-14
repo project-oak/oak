@@ -85,7 +85,7 @@ jobs:
       - name: Cache Rust artifacts
         uses: actions/cache@v2
         if: |
-          matrix.cmd == 'run-cargo-clippy --scope=all' || matrix.cmd == 'run-functions-examples --application-variant=rust --scope=all'
+          matrix.cmd == 'run-cargo-clippy --scope=all' || matrix.cmd == 'run-examples --application-variant=rust --scope=all' || matrix.cmd == 'run-examples --application-variant=cpp --scope=all' || matrix.cmd == 'run-functions-examples --application-variant=rust --scope=all'
         with:
           path: |
             ./cargo-cache/bin
