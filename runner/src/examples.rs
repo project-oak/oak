@@ -348,7 +348,7 @@ impl OakExample for FunctionsExample<'_> {
 }
 
 pub fn run_examples(opt: &RunExamples) -> Step {
-    let examples: Vec<Example> = example_toml_files(&opt.scope)
+    let examples: Vec<Example> = example_toml_files(&opt.scope.scope)
         .map(|path| {
             toml::from_str(&read_file(&path)).unwrap_or_else(|err| {
                 panic!("could not parse example manifest file {:?}: {}", path, err)
@@ -378,7 +378,7 @@ pub fn run_examples(opt: &RunExamples) -> Step {
 }
 
 pub fn run_functions_examples(opt: &RunFunctionsExamples) -> Step {
-    let examples: Vec<Example> = example_toml_files(&opt.scope)
+    let examples: Vec<Example> = example_toml_files(&opt.scope.scope)
         .map(|path| {
             toml::from_str(&read_file(&path)).unwrap_or_else(|err| {
                 panic!("could not parse example manifest file {:?}: {}", path, err)

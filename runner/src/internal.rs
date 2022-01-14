@@ -95,12 +95,8 @@ pub struct RunExamples {
     pub server_additional_args: Vec<String>,
     #[structopt(long, help = "build a Docker image for the examples")]
     pub build_docker: bool,
-    #[structopt(
-        long,
-        help = "scope of the command [all, commits:<count>, diff_to_main]; defaults to diff_to_main",
-        default_value = "diff_to_main"
-    )]
-    pub scope: Scope,
+    #[structopt(flatten)]
+    pub scope: ScopeOpt,
 }
 
 #[derive(StructOpt, Clone, Debug)]
@@ -140,12 +136,8 @@ pub struct RunFunctionsExamples {
     pub server_additional_args: Vec<String>,
     #[structopt(long, help = "build a Docker image for the examples")]
     pub build_docker: bool,
-    #[structopt(
-        long,
-        help = "scope of the command [all, commits:<count>, diff_to_main]; defaults to diff_to_main",
-        default_value = "diff_to_main"
-    )]
-    pub scope: Scope,
+    #[structopt(flatten)]
+    pub scope: ScopeOpt,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -291,22 +283,25 @@ pub struct BuildFunctionsServer {
 pub struct RunTestsOpt {
     #[structopt(
         long,
-        help = "remove generated files after running tests for each crate"
+        help = "Remove generated files after running tests for each crate"
     )]
     pub cleanup: bool,
-    #[structopt(
-        long,
-        help = "scope of the command [all, commits:<count>, diff_to_main]; defaults to diff_to_main",
-        default_value = "diff_to_main"
-    )]
-    pub scope: Scope,
+    #[structopt(flatten)]
+    pub scope: ScopeOpt,
 }
 
 #[derive(StructOpt, Clone, Debug)]
 pub struct ScopeOpt {
     #[structopt(
         long,
-        help = "scope of the command [all, commits:<count>, diff_to_main]; defaults to diff_to_main",
+        help = r#"Scope of the command [all, commits:<count>, diff_to_main].
+        all: The command is run for all relevant files.
+        commits:<count>: The command is run only for the files modified in the last number of
+        commits given in <count>, as well as the files affected by them. All tracked files
+        that are modified are included in the set of modified files, even if the changes are
+        not staged yet. <count> must be positive.
+        diff_to_main: Similar to commits:<count>, except that the diff to main is used for
+        identifying the set of modified files, instead of using a number of commits."#,
         default_value = "diff_to_main"
     )]
     pub scope: Scope,

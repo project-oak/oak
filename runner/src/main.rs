@@ -159,7 +159,9 @@ fn run_tests() -> Step {
         steps: vec![
             run_cargo_tests(&RunTestsOpt {
                 cleanup: false,
-                scope: Scope::DiffToMain,
+                scope: ScopeOpt {
+                    scope: Scope::DiffToMain,
+                },
             }),
             run_bazel_tests(),
         ],
@@ -167,7 +169,7 @@ fn run_tests() -> Step {
 }
 
 fn run_cargo_tests(opt: &RunTestsOpt) -> Step {
-    let all_affected_crates = all_affected_crates(&opt.scope);
+    let all_affected_crates = all_affected_crates(&opt.scope.scope);
     Step::Multiple {
         name: "cargo tests".to_string(),
         steps: vec![

@@ -44,10 +44,12 @@ impl ModifiedContent {
     }
 }
 
-// Get all the files that have been modified in the given `scope`. Does not include
-// new files, unless they are added to git. If present, `commits.commits` must be a positive number.
-// If it is zero or negative, only the last commit will be considered for finding the modified
-// files. If `commits.commits` is not present, all files will be considered.
+/// Get all the files that have been modified in the given `scope`. If the scope is `Scope::All`
+/// returns an empty list of files in `ModifiedContent`. For `Scope::Commits` and
+/// `Scope::DiffToMain` the returned files include tracked files with unstaged changes in, but do
+/// not include new files that are not tracked (i.e., not added to git yet). For
+/// `Scope::Commits(N)`, a positive number of commits must be given. In case of zero or
+/// a negative number, only the last commit will be considered for finding the modified files.
 pub fn modified_files(scope: &Scope) -> ModifiedContent {
     let args = match scope {
         Scope::All => None,
@@ -76,8 +78,8 @@ pub fn modified_files(scope: &Scope) -> ModifiedContent {
     ModifiedContent { files }
 }
 
-/// Returns the list of paths to `Cargo.toml` files for all crates in which at least one file is
-/// modified.
+/// Returns the list of paths to `Cargo.toml` files for all crates that includes at least one of the
+/// given modified files.
 pub fn directly_modified_crates(files: &ModifiedContent) -> ModifiedContent {
     let files = files.files.as_ref().map(|modified_files| {
         let mut crates = hashset![];
@@ -108,7 +110,7 @@ fn find_crate_toml_file(str_path: String) -> Option<String> {
     None
 }
 
-/// List of paths to all `.proto` files affected by the recent changes.
+/// Returns the list of paths to all `.proto` files affected by the given list of modified files.
 fn affected_protos(files: &ModifiedContent) -> Vec<String> {
     files
         .files
