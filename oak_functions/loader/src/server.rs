@@ -269,7 +269,7 @@ impl WasmState {
         let receiver = &mut endpoint.receiver;
         let message = receiver.try_recv().map_err(|e| match e {
             TryRecvError::Empty => ChannelStatus::ChannelEmpty,
-            TryRecvError::Disconnected => ChannelStatus::ChannelDisconnected,
+            TryRecvError::Disconnected => ChannelStatus::ChannelEndpointDisconnected,
         })?;
 
         // Write message to memory of wasm module.
@@ -855,7 +855,10 @@ mod tests {
         extension_endpoints.remove(&LOOKUP_ABI_FUNCTION_NAME.to_string());
         let result = wasm_state.channel_read(channel_handle, 0, 0);
         assert!(result.is_err());
-        assert_eq!(ChannelStatus::ChannelDisconnected, result.unwrap_err());
+        assert_eq!(
+            ChannelStatus::ChannelEndpointDisconnected,
+            result.unwrap_err()
+        );
     }
 
     #[tokio::test]

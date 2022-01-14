@@ -29,11 +29,11 @@ enum ChannelStatus {
   CHANNEL_OK = 1;
   // Channel is empty.
   CHANNEL_EMPTY = 2;
-  // TODO(mschett) Comment. Used if ChannelNumber not in range of ChannelHandle (cast fails) and if no channel endpoint is attached
+  // ChannelNumber not in range of ChannelHandle and or if no channel endpoint is attached.
   CHANNEL_HANDLE_INVALID = 3;
-  // TODO(mschett) Comment. Used if Channel is closed
-  CHANNEL_DISCONNECTED = 4;
-  // TODO(mschett) Comment. Used when writing to wasm memory fails
+  // The endpoint of a channel is disconnected.
+  CHANNEL_ENDPOINT_DISCONNECTED = 4;
+  // Writing message from channel to Wasm memory failed.
   CHANNEL_INVALID_ARGS = 5;
 }
 
