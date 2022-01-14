@@ -37,7 +37,6 @@ const READ_REQUEST: usize = 0;
 const WRITE_RESPONSE: usize = 1;
 const WRITE_LOG_MESSAGE: usize = 3;
 const CHANNEL_READ: usize = 4;
-const CHANNEL_WRITE: usize = 5;
 const EXTENSION_INDEX_OFFSET: usize = 10;
 
 // Type alias for a message sent over a channel through the ABI.
@@ -252,7 +251,6 @@ impl WasmState {
         Ok(())
     }
 
-    // TODO(mschett) Comment
     pub fn channel_read(
         &mut self,
         // TODO(mschett) Find appropriate types here
@@ -289,17 +287,6 @@ impl WasmState {
             .map_err(from_oak_status)?;
 
         Ok(())
-    }
-
-    // TODO(mschett) Comment
-    pub fn channel_write(
-        &mut self,
-        // TODO(mschett) Find appropriate types here
-        _channel_handle: i32,
-        _src_buf_ptr: u32,
-        _src_buf_len: u32,
-    ) -> Result<(), ChannelStatus> {
-        Err(ChannelStatus::Unspecified)
     }
 
     /// Corresponds to the host ABI function [`write_log_message`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#write_log_message).
@@ -375,20 +362,6 @@ impl wasmi::Externals for WasmState {
             WRITE_LOG_MESSAGE => {
                 map_host_errors(self.write_log_message(args.nth_checked(0)?, args.nth_checked(1)?))
             }
-            /* TODO(mschett)
-            // channel_read/channel_write returns ChannelStatus instead of OakStatus
-            // possibly unify ChannelStatus and OakStatus somehow, or remove distinction?
-            CHANNEL_READ => map_host_errors(self.channel_read(
-                args.nth_checked(0)?,
-                args.nth_checked(1)?,
-                args.nth_checked(2)?,
-            )),
-            CHANNEL_WRITE => map_host_errors(self.channel_write(
-                args.nth_checked(0)?,
-                args.nth_checked(1)?,
-                args.nth_checked(2)?,
-            )),
-            */
             _ => {
                 let mut extensions_indices = self
                     .extensions_indices
@@ -725,18 +698,6 @@ fn oak_functions_resolve_func(field_name: &str) -> Option<(usize, wasmi::Signatu
                 Some(ValueType::I32),
             ),
         ),
-        "channel_write" => (
-            CHANNEL_WRITE,
-            wasmi::Signature::new(
-                &[
-                    // TODO(mschett) check whether USIZE is appropriate
-                    ABI_USIZE, // channel_handle
-                    ABI_USIZE, // src_buf_ptr
-                    ABI_USIZE, // src_buf_len
-                ][..],
-                Some(ValueType::I32),
-            ),
-        ),
         _ => return None,
     };
 
@@ -908,8 +869,6 @@ mod tests {
         let mut wasm_state = create_test_wasm_state();
 
         // Write message into Lookup endpoint.
-        // TODO(mschett) check whether this should be wrapped by a channel_write to endpoint
-        // channel.
         let endpoint = wasm_state
             .extensions_endpoints
             .get(&LOOKUP_ABI_FUNCTION_NAME.to_string())
