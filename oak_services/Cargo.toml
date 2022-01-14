@@ -1,5 +1,3 @@
-[workspace]
-
 [package]
 name = "oak_services"
 version = "0.1.0"
@@ -19,9 +17,3 @@ oak_io = { path = "../oak_io" }
 [build-dependencies]
 oak_utils = { path = "../oak_utils" }
 prost-build = { path = "../third_party/prost/prost-build" }
-
-[patch.crates-io]
-prost = { path = "../third_party/prost" }
-prost-build = { path = "../third_party/prost/prost-build" }
-prost-derive = { path = "../third_party/prost/prost-derive" }
-prost-types = { path = "../third_party/prost/prost-types" }

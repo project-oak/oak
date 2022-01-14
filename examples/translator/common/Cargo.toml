@@ -7,10 +7,10 @@ license = "Apache-2.0"
 
 [dependencies]
 log = "*"
-oak = { version = "=0.1.0", features = ["linear-handles"] }
-oak_io = "=0.1.0"
-oak_services = "=0.1.0"
+oak = { path = "../../../sdk/rust/oak", features = ["linear-handles"] }
+oak_io = { path = "../../../oak_io" }
+oak_services = { path = "../../../oak_services" }
 prost = "*"
 
 [build-dependencies]
-oak_utils = "*"
+oak_utils = { path = "../../../oak_utils" }

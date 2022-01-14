@@ -15,8 +15,8 @@ hyper-rustls = { version = "*", default-features = false, features = [
   "webpki-tokio"
 ] }
 log = "*"
-oak_abi = "=0.1.0"
-oak_sign = "*"
+oak_abi = { path = "../../../../oak_abi" }
+oak_sign = { path = "../../../../oak_sign" }
 prost = "*"
 rustls = "*"
 serde_json = "*"

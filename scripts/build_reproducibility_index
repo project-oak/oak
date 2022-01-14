@@ -12,7 +12,7 @@ source "$SCRIPTS_DIR/common"
 
 # List of artifacts that are expected to be reproducibly built.
 readonly REPRODUCIBLE_ARTIFACTS=(
-  ./examples/bin/*.wasm
+  ./bin/*.wasm
   ./oak_loader/bin/oak_loader
   ./oak_functions/loader/bin/oak_functions_loader
 )

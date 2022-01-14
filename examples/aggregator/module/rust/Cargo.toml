@@ -15,26 +15,28 @@ either = "*"
 hex = "*"
 itertools = "*"
 log = "*"
-oak = { version = "=0.1.0", features = ["linear-handles"] }
-oak_abi = "=0.1.0"
-oak_io = "=0.1.0"
-oak_services = "=0.1.0"
+oak = { path = "../../../../sdk/rust/oak", features = ["linear-handles"] }
+oak_abi = { path = "../../../../oak_abi" }
+oak_io = { path = "../../../../oak_io" }
+oak_services = { path = "../../../../oak_services" }
 prost = "*"
 serde = "*"
 toml = "*"
 
 [dev-dependencies]
-aggregator_grpc = "=0.1.0"
+aggregator_grpc = { path = "../../grpc" }
 assert_matches = "*"
 env_logger = "*"
 log = "*"
 maplit = "*"
-oak_client = "=0.1.0"
-oak_runtime = { version = "=0.1.0", features = ["linear-handles"] }
-oak_sign = "=0.1.0"
-oak_tests = "=0.1.0"
+oak_client = { path = "../../../../oak_client" }
+oak_runtime = { path = "../../../../oak_runtime", features = [
+  "linear-handles"
+] }
+oak_sign = { path = "../../../../oak_sign" }
+oak_tests = { path = "../../../../sdk/rust/oak_tests" }
 tokio = { version = "*", features = ["macros", "rt-multi-thread"] }
 tonic = { version = "*", features = ["tls"] }
 
 [build-dependencies]
-oak_utils = "*"
+oak_utils = { path = "../../../../oak_utils" }

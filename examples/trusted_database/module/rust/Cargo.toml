@@ -11,10 +11,10 @@ crate-type = ["cdylib", "rlib"]
 [dependencies]
 anyhow = "*"
 log = "*"
-oak = { version = "=0.1.0", features = ["linear-handles"] }
-oak_abi = "=0.1.0"
-oak_io = "=0.1.0"
-oak_services = "=0.1.0"
+oak = { path = "../../../../sdk/rust/oak", features = ["linear-handles"] }
+oak_abi = { path = "../../../../oak_abi" }
+oak_io = { path = "../../../../oak_io" }
+oak_services = { path = "../../../../oak_services" }
 prost = "*"
 serde = "*"
 quick-xml = { version = "*", features = ["serialize"] }
@@ -23,14 +23,16 @@ quick-xml = { version = "*", features = ["serialize"] }
 assert_matches = "*"
 env_logger = "*"
 maplit = "*"
-oak_abi = "=0.1.0"
-oak_client = "=0.1.0"
-oak_runtime = { version = "=0.1.0", features = ["linear-handles"] }
-oak_services = "=0.1.0"
-oak_tests = "=0.1.0"
+oak_abi = { path = "../../../../oak_abi" }
+oak_client = { path = "../../../../oak_client" }
+oak_runtime = { path = "../../../../oak_runtime", features = [
+  "linear-handles"
+] }
+oak_services = { path = "../../../../oak_services" }
+oak_tests = { path = "../../../../sdk/rust/oak_tests" }
 tokio = { version = "*", features = ["macros", "rt-multi-thread"] }
 tonic = { version = "*", features = ["tls"] }
-trusted_database_client = "*"
+trusted_database_client = { path = "../../client/rust" }
 
 [build-dependencies]
-oak_utils = "*"
+oak_utils = { path = "../../../../oak_utils" }

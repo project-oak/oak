@@ -11,11 +11,11 @@ crate-type = ["cdylib", "rlib"]
 [dependencies]
 anyhow = "*"
 log = "*"
-oak = { version = "=0.1.0", features = ["linear-handles"] }
-oak_abi = "=0.1.0"
-oak_io = "=0.1.0"
-oak_services = "=0.1.0"
+oak = { path = "../../../../sdk/rust/oak", features = ["linear-handles"] }
+oak_abi = { path = "../../../../oak_abi" }
+oak_io = { path = "../../../../oak_io" }
+oak_services = { path = "../../../../oak_services" }
 prost = "*"
 
 [build-dependencies]
-oak_utils = "*"
+oak_utils = { path = "../../../../oak_utils" }

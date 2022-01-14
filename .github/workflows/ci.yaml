@@ -85,7 +85,7 @@ jobs:
       - name: Cache Rust artifacts
         uses: actions/cache@v2
         if: |
-          matrix.cmd == 'run-cargo-clippy' || matrix.cmd == 'run-functions-examples --application-variant=rust'
+          matrix.cmd == 'run-cargo-clippy' || matrix.cmd == 'run-examples --application-variant=rust' || matrix.cmd == 'run-examples --application-variant=cpp' || matrix.cmd == 'run-functions-examples --application-variant=rust'
         with:
           path: |
             ./cargo-cache/bin
@@ -93,24 +93,7 @@ jobs:
             ./cargo-cache/registry/cache
             ./cargo-cache/git/db
             ./sccache-cache
-            ./examples/abitest/module_0/rust/target
-            ./examples/abitest/module_1/rust/target
-            ./examples/target
-            ./experimental/target
-            ./oak_abi/target
-            ./oak_client/target
-            ./oak_derive/target
-            ./oak_functions/loader/fuzz/target
-            ./oak_functions/target
-            ./oak_io/target
-            ./oak_loader/target
-            ./oak_runtime/target
-            ./oak_services/target
-            ./oak_sign/target
-            ./oak_utils/target
-            ./remote_attestation/target
-            ./runner/target
-            ./sdk/target
+            ./target
           key: |
             cargo-cache-${{ matrix.cmd }}-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: |

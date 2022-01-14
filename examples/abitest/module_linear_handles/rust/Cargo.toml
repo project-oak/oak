@@ -9,10 +9,10 @@ license = "Apache-2.0"
 crate-type = ["cdylib", "lib"]
 
 [dependencies]
-oak_abi = "=0.1.0"
+oak_abi = { path = "../../../../oak_abi" }
 log = "*"
 
 [dependencies.oak]
-version = "=0.1.0"
+path = "../../../../sdk/rust/oak"
 features = ["linear-handles"]
 default-features = false

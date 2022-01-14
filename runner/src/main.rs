@@ -841,7 +841,12 @@ fn run_cargo_udeps() -> Step {
                         "udeps",
                         &format!("--manifest-path={}", &entry),
                         "--all-targets",
+                        // The depinfo backend seems much faster and precise.
+                        "--backend=depinfo",
                         "--workspace",
+                        // TODO(#1854): Remove exception when linear handles are stabilized or
+                        // removed.
+                        "--exclude=oak_async",
                     ],
                 ),
             })

@@ -12,11 +12,11 @@ crate-type = ["cdylib", "rlib"]
 anyhow = "*"
 base64 = "*"
 log = "*"
-oak = { version = "=0.1.0", features = ["linear-handles"] }
-oak_abi = "=0.1.0"
-oak_io = "=0.1.0"
-oak_services = "=0.1.0"
-private_set_intersection_handler = "*"
+oak = { path = "../../../../sdk/rust/oak", features = ["linear-handles"] }
+oak_abi = { path = "../../../../oak_abi" }
+oak_io = { path = "../../../../oak_io" }
+oak_services = { path = "../../../../oak_services" }
+private_set_intersection_handler = { path = "../../handler_module/rust" }
 prost = "*"
 
 [dev-dependencies]
@@ -26,11 +26,13 @@ env_logger = "*"
 hex = "*"
 log = "*"
 maplit = "*"
-oak_runtime = { version = "=0.1.0", features = ["linear-handles"] }
-oak_sign = "=0.1.0"
-oak_tests = "=0.1.0"
-private_set_intersection_grpc = "=0.1.0"
+oak_runtime = { path = "../../../../oak_runtime", features = [
+  "linear-handles"
+] }
+oak_sign = { path = "../../../../oak_sign" }
+oak_tests = { path = "../../../../sdk/rust/oak_tests" }
+private_set_intersection_grpc = { path = "../../grpc" }
 tokio = { version = "*", features = ["macros", "rt-multi-thread"] }
 
 [build-dependencies]
-oak_utils = "*"
+oak_utils = { path = "../../../../oak_utils" }

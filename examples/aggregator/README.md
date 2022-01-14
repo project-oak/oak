@@ -150,7 +150,7 @@ gcloud monitoring dashboards list
 ## To update this example
 
 1. Build the example, including the Wasm module
-1. Get module SHA256 hash via `sha256sum ./examples/bin/aggregator.wasm`
+1. Get module SHA256 hash via `sha256sum ./bin/aggregator.wasm`
 1. Fix module hash in the following files:
 
    - [`/examples/aggregator/config.toml`](/examples/aggregator/config.toml)

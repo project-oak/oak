@@ -1,5 +1,3 @@
-[workspace]
-
 [package]
 name = "oak_sign"
 version = "0.1.0"
@@ -25,6 +23,6 @@ oak_abi = { path = "../oak_abi" }
 once_cell = "*"
 pem = "*"
 ring = "*"
-structopt = "*"
 sha2 = "*"
 simple_asn1 = "*"
+structopt = "*"

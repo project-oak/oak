@@ -32,9 +32,9 @@ prost = "*"
 # Dependencies for main, not required to build the library
 log = { version = "*", optional = true }
 structopt = { version = "*", optional = true }
-oak_abi = { version = "=0.1.0", optional = true }
-oak_client = { version = "=0.1.0", optional = true }
-oak_sign = { version = "=0.1.0", optional = true }
+oak_abi = { path = "../../../../oak_abi", optional = true }
+oak_client = { path = "../../../../oak_client", optional = true }
+oak_sign = { path = "../../../../oak_sign", optional = true }
 anyhow = { version = "*", optional = true }
 env_logger = { version = "*", optional = true }
 tokio = { version = "*", features = [
@@ -45,4 +45,4 @@ tokio = { version = "*", features = [
 ], optional = true }
 
 [build-dependencies]
-oak_utils = "*"
+oak_utils = { path = "../../../../oak_utils" }

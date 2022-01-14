@@ -11,7 +11,7 @@ source "$SCRIPTS_DIR/gcp_common"
 ./scripts/docker_run ./scripts/runner build-functions-example \
   --example-name="${EXAMPLE_NAME}" \
   --client-variant=rust
-  
+
 # Build and push base Oak Functions Loader image.
 
 readonly FUNCTIONS_DOCKER_IMAGE_NAME='gcr.io/oak-ci/oak-functions'
@@ -25,8 +25,8 @@ docker push "${FUNCTIONS_DOCKER_IMAGE_NAME}:latest"
 # Build and push the example application built on Oak Functions.
 
 # Copy the `.wasm` file to the example's directory
-mkdir --parents ./oak_functions/examples/"${EXAMPLE_NAME}"/bin/
-cp ./oak_functions/examples/bin/"${EXAMPLE_NAME}".wasm ./oak_functions/examples/"${EXAMPLE_NAME}"/bin/"${EXAMPLE_NAME}".wasm 
+mkdir --parents "./oak_functions/examples/${EXAMPLE_NAME}/bin/"
+cp "./bin/${EXAMPLE_NAME}.wasm" "./oak_functions/examples/${EXAMPLE_NAME}/bin/${EXAMPLE_NAME}.wasm"
 
 readonly FUNCTIONS_EXAMPLE_DOCKER_IMAGE_NAME="gcr.io/oak-ci/${FUNCTIONS_INSTANCE_NAME}"
 

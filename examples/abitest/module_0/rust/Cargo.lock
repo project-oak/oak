@@ -1740,7 +1740,6 @@ dependencies = [
 name = "roughenough"
 version = "1.1.8"
 dependencies = [
- "base64 0.12.3",
  "byteorder",
  "hex",
  "ring",

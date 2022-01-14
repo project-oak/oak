@@ -1,5 +1,3 @@
-[workspace]
-
 [package]
 name = "oak_client"
 version = "0.1.0"
@@ -30,7 +28,7 @@ oak_abi = { path = "../oak_abi" }
 oak_attestation_common = { path = "../experimental/attestation_common", optional = true }
 oak_sign = { path = "../oak_sign" }
 openssl = { version = "*", optional = true }
-prost = "*"
+prost = { path = "../third_party/prost" }
 regex = { version = "*", optional = true }
 tokio-rustls = { version = "*", features = [
   "dangerous_configuration"
@@ -38,15 +36,3 @@ tokio-rustls = { version = "*", features = [
 tonic = { version = "*", features = ["tls"] }
 x509-parser = { version = "*", optional = true }
 webpki = { version = "*", optional = true }
-
-# Patch dependencies on oak crates so that they refer to the versions within this same repository.
-#
-# From https://doc.rust-lang.org/book/ch14-03-cargo-workspaces.html :
-# > Cargo doesn’t assume that crates in a workspace will depend on each other, so we need to be
-# > explicit about the dependency relationships between the crates.
-[patch.crates-io]
-# Third party.
-prost = { path = "../third_party/prost" }
-prost-build = { path = "../third_party/prost/prost-build" }
-prost-derive = { path = "../third_party/prost/prost-derive" }
-prost-types = { path = "../third_party/prost/prost-types" }

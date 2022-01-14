@@ -91,7 +91,7 @@ To build and run this example manually follow these steps:
 1. Run `oak_functions_loader` with the Wasm module:
 
    ```shell
-   ./oak_functions/loader/target/x86_64-unknown-linux-musl/release/oak_functions_loader \
+   ./target/x86_64-unknown-linux-musl/release/oak_functions_loader \
        --wasm-path=./oak_functions/examples/weather_lookup/bin/weather_lookup.wasm \
        --config-path=./oak_functions/examples/weather_lookup/config.toml
    ```

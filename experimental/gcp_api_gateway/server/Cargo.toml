@@ -20,4 +20,4 @@ tokio-stream = "*"
 tonic = "*"
 
 [build-dependencies]
-oak_utils = "*"
+oak_utils = { path = "../../../oak_utils" }

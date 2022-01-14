@@ -9,8 +9,8 @@ license = "Apache-2.0"
 futures = "0.3"
 futures-core = "*"
 log = "0.4"
-oak = "=0.1.0"
-oak_abi = "=0.1.0"
+oak = { path = "../../sdk/rust/oak" }
+oak_abi = { path = "../../oak_abi" }
 prost = "*"
 
 [dev-dependencies]

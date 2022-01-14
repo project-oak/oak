@@ -1,5 +1,3 @@
-[workspace]
-
 [package]
 name = "oak_loader"
 version = "0.1.0"
@@ -44,9 +42,3 @@ tonic = { version = "*", features = ["tls"] }
 
 [dev-dependencies]
 maplit = "*"
-
-[patch.crates-io]
-prost = { path = "../third_party/prost" }
-prost-derive = { path = "../third_party/prost/prost-derive" }
-prost-build = { path = "../third_party/prost/prost-build" }
-prost-types = { path = "../third_party/prost/prost-types" }

@@ -1,5 +1,3 @@
-[workspace]
-
 [package]
 name = "grpc_attestation"
 version = "0.1.0"
