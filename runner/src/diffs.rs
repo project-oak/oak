@@ -45,8 +45,8 @@ impl ModifiedContent {
 }
 
 /// Get all the files that have been modified in the given `scope`. If the scope is `Scope::All`
-/// returns an empty list of files in `ModifiedContent`. For `Scope::Commits` and
-/// `Scope::DiffToMain` the returned files include tracked files with unstaged changes in, but do
+/// returns `None` as the list of files in `ModifiedContent`. For `Scope::Commits` and
+/// `Scope::DiffToMain` the returned files include tracked files with unstaged changes, but do
 /// not include new files that are not tracked (i.e., not added to git yet). For
 /// `Scope::Commits(N)`, a positive number of commits must be given. In case of zero or
 /// a negative number, only the last commit will be considered for finding the modified files.
@@ -75,7 +75,7 @@ pub fn modified_files(scope: &Scope) -> ModifiedContent {
     ModifiedContent { files }
 }
 
-/// Returns the list of paths to `Cargo.toml` files for all crates that includes at least one of the
+/// Returns the list of paths to `Cargo.toml` files for all crates that include at least one of the
 /// given modified files.
 pub fn directly_modified_crates(files: &ModifiedContent) -> ModifiedContent {
     let files = files.files.as_ref().map(|modified_files| {
@@ -220,7 +220,7 @@ fn crates_affected_by_protos(affected_protos: &[String]) -> HashSet<String> {
         .filter(|path| to_string(path.clone()).ends_with("build.rs"))
         .filter(|path| {
             for proto in affected_protos {
-                if file_contains(path, proto) {
+                if file_contains(path, &proto.replace("./", "")) {
                     return true;
                 }
             }

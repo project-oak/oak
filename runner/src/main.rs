@@ -764,9 +764,6 @@ fn run_clang_tidy() -> Step {
 fn run_cargo_test_tsan(scope: &Scope) -> Step {
     let abitest_crate = "./examples/abitest/module_0/rust/Cargo.toml";
     let all_affected_crates = all_affected_crates(scope);
-
-    eprintln!("The modified crates: {:?}", all_affected_crates);
-
     let mut steps = vec![];
     if all_affected_crates.contains(abitest_crate) {
         let cmd = Cmd::new_with_env(
