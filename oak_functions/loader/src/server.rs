@@ -51,7 +51,7 @@ const ABI_CHANNEL_BOUND: usize = 100;
 // of Wasm would use different types.
 pub type AbiPointer = u32;
 pub type AbiPointerOffset = u32;
-// Type alias for the ChannelHandle type, which has to be casted into a ChannelHandle.
+// Type alias for the ChannelHandle type, which has to be cast into a ChannelHandle.
 pub type AbiChannelHandle = i32;
 /// Wasm type identifier for position/offset values in linear memory. Any future 64-bit version of
 /// Wasm would use a different value.
@@ -272,20 +272,11 @@ impl WasmState {
             TryRecvError::Disconnected => ChannelStatus::ChannelEndpointDisconnected,
         })?;
 
-        // Write message to memory of wasm module.
+        // Write message to memory of the Wasm module.
         let dest_ptr = self.alloc(message.len() as u32);
-
-        let from_oak_status = |e| match e {
-            OakStatus::ErrInvalidArgs => ChannelStatus::ChannelInvalidArgs,
-            _ => ChannelStatus::Unspecified,
-        };
-
-        self.write_buffer_to_wasm_memory(&message, dest_ptr)
-            .map_err(from_oak_status)?;
-        self.write_u32_to_wasm_memory(dest_ptr, dest_ptr_ptr)
-            .map_err(from_oak_status)?;
-        self.write_u32_to_wasm_memory(message.len() as u32, dest_len_ptr)
-            .map_err(from_oak_status)?;
+        self.write_buffer_to_wasm_memory(&message, dest_ptr)?;
+        self.write_u32_to_wasm_memory(dest_ptr, dest_ptr_ptr)?;
+        self.write_u32_to_wasm_memory(message.len() as u32, dest_len_ptr)?;
 
         Ok(())
     }
@@ -606,10 +597,12 @@ impl WasmHandler {
     fn init(&self, request_bytes: Vec<u8>) -> anyhow::Result<WasmState> {
         let mut extensions_indices = HashMap::new();
         let mut extensions_metadata = HashMap::new();
+        // Remove the exentsion_endpoints map as soon as we extend extensions by functionality for
+        // channels. Until then we use the (unique) ABI_FUNCTION_NAME as keys.
         let mut extensions_endpoints = HashMap::new();
 
         let mut channel_switchboard = ChannelSwitchboard::new();
-        // Register only lookup channel for now
+        // Register only lookup channel for now.
         let lookup_endpoint = channel_switchboard.register(ChannelHandle::LookupData);
         extensions_endpoints.insert(LOOKUP_ABI_FUNCTION_NAME.to_string(), lookup_endpoint);
 
@@ -897,7 +890,7 @@ mod tests {
         assert_eq!(
             wasm_state
                 .get_memory()
-                .get(dest_ptr, message.len())
+                .get(dest_ptr, dest_len as usize)
                 .unwrap(),
             message
         );
