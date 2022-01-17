@@ -105,13 +105,13 @@ jobs:
             cargo-cache-
 
       - name: Run command
-        if: ${{ github.ref != 'refs/heads/main' }}
+        if: github.event_name == 'pull_request'
         run: |
-          ./scripts/docker_run ./scripts/runner --commands ${{ matrix.cmd }}
+          ./scripts/docker_run ./scripts/runner --commands --scope=diff_to_main ${{ matrix.cmd }}
           df --human-readable
 
       - name: Run Command - Post-Merge
-        if: ${{ github.ref == 'refs/heads/main' }}
+        if: github.event_name == 'push'
         run: |
           ./scripts/docker_run ./scripts/runner --commands --scope=all ${{ matrix.cmd }}
           df --human-readable
