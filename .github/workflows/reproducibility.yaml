@@ -60,7 +60,7 @@ jobs:
 
       - name: Build examples
         run: |
-          ./scripts/docker_run ./scripts/runner run-examples --scope=all --client-variant=none --run-server=false
+          ./scripts/docker_run ./scripts/runner --scope=all run-examples --client-variant=none --run-server=false
 
       - name: Build Functions server
         run: |

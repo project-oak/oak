@@ -113,23 +113,23 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 fn match_cmd(opt: &Opt) -> Step {
     match opt.cmd {
-        Command::RunExamples(ref opt) => run_examples(opt),
-        Command::RunFunctionsExamples(ref opt) => run_functions_examples(opt),
+        Command::RunExamples(ref run_opt) => run_examples(run_opt, &opt.scope),
+        Command::RunFunctionsExamples(ref run_opt) => run_functions_examples(run_opt, &opt.scope),
         Command::BuildFunctionsExample(ref opt) => build_functions_example(opt),
         Command::BuildServer(ref opt) => build_server(opt, vec![]),
         Command::BuildFunctionsServer(ref opt) => build_functions_server(opt, vec![]),
         Command::RunTests => run_tests(),
-        Command::RunCargoClippy(ref scope) => run_cargo_clippy(&scope.scope),
-        Command::RunCargoTests(ref opt) => run_cargo_tests(opt),
+        Command::RunCargoClippy => run_cargo_clippy(&opt.scope),
+        Command::RunCargoTests(ref run_opt) => run_cargo_tests(run_opt, &opt.scope),
         Command::RunBazelTests => run_bazel_tests(),
-        Command::RunTestsTsan(ref scope) => run_tests_tsan(&scope.scope),
+        Command::RunTestsTsan => run_tests_tsan(&opt.scope),
         Command::RunCargoFuzz(ref opt) => run_cargo_fuzz(opt),
-        Command::Format(ref scope) => format(&scope.scope),
-        Command::CheckFormat(ref scope) => check_format(&scope.scope),
+        Command::Format => format(&opt.scope),
+        Command::CheckFormat => check_format(&opt.scope),
         Command::RunCi => run_ci(),
         Command::Completion(ref opt) => run_completion(opt),
         Command::RunCargoDeny => run_cargo_deny(),
-        Command::RunCargoUdeps(ref scope) => run_cargo_udeps(&scope.scope),
+        Command::RunCargoUdeps => run_cargo_udeps(&opt.scope),
         Command::RunCargoClean => run_cargo_clean(),
     }
 }
@@ -157,19 +157,14 @@ fn run_tests() -> Step {
     Step::Multiple {
         name: "tests".to_string(),
         steps: vec![
-            run_cargo_tests(&RunTestsOpt {
-                cleanup: false,
-                scope: ScopeOpt {
-                    scope: Scope::DiffToMain,
-                },
-            }),
+            run_cargo_tests(&RunTestsOpt { cleanup: false }, &Scope::DiffToMain),
             run_bazel_tests(),
         ],
     }
 }
 
-fn run_cargo_tests(opt: &RunTestsOpt) -> Step {
-    let all_affected_crates = all_affected_crates(&opt.scope.scope);
+fn run_cargo_tests(opt: &RunTestsOpt, scope: &Scope) -> Step {
+    let all_affected_crates = all_affected_crates(scope);
     Step::Multiple {
         name: "cargo tests".to_string(),
         steps: vec![

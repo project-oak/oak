@@ -1,6 +1,8 @@
 name: Continuous Integration
 
 on:
+  push:
+    branches: [main]
   pull_request:
     branches: [main]
 
@@ -45,6 +47,8 @@ jobs:
     steps:
       - name: Checkout branch
         uses: actions/checkout@v2
+        # Fetch the entire repo and its history. This is required to be able to compute the diff-to-main.
+        # TODO(#2490): See if there is a better alternative to this.
         with:
           fetch-depth: 0
 
@@ -101,8 +105,15 @@ jobs:
             cargo-cache-
 
       - name: Run command
+        if: ${{ github.ref != 'refs/heads/main' }}
         run: |
           ./scripts/docker_run ./scripts/runner --commands ${{ matrix.cmd }}
+          df --human-readable
+
+      - name: Run Command - Post-Merge
+        if: ${{ github.ref == 'refs/heads/main' }}
+        run: |
+          ./scripts/docker_run ./scripts/runner --commands --scope=all ${{ matrix.cmd }}
           df --human-readable
 
       - name: Generate root CA certs
