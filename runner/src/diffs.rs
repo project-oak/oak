@@ -53,17 +53,14 @@ impl ModifiedContent {
 pub fn modified_files(scope: &Scope) -> ModifiedContent {
     let args = match scope {
         Scope::All => None,
-        Scope::Commits(commits) => Some(vec![format!("HEAD~{}", std::cmp::max(1, *commits))]),
-        Scope::DiffToMain => Some(vec!["main".to_owned()]),
+        Scope::Commits(commits) => Some(format!("HEAD~{}", std::cmp::max(1, *commits))),
+        // TODO(#2491): Use `--merge-base` when we have a newer version of Git in the docker image.
+        Scope::DiffToMain => Some("main".to_owned()),
     };
 
     let files = args.map(|args| {
         let vec = Command::new("git")
-            .args(spread![
-                "diff".to_owned(),
-                "--name-only".to_owned(),
-                ...args,
-            ])
+            .args(spread!["diff".to_owned(), "--name-only".to_owned(), args,])
             .output()
             .expect("could not get modified files")
             .stdout;
