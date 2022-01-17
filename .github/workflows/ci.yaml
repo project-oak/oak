@@ -47,10 +47,8 @@ jobs:
     steps:
       - name: Checkout branch
         uses: actions/checkout@v2
-        # Fetch the entire repo and its history. This is required to be able to compute the diff-to-main.
-        # TODO(#2490): See if there is a better alternative to this.
         with:
-          fetch-depth: 0
+          fetch-depth: 2
 
       # The runner comes with all this software pre-installed: https://github.com/actions/virtual-environments/blob/main/images/linux/Ubuntu2004-README.md
       # so we delete some large packages to make sure we have more space available.
@@ -107,7 +105,7 @@ jobs:
       - name: Run command
         if: github.event_name == 'pull_request'
         run: |
-          ./scripts/docker_run ./scripts/runner --commands --scope=diff_to_main ${{ matrix.cmd }}
+          ./scripts/docker_run ./scripts/runner --commands --scope=commits:1 ${{ matrix.cmd }}
           df --human-readable
 
       - name: Run Command - Post-Merge
