@@ -1,17 +1,25 @@
 #!/bin/bash
 #
-# Clean chaches, build artifacts etc
+# Clean chaches, build artifacts etc, recursively from the directory from which script is called.
 
 readonly SCRIPTS_DIR="$(dirname "$0")"
 # shellcheck source=scripts/common
 source "$SCRIPTS_DIR/common"
 
+GIT_STASH_MESSAGE="Stash for git_clean-${RANDOM}"
+
 # Stash untracked but not ignored files
-git stash push --include-untracked
+git stash push --include-untracked -m "${GIT_STASH_MESSAGE}"
 
 # Delete remaining untracked files (defacto only ignored files), excluding auth
 # files. Use double --force to delete untracked nested repositories.
 git clean -d --force --force -x --exclude="/.oak_remote_cache_key.json" --exclude="**/client_secret_*.apps.googleusercontent.com.json"
 
-# Restore the previously stashed files
-git stash pop
+# Count $GIT_STASH_MESSAGE in list of stashes
+STASH_EXIST=$(git stash list | grep "${GIT_STASH_MESSAGE}" -c) 
+
+# Restore the previously stashed files, but only if any files were previously stashed.
+if [ "$STASH_EXIST" -gt 0 ] 
+then 
+  git stash pop 
+fi
