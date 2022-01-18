@@ -24,7 +24,10 @@ use maplit::hashmap;
 use oak_functions_abi::proto::{ConfigurationInfo, Request};
 use oak_functions_client::Client;
 use prost::Message;
-use proto::serving::{ModelSpec, PredictRequest, PredictResponse};
+use proto::{
+    oak::encap::GrpcRequest,
+    serving::{ModelSpec, PredictRequest, PredictResponse},
+};
 use structopt::StructOpt;
 
 mod data;
@@ -35,6 +38,16 @@ mod proto {
     tonic::include_proto!("tensorflow");
     pub mod serving {
         tonic::include_proto!("tensorflow.serving");
+    }
+    pub mod google {
+        pub mod rpc {
+            tonic::include_proto!("google.rpc");
+        }
+    }
+    pub mod oak {
+        pub mod encap {
+            tonic::include_proto!("oak.encap");
+        }
     }
 }
 
@@ -81,8 +94,13 @@ async fn main() -> anyhow::Result<()> {
         };
         trace!("predict request: {:?}", predict_request);
 
+        let encapsulated_request = GrpcRequest {
+            method_name: "/tensorflow.serving.PredictionService/Predict".to_owned(),
+            req_msg: predict_request.encode_to_vec(),
+            last: true,
+        };
         let request = Request {
-            body: predict_request.encode_to_vec(),
+            body: encapsulated_request.encode_to_vec(),
         };
 
         let response = client

@@ -16,6 +16,19 @@
 
 #![feature(async_closure)]
 
+pub mod proto {
+    pub mod google {
+        pub mod rpc {
+            tonic::include_proto!("google.rpc");
+        }
+    }
+    pub mod oak {
+        pub mod encap {
+            tonic::include_proto!("oak.encap");
+        }
+    }
+}
+
 use crate::grpc::handle_request;
 use anyhow::Context;
 use grpc_attestation::{
