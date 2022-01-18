@@ -931,7 +931,6 @@
 <span id="929">929</span>
 <span id="930">930</span>
 <span id="931">931</span>
-<span id="932">932</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2021 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -1271,7 +1270,7 @@
     <span class="doccomment">/// Invocation of a host function specified by its registered index. Acts as a wrapper for</span>
     <span class="doccomment">/// the relevant native function, just:</span>
     <span class="doccomment">/// - checking argument types (which should be correct as `wasmi` will only pass through those</span>
-    <span class="doccomment">///   types that were specified when the host function was registered with `resolv_func`).</span>
+    <span class="doccomment">///   types that were specified when the host function was registered with `resolve_func`).</span>
     <span class="doccomment">/// - mapping resulting return/error values.</span>
     <span class="kw">fn</span> <span class="ident">invoke_index</span>(
         <span class="kw-2">&amp;mut</span> <span class="self">self</span>,
@@ -1531,7 +1530,7 @@
     <span class="kw">fn</span> <span class="ident">init</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">request_bytes</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">WasmState</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">extensions_indices</span> <span class="op">=</span> <span class="ident">HashMap::new</span>();
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">extensions_metadata</span> <span class="op">=</span> <span class="ident">HashMap::new</span>();
-        <span class="comment">// Remove the exentsion_endpoints map as soon as we extend extensions by functionality for</span>
+        <span class="comment">// Remove the extension_endpoints map as soon as we extend extensions by functionality for</span>
         <span class="comment">// channels. Until then we use the (unique) ABI_FUNCTION_NAME as keys.</span>
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">extensions_endpoints</span> <span class="op">=</span> <span class="ident">HashMap::new</span>();
 
@@ -1654,7 +1653,6 @@
 
 <span class="comment">// The Endpoint of a bidirectional channel. Sender and Receiver are exposed.</span>
 <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">dead_code</span>)]</span>
-
 <span class="kw">struct</span> <span class="ident">Endpoint</span> {
     <span class="ident">sender</span>: <span class="ident">Sender</span><span class="op">&lt;</span><span class="ident">AbiMessage</span><span class="op">&gt;</span>,
     <span class="ident">receiver</span>: <span class="ident">Receiver</span><span class="op">&lt;</span><span class="ident">AbiMessage</span><span class="op">&gt;</span>,
