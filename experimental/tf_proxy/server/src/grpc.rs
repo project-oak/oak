@@ -14,25 +14,20 @@
 // limitations under the License.
 //
 
-pub mod proto {
-    // Suppress warning: `large size difference between variants`.
-    #![allow(clippy::large_enum_variant)]
-    #![allow(clippy::return_self_not_must_use)]
-    tonic::include_proto!("tensorflow");
-    pub mod serving {
-        tonic::include_proto!("tensorflow.serving");
-    }
-}
-
 use anyhow::Context;
+use bytes::{Buf, BufMut};
 use futures::task::Poll;
 use pin_project_lite::pin_project;
 use prost::Message;
-pub use proto::serving::{prediction_service_client::PredictionServiceClient, PredictRequest};
-use std::{future::Future, pin::Pin};
+use std::{future::Future, io::copy, pin::Pin};
 use sync_wrapper::SyncWrapper;
 use tokio::net::UnixStream;
-use tonic::transport::{Channel, Endpoint, Uri};
+use tonic::{
+    client::Grpc,
+    codec::{Codec, DecodeBuf, Decoder, EncodeBuf, Encoder},
+    transport::{Channel, Endpoint, Uri},
+    Request,
+};
 use tower::service_fn;
 
 /// Connection to the prediction service that can be used for creating new clients.
@@ -56,32 +51,34 @@ impl BackendConnection {
     }
 
     /// Creates a new client.
-    pub fn create_client(&self) -> PredictionServiceClient<Channel> {
-        PredictionServiceClient::new(self.channel.clone())
+    pub fn create_client(&self) -> Grpc<Channel> {
+        Grpc::new(self.channel.clone())
     }
 }
 
 pub async fn handle_request(
-    mut client: PredictionServiceClient<Channel>,
+    mut client: Grpc<Channel>,
     cleartext_request: Vec<u8>,
 ) -> anyhow::Result<Vec<u8>> {
-    let predict_request =
-        PredictRequest::decode(&*cleartext_request).context("couldn't parse decrypted request")?;
+    let bytes = Request::new(cleartext_request.clone());
+    let codec = BytesCodec::default();
+    let path =
+        http::uri::PathAndQuery::from_static("/tensorflow.serving.PredictionService/Predict");
 
-    // Send the prediction request (which wraps the input tensor) to the backend TensorFlow model
-    // server to execute the inference against the loaded model. We wrap the resulting future to
+    client.ready().await.context("connection not ready")?;
+    // Forward the encapsulated request to the backend. We wrap the resulting future to
     // make it `Sync`, as required by the trait bounds for the request handler.
-    let sync_predict = FutureSyncWrapper {
-        inner: SyncWrapper::new(client.predict(predict_request)),
+    let sync_unary = FutureSyncWrapper {
+        inner: SyncWrapper::new(client.unary(bytes, path, codec)),
     };
-    let response = sync_predict
+    let response = sync_unary
         .await
         .context("couldn't execute prediction")?
         .into_inner();
 
     let wrapped_response = oak_functions_abi::proto::Response::create(
         oak_functions_abi::proto::StatusCode::Success,
-        response.encode_to_vec(),
+        response,
     );
     Ok(wrapped_response.encode_to_vec())
 }
@@ -100,5 +97,59 @@ impl<F: Future> Future for FutureSyncWrapper<F> {
 
     fn poll(self: Pin<&mut Self>, cx: &mut std::task::Context) -> Poll<Self::Output> {
         self.project().inner.get_pin_mut().poll(cx)
+    }
+}
+
+/// A Codec for encoding and decoding byte vectors to and from Tonic buffers.
+///
+/// This allows us to pass through the client encoding of the request to the backend and the backend
+/// response to the client without requiring knowlege of the specific protos involved.
+#[derive(Default)]
+struct BytesCodec;
+
+impl Codec for BytesCodec {
+    type Encode = Vec<u8>;
+    type Decode = Vec<u8>;
+
+    type Encoder = BytesEncoder;
+    type Decoder = BytesDecoder;
+
+    fn encoder(&mut self) -> Self::Encoder {
+        BytesEncoder {}
+    }
+
+    fn decoder(&mut self) -> Self::Decoder {
+        BytesDecoder {}
+    }
+}
+
+/// Passthrough encoder for encoding a byte vector to an [`tonic::codec::EncodeBuf`].
+pub struct BytesEncoder;
+
+impl Encoder for BytesEncoder {
+    type Item = Vec<u8>;
+    type Error = tonic::Status;
+
+    fn encode(&mut self, item: Self::Item, dst: &mut EncodeBuf<'_>) -> Result<(), Self::Error> {
+        copy(&mut item.reader(), &mut dst.writer()).map_err(|error| {
+            tonic::Status::internal(format!("Couln't encode bytes: {:?}", error))
+        })?;
+        Ok(())
+    }
+}
+
+/// Passthrough decoder for decoding a [`tonic::codec::DecodeBuf`] to a byte vector.
+pub struct BytesDecoder;
+
+impl Decoder for BytesDecoder {
+    type Item = Vec<u8>;
+    type Error = tonic::Status;
+
+    fn decode(&mut self, src: &mut DecodeBuf<'_>) -> Result<Option<Self::Item>, Self::Error> {
+        let mut item = vec![];
+        copy(&mut src.reader(), &mut item).map_err(|error| {
+            tonic::Status::internal(format!("Couln't decode bytes: {:?}", error))
+        })?;
+        Ok(Some(item))
     }
 }
