@@ -985,6 +985,32 @@ mod tests {
         assert_eq!(message.to_vec(), received_message.clone());
     }
 
+    #[tokio::test]
+    async fn test_hosted_channel_write_full() {
+        let channel_handle = ChannelHandle::LookupData as i32;
+        let message: AbiMessage = vec![42, 42];
+        let mut wasm_state = create_test_wasm_state();
+
+        write_to_lookup_runtime_endpoint(&mut wasm_state, message.clone()).await;
+
+        // Guess some memory addresses in linear Wasm memory to write the message to from
+        // `src_buf_ptr`.
+        let src_buf_ptr: AbiPointer = 100;
+        let result = wasm_state.write_buffer_to_wasm_memory(&message, src_buf_ptr);
+        assert!(result.is_ok());
+
+        // write the message ABI_CHANNEL_BOUND times
+        for _ in 0..ABI_CHANNEL_BOUND {
+            let result =
+                wasm_state.channel_write(channel_handle, src_buf_ptr, message.len() as u32);
+            assert!(result.is_ok());
+        }
+
+        let result = wasm_state.channel_write(channel_handle, src_buf_ptr, message.len() as u32);
+        assert!(result.is_err());
+        assert_eq!(ChannelStatus::ChannelFull, result.unwrap_err());
+    }
+
     fn create_test_wasm_handler() -> WasmHandler {
         let logger = Logger::for_test();
         let lookup_data = Arc::new(LookupData::for_test(hashmap! {}));
