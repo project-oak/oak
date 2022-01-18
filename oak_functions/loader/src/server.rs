@@ -793,7 +793,7 @@ mod tests {
     #[tokio::test]
     async fn test_crossed_write_read() {
         async fn check_crossed_write_read(endpoint1: &mut Endpoint, endpoint2: &mut Endpoint) {
-            let message = String::from("Message").into_bytes();
+            let message: AbiMessage = vec![42, 21, 0];
             let sender = &endpoint1.sender;
             let send_result = sender.send(message.clone()).await;
             assert!(send_result.is_ok());
@@ -804,11 +804,11 @@ mod tests {
             assert_eq!(message, received_message);
         }
 
-        let (mut module, mut runtime) = channel_create();
-        // Check from module endpoint to runtime endpoint.
-        check_crossed_write_read(&mut module, &mut runtime).await;
-        // Check the other direction from runtime endpoint to module endpoint.
-        check_crossed_write_read(&mut runtime, &mut module).await;
+        let (mut endpoint_1, mut endpoint_2) = channel_create();
+        // Check from endpoint_1 to endpoint_2.
+        check_crossed_write_read(&mut endpoint_1, &mut endpoint_2).await;
+        // Check the other direction from endpoint_2 to endpoint_1.
+        check_crossed_write_read(&mut endpoint_2, &mut endpoint_1).await;
     }
 
     #[tokio::test]
