@@ -719,6 +719,8 @@ pub fn format_bytes(v: &[u8]) -> String {
 }
 
 // The Endpoint of a bidirectional channel. Sender and Receiver are exposed.
+#[allow(dead_code)]
+
 struct Endpoint {
     sender: Sender<AbiMessage>,
     receiver: Receiver<AbiMessage>,

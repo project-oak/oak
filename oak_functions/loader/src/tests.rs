@@ -21,7 +21,7 @@ use oak_functions_loader::{
     logger::Logger,
     lookup::LookupFactory,
     lookup_data::{parse_lookup_entries, LookupData, LookupDataAuth, LookupDataSource},
-    server::{apply_policy, channel_create, format_bytes, Endpoint},
+    server::{apply_policy, format_bytes},
 };
 use prost::Message;
 use std::{
@@ -31,7 +31,6 @@ use std::{
     time::Duration,
 };
 use test_utils::{get_config_info, make_request};
-use tokio::sync::mpsc::error::TryRecvError;
 
 const MANIFEST_PATH: &str = "examples/key_value_lookup/module/Cargo.toml";
 
