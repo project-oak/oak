@@ -337,7 +337,7 @@ impl wasmi::Externals for WasmState {
     /// Invocation of a host function specified by its registered index. Acts as a wrapper for
     /// the relevant native function, just:
     /// - checking argument types (which should be correct as `wasmi` will only pass through those
-    ///   types that were specified when the host function was registered with `resolv_func`).
+    ///   types that were specified when the host function was registered with `resolve_func`).
     /// - mapping resulting return/error values.
     fn invoke_index(
         &mut self,
@@ -597,7 +597,7 @@ impl WasmHandler {
     fn init(&self, request_bytes: Vec<u8>) -> anyhow::Result<WasmState> {
         let mut extensions_indices = HashMap::new();
         let mut extensions_metadata = HashMap::new();
-        // Remove the exentsion_endpoints map as soon as we extend extensions by functionality for
+        // Remove the extension_endpoints map as soon as we extend extensions by functionality for
         // channels. Until then we use the (unique) ABI_FUNCTION_NAME as keys.
         let mut extensions_endpoints = HashMap::new();
 
@@ -720,7 +720,6 @@ pub fn format_bytes(v: &[u8]) -> String {
 
 // The Endpoint of a bidirectional channel. Sender and Receiver are exposed.
 #[allow(dead_code)]
-
 struct Endpoint {
     sender: Sender<AbiMessage>,
     receiver: Receiver<AbiMessage>,
