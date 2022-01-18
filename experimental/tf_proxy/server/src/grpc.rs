@@ -14,6 +14,7 @@
 // limitations under the License.
 //
 
+use crate::proto::oak::encap::GrpcRequest;
 use anyhow::Context;
 use bytes::{Buf, BufMut};
 use futures::task::Poll;
@@ -60,14 +61,17 @@ pub async fn handle_request(
     mut client: Grpc<Channel>,
     cleartext_request: Vec<u8>,
 ) -> anyhow::Result<Vec<u8>> {
-    let bytes = Request::new(cleartext_request.clone());
+    let encapsulated_request =
+        GrpcRequest::decode(&*cleartext_request).context("couldn't decode encapsulated request")?;
+    let bytes = Request::new(encapsulated_request.req_msg.clone());
     let codec = BytesCodec::default();
-    let path =
-        http::uri::PathAndQuery::from_static("/tensorflow.serving.PredictionService/Predict");
-
+    let path = encapsulated_request
+        .method_name
+        .parse()
+        .context("couldn't parse method name")?;
     client.ready().await.context("connection not ready")?;
-    // Forward the encapsulated request to the backend. We wrap the resulting future to
-    // make it `Sync`, as required by the trait bounds for the request handler.
+    // Forward the bytes from the encapsulated request to the backend. We wrap the resulting future
+    // to make it `Sync`, as required by the trait bounds for the request handler.
     let sync_unary = FutureSyncWrapper {
         inner: SyncWrapper::new(client.unary(bytes, path, codec)),
     };
@@ -83,6 +87,7 @@ pub async fn handle_request(
     Ok(wrapped_response.encode_to_vec())
 }
 
+// TODO(#2476): Remove when upgrading Tonic from v0.5 to v0.6.
 pin_project! {
     /// Utility wrapper to implement `Sync` for `Future`s by wrapping the inner Future in a
     /// `SyncWrapper`.

@@ -22,11 +22,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         // the import statements of the third party protos.
         "../../../third_party/google",
         &["tensorflow_serving/apis/predict.proto"],
-        CodegenOptions {
-            build_client: false,
-            build_server: false,
-            extern_paths: vec![],
-        },
+        CodegenOptions::default(),
+    )?;
+
+    generate_grpc_code(
+        "../../../",
+        &[
+            "oak_services/proto/grpc_encap.proto",
+            "third_party/google/rpc/code.proto",
+            "third_party/google/rpc/status.proto",
+        ],
+        CodegenOptions::default(),
     )?;
 
     Ok(())
