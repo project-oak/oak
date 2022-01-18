@@ -931,16 +931,10 @@ mod tests {
     #[tokio::test]
     async fn test_hosted_channel_read_ok() {
         let channel_handle = ChannelHandle::LookupData as i32;
-        let message = b"A Test Message: Value";
+        let message = vec![42, 42, 232];
         let mut wasm_state = create_test_wasm_state();
 
-        // Write message into Lookup endpoint.
-        let endpoint = wasm_state
-            .extensions_endpoints
-            .get(&LOOKUP_ABI_FUNCTION_NAME.to_string())
-            .unwrap();
-        let result = endpoint.sender.send(message.to_vec().clone()).await;
-        assert!(result.is_ok());
+        write_to_lookup_runtime_endpoint(&mut wasm_state, message.clone()).await;
 
         // Guess some memory addresses in linear Wasm memory.
         let dest_ptr_ptr: AbiPointer = 100;
@@ -970,44 +964,24 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_hosted_channel_write_after_read_ok() {
+    async fn test_hosted_channel_write_ok() {
         let channel_handle = ChannelHandle::LookupData as i32;
-        let message = b"TT" /* A Tiny Test message */;
+        let message: AbiMessage = vec![42, 42];
         let mut wasm_state = create_test_wasm_state();
 
-        // Write message into Lookup endpoint.
-        let endpoint = wasm_state
-            .extensions_endpoints
-            .get_mut(&LOOKUP_ABI_FUNCTION_NAME.to_string())
-            .unwrap();
-        let result = endpoint.sender.send(message.to_vec().clone()).await;
+        write_to_lookup_runtime_endpoint(&mut wasm_state, message.clone()).await;
+
+        // Guess some memory addresses in linear Wasm memory to write the message to from
+        // `src_buf_ptr`.
+        let src_buf_ptr: AbiPointer = 100;
+        let result = wasm_state.write_buffer_to_wasm_memory(&message, src_buf_ptr);
         assert!(result.is_ok());
 
-        // Read message into linear Wasm memory.
-        // Guess some memory addresses in linear Wasm memory.
-        let dest_ptr_ptr: AbiPointer = 100;
-        let dest_len_ptr: AbiPointer = 150;
-
-        let result = wasm_state.channel_read(channel_handle, dest_ptr_ptr, dest_len_ptr);
+        let result = wasm_state.channel_write(channel_handle, src_buf_ptr, message.len() as u32);
         assert!(result.is_ok());
 
-        // Write message back from linear Wasm memory.
-        let src_buf_ptr: AbiPointer =
-            LittleEndian::read_u32(&wasm_state.get_memory().get(dest_ptr_ptr, 4).unwrap());
-
-        let src_buf_len: AbiPointerOffset = message.len() as u32;
-
-        let result = wasm_state.channel_write(channel_handle, src_buf_ptr, src_buf_len);
-
-        assert!(result.is_ok());
-
-        // check that message is in receiver endpoint
-        let endpoint = wasm_state
-            .extensions_endpoints
-            .get_mut(&LOOKUP_ABI_FUNCTION_NAME.to_string())
-            .unwrap();
-        let received_message = endpoint.receiver.try_recv().unwrap();
-
+        // Assert that the message arrived at runtime endpoint.
+        let received_message = read_from_lookup_runtime_endpoint(&mut wasm_state).await;
         assert_eq!(message.to_vec(), received_message.clone());
     }
 
@@ -1029,5 +1003,25 @@ mod tests {
         wasm_handler
             .init(b"".to_vec())
             .expect("could not create wasm_state")
+    }
+
+    // Helper function to read from Endpoint associated to Lookup extension in the runtime.
+    async fn read_from_lookup_runtime_endpoint(wasm_state: &mut WasmState) -> Vec<u8> {
+        let endpoint = wasm_state
+            .extensions_endpoints
+            .get_mut(&LOOKUP_ABI_FUNCTION_NAME.to_string())
+            .unwrap();
+        let received_message = endpoint.receiver.try_recv().unwrap();
+        received_message
+    }
+
+    // Helper function to write to Endpoint associated to Lookup extension in the runtime.
+    async fn write_to_lookup_runtime_endpoint(wasm_state: &mut WasmState, message: AbiMessage) {
+        let endpoint = wasm_state
+            .extensions_endpoints
+            .get_mut(&LOOKUP_ABI_FUNCTION_NAME.to_string())
+            .unwrap();
+        let result = endpoint.sender.send(message.to_vec().clone()).await;
+        assert!(result.is_ok());
     }
 }
