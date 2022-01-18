@@ -175,6 +175,10 @@ alias runner=./scripts/runner
 source <(runner completion)
 ```
 
+For commands that use `cargo`, by default the `runner` runs the command only for
+the modified files and the crates affected by those changes. Use `--scope=all`
+to run the command for the entire code base.
+
 ## Run Example Application
 
 Running one of the example Oak applications will confirm that all core
