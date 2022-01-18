@@ -719,9 +719,11 @@ pub fn format_bytes(v: &[u8]) -> String {
 }
 
 // The Endpoint of a bidirectional channel. Sender and Receiver are exposed.
-pub struct Endpoint {
-    pub sender: Sender<AbiMessage>,
-    pub receiver: Receiver<AbiMessage>,
+#[allow(dead_code)]
+
+struct Endpoint {
+    sender: Sender<AbiMessage>,
+    receiver: Receiver<AbiMessage>,
 }
 
 /// Create a channel with two symmetrical endpoints. The [`AbiMessage`] sent from one [`Endpoint`]
@@ -734,7 +736,7 @@ pub struct Endpoint {
 ///              \/
 /// receiver ____/\____ receiver
 /// ```
-pub fn channel_create() -> (Endpoint, Endpoint) {
+fn channel_create() -> (Endpoint, Endpoint) {
     let (tx0, rx0) = channel::<AbiMessage>(ABI_CHANNEL_BOUND);
     let (tx1, rx1) = channel::<AbiMessage>(ABI_CHANNEL_BOUND);
     let endpoint0 = Endpoint {
@@ -777,24 +779,36 @@ mod tests {
     };
     use maplit::hashmap;
 
-    fn create_test_wasm_handler() -> WasmHandler {
-        let logger = Logger::for_test();
-        let lookup_data = Arc::new(LookupData::for_test(hashmap! {}));
-        let lookup_factory =
-            LookupFactory::new_boxed_extension_factory(lookup_data, logger.clone())
-                .expect("could not create LookupFactory");
-
-        let wasm_module_bytes = test_utils::create_some_wasm_module_bytes();
-
-        create_wasm_handler(&wasm_module_bytes, vec![lookup_factory], logger)
-            .expect("could not create wasm_handler")
+    #[test]
+    fn test_start_from_empty_endpoints() {
+        fn check_empty(endpoint: &mut Endpoint) {
+            let receiver = &mut endpoint.receiver;
+            assert_eq!(TryRecvError::Empty, receiver.try_recv().unwrap_err());
+        }
+        let (mut module, mut runtime) = channel_create();
+        check_empty(&mut module);
+        check_empty(&mut runtime);
     }
 
-    fn create_test_wasm_state() -> WasmState {
-        let wasm_handler = create_test_wasm_handler();
-        wasm_handler
-            .init(b"".to_vec())
-            .expect("could not create wasm_state")
+    #[tokio::test]
+    async fn test_crossed_write_read() {
+        async fn check_crossed_write_read(endpoint1: &mut Endpoint, endpoint2: &mut Endpoint) {
+            let message: AbiMessage = vec![42, 21, 0];
+            let sender = &endpoint1.sender;
+            let send_result = sender.send(message.clone()).await;
+            assert!(send_result.is_ok());
+
+            let receiver = &mut endpoint2.receiver;
+            let received_message = receiver.recv().await.unwrap();
+
+            assert_eq!(message, received_message);
+        }
+
+        let (mut endpoint_1, mut endpoint_2) = channel_create();
+        // Check from endpoint_1 to endpoint_2.
+        check_crossed_write_read(&mut endpoint_1, &mut endpoint_2).await;
+        // Check the other direction from endpoint_2 to endpoint_1.
+        check_crossed_write_read(&mut endpoint_2, &mut endpoint_1).await;
     }
 
     #[tokio::test]
@@ -894,5 +908,25 @@ mod tests {
                 .unwrap(),
             message
         );
+    }
+
+    fn create_test_wasm_handler() -> WasmHandler {
+        let logger = Logger::for_test();
+        let lookup_data = Arc::new(LookupData::for_test(hashmap! {}));
+        let lookup_factory =
+            LookupFactory::new_boxed_extension_factory(lookup_data, logger.clone())
+                .expect("could not create LookupFactory");
+
+        let wasm_module_bytes = test_utils::create_some_wasm_module_bytes();
+
+        create_wasm_handler(&wasm_module_bytes, vec![lookup_factory], logger)
+            .expect("could not create wasm_handler")
+    }
+
+    fn create_test_wasm_state() -> WasmState {
+        let wasm_handler = create_test_wasm_handler();
+        wasm_handler
+            .init(b"".to_vec())
+            .expect("could not create wasm_state")
     }
 }

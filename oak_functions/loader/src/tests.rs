@@ -21,7 +21,7 @@ use oak_functions_loader::{
     logger::Logger,
     lookup::LookupFactory,
     lookup_data::{parse_lookup_entries, LookupData, LookupDataAuth, LookupDataSource},
-    server::{apply_policy, channel_create, format_bytes, Endpoint},
+    server::{apply_policy, format_bytes},
 };
 use prost::Message;
 use std::{
@@ -31,7 +31,6 @@ use std::{
     time::Duration,
 };
 use test_utils::{get_config_info, make_request};
-use tokio::sync::mpsc::error::TryRecvError;
 
 const MANIFEST_PATH: &str = "examples/key_value_lookup/module/Cargo.toml";
 
@@ -436,36 +435,4 @@ fn test_format_bytes() {
     assert_eq!("🚀oak⭐", format_bytes("🚀oak⭐".as_bytes()));
     // Incorrect UTF-8 bytes, as per https://doc.rust-lang.org/std/string/struct.String.html#examples-3.
     assert_eq!("[0, 159, 146, 150]", format_bytes(&[0, 159, 146, 150]));
-}
-
-#[test]
-fn test_start_from_empty_endpoints() {
-    fn check_empty(endpoint: &mut Endpoint) {
-        let receiver = &mut endpoint.receiver;
-        assert_eq!(TryRecvError::Empty, receiver.try_recv().unwrap_err());
-    }
-    let (mut module, mut runtime) = channel_create();
-    check_empty(&mut module);
-    check_empty(&mut runtime);
-}
-
-#[tokio::test]
-async fn test_crossed_write_read() {
-    async fn check_crossed_write_read(endpoint1: &mut Endpoint, endpoint2: &mut Endpoint) {
-        let message = String::from("Message").into_bytes();
-        let sender = &endpoint1.sender;
-        let send_result = sender.send(message.clone()).await;
-        assert!(send_result.is_ok());
-
-        let receiver = &mut endpoint2.receiver;
-        let received_message = receiver.recv().await.unwrap();
-
-        assert_eq!(message, received_message);
-    }
-
-    let (mut module, mut runtime) = channel_create();
-    // Check from module endpoint to runtime endpoint.
-    check_crossed_write_read(&mut module, &mut runtime).await;
-    // Check the other direction from runtime endpoint to module endpoint.
-    check_crossed_write_read(&mut runtime, &mut module).await;
 }
