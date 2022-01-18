@@ -1,1 +1,1 @@
-initSidebarItems({"fn":[["storage_get_item","Corresponds to the host ABI function `storage_get_item`."]],"struct":[["LookupExtension",""],["LookupFactory",""]]});
+initSidebarItems({"constant":[["LOOKUP_ABI_FUNCTION_NAME",""]],"fn":[["storage_get_item","Corresponds to the host ABI function `storage_get_item`."]],"struct":[["LookupExtension",""],["LookupFactory",""]]});
