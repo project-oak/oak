@@ -25,7 +25,11 @@ use oak_functions_abi::proto::{
 };
 use serde::Deserialize;
 use std::{collections::HashMap, convert::TryInto, str, sync::Arc, time::Duration};
-use tokio::sync::mpsc::{channel, error::TryRecvError, Receiver, Sender};
+use tokio::sync::mpsc::{
+    channel,
+    error::{TryRecvError, TrySendError},
+    Receiver, Sender,
+};
 use wasmi::ValueType;
 
 const MAIN_FUNCTION_NAME: &str = "main";
@@ -313,11 +317,16 @@ impl WasmState {
         src_buf_len: AbiPointerOffset,
     ) -> Result<(), ChannelStatus> {
         // Read message from Wasm memory.
-        let _message = self.read_buffer_from_wasm_memory(src_buf_ptr, src_buf_len)?;
+        let message: AbiMessage = self.read_buffer_from_wasm_memory(src_buf_ptr, src_buf_len)?;
 
         // Write message to hosted endpoint.
         let endpoint = self.get_endpoint_from_channel_handle(channel_handle)?;
-        let _sender = &mut endpoint.sender;
+        let sender = &mut endpoint.sender;
+
+        sender.try_send(message).map_err(|e| match e {
+            TrySendError::Full(_) => ChannelStatus::ChannelFull,
+            TrySendError::Closed(_) => ChannelStatus::ChannelEndpointClosed,
+        })?;
 
         Ok(())
     }
@@ -958,6 +967,48 @@ mod tests {
                 .unwrap(),
             message
         );
+    }
+
+    #[tokio::test]
+    async fn test_hosted_channel_write_after_read_ok() {
+        let channel_handle = ChannelHandle::LookupData as i32;
+        let message = b"TT" /* A Tiny Test message */;
+        let mut wasm_state = create_test_wasm_state();
+
+        // Write message into Lookup endpoint.
+        let endpoint = wasm_state
+            .extensions_endpoints
+            .get_mut(&LOOKUP_ABI_FUNCTION_NAME.to_string())
+            .unwrap();
+        let result = endpoint.sender.send(message.to_vec().clone()).await;
+        assert!(result.is_ok());
+
+        // Read message into linear Wasm memory.
+        // Guess some memory addresses in linear Wasm memory.
+        let dest_ptr_ptr: AbiPointer = 100;
+        let dest_len_ptr: AbiPointer = 150;
+
+        let result = wasm_state.channel_read(channel_handle, dest_ptr_ptr, dest_len_ptr);
+        assert!(result.is_ok());
+
+        // Write message back from linear Wasm memory.
+        let src_buf_ptr: AbiPointer =
+            LittleEndian::read_u32(&wasm_state.get_memory().get(dest_ptr_ptr, 4).unwrap());
+
+        let src_buf_len: AbiPointerOffset = message.len() as u32;
+
+        let result = wasm_state.channel_write(channel_handle, src_buf_ptr, src_buf_len);
+
+        assert!(result.is_ok());
+
+        // check that message is in receiver endpoint
+        let endpoint = wasm_state
+            .extensions_endpoints
+            .get_mut(&LOOKUP_ABI_FUNCTION_NAME.to_string())
+            .unwrap();
+        let received_message = endpoint.receiver.try_recv().unwrap();
+
+        assert_eq!(message.to_vec(), received_message.clone());
     }
 
     fn create_test_wasm_handler() -> WasmHandler {
