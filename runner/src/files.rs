@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-use crate::{diffs::all_affected_crates, internal::Commits};
+use crate::{diffs::all_affected_crates, internal::Scope};
 use std::{
     io::Read,
     path::{Path, PathBuf},
@@ -53,8 +53,8 @@ pub fn file_contains(path: &Path, pattern: &str) -> bool {
     }
 }
 
-pub fn example_toml_files(commits: &Commits) -> Box<dyn Iterator<Item = PathBuf>> {
-    all_affected_crates(commits)
+pub fn example_toml_files(scope: &Scope) -> Box<dyn Iterator<Item = PathBuf>> {
+    all_affected_crates(scope)
         .files
         .map(affected_example_toml_filles)
         .unwrap_or_else(|| Box::new(source_files().filter(|p| is_example_toml_file(p))))

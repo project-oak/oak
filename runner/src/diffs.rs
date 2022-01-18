@@ -24,7 +24,7 @@ use std::{
 
 use crate::{
     files::*,
-    internal::{CargoManifest, Commits},
+    internal::{CargoManifest, Scope},
 };
 
 #[derive(Debug)]
@@ -44,18 +44,23 @@ impl ModifiedContent {
     }
 }
 
-// Get all the files that have been modified in the commits specified by `commits`. Does not include
-// new files, unless they are added to git. If present, `commits.commits` must be a positive number.
-// If it is zero or negative, only the last commit will be considered for finding the modified
-// files. If `commits.commits` is not present, all files will be considered.
-pub fn modified_files(commits: &Commits) -> ModifiedContent {
-    let files = commits.commits.map(|commits| {
+/// Get all the files that have been modified in the given `scope`. If the scope is `Scope::All`
+/// returns `None` as the list of files in `ModifiedContent`. For `Scope::Commits` and
+/// `Scope::DiffToMain` the returned files include tracked files with unstaged changes, but do
+/// not include new files that are not tracked (i.e., not added to git yet). For
+/// `Scope::Commits(N)`, a positive number of commits must be given. In case of zero or
+/// a negative number, only the last commit will be considered for finding the modified files.
+pub fn modified_files(scope: &Scope) -> ModifiedContent {
+    let args = match scope {
+        Scope::All => None,
+        Scope::Commits(commits) => Some(format!("HEAD~{}", std::cmp::max(1, *commits))),
+        // TODO(#2491): Use `--merge-base` when we have a newer version of Git in the docker image.
+        Scope::DiffToMain => Some("main".to_owned()),
+    };
+
+    let files = args.map(|args| {
         let vec = Command::new("git")
-            .args(&[
-                "diff",
-                "--name-only",
-                &format!("HEAD~{}", std::cmp::max(1, commits)),
-            ])
+            .args(spread!["diff".to_owned(), "--name-only".to_owned(), args,])
             .output()
             .expect("could not get modified files")
             .stdout;
@@ -70,13 +75,13 @@ pub fn modified_files(commits: &Commits) -> ModifiedContent {
     ModifiedContent { files }
 }
 
-/// Returns the list of paths to `Cargo.toml` files for all crates in which at least one file is
-/// modified.
-pub fn directly_modified_crates(commits: &Commits) -> ModifiedContent {
-    let files = modified_files(commits).files.map(|modified_files| {
+/// Returns the list of paths to `Cargo.toml` files for all crates that include at least one of the
+/// given modified files.
+pub fn directly_modified_crates(files: &ModifiedContent) -> ModifiedContent {
+    let files = files.files.as_ref().map(|modified_files| {
         let mut crates = hashset![];
         for str_path in modified_files {
-            if let Some(crate_path) = find_crate_toml_file(str_path) {
+            if let Some(crate_path) = find_crate_toml_file(str_path.clone()) {
                 crates.insert(crate_path);
             }
         }
@@ -102,14 +107,16 @@ fn find_crate_toml_file(str_path: String) -> Option<String> {
     None
 }
 
-/// List of paths to all `.proto` files affected by the recent changes.
-fn affected_protos(commits: &Commits) -> Vec<String> {
-    modified_files(commits)
+/// Returns the list of paths to all `.proto` files affected by the given list of modified files.
+fn affected_protos(files: &ModifiedContent) -> Vec<String> {
+    files
         .files
+        .as_ref()
         .map(|modified_files| {
             let mut affected_protos: Vec<String> = modified_files
-                .into_iter()
+                .iter()
                 .filter(|p| p.ends_with(".proto"))
+                .cloned()
                 .collect();
 
             if !affected_protos.is_empty() {
@@ -169,37 +176,40 @@ fn imported_proto_files(proto_file_path: String) -> Vec<String> {
 
 /// Path to the `Cargo.toml` files for all crates that are either directly modified or have a
 /// dependency to a modified crate.
-pub fn all_affected_crates(commits: &Commits) -> ModifiedContent {
-    let files = directly_modified_crates(commits)
-        .files
-        .map(|modified_files| {
-            let crate_manifest_files = crate_manifest_files();
-            // A map of `Cargo.toml` files visited by the algorithm. If the value associated with a
-            // key is `true`, the crate is affected by the changes and should be included in the
-            // result.
-            let mut affected_crates: HashMap<String, bool> = modified_files
-                .into_iter()
-                .map(|path| (path, true))
-                .collect();
+pub fn all_affected_crates(scope: &Scope) -> ModifiedContent {
+    crates_affected_by_files(&modified_files(scope))
+}
 
-            crates_affected_by_protos(&affected_protos(commits))
-                .iter()
-                .fold(&mut affected_crates, |affected_crates, toml_path| {
-                    affected_crates.insert(toml_path.clone(), true);
-                    affected_crates
-                });
+fn crates_affected_by_files(files: &ModifiedContent) -> ModifiedContent {
+    let modified_crates = directly_modified_crates(files);
+    let files = modified_crates.files.map(|modified_files| {
+        let crate_manifest_files = crate_manifest_files();
+        // A map of `Cargo.toml` files visited by the algorithm. If the value associated with a
+        // key is `true`, the crate is affected by the changes and should be included in the
+        // result.
+        let mut affected_crates: HashMap<String, bool> = modified_files
+            .into_iter()
+            .map(|path| (path, true))
+            .collect();
 
-            for crate_path in crate_manifest_files {
-                add_affected_crates(crate_path, &mut affected_crates);
-            }
+        crates_affected_by_protos(&affected_protos(files))
+            .iter()
+            .fold(&mut affected_crates, |affected_crates, toml_path| {
+                affected_crates.insert(toml_path.clone(), true);
+                affected_crates
+            });
 
-            // Return `Cargo.toml` files of the crates that are affected by the changes
-            affected_crates
-                .iter()
-                .filter(|(_key, value)| **value)
-                .map(|(key, _value)| key.clone())
-                .collect()
-        });
+        for crate_path in crate_manifest_files {
+            add_affected_crates(crate_path, &mut affected_crates);
+        }
+
+        // Return `Cargo.toml` files of the crates that are affected by the changes
+        affected_crates
+            .iter()
+            .filter(|(_key, value)| **value)
+            .map(|(key, _value)| key.clone())
+            .collect()
+    });
 
     ModifiedContent { files }
 }
@@ -210,7 +220,7 @@ fn crates_affected_by_protos(affected_protos: &[String]) -> HashSet<String> {
         .filter(|path| to_string(path.clone()).ends_with("build.rs"))
         .filter(|path| {
             for proto in affected_protos {
-                if file_contains(path, proto) {
+                if file_contains(path, &proto.replace("./", "")) {
                     return true;
                 }
             }
@@ -235,6 +245,7 @@ fn add_affected_crates(
     if affected_crates_toml_path.contains_key(&to_string(crate_toml_path.clone())) {
         return;
     }
+    affected_crates_toml_path.insert(to_string(crate_toml_path.clone()), false);
     let deps = get_local_dependencies(&crate_toml_path);
     for dep in deps {
         // If the dependency is not visited, visit it and its dependencies
@@ -247,7 +258,6 @@ fn add_affected_crates(
             return;
         }
     }
-    affected_crates_toml_path.insert(to_string(crate_toml_path), false);
 }
 
 /// Returns paths to `Cargo.toml` files of local crates (crates belonging to the Oak repo) that the

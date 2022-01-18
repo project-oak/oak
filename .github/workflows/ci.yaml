@@ -47,6 +47,8 @@ jobs:
     steps:
       - name: Checkout branch
         uses: actions/checkout@v2
+        with:
+          fetch-depth: 2
 
       # The runner comes with all this software pre-installed: https://github.com/actions/virtual-environments/blob/main/images/linux/Ubuntu2004-README.md
       # so we delete some large packages to make sure we have more space available.
@@ -101,8 +103,15 @@ jobs:
             cargo-cache-
 
       - name: Run command
+        if: github.event_name == 'pull_request'
         run: |
-          ./scripts/docker_run ./scripts/runner --commands ${{ matrix.cmd }}
+          ./scripts/docker_run ./scripts/runner --commands --scope=commits:1 ${{ matrix.cmd }}
+          df --human-readable
+
+      - name: Run Command - Post-Merge
+        if: github.event_name == 'push'
+        run: |
+          ./scripts/docker_run ./scripts/runner --commands --scope=all ${{ matrix.cmd }}
           df --human-readable
 
       - name: Generate root CA certs

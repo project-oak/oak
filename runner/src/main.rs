@@ -113,23 +113,23 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 fn match_cmd(opt: &Opt) -> Step {
     match opt.cmd {
-        Command::RunExamples(ref opt) => run_examples(opt),
-        Command::RunFunctionsExamples(ref opt) => run_functions_examples(opt),
+        Command::RunExamples(ref run_opt) => run_examples(run_opt, &opt.scope),
+        Command::RunFunctionsExamples(ref run_opt) => run_functions_examples(run_opt, &opt.scope),
         Command::BuildFunctionsExample(ref opt) => build_functions_example(opt),
         Command::BuildServer(ref opt) => build_server(opt, vec![]),
         Command::BuildFunctionsServer(ref opt) => build_functions_server(opt, vec![]),
         Command::RunTests => run_tests(),
-        Command::RunCargoClippy(ref commits) => run_cargo_clippy(commits),
-        Command::RunCargoTests(ref opt) => run_cargo_tests(opt),
+        Command::RunCargoClippy => run_cargo_clippy(&opt.scope),
+        Command::RunCargoTests(ref run_opt) => run_cargo_tests(run_opt, &opt.scope),
         Command::RunBazelTests => run_bazel_tests(),
-        Command::RunTestsTsan => run_tests_tsan(),
+        Command::RunTestsTsan => run_tests_tsan(&opt.scope),
         Command::RunCargoFuzz(ref opt) => run_cargo_fuzz(opt),
-        Command::Format(ref commits) => format(commits),
-        Command::CheckFormat(ref commits) => check_format(commits),
+        Command::Format => format(&opt.scope),
+        Command::CheckFormat => check_format(&opt.scope),
         Command::RunCi => run_ci(),
         Command::Completion(ref opt) => run_completion(opt),
         Command::RunCargoDeny => run_cargo_deny(),
-        Command::RunCargoUdeps => run_cargo_udeps(),
+        Command::RunCargoUdeps => run_cargo_udeps(&opt.scope),
         Command::RunCargoClean => run_cargo_clean(),
     }
 }
@@ -157,17 +157,14 @@ fn run_tests() -> Step {
     Step::Multiple {
         name: "tests".to_string(),
         steps: vec![
-            run_cargo_tests(&RunTestsOpt {
-                cleanup: false,
-                commits: Commits::default(),
-            }),
+            run_cargo_tests(&RunTestsOpt { cleanup: false }, &Scope::DiffToMain),
             run_bazel_tests(),
         ],
     }
 }
 
-fn run_cargo_tests(opt: &RunTestsOpt) -> Step {
-    let all_affected_crates = all_affected_crates(&opt.commits);
+fn run_cargo_tests(opt: &RunTestsOpt, scope: &Scope) -> Step {
+    let all_affected_crates = all_affected_crates(scope);
     Step::Multiple {
         name: "cargo tests".to_string(),
         steps: vec![
@@ -184,10 +181,10 @@ fn run_bazel_tests() -> Step {
     }
 }
 
-fn run_tests_tsan() -> Step {
+fn run_tests_tsan(scope: &Scope) -> Step {
     Step::Multiple {
         name: "tests".to_string(),
-        steps: vec![run_cargo_test_tsan()],
+        steps: vec![run_cargo_test_tsan(scope)],
     }
 }
 
@@ -343,8 +340,9 @@ pub fn run_fuzz_targets_in_crate(path: &Path, opt: &RunCargoFuzz) -> Step {
     }
 }
 
-fn format(commits: &Commits) -> Step {
-    let modified_crates = directly_modified_crates(commits);
+fn format(scope: &Scope) -> Step {
+    let modified_files = modified_files(scope);
+    let modified_crates = directly_modified_crates(&modified_files);
     Step::Multiple {
         name: "format".to_string(),
         steps: vec![
@@ -358,9 +356,9 @@ fn format(commits: &Commits) -> Step {
     }
 }
 
-fn check_format(commits: &Commits) -> Step {
-    let modified_files = modified_files(commits);
-    let modified_crates = directly_modified_crates(commits);
+fn check_format(scope: &Scope) -> Step {
+    let modified_files = modified_files(scope);
+    let modified_crates = directly_modified_crates(&modified_files);
 
     Step::Multiple {
         name: "format".to_string(),
@@ -681,7 +679,7 @@ fn run_cargo_fmt(mode: FormatMode, modified_crates: &ModifiedContent) -> Step {
     }
 }
 
-fn featues_excl_introspection_client(entry: &str) -> &str {
+fn features_excl_introspection_client(entry: &str) -> &str {
     // Manually exclude `oak-introspection-client` for `oak_loader` and `oak_runtime` to
     // avoid compile time errors.
     if entry.contains("oak_loader") {
@@ -709,7 +707,7 @@ fn run_cargo_test(opt: &RunTestsOpt, all_affected_crates: &ModifiedContent) -> S
                         &[
                             "test",
                             // Compile and test for all features
-                            featues_excl_introspection_client(&entry),
+                            features_excl_introspection_client(&entry),
                             &format!("--manifest-path={}", &entry),
                         ],
                     ),
@@ -763,15 +761,17 @@ fn run_clang_tidy() -> Step {
     }
 }
 
-fn run_cargo_test_tsan() -> Step {
-    Step::Single {
-        name: "cargo test (tsan)".to_string(),
-        command: Cmd::new_with_env(
+fn run_cargo_test_tsan(scope: &Scope) -> Step {
+    let abitest_crate = "./examples/abitest/module_0/rust/Cargo.toml";
+    let all_affected_crates = all_affected_crates(scope);
+    let mut steps = vec![];
+    if all_affected_crates.contains(abitest_crate) {
+        let cmd = Cmd::new_with_env(
             "cargo",
             &[
                 "-Zbuild-std",
                 "test",
-                "--manifest-path=./examples/abitest/module_0/rust/Cargo.toml",
+                &format!("--manifest-path={}", abitest_crate),
                 "--target=x86_64-unknown-linux-gnu",
                 "--verbose",
                 "--",
@@ -782,17 +782,26 @@ fn run_cargo_test_tsan() -> Step {
                 "RUSTFLAGS".to_string() => "-Z sanitizer=thread".to_string(),
                 "TSAN_OPTIONS".to_string() => format!("halt_on_error=1 report_atomic_races=0 suppressions={}/.tsan_suppress", std::env::current_dir().unwrap().display()),
             },
-        ),
+        );
+        steps.push(Step::Single {
+            name: "abitest (tsan)".to_string(),
+            command: cmd,
+        });
+    }
+
+    Step::Multiple {
+        name: "cargo test (tsan)".to_string(),
+        steps,
     }
 }
 
-fn run_cargo_clippy(commits: &Commits) -> Step {
-    let modified_crates = directly_modified_crates(commits);
+fn run_cargo_clippy(scope: &Scope) -> Step {
+    let all_affected_crates = all_affected_crates(scope);
     Step::Multiple {
         name: "cargo clippy".to_string(),
         steps: crate_manifest_files()
             .map(to_string)
-            .filter(|path| modified_crates.contains(path))
+            .filter(|path| all_affected_crates.contains(path))
             .map(|entry| Step::Single {
                 name: entry.clone(),
                 command: Cmd::new(
@@ -800,7 +809,7 @@ fn run_cargo_clippy(commits: &Commits) -> Step {
                     &[
                         "clippy",
                         "--all-targets",
-                        featues_excl_introspection_client(&entry),
+                        features_excl_introspection_client(&entry),
                         &format!("--manifest-path={}", &entry),
                         "--no-deps",
                         "--",
@@ -828,11 +837,14 @@ fn run_cargo_deny() -> Step {
     }
 }
 
-fn run_cargo_udeps() -> Step {
+fn run_cargo_udeps(scope: &Scope) -> Step {
+    let all_affected_crates = all_affected_crates(scope);
+
     Step::Multiple {
         name: "cargo udeps".to_string(),
         steps: workspace_manifest_files()
             .map(to_string)
+            .filter(|path| all_affected_crates.contains(path))
             .map(|entry| Step::Single {
                 name: entry.clone(),
                 command: Cmd::new(
