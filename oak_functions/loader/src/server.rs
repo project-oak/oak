@@ -253,6 +253,20 @@ impl WasmState {
         Ok(())
     }
 
+    // Helper function to get the hosted Endpoint for the given channel handle.
+    fn get_endpoint_from_channel_handle(
+        &mut self,
+        channel_handle: AbiChannelHandle,
+    ) -> Result<&mut Endpoint, ChannelStatus> {
+        let channel_handle =
+            ChannelHandle::from_i32(channel_handle).ok_or(ChannelStatus::ChannelHandleInvalid)?;
+        let endpoint = self
+            .channel_switchboard
+            .get_mut(&channel_handle)
+            .ok_or(ChannelStatus::ChannelHandleInvalid)?;
+        Ok(endpoint)
+    }
+
     pub fn channel_read(
         &mut self,
         channel_handle: AbiChannelHandle,
@@ -260,12 +274,7 @@ impl WasmState {
         dest_len_ptr: AbiPointer,
     ) -> Result<(), ChannelStatus> {
         // Read message from channel at channel_handle.
-        let channel_handle =
-            ChannelHandle::from_i32(channel_handle).ok_or(ChannelStatus::ChannelHandleInvalid)?;
-        let endpoint = self
-            .channel_switchboard
-            .get_mut(&channel_handle)
-            .ok_or(ChannelStatus::ChannelHandleInvalid)?;
+        let endpoint = self.get_endpoint_from_channel_handle(channel_handle)?;
         let receiver = &mut endpoint.receiver;
         let message = receiver.try_recv().map_err(|e| match e {
             TryRecvError::Empty => ChannelStatus::ChannelEmpty,
@@ -278,6 +287,17 @@ impl WasmState {
         self.write_u32_to_wasm_memory(dest_ptr, dest_ptr_ptr)?;
         self.write_u32_to_wasm_memory(message.len() as u32, dest_len_ptr)?;
 
+        Ok(())
+    }
+
+    pub fn channel_write(
+        &mut self,
+        channel_handle: AbiChannelHandle,
+        _src_buf_ptr: AbiPointer,
+        _src_buf_len: AbiPointer,
+    ) -> Result<(), ChannelStatus> {
+        let endpoint = self.get_endpoint_from_channel_handle(channel_handle)?;
+        let _sender = &mut endpoint.sender;
         Ok(())
     }
 
@@ -685,6 +705,17 @@ fn oak_functions_resolve_func(field_name: &str) -> Option<(usize, wasmi::Signatu
             wasmi::Signature::new(
                 &[
                     ABI_USIZE, // channel_handle
+                    ABI_USIZE, // dest_buf_ptr_ptr
+                    ABI_USIZE, // dest_buf_len_ptr
+                ][..],
+                Some(ValueType::I32),
+            ),
+        ),
+        "channel_write" => (
+            CHANNEL_READ,
+            wasmi::Signature::new(
+                &[
+                    ABI_USIZE, // channel_handle
                     ABI_USIZE, // src_buf_ptr
                     ABI_USIZE, // src_buf_len
                 ][..],
@@ -718,8 +749,8 @@ pub fn format_bytes(v: &[u8]) -> String {
         .unwrap_or_else(|_| format!("{:?}", v))
 }
 
-// The Endpoint of a bidirectional channel. Sender and Receiver are exposed.
-#[allow(dead_code)]
+// The Endpoint of a bidirectional channel.
+#[derive(Debug)]
 struct Endpoint {
     sender: Sender<AbiMessage>,
     receiver: Receiver<AbiMessage>,
@@ -825,18 +856,18 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_hosted_channel_read_from_handle_out_of_range() {
+    async fn test_get_endpoint_from_channel_handle_out_of_range() {
         let mut wasm_state = create_test_wasm_state();
-        let result = wasm_state.channel_read(-1, 0, 0);
+        let result = wasm_state.get_endpoint_from_channel_handle(-1);
         assert!(result.is_err());
         assert_eq!(ChannelStatus::ChannelHandleInvalid, result.unwrap_err())
     }
 
     #[tokio::test]
-    async fn test_hosted_channel_read_from_handle_without_endpoint() {
+    async fn test_get_endpoint_from_channel_handle_without_endpoint() {
         let mut wasm_state = create_test_wasm_state();
         // Assumes ChannelHandle 0 will never have an Endpoint.
-        let result = wasm_state.channel_read(0, 0, 0);
+        let result = wasm_state.get_endpoint_from_channel_handle(0);
         assert!(result.is_err());
         assert_eq!(ChannelStatus::ChannelHandleInvalid, result.unwrap_err())
     }
