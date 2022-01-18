@@ -155,6 +155,19 @@
 <span id="153">153</span>
 <span id="154">154</span>
 <span id="155">155</span>
+<span id="156">156</span>
+<span id="157">157</span>
+<span id="158">158</span>
+<span id="159">159</span>
+<span id="160">160</span>
+<span id="161">161</span>
+<span id="162">162</span>
+<span id="163">163</span>
+<span id="164">164</span>
+<span id="165">165</span>
+<span id="166">166</span>
+<span id="167">167</span>
+<span id="168">168</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2021 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -172,6 +185,19 @@
 <span class="comment">//</span>
 
 <span class="attribute">#![<span class="ident">feature</span>(<span class="ident">async_closure</span>)]</span>
+
+<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">proto</span> {
+    <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">google</span> {
+        <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">rpc</span> {
+            <span class="macro">tonic::include_proto!</span>(<span class="string">&quot;google.rpc&quot;</span>);
+        }
+    }
+    <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">oak</span> {
+        <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">encap</span> {
+            <span class="macro">tonic::include_proto!</span>(<span class="string">&quot;oak.encap&quot;</span>);
+        }
+    }
+}
 
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::grpc::handle_request</span>;
 <span class="kw">use</span> <span class="ident">anyhow::Context</span>;

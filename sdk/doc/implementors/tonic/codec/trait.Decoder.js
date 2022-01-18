@@ -1,0 +1,3 @@
+(function() {var implementors = {};
+implementors["tensorflow_proxy"] = [{"text":"impl <a class=\"trait\" href=\"https://docs.rs/tonic/0.5.2/tonic/codec/trait.Decoder.html\" title=\"trait tonic::codec::Decoder\">Decoder</a> for <a class=\"struct\" href=\"tensorflow_proxy/grpc/struct.BytesDecoder.html\" title=\"struct tensorflow_proxy::grpc::BytesDecoder\">BytesDecoder</a>","synthetic":false,"types":["tensorflow_proxy::grpc::BytesDecoder"]}];
+if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

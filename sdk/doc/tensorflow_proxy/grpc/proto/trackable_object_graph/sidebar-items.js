@@ -1,1 +1,0 @@
-initSidebarItems({"mod":[["trackable_object","Nested message and enum types in `TrackableObject`."]],"struct":[["TrackableObject",""]]});

@@ -140,6 +140,24 @@
 <span id="138">138</span>
 <span id="139">139</span>
 <span id="140">140</span>
+<span id="141">141</span>
+<span id="142">142</span>
+<span id="143">143</span>
+<span id="144">144</span>
+<span id="145">145</span>
+<span id="146">146</span>
+<span id="147">147</span>
+<span id="148">148</span>
+<span id="149">149</span>
+<span id="150">150</span>
+<span id="151">151</span>
+<span id="152">152</span>
+<span id="153">153</span>
+<span id="154">154</span>
+<span id="155">155</span>
+<span id="156">156</span>
+<span id="157">157</span>
+<span id="158">158</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2021 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -166,7 +184,10 @@
 <span class="kw">use</span> <span class="ident">oak_functions_abi::proto</span>::{<span class="ident">ConfigurationInfo</span>, <span class="ident">Request</span>};
 <span class="kw">use</span> <span class="ident">oak_functions_client::Client</span>;
 <span class="kw">use</span> <span class="ident">prost::Message</span>;
-<span class="kw">use</span> <span class="ident">proto::serving</span>::{<span class="ident">ModelSpec</span>, <span class="ident">PredictRequest</span>, <span class="ident">PredictResponse</span>};
+<span class="kw">use</span> <span class="ident">proto</span>::{
+    <span class="ident">oak::encap::GrpcRequest</span>,
+    <span class="ident">serving</span>::{<span class="ident">ModelSpec</span>, <span class="ident">PredictRequest</span>, <span class="ident">PredictResponse</span>},
+};
 <span class="kw">use</span> <span class="ident">structopt::StructOpt</span>;
 
 <span class="kw">mod</span> <span class="ident">data</span>;
@@ -177,6 +198,16 @@
     <span class="macro">tonic::include_proto!</span>(<span class="string">&quot;tensorflow&quot;</span>);
     <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">serving</span> {
         <span class="macro">tonic::include_proto!</span>(<span class="string">&quot;tensorflow.serving&quot;</span>);
+    }
+    <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">google</span> {
+        <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">rpc</span> {
+            <span class="macro">tonic::include_proto!</span>(<span class="string">&quot;google.rpc&quot;</span>);
+        }
+    }
+    <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">oak</span> {
+        <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">encap</span> {
+            <span class="macro">tonic::include_proto!</span>(<span class="string">&quot;oak.encap&quot;</span>);
+        }
     }
 }
 
@@ -223,8 +254,13 @@
         };
         <span class="macro">trace!</span>(<span class="string">&quot;predict request: {:?}&quot;</span>, <span class="ident">predict_request</span>);
 
+        <span class="kw">let</span> <span class="ident">encapsulated_request</span> <span class="op">=</span> <span class="ident">GrpcRequest</span> {
+            <span class="ident">method_name</span>: <span class="string">&quot;/tensorflow.serving.PredictionService/Predict&quot;</span>.<span class="ident">to_owned</span>(),
+            <span class="ident">req_msg</span>: <span class="ident">predict_request</span>.<span class="ident">encode_to_vec</span>(),
+            <span class="ident">last</span>: <span class="bool-val">true</span>,
+        };
         <span class="kw">let</span> <span class="ident">request</span> <span class="op">=</span> <span class="ident">Request</span> {
-            <span class="ident">body</span>: <span class="ident">predict_request</span>.<span class="ident">encode_to_vec</span>(),
+            <span class="ident">body</span>: <span class="ident">encapsulated_request</span>.<span class="ident">encode_to_vec</span>(),
         };
 
         <span class="kw">let</span> <span class="ident">response</span> <span class="op">=</span> <span class="ident">client</span>

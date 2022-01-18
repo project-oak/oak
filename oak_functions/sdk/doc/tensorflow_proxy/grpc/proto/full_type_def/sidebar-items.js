@@ -1,1 +1,0 @@
-initSidebarItems({"enum":[["Attr","Literal values of this type object, if the the type admits one. For example, a type variable admits a string attribute - its name. Shape-related types may admit int attributes - their static shape values. Fields for more data types to be added as needed."]]});

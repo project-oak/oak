@@ -104,6 +104,62 @@
 <span id="102">102</span>
 <span id="103">103</span>
 <span id="104">104</span>
+<span id="105">105</span>
+<span id="106">106</span>
+<span id="107">107</span>
+<span id="108">108</span>
+<span id="109">109</span>
+<span id="110">110</span>
+<span id="111">111</span>
+<span id="112">112</span>
+<span id="113">113</span>
+<span id="114">114</span>
+<span id="115">115</span>
+<span id="116">116</span>
+<span id="117">117</span>
+<span id="118">118</span>
+<span id="119">119</span>
+<span id="120">120</span>
+<span id="121">121</span>
+<span id="122">122</span>
+<span id="123">123</span>
+<span id="124">124</span>
+<span id="125">125</span>
+<span id="126">126</span>
+<span id="127">127</span>
+<span id="128">128</span>
+<span id="129">129</span>
+<span id="130">130</span>
+<span id="131">131</span>
+<span id="132">132</span>
+<span id="133">133</span>
+<span id="134">134</span>
+<span id="135">135</span>
+<span id="136">136</span>
+<span id="137">137</span>
+<span id="138">138</span>
+<span id="139">139</span>
+<span id="140">140</span>
+<span id="141">141</span>
+<span id="142">142</span>
+<span id="143">143</span>
+<span id="144">144</span>
+<span id="145">145</span>
+<span id="146">146</span>
+<span id="147">147</span>
+<span id="148">148</span>
+<span id="149">149</span>
+<span id="150">150</span>
+<span id="151">151</span>
+<span id="152">152</span>
+<span id="153">153</span>
+<span id="154">154</span>
+<span id="155">155</span>
+<span id="156">156</span>
+<span id="157">157</span>
+<span id="158">158</span>
+<span id="159">159</span>
+<span id="160">160</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2021 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -120,25 +176,21 @@
 <span class="comment">// limitations under the License.</span>
 <span class="comment">//</span>
 
-<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">proto</span> {
-    <span class="comment">// Suppress warning: `large size difference between variants`.</span>
-    <span class="attribute">#![<span class="ident">allow</span>(<span class="ident">clippy::large_enum_variant</span>)]</span>
-    <span class="attribute">#![<span class="ident">allow</span>(<span class="ident">clippy::return_self_not_must_use</span>)]</span>
-    <span class="macro">tonic::include_proto!</span>(<span class="string">&quot;tensorflow&quot;</span>);
-    <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">serving</span> {
-        <span class="macro">tonic::include_proto!</span>(<span class="string">&quot;tensorflow.serving&quot;</span>);
-    }
-}
-
+<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::proto::oak::encap::GrpcRequest</span>;
 <span class="kw">use</span> <span class="ident">anyhow::Context</span>;
+<span class="kw">use</span> <span class="ident">bytes</span>::{<span class="ident">Buf</span>, <span class="ident">BufMut</span>};
 <span class="kw">use</span> <span class="ident">futures::task::Poll</span>;
 <span class="kw">use</span> <span class="ident">pin_project_lite::pin_project</span>;
 <span class="kw">use</span> <span class="ident">prost::Message</span>;
-<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">proto::serving</span>::{<span class="ident">prediction_service_client::PredictionServiceClient</span>, <span class="ident">PredictRequest</span>};
-<span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">future::Future</span>, <span class="ident">pin::Pin</span>};
+<span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">future::Future</span>, <span class="ident">io::copy</span>, <span class="ident">pin::Pin</span>};
 <span class="kw">use</span> <span class="ident">sync_wrapper::SyncWrapper</span>;
 <span class="kw">use</span> <span class="ident">tokio::net::UnixStream</span>;
-<span class="kw">use</span> <span class="ident">tonic::transport</span>::{<span class="ident">Channel</span>, <span class="ident">Endpoint</span>, <span class="ident">Uri</span>};
+<span class="kw">use</span> <span class="ident">tonic</span>::{
+    <span class="ident">client::Grpc</span>,
+    <span class="ident">codec</span>::{<span class="ident">Codec</span>, <span class="ident">DecodeBuf</span>, <span class="ident">Decoder</span>, <span class="ident">EncodeBuf</span>, <span class="ident">Encoder</span>},
+    <span class="ident">transport</span>::{<span class="ident">Channel</span>, <span class="ident">Endpoint</span>, <span class="ident">Uri</span>},
+    <span class="ident">Request</span>,
+};
 <span class="kw">use</span> <span class="ident">tower::service_fn</span>;
 
 <span class="doccomment">/// Connection to the prediction service that can be used for creating new clients.</span>
@@ -162,36 +214,42 @@
     }
 
     <span class="doccomment">/// Creates a new client.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">create_client</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">PredictionServiceClient</span><span class="op">&lt;</span><span class="ident">Channel</span><span class="op">&gt;</span> {
-        <span class="ident">PredictionServiceClient::new</span>(<span class="self">self</span>.<span class="ident">channel</span>.<span class="ident">clone</span>())
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">create_client</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">Grpc</span><span class="op">&lt;</span><span class="ident">Channel</span><span class="op">&gt;</span> {
+        <span class="ident">Grpc::new</span>(<span class="self">self</span>.<span class="ident">channel</span>.<span class="ident">clone</span>())
     }
 }
 
 <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">handle_request</span>(
-    <span class="kw-2">mut</span> <span class="ident">client</span>: <span class="ident">PredictionServiceClient</span><span class="op">&lt;</span><span class="ident">Channel</span><span class="op">&gt;</span>,
+    <span class="kw-2">mut</span> <span class="ident">client</span>: <span class="ident">Grpc</span><span class="op">&lt;</span><span class="ident">Channel</span><span class="op">&gt;</span>,
     <span class="ident">cleartext_request</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
 ) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-    <span class="kw">let</span> <span class="ident">predict_request</span> <span class="op">=</span>
-        <span class="ident">PredictRequest::decode</span>(<span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="ident">cleartext_request</span>).<span class="ident">context</span>(<span class="string">&quot;couldn&#39;t parse decrypted request&quot;</span>)<span class="question-mark">?</span>;
-
-    <span class="comment">// Send the prediction request (which wraps the input tensor) to the backend TensorFlow model</span>
-    <span class="comment">// server to execute the inference against the loaded model. We wrap the resulting future to</span>
-    <span class="comment">// make it `Sync`, as required by the trait bounds for the request handler.</span>
-    <span class="kw">let</span> <span class="ident">sync_predict</span> <span class="op">=</span> <span class="ident">FutureSyncWrapper</span> {
-        <span class="ident">inner</span>: <span class="ident">SyncWrapper::new</span>(<span class="ident">client</span>.<span class="ident">predict</span>(<span class="ident">predict_request</span>)),
+    <span class="kw">let</span> <span class="ident">encapsulated_request</span> <span class="op">=</span>
+        <span class="ident">GrpcRequest::decode</span>(<span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="ident">cleartext_request</span>).<span class="ident">context</span>(<span class="string">&quot;couldn&#39;t decode encapsulated request&quot;</span>)<span class="question-mark">?</span>;
+    <span class="kw">let</span> <span class="ident">bytes</span> <span class="op">=</span> <span class="ident">Request::new</span>(<span class="ident">encapsulated_request</span>.<span class="ident">req_msg</span>.<span class="ident">clone</span>());
+    <span class="kw">let</span> <span class="ident">codec</span> <span class="op">=</span> <span class="ident">BytesCodec::default</span>();
+    <span class="kw">let</span> <span class="ident">path</span> <span class="op">=</span> <span class="ident">encapsulated_request</span>
+        .<span class="ident">method_name</span>
+        .<span class="ident">parse</span>()
+        .<span class="ident">context</span>(<span class="string">&quot;couldn&#39;t parse method name&quot;</span>)<span class="question-mark">?</span>;
+    <span class="ident">client</span>.<span class="ident">ready</span>().<span class="kw">await</span>.<span class="ident">context</span>(<span class="string">&quot;connection not ready&quot;</span>)<span class="question-mark">?</span>;
+    <span class="comment">// Forward the bytes from the encapsulated request to the backend. We wrap the resulting future</span>
+    <span class="comment">// to make it `Sync`, as required by the trait bounds for the request handler.</span>
+    <span class="kw">let</span> <span class="ident">sync_unary</span> <span class="op">=</span> <span class="ident">FutureSyncWrapper</span> {
+        <span class="ident">inner</span>: <span class="ident">SyncWrapper::new</span>(<span class="ident">client</span>.<span class="ident">unary</span>(<span class="ident">bytes</span>, <span class="ident">path</span>, <span class="ident">codec</span>)),
     };
-    <span class="kw">let</span> <span class="ident">response</span> <span class="op">=</span> <span class="ident">sync_predict</span>
+    <span class="kw">let</span> <span class="ident">response</span> <span class="op">=</span> <span class="ident">sync_unary</span>
         .<span class="kw">await</span>
         .<span class="ident">context</span>(<span class="string">&quot;couldn&#39;t execute prediction&quot;</span>)<span class="question-mark">?</span>
         .<span class="ident">into_inner</span>();
 
     <span class="kw">let</span> <span class="ident">wrapped_response</span> <span class="op">=</span> <span class="ident">oak_functions_abi::proto::Response::create</span>(
         <span class="ident">oak_functions_abi::proto::StatusCode::Success</span>,
-        <span class="ident">response</span>.<span class="ident">encode_to_vec</span>(),
+        <span class="ident">response</span>,
     );
     <span class="prelude-val">Ok</span>(<span class="ident">wrapped_response</span>.<span class="ident">encode_to_vec</span>())
 }
 
+<span class="comment">// TODO(#2476): Remove when upgrading Tonic from v0.5 to v0.6.</span>
 <span class="macro">pin_project!</span> {
     <span class="doccomment">/// Utility wrapper to implement `Sync` for `Future`s by wrapping the inner Future in a</span>
     <span class="doccomment">/// `SyncWrapper`.</span>
@@ -206,6 +264,60 @@
 
     <span class="kw">fn</span> <span class="ident">poll</span>(<span class="self">self</span>: <span class="ident">Pin</span><span class="op">&lt;</span><span class="kw-2">&amp;mut</span> <span class="self">Self</span><span class="op">&gt;</span>, <span class="ident">cx</span>: <span class="kw-2">&amp;mut</span> <span class="ident">std::task::Context</span>) -&gt; <span class="ident">Poll</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::Output</span><span class="op">&gt;</span> {
         <span class="self">self</span>.<span class="ident">project</span>().<span class="ident">inner</span>.<span class="ident">get_pin_mut</span>().<span class="ident">poll</span>(<span class="ident">cx</span>)
+    }
+}
+
+<span class="doccomment">/// A Codec for encoding and decoding byte vectors to and from Tonic buffers.</span>
+<span class="doccomment">///</span>
+<span class="doccomment">/// This allows us to pass through the client encoding of the request to the backend and the backend</span>
+<span class="doccomment">/// response to the client without requiring knowlege of the specific protos involved.</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Default</span>)]</span>
+<span class="kw">struct</span> <span class="ident">BytesCodec</span>;
+
+<span class="kw">impl</span> <span class="ident">Codec</span> <span class="kw">for</span> <span class="ident">BytesCodec</span> {
+    <span class="kw">type</span> <span class="ident">Encode</span> <span class="op">=</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>;
+    <span class="kw">type</span> <span class="ident">Decode</span> <span class="op">=</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>;
+
+    <span class="kw">type</span> <span class="ident">Encoder</span> <span class="op">=</span> <span class="ident">BytesEncoder</span>;
+    <span class="kw">type</span> <span class="ident">Decoder</span> <span class="op">=</span> <span class="ident">BytesDecoder</span>;
+
+    <span class="kw">fn</span> <span class="ident">encoder</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) -&gt; <span class="ident"><span class="self">Self</span>::Encoder</span> {
+        <span class="ident">BytesEncoder</span> {}
+    }
+
+    <span class="kw">fn</span> <span class="ident">decoder</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) -&gt; <span class="ident"><span class="self">Self</span>::Decoder</span> {
+        <span class="ident">BytesDecoder</span> {}
+    }
+}
+
+<span class="doccomment">/// Passthrough encoder for encoding a byte vector to an [`tonic::codec::EncodeBuf`].</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">BytesEncoder</span>;
+
+<span class="kw">impl</span> <span class="ident">Encoder</span> <span class="kw">for</span> <span class="ident">BytesEncoder</span> {
+    <span class="kw">type</span> <span class="ident">Item</span> <span class="op">=</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>;
+    <span class="kw">type</span> <span class="ident">Error</span> <span class="op">=</span> <span class="ident">tonic::Status</span>;
+
+    <span class="kw">fn</span> <span class="ident">encode</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">item</span>: <span class="ident"><span class="self">Self</span>::Item</span>, <span class="ident">dst</span>: <span class="kw-2">&amp;mut</span> <span class="ident">EncodeBuf</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident"><span class="self">Self</span>::Error</span><span class="op">&gt;</span> {
+        <span class="ident">copy</span>(<span class="kw-2">&amp;mut</span> <span class="ident">item</span>.<span class="ident">reader</span>(), <span class="kw-2">&amp;mut</span> <span class="ident">dst</span>.<span class="ident">writer</span>()).<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">error</span><span class="op">|</span> {
+            <span class="ident">tonic::Status::internal</span>(<span class="macro">format!</span>(<span class="string">&quot;Couln&#39;t encode bytes: {:?}&quot;</span>, <span class="ident">error</span>))
+        })<span class="question-mark">?</span>;
+        <span class="prelude-val">Ok</span>(())
+    }
+}
+
+<span class="doccomment">/// Passthrough decoder for decoding a [`tonic::codec::DecodeBuf`] to a byte vector.</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">BytesDecoder</span>;
+
+<span class="kw">impl</span> <span class="ident">Decoder</span> <span class="kw">for</span> <span class="ident">BytesDecoder</span> {
+    <span class="kw">type</span> <span class="ident">Item</span> <span class="op">=</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>;
+    <span class="kw">type</span> <span class="ident">Error</span> <span class="op">=</span> <span class="ident">tonic::Status</span>;
+
+    <span class="kw">fn</span> <span class="ident">decode</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">src</span>: <span class="kw-2">&amp;mut</span> <span class="ident">DecodeBuf</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::Item</span><span class="op">&gt;</span>, <span class="ident"><span class="self">Self</span>::Error</span><span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">item</span> <span class="op">=</span> <span class="macro">vec!</span>[];
+        <span class="ident">copy</span>(<span class="kw-2">&amp;mut</span> <span class="ident">src</span>.<span class="ident">reader</span>(), <span class="kw-2">&amp;mut</span> <span class="ident">item</span>).<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">error</span><span class="op">|</span> {
+            <span class="ident">tonic::Status::internal</span>(<span class="macro">format!</span>(<span class="string">&quot;Couln&#39;t decode bytes: {:?}&quot;</span>, <span class="ident">error</span>))
+        })<span class="question-mark">?</span>;
+        <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(<span class="ident">item</span>))
     }
 }
 </code></pre></div>

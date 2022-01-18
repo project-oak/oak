@@ -1,1 +1,0 @@
-initSidebarItems({"struct":[["ArgAttrs","Attributes for function arguments. These attributes are the same set of valid attributes as to _Arg nodes."]]});
