@@ -898,6 +898,40 @@
 <span id="896">896</span>
 <span id="897">897</span>
 <span id="898">898</span>
+<span id="899">899</span>
+<span id="900">900</span>
+<span id="901">901</span>
+<span id="902">902</span>
+<span id="903">903</span>
+<span id="904">904</span>
+<span id="905">905</span>
+<span id="906">906</span>
+<span id="907">907</span>
+<span id="908">908</span>
+<span id="909">909</span>
+<span id="910">910</span>
+<span id="911">911</span>
+<span id="912">912</span>
+<span id="913">913</span>
+<span id="914">914</span>
+<span id="915">915</span>
+<span id="916">916</span>
+<span id="917">917</span>
+<span id="918">918</span>
+<span id="919">919</span>
+<span id="920">920</span>
+<span id="921">921</span>
+<span id="922">922</span>
+<span id="923">923</span>
+<span id="924">924</span>
+<span id="925">925</span>
+<span id="926">926</span>
+<span id="927">927</span>
+<span id="928">928</span>
+<span id="929">929</span>
+<span id="930">930</span>
+<span id="931">931</span>
+<span id="932">932</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2021 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -1619,9 +1653,11 @@
 }
 
 <span class="comment">// The Endpoint of a bidirectional channel. Sender and Receiver are exposed.</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Endpoint</span> {
-    <span class="kw">pub</span> <span class="ident">sender</span>: <span class="ident">Sender</span><span class="op">&lt;</span><span class="ident">AbiMessage</span><span class="op">&gt;</span>,
-    <span class="kw">pub</span> <span class="ident">receiver</span>: <span class="ident">Receiver</span><span class="op">&lt;</span><span class="ident">AbiMessage</span><span class="op">&gt;</span>,
+<span class="attribute">#[<span class="ident">allow</span>(<span class="ident">dead_code</span>)]</span>
+
+<span class="kw">struct</span> <span class="ident">Endpoint</span> {
+    <span class="ident">sender</span>: <span class="ident">Sender</span><span class="op">&lt;</span><span class="ident">AbiMessage</span><span class="op">&gt;</span>,
+    <span class="ident">receiver</span>: <span class="ident">Receiver</span><span class="op">&lt;</span><span class="ident">AbiMessage</span><span class="op">&gt;</span>,
 }
 
 <span class="doccomment">/// Create a channel with two symmetrical endpoints. The [`AbiMessage`] sent from one [`Endpoint`]</span>
@@ -1634,7 +1670,7 @@
 <span class="doccomment">///              \/</span>
 <span class="doccomment">/// receiver ____/\____ receiver</span>
 <span class="doccomment">/// ```</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">channel_create</span>() -&gt; (<span class="ident">Endpoint</span>, <span class="ident">Endpoint</span>) {
+<span class="kw">fn</span> <span class="ident">channel_create</span>() -&gt; (<span class="ident">Endpoint</span>, <span class="ident">Endpoint</span>) {
     <span class="kw">let</span> (<span class="ident">tx0</span>, <span class="ident">rx0</span>) <span class="op">=</span> <span class="ident">channel</span>::<span class="op">&lt;</span><span class="ident">AbiMessage</span><span class="op">&gt;</span>(<span class="ident">ABI_CHANNEL_BOUND</span>);
     <span class="kw">let</span> (<span class="ident">tx1</span>, <span class="ident">rx1</span>) <span class="op">=</span> <span class="ident">channel</span>::<span class="op">&lt;</span><span class="ident">AbiMessage</span><span class="op">&gt;</span>(<span class="ident">ABI_CHANNEL_BOUND</span>);
     <span class="kw">let</span> <span class="ident">endpoint0</span> <span class="op">=</span> <span class="ident">Endpoint</span> {
@@ -1677,24 +1713,36 @@
     };
     <span class="kw">use</span> <span class="ident">maplit::hashmap</span>;
 
-    <span class="kw">fn</span> <span class="ident">create_test_wasm_handler</span>() -&gt; <span class="ident">WasmHandler</span> {
-        <span class="kw">let</span> <span class="ident">logger</span> <span class="op">=</span> <span class="ident">Logger::for_test</span>();
-        <span class="kw">let</span> <span class="ident">lookup_data</span> <span class="op">=</span> <span class="ident">Arc::new</span>(<span class="ident">LookupData::for_test</span>(<span class="macro">hashmap!</span> {}));
-        <span class="kw">let</span> <span class="ident">lookup_factory</span> <span class="op">=</span>
-            <span class="ident">LookupFactory::new_boxed_extension_factory</span>(<span class="ident">lookup_data</span>, <span class="ident">logger</span>.<span class="ident">clone</span>())
-                .<span class="ident">expect</span>(<span class="string">&quot;could not create LookupFactory&quot;</span>);
-
-        <span class="kw">let</span> <span class="ident">wasm_module_bytes</span> <span class="op">=</span> <span class="ident">test_utils::create_some_wasm_module_bytes</span>();
-
-        <span class="ident">create_wasm_handler</span>(<span class="kw-2">&amp;</span><span class="ident">wasm_module_bytes</span>, <span class="macro">vec!</span>[<span class="ident">lookup_factory</span>], <span class="ident">logger</span>)
-            .<span class="ident">expect</span>(<span class="string">&quot;could not create wasm_handler&quot;</span>)
+    <span class="attribute">#[<span class="ident">test</span>]</span>
+    <span class="kw">fn</span> <span class="ident">test_start_from_empty_endpoints</span>() {
+        <span class="kw">fn</span> <span class="ident">check_empty</span>(<span class="ident">endpoint</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Endpoint</span>) {
+            <span class="kw">let</span> <span class="ident">receiver</span> <span class="op">=</span> <span class="kw-2">&amp;mut</span> <span class="ident">endpoint</span>.<span class="ident">receiver</span>;
+            <span class="macro">assert_eq!</span>(<span class="ident">TryRecvError::Empty</span>, <span class="ident">receiver</span>.<span class="ident">try_recv</span>().<span class="ident">unwrap_err</span>());
+        }
+        <span class="kw">let</span> (<span class="kw-2">mut</span> <span class="ident">module</span>, <span class="kw-2">mut</span> <span class="ident">runtime</span>) <span class="op">=</span> <span class="ident">channel_create</span>();
+        <span class="ident">check_empty</span>(<span class="kw-2">&amp;mut</span> <span class="ident">module</span>);
+        <span class="ident">check_empty</span>(<span class="kw-2">&amp;mut</span> <span class="ident">runtime</span>);
     }
 
-    <span class="kw">fn</span> <span class="ident">create_test_wasm_state</span>() -&gt; <span class="ident">WasmState</span> {
-        <span class="kw">let</span> <span class="ident">wasm_handler</span> <span class="op">=</span> <span class="ident">create_test_wasm_handler</span>();
-        <span class="ident">wasm_handler</span>
-            .<span class="ident">init</span>(<span class="string">b&quot;&quot;</span>.<span class="ident">to_vec</span>())
-            .<span class="ident">expect</span>(<span class="string">&quot;could not create wasm_state&quot;</span>)
+    <span class="attribute">#[<span class="ident">tokio::test</span>]</span>
+    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">test_crossed_write_read</span>() {
+        <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">check_crossed_write_read</span>(<span class="ident">endpoint1</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Endpoint</span>, <span class="ident">endpoint2</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Endpoint</span>) {
+            <span class="kw">let</span> <span class="ident">message</span>: <span class="ident">AbiMessage</span> <span class="op">=</span> <span class="macro">vec!</span>[<span class="number">42</span>, <span class="number">21</span>, <span class="number">0</span>];
+            <span class="kw">let</span> <span class="ident">sender</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">endpoint1</span>.<span class="ident">sender</span>;
+            <span class="kw">let</span> <span class="ident">send_result</span> <span class="op">=</span> <span class="ident">sender</span>.<span class="ident">send</span>(<span class="ident">message</span>.<span class="ident">clone</span>()).<span class="kw">await</span>;
+            <span class="macro">assert!</span>(<span class="ident">send_result</span>.<span class="ident">is_ok</span>());
+
+            <span class="kw">let</span> <span class="ident">receiver</span> <span class="op">=</span> <span class="kw-2">&amp;mut</span> <span class="ident">endpoint2</span>.<span class="ident">receiver</span>;
+            <span class="kw">let</span> <span class="ident">received_message</span> <span class="op">=</span> <span class="ident">receiver</span>.<span class="ident">recv</span>().<span class="kw">await</span>.<span class="ident">unwrap</span>();
+
+            <span class="macro">assert_eq!</span>(<span class="ident">message</span>, <span class="ident">received_message</span>);
+        }
+
+        <span class="kw">let</span> (<span class="kw-2">mut</span> <span class="ident">endpoint_1</span>, <span class="kw-2">mut</span> <span class="ident">endpoint_2</span>) <span class="op">=</span> <span class="ident">channel_create</span>();
+        <span class="comment">// Check from endpoint_1 to endpoint_2.</span>
+        <span class="ident">check_crossed_write_read</span>(<span class="kw-2">&amp;mut</span> <span class="ident">endpoint_1</span>, <span class="kw-2">&amp;mut</span> <span class="ident">endpoint_2</span>).<span class="kw">await</span>;
+        <span class="comment">// Check the other direction from endpoint_2 to endpoint_1.</span>
+        <span class="ident">check_crossed_write_read</span>(<span class="kw-2">&amp;mut</span> <span class="ident">endpoint_2</span>, <span class="kw-2">&amp;mut</span> <span class="ident">endpoint_1</span>).<span class="kw">await</span>;
     }
 
     <span class="attribute">#[<span class="ident">tokio::test</span>]</span>
@@ -1794,6 +1842,26 @@
                 .<span class="ident">unwrap</span>(),
             <span class="ident">message</span>
         );
+    }
+
+    <span class="kw">fn</span> <span class="ident">create_test_wasm_handler</span>() -&gt; <span class="ident">WasmHandler</span> {
+        <span class="kw">let</span> <span class="ident">logger</span> <span class="op">=</span> <span class="ident">Logger::for_test</span>();
+        <span class="kw">let</span> <span class="ident">lookup_data</span> <span class="op">=</span> <span class="ident">Arc::new</span>(<span class="ident">LookupData::for_test</span>(<span class="macro">hashmap!</span> {}));
+        <span class="kw">let</span> <span class="ident">lookup_factory</span> <span class="op">=</span>
+            <span class="ident">LookupFactory::new_boxed_extension_factory</span>(<span class="ident">lookup_data</span>, <span class="ident">logger</span>.<span class="ident">clone</span>())
+                .<span class="ident">expect</span>(<span class="string">&quot;could not create LookupFactory&quot;</span>);
+
+        <span class="kw">let</span> <span class="ident">wasm_module_bytes</span> <span class="op">=</span> <span class="ident">test_utils::create_some_wasm_module_bytes</span>();
+
+        <span class="ident">create_wasm_handler</span>(<span class="kw-2">&amp;</span><span class="ident">wasm_module_bytes</span>, <span class="macro">vec!</span>[<span class="ident">lookup_factory</span>], <span class="ident">logger</span>)
+            .<span class="ident">expect</span>(<span class="string">&quot;could not create wasm_handler&quot;</span>)
+    }
+
+    <span class="kw">fn</span> <span class="ident">create_test_wasm_state</span>() -&gt; <span class="ident">WasmState</span> {
+        <span class="kw">let</span> <span class="ident">wasm_handler</span> <span class="op">=</span> <span class="ident">create_test_wasm_handler</span>();
+        <span class="ident">wasm_handler</span>
+            .<span class="ident">init</span>(<span class="string">b&quot;&quot;</span>.<span class="ident">to_vec</span>())
+            .<span class="ident">expect</span>(<span class="string">&quot;could not create wasm_state&quot;</span>)
     }
 }
 </code></pre></div>
