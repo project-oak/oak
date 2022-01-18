@@ -46,6 +46,16 @@ pub mod proto {
             Ok(&self.body.as_slice()[..length])
         }
     }
+
+    // Converts a ChannelStatus into an OakStatus.
+    impl From<OakStatus> for ChannelStatus {
+        fn from(oak_status: OakStatus) -> Self {
+            match oak_status {
+                OakStatus::ErrInvalidArgs => ChannelStatus::ChannelInvalidArgs,
+                _ => ChannelStatus::Unspecified,
+            }
+        }
+    }
 }
 
 // TODO(#1963): Add tests, in an example.

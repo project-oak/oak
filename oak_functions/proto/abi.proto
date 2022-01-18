@@ -29,6 +29,12 @@ enum ChannelStatus {
   CHANNEL_OK = 1;
   // Channel is empty.
   CHANNEL_EMPTY = 2;
+  // ChannelNumber not in range of ChannelHandle and or if no channel endpoint is attached.
+  CHANNEL_HANDLE_INVALID = 3;
+  // The endpoint of a channel is disconnected.
+  CHANNEL_ENDPOINT_DISCONNECTED = 4;
+  // Writing message from channel to Wasm memory failed.
+  CHANNEL_INVALID_ARGS = 5;
 }
 
 // A ChannelHandle corresonds to a channel. The Endpoint which does not own the channel uses a

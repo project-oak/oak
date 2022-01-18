@@ -15,16 +15,17 @@
 
 use crate::logger::Logger;
 
+use crate::lookup::LOOKUP_ABI_FUNCTION_NAME;
 use anyhow::Context;
 use byteorder::{ByteOrder, LittleEndian};
 use futures::future::FutureExt;
 use log::Level;
 use oak_functions_abi::proto::{
-    ChannelHandle, OakStatus, Request, Response, ServerPolicy, StatusCode,
+    ChannelHandle, ChannelStatus, OakStatus, Request, Response, ServerPolicy, StatusCode,
 };
 use serde::Deserialize;
 use std::{collections::HashMap, convert::TryInto, str, sync::Arc, time::Duration};
-use tokio::sync::mpsc::{channel, Receiver, Sender};
+use tokio::sync::mpsc::{channel, error::TryRecvError, Receiver, Sender};
 use wasmi::ValueType;
 
 const MAIN_FUNCTION_NAME: &str = "main";
@@ -35,6 +36,7 @@ const ALLOC_FUNCTION_NAME: &str = "alloc";
 const READ_REQUEST: usize = 0;
 const WRITE_RESPONSE: usize = 1;
 const WRITE_LOG_MESSAGE: usize = 3;
+const CHANNEL_READ: usize = 4;
 const EXTENSION_INDEX_OFFSET: usize = 10;
 
 // Type alias for a message sent over a channel through the ABI.
@@ -49,6 +51,8 @@ const ABI_CHANNEL_BOUND: usize = 100;
 // of Wasm would use different types.
 pub type AbiPointer = u32;
 pub type AbiPointerOffset = u32;
+// Type alias for the ChannelHandle type, which has to be cast into a ChannelHandle.
+pub type AbiChannelHandle = i32;
 /// Wasm type identifier for position/offset values in linear memory. Any future 64-bit version of
 /// Wasm would use a different value.
 pub const ABI_USIZE: ValueType = ValueType::I32;
@@ -159,6 +163,7 @@ pub struct WasmState {
     /// A mapping of host function names to metadata required for resolving the function.
     extensions_metadata: HashMap<String, (usize, wasmi::Signature)>,
     channel_switchboard: ChannelSwitchboard,
+    extensions_endpoints: HashMap<String, Endpoint>,
 }
 
 impl WasmState {
@@ -245,6 +250,34 @@ impl WasmState {
                 OakStatus::ErrInvalidArgs
             })?;
         self.response_bytes = response;
+        Ok(())
+    }
+
+    pub fn channel_read(
+        &mut self,
+        channel_handle: AbiChannelHandle,
+        dest_ptr_ptr: AbiPointer,
+        dest_len_ptr: AbiPointer,
+    ) -> Result<(), ChannelStatus> {
+        // Read message from channel at channel_handle.
+        let channel_handle =
+            ChannelHandle::from_i32(channel_handle).ok_or(ChannelStatus::ChannelHandleInvalid)?;
+        let endpoint = self
+            .channel_switchboard
+            .get_mut(&channel_handle)
+            .ok_or(ChannelStatus::ChannelHandleInvalid)?;
+        let receiver = &mut endpoint.receiver;
+        let message = receiver.try_recv().map_err(|e| match e {
+            TryRecvError::Empty => ChannelStatus::ChannelEmpty,
+            TryRecvError::Disconnected => ChannelStatus::ChannelEndpointDisconnected,
+        })?;
+
+        // Write message to memory of the Wasm module.
+        let dest_ptr = self.alloc(message.len() as u32);
+        self.write_buffer_to_wasm_memory(&message, dest_ptr)?;
+        self.write_u32_to_wasm_memory(dest_ptr, dest_ptr_ptr)?;
+        self.write_u32_to_wasm_memory(message.len() as u32, dest_len_ptr)?;
+
         Ok(())
     }
 
@@ -378,6 +411,7 @@ impl WasmState {
         extensions_indices: HashMap<usize, BoxedExtension>,
         extensions_metadata: HashMap<String, (usize, wasmi::Signature)>,
         channel_switchboard: ChannelSwitchboard,
+        extensions_endpoints: HashMap<String, Endpoint>,
     ) -> anyhow::Result<WasmState> {
         let mut abi = WasmState {
             request_bytes,
@@ -388,6 +422,7 @@ impl WasmState {
             extensions_indices: Some(extensions_indices),
             extensions_metadata,
             channel_switchboard,
+            extensions_endpoints,
         };
 
         let instance = wasmi::ModuleInstance::new(
@@ -559,9 +594,17 @@ impl WasmHandler {
         })
     }
 
-    fn init_wasm_state(&self, request_bytes: Vec<u8>) -> anyhow::Result<WasmState> {
+    fn init(&self, request_bytes: Vec<u8>) -> anyhow::Result<WasmState> {
         let mut extensions_indices = HashMap::new();
         let mut extensions_metadata = HashMap::new();
+        // Remove the exentsion_endpoints map as soon as we extend extensions by functionality for
+        // channels. Until then we use the (unique) ABI_FUNCTION_NAME as keys.
+        let mut extensions_endpoints = HashMap::new();
+
+        let mut channel_switchboard = ChannelSwitchboard::new();
+        // Register only lookup channel for now.
+        let lookup_endpoint = channel_switchboard.register(ChannelHandle::LookupData);
+        extensions_endpoints.insert(LOOKUP_ABI_FUNCTION_NAME.to_string(), lookup_endpoint);
 
         for (ind, factory) in self.extension_factories.iter().enumerate() {
             let extension = factory.create()?;
@@ -570,22 +613,20 @@ impl WasmHandler {
             extensions_metadata.insert(name, (ind + EXTENSION_INDEX_OFFSET, signature));
         }
 
-        // Keep _endpoints for runtime, give the corresponding switchboard to the WasmHandler.
-        let (_endpoints, switchboard) = ChannelSwitchboard::create();
-
         WasmState::new(
             &self.module,
             request_bytes,
             self.logger.clone(),
             extensions_indices,
             extensions_metadata,
-            switchboard,
+            channel_switchboard,
+            extensions_endpoints,
         )
     }
 
     pub async fn handle_invoke(&self, request: Request) -> anyhow::Result<Response> {
         let request_bytes = request.body;
-        let mut wasm_state = self.init_wasm_state(request_bytes)?;
+        let mut wasm_state = self.init(request_bytes)?;
 
         wasm_state.invoke();
         for mut extension in wasm_state
@@ -635,6 +676,17 @@ fn oak_functions_resolve_func(field_name: &str) -> Option<(usize, wasmi::Signatu
                 &[
                     ABI_USIZE, // buf_ptr
                     ABI_USIZE, // buf_len
+                ][..],
+                Some(ValueType::I32),
+            ),
+        ),
+        "channel_read" => (
+            CHANNEL_READ,
+            wasmi::Signature::new(
+                &[
+                    ABI_USIZE, // channel_handle
+                    ABI_USIZE, // src_buf_ptr
+                    ABI_USIZE, // src_buf_len
                 ][..],
                 Some(ValueType::I32),
             ),
@@ -695,30 +747,25 @@ pub fn channel_create() -> (Endpoint, Endpoint) {
     };
     (endpoint0, endpoint1)
 }
-
-#[allow(dead_code)]
-struct RuntimeEndpoints {
-    lookup: Endpoint,
-}
 struct ChannelSwitchboard(HashMap<ChannelHandle, Endpoint>);
 
 impl ChannelSwitchboard {
-    fn create() -> (RuntimeEndpoints, Self) {
-        let mut channel_switchboard = HashMap::new();
-
-        // Create endpoints for lookup extension
-        let (lookup, e2) = channel_create();
-        channel_switchboard.insert(ChannelHandle::LookupData, e2);
-
-        (
-            RuntimeEndpoints { lookup },
-            ChannelSwitchboard(channel_switchboard),
-        )
+    fn new() -> Self {
+        ChannelSwitchboard(HashMap::new())
     }
 
-    #[allow(dead_code)]
-    fn get(&self, handle: &ChannelHandle) -> Option<&Endpoint> {
-        self.0.get(handle)
+    // Creates a channel for `channel_handle`, adds one endpoint to the channel switchboard and
+    // returns the corresponding endpoint. Overwrites existing channels for `channel_handle`.
+    fn register(&mut self, channel_handle: ChannelHandle) -> Endpoint {
+        let (e1, e2) = channel_create();
+        self.0.insert(channel_handle, e2);
+        e1
+    }
+
+    // Get the endpoint registered for the channel_handle. To send to/receive from the endpoint, the
+    // endpoint has to be mutable.
+    fn get_mut(&mut self, channel_handle: &ChannelHandle) -> Option<&mut Endpoint> {
+        self.0.get_mut(channel_handle)
     }
 }
 
@@ -730,8 +777,7 @@ mod tests {
     };
     use maplit::hashmap;
 
-    #[tokio::test]
-    async fn test_create_channel_switchboard_in_wasm_state() {
+    fn create_test_wasm_handler() -> WasmHandler {
         let logger = Logger::for_test();
         let lookup_data = Arc::new(LookupData::for_test(hashmap! {}));
         let lookup_factory =
@@ -740,21 +786,113 @@ mod tests {
 
         let wasm_module_bytes = test_utils::create_some_wasm_module_bytes();
 
-        let wasm_handler = create_wasm_handler(&wasm_module_bytes, vec![lookup_factory], logger)
-            .expect("could not create wasm_handler");
+        create_wasm_handler(&wasm_module_bytes, vec![lookup_factory], logger)
+            .expect("could not create wasm_handler")
+    }
 
-        let wasm_state = wasm_handler
-            .init_wasm_state(b"".to_vec())
-            .expect("could not create wasm_state");
+    fn create_test_wasm_state() -> WasmState {
+        let wasm_handler = create_test_wasm_handler();
+        wasm_handler
+            .init(b"".to_vec())
+            .expect("could not create wasm_state")
+    }
 
-        let channel_switchboard = wasm_state.channel_switchboard;
+    #[tokio::test]
+    async fn test_create_channel_switchboard_in_wasm_state() {
+        let wasm_state = create_test_wasm_state();
+        let mut channel_switchboard = wasm_state.channel_switchboard;
 
         assert!(&channel_switchboard
-            .get(&ChannelHandle::Unspecified)
+            .get_mut(&ChannelHandle::Unspecified)
             .is_none());
 
         assert!(&channel_switchboard
-            .get(&ChannelHandle::LookupData)
+            .get_mut(&ChannelHandle::LookupData)
             .is_some());
+    }
+
+    #[tokio::test]
+    async fn test_hosted_channel_read_from_handle_out_of_range() {
+        let mut wasm_state = create_test_wasm_state();
+        let result = wasm_state.channel_read(-1, 0, 0);
+        assert!(result.is_err());
+        assert_eq!(ChannelStatus::ChannelHandleInvalid, result.unwrap_err())
+    }
+
+    #[tokio::test]
+    async fn test_hosted_channel_read_from_handle_without_endpoint() {
+        let mut wasm_state = create_test_wasm_state();
+        // Assumes ChannelHandle 0 will never have an Endpoint.
+        let result = wasm_state.channel_read(0, 0, 0);
+        assert!(result.is_err());
+        assert_eq!(ChannelStatus::ChannelHandleInvalid, result.unwrap_err())
+    }
+
+    #[tokio::test]
+    async fn test_hosted_channel_read_no_message() {
+        let channel_handle = ChannelHandle::LookupData as i32;
+        let mut wasm_state = create_test_wasm_state();
+        // Assumes LookupData has a channel.
+        let result = wasm_state.channel_read(channel_handle, 0, 0);
+        assert!(result.is_err());
+        assert_eq!(ChannelStatus::ChannelEmpty, result.unwrap_err());
+    }
+
+    #[tokio::test]
+    async fn test_hosted_channel_read_channel_closed() {
+        let channel_handle = ChannelHandle::LookupData as i32;
+        let mut wasm_state = create_test_wasm_state();
+        // Assumes LookupData has a channel.
+        let extension_endpoints = &mut wasm_state.extensions_endpoints;
+        // Remove the endpoint of the runtime closes one endpoint of the channel.
+        extension_endpoints.remove(&LOOKUP_ABI_FUNCTION_NAME.to_string());
+        let result = wasm_state.channel_read(channel_handle, 0, 0);
+        assert!(result.is_err());
+        assert_eq!(
+            ChannelStatus::ChannelEndpointDisconnected,
+            result.unwrap_err()
+        );
+    }
+
+    #[tokio::test]
+    async fn test_hosted_channel_read_ok() {
+        let channel_handle = ChannelHandle::LookupData as i32;
+        let message = b"A Test Message: Value";
+        let mut wasm_state = create_test_wasm_state();
+
+        // Write message into Lookup endpoint.
+        let endpoint = wasm_state
+            .extensions_endpoints
+            .get(&LOOKUP_ABI_FUNCTION_NAME.to_string())
+            .unwrap();
+        let result = endpoint.sender.send(message.to_vec().clone()).await;
+        assert!(result.is_ok());
+
+        // Guess some memory addresses in linear Wasm memory.
+        let dest_ptr_ptr: AbiPointer = 100;
+        let dest_len_ptr: AbiPointer = 150;
+
+        let result = wasm_state.channel_read(channel_handle, dest_ptr_ptr, dest_len_ptr);
+        assert!(result.is_ok());
+
+        // Get dest_len from dest_len_ptr.
+        let dest_len: u32 =
+            LittleEndian::read_u32(&wasm_state.get_memory().get(dest_len_ptr, 4).unwrap());
+
+        // Assert that dest_len holds length of message.
+        assert_eq!(dest_len as usize, message.len());
+
+        // Get dest_ptr from dest_ptr_ptr.
+        let dest_ptr: u32 =
+            LittleEndian::read_u32(&wasm_state.get_memory().get(dest_ptr_ptr, 4).unwrap());
+
+        // Assert that dest_ptr holds message.
+        assert_eq!(
+            wasm_state
+                .get_memory()
+                .get(dest_ptr, dest_len as usize)
+                .unwrap(),
+            message
+        );
     }
 }
