@@ -186,6 +186,22 @@ impl WasmState {
         }
     }
 
+    fn read_buffer_from_wasm_memory(
+        &self,
+        buf_ptr: AbiPointer,
+        buf_len: AbiPointerOffset,
+    ) -> Result<Vec<u8>, OakStatus> {
+        self.get_memory()
+            .get(buf_ptr, buf_len as usize)
+            .map_err(|err| {
+                self.logger.log_sensitive(
+                    Level::Error,
+                    &format!("Unable to read buffer from guest memory: {:?}", err),
+                );
+                OakStatus::ErrInvalidArgs
+            })
+    }
+
     pub fn write_buffer_to_wasm_memory(
         &self,
         source: &[u8],
@@ -293,11 +309,16 @@ impl WasmState {
     pub fn channel_write(
         &mut self,
         channel_handle: AbiChannelHandle,
-        _src_buf_ptr: AbiPointer,
-        _src_buf_len: AbiPointer,
+        src_buf_ptr: AbiPointer,
+        src_buf_len: AbiPointerOffset,
     ) -> Result<(), ChannelStatus> {
+        // Read message from Wasm memory.
+        let _message = self.read_buffer_from_wasm_memory(src_buf_ptr, src_buf_len)?;
+
+        // Write message to hosted endpoint.
         let endpoint = self.get_endpoint_from_channel_handle(channel_handle)?;
         let _sender = &mut endpoint.sender;
+
         Ok(())
     }
 
@@ -933,8 +954,7 @@ mod tests {
         // Assert that dest_ptr holds message.
         assert_eq!(
             wasm_state
-                .get_memory()
-                .get(dest_ptr, dest_len as usize)
+                .read_buffer_from_wasm_memory(dest_ptr, dest_len)
                 .unwrap(),
             message
         );
