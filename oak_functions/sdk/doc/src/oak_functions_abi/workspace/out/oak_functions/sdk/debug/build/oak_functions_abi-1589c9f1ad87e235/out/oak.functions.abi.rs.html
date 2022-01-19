@@ -105,6 +105,10 @@
 <span id="103">103</span>
 <span id="104">104</span>
 <span id="105">105</span>
+<span id="106">106</span>
+<span id="107">107</span>
+<span id="108">108</span>
+<span id="109">109</span>
 </pre><pre class="rust"><code><span class="doccomment">/// The inference from a TensorFlow model, containing an inference vector of floats, and a shape</span>
 <span class="doccomment">/// vector specifying the dimensions of the inference vector.</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">PartialEq</span>, <span class="ident">::prost::Message</span>)]</span>
@@ -179,10 +183,14 @@
     <span class="ident">ChannelEmpty</span> <span class="op">=</span> <span class="number">2</span>,
     <span class="doccomment">/// ChannelNumber not in range of ChannelHandle and or if no channel endpoint is attached.</span>
     <span class="ident">ChannelHandleInvalid</span> <span class="op">=</span> <span class="number">3</span>,
-    <span class="doccomment">/// The endpoint of a channel is disconnected.</span>
+    <span class="doccomment">/// The receiving endpoint of a channel is disconnected.</span>
     <span class="ident">ChannelEndpointDisconnected</span> <span class="op">=</span> <span class="number">4</span>,
     <span class="doccomment">/// Writing message from channel to Wasm memory failed.</span>
     <span class="ident">ChannelInvalidArgs</span> <span class="op">=</span> <span class="number">5</span>,
+    <span class="doccomment">/// Channel is full.</span>
+    <span class="ident">ChannelFull</span> <span class="op">=</span> <span class="number">6</span>,
+    <span class="doccomment">/// The sending endpoint of a channel is closed.</span>
+    <span class="ident">ChannelEndpointClosed</span> <span class="op">=</span> <span class="number">7</span>,
 }
 <span class="doccomment">/// A ChannelHandle corresonds to a channel. The Endpoint which does not own the channel uses a</span>
 <span class="doccomment">/// ChannelHandle to read, write, or wait on the corresponding channel.</span>
