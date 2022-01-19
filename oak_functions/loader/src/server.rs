@@ -983,7 +983,7 @@ mod tests {
 
         // Assert that the message arrived at runtime endpoint.
         let received_message = read_from_lookup_runtime_endpoint(&mut wasm_state).await;
-        assert_eq!(message.to_vec(), received_message.clone());
+        assert_eq!(message.to_vec(), received_message);
     }
 
     #[tokio::test]
@@ -1051,8 +1051,7 @@ mod tests {
             .extensions_endpoints
             .get_mut(&LOOKUP_ABI_FUNCTION_NAME.to_string())
             .unwrap();
-        let received_message = endpoint.receiver.try_recv().unwrap();
-        received_message
+        endpoint.receiver.try_recv().unwrap()
     }
 
     // Helper function to write to Endpoint associated to Lookup extension in the runtime.
