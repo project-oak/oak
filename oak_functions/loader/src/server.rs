@@ -41,6 +41,7 @@ const READ_REQUEST: usize = 0;
 const WRITE_RESPONSE: usize = 1;
 const WRITE_LOG_MESSAGE: usize = 3;
 const CHANNEL_READ: usize = 4;
+const CHANNEL_WRITE: usize = 5;
 const EXTENSION_INDEX_OFFSET: usize = 10;
 
 // Type alias for a message sent over a channel through the ABI.
@@ -742,7 +743,7 @@ fn oak_functions_resolve_func(field_name: &str) -> Option<(usize, wasmi::Signatu
             ),
         ),
         "channel_write" => (
-            CHANNEL_READ,
+            CHANNEL_WRITE,
             wasmi::Signature::new(
                 &[
                     ABI_USIZE, // channel_handle
