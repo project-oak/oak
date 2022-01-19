@@ -25,7 +25,11 @@ use oak_functions_abi::proto::{
 };
 use serde::Deserialize;
 use std::{collections::HashMap, convert::TryInto, str, sync::Arc, time::Duration};
-use tokio::sync::mpsc::{channel, error::TryRecvError, Receiver, Sender};
+use tokio::sync::mpsc::{
+    channel,
+    error::{TryRecvError, TrySendError},
+    Receiver, Sender,
+};
 use wasmi::ValueType;
 
 const MAIN_FUNCTION_NAME: &str = "main";
@@ -37,6 +41,7 @@ const READ_REQUEST: usize = 0;
 const WRITE_RESPONSE: usize = 1;
 const WRITE_LOG_MESSAGE: usize = 3;
 const CHANNEL_READ: usize = 4;
+const CHANNEL_WRITE: usize = 5;
 const EXTENSION_INDEX_OFFSET: usize = 10;
 
 // Type alias for a message sent over a channel through the ABI.
@@ -186,6 +191,22 @@ impl WasmState {
         }
     }
 
+    fn read_buffer_from_wasm_memory(
+        &self,
+        buf_ptr: AbiPointer,
+        buf_len: AbiPointerOffset,
+    ) -> Result<Vec<u8>, OakStatus> {
+        self.get_memory()
+            .get(buf_ptr, buf_len as usize)
+            .map_err(|err| {
+                self.logger.log_sensitive(
+                    Level::Error,
+                    &format!("Unable to read buffer from guest memory: {:?}", err),
+                );
+                OakStatus::ErrInvalidArgs
+            })
+    }
+
     pub fn write_buffer_to_wasm_memory(
         &self,
         source: &[u8],
@@ -253,6 +274,20 @@ impl WasmState {
         Ok(())
     }
 
+    // Helper function to get the hosted Endpoint for the given channel handle.
+    fn get_endpoint_from_channel_handle(
+        &mut self,
+        channel_handle: AbiChannelHandle,
+    ) -> Result<&mut Endpoint, ChannelStatus> {
+        let channel_handle =
+            ChannelHandle::from_i32(channel_handle).ok_or(ChannelStatus::ChannelHandleInvalid)?;
+        let endpoint = self
+            .channel_switchboard
+            .get_mut(&channel_handle)
+            .ok_or(ChannelStatus::ChannelHandleInvalid)?;
+        Ok(endpoint)
+    }
+
     pub fn channel_read(
         &mut self,
         channel_handle: AbiChannelHandle,
@@ -260,12 +295,7 @@ impl WasmState {
         dest_len_ptr: AbiPointer,
     ) -> Result<(), ChannelStatus> {
         // Read message from channel at channel_handle.
-        let channel_handle =
-            ChannelHandle::from_i32(channel_handle).ok_or(ChannelStatus::ChannelHandleInvalid)?;
-        let endpoint = self
-            .channel_switchboard
-            .get_mut(&channel_handle)
-            .ok_or(ChannelStatus::ChannelHandleInvalid)?;
+        let endpoint = self.get_endpoint_from_channel_handle(channel_handle)?;
         let receiver = &mut endpoint.receiver;
         let message = receiver.try_recv().map_err(|e| match e {
             TryRecvError::Empty => ChannelStatus::ChannelEmpty,
@@ -277,6 +307,27 @@ impl WasmState {
         self.write_buffer_to_wasm_memory(&message, dest_ptr)?;
         self.write_u32_to_wasm_memory(dest_ptr, dest_ptr_ptr)?;
         self.write_u32_to_wasm_memory(message.len() as u32, dest_len_ptr)?;
+
+        Ok(())
+    }
+
+    pub fn channel_write(
+        &mut self,
+        channel_handle: AbiChannelHandle,
+        src_buf_ptr: AbiPointer,
+        src_buf_len: AbiPointerOffset,
+    ) -> Result<(), ChannelStatus> {
+        // Read message from Wasm memory.
+        let message: AbiMessage = self.read_buffer_from_wasm_memory(src_buf_ptr, src_buf_len)?;
+
+        // Write message to hosted endpoint.
+        let endpoint = self.get_endpoint_from_channel_handle(channel_handle)?;
+        let sender = &mut endpoint.sender;
+
+        sender.try_send(message).map_err(|e| match e {
+            TrySendError::Full(_) => ChannelStatus::ChannelFull,
+            TrySendError::Closed(_) => ChannelStatus::ChannelEndpointClosed,
+        })?;
 
         Ok(())
     }
@@ -685,6 +736,17 @@ fn oak_functions_resolve_func(field_name: &str) -> Option<(usize, wasmi::Signatu
             wasmi::Signature::new(
                 &[
                     ABI_USIZE, // channel_handle
+                    ABI_USIZE, // dest_buf_ptr_ptr
+                    ABI_USIZE, // dest_buf_len_ptr
+                ][..],
+                Some(ValueType::I32),
+            ),
+        ),
+        "channel_write" => (
+            CHANNEL_WRITE,
+            wasmi::Signature::new(
+                &[
+                    ABI_USIZE, // channel_handle
                     ABI_USIZE, // src_buf_ptr
                     ABI_USIZE, // src_buf_len
                 ][..],
@@ -718,8 +780,8 @@ pub fn format_bytes(v: &[u8]) -> String {
         .unwrap_or_else(|_| format!("{:?}", v))
 }
 
-// The Endpoint of a bidirectional channel. Sender and Receiver are exposed.
-#[allow(dead_code)]
+// The Endpoint of a bidirectional channel.
+#[derive(Debug)]
 struct Endpoint {
     sender: Sender<AbiMessage>,
     receiver: Receiver<AbiMessage>,
@@ -825,18 +887,18 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_hosted_channel_read_from_handle_out_of_range() {
+    async fn test_get_endpoint_from_channel_handle_out_of_range() {
         let mut wasm_state = create_test_wasm_state();
-        let result = wasm_state.channel_read(-1, 0, 0);
+        let result = wasm_state.get_endpoint_from_channel_handle(-1);
         assert!(result.is_err());
         assert_eq!(ChannelStatus::ChannelHandleInvalid, result.unwrap_err())
     }
 
     #[tokio::test]
-    async fn test_hosted_channel_read_from_handle_without_endpoint() {
+    async fn test_get_endpoint_from_channel_handle_without_endpoint() {
         let mut wasm_state = create_test_wasm_state();
         // Assumes ChannelHandle 0 will never have an Endpoint.
-        let result = wasm_state.channel_read(0, 0, 0);
+        let result = wasm_state.get_endpoint_from_channel_handle(0);
         assert!(result.is_err());
         assert_eq!(ChannelStatus::ChannelHandleInvalid, result.unwrap_err())
     }
@@ -870,16 +932,10 @@ mod tests {
     #[tokio::test]
     async fn test_hosted_channel_read_ok() {
         let channel_handle = ChannelHandle::LookupData as i32;
-        let message = b"A Test Message: Value";
+        let message = vec![42, 42, 232];
         let mut wasm_state = create_test_wasm_state();
 
-        // Write message into Lookup endpoint.
-        let endpoint = wasm_state
-            .extensions_endpoints
-            .get(&LOOKUP_ABI_FUNCTION_NAME.to_string())
-            .unwrap();
-        let result = endpoint.sender.send(message.to_vec().clone()).await;
-        assert!(result.is_ok());
+        write_to_lookup_runtime_endpoint(&mut wasm_state, message.clone()).await;
 
         // Guess some memory addresses in linear Wasm memory.
         let dest_ptr_ptr: AbiPointer = 100;
@@ -902,11 +958,71 @@ mod tests {
         // Assert that dest_ptr holds message.
         assert_eq!(
             wasm_state
-                .get_memory()
-                .get(dest_ptr, dest_len as usize)
+                .read_buffer_from_wasm_memory(dest_ptr, dest_len)
                 .unwrap(),
             message
         );
+    }
+
+    #[tokio::test]
+    async fn test_hosted_channel_write_ok() {
+        let channel_handle = ChannelHandle::LookupData as i32;
+        let message: AbiMessage = vec![42, 42];
+        let mut wasm_state = create_test_wasm_state();
+
+        write_to_lookup_runtime_endpoint(&mut wasm_state, message.clone()).await;
+
+        // Guess some memory addresses in linear Wasm memory to write the message to from
+        // `src_buf_ptr`.
+        let src_buf_ptr: AbiPointer = 100;
+        let result = wasm_state.write_buffer_to_wasm_memory(&message, src_buf_ptr);
+        assert!(result.is_ok());
+
+        let result = wasm_state.channel_write(channel_handle, src_buf_ptr, message.len() as u32);
+        assert!(result.is_ok());
+
+        // Assert that the message arrived at runtime endpoint.
+        let received_message = read_from_lookup_runtime_endpoint(&mut wasm_state).await;
+        assert_eq!(message.to_vec(), received_message);
+    }
+
+    #[tokio::test]
+    async fn test_hosted_channel_write_full() {
+        let channel_handle = ChannelHandle::LookupData as i32;
+        let message: AbiMessage = vec![42, 42];
+        let mut wasm_state = create_test_wasm_state();
+
+        write_to_lookup_runtime_endpoint(&mut wasm_state, message.clone()).await;
+
+        // Guess some memory addresses in linear Wasm memory to write the message to from
+        // `src_buf_ptr`.
+        let src_buf_ptr: AbiPointer = 100;
+        let result = wasm_state.write_buffer_to_wasm_memory(&message, src_buf_ptr);
+        assert!(result.is_ok());
+
+        // write the message ABI_CHANNEL_BOUND times
+        for _ in 0..ABI_CHANNEL_BOUND {
+            let result =
+                wasm_state.channel_write(channel_handle, src_buf_ptr, message.len() as u32);
+            assert!(result.is_ok());
+        }
+
+        let result = wasm_state.channel_write(channel_handle, src_buf_ptr, message.len() as u32);
+        assert!(result.is_err());
+        assert_eq!(ChannelStatus::ChannelFull, result.unwrap_err());
+    }
+
+    #[tokio::test]
+    async fn test_hosted_channel_write_channel_closed() {
+        let channel_handle = ChannelHandle::LookupData as i32;
+        let mut wasm_state = create_test_wasm_state();
+        // Assumes LookupData has a channel.
+        let extension_endpoints = &mut wasm_state.extensions_endpoints;
+        // Remove the endpoint of the runtime closes one endpoint of the channel.
+        extension_endpoints.remove(&LOOKUP_ABI_FUNCTION_NAME.to_string());
+        let result = wasm_state.channel_write(channel_handle, 0, 0);
+        assert!(result.is_err());
+        assert_eq!(ChannelStatus::ChannelEndpointClosed, result.unwrap_err());
     }
 
     fn create_test_wasm_handler() -> WasmHandler {
@@ -927,5 +1043,24 @@ mod tests {
         wasm_handler
             .init(b"".to_vec())
             .expect("could not create wasm_state")
+    }
+
+    // Helper function to read from Endpoint associated to Lookup extension in the runtime.
+    async fn read_from_lookup_runtime_endpoint(wasm_state: &mut WasmState) -> Vec<u8> {
+        let endpoint = wasm_state
+            .extensions_endpoints
+            .get_mut(&LOOKUP_ABI_FUNCTION_NAME.to_string())
+            .unwrap();
+        endpoint.receiver.try_recv().unwrap()
+    }
+
+    // Helper function to write to Endpoint associated to Lookup extension in the runtime.
+    async fn write_to_lookup_runtime_endpoint(wasm_state: &mut WasmState, message: AbiMessage) {
+        let endpoint = wasm_state
+            .extensions_endpoints
+            .get_mut(&LOOKUP_ABI_FUNCTION_NAME.to_string())
+            .unwrap();
+        let result = endpoint.sender.send(message.to_vec().clone()).await;
+        assert!(result.is_ok());
     }
 }
