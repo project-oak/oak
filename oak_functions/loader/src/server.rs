@@ -1011,6 +1011,19 @@ mod tests {
         assert_eq!(ChannelStatus::ChannelFull, result.unwrap_err());
     }
 
+    #[tokio::test]
+    async fn test_hosted_channel_write_channel_closed() {
+        let channel_handle = ChannelHandle::LookupData as i32;
+        let mut wasm_state = create_test_wasm_state();
+        // Assumes LookupData has a channel.
+        let extension_endpoints = &mut wasm_state.extensions_endpoints;
+        // Remove the endpoint of the runtime closes one endpoint of the channel.
+        extension_endpoints.remove(&LOOKUP_ABI_FUNCTION_NAME.to_string());
+        let result = wasm_state.channel_write(channel_handle, 0, 0);
+        assert!(result.is_err());
+        assert_eq!(ChannelStatus::ChannelEndpointClosed, result.unwrap_err());
+    }
+
     fn create_test_wasm_handler() -> WasmHandler {
         let logger = Logger::for_test();
         let lookup_data = Arc::new(LookupData::for_test(hashmap! {}));
