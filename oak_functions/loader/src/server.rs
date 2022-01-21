@@ -871,11 +871,7 @@ impl ChannelSwitchboard {
 
 #[cfg(test)]
 mod tests {
-    use super::{
-        super::{grpc::create_wasm_handler, lookup::LookupFactory, lookup_data::LookupData},
-        *,
-    };
-    use maplit::hashmap;
+    use super::{super::grpc::create_wasm_handler, *};
 
     pub struct TestingFactory {
         logger: Logger,
@@ -1125,22 +1121,13 @@ mod tests {
     fn create_test_wasm_handler() -> WasmHandler {
         let logger = Logger::for_test();
 
-        let lookup_data = Arc::new(LookupData::for_test(hashmap! {}));
-        let lookup_factory =
-            LookupFactory::new_boxed_extension_factory(lookup_data, logger.clone())
-                .expect("Could not create LookupFactory.");
-
         let testing_factory = TestingFactory::new_boxed_extension_factory(logger.clone())
             .expect("Could not create TestingFactory.");
 
-        let wasm_module_bytes = test_utils::create_some_wasm_module_bytes();
+        let wasm_module_bytes = test_utils::create_echo_wasm_module_bytes();
 
-        create_wasm_handler(
-            &wasm_module_bytes,
-            vec![lookup_factory, testing_factory],
-            logger,
-        )
-        .expect("could not create wasm_handler")
+        create_wasm_handler(&wasm_module_bytes, vec![testing_factory], logger)
+            .expect("could not create wasm_handler")
     }
 
     fn create_test_wasm_state() -> WasmState {
