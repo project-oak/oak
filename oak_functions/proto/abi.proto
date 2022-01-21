@@ -45,6 +45,7 @@ enum ChannelStatus {
 // ChannelHandle to read, write, or wait on the corresponding channel.
 enum ChannelHandle {
   CHANNEL_HANDLE_UNSPECIFIED = 0;
+  TESTING = 1;
   LOOKUP_DATA = 2;
 }
 

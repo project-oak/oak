@@ -145,12 +145,19 @@ pub trait OakApiNativeExtension {
     /// Performs any cleanup or terminating behavior necessary before destroying the WasmState.
     fn terminate(&mut self) -> anyhow::Result<()>;
 }
+
 pub trait ExtensionFactory {
     fn create(&self) -> anyhow::Result<BoxedExtension>;
 }
 
 pub type BoxedExtension = Box<dyn OakApiNativeExtension + Send + Sync>;
 pub type BoxedExtensionFactory = Box<dyn ExtensionFactory + Send + Sync>;
+
+/// Trait for implementing an extension which relies on uwabi.
+pub trait UwabiExtension {
+    /// Get the channel handle to address this extension.
+    fn get_channel_handle(&self) -> ChannelHandle;
+}
 
 /// `WasmState` holds runtime values for a particular execution instance of Wasm, handling a
 /// single user request. The methods here correspond to the ABI host functions that allow the Wasm
@@ -191,7 +198,7 @@ impl WasmState {
         }
     }
 
-    fn read_buffer_from_wasm_memory(
+    pub fn read_buffer_from_wasm_memory(
         &self,
         buf_ptr: AbiPointer,
         buf_len: AbiPointerOffset,
@@ -236,6 +243,21 @@ impl WasmState {
             );
             OakStatus::ErrInvalidArgs
         })
+    }
+
+    // Writes the given `buffer` by allocating `buffer.len()` Wasm memory and writing the address of
+    // the allocated memory to `dest_ptr_ptr` and the length to `dest_len_ptr`.
+    pub fn alloc_and_write_buffer_to_wasm_memory(
+        &mut self,
+        buffer: Vec<u8>,
+        dest_ptr_ptr: AbiPointer,
+        dest_len_ptr: AbiPointer,
+    ) -> Result<(), OakStatus> {
+        let dest_ptr = self.alloc(buffer.len() as u32);
+        self.write_buffer_to_wasm_memory(&buffer, dest_ptr)?;
+        self.write_u32_to_wasm_memory(dest_ptr, dest_ptr_ptr)?;
+        self.write_u32_to_wasm_memory(buffer.len() as u32, dest_len_ptr)?;
+        Ok(())
     }
 
     /// Corresponds to the host ABI function [`read_request`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#read_request).
@@ -303,10 +325,7 @@ impl WasmState {
         })?;
 
         // Write message to memory of the Wasm module.
-        let dest_ptr = self.alloc(message.len() as u32);
-        self.write_buffer_to_wasm_memory(&message, dest_ptr)?;
-        self.write_u32_to_wasm_memory(dest_ptr, dest_ptr_ptr)?;
-        self.write_u32_to_wasm_memory(message.len() as u32, dest_len_ptr)?;
+        self.alloc_and_write_buffer_to_wasm_memory(message, dest_ptr_ptr, dest_len_ptr)?;
 
         Ok(())
     }
