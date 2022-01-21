@@ -15,7 +15,6 @@
 
 use crate::logger::Logger;
 
-use crate::lookup::LOOKUP_ABI_FUNCTION_NAME;
 use anyhow::Context;
 use byteorder::{ByteOrder, LittleEndian};
 use futures::future::FutureExt;
@@ -180,7 +179,7 @@ pub struct WasmState {
     /// A mapping of host function names to metadata required for resolving the function.
     extensions_metadata: HashMap<String, (usize, wasmi::Signature)>,
     channel_switchboard: ChannelSwitchboard,
-    extensions_endpoints: HashMap<String, Endpoint>,
+    extensions_endpoints: HashMap<ChannelHandle, Endpoint>,
 }
 
 impl WasmState {
@@ -486,7 +485,7 @@ impl WasmState {
         extensions_indices: HashMap<usize, BoxedExtension>,
         extensions_metadata: HashMap<String, (usize, wasmi::Signature)>,
         channel_switchboard: ChannelSwitchboard,
-        extensions_endpoints: HashMap<String, Endpoint>,
+        extensions_endpoints: HashMap<ChannelHandle, Endpoint>,
     ) -> anyhow::Result<WasmState> {
         let mut abi = WasmState {
             request_bytes,
@@ -677,9 +676,10 @@ impl WasmHandler {
         let mut extensions_endpoints = HashMap::new();
 
         let mut channel_switchboard = ChannelSwitchboard::new();
-        // Register only lookup channel for now.
+
+        // TODO(mschett) Remove lookup_endpoint channel when testing extension works
         let lookup_endpoint = channel_switchboard.register(ChannelHandle::LookupData);
-        extensions_endpoints.insert(LOOKUP_ABI_FUNCTION_NAME.to_string(), lookup_endpoint);
+        extensions_endpoints.insert(ChannelHandle::LookupData, lookup_endpoint);
 
         for (ind, factory) in self.extension_factories.iter().enumerate() {
             let extension = factory.create()?;
@@ -689,8 +689,10 @@ impl WasmHandler {
                     extensions_indices.insert(ind + EXTENSION_INDEX_OFFSET, extension);
                     extensions_metadata.insert(name, (ind + EXTENSION_INDEX_OFFSET, signature));
                 }
-                Extension::Uwabi(_uwabi_extension) => {
-                    // TODO(mschett) Add functionality for creating endpoints
+                Extension::Uwabi(uwabi_extension) => {
+                    let channel_handle = uwabi_extension.get_channel_handle();
+                    let endpoint = channel_switchboard.register(channel_handle);
+                    extensions_endpoints.insert(channel_handle, endpoint);
                 }
             }
         }
@@ -1005,9 +1007,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_hosted_channel_read_no_message() {
-        let channel_handle = ChannelHandle::LookupData as i32;
+        let channel_handle = ChannelHandle::Testing as i32;
         let mut wasm_state = create_test_wasm_state();
-        // Assumes LookupData has a channel.
         let result = wasm_state.channel_read(channel_handle, 0, 0);
         assert!(result.is_err());
         assert_eq!(ChannelStatus::ChannelEmpty, result.unwrap_err());
@@ -1015,12 +1016,11 @@ mod tests {
 
     #[tokio::test]
     async fn test_hosted_channel_read_channel_closed() {
-        let channel_handle = ChannelHandle::LookupData as i32;
+        let channel_handle = ChannelHandle::Testing as i32;
         let mut wasm_state = create_test_wasm_state();
-        // Assumes LookupData has a channel.
         let extension_endpoints = &mut wasm_state.extensions_endpoints;
         // Remove the endpoint of the runtime closes one endpoint of the channel.
-        extension_endpoints.remove(&LOOKUP_ABI_FUNCTION_NAME.to_string());
+        extension_endpoints.remove(&ChannelHandle::Testing);
         let result = wasm_state.channel_read(channel_handle, 0, 0);
         assert!(result.is_err());
         assert_eq!(
@@ -1119,7 +1119,7 @@ mod tests {
         // Assumes LookupData has a channel.
         let extension_endpoints = &mut wasm_state.extensions_endpoints;
         // Remove the endpoint of the runtime closes one endpoint of the channel.
-        extension_endpoints.remove(&LOOKUP_ABI_FUNCTION_NAME.to_string());
+        extension_endpoints.remove(&ChannelHandle::LookupData);
         let result = wasm_state.channel_write(channel_handle, 0, 0);
         assert!(result.is_err());
         assert_eq!(ChannelStatus::ChannelEndpointClosed, result.unwrap_err());
@@ -1156,7 +1156,7 @@ mod tests {
     async fn read_from_lookup_runtime_endpoint(wasm_state: &mut WasmState) -> Vec<u8> {
         let endpoint = wasm_state
             .extensions_endpoints
-            .get_mut(&LOOKUP_ABI_FUNCTION_NAME.to_string())
+            .get_mut(&ChannelHandle::LookupData)
             .unwrap();
         endpoint.receiver.try_recv().unwrap()
     }
@@ -1165,7 +1165,7 @@ mod tests {
     async fn write_to_lookup_runtime_endpoint(wasm_state: &mut WasmState, message: AbiMessage) {
         let endpoint = wasm_state
             .extensions_endpoints
-            .get_mut(&LOOKUP_ABI_FUNCTION_NAME.to_string())
+            .get_mut(&ChannelHandle::LookupData)
             .unwrap();
         let result = endpoint.sender.send(message.to_vec().clone()).await;
         assert!(result.is_ok());
