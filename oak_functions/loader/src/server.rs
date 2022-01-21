@@ -150,7 +150,12 @@ pub trait ExtensionFactory {
     fn create(&self) -> anyhow::Result<BoxedExtension>;
 }
 
-pub type BoxedExtension = Box<dyn OakApiNativeExtension + Send + Sync>;
+pub enum Extension {
+    Native(Box<dyn OakApiNativeExtension + Send + Sync>),
+    Uwabi(Box<dyn UwabiExtension + Send + Sync>),
+}
+
+pub type BoxedExtension = Extension;
 pub type BoxedExtensionFactory = Box<dyn ExtensionFactory + Send + Sync>;
 
 /// Trait for implementing an extension which relies on uwabi.
@@ -430,8 +435,8 @@ impl wasmi::Externals for WasmState {
                     .take()
                     .expect("no extensions_indices is set");
                 let extension = match extensions_indices.get_mut(&index) {
-                    Some(extension) => Box::new(extension),
-                    None => panic!("Unimplemented function at {}", index),
+                    Some(Extension::Native(extension)) => Box::new(extension),
+                    _ => panic!("Unimplemented function at {}", index),
                 };
                 let result = map_host_errors(extension.invoke(self, args)?);
                 self.extensions_indices = Some(extensions_indices);
@@ -678,9 +683,17 @@ impl WasmHandler {
 
         for (ind, factory) in self.extension_factories.iter().enumerate() {
             let extension = factory.create()?;
-            let (name, signature) = extension.get_metadata();
-            extensions_indices.insert(ind + EXTENSION_INDEX_OFFSET, extension);
-            extensions_metadata.insert(name, (ind + EXTENSION_INDEX_OFFSET, signature));
+            match extension {
+                Extension::Native(ref native_extension) => {
+                    let (name, signature) = native_extension.get_metadata();
+                    extensions_indices.insert(ind + EXTENSION_INDEX_OFFSET, extension);
+                    extensions_metadata.insert(name, (ind + EXTENSION_INDEX_OFFSET, signature));
+                }
+                Extension::Uwabi(_uwabi_extension) => {
+                    // TODO(mschett) Add functionality for creating endpoints
+                    panic!("Uwabi Extension in init of WasmState not defined.")
+                }
+            }
         }
 
         WasmState::new(
@@ -699,13 +712,21 @@ impl WasmHandler {
         let mut wasm_state = self.init(request_bytes)?;
 
         wasm_state.invoke();
-        for mut extension in wasm_state
+        for extension in wasm_state
             .extensions_indices
             .take()
             .expect("no extensions_indices is set in wasm_state")
             .into_values()
         {
-            extension.terminate()?;
+            match extension {
+                Extension::Native(mut native_extension) => {
+                    native_extension.terminate()?;
+                }
+                Extension::Uwabi(_uwabi_extension) => {
+                    // TODO(mschett) figure out if that ever happens.
+                    panic!("Uwabi Extension inserted in extension_indicies.")
+                }
+            }
         }
         Ok(Response::create(
             StatusCode::Success,

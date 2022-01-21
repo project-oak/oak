@@ -22,7 +22,10 @@ use oak_functions_loader::{
     logger::Logger,
     lookup::LookupFactory,
     lookup_data::{parse_lookup_entries, LookupData, LookupDataAuth, LookupDataSource},
-    server::{apply_policy, format_bytes, AbiPointer, AbiPointerOffset, UwabiExtension, WasmState},
+    server::{
+        apply_policy, format_bytes, AbiPointer, AbiPointerOffset, BoxedExtension,
+        BoxedExtensionFactory, Extension::Uwabi, ExtensionFactory, UwabiExtension, WasmState,
+    },
 };
 use prost::Message;
 use std::{
@@ -436,6 +439,25 @@ fn test_format_bytes() {
     assert_eq!("🚀oak⭐", format_bytes("🚀oak⭐".as_bytes()));
     // Incorrect UTF-8 bytes, as per https://doc.rust-lang.org/std/string/struct.String.html#examples-3.
     assert_eq!("[0, 159, 146, 150]", format_bytes(&[0, 159, 146, 150]));
+}
+
+pub struct TestingFactory {
+    logger: Logger,
+}
+
+impl TestingFactory {
+    pub fn new_boxed_extension_factory(logger: Logger) -> anyhow::Result<BoxedExtensionFactory> {
+        Ok(Box::new(Self { logger }))
+    }
+}
+
+impl ExtensionFactory for TestingFactory {
+    fn create(&self) -> anyhow::Result<BoxedExtension> {
+        let extension = TestingExtension {
+            logger: self.logger.clone(),
+        };
+        Ok(Uwabi(Box::new(extension)))
+    }
 }
 
 pub struct TestingExtension {
