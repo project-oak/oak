@@ -157,7 +157,7 @@ pub enum Extension {
 pub type BoxedExtension = Extension;
 pub type BoxedExtensionFactory = Box<dyn ExtensionFactory + Send + Sync>;
 
-/// Trait for implementing an extension which relies on uwabi.
+/// Trait for implementing an extension which relies on UWABI.
 pub trait UwabiExtension {
     /// Get the channel handle to address this extension.
     fn get_channel_handle(&self) -> ChannelHandle;
