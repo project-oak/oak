@@ -994,15 +994,8 @@ dependencies = [
 name = "echo"
 version = "0.1.0"
 dependencies = [
- "http",
- "hyper",
- "maplit",
  "oak_functions",
  "oak_functions_abi",
- "oak_functions_loader",
- "prost 0.9.0",
- "test_utils",
- "tokio",
 ]
 
 [[package]]
