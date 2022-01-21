@@ -691,7 +691,6 @@ impl WasmHandler {
                 }
                 Extension::Uwabi(_uwabi_extension) => {
                     // TODO(mschett) Add functionality for creating endpoints
-                    panic!("Uwabi Extension in init of WasmState not defined.")
                 }
             }
         }
@@ -879,6 +878,67 @@ mod tests {
         *,
     };
     use maplit::hashmap;
+
+    pub struct TestingFactory {
+        logger: Logger,
+    }
+
+    impl TestingFactory {
+        pub fn new_boxed_extension_factory(
+            logger: Logger,
+        ) -> anyhow::Result<BoxedExtensionFactory> {
+            Ok(Box::new(Self { logger }))
+        }
+    }
+
+    impl ExtensionFactory for TestingFactory {
+        fn create(&self) -> anyhow::Result<BoxedExtension> {
+            let extension = TestingExtension {
+                logger: self.logger.clone(),
+            };
+            Ok(Extension::Uwabi(Box::new(extension)))
+        }
+    }
+
+    pub struct TestingExtension {
+        logger: Logger,
+    }
+
+    impl UwabiExtension for TestingExtension {
+        fn get_channel_handle(&self) -> oak_functions_abi::proto::ChannelHandle {
+            ChannelHandle::Testing
+        }
+    }
+
+    fn testing(
+        wasm_state: &mut WasmState,
+        extension: &mut TestingExtension,
+        request_ptr: AbiPointer,
+        request_len: AbiPointerOffset,
+        response_ptr_ptr: AbiPointer,
+        response_len_ptr: AbiPointer,
+    ) -> Result<(), OakStatus> {
+        let request = wasm_state
+            .read_buffer_from_wasm_memory(request_ptr, request_len)
+            .expect("testing(): Unable to read request.");
+
+        // Simply echo request.
+        wasm_state.alloc_and_write_buffer_to_wasm_memory(
+            request.clone(),
+            response_ptr_ptr,
+            response_len_ptr,
+        )?;
+
+        extension.logger.log_sensitive(
+            Level::Debug,
+            &format!(
+                "testing(): Echoed request {} as response",
+                format_bytes(&request)
+            ),
+        );
+
+        Ok(())
+    }
 
     #[test]
     fn test_start_from_empty_endpoints() {
@@ -1070,12 +1130,19 @@ mod tests {
         let lookup_data = Arc::new(LookupData::for_test(hashmap! {}));
         let lookup_factory =
             LookupFactory::new_boxed_extension_factory(lookup_data, logger.clone())
-                .expect("could not create LookupFactory");
+                .expect("Could not create LookupFactory.");
+
+        let testing_factory = TestingFactory::new_boxed_extension_factory(logger.clone())
+            .expect("Could not create TestingFactory.");
 
         let wasm_module_bytes = test_utils::create_some_wasm_module_bytes();
 
-        create_wasm_handler(&wasm_module_bytes, vec![lookup_factory], logger)
-            .expect("could not create wasm_handler")
+        create_wasm_handler(
+            &wasm_module_bytes,
+            vec![lookup_factory, testing_factory],
+            logger,
+        )
+        .expect("could not create wasm_handler")
     }
 
     fn create_test_wasm_state() -> WasmState {

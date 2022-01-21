@@ -14,18 +14,14 @@
 // limitations under the License.
 //
 
-use log::Level;
 use maplit::hashmap;
-use oak_functions_abi::proto::{ChannelHandle, OakStatus, Response, ServerPolicy, StatusCode};
+use oak_functions_abi::proto::{Response, ServerPolicy, StatusCode};
 use oak_functions_loader::{
     grpc::{create_and_start_grpc_server, create_wasm_handler},
     logger::Logger,
     lookup::LookupFactory,
     lookup_data::{parse_lookup_entries, LookupData, LookupDataAuth, LookupDataSource},
-    server::{
-        apply_policy, format_bytes, AbiPointer, AbiPointerOffset, BoxedExtension,
-        BoxedExtensionFactory, Extension::Uwabi, ExtensionFactory, UwabiExtension, WasmState,
-    },
+    server::{apply_policy, format_bytes},
 };
 use prost::Message;
 use std::{
@@ -439,63 +435,4 @@ fn test_format_bytes() {
     assert_eq!("🚀oak⭐", format_bytes("🚀oak⭐".as_bytes()));
     // Incorrect UTF-8 bytes, as per https://doc.rust-lang.org/std/string/struct.String.html#examples-3.
     assert_eq!("[0, 159, 146, 150]", format_bytes(&[0, 159, 146, 150]));
-}
-
-pub struct TestingFactory {
-    logger: Logger,
-}
-
-impl TestingFactory {
-    pub fn new_boxed_extension_factory(logger: Logger) -> anyhow::Result<BoxedExtensionFactory> {
-        Ok(Box::new(Self { logger }))
-    }
-}
-
-impl ExtensionFactory for TestingFactory {
-    fn create(&self) -> anyhow::Result<BoxedExtension> {
-        let extension = TestingExtension {
-            logger: self.logger.clone(),
-        };
-        Ok(Uwabi(Box::new(extension)))
-    }
-}
-
-pub struct TestingExtension {
-    logger: Logger,
-}
-
-impl UwabiExtension for TestingExtension {
-    fn get_channel_handle(&self) -> oak_functions_abi::proto::ChannelHandle {
-        ChannelHandle::Testing
-    }
-}
-
-fn testing(
-    wasm_state: &mut WasmState,
-    extension: &mut TestingExtension,
-    request_ptr: AbiPointer,
-    request_len: AbiPointerOffset,
-    response_ptr_ptr: AbiPointer,
-    response_len_ptr: AbiPointer,
-) -> Result<(), OakStatus> {
-    let request = wasm_state
-        .read_buffer_from_wasm_memory(request_ptr, request_len)
-        .expect("testing(): Unable to read request.");
-
-    // Simply echo request.
-    wasm_state.alloc_and_write_buffer_to_wasm_memory(
-        request.clone(),
-        response_ptr_ptr,
-        response_len_ptr,
-    )?;
-
-    extension.logger.log_sensitive(
-        Level::Debug,
-        &format!(
-            "testing(): Echoed request {} as response",
-            format_bytes(&request)
-        ),
-    );
-
-    Ok(())
 }
