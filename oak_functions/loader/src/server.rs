@@ -672,7 +672,7 @@ impl WasmHandler {
         let mut extensions_indices = HashMap::new();
         let mut extensions_metadata = HashMap::new();
         // Remove the extension_endpoints map as soon as we extend extensions by functionality for
-        // channels. Until then we use the (unique) ABI_FUNCTION_NAME as keys.
+        // channels. Until then we use the ChannelHandle as keys.
         let mut extensions_endpoints = HashMap::new();
 
         let mut channel_switchboard = ChannelSwitchboard::new();
@@ -720,7 +720,6 @@ impl WasmHandler {
                     native_extension.terminate()?;
                 }
                 Extension::Uwabi(_uwabi_extension) => {
-                    // TODO(mschett) figure out if that ever happens.
                     panic!("Uwabi Extension inserted in extension_indicies.")
                 }
             }
@@ -894,6 +893,7 @@ mod tests {
         }
     }
 
+    #[allow(dead_code)]
     pub struct TestingExtension {
         logger: Logger,
     }
@@ -902,36 +902,6 @@ mod tests {
         fn get_channel_handle(&self) -> oak_functions_abi::proto::ChannelHandle {
             ChannelHandle::Testing
         }
-    }
-
-    fn testing(
-        wasm_state: &mut WasmState,
-        extension: &mut TestingExtension,
-        request_ptr: AbiPointer,
-        request_len: AbiPointerOffset,
-        response_ptr_ptr: AbiPointer,
-        response_len_ptr: AbiPointer,
-    ) -> Result<(), OakStatus> {
-        let request = wasm_state
-            .read_buffer_from_wasm_memory(request_ptr, request_len)
-            .expect("testing(): Unable to read request.");
-
-        // Simply echo request.
-        wasm_state.alloc_and_write_buffer_to_wasm_memory(
-            request.clone(),
-            response_ptr_ptr,
-            response_len_ptr,
-        )?;
-
-        extension.logger.log_sensitive(
-            Level::Debug,
-            &format!(
-                "testing(): Echoed request {} as response",
-                format_bytes(&request)
-            ),
-        );
-
-        Ok(())
     }
 
     #[test]
