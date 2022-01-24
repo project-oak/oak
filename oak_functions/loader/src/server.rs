@@ -682,6 +682,7 @@ impl WasmHandler {
         let mut extensions_metadata = HashMap::new();
         // Remove the extension_endpoints map as soon as we extend extensions by functionality for
         // channels. Until then we use the ChannelHandle as keys.
+        // TODO(#2502).
         let mut extensions_endpoints = HashMap::new();
 
         let mut channel_switchboard = ChannelSwitchboard::new();
@@ -724,13 +725,8 @@ impl WasmHandler {
             .expect("no extensions_indices is set in wasm_state")
             .into_values()
         {
-            match extension {
-                BoxedExtension::Native(mut native_extension) => {
-                    native_extension.terminate()?;
-                }
-                BoxedExtension::Uwabi(_uwabi_extension) => {
-                    panic!("Uwabi Extension inserted in extension_indicies.")
-                }
+            if let BoxedExtension::Native(mut native_extension) = extension {
+                native_extension.terminate()?;
             }
         }
         Ok(Response::create(
