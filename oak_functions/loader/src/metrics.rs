@@ -17,8 +17,8 @@
 use crate::{
     logger::Logger,
     server::{
-        AbiPointer, AbiPointerOffset, BoxedExtension, BoxedExtensionFactory, Extension,
-        ExtensionFactory, OakApiNativeExtension, WasmState, ABI_USIZE,
+        AbiPointer, AbiPointerOffset, BoxedExtension, BoxedExtensionFactory, ExtensionFactory,
+        OakApiNativeExtension, WasmState, ABI_USIZE,
     },
 };
 use oak_functions_abi::proto::OakStatus;
@@ -259,7 +259,7 @@ impl ExtensionFactory for PrivateMetricsProxyFactory {
             metrics_proxy: Some(metrics_proxy),
             logger: self.logger.clone(),
         };
-        Ok(Extension::Native(Box::new(extension)))
+        Ok(BoxedExtension::Native(Box::new(extension)))
     }
 }
 

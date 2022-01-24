@@ -149,12 +149,11 @@ pub trait ExtensionFactory {
     fn create(&self) -> anyhow::Result<BoxedExtension>;
 }
 
-pub enum Extension {
+pub enum BoxedExtension {
     Native(Box<dyn OakApiNativeExtension + Send + Sync>),
     Uwabi(Box<dyn UwabiExtension + Send + Sync>),
 }
 
-pub type BoxedExtension = Extension;
 pub type BoxedExtensionFactory = Box<dyn ExtensionFactory + Send + Sync>;
 
 /// Trait for implementing an extension which relies on UWABI.
@@ -434,7 +433,7 @@ impl wasmi::Externals for WasmState {
                     .take()
                     .expect("no extensions_indices is set");
                 let extension = match extensions_indices.get_mut(&index) {
-                    Some(Extension::Native(extension)) => Box::new(extension),
+                    Some(BoxedExtension::Native(extension)) => Box::new(extension),
                     _ => panic!("Unimplemented function at {}", index),
                 };
                 let result = map_host_errors(extension.invoke(self, args)?);
@@ -680,12 +679,12 @@ impl WasmHandler {
         for (ind, factory) in self.extension_factories.iter().enumerate() {
             let extension = factory.create()?;
             match extension {
-                Extension::Native(ref native_extension) => {
+                BoxedExtension::Native(ref native_extension) => {
                     let (name, signature) = native_extension.get_metadata();
                     extensions_indices.insert(ind + EXTENSION_INDEX_OFFSET, extension);
                     extensions_metadata.insert(name, (ind + EXTENSION_INDEX_OFFSET, signature));
                 }
-                Extension::Uwabi(uwabi_extension) => {
+                BoxedExtension::Uwabi(uwabi_extension) => {
                     let channel_handle = uwabi_extension.get_channel_handle();
                     let endpoint = channel_switchboard.register(channel_handle);
                     extensions_endpoints.insert(channel_handle, endpoint);
@@ -716,10 +715,10 @@ impl WasmHandler {
             .into_values()
         {
             match extension {
-                Extension::Native(mut native_extension) => {
+                BoxedExtension::Native(mut native_extension) => {
                     native_extension.terminate()?;
                 }
-                Extension::Uwabi(_uwabi_extension) => {
+                BoxedExtension::Uwabi(_uwabi_extension) => {
                     panic!("Uwabi Extension inserted in extension_indicies.")
                 }
             }
@@ -889,7 +888,7 @@ mod tests {
             let extension = TestingExtension {
                 logger: self.logger.clone(),
             };
-            Ok(Extension::Uwabi(Box::new(extension)))
+            Ok(BoxedExtension::Uwabi(Box::new(extension)))
         }
     }
 

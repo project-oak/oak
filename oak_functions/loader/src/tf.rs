@@ -17,8 +17,8 @@
 use crate::{
     logger::Logger,
     server::{
-        AbiPointer, AbiPointerOffset, BoxedExtension, BoxedExtensionFactory, Extension,
-        ExtensionFactory, OakApiNativeExtension, WasmState, ABI_USIZE,
+        AbiPointer, AbiPointerOffset, BoxedExtension, BoxedExtensionFactory, ExtensionFactory,
+        OakApiNativeExtension, WasmState, ABI_USIZE,
     },
 };
 use anyhow::Context;
@@ -255,6 +255,6 @@ impl ExtensionFactory for TensorFlowFactory {
             logger: self.logger.clone(),
         };
 
-        Ok(Extension::Native(Box::new(model)))
+        Ok(BoxedExtension::Native(Box::new(model)))
     }
 }

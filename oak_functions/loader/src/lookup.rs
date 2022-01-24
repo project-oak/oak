@@ -19,7 +19,7 @@ use crate::{
     lookup_data::LookupData,
     server::{
         format_bytes, AbiPointer, AbiPointerOffset, BoxedExtension, BoxedExtensionFactory,
-        Extension, ExtensionFactory, OakApiNativeExtension, WasmState, ABI_USIZE,
+        ExtensionFactory, OakApiNativeExtension, WasmState, ABI_USIZE,
     },
 };
 use log::Level;
@@ -59,7 +59,7 @@ impl ExtensionFactory for LookupFactory {
             lookup_data: self.lookup_data.clone(),
             logger: self.logger.clone(),
         };
-        Ok(Extension::Native(Box::new(extension)))
+        Ok(BoxedExtension::Native(Box::new(extension)))
     }
 }
 
