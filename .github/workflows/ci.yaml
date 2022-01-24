@@ -44,6 +44,12 @@ jobs:
           - completion
           - run-cargo-clippy
 
+    permissions:
+      # Allow the job to update the repo with the latest index.
+      contents: write
+      # Allow the job to add a comment to the PR.
+      pull-requests: write
+
     steps:
       - name: Checkout branch
         uses: actions/checkout@v2
@@ -114,27 +120,6 @@ jobs:
           ./scripts/docker_run ./scripts/runner --commands --scope=all ${{ matrix.cmd }}
           df --human-readable
 
-      - name: Send failure notification
-        if: always()
-        uses: dawidd6/action-send-mail@v2
-        with:
-          # mail server settings
-          server_address: smtp.gmail.com
-          server_port: 465
-          # user credentials
-          username: ${{ secrets.EMAIL_USERNAME }}
-          password: ${{ secrets.EMAIL_PASSWORD }}
-          # email subject
-          subject: ${{ github.job }} job has ${{ job.status }}
-          # email body as text
-          body:
-            ${{ github.job }} job in workflow ${{ github.workflow }} of ${{
-            github.repository }} has ${{ job.status }}
-          # comma-separated string, send email to
-          to: razieh@google.com
-          # from email name
-          from: Oak GitHub
-
       - name: Generate root CA certs
         run: ./scripts/docker_run ./scripts/generate_root_ca_certs
 
@@ -142,6 +127,34 @@ jobs:
         # relevant build artifacts are ignored by git.
       - name: Git check diff
         run: ./scripts/docker_run ./scripts/git_check_diff
+
+      # Post a reply on the PR thread with status of the CI, after merge.
+      - name: Post CI status after merge (post-merge only)
+        uses: actions/github-script@0.9.0
+        if: github.event_name == 'push' && failure()
+        with:
+          github-token: ${{secrets.GITHUB_TOKEN}}
+          script: |
+            const opts = await github.repos.listPullRequestsAssociatedWithCommit({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              commit_sha: context.sha
+            });
+            // See:
+            // - https://octokit.github.io/rest.js/v17#previews
+            // - https://developer.github.com/v3/repos/commits/#list-pull-requests-associated-with-commit
+            opts.mediaType = {
+                previews: ['groot']
+            };
+
+            const issues = await github.paginate(opts);
+
+            await github.issues.createComment({
+              issue_number: issues[0].number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `CI status after merge:`
+            });
 
   android-runner:
     runs-on: ubuntu-20.04
