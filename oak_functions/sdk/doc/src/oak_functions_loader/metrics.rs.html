@@ -852,7 +852,7 @@
             <span class="ident">metrics_proxy</span>: <span class="prelude-val">Some</span>(<span class="ident">metrics_proxy</span>),
             <span class="ident">logger</span>: <span class="self">self</span>.<span class="ident">logger</span>.<span class="ident">clone</span>(),
         };
-        <span class="prelude-val">Ok</span>(<span class="ident">Box::new</span>(<span class="ident">extension</span>))
+        <span class="prelude-val">Ok</span>(<span class="ident">BoxedExtension::Native</span>(<span class="ident">Box::new</span>(<span class="ident">extension</span>)))
     }
 }
 

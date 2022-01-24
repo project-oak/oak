@@ -10,6 +10,7 @@ sourcesIndex["auth_client"] = {"name":"","files":["auth_client.rs","main.rs","re
 sourcesIndex["benchmark"] = {"name":"","files":["lib.rs"]};
 sourcesIndex["chat"] = {"name":"","files":["lib.rs"]};
 sourcesIndex["chat_grpc"] = {"name":"","files":["lib.rs"]};
+sourcesIndex["echo"] = {"name":"","files":["lib.rs"]};
 sourcesIndex["fuzzable"] = {"name":"","files":["lib.rs"]};
 sourcesIndex["gcp_api_gateway_client"] = {"name":"","files":["main.rs"]};
 sourcesIndex["gcp_api_gateway_server"] = {"name":"","files":["main.rs"]};

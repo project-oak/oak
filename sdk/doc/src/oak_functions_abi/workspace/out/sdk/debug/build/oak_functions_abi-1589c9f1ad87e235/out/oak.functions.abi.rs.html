@@ -109,6 +109,9 @@
 <span id="107">107</span>
 <span id="108">108</span>
 <span id="109">109</span>
+<span id="110">110</span>
+<span id="111">111</span>
+<span id="112">112</span>
 </pre><pre class="rust"><code><span class="doccomment">/// The inference from a TensorFlow model, containing an inference vector of floats, and a shape</span>
 <span class="doccomment">/// vector specifying the dimensions of the inference vector.</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">PartialEq</span>, <span class="ident">::prost::Message</span>)]</span>
@@ -198,6 +201,9 @@
 <span class="attribute">#[<span class="ident">repr</span>(<span class="ident">i32</span>)]</span>
 <span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">ChannelHandle</span> {
     <span class="ident">Unspecified</span> <span class="op">=</span> <span class="number">0</span>,
+    <span class="doccomment">/// Handle for an extension used for testing Wasm modules.</span>
+    <span class="ident">Testing</span> <span class="op">=</span> <span class="number">1</span>,
+    <span class="doccomment">/// Handle for an extension to look up a key in the lookup data.</span>
     <span class="ident">LookupData</span> <span class="op">=</span> <span class="number">2</span>,
 }
 <span class="doccomment">/// Status values exchanged as i32 values across the Node Wasm interface.</span>
