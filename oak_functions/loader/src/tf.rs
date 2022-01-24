@@ -255,6 +255,6 @@ impl ExtensionFactory for TensorFlowFactory {
             logger: self.logger.clone(),
         };
 
-        Ok(Box::new(model))
+        Ok(BoxedExtension::Native(Box::new(model)))
     }
 }

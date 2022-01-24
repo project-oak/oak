@@ -45,6 +45,9 @@ enum ChannelStatus {
 // ChannelHandle to read, write, or wait on the corresponding channel.
 enum ChannelHandle {
   CHANNEL_HANDLE_UNSPECIFIED = 0;
+  // Handle for an extension used for testing Wasm modules.
+  TESTING = 1;
+  // Handle for an extension to look up a key in the lookup data.
   LOOKUP_DATA = 2;
 }
 

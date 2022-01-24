@@ -259,7 +259,7 @@ impl ExtensionFactory for PrivateMetricsProxyFactory {
             metrics_proxy: Some(metrics_proxy),
             logger: self.logger.clone(),
         };
-        Ok(Box::new(extension))
+        Ok(BoxedExtension::Native(Box::new(extension)))
     }
 }
 

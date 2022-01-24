@@ -1,0 +1,15 @@
+[package]
+name = "echo"
+version = "0.1.0"
+authors = ["Maria Schett <mschett@google.com>"]
+edition = "2021"
+license = "Apache-2.0"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+oak_functions = { path = "../../../sdk/oak_functions" }
+
+[dev-dependencies]
+oak_functions_abi = { path = "../../../abi" }

@@ -28,7 +28,7 @@ use std::sync::Arc;
 use wasmi::ValueType;
 
 // Host function name for invoking lookup in lookup data.
-pub const LOOKUP_ABI_FUNCTION_NAME: &str = "storage_get_item";
+const LOOKUP_ABI_FUNCTION_NAME: &str = "storage_get_item";
 
 pub struct LookupExtension {
     lookup_data: Arc<LookupData>,
@@ -59,7 +59,7 @@ impl ExtensionFactory for LookupFactory {
             lookup_data: self.lookup_data.clone(),
             logger: self.logger.clone(),
         };
-        Ok(Box::new(extension))
+        Ok(BoxedExtension::Native(Box::new(extension)))
     }
 }
 
