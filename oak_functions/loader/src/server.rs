@@ -149,6 +149,8 @@ pub trait ExtensionFactory {
     fn create(&self) -> anyhow::Result<BoxedExtension>;
 }
 
+/// A BoxedExtension can either be a `Native extension called by a dedicated ABI function, or a
+/// `Uwabi` extension called by listening to a channel.
 pub enum BoxedExtension {
     Native(Box<dyn OakApiNativeExtension + Send + Sync>),
     Uwabi(Box<dyn UwabiExtension + Send + Sync>),
