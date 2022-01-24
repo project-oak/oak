@@ -177,7 +177,10 @@ pub struct WasmState {
     extensions_indices: Option<HashMap<usize, BoxedExtension>>,
     /// A mapping of host function names to metadata required for resolving the function.
     extensions_metadata: HashMap<String, (usize, wasmi::Signature)>,
+    /// A mapping from channel handles to the hosted endpoints of channels.
     channel_switchboard: ChannelSwitchboard,
+    /// A mapping from channel handles to the endpoints for the Oak functions runtime.
+    // TODO(#2502) Add extension endpoints to the corresponding endpoint.
     extensions_endpoints: HashMap<ChannelHandle, Endpoint>,
 }
 
@@ -201,6 +204,7 @@ impl WasmState {
         }
     }
 
+    /// Reads the buffer starting at address `buf_ptr` with length `buf_len` from the Wasm memory.
     pub fn read_buffer_from_wasm_memory(
         &self,
         buf_ptr: AbiPointer,
@@ -217,6 +221,8 @@ impl WasmState {
             })
     }
 
+    /// Writes the buffer `source` at the address `dest` of the Wasm memory, if `source` fits in the
+    /// allocated memory.
     pub fn write_buffer_to_wasm_memory(
         &self,
         source: &[u8],
@@ -232,6 +238,7 @@ impl WasmState {
         })
     }
 
+    ///  Writes the u32 `value` at the `address` of the Wasm memory.
     pub fn write_u32_to_wasm_memory(
         &self,
         value: u32,
@@ -248,8 +255,8 @@ impl WasmState {
         })
     }
 
-    // Writes the given `buffer` by allocating `buffer.len()` Wasm memory and writing the address of
-    // the allocated memory to `dest_ptr_ptr` and the length to `dest_len_ptr`.
+    /// Writes the given `buffer` by allocating `buffer.len()` Wasm memory and writing the address
+    /// of the allocated memory to `dest_ptr_ptr` and the length to `dest_len_ptr`.
     pub fn alloc_and_write_buffer_to_wasm_memory(
         &mut self,
         buffer: Vec<u8>,
