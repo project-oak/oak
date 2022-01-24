@@ -441,7 +441,10 @@ impl wasmi::Externals for WasmState {
                     .expect("no extensions_indices is set");
                 let extension = match extensions_indices.get_mut(&index) {
                     Some(BoxedExtension::Native(extension)) => Box::new(extension),
-                    _ => panic!("Unimplemented function at {}", index),
+                    Some(BoxedExtension::Uwabi(_)) => {
+                        panic!("Invoked Uwabi extension at index {} instead of reading/writing from channel.", index)
+                    }
+                    None => panic!("Unimplemented function at {}", index),
                 };
                 let result = map_host_errors(extension.invoke(self, args)?);
                 self.extensions_indices = Some(extensions_indices);
