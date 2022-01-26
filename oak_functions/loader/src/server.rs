@@ -1013,9 +1013,7 @@ mod tests {
         let channel_handle = ChannelHandle::Testing;
         let mut wasm_state = create_test_wasm_state();
         // Remove the extension to close one endpoint of the channel.
-        wasm_state
-            .uwabi_extensions
-            .retain(|uwabi_extension| uwabi_extension.get_channel_handle() != channel_handle);
+        drop_extension(&mut wasm_state, channel_handle);
         let result = wasm_state.channel_read(channel_handle as i32, 0, 0);
         assert!(result.is_err());
         assert_eq!(
@@ -1114,9 +1112,7 @@ mod tests {
         let channel_handle = ChannelHandle::Testing;
         let mut wasm_state = create_test_wasm_state();
         // Remove the extension to close one endpoint of the channel.
-        wasm_state
-            .uwabi_extensions
-            .retain(|uwabi_extension| uwabi_extension.get_channel_handle() != channel_handle);
+        drop_extension(&mut wasm_state, channel_handle);
         let result = wasm_state.channel_write(channel_handle as i32, 0, 0);
         assert!(result.is_err());
         assert_eq!(ChannelStatus::ChannelEndpointClosed, result.unwrap_err());
@@ -1139,6 +1135,13 @@ mod tests {
         wasm_handler
             .init(b"".to_vec())
             .expect("could not create wasm_state")
+    }
+
+    // Helper function for testing to drop the UWABI extension for the given ChannelHandle.
+    fn drop_extension(wasm_state: &mut WasmState, channel_handle: ChannelHandle) {
+        wasm_state
+            .uwabi_extensions
+            .retain(|uwabi_extension| uwabi_extension.get_channel_handle() != channel_handle);
     }
 
     // Helper function for testing to read from Endpoint associated to ChannelHandle extension in
