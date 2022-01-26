@@ -166,7 +166,9 @@ pub trait UwabiExtension {
     fn get_channel_handle(&self) -> ChannelHandle;
 
     /// Get the endpoint.
-    fn get_endpoint(&mut self) -> Option<&mut Endpoint>;
+    // TODO(#2508): Stop exposing the endpoint for an extension as soon as we have a way the
+    // extension handles how it reads/writes into the endpoint.
+    fn get_endpoint_mut(&mut self) -> Option<&mut Endpoint>;
 
     /// Set the endpoint if it has not been set before.
     // Note: we cannot set the endpoint when we `create` the extension, as this would require
@@ -920,7 +922,7 @@ mod tests {
             ChannelHandle::Testing
         }
 
-        fn get_endpoint(&mut self) -> Option<&mut Endpoint> {
+        fn get_endpoint_mut(&mut self) -> Option<&mut Endpoint> {
             match &mut self.endpoint {
                 Some(endpoint) => Some(endpoint),
                 None => None,
@@ -1178,7 +1180,7 @@ mod tests {
 
         // Get endpoint from the extension.
         extension
-            .get_endpoint()
+            .get_endpoint_mut()
             .expect("No endpoint set for extension.")
     }
 }
