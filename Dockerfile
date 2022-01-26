@@ -1,7 +1,7 @@
 # Use fixed snapshot of Debian to create a deterministic environment.
 # Snapshot tags can be found at https://hub.docker.com/r/debian/snapshot/tags
-ARG debian_snapshot=buster-20210927
-FROM debian/snapshot:${debian_snapshot}
+ARG debian_snapshot=sha256:eeed67d1ae0846429668170fdab5e8f7ed884234db1b2c8075471bd8365cf3a7
+FROM debian/snapshot@${debian_snapshot}
 
 # Set the SHELL option -o pipefail before RUN with a pipe in.
 # See https://github.com/hadolint/hadolint/wiki/DL4006
