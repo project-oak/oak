@@ -171,7 +171,7 @@ pub trait UwabiExtension {
     fn get_endpoint_mut(&mut self) -> Option<&mut Endpoint>;
 
     /// Set the endpoint if it has not been set before.
-    // Note: we cannot set the endpoint when we `create` the extension, as this would require
+    // TODO(#2510) We cannot set the endpoint when we `create` the extension, as this would require
     // to change the `BoxedExtensionFactory` trait. This helps to keep the changes to the
     // (existing) Native extensions minimal.
     fn set_endpoint(&mut self, endpoint: Endpoint);
