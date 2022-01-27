@@ -208,13 +208,17 @@ impl WasmState {
 
     /// Validates whether a given address range (inclusive) falls within the currently allocated
     /// range of guest memory.
-    fn validate_range(&self, addr: AbiPointer, offset: AbiPointerOffset) -> Result<(), OakStatus> {
+    fn validate_range(
+        &self,
+        addr: AbiPointer,
+        offset: AbiPointerOffset,
+    ) -> Result<(), ChannelStatus> {
         let memory_size: wasmi::memory_units::Bytes = self.get_memory().current_size().into();
         // Check whether the end address is below or equal to the size of the guest memory.
         if wasmi::memory_units::Bytes((addr as usize) + (offset as usize)) <= memory_size {
             Ok(())
         } else {
-            Err(OakStatus::ErrInvalidArgs)
+            Err(ChannelStatus::ChannelInvalidArgs)
         }
     }
 
@@ -223,7 +227,7 @@ impl WasmState {
         &self,
         buf_ptr: AbiPointer,
         buf_len: AbiPointerOffset,
-    ) -> Result<Vec<u8>, OakStatus> {
+    ) -> Result<Vec<u8>, ChannelStatus> {
         self.get_memory()
             .get(buf_ptr, buf_len as usize)
             .map_err(|err| {
@@ -231,7 +235,7 @@ impl WasmState {
                     Level::Error,
                     &format!("Unable to read buffer from guest memory: {:?}", err),
                 );
-                OakStatus::ErrInvalidArgs
+                ChannelStatus::ChannelInvalidArgs
             })
     }
 
@@ -241,14 +245,14 @@ impl WasmState {
         &self,
         source: &[u8],
         dest: AbiPointer,
-    ) -> Result<(), OakStatus> {
+    ) -> Result<(), ChannelStatus> {
         self.validate_range(dest, source.len() as u32)?;
         self.get_memory().set(dest, source).map_err(|err| {
             self.logger.log_sensitive(
                 Level::Error,
                 &format!("Unable to write buffer into guest memory: {:?}", err),
             );
-            OakStatus::ErrInvalidArgs
+            ChannelStatus::ChannelInvalidArgs
         })
     }
 
@@ -257,7 +261,7 @@ impl WasmState {
         &self,
         value: u32,
         address: AbiPointer,
-    ) -> Result<(), OakStatus> {
+    ) -> Result<(), ChannelStatus> {
         let value_bytes = &mut [0; 4];
         LittleEndian::write_u32(value_bytes, value);
         self.get_memory().set(address, value_bytes).map_err(|err| {
@@ -265,7 +269,7 @@ impl WasmState {
                 Level::Error,
                 &format!("Unable to write u32 value into guest memory: {:?}", err),
             );
-            OakStatus::ErrInvalidArgs
+            ChannelStatus::ChannelInvalidArgs
         })
     }
 
@@ -276,7 +280,7 @@ impl WasmState {
         buffer: Vec<u8>,
         dest_ptr_ptr: AbiPointer,
         dest_len_ptr: AbiPointer,
-    ) -> Result<(), OakStatus> {
+    ) -> Result<(), ChannelStatus> {
         let dest_ptr = self.alloc(buffer.len() as u32);
         self.write_buffer_to_wasm_memory(&buffer, dest_ptr)?;
         self.write_u32_to_wasm_memory(dest_ptr, dest_ptr_ptr)?;
