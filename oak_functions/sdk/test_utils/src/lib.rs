@@ -257,11 +257,17 @@ pub fn assert_response_body(response: Response, expected: &str) {
     )
 }
 
-/// Create some valid Wasm bytecode only calling Abi functions `read_request` and `write_request`.
-pub fn create_echo_wasm_module_bytes() -> Vec<u8> {
+/// Create Wasm bytecode from manifest path relative from the `oak_functions` directory.
+fn create_wasm_module_bytes(relative_manifest_path: &str, release: bool) -> Vec<u8> {
     let mut manifest_path = std::env::current_dir().unwrap();
     manifest_path.pop();
-    manifest_path.push("examples/echo/module/Cargo.toml");
-    compile_rust_wasm(manifest_path.to_str().expect("Invalid target dir"), false)
+    manifest_path.push(relative_manifest_path);
+    compile_rust_wasm(manifest_path.to_str().expect("Invalid target dir"), release)
         .expect("Couldn't read Wasm module")
+}
+
+/// Create valid (release) Wasm bytecode for a minimal "echo" module which only uses the Abi
+/// functions `read_request` and `write_request`.
+pub fn create_echo_wasm_module_bytes() -> Vec<u8> {
+    create_wasm_module_bytes("examples/echo/module/Cargo.toml", true)
 }
