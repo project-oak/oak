@@ -1,0 +1,73 @@
+name: Build Provenance
+
+# See https://docs.github.com/en/actions/learn-github-actions/workflow-syntax-for-github-actions#example-using-concurrency-to-cancel-any-in-progress-job-or-run
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+on:
+  push:
+    branches: [main]
+jobs:
+  build_provenance:
+    runs-on: ubuntu-20.04
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Mount main branch
+        uses: actions/checkout@v2
+
+      - name: Mount provenance branch
+        uses: actions/checkout@v2
+        with:
+          ref: provenance
+          path: provenance-branch
+
+      - name: Git setup
+        run: |
+          git config --global user.email "actions@github.com"
+          git config --global user.name "GitHub Actions"
+
+      # Copied from https://github.com/jens-maus/RaspberryMatic/blob/ea6b8ce0dd2d53ea88b2766ba8d7f8e1d667281f/.github/workflows/ci.yml#L34-L40
+      - name: free disk space
+        run: |
+          df --human-readable
+          sudo swapoff --all
+          sudo rm --force /swapfile
+          sudo apt clean
+          docker rmi $(docker image ls --all --quiet)
+          df --human-readable
+
+      - name: Docker pull
+        timeout-minutes: 10
+        run: |
+          ./scripts/docker_pull
+          df --human-readable
+
+      - name: Build Server Provenance
+        run: |
+          ./scripts/build_provenance \
+          ./scripts/runner\ build-server \
+          ./oak_loader/bin/oak_loader
+
+      - name: Build Functions Provenance
+        run: |
+          ./scripts/build_provenance \
+          ./scripts/runner\ build-functions-server \
+          ./oak_functions/loader/bin/oak_functions_loader
+
+      - name: Move new provenance files to the provenance branch
+        run: cp -r ./provenance/. ./provenance-branch/
+
+      - name: Commit new provenance files to the provenance branch
+        run: |
+          git -C ./provenance-branch add .
+          git -C ./provenance-branch status
+          git -C ./provenance-branch diff --staged
+          git -C ./provenance-branch commit --allow-empty --message="Provenance files for ${GITHUB_SHA}"
+          git -C ./provenance-branch tag -a -m "record source commit" provenance-${GITHUB_SHA}
+
+      - name: Push provenance branch
+        run: git -C ./provenance-branch push --follow-tags
