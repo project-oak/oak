@@ -47,7 +47,7 @@ pub mod proto {
         }
     }
 
-    // Converts a OakStatus into an ChannelStatus.
+    // Converts an OakStatus into a ChannelStatus.
     impl From<ChannelStatus> for OakStatus {
         fn from(channel_status: ChannelStatus) -> Self {
             match channel_status {
