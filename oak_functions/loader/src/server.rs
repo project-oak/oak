@@ -443,21 +443,21 @@ impl wasmi::Externals for WasmState {
         args: wasmi::RuntimeArgs,
     ) -> Result<Option<wasmi::RuntimeValue>, wasmi::Trap> {
         match index {
-            READ_REQUEST => {
-                oak_to_wasmi(self.read_request(args.nth_checked(0)?, args.nth_checked(1)?))
-            }
-            WRITE_RESPONSE => {
-                oak_to_wasmi(self.write_response(args.nth_checked(0)?, args.nth_checked(1)?))
-            }
-            WRITE_LOG_MESSAGE => {
-                oak_to_wasmi(self.write_log_message(args.nth_checked(0)?, args.nth_checked(1)?))
-            }
-            CHANNEL_READ => uwabi_to_wasmi(self.channel_read(
+            READ_REQUEST => from_oak_status_result(
+                self.read_request(args.nth_checked(0)?, args.nth_checked(1)?),
+            ),
+            WRITE_RESPONSE => from_oak_status_result(
+                self.write_response(args.nth_checked(0)?, args.nth_checked(1)?),
+            ),
+            WRITE_LOG_MESSAGE => from_oak_status_result(
+                self.write_log_message(args.nth_checked(0)?, args.nth_checked(1)?),
+            ),
+            CHANNEL_READ => from_channel_status_result(self.channel_read(
                 args.nth_checked(0)?,
                 args.nth_checked(1)?,
                 args.nth_checked(2)?,
             )),
-            CHANNEL_WRITE => uwabi_to_wasmi(self.channel_write(
+            CHANNEL_WRITE => from_channel_status_result(self.channel_write(
                 args.nth_checked(0)?,
                 args.nth_checked(1)?,
                 args.nth_checked(2)?,
@@ -475,7 +475,7 @@ impl wasmi::Externals for WasmState {
                     }
                     None => panic!("Unimplemented function at {}", index),
                 };
-                let result = oak_to_wasmi(extension.invoke(self, args)?);
+                let result = from_oak_status_result(extension.invoke(self, args)?);
                 self.extensions_indices = Some(extensions_indices);
                 result
             }
@@ -831,24 +831,25 @@ fn oak_functions_resolve_func(field_name: &str) -> Option<(usize, wasmi::Signatu
 /// `wasmi` specific result type `Result<Option<wasmi::RuntimeValue>, wasmi::Trap>`, mapping:
 /// - `Ok(())` to `Ok(Some(OakStatus::Ok))`
 /// - `Err(x)` to `Ok(Some(x))`
-fn oak_to_wasmi(result: Result<(), OakStatus>) -> Result<Option<wasmi::RuntimeValue>, wasmi::Trap> {
-    Ok(Some(wasmi::RuntimeValue::I32(result.map_or_else(
-        |x: OakStatus| x as i32,
-        |_| OakStatus::Ok as i32,
-    ))))
+fn from_oak_status_result(
+    result: Result<(), OakStatus>,
+) -> Result<Option<wasmi::RuntimeValue>, wasmi::Trap> {
+    let oak_status_from_result = result.map_or_else(|x: OakStatus| x, |()| OakStatus::Ok);
+    let wasmi_value = wasmi::RuntimeValue::I32(oak_status_from_result as i32);
+    Ok(Some(wasmi_value))
 }
 
 /// A helper function to move between our specific result type `Result<(), ChannelStatus>` and the
 /// `wasmi` specific result type `Result<Option<wasmi::RuntimeValue>, wasmi::Trap>`, mapping:
 /// - `Ok(())` to `Ok(Some(ChannelStatus::Ok))`
 /// - `Err(x)` to `Ok(Some(x))`
-fn uwabi_to_wasmi(
+fn from_channel_status_result(
     result: Result<(), ChannelStatus>,
 ) -> Result<Option<wasmi::RuntimeValue>, wasmi::Trap> {
-    Ok(Some(wasmi::RuntimeValue::I32(result.map_or_else(
-        |x: ChannelStatus| x as i32,
-        |_| ChannelStatus::ChannelOk as i32,
-    ))))
+    let channel_status_from_result =
+        result.map_or_else(|x: ChannelStatus| x, |()| ChannelStatus::ChannelOk);
+    let wasmi_value = wasmi::RuntimeValue::I32(channel_status_from_result as i32);
+    Ok(Some(wasmi_value))
 }
 
 /// Converts a binary sequence to a string if it is a valid UTF-8 string, or formats it as a numeric
