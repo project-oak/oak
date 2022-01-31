@@ -16,7 +16,7 @@ readonly COMMIT_HASH=$(git rev-parse --verify HEAD)
 mkdir -p "./provenance"
 mkdir -p "./provenance/${BINARY_SHA_256_HASH}"
 
-readonly PROVENANCE=$(cat << EOF >> "./provenance/${BINARY_SHA_256_HASH}/${COMMIT_HASH}.toml"
+cat << EOF >> "./provenance/${BINARY_SHA_256_HASH}/${COMMIT_HASH}.toml"
 repo = "https://github.com/project-oak/oak"
 commit_hash = "$(git rev-parse --verify HEAD)"
 builder_image = "${DOCKER_IMAGE_REPO_DIGEST}"
@@ -24,5 +24,4 @@ command = ["${BUILD_COMMAND}"]
 output_path = "${OUTPUT_PATH}"
 expected_binary_sha256_hash = "${BINARY_SHA_256_HASH}"
 EOF
-)
 
