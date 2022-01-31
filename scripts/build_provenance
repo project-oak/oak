@@ -16,6 +16,11 @@ readonly COMMIT_HASH=$(git rev-parse --verify HEAD)
 mkdir -p "./provenance"
 mkdir -p "./provenance/${BINARY_SHA_256_HASH}"
 
+# Note that the command currently is a single string wrapped in an array. The
+# reason is that our transparent-release (which parses this file) expects an
+# array as the command value at its current version. There isn't much value
+# in using an array though, and in upcoming versions it will move towards
+# an unwrapped string.
 cat << EOF >> "./provenance/${BINARY_SHA_256_HASH}/${COMMIT_HASH}.toml"
 repo = "https://github.com/project-oak/oak"
 commit_hash = "$(COMMIT_HASH)"
