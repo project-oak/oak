@@ -208,13 +208,17 @@ impl WasmState {
 
     /// Validates whether a given address range (inclusive) falls within the currently allocated
     /// range of guest memory.
-    fn validate_range(&self, addr: AbiPointer, offset: AbiPointerOffset) -> Result<(), OakStatus> {
+    fn validate_range(
+        &self,
+        addr: AbiPointer,
+        offset: AbiPointerOffset,
+    ) -> Result<(), ChannelStatus> {
         let memory_size: wasmi::memory_units::Bytes = self.get_memory().current_size().into();
         // Check whether the end address is below or equal to the size of the guest memory.
         if wasmi::memory_units::Bytes((addr as usize) + (offset as usize)) <= memory_size {
             Ok(())
         } else {
-            Err(OakStatus::ErrInvalidArgs)
+            Err(ChannelStatus::ChannelInvalidArgs)
         }
     }
 
@@ -223,7 +227,7 @@ impl WasmState {
         &self,
         buf_ptr: AbiPointer,
         buf_len: AbiPointerOffset,
-    ) -> Result<Vec<u8>, OakStatus> {
+    ) -> Result<Vec<u8>, ChannelStatus> {
         self.get_memory()
             .get(buf_ptr, buf_len as usize)
             .map_err(|err| {
@@ -231,7 +235,7 @@ impl WasmState {
                     Level::Error,
                     &format!("Unable to read buffer from guest memory: {:?}", err),
                 );
-                OakStatus::ErrInvalidArgs
+                ChannelStatus::ChannelInvalidArgs
             })
     }
 
@@ -241,14 +245,14 @@ impl WasmState {
         &self,
         source: &[u8],
         dest: AbiPointer,
-    ) -> Result<(), OakStatus> {
+    ) -> Result<(), ChannelStatus> {
         self.validate_range(dest, source.len() as u32)?;
         self.get_memory().set(dest, source).map_err(|err| {
             self.logger.log_sensitive(
                 Level::Error,
                 &format!("Unable to write buffer into guest memory: {:?}", err),
             );
-            OakStatus::ErrInvalidArgs
+            ChannelStatus::ChannelInvalidArgs
         })
     }
 
@@ -257,7 +261,7 @@ impl WasmState {
         &self,
         value: u32,
         address: AbiPointer,
-    ) -> Result<(), OakStatus> {
+    ) -> Result<(), ChannelStatus> {
         let value_bytes = &mut [0; 4];
         LittleEndian::write_u32(value_bytes, value);
         self.get_memory().set(address, value_bytes).map_err(|err| {
@@ -265,7 +269,7 @@ impl WasmState {
                 Level::Error,
                 &format!("Unable to write u32 value into guest memory: {:?}", err),
             );
-            OakStatus::ErrInvalidArgs
+            ChannelStatus::ChannelInvalidArgs
         })
     }
 
@@ -276,7 +280,7 @@ impl WasmState {
         buffer: Vec<u8>,
         dest_ptr_ptr: AbiPointer,
         dest_len_ptr: AbiPointer,
-    ) -> Result<(), OakStatus> {
+    ) -> Result<(), ChannelStatus> {
         let dest_ptr = self.alloc(buffer.len() as u32);
         self.write_buffer_to_wasm_memory(&buffer, dest_ptr)?;
         self.write_u32_to_wasm_memory(dest_ptr, dest_ptr_ptr)?;
@@ -439,15 +443,26 @@ impl wasmi::Externals for WasmState {
         args: wasmi::RuntimeArgs,
     ) -> Result<Option<wasmi::RuntimeValue>, wasmi::Trap> {
         match index {
-            READ_REQUEST => {
-                map_host_errors(self.read_request(args.nth_checked(0)?, args.nth_checked(1)?))
-            }
-            WRITE_RESPONSE => {
-                map_host_errors(self.write_response(args.nth_checked(0)?, args.nth_checked(1)?))
-            }
-            WRITE_LOG_MESSAGE => {
-                map_host_errors(self.write_log_message(args.nth_checked(0)?, args.nth_checked(1)?))
-            }
+            READ_REQUEST => from_oak_status_result(
+                self.read_request(args.nth_checked(0)?, args.nth_checked(1)?),
+            ),
+            WRITE_RESPONSE => from_oak_status_result(
+                self.write_response(args.nth_checked(0)?, args.nth_checked(1)?),
+            ),
+            WRITE_LOG_MESSAGE => from_oak_status_result(
+                self.write_log_message(args.nth_checked(0)?, args.nth_checked(1)?),
+            ),
+            CHANNEL_READ => from_channel_status_result(self.channel_read(
+                args.nth_checked(0)?,
+                args.nth_checked(1)?,
+                args.nth_checked(2)?,
+            )),
+            CHANNEL_WRITE => from_channel_status_result(self.channel_write(
+                args.nth_checked(0)?,
+                args.nth_checked(1)?,
+                args.nth_checked(2)?,
+            )),
+
             _ => {
                 let mut extensions_indices = self
                     .extensions_indices
@@ -460,7 +475,7 @@ impl wasmi::Externals for WasmState {
                     }
                     None => panic!("Unimplemented function at {}", index),
                 };
-                let result = map_host_errors(extension.invoke(self, args)?);
+                let result = from_oak_status_result(extension.invoke(self, args)?);
                 self.extensions_indices = Some(extensions_indices);
                 result
             }
@@ -816,13 +831,25 @@ fn oak_functions_resolve_func(field_name: &str) -> Option<(usize, wasmi::Signatu
 /// `wasmi` specific result type `Result<Option<wasmi::RuntimeValue>, wasmi::Trap>`, mapping:
 /// - `Ok(())` to `Ok(Some(OakStatus::Ok))`
 /// - `Err(x)` to `Ok(Some(x))`
-fn map_host_errors(
+fn from_oak_status_result(
     result: Result<(), OakStatus>,
 ) -> Result<Option<wasmi::RuntimeValue>, wasmi::Trap> {
-    Ok(Some(wasmi::RuntimeValue::I32(result.map_or_else(
-        |x: OakStatus| x as i32,
-        |_| OakStatus::Ok as i32,
-    ))))
+    let oak_status_from_result = result.map_or_else(|x: OakStatus| x, |()| OakStatus::Ok);
+    let wasmi_value = wasmi::RuntimeValue::I32(oak_status_from_result as i32);
+    Ok(Some(wasmi_value))
+}
+
+/// A helper function to move between our specific result type `Result<(), ChannelStatus>` and the
+/// `wasmi` specific result type `Result<Option<wasmi::RuntimeValue>, wasmi::Trap>`, mapping:
+/// - `Ok(())` to `Ok(Some(ChannelStatus::Ok))`
+/// - `Err(x)` to `Ok(Some(x))`
+fn from_channel_status_result(
+    result: Result<(), ChannelStatus>,
+) -> Result<Option<wasmi::RuntimeValue>, wasmi::Trap> {
+    let channel_status_from_result =
+        result.map_or_else(|x: ChannelStatus| x, |()| ChannelStatus::ChannelOk);
+    let wasmi_value = wasmi::RuntimeValue::I32(channel_status_from_result as i32);
+    Ok(Some(wasmi_value))
 }
 
 /// Converts a binary sequence to a string if it is a valid UTF-8 string, or formats it as a numeric

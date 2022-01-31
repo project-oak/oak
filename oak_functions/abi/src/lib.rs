@@ -47,12 +47,12 @@ pub mod proto {
         }
     }
 
-    // Converts a ChannelStatus into an OakStatus.
-    impl From<OakStatus> for ChannelStatus {
-        fn from(oak_status: OakStatus) -> Self {
-            match oak_status {
-                OakStatus::ErrInvalidArgs => ChannelStatus::ChannelInvalidArgs,
-                _ => ChannelStatus::Unspecified,
+    // Converts an OakStatus into a ChannelStatus.
+    impl From<ChannelStatus> for OakStatus {
+        fn from(channel_status: ChannelStatus) -> Self {
+            match channel_status {
+                ChannelStatus::ChannelInvalidArgs => OakStatus::ErrInvalidArgs,
+                _ => OakStatus::Unspecified,
             }
         }
     }

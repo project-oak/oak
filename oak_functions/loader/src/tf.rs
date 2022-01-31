@@ -190,7 +190,8 @@ fn tf_model_infer(
     let buf_ptr = wasm_state.alloc(encoded_inference.len() as u32);
     wasm_state.write_buffer_to_wasm_memory(&encoded_inference, buf_ptr)?;
     wasm_state.write_u32_to_wasm_memory(buf_ptr, inference_ptr_ptr)?;
-    wasm_state.write_u32_to_wasm_memory(encoded_inference.len() as u32, inference_len_ptr)
+    wasm_state.write_u32_to_wasm_memory(encoded_inference.len() as u32, inference_len_ptr)?;
+    Ok(())
 }
 
 /// Read a tensorFlow model from the given path, into a byte array.
