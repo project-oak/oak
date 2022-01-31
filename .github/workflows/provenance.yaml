@@ -67,7 +67,7 @@ jobs:
           git -C ./provenance-branch status
           git -C ./provenance-branch diff --staged
           git -C ./provenance-branch commit --allow-empty --message="Provenance files for ${GITHUB_SHA}"
-          git -C ./provenance-branch tag -a -m "record source commit" provenance-${GITHUB_SHA}
+          git -C ./provenance-branch tag --annotate --message "record source commit" provenance-${GITHUB_SHA}
 
       - name: Push provenance branch
         run: git -C ./provenance-branch push --follow-tags
