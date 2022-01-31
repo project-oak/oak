@@ -16,6 +16,7 @@
 use crate::logger::Logger;
 
 use anyhow::Context;
+use async_trait::async_trait;
 use byteorder::{ByteOrder, LittleEndian};
 use futures::future::FutureExt;
 use log::Level;
@@ -161,6 +162,7 @@ pub type BoxedUwabiExtension = Box<dyn UwabiExtension + Send + Sync>;
 pub type BoxedExtensionFactory = Box<dyn ExtensionFactory + Send + Sync>;
 
 /// Trait for implementing an extension which relies on UWABI.
+#[async_trait]
 pub trait UwabiExtension {
     /// Get the channel handle to address this extension.
     fn get_channel_handle(&self) -> ChannelHandle;
@@ -175,6 +177,9 @@ pub trait UwabiExtension {
     // to change the `BoxedExtensionFactory` trait. This helps to keep the changes to the
     // (existing) Native extensions minimal.
     fn set_endpoint(&mut self, endpoint: Endpoint);
+
+    /// Listen to the channel.
+    async fn listen(&mut self, handle_message: Box<dyn Fn(AbiMessage) -> () + Send>);
 }
 
 /// `WasmState` holds runtime values for a particular execution instance of Wasm, handling a
@@ -944,6 +949,7 @@ mod tests {
         endpoint: Option<Endpoint>,
     }
 
+    #[async_trait]
     impl UwabiExtension for TestingExtension {
         fn get_channel_handle(&self) -> oak_functions_abi::proto::ChannelHandle {
             ChannelHandle::Testing
@@ -960,6 +966,16 @@ mod tests {
             if self.endpoint.is_none() {
                 self.endpoint = Some(endpoint);
             }
+        }
+
+        async fn listen(&mut self, handle_message: Box<dyn Fn(AbiMessage) -> () + Send>) {
+            let endpoint = self
+                .get_endpoint_mut()
+                .expect("No endpoint set in extension.");
+
+            let message = &endpoint.receiver.recv().await;
+            let unwrapped_message = message.clone().unwrap();
+            handle_message(unwrapped_message);
         }
     }
 
@@ -1103,8 +1119,10 @@ mod tests {
         assert!(result.is_ok());
 
         // Assert that the message arrived at runtime endpoint.
-        let received_message = read_from_runtime_endpoint(&mut wasm_state, channel_handle).await;
-        assert_eq!(message.to_vec(), received_message);
+        let testing_extension = extension_for_channel_handle(&mut wasm_state, channel_handle);
+        let assert_is_message =
+            Box::new(move |expected: AbiMessage| assert_eq!(message.clone(), expected.clone()));
+        testing_extension.listen(assert_is_message).await;
     }
 
     #[tokio::test]
@@ -1193,11 +1211,11 @@ mod tests {
         assert!(result.is_ok());
     }
 
-    // Helper function for testing to find the Endpoint associated to ChannelHandle in the runtime.
-    fn runtime_endpoint_for_channel_handle(
+    // Helper function to find extension associated to ChannelHandle in runtime.
+    fn extension_for_channel_handle(
         wasm_state: &mut WasmState,
         channel_handle: ChannelHandle,
-    ) -> &mut Endpoint {
+    ) -> &mut BoxedUwabiExtension {
         // Find extension associated to ChannelHandle in WasmState.
         let extension = wasm_state
             .uwabi_extensions
@@ -1207,8 +1225,15 @@ mod tests {
                 channel_handle_of_extension == channel_handle
             })
             .expect("No extension for channel handle.");
+        extension
+    }
 
-        // Get endpoint from the extension.
+    // Helper function for testing to find the Endpoint associated to ChannelHandle in the runtime.
+    fn runtime_endpoint_for_channel_handle(
+        wasm_state: &mut WasmState,
+        channel_handle: ChannelHandle,
+    ) -> &mut Endpoint {
+        let extension = extension_for_channel_handle(wasm_state, channel_handle);
         extension
             .get_endpoint_mut()
             .expect("No endpoint set for extension.")
