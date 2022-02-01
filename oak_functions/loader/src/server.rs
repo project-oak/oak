@@ -179,7 +179,15 @@ pub trait UwabiExtension {
     fn set_endpoint(&mut self, endpoint: Endpoint);
 
     /// Listen to the channel.
-    async fn listen(&mut self, handle_message: Box<dyn Fn(AbiMessage) -> () + Send>);
+    async fn listen(&mut self, message_handler: Box<dyn Fn(AbiMessage) -> () + Send>) {
+        let endpoint = self
+            .get_endpoint_mut()
+            .expect("No endpoint set in extension.");
+
+        if let Some(message) = &endpoint.receiver.recv().await {
+            message_handler(message.clone());
+        }
+    }
 }
 
 /// `WasmState` holds runtime values for a particular execution instance of Wasm, handling a
@@ -949,7 +957,6 @@ mod tests {
         endpoint: Option<Endpoint>,
     }
 
-    #[async_trait]
     impl UwabiExtension for TestingExtension {
         fn get_channel_handle(&self) -> oak_functions_abi::proto::ChannelHandle {
             ChannelHandle::Testing
@@ -965,16 +972,6 @@ mod tests {
         fn set_endpoint(&mut self, endpoint: Endpoint) {
             if self.endpoint.is_none() {
                 self.endpoint = Some(endpoint);
-            }
-        }
-
-        async fn listen(&mut self, message_handler: Box<dyn Fn(AbiMessage) -> () + Send>) {
-            let endpoint = self
-                .get_endpoint_mut()
-                .expect("No endpoint set in extension.");
-
-            if let Some(message) = &endpoint.receiver.recv().await {
-                message_handler(message.clone());
             }
         }
     }
