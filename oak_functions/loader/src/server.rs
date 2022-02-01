@@ -968,14 +968,14 @@ mod tests {
             }
         }
 
-        async fn listen(&mut self, handle_message: Box<dyn Fn(AbiMessage) -> () + Send>) {
+        async fn listen(&mut self, message_handler: Box<dyn Fn(AbiMessage) -> () + Send>) {
             let endpoint = self
                 .get_endpoint_mut()
                 .expect("No endpoint set in extension.");
 
-            let message = &endpoint.receiver.recv().await;
-            let unwrapped_message = message.clone().unwrap();
-            handle_message(unwrapped_message);
+            if let Some(message) = &endpoint.receiver.recv().await {
+                message_handler(message.clone());
+            }
         }
     }
 
@@ -1120,8 +1120,7 @@ mod tests {
 
         // Assert that the message arrived at runtime endpoint.
         let testing_extension = extension_for_channel_handle(&mut wasm_state, channel_handle);
-        let assert_is_message =
-            Box::new(move |expected: AbiMessage| assert_eq!(message.clone(), expected.clone()));
+        let assert_is_message = Box::new(move |expected: AbiMessage| assert_eq!(message, expected));
         testing_extension.listen(assert_is_message).await;
     }
 
@@ -1187,16 +1186,6 @@ mod tests {
         wasm_state
             .uwabi_extensions
             .retain(|uwabi_extension| uwabi_extension.get_channel_handle() != channel_handle);
-    }
-
-    // Helper function for testing to read from Endpoint associated to ChannelHandle extension in
-    // the runtime.
-    async fn read_from_runtime_endpoint(
-        wasm_state: &mut WasmState,
-        channel_handle: ChannelHandle,
-    ) -> Vec<u8> {
-        let endpoint = runtime_endpoint_for_channel_handle(wasm_state, channel_handle);
-        endpoint.receiver.try_recv().unwrap()
     }
 
     // Helper function for testing to write to Endpoint associated to ChannelHandle extension in the
