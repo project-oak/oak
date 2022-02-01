@@ -36,9 +36,11 @@ import io.grpc.stub.StreamObserver;
 import java.io.IOException;
 import java.net.URL;
 import java.security.GeneralSecurityException;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Predicate;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -61,6 +63,7 @@ public class AttestationClient {
   // https://cloud.google.com/apis/docs/system-parameters
   // https://cloud.google.com/docs/authentication/api-keys
   private static final String API_KEY_HEADER = "x-goog-api-key";
+  private final Duration connectionTimeout;
   private ManagedChannel channel;
   private StreamObserver<StreamingRequest> requestObserver;
   private BlockingQueue<StreamingResponse> messageQueue;
@@ -88,6 +91,15 @@ public class AttestationClient {
       interceptors.add(new Interceptor(apiKey));
     }
     return builder.intercept(interceptors);
+  }
+
+  /**
+   * Creates an unattested AttestationClient instance.
+   *
+   * @param connectionTimeout contains an inactivity threshold for gRPC connections.
+   */
+  public AttestationClient(Duration connectionTimeout) {
+    this.connectionTimeout = connectionTimeout;
   }
 
   // TODO(#2356): Change the return type to `AttestationResult` instead of throwing exceptions.
@@ -142,7 +154,8 @@ public class AttestationClient {
     requestObserver.onNext(clientHelloRequest);
 
     // Receive server attestation identity containing server's ephemeral public key.
-    StreamingResponse serverIdentityResponse = messageQueue.take();
+    StreamingResponse serverIdentityResponse =
+        messageQueue.poll(connectionTimeout.getSeconds(), TimeUnit.SECONDS);
     byte[] serverIdentity = serverIdentityResponse.getBody().toByteArray();
 
     // Verify ServerIdentity, including its configuration and proof of its inclusion in Rekor.
@@ -223,7 +236,8 @@ public class AttestationClient {
         StreamingRequest.newBuilder().setBody(ByteString.copyFrom(encryptedData)).build();
 
     requestObserver.onNext(streamingRequest);
-    StreamingResponse streamingResponse = messageQueue.take();
+    StreamingResponse streamingResponse =
+        messageQueue.poll(connectionTimeout.getSeconds(), TimeUnit.SECONDS);
 
     byte[] responsePayload = streamingResponse.getBody().toByteArray();
     byte[] decryptedResponse = encryptor.decrypt(responsePayload);

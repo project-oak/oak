@@ -31,12 +31,15 @@ import com.google.protobuf.ByteString;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import java.net.URL;
+import java.time.Duration;
 import oak.functions.invocation.Request;
 import oak.functions.invocation.Response;
 import oak.functions.invocation.StatusCode;
 
 /** Main class for the Oak Functions Client application. */
 public class MainActivity extends Activity {
+  private static final long CONNECTION_TIMEOUT_SECONDS = 5;
+
   /** Handles initial setup on creation of the activity. */
   @Override
   public void onCreate(Bundle savedInstanceState) {
@@ -77,7 +80,8 @@ public class MainActivity extends Activity {
       ManagedChannel channel = builder.build();
 
       // Attest a gRPC channel.
-      AttestationClient client = new AttestationClient();
+      AttestationClient client =
+          new AttestationClient(Duration.ofSeconds(CONNECTION_TIMEOUT_SECONDS));
       client.attest(channel, (config) -> !config.getMlInference());
 
       // Send a request.
