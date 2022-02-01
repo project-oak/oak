@@ -976,6 +976,12 @@ mod tests {
         }
     }
 
+    // Returns a _function_ which takes an AbiMessage as an argument asserts that this AbiMessage
+    // is equal to the given `expected` AbiMessage, i.e., partially applies `assert_eq!`.
+    fn assert_eq_handler(expected: AbiMessage) -> Box<dyn Fn(AbiMessage) -> () + Send> {
+        Box::new(move |actual: AbiMessage| assert_eq!(actual, expected))
+    }
+
     #[test]
     fn test_start_from_empty_endpoints() {
         fn check_empty(endpoint: &mut Endpoint) {
@@ -1117,8 +1123,10 @@ mod tests {
 
         // Assert that the message arrived at runtime endpoint.
         let testing_extension = extension_for_channel_handle(&mut wasm_state, channel_handle);
-        let assert_is_message = Box::new(move |expected: AbiMessage| assert_eq!(message, expected));
-        testing_extension.listen(assert_is_message).await;
+
+        testing_extension
+            .listen(assert_eq_handler(message.clone()))
+            .await;
     }
 
     #[tokio::test]
