@@ -278,7 +278,7 @@ http_archive(
 # Bazel rules for Android applications.
 http_archive(
     name = "rules_android",
-    sha256 = "cd06d15dd8bb59926e4d65f9003bfc20f9da4b2519985c27e190cddc8b7a7806",
+    sha256 = "7cb2b2e11aafe08b2ccb6eeb11f21f52c45e1ad1cdd0132ddf7bde8462bd9e20",
     strip_prefix = "rules_android-0.1.1",
     urls = ["https://github.com/bazelbuild/rules_android/archive/v0.1.1.zip"],
 )
