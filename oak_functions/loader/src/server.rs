@@ -44,13 +44,13 @@ const CHANNEL_READ: usize = 4;
 const CHANNEL_WRITE: usize = 5;
 const EXTENSION_INDEX_OFFSET: usize = 10;
 
-// Type alias for a message sent over a channel through the ABI.
-pub type AbiMessage = Vec<u8>;
+// Type alias for a message sent over a channel through UWABI.
+pub type UwabiMessage = Vec<u8>;
 
-// Bound on the amount of [`AbiMessage`]s an [`Endpoint`] can hold on the sender and the
+// Bound on the amount of [`UwabiMessage`]s an [`Endpoint`] can hold on the sender and the
 // receiver individually. We fixed 100 arbitrarily, and it is the same for every Endpoint. We expect
-// AbiMessages to be processed fast and do not expect to exceed the bound.
-const ABI_CHANNEL_BOUND: usize = 100;
+// UwabiMessages to be processed fast and do not expect to exceed the bound.
+const UWABI_CHANNEL_BOUND: usize = 100;
 
 // Type aliases for positions and offsets in Wasm linear memory. Any future 64-bit version
 // of Wasm would use different types.
@@ -178,10 +178,10 @@ pub trait UwabiExtension {
     // (existing) Native extensions minimal.
     fn set_endpoint(&mut self, endpoint: Endpoint);
 
-    /// Listen to the channel and handle the Abi Message with the given message_handler.
+    /// Listen to the channel and handle the UwabiMessage with the given message_handler.
     async fn listen(
         &mut self,
-        message_handler: Box<dyn Fn(AbiMessage) -> Option<AbiMessage> + Send>,
+        message_handler: Box<dyn Fn(UwabiMessage) -> Option<UwabiMessage> + Send>,
     ) {
         let endpoint = self
             .get_endpoint_mut()
@@ -387,7 +387,7 @@ impl WasmState {
         src_buf_len: AbiPointerOffset,
     ) -> Result<(), ChannelStatus> {
         // Read message from Wasm memory.
-        let message: AbiMessage = self.read_buffer_from_wasm_memory(src_buf_ptr, src_buf_len)?;
+        let message: UwabiMessage = self.read_buffer_from_wasm_memory(src_buf_ptr, src_buf_len)?;
 
         // Write message to hosted endpoint.
         let endpoint = self.get_endpoint_from_channel_handle(channel_handle)?;
@@ -885,11 +885,11 @@ pub fn format_bytes(v: &[u8]) -> String {
 // The Endpoint of a bidirectional channel.
 #[derive(Debug)]
 pub struct Endpoint {
-    sender: Sender<AbiMessage>,
-    receiver: Receiver<AbiMessage>,
+    sender: Sender<UwabiMessage>,
+    receiver: Receiver<UwabiMessage>,
 }
 
-/// Create a channel with two symmetrical endpoints. The [`AbiMessage`] sent from one [`Endpoint`]
+/// Create a channel with two symmetrical endpoints. The [`UwabiMessage`] sent from one [`Endpoint`]
 /// are received at the other [`Endpoint`] and vice versa by connecting two unidirectional
 /// [tokio::mpsc channels](https://docs.rs/tokio/0.1.16/tokio/sync/mpsc/index.html).
 ///
@@ -900,8 +900,8 @@ pub struct Endpoint {
 /// receiver ____/\____ receiver
 /// ```
 fn channel_create() -> (Endpoint, Endpoint) {
-    let (tx0, rx0) = channel::<AbiMessage>(ABI_CHANNEL_BOUND);
-    let (tx1, rx1) = channel::<AbiMessage>(ABI_CHANNEL_BOUND);
+    let (tx0, rx0) = channel::<UwabiMessage>(UWABI_CHANNEL_BOUND);
+    let (tx1, rx1) = channel::<UwabiMessage>(UWABI_CHANNEL_BOUND);
     let endpoint0 = Endpoint {
         sender: tx0,
         receiver: rx1,
@@ -985,20 +985,20 @@ mod tests {
         }
     }
 
-    // Returns a function which takes an AbiMessage as an argument asserts that this AbiMessage
-    // is equal to the given `expected` AbiMessage, i.e., partially applies `assert_eq!`.
+    // Returns a function which takes an UwabiMessage as an argument asserts that this UwabiMessage
+    // is equal to the given `expected` UwabiMessage, i.e., partially applies `assert_eq!`.
     fn assert_eq_handler(
-        expected: AbiMessage,
-    ) -> Box<dyn Fn(AbiMessage) -> Option<AbiMessage> + Send> {
-        Box::new(move |actual: AbiMessage| {
+        expected: UwabiMessage,
+    ) -> Box<dyn Fn(UwabiMessage) -> Option<UwabiMessage> + Send> {
+        Box::new(move |actual: UwabiMessage| {
             assert_eq!(actual, expected);
             None
         })
     }
 
-    // Returns a function which takes an AbiMessage as an argument and echoes this AbiMessage.
-    fn echo_handler() -> Box<dyn Fn(AbiMessage) -> Option<AbiMessage> + Send> {
-        Box::new(move |message: AbiMessage| Some(message))
+    // Returns a function which takes an UwabiMessage as an argument and echoes this UwabiMessage.
+    fn echo_handler() -> Box<dyn Fn(UwabiMessage) -> Option<UwabiMessage> + Send> {
+        Box::new(move |message: UwabiMessage| Some(message))
     }
 
     #[test]
@@ -1015,7 +1015,7 @@ mod tests {
     #[tokio::test]
     async fn test_crossed_write_read() {
         async fn check_crossed_write_read(endpoint1: &mut Endpoint, endpoint2: &mut Endpoint) {
-            let message: AbiMessage = vec![42, 21, 0];
+            let message: UwabiMessage = vec![42, 21, 0];
             let sender = &endpoint1.sender;
             let send_result = sender.send(message.clone()).await;
             assert!(send_result.is_ok());
@@ -1105,7 +1105,7 @@ mod tests {
     #[tokio::test]
     async fn test_hosted_channel_write_ok() {
         let channel_handle = ChannelHandle::Testing;
-        let message: AbiMessage = vec![42, 42];
+        let message: UwabiMessage = vec![42, 42];
         let mut wasm_state = create_test_wasm_state();
 
         write_from_wasm_module(&mut wasm_state, channel_handle, message.clone()).await;
@@ -1121,7 +1121,7 @@ mod tests {
     #[tokio::test]
     async fn test_hosted_channel_write_full() {
         let channel_handle = ChannelHandle::Testing;
-        let message: AbiMessage = vec![42, 42];
+        let message: UwabiMessage = vec![42, 42];
         let mut wasm_state = create_test_wasm_state();
 
         write_to_runtime_endpoint(&mut wasm_state, channel_handle, message.clone()).await;
@@ -1132,8 +1132,8 @@ mod tests {
         let result = wasm_state.write_buffer_to_wasm_memory(&message, src_buf_ptr);
         assert!(result.is_ok());
 
-        // write the message ABI_CHANNEL_BOUND times
-        for _ in 0..ABI_CHANNEL_BOUND {
+        // write the message UWABI_CHANNEL_BOUND times
+        for _ in 0..UWABI_CHANNEL_BOUND {
             let result =
                 wasm_state.channel_write(channel_handle as i32, src_buf_ptr, message.len() as u32);
             assert!(result.is_ok());
@@ -1160,7 +1160,7 @@ mod tests {
     async fn test_echo_in_testing_extension() {
         let channel_handle = ChannelHandle::Testing;
         let mut wasm_state = create_test_wasm_state();
-        let message: AbiMessage = vec![42, 42];
+        let message: UwabiMessage = vec![42, 42];
 
         write_from_wasm_module(&mut wasm_state, channel_handle, message.clone()).await;
 
@@ -1202,7 +1202,7 @@ mod tests {
     async fn write_to_runtime_endpoint(
         wasm_state: &mut WasmState,
         channel_handle: ChannelHandle,
-        message: AbiMessage,
+        message: UwabiMessage,
     ) {
         let endpoint = runtime_endpoint_for_channel_handle(wasm_state, channel_handle);
         let result = endpoint.sender.send(message.to_vec().clone()).await;
@@ -1216,7 +1216,7 @@ mod tests {
     async fn read_from_wasm_module(
         wasm_state: &mut WasmState,
         channel_handle: ChannelHandle,
-    ) -> AbiMessage {
+    ) -> UwabiMessage {
         // Guess some memory addresses in linear Wasm memory.
         let dest_ptr_ptr: AbiPointer = 100;
         let dest_len_ptr: AbiPointer = 150;
@@ -1251,7 +1251,7 @@ mod tests {
     async fn write_from_wasm_module(
         wasm_state: &mut WasmState,
         channel_handle: ChannelHandle,
-        message: AbiMessage,
+        message: UwabiMessage,
     ) {
         // Guess some memory addresses in linear Wasm memory to write the message to from
         // `src_buf_ptr`.
