@@ -178,14 +178,23 @@ pub trait UwabiExtension {
     // (existing) Native extensions minimal.
     fn set_endpoint(&mut self, endpoint: Endpoint);
 
-    /// Listen to the channel.
-    async fn listen(&mut self, message_handler: Box<dyn Fn(AbiMessage) -> () + Send>) {
+    /// Listen to the channel and handle the Abi Message with the given message_handler.
+    async fn listen(
+        &mut self,
+        message_handler: Box<dyn Fn(AbiMessage) -> Option<AbiMessage> + Send>,
+    ) {
         let endpoint = self
             .get_endpoint_mut()
             .expect("No endpoint set in extension.");
 
-        if let Some(message) = &endpoint.receiver.recv().await {
-            message_handler(message.clone());
+        let receiver = &mut endpoint.receiver;
+        let sender = &mut endpoint.sender;
+
+        if let Some(request) = receiver.recv().await {
+            let response = message_handler(request.clone());
+            if let Some(response) = response {
+                let _ = sender.send(response.clone()).await;
+            };
         }
     }
 }
@@ -976,10 +985,20 @@ mod tests {
         }
     }
 
-    // Returns a _function_ which takes an AbiMessage as an argument asserts that this AbiMessage
+    // Returns a function which takes an AbiMessage as an argument asserts that this AbiMessage
     // is equal to the given `expected` AbiMessage, i.e., partially applies `assert_eq!`.
-    fn assert_eq_handler(expected: AbiMessage) -> Box<dyn Fn(AbiMessage) -> () + Send> {
-        Box::new(move |actual: AbiMessage| assert_eq!(actual, expected))
+    fn assert_eq_handler(
+        expected: AbiMessage,
+    ) -> Box<dyn Fn(AbiMessage) -> Option<AbiMessage> + Send> {
+        Box::new(move |actual: AbiMessage| {
+            assert_eq!(actual, expected);
+            None
+        })
+    }
+
+    // Returns a function which takes an AbiMessage as an argument and echoes this AbiMessage.
+    fn echo_handler() -> Box<dyn Fn(AbiMessage) -> Option<AbiMessage> + Send> {
+        Box::new(move |message: AbiMessage| Some(message))
     }
 
     #[test]
@@ -1074,33 +1093,13 @@ mod tests {
         let message = vec![42, 42, 232];
         let mut wasm_state = create_test_wasm_state();
 
+        // Write message to runtime endpoint for `channel_read` to read from.
         write_to_runtime_endpoint(&mut wasm_state, channel_handle, message.clone()).await;
 
-        // Guess some memory addresses in linear Wasm memory.
-        let dest_ptr_ptr: AbiPointer = 100;
-        let dest_len_ptr: AbiPointer = 150;
+        let read_message = read_from_wasm_module(&mut wasm_state, channel_handle).await;
 
-        let result = wasm_state.channel_read(channel_handle as i32, dest_ptr_ptr, dest_len_ptr);
-        assert!(result.is_ok());
-
-        // Get dest_len from dest_len_ptr.
-        let dest_len: u32 =
-            LittleEndian::read_u32(&wasm_state.get_memory().get(dest_len_ptr, 4).unwrap());
-
-        // Assert that dest_len holds length of message.
-        assert_eq!(dest_len as usize, message.len());
-
-        // Get dest_ptr from dest_ptr_ptr.
-        let dest_ptr: u32 =
-            LittleEndian::read_u32(&wasm_state.get_memory().get(dest_ptr_ptr, 4).unwrap());
-
-        // Assert that dest_ptr holds message.
-        assert_eq!(
-            wasm_state
-                .read_buffer_from_wasm_memory(dest_ptr, dest_len)
-                .unwrap(),
-            message
-        );
+        // Assert read message is message.
+        assert_eq!(read_message, message);
     }
 
     #[tokio::test]
@@ -1109,17 +1108,7 @@ mod tests {
         let message: AbiMessage = vec![42, 42];
         let mut wasm_state = create_test_wasm_state();
 
-        write_to_runtime_endpoint(&mut wasm_state, channel_handle, message.clone()).await;
-
-        // Guess some memory addresses in linear Wasm memory to write the message to from
-        // `src_buf_ptr`.
-        let src_buf_ptr: AbiPointer = 100;
-        let result = wasm_state.write_buffer_to_wasm_memory(&message, src_buf_ptr);
-        assert!(result.is_ok());
-
-        let result =
-            wasm_state.channel_write(channel_handle as i32, src_buf_ptr, message.len() as u32);
-        assert!(result.is_ok());
+        write_from_wasm_module(&mut wasm_state, channel_handle, message.clone()).await;
 
         // Assert that the message arrived at runtime endpoint.
         let testing_extension = extension_for_channel_handle(&mut wasm_state, channel_handle);
@@ -1167,6 +1156,21 @@ mod tests {
         assert_eq!(ChannelStatus::ChannelEndpointClosed, result.unwrap_err());
     }
 
+    #[tokio::test]
+    async fn test_echo_in_testing_extension() {
+        let channel_handle = ChannelHandle::Testing;
+        let mut wasm_state = create_test_wasm_state();
+        let message: AbiMessage = vec![42, 42];
+
+        write_from_wasm_module(&mut wasm_state, channel_handle, message.clone()).await;
+
+        let testing_extension = extension_for_channel_handle(&mut wasm_state, channel_handle);
+        testing_extension.listen(echo_handler()).await;
+
+        let echoed_message = read_from_wasm_module(&mut wasm_state, channel_handle).await;
+        assert_eq!(message, echoed_message);
+    }
+
     fn create_test_wasm_handler() -> WasmHandler {
         let logger = Logger::for_test();
 
@@ -1202,6 +1206,61 @@ mod tests {
     ) {
         let endpoint = runtime_endpoint_for_channel_handle(wasm_state, channel_handle);
         let result = endpoint.sender.send(message.to_vec().clone()).await;
+        assert!(result.is_ok());
+    }
+
+    // Helper function to read message from the runtime endpoint and return a message from Wasm
+    // memory after calling `channel_read` for a channel, which requires the Wasm module to
+    // provide two guessed memory addresses (100 and 150). Note: assumes a message in the runtime
+    // endpoint.
+    async fn read_from_wasm_module(
+        wasm_state: &mut WasmState,
+        channel_handle: ChannelHandle,
+    ) -> AbiMessage {
+        // Guess some memory addresses in linear Wasm memory.
+        let dest_ptr_ptr: AbiPointer = 100;
+        let dest_len_ptr: AbiPointer = 150;
+
+        let result = wasm_state.channel_read(channel_handle as i32, dest_ptr_ptr, dest_len_ptr);
+        assert!(result.is_ok());
+
+        // Get dest_len from dest_len_ptr.
+        let dest_len: u32 = LittleEndian::read_u32(
+            &wasm_state
+                .get_memory()
+                .get(dest_len_ptr, 4)
+                .expect("Unable to read dest_len."),
+        );
+
+        // Get dest_ptr from dest_ptr_ptr.
+        let dest_ptr: u32 = LittleEndian::read_u32(
+            &wasm_state
+                .get_memory()
+                .get(dest_ptr_ptr, 4)
+                .expect("Unable to read dest_ptr."),
+        );
+
+        wasm_state
+            .read_buffer_from_wasm_memory(dest_ptr, dest_len)
+            .expect("Unable to read buffer")
+    }
+
+    // Helper function to write the given `message` from the Wasm module to runtime endpoint with
+    // given `channel_handle` using `channel_write`. Requires to first write the message at a
+    // randomly guessed memory address (100) in the Wasm memory.
+    async fn write_from_wasm_module(
+        wasm_state: &mut WasmState,
+        channel_handle: ChannelHandle,
+        message: AbiMessage,
+    ) {
+        // Guess some memory addresses in linear Wasm memory to write the message to from
+        // `src_buf_ptr`.
+        let src_buf_ptr: AbiPointer = 100;
+        let result = wasm_state.write_buffer_to_wasm_memory(&message, src_buf_ptr);
+        assert!(result.is_ok());
+
+        let result =
+            wasm_state.channel_write(channel_handle as i32, src_buf_ptr, message.len() as u32);
         assert!(result.is_ok());
     }
 
