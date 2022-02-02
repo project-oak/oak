@@ -60,6 +60,7 @@ public class AttestationClient {
   private static final Logger logger = Logger.getLogger(AttestationClient.class.getName());
   // TODO(#1867): Add remote attestation support.
   private static final String TEST_TEE_MEASUREMENT = "Test TEE measurement";
+  private Duration connectionTimeout;
   // HTTP/gRPC header for Google API keys.
   // https://cloud.google.com/apis/docs/system-parameters
   // https://cloud.google.com/docs/authentication/api-keys
@@ -73,6 +74,23 @@ public class AttestationClient {
     public VerificationException(String msg) {
       super(msg);
     }
+  }
+
+  /**
+   * Creates an unattested AttestationClient instance.
+   *
+   * @param connectionTimeout contains an inactivity threshold for gRPC connections.
+   */
+  public AttestationClient(Duration connectionTimeout) {
+    this.connectionTimeout = connectionTimeout;
+  }
+
+  public Duration getConnectionTimeout() {
+    return connectionTimeout;
+  }
+
+  public void setConnectionTimeout(Duration connectionTimeout) {
+    this.connectionTimeout = connectionTimeout;
   }
 
   /**
@@ -100,10 +118,9 @@ public class AttestationClient {
    * @param channel an instance of a gRPC {@code ManagedChannel}.
    * @param verifier checks that the ServerIdentity contains the expected attestation info as
    * described in {@code ServerIdentityVerifier::verifyAttestationInfo}.
-   * @param connectionTimeout contains an inactivity threshold for gRPC connections.
    */
   public void attest(
-      ManagedChannel channel, Predicate<ConfigurationInfo> verifier, Duration connectionTimeout)
+      ManagedChannel channel, Predicate<ConfigurationInfo> verifier)
       throws GeneralSecurityException, IOException, InterruptedException, VerificationException {
     if (channel == null) {
       throw new NullPointerException("Channel must not be null.");
@@ -218,10 +235,9 @@ public class AttestationClient {
    * This method can only be used after the {@code attest} method has been called successfully.
    *
    * @param request contains a request to be sent via the attested gRPC channel.
-   * @param connectionTimeout contains an inactivity threshold for gRPC connections.
    */
   @SuppressWarnings("ProtoParseWithRegistry")
-  public Response send(Request request, Duration connectionTimeout)
+  public Response send(Request request)
       throws GeneralSecurityException, IOException, InterruptedException {
     if (channel == null || requestObserver == null || encryptor == null) {
       throw new IllegalStateException("Session is not available");

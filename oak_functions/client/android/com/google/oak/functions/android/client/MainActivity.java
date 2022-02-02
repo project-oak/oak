@@ -80,14 +80,12 @@ public class MainActivity extends Activity {
       ManagedChannel channel = builder.build();
 
       // Attest a gRPC channel.
-      AttestationClient client = new AttestationClient();
-      client.attest(
-          channel,
-          (config) -> !config.getMlInference(),
-          AttestationClient.DEFAULT_CONNECTION_TIMEOUT);
+      AttestationClient client =
+          new AttestationClient(AttestationClient.DEFAULT_CONNECTION_TIMEOUT);
+      client.attest(channel, (config) -> !config.getMlInference());
 
       // Send a request.
-      Response response = client.send(request, AttestationClient.DEFAULT_CONNECTION_TIMEOUT);
+      Response response = client.send(request);
       client.finalize();
 
       // Receive a response.
