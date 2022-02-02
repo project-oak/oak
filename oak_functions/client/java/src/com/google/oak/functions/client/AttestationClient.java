@@ -56,6 +56,7 @@ import oak.session.stream.v1.StreamingSessionGrpc.StreamingSessionStub;
  * Client with remote attestation support for sending requests to an Oak Functions application.
  */
 public class AttestationClient {
+  static public final Duration DEFAULT_CONNECTION_TIMEOUT = Duration.ofSeconds(5);
   private static final Logger logger = Logger.getLogger(AttestationClient.class.getName());
   // TODO(#1867): Add remote attestation support.
   private static final String TEST_TEE_MEASUREMENT = "Test TEE measurement";
@@ -63,7 +64,6 @@ public class AttestationClient {
   // https://cloud.google.com/apis/docs/system-parameters
   // https://cloud.google.com/docs/authentication/api-keys
   private static final String API_KEY_HEADER = "x-goog-api-key";
-  private final Duration connectionTimeout;
   private ManagedChannel channel;
   private StreamObserver<StreamingRequest> requestObserver;
   private BlockingQueue<StreamingResponse> messageQueue;
@@ -93,15 +93,6 @@ public class AttestationClient {
     return builder.intercept(interceptors);
   }
 
-  /**
-   * Creates an unattested AttestationClient instance.
-   *
-   * @param connectionTimeout contains an inactivity threshold for gRPC connections.
-   */
-  public AttestationClient(Duration connectionTimeout) {
-    this.connectionTimeout = connectionTimeout;
-  }
-
   // TODO(#2356): Change the return type to `AttestationResult` instead of throwing exceptions.
   /**
    * Creates an attested channel over the gRPC channel.
@@ -109,8 +100,10 @@ public class AttestationClient {
    * @param channel an instance of a gRPC {@code ManagedChannel}.
    * @param verifier checks that the ServerIdentity contains the expected attestation info as
    * described in {@code ServerIdentityVerifier::verifyAttestationInfo}.
+   * @param connectionTimeout contains an inactivity threshold for gRPC connections.
    */
-  public void attest(ManagedChannel channel, Predicate<ConfigurationInfo> verifier)
+  public void attest(
+      ManagedChannel channel, Predicate<ConfigurationInfo> verifier, Duration connectionTimeout)
       throws GeneralSecurityException, IOException, InterruptedException, VerificationException {
     if (channel == null) {
       throw new NullPointerException("Channel must not be null.");
@@ -223,9 +216,12 @@ public class AttestationClient {
    * decrypts the response.
    *
    * This method can only be used after the {@code attest} method has been called successfully.
+   *
+   * @param request contains a request to be sent via the attested gRPC channel.
+   * @param connectionTimeout contains an inactivity threshold for gRPC connections.
    */
   @SuppressWarnings("ProtoParseWithRegistry")
-  public Response send(Request request)
+  public Response send(Request request, Duration connectionTimeout)
       throws GeneralSecurityException, IOException, InterruptedException {
     if (channel == null || requestObserver == null || encryptor == null) {
       throw new IllegalStateException("Session is not available");
