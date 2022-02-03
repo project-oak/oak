@@ -189,15 +189,12 @@ pub trait UwabiExtension {
             .expect("No endpoint set in extension.");
 
         let receiver = &mut endpoint.receiver;
-        let sender = &mut endpoint.sender;
 
         // `channel_read` at runtime endpoint reading messages from Wasm module endpoint
         if let Some(request) = receiver.recv().await {
-            let response = message_handler(request);
-            if let Some(response) = response {
-                // `channel_write` at runtime endpoint sending messages to Wasm module endpoint
-                let _ = sender.send(response).await;
-            };
+            // Eventually we want to send the response through endpoint.sender, but we first want to
+            // successfully handle one or more messages in WasmState.
+            let _response = message_handler(request);
         }
     }
 }
@@ -999,11 +996,6 @@ mod tests {
         })
     }
 
-    // Returns a function which takes an UwabiMessage as an argument and echoes this UwabiMessage.
-    fn echo_handler() -> Box<dyn Fn(UwabiMessage) -> Option<UwabiMessage> + Send> {
-        Box::new(move |message: UwabiMessage| Some(message))
-    }
-
     #[test]
     fn test_start_from_empty_endpoints() {
         fn check_empty(endpoint: &mut Endpoint) {
@@ -1157,21 +1149,6 @@ mod tests {
         let result = wasm_state.channel_write(channel_handle as i32, 0, 0);
         assert!(result.is_err());
         assert_eq!(ChannelStatus::ChannelEndpointClosed, result.unwrap_err());
-    }
-
-    #[tokio::test]
-    async fn test_echo_in_testing_extension() {
-        let channel_handle = ChannelHandle::Testing;
-        let mut wasm_state = create_test_wasm_state();
-        let message: UwabiMessage = vec![42, 42];
-
-        write_from_wasm_module(&mut wasm_state, channel_handle, message.clone()).await;
-
-        let testing_extension = extension_for_channel_handle(&mut wasm_state, channel_handle);
-        testing_extension.handle_message(echo_handler()).await;
-
-        let echoed_message = read_from_wasm_module(&mut wasm_state, channel_handle).await;
-        assert_eq!(message, echoed_message);
     }
 
     fn create_test_wasm_handler() -> WasmHandler {
