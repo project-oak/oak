@@ -907,6 +907,11 @@ impl Endpoint {
             let _response = message_handler(request);
         }
     }
+
+    /// Close the receiver in the endpoint to not receive any more messages.
+    fn close(&mut self) {
+        self.receiver.close()
+    }
 }
 struct ChannelSwitchboard(HashMap<ChannelHandle, Endpoint>);
 
@@ -992,6 +997,11 @@ mod tests {
         })
     }
 
+    // Returns a function which takes an UwabiMessage as an argument and echos this UwabiMessage.
+    fn echo_handler() -> Box<dyn Fn(UwabiMessage) -> Option<UwabiMessage> + Send> {
+        Box::new(move |message: UwabiMessage| Some(message))
+    }
+
     #[test]
     fn test_start_from_empty_endpoints() {
         fn check_empty(endpoint: &mut Endpoint) {
@@ -1022,6 +1032,37 @@ mod tests {
         check_crossed_write_read(&mut endpoint_1, &mut endpoint_2).await;
         // Check the other direction from endpoint_2 to endpoint_1.
         check_crossed_write_read(&mut endpoint_2, &mut endpoint_1).await;
+    }
+
+    #[tokio::test]
+    async fn test_send_to_closed_receiver() {
+        let (mut endpoint_1, endpoint_2) = channel_create();
+        endpoint_1.close();
+        let result = endpoint_2.sender.send(vec![43]).await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_dropped_endpoint() {
+        let (mut endpoint_1, mut endpoint_2) = channel_create();
+
+        // While endpoint_1 is in scope, it receives a message.
+        let result = endpoint_2.sender.send(vec![43]).await;
+        assert!(result.is_ok());
+
+        endpoint_1.handle_message(echo_handler()).await;
+
+        // Then we drop endpoint_1.
+        std::mem::drop(endpoint_1);
+
+        // And endpoint_2 cannot send any message any more to endpoint_1.
+        let result = endpoint_2.sender.send(vec![43]).await;
+        assert!(result.is_err());
+
+        // And endpoint_2 cannot receive any more messages, because its only sender in endpoint_1
+        // closed.
+        let message = endpoint_2.receiver.recv().await;
+        assert!(message.is_none());
     }
 
     #[tokio::test]
