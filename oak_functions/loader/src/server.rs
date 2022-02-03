@@ -16,7 +16,6 @@
 use crate::logger::Logger;
 
 use anyhow::Context;
-use async_trait::async_trait;
 use byteorder::{ByteOrder, LittleEndian};
 use futures::future::FutureExt;
 use log::Level;
@@ -162,7 +161,6 @@ pub type BoxedUwabiExtension = Box<dyn UwabiExtension + Send + Sync>;
 pub type BoxedExtensionFactory = Box<dyn ExtensionFactory + Send + Sync>;
 
 /// Trait for implementing an extension which relies on UWABI.
-#[async_trait]
 pub trait UwabiExtension {
     /// Get the channel handle to address this extension.
     fn get_channel_handle(&self) -> ChannelHandle;
@@ -177,26 +175,6 @@ pub trait UwabiExtension {
     // to change the `BoxedExtensionFactory` trait. This helps to keep the changes to the
     // (existing) Native extensions minimal.
     fn set_endpoint(&mut self, endpoint: Endpoint);
-
-    /// Listen to the endpoint of the extension and handle the UwabiMessage with the given
-    /// message_handler.
-    async fn handle_message(
-        &mut self,
-        message_handler: Box<dyn Fn(UwabiMessage) -> Option<UwabiMessage> + Send>,
-    ) {
-        let endpoint = self
-            .get_endpoint_mut()
-            .expect("No endpoint set in extension.");
-
-        let receiver = &mut endpoint.receiver;
-
-        // `channel_read` at runtime endpoint reading messages from Wasm module endpoint
-        if let Some(request) = receiver.recv().await {
-            // Eventually we want to send the response through endpoint.sender, but we first want to
-            // successfully handle one or more messages in WasmState.
-            let _response = message_handler(request);
-        }
-    }
 }
 
 /// `WasmState` holds runtime values for a particular execution instance of Wasm, handling a
@@ -912,6 +890,24 @@ fn channel_create() -> (Endpoint, Endpoint) {
     };
     (endpoint0, endpoint1)
 }
+
+impl Endpoint {
+    /// Listen to the endpoint of the extension and handle the UwabiMessage with the given
+    /// message_handler.
+    async fn handle_message(
+        &mut self,
+        message_handler: Box<dyn Fn(UwabiMessage) -> Option<UwabiMessage> + Send>,
+    ) {
+        let receiver = &mut self.receiver;
+
+        // `channel_read` at runtime endpoint reading messages from Wasm module endpoint
+        if let Some(request) = receiver.recv().await {
+            // Eventually we want to send the response through endpoint.sender, but we first want to
+            // successfully handle one or more messages in WasmState.
+            let _response = message_handler(request);
+        }
+    }
+}
 struct ChannelSwitchboard(HashMap<ChannelHandle, Endpoint>);
 
 impl ChannelSwitchboard {
@@ -1108,7 +1104,11 @@ mod tests {
         // Assert that the message arrived at runtime endpoint.
         let testing_extension = extension_for_channel_handle(&mut wasm_state, channel_handle);
 
-        testing_extension
+        let endpoint = testing_extension
+            .get_endpoint_mut()
+            .expect("No endpoint set in extension.");
+
+        endpoint
             .handle_message(assert_eq_handler(message.clone()))
             .await;
     }
