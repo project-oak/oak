@@ -178,8 +178,9 @@ pub trait UwabiExtension {
     // (existing) Native extensions minimal.
     fn set_endpoint(&mut self, endpoint: Endpoint);
 
-    /// Listen to the channel and handle the UwabiMessage with the given message_handler.
-    async fn listen(
+    /// Listen to the endpoint of the extension and handle the UwabiMessage with the given
+    /// message_handler.
+    async fn handle_message(
         &mut self,
         message_handler: Box<dyn Fn(UwabiMessage) -> Option<UwabiMessage> + Send>,
     ) {
@@ -190,10 +191,12 @@ pub trait UwabiExtension {
         let receiver = &mut endpoint.receiver;
         let sender = &mut endpoint.sender;
 
+        // `channel_read` at runtime endpoint reading messages from Wasm module endpoint
         if let Some(request) = receiver.recv().await {
-            let response = message_handler(request.clone());
+            let response = message_handler(request);
             if let Some(response) = response {
-                let _ = sender.send(response.clone()).await;
+                // `channel_write` at runtime endpoint sending messages to Wasm module endpoint
+                let _ = sender.send(response).await;
             };
         }
     }
@@ -1114,7 +1117,7 @@ mod tests {
         let testing_extension = extension_for_channel_handle(&mut wasm_state, channel_handle);
 
         testing_extension
-            .listen(assert_eq_handler(message.clone()))
+            .handle_message(assert_eq_handler(message.clone()))
             .await;
     }
 
@@ -1165,7 +1168,7 @@ mod tests {
         write_from_wasm_module(&mut wasm_state, channel_handle, message.clone()).await;
 
         let testing_extension = extension_for_channel_handle(&mut wasm_state, channel_handle);
-        testing_extension.listen(echo_handler()).await;
+        testing_extension.handle_message(echo_handler()).await;
 
         let echoed_message = read_from_wasm_module(&mut wasm_state, channel_handle).await;
         assert_eq!(message, echoed_message);
