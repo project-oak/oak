@@ -4,11 +4,10 @@ readonly SCRIPTS_DIR="$(dirname "$0")"
 # shellcheck source=scripts/common
 source "$SCRIPTS_DIR/common"
 
-readonly BUILD_SCRIPT=$1
+readonly BUILD_COMMAND=$1
 readonly OUTPUT_PATH=$2
 
-readonly BUILD_COMMAND="./scripts/docker_run ${BUILD_SCRIPT}"
-eval "${BUILD_COMMAND}"
+eval "./scripts/docker_run ${BUILD_COMMAND}"
 readonly BINARY_SHA_256_HASH=$(sha256sum "${OUTPUT_PATH}" | cut -d " " -f 1)
 
 readonly COMMIT_HASH=$(git rev-parse --verify HEAD)
