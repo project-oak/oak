@@ -10,7 +10,7 @@ readonly OUTPUT_PATH=$1
 # build arguments.
 shift
 
-eval ./scripts/docker_run "${@}"
+./scripts/docker_run "${@}"
 readonly BINARY_SHA_256_HASH=$(sha256sum "${OUTPUT_PATH}" | cut -d " " -f 1)
 
 readonly COMMIT_HASH=$(git rev-parse --verify HEAD)
