@@ -22,7 +22,7 @@ mkdir -p "./provenance/${BINARY_SHA_256_HASH}"
 # an unwrapped string.
 cat << EOF >> "./provenance/${BINARY_SHA_256_HASH}/${COMMIT_HASH}.toml"
 repo = "https://github.com/project-oak/oak"
-commit_hash = "$(COMMIT_HASH)"
+commit_hash = "${COMMIT_HASH}"
 builder_image = "${DOCKER_IMAGE_REPO_DIGEST}"
 command = ["${BUILD_COMMAND}"]
 output_path = "${OUTPUT_PATH}"
