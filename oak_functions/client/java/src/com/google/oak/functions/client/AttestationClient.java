@@ -60,7 +60,7 @@ public class AttestationClient {
   private static final Logger logger = Logger.getLogger(AttestationClient.class.getName());
   // TODO(#1867): Add remote attestation support.
   private static final String TEST_TEE_MEASUREMENT = "Test TEE measurement";
-  private Duration connectionTimeout;
+  private final Duration connectionTimeout;
   // HTTP/gRPC header for Google API keys.
   // https://cloud.google.com/apis/docs/system-parameters
   // https://cloud.google.com/docs/authentication/api-keys
@@ -70,10 +70,16 @@ public class AttestationClient {
   private BlockingQueue<StreamingResponse> messageQueue;
   private AeadEncryptor encryptor;
 
+  /** Remote Attestation identity verification failure. */
   public static class VerificationException extends Exception {
     public VerificationException(String msg) {
       super(msg);
     }
+  }
+
+  /** Creates an unattested AttestationClient instance with the default connection timeout. */
+  public AttestationClient() {
+    this(DEFAULT_CONNECTION_TIMEOUT);
   }
 
   /**
@@ -82,14 +88,6 @@ public class AttestationClient {
    * @param connectionTimeout contains an inactivity threshold for gRPC connections.
    */
   public AttestationClient(Duration connectionTimeout) {
-    this.connectionTimeout = connectionTimeout;
-  }
-
-  public Duration getConnectionTimeout() {
-    return connectionTimeout;
-  }
-
-  public void setConnectionTimeout(Duration connectionTimeout) {
     this.connectionTimeout = connectionTimeout;
   }
 
