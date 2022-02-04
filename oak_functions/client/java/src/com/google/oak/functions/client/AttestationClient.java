@@ -17,6 +17,7 @@
 package com.google.oak.functions.client;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.util.concurrent.TimeUnit.SECONDS;
 
 import com.google.oak.remote_attestation.AeadEncryptor;
 import com.google.oak.remote_attestation.ClientHandshaker;
@@ -40,7 +41,6 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Predicate;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -56,23 +56,39 @@ import oak.session.stream.v1.StreamingSessionGrpc.StreamingSessionStub;
  * Client with remote attestation support for sending requests to an Oak Functions application.
  */
 public class AttestationClient {
+  static public final Duration DEFAULT_CONNECTION_TIMEOUT = Duration.ofSeconds(5);
   private static final Logger logger = Logger.getLogger(AttestationClient.class.getName());
   // TODO(#1867): Add remote attestation support.
   private static final String TEST_TEE_MEASUREMENT = "Test TEE measurement";
+  private final Duration connectionTimeout;
   // HTTP/gRPC header for Google API keys.
   // https://cloud.google.com/apis/docs/system-parameters
   // https://cloud.google.com/docs/authentication/api-keys
   private static final String API_KEY_HEADER = "x-goog-api-key";
-  private final Duration connectionTimeout;
   private ManagedChannel channel;
   private StreamObserver<StreamingRequest> requestObserver;
   private BlockingQueue<StreamingResponse> messageQueue;
   private AeadEncryptor encryptor;
 
+  /** Remote Attestation identity verification failure. */
   public static class VerificationException extends Exception {
     public VerificationException(String msg) {
       super(msg);
     }
+  }
+
+  /** Creates an unattested AttestationClient instance with the default connection timeout. */
+  public AttestationClient() {
+    this(DEFAULT_CONNECTION_TIMEOUT);
+  }
+
+  /**
+   * Creates an unattested AttestationClient instance.
+   *
+   * @param connectionTimeout contains an inactivity threshold for gRPC connections.
+   */
+  public AttestationClient(Duration connectionTimeout) {
+    this.connectionTimeout = connectionTimeout;
   }
 
   /**
@@ -93,15 +109,6 @@ public class AttestationClient {
     return builder.intercept(interceptors);
   }
 
-  /**
-   * Creates an unattested AttestationClient instance.
-   *
-   * @param connectionTimeout contains an inactivity threshold for gRPC connections.
-   */
-  public AttestationClient(Duration connectionTimeout) {
-    this.connectionTimeout = connectionTimeout;
-  }
-
   // TODO(#2356): Change the return type to `AttestationResult` instead of throwing exceptions.
   /**
    * Creates an attested channel over the gRPC channel.
@@ -110,7 +117,8 @@ public class AttestationClient {
    * @param verifier checks that the ServerIdentity contains the expected attestation info as
    * described in {@code ServerIdentityVerifier::verifyAttestationInfo}.
    */
-  public void attest(ManagedChannel channel, Predicate<ConfigurationInfo> verifier)
+  public void attest(
+      ManagedChannel channel, Predicate<ConfigurationInfo> verifier)
       throws GeneralSecurityException, IOException, InterruptedException, VerificationException {
     if (channel == null) {
       throw new NullPointerException("Channel must not be null.");
@@ -155,7 +163,7 @@ public class AttestationClient {
 
     // Receive server attestation identity containing server's ephemeral public key.
     StreamingResponse serverIdentityResponse =
-        messageQueue.poll(connectionTimeout.getSeconds(), TimeUnit.SECONDS);
+        messageQueue.poll(connectionTimeout.getSeconds(), SECONDS);
     byte[] serverIdentity = serverIdentityResponse.getBody().toByteArray();
 
     // Verify ServerIdentity, including its configuration and proof of its inclusion in Rekor.
@@ -223,6 +231,8 @@ public class AttestationClient {
    * decrypts the response.
    *
    * This method can only be used after the {@code attest} method has been called successfully.
+   *
+   * @param request contains a request to be sent via the attested gRPC channel.
    */
   @SuppressWarnings("ProtoParseWithRegistry")
   public Response send(Request request)
@@ -237,7 +247,7 @@ public class AttestationClient {
 
     requestObserver.onNext(streamingRequest);
     StreamingResponse streamingResponse =
-        messageQueue.poll(connectionTimeout.getSeconds(), TimeUnit.SECONDS);
+        messageQueue.poll(connectionTimeout.getSeconds(), SECONDS);
 
     byte[] responsePayload = streamingResponse.getBody().toByteArray();
     byte[] decryptedResponse = encryptor.decrypt(responsePayload);
