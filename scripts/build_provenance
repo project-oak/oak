@@ -4,13 +4,24 @@ readonly SCRIPTS_DIR="$(dirname "$0")"
 # shellcheck source=scripts/common
 source "$SCRIPTS_DIR/common"
 
-readonly BUILD_COMMAND=$1
-readonly OUTPUT_PATH=$2
+readonly OUTPUT_PATH=$1
 
-eval "./scripts/docker_run ${BUILD_COMMAND}"
+# Shift arguments to omit the output path. The remaining arguments are the
+# build arguments.
+shift
+
+./scripts/docker_run "${@}"
 readonly BINARY_SHA_256_HASH=$(sha256sum "${OUTPUT_PATH}" | cut -d " " -f 1)
 
 readonly COMMIT_HASH=$(git rev-parse --verify HEAD)
+
+# Format the build arguments as a TOML array.
+FORMATTED_COMMAND=""
+for arg in "${@}"; do
+  FORMATTED_COMMAND+="\"${arg}\", "
+done
+FORMATTED_COMMAND=${FORMATTED_COMMAND::-2}
+FORMATTED_COMMAND="[ ${FORMATTED_COMMAND} ]"
 
 mkdir -p "./provenance"
 mkdir -p "./provenance/${BINARY_SHA_256_HASH}"
@@ -24,7 +35,7 @@ cat << EOF >> "./provenance/${BINARY_SHA_256_HASH}/${COMMIT_HASH}.toml"
 repo = "https://github.com/project-oak/oak"
 commit_hash = "${COMMIT_HASH}"
 builder_image = "${DOCKER_IMAGE_REPO_DIGEST}"
-command = ["${BUILD_COMMAND}"]
+command = ${FORMATTED_COMMAND}
 output_path = "${OUTPUT_PATH}"
 expected_binary_sha256_hash = "${BINARY_SHA_256_HASH}"
 EOF

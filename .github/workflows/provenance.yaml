@@ -49,14 +49,14 @@ jobs:
       - name: Build Server Provenance
         run: |
           ./scripts/build_provenance \
-          ./scripts/runner\ build-server \
-          ./oak_loader/bin/oak_loader
+          ./oak_loader/bin/oak_loader \
+          ./scripts/runner build-server
 
       - name: Build Functions Provenance
         run: |
           ./scripts/build_provenance \
-          ./scripts/runner\ build-functions-server \
-          ./oak_functions/loader/bin/oak_functions_loader
+          ./oak_functions/loader/bin/oak_functions_loader \
+          ./scripts/runner build-functions-server
 
       - name: Move new provenance files to the provenance branch
         run: cp -r ./provenance/. ./provenance-branch/
