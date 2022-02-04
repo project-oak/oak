@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+
+readonly SCRIPTS_DIR="$(dirname "$0")"
+# shellcheck source=scripts/common
+source "$SCRIPTS_DIR/common"
+
+readonly BUILD_COMMAND=$1
+readonly OUTPUT_PATH=$2
+
+eval "./scripts/docker_run ${BUILD_COMMAND}"
+readonly BINARY_SHA_256_HASH=$(sha256sum "${OUTPUT_PATH}" | cut -d " " -f 1)
+
+readonly COMMIT_HASH=$(git rev-parse --verify HEAD)
+
+mkdir -p "./provenance"
+mkdir -p "./provenance/${BINARY_SHA_256_HASH}"
+
+# Note that the command currently is a single string wrapped in an array. The
+# reason is that our transparent-release (which parses this file) expects an
+# array as the command value at its current version. There isn't much value
+# in using an array though, and in upcoming versions it will move towards
+# an unwrapped string.
+cat << EOF >> "./provenance/${BINARY_SHA_256_HASH}/${COMMIT_HASH}.toml"
+repo = "https://github.com/project-oak/oak"
+commit_hash = "${COMMIT_HASH}"
+builder_image = "${DOCKER_IMAGE_REPO_DIGEST}"
+command = ["${BUILD_COMMAND}"]
+output_path = "${OUTPUT_PATH}"
+expected_binary_sha256_hash = "${BINARY_SHA_256_HASH}"
+EOF
+
