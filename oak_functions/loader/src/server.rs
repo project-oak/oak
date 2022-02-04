@@ -175,6 +175,9 @@ pub trait UwabiExtension {
     // to change the `BoxedExtensionFactory` trait. This helps to keep the changes to the
     // (existing) Native extensions minimal.
     fn set_endpoint(&mut self, endpoint: Endpoint);
+
+    /// Get the message handler for the UwabiExtension.
+    fn message_handler(&self) -> Box<dyn Fn(UwabiMessage) -> Option<UwabiMessage> + Send>;
 }
 
 /// `WasmState` holds runtime values for a particular execution instance of Wasm, handling a
@@ -984,17 +987,19 @@ mod tests {
                 self.endpoint = Some(endpoint);
             }
         }
-    }
 
-    // Returns a function which takes an UwabiMessage as an argument asserts that this UwabiMessage
-    // is equal to the given `expected` UwabiMessage, i.e., partially applies `assert_eq!`.
-    fn assert_eq_handler(
-        expected: UwabiMessage,
-    ) -> Box<dyn Fn(UwabiMessage) -> Option<UwabiMessage> + Send> {
-        Box::new(move |actual: UwabiMessage| {
-            assert_eq!(actual, expected);
-            None
-        })
+        // TODO(mschett) Currently we can only use the testing extension to assert that a hardcoded
+        // message has been sent. This works, because the `message_handler` is only used in
+        // `test_hosted_channel_write_ok()`, but we want to generalize this.
+        // Once we have writing to a channel, we can echo the message back to
+        // `test_hosted_channel_write_ok()`.
+        fn message_handler(&self) -> Box<dyn Fn(UwabiMessage) -> Option<UwabiMessage> + Send> {
+            Box::new(move |message: UwabiMessage| {
+                let hardcoded_message = vec![42, 42, 43, 43, 32];
+                assert_eq!(hardcoded_message, message);
+                None
+            })
+        }
     }
 
     // Returns a function which takes an UwabiMessage as an argument and echos this UwabiMessage.
@@ -1127,7 +1132,7 @@ mod tests {
     #[tokio::test]
     async fn test_hosted_channel_write_ok() {
         let channel_handle = ChannelHandle::Testing;
-        let message: UwabiMessage = vec![42, 42];
+        let message: UwabiMessage = vec![42, 42, 43, 43, 32];
         let mut wasm_state = create_test_wasm_state();
 
         write_from_wasm_module(&mut wasm_state, channel_handle, message.clone()).await;
@@ -1135,13 +1140,12 @@ mod tests {
         // Assert that the message arrived at runtime endpoint.
         let testing_extension = extension_for_channel_handle(&mut wasm_state, channel_handle);
 
+        let handler = testing_extension.message_handler();
         let endpoint = testing_extension
             .get_endpoint_mut()
             .expect("No endpoint set in extension.");
 
-        endpoint
-            .handle_message(assert_eq_handler(message.clone()))
-            .await;
+        endpoint.handle_message(handler).await;
     }
 
     #[tokio::test]
