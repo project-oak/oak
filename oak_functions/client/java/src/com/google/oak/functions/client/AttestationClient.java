@@ -17,6 +17,7 @@
 package com.google.oak.functions.client;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.util.concurrent.TimeUnit.SECONDS;
 
 import com.google.oak.remote_attestation.AeadEncryptor;
 import com.google.oak.remote_attestation.ClientHandshaker;
@@ -40,7 +41,6 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Predicate;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -163,7 +163,7 @@ public class AttestationClient {
 
     // Receive server attestation identity containing server's ephemeral public key.
     StreamingResponse serverIdentityResponse =
-        messageQueue.poll(connectionTimeout.getSeconds(), TimeUnit.SECONDS);
+        messageQueue.poll(connectionTimeout.getSeconds(), SECONDS);
     byte[] serverIdentity = serverIdentityResponse.getBody().toByteArray();
 
     // Verify ServerIdentity, including its configuration and proof of its inclusion in Rekor.
@@ -247,7 +247,7 @@ public class AttestationClient {
 
     requestObserver.onNext(streamingRequest);
     StreamingResponse streamingResponse =
-        messageQueue.poll(connectionTimeout.getSeconds(), TimeUnit.SECONDS);
+        messageQueue.poll(connectionTimeout.getSeconds(), SECONDS);
 
     byte[] responsePayload = streamingResponse.getBody().toByteArray();
     byte[] decryptedResponse = encryptor.decrypt(responsePayload);
