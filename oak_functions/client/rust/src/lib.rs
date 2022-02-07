@@ -26,6 +26,9 @@ use grpc_attestation::client::AttestationClient;
 use oak_functions_abi::proto::{Request, Response};
 use prost::Message;
 
+#[cfg(test)]
+mod tests;
+
 // TODO(#1867): Add remote attestation support.
 const TEE_MEASUREMENT: &[u8] = br"Test TEE measurement";
 

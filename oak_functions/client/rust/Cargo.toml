@@ -25,5 +25,11 @@ tokio = { version = "*", features = [
 ] }
 tonic = { version = "*", features = ["tls", "tls-roots"] }
 
+[dev-dependencies]
+serde_json = "*" 
+assert_matches = "*"
+pem = "*"
+oak_sign = { path = "../../../oak_sign" }
+
 [build-dependencies]
 oak_utils = { path = "../../../oak_utils" }

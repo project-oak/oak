@@ -1,0 +1,18 @@
+{
+  "_type": "https://in-toto.io/Statement/v0.1",
+  "subject": [
+    {
+      "name": "oak_functions_loader-0f2189703c57845e09d8ab89164a4041c0af0a62",
+      "digest": {
+        "sha256": "15dc16c42a4ac9ed77f337a4a3065a63e444c29c18c8cf69d6a6b4ae678dca5c"
+      }
+    }
+  ],
+  "predicateType": "https://github.com/project-oak/transparent-release/schema/amber-endorsement/v0.1/predicate.json",
+  "predicate": {
+    "validityPeriod": {
+      "releaseTime": "2022-02-01T10:20:50.32Z",
+      "expiryTime": "2022-03-01T10:20:50.32Z"
+    }
+  }
+}
