@@ -904,9 +904,9 @@ impl Endpoint {
         let receiver = &mut self.receiver;
 
         // `channel_read` at runtime endpoint reading messages from Wasm module endpoint
-        if let Some(request) = receiver.recv().await {
-            // Eventually we want to send the response through endpoint.sender, but we first want to
-            // successfully handle one or more messages in WasmState.
+        while let Some(request) = receiver.recv().await {
+            // TODO(mschett): Eventually we want to send the response through endpoint.sender, but
+            // we first want to successfully receive one or more messages in WasmState.
             let _response = message_handler(request);
         }
     }
@@ -940,6 +940,7 @@ impl ChannelSwitchboard {
 
 #[cfg(test)]
 mod tests {
+
     use super::{super::grpc::create_wasm_handler, *};
 
     pub struct TestingFactory {
@@ -1122,12 +1123,22 @@ mod tests {
 
         // Write message to runtime endpoint for `channel_read` to read from.
         let mut extension = extension_for_channel_handle(&mut wasm_state, channel_handle);
-        write_to_extension_endpoint(&mut extension, channel_handle, message.clone()).await;
+        write_to_extension_endpoint(&mut extension, message.clone()).await;
 
         let read_message = read_from_wasm_module(&mut wasm_state, channel_handle).await;
 
         // Assert read message is message.
         assert_eq!(read_message, message);
+    }
+
+    // TODO(mschett): Move to suitable place, e.g., UwabiExtension trait.
+    // TODO(mschett): Check whether async is actually necessary.
+    fn start_extension(mut uwabi_extension: BoxedUwabiExtension) -> tokio::task::JoinHandle<()> {
+        tokio::spawn(async move {
+            let handler = uwabi_extension.message_handler();
+            let endpoint = uwabi_extension.get_endpoint_mut().unwrap();
+            endpoint.handle_message(handler).await
+        })
     }
 
     #[tokio::test]
@@ -1139,14 +1150,14 @@ mod tests {
         write_from_wasm_module(&mut wasm_state, channel_handle, message.clone()).await;
 
         // Assert that the message arrived at runtime endpoint.
-        let mut testing_extension = extension_for_channel_handle(&mut wasm_state, channel_handle);
+        let uwabi_extension = extension_for_channel_handle(&mut wasm_state, channel_handle);
+        let join_handler = start_extension(uwabi_extension);
 
-        let handler = testing_extension.message_handler();
-        let endpoint = testing_extension
-            .get_endpoint_mut()
-            .expect("No endpoint set in extension.");
+        // Make sure the endpoint is dropped so that handle_message escapes the loop
+        // TODO(mschett) add functionality to drop channel_switchboard in WasmState.
+        wasm_state.channel_switchboard.0.remove(&channel_handle);
 
-        endpoint.handle_message(handler).await;
+        join_handler.await;
     }
 
     #[tokio::test]
@@ -1156,7 +1167,7 @@ mod tests {
         let mut wasm_state = create_test_wasm_state();
 
         let mut extension = extension_for_channel_handle(&mut wasm_state, channel_handle);
-        write_to_extension_endpoint(&mut extension, channel_handle, message.clone()).await;
+        write_to_extension_endpoint(&mut extension, message.clone()).await;
 
         // Guess some memory addresses in linear Wasm memory to write the message to from
         // `src_buf_ptr`.
@@ -1218,7 +1229,6 @@ mod tests {
     // runtime.
     async fn write_to_extension_endpoint(
         extension: &mut BoxedUwabiExtension,
-        channel_handle: ChannelHandle,
         message: UwabiMessage,
     ) {
         let endpoint = extension.get_endpoint_mut().unwrap();
