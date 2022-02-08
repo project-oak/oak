@@ -43,13 +43,13 @@ const CHANNEL_READ: usize = 4;
 const CHANNEL_WRITE: usize = 5;
 const EXTENSION_INDEX_OFFSET: usize = 10;
 
-// Type alias for a message sent over a channel through the ABI.
-pub type AbiMessage = Vec<u8>;
+// Type alias for a message sent over a channel through UWABI.
+pub type UwabiMessage = Vec<u8>;
 
-// Bound on the amount of [`AbiMessage`]s an [`Endpoint`] can hold on the sender and the
+// Bound on the amount of [`UwabiMessage`]s an [`Endpoint`] can hold on the sender and the
 // receiver individually. We fixed 100 arbitrarily, and it is the same for every Endpoint. We expect
-// AbiMessages to be processed fast and do not expect to exceed the bound.
-const ABI_CHANNEL_BOUND: usize = 100;
+// UwabiMessages to be processed fast and do not expect to exceed the bound.
+const UWABI_CHANNEL_BOUND: usize = 100;
 
 // Type aliases for positions and offsets in Wasm linear memory. Any future 64-bit version
 // of Wasm would use different types.
@@ -365,7 +365,7 @@ impl WasmState {
         src_buf_len: AbiPointerOffset,
     ) -> Result<(), ChannelStatus> {
         // Read message from Wasm memory.
-        let message: AbiMessage = self.read_buffer_from_wasm_memory(src_buf_ptr, src_buf_len)?;
+        let message: UwabiMessage = self.read_buffer_from_wasm_memory(src_buf_ptr, src_buf_len)?;
 
         // Write message to hosted endpoint.
         let endpoint = self.get_endpoint_from_channel_handle(channel_handle)?;
@@ -863,11 +863,11 @@ pub fn format_bytes(v: &[u8]) -> String {
 // The Endpoint of a bidirectional channel.
 #[derive(Debug)]
 pub struct Endpoint {
-    sender: Sender<AbiMessage>,
-    receiver: Receiver<AbiMessage>,
+    sender: Sender<UwabiMessage>,
+    receiver: Receiver<UwabiMessage>,
 }
 
-/// Create a channel with two symmetrical endpoints. The [`AbiMessage`] sent from one [`Endpoint`]
+/// Create a channel with two symmetrical endpoints. The [`UwabiMessage`] sent from one [`Endpoint`]
 /// are received at the other [`Endpoint`] and vice versa by connecting two unidirectional
 /// [tokio::mpsc channels](https://docs.rs/tokio/0.1.16/tokio/sync/mpsc/index.html).
 ///
@@ -878,8 +878,8 @@ pub struct Endpoint {
 /// receiver ____/\____ receiver
 /// ```
 fn channel_create() -> (Endpoint, Endpoint) {
-    let (tx0, rx0) = channel::<AbiMessage>(ABI_CHANNEL_BOUND);
-    let (tx1, rx1) = channel::<AbiMessage>(ABI_CHANNEL_BOUND);
+    let (tx0, rx0) = channel::<UwabiMessage>(UWABI_CHANNEL_BOUND);
+    let (tx1, rx1) = channel::<UwabiMessage>(UWABI_CHANNEL_BOUND);
     let endpoint0 = Endpoint {
         sender: tx0,
         receiver: rx1,
@@ -977,7 +977,7 @@ mod tests {
     #[tokio::test]
     async fn test_crossed_write_read() {
         async fn check_crossed_write_read(endpoint1: &mut Endpoint, endpoint2: &mut Endpoint) {
-            let message: AbiMessage = vec![42, 21, 0];
+            let message: UwabiMessage = vec![42, 21, 0];
             let sender = &endpoint1.sender;
             let send_result = sender.send(message.clone()).await;
             assert!(send_result.is_ok());
@@ -1087,7 +1087,7 @@ mod tests {
     #[tokio::test]
     async fn test_hosted_channel_write_ok() {
         let channel_handle = ChannelHandle::Testing;
-        let message: AbiMessage = vec![42, 42];
+        let message: UwabiMessage = vec![42, 42];
         let mut wasm_state = create_test_wasm_state();
 
         write_to_runtime_endpoint(&mut wasm_state, channel_handle, message.clone()).await;
@@ -1110,7 +1110,7 @@ mod tests {
     #[tokio::test]
     async fn test_hosted_channel_write_full() {
         let channel_handle = ChannelHandle::Testing;
-        let message: AbiMessage = vec![42, 42];
+        let message: UwabiMessage = vec![42, 42];
         let mut wasm_state = create_test_wasm_state();
 
         write_to_runtime_endpoint(&mut wasm_state, channel_handle, message.clone()).await;
@@ -1122,7 +1122,7 @@ mod tests {
         assert!(result.is_ok());
 
         // write the message ABI_CHANNEL_BOUND times
-        for _ in 0..ABI_CHANNEL_BOUND {
+        for _ in 0..UWABI_CHANNEL_BOUND {
             let result =
                 wasm_state.channel_write(channel_handle as i32, src_buf_ptr, message.len() as u32);
             assert!(result.is_ok());
@@ -1186,7 +1186,7 @@ mod tests {
     async fn write_to_runtime_endpoint(
         wasm_state: &mut WasmState,
         channel_handle: ChannelHandle,
-        message: AbiMessage,
+        message: UwabiMessage,
     ) {
         let endpoint = runtime_endpoint_for_channel_handle(wasm_state, channel_handle);
         let result = endpoint.sender.send(message.to_vec().clone()).await;
