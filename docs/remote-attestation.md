@@ -2,21 +2,21 @@
 
 A crucial advantage of a Trusted Execution Environment (TEE) is the ability to
 perform **Remote Attestation**. It allows software to remotely check the TEE
-platform authenticity and also provides them with the information about the code
-running inside the TEE. And if the code of the application is **reproducibly
-buildable**, software can check that the TEE platform is running the application
-that is expected to run.
+platform authenticity and also provides the remote software with the information
+about the code running inside the TEE. And if the code of the application is
+**reproducibly buildable**, the software can check that the TEE platform is
+running the application that is expected to run.
 
 One of the main components used in the remote attestation process is an
 **Attestation report**, which is a data structure signed by the TEE platform and
 containing information identifying the code that is running inside the TEE. This
-report can then be checked and signed by the **TEE Provider** (e.g. AMD or
-Intel), which results in evidence that the code is running on a genuine TEE
-platform.
+report can be checked to confirm that it is signed by the **TEE Provider** (e.g.
+AMD or Intel), which results in evidence that the code is running on a genuine
+TEE platform.
 
 ## Overview
 
-Remote Attestation protocol is implemented as a simplification of the
+The Remote Attestation protocol is implemented as a simplification of the
 [Enclave Key Exchange Protocol (EKEP)](https://asylo.dev/docs/concepts/ekep.html)
 handshake protocol.
 
