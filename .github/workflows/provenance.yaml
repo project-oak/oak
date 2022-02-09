@@ -49,12 +49,14 @@ jobs:
       - name: Build Server Provenance
         run: |
           ./scripts/build_provenance \
+          "oak_loader" \
           ./oak_loader/bin/oak_loader \
           ./scripts/runner build-server
 
       - name: Build Functions Provenance
         run: |
           ./scripts/build_provenance \
+          "oak_functions" \
           ./oak_functions/loader/bin/oak_functions_loader \
           ./scripts/runner build-functions-server
 
