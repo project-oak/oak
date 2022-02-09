@@ -153,15 +153,13 @@ pub trait ExtensionFactory {
 /// `Uwabi` extension called by listening to a channel.
 pub enum BoxedExtension {
     Native(Box<dyn OakApiNativeExtension + Send + Sync>),
-    Uwabi(BoxedUwabiExtension),
+    Uwabi(Box<dyn UwabiExtension>),
 }
-
-pub type BoxedUwabiExtension = Box<dyn UwabiExtension + Send + Sync>;
 
 pub type BoxedExtensionFactory = Box<dyn ExtensionFactory + Send + Sync>;
 
 /// Trait for implementing an extension which relies on UWABI.
-pub trait UwabiExtension {
+pub trait UwabiExtension: Sync + Send {
     /// Get the channel handle to address this extension.
     fn get_channel_handle(&self) -> ChannelHandle;
 
@@ -195,7 +193,7 @@ pub struct WasmState {
     /// A mapping from channel handles to the hosted endpoints of channels.
     channel_switchboard: ChannelSwitchboard,
     /// A list of UWABI extensions.
-    uwabi_extensions: Vec<BoxedUwabiExtension>,
+    uwabi_extensions: Vec<Box<dyn UwabiExtension>>,
 }
 
 impl WasmState {
@@ -523,7 +521,7 @@ impl WasmState {
         extensions_indices: HashMap<usize, BoxedExtension>,
         extensions_metadata: HashMap<String, (usize, wasmi::Signature)>,
         channel_switchboard: ChannelSwitchboard,
-        uwabi_extensions: Vec<BoxedUwabiExtension>,
+        uwabi_extensions: Vec<Box<dyn UwabiExtension>>,
     ) -> anyhow::Result<WasmState> {
         let mut abi = WasmState {
             request_bytes,
@@ -709,7 +707,7 @@ impl WasmHandler {
     fn init(&self, request_bytes: Vec<u8>) -> anyhow::Result<WasmState> {
         let mut extensions_indices = HashMap::new();
         let mut extensions_metadata = HashMap::new();
-        let mut uwabi_extensions: Vec<BoxedUwabiExtension> = vec![];
+        let mut uwabi_extensions: Vec<Box<dyn UwabiExtension>> = vec![];
 
         let mut channel_switchboard = ChannelSwitchboard::new();
 
