@@ -1,17 +1,17 @@
 # Remote Attestation
 
-A crucial advantage of Trusted Execution Environments is the ability to perform
-**Remote Attestation**. It allows software to remotely check the TEE platform
-authenticity and also provides them with the information about the code running
-inside the TEE. And if the code of the application is **reproducibly
+A crucial advantage of a Trusted Execution Environment (TEE) is the ability to
+perform **Remote Attestation**. It allows software to remotely check the TEE
+platform authenticity and also provides them with the information about the code
+running inside the TEE. And if the code of the application is **reproducibly
 buildable**, software can check that the TEE platform is running the application
 that is expected to run.
 
 One of the main components used in the remote attestation process is an
 **Attestation report**, which is a data structure signed by the TEE platform and
 containing information identifying the code that is running inside the TEE. This
-report can then be checked and signed by the **TEE platform provider** (e.g. AMD
-or Intel), which results in evidence that the code is running on a genuine TEE
+report can then be checked and signed by the **TEE Provider** (e.g. AMD or
+Intel), which results in evidence that the code is running on a genuine TEE
 platform.
 
 ## Overview
@@ -24,46 +24,46 @@ The Remote Attestation protocol works on top of the [gRPC](https://grpc.io/)
 protocol and consists of 2 stages:
 
 1. Handshake
-   - _Server_ proves its identity by sending a cryptographically signed
+   - Server proves its identity by sending a cryptographically signed
      Attestation Report
-   - Both _Client_ and _Server_ establish an encrypted connection with keys that
-     are bound to the TEE firmware
+   - Both Client and Server establish an encrypted connection with keys that are
+     bound to the TEE platform's firmware
 1. Data Exchange
    - The keys generated during the Handshake are used to encrypt data sent
-     between _Client_ and _Server_
+     between Client and Server
 
-Prior to the _Handshake_ both _Client_ and _Server_ generate an individual pair
-of [ECDSA-P256](https://datatracker.ietf.org/doc/html/rfc6979) keys called
+Prior to the _Handshake_ both Client and Server generate an individual pair of
+[ECDSA-P256](https://datatracker.ietf.org/doc/html/rfc6979) keys called
 **Signing Keys**. These keys are persistent between connections (but regenerated
 at startup) and are used to sign **Transcripts**: hashes of previous handshake
 messages that are sent in each new handshake message to prevent
 [Replay Attacks](https://en.wikipedia.org/wiki/Replay_attack). Each handshake
-message also includes a random string so that messages cannot be replayed later.
+message also includes a random string so that transcripts always contain new
+random values.
 
-Also for each individual connection both _Client_ and _Server_ generate a pair
-of [X25519](https://datatracker.ietf.org/doc/html/rfc7748) Diffie-Hellman keys
+Also for each individual connection both Client and Server generate a pair of
+[X25519](https://datatracker.ietf.org/doc/html/rfc7748) Diffie-Hellman keys
 called **Ephemeral Keys**. These keys are used to establish a shared secret
-between _Client_ and _Server_.
+between Client and Server.
 
 The shared secret is used to generate 2 shared
 [AES-256-GCM](https://datatracker.ietf.org/doc/html/rfc5288) **Session Keys**
 that are used during the _Data Exchange_ stage:
 
 - Server Session Key
-  - Which is used to encrypt messages sent by the _Server_
+  - Which is used to encrypt messages sent by the Server
 - Client Session Key
-  - Which is used to encrypt messages sent by the _Client_
+  - Which is used to encrypt messages sent by the Client
 
 ## Workflow
 
 The workflow of the Remote Attestation protocol involves 3 interacting entities:
 
 1. Server
-   - Server application that processes requests from TLS clients
-   - Can run inside the TEE environment
+   - Server application that processes requests from Clients
+   - Runs on a TEE Platform
 1. Client
-   - Client application that connects to applications using TLS
-   - Can run inside the TEE environment
+   - Client application that connects to the Server
 1. TEE Platform
    - Firmware that provides a TEE support (i.e. Intel SGX or AMD-SEV-SNP capable
      CPU)
@@ -71,9 +71,9 @@ The workflow of the Remote Attestation protocol involves 3 interacting entities:
 1. TEE Provider
    - TEE platform provider that can confirm authenticity of the TEE Platform
      firmware keys using its root key
+   - Client must have the TEE Provider's root public key
    - It’s important to note that the Provider is an external server (i.e.
      belongs to Intel or AMD)
-   - Client must have the TEE Provider's root public key
 
 The complete workflow of the Remote Attestation protocol looks as follows:
 
@@ -91,8 +91,9 @@ The complete workflow of the Remote Attestation protocol looks as follows:
    [X25519](https://datatracker.ietf.org/doc/html/rfc7748) _Ephemeral_ key pair
 1. **Server** sends a request for the `AttestationReport` to the **TEE
    Platform**
-   - [SHA-256](https://datatracker.ietf.org/doc/html/rfc6234) hash of the
-     **Server**’s _Signing_ public key is included in this request
+   - This request contains
+     [SHA-256](https://datatracker.ietf.org/doc/html/rfc6234) hash of the
+     **Server**’s _Signing_ public key
 1. **TEE Platform** generates an `AttestationReport`
    - **TEE Platform** signs the report using its firmware key that was signed by
      the **TEE Provider** and could be verified by the **Client**
