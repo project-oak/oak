@@ -1214,8 +1214,6 @@
 <span id="1212">1212</span>
 <span id="1213">1213</span>
 <span id="1214">1214</span>
-<span id="1215">1215</span>
-<span id="1216">1216</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2021 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -1371,15 +1369,13 @@
 <span class="doccomment">/// `Uwabi` extension called by listening to a channel.</span>
 <span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">BoxedExtension</span> {
     <span class="ident">Native</span>(<span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">OakApiNativeExtension</span> <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span><span class="op">&gt;</span>),
-    <span class="ident">Uwabi</span>(<span class="ident">BoxedUwabiExtension</span>),
+    <span class="ident">Uwabi</span>(<span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">UwabiExtension</span><span class="op">&gt;</span>),
 }
-
-<span class="kw">pub</span> <span class="kw">type</span> <span class="ident">BoxedUwabiExtension</span> <span class="op">=</span> <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">UwabiExtension</span> <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span><span class="op">&gt;</span>;
 
 <span class="kw">pub</span> <span class="kw">type</span> <span class="ident">BoxedExtensionFactory</span> <span class="op">=</span> <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">ExtensionFactory</span> <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span><span class="op">&gt;</span>;
 
 <span class="doccomment">/// Trait for implementing an extension which relies on UWABI.</span>
-<span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">UwabiExtension</span> {
+<span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">UwabiExtension</span>: <span class="ident">Sync</span> <span class="op">+</span> <span class="ident">Send</span> {
     <span class="doccomment">/// Get the channel handle to address this extension.</span>
     <span class="kw">fn</span> <span class="ident">get_channel_handle</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">ChannelHandle</span>;
 
@@ -1413,7 +1409,7 @@
     <span class="doccomment">/// A mapping from channel handles to the hosted endpoints of channels.</span>
     <span class="ident">channel_switchboard</span>: <span class="ident">ChannelSwitchboard</span>,
     <span class="doccomment">/// A list of UWABI extensions.</span>
-    <span class="ident">uwabi_extensions</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">BoxedUwabiExtension</span><span class="op">&gt;</span>,
+    <span class="ident">uwabi_extensions</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">UwabiExtension</span><span class="op">&gt;</span><span class="op">&gt;</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">WasmState</span> {
@@ -1741,7 +1737,7 @@
         <span class="ident">extensions_indices</span>: <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">usize</span>, <span class="ident">BoxedExtension</span><span class="op">&gt;</span>,
         <span class="ident">extensions_metadata</span>: <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">String</span>, (<span class="ident">usize</span>, <span class="ident">wasmi::Signature</span>)<span class="op">&gt;</span>,
         <span class="ident">channel_switchboard</span>: <span class="ident">ChannelSwitchboard</span>,
-        <span class="ident">uwabi_extensions</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">BoxedUwabiExtension</span><span class="op">&gt;</span>,
+        <span class="ident">uwabi_extensions</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">UwabiExtension</span><span class="op">&gt;</span><span class="op">&gt;</span>,
     ) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">WasmState</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">abi</span> <span class="op">=</span> <span class="ident">WasmState</span> {
             <span class="ident">request_bytes</span>,
@@ -1927,7 +1923,7 @@
     <span class="kw">fn</span> <span class="ident">init</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">request_bytes</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">WasmState</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">extensions_indices</span> <span class="op">=</span> <span class="ident">HashMap::new</span>();
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">extensions_metadata</span> <span class="op">=</span> <span class="ident">HashMap::new</span>();
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">uwabi_extensions</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">BoxedUwabiExtension</span><span class="op">&gt;</span> <span class="op">=</span> <span class="macro">vec!</span>[];
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">uwabi_extensions</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">UwabiExtension</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">=</span> <span class="macro">vec!</span>[];
 
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">channel_switchboard</span> <span class="op">=</span> <span class="ident">ChannelSwitchboard::new</span>();
 
