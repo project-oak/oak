@@ -536,8 +536,8 @@ SGX).
 
 Remote Attestation protocol is implemented as a simplification of the
 [Enclave Key Exchange Protocol (EKEP)](https://asylo.dev/docs/concepts/ekep.html)
-handshake protocol. Protocol implementation is described in
-[Remote Attestation](/docs/remote-attestation.md).
+handshake protocol. Protocol implementation is described in the
+[Remote Attestation](/docs/remote-attestation.md) document.
 
 The client first validates the cryptographic integrity of the attestation
 received from the server, by checking whether the signature corresponds to a
