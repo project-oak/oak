@@ -754,6 +754,11 @@ impl WasmHandler {
                 native_extension.terminate()?;
             }
         }
+
+        // Dropping and closing the endpoints of the Wasm module indicates to runtime endpoints that
+        // they will not receive further messages.
+        wasm_state.channel_switchboard.clear();
+
         Ok(Response::create(
             StatusCode::Success,
             wasm_state.get_response_bytes(),
@@ -865,6 +870,13 @@ pub struct Endpoint {
     receiver: Receiver<UwabiMessage>,
 }
 
+impl Endpoint {
+    /// Close the receiver in the endpoint to not receive any more messages.
+    fn close_receiver(&mut self) {
+        self.receiver.close()
+    }
+}
+
 /// Create a channel with two symmetrical endpoints. The [`UwabiMessage`] sent from one [`Endpoint`]
 /// are received at the other [`Endpoint`] and vice versa by connecting two unidirectional
 /// [tokio::mpsc channels](https://docs.rs/tokio/0.1.16/tokio/sync/mpsc/index.html).
@@ -907,6 +919,16 @@ impl ChannelSwitchboard {
     // endpoint has to be mutable.
     fn get_mut(&mut self, channel_handle: &ChannelHandle) -> Option<&mut Endpoint> {
         self.0.get_mut(channel_handle)
+    }
+
+    // By removing all endpoints from the ChannelSwitchboard their connected endpoints will know
+    // that they will not receive any more messages and get an error when sending messages.
+    fn clear(&mut self) {
+        // Closing the receivers of the endpoint is good practice.
+        for endpoint in self.0.values_mut() {
+            endpoint.close_receiver();
+        }
+        self.0.drain();
     }
 }
 
@@ -994,6 +1016,14 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_send_to_closed_receiver() {
+        let (mut endpoint_1, endpoint_2) = channel_create();
+        endpoint_1.close_receiver();
+        let result = endpoint_2.sender.send(vec![43]).await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
     async fn test_create_channel_switchboard_in_wasm_state() {
         let wasm_state = create_test_wasm_state();
         let mut channel_switchboard = wasm_state.channel_switchboard;
@@ -1022,6 +1052,40 @@ mod tests {
         let result = wasm_state.get_endpoint_from_channel_handle(0);
         assert!(result.is_err());
         assert_eq!(ChannelStatus::ChannelHandleInvalid, result.unwrap_err())
+    }
+
+    #[test]
+    fn test_channel_switchboard_channel_handle_removed_after_clear() {
+        let channel_handle = ChannelHandle::Testing;
+        let mut channel_switchboard = ChannelSwitchboard::new();
+        channel_switchboard.register(channel_handle);
+
+        channel_switchboard.clear();
+        assert!(channel_switchboard.get_mut(&channel_handle).is_none());
+    }
+
+    #[test]
+    fn test_channel_switchboard_endpoint_closed_after_clear() {
+        let channel_handle = ChannelHandle::Testing;
+        let mut channel_switchboard = ChannelSwitchboard::new();
+        let endpoint2 = channel_switchboard.register(channel_handle);
+
+        channel_switchboard.clear();
+        assert!(endpoint2.sender.try_send(vec![]).is_err());
+    }
+
+    #[tokio::test]
+    async fn test_clear_channel_switchboard_stops_recv() {
+        let mut channel_switchboard = ChannelSwitchboard::new();
+        let mut endpoint_2 = channel_switchboard.register(ChannelHandle::Testing);
+
+        let stopped_receiving = tokio::spawn(async move {
+            endpoint_2.receiver.recv().await;
+            true
+        });
+
+        channel_switchboard.clear();
+        assert!(stopped_receiving.await.unwrap());
     }
 
     #[tokio::test]
