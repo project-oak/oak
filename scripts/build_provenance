@@ -4,13 +4,19 @@ readonly SCRIPTS_DIR="$(dirname "$0")"
 # shellcheck source=scripts/common
 source "$SCRIPTS_DIR/common"
 
-readonly OUTPUT_PATH=$1
+readonly SUBJECT_NAME=$1
+readonly OUTPUT_PATH=$2
 
-# Shift arguments to omit the output path. The remaining arguments are the
-# build arguments.
-shift
+# Shift arguments so that the remaining arguments are the just build arguments.
+shift 2
 
 ./scripts/docker_run "${@}"
+
+# Get digest of the docker image, as defined in https://github.com/opencontainers/image-spec/blob/v1.0.1/descriptor.md#digests
+readonly DOCKER_DIGEST=$(docker images --digests --format="{{.Digest}}" "${DOCKER_IMAGE_REPO_DIGEST}")
+IFS=':'; read -r DOCKER_DIGEST_HASH_ALGORITHM DOCKER_DIGEST_HASH_VALUE <<< "${DOCKER_DIGEST}"; unset IFS;
+
+
 readonly BINARY_SHA_256_HASH=$(sha256sum "${OUTPUT_PATH}" | cut -d " " -f 1)
 
 readonly COMMIT_HASH=$(git rev-parse --verify HEAD)
@@ -31,12 +37,42 @@ mkdir -p "./provenance/${BINARY_SHA_256_HASH}"
 # array as the command value at its current version. There isn't much value
 # in using an array though, and in upcoming versions it will move towards
 # an unwrapped string.
-cat << EOF >> "./provenance/${BINARY_SHA_256_HASH}/${COMMIT_HASH}.toml"
-repo = "https://github.com/project-oak/oak"
-commit_hash = "${COMMIT_HASH}"
-builder_image = "${DOCKER_IMAGE_REPO_DIGEST}"
-command = ${FORMATTED_COMMAND}
-output_path = "${OUTPUT_PATH}"
-expected_binary_sha256_hash = "${BINARY_SHA_256_HASH}"
+cat << EOF >> "./provenance/${BINARY_SHA_256_HASH}/${COMMIT_HASH}.json"
+{
+  "_type": "https://in-toto.io/Statement/v0.1",
+  "subject": [
+    {
+      "name": "${SUBJECT_NAME}",
+      "digest": {
+        "sha256": "${BINARY_SHA_256_HASH}"
+      }
+    }
+  ],
+  "predicateType": "https://slsa.dev/provenance/v0.2",
+  "predicate": {
+    "builder": {
+      "id": "https://github.com/project-oak/transparent-release"
+    },
+    "buildType": "https://github.com/project-oak/transparent-release/schema/amber-slsa-buildtype/v1.json",
+    "buildConfig": {
+      "command": ${FORMATTED_COMMAND},
+      "outputPath": "${OUTPUT_PATH}"
+    },
+    "materials": [
+      {
+        "uri": "${DOCKER_IMAGE_REPO_DIGEST}",
+        "digest": {
+          "${DOCKER_DIGEST_HASH_ALGORITHM}": "${DOCKER_DIGEST_HASH_VALUE}"
+        }
+      },
+      {
+        "uri": "https://github.com/project-oak/oak",
+        "digest": {
+          "sha1": "${COMMIT_HASH}"
+        }
+      }
+    ]
+  }
+}
 EOF
 
