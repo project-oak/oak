@@ -60,6 +60,12 @@ jobs:
           ./oak_functions/loader/bin/oak_functions_loader \
           ./scripts/runner build-functions-server
 
+      - name: Validate the shape of the generated provenance files
+        uses: cardinalby/schema-validator-action@v1
+        with:
+          file: './provenance/**/*.json'
+          schema: 'https://raw.githubusercontent.com/project-oak/transparent-release/main/schema/amber-slsa-buildtype/v1.json'
+
       - name: Move new provenance files to the provenance branch
         run: cp -r ./provenance/. ./provenance-branch/
 
