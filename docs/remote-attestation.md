@@ -8,7 +8,7 @@ about the code running inside the TEE. And if the code of the application is
 running the application that is expected to run.
 
 One of the main components used in the remote attestation process is an
-**Attestation report**, which is a data structure signed by the TEE platform and
+**Attestation Report**, which is a data structure signed by the TEE platform and
 containing information identifying the code that is running inside the TEE. This
 report can be checked to confirm that it is signed by the **TEE Provider** (e.g.
 AMD or Intel), which results in evidence that the code is running on a genuine
@@ -55,15 +55,19 @@ that are used during the _Data Exchange_ stage:
 - Client Session Key
   - Which is used to encrypt messages sent by the Client
 
+It's important to node that for each new request **Client** performs the Remote
+Attestation from the start in order to create a new pair of Session keys.
+
 ## Workflow
 
-The workflow of the Remote Attestation protocol involves 3 interacting entities:
+The workflow of the Remote Attestation protocol involves 4 interacting entities:
 
 1. Server
    - Server application that processes requests from Clients
    - Runs on a TEE Platform
 1. Client
    - Client application that connects to the Server
+   - Client is provided with a TEE Provider's Root key
 1. TEE Platform
    - Firmware that provides a TEE support (i.e. Intel SGX or AMD-SEV-SNP capable
      CPU)
@@ -72,7 +76,7 @@ The workflow of the Remote Attestation protocol involves 3 interacting entities:
    - TEE platform provider that can confirm authenticity of the TEE Platform
      firmware keys using its root key
    - Client must have the TEE Provider's root public key
-   - It’s important to note that the Provider is an external server (i.e.
+   - It’s important to note that the TEE Provider is an external server (i.e.
      belongs to Intel or AMD)
 
 The complete workflow of the Remote Attestation protocol looks as follows:
@@ -82,7 +86,6 @@ The complete workflow of the Remote Attestation protocol looks as follows:
      [ECDSA-P256](https://datatracker.ietf.org/doc/html/rfc6979) _Signing_ key
      pair
    - **TEE Provider** creates a signature of the **TEE Platform**'s firmware key
-   - **Client** is provided with a **TEE Provider**'s _Root_ key
 1. **Client** generates an
    [X25519](https://datatracker.ietf.org/doc/html/rfc7748) _Ephemeral_ key pair
 1. **Client** sends a `ClientHello` message to the **Server**
@@ -139,8 +142,6 @@ The complete workflow of the Remote Attestation protocol looks as follows:
      communication
 1. **Client** and **Server** use generated _Session_ keys for communication
    between them
-   - _Note_: for each new request **Client** performs the Remote Attestation
-     from the start in order to create a new pair of _Session_ keys
 
 <!-- From: -->
 <!-- https://sequencediagram.googleplex.com/view/6235412701904896 -->
