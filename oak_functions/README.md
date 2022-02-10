@@ -8,18 +8,23 @@ sandboxing, and allows exposing metrics in a Differentially Private way.
 At its core, Oak Functions consists of a **trusted runtime** compiled into a
 server binary
 ([`oak_functions_loader`](https://github.com/project-oak/oak/tree/main/oak_functions/loader))
-that, for each incoming client gRPC request, executes an untrusted workload that
-operates on the request payload, and produces a response which is sent back to
-the same client.
+that, for each incoming client gRPC request, executes a workload that operates
+on the request payload, and produces a response which is sent back to the same
+client.
 
-The Oak Functions trusted runtime ensures that the untrusted workload may not
-violate the confidentiality of the client request data, preventing observers
-from learning anything about the request.
+The Oak Functions trusted runtime ensures that the workload may not violate the
+confidentiality of the client request data, preventing observers from learning
+anything about the request. Note that since the Oak Functions trusted runtime
+guarantees the confidentiality and integrity of the data, the workload can
+potentially be untrusted.
 
 From the client point of view, the server provides cryptographic evidence
 (backed by an hardware-based Trusted Execution Environment) of its own identity
-as part of a remote attestation protocol, which convinces the client that it is
-in fact a legitimate version of such a runtime.
+as part of a remote attestation protocol. The server identity can then be used
+to decide whether it is in fact a legitimate version of the trusted runtime.
+
+**TODO:** Briefly explain the use of transparent release for verifying the
+server identity.
 
 The main building blocks used in Oak Functions are:
 
@@ -134,8 +139,8 @@ requirements, before publishing the results by logging to stdout.
 
 ### Remote Attestation
 
-The Remote Attestation protocol implemented in Oak is currently integrated in
-Oak Functions.
+The [Remote Attestation protocol](/docs/remote-attestation.md) implemented in
+Oak is currently integrated in Oak Functions.
 
 ## Applications
 
