@@ -757,7 +757,7 @@ impl WasmHandler {
 
         // Dropping and closing the endpoints of the Wasm module indicates to runtime endpoints that
         // they will not receive further messages.
-        wasm_state.channel_switchboard.clear();
+        wasm_state.channel_switchboard.unregister_all();
 
         Ok(Response::create(
             StatusCode::Success,
@@ -923,12 +923,12 @@ impl ChannelSwitchboard {
 
     // By removing all endpoints from the ChannelSwitchboard their connected endpoints will know
     // that they will not receive any more messages and get an error when sending messages.
-    fn clear(&mut self) {
-        // Closing the receivers of the endpoint is good practice.
-        for endpoint in self.0.values_mut() {
+    fn unregister_all(&mut self) {
+        for (_, mut endpoint) in self.0.drain() {
+            // Closing the receivers is good practice. We are currently not handling remaining
+            // messages, though.
             endpoint.close_receiver();
         }
-        self.0.drain();
     }
 }
 
@@ -1060,7 +1060,7 @@ mod tests {
         let mut channel_switchboard = ChannelSwitchboard::new();
         channel_switchboard.register(channel_handle);
 
-        channel_switchboard.clear();
+        channel_switchboard.unregister_all();
         assert!(channel_switchboard.get_mut(&channel_handle).is_none());
     }
 
@@ -1070,7 +1070,7 @@ mod tests {
         let mut channel_switchboard = ChannelSwitchboard::new();
         let endpoint2 = channel_switchboard.register(channel_handle);
 
-        channel_switchboard.clear();
+        channel_switchboard.unregister_all();
         assert!(endpoint2.sender.try_send(vec![]).is_err());
     }
 
@@ -1084,7 +1084,7 @@ mod tests {
             true
         });
 
-        channel_switchboard.clear();
+        channel_switchboard.unregister_all();
         assert!(stopped_receiving.await.unwrap());
     }
 
