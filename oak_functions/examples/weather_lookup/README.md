@@ -64,7 +64,7 @@ The weather file format looks as follows:
 The weather lookup data file is a
 [stream of length-delimited binary encoded protobuf entries](https://developers.google.com/protocol-buffers/docs/techniques#streaming).
 The encoding length of each entry is encoded as a
-[base 128 variant](https://developers.google.com/protocol-buffers/docs/encoding#varints).
+[base 128 varant](https://developers.google.com/protocol-buffers/docs/encoding#varints).
 Each entry is based on the following
 [Proto](oak_functions/proto/lookup_data.proto) definition:
 
@@ -93,6 +93,8 @@ cells. These entries are represented as:
 
 - `key` UTF-8 encoded string representation of the hex `CELL_ID_TOKEN` value is
   with all the trailing zeros trimmed
+  - For example, if the cell id is `0xff000000000000000` token is the string
+    `ff`
 - `value` is a concatenation of all the `key` values of _Location_ entries that
   are in the vicinity of a corresponding S2 cell
 
