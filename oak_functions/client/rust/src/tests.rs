@@ -1,5 +1,5 @@
 //
-// Copyright 2021 The Project Oak Authors
+// Copyright 2022 The Project Oak Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,129 +14,55 @@
 // limitations under the License.
 //
 
-use crate::verification::LogEntry;
-use assert_matches::assert_matches;
-use serde_json::Value;
+use crate::rekor::*;
 use std::fs;
 
 #[test]
-fn testing_rekor_verification() {
-    // The following description from https://github.com/sigstore/rekor/blob/4fcdcaa58fd5263560a82978d781eb64f5c5f93c/openapi.yaml#L433-L476 is somewhat inaccurate.
-    // # To verify the signedEntryTimestamp:
-    // # 1. Remove the Verification object from the JSON Document
-    // # 2. Canonicalize the remaining JSON document by following RFC 8785 rules
-    // # 3. Verify the canonicalized payload and signedEntryTimestamp against rekor's public key
-    //
-    // One should note that the description of `signedEntryTimestamp` says that it is a "Signature
-    // over the logID, logIndex, body and integratedTime." So the outer LogEntry must be
-    // discarded, and the `attestation` field must be excluded too. Also note that
-    // `signedEntryTimestamp` is base64 encoded. So most likely it should first be decoded to a byte
-    // array.
-
-    // load the log entry and endorsement files
+fn test_verify_rekor_log_entry() {
+    // Example endorsement file corresponding to the provenance file in
+    // https://github.com/project-oak/transparent-release/blob/main/testdata/provenances/15dc16c42a4ac9ed77f337a4a3065a63e444c29c18c8cf69d6a6b4ae678dca5c.json
     let endorsement_path = "testdata/endorsement.json";
+
+    // LogEntry downloaded from
+    // https://rekor.sigstore.dev/api/v1/log/entries/bb05be1bd813f8afb7b77b2d9f7be5ae25b396d111c7a26a04b785c48c277372.
+    // This LogEntry was created by sining the example endorsement file above,
+    // and publishing that to Rekor (https://rekor.sigstore.dev), as described
+    // in https://github.com/sigstore/rekor/blob/main/types.md#pkixx509.
+    // The resulting entry in Rekor has UUID
+    // `bb05be1bd813f8afb7b77b2d9f7be5ae25b396d111c7a26a04b785c48c277372`.
     let log_entry_path = "testdata/logentry.json";
-    let rekor_public_key_path = "testdata/rekor_public_key.pem";
 
-    let endorsement_content = fs::read(endorsement_path).expect("Couldn't read endorsement file.");
-    let log_entry_content = fs::read(log_entry_path).expect("Couldn't read log entry file.");
-    let rekor_public_key =
-        fs::read(rekor_public_key_path).expect("Couldn't read rekor public key file.");
+    // Public key of the Rekor instance hosted by sigstore.dev. It is downloaded from https://rekor.sigstore.dev/api/v1/log/publicKey.
+    let rekor_pubkey_path = "testdata/rekor_public_key.pem";
 
-    // verify signature in the log entry
-    let signed_hash = get_decoded_signature();
+    let endorsement_bytes = fs::read(endorsement_path).expect("Couldn't read endorsement file.");
+    let log_entry_bytes = fs::read(log_entry_path).expect("Couldn't read log entry file.");
+    let rekor_pem_bytes =
+        fs::read(rekor_pubkey_path).expect("Couldn't read Rekor's public key file.");
 
-    let rekor_pem_content =
-        pem::parse(&rekor_public_key).expect("could not parse Rekor public key as pem");
-    assert_eq!(rekor_pem_content.tag, "PUBLIC KEY");
-    eprintln!("public key: {:?}", rekor_pem_content.contents);
-    let public_key_der = rekor_pem_content.contents;
-
-    // get sha256 hash of the canonicalized subset of the LogEntry that is signed
-
-    // The verify fails, what could be wrong?
-    // 1. The json is not canonicalized.
-    // 2. The hash is not sha256.
-    // 3. The public key is not correctly formatted.
-    // 4. The signing algorithm is different.
-    // eprintln!("{:?}", sig_bundle.verify());
-
-    // get to body of log entry
-    // verify hash in the body is equal to the hash of the endorsement file.
-    // verify signature in the body; using the public key (is the public key in the body the same as
-    // the one we have? Even if it is, it cannot be trusted)
-    assert!(log_entry_content.len() != endorsement_content.len());
-}
-
-use signature::Verifier;
-use std::str::FromStr;
-
-#[test]
-fn test_rekor_pubkey() {
-    let key = get_rekor_public_key();
-    assert!(key.is_some());
-}
-
-use ecdsa::Signature;
-
-#[test]
-fn verify_rekor_signature() {
-    let key = get_rekor_public_key();
-    assert!(key.is_some());
-
-    let decoded_signature = get_decoded_signature();
-    let canonicalized = canonicalized_msg();
-
-    let sig =
-        Signature::from_der(&decoded_signature).expect("EcdsaVerifier: invalid ASN.1 signature");
-
-    let result = key.unwrap().verify(&canonicalized, &sig);
+    let result =
+        verify_rekor_log_entry(&log_entry_bytes, &rekor_pem_bytes, &[], &endorsement_bytes);
     assert!(result.is_ok());
 }
 
-fn get_rekor_public_key() -> Option<p256::ecdsa::VerifyingKey> {
-    let rekor_public_key_path = "testdata/rekor_public_key.pem";
+#[test]
+fn test_unmarshal_pem_public_key() {
+    let pubkey_path = "testdata/rekor_public_key.pem";
+    let pem_bytes = fs::read(pubkey_path).expect("Couldn't read Rekor's public key file.");
 
-    let rekor_public_key =
-        fs::read(rekor_public_key_path).expect("Couldn't read rekor public key file.");
-    let pem_str = std::str::from_utf8(&rekor_public_key).unwrap();
-
-    p256::ecdsa::VerifyingKey::from_str(pem_str).ok()
+    let key = unmarshal_pem_to_p256_public_key(&pem_bytes);
+    assert!(key.is_ok());
 }
 
-fn get_decoded_signature() -> Vec<u8> {
-    let log_entry_path = "testdata/logentry.json";
-    let log_entry_content = fs::read(log_entry_path).expect("Couldn't read log entry file.");
+#[test]
+fn test_verify_rekor_signature() {
+    let entry_path = "testdata/logentry.json";
+    let pubkey_path = "testdata/rekor_public_key.pem";
 
-    let v: Value = serde_json::from_slice(&log_entry_content)
-        .expect("couldn't load log entry as json object.");
-    assert_matches!(v, Value::Object(_));
-    let signed_entry_timestamp = match v {
-        Value::Object(obj) => {
-            assert_eq!(obj.values().len(), 1);
-            let obj = obj.values().next().unwrap();
-            assert_eq!(obj["verification"].as_object().unwrap().len(), 2);
-            obj["verification"]["signedEntryTimestamp"].clone()
-        }
-        _ => panic!("Json file does contain an object."),
-    };
+    let log_entry_bytes = fs::read(entry_path).expect("Couldn't read Rekor log entry.");
+    let pem_bytes = fs::read(pubkey_path).expect("Couldn't read Rekor's public key file.");
 
-    eprintln!("signedEntryTimestamp: {}", signed_entry_timestamp);
-    let signature = base64::decode(signed_entry_timestamp.as_str().unwrap().as_bytes())
-        .expect("Couldn't decode Base64 signed_entry_timestamp");
+    let result = verify_rekor_signature(&log_entry_bytes, &pem_bytes);
 
-    signature
-}
-
-fn canonicalized_msg() -> Vec<u8> {
-    let log_entry_path = "testdata/logentry.json";
-    let log_entry_content = fs::read(log_entry_path).expect("Couldn't read log entry file.");
-    let parsed: std::collections::HashMap<String, LogEntry> =
-        serde_json::from_slice(&log_entry_content)
-            .expect("couldn't load log entry as LogEntry object.");
-    let entry = parsed.values().next().unwrap();
-    let canonicalized =
-        serde_jcs::to_string(&entry).expect("couldn't create canonicalized json string");
-    let canonicalized = canonicalized.as_bytes().to_vec();
-    canonicalized
+    assert!(result.is_ok());
 }

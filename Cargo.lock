@@ -660,12 +660,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "279bc8fc53f788a75c7804af68237d1fce02cde1e275a886a4b320604dc2aeda"
 
 [[package]]
-name = "const-oid"
-version = "0.7.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e4c78c047431fee22c1a7bb92e00ad095a02a983affe4d8a72e2a2c62c1b94f3"
-
-[[package]]
 name = "core-foundation"
 version = "0.9.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -883,18 +877,8 @@ version = "0.3.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2eeb9d92785d1facb50567852ce75d0858630630e7eabea59cf7eb7474051087"
 dependencies = [
- "const-oid 0.5.2",
+ "const-oid",
  "typenum",
-]
-
-[[package]]
-name = "der"
-version = "0.5.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6919815d73839e7ad218de758883aae3a257ba6759ce7a9992501efbb53d705c"
-dependencies = [
- "const-oid 0.7.1",
- "pem-rfc7468",
 ]
 
 [[package]]
@@ -1006,7 +990,7 @@ version = "0.11.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "34d33b390ab82f2e1481e331dbd0530895640179d2128ef9a79cc690b78d1eba"
 dependencies = [
- "der 0.3.5",
+ "der",
  "elliptic-curve",
  "hmac",
  "signature",
@@ -2543,7 +2527,6 @@ name = "oak_functions_client"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "assert_matches",
  "async-stream",
  "base64 0.13.0",
  "ecdsa",
@@ -2553,22 +2536,17 @@ dependencies = [
  "log",
  "oak_functions_abi",
  "oak_remote_attestation",
- "oak_sign",
  "oak_utils",
  "p256",
- "pem 1.0.2",
  "prost 0.8.0",
  "regex",
- "ring",
  "serde",
  "serde_jcs",
  "serde_json",
  "signature",
- "spki 0.5.4",
  "structopt",
  "tokio",
  "tonic",
- "x509-parser",
 ]
 
 [[package]]
@@ -3040,15 +3018,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "pem-rfc7468"
-version = "0.3.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "01de5d978f34aa4b2296576379fcc416034702fd94117c56ffd8a1a767cefb30"
-dependencies = [
- "base64ct",
-]
-
-[[package]]
 name = "percent-encoding"
 version = "2.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3156,8 +3125,8 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c9c2f795bc591cb3384cb64082a578b89207ac92bb89c9d98c1ea2ace7cd8110"
 dependencies = [
  "base64ct",
- "der 0.3.5",
- "spki 0.3.0",
+ "der",
+ "spki",
  "zeroize",
 ]
 
@@ -4406,17 +4375,7 @@ version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9dae7e047abc519c96350e9484a96c6bf1492348af912fd3446dd2dc323f6268"
 dependencies = [
- "der 0.3.5",
-]
-
-[[package]]
-name = "spki"
-version = "0.5.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "44d01ac02a6ccf3e07db148d2be087da624fea0221a16152ed01f0496a6b0a27"
-dependencies = [
- "base64ct",
- "der 0.5.1",
+ "der",
 ]
 
 [[package]]
