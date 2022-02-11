@@ -61,8 +61,12 @@ https://s2.sidewalklabs.com/regioncoverer/.
 
 The weather file format looks as follows:
 
-Weather file is a Protobuf compiled file that consists of a list of the
-following entries:
+The weather lookup data file is a
+[stream of length-delimited binary encoded protobuf entries](https://developers.google.com/protocol-buffers/docs/techniques#streaming).
+The encoding length of each entry is encoded as a
+[base 128 variant](https://developers.google.com/protocol-buffers/docs/encoding#varints).
+Each entry is based on the following
+[Proto](oak_functions/proto/lookup_data.proto) definition:
 
 ```protobuf
 message Entry {
@@ -73,25 +77,24 @@ message Entry {
 
 There are 2 types of entries:
 
-- Location entries
-- Cell entries
+- Location Entries
+- Index Entries
 
 _Location_ entries are represented as:
 
 - `key` is `LATITUDE_SIGNED_BIG_ENDIAN | LONGITUDE_SIGNED_BIG_ENDIAN`
-  [Length-Delimited](https://developers.google.com/protocol-buffers/docs/encoding#structure)
-  encoded
   - Where `|` is concatenation
   - Both Latitude and Longitude are in _microdegrees_
 - `value` is `bytes` that correspond to weather
 
-Each _Location_ entry has a single corresponding _Cell_ entry
-([S2 geometry](https://s2geometry.io/devguide/s2cell_hierarchy#s2cellid-numbering-again)).
-Cell entries are represented as:
+_Index_ entries correspond to
+[S2](https://s2geometry.io/devguide/s2cell_hierarchy#s2cellid-numbering-again)
+cells. These entries are represented as:
 
-- `key` is `CELL_ID_TOKEN_HEX` Length-Delimited encoded with all the trailing
-  zeros trimmed
-- `value` is a corresponding Location entry `key`
+- `key` UTF-8 encoded string representation of the hex `CELL_ID_TOKEN` value is
+  with all the trailing zeros trimmed
+- `value` is a concatenation of all the `key` values of _Location_ entries that
+  are in the vicinity of a corresponding S2 cell
 
 ## Lookup Logic
 
