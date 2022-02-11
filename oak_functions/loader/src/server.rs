@@ -754,10 +754,16 @@ impl WasmHandler {
                 native_extension.terminate()?;
             }
         }
+
         Ok(Response::create(
             StatusCode::Success,
             wasm_state.get_response_bytes(),
         ))
+
+        // Here we drop all endpoints of the Wasm module (i.e., the wasm_state.channel_switchboard).
+        // This indicates to the Runtime endpoints that they will not receive further messages.
+        // Note, that we do not do a clean shutdown of the receivers in the endpoints Wasm module,
+        // because there is no need to handle, or even log, the remaining messages.
     }
 }
 
@@ -1022,6 +1028,20 @@ mod tests {
         let result = wasm_state.get_endpoint_from_channel_handle(0);
         assert!(result.is_err());
         assert_eq!(ChannelStatus::ChannelHandleInvalid, result.unwrap_err())
+    }
+
+    #[tokio::test]
+    async fn test_drop_channel_switchboard_stops_recv() {
+        let mut channel_switchboard = ChannelSwitchboard::new();
+        let mut endpoint_2 = channel_switchboard.register(ChannelHandle::Testing);
+
+        let stopped_receiving = tokio::spawn(async move {
+            endpoint_2.receiver.recv().await;
+            true
+        });
+
+        std::mem::drop(channel_switchboard);
+        assert!(stopped_receiving.await.unwrap());
     }
 
     #[tokio::test]
