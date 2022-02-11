@@ -1227,13 +1227,6 @@
 <span id="1225">1225</span>
 <span id="1226">1226</span>
 <span id="1227">1227</span>
-<span id="1228">1228</span>
-<span id="1229">1229</span>
-<span id="1230">1230</span>
-<span id="1231">1231</span>
-<span id="1232">1232</span>
-<span id="1233">1233</span>
-<span id="1234">1234</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2021 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -1428,8 +1421,6 @@
     <span class="ident">extensions_metadata</span>: <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">String</span>, (<span class="ident">usize</span>, <span class="ident">wasmi::Signature</span>)<span class="op">&gt;</span>,
     <span class="doccomment">/// A mapping from channel handles to the hosted endpoints of channels.</span>
     <span class="ident">channel_switchboard</span>: <span class="ident">ChannelSwitchboard</span>,
-    <span class="doccomment">/// A list of UWABI extensions.</span>
-    <span class="ident">uwabi_extensions</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">UwabiExtension</span><span class="op">&gt;</span><span class="op">&gt;</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">WasmState</span> {
@@ -1757,7 +1748,6 @@
         <span class="ident">extensions_indices</span>: <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">usize</span>, <span class="ident">BoxedExtension</span><span class="op">&gt;</span>,
         <span class="ident">extensions_metadata</span>: <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">String</span>, (<span class="ident">usize</span>, <span class="ident">wasmi::Signature</span>)<span class="op">&gt;</span>,
         <span class="ident">channel_switchboard</span>: <span class="ident">ChannelSwitchboard</span>,
-        <span class="ident">uwabi_extensions</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">UwabiExtension</span><span class="op">&gt;</span><span class="op">&gt;</span>,
     ) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">WasmState</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">abi</span> <span class="op">=</span> <span class="ident">WasmState</span> {
             <span class="ident">request_bytes</span>,
@@ -1768,7 +1758,6 @@
             <span class="ident">extensions_indices</span>: <span class="prelude-val">Some</span>(<span class="ident">extensions_indices</span>),
             <span class="ident">extensions_metadata</span>,
             <span class="ident">channel_switchboard</span>,
-            <span class="ident">uwabi_extensions</span>,
         };
 
         <span class="kw">let</span> <span class="ident">instance</span> <span class="op">=</span> <span class="ident">wasmi::ModuleInstance::new</span>(
@@ -1940,7 +1929,10 @@
         })
     }
 
-    <span class="kw">fn</span> <span class="ident">init</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">request_bytes</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">WasmState</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">init_wasm_state_and_extensions</span>(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        <span class="ident">request_bytes</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
+    ) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span>(<span class="ident">WasmState</span>, <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">UwabiExtension</span><span class="op">&gt;</span><span class="op">&gt;</span>)<span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">extensions_indices</span> <span class="op">=</span> <span class="ident">HashMap::new</span>();
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">extensions_metadata</span> <span class="op">=</span> <span class="ident">HashMap::new</span>();
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">uwabi_extensions</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">UwabiExtension</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">=</span> <span class="macro">vec!</span>[];
@@ -1964,20 +1956,21 @@
             }
         }
 
-        <span class="ident">WasmState::new</span>(
+        <span class="kw">let</span> <span class="ident">wasm_state</span> <span class="op">=</span> <span class="ident">WasmState::new</span>(
             <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">module</span>,
             <span class="ident">request_bytes</span>,
             <span class="self">self</span>.<span class="ident">logger</span>.<span class="ident">clone</span>(),
             <span class="ident">extensions_indices</span>,
             <span class="ident">extensions_metadata</span>,
             <span class="ident">channel_switchboard</span>,
-            <span class="ident">uwabi_extensions</span>,
-        )
+        )<span class="question-mark">?</span>;
+
+        <span class="prelude-val">Ok</span>((<span class="ident">wasm_state</span>, <span class="ident">uwabi_extensions</span>))
     }
 
     <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">handle_invoke</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">request</span>: <span class="ident">Request</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">Response</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">request_bytes</span> <span class="op">=</span> <span class="ident">request</span>.<span class="ident">body</span>;
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">wasm_state</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">init</span>(<span class="ident">request_bytes</span>)<span class="question-mark">?</span>;
+        <span class="kw">let</span> (<span class="kw-2">mut</span> <span class="ident">wasm_state</span>, <span class="ident">_extensions</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">init_wasm_state_and_extensions</span>(<span class="ident">request_bytes</span>)<span class="question-mark">?</span>;
 
         <span class="ident">wasm_state</span>.<span class="ident">invoke</span>();
         <span class="kw">for</span> <span class="ident">extension</span> <span class="kw">in</span> <span class="ident">wasm_state</span>
@@ -2237,7 +2230,7 @@
 
     <span class="attribute">#[<span class="ident">tokio::test</span>]</span>
     <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">test_create_channel_switchboard_in_wasm_state</span>() {
-        <span class="kw">let</span> <span class="ident">wasm_state</span> <span class="op">=</span> <span class="ident">create_test_wasm_state</span>();
+        <span class="kw">let</span> (<span class="ident">wasm_state</span>, <span class="kw">_</span>) <span class="op">=</span> <span class="ident">create_test_wasm_state_and_extensions</span>();
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">channel_switchboard</span> <span class="op">=</span> <span class="ident">wasm_state</span>.<span class="ident">channel_switchboard</span>;
 
         <span class="macro">assert!</span>(<span class="kw-2">&amp;</span><span class="ident">channel_switchboard</span>
@@ -2251,7 +2244,7 @@
 
     <span class="attribute">#[<span class="ident">tokio::test</span>]</span>
     <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">test_get_endpoint_from_channel_handle_out_of_range</span>() {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">wasm_state</span> <span class="op">=</span> <span class="ident">create_test_wasm_state</span>();
+        <span class="kw">let</span> (<span class="kw-2">mut</span> <span class="ident">wasm_state</span>, <span class="kw">_</span>) <span class="op">=</span> <span class="ident">create_test_wasm_state_and_extensions</span>();
         <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="ident">wasm_state</span>.<span class="ident">get_endpoint_from_channel_handle</span>(<span class="op">-</span><span class="number">1</span>);
         <span class="macro">assert!</span>(<span class="ident">result</span>.<span class="ident">is_err</span>());
         <span class="macro">assert_eq!</span>(<span class="ident">ChannelStatus::ChannelHandleInvalid</span>, <span class="ident">result</span>.<span class="ident">unwrap_err</span>())
@@ -2259,7 +2252,7 @@
 
     <span class="attribute">#[<span class="ident">tokio::test</span>]</span>
     <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">test_get_endpoint_from_channel_handle_without_endpoint</span>() {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">wasm_state</span> <span class="op">=</span> <span class="ident">create_test_wasm_state</span>();
+        <span class="kw">let</span> (<span class="kw-2">mut</span> <span class="ident">wasm_state</span>, <span class="kw">_</span>) <span class="op">=</span> <span class="ident">create_test_wasm_state_and_extensions</span>();
         <span class="comment">// Assumes ChannelHandle 0 will never have an Endpoint.</span>
         <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="ident">wasm_state</span>.<span class="ident">get_endpoint_from_channel_handle</span>(<span class="number">0</span>);
         <span class="macro">assert!</span>(<span class="ident">result</span>.<span class="ident">is_err</span>());
@@ -2283,7 +2276,7 @@
     <span class="attribute">#[<span class="ident">tokio::test</span>]</span>
     <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">test_hosted_channel_read_no_message</span>() {
         <span class="kw">let</span> <span class="ident">channel_handle</span> <span class="op">=</span> <span class="ident">ChannelHandle::Testing</span> <span class="kw">as</span> <span class="ident">i32</span>;
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">wasm_state</span> <span class="op">=</span> <span class="ident">create_test_wasm_state</span>();
+        <span class="kw">let</span> (<span class="kw-2">mut</span> <span class="ident">wasm_state</span>, <span class="ident">_uwabi_extensions</span>) <span class="op">=</span> <span class="ident">create_test_wasm_state_and_extensions</span>();
         <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="ident">wasm_state</span>.<span class="ident">channel_read</span>(<span class="ident">channel_handle</span>, <span class="number">0</span>, <span class="number">0</span>);
         <span class="macro">assert!</span>(<span class="ident">result</span>.<span class="ident">is_err</span>());
         <span class="macro">assert_eq!</span>(<span class="ident">ChannelStatus::ChannelEmpty</span>, <span class="ident">result</span>.<span class="ident">unwrap_err</span>());
@@ -2292,9 +2285,9 @@
     <span class="attribute">#[<span class="ident">tokio::test</span>]</span>
     <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">test_hosted_channel_read_channel_closed</span>() {
         <span class="kw">let</span> <span class="ident">channel_handle</span> <span class="op">=</span> <span class="ident">ChannelHandle::Testing</span>;
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">wasm_state</span> <span class="op">=</span> <span class="ident">create_test_wasm_state</span>();
-        <span class="comment">// Remove the extension to close one endpoint of the channel.</span>
-        <span class="ident">drop_extension</span>(<span class="kw-2">&amp;mut</span> <span class="ident">wasm_state</span>, <span class="ident">channel_handle</span>);
+        <span class="kw">let</span> (<span class="kw-2">mut</span> <span class="ident">wasm_state</span>, <span class="kw-2">mut</span> <span class="ident">uwabi_extensions</span>) <span class="op">=</span> <span class="ident">create_test_wasm_state_and_extensions</span>();
+        <span class="comment">// Drop all extensions to close the runtime endpoint of the channels.</span>
+        <span class="ident">uwabi_extensions</span>.<span class="ident">clear</span>();
         <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="ident">wasm_state</span>.<span class="ident">channel_read</span>(<span class="ident">channel_handle</span> <span class="kw">as</span> <span class="ident">i32</span>, <span class="number">0</span>, <span class="number">0</span>);
         <span class="macro">assert!</span>(<span class="ident">result</span>.<span class="ident">is_err</span>());
         <span class="macro">assert_eq!</span>(
@@ -2307,9 +2300,9 @@
     <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">test_hosted_channel_read_ok</span>() {
         <span class="kw">let</span> <span class="ident">channel_handle</span> <span class="op">=</span> <span class="ident">ChannelHandle::Testing</span>;
         <span class="kw">let</span> <span class="ident">message</span> <span class="op">=</span> <span class="macro">vec!</span>[<span class="number">42</span>, <span class="number">42</span>, <span class="number">232</span>];
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">wasm_state</span> <span class="op">=</span> <span class="ident">create_test_wasm_state</span>();
+        <span class="kw">let</span> (<span class="kw-2">mut</span> <span class="ident">wasm_state</span>, <span class="kw-2">mut</span> <span class="ident">uwabi_extensions</span>) <span class="op">=</span> <span class="ident">create_test_wasm_state_and_extensions</span>();
 
-        <span class="ident">write_to_runtime_endpoint</span>(<span class="kw-2">&amp;mut</span> <span class="ident">wasm_state</span>, <span class="ident">channel_handle</span>, <span class="ident">message</span>.<span class="ident">clone</span>()).<span class="kw">await</span>;
+        <span class="ident">write_to_runtime_endpoint</span>(<span class="kw-2">&amp;mut</span> <span class="ident">uwabi_extensions</span>, <span class="ident">channel_handle</span>, <span class="ident">message</span>.<span class="ident">clone</span>()).<span class="kw">await</span>;
 
         <span class="comment">// Guess some memory addresses in linear Wasm memory.</span>
         <span class="kw">let</span> <span class="ident">dest_ptr_ptr</span>: <span class="ident">AbiPointer</span> <span class="op">=</span> <span class="number">100</span>;
@@ -2342,9 +2335,9 @@
     <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">test_hosted_channel_write_ok</span>() {
         <span class="kw">let</span> <span class="ident">channel_handle</span> <span class="op">=</span> <span class="ident">ChannelHandle::Testing</span>;
         <span class="kw">let</span> <span class="ident">message</span>: <span class="ident">UwabiMessage</span> <span class="op">=</span> <span class="macro">vec!</span>[<span class="number">42</span>, <span class="number">42</span>];
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">wasm_state</span> <span class="op">=</span> <span class="ident">create_test_wasm_state</span>();
+        <span class="kw">let</span> (<span class="kw-2">mut</span> <span class="ident">wasm_state</span>, <span class="kw-2">mut</span> <span class="ident">uwabi_extensions</span>) <span class="op">=</span> <span class="ident">create_test_wasm_state_and_extensions</span>();
 
-        <span class="ident">write_to_runtime_endpoint</span>(<span class="kw-2">&amp;mut</span> <span class="ident">wasm_state</span>, <span class="ident">channel_handle</span>, <span class="ident">message</span>.<span class="ident">clone</span>()).<span class="kw">await</span>;
+        <span class="ident">write_to_runtime_endpoint</span>(<span class="kw-2">&amp;mut</span> <span class="ident">uwabi_extensions</span>, <span class="ident">channel_handle</span>, <span class="ident">message</span>.<span class="ident">clone</span>()).<span class="kw">await</span>;
 
         <span class="comment">// Guess some memory addresses in linear Wasm memory to write the message to from</span>
         <span class="comment">// `src_buf_ptr`.</span>
@@ -2357,7 +2350,8 @@
         <span class="macro">assert!</span>(<span class="ident">result</span>.<span class="ident">is_ok</span>());
 
         <span class="comment">// Assert that the message arrived at runtime endpoint.</span>
-        <span class="kw">let</span> <span class="ident">received_message</span> <span class="op">=</span> <span class="ident">read_from_runtime_endpoint</span>(<span class="kw-2">&amp;mut</span> <span class="ident">wasm_state</span>, <span class="ident">channel_handle</span>).<span class="kw">await</span>;
+        <span class="kw">let</span> <span class="ident">received_message</span> <span class="op">=</span>
+            <span class="ident">read_from_runtime_endpoint</span>(<span class="kw-2">&amp;mut</span> <span class="ident">uwabi_extensions</span>, <span class="ident">channel_handle</span>).<span class="kw">await</span>;
         <span class="macro">assert_eq!</span>(<span class="ident">message</span>.<span class="ident">to_vec</span>(), <span class="ident">received_message</span>);
     }
 
@@ -2365,9 +2359,9 @@
     <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">test_hosted_channel_write_full</span>() {
         <span class="kw">let</span> <span class="ident">channel_handle</span> <span class="op">=</span> <span class="ident">ChannelHandle::Testing</span>;
         <span class="kw">let</span> <span class="ident">message</span>: <span class="ident">UwabiMessage</span> <span class="op">=</span> <span class="macro">vec!</span>[<span class="number">42</span>, <span class="number">42</span>];
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">wasm_state</span> <span class="op">=</span> <span class="ident">create_test_wasm_state</span>();
+        <span class="kw">let</span> (<span class="kw-2">mut</span> <span class="ident">wasm_state</span>, <span class="kw-2">mut</span> <span class="ident">uwabi_extensions</span>) <span class="op">=</span> <span class="ident">create_test_wasm_state_and_extensions</span>();
 
-        <span class="ident">write_to_runtime_endpoint</span>(<span class="kw-2">&amp;mut</span> <span class="ident">wasm_state</span>, <span class="ident">channel_handle</span>, <span class="ident">message</span>.<span class="ident">clone</span>()).<span class="kw">await</span>;
+        <span class="ident">write_to_runtime_endpoint</span>(<span class="kw-2">&amp;mut</span> <span class="ident">uwabi_extensions</span>, <span class="ident">channel_handle</span>, <span class="ident">message</span>.<span class="ident">clone</span>()).<span class="kw">await</span>;
 
         <span class="comment">// Guess some memory addresses in linear Wasm memory to write the message to from</span>
         <span class="comment">// `src_buf_ptr`.</span>
@@ -2391,9 +2385,9 @@
     <span class="attribute">#[<span class="ident">tokio::test</span>]</span>
     <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">test_hosted_channel_write_channel_closed</span>() {
         <span class="kw">let</span> <span class="ident">channel_handle</span> <span class="op">=</span> <span class="ident">ChannelHandle::Testing</span>;
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">wasm_state</span> <span class="op">=</span> <span class="ident">create_test_wasm_state</span>();
-        <span class="comment">// Remove the extension to close one endpoint of the channel.</span>
-        <span class="ident">drop_extension</span>(<span class="kw-2">&amp;mut</span> <span class="ident">wasm_state</span>, <span class="ident">channel_handle</span>);
+        <span class="kw">let</span> (<span class="kw-2">mut</span> <span class="ident">wasm_state</span>, <span class="kw-2">mut</span> <span class="ident">uwabi_extensions</span>) <span class="op">=</span> <span class="ident">create_test_wasm_state_and_extensions</span>();
+        <span class="comment">// Drop all extensions to close the runtime endpoint of the channels.</span>
+        <span class="ident">uwabi_extensions</span>.<span class="ident">clear</span>();
         <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="ident">wasm_state</span>.<span class="ident">channel_write</span>(<span class="ident">channel_handle</span> <span class="kw">as</span> <span class="ident">i32</span>, <span class="number">0</span>, <span class="number">0</span>);
         <span class="macro">assert!</span>(<span class="ident">result</span>.<span class="ident">is_err</span>());
         <span class="macro">assert_eq!</span>(<span class="ident">ChannelStatus::ChannelEndpointClosed</span>, <span class="ident">result</span>.<span class="ident">unwrap_err</span>());
@@ -2411,50 +2405,42 @@
             .<span class="ident">expect</span>(<span class="string">&quot;could not create wasm_handler&quot;</span>)
     }
 
-    <span class="kw">fn</span> <span class="ident">create_test_wasm_state</span>() -&gt; <span class="ident">WasmState</span> {
+    <span class="kw">fn</span> <span class="ident">create_test_wasm_state_and_extensions</span>() -&gt; (<span class="ident">WasmState</span>, <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">UwabiExtension</span><span class="op">&gt;</span><span class="op">&gt;</span>) {
         <span class="kw">let</span> <span class="ident">wasm_handler</span> <span class="op">=</span> <span class="ident">create_test_wasm_handler</span>();
         <span class="ident">wasm_handler</span>
-            .<span class="ident">init</span>(<span class="string">b&quot;&quot;</span>.<span class="ident">to_vec</span>())
+            .<span class="ident">init_wasm_state_and_extensions</span>(<span class="string">b&quot;&quot;</span>.<span class="ident">to_vec</span>())
             .<span class="ident">expect</span>(<span class="string">&quot;could not create wasm_state&quot;</span>)
-    }
-
-    <span class="comment">// Helper function for testing to drop the UWABI extension for the given ChannelHandle.</span>
-    <span class="kw">fn</span> <span class="ident">drop_extension</span>(<span class="ident">wasm_state</span>: <span class="kw-2">&amp;mut</span> <span class="ident">WasmState</span>, <span class="ident">channel_handle</span>: <span class="ident">ChannelHandle</span>) {
-        <span class="ident">wasm_state</span>
-            .<span class="ident">uwabi_extensions</span>
-            .<span class="ident">retain</span>(<span class="op">|</span><span class="ident">uwabi_extension</span><span class="op">|</span> <span class="ident">uwabi_extension</span>.<span class="ident">get_channel_handle</span>() <span class="op">!</span><span class="op">=</span> <span class="ident">channel_handle</span>);
     }
 
     <span class="comment">// Helper function for testing to read from Endpoint associated to ChannelHandle extension in</span>
     <span class="comment">// the runtime.</span>
     <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">read_from_runtime_endpoint</span>(
-        <span class="ident">wasm_state</span>: <span class="kw-2">&amp;mut</span> <span class="ident">WasmState</span>,
+        <span class="ident">uwabi_extensions</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">UwabiExtension</span><span class="op">&gt;</span><span class="op">&gt;</span>,
         <span class="ident">channel_handle</span>: <span class="ident">ChannelHandle</span>,
     ) -&gt; <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">endpoint</span> <span class="op">=</span> <span class="ident">runtime_endpoint_for_channel_handle</span>(<span class="ident">wasm_state</span>, <span class="ident">channel_handle</span>);
+        <span class="kw">let</span> <span class="ident">endpoint</span> <span class="op">=</span> <span class="ident">runtime_endpoint_for_channel_handle</span>(<span class="ident">uwabi_extensions</span>, <span class="ident">channel_handle</span>);
         <span class="ident">endpoint</span>.<span class="ident">receiver</span>.<span class="ident">try_recv</span>().<span class="ident">unwrap</span>()
     }
 
     <span class="comment">// Helper function for testing to write to Endpoint associated to ChannelHandle extension in the</span>
     <span class="comment">// runtime.</span>
     <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">write_to_runtime_endpoint</span>(
-        <span class="ident">wasm_state</span>: <span class="kw-2">&amp;mut</span> <span class="ident">WasmState</span>,
+        <span class="ident">uwabi_extensions</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">UwabiExtension</span><span class="op">&gt;</span><span class="op">&gt;</span>,
         <span class="ident">channel_handle</span>: <span class="ident">ChannelHandle</span>,
         <span class="ident">message</span>: <span class="ident">UwabiMessage</span>,
     ) {
-        <span class="kw">let</span> <span class="ident">endpoint</span> <span class="op">=</span> <span class="ident">runtime_endpoint_for_channel_handle</span>(<span class="ident">wasm_state</span>, <span class="ident">channel_handle</span>);
+        <span class="kw">let</span> <span class="ident">endpoint</span> <span class="op">=</span> <span class="ident">runtime_endpoint_for_channel_handle</span>(<span class="ident">uwabi_extensions</span>, <span class="ident">channel_handle</span>);
         <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="ident">endpoint</span>.<span class="ident">sender</span>.<span class="ident">send</span>(<span class="ident">message</span>.<span class="ident">to_vec</span>().<span class="ident">clone</span>()).<span class="kw">await</span>;
         <span class="macro">assert!</span>(<span class="ident">result</span>.<span class="ident">is_ok</span>());
     }
 
     <span class="comment">// Helper function for testing to find the Endpoint associated to ChannelHandle in the runtime.</span>
     <span class="kw">fn</span> <span class="ident">runtime_endpoint_for_channel_handle</span>(
-        <span class="ident">wasm_state</span>: <span class="kw-2">&amp;mut</span> <span class="ident">WasmState</span>,
+        <span class="ident">uwabi_extensions</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">UwabiExtension</span><span class="op">&gt;</span><span class="op">&gt;</span>,
         <span class="ident">channel_handle</span>: <span class="ident">ChannelHandle</span>,
     ) -&gt; <span class="kw-2">&amp;mut</span> <span class="ident">Endpoint</span> {
-        <span class="comment">// Find extension associated to ChannelHandle in WasmState.</span>
-        <span class="kw">let</span> <span class="ident">extension</span> <span class="op">=</span> <span class="ident">wasm_state</span>
-            .<span class="ident">uwabi_extensions</span>
+        <span class="comment">// Find extension associated to ChannelHandle.</span>
+        <span class="kw">let</span> <span class="ident">extension</span> <span class="op">=</span> <span class="ident">uwabi_extensions</span>
             .<span class="ident">iter_mut</span>()
             .<span class="ident">find</span>(<span class="op">|</span><span class="ident">uwabi_extension</span><span class="op">|</span> {
                 <span class="kw">let</span> <span class="ident">channel_handle_of_extension</span> <span class="op">=</span> <span class="ident">uwabi_extension</span>.<span class="ident">get_channel_handle</span>();
