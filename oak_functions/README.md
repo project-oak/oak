@@ -15,8 +15,8 @@ client.
 The Oak Functions trusted runtime ensures that the workload may not violate the
 confidentiality of the client request data, preventing observers from learning
 anything about the request. As a result, the workload can potentially be
-untrusted, i.e., the client does not need to know the identity of the workload
-or trust it.
+untrusted, meaning that neither the client nor the host needs to know the
+identity of the workload or trust it.
 
 From the client point of view, the server provides cryptographic evidence
 (backed by an hardware-based Trusted Execution Environment) of its own identity
