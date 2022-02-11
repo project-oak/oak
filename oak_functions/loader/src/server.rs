@@ -757,7 +757,9 @@ impl WasmHandler {
 
         // Dropping and closing the endpoints of the Wasm module indicates to runtime endpoints that
         // they will not receive further messages.
-        wasm_state.channel_switchboard.unregister_all();
+        wasm_state
+            .channel_switchboard
+            .unregister_all(&wasm_state.logger);
 
         Ok(Response::create(
             StatusCode::Success,
@@ -923,11 +925,16 @@ impl ChannelSwitchboard {
 
     // By removing all endpoints from the ChannelSwitchboard their connected endpoints will know
     // that they will not receive any more messages and get an error when sending messages.
-    fn unregister_all(&mut self) {
+    fn unregister_all(&mut self, logger: &Logger) {
         for (_, mut endpoint) in self.0.drain() {
-            // Closing the receivers is good practice. We are currently not handling remaining
-            // messages, though.
             endpoint.close_receiver();
+            // We do not expect the Wasm module to have any unprocessed messages.
+            while let Ok(msg) = endpoint.receiver.try_recv() {
+                logger.log_sensitive(
+                    Level::Info,
+                    &format!("Message not received by Wasm module: {:?}", msg),
+                )
+            }
         }
     }
 }
@@ -1056,26 +1063,29 @@ mod tests {
 
     #[test]
     fn test_channel_switchboard_channel_handle_removed_after_clear() {
+        let logger = Logger::for_test();
         let channel_handle = ChannelHandle::Testing;
         let mut channel_switchboard = ChannelSwitchboard::new();
         channel_switchboard.register(channel_handle);
 
-        channel_switchboard.unregister_all();
+        channel_switchboard.unregister_all(&logger);
         assert!(channel_switchboard.get_mut(&channel_handle).is_none());
     }
 
     #[test]
     fn test_channel_switchboard_endpoint_closed_after_clear() {
+        let logger = Logger::for_test();
         let channel_handle = ChannelHandle::Testing;
         let mut channel_switchboard = ChannelSwitchboard::new();
         let endpoint2 = channel_switchboard.register(channel_handle);
 
-        channel_switchboard.unregister_all();
+        channel_switchboard.unregister_all(&logger);
         assert!(endpoint2.sender.try_send(vec![]).is_err());
     }
 
     #[tokio::test]
     async fn test_clear_channel_switchboard_stops_recv() {
+        let logger = Logger::for_test();
         let mut channel_switchboard = ChannelSwitchboard::new();
         let mut endpoint_2 = channel_switchboard.register(ChannelHandle::Testing);
 
@@ -1084,7 +1094,7 @@ mod tests {
             true
         });
 
-        channel_switchboard.unregister_all();
+        channel_switchboard.unregister_all(&logger);
         assert!(stopped_receiving.await.unwrap());
     }
 
