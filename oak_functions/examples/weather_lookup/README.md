@@ -57,6 +57,42 @@ radius of 40km. See https://s2geometry.io/devguide/examples/coverings for more
 information on coverings. Cell coverings for areas can be visualised using
 https://s2.sidewalklabs.com/regioncoverer/.
 
+### File format
+
+The weather file format looks as follows:
+
+Weather file is a Protobuf compiled file that consists of a list of the
+following entries:
+
+```protobuf
+message Entry {
+  bytes key = 1;
+  bytes value = 2;
+}
+```
+
+There are 2 types of entries:
+
+- Location entries
+- Cell entries
+
+_Location_ entries are represented as:
+
+- `key` is `LATITUDE_SIGNED_BIG_ENDIAN | LONGITUDE_SIGNED_BIG_ENDIAN`
+  [Length-Delimited](https://developers.google.com/protocol-buffers/docs/encoding#structure)
+  encoded
+  - Where `|` is concatenation
+  - Both Latitude and Longitude are in _microdegrees_
+- `value` is `bytes` that correspond to weather
+
+Each _Location_ entry has a single corresponding _Cell_ entry
+([S2 geometry](https://s2geometry.io/devguide/s2cell_hierarchy#s2cellid-numbering-again)).
+Cell entries are represented as:
+
+- `key` is `CELL_ID_TOKEN_HEX` Length-Delimited encoded with all the trailing
+  zeros trimmed
+- `value` is a corresponding Location entry `key`
+
 ## Lookup Logic
 
 The Wasm logic of the lookup module first determines in which cell the current
