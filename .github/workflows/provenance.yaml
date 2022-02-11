@@ -64,7 +64,7 @@ jobs:
         uses: cardinalby/schema-validator-action@v1
         with:
           file: './provenance/**/*.json'
-          schema: 'https://raw.githubusercontent.com/project-oak/transparent-release/main/schema/amber-slsa-buildtype/v1.json'
+          schema: 'https://raw.githubusercontent.com/project-oak/transparent-release/2c2eedca8236d45f67ee618c3bd83184d19a6bad/schema/amber-slsa-buildtype/v1.json'
 
       - name: Move new provenance files to the provenance branch
         run: cp -r ./provenance/. ./provenance-branch/
