@@ -192,8 +192,6 @@ pub struct WasmState {
     extensions_metadata: HashMap<String, (usize, wasmi::Signature)>,
     /// A mapping from channel handles to the hosted endpoints of channels.
     channel_switchboard: ChannelSwitchboard,
-    /// A list of UWABI extensions.
-    uwabi_extensions: Vec<Box<dyn UwabiExtension>>,
 }
 
 impl WasmState {
@@ -521,7 +519,6 @@ impl WasmState {
         extensions_indices: HashMap<usize, BoxedExtension>,
         extensions_metadata: HashMap<String, (usize, wasmi::Signature)>,
         channel_switchboard: ChannelSwitchboard,
-        uwabi_extensions: Vec<Box<dyn UwabiExtension>>,
     ) -> anyhow::Result<WasmState> {
         let mut abi = WasmState {
             request_bytes,
@@ -532,7 +529,6 @@ impl WasmState {
             extensions_indices: Some(extensions_indices),
             extensions_metadata,
             channel_switchboard,
-            uwabi_extensions,
         };
 
         let instance = wasmi::ModuleInstance::new(
@@ -704,7 +700,10 @@ impl WasmHandler {
         })
     }
 
-    fn init(&self, request_bytes: Vec<u8>) -> anyhow::Result<WasmState> {
+    fn init_wasm_state_and_extensions(
+        &self,
+        request_bytes: Vec<u8>,
+    ) -> anyhow::Result<(WasmState, Vec<Box<dyn UwabiExtension>>)> {
         let mut extensions_indices = HashMap::new();
         let mut extensions_metadata = HashMap::new();
         let mut uwabi_extensions: Vec<Box<dyn UwabiExtension>> = vec![];
@@ -728,20 +727,21 @@ impl WasmHandler {
             }
         }
 
-        WasmState::new(
+        let wasm_state = WasmState::new(
             &self.module,
             request_bytes,
             self.logger.clone(),
             extensions_indices,
             extensions_metadata,
             channel_switchboard,
-            uwabi_extensions,
-        )
+        )?;
+
+        Ok((wasm_state, uwabi_extensions))
     }
 
     pub async fn handle_invoke(&self, request: Request) -> anyhow::Result<Response> {
         let request_bytes = request.body;
-        let mut wasm_state = self.init(request_bytes)?;
+        let (mut wasm_state, _extensions) = self.init_wasm_state_and_extensions(request_bytes)?;
 
         wasm_state.invoke();
         for extension in wasm_state
@@ -1001,7 +1001,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_create_channel_switchboard_in_wasm_state() {
-        let wasm_state = create_test_wasm_state();
+        let (wasm_state, _) = create_test_wasm_state_and_extensions();
         let mut channel_switchboard = wasm_state.channel_switchboard;
 
         assert!(&channel_switchboard
@@ -1015,7 +1015,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_endpoint_from_channel_handle_out_of_range() {
-        let mut wasm_state = create_test_wasm_state();
+        let (mut wasm_state, _) = create_test_wasm_state_and_extensions();
         let result = wasm_state.get_endpoint_from_channel_handle(-1);
         assert!(result.is_err());
         assert_eq!(ChannelStatus::ChannelHandleInvalid, result.unwrap_err())
@@ -1023,7 +1023,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_endpoint_from_channel_handle_without_endpoint() {
-        let mut wasm_state = create_test_wasm_state();
+        let (mut wasm_state, _) = create_test_wasm_state_and_extensions();
         // Assumes ChannelHandle 0 will never have an Endpoint.
         let result = wasm_state.get_endpoint_from_channel_handle(0);
         assert!(result.is_err());
@@ -1047,7 +1047,7 @@ mod tests {
     #[tokio::test]
     async fn test_hosted_channel_read_no_message() {
         let channel_handle = ChannelHandle::Testing as i32;
-        let mut wasm_state = create_test_wasm_state();
+        let (mut wasm_state, _uwabi_extensions) = create_test_wasm_state_and_extensions();
         let result = wasm_state.channel_read(channel_handle, 0, 0);
         assert!(result.is_err());
         assert_eq!(ChannelStatus::ChannelEmpty, result.unwrap_err());
@@ -1056,9 +1056,9 @@ mod tests {
     #[tokio::test]
     async fn test_hosted_channel_read_channel_closed() {
         let channel_handle = ChannelHandle::Testing;
-        let mut wasm_state = create_test_wasm_state();
-        // Remove the extension to close one endpoint of the channel.
-        drop_extension(&mut wasm_state, channel_handle);
+        let (mut wasm_state, mut uwabi_extensions) = create_test_wasm_state_and_extensions();
+        // Drop all extensions to close the runtime endpoint of the channels.
+        uwabi_extensions.clear();
         let result = wasm_state.channel_read(channel_handle as i32, 0, 0);
         assert!(result.is_err());
         assert_eq!(
@@ -1071,9 +1071,9 @@ mod tests {
     async fn test_hosted_channel_read_ok() {
         let channel_handle = ChannelHandle::Testing;
         let message = vec![42, 42, 232];
-        let mut wasm_state = create_test_wasm_state();
+        let (mut wasm_state, mut uwabi_extensions) = create_test_wasm_state_and_extensions();
 
-        write_to_runtime_endpoint(&mut wasm_state, channel_handle, message.clone()).await;
+        write_to_runtime_endpoint(&mut uwabi_extensions, channel_handle, message.clone()).await;
 
         // Guess some memory addresses in linear Wasm memory.
         let dest_ptr_ptr: AbiPointer = 100;
@@ -1106,9 +1106,9 @@ mod tests {
     async fn test_hosted_channel_write_ok() {
         let channel_handle = ChannelHandle::Testing;
         let message: UwabiMessage = vec![42, 42];
-        let mut wasm_state = create_test_wasm_state();
+        let (mut wasm_state, mut uwabi_extensions) = create_test_wasm_state_and_extensions();
 
-        write_to_runtime_endpoint(&mut wasm_state, channel_handle, message.clone()).await;
+        write_to_runtime_endpoint(&mut uwabi_extensions, channel_handle, message.clone()).await;
 
         // Guess some memory addresses in linear Wasm memory to write the message to from
         // `src_buf_ptr`.
@@ -1121,7 +1121,8 @@ mod tests {
         assert!(result.is_ok());
 
         // Assert that the message arrived at runtime endpoint.
-        let received_message = read_from_runtime_endpoint(&mut wasm_state, channel_handle).await;
+        let received_message =
+            read_from_runtime_endpoint(&mut uwabi_extensions, channel_handle).await;
         assert_eq!(message.to_vec(), received_message);
     }
 
@@ -1129,9 +1130,9 @@ mod tests {
     async fn test_hosted_channel_write_full() {
         let channel_handle = ChannelHandle::Testing;
         let message: UwabiMessage = vec![42, 42];
-        let mut wasm_state = create_test_wasm_state();
+        let (mut wasm_state, mut uwabi_extensions) = create_test_wasm_state_and_extensions();
 
-        write_to_runtime_endpoint(&mut wasm_state, channel_handle, message.clone()).await;
+        write_to_runtime_endpoint(&mut uwabi_extensions, channel_handle, message.clone()).await;
 
         // Guess some memory addresses in linear Wasm memory to write the message to from
         // `src_buf_ptr`.
@@ -1155,9 +1156,9 @@ mod tests {
     #[tokio::test]
     async fn test_hosted_channel_write_channel_closed() {
         let channel_handle = ChannelHandle::Testing;
-        let mut wasm_state = create_test_wasm_state();
-        // Remove the extension to close one endpoint of the channel.
-        drop_extension(&mut wasm_state, channel_handle);
+        let (mut wasm_state, mut uwabi_extensions) = create_test_wasm_state_and_extensions();
+        // Drop all extensions to close the runtime endpoint of the channels.
+        uwabi_extensions.clear();
         let result = wasm_state.channel_write(channel_handle as i32, 0, 0);
         assert!(result.is_err());
         assert_eq!(ChannelStatus::ChannelEndpointClosed, result.unwrap_err());
@@ -1175,50 +1176,42 @@ mod tests {
             .expect("could not create wasm_handler")
     }
 
-    fn create_test_wasm_state() -> WasmState {
+    fn create_test_wasm_state_and_extensions() -> (WasmState, Vec<Box<dyn UwabiExtension>>) {
         let wasm_handler = create_test_wasm_handler();
         wasm_handler
-            .init(b"".to_vec())
+            .init_wasm_state_and_extensions(b"".to_vec())
             .expect("could not create wasm_state")
-    }
-
-    // Helper function for testing to drop the UWABI extension for the given ChannelHandle.
-    fn drop_extension(wasm_state: &mut WasmState, channel_handle: ChannelHandle) {
-        wasm_state
-            .uwabi_extensions
-            .retain(|uwabi_extension| uwabi_extension.get_channel_handle() != channel_handle);
     }
 
     // Helper function for testing to read from Endpoint associated to ChannelHandle extension in
     // the runtime.
     async fn read_from_runtime_endpoint(
-        wasm_state: &mut WasmState,
+        uwabi_extensions: &mut Vec<Box<dyn UwabiExtension>>,
         channel_handle: ChannelHandle,
     ) -> Vec<u8> {
-        let endpoint = runtime_endpoint_for_channel_handle(wasm_state, channel_handle);
+        let endpoint = runtime_endpoint_for_channel_handle(uwabi_extensions, channel_handle);
         endpoint.receiver.try_recv().unwrap()
     }
 
     // Helper function for testing to write to Endpoint associated to ChannelHandle extension in the
     // runtime.
     async fn write_to_runtime_endpoint(
-        wasm_state: &mut WasmState,
+        uwabi_extensions: &mut Vec<Box<dyn UwabiExtension>>,
         channel_handle: ChannelHandle,
         message: UwabiMessage,
     ) {
-        let endpoint = runtime_endpoint_for_channel_handle(wasm_state, channel_handle);
+        let endpoint = runtime_endpoint_for_channel_handle(uwabi_extensions, channel_handle);
         let result = endpoint.sender.send(message.to_vec().clone()).await;
         assert!(result.is_ok());
     }
 
     // Helper function for testing to find the Endpoint associated to ChannelHandle in the runtime.
     fn runtime_endpoint_for_channel_handle(
-        wasm_state: &mut WasmState,
+        uwabi_extensions: &mut Vec<Box<dyn UwabiExtension>>,
         channel_handle: ChannelHandle,
     ) -> &mut Endpoint {
-        // Find extension associated to ChannelHandle in WasmState.
-        let extension = wasm_state
-            .uwabi_extensions
+        // Find extension associated to ChannelHandle.
+        let extension = uwabi_extensions
             .iter_mut()
             .find(|uwabi_extension| {
                 let channel_handle_of_extension = uwabi_extension.get_channel_handle();
