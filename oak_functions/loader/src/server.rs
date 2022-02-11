@@ -755,16 +755,15 @@ impl WasmHandler {
             }
         }
 
-        // Dropping and closing the endpoints of the Wasm module indicates to runtime endpoints that
-        // they will not receive further messages.
-        wasm_state
-            .channel_switchboard
-            .unregister_all(&wasm_state.logger);
-
         Ok(Response::create(
             StatusCode::Success,
             wasm_state.get_response_bytes(),
         ))
+
+        // Here we drop all endpoints of the Wasm module (i.e., the wasm_state.channel_switchboard).
+        // This indicates to the Runtime endpoints that they will not receive further messages.
+        // Note, that we do not do a clean shutdown of the receivers in the endpoints Wasm module,
+        // because there is no need to handle, or even log, the remaining messages.
     }
 }
 
@@ -872,13 +871,6 @@ pub struct Endpoint {
     receiver: Receiver<UwabiMessage>,
 }
 
-impl Endpoint {
-    /// Close the receiver in the endpoint to not receive any more messages.
-    fn close_receiver(&mut self) {
-        self.receiver.close()
-    }
-}
-
 /// Create a channel with two symmetrical endpoints. The [`UwabiMessage`] sent from one [`Endpoint`]
 /// are received at the other [`Endpoint`] and vice versa by connecting two unidirectional
 /// [tokio::mpsc channels](https://docs.rs/tokio/0.1.16/tokio/sync/mpsc/index.html).
@@ -921,21 +913,6 @@ impl ChannelSwitchboard {
     // endpoint has to be mutable.
     fn get_mut(&mut self, channel_handle: &ChannelHandle) -> Option<&mut Endpoint> {
         self.0.get_mut(channel_handle)
-    }
-
-    // By removing all endpoints from the ChannelSwitchboard their connected endpoints will know
-    // that they will not receive any more messages and get an error when sending messages.
-    fn unregister_all(&mut self, logger: &Logger) {
-        for (_, mut endpoint) in self.0.drain() {
-            endpoint.close_receiver();
-            // We do not expect the Wasm module to have any unprocessed messages.
-            while let Ok(msg) = endpoint.receiver.try_recv() {
-                logger.log_sensitive(
-                    Level::Info,
-                    &format!("Message not received by Wasm module: {:?}", msg),
-                )
-            }
-        }
     }
 }
 
@@ -1023,14 +1000,6 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_send_to_closed_receiver() {
-        let (mut endpoint_1, endpoint_2) = channel_create();
-        endpoint_1.close_receiver();
-        let result = endpoint_2.sender.send(vec![43]).await;
-        assert!(result.is_err());
-    }
-
-    #[tokio::test]
     async fn test_create_channel_switchboard_in_wasm_state() {
         let wasm_state = create_test_wasm_state();
         let mut channel_switchboard = wasm_state.channel_switchboard;
@@ -1061,31 +1030,8 @@ mod tests {
         assert_eq!(ChannelStatus::ChannelHandleInvalid, result.unwrap_err())
     }
 
-    #[test]
-    fn test_channel_switchboard_channel_handle_removed_after_clear() {
-        let logger = Logger::for_test();
-        let channel_handle = ChannelHandle::Testing;
-        let mut channel_switchboard = ChannelSwitchboard::new();
-        channel_switchboard.register(channel_handle);
-
-        channel_switchboard.unregister_all(&logger);
-        assert!(channel_switchboard.get_mut(&channel_handle).is_none());
-    }
-
-    #[test]
-    fn test_channel_switchboard_endpoint_closed_after_clear() {
-        let logger = Logger::for_test();
-        let channel_handle = ChannelHandle::Testing;
-        let mut channel_switchboard = ChannelSwitchboard::new();
-        let endpoint2 = channel_switchboard.register(channel_handle);
-
-        channel_switchboard.unregister_all(&logger);
-        assert!(endpoint2.sender.try_send(vec![]).is_err());
-    }
-
     #[tokio::test]
-    async fn test_clear_channel_switchboard_stops_recv() {
-        let logger = Logger::for_test();
+    async fn test_drop_channel_switchboard_stops_recv() {
         let mut channel_switchboard = ChannelSwitchboard::new();
         let mut endpoint_2 = channel_switchboard.register(ChannelHandle::Testing);
 
@@ -1094,7 +1040,7 @@ mod tests {
             true
         });
 
-        channel_switchboard.unregister_all(&logger);
+        std::mem::drop(channel_switchboard);
         assert!(stopped_receiving.await.unwrap());
     }
 
