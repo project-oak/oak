@@ -32,18 +32,18 @@ protocol and consists of 2 stages:
    - The keys generated during the Handshake are used to encrypt data sent
      between Client and Server
 
-Prior to the _Handshake_ both Client and Server generate an individual pair of
-[ECDSA-P256](https://datatracker.ietf.org/doc/html/rfc6979) keys called
-**Signing Keys**. These keys are persistent between connections (but regenerated
-at startup) and are used to sign **Transcripts**: hashes of previous handshake
-messages that are sent in each new handshake message to prevent
+Prior to the _Handshake_ both Client and Server each generate an individual
+[ECDSA-P256](https://datatracker.ietf.org/doc/html/rfc6979) key pair called
+**Signing Key Pair**. These keys are persistent between connections (but
+regenerated at startup) and are used to sign **Transcripts**: hashes of previous
+handshake messages that are sent in each new handshake message to prevent
 [Replay Attacks](https://en.wikipedia.org/wiki/Replay_attack). Each handshake
 message also includes a random string so that transcripts always contain new
 random values.
 
-Also for each individual connection both Client and Server generate a pair of
-[X25519](https://datatracker.ietf.org/doc/html/rfc7748) Diffie-Hellman keys
-called **Ephemeral Keys**. These keys are used to establish a shared secret
+Also for each individual connection both Client and Server each generate an
+[X25519](https://datatracker.ietf.org/doc/html/rfc7748) Diffie-Hellman key pair
+called **Ephemeral Key Pair**. These keys are used to establish a shared secret
 between Client and Server.
 
 The shared secret is used to generate 2 shared
