@@ -19,6 +19,7 @@ pub mod proto {
 }
 
 pub mod attestation;
+pub mod verification;
 
 use crate::attestation::{into_server_identity_verifier, ConfigurationVerifier};
 use anyhow::Context;

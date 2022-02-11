@@ -8,6 +8,9 @@ license = "Apache-2.0"
 [dependencies]
 anyhow = "*"
 async-stream = "*"
+base64 = "*"
+p256 = {version = "*", features = ["ecdsa-core", "ecdsa", "pem"]}
+ecdsa = {version = "*", features = ["verify", "pkcs8", "pem"]}
 env_logger = "*"
 grpc_attestation = { path = "../../../grpc_attestation/" }
 http = "*"
@@ -16,6 +19,11 @@ oak_functions_abi = { path = "../../abi" }
 oak_remote_attestation = { path = "../../../remote_attestation/rust/" }
 prost = "*"
 regex = "*"
+ring = "*"
+serde = "*"
+serde_jcs = "*"
+spki = { version = "0.5.4", features = ["pem"] }
+signature = "^1.3"
 structopt = "*"
 tokio = { version = "*", features = [
   "fs",
@@ -24,9 +32,10 @@ tokio = { version = "*", features = [
   "rt-multi-thread"
 ] }
 tonic = { version = "*", features = ["tls", "tls-roots"] }
+x509-parser = "*"
 
 [dev-dependencies]
-serde_json = "*" 
+serde_json = "*"
 assert_matches = "*"
 pem = "*"
 oak_sign = { path = "../../../oak_sign" }

@@ -2546,6 +2546,7 @@ dependencies = [
  "assert_matches",
  "async-stream",
  "base64 0.13.0",
+ "ecdsa",
  "env_logger 0.9.0",
  "grpc_attestation",
  "http",
@@ -2554,6 +2555,7 @@ dependencies = [
  "oak_remote_attestation",
  "oak_sign",
  "oak_utils",
+ "p256",
  "pem 1.0.2",
  "prost 0.8.0",
  "regex",
@@ -2561,6 +2563,7 @@ dependencies = [
  "serde",
  "serde_jcs",
  "serde_json",
+ "signature",
  "spki 0.5.4",
  "structopt",
  "tokio",
@@ -3152,8 +3155,10 @@ version = "0.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c9c2f795bc591cb3384cb64082a578b89207ac92bb89c9d98c1ea2ace7cd8110"
 dependencies = [
+ "base64ct",
  "der 0.3.5",
  "spki 0.3.0",
+ "zeroize",
 ]
 
 [[package]]
