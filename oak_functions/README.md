@@ -14,17 +14,14 @@ client.
 
 The Oak Functions trusted runtime ensures that the workload may not violate the
 confidentiality of the client request data, preventing observers from learning
-anything about the request. Note that since the Oak Functions trusted runtime
-guarantees the confidentiality and integrity of the data, the workload can
-potentially be untrusted.
+anything about the request. As a result, the workload can potentially be
+untrusted, i.e., the client does not need to know the identity of the workload
+or trust it.
 
 From the client point of view, the server provides cryptographic evidence
 (backed by an hardware-based Trusted Execution Environment) of its own identity
 as part of a remote attestation protocol. The server identity can then be used
 to decide whether it is in fact a legitimate version of the trusted runtime.
-
-**TODO:** Briefly explain the use of transparent release for verifying the
-server identity.
 
 The main building blocks used in Oak Functions are:
 
