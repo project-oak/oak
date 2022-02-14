@@ -1128,6 +1128,7 @@ mod tests {
         let message: UwabiMessage = vec![42, 42];
         let (mut wasm_state, mut uwabi_extensions) = create_test_wasm_state_and_extensions();
 
+        // TODO(mschett): Document why we need to write message first in endpoint.
         write_to_runtime_endpoint(&mut uwabi_extensions, channel_handle, message.clone()).await;
 
         // Guess some memory addresses in linear Wasm memory to write the message to from
