@@ -91,7 +91,7 @@ _Index_ entries correspond to
 [S2](https://s2geometry.io/devguide/s2cell_hierarchy#s2cellid-numbering-again)
 cells. These entries are represented as:
 
-- `key` UTF-8 encoded string representation of the hex `CELL_ID_TOKEN` value is
+- `key` UTF-8 encoded string representation of the hex `CELL_ID_TOKEN` value
   with all the trailing zeros trimmed
   - For example, if the cell id is `0xff000000000000000` token is the string
     `ff`
