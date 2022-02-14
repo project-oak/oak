@@ -257,11 +257,14 @@ pub fn assert_response_body(response: Response, expected: &str) {
     )
 }
 
-/// Create Wasm bytecode from manifest path relative from the `oak_functions` directory.
-fn create_wasm_module_bytes(relative_manifest_path: &str, release: bool) -> Vec<u8> {
-    let mut manifest_path = std::env::current_dir().unwrap();
-    manifest_path.pop();
-    manifest_path.push(relative_manifest_path);
+/// Create Wasm bytecode from an Oak Functions example.
+fn create_wasm_module_bytes_from_example(
+    manifest_path_from_examples: &str,
+    release: bool,
+) -> Vec<u8> {
+    let mut manifest_path = std::path::PathBuf::new();
+    manifest_path.push(env!("OAK_FUNCTIONS_EXAMPLES"));
+    manifest_path.push(manifest_path_from_examples);
     compile_rust_wasm(manifest_path.to_str().expect("Invalid target dir"), release)
         .expect("Couldn't read Wasm module")
 }
@@ -269,5 +272,5 @@ fn create_wasm_module_bytes(relative_manifest_path: &str, release: bool) -> Vec<
 /// Create valid (release) Wasm bytecode for a minimal "echo" module which only uses the Abi
 /// functions `read_request` and `write_request`.
 pub fn create_echo_wasm_module_bytes() -> Vec<u8> {
-    create_wasm_module_bytes("examples/echo/module/Cargo.toml", true)
+    create_wasm_module_bytes_from_example("echo/module/Cargo.toml", true)
 }

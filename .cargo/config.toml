@@ -26,3 +26,6 @@ rustflags = ["-C", "target-feature=+crt-static", "-C", "link-arg=-lgcc"]
 # See also https://doc.rust-lang.org/cargo/reference/config.html#httpmultiplexing
 [http]
 multiplexing = false
+
+[env]
+OAK_FUNCTIONS_EXAMPLES = { value = "oak_functions/examples", relative = true }
