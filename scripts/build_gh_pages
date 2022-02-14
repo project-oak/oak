@@ -29,101 +29,25 @@ if [[ -n "$(ls "${TARGET_DIR}"/*)" ]]; then
   exit 1
 fi
 
-# Absolute path to the target directory, to make sure that docs are generated into the correct directory.
-readonly TARGET_ABS_PATH="$(realpath "${TARGET_DIR}")"
+cargo doc --no-deps --target-dir="${TARGET_DIR}"
 
-# All the dirs that we want to generate docs for.
-declare -ar SOURCE_PATHS=(
-  'oak_abi'
-  'oak_client'
-  'oak_derive'
-  'oak_functions/loader'
-  'oak_functions/sdk'
-  'oak_io'
-  'oak_loader'
-  'oak_runtime'
-  'oak_services'
-  'oak_sign'
-  'oak_utils'
-  'runner'
-  'sdk'
-)
-declare -ar TARGET_SUBDIRS=(
-  'oak_abi'
-  'oak_client'
-  'oak_derive'
-  'oak_functions_loader'
-  'oak_functions'
-  'oak_io'
-  'oak_loader'
-  'oak_runtime'
-  'oak_services'
-  'oak_sign'
-  'oak_utils'
-  'runner'
-  'oak'
-)
+# Remove non-doc artifacts from the target dir.
+rm --recursive --force "${TARGET_DIR}/debug"
 
-# Titles used in the top-level index.html files.
-declare -ar PAGE_TITLES=(
-  'ABI'
-  'Client'
-  'Derive'
-  'Functions Loader'
-  'Functions SDK'
-  'IO'
-  'Loader'
-  'Runtime'
-  'Services'
-  'Sign'
-  'Utils'
-  'Runner'
-  'SDK'
-)
+# Remove non-deterministic files.
+rm "${TARGET_DIR}/.rustc_info.json"
 
-readonly LEN=${#SOURCE_PATHS[@]}
-
-for ((i=0;i<LEN;i++)); do
-  (
-    cd "${SOURCE_PATHS[$i]}"
-
-    target_dir="${TARGET_ABS_PATH}/${SOURCE_PATHS[$i]}"
-    mkdir --parent "${target_dir}"
-
-    # Generate docs directly into the target dir.
-    cargo doc --no-deps --target-dir="${target_dir}"
-
-    # Remove non-doc artifacts from the target dir.
-    rm --recursive --force "${target_dir}/debug"
-
-    # Remove non-deterministic files.
-    rm "${target_dir}/.rustc_info.json"
-
-    # The docs generated from the Cargo workspace do not include a workspace-level index, so we generate
-    # one here and redirect to the appropriate documentation.
-    cat <<-END > "${target_dir}/index.html"
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <meta http-equiv="Refresh" content="0; url=./doc/${TARGET_SUBDIRS[$i]}/index.html" />
-        </head>
-        <body>
-          <p><a href="./doc/${TARGET_SUBDIRS[$i]}/index.html">Oak ${PAGE_TITLES[$i]} main page</a></p>
-        </body>
-      </html>
-END
-  )
-done
-
-# A top-level index so that visiting https://project-oak.github.io/oak/ goes somewhere helpful.
-cat <<-END > "${TARGET_ABS_PATH}/index.html"
+# The docs generated from the Cargo workspace do not include a workspace-level index, so we generate
+# one here and redirect to the appropriate documentation.
+readonly REDIRECT_CRATE_NAME=oak_functions
+cat <<-END > "${TARGET_DIR}/index.html"
   <!DOCTYPE html>
   <html>
     <head>
-      <meta http-equiv="Refresh" content="0; url=./sdk/doc/oak/index.html" />
+      <meta http-equiv="Refresh" content="0; url=./doc/${REDIRECT_CRATE_NAME}/index.html" />
     </head>
     <body>
-      <p><a href="./sdk/doc/oak/index.html">Oak SDK main page</a></p>
+      <p><a href="./doc/${REDIRECT_CRATE_NAME}/index.html">${REDIRECT_CRATE_NAME}</a></p>
     </body>
   </html>
 END

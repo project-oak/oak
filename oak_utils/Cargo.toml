@@ -7,8 +7,8 @@ license = "Apache-2.0"
 
 [dependencies]
 proc-macro2 = "*"
-prost = { path = "../third_party/prost" }
-prost-build = { path = "../third_party/prost/prost-build" }
+prost = "*"
+prost-build = "*"
 quote = "*"
 tempfile = "*"
 # Disable the `rustfmt` feature, as it requires `rustfmt` which may not be supported for custom

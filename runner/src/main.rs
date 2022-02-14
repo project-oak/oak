@@ -113,16 +113,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 fn match_cmd(opt: &Opt) -> Step {
     match opt.cmd {
-        Command::RunExamples(ref run_opt) => run_examples(run_opt, &opt.scope),
         Command::RunFunctionsExamples(ref run_opt) => run_functions_examples(run_opt, &opt.scope),
         Command::BuildFunctionsExample(ref opt) => build_functions_example(opt),
-        Command::BuildServer(ref opt) => build_server(opt, vec![]),
         Command::BuildFunctionsServer(ref opt) => build_functions_server(opt, vec![]),
         Command::RunTests => run_tests(),
         Command::RunCargoClippy => run_cargo_clippy(&opt.scope),
         Command::RunCargoTests(ref run_opt) => run_cargo_tests(run_opt, &opt.scope),
         Command::RunBazelTests => run_bazel_tests(),
-        Command::RunTestsTsan => run_tests_tsan(&opt.scope),
         Command::RunCargoFuzz(ref opt) => run_cargo_fuzz(opt),
         Command::Format => format(&opt.scope),
         Command::CheckFormat => check_format(&opt.scope),
@@ -178,13 +175,6 @@ fn run_bazel_tests() -> Step {
     Step::Multiple {
         name: "bazel tests".to_string(),
         steps: vec![run_bazel_build(), run_bazel_test(), run_clang_tidy()],
-    }
-}
-
-fn run_tests_tsan(scope: &Scope) -> Step {
-    Step::Multiple {
-        name: "tests".to_string(),
-        steps: vec![run_cargo_test_tsan(scope)],
     }
 }
 
@@ -582,11 +572,12 @@ fn run_clang_format(mode: FormatMode) -> Step {
                 "python",
                 &[
                     "./third_party/run-clang-format/run-clang-format.py",
-                    "-r",
+                    "--recursive",
                     "--exclude",
                     "*/node_modules",
-                    "oak",
-                    "examples",
+                    "--exclude",
+                    "third_party",
+                    "oak_functions",
                 ],
             ),
         },
@@ -761,40 +752,6 @@ fn run_clang_tidy() -> Step {
     }
 }
 
-fn run_cargo_test_tsan(scope: &Scope) -> Step {
-    let abitest_crate = "./examples/abitest/module_0/rust/Cargo.toml";
-    let all_affected_crates = all_affected_crates(scope);
-    let mut steps = vec![];
-    if all_affected_crates.contains(abitest_crate) {
-        let cmd = Cmd::new_with_env(
-            "cargo",
-            &[
-                "-Zbuild-std",
-                "test",
-                &format!("--manifest-path={}", abitest_crate),
-                "--target=x86_64-unknown-linux-gnu",
-                "--verbose",
-                "--",
-                "--nocapture",
-            ],
-            &hashmap! {
-                "RUST_BACKTRACE".to_string() => "1".to_string(),
-                "RUSTFLAGS".to_string() => "-Z sanitizer=thread".to_string(),
-                "TSAN_OPTIONS".to_string() => format!("halt_on_error=1 report_atomic_races=0 suppressions={}/.tsan_suppress", std::env::current_dir().unwrap().display()),
-            },
-        );
-        steps.push(Step::Single {
-            name: "abitest (tsan)".to_string(),
-            command: cmd,
-        });
-    }
-
-    Step::Multiple {
-        name: "cargo test (tsan)".to_string(),
-        steps,
-    }
-}
-
 fn run_cargo_clippy(scope: &Scope) -> Step {
     let all_affected_crates = all_affected_crates(scope);
     Step::Multiple {
@@ -885,7 +842,10 @@ fn run_cargo_clean() -> Step {
 fn run_bazel_build() -> Step {
     Step::Single {
         name: "bazel build".to_string(),
-        command: Cmd::new("bazel", &["build", "--", "//oak/...:all"]),
+        command: Cmd::new(
+            "bazel",
+            &["build", "--", "//remote_attestation/java/...:all"],
+        ),
     }
 }
 
@@ -897,9 +857,8 @@ fn run_bazel_test() -> Step {
             &[
                 "test",
                 "--",
-                "//oak/...:all",
-                "//remote_attestation/java/tests/...:all",
                 "//oak_functions/client/java/tests/...:all",
+                "//remote_attestation/java/tests/...:all",
             ],
         ),
     }

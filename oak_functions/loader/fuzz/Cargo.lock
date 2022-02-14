@@ -376,8 +376,8 @@ dependencies = [
  "oak_functions_abi",
  "oak_remote_attestation",
  "oak_utils",
- "prost 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "prost-types 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "prost",
+ "prost-types",
  "tokio",
  "tonic",
  "tower",
@@ -717,8 +717,8 @@ dependencies = [
 name = "oak_functions_abi"
 version = "0.1.0"
 dependencies = [
- "prost 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "prost-build 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "prost",
+ "prost-build",
 ]
 
 [[package]]
@@ -740,7 +740,7 @@ dependencies = [
  "oak_functions_abi",
  "oak_remote_attestation",
  "oak_utils",
- "prost 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "prost",
  "rand",
  "serde",
  "serde_derive",
@@ -765,8 +765,8 @@ dependencies = [
  "maplit",
  "oak_functions_abi",
  "oak_functions_loader",
- "prost 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "prost-build 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "prost",
+ "prost-build",
  "tokio",
  "tonic",
 ]
@@ -778,8 +778,8 @@ dependencies = [
  "anyhow",
  "bincode",
  "log",
- "prost 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "prost-build 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "prost",
+ "prost-build",
  "ring",
  "rustls 0.20.0",
  "serde",
@@ -793,8 +793,8 @@ name = "oak_utils"
 version = "0.1.0"
 dependencies = [
  "proc-macro2",
- "prost 0.8.0",
- "prost-build 0.8.0",
+ "prost",
+ "prost-build",
  "quote",
  "tempfile",
  "tonic-build",
@@ -926,35 +926,11 @@ dependencies = [
 [[package]]
 name = "prost"
 version = "0.8.0"
-dependencies = [
- "bytes",
- "prost-derive 0.8.0",
-]
-
-[[package]]
-name = "prost"
-version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "de5e2533f59d08fcf364fd374ebda0692a70bd6d7e66ef97f306f45c6c5d8020"
 dependencies = [
  "bytes",
- "prost-derive 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
-name = "prost-build"
-version = "0.8.0"
-dependencies = [
- "bytes",
- "heck",
- "itertools",
- "log",
- "multimap",
- "petgraph",
- "prost 0.8.0",
- "prost-types 0.8.0",
- "tempfile",
- "which",
+ "prost-derive",
 ]
 
 [[package]]
@@ -969,21 +945,10 @@ dependencies = [
  "log",
  "multimap",
  "petgraph",
- "prost 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "prost-types 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "prost",
+ "prost-types",
  "tempfile",
  "which",
-]
-
-[[package]]
-name = "prost-derive"
-version = "0.8.0"
-dependencies = [
- "anyhow",
- "itertools",
- "proc-macro2",
- "quote",
- "syn",
 ]
 
 [[package]]
@@ -1002,19 +967,11 @@ dependencies = [
 [[package]]
 name = "prost-types"
 version = "0.8.0"
-dependencies = [
- "bytes",
- "prost 0.8.0",
-]
-
-[[package]]
-name = "prost-types"
-version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "603bbd6394701d13f3f25aada59c7de9d35a6a5887cfc156181234a44002771b"
 dependencies = [
  "bytes",
- "prost 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "prost",
 ]
 
 [[package]]
@@ -1483,8 +1440,8 @@ dependencies = [
  "hyper-timeout",
  "percent-encoding",
  "pin-project",
- "prost 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "prost-derive 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "prost",
+ "prost-derive",
  "tokio",
  "tokio-rustls",
  "tokio-stream",
@@ -1503,7 +1460,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "12b52d07035516c2b74337d2ac7746075e7dcae7643816c1b12c5ff8a7484c08"
 dependencies = [
  "proc-macro2",
- "prost-build 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "prost-build",
  "quote",
  "syn",
 ]

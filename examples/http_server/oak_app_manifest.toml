@@ -1,4 +1,0 @@
-name = "http_server"
-
-[modules]
-app = { path = "bin/http_server.wasm" }

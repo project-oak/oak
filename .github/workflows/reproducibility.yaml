@@ -54,14 +54,6 @@ jobs:
           df --human-readable
 
       # Build artifacts that are supposed to be reproducible.
-      - name: Build Rust server
-        run: |
-          ./scripts/docker_run ./scripts/runner build-server
-
-      - name: Build examples
-        run: |
-          ./scripts/docker_run ./scripts/runner --scope=all run-examples --client-variant=none --run-server=false
-
       - name: Build Functions server
         run: |
           ./scripts/docker_run ./scripts/runner build-functions-server

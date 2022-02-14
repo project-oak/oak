@@ -137,39 +137,6 @@ requirements, before publishing the results by logging to stdout.
 The Remote Attestation protocol implemented in Oak is currently integrated in
 Oak Functions.
 
-## Comparison with Oak
-
-Oak Functions is a stripped-down version of Oak, and has borrowed many ideas
-from Oak, but is different from Oak in a few ways that are described in this
-section.
-
-### Number of Wasm Modules
-
-While an Oak application may have more than one Wasm module, each Oak Functions
-application can have only one Wasm module.
-
-Structurally, an Oak Functions application is very similar to a single-node Oak
-application. This simplifies the design considerably. Since there is only one
-Oak node (i.e., Wasm module), and the native APIs are no longer implemented as
-pseudo-nodes, there is no need for message passing over channels. As a
-consequence, we no longer require information flow control (IFC) to police the
-flow of data from one node to another. The developers do not have to deal with
-IFC labels or more advanced concepts and patterns.
-
-Similar to Oak, we have implemented several layers of defense in depth. In
-particular, application owners can control which functionalities to enable in a
-server configuration file.
-
-### No external interaction and read-only storage
-
-An Oak application can have restricted interactions with the external world via
-gRPC and HTTP pseudo-nodes. There is no equivalent functionality in an Oak
-Functions application. Instead, as described above, each Oak Functions
-application can have a read-only storage that can be refreshed periodically. The
-trusted runtime offers a
-[lookup API](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#storage_get_item)
-for fetching data from the storage.
-
 ## Applications
 
 The assumption is that Oak Functions only covers a subset of the use cases

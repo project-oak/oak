@@ -46,14 +46,12 @@ pub struct Example {
 impl Example {
     fn has_classic_app(&self) -> bool {
         self.applications.values().any(|app| match app {
-            Application::Classic(_) => true,
             Application::Functions(_) => false,
         })
     }
 
     fn has_functions_app(&self) -> bool {
         self.applications.values().any(|app| match app {
-            Application::Classic(_) => false,
             Application::Functions(_) => true,
         })
     }
@@ -68,16 +66,7 @@ impl Example {
 #[serde(deny_unknown_fields)]
 #[serde(tag = "type")]
 enum Application {
-    Classic(ApplicationClassic),
     Functions(ApplicationFunctions),
-}
-
-#[derive(serde::Deserialize, Debug)]
-#[serde(deny_unknown_fields)]
-pub struct ApplicationClassic {
-    manifest: String,
-    out: String,
-    modules: HashMap<String, Target>,
 }
 
 #[derive(serde::Deserialize, Debug)]
@@ -124,54 +113,6 @@ struct Executable {
     target: Target,
     #[serde(default)]
     additional_args: Vec<String>,
-}
-
-impl ApplicationClassic {
-    fn construct_application_build_steps(&self, example_name: &str) -> Vec<Step> {
-        vec![
-            Step::Multiple {
-                name: "build wasm modules".to_string(),
-                steps: self
-                    .modules
-                    .iter()
-                    .map(|(name, target)| build_wasm_module(name, target, example_name))
-                    .collect(),
-            },
-            Step::Single {
-                name: "build application".to_string(),
-                command: build_application(self),
-            },
-        ]
-    }
-
-    fn construct_example_server_run_step(
-        &self,
-        example: &ClassicExample,
-        run_clients: Step,
-    ) -> Step {
-        let opt = &example.options;
-
-        let run_server = run_example_server(
-            &opt.build_server,
-            &example.example.server,
-            opt.server_additional_args.clone(),
-            &self.out,
-            &opt.permissions_file,
-        );
-
-        if opt.build_client.client_variant == NO_CLIENTS {
-            Step::Single {
-                name: "run server".to_string(),
-                command: run_server,
-            }
-        } else {
-            Step::WithBackground {
-                name: "background server".to_string(),
-                background: run_server,
-                foreground: Box::new(run_clients),
-            }
-        }
-    }
 }
 
 impl ApplicationFunctions {
@@ -239,60 +180,6 @@ trait OakExample {
             })
     }
 }
-pub struct ClassicExample<'a> {
-    example: &'a Example,
-    applications: HashMap<String, &'a ApplicationClassic>,
-    options: RunExamples,
-}
-
-impl<'a> ClassicExample<'a> {
-    fn new(example: &'a Example, options: RunExamples) -> Self {
-        let applications =
-            example
-                .applications
-                .iter()
-                .fold(hashmap! {}, |mut apps, app| match app {
-                    (name, Application::Classic(ref app)) => {
-                        apps.insert(name.clone(), app);
-                        apps
-                    }
-                    (_name, Application::Functions(_app)) => apps,
-                });
-
-        ClassicExample {
-            example,
-            applications,
-            options,
-        }
-    }
-}
-
-impl OakExample for ClassicExample<'_> {
-    fn get_backends(&self) -> &HashMap<String, Executable> {
-        &self.example.backends
-    }
-
-    fn get_build_client(&self) -> &BuildClient {
-        &self.options.build_client
-    }
-
-    fn construct_application_build_steps(&self) -> Vec<Step> {
-        let app_variant = self.options.application_variant.as_str();
-        match self.applications.get(app_variant) {
-            None => vec![],
-            Some(app) => app.construct_application_build_steps(&self.example.name),
-        }
-    }
-
-    fn construct_example_server_run_step(&self, run_clients: Step) -> Step {
-        let app_variant = self.options.application_variant.as_str();
-        match self.applications.get(app_variant) {
-            None => run_clients,
-            Some(app) => app.construct_example_server_run_step(self, run_clients),
-        }
-    }
-}
-
 pub struct FunctionsExample<'a> {
     example: &'a Example,
     applications: HashMap<String, &'a ApplicationFunctions>,
@@ -306,7 +193,6 @@ impl<'a> FunctionsExample<'a> {
                 .applications
                 .iter()
                 .fold(hashmap! {}, |mut apps, app| match app {
-                    (_name, Application::Classic(_app)) => apps,
                     (name, Application::Functions(ref app)) => {
                         apps.insert(name.clone(), app);
                         apps
@@ -347,36 +233,6 @@ impl OakExample for FunctionsExample<'_> {
     }
 }
 
-pub fn run_examples(opt: &RunExamples, scope: &Scope) -> Step {
-    let examples: Vec<Example> = example_toml_files(scope)
-        .map(|path| {
-            toml::from_str(&read_file(&path)).unwrap_or_else(|err| {
-                panic!("could not parse example manifest file {:?}: {}", path, err)
-            })
-        })
-        .filter(|example: &Example| !example.has_functions_app())
-        .collect();
-    Step::Multiple {
-        name: "examples".to_string(),
-        /// TODO(#396): Check that all the example folders are covered by an entry here, or
-        /// explicitly ignored. This will probably require pulling out the `Vec<Example>` to a
-        /// top-level method first.
-        steps: examples
-            .iter()
-            .filter(|example| match &opt.example_name {
-                Some(example_name) => &example.name == example_name,
-                None => true,
-            })
-            .filter(|example| {
-                example.applications.is_empty()
-                    || example.applications.get(&opt.application_variant).is_some()
-            })
-            .map(|example| ClassicExample::new(example, opt.clone()))
-            .map(|example| run_example(&example))
-            .collect(),
-    }
-}
-
 pub fn run_functions_examples(opt: &RunFunctionsExamples, scope: &Scope) -> Step {
     let examples: Vec<Example> = example_toml_files(scope)
         .map(|path| {
@@ -401,50 +257,6 @@ pub fn run_functions_examples(opt: &RunFunctionsExamples, scope: &Scope) -> Step
     }
 }
 
-pub fn build_server(opt: &BuildServer, additional_features: Vec<String>) -> Step {
-    Step::Multiple {
-        name: "server".to_string(),
-        steps: vec![
-            vec![Step::Single {
-                name: "create bin folder".to_string(),
-                command: Cmd::new(
-                    "mkdir",
-                    vec!["-p".to_string(), "oak_loader/bin".to_string()],
-                ),
-            }],
-            match opt.server_variant {
-                ServerVariant::Unsafe | ServerVariant::Coverage | ServerVariant::Experimental => vec![Step::Single {
-                    name: "build introspection browser client".to_string(),
-                    command: Cmd::new("npm",
-                                      vec![
-                                          "--prefix",
-                                          "oak_runtime/introspection_browser_client",
-                                          "run",
-                                          "build",
-                                      ])
-                }],
-                _ => vec![]
-            },
-            vec![
-                build_rust_binary("oak_loader", opt, additional_features,
-                &if opt.server_variant == ServerVariant::Coverage {
-                    hashmap! {
-                        // Build the Runtime server in coverage mode, as per https://github.com/mozilla/grcov
-                        "CARGO_INCREMENTAL".to_string() => "0".to_string(),
-                        "RUSTDOCFLAGS".to_string() => "-Cpanic=abort".to_string(),
-                        // grcov instructions suggest also including `-Cpanic=abort` in RUSTFLAGS, but this causes our build.rs scripts to fail.
-                        "RUSTFLAGS".to_string() => "-Zprofile -Ccodegen-units=1 -Copt-level=0 -Clink-dead-code -Coverflow-checks=off -Zpanic-abort_tests".to_string(),
-                    }
-                } else {
-                    hashmap! {}
-                },)
-            ],
-        ].into_iter()
-            .flatten()
-            .collect::<Vec<_>>()
-    }
-}
-
 pub fn build_functions_server(
     opt: &BuildFunctionsServer,
     additional_features: Vec<String>,
@@ -465,61 +277,6 @@ pub fn build_functions_server(
                 additional_features,
                 &hashmap! {},
             )],
-        ]
-        .into_iter()
-        .flatten()
-        .collect::<Vec<_>>(),
-    }
-}
-
-fn run_example(example: &ClassicExample) -> Step {
-    let opt = &example.options;
-
-    let run_clients = run_clients(
-        example.example,
-        &opt.build_client,
-        opt.client_additional_args.clone(),
-    );
-
-    // Build the run steps (if any) according to the provided flags.
-    //
-    // If `run-server` is enabled, then run the server as well as a potential backend, both in the
-    // background.
-    //
-    // If `client-variant` is not 'none', then run the server and backend in the background, and the
-    // clients in the foreground.
-    #[allow(clippy::collapsible_if)]
-    let run_backend_server_clients: Step = if opt.run_server.unwrap_or(true) {
-        let run_server_clients = example.construct_example_server_run_step(run_clients);
-        example.construct_backend_run_steps(run_server_clients)
-    } else {
-        run_clients
-    };
-
-    Step::Multiple {
-        name: example.example.name.to_string(),
-        steps: vec![
-            example.construct_application_build_steps(),
-            if opt.run_server.unwrap_or(true) {
-                // Build the server first so that when running it in the next step it will start up
-                // faster.
-                vec![build_server(
-                    &opt.build_server,
-                    example.example.server.required_features.clone(),
-                )]
-            } else {
-                vec![]
-            },
-            if opt.build_docker {
-                vec![build_docker(example.example)]
-            } else {
-                vec![]
-            },
-            example.construct_backend_build_steps(),
-            vec![Step::Multiple {
-                name: "run".to_string(),
-                steps: vec![run_backend_server_clients],
-            }],
         ]
         .into_iter()
         .flatten()
@@ -725,45 +482,6 @@ pub fn build_wasm_module(name: &str, target: &Target, example_name: &str) -> Ste
     }
 }
 
-fn run_example_server(
-    opt: &BuildServer,
-    example_server: &ExampleServer,
-    server_additional_args: Vec<String>,
-    application_file: &str,
-    permissions_file: &str,
-) -> Box<dyn Runnable> {
-    Cmd::new_with_env(
-        "oak_loader/bin/oak_loader",
-        spread![
-            "--grpc-tls-certificate=./examples/certs/local/local.pem".to_string(),
-            "--grpc-tls-private-key=./examples/certs/local/local.key".to_string(),
-            "--http-tls-certificate=./examples/certs/local/local.pem".to_string(),
-            "--http-tls-private-key=./examples/certs/local/local.key".to_string(),
-            // TODO(#396): Add `--oidc-client` support.
-            format!("--application={}", application_file),
-            ...match opt.server_variant {
-                // server variants that don't have `oak-unsafe` require a `permissions` file
-                ServerVariant::Base => vec![format!("--permissions={}", permissions_file)],
-                // server variants that have `oak-unsafe` need to specify `root-tls-certificate`
-                _ => vec!["--root-tls-certificate=./examples/certs/local/ca.pem".to_string()],
-            },
-            ...example_server.additional_args.clone(),
-            ...server_additional_args,
-        ],
-        &if opt.server_variant == ServerVariant::Coverage {
-            hashmap! {
-                // Build the Runtime server in coverage mode, as per https://github.com/mozilla/grcov
-                "CARGO_INCREMENTAL".to_string() => "0".to_string(),
-                "RUSTDOCFLAGS".to_string() => "-Cpanic=abort".to_string(),
-                // grcov instructions suggest also including `-Cpanic=abort` in RUSTFLAGS, but this causes our build.rs scripts to fail.
-                "RUSTFLAGS".to_string() => "-Zprofile -Ccodegen-units=1 -Copt-level=0 -Clink-dead-code -Coverflow-checks=off -Zpanic-abort_tests".to_string(),
-            }
-        } else {
-            hashmap! {}
-        },
-    )
-}
-
 fn run_functions_example_server(
     example_server: &ExampleServer,
     application: &ApplicationFunctions,
@@ -818,18 +536,6 @@ fn run_client(
             },
         ],
     }
-}
-
-fn build_application(application: &ApplicationClassic) -> Box<dyn Runnable> {
-    Cmd::new(
-        "cargo",
-        vec![
-            "run".to_string(),
-            "--manifest-path=sdk/rust/oak_app_build/Cargo.toml".to_string(),
-            "--".to_string(),
-            format!("--manifest-path={}", application.manifest),
-        ],
-    )
 }
 
 fn build_docker(example: &Example) -> Step {
