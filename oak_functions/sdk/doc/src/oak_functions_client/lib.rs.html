@@ -57,6 +57,10 @@
 <span id="55">55</span>
 <span id="56">56</span>
 <span id="57">57</span>
+<span id="58">58</span>
+<span id="59">59</span>
+<span id="60">60</span>
+<span id="61">61</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2021 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -78,12 +82,16 @@
 }
 
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">attestation</span>;
+<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">rekor</span>;
 
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::attestation</span>::{<span class="ident">into_server_identity_verifier</span>, <span class="ident">ConfigurationVerifier</span>};
 <span class="kw">use</span> <span class="ident">anyhow::Context</span>;
 <span class="kw">use</span> <span class="ident">grpc_attestation::client::AttestationClient</span>;
 <span class="kw">use</span> <span class="ident">oak_functions_abi::proto</span>::{<span class="ident">Request</span>, <span class="ident">Response</span>};
 <span class="kw">use</span> <span class="ident">prost::Message</span>;
+
+<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
+<span class="kw">mod</span> <span class="ident">tests</span>;
 
 <span class="comment">// TODO(#1867): Add remote attestation support.</span>
 <span class="kw">const</span> <span class="ident">TEE_MEASUREMENT</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>] <span class="op">=</span> <span class="string">br&quot;Test TEE measurement&quot;</span>;
