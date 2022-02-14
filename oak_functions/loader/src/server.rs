@@ -173,6 +173,9 @@ pub trait UwabiExtension: Sync + Send {
     // to change the `BoxedExtensionFactory` trait. This helps to keep the changes to the
     // (existing) Native extensions minimal.
     fn set_endpoint(&mut self, endpoint: Endpoint);
+
+    // Run an UWABI extension by continously receiving messages on the endpoint and answering it.
+    fn run(self: Box<Self>) -> tokio::task::JoinHandle<()>;
 }
 
 /// `WasmState` holds runtime values for a particular execution instance of Wasm, handling a
@@ -965,6 +968,22 @@ mod tests {
             if self.endpoint.is_none() {
                 self.endpoint = Some(endpoint);
             }
+        }
+
+        fn run(mut self: Box<Self>) -> tokio::task::JoinHandle<()> {
+            tokio::spawn(async move {
+                let endpoint = self.get_endpoint_mut().unwrap();
+                let receiver = &mut endpoint.receiver;
+
+                // The runtime endpoint continiously reads messages from Wasm module endpoint until
+                // all senders from the Wasm endpoint are closed.
+                while let Some(_request) = receiver.recv().await {
+
+                    // TODO(mschett): We want to send the response through
+                    // endpoint.sender by spawning a new task. For testing, we want to first
+                    // implement a echo of the message.
+                }
+            })
         }
     }
 
