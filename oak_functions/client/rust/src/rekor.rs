@@ -41,7 +41,7 @@ pub struct LogEntry {
 
     /// Minimum: 0
     #[serde(rename = "logIndex")]
-    pub log_index: usize,
+    pub log_index: u64,
 
     /// Includes a signature over the body, integratedTime, logID, and logIndex.
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -66,9 +66,9 @@ pub struct LogEntryVerification {
 /// x509/PKIX public key. The PEM-encoded content can be parsed into a `p256::ecdsa::VerifyingKey`
 /// using `unmarshal_pem_to_p256_public_key`.
 pub struct RekorSignatureBundle {
-    /// Canonicalized JSON representation of a subset of a Rekor LogEntry fields that are signed
-    /// to generate `signedEntryTimestamp` (also a field in the Rekor LogEntry). These fields
-    /// include body, integratedTime, logID and logIndex.
+    /// Canonicalized JSON representation, based on RFC 8785 rules, of a subset of a Rekor LogEntry
+    /// fields that are signed to generate `signedEntryTimestamp` (also a field in the Rekor
+    /// LogEntry). These fields include body, integratedTime, logID and logIndex.
     pub canonicalized: Vec<u8>,
 
     /// Signature over the canonicalized JSON document. This is obtained by decoding the
@@ -90,7 +90,8 @@ impl TryFrom<&LogEntry> for RekorSignatureBundle {
             verification: None,
         };
 
-        // Canonicalized JSON document that is signed.
+        // Canonicalized JSON document that is signed. Canonicalization should follow the RFC 8785
+        // rules.
         let canonicalized = serde_jcs::to_string(&entry_subset)
             .context("couldn't create canonicalized json string")?;
         let canonicalized = canonicalized.as_bytes().to_vec();
@@ -114,10 +115,13 @@ impl TryFrom<&LogEntry> for RekorSignatureBundle {
     }
 }
 
-/// Verifies a Rekor LogEntry, by:
-/// (1) verifying the signature in `signedEntryTimestamp` using Rekor's public key,
-/// (2) verifying the signature in the `body.RekordObj.signature`, using Oak's public key,
-/// (3) verifying that the content of the body matches the input `endorsement_bytes`.
+/// Verifies a Rekor LogEntry.
+///
+/// The verification involves the following:
+///
+/// 1. verifying the signature in `signedEntryTimestamp`, using Rekor's public key,
+/// 1. verifying the signature in `body.RekordObj.signature`, using Oak's public key,
+/// 1. verifying that the content of the body matches the input `endorsement_bytes`.
 ///
 /// Returns `Ok(())` if the verification succeeds, otherwise returns `Err()`.
 pub fn verify_rekor_log_entry(
