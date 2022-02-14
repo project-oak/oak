@@ -301,6 +301,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "904dfeac50f3cdaba28fc6f57fdcddb75f49ed61346676a78c4ffe55877802fd"
 
 [[package]]
+name = "base64ct"
+version = "1.3.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "874f8444adcb4952a8bc51305c8be95c8ec8237bb0d2e78d2e039f771f8828a0"
+
+[[package]]
 name = "bencher"
 version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -312,7 +318,7 @@ version = "0.1.0"
 dependencies = [
  "oak_functions",
  "prost 0.8.0",
- "prost-build 0.8.0",
+ "prost-build 0.9.0",
 ]
 
 [[package]]
@@ -1317,7 +1323,7 @@ dependencies = [
  "oak_functions_abi",
  "oak_functions_loader",
  "prost 0.8.0",
- "prost-build 0.8.0",
+ "prost-build 0.9.0",
  "rand 0.8.4",
  "test_utils",
  "tokio",
@@ -2513,7 +2519,7 @@ name = "oak_functions_abi"
 version = "0.1.0"
 dependencies = [
  "prost 0.8.0",
- "prost-build 0.8.0",
+ "prost-build 0.9.0",
 ]
 
 [[package]]
@@ -2522,6 +2528,8 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-stream",
+ "base64 0.13.0",
+ "ecdsa",
  "env_logger 0.9.0",
  "grpc_attestation",
  "http",
@@ -2529,8 +2537,13 @@ dependencies = [
  "oak_functions_abi",
  "oak_remote_attestation",
  "oak_utils",
+ "p256",
  "prost 0.8.0",
  "regex",
+ "serde",
+ "serde_jcs",
+ "serde_json",
+ "signature",
  "structopt",
  "tokio",
  "tonic",
@@ -2691,7 +2704,7 @@ dependencies = [
  "bincode",
  "log",
  "prost 0.8.0",
- "prost-build 0.8.0",
+ "prost-build 0.9.0",
  "quickcheck",
  "quickcheck_macros",
  "ring",
@@ -3111,8 +3124,10 @@ version = "0.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c9c2f795bc591cb3384cb64082a578b89207ac92bb89c9d98c1ea2ace7cd8110"
 dependencies = [
+ "base64ct",
  "der",
  "spki",
+ "zeroize",
 ]
 
 [[package]]
@@ -4014,6 +4029,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "73b4b750c782965c211b42f022f59af1fbceabdd026623714f104152f1ec149f"
 
 [[package]]
+name = "ryu-js"
+version = "0.2.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6518fc26bced4d53678a22d6e423e9d8716377def84545fe328236e3af070e7f"
+
+[[package]]
 name = "s2"
 version = "0.0.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4143,6 +4164,17 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
+]
+
+[[package]]
+name = "serde_jcs"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cacecf649bc1a7c5f0e299cc813977c6a78116abda2b93b1ee01735b71ead9a8"
+dependencies = [
+ "ryu-js",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
