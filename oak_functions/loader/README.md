@@ -81,4 +81,4 @@ requirements, before publishing the results by logging to stdout.
 
 <!-- From: -->
 <!-- https://docs.google.com/drawings/d/1hOGbe0cHCDfpDjqAhMrqd1dkz4gxcT8Pzm9VxQtPmKA/edit -->
-<img src="images/OakFunctionsLoader.png" width="1000">
+<img src="../images/OakFunctionsLoader.png" width="1000">
