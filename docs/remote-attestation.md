@@ -85,7 +85,8 @@ The complete workflow of the Remote Attestation protocol looks as follows:
    - Both **Client** and **Server** generate an individual
      [ECDSA-P256](https://datatracker.ietf.org/doc/html/rfc6979) _Signing_ key
      pair
-   - **TEE Provider** creates a signature of the **TEE Platform**'s firmware key
+   - **TEE Provider** creates a signature of the **TEE Platform**'s firmware
+     public key
 1. **Client** generates an
    [X25519](https://datatracker.ietf.org/doc/html/rfc7748) _Ephemeral_ key pair
 1. **Client** sends a `ClientHello` message to the **Server**
@@ -98,8 +99,9 @@ The complete workflow of the Remote Attestation protocol looks as follows:
      [SHA-256](https://datatracker.ietf.org/doc/html/rfc6234) hash of the
      **Server**’s _Signing_ public key
 1. **TEE Platform** generates an `AttestationReport`
-   - **TEE Platform** signs the report using its firmware key that was signed by
-     the **TEE Provider** and could be verified by the **Client**
+   - **TEE Platform** signs the report using its firmware private key, the
+     public key equivalent of which was signed by the **TEE Provider** and could
+     be verified by the **Client**
    - The signed `AttestationReport` also gives the **Client** information about
      the TEE itself (its version and etc.) and about the code that is running
      inside the **TEE Platform**
