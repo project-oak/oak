@@ -14,7 +14,7 @@ shift 2
 # docker user and does not pass ENV vars. Flags are intentionally a subset of
 # the ones used in `./scripts/docker_run` which proxies host cache dirs and
 # file system permissions for developer convenience.
-docker run --rm --tty --volume=$PWD:/workspace --workdir=/workspace "$DOCKER_IMAGE_ID" "${@}"
+docker run --rm --tty "--volume=${PWD}:/workspace" --workdir=/workspace "${DOCKER_IMAGE_ID}" "${@}"
 
 # Get digest of the docker image, as defined in https://github.com/opencontainers/image-spec/blob/v1.0.1/descriptor.md#digests
 readonly DOCKER_DIGEST=$(docker images --digests --format="{{.Digest}}" "${DOCKER_IMAGE_REPO_DIGEST}")
