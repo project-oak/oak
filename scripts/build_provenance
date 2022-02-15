@@ -53,7 +53,7 @@ cat << EOF >> "./provenance/${BINARY_SHA_256_HASH}/${COMMIT_HASH}.json"
     "builder": {
       "id": "https://github.com/project-oak/transparent-release"
     },
-    "buildType": "https://github.com/project-oak/transparent-release/schema/amber-slsa-buildtype/v1.json",
+    "buildType": "https://github.com/project-oak/transparent-release/schema/amber-slsa-buildtype/v1/provenance.json",
     "buildConfig": {
       "command": ${FORMATTED_COMMAND},
       "outputPath": "${OUTPUT_PATH}"
