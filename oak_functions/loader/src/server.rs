@@ -977,11 +977,8 @@ mod tests {
 
                 // The runtime endpoint continiously reads messages from Wasm module endpoint until
                 // all senders from the Wasm endpoint are closed.
-                while let Some(_request) = receiver.recv().await {
-
-                    // TODO(mschett): We want to send the response through
-                    // endpoint.sender by spawning a new task. For testing, we want to first
-                    // implement a echo of the message.
+                while let Some(request) = receiver.recv().await {
+                    assert_eq!(request, vec![42]);
                 }
             })
         }
@@ -1127,10 +1124,11 @@ mod tests {
     #[tokio::test]
     async fn test_hosted_channel_write_ok() {
         let channel_handle = ChannelHandle::Testing;
-        let message: UwabiMessage = vec![42, 42];
+        let message: UwabiMessage = vec![42];
         let (mut wasm_state, mut uwabi_extensions) = create_test_wasm_state_and_extensions();
-        let mut testing_extension =
-            extension_for_channel_handle(&mut uwabi_extensions, channel_handle);
+        let testing_extension = extension_for_channel_handle(&mut uwabi_extensions, channel_handle);
+
+        let join_handle = testing_extension.run();
 
         // Guess some memory addresses in linear Wasm memory to write the message to.
         let src_buf_ptr: AbiPointer = 100;
@@ -1141,9 +1139,11 @@ mod tests {
             wasm_state.channel_write(channel_handle as i32, src_buf_ptr, message.len() as u32);
         assert!(result.is_ok());
 
-        // Assert that the message arrived at runtime endpoint.
-        let received_message = read_from_runtime_endpoint(&mut testing_extension).await;
-        assert_eq!(message.to_vec(), received_message);
+        // Dropping the WasmState drops the Channel Switchboard stopping the extension.
+        std::mem::drop(wasm_state);
+
+        let result = join_handle.await;
+        assert!(result.is_ok());
     }
 
     #[tokio::test]
@@ -1198,15 +1198,6 @@ mod tests {
         wasm_handler
             .init_wasm_state_and_extensions(b"".to_vec())
             .expect("could not create wasm_state")
-    }
-
-    // Helper function for testing to read from Endpoint associated to ChannelHandle extension in
-    // the runtime.
-    async fn read_from_runtime_endpoint(uwabi_extension: &mut Box<dyn UwabiExtension>) -> Vec<u8> {
-        let endpoint = uwabi_extension
-            .get_endpoint_mut()
-            .expect("No endpoint set for extension.");
-        endpoint.receiver.try_recv().unwrap()
     }
 
     // Helper function for testing to write to Endpoint associated to ChannelHandle extension in the
