@@ -7,11 +7,6 @@ request, runs the request through it in order to produce a response, and then
 terminates the Wasm instance; each Wasm instance is short lived and cannot
 persist state outside of the request lifetime.
 
-As part of our shift to a distributed runtime, in the future, we may allow
-native Oak Functions instances that do not run any untrusted Wasm code. An
-example is a native Oak Functions instance for collecting differentially private
-metrics, deployed on its own TEE instances.
-
 ## ABI Functions and the Rust SDK
 
 WebAssembly is very restricted. In order to be able to implement meaningful
