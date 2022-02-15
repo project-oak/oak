@@ -1,9 +1,0 @@
-syntax = "proto3";
-
-package invalid.doctest;
-
-// ```
-// invalid
-// ```
-message MessageWithInvalidDoctest {
-}

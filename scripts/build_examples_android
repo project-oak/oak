@@ -4,6 +4,4 @@ readonly SCRIPTS_DIR="$(dirname "$0")"
 # shellcheck source=scripts/common
 source "$SCRIPTS_DIR/common"
 
-for example in hello_world aggregator oak_functions; do
-  "${SCRIPTS_DIR}/build_example_android" -e "${example}"
-done
+"${SCRIPTS_DIR}/build_example_android" -e oak_functions

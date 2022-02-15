@@ -1,4 +1,0 @@
-name = "translator"
-
-[modules]
-app = { path = "bin/translator.wasm" }

@@ -1,4 +1,0 @@
-name = "proxy_attestation"
-
-[modules]
-app = { path = "bin/proxy_attestation_example.wasm" }

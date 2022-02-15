@@ -55,10 +55,8 @@ pub struct Opt {
 
 #[derive(StructOpt, Clone, Debug)]
 pub enum Command {
-    RunExamples(RunExamples),
     RunFunctionsExamples(RunFunctionsExamples),
     BuildFunctionsExample(RunFunctionsExamples),
-    BuildServer(BuildServer),
     BuildFunctionsServer(BuildFunctionsServer),
     Format,
     CheckFormat,
@@ -66,7 +64,6 @@ pub enum Command {
     RunCargoClippy,
     RunCargoTests(RunTestsOpt),
     RunBazelTests,
-    RunTestsTsan,
     RunCargoFuzz(RunCargoFuzz),
     RunCargoDeny,
     RunCargoUdeps,

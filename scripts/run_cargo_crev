@@ -27,7 +27,7 @@ done
 cargo crev repo fetch all
 
 (
-  cd ./oak_loader
+  cd ./oak_functions/loader
   # Ignore status code from the verify command.
   cargo crev crate verify --show-all --for-id="${ROOT_ID}" || true
 )

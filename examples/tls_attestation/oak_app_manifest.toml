@@ -1,4 +1,0 @@
-name = "tls_attestation"
-
-[modules]
-app = { path = "tls_attestation/bin/tls_attestation_example.wasm" }

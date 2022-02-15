@@ -20,9 +20,9 @@ readonly CLANG_TIDY_FLAGS=(
 )
 
 # Generate compilation database.
-bazel build "${bazel_build_flags[@]}" -- //oak/...:all
+bazel build "${bazel_build_flags[@]}" -- //...:all
 ./scripts/generate_compilation_database
 
 # Run clang-tidy.
-mapfile -t SOURCE_FILES < <(find oak -name '*.cc')
+mapfile -t SOURCE_FILES < <(find . -name '*.cc')
 clang-tidy "${CLANG_TIDY_FLAGS[@]}" "${SOURCE_FILES[@]}"

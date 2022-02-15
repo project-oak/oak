@@ -16,7 +16,7 @@ http = "*"
 log = "*"
 oak_functions_abi = { path = "../../../oak_functions/abi" }
 oak_remote_attestation = { path = "../../../remote_attestation/rust/" }
-prost = { path = "../../../third_party/prost" }
+prost = "*"
 prost-types = "*"
 structopt = "*"
 sync_wrapper = "*"

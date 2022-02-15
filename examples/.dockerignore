@@ -1,5 +1,0 @@
-# Ignore everything
-**
-
-# Allow only the binaries we care about
-!/target/x86_64-unknown-linux-gnu/release/**

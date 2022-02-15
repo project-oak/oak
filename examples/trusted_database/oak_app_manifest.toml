@@ -1,4 +1,0 @@
-name = "trusted_database"
-
-[modules]
-app = { path = "bin/trusted_database.wasm" }

@@ -1,4 +1,0 @@
-name = "tensorflow"
-
-[modules]
-app = { path = "examples/tensorflow/bin/tensorflow_micro.wasm" }
