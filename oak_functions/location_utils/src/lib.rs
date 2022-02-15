@@ -15,7 +15,8 @@
 //
 
 //! Utilities for finding and comparing longitude- and latitude-based locations using S2 Geometry.
-//! See https://s2geometry.io/ for more information.
+//!
+//! See <https://s2geometry.io/> for more information.
 
 pub use anyhow::Result;
 use s2::{
@@ -63,7 +64,7 @@ pub fn location_from_degrees(lat_deg: f64, lng_deg: f64) -> LatLng {
 /// the level is lower it would usually require fewer cells to cover the zone, but there is usually
 /// larger areas that fall outside of the zone.
 ///
-/// See https://s2geometry.io/devguide/examples/coverings for more information on coverings.
+/// See <https://s2geometry.io/devguide/examples/coverings> for more information on coverings.
 pub fn find_covering_cells(location: &LatLng, radius: &Angle, level: u8) -> Result<Vec<CellID>> {
     if level > s2::cellid::MAX_LEVEL as u8 {
         anyhow::bail!("level too high");

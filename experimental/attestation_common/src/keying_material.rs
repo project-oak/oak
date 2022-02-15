@@ -78,7 +78,8 @@ impl Assertion {
 
 /// Value uniquely derived from the TLS master secret that is shared by both participants of the TLS
 /// session. Used to bind remote attestation to each TLS session independently.
-/// https://tools.ietf.org/html/rfc5705
+///
+/// <https://tools.ietf.org/html/rfc5705>
 #[derive(Clone, Serialize, Deserialize, PartialEq)]
 pub struct KeyingMaterial {
     /// Value used to disambiguate the proper use of the `KeyingMaterial`.
@@ -89,7 +90,8 @@ pub struct KeyingMaterial {
 
 impl KeyingMaterial {
     /// Exports `KeyingMaterial` for a given TLS `session`.
-    /// https://tools.ietf.org/html/rfc5705#section-4
+    ///
+    /// <https://tools.ietf.org/html/rfc5705#section-4>
     fn export(
         // TLS session used to export `KeyingMaterial` from.
         session: &dyn rustls::Session,

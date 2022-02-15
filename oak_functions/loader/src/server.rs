@@ -35,7 +35,7 @@ const MAIN_FUNCTION_NAME: &str = "main";
 const ALLOC_FUNCTION_NAME: &str = "alloc";
 
 /// Wasm host function index numbers for `wasmi` to map import names with. This numbering is not
-/// exposed to the Wasm client. See https://docs.rs/wasmi/0.6.2/wasmi/trait.Externals.html
+/// exposed to the Wasm client. See <https://docs.rs/wasmi/0.6.2/wasmi/trait.Externals.html>
 const READ_REQUEST: usize = 0;
 const WRITE_RESPONSE: usize = 1;
 const WRITE_LOG_MESSAGE: usize = 3;
@@ -876,7 +876,8 @@ pub struct Endpoint {
 /// [tokio::mpsc channels](https://docs.rs/tokio/0.1.16/tokio/sync/mpsc/index.html).
 ///
 /// In ASCII art:
-/// ```ignore
+///
+/// ```text
 ///   sender ____  ____ sender
 ///              \/
 /// receiver ____/\____ receiver

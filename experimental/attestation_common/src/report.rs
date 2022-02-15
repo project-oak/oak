@@ -20,14 +20,17 @@ use serde::{Deserialize, Serialize};
 use x509_parser::der_parser::{self, oid::Oid};
 
 // Using `NETSCAPE_COMMENT` extension since `rust-openssl` doesn't support custom extensions yet.
-// https://github.com/sfackler/rust-openssl/issues/1411
-// https://www.alvestrand.no/objectid/2.16.840.1.113730.1.13.html
+//
+// <https://github.com/sfackler/rust-openssl/issues/1411>
+//
+// <https://www.alvestrand.no/objectid/2.16.840.1.113730.1.13.html>
 pub const TEE_EXTENSION_OID: Oid<'static> = der_parser::oid!(2.16.840 .1 .113730 .1 .13);
 // TODO(#1867): Add remote attestation support.
 const TEST_TEE_MEASUREMENT: &str = "Test TEE measurement";
 
 /// Placeholder implementation of TEE report for remote attestation.
-/// https://www.amd.com/system/files/TechDocs/56860.pdf#page=39
+///
+/// <https://www.amd.com/system/files/TechDocs/56860.pdf#page=39>
 ///
 /// TODO(#1867): Add remote attestation support and use real TEE reports.
 #[derive(Deserialize, Serialize, Debug, Default, PartialEq)]
@@ -64,7 +67,8 @@ pub struct AttestationInfo {
     /// TEE report.
     pub report: Report,
     /// Provider's PEM encoded X.509 certificate that signs TEE firmware keys.
-    /// https://tools.ietf.org/html/rfc7468
+    ///
+    /// <https://tools.ietf.org/html/rfc7468>
     pub certificate: Vec<u8>,
 }
 

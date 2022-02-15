@@ -107,7 +107,7 @@ pub struct ClientHandshaker {
 }
 
 impl ClientHandshaker {
-    /// Creates [`ClientHandshaker`] with [`HandshakerState::Initializing`] state.
+    /// Creates [`ClientHandshaker`] with `Initializing` state.
     pub fn new(behavior: AttestationBehavior, server_verifier: ServerIdentityVerifier) -> Self {
         Self {
             behavior,
@@ -178,8 +178,8 @@ impl ClientHandshaker {
     /// Initializes the remote attestation handshake by creating a serialized [`ClientHello`]
     /// message.
     ///
-    /// Transitions [`ClientHandshaker`] state from [`HandshakerState::Initializing`] to
-    /// [`HandshakerState::ExpectingServerIdentity`] state.
+    /// Transitions [`ClientHandshaker`] state from `Initializing` to `ExpectingServerIdentity`
+    /// state.
     pub fn create_client_hello(&mut self) -> anyhow::Result<Vec<u8>> {
         self.create_client_hello_util().map_err(|error| {
             self.state = ClientHandshakerState::Aborted;
@@ -223,8 +223,9 @@ impl ClientHandshaker {
     /// If self attestation is enabled this message also provides necessary information to perform
     /// remote attestation.
     ///
-    /// Transitions [`ClientHandshaker`] state from [`HandshakerState::ExpectingServerIdentity`] to
-    /// [`HandshakerState::Completed`] state.
+    /// Transitions [`ClientHandshaker`] state from
+    /// [`ClientHandshakerState::ExpectingServerIdentity`] to [`ClientHandshakerState::Completed`]
+    /// state.
     fn process_server_identity(
         &mut self,
         server_identity: ServerIdentity,
@@ -333,7 +334,7 @@ pub struct ServerHandshaker {
 }
 
 impl ServerHandshaker {
-    /// Creates [`ServerHandshaker`] with [`HandshakerState::ExpectingClientIdentity`]
+    /// Creates [`ServerHandshaker`] with `ServerHandshakerState::ExpectingClientIdentity`
     /// state.
     pub fn new(behavior: AttestationBehavior, additional_info: Vec<u8>) -> Self {
         Self {
@@ -422,8 +423,8 @@ impl ServerHandshaker {
     /// If self attestation is enabled this message also provides necessary information to perform
     /// remote attestation.
     ///
-    /// Transitions [`ServerHandshaker`] state from [`HandshakerState::ExpectingClientHello`] to
-    /// [`HandshakerState::ExpectingClientIdentity`] state.
+    /// Transitions [`ServerHandshaker`] state from [`ServerHandshakerState::ExpectingClientHello`]
+    /// to [`ServerHandshakerState::ExpectingClientIdentity`] state.
     fn process_client_hello(
         &mut self,
         client_hello: ClientHello,
@@ -497,7 +498,8 @@ impl ServerHandshaker {
     /// encrypting/decrypting messages from the client.
     ///
     /// Transitions [`ServerHandshaker`] state from
-    /// [`HandshakerState::ExpectingClientIdentity`] to [`HandshakerState::Completed`] state.
+    /// [`ServerHandshakerState::ExpectingClientIdentity`] to [`ServerHandshakerState::Completed`]
+    /// state.
     fn process_client_identity(
         &mut self,
         client_identity: ClientIdentity,

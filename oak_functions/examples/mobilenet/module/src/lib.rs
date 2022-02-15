@@ -15,7 +15,7 @@
 //
 
 //! Oak Functions TensorFlow example, based on the MobilenetV2 example
-//! in https://github.com/sonos/tract/tree/main/examples/tensorflow-mobilenet-v2.
+//! in <https://github.com/sonos/tract/tree/main/examples/tensorflow-mobilenet-v2>.
 
 #![feature(try_blocks)]
 

@@ -76,7 +76,8 @@ pub struct RekorSignatureBundle {
     pub signature: p256::ecdsa::Signature,
 }
 
-/// Convertor for creating a RekorSignatureBundle from a Rekor LogEntry as described in https://github.com/sigstore/rekor/blob/4fcdcaa58fd5263560a82978d781eb64f5c5f93c/openapi.yaml#L433-L476.
+/// Converter for creating a RekorSignatureBundle from a Rekor LogEntry as described in
+/// <https://github.com/sigstore/rekor/blob/4fcdcaa58fd5263560a82978d781eb64f5c5f93c/openapi.yaml#L433-L476>.
 impl TryFrom<&LogEntry> for RekorSignatureBundle {
     type Error = anyhow::Error;
 

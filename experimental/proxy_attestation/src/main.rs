@@ -21,7 +21,9 @@
 //! connections with clients.
 //!
 //! The work cycle of the proxy is represented in 2 stages.
+//!
 //! First stage corresponds to the backend server attestation:
+//!
 //! - TEE application connects to the proxy
 //! - Proxy attests the application using a corresponding remote attestation protocol
 //! - Application sends the proxy a certificate signing request
@@ -29,6 +31,7 @@
 //!     - The certificate contains application's TEE measurements
 //!
 //! Second stage corresponds to the client connection:
+//!
 //! - Client remotely attests the proxy using a corresponding attestation protocol
 //! - Proxy sends the client its root certificate
 //!     - Client trusts that this is a correct certificate, since it was sent via a secure channel
@@ -138,7 +141,7 @@ impl ProxyAttestation for Proxy {
     }
 
     /// Sends back root X.509 certificate in PEM format.
-    /// https://tools.ietf.org/html/rfc7468
+    /// <https://tools.ietf.org/html/rfc7468>
     async fn get_root_certificate(
         &self,
         _req: Request<GetRootCertificateRequest>,

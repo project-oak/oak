@@ -15,6 +15,6 @@
 //
 
 pub mod proto {
-    #![allow(clippy::return_self_not_must_use)]
+    #![allow(clippy::return_self_not_must_use, rustdoc::bare_urls)]
     tonic::include_proto!("oak.examples.proxy_attestation");
 }
