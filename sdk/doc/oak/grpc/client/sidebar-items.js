@@ -1,1 +1,0 @@
-initSidebarItems({"fn":[["init","Initializes a gRPC client pseudo-Node connecting to the provided address."]]});

@@ -1,1 +1,0 @@
-initSidebarItems({"mod":[["authentication_client","Generated client implementations."]],"struct":[["AuthParameters","Parameters needed by clients to initiate OpenID Connect authentication requests."],["IdentityTokenRequest","Request for exchanging an authorisation code for an identity token."],["IdentityTokenResponse","Wrapper for the exchanged identity token."]]});

@@ -1,1 +1,0 @@
-initSidebarItems({"struct":[["CheckLicense","A [`Runnable`] command that checks for the existence of source files without the necessary license header."]]});

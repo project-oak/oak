@@ -1,1 +1,0 @@
-initSidebarItems({"struct":[["GrpcRequestStream","A streaming gRPC client request."],["MultiWriter","Writes multiple messages to a gRPC response channel, automatically closing the channel on `drop()`."],["OneshotWriter","Writes exactly one message on a gRPC response channel, setting an `UNKNOWN` error if unused."]]});

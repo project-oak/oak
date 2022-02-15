@@ -1,1 +1,0 @@
-initSidebarItems({"constant":[["EXAMPLE_MESSAGE",""]],"fn":[["main",""],["service",""]],"struct":[["Opt",""]]});

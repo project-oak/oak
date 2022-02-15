@@ -1,1 +1,0 @@
-initSidebarItems({"struct":[["HelloWorldServer","As seen in https://grpc.io/docs/guides/concepts/."],["_Inner",""]],"trait":[["HelloWorld","Generated trait containing gRPC methods that should be implemented for use with HelloWorldServer."]]});

@@ -1,1 +1,0 @@
-initSidebarItems({"struct":[["SignedChallenge","Response from the client to a signing challenge. The client uses its private key to sign the hash of the challenge obtained from the server. The response contains the signed hash along with the public key corresponding to the private key used for signing."]]});

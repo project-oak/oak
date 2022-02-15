@@ -1,1 +1,0 @@
-initSidebarItems({"struct":[["RedirectHandlerInit","Initialization message that should be sent to RedirectHandler Oak Node."],["RedirectInvocation","Initialization message that should be sent to RedirectHelper Oak Node."]]});

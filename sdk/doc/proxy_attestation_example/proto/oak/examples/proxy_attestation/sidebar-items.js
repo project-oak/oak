@@ -1,1 +1,0 @@
-initSidebarItems({"struct":[["ExampleApplicationClient",""],["ExampleApplicationDispatcher",""],["GetExampleMessageRequest",""],["GetExampleMessageResponse",""]],"trait":[["ExampleApplication",""]]});

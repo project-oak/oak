@@ -1,1 +1,0 @@
-initSidebarItems({"struct":[["Storage","Local representation of the connection to an external storage service."]]});

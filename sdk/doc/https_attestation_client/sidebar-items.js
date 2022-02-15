@@ -1,1 +1,0 @@
-initSidebarItems({"constant":[["EXAMPLE_MESSAGE",""]],"fn":[["main",""],["send_request",""],["verify_server_assertion",""]],"struct":[["Opt",""]]});

@@ -1,1 +1,0 @@
-initSidebarItems({"fn":[["get_sha256","Computes a SHA-256 digest of `input` and returns it in a form of raw bytes."]],"mod":[["certificate",""],["keying_material",""],["report",""]]});

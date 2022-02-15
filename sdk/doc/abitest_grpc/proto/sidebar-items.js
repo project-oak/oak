@@ -1,1 +1,0 @@
-initSidebarItems({"mod":[["abi_test_response","Nested message and enum types in `ABITestResponse`."],["grpc_test_request","Nested message and enum types in `GrpcTestRequest`."],["oak_abi_test_service_client","Generated client implementations."]],"struct":[["AbiTestRequest",""],["AbiTestResponse",""],["GrpcTestRequest",""],["GrpcTestResponse",""]]});

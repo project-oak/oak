@@ -1,3 +1,0 @@
-(function() {var implementors = {};
-implementors["oak_io"] = [{"text":"impl <a class=\"trait\" href=\"https://doc.rust-lang.org/nightly/std/error/trait.Error.html\" title=\"trait std::error::Error\">Error</a> for <a class=\"enum\" href=\"oak_io/enum.OakError.html\" title=\"enum oak_io::OakError\">OakError</a>","synthetic":false,"types":["oak_io::error::OakError"]}];
-if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

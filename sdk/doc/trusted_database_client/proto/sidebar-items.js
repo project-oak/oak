@@ -1,1 +1,0 @@
-initSidebarItems({"mod":[["trusted_database_client","Generated client implementations."]],"struct":[["DatabaseEntry",""],["GetPointOfInterestRequest",""],["GetPointOfInterestResponse",""],["ListPointsOfInterestRequest",""],["ListPointsOfInterestResponse",""],["Location",""],["PointOfInterest",""],["PointOfInterestMap","Maps a string ID to `PointOfInterest`."]]});

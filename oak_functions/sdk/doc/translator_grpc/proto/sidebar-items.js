@@ -1,1 +1,0 @@
-initSidebarItems({"mod":[["translator_client","Generated client implementations."]],"struct":[["TranslateRequest",""],["TranslateResponse",""]]});

@@ -1,1 +1,0 @@
-initSidebarItems({"struct":[["TranslateRequest",""],["TranslateResponse",""],["TranslatorClient",""],["TranslatorDispatcher",""]],"trait":[["Translator",""]]});

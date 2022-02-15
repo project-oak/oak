@@ -1,3 +1,0 @@
-(function() {var implementors = {};
-implementors["tensorflow_proxy"] = [{"text":"impl <a class=\"trait\" href=\"grpc_attestation/server/trait.LogError.html\" title=\"trait grpc_attestation::server::LogError\">LogError</a> for <a class=\"struct\" href=\"tensorflow_proxy/struct.ErrorLogger.html\" title=\"struct tensorflow_proxy::ErrorLogger\">ErrorLogger</a>","synthetic":false,"types":["tensorflow_proxy::ErrorLogger"]}];
-if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

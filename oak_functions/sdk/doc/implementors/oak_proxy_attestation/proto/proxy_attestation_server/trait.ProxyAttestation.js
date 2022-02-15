@@ -1,3 +1,0 @@
-(function() {var implementors = {};
-implementors["oak_proxy_attestation_bin"] = [{"text":"impl <a class=\"trait\" href=\"oak_proxy_attestation/proto/proxy_attestation_server/trait.ProxyAttestation.html\" title=\"trait oak_proxy_attestation::proto::proxy_attestation_server::ProxyAttestation\">ProxyAttestation</a> for <a class=\"struct\" href=\"oak_proxy_attestation_bin/struct.Proxy.html\" title=\"struct oak_proxy_attestation_bin::Proxy\">Proxy</a>","synthetic":false,"types":["oak_proxy_attestation_bin::Proxy"]}];
-if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

@@ -1,3 +1,0 @@
-(function() {var implementors = {};
-implementors["tensorflow_client"] = [{"text":"impl <a class=\"trait\" href=\"https://doc.rust-lang.org/nightly/core/iter/traits/iterator/trait.Iterator.html\" title=\"trait core::iter::traits::iterator::Iterator\">Iterator</a> for <a class=\"struct\" href=\"tensorflow_client/data/struct.Iter.html\" title=\"struct tensorflow_client::data::Iter\">Iter</a>&lt;'_&gt;","synthetic":false,"types":["tensorflow_client::data::Iter"]}];
-if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

@@ -1,1 +1,0 @@
-initSidebarItems({"struct":[["PermissionsConfiguration","Provides a declarative description of the features that are permitted for an Oak application."]]});

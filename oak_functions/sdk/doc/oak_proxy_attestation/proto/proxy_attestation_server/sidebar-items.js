@@ -1,1 +1,0 @@
-initSidebarItems({"struct":[["ProxyAttestationServer","Service for signing X.509 certificates. https://tools.ietf.org/html/rfc5280"]],"trait":[["ProxyAttestation","Generated trait containing gRPC methods that should be implemented for use with ProxyAttestationServer."]]});

@@ -1,1 +1,0 @@
-initSidebarItems({"struct":[["GetIntersectionRequest",""],["GetIntersectionResponse",""],["PrivateSetIntersectionClient",""],["PrivateSetIntersectionDispatcher",""],["SubmitSetRequest",""]],"trait":[["PrivateSetIntersection",""]]});

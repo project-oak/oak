@@ -1,1 +1,0 @@
-initSidebarItems({"mod":[["example_application_client","Generated client implementations."]],"struct":[["GetExampleMessageRequest",""],["GetExampleMessageResponse",""]]});

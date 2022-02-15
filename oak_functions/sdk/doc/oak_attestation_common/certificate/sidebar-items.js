@@ -1,1 +1,0 @@
-initSidebarItems({"enum":[["AddTeeExtension","Indicator whether to add a custom TEE extension to a certificate."]],"struct":[["CertificateAuthority","Convenience structure for generating X.509 certificates. https://tools.ietf.org/html/rfc5280"]]});

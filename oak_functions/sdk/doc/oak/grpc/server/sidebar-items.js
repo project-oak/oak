@@ -1,1 +1,0 @@
-initSidebarItems({"fn":[["init","Initializes a gRPC server pseudo-Node listening on the provided address, additionally creating a local channel to collect [`Invocation`] messages."],["init_with_sender","Initializes a gRPC server pseudo-Node listening on the provided address."]]});

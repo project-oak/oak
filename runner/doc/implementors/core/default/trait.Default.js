@@ -1,3 +1,0 @@
-(function() {var implementors = {};
-implementors["runner"] = [{"text":"impl <a class=\"trait\" href=\"https://doc.rust-lang.org/nightly/core/default/trait.Default.html\" title=\"trait core::default::Default\">Default</a> for <a class=\"struct\" href=\"runner/examples/struct.ExampleServer.html\" title=\"struct runner::examples::ExampleServer\">ExampleServer</a>","synthetic":false,"types":["runner::examples::ExampleServer"]}];
-if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

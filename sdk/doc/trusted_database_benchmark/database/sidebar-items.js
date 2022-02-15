@@ -1,1 +1,0 @@
-initSidebarItems({"struct":[["Database",""],["Station",""],["StationDatabase","Database structure represents internal XML fields from the following database: https://tfl.gov.uk/tfl/syndication/feeds/cycle-hire/livecyclehireupdates.xml"]]});
