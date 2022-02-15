@@ -17,14 +17,14 @@
 //! Sends 200 requests to the metrics backend alternating between "a" and "b".
 
 use anyhow::Context;
+use clap::Parser;
 use oak_functions_abi::proto::Request;
 use oak_functions_client::Client;
-use structopt::StructOpt;
 
-#[derive(StructOpt, Clone)]
-#[structopt(about = "Oak Functions Client")]
+#[derive(Parser, Clone)]
+#[clap(about = "Oak Functions Client")]
 pub struct Opt {
-    #[structopt(
+    #[clap(
         long,
         help = "URI of the Oak Functions application to connect to",
         default_value = "http://localhost:8080"
@@ -34,7 +34,7 @@ pub struct Opt {
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    let opt = Opt::from_args();
+    let opt = Opt::parse();
 
     let mut client = Client::new(&opt.uri, |_config| Ok(()))
         .await

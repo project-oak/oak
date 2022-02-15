@@ -19,6 +19,7 @@ async-stream = "*"
 bytes = "*"
 byteorder = { version = "*", default-features = false }
 chrono = "*"
+clap = { version = "*", features = ["derive"] }
 futures = "*"
 grpc_attestation = { path = "../../grpc_attestation/" }
 http = "*"
@@ -40,7 +41,6 @@ rand = "*"
 serde = "*"
 serde_derive = "*"
 serde_json = "*"
-structopt = "*"
 tokio = { version = "*", features = [
   "fs",
   "macros",

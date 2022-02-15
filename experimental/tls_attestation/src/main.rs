@@ -58,25 +58,25 @@
 mod server;
 
 use anyhow::Context;
+use clap::Parser;
 use log::info;
-use structopt::StructOpt;
 
-#[derive(StructOpt, Clone)]
-#[structopt(about = "TLS Attestation")]
+#[derive(Parser, Clone)]
+#[clap(about = "TLS Attestation")]
 pub struct Opt {
-    #[structopt(
+    #[clap(
         long,
         help = "Address to listen on for the HTTPS server.",
         default_value = "[::]:8888"
     )]
     https_listen_address: String,
-    #[structopt(
+    #[clap(
         long,
         help = "URI of the backend application to proxy HTTP requests to",
         default_value = "http://localhost:8081"
     )]
     backend_uri: String,
-    #[structopt(
+    #[clap(
         long,
         help = "PEM encoded X.509 certificate that signs TEE firmware key.",
         default_value = "./examples/certs/local/ca.pem"
@@ -87,7 +87,7 @@ pub struct Opt {
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     env_logger::init();
-    let opt = Opt::from_args();
+    let opt = Opt::parse();
 
     let backend_uri = opt
         .backend_uri

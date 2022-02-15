@@ -42,6 +42,7 @@
 //! Note: Current version of Remote Attestation Service doesn't have remote attestation.
 
 use anyhow::Context;
+use clap::Parser;
 use futures::future::FutureExt;
 use log::{error, info};
 use oak_attestation_common::certificate::{AddTeeExtension, CertificateAuthority};
@@ -51,29 +52,28 @@ use oak_proxy_attestation::proto::{
     GetSignedCertificateResponse,
 };
 use openssl::x509::X509Req;
-use structopt::StructOpt;
 use tonic::{
     transport::{Identity, Server, ServerTlsConfig},
     Request, Response, Status,
 };
 
-#[derive(StructOpt, Clone)]
-#[structopt(about = "Proxy Attestation")]
+#[derive(Parser, Clone)]
+#[clap(about = "Proxy Attestation")]
 pub struct Opt {
-    #[structopt(
+    #[clap(
         long,
         help = "Address to listen on for the gRPC server.",
         default_value = "[::]:8888"
     )]
     grpc_listen_address: String,
-    #[structopt(long, help = "Private RSA key PEM encoded file used by gRPC server.")]
+    #[clap(long, help = "Private RSA key PEM encoded file used by gRPC server.")]
     grpc_tls_private_key: String,
-    #[structopt(
+    #[clap(
         long,
         help = "PEM encoded X.509 TLS certificate file used by gRPC server."
     )]
     grpc_tls_certificate: String,
-    #[structopt(
+    #[clap(
         long,
         help = "PEM encoded X.509 certificate that signs TEE firmware key.",
         default_value = "./examples/certs/local/ca.pem"
@@ -164,7 +164,7 @@ impl ProxyAttestation for Proxy {
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     env_logger::init();
-    let opt = Opt::from_args();
+    let opt = Opt::parse();
 
     let grpc_tls_private_key =
         std::fs::read(&opt.grpc_tls_private_key).context("Couldn't load private key")?;

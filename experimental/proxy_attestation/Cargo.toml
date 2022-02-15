@@ -15,6 +15,7 @@ path = "src/main.rs"
 
 [dependencies]
 anyhow = "*"
+clap = { version = "*", features = ["derive"] }
 env_logger = "*"
 futures = "*"
 futures-core = "*"
@@ -24,7 +25,6 @@ log = "*"
 oak_attestation_common = { version = "*", path = "../attestation_common" }
 openssl = "*"
 prost = "*"
-structopt = "*"
 tokio = { version = "*", features = [
   "fs",
   "macros",

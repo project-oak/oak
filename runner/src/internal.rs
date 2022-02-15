@@ -16,6 +16,7 @@
 
 use async_recursion::async_recursion;
 use async_trait::async_trait;
+use clap::{Parser, Subcommand};
 use colored::*;
 use nix::sys::signal::Signal;
 use std::{
@@ -23,20 +24,19 @@ use std::{
     path::{Path, PathBuf},
     time::Instant,
 };
-use structopt::StructOpt;
 use tokio::io::{empty, AsyncRead, AsyncReadExt};
 
-#[derive(StructOpt, Clone)]
+#[derive(Parser, Clone)]
 pub struct Opt {
-    #[structopt(long, help = "do not execute commands")]
+    #[clap(long, help = "do not execute commands")]
     dry_run: bool,
-    #[structopt(long, help = "print commands")]
+    #[clap(long, help = "print commands")]
     commands: bool,
-    #[structopt(long, help = "show logs of commands")]
+    #[clap(long, help = "show logs of commands")]
     logs: bool,
-    #[structopt(long, help = "continue execution after error")]
+    #[clap(long, help = "continue execution after error")]
     keep_going: bool,
-    #[structopt(
+    #[clap(
         long,
         help = r#"Scope of the command [all, commits:<count>, diff_to_main].
         all: The command is run for all relevant files.
@@ -49,11 +49,11 @@ pub struct Opt {
         default_value = "diff_to_main"
     )]
     pub scope: Scope,
-    #[structopt(subcommand)]
+    #[clap(subcommand)]
     pub cmd: Command,
 }
 
-#[derive(StructOpt, Clone, Debug)]
+#[derive(Subcommand, Clone, Debug)]
 pub enum Command {
     RunFunctionsExamples(RunFunctionsExamples),
     BuildFunctionsExample(RunFunctionsExamples),
@@ -69,47 +69,47 @@ pub enum Command {
     RunCargoUdeps,
     RunCi,
     RunCargoClean,
-    #[structopt(about = "generate bash completion script to stdout")]
+    #[clap(about = "generate bash completion script to stdout")]
     Completion(Completion),
 }
 
-#[derive(StructOpt, Clone, Debug)]
+#[derive(Parser, Clone, Debug)]
 pub struct RunExamples {
-    #[structopt(
+    #[clap(
         long,
         help = "application variant: [rust, cpp]",
         default_value = "rust"
     )]
     pub application_variant: String,
-    #[structopt(
+    #[clap(
         long,
         help = "Path to permissions file",
         default_value = "./examples/permissions/permissions.toml"
     )]
     pub permissions_file: String,
     // TODO(#396): Clarify the name and type of this, currently it is not very intuitive.
-    #[structopt(
+    #[clap(
         long,
         help = "name of a single example to run; if unset, run all the examples"
     )]
     pub example_name: Option<String>,
-    #[structopt(flatten)]
+    #[clap(flatten)]
     pub build_client: BuildClient,
-    #[structopt(flatten)]
+    #[clap(flatten)]
     pub build_server: BuildServer,
-    #[structopt(long, help = "run server [default: true]")]
+    #[clap(long, help = "run server [default: true]")]
     pub run_server: Option<bool>,
-    #[structopt(long, help = "additional arguments to pass to clients")]
+    #[clap(long, help = "additional arguments to pass to clients")]
     pub client_additional_args: Vec<String>,
-    #[structopt(long, help = "additional arguments to pass to server")]
+    #[clap(long, help = "additional arguments to pass to server")]
     pub server_additional_args: Vec<String>,
-    #[structopt(long, help = "build a Docker image for the examples")]
+    #[clap(long, help = "build a Docker image for the examples")]
     pub build_docker: bool,
 }
 
-#[derive(StructOpt, Clone, Debug)]
+#[derive(Parser, Clone, Debug)]
 pub struct Completion {
-    #[structopt(
+    #[clap(
         long,
         help = "file name to write runner_bash_completion with full path; defaults to .runner_bash_completion in current directory",
         default_value = ".runner_bash_completion",
@@ -118,31 +118,31 @@ pub struct Completion {
     pub file_name: PathBuf,
 }
 
-#[derive(StructOpt, Clone, Debug)]
+#[derive(Parser, Clone, Debug)]
 pub struct RunFunctionsExamples {
-    #[structopt(
+    #[clap(
         long,
         help = "application variant: [rust, cpp]",
         default_value = "rust"
     )]
     pub application_variant: String,
     // TODO(#396): Clarify the name and type of this, currently it is not very intuitive.
-    #[structopt(
+    #[clap(
         long,
         help = "name of a single example to run; if unset, run all the examples"
     )]
     pub example_name: Option<String>,
-    #[structopt(flatten)]
+    #[clap(flatten)]
     pub build_client: BuildClient,
-    #[structopt(flatten)]
+    #[clap(flatten)]
     pub build_server: BuildFunctionsServer,
-    #[structopt(long, help = "run server [default: true]")]
+    #[clap(long, help = "run server [default: true]")]
     pub run_server: Option<bool>,
-    #[structopt(long, help = "additional arguments to pass to clients")]
+    #[clap(long, help = "additional arguments to pass to clients")]
     pub client_additional_args: Vec<String>,
-    #[structopt(long, help = "additional arguments to pass to server")]
+    #[clap(long, help = "additional arguments to pass to server")]
     pub server_additional_args: Vec<String>,
-    #[structopt(long, help = "build a Docker image for the examples")]
+    #[clap(long, help = "build a Docker image for the examples")]
     pub build_docker: bool,
 }
 
@@ -182,20 +182,20 @@ impl std::str::FromStr for Scope {
     }
 }
 
-#[derive(StructOpt, Clone, Debug)]
+#[derive(Parser, Clone, Debug)]
 pub struct BuildClient {
-    #[structopt(
+    #[clap(
         long,
         help = "client variant: [all, rust, cpp, go, nodejs, none] [default: all]",
         default_value = "all"
     )]
     pub client_variant: String,
-    #[structopt(
+    #[clap(
         long,
         help = "rust toolchain override to use for the client compilation [e.g. stable, nightly, stage2]"
     )]
     pub client_rust_toolchain: Option<String>,
-    #[structopt(
+    #[clap(
         long,
         help = "rust target to use for the client compilation [e.g. x86_64-unknown-linux-gnu, x86_64-unknown-linux-musl, x86_64-apple-darwin]"
     )]
@@ -230,20 +230,20 @@ impl std::str::FromStr for ServerVariant {
     }
 }
 
-#[derive(StructOpt, Clone, Debug)]
+#[derive(Parser, Clone, Debug)]
 pub struct BuildServer {
-    #[structopt(
+    #[clap(
         long,
         help = "server variant: [base, coverage, unsafe, no-introspection-client, experimental]",
         default_value = "experimental"
     )]
     pub server_variant: ServerVariant,
-    #[structopt(
+    #[clap(
         long,
         help = "rust toolchain override to use for the server compilation [e.g. stable, nightly, stage2]"
     )]
     pub server_rust_toolchain: Option<String>,
-    #[structopt(
+    #[clap(
         long,
         help = "rust target to use for the server compilation [e.g. x86_64-unknown-linux-gnu, x86_64-unknown-linux-musl, x86_64-apple-darwin]"
     )]
@@ -269,25 +269,25 @@ impl std::str::FromStr for FunctionsServerVariant {
     }
 }
 
-#[derive(StructOpt, Clone, Debug)]
+#[derive(Parser, Clone, Debug)]
 pub struct BuildFunctionsServer {
-    #[structopt(long, help = "server variant: [base, unsafe]", default_value = "base")]
+    #[clap(long, help = "server variant: [base, unsafe]", default_value = "base")]
     pub server_variant: FunctionsServerVariant,
-    #[structopt(
+    #[clap(
         long,
         help = "rust toolchain override to use for the server compilation [e.g. stable, nightly, stage2]"
     )]
     pub server_rust_toolchain: Option<String>,
-    #[structopt(
+    #[clap(
         long,
         help = "rust target to use for the server compilation [e.g. x86_64-unknown-linux-gnu, x86_64-unknown-linux-musl, x86_64-apple-darwin]"
     )]
     pub server_rust_target: Option<String>,
 }
 
-#[derive(StructOpt, Clone, Debug)]
+#[derive(Parser, Clone, Debug)]
 pub struct RunTestsOpt {
-    #[structopt(
+    #[clap(
         long,
         help = "Remove generated files after running tests for each crate"
     )]
@@ -353,26 +353,26 @@ impl RustBinaryOptions for BuildServer {
     }
 }
 
-#[derive(StructOpt, Clone, Debug)]
+#[derive(Parser, Clone, Debug)]
 pub struct RunCargoFuzz {
-    #[structopt(
+    #[clap(
         long,
         help = "name of a specific crate with fuzz-target. If not specified, runs all fuzz targets for all crates."
     )]
     pub crate_name: Option<String>,
-    #[structopt(
+    #[clap(
         long,
         help = "name of a specific fuzz-target. If not specified, runs all fuzz targets.",
         requires("crate-name")
     )]
     pub target_name: Option<String>,
-    #[structopt(
+    #[clap(
         long,
         help = "weather to rebuild the dependencies, including any required .wasm files."
     )]
     pub build_deps: bool,
     /// Additional `libFuzzer` arguments passed through to the binary
-    #[structopt(last(true))]
+    #[clap(last(true))]
     pub args: Vec<String>,
 }
 
@@ -874,6 +874,10 @@ impl Runnable for Cmd {
         env_passthru(&mut cmd, "CARGO_HOME");
         env_passthru(&mut cmd, "CARGO_INCREMENTAL");
         env_passthru(&mut cmd, "RUSTC_WRAPPER");
+
+        // See https://docs.rs/prost-build/latest/prost_build/#sourcing-protoc.
+        env_passthru(&mut cmd, "PROTOC");
+        env_passthru(&mut cmd, "PROTOC_INCLUDE");
 
         // Rust runtime variables.
         cmd.env(

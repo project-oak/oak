@@ -132,7 +132,7 @@ where
     L: Send + Sync + Clone + LogError + 'static,
 {
     type StreamStream =
-        Pin<Box<dyn Stream<Item = Result<StreamingResponse, Status>> + Send + Sync + 'static>>;
+        Pin<Box<dyn Stream<Item = Result<StreamingResponse, Status>> + Send + 'static>>;
 
     async fn stream(
         &self,

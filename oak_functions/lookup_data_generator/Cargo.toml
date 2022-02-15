@@ -8,6 +8,7 @@ license = "Apache-2.0"
 [dependencies]
 anyhow = "*"
 bytes = "*"
+clap = { version = "*", features = ["derive"] }
 location_utils = { path = "../location_utils" }
 multimap = "*"
 oak_functions_abi = { path = "../abi" }
@@ -15,4 +16,3 @@ prost = "*"
 rand = "*"
 serde = { version = "*", features = ["derive"] }
 serde_json = "*"
-structopt = "*"

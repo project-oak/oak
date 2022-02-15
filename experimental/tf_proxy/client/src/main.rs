@@ -19,6 +19,7 @@
 //! https://github.com/tensorflow/serving/blob/f3fbec59798e13cb1f7230fcf891c0ec4113331e/tensorflow_serving/example/mnist_client.py
 
 use anyhow::Context;
+use clap::Parser;
 use log::{debug, info, trace};
 use maplit::hashmap;
 use oak_functions_abi::proto::{ConfigurationInfo, Request};
@@ -28,7 +29,6 @@ use proto::{
     oak::encap::GrpcRequest,
     serving::{ModelSpec, PredictRequest, PredictResponse},
 };
-use structopt::StructOpt;
 
 mod data;
 mod proto {
@@ -51,16 +51,16 @@ mod proto {
     }
 }
 
-#[derive(StructOpt, Clone)]
-#[structopt(about = "Oak Functions Client")]
+#[derive(Parser, Clone)]
+#[clap(about = "Oak Functions Client")]
 pub struct Opt {
-    #[structopt(
+    #[clap(
         long,
         help = "URI of the Tensorflow Proxy to connect to",
         default_value = "http://localhost:8080"
     )]
     uri: String,
-    #[structopt(
+    #[clap(
         long,
         help = "The working directory for downloading and processing test data",
         default_value = "/tmp"
@@ -71,7 +71,7 @@ pub struct Opt {
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     env_logger::init();
-    let opt = Opt::from_args();
+    let opt = Opt::parse();
 
     // Config is not relevant for the proxy for now.
     let config_verifier = |_: ConfigurationInfo| Ok(());

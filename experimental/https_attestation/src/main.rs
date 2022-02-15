@@ -33,38 +33,38 @@
 mod server;
 
 use anyhow::{anyhow, Context};
+use clap::Parser;
 use futures::FutureExt;
 use log::info;
-use structopt::StructOpt;
 
-#[derive(StructOpt, Clone)]
-#[structopt(about = "HTTPS Attestation")]
+#[derive(Parser, Clone)]
+#[clap(about = "HTTPS Attestation")]
 pub struct Opt {
-    #[structopt(
+    #[clap(
         long,
         help = "Address to listen on for the HTTPS server.",
         default_value = "[::]:8888"
     )]
     https_listen_address: String,
-    #[structopt(
+    #[clap(
         long,
         help = "Private RSA key file used by HTTPS server.",
         default_value = "./examples/certs/local/local.key"
     )]
     https_private_key: String,
-    #[structopt(
+    #[clap(
         long,
         help = "PEM encoded X.509 TLS certificate file used by HTTPS server.",
         default_value = "./examples/certs/local/local.pem"
     )]
     https_certificate: String,
-    #[structopt(
+    #[clap(
         long,
         help = "URI of the backend application to proxy HTTP requests to",
         default_value = "http://localhost:8081"
     )]
     backend_uri: String,
-    #[structopt(
+    #[clap(
         long,
         help = "PEM encoded X.509 certificate that signs TEE firmware key.",
         default_value = "./examples/certs/local/ca.pem"
@@ -111,7 +111,7 @@ fn load_certificate(filename: &str) -> anyhow::Result<rustls::Certificate> {
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     env_logger::init();
-    let opt = Opt::from_args();
+    let opt = Opt::parse();
 
     let private_key =
         load_private_key(&opt.https_private_key).context("Couldn't load private key")?;
