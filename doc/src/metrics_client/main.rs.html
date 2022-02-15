@@ -74,14 +74,14 @@
 <span class="doccomment">//! Sends 200 requests to the metrics backend alternating between &quot;a&quot; and &quot;b&quot;.</span>
 
 <span class="kw">use</span> <span class="ident">anyhow::Context</span>;
+<span class="kw">use</span> <span class="ident">clap::Parser</span>;
 <span class="kw">use</span> <span class="ident">oak_functions_abi::proto::Request</span>;
 <span class="kw">use</span> <span class="ident">oak_functions_client::Client</span>;
-<span class="kw">use</span> <span class="ident">structopt::StructOpt</span>;
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">StructOpt</span>, <span class="ident">Clone</span>)]</span>
-<span class="attribute">#[<span class="ident">structopt</span>(<span class="ident">about</span> <span class="op">=</span> <span class="string">&quot;Oak Functions Client&quot;</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Parser</span>, <span class="ident">Clone</span>)]</span>
+<span class="attribute">#[<span class="ident">clap</span>(<span class="ident">about</span> <span class="op">=</span> <span class="string">&quot;Oak Functions Client&quot;</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Opt</span> {
-    <span class="attribute">#[<span class="ident">structopt</span>(
+    <span class="attribute">#[<span class="ident">clap</span>(
         <span class="ident">long</span>,
         <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;URI of the Oak Functions application to connect to&quot;</span>,
         <span class="ident">default_value</span> <span class="op">=</span> <span class="string">&quot;http://localhost:8080&quot;</span>
@@ -91,7 +91,7 @@
 
 <span class="attribute">#[<span class="ident">tokio::main</span>]</span>
 <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">main</span>() -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-    <span class="kw">let</span> <span class="ident">opt</span> <span class="op">=</span> <span class="ident">Opt::from_args</span>();
+    <span class="kw">let</span> <span class="ident">opt</span> <span class="op">=</span> <span class="ident">Opt::parse</span>();
 
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">client</span> <span class="op">=</span> <span class="ident">Client::new</span>(<span class="kw-2">&amp;</span><span class="ident">opt</span>.<span class="ident">uri</span>, <span class="op">|</span><span class="ident">_config</span><span class="op">|</span> <span class="prelude-val">Ok</span>(()))
         .<span class="kw">await</span>

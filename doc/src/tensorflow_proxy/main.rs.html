@@ -201,6 +201,7 @@
 
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::grpc::handle_request</span>;
 <span class="kw">use</span> <span class="ident">anyhow::Context</span>;
+<span class="kw">use</span> <span class="ident">clap::Parser</span>;
 <span class="kw">use</span> <span class="ident">grpc_attestation</span>::{
     <span class="ident">proto::streaming_session_server::StreamingSessionServer</span>,
     <span class="ident">server</span>::{<span class="ident">AttestationServer</span>, <span class="ident">LogError</span>},
@@ -213,7 +214,6 @@
     <span class="ident">net</span>::{<span class="ident">Ipv6Addr</span>, <span class="ident">SocketAddr</span>},
     <span class="ident">path::PathBuf</span>,
 };
-<span class="kw">use</span> <span class="ident">structopt::StructOpt</span>;
 <span class="kw">use</span> <span class="ident">tokio::time</span>::{<span class="ident">sleep</span>, <span class="ident">Duration</span>};
 <span class="kw">use</span> <span class="ident">tonic::transport::Server</span>;
 
@@ -222,27 +222,27 @@
 <span class="comment">// The name of the UNIX domain socket for communicating with the TF model server.</span>
 <span class="kw">static</span> <span class="ident">SOCKET</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;/tmp/serving_uds&quot;</span>;
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">StructOpt</span>, <span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Parser</span>, <span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Opt</span> {
-    <span class="attribute">#[<span class="ident">structopt</span>(
+    <span class="attribute">#[<span class="ident">clap</span>(
         <span class="ident">long</span>,
         <span class="ident">default_value</span> <span class="op">=</span> <span class="string">&quot;8080&quot;</span>,
         <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;Port number that the proxy listens on.&quot;</span>
     )]</span>
     <span class="ident">port</span>: <span class="ident">u16</span>,
-    <span class="attribute">#[<span class="ident">structopt</span>(
+    <span class="attribute">#[<span class="ident">clap</span>(
         <span class="ident">long</span>,
         <span class="ident">default_value</span> <span class="op">=</span> <span class="string">&quot;tensorflow_model_server&quot;</span>,
         <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;Path to the TensorFlow model server binary to launch.&quot;</span>
     )]</span>
     <span class="ident">tf_server_path</span>: <span class="ident">String</span>,
-    <span class="attribute">#[<span class="ident">structopt</span>(
+    <span class="attribute">#[<span class="ident">clap</span>(
         <span class="ident">long</span>,
         <span class="ident">default_value</span> <span class="op">=</span> <span class="string">&quot;model/mnist&quot;</span>,
         <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;Path to the base directory of the TensorFlow saved model to serve.&quot;</span>
     )]</span>
     <span class="ident">tf_model_base_path</span>: <span class="ident">String</span>,
-    <span class="attribute">#[<span class="ident">structopt</span>(
+    <span class="attribute">#[<span class="ident">clap</span>(
         <span class="ident">long</span>,
         <span class="ident">default_value</span> <span class="op">=</span> <span class="string">&quot;mnist&quot;</span>,
         <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;The name of the TensorFlow saved model to serve.&quot;</span>
@@ -254,7 +254,7 @@
 <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">main</span>() -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
     <span class="ident">env_logger::init</span>();
     <span class="ident">cleanup_socket_temp_file</span>()<span class="question-mark">?</span>;
-    <span class="kw">let</span> <span class="ident">opt</span> <span class="op">=</span> <span class="ident">Opt::from_args</span>();
+    <span class="kw">let</span> <span class="ident">opt</span> <span class="op">=</span> <span class="ident">Opt::parse</span>();
     <span class="ident">launch_tf_model_server</span>(<span class="kw-2">&amp;</span><span class="ident">opt</span>)<span class="question-mark">?</span>;
     <span class="kw">let</span> <span class="ident">address</span> <span class="op">=</span> <span class="ident">SocketAddr::from</span>((<span class="ident">Ipv6Addr::UNSPECIFIED</span>, <span class="ident">opt</span>.<span class="ident">port</span>));
     <span class="ident">wait_for_socket</span>(<span class="ident">SOCKET</span>).<span class="kw">await</span><span class="question-mark">?</span>;

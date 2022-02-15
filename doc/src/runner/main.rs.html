@@ -865,6 +865,8 @@
 <span id="863">863</span>
 <span id="864">864</span>
 <span id="865">865</span>
+<span id="866">866</span>
+<span id="867">867</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -892,6 +894,7 @@
 
 <span class="attribute">#![<span class="ident">feature</span>(<span class="ident">async_closure</span>)]</span>
 
+<span class="kw">use</span> <span class="ident">clap</span>::{<span class="ident">IntoApp</span>, <span class="ident">Parser</span>};
 <span class="kw">use</span> <span class="ident">colored</span>::<span class="kw-2">*</span>;
 <span class="kw">use</span> <span class="ident">maplit::hashmap</span>;
 <span class="kw">use</span> <span class="ident">once_cell::sync::Lazy</span>;
@@ -899,7 +902,6 @@
     <span class="ident">path</span>::{<span class="ident">Path</span>, <span class="ident">PathBuf</span>},
     <span class="ident">sync::Mutex</span>,
 };
-<span class="kw">use</span> <span class="ident">structopt::StructOpt</span>;
 
 <span class="attribute">#[<span class="ident">macro_use</span>]</span>
 <span class="kw">mod</span> <span class="ident">internal</span>;
@@ -941,7 +943,7 @@
         <span class="ident">cleanup</span>();
     }));
 
-    <span class="kw">let</span> <span class="ident">opt</span> <span class="op">=</span> <span class="ident">Opt::from_args</span>();
+    <span class="kw">let</span> <span class="ident">opt</span> <span class="op">=</span> <span class="ident">Opt::parse</span>();
 
     <span class="kw">let</span> <span class="ident">run</span> <span class="op">=</span> <span class="kw">async</span> <span class="kw">move</span> <span class="op">|</span><span class="op">|</span> {
         <span class="kw">let</span> <span class="ident">steps</span> <span class="op">=</span> <span class="ident">match_cmd</span>(<span class="kw-2">&amp;</span><span class="ident">opt</span>);
@@ -1239,7 +1241,12 @@
 
 <span class="kw">fn</span> <span class="ident">run_completion</span>(<span class="ident">completion</span>: <span class="kw-2">&amp;</span><span class="ident">Completion</span>) -&gt; <span class="ident">Step</span> {
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">file</span> <span class="op">=</span> <span class="ident">std::fs::File::create</span>(<span class="ident">completion</span>.<span class="ident">file_name</span>.<span class="ident">clone</span>()).<span class="ident">expect</span>(<span class="string">&quot;file not created&quot;</span>);
-    <span class="ident">Opt::clap</span>().<span class="ident">gen_completions_to</span>(<span class="string">&quot;runner&quot;</span>, <span class="ident">clap::Shell::Bash</span>, <span class="kw-2">&amp;mut</span> <span class="ident">file</span>);
+    <span class="ident">clap_complete::generate</span>(
+        <span class="ident">clap_complete::Shell::Bash</span>,
+        <span class="kw-2">&amp;mut</span> <span class="ident">Opt::into_app</span>(),
+        <span class="string">&quot;runner&quot;</span>,
+        <span class="kw-2">&amp;mut</span> <span class="ident">file</span>,
+    );
 
     <span class="comment">// Return an empty step. Otherwise we cannot call run_completion from match_cmd.</span>
     <span class="ident">Step::Multiple</span> {
@@ -1268,7 +1275,7 @@
             .<span class="ident">map</span>(<span class="op">|</span><span class="ident">cmd</span><span class="op">|</span> {
                 <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">call</span> <span class="op">=</span> <span class="macro">vec!</span>[<span class="string">&quot;runner&quot;</span>];
                 <span class="ident">call</span>.<span class="ident">append</span>(<span class="ident">cmd</span>);
-                <span class="kw">let</span> <span class="ident">opt</span> <span class="op">=</span> <span class="ident">Opt::from_iter</span>(<span class="ident">call</span>);
+                <span class="kw">let</span> <span class="ident">opt</span> <span class="op">=</span> <span class="ident">Opt::parse_from</span>(<span class="ident">call</span>);
                 <span class="ident">match_cmd</span>(<span class="kw-2">&amp;</span><span class="ident">opt</span>)
             })
             .<span class="ident">collect</span>(),
@@ -1680,9 +1687,6 @@
                         <span class="comment">// The depinfo backend seems much faster and precise.</span>
                         <span class="string">&quot;--backend=depinfo&quot;</span>,
                         <span class="string">&quot;--workspace&quot;</span>,
-                        <span class="comment">// TODO(#1854): Remove exception when linear handles are stabilized or</span>
-                        <span class="comment">// removed.</span>
-                        <span class="string">&quot;--exclude=oak_async&quot;</span>,
                     ],
                 ),
             })

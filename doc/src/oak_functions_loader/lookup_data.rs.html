@@ -260,6 +260,10 @@
 <span id="258">258</span>
 <span id="259">259</span>
 <span id="260">260</span>
+<span id="261">261</span>
+<span id="262">262</span>
+<span id="263">263</span>
+<span id="264">264</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2021 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -279,7 +283,7 @@
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::logger::Logger</span>;
 <span class="kw">use</span> <span class="ident">anyhow</span>::{<span class="ident">anyhow</span>, <span class="ident">Context</span>};
 <span class="kw">use</span> <span class="ident">hyper</span>::{<span class="ident">body::Bytes</span>, <span class="ident">client::connect::Connect</span>, <span class="ident">Body</span>, <span class="ident">Client</span>, <span class="ident">Request</span>};
-<span class="kw">use</span> <span class="ident">hyper_rustls::HttpsConnector</span>;
+<span class="kw">use</span> <span class="ident">hyper_rustls::HttpsConnectorBuilder</span>;
 <span class="kw">use</span> <span class="ident">log::Level</span>;
 <span class="kw">use</span> <span class="ident">prost::Message</span>;
 <span class="kw">use</span> <span class="ident">serde_derive::Deserialize</span>;
@@ -441,7 +445,11 @@
                 ),
             );
             <span class="comment">// TODO(#1930): Avoid loading the entire file in memory for parsing.</span>
-            <span class="kw">let</span> <span class="ident">https</span> <span class="op">=</span> <span class="ident">HttpsConnector::with_native_roots</span>();
+            <span class="kw">let</span> <span class="ident">https</span> <span class="op">=</span> <span class="ident">HttpsConnectorBuilder::new</span>()
+                .<span class="ident">with_native_roots</span>()
+                .<span class="ident">https_or_http</span>()
+                .<span class="ident">enable_http1</span>()
+                .<span class="ident">build</span>();
             <span class="kw">let</span> <span class="ident">client</span> <span class="op">=</span> <span class="ident">Client::builder</span>().<span class="ident">build</span>::<span class="op">&lt;</span><span class="kw">_</span>, <span class="ident">Body</span><span class="op">&gt;</span>(<span class="ident">https</span>);
             <span class="ident">send_request</span>(<span class="kw-2">&amp;</span><span class="ident">client</span>, <span class="ident">build_download_request</span>(<span class="ident">url</span>, <span class="ident">auth</span>).<span class="kw">await</span><span class="question-mark">?</span>).<span class="kw">await</span>
         }

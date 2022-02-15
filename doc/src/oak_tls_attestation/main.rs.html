@@ -168,25 +168,25 @@
 <span class="kw">mod</span> <span class="ident">server</span>;
 
 <span class="kw">use</span> <span class="ident">anyhow::Context</span>;
+<span class="kw">use</span> <span class="ident">clap::Parser</span>;
 <span class="kw">use</span> <span class="ident">log::info</span>;
-<span class="kw">use</span> <span class="ident">structopt::StructOpt</span>;
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">StructOpt</span>, <span class="ident">Clone</span>)]</span>
-<span class="attribute">#[<span class="ident">structopt</span>(<span class="ident">about</span> <span class="op">=</span> <span class="string">&quot;TLS Attestation&quot;</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Parser</span>, <span class="ident">Clone</span>)]</span>
+<span class="attribute">#[<span class="ident">clap</span>(<span class="ident">about</span> <span class="op">=</span> <span class="string">&quot;TLS Attestation&quot;</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Opt</span> {
-    <span class="attribute">#[<span class="ident">structopt</span>(
+    <span class="attribute">#[<span class="ident">clap</span>(
         <span class="ident">long</span>,
         <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;Address to listen on for the HTTPS server.&quot;</span>,
         <span class="ident">default_value</span> <span class="op">=</span> <span class="string">&quot;[::]:8888&quot;</span>
     )]</span>
     <span class="ident">https_listen_address</span>: <span class="ident">String</span>,
-    <span class="attribute">#[<span class="ident">structopt</span>(
+    <span class="attribute">#[<span class="ident">clap</span>(
         <span class="ident">long</span>,
         <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;URI of the backend application to proxy HTTP requests to&quot;</span>,
         <span class="ident">default_value</span> <span class="op">=</span> <span class="string">&quot;http://localhost:8081&quot;</span>
     )]</span>
     <span class="ident">backend_uri</span>: <span class="ident">String</span>,
-    <span class="attribute">#[<span class="ident">structopt</span>(
+    <span class="attribute">#[<span class="ident">clap</span>(
         <span class="ident">long</span>,
         <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;PEM encoded X.509 certificate that signs TEE firmware key.&quot;</span>,
         <span class="ident">default_value</span> <span class="op">=</span> <span class="string">&quot;./examples/certs/local/ca.pem&quot;</span>
@@ -197,7 +197,7 @@
 <span class="attribute">#[<span class="ident">tokio::main</span>]</span>
 <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">main</span>() -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
     <span class="ident">env_logger::init</span>();
-    <span class="kw">let</span> <span class="ident">opt</span> <span class="op">=</span> <span class="ident">Opt::from_args</span>();
+    <span class="kw">let</span> <span class="ident">opt</span> <span class="op">=</span> <span class="ident">Opt::parse</span>();
 
     <span class="kw">let</span> <span class="ident">backend_uri</span> <span class="op">=</span> <span class="ident">opt</span>
         .<span class="ident">backend_uri</span>

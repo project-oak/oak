@@ -1127,6 +1127,10 @@
 <span id="1125">1125</span>
 <span id="1126">1126</span>
 <span id="1127">1127</span>
+<span id="1128">1128</span>
+<span id="1129">1129</span>
+<span id="1130">1130</span>
+<span id="1131">1131</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -1145,6 +1149,7 @@
 
 <span class="kw">use</span> <span class="ident">async_recursion::async_recursion</span>;
 <span class="kw">use</span> <span class="ident">async_trait::async_trait</span>;
+<span class="kw">use</span> <span class="ident">clap</span>::{<span class="ident">Parser</span>, <span class="ident">Subcommand</span>};
 <span class="kw">use</span> <span class="ident">colored</span>::<span class="kw-2">*</span>;
 <span class="kw">use</span> <span class="ident">nix::sys::signal::Signal</span>;
 <span class="kw">use</span> <span class="ident">std</span>::{
@@ -1152,20 +1157,19 @@
     <span class="ident">path</span>::{<span class="ident">Path</span>, <span class="ident">PathBuf</span>},
     <span class="ident">time::Instant</span>,
 };
-<span class="kw">use</span> <span class="ident">structopt::StructOpt</span>;
 <span class="kw">use</span> <span class="ident">tokio::io</span>::{<span class="ident">empty</span>, <span class="ident">AsyncRead</span>, <span class="ident">AsyncReadExt</span>};
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">StructOpt</span>, <span class="ident">Clone</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Parser</span>, <span class="ident">Clone</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Opt</span> {
-    <span class="attribute">#[<span class="ident">structopt</span>(<span class="ident">long</span>, <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;do not execute commands&quot;</span>)]</span>
+    <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">long</span>, <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;do not execute commands&quot;</span>)]</span>
     <span class="ident">dry_run</span>: <span class="ident">bool</span>,
-    <span class="attribute">#[<span class="ident">structopt</span>(<span class="ident">long</span>, <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;print commands&quot;</span>)]</span>
+    <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">long</span>, <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;print commands&quot;</span>)]</span>
     <span class="ident">commands</span>: <span class="ident">bool</span>,
-    <span class="attribute">#[<span class="ident">structopt</span>(<span class="ident">long</span>, <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;show logs of commands&quot;</span>)]</span>
+    <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">long</span>, <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;show logs of commands&quot;</span>)]</span>
     <span class="ident">logs</span>: <span class="ident">bool</span>,
-    <span class="attribute">#[<span class="ident">structopt</span>(<span class="ident">long</span>, <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;continue execution after error&quot;</span>)]</span>
+    <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">long</span>, <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;continue execution after error&quot;</span>)]</span>
     <span class="ident">keep_going</span>: <span class="ident">bool</span>,
-    <span class="attribute">#[<span class="ident">structopt</span>(
+    <span class="attribute">#[<span class="ident">clap</span>(
         <span class="ident">long</span>,
         <span class="ident">help</span> <span class="op">=</span> <span class="string">r#&quot;Scope of the command [all, commits:&lt;count&gt;, diff_to_main].
         all: The command is run for all relevant files.
@@ -1178,11 +1182,11 @@
         <span class="ident">default_value</span> <span class="op">=</span> <span class="string">&quot;diff_to_main&quot;</span>
     )]</span>
     <span class="kw">pub</span> <span class="ident">scope</span>: <span class="ident">Scope</span>,
-    <span class="attribute">#[<span class="ident">structopt</span>(<span class="ident">subcommand</span>)]</span>
+    <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">subcommand</span>)]</span>
     <span class="kw">pub</span> <span class="ident">cmd</span>: <span class="ident">Command</span>,
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">StructOpt</span>, <span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Subcommand</span>, <span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
 <span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">Command</span> {
     <span class="ident">RunFunctionsExamples</span>(<span class="ident">RunFunctionsExamples</span>),
     <span class="ident">BuildFunctionsExample</span>(<span class="ident">RunFunctionsExamples</span>),
@@ -1198,47 +1202,47 @@
     <span class="ident">RunCargoUdeps</span>,
     <span class="ident">RunCi</span>,
     <span class="ident">RunCargoClean</span>,
-    <span class="attribute">#[<span class="ident">structopt</span>(<span class="ident">about</span> <span class="op">=</span> <span class="string">&quot;generate bash completion script to stdout&quot;</span>)]</span>
+    <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">about</span> <span class="op">=</span> <span class="string">&quot;generate bash completion script to stdout&quot;</span>)]</span>
     <span class="ident">Completion</span>(<span class="ident">Completion</span>),
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">StructOpt</span>, <span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Parser</span>, <span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">RunExamples</span> {
-    <span class="attribute">#[<span class="ident">structopt</span>(
+    <span class="attribute">#[<span class="ident">clap</span>(
         <span class="ident">long</span>,
         <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;application variant: [rust, cpp]&quot;</span>,
         <span class="ident">default_value</span> <span class="op">=</span> <span class="string">&quot;rust&quot;</span>
     )]</span>
     <span class="kw">pub</span> <span class="ident">application_variant</span>: <span class="ident">String</span>,
-    <span class="attribute">#[<span class="ident">structopt</span>(
+    <span class="attribute">#[<span class="ident">clap</span>(
         <span class="ident">long</span>,
         <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;Path to permissions file&quot;</span>,
         <span class="ident">default_value</span> <span class="op">=</span> <span class="string">&quot;./examples/permissions/permissions.toml&quot;</span>
     )]</span>
     <span class="kw">pub</span> <span class="ident">permissions_file</span>: <span class="ident">String</span>,
     <span class="comment">// TODO(#396): Clarify the name and type of this, currently it is not very intuitive.</span>
-    <span class="attribute">#[<span class="ident">structopt</span>(
+    <span class="attribute">#[<span class="ident">clap</span>(
         <span class="ident">long</span>,
         <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;name of a single example to run; if unset, run all the examples&quot;</span>
     )]</span>
     <span class="kw">pub</span> <span class="ident">example_name</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
-    <span class="attribute">#[<span class="ident">structopt</span>(<span class="ident">flatten</span>)]</span>
+    <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">flatten</span>)]</span>
     <span class="kw">pub</span> <span class="ident">build_client</span>: <span class="ident">BuildClient</span>,
-    <span class="attribute">#[<span class="ident">structopt</span>(<span class="ident">flatten</span>)]</span>
+    <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">flatten</span>)]</span>
     <span class="kw">pub</span> <span class="ident">build_server</span>: <span class="ident">BuildServer</span>,
-    <span class="attribute">#[<span class="ident">structopt</span>(<span class="ident">long</span>, <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;run server [default: true]&quot;</span>)]</span>
+    <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">long</span>, <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;run server [default: true]&quot;</span>)]</span>
     <span class="kw">pub</span> <span class="ident">run_server</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">bool</span><span class="op">&gt;</span>,
-    <span class="attribute">#[<span class="ident">structopt</span>(<span class="ident">long</span>, <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;additional arguments to pass to clients&quot;</span>)]</span>
+    <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">long</span>, <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;additional arguments to pass to clients&quot;</span>)]</span>
     <span class="kw">pub</span> <span class="ident">client_additional_args</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
-    <span class="attribute">#[<span class="ident">structopt</span>(<span class="ident">long</span>, <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;additional arguments to pass to server&quot;</span>)]</span>
+    <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">long</span>, <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;additional arguments to pass to server&quot;</span>)]</span>
     <span class="kw">pub</span> <span class="ident">server_additional_args</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
-    <span class="attribute">#[<span class="ident">structopt</span>(<span class="ident">long</span>, <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;build a Docker image for the examples&quot;</span>)]</span>
+    <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">long</span>, <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;build a Docker image for the examples&quot;</span>)]</span>
     <span class="kw">pub</span> <span class="ident">build_docker</span>: <span class="ident">bool</span>,
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">StructOpt</span>, <span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Parser</span>, <span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Completion</span> {
-    <span class="attribute">#[<span class="ident">structopt</span>(
+    <span class="attribute">#[<span class="ident">clap</span>(
         <span class="ident">long</span>,
         <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;file name to write runner_bash_completion with full path; defaults to .runner_bash_completion in current directory&quot;</span>,
         <span class="ident">default_value</span> <span class="op">=</span> <span class="string">&quot;.runner_bash_completion&quot;</span>,
@@ -1247,31 +1251,31 @@
     <span class="kw">pub</span> <span class="ident">file_name</span>: <span class="ident">PathBuf</span>,
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">StructOpt</span>, <span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Parser</span>, <span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">RunFunctionsExamples</span> {
-    <span class="attribute">#[<span class="ident">structopt</span>(
+    <span class="attribute">#[<span class="ident">clap</span>(
         <span class="ident">long</span>,
         <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;application variant: [rust, cpp]&quot;</span>,
         <span class="ident">default_value</span> <span class="op">=</span> <span class="string">&quot;rust&quot;</span>
     )]</span>
     <span class="kw">pub</span> <span class="ident">application_variant</span>: <span class="ident">String</span>,
     <span class="comment">// TODO(#396): Clarify the name and type of this, currently it is not very intuitive.</span>
-    <span class="attribute">#[<span class="ident">structopt</span>(
+    <span class="attribute">#[<span class="ident">clap</span>(
         <span class="ident">long</span>,
         <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;name of a single example to run; if unset, run all the examples&quot;</span>
     )]</span>
     <span class="kw">pub</span> <span class="ident">example_name</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
-    <span class="attribute">#[<span class="ident">structopt</span>(<span class="ident">flatten</span>)]</span>
+    <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">flatten</span>)]</span>
     <span class="kw">pub</span> <span class="ident">build_client</span>: <span class="ident">BuildClient</span>,
-    <span class="attribute">#[<span class="ident">structopt</span>(<span class="ident">flatten</span>)]</span>
+    <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">flatten</span>)]</span>
     <span class="kw">pub</span> <span class="ident">build_server</span>: <span class="ident">BuildFunctionsServer</span>,
-    <span class="attribute">#[<span class="ident">structopt</span>(<span class="ident">long</span>, <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;run server [default: true]&quot;</span>)]</span>
+    <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">long</span>, <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;run server [default: true]&quot;</span>)]</span>
     <span class="kw">pub</span> <span class="ident">run_server</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">bool</span><span class="op">&gt;</span>,
-    <span class="attribute">#[<span class="ident">structopt</span>(<span class="ident">long</span>, <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;additional arguments to pass to clients&quot;</span>)]</span>
+    <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">long</span>, <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;additional arguments to pass to clients&quot;</span>)]</span>
     <span class="kw">pub</span> <span class="ident">client_additional_args</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
-    <span class="attribute">#[<span class="ident">structopt</span>(<span class="ident">long</span>, <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;additional arguments to pass to server&quot;</span>)]</span>
+    <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">long</span>, <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;additional arguments to pass to server&quot;</span>)]</span>
     <span class="kw">pub</span> <span class="ident">server_additional_args</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
-    <span class="attribute">#[<span class="ident">structopt</span>(<span class="ident">long</span>, <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;build a Docker image for the examples&quot;</span>)]</span>
+    <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">long</span>, <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;build a Docker image for the examples&quot;</span>)]</span>
     <span class="kw">pub</span> <span class="ident">build_docker</span>: <span class="ident">bool</span>,
 }
 
@@ -1311,20 +1315,20 @@
     }
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">StructOpt</span>, <span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Parser</span>, <span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">BuildClient</span> {
-    <span class="attribute">#[<span class="ident">structopt</span>(
+    <span class="attribute">#[<span class="ident">clap</span>(
         <span class="ident">long</span>,
         <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;client variant: [all, rust, cpp, go, nodejs, none] [default: all]&quot;</span>,
         <span class="ident">default_value</span> <span class="op">=</span> <span class="string">&quot;all&quot;</span>
     )]</span>
     <span class="kw">pub</span> <span class="ident">client_variant</span>: <span class="ident">String</span>,
-    <span class="attribute">#[<span class="ident">structopt</span>(
+    <span class="attribute">#[<span class="ident">clap</span>(
         <span class="ident">long</span>,
         <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;rust toolchain override to use for the client compilation [e.g. stable, nightly, stage2]&quot;</span>
     )]</span>
     <span class="kw">pub</span> <span class="ident">client_rust_toolchain</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
-    <span class="attribute">#[<span class="ident">structopt</span>(
+    <span class="attribute">#[<span class="ident">clap</span>(
         <span class="ident">long</span>,
         <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;rust target to use for the client compilation [e.g. x86_64-unknown-linux-gnu, x86_64-unknown-linux-musl, x86_64-apple-darwin]&quot;</span>
     )]</span>
@@ -1359,20 +1363,20 @@
     }
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">StructOpt</span>, <span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Parser</span>, <span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">BuildServer</span> {
-    <span class="attribute">#[<span class="ident">structopt</span>(
+    <span class="attribute">#[<span class="ident">clap</span>(
         <span class="ident">long</span>,
         <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;server variant: [base, coverage, unsafe, no-introspection-client, experimental]&quot;</span>,
         <span class="ident">default_value</span> <span class="op">=</span> <span class="string">&quot;experimental&quot;</span>
     )]</span>
     <span class="kw">pub</span> <span class="ident">server_variant</span>: <span class="ident">ServerVariant</span>,
-    <span class="attribute">#[<span class="ident">structopt</span>(
+    <span class="attribute">#[<span class="ident">clap</span>(
         <span class="ident">long</span>,
         <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;rust toolchain override to use for the server compilation [e.g. stable, nightly, stage2]&quot;</span>
     )]</span>
     <span class="kw">pub</span> <span class="ident">server_rust_toolchain</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
-    <span class="attribute">#[<span class="ident">structopt</span>(
+    <span class="attribute">#[<span class="ident">clap</span>(
         <span class="ident">long</span>,
         <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;rust target to use for the server compilation [e.g. x86_64-unknown-linux-gnu, x86_64-unknown-linux-musl, x86_64-apple-darwin]&quot;</span>
     )]</span>
@@ -1398,25 +1402,25 @@
     }
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">StructOpt</span>, <span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Parser</span>, <span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">BuildFunctionsServer</span> {
-    <span class="attribute">#[<span class="ident">structopt</span>(<span class="ident">long</span>, <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;server variant: [base, unsafe]&quot;</span>, <span class="ident">default_value</span> <span class="op">=</span> <span class="string">&quot;base&quot;</span>)]</span>
+    <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">long</span>, <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;server variant: [base, unsafe]&quot;</span>, <span class="ident">default_value</span> <span class="op">=</span> <span class="string">&quot;base&quot;</span>)]</span>
     <span class="kw">pub</span> <span class="ident">server_variant</span>: <span class="ident">FunctionsServerVariant</span>,
-    <span class="attribute">#[<span class="ident">structopt</span>(
+    <span class="attribute">#[<span class="ident">clap</span>(
         <span class="ident">long</span>,
         <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;rust toolchain override to use for the server compilation [e.g. stable, nightly, stage2]&quot;</span>
     )]</span>
     <span class="kw">pub</span> <span class="ident">server_rust_toolchain</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
-    <span class="attribute">#[<span class="ident">structopt</span>(
+    <span class="attribute">#[<span class="ident">clap</span>(
         <span class="ident">long</span>,
         <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;rust target to use for the server compilation [e.g. x86_64-unknown-linux-gnu, x86_64-unknown-linux-musl, x86_64-apple-darwin]&quot;</span>
     )]</span>
     <span class="kw">pub</span> <span class="ident">server_rust_target</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">StructOpt</span>, <span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Parser</span>, <span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">RunTestsOpt</span> {
-    <span class="attribute">#[<span class="ident">structopt</span>(
+    <span class="attribute">#[<span class="ident">clap</span>(
         <span class="ident">long</span>,
         <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;Remove generated files after running tests for each crate&quot;</span>
     )]</span>
@@ -1482,26 +1486,26 @@
     }
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">StructOpt</span>, <span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Parser</span>, <span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">RunCargoFuzz</span> {
-    <span class="attribute">#[<span class="ident">structopt</span>(
+    <span class="attribute">#[<span class="ident">clap</span>(
         <span class="ident">long</span>,
         <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;name of a specific crate with fuzz-target. If not specified, runs all fuzz targets for all crates.&quot;</span>
     )]</span>
     <span class="kw">pub</span> <span class="ident">crate_name</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
-    <span class="attribute">#[<span class="ident">structopt</span>(
+    <span class="attribute">#[<span class="ident">clap</span>(
         <span class="ident">long</span>,
         <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;name of a specific fuzz-target. If not specified, runs all fuzz targets.&quot;</span>,
         <span class="ident">requires</span>(<span class="string">&quot;crate-name&quot;</span>)
     )]</span>
     <span class="kw">pub</span> <span class="ident">target_name</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
-    <span class="attribute">#[<span class="ident">structopt</span>(
+    <span class="attribute">#[<span class="ident">clap</span>(
         <span class="ident">long</span>,
         <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;weather to rebuild the dependencies, including any required .wasm files.&quot;</span>
     )]</span>
     <span class="kw">pub</span> <span class="ident">build_deps</span>: <span class="ident">bool</span>,
     <span class="doccomment">/// Additional `libFuzzer` arguments passed through to the binary</span>
-    <span class="attribute">#[<span class="ident">structopt</span>(<span class="ident">last</span>(<span class="bool-val">true</span>))]</span>
+    <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">last</span>(<span class="bool-val">true</span>))]</span>
     <span class="kw">pub</span> <span class="ident">args</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
 }
 
@@ -2003,6 +2007,10 @@
         <span class="ident">env_passthru</span>(<span class="kw-2">&amp;mut</span> <span class="ident">cmd</span>, <span class="string">&quot;CARGO_HOME&quot;</span>);
         <span class="ident">env_passthru</span>(<span class="kw-2">&amp;mut</span> <span class="ident">cmd</span>, <span class="string">&quot;CARGO_INCREMENTAL&quot;</span>);
         <span class="ident">env_passthru</span>(<span class="kw-2">&amp;mut</span> <span class="ident">cmd</span>, <span class="string">&quot;RUSTC_WRAPPER&quot;</span>);
+
+        <span class="comment">// See https://docs.rs/prost-build/latest/prost_build/#sourcing-protoc.</span>
+        <span class="ident">env_passthru</span>(<span class="kw-2">&amp;mut</span> <span class="ident">cmd</span>, <span class="string">&quot;PROTOC&quot;</span>);
+        <span class="ident">env_passthru</span>(<span class="kw-2">&amp;mut</span> <span class="ident">cmd</span>, <span class="string">&quot;PROTOC_INCLUDE&quot;</span>);
 
         <span class="comment">// Rust runtime variables.</span>
         <span class="ident">cmd</span>.<span class="ident">env</span>(
