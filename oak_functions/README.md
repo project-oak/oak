@@ -52,7 +52,21 @@ from the conventional computing model.
 <!-- https://docs.google.com/drawings/d/1ZPeJ93IkyOOJVI8CFSbEeEKn6wVozB-d6E1SekK2QyQ/edit -->
 <img src="images/ComputingModel.png" width="1000">
 
-## Remote Attestation
+## Features
+
+### Oak Functions Loader and the Trusted Runtime
+
+The [Oak Functions Loader](loader/README.md) starts the Oak Functions trusted
+runtime and loads a Wasm module as workload. The Oak Functions trusted runtime
+and the Wasm module communicate through
+[ABI Functions and a Rust SDK](loader/README.md#abi-functions-and-the-rust-sdk).
+To serve client requests, the Oak Functions trusted runtime has
+[Read-Only Storage](loader/README.md#read-only-storage). The Oak Functions
+trusted runtime allows to specify [Policies](loader/README.md#read-only-storage)
+such as a fixed size and processing time for responses returned by the trusted
+runtime, and a fixed processing time.
+
+### Remote Attestation
 
 The [Remote Attestation protocol](/remote_attestation) implemented in Oak is
 currently integrated in Oak Functions.
