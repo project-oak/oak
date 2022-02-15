@@ -4,10 +4,6 @@
 version: 2
 updates:
   - package-ecosystem: 'cargo'
-    directory: '/oak_loader'
-    schedule:
-      interval: 'daily'
-  - package-ecosystem: 'cargo'
-    directory: '/oak_functions/loader'
+    directory: '/'
     schedule:
       interval: 'daily'

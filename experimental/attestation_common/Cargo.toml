@@ -14,7 +14,8 @@ anyhow = "*"
 log = "*"
 openssl = "*"
 ring = "*"
-rustls = "*"
+# TODO(#2544): Update rustls.
+rustls = "0.19"
 serde = { version = "*", features = ["derive"] }
 serde_json = "*"
 sha2 = "*"

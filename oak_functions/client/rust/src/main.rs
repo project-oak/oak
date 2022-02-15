@@ -18,31 +18,31 @@
 //! correct format.
 
 use anyhow::Context;
+use clap::Parser;
 use oak_functions_abi::proto::{ConfigurationInfo, Request};
 use oak_functions_client::Client;
 use regex::Regex;
-use structopt::StructOpt;
 
-#[derive(StructOpt, Clone)]
-#[structopt(about = "Oak Functions Client")]
+#[derive(Parser, Clone)]
+#[clap(about = "Oak Functions Client")]
 pub struct Opt {
-    #[structopt(
+    #[clap(
         long,
         help = "URI of the Oak Functions application to connect to",
         default_value = "http://localhost:8080"
     )]
     uri: String,
-    #[structopt(long, help = "request payload")]
+    #[clap(long, help = "request payload")]
     request: String,
     /// Optional, only for testing.
-    #[structopt(long, help = "expected response body, for testing")]
+    #[clap(long, help = "expected response body, for testing")]
     expected_response_pattern: Option<String>,
 }
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     env_logger::init();
-    let opt = Opt::from_args();
+    let opt = Opt::parse();
 
     // TODO(#2348): Replace with a more flexible specification of the verification logic.
     // For the common client used in examples, we expect ML-inference and private metrics to be

@@ -17,7 +17,7 @@
 use crate::logger::Logger;
 use anyhow::{anyhow, Context};
 use hyper::{body::Bytes, client::connect::Connect, Body, Client, Request};
-use hyper_rustls::HttpsConnector;
+use hyper_rustls::HttpsConnectorBuilder;
 use log::Level;
 use prost::Message;
 use serde_derive::Deserialize;
@@ -179,7 +179,11 @@ async fn fetch_lookup_data(
                 ),
             );
             // TODO(#1930): Avoid loading the entire file in memory for parsing.
-            let https = HttpsConnector::with_native_roots();
+            let https = HttpsConnectorBuilder::new()
+                .with_native_roots()
+                .https_or_http()
+                .enable_http1()
+                .build();
             let client = Client::builder().build::<_, Body>(https);
             send_request(&client, build_download_request(url, auth).await?).await
         }

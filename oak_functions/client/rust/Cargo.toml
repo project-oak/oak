@@ -9,6 +9,7 @@ license = "Apache-2.0"
 anyhow = "*"
 async-stream = "*"
 base64 = "*"
+clap = { version = "*", features = ["derive"] }
 ecdsa = { version = "*", features = ["verify", "pkcs8", "pem"] }
 env_logger = "*"
 grpc_attestation = { path = "../../../grpc_attestation/" }
@@ -23,7 +24,6 @@ serde = "*"
 serde_jcs = "*"
 serde_json = "*"
 signature = "*"
-structopt = "*"
 tokio = { version = "*", features = [
   "fs",
   "macros",

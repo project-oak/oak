@@ -15,46 +15,46 @@
 //
 
 use anyhow::Context;
+use clap::Parser;
 use lookup_data_generator::data::{
     generate_and_serialize_random_entries, generate_and_serialize_sparse_weather_entries,
     generate_and_serialize_weather_entries,
 };
 use std::{fs::File, io::Write};
-use structopt::StructOpt;
 
-#[derive(StructOpt, Clone, Debug)]
-#[structopt(about = "Oak Functions Lookup Data Generator")]
+#[derive(Parser, Clone, Debug)]
+#[clap(about = "Oak Functions Lookup Data Generator")]
 pub struct Opt {
-    #[structopt(long)]
+    #[clap(long)]
     out_file_path: String,
-    #[structopt(subcommand)]
+    #[clap(subcommand)]
     cmd: Command,
 }
 
-#[derive(StructOpt, Clone, Debug)]
+#[derive(Parser, Clone, Debug)]
 pub enum Command {
-    #[structopt(about = "Generate random key value pairs")]
+    #[clap(about = "Generate random key value pairs")]
     Random {
-        #[structopt(long, default_value = "20")]
+        #[clap(long, default_value = "20")]
         key_size_bytes: usize,
-        #[structopt(long, default_value = "1000")]
+        #[clap(long, default_value = "1000")]
         value_size_bytes: usize,
-        #[structopt(long, default_value = "100")]
+        #[clap(long, default_value = "100")]
         entries: usize,
     },
-    #[structopt(about = "Generate entries for the weather lookup example with random values")]
+    #[clap(about = "Generate entries for the weather lookup example with random values")]
     Weather {},
-    #[structopt(
+    #[clap(
         about = "Generate sparse entries plus an index for the weather lookup example with random values"
     )]
     WeatherSparse {
-        #[structopt(long, default_value = "100000")]
+        #[clap(long, default_value = "100000")]
         entries: usize,
     },
 }
 
 fn main() -> anyhow::Result<()> {
-    let opt = Opt::from_args();
+    let opt = Opt::parse();
     let mut rng = rand::thread_rng();
     let buf = match opt.cmd {
         Command::Random {

@@ -17,6 +17,7 @@
 #![feature(async_closure)]
 
 use anyhow::Context;
+use clap::Parser;
 use log::Level;
 use oak_functions_abi::proto::{ConfigurationInfo, ServerPolicy};
 use oak_functions_loader::{
@@ -45,7 +46,6 @@ use std::{
     },
     time::Duration,
 };
-use structopt::StructOpt;
 
 #[cfg(test)]
 mod tests;
@@ -105,21 +105,21 @@ enum Data {
 /// In general, when adding new configuration parameters, they should go in the `Config` struct
 /// instead of here, and provided as part of the config TOML file by the developer, who would
 /// normally bundle it with the Docker image of the Oak Functions Loader.
-#[derive(StructOpt, Clone, Debug)]
-#[structopt(about = "Oak Functions Loader")]
+#[derive(Parser, Clone, Debug)]
+#[clap(about = "Oak Functions Loader")]
 pub struct Opt {
-    #[structopt(
+    #[clap(
         long,
         default_value = "8080",
         help = "Port number that the server listens on."
     )]
     http_listen_port: u16,
-    #[structopt(
+    #[clap(
         long,
         help = "Path to a Wasm file to be loaded and executed per invocation. The Wasm module must export a function named `main`."
     )]
     wasm_path: String,
-    #[structopt(
+    #[clap(
         long,
         help = "Path to a file containing configuration parameters in TOML format."
     )]
@@ -147,7 +147,7 @@ async fn background_refresh_lookup_data(
 }
 
 fn main() -> anyhow::Result<()> {
-    let opt = Opt::from_args();
+    let opt = Opt::parse();
     let config_file_bytes = fs::read(&opt.config_path)
         .with_context(|| format!("Couldn't read config file {}", &opt.config_path))?;
     let config: Config =

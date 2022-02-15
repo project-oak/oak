@@ -25,6 +25,7 @@
 
 #![feature(async_closure)]
 
+use clap::{IntoApp, Parser};
 use colored::*;
 use maplit::hashmap;
 use once_cell::sync::Lazy;
@@ -32,7 +33,6 @@ use std::{
     path::{Path, PathBuf},
     sync::Mutex,
 };
-use structopt::StructOpt;
 
 #[macro_use]
 mod internal;
@@ -74,7 +74,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         cleanup();
     }));
 
-    let opt = Opt::from_args();
+    let opt = Opt::parse();
 
     let run = async move || {
         let steps = match_cmd(&opt);
@@ -372,7 +372,12 @@ fn check_format(scope: &Scope) -> Step {
 
 fn run_completion(completion: &Completion) -> Step {
     let mut file = std::fs::File::create(completion.file_name.clone()).expect("file not created");
-    Opt::clap().gen_completions_to("runner", clap::Shell::Bash, &mut file);
+    clap_complete::generate(
+        clap_complete::Shell::Bash,
+        &mut Opt::into_app(),
+        "runner",
+        &mut file,
+    );
 
     // Return an empty step. Otherwise we cannot call run_completion from match_cmd.
     Step::Multiple {
@@ -401,7 +406,7 @@ fn run_ci() -> Step {
             .map(|cmd| {
                 let mut call = vec!["runner"];
                 call.append(cmd);
-                let opt = Opt::from_iter(call);
+                let opt = Opt::parse_from(call);
                 match_cmd(&opt)
             })
             .collect(),
@@ -813,9 +818,6 @@ fn run_cargo_udeps(scope: &Scope) -> Step {
                         // The depinfo backend seems much faster and precise.
                         "--backend=depinfo",
                         "--workspace",
-                        // TODO(#1854): Remove exception when linear handles are stabilized or
-                        // removed.
-                        "--exclude=oak_async",
                     ],
                 ),
             })

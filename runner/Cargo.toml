@@ -10,7 +10,8 @@ async-recursion = "*"
 async-trait = "*"
 cargo_metadata = "*"
 chrono = "*"
-clap = "*"
+clap = { version = "*", features = ["derive"] }
+clap_complete = "*"
 colored = "*"
 itertools = "*"
 maplit = "*"
@@ -19,7 +20,6 @@ once_cell = "*"
 regex = "*"
 serde = { version = "*", features = ["derive"] }
 serde_yaml = "*"
-structopt = "*"
 tokio = { version = "*", features = [
   "fs",
   "io-util",

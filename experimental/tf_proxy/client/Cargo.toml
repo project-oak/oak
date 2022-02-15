@@ -7,6 +7,7 @@ license = "Apache-2.0"
 
 [dependencies]
 anyhow = "*"
+clap = { version = "*", features = ["derive"] }
 env_logger = "*"
 flate2 = "*"
 log = "*"
@@ -16,7 +17,6 @@ oak_functions_client = { path = "../../../oak_functions/client/rust" }
 prost = "*"
 prost-types = "*"
 reqwest = "*"
-structopt = "*"
 tokio = { version = "*", features = [
   "fs",
   "macros",

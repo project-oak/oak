@@ -27,7 +27,6 @@ wildcards = "allow"
 # For more detailed information see http://go/thirdpartylicenses.
 [licenses]
 allow = [
-  "Apache-2.0 WITH LLVM-exception",
   "Apache-2.0",
   "BSD-3-Clause",
   "ISC",
@@ -50,3 +49,10 @@ name = "encoding_rs"
 version = "*"
 expression = "(Apache-2.0 OR MIT) AND BSD-3-Clause"
 license-files = [{ path = "COPYRIGHT", hash = 972598577 }]
+
+# See https://github.com/johannesvollmer/exrs/blob/c2f89e85af3f15477c2da52e08b6d71a2577ec0f/LICENSE.md
+[[licenses.clarify]]
+name = "exr"
+version = "*"
+expression = "BSD-3-Clause"
+license-files = [{ path = "LICENSE.md", hash = 4032825156 }]

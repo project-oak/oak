@@ -31,6 +31,7 @@ pub mod proto {
 
 use crate::grpc::handle_request;
 use anyhow::Context;
+use clap::Parser;
 use grpc_attestation::{
     proto::streaming_session_server::StreamingSessionServer,
     server::{AttestationServer, LogError},
@@ -43,7 +44,6 @@ use std::{
     net::{Ipv6Addr, SocketAddr},
     path::PathBuf,
 };
-use structopt::StructOpt;
 use tokio::time::{sleep, Duration};
 use tonic::transport::Server;
 
@@ -52,27 +52,27 @@ pub mod grpc;
 // The name of the UNIX domain socket for communicating with the TF model server.
 static SOCKET: &str = "/tmp/serving_uds";
 
-#[derive(StructOpt, Clone, Debug)]
+#[derive(Parser, Clone, Debug)]
 pub struct Opt {
-    #[structopt(
+    #[clap(
         long,
         default_value = "8080",
         help = "Port number that the proxy listens on."
     )]
     port: u16,
-    #[structopt(
+    #[clap(
         long,
         default_value = "tensorflow_model_server",
         help = "Path to the TensorFlow model server binary to launch."
     )]
     tf_server_path: String,
-    #[structopt(
+    #[clap(
         long,
         default_value = "model/mnist",
         help = "Path to the base directory of the TensorFlow saved model to serve."
     )]
     tf_model_base_path: String,
-    #[structopt(
+    #[clap(
         long,
         default_value = "mnist",
         help = "The name of the TensorFlow saved model to serve."
@@ -84,7 +84,7 @@ pub struct Opt {
 async fn main() -> anyhow::Result<()> {
     env_logger::init();
     cleanup_socket_temp_file()?;
-    let opt = Opt::from_args();
+    let opt = Opt::parse();
     launch_tf_model_server(&opt)?;
     let address = SocketAddr::from((Ipv6Addr::UNSPECIFIED, opt.port));
     wait_for_socket(SOCKET).await?;

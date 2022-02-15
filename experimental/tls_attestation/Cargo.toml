@@ -8,6 +8,7 @@ license = "Apache-2.0"
 [dependencies]
 anyhow = "*"
 async-stream = "*"
+clap = { version = "*", features = ["derive"] }
 env_logger = "*"
 futures = "*"
 futures-core = "*"
@@ -23,9 +24,9 @@ hyper = { version = "*", features = [
 log = "*"
 oak_attestation_common = { version = "*", path = "../attestation_common" }
 openssl = "*"
-rustls = "*"
+# TODO(#2544): Update rustls.
+rustls = "0.19"
 sha2 = "*"
-structopt = "*"
 tokio = { version = "*", features = [
   "fs",
   "macros",
@@ -33,4 +34,4 @@ tokio = { version = "*", features = [
   "sync",
   "rt-multi-thread"
 ] }
-tokio-rustls = "*"
+tokio-rustls = "0.22"

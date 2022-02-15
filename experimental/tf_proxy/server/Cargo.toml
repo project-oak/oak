@@ -9,6 +9,7 @@ license = "Apache-2.0"
 async-stream = "*"
 anyhow = "*"
 bytes = "*"
+clap = { version = "*", features = ["derive"] }
 env_logger = "*"
 futures = "*"
 grpc_attestation = { path = "../../../grpc_attestation/" }
@@ -18,7 +19,6 @@ oak_functions_abi = { path = "../../../oak_functions/abi" }
 oak_remote_attestation = { path = "../../../remote_attestation/rust/" }
 prost = "*"
 prost-types = "*"
-structopt = "*"
 sync_wrapper = "*"
 tokio = { version = "*", features = [
   "fs",

@@ -80,7 +80,7 @@ async fn main() -> anyhow::Result<()> {
         .context("Could not invoke Oak Functions")?;
 
     let response_body = std::str::from_utf8(response.body().unwrap()).unwrap();
-    assert_eq!(response_body, "Best result: Some((0.17839512, 789))");
+    assert_eq!(response_body, "Best result: Some((0.1752324, 789))");
 
     Ok(())
 }
