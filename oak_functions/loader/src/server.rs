@@ -746,7 +746,12 @@ impl WasmHandler {
 
     pub async fn handle_invoke(&self, request: Request) -> anyhow::Result<Response> {
         let request_bytes = request.body;
-        let (mut wasm_state, _extensions) = self.init_wasm_state_and_extensions(request_bytes)?;
+        let (mut wasm_state, uwabi_extensions) =
+            self.init_wasm_state_and_extensions(request_bytes)?;
+
+        for uwabi_extension in uwabi_extensions {
+            tokio::spawn(uwabi_extension.run());
+        }
 
         wasm_state.invoke();
         for extension in wasm_state
@@ -766,9 +771,10 @@ impl WasmHandler {
         ))
 
         // Here we drop all endpoints of the Wasm module (i.e., the wasm_state.channel_switchboard).
-        // This indicates to the Runtime endpoints that they will not receive further messages.
-        // Note, that we do not do a clean shutdown of the receivers in the endpoints Wasm module,
-        // because there is no need to handle, or even log, the remaining messages.
+        // This indicates to the endpoints in the UWABI Extensions that they will not receive
+        // further messages and can stop. Note, that we do not do a clean shutdown of the receivers
+        // in the endpoints Wasm module, because there is no need to handle, or even log,
+        // the remaining messages.
     }
 }
 
