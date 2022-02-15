@@ -27,7 +27,7 @@ jobs:
           - run-cargo-udeps
           - build-functions-server --server-variant=unsafe
           - build-functions-server --server-variant=base
-          - run-cargo-tests --cleanup
+          - run-cargo-tests
           # TODO(#2538): Re-enable when bazel tests run on the main Docker image.
           # - run-bazel-tests
           - run-functions-examples --application-variant=rust
@@ -41,22 +41,8 @@ jobs:
         with:
           fetch-depth: 2
 
-      # The runner comes with all this software pre-installed: https://github.com/actions/virtual-environments/blob/main/images/linux/Ubuntu2004-README.md
-      # so we delete some large packages to make sure we have more space available.
-      #
-      # Copied from https://github.com/jens-maus/RaspberryMatic/blob/ea6b8ce0dd2d53ea88b2766ba8d7f8e1d667281f/.github/workflows/ci.yml#L34-L40
-      # and https://github.com/actions/virtual-environments/issues/709#issuecomment-612569242
-      - name: Free disk space
+      - name: Print disk space
         run: |
-          df --human-readable
-          sudo apt-get remove --yes '^dotnet-.*' '^llvm-.*' 'php.*' azure-cli google-cloud-sdk hhvm google-chrome-stable firefox powershell
-          sudo apt-get autoremove --yes
-          sudo apt clean
-          docker rmi $(docker image ls --all --quiet)
-          rm --recursive --force "$AGENT_TOOLSDIRECTORY"
-          rm --recursive --force /usr/local/share/boost
-          sudo swapoff --all
-          sudo rm --force /swapfile
           df --human-readable
 
       - name: Docker pull
@@ -77,8 +63,6 @@ jobs:
       # See https://doc.rust-lang.org/nightly/cargo/guide/cargo-home.html#caching-the-cargo-home-in-ci
       - name: Cache Rust artifacts
         uses: actions/cache@v2
-        if: |
-          matrix.cmd == 'run-cargo-clippy' || matrix.cmd == 'run-examples --application-variant=rust' || matrix.cmd == 'run-examples --application-variant=cpp' || matrix.cmd == 'run-functions-examples --application-variant=rust'
         with:
           path: |
             ./cargo-cache/bin
