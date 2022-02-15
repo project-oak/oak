@@ -6,11 +6,9 @@ preserving way. Oak Functions leverages TEEs and remote attestation, Wasm
 sandboxing, and allows exposing metrics in a Differentially Private way.
 
 At its core, Oak Functions consists of a **trusted runtime** compiled into a
-server binary
-([`oak_functions_loader`](https://github.com/project-oak/oak/tree/main/oak_functions/loader))
-that, for each incoming client gRPC request, executes a workload that operates
-on the request payload, and produces a response which is sent back to the same
-client.
+server binary ([`oak_functions_loader`](loader/)) that, for each incoming client
+gRPC request, executes a workload that operates on the request payload, and
+produces a response which is sent back to the same client.
 
 The Oak Functions trusted runtime ensures that the workload may not violate the
 confidentiality of the client request data, preventing observers from learning
@@ -56,9 +54,9 @@ from the conventional computing model.
 
 ### Oak Functions Loader and the Trusted Runtime
 
-The [Oak Functions Loader](loader/README.md) starts the Oak Functions trusted
-runtime and loads a Wasm module as workload. The Oak Functions trusted runtime
-and the Wasm module communicate through
+The [Oak Functions Loader](loader/) starts the Oak Functions trusted runtime and
+loads a Wasm module as workload. The Oak Functions trusted runtime and the Wasm
+module communicate through
 [ABI Functions and a Rust SDK](loader/README.md#abi-functions-and-the-rust-sdk).
 To serve client requests, the Oak Functions trusted runtime has
 [Read-Only Storage](loader/README.md#read-only-storage). The Oak Functions
