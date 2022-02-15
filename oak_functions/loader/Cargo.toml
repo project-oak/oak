@@ -15,6 +15,7 @@ oak-metrics = []
 
 [dependencies]
 anyhow = "*"
+async-trait = "*"
 async-stream = "*"
 bytes = "*"
 byteorder = { version = "*", default-features = false }

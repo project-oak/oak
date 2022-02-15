@@ -16,6 +16,7 @@
 use crate::logger::Logger;
 
 use anyhow::Context;
+use async_trait::async_trait;
 use byteorder::{ByteOrder, LittleEndian};
 use futures::future::FutureExt;
 use log::Level;
@@ -159,6 +160,7 @@ pub enum BoxedExtension {
 pub type BoxedExtensionFactory = Box<dyn ExtensionFactory + Send + Sync>;
 
 /// Trait for implementing an extension which relies on UWABI.
+#[async_trait]
 pub trait UwabiExtension: Sync + Send {
     /// Get the channel handle to address this extension.
     fn get_channel_handle(&self) -> ChannelHandle;
@@ -175,7 +177,7 @@ pub trait UwabiExtension: Sync + Send {
     fn set_endpoint(&mut self, endpoint: Endpoint);
 
     // Run an UWABI extension by continously receiving messages on the endpoint and answering it.
-    fn run(self: Box<Self>) -> tokio::task::JoinHandle<()>;
+    async fn run(self: Box<Self>);
 }
 
 /// `WasmState` holds runtime values for a particular execution instance of Wasm, handling a
@@ -952,6 +954,7 @@ mod tests {
         endpoint: Option<Endpoint>,
     }
 
+    #[async_trait]
     impl UwabiExtension for TestingExtension {
         fn get_channel_handle(&self) -> oak_functions_abi::proto::ChannelHandle {
             ChannelHandle::Testing
@@ -970,17 +973,15 @@ mod tests {
             }
         }
 
-        fn run(mut self: Box<Self>) -> tokio::task::JoinHandle<()> {
-            tokio::spawn(async move {
-                let endpoint = self.get_endpoint_mut().unwrap();
-                let receiver = &mut endpoint.receiver;
+        async fn run(mut self: Box<Self>) {
+            let endpoint = self.get_endpoint_mut().unwrap();
+            let receiver = &mut endpoint.receiver;
 
-                // The runtime endpoint continiously reads messages from Wasm module endpoint until
-                // all senders from the Wasm endpoint are closed.
-                while let Some(request) = receiver.recv().await {
-                    assert_eq!(request, vec![42]);
-                }
-            })
+            // The runtime endpoint continiously reads messages from Wasm module endpoint until
+            // all senders from the Wasm endpoint are closed.
+            while let Some(request) = receiver.recv().await {
+                assert_eq!(request, vec![42]);
+            }
         }
     }
 
@@ -1128,7 +1129,7 @@ mod tests {
         let (mut wasm_state, mut uwabi_extensions) = create_test_wasm_state_and_extensions();
         let testing_extension = extension_for_channel_handle(&mut uwabi_extensions, channel_handle);
 
-        let join_handle = testing_extension.run();
+        let join_handle = tokio::spawn(testing_extension.run());
 
         // Guess some memory addresses in linear Wasm memory to write the message to.
         let src_buf_ptr: AbiPointer = 100;
