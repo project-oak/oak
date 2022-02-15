@@ -76,3 +76,9 @@ specified in the configuration, and aggregates them after the batch size is
 reached. A laplacian noise, calculated using the specified epsilon parameter, is
 then added to the aggregated value, to conform to the differential privacy
 requirements, before publishing the results by logging to stdout.
+
+## Relationship between types in Oak Functions Loader
+
+<!-- From: -->
+<!-- https://docs.google.com/drawings/d/1hOGbe0cHCDfpDjqAhMrqd1dkz4gxcT8Pzm9VxQtPmKA/edit -->
+<img src="images/OakFunctionsLoader.png" width="1000">
