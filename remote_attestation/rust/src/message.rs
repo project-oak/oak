@@ -88,16 +88,20 @@ pub struct ServerIdentity {
     /// Transcript signature is sent in messages to prevent replay attacks.
     ///
     /// Signature must be an IEEE-P1363 encoded ECDSA-P256 signature.
-    /// https://datatracker.ietf.org/doc/html/rfc6979
-    /// https://standards.ieee.org/standard/1363-2000.html
+    ///
+    /// <https://datatracker.ietf.org/doc/html/rfc6979>
+    ///
+    /// <https://standards.ieee.org/standard/1363-2000.html>
     #[serde(with = "BigArray")]
     pub transcript_signature: [u8; SIGNATURE_LENGTH],
     /// Public key used to sign transcripts.
     ///
     /// Public key must be an OpenSSL ECDSA-P256 key, which is represented as
     /// `0x04 | X: 32-byte | Y: 32-byte`.
+    ///
     /// Where X and Y are big-endian coordinates of an Elliptic Curve point.
-    /// https://datatracker.ietf.org/doc/html/rfc6979
+    ///
+    /// <https://datatracker.ietf.org/doc/html/rfc6979>
     #[serde(with = "BigArray")]
     pub signing_public_key: [u8; SIGNING_ALGORITHM_KEY_LENGTH],
     /// Information used for remote attestation such as a TEE report and a TEE provider's
@@ -108,6 +112,7 @@ pub struct ServerIdentity {
     pub attestation_info: Vec<u8>,
     /// Additional info to be checked when verifying the identity. This may include server
     /// configuration details, and inclusion proofs on a verifiable log (e.g., LogEntry on Rekor).
+    ///
     /// The server and the client must be able to agree on a canonical representation of the
     /// content to be able to deterministically compute the hash of this field.
     pub additional_info: Vec<u8>,
@@ -125,16 +130,20 @@ pub struct ClientIdentity {
     /// Transcript signature is sent in messages to prevent replay attacks.
     ///
     /// Signature must be an IEEE-P1363 encoded ECDSA-P256 signature.
-    /// https://datatracker.ietf.org/doc/html/rfc6979
-    /// https://standards.ieee.org/standard/1363-2000.html
+    ///
+    /// <https://datatracker.ietf.org/doc/html/rfc6979>
+    ///
+    /// <https://standards.ieee.org/standard/1363-2000.html>
     #[serde(with = "BigArray")]
     pub transcript_signature: [u8; SIGNATURE_LENGTH],
     /// Public key used to sign transcripts.
     ///
     /// Public key must be an OpenSSL ECDSA-P256 key, which is represented as
     /// `0x04 | X: 32-byte | Y: 32-byte`.
+    ///
     /// Where X and Y are big-endian coordinates of an Elliptic Curve point.
-    /// https://datatracker.ietf.org/doc/html/rfc6979
+    ///
+    /// <https://datatracker.ietf.org/doc/html/rfc6979>
     #[serde(with = "BigArray")]
     pub signing_public_key: [u8; SIGNING_ALGORITHM_KEY_LENGTH],
     /// Information used for remote attestation such as a TEE report and a TEE provider's
@@ -337,7 +346,7 @@ impl Deserializable for EncryptedData {
     }
 }
 
-/// Deserializes an attestation message from a serialized [`input`] and wraps in a
+/// Deserializes an attestation message from a serialized `input` and wraps in a
 /// [`MessageWrapper`].
 pub fn deserialize_message(input: &[u8]) -> anyhow::Result<MessageWrapper> {
     if input.is_empty() {

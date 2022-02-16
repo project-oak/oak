@@ -16,7 +16,7 @@
 
 //! Sends a series of TensorFlow Prediction Requests via the proxy and checks the response against
 //! the expected labels. Inspired by
-//! https://github.com/tensorflow/serving/blob/f3fbec59798e13cb1f7230fcf891c0ec4113331e/tensorflow_serving/example/mnist_client.py
+//! <https://github.com/tensorflow/serving/blob/f3fbec59798e13cb1f7230fcf891c0ec4113331e/tensorflow_serving/example/mnist_client.py>
 
 use anyhow::Context;
 use clap::Parser;

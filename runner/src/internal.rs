@@ -1068,7 +1068,7 @@ impl Running for SingleStatusResult {
 /// Similar to the `vec!` macro, but also allows a "spread" operator syntax (`...`) to inline and
 /// expand nested iterable values.
 ///
-/// See https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Spread_syntax.
+/// See <https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Spread_syntax>.
 #[macro_export]
 macro_rules! spread [
     // Empty case.

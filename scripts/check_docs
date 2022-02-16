@@ -11,8 +11,7 @@ DOCS_OUT="$(cargo doc --document-private-items --no-deps 2>&1)"
 # `cargo doc` produces warnings for incorrect paths. These warnings cannot be promoted to errors, so we use grep to detect them.
 if grep --ignore-case --quiet --regexp='^warning' <<< "$DOCS_OUT"; then
   echo "Warnings found when generating the docs."
-  # TODO(#2540): Return error once existing warnings are fixed.
-  exit 0
+  exit 1
 fi
 
 # Check for any deadlinks in the generated docs.

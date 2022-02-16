@@ -41,7 +41,7 @@ const METRICS_ABI_FUNCTION_NAME: &str = "report_metric";
 #[serde(deny_unknown_fields)]
 pub struct PrivateMetricsConfig {
     /// The privacy budget. See
-    /// https://desfontain.es/privacy/differential-privacy-in-practice.html for more information
+    /// <https://desfontain.es/privacy/differential-privacy-in-practice.html> for more information
     /// on epsilon-differential privacy and Laplacian noise.
     pub epsilon: f64,
     /// The number of requests that will be aggregated into each batch.
@@ -220,7 +220,7 @@ pub fn add_laplace_noise(rng: &mut StdRng, beta: f64, value: i64, scale: f64) ->
 
 /// Applies the inverse of the Laplace cummulative distribution function with mu = 0.
 ///
-/// See https://en.wikipedia.org/wiki/Laplace_distribution
+/// See <https://en.wikipedia.org/wiki/Laplace_distribution>
 fn inverse_laplace(beta: f64, p: f64) -> f64 {
     if p >= 1.0 {
         return f64::INFINITY;

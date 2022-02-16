@@ -33,19 +33,19 @@ use std::convert::TryInto;
 
 /// Length of the encryption nonce.
 /// `ring::aead` uses 96-bit (12-byte) nonces.
-/// https://briansmith.org/rustdoc/ring/aead/constant.NONCE_LEN.html
+/// <https://briansmith.org/rustdoc/ring/aead/constant.NONCE_LEN.html>
 pub const NONCE_LENGTH: usize = aead::NONCE_LEN;
 pub const SHA256_HASH_LENGTH: usize = 32;
 /// Algorithm used for encrypting/decrypting messages.
-/// https://datatracker.ietf.org/doc/html/rfc5288
+/// <https://datatracker.ietf.org/doc/html/rfc5288>
 static AEAD_ALGORITHM: &aead::Algorithm = &aead::AES_256_GCM;
 pub const AEAD_ALGORITHM_KEY_LENGTH: usize = 32;
 /// Algorithm used for negotiating a session key.
-/// https://datatracker.ietf.org/doc/html/rfc7748
+/// <https://datatracker.ietf.org/doc/html/rfc7748>
 static KEY_AGREEMENT_ALGORITHM: &agreement::Algorithm = &agreement::X25519;
 pub const KEY_AGREEMENT_ALGORITHM_KEY_LENGTH: usize = 32;
 /// Salt used for key derivation with HKDF.
-/// https://datatracker.ietf.org/doc/html/rfc5869
+/// <https://datatracker.ietf.org/doc/html/rfc5869>
 pub const KEY_DERIVATION_SALT: &str = "Remote Attestation Protocol v1";
 /// Purpose string used for deriving server session keys with HKDF.
 pub const SERVER_KEY_PURPOSE: &str = "Remote Attestation Protocol Server Session Key";
@@ -57,12 +57,12 @@ static SIGNING_ALGORITHM: &EcdsaSigningAlgorithm =
 /// OpenSSL ECDSA-P256 key public key length, which is represented as
 /// `0x04 | X: 32-byte | Y: 32-byte`.
 /// Where X and Y are big-endian coordinates of an Elliptic Curve point.
-/// https://datatracker.ietf.org/doc/html/rfc6979
+/// <https://datatracker.ietf.org/doc/html/rfc6979>
 pub const SIGNING_ALGORITHM_KEY_LENGTH: usize = 65;
 // TODO(#2277): Use OpenSSL signature format (which is 72 bytes).
 /// IEEE-P1363 encoded ECDSA-P256 signature length.
-/// https://datatracker.ietf.org/doc/html/rfc6979
-/// https://standards.ieee.org/standard/1363-2000.html
+/// <https://datatracker.ietf.org/doc/html/rfc6979>
+/// <https://standards.ieee.org/standard/1363-2000.html>
 pub const SIGNATURE_LENGTH: usize = 64;
 /// Algorithm used to verify cryptographic signatures.
 static VERIFICATION_ALGORITHM: &EcdsaVerificationAlgorithm =
@@ -94,11 +94,13 @@ pub(crate) struct EncryptionKey(pub(crate) [u8; KEY_AGREEMENT_ALGORITHM_KEY_LENG
 pub(crate) struct DecryptionKey(pub(crate) [u8; KEY_AGREEMENT_ALGORITHM_KEY_LENGTH]);
 
 /// Implementation of Authenticated Encryption with Associated Data (AEAD).
-/// https://datatracker.ietf.org/doc/html/rfc5116
+///
+/// <https://datatracker.ietf.org/doc/html/rfc5116>
 ///
 /// This implementation uses separate keys for encrypting data and decrypting peer encrypted data.
 /// Which means that this implementation uses the same key for encryption, which peer uses for
 /// decryption.
+///
 /// It is necessary to prevent the Loopback Attack, where malicious network takes an outgoing packet
 /// and feeds it back as an incoming packet.
 pub struct AeadEncryptor {
@@ -116,7 +118,7 @@ impl AeadEncryptor {
         }
     }
 
-    /// Encrypts `data` using [`AeadEncryptor::key`].
+    /// Encrypts `data` using `AeadEncryptor::encryption_key`.
     pub fn encrypt(&mut self, data: &[u8]) -> anyhow::Result<EncryptedData> {
         // Generate a random nonce.
         let nonce = Self::generate_nonce().context("Couldn't generate nonce")?;
@@ -140,7 +142,7 @@ impl AeadEncryptor {
         Ok(EncryptedData::new(nonce, encrypted_data))
     }
 
-    /// Decrypts and authenticates `data` using [`AeadEncryptor::key`].
+    /// Decrypts and authenticates `data` using `AeadEncryptor::decryption_key`.
     /// `data` must contain an encrypted message prefixed with a random nonce of [`NONCE_LENGTH`]
     /// length.
     pub fn decrypt(&mut self, data: &EncryptedData) -> anyhow::Result<Vec<u8>> {
@@ -169,7 +171,8 @@ impl AeadEncryptor {
 }
 
 /// Implementation of the X25519 Elliptic Curve Diffie-Hellman (ECDH) key negotiation.
-/// https://datatracker.ietf.org/doc/html/rfc7748#section-6.1
+///
+/// <https://datatracker.ietf.org/doc/html/rfc7748#section-6.1>
 pub struct KeyNegotiator {
     type_: KeyNegotiatorType,
     private_key: agreement::EphemeralPrivateKey,
@@ -281,8 +284,10 @@ impl KeyNegotiator {
     }
 
     /// Derives a session key from `key_material` using HKDF.
-    /// https://datatracker.ietf.org/doc/html/rfc5869
-    /// https://datatracker.ietf.org/doc/html/rfc7748#section-6.1
+    ///
+    /// <https://datatracker.ietf.org/doc/html/rfc5869>
+    ///
+    /// <https://datatracker.ietf.org/doc/html/rfc7748#section-6.1>
     ///
     /// In order to derive keys, uses the information string that consists of a purpose string, a
     /// server public key and a client public key (in that specific order).

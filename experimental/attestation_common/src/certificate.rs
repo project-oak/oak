@@ -37,18 +37,20 @@ use openssl::{
 };
 
 // X.509 certificate parameters.
-// https://tools.ietf.org/html/rfc5280
+//
+// <https://tools.ietf.org/html/rfc5280>
 const RSA_KEY_SIZE: u32 = 2048;
 // Version is zero-indexed, so the value of `2` corresponds to the version `3`.
 const CERTIFICATE_VERSION: i32 = 2;
 // Length of the randomly generated X.509 certificate serial number (which is 20 bytes).
+//
 // The most significant bit is excluded because it's passed as a separate argument to:
 // https://docs.rs/openssl/0.10.33/openssl/bn/struct.BigNum.html#method.rand
 const SERIAL_NUMBER_SIZE: i32 = 159;
 const CERTIFICATE_EXPIRATION_INTERVAL_IN_DAYS: u32 = 1;
 const DEFAULT_DNS_NAME: &str = "localhost";
 
-/// Indicator whether to add a custom TEE extension to a certificate.
+/// Indicates whether to add a custom TEE extension to a certificate.
 #[derive(PartialEq)]
 pub enum AddTeeExtension {
     /// Enum value contains a PEM encoded TEE Provider's X.509 certificate that signs TEE firmware
@@ -58,7 +60,8 @@ pub enum AddTeeExtension {
 }
 
 /// Convenience structure for generating X.509 certificates.
-/// https://tools.ietf.org/html/rfc5280
+///
+/// <https://tools.ietf.org/html/rfc5280>
 pub struct CertificateAuthority {
     pub key_pair: PKey<Private>,
     pub root_certificate: X509,
@@ -66,6 +69,7 @@ pub struct CertificateAuthority {
 
 impl CertificateAuthority {
     /// Generates a root X.509 certificate and a corresponding private/public key pair.
+    ///
     /// `add_tee_extension` indicates whether to add a custom extension containing a TEE report to
     /// the root certificate.
     pub fn create(add_tee_extension: AddTeeExtension) -> anyhow::Result<Self> {
@@ -113,6 +117,7 @@ impl CertificateAuthority {
     }
 
     /// Generates an X.509 certificate based on the certificate signing `request`.
+    ///
     /// `add_tee_extension` indicates whether to add a custom extension containing a TEE report.
     pub fn sign_certificate(
         &self,
@@ -146,7 +151,8 @@ impl CertificateAuthority {
     }
 
     /// Get RSA key pair encoded in PEM format.
-    /// https://tools.ietf.org/html/rfc7468
+    ///
+    /// <https://tools.ietf.org/html/rfc7468>
     pub fn get_private_key_pem(&self) -> anyhow::Result<Vec<u8>> {
         self.key_pair
             .private_key_to_pem_pkcs8()
@@ -154,7 +160,8 @@ impl CertificateAuthority {
     }
 
     /// Get a root X.509 certificate encoded in PEM format.
-    /// https://tools.ietf.org/html/rfc7468
+    ///
+    /// <https://tools.ietf.org/html/rfc7468>
     pub fn get_root_certificate_pem(&self) -> anyhow::Result<Vec<u8>> {
         self.root_certificate
             .to_pem()
