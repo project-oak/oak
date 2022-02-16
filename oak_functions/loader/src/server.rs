@@ -982,11 +982,24 @@ mod tests {
         async fn run(mut self: Box<Self>) {
             let endpoint = self.get_endpoint_mut().unwrap();
             let receiver = &mut endpoint.receiver;
+            let sender = &mut endpoint.sender;
 
-            // The runtime endpoint continiously reads messages from Wasm module endpoint until
+            // The runtime endpoint continiously reads messages from the Wasm module endpoint until
             // all senders from the Wasm endpoint are closed.
+            //
+            // Every message should tell the Testing Extension what to do. If the message
+            // does not do so, the Testing Extension panics. When we
+            // want the Testing Extension to have new behaviour for testing, we can add a new case
+            // for this message.
             while let Some(request) = receiver.recv().await {
-                assert_eq!(request, vec![42]);
+                let message = from_uwabi_message(&request);
+                // Messages starting with ECHO will be echoed back.
+                if message.starts_with("ECHO") {
+                    let result = sender.send(to_uwabi_message(&message)).await;
+                    assert!(result.is_ok());
+                } else {
+                    panic!("Unhandled UWABI Message: {}", message);
+                }
             }
         }
     }
@@ -1131,7 +1144,7 @@ mod tests {
     #[tokio::test]
     async fn test_hosted_channel_write_ok() {
         let channel_handle = ChannelHandle::Testing;
-        let message: UwabiMessage = vec![42];
+        let message: UwabiMessage = to_uwabi_message("ECHO 42");
         let (mut wasm_state, mut uwabi_extensions) = create_test_wasm_state_and_extensions();
         let testing_extension = extension_for_channel_handle(&mut uwabi_extensions, channel_handle);
 
@@ -1142,9 +1155,17 @@ mod tests {
         let result = wasm_state.write_buffer_to_wasm_memory(&message, src_buf_ptr);
         assert!(result.is_ok());
 
+        // The Wasm Module writes an ECHO message to the Testing Extension.
         let result =
             wasm_state.channel_write(channel_handle as i32, src_buf_ptr, message.len() as u32);
         assert!(result.is_ok());
+
+        // The Testing Extension should now ECHO the message to the Wasm module so we read from then
+        // Wasm module endpoint.
+        let received_message =
+            read_from_wasm_module_endpoint(&mut wasm_state, channel_handle).await;
+
+        assert_eq!(received_message, message);
 
         // Dropping the WasmState drops the Channel Switchboard stopping the extension.
         std::mem::drop(wasm_state);
@@ -1207,8 +1228,7 @@ mod tests {
             .expect("could not create wasm_state")
     }
 
-    // Helper function for testing to write to Endpoint associated to ChannelHandle extension in the
-    // runtime.
+    // Helper function for testing to write to the endpoint of the given UWABI Extension.
     async fn write_to_runtime_endpoint(
         uwabi_extension: &mut Box<dyn UwabiExtension>,
         message: UwabiMessage,
@@ -1218,6 +1238,22 @@ mod tests {
             .expect("No endpoint set for extension.");
         let result = endpoint.sender.send(message.to_vec().clone()).await;
         assert!(result.is_ok());
+    }
+
+    // Helper function for testing to read from the endpoint associated to ChannelHandle in the Wasm
+    // Module.
+    async fn read_from_wasm_module_endpoint(
+        wasm_state: &mut WasmState,
+        channel_handle: ChannelHandle,
+    ) -> UwabiMessage {
+        wasm_state
+            .channel_switchboard
+            .get_mut(&channel_handle)
+            .expect("Endpoint not set for Channel Handle")
+            .receiver
+            .recv()
+            .await
+            .expect("No message or channel closed.")
     }
 
     // Helper function for testing to find the Extension associated to ChannelHandle.
@@ -1233,5 +1269,16 @@ mod tests {
             })
             .expect("No extension for channel handle.");
         uwabi_extensions.remove(pos_of_extension)
+    }
+
+    // Helper function for testing to make an UWABI message human readable in code.
+    fn from_uwabi_message(uwabi_message: &UwabiMessage) -> String {
+        String::from_utf8(uwabi_message.clone())
+            .expect("Failed to convert UWABI message to String.")
+    }
+
+    // Helper function for testing to make an UWABI message from a human readable format in code.
+    fn to_uwabi_message(text: &str) -> UwabiMessage {
+        text.as_bytes().to_vec()
     }
 }
