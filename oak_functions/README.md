@@ -136,8 +136,8 @@ requirements, before publishing the results by logging to stdout.
 
 ### Remote Attestation
 
-The [Remote Attestation protocol](/docs/remote-attestation.md) implemented in
-Oak is currently integrated in Oak Functions.
+The [Remote Attestation protocol](/remote_attestation) implemented in Oak is
+currently integrated in Oak Functions.
 
 ## Applications
 
