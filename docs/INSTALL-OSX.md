@@ -57,10 +57,11 @@ retrieved from a Google Cloud Docker repository.
 
 ## Building and Running
 
-The Oak Runtime and its dependencies are built with the following script:
+The Oak Functions Runtime and its dependencies are built with the following
+script:
 
 ```bash
-./scripts/runner build-server
+./scripts/runner build-functions-server
 ```
 
 Build a particular example, say `hello_world`, with:

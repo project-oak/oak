@@ -235,11 +235,12 @@ are written in C++, but there are clients in
 
 ### Build Runtime Server
 
-The following command builds the Oak Runtime server. An initial build will take
-some time, but subsequent builds should be cached and so run much faster.
+The following command builds the Oak Functions Runtime server. An initial build
+will take some time, but subsequent builds should be cached and so run much
+faster.
 
 ```bash
-./scripts/runner build-server
+./scripts/runner build-functions-server
 ```
 
 ### Run Runtime Server
