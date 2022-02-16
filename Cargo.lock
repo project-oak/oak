@@ -1995,6 +1995,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "oak_functions_loader_base"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "oak_functions_loader",
+]
+
+[[package]]
+name = "oak_functions_loader_unsafe"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "oak_functions_loader",
+]
+
+[[package]]
 name = "oak_functions_sdk_abi_test"
 version = "0.1.0"
 dependencies = [

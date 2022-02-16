@@ -9,7 +9,7 @@ target = { Cargo = { cargo_manifest = "oak_functions/examples/metrics/module/Car
 
 [server]
 additional_args = ["--config-path=./oak_functions/examples/metrics/config.toml"]
-required_features = ["oak-unsafe"]
+server_variant = "Unsafe"
 
 [clients]
 rust = { Cargo = { cargo_manifest = "oak_functions/examples/metrics/client/rust/Cargo.toml" }, additional_args = [
