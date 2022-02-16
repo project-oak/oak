@@ -140,6 +140,7 @@
 <span id="138">138</span>
 <span id="139">139</span>
 <span id="140">140</span>
+<span id="141">141</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2021 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -157,7 +158,8 @@
 <span class="comment">//</span>
 
 <span class="doccomment">//! Utilities for finding and comparing longitude- and latitude-based locations using S2 Geometry.</span>
-<span class="doccomment">//! See https://s2geometry.io/ for more information.</span>
+<span class="doccomment">//!</span>
+<span class="doccomment">//! See &lt;https://s2geometry.io/&gt; for more information.</span>
 
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">anyhow::Result</span>;
 <span class="kw">use</span> <span class="ident">s2</span>::{
@@ -205,7 +207,7 @@
 <span class="doccomment">/// the level is lower it would usually require fewer cells to cover the zone, but there is usually</span>
 <span class="doccomment">/// larger areas that fall outside of the zone.</span>
 <span class="doccomment">///</span>
-<span class="doccomment">/// See https://s2geometry.io/devguide/examples/coverings for more information on coverings.</span>
+<span class="doccomment">/// See &lt;https://s2geometry.io/devguide/examples/coverings&gt; for more information on coverings.</span>
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">find_covering_cells</span>(<span class="ident">location</span>: <span class="kw-2">&amp;</span><span class="ident">LatLng</span>, <span class="ident">radius</span>: <span class="kw-2">&amp;</span><span class="ident">Angle</span>, <span class="ident">level</span>: <span class="ident">u8</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">CellID</span><span class="op">&gt;</span><span class="op">&gt;</span> {
     <span class="kw">if</span> <span class="ident">level</span> <span class="op">&gt;</span> <span class="ident">s2::cellid::MAX_LEVEL</span> <span class="kw">as</span> <span class="ident">u8</span> {
         <span class="macro">anyhow::bail!</span>(<span class="string">&quot;level too high&quot;</span>);

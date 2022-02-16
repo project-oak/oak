@@ -763,6 +763,8 @@
 <span id="761">761</span>
 <span id="762">762</span>
 <span id="763">763</span>
+<span id="764">764</span>
+<span id="765">765</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2021 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -872,7 +874,7 @@
 }
 
 <span class="kw">impl</span> <span class="ident">ClientHandshaker</span> {
-    <span class="doccomment">/// Creates [`ClientHandshaker`] with [`HandshakerState::Initializing`] state.</span>
+    <span class="doccomment">/// Creates [`ClientHandshaker`] with `Initializing` state.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">behavior</span>: <span class="ident">AttestationBehavior</span>, <span class="ident">server_verifier</span>: <span class="ident">ServerIdentityVerifier</span>) -&gt; <span class="self">Self</span> {
         <span class="self">Self</span> {
             <span class="ident">behavior</span>,
@@ -943,8 +945,8 @@
     <span class="doccomment">/// Initializes the remote attestation handshake by creating a serialized [`ClientHello`]</span>
     <span class="doccomment">/// message.</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// Transitions [`ClientHandshaker`] state from [`HandshakerState::Initializing`] to</span>
-    <span class="doccomment">/// [`HandshakerState::ExpectingServerIdentity`] state.</span>
+    <span class="doccomment">/// Transitions [`ClientHandshaker`] state from `Initializing` to `ExpectingServerIdentity`</span>
+    <span class="doccomment">/// state.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">create_client_hello</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span> {
         <span class="self">self</span>.<span class="ident">create_client_hello_util</span>().<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">error</span><span class="op">|</span> {
             <span class="self">self</span>.<span class="ident">state</span> <span class="op">=</span> <span class="ident">ClientHandshakerState::Aborted</span>;
@@ -988,8 +990,9 @@
     <span class="doccomment">/// If self attestation is enabled this message also provides necessary information to perform</span>
     <span class="doccomment">/// remote attestation.</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// Transitions [`ClientHandshaker`] state from [`HandshakerState::ExpectingServerIdentity`] to</span>
-    <span class="doccomment">/// [`HandshakerState::Completed`] state.</span>
+    <span class="doccomment">/// Transitions [`ClientHandshaker`] state from</span>
+    <span class="doccomment">/// [`ClientHandshakerState::ExpectingServerIdentity`] to [`ClientHandshakerState::Completed`]</span>
+    <span class="doccomment">/// state.</span>
     <span class="kw">fn</span> <span class="ident">process_server_identity</span>(
         <span class="kw-2">&amp;mut</span> <span class="self">self</span>,
         <span class="ident">server_identity</span>: <span class="ident">ServerIdentity</span>,
@@ -1098,7 +1101,7 @@
 }
 
 <span class="kw">impl</span> <span class="ident">ServerHandshaker</span> {
-    <span class="doccomment">/// Creates [`ServerHandshaker`] with [`HandshakerState::ExpectingClientIdentity`]</span>
+    <span class="doccomment">/// Creates [`ServerHandshaker`] with `ServerHandshakerState::ExpectingClientIdentity`</span>
     <span class="doccomment">/// state.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">behavior</span>: <span class="ident">AttestationBehavior</span>, <span class="ident">additional_info</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>) -&gt; <span class="self">Self</span> {
         <span class="self">Self</span> {
@@ -1187,8 +1190,8 @@
     <span class="doccomment">/// If self attestation is enabled this message also provides necessary information to perform</span>
     <span class="doccomment">/// remote attestation.</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// Transitions [`ServerHandshaker`] state from [`HandshakerState::ExpectingClientHello`] to</span>
-    <span class="doccomment">/// [`HandshakerState::ExpectingClientIdentity`] state.</span>
+    <span class="doccomment">/// Transitions [`ServerHandshaker`] state from [`ServerHandshakerState::ExpectingClientHello`]</span>
+    <span class="doccomment">/// to [`ServerHandshakerState::ExpectingClientIdentity`] state.</span>
     <span class="kw">fn</span> <span class="ident">process_client_hello</span>(
         <span class="kw-2">&amp;mut</span> <span class="self">self</span>,
         <span class="ident">client_hello</span>: <span class="ident">ClientHello</span>,
@@ -1262,7 +1265,8 @@
     <span class="doccomment">/// encrypting/decrypting messages from the client.</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// Transitions [`ServerHandshaker`] state from</span>
-    <span class="doccomment">/// [`HandshakerState::ExpectingClientIdentity`] to [`HandshakerState::Completed`] state.</span>
+    <span class="doccomment">/// [`ServerHandshakerState::ExpectingClientIdentity`] to [`ServerHandshakerState::Completed`]</span>
+    <span class="doccomment">/// state.</span>
     <span class="kw">fn</span> <span class="ident">process_client_identity</span>(
         <span class="kw-2">&amp;mut</span> <span class="self">self</span>,
         <span class="ident">client_identity</span>: <span class="ident">ClientIdentity</span>,

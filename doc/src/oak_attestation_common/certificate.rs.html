@@ -318,6 +318,13 @@
 <span id="316">316</span>
 <span id="317">317</span>
 <span id="318">318</span>
+<span id="319">319</span>
+<span id="320">320</span>
+<span id="321">321</span>
+<span id="322">322</span>
+<span id="323">323</span>
+<span id="324">324</span>
+<span id="325">325</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2021 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -357,18 +364,20 @@
 };
 
 <span class="comment">// X.509 certificate parameters.</span>
-<span class="comment">// https://tools.ietf.org/html/rfc5280</span>
+<span class="comment">//</span>
+<span class="comment">// &lt;https://tools.ietf.org/html/rfc5280&gt;</span>
 <span class="kw">const</span> <span class="ident">RSA_KEY_SIZE</span>: <span class="ident">u32</span> <span class="op">=</span> <span class="number">2048</span>;
 <span class="comment">// Version is zero-indexed, so the value of `2` corresponds to the version `3`.</span>
 <span class="kw">const</span> <span class="ident">CERTIFICATE_VERSION</span>: <span class="ident">i32</span> <span class="op">=</span> <span class="number">2</span>;
 <span class="comment">// Length of the randomly generated X.509 certificate serial number (which is 20 bytes).</span>
+<span class="comment">//</span>
 <span class="comment">// The most significant bit is excluded because it&#39;s passed as a separate argument to:</span>
 <span class="comment">// https://docs.rs/openssl/0.10.33/openssl/bn/struct.BigNum.html#method.rand</span>
 <span class="kw">const</span> <span class="ident">SERIAL_NUMBER_SIZE</span>: <span class="ident">i32</span> <span class="op">=</span> <span class="number">159</span>;
 <span class="kw">const</span> <span class="ident">CERTIFICATE_EXPIRATION_INTERVAL_IN_DAYS</span>: <span class="ident">u32</span> <span class="op">=</span> <span class="number">1</span>;
 <span class="kw">const</span> <span class="ident">DEFAULT_DNS_NAME</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;localhost&quot;</span>;
 
-<span class="doccomment">/// Indicator whether to add a custom TEE extension to a certificate.</span>
+<span class="doccomment">/// Indicates whether to add a custom TEE extension to a certificate.</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">PartialEq</span>)]</span>
 <span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">AddTeeExtension</span> {
     <span class="doccomment">/// Enum value contains a PEM encoded TEE Provider&#39;s X.509 certificate that signs TEE firmware</span>
@@ -378,7 +387,8 @@
 }
 
 <span class="doccomment">/// Convenience structure for generating X.509 certificates.</span>
-<span class="doccomment">/// https://tools.ietf.org/html/rfc5280</span>
+<span class="doccomment">///</span>
+<span class="doccomment">/// &lt;https://tools.ietf.org/html/rfc5280&gt;</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">CertificateAuthority</span> {
     <span class="kw">pub</span> <span class="ident">key_pair</span>: <span class="ident">PKey</span><span class="op">&lt;</span><span class="ident">Private</span><span class="op">&gt;</span>,
     <span class="kw">pub</span> <span class="ident">root_certificate</span>: <span class="ident">X509</span>,
@@ -386,6 +396,7 @@
 
 <span class="kw">impl</span> <span class="ident">CertificateAuthority</span> {
     <span class="doccomment">/// Generates a root X.509 certificate and a corresponding private/public key pair.</span>
+    <span class="doccomment">///</span>
     <span class="doccomment">/// `add_tee_extension` indicates whether to add a custom extension containing a TEE report to</span>
     <span class="doccomment">/// the root certificate.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">create</span>(<span class="ident">add_tee_extension</span>: <span class="ident">AddTeeExtension</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
@@ -433,6 +444,7 @@
     }
 
     <span class="doccomment">/// Generates an X.509 certificate based on the certificate signing `request`.</span>
+    <span class="doccomment">///</span>
     <span class="doccomment">/// `add_tee_extension` indicates whether to add a custom extension containing a TEE report.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">sign_certificate</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
@@ -466,7 +478,8 @@
     }
 
     <span class="doccomment">/// Get RSA key pair encoded in PEM format.</span>
-    <span class="doccomment">/// https://tools.ietf.org/html/rfc7468</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// &lt;https://tools.ietf.org/html/rfc7468&gt;</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_private_key_pem</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span> {
         <span class="self">self</span>.<span class="ident">key_pair</span>
             .<span class="ident">private_key_to_pem_pkcs8</span>()
@@ -474,7 +487,8 @@
     }
 
     <span class="doccomment">/// Get a root X.509 certificate encoded in PEM format.</span>
-    <span class="doccomment">/// https://tools.ietf.org/html/rfc7468</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// &lt;https://tools.ietf.org/html/rfc7468&gt;</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_root_certificate_pem</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span> {
         <span class="self">self</span>.<span class="ident">root_certificate</span>
             .<span class="ident">to_pem</span>()

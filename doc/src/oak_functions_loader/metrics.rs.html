@@ -634,7 +634,7 @@
 <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">deny_unknown_fields</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">PrivateMetricsConfig</span> {
     <span class="doccomment">/// The privacy budget. See</span>
-    <span class="doccomment">/// https://desfontain.es/privacy/differential-privacy-in-practice.html for more information</span>
+    <span class="doccomment">/// &lt;https://desfontain.es/privacy/differential-privacy-in-practice.html&gt; for more information</span>
     <span class="doccomment">/// on epsilon-differential privacy and Laplacian noise.</span>
     <span class="kw">pub</span> <span class="ident">epsilon</span>: <span class="ident">f64</span>,
     <span class="doccomment">/// The number of requests that will be aggregated into each batch.</span>
@@ -813,7 +813,7 @@
 
 <span class="doccomment">/// Applies the inverse of the Laplace cummulative distribution function with mu = 0.</span>
 <span class="doccomment">///</span>
-<span class="doccomment">/// See https://en.wikipedia.org/wiki/Laplace_distribution</span>
+<span class="doccomment">/// See &lt;https://en.wikipedia.org/wiki/Laplace_distribution&gt;</span>
 <span class="kw">fn</span> <span class="ident">inverse_laplace</span>(<span class="ident">beta</span>: <span class="ident">f64</span>, <span class="ident">p</span>: <span class="ident">f64</span>) -&gt; <span class="ident">f64</span> {
     <span class="kw">if</span> <span class="ident">p</span> <span class="op">&gt;</span><span class="op">=</span> <span class="number">1.0</span> {
         <span class="kw">return</span> <span class="ident">f64::INFINITY</span>;

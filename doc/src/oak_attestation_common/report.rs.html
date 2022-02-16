@@ -95,6 +95,10 @@
 <span id="93">93</span>
 <span id="94">94</span>
 <span id="95">95</span>
+<span id="96">96</span>
+<span id="97">97</span>
+<span id="98">98</span>
+<span id="99">99</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2021 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -117,14 +121,17 @@
 <span class="kw">use</span> <span class="ident">x509_parser::der_parser</span>::{<span class="self">self</span>, <span class="ident">oid::Oid</span>};
 
 <span class="comment">// Using `NETSCAPE_COMMENT` extension since `rust-openssl` doesn&#39;t support custom extensions yet.</span>
-<span class="comment">// https://github.com/sfackler/rust-openssl/issues/1411</span>
-<span class="comment">// https://www.alvestrand.no/objectid/2.16.840.1.113730.1.13.html</span>
+<span class="comment">//</span>
+<span class="comment">// &lt;https://github.com/sfackler/rust-openssl/issues/1411&gt;</span>
+<span class="comment">//</span>
+<span class="comment">// &lt;https://www.alvestrand.no/objectid/2.16.840.1.113730.1.13.html&gt;</span>
 <span class="kw">pub</span> <span class="kw">const</span> <span class="ident">TEE_EXTENSION_OID</span>: <span class="ident">Oid</span><span class="op">&lt;</span><span class="lifetime">&#39;static</span><span class="op">&gt;</span> <span class="op">=</span> <span class="macro">der_parser::oid!</span>(<span class="number">2.16</span>.<span class="number">840</span> .<span class="number">1</span> .<span class="number">113730</span> .<span class="number">1</span> .<span class="number">13</span>);
 <span class="comment">// TODO(#1867): Add remote attestation support.</span>
 <span class="kw">const</span> <span class="ident">TEST_TEE_MEASUREMENT</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;Test TEE measurement&quot;</span>;
 
 <span class="doccomment">/// Placeholder implementation of TEE report for remote attestation.</span>
-<span class="doccomment">/// https://www.amd.com/system/files/TechDocs/56860.pdf#page=39</span>
+<span class="doccomment">///</span>
+<span class="doccomment">/// &lt;https://www.amd.com/system/files/TechDocs/56860.pdf#page=39&gt;</span>
 <span class="doccomment">///</span>
 <span class="doccomment">/// TODO(#1867): Add remote attestation support and use real TEE reports.</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Deserialize</span>, <span class="ident">Serialize</span>, <span class="ident">Debug</span>, <span class="ident">Default</span>, <span class="ident">PartialEq</span>)]</span>
@@ -161,7 +168,8 @@
     <span class="doccomment">/// TEE report.</span>
     <span class="kw">pub</span> <span class="ident">report</span>: <span class="ident">Report</span>,
     <span class="doccomment">/// Provider&#39;s PEM encoded X.509 certificate that signs TEE firmware keys.</span>
-    <span class="doccomment">/// https://tools.ietf.org/html/rfc7468</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// &lt;https://tools.ietf.org/html/rfc7468&gt;</span>
     <span class="kw">pub</span> <span class="ident">certificate</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
 }
 

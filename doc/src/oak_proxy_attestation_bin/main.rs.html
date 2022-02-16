@@ -195,6 +195,9 @@
 <span id="193">193</span>
 <span id="194">194</span>
 <span id="195">195</span>
+<span id="196">196</span>
+<span id="197">197</span>
+<span id="198">198</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2021 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -218,7 +221,9 @@
 <span class="doccomment">//! connections with clients.</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! The work cycle of the proxy is represented in 2 stages.</span>
+<span class="doccomment">//!</span>
 <span class="doccomment">//! First stage corresponds to the backend server attestation:</span>
+<span class="doccomment">//!</span>
 <span class="doccomment">//! - TEE application connects to the proxy</span>
 <span class="doccomment">//! - Proxy attests the application using a corresponding remote attestation protocol</span>
 <span class="doccomment">//! - Application sends the proxy a certificate signing request</span>
@@ -226,6 +231,7 @@
 <span class="doccomment">//!     - The certificate contains application&#39;s TEE measurements</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! Second stage corresponds to the client connection:</span>
+<span class="doccomment">//!</span>
 <span class="doccomment">//! - Client remotely attests the proxy using a corresponding attestation protocol</span>
 <span class="doccomment">//! - Proxy sends the client its root certificate</span>
 <span class="doccomment">//!     - Client trusts that this is a correct certificate, since it was sent via a secure channel</span>
@@ -335,7 +341,7 @@
     }
 
     <span class="doccomment">/// Sends back root X.509 certificate in PEM format.</span>
-    <span class="doccomment">/// https://tools.ietf.org/html/rfc7468</span>
+    <span class="doccomment">/// &lt;https://tools.ietf.org/html/rfc7468&gt;</span>
     <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">get_root_certificate</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">_req</span>: <span class="ident">Request</span><span class="op">&lt;</span><span class="ident">GetRootCertificateRequest</span><span class="op">&gt;</span>,

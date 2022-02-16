@@ -369,6 +369,15 @@
 <span id="367">367</span>
 <span id="368">368</span>
 <span id="369">369</span>
+<span id="370">370</span>
+<span id="371">371</span>
+<span id="372">372</span>
+<span id="373">373</span>
+<span id="374">374</span>
+<span id="375">375</span>
+<span id="376">376</span>
+<span id="377">377</span>
+<span id="378">378</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2021 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -459,16 +468,20 @@
     <span class="doccomment">/// Transcript signature is sent in messages to prevent replay attacks.</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// Signature must be an IEEE-P1363 encoded ECDSA-P256 signature.</span>
-    <span class="doccomment">/// https://datatracker.ietf.org/doc/html/rfc6979</span>
-    <span class="doccomment">/// https://standards.ieee.org/standard/1363-2000.html</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// &lt;https://datatracker.ietf.org/doc/html/rfc6979&gt;</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// &lt;https://standards.ieee.org/standard/1363-2000.html&gt;</span>
     <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">with</span> <span class="op">=</span> <span class="string">&quot;BigArray&quot;</span>)]</span>
     <span class="kw">pub</span> <span class="ident">transcript_signature</span>: [<span class="ident">u8</span>; <span class="ident">SIGNATURE_LENGTH</span>],
     <span class="doccomment">/// Public key used to sign transcripts.</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// Public key must be an OpenSSL ECDSA-P256 key, which is represented as</span>
     <span class="doccomment">/// `0x04 | X: 32-byte | Y: 32-byte`.</span>
+    <span class="doccomment">///</span>
     <span class="doccomment">/// Where X and Y are big-endian coordinates of an Elliptic Curve point.</span>
-    <span class="doccomment">/// https://datatracker.ietf.org/doc/html/rfc6979</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// &lt;https://datatracker.ietf.org/doc/html/rfc6979&gt;</span>
     <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">with</span> <span class="op">=</span> <span class="string">&quot;BigArray&quot;</span>)]</span>
     <span class="kw">pub</span> <span class="ident">signing_public_key</span>: [<span class="ident">u8</span>; <span class="ident">SIGNING_ALGORITHM_KEY_LENGTH</span>],
     <span class="doccomment">/// Information used for remote attestation such as a TEE report and a TEE provider&#39;s</span>
@@ -479,6 +492,7 @@
     <span class="kw">pub</span> <span class="ident">attestation_info</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
     <span class="doccomment">/// Additional info to be checked when verifying the identity. This may include server</span>
     <span class="doccomment">/// configuration details, and inclusion proofs on a verifiable log (e.g., LogEntry on Rekor).</span>
+    <span class="doccomment">///</span>
     <span class="doccomment">/// The server and the client must be able to agree on a canonical representation of the</span>
     <span class="doccomment">/// content to be able to deterministically compute the hash of this field.</span>
     <span class="kw">pub</span> <span class="ident">additional_info</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
@@ -496,16 +510,20 @@
     <span class="doccomment">/// Transcript signature is sent in messages to prevent replay attacks.</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// Signature must be an IEEE-P1363 encoded ECDSA-P256 signature.</span>
-    <span class="doccomment">/// https://datatracker.ietf.org/doc/html/rfc6979</span>
-    <span class="doccomment">/// https://standards.ieee.org/standard/1363-2000.html</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// &lt;https://datatracker.ietf.org/doc/html/rfc6979&gt;</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// &lt;https://standards.ieee.org/standard/1363-2000.html&gt;</span>
     <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">with</span> <span class="op">=</span> <span class="string">&quot;BigArray&quot;</span>)]</span>
     <span class="kw">pub</span> <span class="ident">transcript_signature</span>: [<span class="ident">u8</span>; <span class="ident">SIGNATURE_LENGTH</span>],
     <span class="doccomment">/// Public key used to sign transcripts.</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// Public key must be an OpenSSL ECDSA-P256 key, which is represented as</span>
     <span class="doccomment">/// `0x04 | X: 32-byte | Y: 32-byte`.</span>
+    <span class="doccomment">///</span>
     <span class="doccomment">/// Where X and Y are big-endian coordinates of an Elliptic Curve point.</span>
-    <span class="doccomment">/// https://datatracker.ietf.org/doc/html/rfc6979</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// &lt;https://datatracker.ietf.org/doc/html/rfc6979&gt;</span>
     <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">with</span> <span class="op">=</span> <span class="string">&quot;BigArray&quot;</span>)]</span>
     <span class="kw">pub</span> <span class="ident">signing_public_key</span>: [<span class="ident">u8</span>; <span class="ident">SIGNING_ALGORITHM_KEY_LENGTH</span>],
     <span class="doccomment">/// Information used for remote attestation such as a TEE report and a TEE provider&#39;s</span>
@@ -708,7 +726,7 @@
     }
 }
 
-<span class="doccomment">/// Deserializes an attestation message from a serialized [`input`] and wraps in a</span>
+<span class="doccomment">/// Deserializes an attestation message from a serialized `input` and wraps in a</span>
 <span class="doccomment">/// [`MessageWrapper`].</span>
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">deserialize_message</span>(<span class="ident">input</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">MessageWrapper</span><span class="op">&gt;</span> {
     <span class="kw">if</span> <span class="ident">input</span>.<span class="ident">is_empty</span>() {
