@@ -8,6 +8,9 @@ concurrency:
 on:
   push:
     branches: [main]
+  pull_request:
+    branches: [main]
+
 jobs:
   build_provenance:
     runs-on: ubuntu-20.04
@@ -46,14 +49,7 @@ jobs:
           ./scripts/docker_pull
           df --human-readable
 
-      - name: Build Server Provenance
-        run: |
-          ./scripts/build_provenance \
-          "oak_loader" \
-          ./oak_loader/bin/oak_loader \
-          ./scripts/runner build-server
-
-      - name: Build Functions Provenance
+      - name: Build Functions Server Provenance
         run: |
           ./scripts/build_provenance \
           "oak_functions" \
@@ -61,9 +57,11 @@ jobs:
           ./scripts/runner build-functions-server
 
       - name: Move new provenance files to the provenance branch
+        if: github.event_name == 'push'
         run: cp -r ./provenance/. ./provenance-branch/
 
       - name: Commit new provenance files to the provenance branch
+        if: github.event_name == 'push'
         run: |
           git -C ./provenance-branch add .
           git -C ./provenance-branch status
@@ -72,4 +70,5 @@ jobs:
           git -C ./provenance-branch tag --annotate --message "record source commit" provenance-${GITHUB_SHA}
 
       - name: Push provenance branch
+        if: github.event_name == 'push'
         run: git -C ./provenance-branch push --follow-tags
