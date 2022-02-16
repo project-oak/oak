@@ -10,7 +10,11 @@ readonly OUTPUT_PATH=$2
 # Shift arguments so that the remaining arguments are the just build arguments.
 shift 2
 
-./scripts/docker_run "${@}"
+# Run the build in a simplified docker configuration that uses the default
+# docker user and does not pass ENV vars. Flags are intentionally a subset of
+# the ones used in `./scripts/docker_run` which proxies host cache dirs and
+# file system permissions for developer convenience.
+docker run --rm --tty "--volume=${PWD}:/workspace" --workdir=/workspace "${DOCKER_IMAGE_ID}" "${@}"
 
 # Get digest of the docker image, as defined in https://github.com/opencontainers/image-spec/blob/v1.0.1/descriptor.md#digests
 readonly DOCKER_DIGEST=$(docker images --digests --format="{{.Digest}}" "${DOCKER_IMAGE_REPO_DIGEST}")
@@ -53,7 +57,7 @@ cat << EOF >> "./provenance/${BINARY_SHA_256_HASH}/${COMMIT_HASH}.json"
     "builder": {
       "id": "https://github.com/project-oak/transparent-release"
     },
-    "buildType": "https://github.com/project-oak/transparent-release/schema/amber-slsa-buildtype/v1.json",
+    "buildType": "https://github.com/project-oak/transparent-release/schema/amber-slsa-buildtype/v1/provenance.json",
     "buildConfig": {
       "command": ${FORMATTED_COMMAND},
       "outputPath": "${OUTPUT_PATH}"
