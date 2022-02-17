@@ -1,1 +1,1 @@
-initSidebarItems({"mod":[["grpc","gRPC server for Oak Functions."],["logger",""],["lookup",""],["lookup_data",""],["metrics",""],["server",""]]});
+initSidebarItems({"fn":[["lib_main","This crate is just a library so this function does not get executed directly by anything, it needs to be wrapped in the “actual” `main` from a bin crate."]],"mod":[["grpc","gRPC server for Oak Functions."],["logger",""],["lookup",""],["lookup_data",""],["metrics",""],["server",""],["tf",""]],"struct":[["Opt","Command line options for the Oak loader."]]});
