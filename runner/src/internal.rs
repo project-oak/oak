@@ -74,40 +74,6 @@ pub enum Command {
 }
 
 #[derive(Parser, Clone, Debug)]
-pub struct RunExamples {
-    #[clap(
-        long,
-        help = "application variant: [rust, cpp]",
-        default_value = "rust"
-    )]
-    pub application_variant: String,
-    #[clap(
-        long,
-        help = "Path to permissions file",
-        default_value = "./examples/permissions/permissions.toml"
-    )]
-    pub permissions_file: String,
-    // TODO(#396): Clarify the name and type of this, currently it is not very intuitive.
-    #[clap(
-        long,
-        help = "name of a single example to run; if unset, run all the examples"
-    )]
-    pub example_name: Option<String>,
-    #[clap(flatten)]
-    pub build_client: BuildClient,
-    #[clap(flatten)]
-    pub build_server: BuildServer,
-    #[clap(long, help = "run server [default: true]")]
-    pub run_server: Option<bool>,
-    #[clap(long, help = "additional arguments to pass to clients")]
-    pub client_additional_args: Vec<String>,
-    #[clap(long, help = "additional arguments to pass to server")]
-    pub server_additional_args: Vec<String>,
-    #[clap(long, help = "build a Docker image for the examples")]
-    pub build_docker: bool,
-}
-
-#[derive(Parser, Clone, Debug)]
 pub struct Completion {
     #[clap(
         long,
@@ -202,60 +168,18 @@ pub struct BuildClient {
     pub client_rust_target: Option<String>,
 }
 
-#[derive(Clone, Debug, PartialEq)]
-pub enum ServerVariant {
-    /// Production-like server variant, without any of the features enabled
-    Base,
-    /// Debug server with logging and introspection client enabled
-    Unsafe,
-    /// Debug server with logging, but no introspection client
-    NoIntrospectionClient,
-    /// Similar to Unsafe, but with additional commands for running coverage
-    Coverage,
-    /// Debug server, with logging, introspection client, and experimental features enabled
-    Experimental,
-}
-
-impl std::str::FromStr for ServerVariant {
-    type Err = String;
-    fn from_str(variant: &str) -> Result<Self, Self::Err> {
-        match variant {
-            "base" => Ok(ServerVariant::Base),
-            "coverage" => Ok(ServerVariant::Coverage),
-            "no-introspection-client" => Ok(ServerVariant::NoIntrospectionClient),
-            "experimental" => Ok(ServerVariant::Experimental),
-            "unsafe" => Ok(ServerVariant::Unsafe),
-            _ => Err(format!("Failed to parse server variant {}", variant)),
-        }
-    }
-}
-
-#[derive(Parser, Clone, Debug)]
-pub struct BuildServer {
-    #[clap(
-        long,
-        help = "server variant: [base, coverage, unsafe, no-introspection-client, experimental]",
-        default_value = "experimental"
-    )]
-    pub server_variant: ServerVariant,
-    #[clap(
-        long,
-        help = "rust toolchain override to use for the server compilation [e.g. stable, nightly, stage2]"
-    )]
-    pub server_rust_toolchain: Option<String>,
-    #[clap(
-        long,
-        help = "rust target to use for the server compilation [e.g. x86_64-unknown-linux-gnu, x86_64-unknown-linux-musl, x86_64-apple-darwin]"
-    )]
-    pub server_rust_target: Option<String>,
-}
-
-#[derive(Clone, Debug, PartialEq)]
+#[derive(serde::Deserialize, Debug, Clone, PartialEq)]
 pub enum FunctionsServerVariant {
     /// Production-like server variant, without logging or any of the experimental features enabled
     Base,
     /// Debug server with logging and experimental features enabled
     Unsafe,
+}
+
+impl Default for FunctionsServerVariant {
+    fn default() -> Self {
+        FunctionsServerVariant::Base
+    }
 }
 
 impl std::str::FromStr for FunctionsServerVariant {
@@ -264,7 +188,10 @@ impl std::str::FromStr for FunctionsServerVariant {
         match variant {
             "base" => Ok(FunctionsServerVariant::Base),
             "unsafe" => Ok(FunctionsServerVariant::Unsafe),
-            _ => Err(format!("Failed to parse server variant {}", variant)),
+            _ => Err(format!(
+                "Failed to parse functions server variant {}",
+                variant
+            )),
         }
     }
 }
@@ -292,65 +219,6 @@ pub struct RunTestsOpt {
         help = "Remove generated files after running tests for each crate"
     )]
     pub cleanup: bool,
-}
-
-pub trait RustBinaryOptions {
-    fn features(&self) -> Vec<&str>;
-    fn server_rust_toolchain(&self) -> &Option<String>;
-    fn server_rust_target(&self) -> &Option<String>;
-    fn build_release(&self) -> bool;
-}
-
-impl RustBinaryOptions for BuildFunctionsServer {
-    fn features(&self) -> Vec<&str> {
-        match self.server_variant {
-            FunctionsServerVariant::Unsafe => vec!["oak-unsafe"],
-            FunctionsServerVariant::Base => vec![],
-        }
-    }
-    fn server_rust_toolchain(&self) -> &Option<String> {
-        &self.server_rust_toolchain
-    }
-    fn server_rust_target(&self) -> &Option<String> {
-        &self.server_rust_target
-    }
-    fn build_release(&self) -> bool {
-        true
-    }
-}
-
-impl RustBinaryOptions for BuildServer {
-    fn features(&self) -> Vec<&str> {
-        match self.server_variant {
-            ServerVariant::Base => vec![],
-            ServerVariant::NoIntrospectionClient => vec!["oak-unsafe"],
-            ServerVariant::Unsafe => vec!["oak-unsafe", "oak-introspection-client"],
-            // If building in coverage mode, use the default target from the host, and build
-            // in unsafe (debug) mode.
-            ServerVariant::Coverage => vec!["oak-unsafe", "oak-introspection-client"],
-            ServerVariant::Experimental => vec![
-                "oak-attestation",
-                "awskms",
-                "gcpkms",
-                "oak-unsafe",
-                "oak-introspection-client",
-            ],
-        }
-    }
-    fn server_rust_toolchain(&self) -> &Option<String> {
-        &self.server_rust_toolchain
-    }
-    fn server_rust_target(&self) -> &Option<String> {
-        match self.server_variant {
-            ServerVariant::Coverage => &None,
-            _ => &self.server_rust_target,
-        }
-    }
-    fn build_release(&self) -> bool {
-        // For the coverage server variant, build debug artifacts
-        // For all other server variants build the release artifacts
-        !matches!(self.server_variant, ServerVariant::Coverage)
-    }
 }
 
 #[derive(Parser, Clone, Debug)]

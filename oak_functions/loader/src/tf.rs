@@ -38,9 +38,10 @@ use wasmi::ValueType;
 const TF_ABI_FUNCTION_NAME: &str = "tf_model_infer";
 
 /// An optimized TypeModel with [`TypedFact`] and [`TypedOp`]. If optimization performed by `tract`
-/// is not required, InferenceModel with [`InferenceFact`] and [`InferenceOp`] could be used
+/// is not required, InferenceModel with [`InferenceFact`] and `InferenceOp` could be used
 /// instead. These traits are available from the `tract-hir` crate.
-/// More information: https://github.com/sonos/tract/blob/main/doc/graph.md
+///
+/// More information: <https://github.com/sonos/tract/blob/main/doc/graph.md>
 type Model = RunnableModel<TypedFact, Box<dyn TypedOp>, Graph<TypedFact, Box<dyn TypedOp>>>;
 
 #[derive(Deserialize, Debug, Default)]
@@ -145,7 +146,7 @@ impl OakApiNativeExtension for TensorFlowModel {
     }
 }
 
-/// Corresponds to the host ABI function [`tf_model_infer`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#tf_model_infer).    
+/// Corresponds to the host ABI function [`tf_model_infer`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#tf_model_infer).
 fn tf_model_infer(
     wasm_state: &mut WasmState,
     tf_model: &TensorFlowModel,

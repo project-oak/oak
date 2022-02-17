@@ -115,7 +115,7 @@ fn match_cmd(opt: &Opt) -> Step {
     match opt.cmd {
         Command::RunFunctionsExamples(ref run_opt) => run_functions_examples(run_opt, &opt.scope),
         Command::BuildFunctionsExample(ref opt) => build_functions_example(opt),
-        Command::BuildFunctionsServer(ref opt) => build_functions_server(opt, vec![]),
+        Command::BuildFunctionsServer(ref opt) => build_functions_server(&opt.server_variant, opt),
         Command::RunTests => run_tests(),
         Command::RunCargoClippy => run_cargo_clippy(&opt.scope),
         Command::RunCargoTests(ref run_opt) => run_cargo_tests(run_opt, &opt.scope),
@@ -675,18 +675,6 @@ fn run_cargo_fmt(mode: FormatMode, modified_crates: &ModifiedContent) -> Step {
     }
 }
 
-fn features_excl_introspection_client(entry: &str) -> &str {
-    // Manually exclude `oak-introspection-client` for `oak_loader` and `oak_runtime` to
-    // avoid compile time errors.
-    if entry.contains("oak_loader") {
-        "--features=oak-unsafe,awskms,gcpkms,oak-attestation"
-    } else if entry.contains("oak_runtime") {
-        "--features=oak-unsafe,awskms,gcpkms,linear-handles"
-    } else {
-        "--all-features"
-    }
-}
-
 fn run_cargo_test(opt: &RunTestsOpt, all_affected_crates: &ModifiedContent) -> Step {
     Step::Multiple {
         name: "cargo test".to_string(),
@@ -702,8 +690,7 @@ fn run_cargo_test(opt: &RunTestsOpt, all_affected_crates: &ModifiedContent) -> S
                         "cargo",
                         &[
                             "test",
-                            // Compile and test for all features
-                            features_excl_introspection_client(&entry),
+                            "--all-features",
                             &format!("--manifest-path={}", &entry),
                         ],
                     ),
@@ -771,7 +758,7 @@ fn run_cargo_clippy(scope: &Scope) -> Step {
                     &[
                         "clippy",
                         "--all-targets",
-                        features_excl_introspection_client(&entry),
+                        "--all-features",
                         &format!("--manifest-path={}", &entry),
                         "--no-deps",
                         "--",

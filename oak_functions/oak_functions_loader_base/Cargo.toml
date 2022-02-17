@@ -1,0 +1,9 @@
+[package]
+name = "oak_functions_loader_base"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+
+[dependencies]
+anyhow = "*"
+oak_functions_loader = { path = "../loader" }

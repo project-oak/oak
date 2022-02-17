@@ -82,7 +82,7 @@ struct ExampleServer {
     #[serde(default)]
     additional_args: Vec<String>,
     #[serde(default)]
-    required_features: Vec<String>,
+    server_variant: FunctionsServerVariant,
 }
 
 #[derive(serde::Deserialize, Debug)]
@@ -258,30 +258,17 @@ pub fn run_functions_examples(opt: &RunFunctionsExamples, scope: &Scope) -> Step
 }
 
 pub fn build_functions_server(
+    server_variant: &FunctionsServerVariant,
     opt: &BuildFunctionsServer,
-    additional_features: Vec<String>,
 ) -> Step {
-    Step::Multiple {
-        name: "server".to_string(),
-        steps: vec![
-            vec![Step::Single {
-                name: "create bin folder".to_string(),
-                command: Cmd::new(
-                    "mkdir",
-                    vec!["-p".to_string(), "oak_functions/loader/bin".to_string()],
-                ),
-            }],
-            vec![build_rust_binary(
-                "oak_functions/loader",
-                opt,
-                additional_features,
-                &hashmap! {},
-            )],
-        ]
-        .into_iter()
-        .flatten()
-        .collect::<Vec<_>>(),
-    }
+    build_rust_binary(
+        match server_variant {
+            FunctionsServerVariant::Base => "oak_functions/oak_functions_loader_base",
+            FunctionsServerVariant::Unsafe => "oak_functions/oak_functions_loader_unsafe",
+        },
+        opt,
+        &hashmap! {},
+    )
 }
 
 fn run_functions_example(example: &FunctionsExample) -> Step {
@@ -311,8 +298,8 @@ fn run_functions_example(example: &FunctionsExample) -> Step {
                 // Build the server first so that when running it in the next step it will start up
                 // faster.
                 vec![build_functions_server(
+                    &example.example.server.server_variant,
                     &opt.build_server,
-                    example.example.server.required_features.clone(),
                 )]
             } else {
                 vec![]
@@ -377,8 +364,8 @@ pub fn build_functions_example(opt: &RunFunctionsExamples) -> Step {
             // Build the server first so that when running it in the next step it will start up
             // faster.
             vec![build_functions_server(
+                &example.server.server_variant,
                 &opt.build_server,
-                example.server.required_features.clone(),
             )],
             if opt.build_docker {
                 vec![build_docker(&example)]
@@ -487,7 +474,14 @@ fn run_functions_example_server(
     application: &ApplicationFunctions,
 ) -> Box<dyn Runnable> {
     Cmd::new_with_env(
-        "oak_functions/loader/bin/oak_functions_loader",
+        match example_server.server_variant {
+            FunctionsServerVariant::Base => {
+                "target/x86_64-unknown-linux-musl/release/oak_functions_loader_base"
+            }
+            FunctionsServerVariant::Unsafe => {
+                "target/x86_64-unknown-linux-musl/release/oak_functions_loader_unsafe"
+            }
+        },
         spread![
             format!("--wasm-path={}", application.wasm_path),
             ...example_server.additional_args.clone(),
@@ -683,27 +677,17 @@ fn run(
     }
 }
 
-fn build_rust_binary<T: RustBinaryOptions>(
+fn build_rust_binary(
     manifest_dir: &str,
-    opt: &T,
-    additional_features: Vec<String>,
+    opt: &BuildFunctionsServer,
     env: &HashMap<String, String>,
 ) -> Step {
-    let mut features = additional_features;
-    let mut server_variant_features = opt.features().iter().map(|s| s.to_string()).collect();
-    features.append(&mut server_variant_features);
-    let features = if !features.is_empty() {
-        features.join(",")
-    } else {
-        "".to_string()
-    };
-
     Step::Single {
         name: "build rust binary".to_string(),
         command: Cmd::new_with_env(
             "cargo",
             spread![
-                ...match opt.server_rust_toolchain() {
+                ...match &opt.server_rust_toolchain {
                     // This overrides the toolchain used by `rustup` to invoke the actual
                     // `cargo` binary.
                     // See https://github.com/rust-lang/rustup#toolchain-override-shorthand
@@ -712,17 +696,8 @@ fn build_rust_binary<T: RustBinaryOptions>(
                 },
                 "build".to_string(),
                 format!("--manifest-path={}/Cargo.toml", manifest_dir),
-                format!("--out-dir={}/bin", manifest_dir),
-                // `--out-dir` is unstable and requires `-Zunstable-options`.
-                "-Zunstable-options".to_string(),
-                ...if !features.is_empty() {
-                    vec![format!("--features={}", features)]
-                } else {
-                    vec![]
-                },
-                ...if opt.build_release() {
-                    vec![format!("--target={}", opt.server_rust_target().as_deref().unwrap_or(DEFAULT_SERVER_RUST_TARGET)),
-                    "--release".to_string() ]} else {vec![]},
+                format!("--target={}", opt.server_rust_target.as_deref().unwrap_or(DEFAULT_SERVER_RUST_TARGET)),
+                "--release".to_string(),
             ],
             env,
         ),

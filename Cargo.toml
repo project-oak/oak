@@ -22,6 +22,8 @@ members = [
   "oak_functions/loader",
   "oak_functions/location_utils",
   "oak_functions/lookup_data_generator",
+  "oak_functions/oak_functions_loader_base",
+  "oak_functions/oak_functions_loader_unsafe",
   "oak_functions/sdk/oak_functions",
   "oak_functions/sdk/oak_functions/tests/module",
   "oak_functions/sdk/test_utils",

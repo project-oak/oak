@@ -14,15 +14,15 @@
 // limitations under the License.
 //
 
-use maplit::hashmap;
-use oak_functions_abi::proto::{Response, ServerPolicy, StatusCode};
-use oak_functions_loader::{
+use crate::{
     grpc::{create_and_start_grpc_server, create_wasm_handler},
     logger::Logger,
     lookup::LookupFactory,
     lookup_data::{parse_lookup_entries, LookupData, LookupDataAuth, LookupDataSource},
     server::{apply_policy, format_bytes},
 };
+use maplit::hashmap;
+use oak_functions_abi::proto::{Response, ServerPolicy, StatusCode};
 use prost::Message;
 use std::{
     io::{Seek, Write},
