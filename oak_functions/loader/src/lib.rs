@@ -152,9 +152,9 @@ async fn background_refresh_lookup_data(
     }
 }
 
-/// This crate is just a library so this `main` function does not get executed directly by anything,
-/// it needs to be wrapped in the "actual" main from a bin crate.
-pub fn main() -> anyhow::Result<()> {
+/// This crate is just a library so this function does not get executed directly by anything, it
+/// needs to be wrapped in the "actual" `main` from a bin crate.
+pub fn lib_main() -> anyhow::Result<()> {
     let opt = Opt::parse();
     let config_file_bytes = fs::read(&opt.config_path)
         .with_context(|| format!("Couldn't read config file {}", &opt.config_path))?;

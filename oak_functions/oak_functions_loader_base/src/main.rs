@@ -17,5 +17,5 @@
 //! The "base" Oak Functions runtime binary, which guarantees that user data stays private.
 
 pub fn main() -> anyhow::Result<()> {
-    oak_functions_loader::main()
+    oak_functions_loader::lib_main()
 }

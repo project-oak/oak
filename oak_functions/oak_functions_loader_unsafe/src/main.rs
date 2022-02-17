@@ -19,5 +19,5 @@
 //! Useful for testing and debugging, but not meant for production use.
 
 pub fn main() -> anyhow::Result<()> {
-    oak_functions_loader::main()
+    oak_functions_loader::lib_main()
 }
