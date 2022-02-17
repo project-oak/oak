@@ -221,14 +221,22 @@ async fn maybe_download(work_dir: &str, file_name: &str) -> anyhow::Result<Vec<u
         info!("reading local file: {}", path.display());
         read(path).context("couldn't read file")
     } else {
-        info!("downloading file: {}{}", SOURCE_URL, file_name);
-        let bytes = reqwest::get(format!("{}{}", SOURCE_URL, file_name))
-            .await
-            .context("couldn't download file")?
-            .bytes()
-            .await
-            .context("couldn't get contente from downloaded file")?
-            .to_vec();
+        let url: hyper::Uri = (format!("{}{}", SOURCE_URL, file_name)).parse().unwrap();
+        info!("downloading file: {}", url);
+        let https = hyper_rustls::HttpsConnectorBuilder::new()
+            .with_native_roots()
+            .https_only()
+            .enable_http1()
+            .build();
+        let client: hyper::Client<_, hyper::Body> = hyper::Client::builder().build(https);
+        let bytes = hyper::body::to_bytes(
+            client
+                .get(url)
+                .await
+                .context("couldn't download file")?
+                .into_body(),
+        )
+        .await?;
         write(path, &bytes).context("couldn't write downloaded file")?;
         Ok(bytes.to_vec())
     }

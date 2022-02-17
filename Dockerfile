@@ -66,8 +66,8 @@ RUN echo 'deb http://deb.debian.org/debian buster-backports main' > /etc/apt/sou
   && ln --symbolic --force clang-format-8 /usr/bin/clang-format
 
 # Use a fixed version of Bazel.
-ARG bazel_version=4.2.0
-ARG bazel_sha256=89b14fa0d9ce5637f4e0b66df56a531e1e3c50d88614311334d192531cf1e0fa
+ARG bazel_version=5.0.0
+ARG bazel_sha256=e3361645ccd731abc424bb3a322d8e6f513b7258f5ca11ff04d6067aff5d09b1
 ARG bazel_url=https://storage.googleapis.com/bazel-apt/pool/jdk1.8/b/bazel/bazel_${bazel_version}_amd64.deb
 RUN curl --location "${bazel_url}" > bazel.deb \
   && sha256sum --binary bazel.deb && echo "${bazel_sha256} *bazel.deb" | sha256sum --check \
@@ -107,8 +107,8 @@ RUN chmod --recursive go+wx "${emscripten_dir}"
 RUN mkdir -p "/.npm" && chmod a+rwx "/.npm" & mkdir -p "/.config" && chmod a+rwx "/.config"
 
 # Install Go.
-ARG golang_version=1.17.1
-ARG golang_sha256=dab7d9c34361dc21ec237d584590d72500652e7c909bf082758fb63064fca0ef
+ARG golang_version=1.17.7
+ARG golang_sha256=02b111284bedbfa35a7e5b74a06082d18632eff824fd144312f6063943d49259
 ARG golang_temp=/tmp/golang.tar.gz
 ENV GOROOT /usr/local/go
 ENV GOPATH ${HOME}/go
@@ -132,7 +132,7 @@ RUN go get github.com/campoy/embedmd@97c13d6 \
 
 # Install liche (Markdown link checker) (via Go).
 # https://github.com/raviqqe/liche
-RUN go get github.com/raviqqe/liche@3ac05a3 \
+RUN go get github.com/raviqqe/liche@f9ba5f2 \
   && liche --version
 
 # Install prettier and markdownlint (via Node.js).
@@ -164,20 +164,20 @@ RUN mkdir --parents ${hadolint_dir} \
 
 # Install buildifier.
 # https://github.com/bazelbuild/buildtools/tree/master/buildifier
-ARG bazel_tools_version=4.2.2
-ARG buildifier_sha256=3f0e450cd852dbfd89aa2761d85f9fbeb6f0faccfc5d4fbe48952cfe0712922a
+ARG bazel_tools_version=5.0.0
+ARG buildifier_sha256=18a518a4b9b83bb96a115a681099ae6c115217e925a2dacfb263089e3a791b5d
 ARG buildifier_dir=/usr/local/buildifier/bin
 ARG buildifier_bin=${buildifier_dir}/buildifier
 ENV PATH "${buildifier_dir}:${PATH}"
 RUN mkdir --parents ${buildifier_dir} \
-  && curl --location https://github.com/bazelbuild/buildtools/releases/download/${bazel_tools_version}/buildifier > ${buildifier_bin} \
+  && curl --location https://github.com/bazelbuild/buildtools/releases/download/${bazel_tools_version}/buildifier-linux-amd64 > ${buildifier_bin} \
   && sha256sum --binary ${buildifier_bin} && echo "${buildifier_sha256} *${buildifier_bin}" | sha256sum --check \
   && chmod +x ${buildifier_bin} \
   && buildifier --version
 
 # Install Protobuf compiler.
-ARG protobuf_version=3.18.0
-ARG protobuf_sha256=8b6b0c82f730212801d9cce4653abb1a1f4204555a92e8e2b5f625d61e66f1b4
+ARG protobuf_version=3.19.4
+ARG protobuf_sha256=058d29255a08f8661c8096c92961f3676218704cbd516d3916ec468e139cbd87
 ARG protobuf_dir=/usr/local/protobuf
 ARG protobuf_temp=/tmp/protobuf.zip
 ENV PATH "${protobuf_dir}/bin:${PATH}"
@@ -202,7 +202,7 @@ RUN curl --location https://sh.rustup.rs > /tmp/rustup \
 # We currently need the nightly version in order to be able to compile some of the examples.
 # See https://rust-lang.github.io/rustup-components-history/ for how to pick a version that supports
 # the appropriate set of components.
-ARG rust_version=nightly-2022-01-09
+ARG rust_version=nightly-2022-02-17
 RUN rustup toolchain install ${rust_version} \
   && rustup default ${rust_version}
 
@@ -242,21 +242,21 @@ RUN chmod +x ${install_dir}/grcov
 
 # Install cargo-crev.
 # https://github.com/crev-dev/cargo-crev
-ARG crev_version=v0.18.0
+ARG crev_version=v0.23.0
 ARG crev_location=https://github.com/crev-dev/cargo-crev/releases/download/${crev_version}/cargo-crev-${crev_version}-x86_64-unknown-linux-musl.tar.gz
 RUN curl --location ${crev_location} | tar --extract --gzip --directory=${install_dir} --strip-components=1
 RUN chmod +x ${install_dir}/cargo-crev
 
 # Install cargo-deny
 # https://github.com/EmbarkStudios/cargo-deny
-ARG deny_version=0.11.0
+ARG deny_version=0.11.3
 ARG deny_location=https://github.com/EmbarkStudios/cargo-deny/releases/download/${deny_version}/cargo-deny-${deny_version}-x86_64-unknown-linux-musl.tar.gz
 RUN curl --location ${deny_location} | tar --extract --gzip --directory=${install_dir} --strip-components=1
 RUN chmod +x ${install_dir}/cargo-deny
 
 # Install cargo-udeps
 # https://github.com/est31/cargo-udeps
-ARG udeps_version=v0.1.25
+ARG udeps_version=v0.1.26
 ARG udeps_dir=cargo-udeps-${udeps_version}-x86_64-unknown-linux-gnu
 ARG udeps_location=https://github.com/est31/cargo-udeps/releases/download/${udeps_version}/cargo-udeps-${udeps_version}-x86_64-unknown-linux-gnu.tar.gz
 RUN curl --location ${udeps_location} | tar --extract --gzip --directory=${install_dir} --strip-components=2 ./${udeps_dir}/cargo-udeps
@@ -264,7 +264,7 @@ RUN chmod +x ${install_dir}/cargo-udeps
 
 # Install rust-analyzer
 # https://github.com/rust-analyzer/rust-analyzer
-ARG rust_analyzer_version=2022-01-10
+ARG rust_analyzer_version=2022-02-14
 ARG rust_analyzer_location=https://github.com/rust-analyzer/rust-analyzer/releases/download/${rust_analyzer_version}/rust-analyzer-x86_64-unknown-linux-gnu.gz
 RUN curl --location ${rust_analyzer_location} | gzip --decompress "$@" > ${install_dir}/rust-analyzer
 RUN chmod +x ${install_dir}/rust-analyzer

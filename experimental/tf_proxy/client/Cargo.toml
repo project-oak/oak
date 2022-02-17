@@ -10,13 +10,14 @@ anyhow = "*"
 clap = { version = "*", features = ["derive"] }
 env_logger = "*"
 flate2 = "*"
+hyper = "*"
+hyper-rustls = "*"
 log = "*"
 maplit = "*"
 oak_functions_abi = { path = "../../../oak_functions/abi" }
 oak_functions_client = { path = "../../../oak_functions/client/rust" }
 prost = "*"
 prost-types = "*"
-reqwest = "*"
 tokio = { version = "*", features = [
   "fs",
   "macros",
