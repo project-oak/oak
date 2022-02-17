@@ -1,1 +1,2 @@
-b933914a788807f099131e33ecef6f22e2e9f2b534d9da47f1fe7e0dcf691457  ./oak_functions/loader/bin/oak_functions_loader
+4179506f71be9580614b533f0da79a349713eef635d87e7abde6b91ee563810e  ./target/x86_64-unknown-linux-musl/release/oak_functions_loader_base
+a922891322c1f260afbb47c78407428035fc72b7f9c4fca7e62d192cfc3e3482  ./target/x86_64-unknown-linux-musl/release/oak_functions_loader_unsafe
