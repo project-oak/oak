@@ -961,6 +961,8 @@ mod tests {
     }
 
     #[derive(Serialize, Deserialize)]
+    // Note that currently the caller is responsible that the Request is send to the extension, and
+    // the extension responds with the response.
     enum TestingMessage {
         EchoRequest(String),
         EchoResponse(String),
@@ -993,10 +995,7 @@ mod tests {
             // The runtime endpoint continiously reads messages from the Wasm module endpoint until
             // all senders from the Wasm endpoint are closed.
             //
-            // Every message should tell the Testing Extension what to do. If the message
-            // does not do so, the Testing Extension panics. When we
-            // want the Testing Extension to have new behaviour for testing, we can add a new case
-            // for this message.
+            // If the Testing Message is not an expected request, the Testing Extension panics.
             while let Some(request) = receiver.recv().await {
                 let deserialized_testing_message =
                     bincode::deserialize(&request).expect("Fail to deserialize testing message.");
@@ -1008,7 +1007,7 @@ mod tests {
                         let result = sender.send(serialized_echo_response).await;
                         assert!(result.is_ok())
                     }
-                    _ => panic!("Unhandled UWABI Message: {:?}", request),
+                    _ => panic!("Unexpected Testing Message: {:?}", request),
                 }
             }
         }
