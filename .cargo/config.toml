@@ -28,4 +28,4 @@ rustflags = ["-C", "target-feature=+crt-static", "-C", "link-arg=-lgcc"]
 multiplexing = false
 
 [env]
-OAK_FUNCTIONS_EXAMPLES = { value = "oak_functions/examples", relative = true }
+OAK_FUNCTIONS_WORKSPACE = { value = "oak_functions", relative = true }

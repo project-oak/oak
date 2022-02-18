@@ -263,7 +263,8 @@ fn create_wasm_module_bytes_from_example(
     release: bool,
 ) -> Vec<u8> {
     let mut manifest_path = std::path::PathBuf::new();
-    manifest_path.push(env!("OAK_FUNCTIONS_EXAMPLES"));
+    manifest_path.push(env!("OAK_FUNCTIONS_WORKSPACE"));
+    manifest_path.push("examples");
     manifest_path.push(manifest_path_from_examples);
     compile_rust_wasm(manifest_path.to_str().expect("Invalid target dir"), release)
         .expect("Couldn't read Wasm module")
