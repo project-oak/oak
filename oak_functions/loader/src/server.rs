@@ -16,6 +16,7 @@
 use crate::logger::Logger;
 
 use anyhow::Context;
+use async_trait::async_trait;
 use byteorder::{ByteOrder, LittleEndian};
 use futures::future::FutureExt;
 use log::Level;
@@ -159,6 +160,7 @@ pub enum BoxedExtension {
 pub type BoxedExtensionFactory = Box<dyn ExtensionFactory + Send + Sync>;
 
 /// Trait for implementing an extension which relies on UWABI.
+#[async_trait]
 pub trait UwabiExtension: Sync + Send {
     /// Get the channel handle to address this extension.
     fn get_channel_handle(&self) -> ChannelHandle;
@@ -173,6 +175,9 @@ pub trait UwabiExtension: Sync + Send {
     // to change the `BoxedExtensionFactory` trait. This helps to keep the changes to the
     // (existing) Native extensions minimal.
     fn set_endpoint(&mut self, endpoint: Endpoint);
+
+    // Run an UWABI extension by continously receiving messages on the endpoint and answering it.
+    async fn run(self: Box<Self>);
 }
 
 /// `WasmState` holds runtime values for a particular execution instance of Wasm, handling a
@@ -741,7 +746,12 @@ impl WasmHandler {
 
     pub async fn handle_invoke(&self, request: Request) -> anyhow::Result<Response> {
         let request_bytes = request.body;
-        let (mut wasm_state, _extensions) = self.init_wasm_state_and_extensions(request_bytes)?;
+        let (mut wasm_state, uwabi_extensions) =
+            self.init_wasm_state_and_extensions(request_bytes)?;
+
+        for uwabi_extension in uwabi_extensions {
+            tokio::spawn(uwabi_extension.run());
+        }
 
         wasm_state.invoke();
         for extension in wasm_state
@@ -761,9 +771,10 @@ impl WasmHandler {
         ))
 
         // Here we drop all endpoints of the Wasm module (i.e., the wasm_state.channel_switchboard).
-        // This indicates to the Runtime endpoints that they will not receive further messages.
-        // Note, that we do not do a clean shutdown of the receivers in the endpoints Wasm module,
-        // because there is no need to handle, or even log, the remaining messages.
+        // This indicates to the endpoints in the UWABI Extensions that they will not receive
+        // further messages and can stop. Note, that we do not do a clean shutdown of the receivers
+        // in the endpoints Wasm module, because there is no need to handle, or even log,
+        // the remaining messages.
     }
 }
 
@@ -920,7 +931,7 @@ impl ChannelSwitchboard {
 #[cfg(test)]
 mod tests {
     use super::{super::grpc::create_wasm_handler, *};
-
+    use serde::{Deserialize, Serialize};
     pub struct TestingFactory {
         logger: Logger,
     }
@@ -949,6 +960,15 @@ mod tests {
         endpoint: Option<Endpoint>,
     }
 
+    #[derive(Serialize, Deserialize)]
+    // Note that currently the caller is responsible that the Request is send to the extension, and
+    // the extension responds with the response.
+    enum TestingMessage {
+        EchoRequest(String),
+        EchoResponse(String),
+    }
+
+    #[async_trait]
     impl UwabiExtension for TestingExtension {
         fn get_channel_handle(&self) -> oak_functions_abi::proto::ChannelHandle {
             ChannelHandle::Testing
@@ -964,6 +984,31 @@ mod tests {
         fn set_endpoint(&mut self, endpoint: Endpoint) {
             if self.endpoint.is_none() {
                 self.endpoint = Some(endpoint);
+            }
+        }
+
+        async fn run(mut self: Box<Self>) {
+            let endpoint = self.get_endpoint_mut().unwrap();
+            let receiver = &mut endpoint.receiver;
+            let sender = &mut endpoint.sender;
+
+            // The runtime endpoint continiously reads messages from the Wasm module endpoint until
+            // all senders from the Wasm endpoint are closed.
+            //
+            // If the Testing Message is not an expected request, the Testing Extension panics.
+            while let Some(request) = receiver.recv().await {
+                let deserialized_testing_message =
+                    bincode::deserialize(&request).expect("Fail to deserialize testing message.");
+                match deserialized_testing_message {
+                    TestingMessage::EchoRequest(echo_message) => {
+                        let echo_response = TestingMessage::EchoResponse(echo_message);
+                        let serialized_echo_response = bincode::serialize(&echo_response)
+                            .expect("Fail to serialize testing message.");
+                        let result = sender.send(serialized_echo_response).await;
+                        assert!(result.is_ok())
+                    }
+                    _ => panic!("Unexpected Testing Message: {:?}", request),
+                }
             }
         }
     }
@@ -1073,8 +1118,10 @@ mod tests {
         let channel_handle = ChannelHandle::Testing;
         let message = vec![42, 42, 232];
         let (mut wasm_state, mut uwabi_extensions) = create_test_wasm_state_and_extensions();
+        let mut testing_extension =
+            extension_for_channel_handle(&mut uwabi_extensions, channel_handle);
 
-        write_to_runtime_endpoint(&mut uwabi_extensions, channel_handle, message.clone()).await;
+        write_to_runtime_endpoint(&mut testing_extension, message.clone()).await;
 
         // Guess some memory addresses in linear Wasm memory.
         let dest_ptr_ptr: AbiPointer = 100;
@@ -1106,42 +1153,61 @@ mod tests {
     #[tokio::test]
     async fn test_hosted_channel_write_ok() {
         let channel_handle = ChannelHandle::Testing;
-        let message: UwabiMessage = vec![42, 42];
+        let message: String = String::from("Test Message");
         let (mut wasm_state, mut uwabi_extensions) = create_test_wasm_state_and_extensions();
+        let testing_extension = extension_for_channel_handle(&mut uwabi_extensions, channel_handle);
 
-        write_to_runtime_endpoint(&mut uwabi_extensions, channel_handle, message.clone()).await;
+        let join_handle = tokio::spawn(testing_extension.run());
 
-        // Guess some memory addresses in linear Wasm memory to write the message to from
-        // `src_buf_ptr`.
+        // Guess some memory addresses in linear Wasm memory to write the message to.
         let src_buf_ptr: AbiPointer = 100;
-        let result = wasm_state.write_buffer_to_wasm_memory(&message, src_buf_ptr);
+
+        let echo_request = TestingMessage::EchoRequest(message.clone());
+        let serialized_echo_request =
+            bincode::serialize(&echo_request).expect("Fail to serialize testing message.");
+        let result = wasm_state.write_buffer_to_wasm_memory(&serialized_echo_request, src_buf_ptr);
         assert!(result.is_ok());
 
-        let result =
-            wasm_state.channel_write(channel_handle as i32, src_buf_ptr, message.len() as u32);
+        // The Wasm Module writes an ECHO message to the Testing Extension.
+        let result = wasm_state.channel_write(
+            channel_handle as i32,
+            src_buf_ptr,
+            serialized_echo_request.len() as u32,
+        );
         assert!(result.is_ok());
 
-        // Assert that the message arrived at runtime endpoint.
-        let received_message =
-            read_from_runtime_endpoint(&mut uwabi_extensions, channel_handle).await;
-        assert_eq!(message.to_vec(), received_message);
+        // The Testing Extension should now ECHO the message to the Wasm module so we read from then
+        // Wasm module endpoint.
+        let echo_response = read_from_wasm_module_endpoint(&mut wasm_state, channel_handle).await;
+
+        let deserialized_response =
+            bincode::deserialize(&echo_response).expect("Fail to deserialize testing message.");
+
+        if let TestingMessage::EchoResponse(echoed_message) = deserialized_response {
+            assert_eq!(echoed_message, message)
+        } else {
+            panic!("Deserialzed message not a valid message")
+        }
+
+        // Dropping the WasmState drops the Channel Switchboard stopping the extension.
+        std::mem::drop(wasm_state);
+
+        let result = join_handle.await;
+        assert!(result.is_ok());
     }
 
     #[tokio::test]
     async fn test_hosted_channel_write_full() {
         let channel_handle = ChannelHandle::Testing;
         let message: UwabiMessage = vec![42, 42];
-        let (mut wasm_state, mut uwabi_extensions) = create_test_wasm_state_and_extensions();
+        let (mut wasm_state, _uwabi_extensions) = create_test_wasm_state_and_extensions();
 
-        write_to_runtime_endpoint(&mut uwabi_extensions, channel_handle, message.clone()).await;
-
-        // Guess some memory addresses in linear Wasm memory to write the message to from
-        // `src_buf_ptr`.
+        // Guess some memory addresses in linear Wasm memory to write the message to.
         let src_buf_ptr: AbiPointer = 100;
         let result = wasm_state.write_buffer_to_wasm_memory(&message, src_buf_ptr);
         assert!(result.is_ok());
 
-        // write the message ABI_CHANNEL_BOUND times
+        // Write the message UWABI_CHANNEL_BOUND times.
         for _ in 0..UWABI_CHANNEL_BOUND {
             let result =
                 wasm_state.channel_write(channel_handle as i32, src_buf_ptr, message.len() as u32);
@@ -1184,45 +1250,46 @@ mod tests {
             .expect("could not create wasm_state")
     }
 
-    // Helper function for testing to read from Endpoint associated to ChannelHandle extension in
-    // the runtime.
-    async fn read_from_runtime_endpoint(
-        uwabi_extensions: &mut Vec<Box<dyn UwabiExtension>>,
-        channel_handle: ChannelHandle,
-    ) -> Vec<u8> {
-        let endpoint = runtime_endpoint_for_channel_handle(uwabi_extensions, channel_handle);
-        endpoint.receiver.try_recv().unwrap()
-    }
-
-    // Helper function for testing to write to Endpoint associated to ChannelHandle extension in the
-    // runtime.
+    // Helper function for testing to write to the endpoint of the given UWABI Extension.
     async fn write_to_runtime_endpoint(
-        uwabi_extensions: &mut Vec<Box<dyn UwabiExtension>>,
-        channel_handle: ChannelHandle,
+        uwabi_extension: &mut Box<dyn UwabiExtension>,
         message: UwabiMessage,
     ) {
-        let endpoint = runtime_endpoint_for_channel_handle(uwabi_extensions, channel_handle);
+        let endpoint = uwabi_extension
+            .get_endpoint_mut()
+            .expect("No endpoint set for extension.");
         let result = endpoint.sender.send(message.to_vec().clone()).await;
         assert!(result.is_ok());
     }
 
-    // Helper function for testing to find the Endpoint associated to ChannelHandle in the runtime.
-    fn runtime_endpoint_for_channel_handle(
+    // Helper function for testing to read from the endpoint associated to ChannelHandle in the Wasm
+    // Module.
+    async fn read_from_wasm_module_endpoint(
+        wasm_state: &mut WasmState,
+        channel_handle: ChannelHandle,
+    ) -> UwabiMessage {
+        wasm_state
+            .channel_switchboard
+            .get_mut(&channel_handle)
+            .expect("Endpoint not set for Channel Handle")
+            .receiver
+            .recv()
+            .await
+            .expect("No message or channel closed.")
+    }
+
+    // Helper function for testing to find the Extension associated to ChannelHandle.
+    fn extension_for_channel_handle(
         uwabi_extensions: &mut Vec<Box<dyn UwabiExtension>>,
         channel_handle: ChannelHandle,
-    ) -> &mut Endpoint {
-        // Find extension associated to ChannelHandle.
-        let extension = uwabi_extensions
-            .iter_mut()
-            .find(|uwabi_extension| {
+    ) -> Box<dyn UwabiExtension> {
+        let pos_of_extension = uwabi_extensions
+            .iter()
+            .position(|uwabi_extension| {
                 let channel_handle_of_extension = uwabi_extension.get_channel_handle();
                 channel_handle_of_extension == channel_handle
             })
             .expect("No extension for channel handle.");
-
-        // Get endpoint from the extension.
-        extension
-            .get_endpoint_mut()
-            .expect("No endpoint set for extension.")
+        uwabi_extensions.remove(pos_of_extension)
     }
 }
