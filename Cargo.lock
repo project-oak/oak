@@ -1962,6 +1962,7 @@ dependencies = [
  "anyhow",
  "async-stream",
  "async-trait",
+ "bincode",
  "byteorder",
  "bytes",
  "chrono",

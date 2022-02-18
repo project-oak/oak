@@ -931,7 +931,7 @@ impl ChannelSwitchboard {
 #[cfg(test)]
 mod tests {
     use super::{super::grpc::create_wasm_handler, *};
-
+    use serde::{Deserialize, Serialize};
     pub struct TestingFactory {
         logger: Logger,
     }
@@ -958,6 +958,12 @@ mod tests {
     pub struct TestingExtension {
         logger: Logger,
         endpoint: Option<Endpoint>,
+    }
+
+    #[derive(Serialize, Deserialize)]
+    enum TestingMessage {
+        EchoRequest(String),
+        EchoResponse(String),
     }
 
     #[async_trait]
@@ -992,13 +998,17 @@ mod tests {
             // want the Testing Extension to have new behaviour for testing, we can add a new case
             // for this message.
             while let Some(request) = receiver.recv().await {
-                let message = from_uwabi_message(&request);
-                // Messages starting with ECHO will be echoed back.
-                if message.starts_with("ECHO") {
-                    let result = sender.send(to_uwabi_message(&message)).await;
-                    assert!(result.is_ok());
-                } else {
-                    panic!("Unhandled UWABI Message: {}", message);
+                let deserialized_testing_message =
+                    bincode::deserialize(&request).expect("Fail to deserialize testing message.");
+                match deserialized_testing_message {
+                    TestingMessage::EchoRequest(echo_message) => {
+                        let echo_response = TestingMessage::EchoResponse(echo_message);
+                        let serialized_echo_response = bincode::serialize(&echo_response)
+                            .expect("Fail to serialize testing message.");
+                        let result = sender.send(serialized_echo_response).await;
+                        assert!(result.is_ok())
+                    }
+                    _ => panic!("Unhandled UWABI Message: {:?}", request),
                 }
             }
         }
@@ -1144,7 +1154,7 @@ mod tests {
     #[tokio::test]
     async fn test_hosted_channel_write_ok() {
         let channel_handle = ChannelHandle::Testing;
-        let message: UwabiMessage = to_uwabi_message("ECHO 42");
+        let message: String = String::from("Test Message");
         let (mut wasm_state, mut uwabi_extensions) = create_test_wasm_state_and_extensions();
         let testing_extension = extension_for_channel_handle(&mut uwabi_extensions, channel_handle);
 
@@ -1152,20 +1162,33 @@ mod tests {
 
         // Guess some memory addresses in linear Wasm memory to write the message to.
         let src_buf_ptr: AbiPointer = 100;
-        let result = wasm_state.write_buffer_to_wasm_memory(&message, src_buf_ptr);
+
+        let echo_request = TestingMessage::EchoRequest(message.clone());
+        let serialized_echo_request =
+            bincode::serialize(&echo_request).expect("Fail to serialize testing message.");
+        let result = wasm_state.write_buffer_to_wasm_memory(&serialized_echo_request, src_buf_ptr);
         assert!(result.is_ok());
 
         // The Wasm Module writes an ECHO message to the Testing Extension.
-        let result =
-            wasm_state.channel_write(channel_handle as i32, src_buf_ptr, message.len() as u32);
+        let result = wasm_state.channel_write(
+            channel_handle as i32,
+            src_buf_ptr,
+            serialized_echo_request.len() as u32,
+        );
         assert!(result.is_ok());
 
         // The Testing Extension should now ECHO the message to the Wasm module so we read from then
         // Wasm module endpoint.
-        let received_message =
-            read_from_wasm_module_endpoint(&mut wasm_state, channel_handle).await;
+        let echo_response = read_from_wasm_module_endpoint(&mut wasm_state, channel_handle).await;
 
-        assert_eq!(received_message, message);
+        let deserialized_response =
+            bincode::deserialize(&echo_response).expect("Fail to deserialize testing message.");
+
+        if let TestingMessage::EchoResponse(echoed_message) = deserialized_response {
+            assert_eq!(echoed_message, message)
+        } else {
+            panic!("Deserialzed message not a valid message")
+        }
 
         // Dropping the WasmState drops the Channel Switchboard stopping the extension.
         std::mem::drop(wasm_state);
@@ -1269,16 +1292,5 @@ mod tests {
             })
             .expect("No extension for channel handle.");
         uwabi_extensions.remove(pos_of_extension)
-    }
-
-    // Helper function for testing to make an UWABI message human readable in code.
-    fn from_uwabi_message(uwabi_message: &UwabiMessage) -> String {
-        String::from_utf8(uwabi_message.clone())
-            .expect("Failed to convert UWABI message to String.")
-    }
-
-    // Helper function for testing to make an UWABI message from a human readable format in code.
-    fn to_uwabi_message(text: &str) -> UwabiMessage {
-        text.as_bytes().to_vec()
     }
 }
