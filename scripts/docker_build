@@ -3,6 +3,11 @@ readonly SCRIPTS_DIR="$(dirname "$0")"
 # shellcheck source=scripts/common
 source "${SCRIPTS_DIR}/common"
 
+# Enable BuildKit for improved performance and storage management.
+#
+# See https://docs.docker.com/develop/develop-images/build_enhancements/.
+export DOCKER_BUILDKIT=1
+
 docker build \
   --cache-from="${DOCKER_IMAGE_NAME}" \
   --tag="${DOCKER_IMAGE_NAME}" \
