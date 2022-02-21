@@ -168,7 +168,7 @@ pub trait UwabiExtension: Sync + Send {
     /// Get the endpoint.
     // TODO(#2508): Stop exposing the endpoint for an extension as soon as we have a way the
     // extension handles how it reads/writes into the endpoint.
-    fn get_endpoint_mut(&mut self) -> Option<&mut Endpoint>;
+    fn get_endpoint_mut(&mut self) -> &mut Endpoint;
 
     /// Set the endpoint if it has not been set before.
     // TODO(#2510) We cannot set the endpoint when we `create` the extension, as this would require
@@ -974,10 +974,10 @@ mod tests {
             ChannelHandle::Testing
         }
 
-        fn get_endpoint_mut(&mut self) -> Option<&mut Endpoint> {
+        fn get_endpoint_mut(&mut self) -> &mut Endpoint {
             match &mut self.endpoint {
-                Some(endpoint) => Some(endpoint),
-                None => None,
+                Some(endpoint) => endpoint,
+                None => panic!("No endpoint set for extension"),
             }
         }
 
@@ -988,7 +988,7 @@ mod tests {
         }
 
         async fn run(mut self: Box<Self>) {
-            let endpoint = self.get_endpoint_mut().unwrap();
+            let endpoint = self.get_endpoint_mut();
             let receiver = &mut endpoint.receiver;
             let sender = &mut endpoint.sender;
 
@@ -1255,9 +1255,7 @@ mod tests {
         uwabi_extension: &mut Box<dyn UwabiExtension>,
         message: UwabiMessage,
     ) {
-        let endpoint = uwabi_extension
-            .get_endpoint_mut()
-            .expect("No endpoint set for extension.");
+        let endpoint = uwabi_extension.get_endpoint_mut();
         let result = endpoint.sender.send(message.to_vec().clone()).await;
         assert!(result.is_ok());
     }
