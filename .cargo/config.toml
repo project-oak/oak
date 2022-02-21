@@ -27,5 +27,7 @@ rustflags = ["-C", "target-feature=+crt-static", "-C", "link-arg=-lgcc"]
 [http]
 multiplexing = false
 
+# A cargo environment variable holding the root directory of our repo.
+# We can use WORK_SPACE instead of `std::env::current_dir()` to navigate in the repo.
 [env]
-OAK_FUNCTIONS_WORKSPACE = { value = "oak_functions", relative = true }
+WORKSPACE_ROOT = { value = "", relative = true }
