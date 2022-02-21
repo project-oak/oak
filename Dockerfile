@@ -66,8 +66,8 @@ RUN echo 'deb http://deb.debian.org/debian buster-backports main' > /etc/apt/sou
   && ln --symbolic --force clang-format-8 /usr/bin/clang-format
 
 # Use a fixed version of Bazel.
-ARG bazel_version=5.0.0
-ARG bazel_sha256=e3361645ccd731abc424bb3a322d8e6f513b7258f5ca11ff04d6067aff5d09b1
+ARG bazel_version=4.2.0
+ARG bazel_sha256=89b14fa0d9ce5637f4e0b66df56a531e1e3c50d88614311334d192531cf1e0fa
 ARG bazel_url=https://storage.googleapis.com/bazel-apt/pool/jdk1.8/b/bazel/bazel_${bazel_version}_amd64.deb
 RUN curl --location "${bazel_url}" > bazel.deb \
   && sha256sum --binary bazel.deb && echo "${bazel_sha256} *bazel.deb" | sha256sum --check \
