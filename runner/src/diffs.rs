@@ -58,7 +58,7 @@ pub fn modified_files(scope: &Scope) -> ModifiedContent {
         Scope::DiffToMain => Some("main".to_owned()),
     };
 
-    let files = args.map(|args| {
+    let files: Option<Vec<String>> = args.map(|args| {
         let vec = Command::new("git")
             .args(spread!["diff".to_owned(), "--name-only".to_owned(), args,])
             .output()
@@ -72,6 +72,15 @@ pub fn modified_files(scope: &Scope) -> ModifiedContent {
             .map(|s| format!("./{}", s))
             .collect()
     });
+
+    // If something is changed in a Dockerfile, we'd want to run all CI steps, so set `files` to
+    // `None` in `ModifiedContent`.
+    if let Some(ref paths) = files {
+        if paths.iter().any(|path| path.contains("Dockerfile")) {
+            return ModifiedContent { files: None };
+        }
+    }
+
     ModifiedContent { files }
 }
 
