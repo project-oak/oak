@@ -1,3 +1,5 @@
+cargo-features = ["per-package-target"]
+
 [package]
 name = "key_value_lookup"
 version = "0.1.0"
