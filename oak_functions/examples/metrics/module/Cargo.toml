@@ -6,7 +6,7 @@ version = "0.1.0"
 authors = ["Conrad Grobler <grobler@google.com>"]
 edition = "2021"
 license = "Apache-2.0"
-default-target = "wasm32-unknown-unknown"
+forced-target = "wasm32-unknown-unknown"
 
 [lib]
 crate-type = ["cdylib", "rlib"]
