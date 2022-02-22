@@ -1,5 +1,3 @@
-cargo-features = ["per-package-target"]
-
 [package]
 name = "weather_lookup"
 version = "0.1.0"

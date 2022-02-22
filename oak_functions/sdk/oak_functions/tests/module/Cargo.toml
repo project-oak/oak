@@ -1,5 +1,3 @@
-cargo-features = ["per-package-target"]
-
 [package]
 name = "oak_functions_sdk_abi_test"
 version = "0.1.0"
