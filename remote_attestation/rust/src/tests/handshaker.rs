@@ -33,7 +33,7 @@ fn create_handshakers() -> (ClientHandshaker, ServerHandshaker) {
             .unwrap();
     let client_handshaker = ClientHandshaker::new(
         bidirectional_attestation,
-        Box::new(|server_identity| {
+        alloc::boxed::Box::new(|server_identity| {
             if !server_identity.additional_info.is_empty() {
                 Ok(())
             } else {
@@ -113,7 +113,7 @@ fn test_handshake() {
 #[test]
 fn test_invalid_message_after_initialization() {
     let (mut client_handshaker, mut server_handshaker) = create_handshakers();
-    let invalid_message = vec![INVALID_MESSAGE_HEADER];
+    let invalid_message = alloc::vec![INVALID_MESSAGE_HEADER];
 
     let result = client_handshaker.next_step(&invalid_message);
     assert_matches!(result, Err(_));
@@ -129,7 +129,7 @@ fn test_invalid_message_after_initialization() {
 #[test]
 fn test_invalid_message_after_hello() {
     let (mut client_handshaker, mut server_handshaker) = create_handshakers();
-    let invalid_message = vec![INVALID_MESSAGE_HEADER];
+    let invalid_message = alloc::vec![INVALID_MESSAGE_HEADER];
 
     let client_hello = client_handshaker.create_client_hello().unwrap();
     let result = client_handshaker.next_step(&invalid_message);
@@ -148,7 +148,7 @@ fn test_invalid_message_after_hello() {
 #[test]
 fn test_invalid_message_after_identities() {
     let (mut client_handshaker, mut server_handshaker) = create_handshakers();
-    let invalid_message = vec![INVALID_MESSAGE_HEADER];
+    let invalid_message = alloc::vec![INVALID_MESSAGE_HEADER];
 
     let client_hello = client_handshaker.create_client_hello().unwrap();
     let server_identity = server_handshaker.next_step(&client_hello).unwrap().unwrap();

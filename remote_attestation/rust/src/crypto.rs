@@ -20,16 +20,17 @@
 // protocol.
 
 use crate::message::EncryptedData;
+use alloc::vec::Vec;
 use anyhow::{anyhow, Context};
+use core::convert::TryInto;
 use ring::{
     aead::{self, BoundKey},
     agreement,
+    digest::{digest, SHA256},
     hkdf::{Salt, HKDF_SHA256},
     rand::{SecureRandom, SystemRandom},
     signature::{EcdsaKeyPair, EcdsaSigningAlgorithm, EcdsaVerificationAlgorithm, KeyPair},
 };
-use sha2::{digest::Digest, Sha256};
-use std::convert::TryInto;
 
 /// Length of the encryption nonce.
 /// `ring::aead` uses 96-bit (12-byte) nonces.
@@ -193,7 +194,7 @@ impl KeyNegotiator {
             .map_err(|error| anyhow!("Couldn't get public key: {:?}", error))?
             .as_ref()
             .to_vec();
-        public_key.as_slice().try_into().context(format!(
+        public_key.as_slice().try_into().context(alloc::format!(
             "Incorrect public key length, expected {}, found {}",
             KEY_AGREEMENT_ALGORITHM_KEY_LENGTH,
             public_key.len()
@@ -234,7 +235,7 @@ impl KeyNegotiator {
             &agreement::UnparsedPublicKey::new(KEY_AGREEMENT_ALGORITHM, peer_public_key),
             anyhow!("Couldn't derive session keys"),
             |key_material| {
-                let key_material = key_material.try_into().context(format!(
+                let key_material = key_material.try_into().context(alloc::format!(
                     "Incorrect key material length, expected {}, found {}",
                     KEY_AGREEMENT_ALGORITHM_KEY_LENGTH,
                     key_material.len()
@@ -298,7 +299,7 @@ impl KeyNegotiator {
         client_public_key: &[u8; KEY_AGREEMENT_ALGORITHM_KEY_LENGTH],
     ) -> anyhow::Result<[u8; AEAD_ALGORITHM_KEY_LENGTH]> {
         // Session key is derived from a purpose string and two public keys.
-        let info = vec![key_purpose.as_bytes(), server_public_key, client_public_key];
+        let info = alloc::vec![key_purpose.as_bytes(), server_public_key, client_public_key];
 
         // Initialize key derivation function.
         let salt = Salt::new(HKDF_SHA256, KEY_DERIVATION_SALT.as_bytes());
@@ -339,6 +340,7 @@ pub struct Signer {
 
 impl Signer {
     pub fn create() -> anyhow::Result<Self> {
+        // TODO(#2557): Ensure SystemRandom work when building for x86_64 UEFI targets.
         let rng = ring::rand::SystemRandom::new();
         let key_pair_pkcs8 = EcdsaKeyPair::generate_pkcs8(SIGNING_ALGORITHM, &rng)
             .map_err(|error| anyhow!("Couldn't generate PKCS#8 key pair: {:?}", error))?;
@@ -350,7 +352,7 @@ impl Signer {
 
     pub fn public_key(&self) -> anyhow::Result<[u8; SIGNING_ALGORITHM_KEY_LENGTH]> {
         let public_key = self.key_pair.public_key().as_ref().to_vec();
-        public_key.as_slice().try_into().context(format!(
+        public_key.as_slice().try_into().context(alloc::format!(
             "Incorrect public key length, expected {}, found {}",
             SIGNING_ALGORITHM_KEY_LENGTH,
             public_key.len()
@@ -365,7 +367,7 @@ impl Signer {
             .map_err(|error| anyhow!("Couldn't sign input: {:?}", error))?
             .as_ref()
             .to_vec();
-        signature.as_slice().try_into().context(format!(
+        signature.as_slice().try_into().context(alloc::format!(
             "Incorrect signature length, expected {}, found {}",
             SIGNATURE_LENGTH,
             signature.len()
@@ -397,11 +399,8 @@ impl SignatureVerifier {
 
 /// Computes a SHA-256 digest of `input` and returns it in a form of raw bytes.
 pub fn get_sha256(input: &[u8]) -> [u8; SHA256_HASH_LENGTH] {
-    let mut hasher = Sha256::new();
-    hasher.update(&input);
-    hasher
-        .finalize()
-        .as_slice()
+    digest(&SHA256, input)
+        .as_ref()
         .try_into()
         .expect("Incorrect SHA-256 hash length")
 }

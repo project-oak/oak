@@ -14,11 +14,10 @@
 // limitations under the License.
 //
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+fn main() {
     prost_build::compile_protos(
         &["remote_attestation/proto/remote_attestation.proto"],
         &["../.."],
     )
     .expect("Proto compilation failed");
-    Ok(())
 }

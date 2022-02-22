@@ -25,6 +25,7 @@ use crate::{
         MAXIMUM_MESSAGE_SIZE, REPLAY_PROTECTION_ARRAY_LENGTH, SERVER_IDENTITY_HEADER,
     },
 };
+use alloc::vec::Vec;
 use anyhow::{anyhow, Context};
 use assert_matches::assert_matches;
 use quickcheck::{quickcheck, TestResult};
@@ -35,7 +36,7 @@ const INVALID_PROTOCOL_VERSION: u8 = 2;
 /// Creates a zero initialized array.
 fn default_array<T, const L: usize>() -> [T; L]
 where
-    T: std::marker::Copy + std::default::Default,
+    T: core::marker::Copy + core::default::Default,
 {
     [Default::default(); L]
 }
@@ -43,11 +44,11 @@ where
 /// Converts slices to arrays (expands with zeroes).
 fn to_array<T, const L: usize>(input: &[T]) -> anyhow::Result<[T; L]>
 where
-    T: std::marker::Copy + std::default::Default,
+    T: core::marker::Copy + core::default::Default,
 {
     if input.len() <= L {
         // `Default` is only implemented for a limited number of array sizes.
-        // https://doc.rust-lang.org/std/primitive.array.html#impl-Default
+        // https://doc.rust-lang.org/core/primitive.array.html#impl-Default
         let mut result: [T; L] = default_array();
         result[..input.len()].copy_from_slice(&input[..input.len()]);
         Ok(result)
@@ -200,8 +201,8 @@ fn test_deserialize_message() {
         default_array(),
         default_array(),
         default_array(),
-        vec![],
-        vec![],
+        alloc::vec![],
+        alloc::vec![],
     );
     let deserialized_server_identity = deserialize_message(&server_identity.serialize().unwrap());
     assert_matches!(deserialized_server_identity, Ok(_));
@@ -210,7 +211,7 @@ fn test_deserialize_message() {
         MessageWrapper::ServerIdentity(server_identity)
     );
 
-    let client_identity = ClientIdentity::new(default_array(), default_array(), vec![]);
+    let client_identity = ClientIdentity::new(default_array(), default_array(), alloc::vec![]);
     let deserialized_client_identity = deserialize_message(&client_identity.serialize().unwrap());
     assert_matches!(deserialized_client_identity, Ok(_));
     assert_eq!(
@@ -218,7 +219,7 @@ fn test_deserialize_message() {
         MessageWrapper::ClientIdentity(client_identity)
     );
 
-    let encrypted_data = EncryptedData::new(default_array(), vec![]);
+    let encrypted_data = EncryptedData::new(default_array(), alloc::vec![]);
     let deserialized_encrypted_data = deserialize_message(&encrypted_data.serialize().unwrap());
     assert_matches!(deserialized_encrypted_data, Ok(_));
     assert_eq!(
@@ -226,7 +227,7 @@ fn test_deserialize_message() {
         MessageWrapper::EncryptedData(encrypted_data)
     );
 
-    let invalid_message = vec![INVALID_MESSAGE_HEADER];
+    let invalid_message = alloc::vec![INVALID_MESSAGE_HEADER];
     let deserialized_invalid_message = deserialize_message(&invalid_message);
     assert_matches!(deserialized_invalid_message, Err(_));
 
@@ -248,7 +249,7 @@ fn test_deserialize_message() {
     assert_matches!(deserialized_big_client_identity, Err(_));
 
     let big_encrypted_data =
-        EncryptedData::new([0; NONCE_LENGTH], vec![0; MAXIMUM_MESSAGE_SIZE + 1])
+        EncryptedData::new([0; NONCE_LENGTH], alloc::vec![0; MAXIMUM_MESSAGE_SIZE + 1])
             .serialize()
             .unwrap();
     let deserialized_big_encrypted_data = deserialize_message(&big_encrypted_data);

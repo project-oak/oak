@@ -13,6 +13,7 @@ oak_remote_attestation = { path = "../remote_attestation/rust/" }
 oak_functions_abi = { path = "../oak_functions/abi/" }
 prost = "*"
 prost-types = "*"
+serde = { version = "*", features = ["derive"] }
 tokio = { version = "*", features = [
   "fs",
   "macros",

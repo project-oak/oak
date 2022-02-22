@@ -14,6 +14,10 @@
 // limitations under the License.
 //
 
+#![cfg_attr(not(feature = "std"), no_std)]
+
+extern crate alloc;
+
 pub mod proto {
     #![allow(clippy::return_self_not_must_use)]
     include!(concat!(env!("OUT_DIR"), "/oak.remote_attestation.rs"));

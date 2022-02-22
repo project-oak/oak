@@ -23,7 +23,7 @@ impl AttestationReport {
     /// Placeholder function for collecting TEE measurement of remotely attested TEEs.
     pub fn new(data: &[u8]) -> Self {
         Self {
-            measurement: TEST_TEE_MEASUREMENT.to_string().as_bytes().to_vec(),
+            measurement: TEST_TEE_MEASUREMENT.as_bytes().to_vec(),
             data: data.to_vec(),
             ..Default::default()
         }

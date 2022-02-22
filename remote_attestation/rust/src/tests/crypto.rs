@@ -23,6 +23,7 @@ use crate::{
     },
     message::EncryptedData,
 };
+use alloc::vec::Vec;
 use quickcheck_macros::quickcheck;
 
 // Keys are only used for test purposes.
