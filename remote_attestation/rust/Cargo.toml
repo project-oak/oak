@@ -14,7 +14,6 @@ ring = "*"
 serde = { version = "*", features = ["derive"] }
 serde-big-array = { version = "*", features = ["const-generics"] }
 sha2 = "*"
-tonic = { version = "*", features = ["tls"] }
 
 [build-dependencies]
 prost-build = "*"

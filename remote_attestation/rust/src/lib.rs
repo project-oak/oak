@@ -16,7 +16,7 @@
 
 pub mod proto {
     #![allow(clippy::return_self_not_must_use)]
-    tonic::include_proto!("oak.remote_attestation");
+    include!(concat!(env!("OUT_DIR"), "/oak.remote_attestation.rs"));
 }
 
 pub mod crypto;
