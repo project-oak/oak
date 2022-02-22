@@ -26,3 +26,8 @@ rustflags = ["-C", "target-feature=+crt-static", "-C", "link-arg=-lgcc"]
 # See also https://doc.rust-lang.org/cargo/reference/config.html#httpmultiplexing
 [http]
 multiplexing = false
+
+# A cargo environment variable holding the root directory of our repo.
+# We can use WORKSPACE_ROOT instead of `std::env::current_dir()` to navigate in the repo.
+[env]
+WORKSPACE_ROOT = { value = "", relative = true }
