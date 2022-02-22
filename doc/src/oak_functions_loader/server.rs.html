@@ -1296,8 +1296,6 @@
 <span id="1291">1291</span>
 <span id="1292">1292</span>
 <span id="1293">1293</span>
-<span id="1294">1294</span>
-<span id="1295">1295</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2021 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -1468,7 +1466,7 @@
     <span class="doccomment">/// Get the endpoint.</span>
     <span class="comment">// TODO(#2508): Stop exposing the endpoint for an extension as soon as we have a way the</span>
     <span class="comment">// extension handles how it reads/writes into the endpoint.</span>
-    <span class="kw">fn</span> <span class="ident">get_endpoint_mut</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;mut</span> <span class="ident">Endpoint</span><span class="op">&gt;</span>;
+    <span class="kw">fn</span> <span class="ident">get_endpoint_mut</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut</span> <span class="ident">Endpoint</span>;
 
     <span class="doccomment">/// Set the endpoint if it has not been set before.</span>
     <span class="comment">// TODO(#2510) We cannot set the endpoint when we `create` the extension, as this would require</span>
@@ -2274,10 +2272,10 @@
             <span class="ident">ChannelHandle::Testing</span>
         }
 
-        <span class="kw">fn</span> <span class="ident">get_endpoint_mut</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;mut</span> <span class="ident">Endpoint</span><span class="op">&gt;</span> {
+        <span class="kw">fn</span> <span class="ident">get_endpoint_mut</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut</span> <span class="ident">Endpoint</span> {
             <span class="kw">match</span> <span class="kw-2">&amp;mut</span> <span class="self">self</span>.<span class="ident">endpoint</span> {
-                <span class="prelude-val">Some</span>(<span class="ident">endpoint</span>) =&gt; <span class="prelude-val">Some</span>(<span class="ident">endpoint</span>),
-                <span class="prelude-val">None</span> =&gt; <span class="prelude-val">None</span>,
+                <span class="prelude-val">Some</span>(<span class="ident">endpoint</span>) =&gt; <span class="ident">endpoint</span>,
+                <span class="prelude-val">None</span> =&gt; <span class="macro">panic!</span>(<span class="string">&quot;No endpoint set for extension&quot;</span>),
             }
         }
 
@@ -2288,7 +2286,7 @@
         }
 
         <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">run</span>(<span class="kw-2">mut</span> <span class="self">self</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span>) {
-            <span class="kw">let</span> <span class="ident">endpoint</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">get_endpoint_mut</span>().<span class="ident">unwrap</span>();
+            <span class="kw">let</span> <span class="ident">endpoint</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">get_endpoint_mut</span>();
             <span class="kw">let</span> <span class="ident">receiver</span> <span class="op">=</span> <span class="kw-2">&amp;mut</span> <span class="ident">endpoint</span>.<span class="ident">receiver</span>;
             <span class="kw">let</span> <span class="ident">sender</span> <span class="op">=</span> <span class="kw-2">&amp;mut</span> <span class="ident">endpoint</span>.<span class="ident">sender</span>;
 
@@ -2555,9 +2553,7 @@
         <span class="ident">uwabi_extension</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">UwabiExtension</span><span class="op">&gt;</span>,
         <span class="ident">message</span>: <span class="ident">UwabiMessage</span>,
     ) {
-        <span class="kw">let</span> <span class="ident">endpoint</span> <span class="op">=</span> <span class="ident">uwabi_extension</span>
-            .<span class="ident">get_endpoint_mut</span>()
-            .<span class="ident">expect</span>(<span class="string">&quot;No endpoint set for extension.&quot;</span>);
+        <span class="kw">let</span> <span class="ident">endpoint</span> <span class="op">=</span> <span class="ident">uwabi_extension</span>.<span class="ident">get_endpoint_mut</span>();
         <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="ident">endpoint</span>.<span class="ident">sender</span>.<span class="ident">send</span>(<span class="ident">message</span>.<span class="ident">to_vec</span>().<span class="ident">clone</span>()).<span class="kw">await</span>;
         <span class="macro">assert!</span>(<span class="ident">result</span>.<span class="ident">is_ok</span>());
     }
