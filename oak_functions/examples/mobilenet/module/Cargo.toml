@@ -1,12 +1,17 @@
+cargo-features = ["per-package-target"]
+
 [package]
 name = "mobilenet"
 version = "0.1.0"
 authors = ["Razieh Behjati <razieh@google.com>"]
 edition = "2021"
 license = "Apache-2.0"
+forced-target = "wasm32-unknown-unknown"
 
 [lib]
 crate-type = ["cdylib", "rlib"]
+# We cannot execute tests with the forced-target wasm32-unknown-unknown.
+test = false
 
 [dependencies]
 anyhow = "*"
