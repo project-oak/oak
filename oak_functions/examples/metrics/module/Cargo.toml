@@ -10,6 +10,8 @@ forced-target = "wasm32-unknown-unknown"
 
 [lib]
 crate-type = ["cdylib", "rlib"]
+# We cannot execute tests with the forced-target wasm32-unknown-unknown.
+test = false
 
 [dependencies]
 oak_functions = { path = "../../../sdk/oak_functions", features = [
