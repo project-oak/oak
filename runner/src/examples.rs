@@ -396,7 +396,6 @@ pub fn build_wasm_module(name: &str, target: &Target, example_name: &str) -> Ste
                 command: Cmd::new(
                     "cargo",
                     // Keep this in sync with `/oak_functions/sdk/test/utils/src/lib.rs`.
-                    // Keep this in sync with `/sdk/rust/oak_tests/src/lib.rs`.
                     spread![
                         // `--out-dir` is unstable and requires `-Zunstable-options`.
                         "-Zunstable-options".to_string(),

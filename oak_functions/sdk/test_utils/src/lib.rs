@@ -56,7 +56,6 @@ pub fn compile_rust_wasm(manifest_path: &str, release: bool) -> anyhow::Result<V
         .exec()
         .unwrap();
     // Keep this in sync with `/runner/src/main.rs`.
-    // Keep this in sync with `/sdk/rust/oak_tests/src/lib.rs`.
     let mut args = vec![
         // `--out-dir` is unstable and requires `-Zunstable-options`.
         "-Zunstable-options".to_string(),
