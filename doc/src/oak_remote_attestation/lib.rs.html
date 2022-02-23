@@ -48,7 +48,7 @@
 
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">proto</span> {
     <span class="attribute">#![<span class="ident">allow</span>(<span class="ident">clippy::return_self_not_must_use</span>)]</span>
-    <span class="macro">tonic::include_proto!</span>(<span class="string">&quot;oak.remote_attestation&quot;</span>);
+    <span class="macro">include!</span>(<span class="macro">concat!</span>(<span class="macro">env!</span>(<span class="string">&quot;OUT_DIR&quot;</span>), <span class="string">&quot;/oak.remote_attestation.rs&quot;</span>));
 }
 
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">crypto</span>;
