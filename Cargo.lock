@@ -2030,7 +2030,6 @@ dependencies = [
  "serde",
  "serde-big-array",
  "sha2 0.10.1",
- "tonic",
 ]
 
 [[package]]
