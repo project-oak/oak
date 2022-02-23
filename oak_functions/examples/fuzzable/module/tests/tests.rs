@@ -13,6 +13,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+extern crate fuzzable;
+
+pub mod proto {
+    include!(concat!(env!("OUT_DIR"), "/loader.fuzz.instructions.rs"));
+}
+
 use crate::proto::{
     instruction::InstructionVariant, Instruction, Instructions, Panic, WriteResponse,
 };

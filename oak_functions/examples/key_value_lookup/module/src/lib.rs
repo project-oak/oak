@@ -15,14 +15,6 @@
 //
 
 //! Oak Functions key / value lookup example.
-
-#![feature(try_blocks)]
-// Required for enabling benchmark tests.
-#![feature(test)]
-
-#[cfg(test)]
-mod tests;
-
 #[cfg_attr(not(test), no_mangle)]
 pub extern "C" fn main() {
     let request = oak_functions::read_request().expect("Couldn't read request body.");

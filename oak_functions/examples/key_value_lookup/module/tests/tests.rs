@@ -13,6 +13,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Required for enabling benchmark tests.
+#![feature(test)]
+
+extern crate key_value_lookup;
 extern crate test;
 
 use maplit::hashmap;

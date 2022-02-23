@@ -25,9 +25,6 @@ use crate::proto::{
 };
 use prost::Message;
 
-#[cfg(test)]
-mod tests;
-
 #[cfg_attr(not(test), no_mangle)]
 pub extern "C" fn main() {
     let request = oak_functions::read_request().expect("Couldn't read request body.");
