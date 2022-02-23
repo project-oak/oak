@@ -7,10 +7,9 @@
 - [Runner](#runner)
 - [Run Example Application](#run-example-application)
   - [Build Application](#build-application)
-  - [Build Runtime Server](#build-runtime-server)
-  - [Run Runtime Server](#run-runtime-server)
+  - [Build Oak Functions Server](#build-oak-functions-server)
+  - [Run Oak Functions Server](#run-oak-functions-server)
   - [Run Example Client](#run-example-client)
-  - [Signing Oak Wasm modules](#signing-oak-wasm-modules)
 - [Fuzz testing](#fuzz-testing)
 
 ## Quick Start
@@ -20,30 +19,35 @@ To build and run one of the Oak example applications under Docker, run (after
 
 ```bash
 ./scripts/docker_pull  # retrieve cached Docker image for faster builds
-./scripts/docker_run ./scripts/runner --logs run-examples --example-name=hello_world
+./scripts/docker_run runner --logs --scope=all run-functions-examples --example-name=weather_lookup --client-variant=rust
 ```
 
-This should build the Runtime, an Oak Application and a client for the
+This should build the Runtime, an Oak Functions Application and a client for the
 Application, then run them all, with log output ending something like the
 following:
 
 ```log
-[2020-07-24T10:52:39Z INFO  oak_runtime::runtime] stopping node NodeId(2)...done
-[2020-07-24T10:52:39Z INFO  oak_loader] Runtime stopped
-[2020-07-24T10:52:39Z INFO  oak_runtime::runtime] stopping runtime instance
-[2020-07-24T10:52:39Z INFO  oak_runtime::runtime] Runtime instance dropped
- ❯ examples ❯ hello_world ❯ run ❯ background server ⊢ (finished) OK
- ❯ examples ❯ hello_world ❯ run } ⊢ [OK] [34s]
- ❯ examples ❯ hello_world } ⊢ [OK] [143s]
- ❯ examples } ⊢ [OK] [143s]
+[21:03:26; E:0,O:0,R:1]: oak-functions examples ❯ weather_lookup ❯ run ❯ background server ❯ run clients ❯ rust ❯ build ⊢    Compiling oak_functions_client v0.1.0 (/workspace/oak_functions/client/rust)
+    Finished release [optimized] target(s) in 15.22sk_functions_client(bin)
+OK [15s]
+[21:03:42; E:0,O:0,R:1]: oak-functions examples ❯ weather_lookup ❯ run ❯ background server ❯ run clients ❯ rust ❯ run ⊢     Finished release [optimized] target(s) in 0.12s
+     Running `target/x86_64-unknown-linux-gnu/release/oak_functions_client '--uri=http://localhost:8080' '--request={"lat":0,"lng":0}' '--expected-response-pattern=\{"temperature_degrees_celsius":.*\}'`
+{"temperature_degrees_celsius":29}
+OK [1s]
+[21:03:26; E:0,O:0,R:1]: oak-functions examples ❯ weather_lookup ❯ run ❯ background server ❯ run clients ❯ rust } ⊢ [OK] [17s]
+[21:03:26; E:0,O:0,R:1]: oak-functions examples ❯ weather_lookup ❯ run ❯ background server ❯ run clients } ⊢ [OK] [17s]
+[21:03:20; E:0,O:0,R:1]: oak-functions examples ❯ weather_lookup ❯ run ❯ background server ⊢ (waiting)
+[21:03:20; E:0,O:0,R:1]: oak-functions examples ❯ weather_lookup ❯ run ❯ background server ⊢ (finished) OK
+[21:03:20; E:0,O:0,R:1]: oak-functions examples ❯ weather_lookup ❯ run } ⊢ [OK] [25s]
+[21:03:20; E:0,O:0,R:1]: oak-functions examples ❯ weather_lookup } ⊢ [OK] [25s]
+[21:03:20; E:0,O:1,R:0]: oak-functions examples } ⊢ [OK] [25s]
 ```
 
 Note: `./scripts/docker_pull` and `./scripts/docker_run` will need `sudo` if not
 [configured otherwise](https://docs.docker.com/engine/install/linux-postinstall/).
 
 The remainder of this document explores what's going on under the covers here,
-allowing individual stages to be built and run independently, and allowing
-builds that don't have to rely on a Docker environment.
+allowing individual stages to be built and run independently.
 
 ## VS Code Dev Container
 
@@ -57,7 +61,6 @@ you haven't already:
 
 ```bash
 ./scripts/docker_pull
-./scripts/docker_build
 ```
 
 Then from VS Code click on the Remote-Containers button in the bottom left
@@ -76,7 +79,7 @@ in which case allow that by clicking on "Download now" in the notification.
 To test that things work correctly, open a Rust file, start typing `std::`
 somewhere, and autocomplete results should start showing up. Note that it may
 take a while for the `rust-analyzer` extension to go through all the local code
-and build its index. Alternatively, try `./scripts/runner run-tests`.
+and build its index. Alternatively, try `runner run-tests`.
 
 On Linux you might have to
 [post-installation steps for Linux](https://docs.docker.com/engine/install/linux-postinstall/)
@@ -111,69 +114,18 @@ using the following wrapper scripts:
 
 If you want to work on the project without using Docker, you should synchronize
 your installed versions of all the tools described in the next section with the
-versions installed in the [`Dockerfile`](/Dockerfile).
-
-## Prerequisites
-
-The key prerequisites for the project are:
-
-- **Rust**: The [Rust toolchain](https://www.rust-lang.org/tools/install) and
-  ancillary tools are required for building the project's source. Note that we
-  also [require](https://github.com/project-oak/oak/issues/969) a nightly build
-  of Rust; check the [`Dockerfile`](/Dockerfile) for the specific version.
-  - Follow install instructions from https://rustup.rs/, roughly:
-    - `curl https://sh.rustup.rs -sSf > /tmp/rustup`
-    - `less /tmp/rustup` (inspect downloaded script before running it)
-    - `sh /tmp/rustup` (follow on-screen instructions -- option 1 is fine to
-      start with)
-    - add `source $HOME/.cargo/env` to your shell init script (e.g. `.bashrc` or
-      `.zshrc`)
-  - Add the WebAssembly target to add support for producing WebAssembly binaries
-    (see
-    [Rust Platform Support](https://forge.rust-lang.org/release/platform-support.html)):
-    `rustup target add wasm32-unknown-unknown`
-  - Install additional tools (e.g. `rustfmt` and `clippy`) as indicated by the
-    [`Dockerfile`](/Dockerfile) contents.
-- **Support for [musl](https://musl.libc.org/)** (on Linux): The
-  [Oak Runtime](/docs/concepts.md#oak-runtime) is built as a
-  [fully static binary](https://doc.rust-lang.org/edition-guide/rust-2018/platform-and-target-support/musl-support-for-fully-static-binaries.html),
-  on Linux, which requires:
-  - the Rust `x86_64-unknown-linux-musl` target
-    (`rustup target add x86_64-unknown-linux-musl`)
-  - the [musl-tools](https://packages.debian.org/search?keywords=musl-tools)
-    package to be installed.
-- **Bazel**: The [Bazel build system](https://bazel.build) is used for building
-  C++ code and managing its dependencies. These dependencies are listed in the
-  top-level [`WORKSPACE`](/WORKSPACE) file; see the
-  [Bazel docs](https://docs.bazel.build/versions/master/external.html) for more
-  information. Follow the
-  [Bazel install instructions](https://docs.bazel.build/versions/master/install.html).
-- **Protocol Buffers**: Install the appropriate version of the protobuf compiler
-  from the
-  [releases page](https://github.com/protocolbuffers/protobuf/releases).
-
-These prerequisites cover what's needed to build the core codebase, and to run
-the top-level build scripts described in the sections below.
-
-A full development environment for the project also includes various extra
-tools, for example for linting and synchronizing documentation. As ever, the
-[`Dockerfile`](/Dockerfile) holds the details, but the scripts under
-[`scripts/`](/scripts) also indicate what's needed for different steps.
+versions installed in the [`Dockerfile`](/Dockerfile). This path is not
+recommended, since it requires a lot of effort to manually install all the tool
+natively on your machine and keeping them up to date to the exact same version
+specified in Docker.
 
 ## Runner
 
 `runner` is a utility binary to perform a number of common tasks within the Oak
 repository. It can be run by invoking `./scripts/runner` from the root of the
-repository, and it has a number of flags and sub-commands available, which
-should be self-explanatory.
-
-For convenience, the following commands install a `runner` alias and bash
-autocompletion:
-
-```bash
-alias runner=./scripts/runner
-source <(runner completion)
-```
+repository, or also directly `runner`, and it has a number of flags and
+sub-commands available, which should be self-explanatory, and it also supports
+flag autocompletion when invoked from inside a Docker shell.
 
 For commands that use `cargo`, by default the `runner` runs the command only for
 the modified files and the crates affected by those changes. Use `--scope=all`
@@ -185,26 +137,19 @@ Running one of the example Oak applications will confirm that all core
 prerequisites have been installed. Run one inside Docker with:
 
 ```bash
-./scripts/docker_run ./scripts/runner run-examples --example-name=hello_world
-```
-
-or, if all prerequisites are available on the local system, outside of Docker:
-
-```bash
-./scripts/runner run-examples --example-name=hello_world
+runner --logs --scope=all run-functions-examples --example-name=weather_lookup --client-variant=rust
 ```
 
 That script:
 
-- builds the Oak Runtime (a combination of C++ and Rust, built to run on the
-  host system)
+- builds the Oak Functions Runtime (in Rust, built to run on the host system)
 - builds a particular example, including both:
   - the Oak Application itself (Rust code that is compiled to a WebAssembly
     binary)
-  - an external client (C++ code built to run on the host system)
+  - an external client (Rust code built to run on the host system)
 - starts the Runtime as a background process, passing it the compiled
-  WebAssembly for the Oak Application (which it then runs in a WebAssembly
-  engine)
+  WebAssembly for the Oak Functins Application (which it then runs in a
+  WebAssembly engine)
 - runs the external client for the Application
 - closes everything down.
 
@@ -215,52 +160,44 @@ where the problem is if something goes wrong.
 
 The following command compiles the code for an example Oak Application from Rust
 to a WebAssembly module and then serializes it into a binary application
-configuration file to be loaded to the Oak Server:
+configuration file to be loaded to the Oak Functions Server:
 
 ```bash
-./scripts/runner run-examples --run-server=false --client-variant=none --example-name=hello_world
+runner --logs --scope=all run-functions-examples --example-name=weather_lookup --client-variant=none --run-server=false
 ```
 
 This binary application configuration file includes the compiled Wasm code for
-the Oak Application, embedded in a serialized protocol buffer that also includes
-the Application's configuration.
+the Oak Functions Application.
 
-The `scripts/build_example` script also builds (using Bazel) the corresponding
-client code for the Oak Application, to produce a binary that runs on the host
-system. Because the client talks to the Oak Application over gRPC, the client
-can be written in any language that supports gRPC; most of the example clients
-are written in C++, but there are clients in
-[Go](/examples/translator/client/go/translator.go) and
-[Rust](/examples/authentication/client/src/main.rs).
-
-### Build Runtime Server
+### Build Oak Functions Server
 
 The following command builds the Oak Functions Runtime server. An initial build
 will take some time, but subsequent builds should be cached and so run much
 faster.
 
 ```bash
-./scripts/runner build-functions-server
+runner build-functions-server
 ```
 
-### Run Runtime Server
+### Run Oak Functions Server
 
-The following command builds and runs an Oak Server instance, running a specific
-Oak Application (which must already have been compiled into WebAssembly and
-built into a serialized configuration, as [described above](#build-application).
+The following command builds and runs an Oak Functions Server instance, running
+a specific Oak Application (which must already have been compiled into
+WebAssembly, as [described above](#build-application).
 
 ```bash
-./scripts/runner run-examples --client-variant=none --example-name=hello_world
+runner --scope=all run-functions-examples --example-name=weather_lookup --client-variant=none
 ```
 
 In the end, you should end up with an Oak server running, end with log output
 something like:
 
 ```log
-2020-05-11 10:14:14,952 INFO  [sdk/rust/oak/src/lib.rs:460] starting event loop
-2020-05-11 10:14:14,952 DEBUG [oak_runtime::runtime] NodeId(2): wait_on_channels: channels not ready, parking thread Thread { id: ThreadId(4), name: Some("log.LogNode(2)") }
-2020-05-11 10:14:14,955 DEBUG [oak_runtime::node::wasm] hello_world.WasmNode-oak_main(1): wait_on_channels(1114152, 1)
-2020-05-11 10:14:14,955 DEBUG [oak_runtime::runtime] NodeId(1): wait_on_channels: channels not ready, parking thread Thread { id: ThreadId(3), name: Some("hello_world.WasmNode-oak_main(1)") }
+2022-02-23T21:14:39Z INFO - refreshing lookup data from HTTP: https://storage.googleapis.com/oak_lookup_data/lookup_data_weather_sparse_s2 with auth None
+2022-02-23T21:14:39Z INFO - fetched 8507683 bytes of lookup data in 626ms
+2022-02-23T21:14:40Z INFO - parsed 143548 entries of lookup data in 102ms
+2022-02-23T21:14:40Z DEBUG - lookup data write lock acquisition time: 709ns
+2022-02-23T21:14:40Z INFO - ThreadId(3): Starting gRPC server on [::]:8080
 ```
 
 ### Run Example Client
@@ -270,91 +207,24 @@ client of an example Oak Application (as [described above](#build-application)),
 and runs the client code locally.
 
 ```bash
-./scripts/runner --logs run-examples --run-server=false --example-name=hello_world
+runner --scope=all --logs run-functions-examples --example-name=weather_lookup --run-server=false --client-variant=rust
 ```
-
-The `-s none` option indicates that the script expects to find an
-already-running Oak Runtime (from the previous section), rather than launching
-an Oak Runtime instance of its own.
 
 The client should run to completion and give output something like:
 
 ```log
-I0511 10:15:29.539814 244858 hello_world.cc:66] Connecting to Oak Application: localhost:8080
-I0511 10:15:29.541366 244858 hello_world.cc:36] Request: WORLD
-I0511 10:15:29.558292 244858 hello_world.cc:43] Response: HELLO WORLD!
-I0511 10:15:29.558353 244858 hello_world.cc:36] Request: MONDO
-I0511 10:15:29.568802 244858 hello_world.cc:43] Response: HELLO MONDO!
-I0511 10:15:29.568862 244858 hello_world.cc:36] Request: 世界
-I0511 10:15:29.578845 244858 hello_world.cc:43] Response: HELLO 世界!
-I0511 10:15:29.578902 244858 hello_world.cc:36] Request: MONDE
-I0511 10:15:29.585346 244858 hello_world.cc:43] Response: HELLO MONDE!
-I0511 10:15:29.585389 244858 hello_world.cc:50] Request: WORLDS
-I0511 10:15:29.591434 244858 hello_world.cc:57] Response: HELLO WORLDS!
-I0511 10:15:29.593106 244858 hello_world.cc:57] Response: HELLO AGAIN WORLDS!
+[21:16:17; E:0,O:0,R:1]: oak-functions examples ❯ weather_lookup ❯ run ❯ run clients ❯ rust ❯ build ⊢     Finished release [optimized] target(s) in 0.11s
+OK [237ms]
+[21:16:17; E:0,O:0,R:1]: oak-functions examples ❯ weather_lookup ❯ run ❯ run clients ❯ rust ❯ run ⊢     Finished release [optimized] target(s) in 0.14s
+     Running `target/x86_64-unknown-linux-gnu/release/oak_functions_client '--uri=http://localhost:8080' '--request={"lat":0,"lng":0}' '--expected-response-pattern=\{"temperature_degrees_celsius":.*\}'`
+{"temperature_degrees_celsius":29}
+OK [1s]
+[21:16:17; E:0,O:0,R:1]: oak-functions examples ❯ weather_lookup ❯ run ❯ run clients ❯ rust } ⊢ [OK] [2s]
+[21:16:17; E:0,O:0,R:1]: oak-functions examples ❯ weather_lookup ❯ run ❯ run clients } ⊢ [OK] [2s]
+[21:16:17; E:0,O:0,R:1]: oak-functions examples ❯ weather_lookup ❯ run } ⊢ [OK] [2s]
+[21:16:17; E:0,O:0,R:1]: oak-functions examples ❯ weather_lookup } ⊢ [OK] [2s]
+[21:16:17; E:0,O:1,R:0]: oak-functions examples } ⊢ [OK] [2s]
 ```
-
-### Signing Oak Wasm modules
-
-As described in [Oak Concepts](/docs/concepts.md#labels) Oak Wasm modules can be
-signed using [Ed25519](https://ed25519.cr.yp.to/) scheme.
-
-If you are reviewing an Oak module (for example `private_set_intersection.wasm`)
-and want to create a signature for it, first you need a private/public key pair.
-It can be generated with `oak_sign` utility using the following script (that
-will generate two key files: `test.key` and `test.pub`)
-
-```bash
-./scripts/oak_sign generate \
-  --private-key=examples/keys/ed25519/test.key \
-  --public-key=examples/keys/ed25519/test.pub
-```
-
-Then a Wasm module can be signed using the following command:
-
-```bash
-./scripts/oak_sign sign \
-  --private-key=examples/keys/ed25519/test.key \
-  --input-file=examples/private_set_intersection/bin/private_set_intersection.wasm \
-  --signature-file=examples/private_set_intersection/bin/signature.sign
-```
-
-This command generates a signature file `signature.sign` containing a public
-key, a signature of the Wasm module SHA-256 hash (also encoded with PEM) and a
-Wasm module SHA-256 hash itself.
-
-Wasm module signatures are specified as part of the Oak application manifest.
-The application manifest can contain locations of signature manifest files. Each
-signature manifest file contains the locations of signature files for signed Oak
-Wasm modules. Also, since each module can be signed by multiple entities, each
-module may have multiple signatures.
-
-Assuming the application manifest file contains the following configuration:
-
-```toml
-signature_manifests = [
-  { path = "examples/private_set_intersection/signatures.toml" },
-]
-
-```
-
-The `signatures.toml` file can look like this:
-
-```toml
-signatures = [
-  { path = "examples/private_set_intersection/signature.sign" },
-  { path = "examples/private_set_intersection/additional_signature.sign" },
-]
-
-```
-
-Where `signature.sign` and `additional_signature.sign` are signatures that could
-be provided by different reviewers.
-
-Oak clients can download the `test.pub` public key (from the reviewer's public
-repository) and use it as a
-[label](/docs/programming-oak.md#using-an-oak-application-from-a-client) for
-requests sent to the corresponding Oak application.
 
 ## Fuzz testing
 
@@ -367,13 +237,13 @@ argument. For instance, the following command runs all fuzz targets with a 2
 seconds timeout for each target.
 
 ```bash
-./scripts/runner run-fuzz-targets -- -max_total_time=2
+runner run-cargo-fuzz -- -max_total_time=2
 ```
 
 The following lists all the `libFuzzer` options:
 
 ```bash
-./scripts/runner --logs run-fuzz-targets -- -help=1
+runner --logs run-fuzz-targets -- -help=1
 ```
 
 Moreover, `crate-name` alone or together with `target-name` could be specified
@@ -381,5 +251,5 @@ to run all targets for a specific crate, or to run a specific target,
 respectively.
 
 ```bash
-./scripts/runner --logs run-fuzz-targets --crate-name=loader --target-name=wasm_invoke -- -max_total_time=20
+runner --logs run-fuzz-targets --crate-name=loader --target-name=wasm_invoke -- -max_total_time=20
 ```
