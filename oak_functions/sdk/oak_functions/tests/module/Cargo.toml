@@ -1,17 +1,12 @@
-cargo-features = ["per-package-target"]
-
 [package]
 name = "oak_functions_sdk_abi_test"
 version = "0.1.0"
 authors = ["Maria Schett <mschett@google.com>"]
 edition = "2021"
 license = "Apache-2.0"
-forced-target = "wasm32-unknown-unknown"
 
 [lib]
 crate-type = ["cdylib", "rlib"]
-# We cannot execute tests with the forced-target wasm32-unknown-unknown.
-test = false
 
 [dependencies]
 anyhow = "*"
