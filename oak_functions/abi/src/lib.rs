@@ -119,17 +119,14 @@ extern "C" {
 
     /// Waits until at least one of the channels from the channel handles in the buffer at
     /// `channel_handle_buf_ptr` has a message to read, or
-    /// until the `deadline_ms` expires. After a successful call to `channel_wait`, the buffer at
-    /// `ready_channel_handle_buf_ptr` holds the channel handles with at least one message to read.
-    /// Both, `channel_handle_buf_len` and `ready_channel_handle_buf_len` hold the length of the
-    /// respective buffers in bytes.
+    /// until the `deadline_ms` expires. If one channel handle is invalid, the `channel_wait`
+    /// returns immediately.
     ///
-    /// Returns a status code to indicate success or deadline expiration.
+    /// Returns a status code to indicate success, an invalid channel handle, or deadline
+    /// expiration.
     pub fn channel_wait(
         channel_handle_buf_ptr: *const ChannelHandle,
         channel_handle_buf_len: usize,
-        ready_channel_handle_buf_ptr: *mut *mut i32,
-        ready_channel_handle_buf_len: *mut usize,
         deadline_ms: u32,
     ) -> ChannelStatus;
 }
