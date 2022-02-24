@@ -34,7 +34,7 @@ use crate::{
     },
     proto::{AttestationInfo, AttestationReport},
 };
-use alloc::{boxed::Box, vec::Vec};
+use alloc::{boxed::Box, vec, vec::Vec};
 use anyhow::{anyhow, Context};
 use prost::Message;
 
@@ -304,7 +304,7 @@ impl ClientHandshaker {
                 // Signing public key.
                 [Default::default(); SIGNING_ALGORITHM_KEY_LENGTH],
                 // Attestation info.
-                alloc::vec![],
+                vec![],
             )
         };
 
@@ -485,9 +485,9 @@ impl ServerHandshaker {
                 // Signing public key.
                 [Default::default(); SIGNING_ALGORITHM_KEY_LENGTH],
                 // Attestation info.
-                alloc::vec![],
+                vec![],
                 // Additional info.
-                alloc::vec![],
+                vec![],
             )
         };
 
@@ -681,9 +681,7 @@ struct Transcript {
 
 impl Transcript {
     pub fn new() -> Self {
-        Self {
-            value: alloc::vec![],
-        }
+        Self { value: vec![] }
     }
 
     /// Appends a serialized `message` to the end of [`Transcript::value`].

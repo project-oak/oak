@@ -20,7 +20,7 @@
 // protocol.
 
 use crate::message::EncryptedData;
-use alloc::vec::Vec;
+use alloc::{format, vec, vec::Vec};
 use anyhow::{anyhow, Context};
 use core::convert::TryInto;
 use ring::{
@@ -194,7 +194,7 @@ impl KeyNegotiator {
             .map_err(|error| anyhow!("Couldn't get public key: {:?}", error))?
             .as_ref()
             .to_vec();
-        public_key.as_slice().try_into().context(alloc::format!(
+        public_key.as_slice().try_into().context(format!(
             "Incorrect public key length, expected {}, found {}",
             KEY_AGREEMENT_ALGORITHM_KEY_LENGTH,
             public_key.len()
@@ -235,7 +235,7 @@ impl KeyNegotiator {
             &agreement::UnparsedPublicKey::new(KEY_AGREEMENT_ALGORITHM, peer_public_key),
             anyhow!("Couldn't derive session keys"),
             |key_material| {
-                let key_material = key_material.try_into().context(alloc::format!(
+                let key_material = key_material.try_into().context(format!(
                     "Incorrect key material length, expected {}, found {}",
                     KEY_AGREEMENT_ALGORITHM_KEY_LENGTH,
                     key_material.len()
@@ -299,7 +299,7 @@ impl KeyNegotiator {
         client_public_key: &[u8; KEY_AGREEMENT_ALGORITHM_KEY_LENGTH],
     ) -> anyhow::Result<[u8; AEAD_ALGORITHM_KEY_LENGTH]> {
         // Session key is derived from a purpose string and two public keys.
-        let info = alloc::vec![key_purpose.as_bytes(), server_public_key, client_public_key];
+        let info = vec![key_purpose.as_bytes(), server_public_key, client_public_key];
 
         // Initialize key derivation function.
         let salt = Salt::new(HKDF_SHA256, KEY_DERIVATION_SALT.as_bytes());
@@ -352,7 +352,7 @@ impl Signer {
 
     pub fn public_key(&self) -> anyhow::Result<[u8; SIGNING_ALGORITHM_KEY_LENGTH]> {
         let public_key = self.key_pair.public_key().as_ref().to_vec();
-        public_key.as_slice().try_into().context(alloc::format!(
+        public_key.as_slice().try_into().context(format!(
             "Incorrect public key length, expected {}, found {}",
             SIGNING_ALGORITHM_KEY_LENGTH,
             public_key.len()
@@ -367,7 +367,7 @@ impl Signer {
             .map_err(|error| anyhow!("Couldn't sign input: {:?}", error))?
             .as_ref()
             .to_vec();
-        signature.as_slice().try_into().context(alloc::format!(
+        signature.as_slice().try_into().context(format!(
             "Incorrect signature length, expected {}, found {}",
             SIGNATURE_LENGTH,
             signature.len()

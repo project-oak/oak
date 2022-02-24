@@ -6,9 +6,8 @@ edition = "2021"
 license = "Apache-2.0"
 
 [features]
-default = ["alloc"]
+default = []
 std = ["anyhow/std", "prost/std"]
-alloc = []
 
 [dependencies]
 anyhow = { version = "*", default-features = false }

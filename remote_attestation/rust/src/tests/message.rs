@@ -25,7 +25,7 @@ use crate::{
         MAXIMUM_MESSAGE_SIZE, REPLAY_PROTECTION_ARRAY_LENGTH, SERVER_IDENTITY_HEADER,
     },
 };
-use alloc::vec::Vec;
+use alloc::{vec, vec::Vec};
 use anyhow::{anyhow, Context};
 use assert_matches::assert_matches;
 use quickcheck::{quickcheck, TestResult};
@@ -201,8 +201,8 @@ fn test_deserialize_message() {
         default_array(),
         default_array(),
         default_array(),
-        alloc::vec![],
-        alloc::vec![],
+        vec![],
+        vec![],
     );
     let deserialized_server_identity = deserialize_message(&server_identity.serialize().unwrap());
     assert_matches!(deserialized_server_identity, Ok(_));
@@ -211,7 +211,7 @@ fn test_deserialize_message() {
         MessageWrapper::ServerIdentity(server_identity)
     );
 
-    let client_identity = ClientIdentity::new(default_array(), default_array(), alloc::vec![]);
+    let client_identity = ClientIdentity::new(default_array(), default_array(), vec![]);
     let deserialized_client_identity = deserialize_message(&client_identity.serialize().unwrap());
     assert_matches!(deserialized_client_identity, Ok(_));
     assert_eq!(
@@ -219,7 +219,7 @@ fn test_deserialize_message() {
         MessageWrapper::ClientIdentity(client_identity)
     );
 
-    let encrypted_data = EncryptedData::new(default_array(), alloc::vec![]);
+    let encrypted_data = EncryptedData::new(default_array(), vec![]);
     let deserialized_encrypted_data = deserialize_message(&encrypted_data.serialize().unwrap());
     assert_matches!(deserialized_encrypted_data, Ok(_));
     assert_eq!(
@@ -227,7 +227,7 @@ fn test_deserialize_message() {
         MessageWrapper::EncryptedData(encrypted_data)
     );
 
-    let invalid_message = alloc::vec![INVALID_MESSAGE_HEADER];
+    let invalid_message = vec![INVALID_MESSAGE_HEADER];
     let deserialized_invalid_message = deserialize_message(&invalid_message);
     assert_matches!(deserialized_invalid_message, Err(_));
 
@@ -249,7 +249,7 @@ fn test_deserialize_message() {
     assert_matches!(deserialized_big_client_identity, Err(_));
 
     let big_encrypted_data =
-        EncryptedData::new([0; NONCE_LENGTH], alloc::vec![0; MAXIMUM_MESSAGE_SIZE + 1])
+        EncryptedData::new([0; NONCE_LENGTH], vec![0; MAXIMUM_MESSAGE_SIZE + 1])
             .serialize()
             .unwrap();
     let deserialized_big_encrypted_data = deserialize_message(&big_encrypted_data);
