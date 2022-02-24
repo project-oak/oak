@@ -22,6 +22,7 @@ use crate::{
     },
     tests::message::INVALID_MESSAGE_HEADER,
 };
+use alloc::{boxed::Box, vec};
 use assert_matches::assert_matches;
 
 const TEE_MEASUREMENT: &str = "Test TEE measurement";

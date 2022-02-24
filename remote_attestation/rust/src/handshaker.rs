@@ -34,6 +34,7 @@ use crate::{
     },
     proto::{AttestationInfo, AttestationReport},
 };
+use alloc::{boxed::Box, vec, vec::Vec};
 use anyhow::{anyhow, Context};
 use prost::Message;
 
@@ -54,8 +55,8 @@ impl Default for ClientHandshakerState {
     }
 }
 
-impl std::fmt::Debug for ClientHandshakerState {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+impl core::fmt::Debug for ClientHandshakerState {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
         match self {
             Self::Initializing => write!(f, "Initializing"),
             Self::ExpectingServerIdentity(_) => write!(f, "ExpectingServerIdentity"),
@@ -81,8 +82,8 @@ impl Default for ServerHandshakerState {
     }
 }
 
-impl std::fmt::Debug for ServerHandshakerState {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+impl core::fmt::Debug for ServerHandshakerState {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
         match self {
             Self::ExpectingClientHello => write!(f, "ExpectingClientHello"),
             Self::ExpectingClientIdentity(_) => write!(f, "ExpectingClientIdentity"),
@@ -131,7 +132,7 @@ impl ClientHandshaker {
             deserialize_message(message).context("Couldn't deserialize message")?;
         match deserialized_message {
             MessageWrapper::ServerIdentity(server_identity) => {
-                match std::mem::take(&mut self.state) {
+                match core::mem::take(&mut self.state) {
                     ClientHandshakerState::ExpectingServerIdentity(key_negotiator) => {
                         let client_identity = self
                             .process_server_identity(server_identity, key_negotiator)
@@ -380,7 +381,7 @@ impl ServerHandshaker {
                 )),
             },
             MessageWrapper::ClientIdentity(client_identity) => {
-                match std::mem::take(&mut self.state) {
+                match core::mem::take(&mut self.state) {
                     ServerHandshakerState::ExpectingClientIdentity(key_negotiator) => {
                         self.process_client_identity(client_identity, key_negotiator)
                             .context("Couldn't process client identity message")?;
@@ -602,8 +603,8 @@ pub struct AttestationBehavior {
     signer: Option<Signer>,
 }
 
-impl std::fmt::Debug for AttestationBehavior {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+impl core::fmt::Debug for AttestationBehavior {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
         match (
             self.contains_peer_attestation(),
             self.contains_self_attestation(),
@@ -732,6 +733,7 @@ pub fn verify_attestation_info(
     expected_tee_measurement: &[u8],
 ) -> anyhow::Result<()> {
     let attestation_info = AttestationInfo::decode(attestation_info_bytes)
+        .map_err(anyhow::Error::msg)
         .context("Couldn't decode attestation info Protobuf message")?;
 
     // TODO(#1867): Add remote attestation support, use real TEE reports and check that
@@ -760,6 +762,7 @@ pub fn serialize_protobuf<M: prost::Message>(message: &M) -> anyhow::Result<Vec<
     let mut message_bytes = Vec::new();
     message
         .encode(&mut message_bytes)
+        .map_err(anyhow::Error::msg)
         .context("Couldn't serialize Protobuf message to bytes")?;
     Ok(message_bytes)
 }

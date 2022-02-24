@@ -5,15 +5,16 @@ authors = ["Ivan Petrov <ivanpetrov@google.com>"]
 edition = "2021"
 license = "Apache-2.0"
 
+[features]
+default = []
+std = ["anyhow/std", "prost/std"]
+
 [dependencies]
-anyhow = "*"
-bincode = "*"
+anyhow = { version = "*", default-features = false }
+bytes = { version = "*", default-features = false }
 log = "*"
-prost = "*"
+prost = { version = "*", default-features = false, features = ["prost-derive"] }
 ring = "*"
-serde = { version = "*", features = ["derive"] }
-serde-big-array = { version = "*", features = ["const-generics"] }
-sha2 = "*"
 
 [build-dependencies]
 prost-build = "*"

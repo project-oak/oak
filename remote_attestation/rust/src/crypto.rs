@@ -20,16 +20,17 @@
 // protocol.
 
 use crate::message::EncryptedData;
+use alloc::{format, vec, vec::Vec};
 use anyhow::{anyhow, Context};
+use core::convert::TryInto;
 use ring::{
     aead::{self, BoundKey},
     agreement,
+    digest::{digest, SHA256},
     hkdf::{Salt, HKDF_SHA256},
     rand::{SecureRandom, SystemRandom},
     signature::{EcdsaKeyPair, EcdsaSigningAlgorithm, EcdsaVerificationAlgorithm, KeyPair},
 };
-use sha2::{digest::Digest, Sha256};
-use std::convert::TryInto;
 
 /// Length of the encryption nonce.
 /// `ring::aead` uses 96-bit (12-byte) nonces.
@@ -339,6 +340,7 @@ pub struct Signer {
 
 impl Signer {
     pub fn create() -> anyhow::Result<Self> {
+        // TODO(#2557): Ensure SystemRandom work when building for x86_64 UEFI targets.
         let rng = ring::rand::SystemRandom::new();
         let key_pair_pkcs8 = EcdsaKeyPair::generate_pkcs8(SIGNING_ALGORITHM, &rng)
             .map_err(|error| anyhow!("Couldn't generate PKCS#8 key pair: {:?}", error))?;
@@ -397,11 +399,8 @@ impl SignatureVerifier {
 
 /// Computes a SHA-256 digest of `input` and returns it in a form of raw bytes.
 pub fn get_sha256(input: &[u8]) -> [u8; SHA256_HASH_LENGTH] {
-    let mut hasher = Sha256::new();
-    hasher.update(&input);
-    hasher
-        .finalize()
-        .as_slice()
+    digest(&SHA256, input)
+        .as_ref()
         .try_into()
         .expect("Incorrect SHA-256 hash length")
 }

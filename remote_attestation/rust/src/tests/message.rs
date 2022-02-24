@@ -25,6 +25,7 @@ use crate::{
         MAXIMUM_MESSAGE_SIZE, REPLAY_PROTECTION_ARRAY_LENGTH, SERVER_IDENTITY_HEADER,
     },
 };
+use alloc::{vec, vec::Vec};
 use anyhow::{anyhow, Context};
 use assert_matches::assert_matches;
 use quickcheck::{quickcheck, TestResult};
@@ -35,7 +36,7 @@ const INVALID_PROTOCOL_VERSION: u8 = 2;
 /// Creates a zero initialized array.
 fn default_array<T, const L: usize>() -> [T; L]
 where
-    T: std::marker::Copy + std::default::Default,
+    T: core::marker::Copy + core::default::Default,
 {
     [Default::default(); L]
 }
@@ -43,11 +44,11 @@ where
 /// Converts slices to arrays (expands with zeroes).
 fn to_array<T, const L: usize>(input: &[T]) -> anyhow::Result<[T; L]>
 where
-    T: std::marker::Copy + std::default::Default,
+    T: core::marker::Copy + core::default::Default,
 {
     if input.len() <= L {
         // `Default` is only implemented for a limited number of array sizes.
-        // https://doc.rust-lang.org/std/primitive.array.html#impl-Default
+        // https://doc.rust-lang.org/core/primitive.array.html#impl-Default
         let mut result: [T; L] = default_array();
         result[..input.len()].copy_from_slice(&input[..input.len()]);
         Ok(result)

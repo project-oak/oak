@@ -1084,6 +1084,7 @@ dependencies = [
  "oak_utils",
  "prost",
  "prost-types",
+ "serde",
  "tokio",
  "tonic",
  "tower",
@@ -2020,16 +2021,13 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "assert_matches",
- "bincode",
+ "bytes",
  "log",
  "prost",
  "prost-build",
  "quickcheck",
  "quickcheck_macros",
  "ring",
- "serde",
- "serde-big-array",
- "sha2 0.10.1",
 ]
 
 [[package]]
@@ -2884,16 +2882,6 @@ version = "1.0.136"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ce31e24b01e1e524df96f1c2fdd054405f8d7376249a5110886fb4b658484789"
 dependencies = [
- "serde_derive",
-]
-
-[[package]]
-name = "serde-big-array"
-version = "0.3.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "18b20e7752957bbe9661cff4e0bb04d183d0948cdab2ea58cdb9df36a61dfe62"
-dependencies = [
- "serde",
  "serde_derive",
 ]
 
