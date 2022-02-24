@@ -71,12 +71,10 @@ async fn main() -> anyhow::Result<()> {
         .context("Could not invoke Oak Functions")?;
 
     let response_body = std::str::from_utf8(response.body().unwrap()).unwrap();
-    match opt.expected_response_pattern {
-        Some(expected) => {
-            let re = Regex::new(&expected).unwrap();
-            assert!(re.is_match(response_body));
-        }
-        None => println!("{}", response_body),
+    println!("{}", response_body);
+    if let Some(expected) = opt.expected_response_pattern {
+        let re = Regex::new(&expected).unwrap();
+        assert!(re.is_match(response_body));
     }
 
     Ok(())
