@@ -243,7 +243,7 @@ runner run-cargo-fuzz -- -max_total_time=2
 The following lists all the `libFuzzer` options:
 
 ```bash
-runner --logs run-fuzz-targets -- -help=1
+runner --logs run-cargo-fuzz -- -help=1
 ```
 
 Moreover, `crate-name` alone or together with `target-name` could be specified
@@ -251,5 +251,5 @@ to run all targets for a specific crate, or to run a specific target,
 respectively.
 
 ```bash
-runner --logs run-fuzz-targets --crate-name=loader --target-name=wasm_invoke -- -max_total_time=20
+runner --logs run-cargo=fuzz --crate-name=loader --target-name=wasm_invoke -- -max_total_time=20
 ```
