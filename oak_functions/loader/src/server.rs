@@ -325,7 +325,8 @@ impl WasmState {
         Ok(())
     }
 
-    // Helper function to get the hosted Endpoint for the given channel handle.
+    // Helper function to get the hosted endpoint for the given channel handle.
+    // Returns an error if the channel handle is out of range or no endpoint is found.
     fn get_endpoint_from_channel_handle(
         &mut self,
         channel_handle: AbiChannelHandle,
@@ -377,6 +378,15 @@ impl WasmState {
             TrySendError::Closed(_) => ChannelStatus::ChannelEndpointClosed,
         })?;
 
+        Ok(())
+    }
+
+    pub fn channel_wait(
+        &mut self,
+        _channel_handle_buf_ptr: AbiPointer,
+        _channel_handle_buf_len: AbiPointerOffset,
+        _deadline_ms: u32,
+    ) -> Result<(), ChannelStatus> {
         Ok(())
     }
 
@@ -1229,6 +1239,32 @@ mod tests {
         let result = wasm_state.channel_write(channel_handle as i32, 0, 0);
         assert!(result.is_err());
         assert_eq!(ChannelStatus::ChannelEndpointClosed, result.unwrap_err());
+    }
+
+    #[tokio::test]
+    async fn test_channel_wait_all_handles_invalid() {
+        // Assumes ChannelHandle 0 does not exists in wasm_state.
+        let channel_handles: Vec<AbiChannelHandle> = vec![0];
+        let (mut wasm_state, _) = create_test_wasm_state_and_extensions();
+
+        // Guess some memory addresses in linear Wasm memory to write the channel handles to.
+        let ch_buf_ptr: AbiPointer = 100;
+        let serialized_channel_handles =
+            bincode::serialize(&channel_handles).expect("Fail to serialize channel handles.");
+        let wasm_memory_write = wasm_state.write_buffer_to_wasm_memory(
+            &serialized_channel_handles,
+            serialized_channel_handles.len() as u32,
+        );
+        assert!(wasm_memory_write.is_ok());
+
+        // Because all handles are invalid we expect an error.
+        let wasm_memory_wait =
+            wasm_state.channel_wait(ch_buf_ptr, serialized_channel_handles.len() as u32, 1);
+        assert!(wasm_memory_wait.is_err());
+        assert_eq!(
+            ChannelStatus::ChannelHandleInvalid,
+            wasm_memory_wait.unwrap_err()
+        );
     }
 
     fn create_test_wasm_handler() -> WasmHandler {
