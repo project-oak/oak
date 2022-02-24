@@ -59,7 +59,7 @@
     <span class="doccomment">/// Placeholder function for collecting TEE measurement of remotely attested TEEs.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">data</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) -&gt; <span class="self">Self</span> {
         <span class="self">Self</span> {
-            <span class="ident">measurement</span>: <span class="ident">TEST_TEE_MEASUREMENT</span>.<span class="ident">to_string</span>().<span class="ident">as_bytes</span>().<span class="ident">to_vec</span>(),
+            <span class="ident">measurement</span>: <span class="ident">TEST_TEE_MEASUREMENT</span>.<span class="ident">as_bytes</span>().<span class="ident">to_vec</span>(),
             <span class="ident">data</span>: <span class="ident">data</span>.<span class="ident">to_vec</span>(),
             ..<span class="ident">Default::default</span>()
         }
