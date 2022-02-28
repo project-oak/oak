@@ -1007,6 +1007,15 @@ dependencies = [
 name = "fuzzable"
 version = "0.1.0"
 dependencies = [
+ "oak_functions",
+ "prost",
+ "prost-build",
+]
+
+[[package]]
+name = "fuzzable_test"
+version = "0.1.0"
+dependencies = [
  "log",
  "maplit",
  "oak_functions",

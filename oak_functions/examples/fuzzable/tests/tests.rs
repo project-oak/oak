@@ -13,8 +13,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-extern crate fuzzable;
-
 pub mod proto {
     include!(concat!(env!("OUT_DIR"), "/loader.fuzz.instructions.rs"));
 }
@@ -24,6 +22,7 @@ use crate::proto::{
 };
 use maplit::hashmap;
 use oak_functions_abi::proto::{ServerPolicy, StatusCode};
+use prost::Message;
 
 use oak_functions_loader::{
     grpc::{create_and_start_grpc_server, create_wasm_handler},
@@ -34,7 +33,6 @@ use oak_functions_loader::{
     server::BoxedExtensionFactory,
 };
 
-use prost::Message;
 use std::{
     net::{Ipv6Addr, SocketAddr},
     sync::Arc,
@@ -48,6 +46,7 @@ async fn test_server() {
     let address = SocketAddr::from((Ipv6Addr::UNSPECIFIED, server_port));
 
     let mut manifest_path = std::env::current_dir().unwrap();
+    manifest_path.push("module");
     manifest_path.push("Cargo.toml");
 
     let wasm_module_bytes =

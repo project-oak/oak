@@ -1,27 +1,23 @@
+cargo-features = ["per-package-target"]
+
 [package]
 name = "fuzzable"
 version = "0.1.0"
 authors = ["Razieh Behjati <razieh@google.com>"]
 edition = "2021"
 license = "Apache-2.0"
+forced-target = "wasm32-unknown-unknown"
 
 [lib]
 crate-type = ["cdylib", "rlib"]
+# We cannot execute tests with the forced-target wasm32-unknown-unknown.
+test = false
 
 [dependencies]
 oak_functions = { path = "../../../sdk/oak_functions", features = [
   "oak-metrics"
 ] }
 prost = "*"
-
-[dev-dependencies]
-log = "*"
-maplit = "*"
-oak_functions_loader = { path = "../../../loader", features = ["oak-metrics"] }
-oak_functions_abi = { path = "../../../abi" }
-rand = "0.8.4"
-test_utils = { path = "../../../sdk/test_utils" }
-tokio = { version = "*", features = ["macros"] }
 
 [build-dependencies]
 prost-build = "*"
