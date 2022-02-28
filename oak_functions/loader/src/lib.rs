@@ -31,7 +31,7 @@ use crate::metrics::{PrivateMetricsConfig, PrivateMetricsProxyFactory};
 #[cfg(feature = "oak-tf")]
 use crate::tf::{read_model_from_path, TensorFlowFactory, TensorFlowModelConfig};
 use crate::{
-    grpc::{create_and_start_grpc_server, create_wasm_handler},
+    grpc::{create_and_start_grpc_server, create_wasm_handler, RequestModel},
     logger::Logger,
     lookup::LookupFactory,
     lookup_data::{LookupData, LookupDataAuth, LookupDataSource},
@@ -93,6 +93,9 @@ struct Config {
     #[cfg(feature = "oak-metrics")]
     #[serde(default)]
     metrics: Option<PrivateMetricsConfig>,
+    /// Request model used to accept gRPC client requests
+    #[serde(default = "RequestModel::default")]
+    grpc_request_model: RequestModel,
 }
 
 #[derive(Deserialize, Debug)]
@@ -231,6 +234,7 @@ async fn async_main(opt: Opt, config: Config, logger: Logger) -> anyhow::Result<
             config_info,
             async { notify_receiver.await.unwrap() },
             logger,
+            config.grpc_request_model,
         )
         .await
         .context("error while waiting for the server to terminate")

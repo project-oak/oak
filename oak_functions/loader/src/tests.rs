@@ -15,7 +15,7 @@
 //
 
 use crate::{
-    grpc::{create_and_start_grpc_server, create_wasm_handler},
+    grpc::{create_and_start_grpc_server, create_wasm_handler, RequestModel},
     logger::Logger,
     lookup::LookupFactory,
     lookup_data::{parse_lookup_entries, LookupData, LookupDataAuth, LookupDataSource},
@@ -162,6 +162,7 @@ where
             get_config_info(&wasm_module_bytes, policy, false, None),
             term,
             logger,
+            RequestModel::BidiStreaming,
         )
         .await
     });

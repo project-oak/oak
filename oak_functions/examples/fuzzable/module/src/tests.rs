@@ -20,7 +20,7 @@ use maplit::hashmap;
 use oak_functions_abi::proto::{ServerPolicy, StatusCode};
 
 use oak_functions_loader::{
-    grpc::{create_and_start_grpc_server, create_wasm_handler},
+    grpc::{create_and_start_grpc_server, create_wasm_handler, RequestModel},
     logger::Logger,
     lookup::LookupFactory,
     lookup_data::LookupData,
@@ -77,6 +77,7 @@ async fn test_server() {
             get_config_info(&wasm_module_bytes, policy, false, None),
             term,
             logger,
+            RequestModel::BidiStreaming,
         )
         .await
     });
