@@ -17,8 +17,8 @@ maplit = "*"
 prost = "*"
 test_utils = { path = "../../sdk/test_utils" }
 tokio = { version = "*", features = [
-    "fs",
-    "macros",
-    "sync",
-    "rt-multi-thread"
+  "fs",
+  "macros",
+  "sync",
+  "rt-multi-thread"
 ] }
