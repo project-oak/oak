@@ -1363,6 +1363,13 @@ dependencies = [
 name = "key_value_lookup"
 version = "0.1.0"
 dependencies = [
+ "oak_functions",
+]
+
+[[package]]
+name = "key_value_lookup_test"
+version = "0.1.0"
+dependencies = [
  "http",
  "hyper",
  "maplit",

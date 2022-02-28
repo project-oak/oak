@@ -17,7 +17,6 @@
 // Required for enabling benchmark tests.
 #![feature(test)]
 
-extern crate key_value_lookup;
 extern crate test;
 
 use maplit::hashmap;
@@ -43,6 +42,7 @@ async fn test_server() {
     let address = SocketAddr::from((Ipv6Addr::UNSPECIFIED, server_port));
 
     let mut manifest_path = std::env::current_dir().unwrap();
+    manifest_path.push("module");
     manifest_path.push("Cargo.toml");
 
     let wasm_module_bytes =
@@ -129,6 +129,7 @@ async fn test_server() {
 #[bench]
 fn bench_wasm_handler(bencher: &mut Bencher) {
     let mut manifest_path = std::env::current_dir().unwrap();
+    manifest_path.push("module");
     manifest_path.push("Cargo.toml");
     let wasm_module_bytes =
         test_utils::compile_rust_wasm(manifest_path.to_str().expect("Invalid target dir"), true)
