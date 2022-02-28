@@ -32,7 +32,7 @@ pub mod proto {
 use crate::grpc::handle_request;
 use anyhow::Context;
 use clap::Parser;
-use grpc_attestation::{
+use grpc_streaming_attestation::{
     proto::streaming_session_server::StreamingSessionServer,
     server::{AttestationServer, LogError},
 };

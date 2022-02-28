@@ -21,7 +21,7 @@ use crate::{
     server::{apply_policy, BoxedExtensionFactory, WasmHandler},
 };
 use anyhow::Context;
-use grpc_attestation::{
+use grpc_streaming_attestation::{
     proto::streaming_session_server::StreamingSessionServer,
     server::{AttestationServer, LogError},
 };
