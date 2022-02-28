@@ -26,7 +26,7 @@ package(
 
 proto_library(
     name = "server_proto",
-    srcs = ["server.proto"],
+    srcs = ["streaming_server.proto"],
     deps = [
         "//remote_attestation/proto:remote_attestation_proto",
         "@com_google_protobuf//:empty_proto",
