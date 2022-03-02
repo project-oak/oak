@@ -9,6 +9,7 @@ license = "Apache-2.0"
 anyhow = "*"
 bytes = "*"
 clap = { version = "*", features = ["derive"] }
+env_logger = "*"
 location_utils = { path = "../location_utils" }
 log = "*"
 multimap = "*"

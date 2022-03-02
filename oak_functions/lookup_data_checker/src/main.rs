@@ -47,6 +47,7 @@ pub fn parse_lookup_entries<B: prost::bytes::Buf>(
 }
 
 fn main() -> anyhow::Result<()> {
+    env_logger::init();
     let opt = Opt::parse();
 
     // Read lookup data file.
@@ -57,7 +58,6 @@ fn main() -> anyhow::Result<()> {
     reader.read_to_end(&mut buffer)?;
     let entries = parse_lookup_entries(&mut buffer.as_ref())
         .context("could not parse lookup data")?;
-    debug!("Raw entries: {:?}", entries);
 
     // Parse lookup data entries.
     debug!("Parsed entries:");
@@ -67,9 +67,10 @@ fn main() -> anyhow::Result<()> {
         if entry.0.len() == LOCATION_SIZE {
             let location = location_from_bytes(&entry.0)
                 .with_context(|| format!("could not parse location {:?}", &entry.0))?;
+            let data = String::from_utf8(entry.1.to_vec()).with_context(|| format!("could not parse data {:?}", &entry.1))?;
             weather_locations.insert(entry.0);
 
-            debug!("- {{{:?}: {:?}}} # Location", location, entry.1);
+            debug!("- {{{:?}: {:?}}} # Location", location, data);
         } else {
             let cell_id = cell_id_from_bytes(&entry.0)
                 .with_context(|| format!("could not parse cell ID {:?}", &entry.0))?;
