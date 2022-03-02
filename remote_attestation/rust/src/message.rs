@@ -17,9 +17,9 @@
 // Messages that implement a simplified version of the Enclave Key Exchange
 // Protocol (EKEP).
 //
-// Unlike other RPC messages these are expressed as Rust structs and serialized
-// with custom logic. This is done to maintain binary-compatibility with other
-// implementations of this protocol.
+// Unlike other messages exchanged between client & server, these are expressed
+// as Rust structs and serialized with custom logic. This is done to maintain
+// binary-compatibility with other implementations of this protocol.
 
 use crate::crypto::{
     KEY_AGREEMENT_ALGORITHM_KEY_LENGTH, NONCE_LENGTH, SIGNATURE_LENGTH,
