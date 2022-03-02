@@ -27,6 +27,7 @@ use assert_matches::assert_matches;
 
 const TEE_MEASUREMENT: &str = "Test TEE measurement";
 const DATA: [u8; 10] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+const ADDITIONAL_INFO: [u8; 15] = *br"Additional Info";
 
 fn create_handshakers() -> (ClientHandshaker, ServerHandshaker) {
     let bidirectional_attestation =
@@ -47,8 +48,7 @@ fn create_handshakers() -> (ClientHandshaker, ServerHandshaker) {
         AttestationBehavior::create_bidirectional_attestation(&[], TEE_MEASUREMENT.as_bytes())
             .unwrap();
 
-    let additional_info = br"Additional Info".to_vec();
-    let server_handshaker = ServerHandshaker::new(bidirectional_attestation, additional_info);
+    let server_handshaker = ServerHandshaker::new(bidirectional_attestation);
 
     (client_handshaker, server_handshaker)
 }
@@ -71,7 +71,7 @@ fn test_handshake() {
         .expect("Couldn't create client hello message");
 
     let server_identity = server_handshaker
-        .next_step(&client_hello)
+        .next_step(&client_hello, ADDITIONAL_INFO.into())
         .expect("Couldn't process client hello message")
         .expect("Empty server identity message");
 
@@ -82,7 +82,7 @@ fn test_handshake() {
     assert!(client_handshaker.is_completed());
 
     let result = server_handshaker
-        .next_step(&client_identity)
+        .next_step(&client_identity, ADDITIONAL_INFO.into())
         .expect("Couldn't process client identity message");
     assert_matches!(result, None);
     assert!(server_handshaker.is_completed());
@@ -122,7 +122,7 @@ fn test_invalid_message_after_initialization() {
     let result = client_handshaker.create_client_hello();
     assert_matches!(result, Err(_));
 
-    let result = server_handshaker.next_step(&invalid_message);
+    let result = server_handshaker.next_step(&invalid_message, ADDITIONAL_INFO.into());
     assert_matches!(result, Err(_));
     assert!(server_handshaker.is_aborted());
 }
@@ -137,8 +137,11 @@ fn test_invalid_message_after_hello() {
     assert_matches!(result, Err(_));
     assert!(client_handshaker.is_aborted());
 
-    let server_identity = server_handshaker.next_step(&client_hello).unwrap().unwrap();
-    let result = server_handshaker.next_step(&invalid_message);
+    let server_identity = server_handshaker
+        .next_step(&client_hello, ADDITIONAL_INFO.into())
+        .unwrap()
+        .unwrap();
+    let result = server_handshaker.next_step(&invalid_message, ADDITIONAL_INFO.into());
     assert_matches!(result, Err(_));
     assert!(server_handshaker.is_aborted());
 
@@ -152,7 +155,10 @@ fn test_invalid_message_after_identities() {
     let invalid_message = vec![INVALID_MESSAGE_HEADER];
 
     let client_hello = client_handshaker.create_client_hello().unwrap();
-    let server_identity = server_handshaker.next_step(&client_hello).unwrap().unwrap();
+    let server_identity = server_handshaker
+        .next_step(&client_hello, ADDITIONAL_INFO.into())
+        .unwrap()
+        .unwrap();
     let client_identity = client_handshaker
         .next_step(&server_identity)
         .unwrap()
@@ -162,11 +168,11 @@ fn test_invalid_message_after_identities() {
     assert_matches!(result, Err(_));
     assert!(client_handshaker.is_aborted());
 
-    let result = server_handshaker.next_step(&invalid_message);
+    let result = server_handshaker.next_step(&invalid_message, ADDITIONAL_INFO.into());
     assert_matches!(result, Err(_));
     assert!(server_handshaker.is_aborted());
 
-    let result = server_handshaker.next_step(&client_identity);
+    let result = server_handshaker.next_step(&client_identity, ADDITIONAL_INFO.into());
     assert_matches!(result, Err(_));
 }
 
@@ -177,7 +183,7 @@ fn test_replay_server_identity() {
 
     let first_client_hello = first_client_handshaker.create_client_hello().unwrap();
     let first_server_identity = first_server_handshaker
-        .next_step(&first_client_hello)
+        .next_step(&first_client_hello, ADDITIONAL_INFO.into())
         .unwrap()
         .unwrap();
 
@@ -194,7 +200,7 @@ fn test_replay_client_identity() {
 
     let first_client_hello = first_client_handshaker.create_client_hello().unwrap();
     let first_server_identity = first_server_handshaker
-        .next_step(&first_client_hello)
+        .next_step(&first_client_hello, ADDITIONAL_INFO.into())
         .unwrap()
         .unwrap();
     let first_client_identity = first_client_handshaker
@@ -204,10 +210,10 @@ fn test_replay_client_identity() {
 
     let second_client_hello = second_client_handshaker.create_client_hello().unwrap();
     let _ = second_server_handshaker
-        .next_step(&second_client_hello)
+        .next_step(&second_client_hello, ADDITIONAL_INFO.into())
         .unwrap()
         .unwrap();
-    let result = second_server_handshaker.next_step(&first_client_identity);
+    let result = second_server_handshaker.next_step(&first_client_identity, ADDITIONAL_INFO.into());
     assert_matches!(result, Err(_));
 }
 

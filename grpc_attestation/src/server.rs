@@ -151,8 +151,7 @@ where
                     .map_err(|error| {
                         error_logger.log_error(&format!("Couldn't create self attestation behavior: {:?}", error));
                         Status::internal("")
-                    })?,
-                    additional_info,
+                    })?
             );
             while !handshaker.is_completed() {
                 let incoming_message = request_stream.next()
@@ -167,7 +166,7 @@ where
                     })?;
 
                 let outgoing_message = handshaker
-                    .next_step(&incoming_message.body)
+                    .next_step(&incoming_message.body, additional_info.clone())
                     .map_err(|error| {
                         error_logger.log_error(&format!("Couldn't process handshake message: {:?}", error));
                         Status::aborted("")

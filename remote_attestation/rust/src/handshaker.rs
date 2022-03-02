@@ -329,40 +329,45 @@ pub struct ServerHandshaker {
     /// Collection of previously sent and received messages.
     /// Signed transcript is sent in messages to prevent replay attacks.
     transcript: Transcript,
-    /// Additional info about the server, including configuration information and proof of
-    /// inclusion in a verifiable log.
-    additional_info: Vec<u8>,
 }
 
 impl ServerHandshaker {
     /// Creates [`ServerHandshaker`] with `ServerHandshakerState::ExpectingClientIdentity`
     /// state.
-    pub fn new(behavior: AttestationBehavior, additional_info: Vec<u8>) -> Self {
+    pub fn new(behavior: AttestationBehavior) -> Self {
         Self {
             behavior,
             state: ServerHandshakerState::ExpectingClientHello,
             transcript: Transcript::new(),
-            additional_info,
         }
     }
 
     /// Processes incoming `message` and returns a serialized remote attestation message.
     /// If [`None`] is returned, then no messages should be sent out to the client.
-    pub fn next_step(&mut self, message: &[u8]) -> anyhow::Result<Option<Vec<u8>>> {
-        self.next_step_util(message).map_err(|error| {
-            self.state = ServerHandshakerState::Aborted;
-            error
-        })
+    pub fn next_step(
+        &mut self,
+        message: &[u8],
+        additional_info: Vec<u8>,
+    ) -> anyhow::Result<Option<Vec<u8>>> {
+        self.next_step_util(message, additional_info)
+            .map_err(|error| {
+                self.state = ServerHandshakerState::Aborted;
+                error
+            })
     }
 
-    fn next_step_util(&mut self, message: &[u8]) -> anyhow::Result<Option<Vec<u8>>> {
+    fn next_step_util(
+        &mut self,
+        message: &[u8],
+        additional_info: Vec<u8>,
+    ) -> anyhow::Result<Option<Vec<u8>>> {
         let deserialized_message =
             deserialize_message(message).context("Couldn't deserialize message")?;
         match deserialized_message {
             MessageWrapper::ClientHello(client_hello) => match &self.state {
                 ServerHandshakerState::ExpectingClientHello => {
                     let server_identity = self
-                        .process_client_hello(client_hello)
+                        .process_client_hello(client_hello, additional_info)
                         .context("Couldn't process client hello message")?;
                     let serialized_server_identity = server_identity
                         .serialize()
@@ -429,6 +434,7 @@ impl ServerHandshaker {
     fn process_client_hello(
         &mut self,
         client_hello: ClientHello,
+        additional_info: Vec<u8>,
     ) -> anyhow::Result<ServerIdentity> {
         // Create server identity message.
         let key_negotiator = KeyNegotiator::create(KeyNegotiatorType::Server)
@@ -448,7 +454,6 @@ impl ServerHandshaker {
                 .as_ref()
                 .context("Couldn't get TEE certificate")?;
 
-            let additional_info = self.additional_info.clone();
             let attestation_info =
                 create_attestation_info(signer, additional_info.as_ref(), tee_certificate)
                     .context("Couldn't get attestation info")?;
