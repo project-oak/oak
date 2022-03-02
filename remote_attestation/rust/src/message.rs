@@ -14,6 +14,12 @@
 // limitations under the License.
 //
 
+// Messages used to implement the Enclave Key Exchange Protocol (EKEP).
+//
+// Unlike other RPC messages these are expressed as Rust structs and serialized
+// with custom logic. The primary reason for is maintaining binary-compatibility
+// with other implementations of the Enclave Key Exchange Protocol (EKEP).
+
 use crate::crypto::{
     KEY_AGREEMENT_ALGORITHM_KEY_LENGTH, NONCE_LENGTH, SIGNATURE_LENGTH,
     SIGNING_ALGORITHM_KEY_LENGTH,
