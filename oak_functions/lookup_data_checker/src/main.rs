@@ -16,14 +16,14 @@
 
 use anyhow::Context;
 use clap::Parser;
-use log::debug;
+use location_utils::{cell_id_from_bytes, location_from_bytes, LOCATION_SIZE, S2_DEFAULT_LEVEL};
+use log::{debug, info};
 use prost::Message;
 use std::{
     collections::{HashMap, HashSet},
     fs::File,
     io::{BufReader, Read},
 };
-use location_utils::{cell_id_from_bytes, location_from_bytes, LOCATION_SIZE, S2_DEFAULT_LEVEL};
 
 #[derive(Parser, Clone, Debug)]
 #[clap(about = "Oak Functions Lookup Data Checker")]
@@ -50,6 +50,7 @@ fn main() -> anyhow::Result<()> {
     let opt = Opt::parse();
 
     // Read lookup data file.
+    info!("Checking lookup data file format: {}", opt.file_path);
     let file = File::open(opt.file_path).context("could not open file")?;
     let mut reader = BufReader::new(file);
     let mut buffer = Vec::new();
@@ -75,7 +76,7 @@ fn main() -> anyhow::Result<()> {
             assert_eq!(cell_id.level(), S2_DEFAULT_LEVEL as u64);
 
             let mut locations = vec![];
-            for chunk in entry.1.chunks(8) {
+            for chunk in entry.1.chunks(LOCATION_SIZE) {
                 let location = location_from_bytes(chunk)
                     .with_context(|| format!("could not parse location {:?} corresponding to the cell ID {:?}", chunk, cell_id))?;
                 locations.push(location);
@@ -99,5 +100,6 @@ fn main() -> anyhow::Result<()> {
         }
     }
 
+    info!("Format is correct");
     Ok(())
 }
