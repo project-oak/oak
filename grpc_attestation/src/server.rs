@@ -166,7 +166,7 @@ where
                     })?;
 
                 let outgoing_message = handshaker
-                    .next_step(&incoming_message.body, additional_info.clone())
+                    .next_step(&incoming_message.body, &additional_info)
                     .map_err(|error| {
                         error_logger.log_error(&format!("Couldn't process handshake message: {:?}", error));
                         Status::aborted("")

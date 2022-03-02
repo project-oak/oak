@@ -347,7 +347,7 @@ impl ServerHandshaker {
     pub fn next_step(
         &mut self,
         message: &[u8],
-        additional_info: Vec<u8>,
+        additional_info: &Vec<u8>,
     ) -> anyhow::Result<Option<Vec<u8>>> {
         self.next_step_util(message, additional_info)
             .map_err(|error| {
@@ -359,7 +359,7 @@ impl ServerHandshaker {
     fn next_step_util(
         &mut self,
         message: &[u8],
-        additional_info: Vec<u8>,
+        additional_info: &Vec<u8>,
     ) -> anyhow::Result<Option<Vec<u8>>> {
         let deserialized_message =
             deserialize_message(message).context("Couldn't deserialize message")?;
@@ -434,7 +434,7 @@ impl ServerHandshaker {
     fn process_client_hello(
         &mut self,
         client_hello: ClientHello,
-        additional_info: Vec<u8>,
+        additional_info: &Vec<u8>,
     ) -> anyhow::Result<ServerIdentity> {
         // Create server identity message.
         let key_negotiator = KeyNegotiator::create(KeyNegotiatorType::Server)
@@ -455,7 +455,7 @@ impl ServerHandshaker {
                 .context("Couldn't get TEE certificate")?;
 
             let attestation_info =
-                create_attestation_info(signer, additional_info.as_ref(), tee_certificate)
+                create_attestation_info(signer, additional_info, tee_certificate)
                     .context("Couldn't get attestation info")?;
 
             let mut server_identity = ServerIdentity::new(
@@ -465,7 +465,7 @@ impl ServerHandshaker {
                     .public_key()
                     .context("Couldn't get singing public key")?,
                 attestation_info,
-                additional_info,
+                additional_info.clone(),
             );
 
             // Update current transcript.
