@@ -506,6 +506,13 @@
 <span id="501">501</span>
 <span id="502">502</span>
 <span id="503">503</span>
+<span id="504">504</span>
+<span id="505">505</span>
+<span id="506">506</span>
+<span id="507">507</span>
+<span id="508">508</span>
+<span id="509">509</span>
+<span id="510">510</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2021 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -521,6 +528,13 @@
 <span class="comment">// See the License for the specific language governing permissions and</span>
 <span class="comment">// limitations under the License.</span>
 <span class="comment">//</span>
+
+<span class="comment">// Messages that implement a simplified version of the Enclave Key Exchange</span>
+<span class="comment">// Protocol (EKEP).</span>
+<span class="comment">//</span>
+<span class="comment">// Unlike other messages exchanged between client &amp; server, these are expressed</span>
+<span class="comment">// as Rust structs and serialized with custom logic. This is done to maintain</span>
+<span class="comment">// binary-compatibility with other implementations of this protocol.</span>
 
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::crypto</span>::{
     <span class="ident">KEY_AGREEMENT_ALGORITHM_KEY_LENGTH</span>, <span class="ident">NONCE_LENGTH</span>, <span class="ident">SIGNATURE_LENGTH</span>,
