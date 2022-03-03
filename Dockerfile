@@ -320,8 +320,8 @@ RUN useradd --shell=/bin/bash --create-home --user-group docker
 # To make the scripts available to call from everywhere.
 ENV PATH "/workspace/scripts:${PATH}"
 
-# Add sourcing of runner_bash_completion file to .bashrc
-RUN echo -e "\n#activate runner auto-complete\nif [ -f /workspace/.runner_bash_completion ]; then\n  source /workspace/.runner_bash_completion \nfi" >> /home/docker/.bashrc
+# Add sourcing of xtask_bash_completion file to .bashrc
+RUN echo -e "\n#activate xtask auto-complete\nif [ -f /workspace/.xtask_bash_completion ]; then\n  source /workspace/.xtask_bash_completion \nfi" >> /home/docker/.bashrc
 
 # Define alias
 RUN echo -e "\nalias ll='ls -l'\n" >> /home/docker/.bashrc

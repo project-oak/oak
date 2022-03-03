@@ -58,7 +58,7 @@ is set to 20, which means that 10 metrics batches will be released and logged.
 To run the example, use the following:
 
 ```bash
-./scripts/docker_run ./scripts/runner \
+./scripts/docker_run ./scripts/xtask \
   --logs \
   run-functions-examples \
   --example-name=metrics

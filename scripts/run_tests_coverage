@@ -6,7 +6,7 @@ source "$SCRIPTS_DIR/common"
 
 # Build the example client and Application in coverage mode and run them.
 export RUST_LOG=trace
-"${SCRIPTS_DIR}/runner" --scope=all run-examples --example-name=abitest --server-variant=coverage
+"${SCRIPTS_DIR}/xtask" --scope=all run-examples --example-name=abitest --server-variant=coverage
 
 # Generate coverage summary
 (

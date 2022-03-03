@@ -5,7 +5,7 @@ readonly EXPERIMENTAL_SCRIPTS_DIR="$(dirname "$0")"
 source "$EXPERIMENTAL_SCRIPTS_DIR/common.sh"
 
 # Build Oak Functions server binary, and the `weather_lookup` example application built on Oak Functions.
-./scripts/docker_run ./scripts/runner run-functions-examples \
+./scripts/docker_run ./scripts/xtask run-functions-examples \
   --example-name=weather_lookup \
   --run-server=false \
   --client-variant=none

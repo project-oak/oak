@@ -77,8 +77,8 @@ pub enum Command {
 pub struct Completion {
     #[clap(
         long,
-        help = "file name to write runner_bash_completion with full path; defaults to .runner_bash_completion in current directory",
-        default_value = ".runner_bash_completion",
+        help = "file name to write xtask_bash_completion with full path; defaults to .xtask_bash_completion in current directory",
+        default_value = ".xtask_bash_completion",
         parse(from_os_str)
     )]
     pub file_name: PathBuf,
@@ -772,7 +772,7 @@ impl Runnable for Cmd {
                 logs: String::new(),
             })
         } else {
-            // If the `logs` flag is enabled, inherit stdout and stderr from the main runner
+            // If the `logs` flag is enabled, inherit stdout and stderr from the main xtask
             // process.
             let stdout = if opt.logs {
                 std::process::Stdio::inherit()

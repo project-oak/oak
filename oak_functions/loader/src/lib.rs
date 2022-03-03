@@ -242,7 +242,7 @@ async fn async_main(opt: Opt, config: Config, logger: Logger) -> anyhow::Result<
         .context("could not register signal handler")?;
 
     // The server is started in its own thread, so just block the current thread until a signal
-    // arrives. This is needed for getting the correct status code when running with `runner`.
+    // arrives. This is needed for getting the correct status code when running with `xtask`.
     while !done.load(Ordering::Relaxed) {
         // There are few synchronization mechanisms that are allowed to be used in a signal
         // handler context, so use a primitive sleep loop to watch for the termination

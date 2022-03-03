@@ -61,20 +61,20 @@ The Oak Functions Runtime and its dependencies are built with the following
 script:
 
 ```bash
-./scripts/runner build-functions-server
+./scripts/xtask build-functions-server
 ```
 
 Build a particular example, say `hello_world`, with:
 
 ```bash
-./scripts/runner run-examples --run-server=false --client-variant=none --example-name=hello_world
+./scripts/xtask run-examples --run-server=false --client-variant=none --example-name=hello_world
 ```
 
 Note that the Runtime server requires a particular Oak Application to run, and
 so relies on the previous section.
 
 ```bash
-./scripts/runner run-examples --client-variant=none --example-name=hello_world
+./scripts/xtask run-examples --client-variant=none --example-name=hello_world
 ```
 
 In a separate terminal, run an example client that connects to the Oak Runtime
@@ -83,12 +83,12 @@ needed, so the client will connect to the already-running server of the previous
 step):
 
 ```bash
-./scripts/runner run-examples --run-server=false --example-name=hello_world
+./scripts/xtask run-examples --run-server=false --example-name=hello_world
 ```
 
 ## Codebase Tools
 
 The Oak codebase also makes use of several linting tools. To run these, and
-their wrapper scripts (e.g. `./scripts/runner format`), the OS X versions of the
+their wrapper scripts (e.g. `./scripts/xtask format`), the OS X versions of the
 tools will need to be installed. Check the top-level [`Dockerfile`](/Dockerfile)
 for the set of required tools.

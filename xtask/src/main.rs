@@ -20,7 +20,7 @@
 //! To invoke, run the following command from the root of the repository:
 //!
 //! ```
-//! cargo run --manifest-path=runner/Cargo.toml
+//! cargo run --manifest-path=xtask/Cargo.toml
 //! ```
 
 #![feature(async_closure)]
@@ -375,7 +375,7 @@ fn run_completion(completion: &Completion) -> Step {
     clap_complete::generate(
         clap_complete::Shell::Bash,
         &mut Opt::into_app(),
-        "runner",
+        "xtask",
         &mut file,
     );
 
@@ -387,12 +387,12 @@ fn run_completion(completion: &Completion) -> Step {
 }
 
 fn run_ci() -> Step {
-    // parse cmds for ./scripts/runner from ci.yaml to keep them in sync
+    // parse cmds for ./scripts/xtask from ci.yaml to keep them in sync
     let path_to_ci_yaml = ".github/workflows/ci.yaml";
     let file = std::fs::File::open(path_to_ci_yaml).expect("could not open file");
     let contents: serde_yaml::Value =
         serde_yaml::from_reader(file).expect("could not read file contents");
-    let mut ci_cmds = contents["jobs"]["runner"]["strategy"]["matrix"]["cmd"]
+    let mut ci_cmds = contents["jobs"]["xtask"]["strategy"]["matrix"]["cmd"]
         .as_sequence()
         .unwrap()
         .iter()
@@ -404,7 +404,7 @@ fn run_ci() -> Step {
         steps: ci_cmds
             .iter_mut()
             .map(|cmd| {
-                let mut call = vec!["runner"];
+                let mut call = vec!["xtask"];
                 call.append(cmd);
                 let opt = Opt::parse_from(call);
                 match_cmd(&opt)
