@@ -1517,12 +1517,10 @@ dependencies = [
  "env_logger 0.8.4",
  "location_utils",
  "log",
- "multimap",
  "oak_functions_abi",
  "prost",
  "rand 0.4.6",
  "serde",
- "serde_json",
 ]
 
 [[package]]

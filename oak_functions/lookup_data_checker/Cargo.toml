@@ -12,9 +12,7 @@ clap = { version = "*", features = ["derive"] }
 env_logger = "*"
 location_utils = { path = "../location_utils" }
 log = "*"
-multimap = "*"
 oak_functions_abi = { path = "../abi" }
 prost = "*"
 rand = "*"
 serde = { version = "*", features = ["derive"] }
-serde_json = "*"
