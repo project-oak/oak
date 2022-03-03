@@ -18,18 +18,19 @@ use crate::logger::Logger;
 use anyhow::Context;
 use async_trait::async_trait;
 use byteorder::{ByteOrder, LittleEndian};
-use futures::future::FutureExt;
+use futures::{future::FutureExt, stream::Peekable};
 use log::Level;
 use oak_functions_abi::proto::{
     ChannelHandle, ChannelStatus, OakStatus, Request, Response, ServerPolicy, StatusCode,
 };
 use serde::Deserialize;
-use std::{collections::HashMap, convert::TryInto, str, sync::Arc, time::Duration};
+use std::{collections::HashMap, convert::TryInto, pin::Pin, str, sync::Arc, time::Duration};
 use tokio::sync::mpsc::{
     channel,
     error::{TryRecvError, TrySendError},
     Receiver, Sender,
 };
+use tokio_stream::wrappers::ReceiverStream;
 use wasmi::ValueType;
 
 const MAIN_FUNCTION_NAME: &str = "main";
@@ -377,11 +378,13 @@ impl WasmState {
     ) -> Result<(), ChannelStatus> {
         // Read message from channel at channel_handle.
         let endpoint = self.get_endpoint_from_channel_handle(channel_handle)?;
-        let receiver = &mut endpoint.receiver;
-        let message = receiver.try_recv().map_err(|e| match e {
-            TryRecvError::Empty => ChannelStatus::ChannelEmpty,
-            TryRecvError::Disconnected => ChannelStatus::ChannelEndpointDisconnected,
-        })?;
+        let message = endpoint
+            .get_receiver_mut()
+            .try_recv()
+            .map_err(|e| match e {
+                TryRecvError::Empty => ChannelStatus::ChannelEmpty,
+                TryRecvError::Disconnected => ChannelStatus::ChannelEndpointDisconnected,
+            })?;
 
         // Write message to memory of the Wasm module.
         self.alloc_and_write_buffer_to_wasm_memory(message, dest_ptr_ptr, dest_len_ptr)?;
@@ -432,7 +435,9 @@ impl WasmState {
         }
 
         let channel_handle = channel_handles[0];
-        let _endpoint = self.get_endpoint_from_channel_handle(channel_handle)?;
+        let endpoint = self.get_endpoint_from_channel_handle(channel_handle)?;
+
+        let _ = Peekable::peek(Pin::new(&mut endpoint.receiver));
 
         Ok(())
     }
@@ -936,7 +941,22 @@ pub fn format_bytes(v: &[u8]) -> String {
 #[derive(Debug)]
 pub struct Endpoint {
     sender: Sender<UwabiMessage>,
-    receiver: Receiver<UwabiMessage>,
+    receiver: Peekable<ReceiverStream<UwabiMessage>>,
+}
+
+impl Endpoint {
+    fn new(sender: Sender<UwabiMessage>, receiver: Receiver<UwabiMessage>) -> Self {
+        Endpoint {
+            sender: sender,
+            receiver: futures::StreamExt::peekable(tokio_stream::wrappers::ReceiverStream::new(
+                receiver,
+            )),
+        }
+    }
+
+    fn get_receiver_mut(&mut self) -> &mut Receiver<UwabiMessage> {
+        self.receiver.get_mut().as_mut()
+    }
 }
 
 /// Create a channel with two symmetrical endpoints. The [`UwabiMessage`] sent from one [`Endpoint`]
@@ -953,14 +973,8 @@ pub struct Endpoint {
 fn channel_create() -> (Endpoint, Endpoint) {
     let (tx0, rx0) = channel::<UwabiMessage>(UWABI_CHANNEL_BOUND);
     let (tx1, rx1) = channel::<UwabiMessage>(UWABI_CHANNEL_BOUND);
-    let endpoint0 = Endpoint {
-        sender: tx0,
-        receiver: rx1,
-    };
-    let endpoint1 = Endpoint {
-        sender: tx1,
-        receiver: rx0,
-    };
+    let endpoint0 = Endpoint::new(tx0, rx1);
+    let endpoint1 = Endpoint::new(tx1, rx0);
     (endpoint0, endpoint1)
 }
 struct ChannelSwitchboard(HashMap<ChannelHandle, Endpoint>);
@@ -1046,8 +1060,8 @@ mod tests {
 
         async fn run(mut self: Box<Self>) {
             let endpoint = self.get_endpoint_mut();
-            let receiver = &mut endpoint.receiver;
-            let sender = &mut endpoint.sender;
+            let sender = endpoint.sender.clone();
+            let receiver = endpoint.get_receiver_mut();
 
             // The runtime endpoint continiously reads messages from the Wasm module endpoint until
             // all senders from the Wasm endpoint are closed.
@@ -1138,8 +1152,10 @@ mod tests {
     #[test]
     fn test_start_from_empty_endpoints() {
         fn check_empty(endpoint: &mut Endpoint) {
-            let receiver = &mut endpoint.receiver;
-            assert_eq!(TryRecvError::Empty, receiver.try_recv().unwrap_err());
+            assert_eq!(
+                TryRecvError::Empty,
+                endpoint.get_receiver_mut().try_recv().unwrap_err()
+            );
         }
         let (mut module, mut runtime) = channel_create();
         check_empty(&mut module);
@@ -1154,7 +1170,7 @@ mod tests {
             let send_result = sender.send(message.clone()).await;
             assert!(send_result.is_ok());
 
-            let receiver = &mut endpoint2.receiver;
+            let receiver = endpoint2.get_receiver_mut();
             let received_message = receiver.recv().await.unwrap();
 
             assert_eq!(message, received_message);
@@ -1204,7 +1220,7 @@ mod tests {
         let mut endpoint_2 = channel_switchboard.register(ChannelHandle::Testing);
 
         let stopped_receiving = tokio::spawn(async move {
-            endpoint_2.receiver.recv().await;
+            endpoint_2.get_receiver_mut().recv().await;
             true
         });
 
@@ -1438,7 +1454,7 @@ mod tests {
             .channel_switchboard
             .get_mut(&channel_handle)
             .expect("Endpoint not set for Channel Handle")
-            .receiver
+            .get_receiver_mut()
             .recv()
             .await
             .expect("No message or channel closed.")

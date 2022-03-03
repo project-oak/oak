@@ -1937,6 +1937,7 @@ dependencies = [
  "tempfile",
  "test_utils",
  "tokio",
+ "tokio-stream",
  "toml",
  "tonic",
  "tract-tensorflow 0.15.9-pre",

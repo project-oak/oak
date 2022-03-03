@@ -49,6 +49,7 @@ tokio = { version = "*", features = [
   "sync",
   "rt-multi-thread"
 ] }
+tokio-stream = "*"
 toml = "*"
 tonic = "*"
 # Provide cargo with version 0.15.9-pre, which includes our reproducibility
