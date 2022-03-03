@@ -18,7 +18,7 @@
 //!
 //! See <https://s2geometry.io/> for more information.
 
-pub use anyhow::Result;
+pub use anyhow::{Context, Result};
 use s2::{
     cap::Cap,
     region::RegionCoverer,
@@ -44,7 +44,7 @@ const DEFAULT_CUTOFF_RADIUS_METERS: f64 = 40_000.;
 const LAT_LNG_INTEGER_SIZE: usize = std::mem::size_of::<i32>();
 
 // The size in bytes of the serialized representation of a location.
-const LOCATION_SIZE: usize = LAT_LNG_INTEGER_SIZE * 2;
+pub const LOCATION_SIZE: usize = LAT_LNG_INTEGER_SIZE * 2;
 
 /// The default cutoff radius in radians.
 pub const DEFAULT_CUTOFF_RADIUS_RADIANS: Rad =
@@ -138,4 +138,16 @@ pub fn location_from_bytes(bytes: &[u8]) -> Result<LatLng> {
 /// vector of bytes.
 pub fn cell_id_to_bytes(cell: &CellID) -> Vec<u8> {
     cell.to_token().as_bytes().to_vec()
+}
+
+/// Converts a byte representation to the `CellID`.
+///
+/// A `CellID` is a wrapper around a `u64`. The `to_token` function generates a hex-encoded string
+/// representation of this internal value and truncates trailing 0s. This is then converted to a
+/// vector of bytes.
+pub fn cell_id_from_bytes(bytes: &[u8]) -> Result<CellID> {
+    let cell_id = CellID::from_token(
+        std::str::from_utf8(bytes).context("could not parse cell id bytes to UTF8 string")?,
+    );
+    Ok(cell_id)
 }

@@ -1,0 +1,18 @@
+[package]
+name = "lookup_data_checker"
+version = "0.1.0"
+authors = ["Ivan Petrov <ivanpetrov@google.com>"]
+edition = "2021"
+license = "Apache-2.0"
+
+[dependencies]
+anyhow = "*"
+bytes = "*"
+clap = { version = "*", features = ["derive"] }
+env_logger = "*"
+location_utils = { path = "../location_utils" }
+log = "*"
+oak_functions_abi = { path = "../abi" }
+prost = "*"
+rand = "*"
+serde = { version = "*", features = ["derive"] }
