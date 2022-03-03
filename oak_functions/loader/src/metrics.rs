@@ -21,10 +21,10 @@ use crate::{
         OakApiNativeExtension, WasmState, ABI_USIZE,
     },
 };
-use oak_functions_abi::proto::OakStatus;
-
 use anyhow::Context;
 use log::Level;
+use oak_functions_abi::proto::OakStatus;
+use oak_logger::OakLogger;
 use rand::{distributions::Open01, rngs::StdRng, thread_rng, Rng, SeedableRng};
 use serde::Deserialize;
 use std::{

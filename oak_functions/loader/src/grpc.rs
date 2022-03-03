@@ -27,6 +27,7 @@ use grpc_attestation::{
 };
 use log::Level;
 use oak_functions_abi::proto::{ConfigurationInfo, Request, ServerPolicy};
+use oak_logger::OakLogger;
 use prost::Message;
 use std::{future::Future, net::SocketAddr};
 

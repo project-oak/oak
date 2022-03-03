@@ -23,6 +23,7 @@ use log::Level;
 use oak_functions_abi::proto::{
     ChannelHandle, ChannelStatus, OakStatus, Request, Response, ServerPolicy, StatusCode,
 };
+use oak_logger::OakLogger;
 use serde::Deserialize;
 use std::{collections::HashMap, convert::TryInto, str, sync::Arc, time::Duration};
 use tokio::sync::mpsc::{
