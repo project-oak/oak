@@ -56,8 +56,8 @@ fn main() -> anyhow::Result<()> {
     let mut reader = BufReader::new(file);
     let mut buffer = Vec::new();
     reader.read_to_end(&mut buffer)?;
-    let entries = parse_lookup_entries(&mut buffer.as_ref())
-        .context("could not parse lookup data")?;
+    let entries =
+        parse_lookup_entries(&mut buffer.as_ref()).context("could not parse lookup data")?;
 
     // Parse lookup data entries.
     debug!("Parsed entries:");
@@ -67,7 +67,8 @@ fn main() -> anyhow::Result<()> {
         if entry.0.len() == LOCATION_SIZE {
             let location = location_from_bytes(&entry.0)
                 .with_context(|| format!("could not parse location {:?}", &entry.0))?;
-            let data = String::from_utf8(entry.1.to_vec()).with_context(|| format!("could not parse data {:?}", &entry.1))?;
+            let data = String::from_utf8(entry.1.to_vec())
+                .with_context(|| format!("could not parse data {:?}", &entry.1))?;
             weather_locations.insert(entry.0);
 
             debug!("- {{{:?}: {:?}}} # Location", location, data);
@@ -78,8 +79,12 @@ fn main() -> anyhow::Result<()> {
 
             let mut locations = vec![];
             for chunk in entry.1.chunks(LOCATION_SIZE) {
-                let location = location_from_bytes(chunk)
-                    .with_context(|| format!("could not parse location {:?} corresponding to the cell ID {:?}", chunk, cell_id))?;
+                let location = location_from_bytes(chunk).with_context(|| {
+                    format!(
+                        "could not parse location {:?} corresponding to the cell ID {:?}",
+                        chunk, cell_id
+                    )
+                })?;
                 locations.push(location);
                 cell_locations.insert(chunk.to_vec());
             }
@@ -92,12 +97,19 @@ fn main() -> anyhow::Result<()> {
     if weather_locations != cell_locations {
         let extra_locations: HashSet<_> = weather_locations.difference(&cell_locations).collect();
         if !extra_locations.is_empty() {
-            anyhow::bail!(format!("Locations are not presented in Cell IDs: {:?}", extra_locations));
+            anyhow::bail!(format!(
+                "Locations are not presented in Cell IDs: {:?}",
+                extra_locations
+            ));
         }
 
-        let extra_locations_in_cells: HashSet<_> = cell_locations.difference(&weather_locations).collect();
+        let extra_locations_in_cells: HashSet<_> =
+            cell_locations.difference(&weather_locations).collect();
         if !extra_locations_in_cells.is_empty() {
-            anyhow::bail!(format!("Locations from Cell IDs do not have individual data entries: {:?}", extra_locations));
+            anyhow::bail!(format!(
+                "Locations from Cell IDs do not have individual data entries: {:?}",
+                extra_locations
+            ));
         }
     }
 
