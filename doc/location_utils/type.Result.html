@@ -7,7 +7,7 @@
     <h1 class="fqn"><span class="in-band">Type Definition <a href="index.html">location_utils</a>::<wbr><a class="type" href="#">Result</a><button id="copy-path" onclick="copy_path(this)" title="Copy item path to clipboard"><img src="../clipboard.svg" width="19" height="18" alt="Copy item path"></button></span></h1><span class="out-of-band"><a class="srclink" href="https://docs.rs/anyhow/1.0.53/src/anyhow/lib.rs.html#449">source</a> · <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">[<span class="inner">&#x2212;</span>]</a></span></div><div class="docblock item-decl"><pre class="rust typedef"><code>pub type Result&lt;T, E&nbsp;=&nbsp;<a class="struct" href="https://docs.rs/anyhow/1.0.53/anyhow/struct.Error.html" title="struct anyhow::Error">Error</a>&gt; = <a class="enum" href="https://doc.rust-lang.org/nightly/core/result/enum.Result.html" title="enum core::result::Result">Result</a>&lt;T, E&gt;;</code></pre></div><details class="rustdoc-toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p><code>Result&lt;T, Error&gt;</code></p>
 <p>This is a reasonable return type to use throughout your application but also
 for <code>fn main</code>; if you do, failures will be printed along with any
-<a href="https://docs.rs/anyhow/1.0.53/anyhow/trait.Context.html" title="Context">context</a> and a backtrace if one was captured.</p>
+<a href="trait.Context.html" title="Context">context</a> and a backtrace if one was captured.</p>
 <p><code>anyhow::Result</code> may be used with one <em>or</em> two type parameters.</p>
 
 <div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">use</span> <span class="ident">anyhow::Result</span>;

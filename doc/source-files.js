@@ -5,6 +5,7 @@ sourcesIndex["fuzzable"] = {"name":"","files":["lib.rs"]};
 sourcesIndex["grpc_attestation"] = {"name":"","files":["client.rs","lib.rs","server.rs"]};
 sourcesIndex["key_value_lookup"] = {"name":"","files":["lib.rs"]};
 sourcesIndex["location_utils"] = {"name":"","files":["lib.rs"]};
+sourcesIndex["lookup_data_checker"] = {"name":"","files":["main.rs"]};
 sourcesIndex["lookup_data_generator"] = {"name":"","files":["data.rs","lib.rs"]};
 sourcesIndex["metrics"] = {"name":"","files":["lib.rs"]};
 sourcesIndex["metrics_client"] = {"name":"","files":["main.rs"]};

@@ -144,6 +144,18 @@
 <span id="139">139</span>
 <span id="140">140</span>
 <span id="141">141</span>
+<span id="142">142</span>
+<span id="143">143</span>
+<span id="144">144</span>
+<span id="145">145</span>
+<span id="146">146</span>
+<span id="147">147</span>
+<span id="148">148</span>
+<span id="149">149</span>
+<span id="150">150</span>
+<span id="151">151</span>
+<span id="152">152</span>
+<span id="153">153</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2021 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -164,7 +176,7 @@
 <span class="doccomment">//!</span>
 <span class="doccomment">//! See &lt;https://s2geometry.io/&gt; for more information.</span>
 
-<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">anyhow::Result</span>;
+<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">anyhow</span>::{<span class="ident">Context</span>, <span class="prelude-ty">Result</span>};
 <span class="kw">use</span> <span class="ident">s2</span>::{
     <span class="ident">cap::Cap</span>,
     <span class="ident">region::RegionCoverer</span>,
@@ -190,7 +202,7 @@
 <span class="kw">const</span> <span class="ident">LAT_LNG_INTEGER_SIZE</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="ident">std::mem::size_of</span>::<span class="op">&lt;</span><span class="ident">i32</span><span class="op">&gt;</span>();
 
 <span class="comment">// The size in bytes of the serialized representation of a location.</span>
-<span class="kw">const</span> <span class="ident">LOCATION_SIZE</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="ident">LAT_LNG_INTEGER_SIZE</span> <span class="op">*</span> <span class="number">2</span>;
+<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">LOCATION_SIZE</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="ident">LAT_LNG_INTEGER_SIZE</span> <span class="op">*</span> <span class="number">2</span>;
 
 <span class="doccomment">/// The default cutoff radius in radians.</span>
 <span class="kw">pub</span> <span class="kw">const</span> <span class="ident">DEFAULT_CUTOFF_RADIUS_RADIANS</span>: <span class="ident">Rad</span> <span class="op">=</span>
@@ -284,6 +296,18 @@
 <span class="doccomment">/// vector of bytes.</span>
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">cell_id_to_bytes</span>(<span class="ident">cell</span>: <span class="kw-2">&amp;</span><span class="ident">CellID</span>) -&gt; <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span> {
     <span class="ident">cell</span>.<span class="ident">to_token</span>().<span class="ident">as_bytes</span>().<span class="ident">to_vec</span>()
+}
+
+<span class="doccomment">/// Converts a byte representation to the `CellID`.</span>
+<span class="doccomment">///</span>
+<span class="doccomment">/// A `CellID` is a wrapper around a `u64`. The `to_token` function generates a hex-encoded string</span>
+<span class="doccomment">/// representation of this internal value and truncates trailing 0s. This is then converted to a</span>
+<span class="doccomment">/// vector of bytes.</span>
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">cell_id_from_bytes</span>(<span class="ident">bytes</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">CellID</span><span class="op">&gt;</span> {
+    <span class="kw">let</span> <span class="ident">cell_id</span> <span class="op">=</span> <span class="ident">CellID::from_token</span>(
+        <span class="ident">std::str::from_utf8</span>(<span class="ident">bytes</span>).<span class="ident">context</span>(<span class="string">&quot;could not parse cell id bytes to UTF8 string&quot;</span>)<span class="question-mark">?</span>,
+    );
+    <span class="prelude-val">Ok</span>(<span class="ident">cell_id</span>)
 }
 </code></pre></div>
 </section><section id="search" class="content hidden"></section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="location_utils" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.60.0-nightly (75d9a0ae2 2022-02-16)" ></div>
