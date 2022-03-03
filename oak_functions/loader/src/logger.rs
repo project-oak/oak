@@ -63,6 +63,9 @@ impl OakLogger for Logger {
         self.log(level, message);
     }
 
+    #[cfg(not(feature = "oak-unsafe"))]
+    fn log_sensitive(&self, _level: Level, _message: &str) {}
+
     fn log_public(&self, level: Level, message: &str) {
         self.log(level, message);
     }

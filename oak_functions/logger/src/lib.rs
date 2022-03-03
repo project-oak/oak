@@ -21,8 +21,7 @@ pub trait OakLogger {
     ///
     /// Only insecure debug-only implementations may provide a non-empty implementation. Production
     /// implementations must not do anything.
-    #[allow(unused_variables)]
-    fn log_sensitive(&self, _level: Level, _message: &str) {}
+    fn log_sensitive(&self, level: Level, message: &str);
 
     /// Logs a message that contains only public, non-sensitive content at the specified `Level`.
     ///
