@@ -180,7 +180,7 @@
 <span class="doccomment">/// Host function name for invoking TensorFlow model inference.</span>
 <span class="kw">const</span> <span class="ident">TF_ABI_FUNCTION_NAME</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;tf_model_infer&quot;</span>;
 
-<span class="comment">// TODO(#2576): Move extension implementation to `tf_inference` crate once the Extension-realted</span>
+<span class="comment">// TODO(#2576): Move extension implementation to `tf_inference` crate once the Extension-related</span>
 <span class="comment">// structs are in a separate crate.</span>
 <span class="kw">impl</span> <span class="ident">OakApiNativeExtension</span> <span class="kw">for</span> <span class="ident">TensorFlowModel</span><span class="op">&lt;</span><span class="ident">Logger</span><span class="op">&gt;</span> {
     <span class="kw">fn</span> <span class="ident">invoke</span>(

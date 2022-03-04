@@ -344,6 +344,8 @@
 <span id="339">339</span>
 <span id="340">340</span>
 <span id="341">341</span>
+<span id="342">342</span>
+<span id="343">343</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2021 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -373,7 +375,7 @@
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">tf</span>;
 
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;oak-metrics&quot;</span>)]</span>
-<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::metrics</span>::{<span class="ident">PrivateMetricsConfig</span>, <span class="ident">PrivateMetricsProxyFactory</span>};
+<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::metrics::PrivateMetricsProxyFactory</span>;
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;oak-tf&quot;</span>)]</span>
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::tf</span>::{<span class="ident">read_model_from_path</span>, <span class="ident">TensorFlowFactory</span>};
 <span class="kw">use</span> <span class="kw">crate</span>::{
@@ -387,6 +389,8 @@
 <span class="kw">use</span> <span class="ident">clap::Parser</span>;
 <span class="kw">use</span> <span class="ident">log::Level</span>;
 <span class="kw">use</span> <span class="ident">oak_functions_abi::proto</span>::{<span class="ident">ConfigurationInfo</span>, <span class="ident">ServerPolicy</span>};
+<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;oak-metrics&quot;</span>)]</span>
+<span class="kw">use</span> <span class="ident">oak_functions_metrics::PrivateMetricsConfig</span>;
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;oak-tf&quot;</span>)]</span>
 <span class="kw">use</span> <span class="ident">oak_functions_tf_inference::TensorFlowModelConfig</span>;
 <span class="kw">use</span> <span class="ident">oak_logger::OakLogger</span>;

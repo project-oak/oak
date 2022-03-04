@@ -19,6 +19,7 @@ sourcesIndex["oak_functions_load_test"] = {"name":"","files":["main.rs"]};
 sourcesIndex["oak_functions_loader"] = {"name":"","files":["grpc.rs","lib.rs","logger.rs","lookup.rs","lookup_data.rs","metrics.rs","server.rs","tf.rs"]};
 sourcesIndex["oak_functions_loader_base"] = {"name":"","files":["main.rs"]};
 sourcesIndex["oak_functions_loader_unsafe"] = {"name":"","files":["main.rs"]};
+sourcesIndex["oak_functions_metrics"] = {"name":"","files":["lib.rs"]};
 sourcesIndex["oak_functions_sdk_abi_test"] = {"name":"","files":["lib.rs"]};
 sourcesIndex["oak_functions_tf_inference"] = {"name":"","files":["lib.rs"]};
 sourcesIndex["oak_https_attestation"] = {"name":"","files":["main.rs","server.rs"]};
