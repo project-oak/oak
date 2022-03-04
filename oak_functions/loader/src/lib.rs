@@ -27,7 +27,7 @@ pub mod server;
 pub mod tf;
 
 #[cfg(feature = "oak-metrics")]
-use crate::metrics::{PrivateMetricsConfig, PrivateMetricsProxyFactory};
+use crate::metrics::PrivateMetricsProxyFactory;
 #[cfg(feature = "oak-tf")]
 use crate::tf::{read_model_from_path, TensorFlowFactory};
 use crate::{
@@ -41,6 +41,8 @@ use anyhow::Context;
 use clap::Parser;
 use log::Level;
 use oak_functions_abi::proto::{ConfigurationInfo, ServerPolicy};
+#[cfg(feature = "oak-metrics")]
+use oak_functions_metrics::PrivateMetricsConfig;
 #[cfg(feature = "oak-tf")]
 use oak_functions_tf_inference::TensorFlowModelConfig;
 use oak_logger::OakLogger;

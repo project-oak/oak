@@ -16,6 +16,7 @@ libfuzzer-sys = "*"
 maplit = "*"
 oak_functions_loader = { path = "..", features = ["oak-metrics"] }
 oak_functions_abi = { path = "../../abi" }
+oak_functions_metrics = { path = "../../experimental/metrics" }
 prost = "*"
 tokio = "*"
 tonic = "*"

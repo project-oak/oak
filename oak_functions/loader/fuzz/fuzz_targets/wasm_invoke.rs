@@ -22,15 +22,16 @@ pub mod proto {
 use crate::proto::{instruction::InstructionVariant, Instructions};
 use arbitrary::Arbitrary;
 use libfuzzer_sys::fuzz_target;
-use maplit::hashmap;
+use maplit::{btreemap, hashmap};
 use oak_functions_abi::proto::Request;
 use oak_functions_loader::{
     logger::Logger,
     lookup::LookupFactory,
     lookup_data::LookupData,
-    metrics::{BucketConfig, PrivateMetricsConfig, PrivateMetricsProxyFactory},
+    metrics::PrivateMetricsProxyFactory,
     server::{BoxedExtensionFactory, WasmHandler},
 };
+use oak_functions_metrics::{BucketConfig, PrivateMetricsConfig};
 use prost::Message;
 use std::{convert::Into, sync::Arc};
 
@@ -172,7 +173,7 @@ fn create_metrics_factory() -> BoxedExtensionFactory {
     let metrics_config = PrivateMetricsConfig {
         epsilon: 1.0,
         batch_size: 20,
-        buckets: hashmap! {"count".to_string() => BucketConfig::Count },
+        buckets: btreemap! {"count".to_string() => BucketConfig::Count },
     };
 
     PrivateMetricsProxyFactory::new_boxed_extension_factory(&metrics_config, Logger::for_test())

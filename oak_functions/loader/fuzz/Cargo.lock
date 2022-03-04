@@ -718,6 +718,7 @@ dependencies = [
  "hyper-rustls",
  "log",
  "oak_functions_abi",
+ "oak_functions_metrics",
  "oak_logger",
  "oak_remote_attestation",
  "oak_utils",
@@ -745,10 +746,23 @@ dependencies = [
  "maplit",
  "oak_functions_abi",
  "oak_functions_loader",
+ "oak_functions_metrics",
  "prost",
  "prost-build",
  "tokio",
  "tonic",
+]
+
+[[package]]
+name = "oak_functions_metrics"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "log",
+ "maplit",
+ "oak_logger",
+ "rand",
+ "serde",
 ]
 
 [[package]]

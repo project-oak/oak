@@ -1015,6 +1015,7 @@ dependencies = [
  "oak_functions",
  "oak_functions_abi",
  "oak_functions_loader",
+ "oak_functions_metrics",
  "prost",
  "prost-build",
  "rand 0.8.5",
@@ -1519,7 +1520,7 @@ dependencies = [
  "log",
  "oak_functions_abi",
  "prost",
- "rand 0.4.6",
+ "rand 0.5.6",
  "serde",
 ]
 
@@ -1946,6 +1947,7 @@ dependencies = [
  "lookup_data_generator",
  "maplit",
  "oak_functions_abi",
+ "oak_functions_metrics",
  "oak_functions_tf_inference",
  "oak_logger",
  "oak_remote_attestation",
@@ -1979,6 +1981,18 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "oak_functions_loader",
+]
+
+[[package]]
+name = "oak_functions_metrics"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "log",
+ "maplit",
+ "oak_logger",
+ "rand 0.8.5",
+ "serde",
 ]
 
 [[package]]
