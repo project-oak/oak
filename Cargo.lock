@@ -1946,6 +1946,8 @@ dependencies = [
  "lookup_data_generator",
  "maplit",
  "oak_functions_abi",
+ "oak_functions_tf_inference",
+ "oak_logger",
  "oak_remote_attestation",
  "oak_utils",
  "prost",
@@ -1959,7 +1961,6 @@ dependencies = [
  "tokio",
  "toml",
  "tonic",
- "tract-tensorflow 0.15.9-pre",
  "url",
  "wasmi",
 ]
@@ -1992,6 +1993,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "oak_functions_tf_inference"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "bytes",
+ "log",
+ "oak_functions_abi",
+ "oak_logger",
+ "prost",
+ "serde",
+ "serde_derive",
+ "tract-tensorflow 0.15.9-pre",
+]
+
+[[package]]
 name = "oak_https_attestation"
 version = "0.1.0"
 dependencies = [
@@ -2012,6 +2028,13 @@ dependencies = [
  "sha2 0.10.1",
  "tokio",
  "tokio-rustls 0.22.0",
+]
+
+[[package]]
+name = "oak_logger"
+version = "0.1.0"
+dependencies = [
+ "log",
 ]
 
 [[package]]

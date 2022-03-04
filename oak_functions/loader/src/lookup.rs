@@ -24,6 +24,7 @@ use crate::{
 };
 use log::Level;
 use oak_functions_abi::proto::OakStatus;
+use oak_logger::OakLogger;
 use std::sync::Arc;
 use wasmi::ValueType;
 
