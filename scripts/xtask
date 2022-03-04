@@ -5,5 +5,5 @@ readonly SCRIPTS_DIR="$(dirname "$0")"
 source "$SCRIPTS_DIR/common"
 
 sccache --show-stats
-cargo run --manifest-path="${SCRIPTS_DIR}/../runner/Cargo.toml" -- "$@"
+cargo run --manifest-path="${SCRIPTS_DIR}/../xtask/Cargo.toml" -- "$@"
 sccache --show-stats

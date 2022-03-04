@@ -1,4 +1,4 @@
-_runner() {
+_xtask() {
     local i cur prev opts cmds
     COMPREPLY=()
     cur="${COMP_WORDS[COMP_CWORD]}"
@@ -10,7 +10,7 @@ _runner() {
     do
         case "${i}" in
             "$1")
-                cmd="runner"
+                cmd="xtask"
                 ;;
             build-functions-example)
                 cmd+="__build__functions__example"
@@ -66,7 +66,7 @@ _runner() {
     done
 
     case "${cmd}" in
-        runner)
+        xtask)
             opts="-h --help --dry-run --commands --logs --keep-going --scope run-functions-examples build-functions-example build-functions-server format check-format run-tests run-cargo-clippy run-cargo-tests run-bazel-tests run-cargo-fuzz run-cargo-deny run-cargo-udeps run-ci run-cargo-clean completion help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 1 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
@@ -84,7 +84,7 @@ _runner() {
             COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
             return 0
             ;;
-        runner__build__functions__example)
+        xtask__build__functions__example)
             opts="-h --application-variant --example-name --client-variant --client-rust-toolchain --client-rust-target --server-variant --server-rust-toolchain --server-rust-target --run-server --client-additional-args --server-additional-args --build-docker --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
@@ -142,7 +142,7 @@ _runner() {
             COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
             return 0
             ;;
-        runner__build__functions__server)
+        xtask__build__functions__server)
             opts="-h --server-variant --server-rust-toolchain --server-rust-target --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
@@ -168,7 +168,7 @@ _runner() {
             COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
             return 0
             ;;
-        runner__check__format)
+        xtask__check__format)
             opts="-h --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
@@ -182,7 +182,7 @@ _runner() {
             COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
             return 0
             ;;
-        runner__completion)
+        xtask__completion)
             opts="-h --file-name --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
@@ -200,7 +200,7 @@ _runner() {
             COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
             return 0
             ;;
-        runner__format)
+        xtask__format)
             opts="-h --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
@@ -214,7 +214,7 @@ _runner() {
             COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
             return 0
             ;;
-        runner__help)
+        xtask__help)
             opts="<SUBCOMMAND>..."
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
@@ -228,7 +228,7 @@ _runner() {
             COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
             return 0
             ;;
-        runner__run__bazel__tests)
+        xtask__run__bazel__tests)
             opts="-h --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
@@ -242,7 +242,7 @@ _runner() {
             COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
             return 0
             ;;
-        runner__run__cargo__clean)
+        xtask__run__cargo__clean)
             opts="-h --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
@@ -256,7 +256,7 @@ _runner() {
             COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
             return 0
             ;;
-        runner__run__cargo__clippy)
+        xtask__run__cargo__clippy)
             opts="-h --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
@@ -270,7 +270,7 @@ _runner() {
             COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
             return 0
             ;;
-        runner__run__cargo__deny)
+        xtask__run__cargo__deny)
             opts="-h --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
@@ -284,7 +284,7 @@ _runner() {
             COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
             return 0
             ;;
-        runner__run__cargo__fuzz)
+        xtask__run__cargo__fuzz)
             opts="-h --crate-name --target-name --build-deps --help <ARGS>..."
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
@@ -306,7 +306,7 @@ _runner() {
             COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
             return 0
             ;;
-        runner__run__cargo__tests)
+        xtask__run__cargo__tests)
             opts="-h --cleanup --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
@@ -320,7 +320,7 @@ _runner() {
             COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
             return 0
             ;;
-        runner__run__cargo__udeps)
+        xtask__run__cargo__udeps)
             opts="-h --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
@@ -334,7 +334,7 @@ _runner() {
             COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
             return 0
             ;;
-        runner__run__ci)
+        xtask__run__ci)
             opts="-h --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
@@ -348,7 +348,7 @@ _runner() {
             COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
             return 0
             ;;
-        runner__run__functions__examples)
+        xtask__run__functions__examples)
             opts="-h --application-variant --example-name --client-variant --client-rust-toolchain --client-rust-target --server-variant --server-rust-toolchain --server-rust-target --run-server --client-additional-args --server-additional-args --build-docker --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
@@ -406,7 +406,7 @@ _runner() {
             COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
             return 0
             ;;
-        runner__run__tests)
+        xtask__run__tests)
             opts="-h --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
@@ -423,4 +423,4 @@ _runner() {
     esac
 }
 
-complete -F _runner -o bashdefault -o default runner
+complete -F _xtask -o bashdefault -o default xtask

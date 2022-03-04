@@ -31,6 +31,6 @@ members = [
   "oak_functions/sdk/oak_functions/tests/module",
   "oak_functions/sdk/test_utils",
   "remote_attestation/rust",
-  "runner",
+  "xtask",
 ]
 exclude = ["oak_functions/loader/fuzz"]

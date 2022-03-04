@@ -145,10 +145,10 @@ To build and run this example manually follow these steps:
        --request={\"lat\":0,\"lng\":0}
    ```
 
-Alternatively, the `runner` could be used to run this example:
+Alternatively, the `xtask` could be used to run this example:
 
 ```shell
-./scripts/runner run-functions-examples --example-name=weather_lookup
+./scripts/xtask run-functions-examples --example-name=weather_lookup
 ```
 
 ## Cloud Run Deploy

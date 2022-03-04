@@ -33,11 +33,11 @@ steps:
     args: ['./scripts/run_cargo_crev']
 
   - name: 'gcr.io/oak-ci/oak:latest'
-    id: runner_ci
+    id: xtask_ci
     waitFor: ['git_init']
     timeout: 90m
     entrypoint: 'bash'
-    args: ['./scripts/runner', '--commands', 'run-ci']
+    args: ['./scripts/xtask', '--commands', 'run-ci']
 
   - name: 'gcr.io/oak-ci/oak:latest'
     id: generate_root_ca_certs
@@ -50,7 +50,7 @@ steps:
   # relevant build artifacts are ignored by git.
   - name: 'gcr.io/oak-ci/oak:latest'
     id: git_check_diff
-    waitFor: ['git_init', 'runner_ci', 'generate_root_ca_certs']
+    waitFor: ['git_init', 'xtask_ci', 'generate_root_ca_certs']
     timeout: 5m
     entrypoint: 'bash'
     args: ['./scripts/git_check_diff']
