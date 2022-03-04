@@ -19,6 +19,7 @@ log = "*"
 maplit = "*"
 oak_functions_loader = { path = "../../../loader", features = ["oak-metrics"] }
 oak_functions_abi = { path = "../../../abi" }
+oak_functions_metrics = { path = "../../../experimental/metrics" }
 rand = "0.8.4"
 test_utils = { path = "../../../sdk/test_utils" }
 tokio = { version = "*", features = ["macros"] }

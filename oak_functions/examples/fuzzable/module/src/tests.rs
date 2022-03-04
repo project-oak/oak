@@ -16,7 +16,7 @@
 use crate::proto::{
     instruction::InstructionVariant, Instruction, Instructions, Panic, WriteResponse,
 };
-use maplit::hashmap;
+use maplit::btreemap;
 use oak_functions_abi::proto::{ServerPolicy, StatusCode};
 
 use oak_functions_loader::{
@@ -24,9 +24,11 @@ use oak_functions_loader::{
     logger::Logger,
     lookup::LookupFactory,
     lookup_data::LookupData,
-    metrics::{BucketConfig, PrivateMetricsConfig, PrivateMetricsProxyFactory},
+    metrics::PrivateMetricsProxyFactory,
     server::BoxedExtensionFactory,
 };
+
+use oak_functions_metrics::{BucketConfig, PrivateMetricsConfig};
 
 use prost::Message;
 use std::{
@@ -146,7 +148,7 @@ fn create_metrics_factory() -> BoxedExtensionFactory {
     let metrics_config = PrivateMetricsConfig {
         epsilon: 1.0,
         batch_size: 20,
-        buckets: hashmap! {"count".to_string() => BucketConfig::Count },
+        buckets: btreemap! {"count".to_string() => BucketConfig::Count },
     };
 
     PrivateMetricsProxyFactory::new_boxed_extension_factory(
