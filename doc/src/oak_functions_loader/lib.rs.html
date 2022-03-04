@@ -591,7 +591,7 @@
         .<span class="ident">context</span>(<span class="string">&quot;could not register signal handler&quot;</span>)<span class="question-mark">?</span>;
 
     <span class="comment">// The server is started in its own thread, so just block the current thread until a signal</span>
-    <span class="comment">// arrives. This is needed for getting the correct status code when running with `runner`.</span>
+    <span class="comment">// arrives. This is needed for getting the correct status code when running with `xtask`.</span>
     <span class="kw">while</span> <span class="op">!</span><span class="ident">done</span>.<span class="ident">load</span>(<span class="ident">Ordering::Relaxed</span>) {
         <span class="comment">// There are few synchronization mechanisms that are allowed to be used in a signal</span>
         <span class="comment">// handler context, so use a primitive sleep loop to watch for the termination</span>
