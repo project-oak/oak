@@ -331,7 +331,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "grpc_attestation"
+name = "grpc_streaming_attestation"
 version = "0.1.0"
 dependencies = [
  "anyhow",
@@ -711,7 +711,7 @@ dependencies = [
  "chrono",
  "clap",
  "futures",
- "grpc_attestation",
+ "grpc_streaming_attestation",
  "http",
  "humantime-serde",
  "hyper",
