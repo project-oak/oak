@@ -6,7 +6,7 @@ members = [
   "experimental/tf_proxy/client",
   "experimental/tf_proxy/server",
   "experimental/tls_attestation",
-  "grpc_attestation",
+  "grpc_streaming_attestation",
   "oak_functions/abi",
   "oak_functions/client/rust/Cargo.toml",
   "oak_functions/examples/benchmark/module",

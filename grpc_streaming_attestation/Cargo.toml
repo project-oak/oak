@@ -1,5 +1,5 @@
 [package]
-name = "grpc_attestation"
+name = "grpc_streaming_attestation"
 version = "0.1.0"
 authors = ["Conrad Grobler <grobler@google.com>"]
 edition = "2018"

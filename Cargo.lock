@@ -1077,7 +1077,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "grpc_attestation"
+name = "grpc_streaming_attestation"
 version = "0.1.0"
 dependencies = [
  "anyhow",
@@ -1895,7 +1895,7 @@ dependencies = [
  "clap 3.0.14",
  "ecdsa",
  "env_logger 0.9.0",
- "grpc_attestation",
+ "grpc_streaming_attestation",
  "http",
  "log",
  "oak_functions_abi",
@@ -1938,7 +1938,7 @@ dependencies = [
  "clap 3.0.14",
  "criterion",
  "futures",
- "grpc_attestation",
+ "grpc_streaming_attestation",
  "http",
  "humantime-serde",
  "hyper",
@@ -3170,7 +3170,7 @@ dependencies = [
  "clap 3.0.14",
  "env_logger 0.9.0",
  "futures",
- "grpc_attestation",
+ "grpc_streaming_attestation",
  "http",
  "log",
  "oak_functions_abi",

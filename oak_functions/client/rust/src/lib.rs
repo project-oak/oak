@@ -23,7 +23,7 @@ pub mod rekor;
 
 use crate::attestation::{into_server_identity_verifier, ConfigurationVerifier};
 use anyhow::Context;
-use grpc_attestation::client::AttestationClient;
+use grpc_streaming_attestation::client::AttestationClient;
 use oak_functions_abi::proto::{Request, Response};
 use prost::Message;
 

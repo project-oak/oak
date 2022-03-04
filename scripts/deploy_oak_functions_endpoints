@@ -20,7 +20,7 @@ readonly OUT_DIR='./oak_functions/bin'
 mkdir --parents "${OUT_DIR}"
 
 cp \
-  ./oak_functions/proto/server.proto \
+  ./oak_functions/proto/streaming_server.proto \
   ./oak_functions/proto/invocation.proto \
   "${OUT_DIR}" \
   --force
@@ -38,9 +38,9 @@ protoc \
   --include_imports \
   --include_source_info \
   --descriptor_set_out="${OUT_DIR}/server.pb" \
-  server.proto
+  streaming_server.proto
 
-# See https://cloud.google.com/endpoints/docs/grpc/get-started-cloud-run for 
+# See https://cloud.google.com/endpoints/docs/grpc/get-started-cloud-run for
 # more details about Endpoints for Cloud Run with ESPv2.
 
 # Deploy a sample image to get a service name
@@ -51,9 +51,9 @@ gcloud run deploy "${CLOUD_RUN_SERVICE_NAME}" \
     --project="${GCP_PROJECT_ID}"
 
 # Fetch the URL for the Cloud Run ESPv2 instance.
-readonly CLOUD_RUN_SERVICE_URL="$(gcloud beta run services describe "${CLOUD_RUN_SERVICE_NAME}" --project="${GCP_PROJECT_ID}" --region=europe-west2 --platform=managed --format='value(status.url)')" 
+readonly CLOUD_RUN_SERVICE_URL="$(gcloud beta run services describe "${CLOUD_RUN_SERVICE_NAME}" --project="${GCP_PROJECT_ID}" --region=europe-west2 --platform=managed --format='value(status.url)')"
 # Fetch the URL for the Cloud Run Oak Functions instance.
-readonly BACKEN_CLOUD_RUN_URL="$(gcloud beta run services describe "${FUNCTIONS_INSTANCE_NAME}" --project="${GCP_PROJECT_ID}" --region=europe-west2 --platform=managed --format='value(status.url)')" 
+readonly BACKEN_CLOUD_RUN_URL="$(gcloud beta run services describe "${FUNCTIONS_INSTANCE_NAME}" --project="${GCP_PROJECT_ID}" --region=europe-west2 --platform=managed --format='value(status.url)')"
 # Get hostname by dropping 'https://' from the beginning of the URL.
 readonly CLOUD_RUN_HOSTNAME="$(echo "${CLOUD_RUN_SERVICE_URL}" | cut -c 9-)"
 readonly BACKEND_CLOUD_RUN_HOST="$(echo "${BACKEN_CLOUD_RUN_URL}" | cut -c 9-)"
@@ -71,14 +71,14 @@ sed \
 gcloud endpoints services deploy "${OUT_DIR}/server.pb" "${OUT_DIR}/endpoint_api_config.yaml" \
   --project="${GCP_PROJECT_ID}"
 
-# Get the CONFIG_ID. The first one in the list is the most recent one, so `--limit=1` is used.  
+# Get the CONFIG_ID. The first one in the list is the most recent one, so `--limit=1` is used.
 readonly CONFIG_ID="$(gcloud endpoints configs list --service="${CLOUD_RUN_HOSTNAME}" --limit=1 --format='value(id)')"
 
 # Building a new ESPv2 image
 ./scripts/gcloud_build_image -s "${CLOUD_RUN_HOSTNAME}" \
     -c "${CONFIG_ID}" -p "${GCP_PROJECT_ID}"
 
-# Get the image tag for the newly created container 
+# Get the image tag for the newly created container
 readonly IMAGE_TAG="$(gcloud container images list-tags gcr.io/oak-ci/endpoints-runtime-serverless --limit=1 --format='value(tags)')"
 
 # Deploying the ESPv2 container
