@@ -75,9 +75,6 @@
 <span id="70">70</span>
 <span id="71">71</span>
 <span id="72">72</span>
-<span id="73">73</span>
-<span id="74">74</span>
-<span id="75">75</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2021 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -95,6 +92,7 @@
 
 <span class="kw">use</span> <span class="ident">chrono</span>::{<span class="ident">SecondsFormat</span>, <span class="ident">Utc</span>};
 <span class="kw">use</span> <span class="ident">log</span>::{<span class="ident">Level</span>, <span class="ident">LevelFilter</span>};
+<span class="kw">use</span> <span class="ident">oak_logger::OakLogger</span>;
 <span class="kw">use</span> <span class="ident">std::default::Default</span>;
 
 <span class="doccomment">/// A simple logger that splits logging between writing logs that contain only public, non-sensitive</span>
@@ -118,24 +116,6 @@
         <span class="ident"><span class="self">Self</span>::new</span>(<span class="ident">LevelFilter::Debug</span>)
     }
 
-    <span class="doccomment">/// Logs the message at the specified `Level`, but only if the &quot;oak-unsafe&quot; feature is</span>
-    <span class="doccomment">/// enabled.</span>
-    <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">unused_variables</span>)]</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">log_sensitive</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">level</span>: <span class="ident">Level</span>, <span class="ident">message</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) {
-        <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;oak-unsafe&quot;</span>)]</span>
-        {
-            <span class="self">self</span>.<span class="ident">log</span>(<span class="ident">level</span>, <span class="ident">message</span>);
-        }
-    }
-
-    <span class="doccomment">/// Logs a message that contains only public, non-sensitive content at the specified `Level`.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// All code that uses this function should be inspected to ensure that the message can never</span>
-    <span class="doccomment">/// contain any sensitive or non-public information.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">log_public</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">level</span>: <span class="ident">Level</span>, <span class="ident">message</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) {
-        <span class="self">self</span>.<span class="ident">log</span>(<span class="ident">level</span>, <span class="ident">message</span>);
-    }
-
     <span class="kw">fn</span> <span class="ident">log</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">level</span>: <span class="ident">Level</span>, <span class="ident">message</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) {
         <span class="kw">if</span> <span class="ident">level</span> <span class="op">&lt;</span><span class="op">=</span> <span class="self">self</span>.<span class="ident">max_level</span> {
             <span class="macro">eprintln!</span>(
@@ -151,6 +131,20 @@
 <span class="kw">impl</span> <span class="ident">Default</span> <span class="kw">for</span> <span class="ident">Logger</span> {
     <span class="kw">fn</span> <span class="ident">default</span>() -&gt; <span class="self">Self</span> {
         <span class="ident">Logger::new</span>(<span class="ident">LevelFilter::Debug</span>)
+    }
+}
+
+<span class="kw">impl</span> <span class="ident">OakLogger</span> <span class="kw">for</span> <span class="ident">Logger</span> {
+    <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;oak-unsafe&quot;</span>)]</span>
+    <span class="kw">fn</span> <span class="ident">log_sensitive</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">level</span>: <span class="ident">Level</span>, <span class="ident">message</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) {
+        <span class="self">self</span>.<span class="ident">log</span>(<span class="ident">level</span>, <span class="ident">message</span>);
+    }
+
+    <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">not</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;oak-unsafe&quot;</span>))]</span>
+    <span class="kw">fn</span> <span class="ident">log_sensitive</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">_level</span>: <span class="ident">Level</span>, <span class="ident">_message</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) {}
+
+    <span class="kw">fn</span> <span class="ident">log_public</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">level</span>: <span class="ident">Level</span>, <span class="ident">message</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) {
+        <span class="self">self</span>.<span class="ident">log</span>(<span class="ident">level</span>, <span class="ident">message</span>);
     }
 }
 </code></pre></div>

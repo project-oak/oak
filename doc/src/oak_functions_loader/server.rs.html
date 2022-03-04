@@ -1296,6 +1296,7 @@
 <span id="1291">1291</span>
 <span id="1292">1292</span>
 <span id="1293">1293</span>
+<span id="1294">1294</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2021 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -1321,6 +1322,7 @@
 <span class="kw">use</span> <span class="ident">oak_functions_abi::proto</span>::{
     <span class="ident">ChannelHandle</span>, <span class="ident">ChannelStatus</span>, <span class="ident">OakStatus</span>, <span class="ident">Request</span>, <span class="ident">Response</span>, <span class="ident">ServerPolicy</span>, <span class="ident">StatusCode</span>,
 };
+<span class="kw">use</span> <span class="ident">oak_logger::OakLogger</span>;
 <span class="kw">use</span> <span class="ident">serde::Deserialize</span>;
 <span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">collections::HashMap</span>, <span class="ident">convert::TryInto</span>, <span class="ident">str</span>, <span class="ident">sync::Arc</span>, <span class="ident">time::Duration</span>};
 <span class="kw">use</span> <span class="ident">tokio::sync::mpsc</span>::{

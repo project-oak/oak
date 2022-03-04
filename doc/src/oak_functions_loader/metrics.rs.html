@@ -617,10 +617,10 @@
         <span class="ident">OakApiNativeExtension</span>, <span class="ident">WasmState</span>, <span class="ident">ABI_USIZE</span>,
     },
 };
-<span class="kw">use</span> <span class="ident">oak_functions_abi::proto::OakStatus</span>;
-
 <span class="kw">use</span> <span class="ident">anyhow::Context</span>;
 <span class="kw">use</span> <span class="ident">log::Level</span>;
+<span class="kw">use</span> <span class="ident">oak_functions_abi::proto::OakStatus</span>;
+<span class="kw">use</span> <span class="ident">oak_logger::OakLogger</span>;
 <span class="kw">use</span> <span class="ident">rand</span>::{<span class="ident">distributions::Open01</span>, <span class="ident">rngs::StdRng</span>, <span class="ident">thread_rng</span>, <span class="ident">Rng</span>, <span class="ident">SeedableRng</span>};
 <span class="kw">use</span> <span class="ident">serde::Deserialize</span>;
 <span class="kw">use</span> <span class="ident">std</span>::{

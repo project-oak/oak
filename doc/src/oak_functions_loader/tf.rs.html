@@ -146,125 +146,6 @@
 <span id="141">141</span>
 <span id="142">142</span>
 <span id="143">143</span>
-<span id="144">144</span>
-<span id="145">145</span>
-<span id="146">146</span>
-<span id="147">147</span>
-<span id="148">148</span>
-<span id="149">149</span>
-<span id="150">150</span>
-<span id="151">151</span>
-<span id="152">152</span>
-<span id="153">153</span>
-<span id="154">154</span>
-<span id="155">155</span>
-<span id="156">156</span>
-<span id="157">157</span>
-<span id="158">158</span>
-<span id="159">159</span>
-<span id="160">160</span>
-<span id="161">161</span>
-<span id="162">162</span>
-<span id="163">163</span>
-<span id="164">164</span>
-<span id="165">165</span>
-<span id="166">166</span>
-<span id="167">167</span>
-<span id="168">168</span>
-<span id="169">169</span>
-<span id="170">170</span>
-<span id="171">171</span>
-<span id="172">172</span>
-<span id="173">173</span>
-<span id="174">174</span>
-<span id="175">175</span>
-<span id="176">176</span>
-<span id="177">177</span>
-<span id="178">178</span>
-<span id="179">179</span>
-<span id="180">180</span>
-<span id="181">181</span>
-<span id="182">182</span>
-<span id="183">183</span>
-<span id="184">184</span>
-<span id="185">185</span>
-<span id="186">186</span>
-<span id="187">187</span>
-<span id="188">188</span>
-<span id="189">189</span>
-<span id="190">190</span>
-<span id="191">191</span>
-<span id="192">192</span>
-<span id="193">193</span>
-<span id="194">194</span>
-<span id="195">195</span>
-<span id="196">196</span>
-<span id="197">197</span>
-<span id="198">198</span>
-<span id="199">199</span>
-<span id="200">200</span>
-<span id="201">201</span>
-<span id="202">202</span>
-<span id="203">203</span>
-<span id="204">204</span>
-<span id="205">205</span>
-<span id="206">206</span>
-<span id="207">207</span>
-<span id="208">208</span>
-<span id="209">209</span>
-<span id="210">210</span>
-<span id="211">211</span>
-<span id="212">212</span>
-<span id="213">213</span>
-<span id="214">214</span>
-<span id="215">215</span>
-<span id="216">216</span>
-<span id="217">217</span>
-<span id="218">218</span>
-<span id="219">219</span>
-<span id="220">220</span>
-<span id="221">221</span>
-<span id="222">222</span>
-<span id="223">223</span>
-<span id="224">224</span>
-<span id="225">225</span>
-<span id="226">226</span>
-<span id="227">227</span>
-<span id="228">228</span>
-<span id="229">229</span>
-<span id="230">230</span>
-<span id="231">231</span>
-<span id="232">232</span>
-<span id="233">233</span>
-<span id="234">234</span>
-<span id="235">235</span>
-<span id="236">236</span>
-<span id="237">237</span>
-<span id="238">238</span>
-<span id="239">239</span>
-<span id="240">240</span>
-<span id="241">241</span>
-<span id="242">242</span>
-<span id="243">243</span>
-<span id="244">244</span>
-<span id="245">245</span>
-<span id="246">246</span>
-<span id="247">247</span>
-<span id="248">248</span>
-<span id="249">249</span>
-<span id="250">250</span>
-<span id="251">251</span>
-<span id="252">252</span>
-<span id="253">253</span>
-<span id="254">254</span>
-<span id="255">255</span>
-<span id="256">256</span>
-<span id="257">257</span>
-<span id="258">258</span>
-<span id="259">259</span>
-<span id="260">260</span>
-<span id="261">261</span>
-<span id="262">262</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2021 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -290,93 +171,18 @@
 };
 <span class="kw">use</span> <span class="ident">anyhow::Context</span>;
 <span class="kw">use</span> <span class="ident">bytes::Bytes</span>;
-<span class="kw">use</span> <span class="ident">log::Level</span>;
-<span class="kw">use</span> <span class="ident">oak_functions_abi::proto</span>::{<span class="ident">Inference</span>, <span class="ident">OakStatus</span>};
+<span class="kw">use</span> <span class="ident">oak_functions_abi::proto::OakStatus</span>;
+<span class="kw">use</span> <span class="ident">oak_functions_tf_inference</span>::{<span class="ident">parse_model</span>, <span class="ident">TensorFlowModel</span>};
 <span class="kw">use</span> <span class="ident">prost::Message</span>;
-<span class="kw">use</span> <span class="ident">serde_derive::Deserialize</span>;
-<span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">fs::File</span>, <span class="ident">io::Read</span>};
-<span class="kw">use</span> <span class="ident">tract_tensorflow::prelude</span>::{
-    <span class="ident">tract_ndarray</span>::{<span class="ident">ArrayBase</span>, <span class="ident">Dim</span>, <span class="ident">IxDynImpl</span>, <span class="ident">ViewRepr</span>},
-    <span class="kw-2">*</span>,
-};
+<span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">fs::File</span>, <span class="ident">io::Read</span>, <span class="ident">sync::Arc</span>};
 <span class="kw">use</span> <span class="ident">wasmi::ValueType</span>;
 
 <span class="doccomment">/// Host function name for invoking TensorFlow model inference.</span>
 <span class="kw">const</span> <span class="ident">TF_ABI_FUNCTION_NAME</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;tf_model_infer&quot;</span>;
 
-<span class="doccomment">/// An optimized TypeModel with [`TypedFact`] and [`TypedOp`]. If optimization performed by `tract`</span>
-<span class="doccomment">/// is not required, InferenceModel with [`InferenceFact`] and `InferenceOp` could be used</span>
-<span class="doccomment">/// instead. These traits are available from the `tract-hir` crate.</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// More information: &lt;https://github.com/sonos/tract/blob/main/doc/graph.md&gt;</span>
-<span class="kw">type</span> <span class="ident">Model</span> <span class="op">=</span> <span class="ident">RunnableModel</span><span class="op">&lt;</span><span class="ident">TypedFact</span>, <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">TypedOp</span><span class="op">&gt;</span>, <span class="ident">Graph</span><span class="op">&lt;</span><span class="ident">TypedFact</span>, <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">TypedOp</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>;
-
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Deserialize</span>, <span class="ident">Debug</span>, <span class="ident">Default</span>)]</span>
-<span class="attribute">#[<span class="ident">serde</span>(<span class="ident">deny_unknown_fields</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">TensorFlowModelConfig</span> {
-    <span class="doccomment">/// Path to a TensorFlow model file.</span>
-    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">path</span>: <span class="ident">String</span>,
-    <span class="doccomment">/// Shape of the input Tensors expected by the model.</span>
-    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">shape</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
-}
-
-<span class="kw">struct</span> <span class="ident">TensorFlowModel</span> {
-    <span class="ident">model</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">Model</span><span class="op">&gt;</span>,
-    <span class="kw">pub</span> <span class="ident">shape</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
-    <span class="ident">logger</span>: <span class="ident">Logger</span>,
-}
-
-<span class="kw">impl</span> <span class="ident">TensorFlowModel</span> {
-    <span class="doccomment">/// Run the model for the given input and return the resulting inference vector. Returns an</span>
-    <span class="doccomment">/// error if the input vector does not have the desired shape, or the model fails to produce an</span>
-    <span class="doccomment">/// inference.</span>
-    <span class="kw">fn</span> <span class="ident">get_inference</span>(
-        <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">tensor_bytes</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>],
-        <span class="ident">tensor_shape</span>: <span class="kw-2">&amp;</span>[<span class="ident">usize</span>],
-    ) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">Inference</span><span class="op">&gt;</span> {
-        <span class="comment">// Reshape the input, if the given shape matches the size of the given byte vector.</span>
-        <span class="kw">let</span> <span class="ident">tensor</span> <span class="op">=</span> <span class="kw">if</span> (<span class="ident">tensor_shape</span>.<span class="ident">iter</span>().<span class="ident">cloned</span>().<span class="ident">product</span>::<span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span>() <span class="op">*</span> <span class="number">4</span>) <span class="op">==</span> <span class="ident">tensor_bytes</span>.<span class="ident">len</span>()
-        {
-            <span class="kw">unsafe</span> {
-                <span class="ident">Tensor::from_raw</span>::<span class="op">&lt;</span><span class="ident">f32</span><span class="op">&gt;</span>(<span class="ident">tensor_shape</span>, <span class="ident">tensor_bytes</span>)
-                    .<span class="ident">context</span>(<span class="string">&quot;could not convert bytes into tensor&quot;</span>)<span class="question-mark">?</span>
-            }
-        } <span class="kw">else</span> {
-            <span class="macro">anyhow::bail!</span>(<span class="string">&quot;tensor bytes don&#39;t match the given shape&quot;</span>);
-        };
-
-        <span class="comment">// Get the inference</span>
-        <span class="kw">let</span> <span class="ident">inference</span> <span class="op">=</span> <span class="self">self</span>
-            .<span class="ident">model</span>
-            .<span class="ident">run</span>(<span class="macro">tvec!</span>(<span class="ident">tensor</span>))
-            .<span class="ident">context</span>(<span class="string">&quot;could not get inference&quot;</span>)<span class="question-mark">?</span>
-            .<span class="ident">into_vec</span>();
-
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">shape</span> <span class="op">=</span> <span class="macro">vec!</span>[<span class="ident">inference</span>.<span class="ident">len</span>() <span class="kw">as</span> <span class="ident">u64</span>];
-        <span class="ident">shape</span>.<span class="ident">append</span>(<span class="kw-2">&amp;mut</span> <span class="ident">inference</span>[<span class="number">0</span>].<span class="ident">shape</span>().<span class="ident">iter</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">u</span><span class="op">|</span> <span class="kw-2">*</span><span class="ident">u</span> <span class="kw">as</span> <span class="ident">u64</span>).<span class="ident">collect</span>());
-        <span class="kw">let</span> <span class="ident">inference_vec</span> <span class="op">=</span> <span class="ident">inference</span>
-            .<span class="ident">iter</span>()
-            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">item</span><span class="op">|</span> {
-                <span class="ident">item</span>.<span class="ident">to_array_view</span>::<span class="op">&lt;</span><span class="ident">f32</span><span class="op">&gt;</span>()
-                    .<span class="ident">context</span>(<span class="string">&quot;could not map byte array to float&quot;</span>)
-            })
-            .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">ArrayBase</span><span class="op">&lt;</span><span class="ident">ViewRepr</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">f32</span><span class="op">&gt;</span>, <span class="ident">Dim</span><span class="op">&lt;</span><span class="ident">IxDynImpl</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>()<span class="question-mark">?</span>
-            .<span class="ident">into_iter</span>()
-            .<span class="ident">flatten</span>()
-            .<span class="ident">cloned</span>()
-            .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">f32</span><span class="op">&gt;</span><span class="op">&gt;</span>();
-
-        <span class="prelude-val">Ok</span>(<span class="ident">Inference</span> {
-            <span class="ident">shape</span>,
-            <span class="ident">inference_vec</span>,
-        })
-    }
-}
-
-<span class="kw">impl</span> <span class="ident">OakApiNativeExtension</span> <span class="kw">for</span> <span class="ident">TensorFlowModel</span> {
+<span class="comment">// TODO(#2576): Move extension implementation to `tf_inference` crate once the Extension-realted</span>
+<span class="comment">// structs are in a separate crate.</span>
+<span class="kw">impl</span> <span class="ident">OakApiNativeExtension</span> <span class="kw">for</span> <span class="ident">TensorFlowModel</span><span class="op">&lt;</span><span class="ident">Logger</span><span class="op">&gt;</span> {
     <span class="kw">fn</span> <span class="ident">invoke</span>(
         <span class="kw-2">&amp;mut</span> <span class="self">self</span>,
         <span class="ident">wasm_state</span>: <span class="kw-2">&amp;mut</span> <span class="ident">WasmState</span>,
@@ -416,7 +222,7 @@
 <span class="doccomment">/// Corresponds to the host ABI function [`tf_model_infer`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#tf_model_infer).</span>
 <span class="kw">fn</span> <span class="ident">tf_model_infer</span>(
     <span class="ident">wasm_state</span>: <span class="kw-2">&amp;mut</span> <span class="ident">WasmState</span>,
-    <span class="ident">tf_model</span>: <span class="kw-2">&amp;</span><span class="ident">TensorFlowModel</span>,
+    <span class="ident">tf_model</span>: <span class="kw-2">&amp;</span><span class="ident">TensorFlowModel</span><span class="op">&lt;</span><span class="ident">Logger</span><span class="op">&gt;</span>,
     <span class="ident">input_ptr</span>: <span class="ident">AbiPointer</span>,
     <span class="ident">input_len</span>: <span class="ident">AbiPointerOffset</span>,
     <span class="ident">inference_ptr_ptr</span>: <span class="ident">AbiPointer</span>,
@@ -426,35 +232,22 @@
         .<span class="ident">get_memory</span>()
         .<span class="ident">get</span>(<span class="ident">input_ptr</span>, <span class="ident">input_len</span> <span class="kw">as</span> <span class="ident">usize</span>)
         .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> {
-            <span class="ident">tf_model</span>.<span class="ident">logger</span>.<span class="ident">log_sensitive</span>(
-                <span class="ident">Level::Error</span>,
-                <span class="kw-2">&amp;</span><span class="macro">format!</span>(
-                    <span class="string">&quot;tf_model_infer(): Unable to read input from guest memory: {:?}&quot;</span>,
-                    <span class="ident">err</span>
-                ),
-            );
+            <span class="ident">tf_model</span>.<span class="ident">log_error</span>(<span class="kw-2">&amp;</span><span class="macro">format!</span>(
+                <span class="string">&quot;tf_model_infer(): Unable to read input from guest memory: {:?}&quot;</span>,
+                <span class="ident">err</span>
+            ));
             <span class="ident">OakStatus::ErrInvalidArgs</span>
         })<span class="question-mark">?</span>;
 
-    <span class="kw">let</span> <span class="ident">shape</span> <span class="op">=</span> <span class="ident">tf_model</span>
-        .<span class="ident">shape</span>
-        .<span class="ident">clone</span>()
-        .<span class="ident">iter</span>()
-        .<span class="ident">cloned</span>()
-        .<span class="ident">map</span>(<span class="op">|</span><span class="ident">u</span><span class="op">|</span> <span class="ident">u</span>.<span class="ident">into</span>())
-        .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span><span class="op">&gt;</span>();
-
     <span class="comment">// Get the inference, and convert it into a protobuf-encoded byte array</span>
-    <span class="kw">let</span> <span class="ident">inference</span> <span class="op">=</span> <span class="ident">tf_model</span>.<span class="ident">get_inference</span>(<span class="kw-2">&amp;</span><span class="ident">input</span>, <span class="kw-2">&amp;</span><span class="ident">shape</span>).<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> {
-        <span class="ident">tf_model</span>.<span class="ident">logger</span>.<span class="ident">log_sensitive</span>(
-            <span class="ident">Level::Error</span>,
-            <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;tf_model_infer(): Unable to run inference: {:?}&quot;</span>, <span class="ident">err</span>),
-        );
+    <span class="kw">let</span> <span class="ident">inference</span> <span class="op">=</span> <span class="ident">tf_model</span>.<span class="ident">get_inference</span>(<span class="kw-2">&amp;</span><span class="ident">input</span>).<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> {
+        <span class="ident">tf_model</span>.<span class="ident">log_error</span>(<span class="kw-2">&amp;</span><span class="macro">format!</span>(
+            <span class="string">&quot;tf_model_infer(): Unable to run inference: {:?}&quot;</span>,
+            <span class="ident">err</span>
+        ));
         <span class="ident">OakStatus::ErrBadTensorFlowModelInput</span>
     })<span class="question-mark">?</span>;
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">encoded_inference</span> <span class="op">=</span> <span class="macro">vec!</span>[];
-    <span class="ident">inference</span>.<span class="ident">encode</span>(<span class="kw-2">&amp;mut</span> <span class="ident">encoded_inference</span>).<span class="ident">unwrap</span>();
-
+    <span class="kw">let</span> <span class="ident">encoded_inference</span> <span class="op">=</span> <span class="ident">inference</span>.<span class="ident">encode_to_vec</span>();
     <span class="kw">let</span> <span class="ident">buf_ptr</span> <span class="op">=</span> <span class="ident">wasm_state</span>.<span class="ident">alloc</span>(<span class="ident">encoded_inference</span>.<span class="ident">len</span>() <span class="kw">as</span> <span class="ident">u32</span>);
     <span class="ident">wasm_state</span>.<span class="ident">write_buffer_to_wasm_memory</span>(<span class="kw-2">&amp;</span><span class="ident">encoded_inference</span>, <span class="ident">buf_ptr</span>)<span class="question-mark">?</span>;
     <span class="ident">wasm_state</span>.<span class="ident">write_u32_to_wasm_memory</span>(<span class="ident">buf_ptr</span>, <span class="ident">inference_ptr_ptr</span>)<span class="question-mark">?</span>;
@@ -463,7 +256,7 @@
 }
 
 <span class="doccomment">/// Read a tensorFlow model from the given path, into a byte array.</span>
-<span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">read_model_from_path</span>(<span class="ident">path</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">Bytes</span><span class="op">&gt;</span> {
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">read_model_from_path</span>(<span class="ident">path</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">Bytes</span><span class="op">&gt;</span> {
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">f</span> <span class="op">=</span> <span class="ident">File::open</span>(<span class="ident">path</span>).<span class="ident">context</span>(<span class="string">&quot;could not open TensorFlow model file&quot;</span>)<span class="question-mark">?</span>;
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">buf</span> <span class="op">=</span> <span class="macro">vec!</span>[];
     <span class="ident">f</span>.<span class="ident">read_to_end</span>(<span class="kw-2">&amp;mut</span> <span class="ident">buf</span>)
@@ -473,9 +266,7 @@
 }
 
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">TensorFlowFactory</span> {
-    <span class="ident">model</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">Model</span><span class="op">&gt;</span>,
-    <span class="kw">pub</span> <span class="ident">shape</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
-    <span class="ident">logger</span>: <span class="ident">Logger</span>,
+    <span class="ident">model</span>: <span class="ident">TensorFlowModel</span><span class="op">&lt;</span><span class="ident">Logger</span><span class="op">&gt;</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">TensorFlowFactory</span> {
@@ -486,44 +277,15 @@
         <span class="ident">shape</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
         <span class="ident">logger</span>: <span class="ident">Logger</span>,
     ) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">BoxedExtensionFactory</span><span class="op">&gt;</span> {
-        <span class="kw">use</span> <span class="ident">bytes::Buf</span>;
-
-        <span class="kw">let</span> <span class="ident">dim</span> <span class="op">=</span> <span class="ident">shape</span>
-            .<span class="ident">iter</span>()
-            .<span class="ident">cloned</span>()
-            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">u</span><span class="op">|</span> <span class="ident">u</span>.<span class="ident">into</span>())
-            .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">i32</span><span class="op">&gt;</span><span class="op">&gt;</span>();
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">reader</span> <span class="op">=</span> <span class="ident">bytes</span>.<span class="ident">reader</span>();
-
-        <span class="comment">// Creates the model based on the example in https://github.com/sonos/tract/tree/main/examples/tensorflow-mobilenet-v2</span>
-        <span class="kw">let</span> <span class="ident">model</span> <span class="op">=</span> <span class="ident">tract_tensorflow::tensorflow</span>()
-            <span class="comment">// load the model</span>
-            .<span class="ident">model_for_read</span>(<span class="kw-2">&amp;mut</span> <span class="ident">reader</span>)<span class="question-mark">?</span>
-            <span class="comment">// specify input type and shape to be able to optimize the model</span>
-            .<span class="ident">with_input_fact</span>(<span class="number">0</span>, <span class="ident">InferenceFact::dt_shape</span>(<span class="ident">f32::datum_type</span>(), <span class="ident">dim</span>))<span class="question-mark">?</span>
-            <span class="comment">// optimize the model</span>
-            .<span class="ident">into_optimized</span>()<span class="question-mark">?</span>
-            <span class="comment">// make the model runnable and fix its inputs and outputs</span>
-            .<span class="ident">into_runnable</span>()<span class="question-mark">?</span>;
-
-        <span class="kw">let</span> <span class="ident">tf_model_factory</span> <span class="op">=</span> <span class="self">Self</span> {
-            <span class="ident">model</span>: <span class="ident">Arc::new</span>(<span class="ident">model</span>),
-            <span class="ident">shape</span>,
-            <span class="ident">logger</span>,
-        };
-
-        <span class="prelude-val">Ok</span>(<span class="ident">Box::new</span>(<span class="ident">tf_model_factory</span>))
+        <span class="kw">let</span> <span class="ident">parsed_model</span> <span class="op">=</span> <span class="ident">parse_model</span>(<span class="ident">bytes</span>, <span class="kw-2">&amp;</span><span class="ident">shape</span>).<span class="ident">context</span>(<span class="string">&quot;couldn&#39;t parse model&quot;</span>)<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">model</span> <span class="op">=</span> <span class="ident">TensorFlowModel::new</span>(<span class="ident">Arc::new</span>(<span class="ident">parsed_model</span>), <span class="ident">shape</span>, <span class="ident">logger</span>);
+        <span class="prelude-val">Ok</span>(<span class="ident">Box::new</span>(<span class="self">Self</span> { <span class="ident">model</span> }))
     }
 }
 
 <span class="kw">impl</span> <span class="ident">ExtensionFactory</span> <span class="kw">for</span> <span class="ident">TensorFlowFactory</span> {
     <span class="kw">fn</span> <span class="ident">create</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">BoxedExtension</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">model</span> <span class="op">=</span> <span class="ident">TensorFlowModel</span> {
-            <span class="ident">model</span>: <span class="self">self</span>.<span class="ident">model</span>.<span class="ident">clone</span>(),
-            <span class="ident">shape</span>: <span class="self">self</span>.<span class="ident">shape</span>.<span class="ident">clone</span>(),
-            <span class="ident">logger</span>: <span class="self">self</span>.<span class="ident">logger</span>.<span class="ident">clone</span>(),
-        };
-
+        <span class="kw">let</span> <span class="ident">model</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">model</span>.<span class="ident">clone</span>();
         <span class="prelude-val">Ok</span>(<span class="ident">BoxedExtension::Native</span>(<span class="ident">Box::new</span>(<span class="ident">model</span>)))
     }
 }

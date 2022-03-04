@@ -1,0 +1,1 @@
+initSidebarItems({"fn":[["parse_model",""]],"struct":[["TensorFlowModel",""],["TensorFlowModelConfig",""]],"type":[["Model","An optimized TypeModel with [`TypedFact`] and [`TypedOp`]. If optimization performed by `tract` is not required, InferenceModel with [`InferenceFact`] and `InferenceOp` could be used instead. These traits are available from the `tract-hir` crate."]]});

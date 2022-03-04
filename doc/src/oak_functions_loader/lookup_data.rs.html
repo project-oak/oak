@@ -267,6 +267,7 @@
 <span id="262">262</span>
 <span id="263">263</span>
 <span id="264">264</span>
+<span id="265">265</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2021 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -288,6 +289,7 @@
 <span class="kw">use</span> <span class="ident">hyper</span>::{<span class="ident">body::Bytes</span>, <span class="ident">client::connect::Connect</span>, <span class="ident">Body</span>, <span class="ident">Client</span>, <span class="ident">Request</span>};
 <span class="kw">use</span> <span class="ident">hyper_rustls::HttpsConnectorBuilder</span>;
 <span class="kw">use</span> <span class="ident">log::Level</span>;
+<span class="kw">use</span> <span class="ident">oak_logger::OakLogger</span>;
 <span class="kw">use</span> <span class="ident">prost::Message</span>;
 <span class="kw">use</span> <span class="ident">serde_derive::Deserialize</span>;
 <span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">collections::HashMap</span>, <span class="ident">sync::RwLock</span>, <span class="ident">time::Instant</span>};
