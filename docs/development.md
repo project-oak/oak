@@ -186,7 +186,7 @@ a specific Oak Application (which must already have been compiled into
 WebAssembly, as [described above](#build-application).
 
 ```bash
-xtask --scope=all run-functions-examples --example-name=weather_lookup --client-variant=none
+xtask --scope=all --logs run-functions-examples --example-name=weather_lookup --client-variant=none
 ```
 
 In the end, you should end up with an Oak server running, end with log output
