@@ -61,6 +61,16 @@ use std::{
 #[cfg(test)]
 mod tests;
 
+/// Runtime Configuration of Runtime.
+///
+/// This struct serves as a schema for a static TOML config file provided by
+/// application developers. In deployment, this static config file is typically
+/// bundled with the Oak Runtime binary. The config file is only ever read at
+/// startup. Config is not expected to ever change for a running Oak instance.
+/// Conceptually, these config values can be thought of as akin to compile-time
+/// constants. The only reason application config is not literally provided at
+/// compile-time is so that different applications can use the same
+/// trusted/endorsed runtime binary.
 #[derive(Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
 struct Config {
