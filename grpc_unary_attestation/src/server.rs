@@ -26,7 +26,7 @@ pub trait LogError {
 }
 
 /// gRPC Attestation Service implementation.
-pub struct AttestationServer<F, L> {
+pub struct AttestationServer<F, L: LogError> {
     /// PEM encoded X.509 certificate that signs TEE firmware key.
     _tee_certificate: Vec<u8>,
     /// Processes data from client requests and creates responses.
