@@ -23,6 +23,7 @@ use crate::proto::{
 use anyhow::Context;
 use futures::{Stream, StreamExt};
 use oak_remote_attestation::handshaker::{AttestationBehavior, Encryptor, ServerHandshaker};
+use oak_utils::LogError;
 use std::pin::Pin;
 use tonic::{Request, Response, Status, Streaming};
 
@@ -83,11 +84,6 @@ where
             Ok(None)
         }
     }
-}
-
-/// Trait for logging error messages.
-pub trait LogError {
-    fn log_error(&self, error: &str);
 }
 
 /// gRPC Attestation Service implementation.

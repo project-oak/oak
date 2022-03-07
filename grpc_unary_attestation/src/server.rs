@@ -18,12 +18,8 @@
 //! protocol.
 
 use crate::proto::{unary_session_server::UnarySession, UnaryRequest, UnaryResponse};
+use oak_utils::LogError;
 use tonic;
-
-/// Trait for logging error messages.
-pub trait LogError {
-    fn log_error(&self, error: &str);
-}
 
 /// gRPC Attestation Service implementation.
 pub struct AttestationServer<F, L: LogError> {

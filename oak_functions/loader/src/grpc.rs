@@ -24,6 +24,7 @@ use anyhow::Context;
 use log::Level;
 use oak_functions_abi::proto::{ConfigurationInfo, Request, ServerPolicy};
 use oak_logger::OakLogger;
+use oak_utils::LogError;
 use prost::Message;
 use std::{future::Future, net::SocketAddr};
 
@@ -142,20 +143,7 @@ struct ErrorLogger {
     logger: Logger,
 }
 
-impl grpc_streaming_attestation::server::LogError for ErrorLogger {
-    fn log_error(&self, error: &str) {
-        self.logger.log_public(
-            Level::Warn,
-            &format!(
-                "{:?}: Remote attestation error: {}",
-                std::thread::current().id(),
-                error
-            ),
-        );
-    }
-}
-
-impl grpc_unary_attestation::server::LogError for ErrorLogger {
+impl LogError for ErrorLogger {
     fn log_error(&self, error: &str) {
         self.logger.log_public(
             Level::Warn,
