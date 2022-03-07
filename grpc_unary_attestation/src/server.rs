@@ -76,6 +76,6 @@ where
             "Received unary request, but request handling isn't yet implemented: {:?}",
             request
         ));
-        return Err(tonic::Status::aborted(""));
+        return Err(tonic::Status::unimplemented(""));
     }
 }
