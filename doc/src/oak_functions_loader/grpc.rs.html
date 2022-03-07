@@ -125,6 +125,27 @@
 <span id="120">120</span>
 <span id="121">121</span>
 <span id="122">122</span>
+<span id="123">123</span>
+<span id="124">124</span>
+<span id="125">125</span>
+<span id="126">126</span>
+<span id="127">127</span>
+<span id="128">128</span>
+<span id="129">129</span>
+<span id="130">130</span>
+<span id="131">131</span>
+<span id="132">132</span>
+<span id="133">133</span>
+<span id="134">134</span>
+<span id="135">135</span>
+<span id="136">136</span>
+<span id="137">137</span>
+<span id="138">138</span>
+<span id="139">139</span>
+<span id="140">140</span>
+<span id="141">141</span>
+<span id="142">142</span>
+<span id="143">143</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2021 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -157,6 +178,19 @@
 <span class="kw">use</span> <span class="ident">oak_logger::OakLogger</span>;
 <span class="kw">use</span> <span class="ident">prost::Message</span>;
 <span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">future::Future</span>, <span class="ident">net::SocketAddr</span>};
+
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">serde::Deserialize</span>, <span class="ident">Debug</span>)]</span>
+<span class="attribute">#[<span class="ident">serde</span>(<span class="ident">deny_unknown_fields</span>)]</span>
+<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">RequestModel</span> {
+    <span class="ident">Unary</span>,
+    <span class="ident">BidiStreaming</span>,
+}
+
+<span class="kw">impl</span> <span class="ident">Default</span> <span class="kw">for</span> <span class="ident">RequestModel</span> {
+    <span class="kw">fn</span> <span class="ident">default</span>() -&gt; <span class="self">Self</span> {
+        <span class="ident">RequestModel::BidiStreaming</span>
+    }
+}
 
 <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">handle_request</span>(
     <span class="ident">wasm_handler</span>: <span class="ident">WasmHandler</span>,
@@ -197,7 +231,15 @@
     <span class="ident">config_info</span>: <span class="ident">ConfigurationInfo</span>,
     <span class="ident">terminate</span>: <span class="ident">F</span>,
     <span class="ident">logger</span>: <span class="ident">Logger</span>,
+    <span class="ident">request_model</span>: <span class="ident">RequestModel</span>,
 ) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+    <span class="kw">if</span> <span class="kw">let</span> <span class="ident">RequestModel::Unary</span> <span class="op">=</span> <span class="ident">request_model</span> {
+        <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="macro">anyhow::anyhow!</span>(
+            <span class="string">&quot;Failed to start, support for {:?} is not yet implemented&quot;</span>,
+            <span class="ident">request_model</span>
+        ));
+    }
+
     <span class="ident">logger</span>.<span class="ident">log_public</span>(
         <span class="ident">Level::Info</span>,
         <span class="kw-2">&amp;</span><span class="macro">format!</span>(

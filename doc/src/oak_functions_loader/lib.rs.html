@@ -346,6 +346,10 @@
 <span id="341">341</span>
 <span id="342">342</span>
 <span id="343">343</span>
+<span id="344">344</span>
+<span id="345">345</span>
+<span id="346">346</span>
+<span id="347">347</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2021 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -379,7 +383,7 @@
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;oak-tf&quot;</span>)]</span>
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::tf</span>::{<span class="ident">read_model_from_path</span>, <span class="ident">TensorFlowFactory</span>};
 <span class="kw">use</span> <span class="kw">crate</span>::{
-    <span class="ident">grpc</span>::{<span class="ident">create_and_start_grpc_server</span>, <span class="ident">create_wasm_handler</span>},
+    <span class="ident">grpc</span>::{<span class="ident">create_and_start_grpc_server</span>, <span class="ident">create_wasm_handler</span>, <span class="ident">RequestModel</span>},
     <span class="ident">logger::Logger</span>,
     <span class="ident">lookup::LookupFactory</span>,
     <span class="ident">lookup_data</span>::{<span class="ident">LookupData</span>, <span class="ident">LookupDataAuth</span>, <span class="ident">LookupDataSource</span>},
@@ -446,6 +450,9 @@
     <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;oak-metrics&quot;</span>)]</span>
     <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span>)]</span>
     <span class="ident">metrics</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">PrivateMetricsConfig</span><span class="op">&gt;</span>,
+    <span class="doccomment">/// Request model used to accept gRPC client requests</span>
+    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span> <span class="op">=</span> <span class="string">&quot;RequestModel::default&quot;</span>)]</span>
+    <span class="ident">grpc_request_model</span>: <span class="ident">RequestModel</span>,
 }
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Deserialize</span>, <span class="ident">Debug</span>)]</span>
@@ -584,6 +591,7 @@
             <span class="ident">config_info</span>,
             <span class="kw">async</span> { <span class="ident">notify_receiver</span>.<span class="kw">await</span>.<span class="ident">unwrap</span>() },
             <span class="ident">logger</span>,
+            <span class="ident">config</span>.<span class="ident">grpc_request_model</span>,
         )
         .<span class="kw">await</span>
         .<span class="ident">context</span>(<span class="string">&quot;error while waiting for the server to terminate&quot;</span>)
