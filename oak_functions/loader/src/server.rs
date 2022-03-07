@@ -413,7 +413,7 @@ impl WasmState {
         Ok(())
     }
 
-    pub fn channel_wait(
+    pub async fn channel_wait(
         &mut self,
         channel_handle_buf_ptr: AbiPointer,
         channel_handle_buf_len: AbiPointerOffset,
@@ -437,8 +437,7 @@ impl WasmState {
         let channel_handle = channel_handles[0];
         let endpoint = self.get_endpoint_from_channel_handle(channel_handle)?;
 
-        let _ = Peekable::peek(Pin::new(&mut endpoint.receiver));
-
+        let _peek = Peekable::peek(Pin::new(&mut endpoint.receiver));
         Ok(())
     }
 
@@ -1384,7 +1383,9 @@ mod tests {
 
         let (mut wasm_state, _) = create_test_wasm_state_and_extensions();
 
-        let wasm_memory_wait = wasm_state.channel_wait(100, (channel_handles.len() * 4) as u32, 1);
+        let wasm_memory_wait = wasm_state
+            .channel_wait(100, (channel_handles.len() * 4) as u32, 1)
+            .await;
         assert!(wasm_memory_wait.is_err());
         assert_eq!(
             ChannelStatus::EmptyChannelHandles,
@@ -1406,13 +1407,85 @@ mod tests {
         assert!(channel_handle_write.is_ok());
 
         // Because all handles are invalid we expect an error.
-        let wasm_memory_wait =
-            wasm_state.channel_wait(ch_buf_ptr, (channel_handles.len() * 4) as u32, 1);
+        let wasm_memory_wait = wasm_state
+            .channel_wait(ch_buf_ptr, (channel_handles.len() * 4) as u32, 1)
+            .await;
         assert!(wasm_memory_wait.is_err());
         assert_eq!(
             ChannelStatus::ChannelHandleInvalid,
             wasm_memory_wait.unwrap_err()
         );
+    }
+
+    #[tokio::test]
+    async fn test_channel_wait_ok_message_already_in_channel() {
+        let channel_handle = ChannelHandle::Testing;
+        let channel_handles: Vec<AbiChannelHandle> = vec![channel_handle as i32];
+        let message = vec![42, 42, 232];
+        let (mut wasm_state, mut uwabi_extensions) = create_test_wasm_state_and_extensions();
+        let mut testing_extension =
+            extension_for_channel_handle(&mut uwabi_extensions, channel_handle);
+
+        // Guess some memory addresses in linear Wasm memory to write the channel handles to.
+        let ch_buf_ptr: AbiPointer = 100;
+        // Prepare by writing channel handles to Wasm memory.
+        let channel_handle_write =
+            write_i32_buffer_to_wasm_memory(&mut wasm_state, &channel_handles, ch_buf_ptr);
+        assert!(channel_handle_write.is_ok());
+
+        // Wait on a channel which already has a message.
+        write_to_runtime_endpoint(&mut testing_extension, message.clone()).await;
+
+        let waited = wasm_state
+            .channel_wait(ch_buf_ptr, (channel_handles.len() * 4) as u32, 1000)
+            .await;
+        assert!(waited.is_ok())
+    }
+
+    #[tokio::test]
+    async fn test_channel_wait_time_out() {
+        let channel_handle = ChannelHandle::Testing;
+        let channel_handles: Vec<AbiChannelHandle> = vec![channel_handle as i32];
+        let (mut wasm_state, _) = create_test_wasm_state_and_extensions();
+
+        // Guess some memory addresses in linear Wasm memory to write the channel handles to.
+        let ch_buf_ptr: AbiPointer = 100;
+        // Prepare by writing channel handles to Wasm memory.
+        let channel_handle_write =
+            write_i32_buffer_to_wasm_memory(&mut wasm_state, &channel_handles, ch_buf_ptr);
+        assert!(channel_handle_write.is_ok());
+
+        let waited = wasm_state
+            .channel_wait(ch_buf_ptr, (channel_handles.len() * 4) as u32, 10)
+            .await;
+        assert!(waited.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_channel_wait_ok() {
+        let channel_handle = ChannelHandle::Testing;
+        let channel_handles: Vec<AbiChannelHandle> = vec![channel_handle as i32];
+        let message = vec![42, 42, 232];
+        let (mut wasm_state, mut uwabi_extensions) = create_test_wasm_state_and_extensions();
+        let mut testing_extension =
+            extension_for_channel_handle(&mut uwabi_extensions, channel_handle);
+
+        // Guess some memory addresses in linear Wasm memory to write the channel handles to.
+        let ch_buf_ptr: AbiPointer = 100;
+        // Prepare by writing channel handles to Wasm memory.
+        let channel_handle_write =
+            write_i32_buffer_to_wasm_memory(&mut wasm_state, &channel_handles, ch_buf_ptr);
+        assert!(channel_handle_write.is_ok());
+
+        let waited = wasm_state
+            .channel_wait(ch_buf_ptr, (channel_handles.len() * 4) as u32, 10)
+            .await;
+
+        // Wait on a channel which already has a message.
+        write_to_runtime_endpoint(&mut testing_extension, message.clone()).await;
+        assert!(waited.is_ok());
+
+        // channel_read(channel_handle) == message
     }
 
     fn create_test_wasm_handler() -> WasmHandler {
