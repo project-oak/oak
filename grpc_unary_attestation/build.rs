@@ -21,7 +21,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "../",
         &["oak_functions/proto/unary_server.proto"],
         CodegenOptions {
-            build_client: true,
             build_server: true,
             ..Default::default()
         },
