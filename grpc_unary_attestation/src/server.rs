@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-//! Server-side implementation of the bidirectional unary gRPC remote attestation handshake
+//! Server-side implementation of the bidirectional gRPC remote attestation handshake
 //! protocol.
 
 use crate::proto::{unary_session_server::UnarySession, UnaryRequest, UnaryResponse};
