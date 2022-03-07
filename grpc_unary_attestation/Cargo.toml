@@ -7,9 +7,6 @@ license = "Apache-2.0"
 
 [dependencies]
 anyhow = "*"
-futures = "*"
-oak_remote_attestation = { path = "../remote_attestation/rust/" }
-oak_functions_abi = { path = "../oak_functions/abi/" }
 prost = "*"
 prost-types = "*"
 serde = { version = "*", features = ["derive"] }

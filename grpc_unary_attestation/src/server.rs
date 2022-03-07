@@ -18,7 +18,6 @@
 //! protocol.
 
 use crate::proto::{unary_session_server::UnarySession, UnaryRequest, UnaryResponse};
-use oak_remote_attestation::handshaker::{AttestationBehavior, Encryptor, ServerHandshaker};
 use tonic;
 
 /// Trait for logging error messages.
@@ -29,11 +28,11 @@ pub trait LogError {
 /// gRPC Attestation Service implementation.
 pub struct AttestationServer<F, L> {
     /// PEM encoded X.509 certificate that signs TEE firmware key.
-    tee_certificate: Vec<u8>,
+    _tee_certificate: Vec<u8>,
     /// Processes data from client requests and creates responses.
-    request_handler: F,
+    _request_handler: F,
     /// Configuration information to provide to the client for the attestation step.
-    additional_info: Vec<u8>,
+    _additional_info: Vec<u8>,
     /// Error logging function that is required for logging attestation protocol errors.
     /// Errors are only logged on server side and are not sent to clients.
     error_logger: L,
@@ -52,9 +51,9 @@ where
         error_logger: L,
     ) -> anyhow::Result<Self> {
         Ok(Self {
-            tee_certificate,
-            request_handler,
-            additional_info,
+            _tee_certificate: tee_certificate,
+            _request_handler: request_handler,
+            _additional_info: additional_info,
             error_logger,
         })
     }
