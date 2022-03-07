@@ -44,6 +44,7 @@ service UnarySession {
   // - Client->Server: `UnaryRequest` with a serialized `ClientHello` message.
   // - Server->Client: `UnaryResponse` with a serialized `ServerIdentity` message.
   // - Client->Server: `UnaryRequest` with a serialized `ClientIdentity` message.
+  // - Server->Client: `UnaryResponse` with an empty message, confirming handshake completion.
   //
   // After the handshake, both client and server derive matching session keys
   // and are then able to exchange multiple UnaryRequest/UnaryResponse request
