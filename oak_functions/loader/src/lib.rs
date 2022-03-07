@@ -65,12 +65,8 @@ mod tests;
 ///
 /// This struct serves as a schema for a static TOML config file provided by
 /// application developers. In deployment, this static config file is typically
-/// bundled with the Oak Runtime binary. The config file is only ever read at
-/// startup. Config is not expected to ever change for a running Oak instance.
-/// Conceptually, these config values can be thought of as akin to compile-time
-/// constants. The only reason application config is not literally provided at
-/// compile-time is so that different applications can use the same
-/// trusted/endorsed runtime binary.
+/// bundled with the Oak Runtime binary. Config values captured in it serve
+/// as a type safe version of regular command line flags.
 #[derive(Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
 struct Config {
@@ -124,8 +120,7 @@ enum Data {
 /// Command line options for the Oak loader.
 ///
 /// In general, when adding new configuration parameters, they should go in the `Config` struct
-/// instead of here, and provided as part of the config TOML file by the developer, who would
-/// normally bundle it with the Docker image of the Oak Functions Loader.
+/// instead of here.
 #[derive(Parser, Clone, Debug)]
 #[clap(about = "Oak Functions Loader")]
 pub struct Opt {
