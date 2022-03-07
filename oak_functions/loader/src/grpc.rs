@@ -31,6 +31,19 @@ use oak_logger::OakLogger;
 use prost::Message;
 use std::{future::Future, net::SocketAddr};
 
+#[derive(serde::Deserialize, Debug)]
+#[serde(deny_unknown_fields)]
+pub enum RequestModel {
+    Unary,
+    BidiStreaming,
+}
+
+impl Default for RequestModel {
+    fn default() -> Self {
+        RequestModel::BidiStreaming
+    }
+}
+
 async fn handle_request(
     wasm_handler: WasmHandler,
     policy: ServerPolicy,
@@ -70,7 +83,15 @@ pub async fn create_and_start_grpc_server<F: Future<Output = ()>>(
     config_info: ConfigurationInfo,
     terminate: F,
     logger: Logger,
+    request_model: RequestModel,
 ) -> anyhow::Result<()> {
+    if let RequestModel::Unary = request_model {
+        return Err(anyhow::anyhow!(
+            "Failed to start, support for {:?} is not yet implemented",
+            request_model
+        ));
+    }
+
     logger.log_public(
         Level::Info,
         &format!(
