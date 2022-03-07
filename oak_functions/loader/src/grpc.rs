@@ -95,8 +95,10 @@ pub async fn create_and_start_grpc_server<F: Future<Output = ()>>(
 
     let additional_info = config_info.encode_to_vec();
 
-    // A `Service` is needed for every connection. Here we create a service using the
-    // `wasm_handler`.
+    // Create a server and add the relevant service defintion for either unary
+    // or streaming communication. Server creation and start is handled entirely
+    // witin each respective match arm, as the added service alters the type
+    // signature of the created server.
     match request_model {
         RequestModel::Unary => {
             tonic::transport::Server::builder()
