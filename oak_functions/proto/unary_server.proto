@@ -44,5 +44,5 @@ service UnarySession {
   //
   // Messages are represented as serialized messages defined in the `remote_attestation::message.rs`
   // and `com.google.oak.remote_attestation.Message`.
-  rpc Message (UnaryRequest) returns (UnaryResponse);
+  rpc Message(UnaryRequest) returns (UnaryResponse);
 }
