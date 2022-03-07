@@ -146,6 +146,20 @@
 <span id="141">141</span>
 <span id="142">142</span>
 <span id="143">143</span>
+<span id="144">144</span>
+<span id="145">145</span>
+<span id="146">146</span>
+<span id="147">147</span>
+<span id="148">148</span>
+<span id="149">149</span>
+<span id="150">150</span>
+<span id="151">151</span>
+<span id="152">152</span>
+<span id="153">153</span>
+<span id="154">154</span>
+<span id="155">155</span>
+<span id="156">156</span>
+<span id="157">157</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2021 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -169,13 +183,10 @@
     <span class="ident">server</span>::{<span class="ident">apply_policy</span>, <span class="ident">BoxedExtensionFactory</span>, <span class="ident">WasmHandler</span>},
 };
 <span class="kw">use</span> <span class="ident">anyhow::Context</span>;
-<span class="kw">use</span> <span class="ident">grpc_streaming_attestation</span>::{
-    <span class="ident">proto::streaming_session_server::StreamingSessionServer</span>,
-    <span class="ident">server</span>::{<span class="ident">AttestationServer</span>, <span class="ident">LogError</span>},
-};
 <span class="kw">use</span> <span class="ident">log::Level</span>;
 <span class="kw">use</span> <span class="ident">oak_functions_abi::proto</span>::{<span class="ident">ConfigurationInfo</span>, <span class="ident">Request</span>, <span class="ident">ServerPolicy</span>};
 <span class="kw">use</span> <span class="ident">oak_logger::OakLogger</span>;
+<span class="kw">use</span> <span class="ident">oak_utils::LogError</span>;
 <span class="kw">use</span> <span class="ident">prost::Message</span>;
 <span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">future::Future</span>, <span class="ident">net::SocketAddr</span>};
 
@@ -233,13 +244,6 @@
     <span class="ident">logger</span>: <span class="ident">Logger</span>,
     <span class="ident">request_model</span>: <span class="ident">RequestModel</span>,
 ) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-    <span class="kw">if</span> <span class="kw">let</span> <span class="ident">RequestModel::Unary</span> <span class="op">=</span> <span class="ident">request_model</span> {
-        <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="macro">anyhow::anyhow!</span>(
-            <span class="string">&quot;Failed to start, support for {:?} is not yet implemented&quot;</span>,
-            <span class="ident">request_model</span>
-        ));
-    }
-
     <span class="ident">logger</span>.<span class="ident">log_public</span>(
         <span class="ident">Level::Info</span>,
         <span class="kw-2">&amp;</span><span class="macro">format!</span>(
@@ -253,21 +257,45 @@
         <span class="kw">async</span> <span class="kw">move</span> <span class="op">|</span><span class="ident">request</span><span class="op">|</span> <span class="ident">handle_request</span>(<span class="ident">wasm_handler</span>, <span class="ident">policy</span>.<span class="ident">clone</span>(), <span class="ident">request</span>).<span class="kw">await</span>;
 
     <span class="kw">let</span> <span class="ident">additional_info</span> <span class="op">=</span> <span class="ident">config_info</span>.<span class="ident">encode_to_vec</span>();
-    <span class="comment">// A `Service` is needed for every connection. Here we create a service using the</span>
-    <span class="comment">// `wasm_handler`.</span>
-    <span class="ident">tonic::transport::Server::builder</span>()
-        .<span class="ident">add_service</span>(<span class="ident">StreamingSessionServer::new</span>(
-            <span class="ident">AttestationServer::create</span>(
-                <span class="ident">tee_certificate</span>,
-                <span class="ident">request_handler</span>,
-                <span class="ident">additional_info</span>,
-                <span class="ident">ErrorLogger</span> { <span class="ident">logger</span> },
-            )
-            .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t create remote attestation server&quot;</span>)<span class="question-mark">?</span>,
-        ))
-        .<span class="ident">serve_with_shutdown</span>(<span class="kw-2">*</span><span class="ident">address</span>, <span class="ident">terminate</span>)
-        .<span class="kw">await</span>
-        .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t start server&quot;</span>)<span class="question-mark">?</span>;
+
+    <span class="comment">// Create a server and add the relevant service defintion for either unary</span>
+    <span class="comment">// or streaming communication. Server creation and start is handled entirely</span>
+    <span class="comment">// witin each respective match arm, as the added service alters the type</span>
+    <span class="comment">// signature of the created server.</span>
+    <span class="kw">match</span> <span class="ident">request_model</span> {
+        <span class="ident">RequestModel::Unary</span> =&gt; {
+            <span class="ident">tonic::transport::Server::builder</span>()
+                .<span class="ident">add_service</span>(
+                    <span class="ident">grpc_unary_attestation::proto::unary_session_server::UnarySessionServer::new</span>(
+                        <span class="ident">grpc_unary_attestation::server::AttestationServer::create</span>(
+                            <span class="ident">tee_certificate</span>,
+                            <span class="ident">request_handler</span>,
+                            <span class="ident">additional_info</span>,
+                            <span class="ident">ErrorLogger</span> { <span class="ident">logger</span> },
+                        )
+                        .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t create remote attestation server&quot;</span>)<span class="question-mark">?</span>,
+                    ),
+                )
+                .<span class="ident">serve_with_shutdown</span>(<span class="kw-2">*</span><span class="ident">address</span>, <span class="ident">terminate</span>)
+                .<span class="kw">await</span>
+                .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t start server&quot;</span>)<span class="question-mark">?</span>;
+        }
+        <span class="ident">RequestModel::BidiStreaming</span> =&gt; {
+            <span class="ident">tonic::transport::Server::builder</span>()
+                .<span class="ident">add_service</span>(<span class="ident">grpc_streaming_attestation::proto::streaming_session_server::StreamingSessionServer::new</span>(
+                    <span class="ident">grpc_streaming_attestation::server::AttestationServer::create</span>(
+                        <span class="ident">tee_certificate</span>,
+                        <span class="ident">request_handler</span>,
+                        <span class="ident">additional_info</span>,
+                        <span class="ident">ErrorLogger</span> { <span class="ident">logger</span> },
+                    )
+                    .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t create remote attestation server&quot;</span>)<span class="question-mark">?</span>,
+                ))
+                .<span class="ident">serve_with_shutdown</span>(<span class="kw-2">*</span><span class="ident">address</span>, <span class="ident">terminate</span>)
+                .<span class="kw">await</span>
+                .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t start server&quot;</span>)<span class="question-mark">?</span>;
+        }
+    };
 
     <span class="prelude-val">Ok</span>(())
 }

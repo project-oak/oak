@@ -206,11 +206,11 @@
 <span class="kw">use</span> <span class="ident">anyhow::Context</span>;
 <span class="kw">use</span> <span class="ident">clap::Parser</span>;
 <span class="kw">use</span> <span class="ident">grpc_streaming_attestation</span>::{
-    <span class="ident">proto::streaming_session_server::StreamingSessionServer</span>,
-    <span class="ident">server</span>::{<span class="ident">AttestationServer</span>, <span class="ident">LogError</span>},
+    <span class="ident">proto::streaming_session_server::StreamingSessionServer</span>, <span class="ident">server::AttestationServer</span>,
 };
 <span class="kw">use</span> <span class="ident">log::warn</span>;
 <span class="kw">use</span> <span class="ident">oak_functions_abi::proto::ConfigurationInfo</span>;
+<span class="kw">use</span> <span class="ident">oak_utils::LogError</span>;
 <span class="kw">use</span> <span class="ident">prost::Message</span>;
 <span class="kw">use</span> <span class="ident">std</span>::{
     <span class="ident">fs::canonicalize</span>,

@@ -434,6 +434,11 @@
 <span id="429">429</span>
 <span id="430">430</span>
 <span id="431">431</span>
+<span id="432">432</span>
+<span id="433">433</span>
+<span id="434">434</span>
+<span id="435">435</span>
+<span id="436">436</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -864,6 +869,11 @@
         <span class="comment">// bundled one that we remove as part of the vendoring process.</span>
         <span class="ident">std::env::set_var</span>(<span class="string">&quot;PROTOC&quot;</span>, <span class="string">&quot;protoc&quot;</span>);
     }
+}
+
+<span class="doccomment">/// Trait for logging error messages</span>
+<span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">LogError</span> {
+    <span class="kw">fn</span> <span class="ident">log_error</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">error</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>);
 }
 </code></pre></div>
 </section><section id="search" class="content hidden"></section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="oak_utils" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.60.0-nightly (75d9a0ae2 2022-02-16)" ></div>
