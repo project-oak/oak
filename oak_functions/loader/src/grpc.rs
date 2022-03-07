@@ -21,10 +21,6 @@ use crate::{
     server::{apply_policy, BoxedExtensionFactory, WasmHandler},
 };
 use anyhow::Context;
-use grpc_streaming_attestation::{
-    proto::streaming_session_server::StreamingSessionServer,
-    server::{AttestationServer, LogError},
-};
 use log::Level;
 use oak_functions_abi::proto::{ConfigurationInfo, Request, ServerPolicy};
 use oak_logger::OakLogger;
@@ -85,13 +81,6 @@ pub async fn create_and_start_grpc_server<F: Future<Output = ()>>(
     logger: Logger,
     request_model: RequestModel,
 ) -> anyhow::Result<()> {
-    if let RequestModel::Unary = request_model {
-        return Err(anyhow::anyhow!(
-            "Failed to start, support for {:?} is not yet implemented",
-            request_model
-        ));
-    }
-
     logger.log_public(
         Level::Info,
         &format!(
@@ -105,21 +94,43 @@ pub async fn create_and_start_grpc_server<F: Future<Output = ()>>(
         async move |request| handle_request(wasm_handler, policy.clone(), request).await;
 
     let additional_info = config_info.encode_to_vec();
+
     // A `Service` is needed for every connection. Here we create a service using the
     // `wasm_handler`.
-    tonic::transport::Server::builder()
-        .add_service(StreamingSessionServer::new(
-            AttestationServer::create(
-                tee_certificate,
-                request_handler,
-                additional_info,
-                ErrorLogger { logger },
-            )
-            .context("Couldn't create remote attestation server")?,
-        ))
-        .serve_with_shutdown(*address, terminate)
-        .await
-        .context("Couldn't start server")?;
+    match request_model {
+        RequestModel::Unary => {
+            tonic::transport::Server::builder()
+                .add_service(
+                    grpc_unary_attestation::proto::unary_session_server::UnarySessionServer::new(
+                        grpc_unary_attestation::server::AttestationServer::create(
+                            tee_certificate,
+                            request_handler,
+                            additional_info,
+                            ErrorLogger { logger },
+                        )
+                        .context("Couldn't create remote attestation server")?,
+                    ),
+                )
+                .serve_with_shutdown(*address, terminate)
+                .await
+                .context("Couldn't start server")?;
+        }
+        RequestModel::BidiStreaming => {
+            tonic::transport::Server::builder()
+                .add_service(grpc_streaming_attestation::proto::streaming_session_server::StreamingSessionServer::new(
+                    grpc_streaming_attestation::server::AttestationServer::create(
+                        tee_certificate,
+                        request_handler,
+                        additional_info,
+                        ErrorLogger { logger },
+                    )
+                    .context("Couldn't create remote attestation server")?,
+                ))
+                .serve_with_shutdown(*address, terminate)
+                .await
+                .context("Couldn't start server")?;
+        }
+    };
 
     Ok(())
 }
@@ -129,7 +140,20 @@ struct ErrorLogger {
     logger: Logger,
 }
 
-impl LogError for ErrorLogger {
+impl grpc_streaming_attestation::server::LogError for ErrorLogger {
+    fn log_error(&self, error: &str) {
+        self.logger.log_public(
+            Level::Warn,
+            &format!(
+                "{:?}: Remote attestation error: {}",
+                std::thread::current().id(),
+                error
+            ),
+        );
+    }
+}
+
+impl grpc_unary_attestation::server::LogError for ErrorLogger {
     fn log_error(&self, error: &str) {
         self.logger.log_public(
             Level::Warn,
