@@ -1,5 +1,5 @@
 //
-// Copyright 2021 The Project Oak Authors
+// Copyright 2022 The Project Oak Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -29,6 +29,11 @@ message StreamingResponse {
   bytes body = 1;
 }
 
+// Service definition for bidi streaming communication with the runtime.
+// It accomplishes the same goal as UnarySession, just with a differnet
+// request model. Oak Applications can choose either request model in the
+// configuration of the runtime. Eventually we plan to transition all clients to
+// use UnarySessions, at which point this will be removed.
 service StreamingSession {
   // Creates a message stream for session key negotiation and encrypted payload exchange.
   //

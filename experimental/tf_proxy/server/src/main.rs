@@ -33,11 +33,11 @@ use crate::grpc::handle_request;
 use anyhow::Context;
 use clap::Parser;
 use grpc_streaming_attestation::{
-    proto::streaming_session_server::StreamingSessionServer,
-    server::{AttestationServer, LogError},
+    proto::streaming_session_server::StreamingSessionServer, server::AttestationServer,
 };
 use log::warn;
 use oak_functions_abi::proto::ConfigurationInfo;
+use oak_utils::LogError;
 use prost::Message;
 use std::{
     fs::canonicalize,

@@ -349,6 +349,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "grpc_unary_attestation"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "oak_utils",
+ "prost",
+ "prost-types",
+ "serde",
+ "tokio",
+ "tonic",
+ "tower",
+]
+
+[[package]]
 name = "h2"
 version = "0.3.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -712,6 +726,7 @@ dependencies = [
  "clap",
  "futures",
  "grpc_streaming_attestation",
+ "grpc_unary_attestation",
  "http",
  "humantime-serde",
  "hyper",

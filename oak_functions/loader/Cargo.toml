@@ -23,6 +23,7 @@ chrono = "*"
 clap = { version = "*", features = ["derive"] }
 futures = "*"
 grpc_streaming_attestation = { path = "../../grpc_streaming_attestation/" }
+grpc_unary_attestation = { path = "../../grpc_unary_attestation/" }
 http = "*"
 hyper = { version = "*", features = [
   "client",
@@ -39,6 +40,7 @@ oak_functions_abi = { path = "../abi" }
 oak_functions_tf_inference = { optional = true, path = "../experimental/tf_inference" }
 oak_functions_metrics = { optional = true, path = "../experimental/metrics" }
 oak_logger = { path = "../logger" }
+oak_utils = { path = "../../oak_utils" }
 oak_remote_attestation = { path = "../../remote_attestation/rust/" }
 prost = "*"
 rand = "*"
