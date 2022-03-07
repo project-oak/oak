@@ -31,6 +31,11 @@ message UnaryResponse {
   bytes body = 1;
 }
 
+// Service definition for bidi unary communication with the runtime.
+// It accomplishes the same goal as StreamingSession, just with a differnet
+// request model. Oak Applications can choose either request model in the
+// configuration of the runtime. Eventually we plan to transition all clients to
+// use UnarySessions.
 service UnarySession {
   // Used to send a sequence of a messages for session key negotiation and
   // encrypted payload exchange.
