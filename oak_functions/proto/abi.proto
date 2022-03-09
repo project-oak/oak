@@ -42,7 +42,7 @@ enum ChannelStatus {
   // The list of channel handles is empty.
   EMPTY_CHANNEL_HANDLES = 8;
   // Waiting on the channel timed out.
-  CHANNEL_TIME_OUT = 9;
+  CHANNEL_TIMEOUT = 9;
 }
 
 // A ChannelHandle corresonds to a channel. The Endpoint which does not own the channel uses a

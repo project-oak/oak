@@ -417,7 +417,7 @@ impl WasmState {
         &mut self,
         channel_handle_buf_ptr: AbiPointer,
         channel_handle_buf_len: AbiPointerOffset,
-        _deadline_ms: u32,
+        deadline_ms: u32,
     ) -> Result<(), ChannelStatus> {
         let channel_handles: Vec<AbiChannelHandle> =
             self.read_i32_list_from_wasm_memory(channel_handle_buf_ptr, channel_handle_buf_len)?;
@@ -437,8 +437,20 @@ impl WasmState {
         let channel_handle = channel_handles[0];
         let endpoint = self.get_endpoint_from_channel_handle(channel_handle)?;
 
-        let _peek = Peekable::peek(Pin::new(&mut endpoint.receiver));
-        Ok(())
+        // TODO(mschett): Fix, peek takes the message, but we want to keep the messsage in the
+        // channel.
+        let peek = Peekable::peek(Pin::new(&mut endpoint.receiver));
+
+        let millis_to_wait = tokio::time::Duration::from_millis(deadline_ms as u64);
+
+        let timeout = tokio::time::timeout(millis_to_wait, peek);
+
+        match timeout.await {
+            Err(_) => Err(ChannelStatus::ChannelTimeout),
+            Ok(None) => Err(ChannelStatus::ChannelEndpointClosed),
+            // We don't care about the reference to the message, we just want it to be there.
+            Ok(_) => Ok(()),
+        }
     }
 
     /// Corresponds to the host ABI function [`write_log_message`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#write_log_message).
@@ -1228,6 +1240,48 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_peek_drop_receiver() {
+        let (mut receiving_endpoint, sending_endpoint) = channel_create();
+
+        let stopped_peeking = tokio::spawn(async move {
+            let peek = Peekable::peek(Pin::new(&mut receiving_endpoint.receiver));
+            assert!(peek.await.is_none());
+            true
+        });
+
+        std::mem::drop(sending_endpoint);
+        assert!(stopped_peeking.await.unwrap());
+    }
+
+    #[tokio::test]
+    // TODO(mschett) Fix this test.
+    async fn test_peek_then_receive() {
+        let message = vec![32, 3];
+        let (mut receiving_endpoint, sending_endpoint) = channel_create();
+
+        // Send message on channel.
+        let send_ok = sending_endpoint.sender.try_send(message.clone());
+        assert!(send_ok.is_ok());
+
+        // Peeking with message in the channel.
+        let peek_present = Peekable::peek(Pin::new(&mut receiving_endpoint.receiver)).await;
+        assert!(peek_present.is_some());
+
+        // Receive message from channel now.
+        let received_result = receiving_endpoint.get_receiver_mut().try_recv();
+        assert!(received_result.is_ok());
+        assert_eq!(received_result.unwrap(), message);
+
+        assert_eq!(
+            receiving_endpoint
+                .get_receiver_mut()
+                .try_recv()
+                .unwrap_err(),
+            TryRecvError::Empty
+        )
+    }
+
+    #[tokio::test]
     async fn test_hosted_channel_read_no_message() {
         let channel_handle = ChannelHandle::Testing as i32;
         let (mut wasm_state, _uwabi_extensions) = create_test_wasm_state_and_extensions();
@@ -1443,10 +1497,11 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_channel_wait_time_out() {
+    async fn test_channel_wait_closed_sender() {
         let channel_handle = ChannelHandle::Testing;
         let channel_handles: Vec<AbiChannelHandle> = vec![channel_handle as i32];
-        let (mut wasm_state, _) = create_test_wasm_state_and_extensions();
+        // We don't keep the testing_extension, so there is no sending endpoint.
+        let (mut wasm_state, _ /* testing_extension */) = create_test_wasm_state_and_extensions();
 
         // Guess some memory addresses in linear Wasm memory to write the channel handles to.
         let ch_buf_ptr: AbiPointer = 100;
@@ -1458,7 +1513,31 @@ mod tests {
         let waited = wasm_state
             .channel_wait(ch_buf_ptr, (channel_handles.len() * 4) as u32, 10)
             .await;
+
         assert!(waited.is_err());
+        assert_eq!(ChannelStatus::ChannelEndpointClosed, waited.unwrap_err());
+    }
+
+    #[tokio::test]
+    async fn test_channel_wait_timeout() {
+        let channel_handle = ChannelHandle::Testing;
+        let channel_handles: Vec<AbiChannelHandle> = vec![channel_handle as i32];
+        // Keep a reference to the testing_extension to keep sending endpoint.
+        let (mut wasm_state, _testing_extension) = create_test_wasm_state_and_extensions();
+
+        // Guess some memory addresses in linear Wasm memory to write the channel handles to.
+        let ch_buf_ptr: AbiPointer = 100;
+        // Prepare by writing channel handles to Wasm memory.
+        let channel_handle_write =
+            write_i32_buffer_to_wasm_memory(&mut wasm_state, &channel_handles, ch_buf_ptr);
+        assert!(channel_handle_write.is_ok());
+
+        let waited = wasm_state
+            .channel_wait(ch_buf_ptr, (channel_handles.len() * 4) as u32, 10)
+            .await;
+
+        assert!(waited.is_err());
+        assert_eq!(ChannelStatus::ChannelTimeout, waited.unwrap_err());
     }
 
     #[tokio::test]
@@ -1477,15 +1556,36 @@ mod tests {
             write_i32_buffer_to_wasm_memory(&mut wasm_state, &channel_handles, ch_buf_ptr);
         assert!(channel_handle_write.is_ok());
 
+        let _testing_extension = tokio::spawn(async move {
+            // We want to give up control flow until channel_wait has started.
+            // TODO(mschett) Find a way to make sure we start channel_wait before.
+            write_to_runtime_endpoint(&mut testing_extension, message.clone()).await;
+            testing_extension
+        });
+
+        // Assert that endpoint is still empty before we wait on it.
+        // Otherwise we are repeating test_channel_wait_ok_message_already_in_channel.
+        let is_empty_before_waiting = wasm_state.channel_read(channel_handle as i32, 0, 0);
+        assert_eq!(
+            ChannelStatus::ChannelEmpty,
+            is_empty_before_waiting.unwrap_err()
+        );
+
         let waited = wasm_state
-            .channel_wait(ch_buf_ptr, (channel_handles.len() * 4) as u32, 10)
+            .channel_wait(ch_buf_ptr, (channel_handles.len() * 4) as u32, 10000)
             .await;
 
-        // Wait on a channel which already has a message.
-        write_to_runtime_endpoint(&mut testing_extension, message.clone()).await;
         assert!(waited.is_ok());
 
-        // channel_read(channel_handle) == message
+        // TODO(mschett) Assert that message is still in channel.
+        let wasm_endpoint = wasm_state
+            .channel_switchboard
+            .get_mut(&channel_handle)
+            .unwrap();
+
+        assert!(wasm_endpoint.get_receiver_mut().try_recv().is_ok());
+
+        // TODO(mschett) Check that message in endpoint is actually message.
     }
 
     fn create_test_wasm_handler() -> WasmHandler {
