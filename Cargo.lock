@@ -2007,6 +2007,7 @@ name = "oak_functions_lookup"
 version = "0.1.0"
 dependencies = [
  "log",
+ "maplit",
  "oak_logger",
 ]
 

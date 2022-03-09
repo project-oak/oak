@@ -119,3 +119,39 @@ where
         self.logger.log_sensitive(Level::Debug, message)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use maplit::hashmap;
+
+    #[derive(Clone)]
+    struct TestLogger {}
+    impl OakLogger for TestLogger {
+        fn log_sensitive(&self, _level: Level, _message: &str) {}
+        fn log_public(&self, _level: Level, _message: &str) {}
+    }
+
+    #[test]
+    fn test_lookup_data_instance_consistency() {
+        // Ensure that the data for a specific lookup data instance remains consistent even if the
+        // data in the manager has been updated.
+        let manager = LookupDataManager::new_empty(TestLogger {});
+        let lookup_data_0 = manager.create_lookup_data();
+        assert_eq!(lookup_data_0.len(), 0);
+
+        manager.update_data(hashmap! { b"key1".to_vec() => b"value1".to_vec() });
+        let lookup_data_1 = manager.create_lookup_data();
+        assert_eq!(lookup_data_0.len(), 0);
+        assert_eq!(lookup_data_1.len(), 1);
+
+        manager.update_data(hashmap! {
+           b"key1".to_vec() => b"value1".to_vec(),
+           b"key2".to_vec() => b"value2".to_vec(),
+        });
+        let lookup_data_2 = manager.create_lookup_data();
+        assert_eq!(lookup_data_0.len(), 0);
+        assert_eq!(lookup_data_1.len(), 1);
+        assert_eq!(lookup_data_2.len(), 2);
+    }
+}
