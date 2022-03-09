@@ -55,10 +55,11 @@ pub struct LookupDataRefresher {
 }
 
 impl LookupDataRefresher {
-    /// Creates a new [`LookupData`] instance that can refresh the backing data managed by the
-    /// lookup data manager by using the provided lookup data source.
+    /// Creates a new [`LookupDataRefresher`] instance that can refresh the backing data managed by
+    /// the lookup data manager by using the provided lookup data source.
     ///
-    /// [`LookupData::refresh`] must be called at least once for for lookup data for be populated.
+    /// [`LookupDataRefresher::refresh`] must be called at least once for for lookup data for be
+    /// populated.
     pub fn new(
         lookup_data_source: Option<LookupDataSource>,
         manager: Arc<LookupDataManager<Logger>>,
