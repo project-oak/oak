@@ -22,6 +22,7 @@ http = "*"
 lookup_data_generator = { path = "../../../lookup_data_generator" }
 oak_functions_abi = { path = "../../../abi" }
 oak_functions_loader = { path = "../../../loader" }
+oak_functions_lookup = { path = "../../../lookup" }
 maplit = "*"
 prost = "*"
 rand = "*"

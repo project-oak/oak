@@ -23,13 +23,11 @@ use oak_functions_loader::{
     grpc::{create_and_start_grpc_server, create_wasm_handler, RequestModel},
     logger::Logger,
     lookup::LookupFactory,
-    lookup_data::LookupData,
     metrics::PrivateMetricsProxyFactory,
     server::BoxedExtensionFactory,
 };
-
+use oak_functions_lookup::LookupDataManager;
 use oak_functions_metrics::{BucketConfig, PrivateMetricsConfig};
-
 use prost::Message;
 use std::{
     net::{Ipv6Addr, SocketAddr},
@@ -57,8 +55,8 @@ async fn test_server() {
 
     let logger = Logger::for_test();
 
-    let lookup_data = Arc::new(LookupData::new_empty(None, logger.clone()));
-    let lookup_factory = LookupFactory::new_boxed_extension_factory(lookup_data, logger.clone())
+    let lookup_data_manager = Arc::new(LookupDataManager::new_empty(logger.clone()));
+    let lookup_factory = LookupFactory::new_boxed_extension_factory(lookup_data_manager)
         .expect("could not create LookupFactory");
     let metrics_factory = create_metrics_factory();
 
