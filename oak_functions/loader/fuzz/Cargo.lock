@@ -762,6 +762,7 @@ dependencies = [
  "maplit",
  "oak_functions_abi",
  "oak_functions_loader",
+ "oak_functions_lookup",
  "oak_functions_metrics",
  "prost",
  "prost-build",
@@ -773,7 +774,6 @@ dependencies = [
 name = "oak_functions_lookup"
 version = "0.1.0"
 dependencies = [
- "anyhow",
  "log",
  "oak_logger",
 ]
