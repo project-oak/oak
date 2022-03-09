@@ -34,9 +34,9 @@ pub type Data = HashMap<Vec<u8>, Vec<u8>>;
 
 /// Utility for managing lookup data.
 ///
-/// `LookupDataManager` can be used to create `LookupData` instances that shared the underlying
-/// data. It can also update the underlying data. After updating the data, new `LookupData` instance
-/// will use the new data, but earlier instances will still used the earlier data.
+/// `LookupDataManager` can be used to create `LookupData` instances that share the underlying data.
+/// It can also update the underlying data. After updating the data, new `LookupData` instances will
+/// use the new data, but earlier instances will still used the earlier data.
 pub struct LookupDataManager<L: OakLogger + Clone> {
     data: RwLock<Arc<Data>>,
     logger: L,
