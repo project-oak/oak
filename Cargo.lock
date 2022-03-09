@@ -1962,6 +1962,7 @@ dependencies = [
  "lookup_data_generator",
  "maplit",
  "oak_functions_abi",
+ "oak_functions_lookup",
  "oak_functions_metrics",
  "oak_functions_tf_inference",
  "oak_logger",
@@ -1996,6 +1997,15 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "oak_functions_loader",
+]
+
+[[package]]
+name = "oak_functions_lookup"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "log",
+ "oak_logger",
 ]
 
 [[package]]

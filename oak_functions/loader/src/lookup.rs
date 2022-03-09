@@ -16,50 +16,37 @@
 
 use crate::{
     logger::Logger,
-    lookup_data::LookupData,
     server::{
         format_bytes, AbiPointer, AbiPointerOffset, BoxedExtension, BoxedExtensionFactory,
         ExtensionFactory, OakApiNativeExtension, WasmState, ABI_USIZE,
     },
 };
-use log::Level;
 use oak_functions_abi::proto::OakStatus;
-use oak_logger::OakLogger;
+use oak_functions_lookup::{LookupData, LookupDataManager};
 use std::sync::Arc;
 use wasmi::ValueType;
 
 // Host function name for invoking lookup in lookup data.
 const LOOKUP_ABI_FUNCTION_NAME: &str = "storage_get_item";
 
-pub struct LookupExtension {
-    lookup_data: Arc<LookupData>,
-    logger: Logger,
-}
-
 pub struct LookupFactory {
-    lookup_data: Arc<LookupData>,
-    logger: Logger,
+    manager: Arc<LookupDataManager<Logger>>,
 }
 
 impl LookupFactory {
     pub fn new_boxed_extension_factory(
-        lookup_data: Arc<LookupData>,
-        logger: Logger,
+        manager: Arc<LookupDataManager<Logger>>,
     ) -> anyhow::Result<BoxedExtensionFactory> {
-        let lookup_factory = Self {
-            lookup_data,
-            logger,
-        };
+        let lookup_factory = Self { manager };
         Ok(Box::new(lookup_factory))
     }
 }
 
+// TODO(#2576): Move extension trait implementations to the lookup crate once the extension-related
+// traits are in a separate crate.
 impl ExtensionFactory for LookupFactory {
     fn create(&self) -> anyhow::Result<BoxedExtension> {
-        let extension = LookupExtension {
-            lookup_data: self.lookup_data.clone(),
-            logger: self.logger.clone(),
-        };
+        let extension = self.manager.create_lookup_data();
         Ok(BoxedExtension::Native(Box::new(extension)))
     }
 }
@@ -67,7 +54,7 @@ impl ExtensionFactory for LookupFactory {
 /// Corresponds to the host ABI function [`storage_get_item`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#storage_get_item).
 pub fn storage_get_item(
     wasm_state: &mut WasmState,
-    extension: &mut LookupExtension,
+    extension: &mut LookupData<Logger>,
     key_ptr: AbiPointer,
     key_len: AbiPointerOffset,
     value_ptr_ptr: AbiPointer,
@@ -77,27 +64,21 @@ pub fn storage_get_item(
         .get_memory()
         .get(key_ptr, key_len as usize)
         .map_err(|err| {
-            extension.logger.log_sensitive(
-                Level::Error,
-                &format!(
-                    "storage_get_item(): Unable to read key from guest memory: {:?}",
-                    err
-                ),
-            );
+            extension.log_error(&format!(
+                "storage_get_item(): Unable to read key from guest memory: {:?}",
+                err
+            ));
             OakStatus::ErrInvalidArgs
         })?;
-    extension.logger.log_sensitive(
-        Level::Debug,
-        &format!("storage_get_item(): key: {}", format_bytes(&key)),
-    );
-    match extension.lookup_data.get(&key) {
+    extension.log_debug(&format!("storage_get_item(): key: {}", format_bytes(&key)));
+    match extension.get(&key) {
         Some(value) => {
             // Truncate value for logging.
             let value_to_log = value.clone().into_iter().take(512).collect::<Vec<_>>();
-            extension.logger.log_sensitive(
-                Level::Debug,
-                &format!("storage_get_item(): value: {}", format_bytes(&value_to_log)),
-            );
+            extension.log_debug(&format!(
+                "storage_get_item(): value: {}",
+                format_bytes(&value_to_log)
+            ));
             let dest_ptr = wasm_state.alloc(value.len() as u32);
             wasm_state.write_buffer_to_wasm_memory(&value, dest_ptr)?;
             wasm_state.write_u32_to_wasm_memory(dest_ptr, value_ptr_ptr)?;
@@ -105,15 +86,13 @@ pub fn storage_get_item(
             Ok(())
         }
         None => {
-            extension
-                .logger
-                .log_sensitive(Level::Debug, "storage_get_item(): value not found");
+            extension.log_debug("storage_get_item(): value not found");
             Err(OakStatus::ErrStorageItemNotFound)
         }
     }
 }
 
-impl OakApiNativeExtension for LookupExtension {
+impl OakApiNativeExtension for LookupData<Logger> {
     fn invoke(
         &mut self,
         wasm_state: &mut WasmState,
