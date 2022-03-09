@@ -258,6 +258,36 @@ impl WasmState {
         })
     }
 
+    // Reads a list of litte Endian i32s starting at address `buf_ptr` with length `buf_len` from
+    // the Wasm memory. Returns an error, if unable to read from Wasm memory, or we cannot
+    // convert every element in the buffer.
+    #[allow(dead_code)]
+    fn read_i32_list_from_wasm_memory(
+        &self,
+        buf_ptr: AbiPointer,
+        buf_len: AbiPointerOffset,
+    ) -> Result<Vec<i32>, ChannelStatus> {
+        let bytes_from_wasm_memory = self.read_buffer_from_wasm_memory(buf_ptr, buf_len)?;
+        let mut i32_list = vec![];
+        // Convert 4 bytes to an i32 using little Endian.
+        for chunk in bytes_from_wasm_memory.chunks(4) {
+            let correctly_sized_chunk: Result<[u8; 4], _> = chunk.try_into();
+            match correctly_sized_chunk {
+                Ok(correctly_sized_chunk) => {
+                    i32_list.push(i32::from_le_bytes(correctly_sized_chunk))
+                }
+                Err(err) => {
+                    self.logger.log_sensitive(
+                        Level::Error,
+                        &format!("Incorrectly sized i32 in guest memory: {:?}", err),
+                    );
+                    return Err(ChannelStatus::ChannelInvalidArgs);
+                }
+            }
+        }
+        Ok(i32_list)
+    }
+
     ///  Writes the u32 `value` at the `address` of the Wasm memory.
     pub fn write_u32_to_wasm_memory(
         &self,
@@ -1091,6 +1121,71 @@ mod tests {
         assert!(stopped_receiving.await.unwrap());
     }
 
+    #[test]
+    fn test_read_i32_buffer_empty() {
+        let (mut wasm_state, _) = create_test_wasm_state_and_extensions();
+        // Guess some address in Wasm memory.
+        let dest: AbiPointer = 100;
+        let empty_buffer = vec![];
+
+        let buffer_write = write_i32_buffer_to_wasm_memory(&mut wasm_state, &empty_buffer, dest);
+        assert!(buffer_write.is_ok());
+
+        let buffer_read =
+            wasm_state.read_i32_list_from_wasm_memory(dest, (empty_buffer.len() * 4) as u32);
+        assert!(buffer_read.is_ok());
+        assert_eq!(buffer_read.unwrap(), empty_buffer);
+    }
+
+    #[test]
+    fn test_read_i32_buffer_invalid_buffer_len() {
+        let (mut wasm_state, _) = create_test_wasm_state_and_extensions();
+        // Guess some address in Wasm memory.
+        let dest: AbiPointer = 100;
+        let buffer = vec![54];
+
+        let buffer_write = write_i32_buffer_to_wasm_memory(&mut wasm_state, &buffer, dest);
+        assert!(buffer_write.is_ok());
+
+        let invalid_buffer_len = (buffer.len() * 4) as u32 - 1;
+        let buffer_read = wasm_state.read_i32_list_from_wasm_memory(dest, invalid_buffer_len);
+
+        assert!(buffer_read.is_err());
+        assert_eq!(ChannelStatus::ChannelInvalidArgs, buffer_read.unwrap_err());
+    }
+
+    #[test]
+    fn test_read_i32_buffer_single_ok() {
+        let (mut wasm_state, _) = create_test_wasm_state_and_extensions();
+        // Guess some address in Wasm memory.
+        let dest: AbiPointer = 100;
+        let buffer = vec![54];
+
+        let buffer_write = write_i32_buffer_to_wasm_memory(&mut wasm_state, &buffer, dest);
+        assert!(buffer_write.is_ok());
+
+        let buffer_read =
+            wasm_state.read_i32_list_from_wasm_memory(dest, (buffer.len() * 4) as u32);
+        assert!(buffer_read.is_ok());
+        assert_eq!(buffer_read.unwrap(), buffer);
+    }
+
+    #[test]
+    fn test_read_i32_buffer_many_ok() {
+        let (mut wasm_state, _) = create_test_wasm_state_and_extensions();
+        // Guess some address in Wasm memory.
+        let dest: AbiPointer = 100;
+        let buffer = vec![54, 43, 32, 3, 0, 32, 32, 4];
+
+        let buffer_write = write_i32_buffer_to_wasm_memory(&mut wasm_state, &buffer, dest);
+        assert!(buffer_write.is_ok());
+
+        let buffer_read =
+            wasm_state.read_i32_list_from_wasm_memory(dest, (buffer.len() * 4) as u32);
+        assert!(buffer_read.is_ok());
+        assert_eq!(buffer_read.unwrap(), buffer);
+    }
+
     #[tokio::test]
     async fn test_hosted_channel_read_no_message() {
         let channel_handle = ChannelHandle::Testing as i32;
@@ -1290,5 +1385,18 @@ mod tests {
             })
             .expect("No extension for channel handle.");
         uwabi_extensions.remove(pos_of_extension)
+    }
+
+    // Helper function for testing to write a buffer of i32s in Wasm memory.
+    fn write_i32_buffer_to_wasm_memory(
+        wasm_state: &mut WasmState,
+        i32_buffer: &Vec<i32>,
+        dest: AbiPointer,
+    ) -> Result<(), ChannelStatus> {
+        let mut bytes_buffer: Vec<u8> = Vec::new();
+        for i in i32_buffer {
+            bytes_buffer.extend_from_slice(&i.to_le_bytes());
+        }
+        wasm_state.write_buffer_to_wasm_memory(&bytes_buffer, dest)
     }
 }
