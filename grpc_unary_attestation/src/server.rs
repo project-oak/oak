@@ -163,12 +163,10 @@ where
                     })?
                     // After receiving a valid `ClientIdentity` message
                     // (the last step of the key exchange)
-                    // ServerHandshaker.next_step returns `None`. This is
-                    // because it was written for streaming attestation, where
-                    // no explicit confirmation is needed. For unary request we
-                    // do want to send an explicit confirmation in the form of
-                    // a status message. Hence in case of `None` fallback to
-                    // a default (empty) response.
+                    // ServerHandshaker.next_step returns `None`. For unary
+                    // request we do want to send an explicit confirmation in
+                    // the form of a status message. Hence in case of `None`
+                    // fallback to a default (empty) response.
                     .unwrap_or_default()
             }
             SessionState::EncryptedMessageExchange(ref mut encryptor) => {
