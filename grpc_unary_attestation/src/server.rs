@@ -18,20 +18,89 @@
 //! protocol.
 
 use crate::proto::{unary_session_server::UnarySession, UnaryRequest, UnaryResponse};
+use lru::LruCache;
+use oak_remote_attestation::handshaker::{AttestationBehavior, Encryptor, ServerHandshaker};
 use oak_utils::LogError;
+use std::sync::{Arc, Mutex};
 use tonic;
+
+type SessionId = u64;
+enum SessionState {
+    // Boxed due to large size difference, ref: https://rust-lang.github.io/rust-clippy/master/index.html#large_enum_variant
+    HandshakeInProgress(Box<ServerHandshaker>),
+    EncryptedMessageExchange(Encryptor),
+}
+
+/// Maintains remote attestation state for a number of sessions
+struct SessionsTracker {
+    /// PEM encoded X.509 certificate that signs TEE firmware key.
+    tee_certificate: Vec<u8>,
+    /// Configuration information to provide to the client for the attestation step.
+    additional_info: Vec<u8>,
+    /// LRU cache tracking known sessions.
+    known_sessions: LruCache<SessionId, SessionState>,
+}
+
+impl SessionsTracker {
+    pub fn create(tee_certificate: Vec<u8>, additional_info: Vec<u8>) -> Self {
+        Self {
+            tee_certificate,
+            additional_info,
+            known_sessions: LruCache::new(10000),
+        }
+    }
+
+    /// Consumes remote attestation state of an existing session. Creates
+    /// intial state if the session is not known.
+    ///
+    /// Note that getting the remote attestaion state of a session automatically
+    /// implicitly removes it from the set of tracked sessions. After
+    /// succesfully processing a request with this state it must explicitly be
+    /// put back into the SessionsTracker. This an intentional choice meant
+    /// meant to ensure that faulty state that leads to errors when preocessing
+    /// a request is not persistent.
+    pub fn pop_session_state(&mut self, session_id: SessionId) -> Result<SessionState, String> {
+        return match self.known_sessions.pop(&session_id) {
+            None => match AttestationBehavior::create_self_attestation(&self.tee_certificate) {
+                Ok(behavior) => Ok(SessionState::HandshakeInProgress(Box::new(
+                    ServerHandshaker::new(behavior, self.additional_info.clone()),
+                ))),
+                Err(error) => Err(format!(
+                    "Couldn't create self attestation behavior: {:?}",
+                    error
+                )),
+            },
+            Some(SessionState::HandshakeInProgress(handshaker)) => {
+                // Completed handshakers are functionally just wrap an
+                // encryptor. In that case the underlying handshaker is
+                // returned, ensuring consistent state representation.
+                match handshaker.is_completed() {
+                    false => Ok(SessionState::HandshakeInProgress(handshaker)),
+                    true => match handshaker.get_encryptor() {
+                        Ok(encryptor) => Ok(SessionState::EncryptedMessageExchange(encryptor)),
+                        Err(error) => Err(format!("Couldn't get encryptor: {:?}", error)),
+                    },
+                }
+            }
+            Some(SessionState::EncryptedMessageExchange(encryptor)) => {
+                Ok(SessionState::EncryptedMessageExchange(encryptor))
+            }
+        };
+    }
+
+    pub fn put_session_state(&mut self, session_id: SessionId, session_state: SessionState) {
+        let _ = &self.known_sessions.put(session_id, session_state);
+    }
+}
 
 /// gRPC Attestation Service implementation.
 pub struct AttestationServer<F, L: LogError> {
-    /// PEM encoded X.509 certificate that signs TEE firmware key.
-    _tee_certificate: Vec<u8>,
-    /// Processes data from client requests and creates responses.
-    _request_handler: F,
-    /// Configuration information to provide to the client for the attestation step.
-    _additional_info: Vec<u8>,
+    /// Business logic processor, accepts decrypted request and returns responses.
+    request_handler: F,
     /// Error logging function that is required for logging attestation protocol errors.
     /// Errors are only logged on server side and are not sent to clients.
     error_logger: L,
+    sessions_tracker: Arc<Mutex<SessionsTracker>>,
 }
 
 impl<F, S, L> AttestationServer<F, L>
@@ -46,11 +115,14 @@ where
         additional_info: Vec<u8>,
         error_logger: L,
     ) -> anyhow::Result<Self> {
+        let sessions_tracker = Arc::new(Mutex::new(SessionsTracker::create(
+            tee_certificate,
+            additional_info,
+        )));
         Ok(Self {
-            _tee_certificate: tee_certificate,
-            _request_handler: request_handler,
-            _additional_info: additional_info,
+            request_handler,
             error_logger,
+            sessions_tracker,
         })
     }
 }
@@ -59,7 +131,7 @@ where
 impl<F, S, L> UnarySession for AttestationServer<F, L>
 where
     F: 'static + Send + Sync + Clone + FnOnce(Vec<u8>) -> S,
-    S: std::future::Future<Output = anyhow::Result<Vec<u8>>> + Send + Sync + 'static,
+    S: std::future::Future<Output = anyhow::Result<Vec<u8>>> + Send + Sync,
     L: Send + Sync + Clone + LogError + 'static,
 {
     async fn message(
@@ -67,11 +139,67 @@ where
         request: tonic::Request<UnaryRequest>,
     ) -> Result<tonic::Response<UnaryResponse>, tonic::Status> {
         let error_logger = self.error_logger.clone();
+        let request_inner = request.into_inner();
 
-        error_logger.log_error(&format!(
-            "Received unary request, but request handling isn't yet implemented: {:?}",
-            request
-        ));
-        return Err(tonic::Status::unimplemented(""));
+        let mut session_state = {
+            let mut sessions_tracker = self
+                .sessions_tracker
+                .lock()
+                .expect("Couldn't lock session_state mutex");
+            sessions_tracker
+                .pop_session_state(request_inner.session_id)
+                .map_err(|error| {
+                    error_logger.log_error(&error);
+                    tonic::Status::internal("")
+                })?
+        };
+
+        let response_body = match session_state {
+            SessionState::HandshakeInProgress(ref mut handshaker) => {
+                handshaker
+                    .next_step(&request_inner.body)
+                    .map_err(|error| {
+                        error_logger
+                            .log_error(&format!("Couldn't process handshake message: {:?}", error));
+                        tonic::Status::aborted("")
+                    })?
+                    // After receiving a valid `ClientIdentity` message
+                    // (the last step of the key exchange)
+                    // ServerHandshaker.next_step returns `None`. This is
+                    // because it was written for streaming attestation, where
+                    // no explicit confirmation is needed. For unary request we
+                    // do want to send an explicit confirmation in the form of
+                    // a status message. Hence in case of non we fallback to a
+                    // default (empty) response.
+                    .unwrap_or_default()
+            }
+            SessionState::EncryptedMessageExchange(ref mut encryptor) => {
+                let decrypted_request =
+                    encryptor.decrypt(&request_inner.body).map_err(|error| {
+                        error_logger.log_error(&format!("Couldn't decrypt request: {:?}", error));
+                        tonic::Status::aborted("")
+                    })?;
+
+                let response = (self.request_handler.clone())(decrypted_request)
+                    .await
+                    .map_err(|error| {
+                        error_logger.log_error(&format!("Couldn't handle request: {:?}", error));
+                        tonic::Status::aborted("")
+                    })?;
+
+                encryptor.encrypt(&response).map_err(|error| {
+                    error_logger.log_error(&format!("Couldn't encrypt response: {:?}", error));
+                    tonic::Status::aborted("")
+                })?
+            }
+        };
+
+        self.sessions_tracker
+            .lock()
+            .expect("Couldn't lock session_state mutex")
+            .put_session_state(request_inner.session_id, session_state);
+        return Ok(tonic::Response::new(UnaryResponse {
+            body: response_body,
+        }));
     }
 }
