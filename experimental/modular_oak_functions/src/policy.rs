@@ -43,7 +43,7 @@ impl Service for PolicyService {
     }
 }
 
-/// Enforcer of the response policies
+/// Enforces the response policies.
 pub struct PolicyProxy {
     // Reference to policy configuration will also be stored here in future.
     next: Box<dyn ServiceProxy>,

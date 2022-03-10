@@ -49,9 +49,9 @@ impl Demux {
     /// Handles a single frame from a multiplexed stream.
     pub fn handle_frame(&self, data: &[u8]) -> anyhow::Result<Vec<u8>> {
         eprintln!("request frame decapsulated");
-        // For now, just create a single request proxy and call it with the raw fram. A real
+        // For now, just create a single request proxy and call it with the raw frame. A real
         // implementation would decapsulate the frame to reconstruct the individual streams
-        // and re-encapsulate the results as frames to return in the main stream.
+        // and re-encapsulate the results as frames to return into the multiplexed stream.
         let response = self.next.create_proxy().call(data)?;
         eprintln!("response frame encapsulated");
         Ok(response)

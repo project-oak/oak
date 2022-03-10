@@ -51,13 +51,25 @@ All services are currently implemented to do passthrough or echo just to show
 how data might flow through the system.
 
 In a real implementation each module will be implemented in a separate crate,
-and where possible will be `no_std`-compatible.
+and, where possible, will be `no_std`-compatible.
 
-The flow of data through the runtime is:
+The implementation starts with a configuration flow:
+
+- IoListener
+  - Demux
+    - LogService
+    - LookupService
+    - PolicyService
+    - SessionService
+    - WasmiService
+
+After the configuration, a single data frame is sent through the system. The
+flow of data through the runtime is:
 
 - IoListener
   - Demux
     - PolicyProxy
-      - WasmiProxy
-        - LogProxy
-        - LookupProxy
+      - SessionProxy
+        - WasmiProxy
+          - LogProxy
+          - LookupProxy

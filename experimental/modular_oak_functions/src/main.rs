@@ -59,10 +59,11 @@ pub enum ServiceType {
 fn main() -> anyhow::Result<()> {
     // Create the log service.
     let log: Arc<Box<dyn Service>> = Arc::new(Box::new(log::LogService::new()));
+
     // Create the lookup service.
     let lookup: Arc<Box<dyn Service>> = Arc::new(Box::new(lookup::LookupService::new()));
 
-    // Create Wasm sandbox service with references to services it can use.
+    // Create Wasm sandbox service with references to the services it can use.
     let services: BTreeMap<ServiceType, Arc<Box<dyn Service>>> = btreemap! {
         ServiceType::Log => log.clone(),
         ServiceType::Lookup => lookup.clone(),
