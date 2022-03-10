@@ -142,11 +142,9 @@ where
         let request_inner = request.into_inner();
 
         let mut session_state = {
-            let mut sessions_tracker = self
-                .sessions_tracker
+            self.sessions_tracker
                 .lock()
-                .expect("Couldn't lock session_state mutex");
-            sessions_tracker
+                .expect("Couldn't lock session_state mutex")
                 .pop_session_state(request_inner.session_id)
                 .map_err(|error| {
                     error_logger.log_error(&error);
