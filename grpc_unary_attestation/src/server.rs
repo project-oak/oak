@@ -37,7 +37,6 @@ struct SessionsTracker {
     tee_certificate: Vec<u8>,
     /// Configuration information to provide to the client for the attestation step.
     additional_info: Vec<u8>,
-    /// LRU cache tracking known sessions.
     known_sessions: LruCache<SessionId, SessionState>,
 }
 
@@ -53,10 +52,10 @@ impl SessionsTracker {
     /// Consumes remote attestation state of an existing session. Creates
     /// intial state if the session is not known.
     ///
-    /// Note that getting the remote attestaion state of a session automatically
+    /// Note that getting the remote attestaion state of a session always
     /// implicitly removes it from the set of tracked sessions. After
-    /// succesfully processing a request with this state it must explicitly be
-    /// put back into the SessionsTracker. This an intentional choice meant
+    /// using the state to process a request with this state it must explicitly
+    /// be put back into the SessionsTracker. This an intentional choice meant
     /// meant to ensure that faulty state that leads to errors when preocessing
     /// a request is not persistent.
     pub fn pop_session_state(&mut self, session_id: SessionId) -> Result<SessionState, String> {
@@ -190,6 +189,10 @@ where
             }
         };
 
+        // Note that we only get here if no errors occured during the preceding
+        // steps. If errors do occur the session state as tracked by the server
+        // is effectovely earsed. This allows the client to negotiate a new
+        // handshake.
         self.sessions_tracker
             .lock()
             .expect("Couldn't lock session_state mutex")
