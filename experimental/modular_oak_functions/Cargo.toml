@@ -1,0 +1,10 @@
+[package]
+name = "modular_oak_functions"
+version = "0.1.0"
+authors = ["Conrad Grobler <grobler@google.com>"]
+edition = "2021"
+license = "Apache-2.0"
+
+[dependencies]
+anyhow = "*"
+maplit = "*"

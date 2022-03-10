@@ -2,6 +2,7 @@
 members = [
   "experimental/attestation_common",
   "experimental/https_attestation",
+  "experimental/modular_oak_functions",
   "experimental/proxy_attestation",
   "experimental/tf_proxy/client",
   "experimental/tf_proxy/server",

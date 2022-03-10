@@ -2075,6 +2075,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "modular_oak_functions"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "maplit",
+]
+
+[[package]]
 name = "more-asserts"
 version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
