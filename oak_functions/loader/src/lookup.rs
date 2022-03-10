@@ -23,6 +23,7 @@ use crate::{
 };
 use oak_functions_abi::proto::OakStatus;
 use oak_functions_lookup::{LookupData, LookupDataManager};
+use oak_logger::OakLogger;
 use std::sync::Arc;
 use wasmi::ValueType;
 
@@ -52,9 +53,9 @@ impl ExtensionFactory for LookupFactory {
 }
 
 /// Corresponds to the host ABI function [`storage_get_item`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#storage_get_item).
-pub fn storage_get_item(
+pub fn storage_get_item<L: OakLogger + Clone>(
     wasm_state: &mut WasmState,
-    extension: &mut LookupData<Logger>,
+    extension: &mut LookupData<L>,
     key_ptr: AbiPointer,
     key_len: AbiPointerOffset,
     value_ptr_ptr: AbiPointer,
@@ -92,7 +93,10 @@ pub fn storage_get_item(
     }
 }
 
-impl OakApiNativeExtension for LookupData<Logger> {
+impl<L> OakApiNativeExtension for LookupData<L>
+where
+    L: OakLogger + Clone,
+{
     fn invoke(
         &mut self,
         wasm_state: &mut WasmState,

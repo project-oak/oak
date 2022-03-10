@@ -62,7 +62,7 @@ where
 
     /// Updates the backing data that will be used by new `LookupData` instances.
     pub fn update_data(&self, data: Data) {
-        *self.data.write().expect("could not lock data for read") = Arc::new(data);
+        *self.data.write().expect("could not lock data for write") = Arc::new(data);
     }
 
     /// Creates a new `LookupData` instance with a reference to the current backing data.
