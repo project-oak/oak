@@ -135,23 +135,6 @@
 <span id="130">130</span>
 <span id="131">131</span>
 <span id="132">132</span>
-<span id="133">133</span>
-<span id="134">134</span>
-<span id="135">135</span>
-<span id="136">136</span>
-<span id="137">137</span>
-<span id="138">138</span>
-<span id="139">139</span>
-<span id="140">140</span>
-<span id="141">141</span>
-<span id="142">142</span>
-<span id="143">143</span>
-<span id="144">144</span>
-<span id="145">145</span>
-<span id="146">146</span>
-<span id="147">147</span>
-<span id="148">148</span>
-<span id="149">149</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2021 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -170,14 +153,13 @@
 
 <span class="kw">use</span> <span class="kw">crate</span>::{
     <span class="ident">logger::Logger</span>,
-    <span class="ident">lookup_data::LookupData</span>,
     <span class="ident">server</span>::{
         <span class="ident">format_bytes</span>, <span class="ident">AbiPointer</span>, <span class="ident">AbiPointerOffset</span>, <span class="ident">BoxedExtension</span>, <span class="ident">BoxedExtensionFactory</span>,
         <span class="ident">ExtensionFactory</span>, <span class="ident">OakApiNativeExtension</span>, <span class="ident">WasmState</span>, <span class="ident">ABI_USIZE</span>,
     },
 };
-<span class="kw">use</span> <span class="ident">log::Level</span>;
 <span class="kw">use</span> <span class="ident">oak_functions_abi::proto::OakStatus</span>;
+<span class="kw">use</span> <span class="ident">oak_functions_lookup</span>::{<span class="ident">LookupData</span>, <span class="ident">LookupDataManager</span>};
 <span class="kw">use</span> <span class="ident">oak_logger::OakLogger</span>;
 <span class="kw">use</span> <span class="ident">std::sync::Arc</span>;
 <span class="kw">use</span> <span class="ident">wasmi::ValueType</span>;
@@ -185,43 +167,32 @@
 <span class="comment">// Host function name for invoking lookup in lookup data.</span>
 <span class="kw">const</span> <span class="ident">LOOKUP_ABI_FUNCTION_NAME</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;storage_get_item&quot;</span>;
 
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">LookupExtension</span> {
-    <span class="ident">lookup_data</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">LookupData</span><span class="op">&gt;</span>,
-    <span class="ident">logger</span>: <span class="ident">Logger</span>,
-}
-
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">LookupFactory</span> {
-    <span class="ident">lookup_data</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">LookupData</span><span class="op">&gt;</span>,
-    <span class="ident">logger</span>: <span class="ident">Logger</span>,
+    <span class="ident">manager</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">LookupDataManager</span><span class="op">&lt;</span><span class="ident">Logger</span><span class="op">&gt;</span><span class="op">&gt;</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">LookupFactory</span> {
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new_boxed_extension_factory</span>(
-        <span class="ident">lookup_data</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">LookupData</span><span class="op">&gt;</span>,
-        <span class="ident">logger</span>: <span class="ident">Logger</span>,
+        <span class="ident">manager</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">LookupDataManager</span><span class="op">&lt;</span><span class="ident">Logger</span><span class="op">&gt;</span><span class="op">&gt;</span>,
     ) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">BoxedExtensionFactory</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">lookup_factory</span> <span class="op">=</span> <span class="self">Self</span> {
-            <span class="ident">lookup_data</span>,
-            <span class="ident">logger</span>,
-        };
+        <span class="kw">let</span> <span class="ident">lookup_factory</span> <span class="op">=</span> <span class="self">Self</span> { <span class="ident">manager</span> };
         <span class="prelude-val">Ok</span>(<span class="ident">Box::new</span>(<span class="ident">lookup_factory</span>))
     }
 }
 
+<span class="comment">// TODO(#2576): Move extension trait implementations to the lookup crate once the extension-related</span>
+<span class="comment">// traits are in a separate crate.</span>
 <span class="kw">impl</span> <span class="ident">ExtensionFactory</span> <span class="kw">for</span> <span class="ident">LookupFactory</span> {
     <span class="kw">fn</span> <span class="ident">create</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">BoxedExtension</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">extension</span> <span class="op">=</span> <span class="ident">LookupExtension</span> {
-            <span class="ident">lookup_data</span>: <span class="self">self</span>.<span class="ident">lookup_data</span>.<span class="ident">clone</span>(),
-            <span class="ident">logger</span>: <span class="self">self</span>.<span class="ident">logger</span>.<span class="ident">clone</span>(),
-        };
+        <span class="kw">let</span> <span class="ident">extension</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">manager</span>.<span class="ident">create_lookup_data</span>();
         <span class="prelude-val">Ok</span>(<span class="ident">BoxedExtension::Native</span>(<span class="ident">Box::new</span>(<span class="ident">extension</span>)))
     }
 }
 
 <span class="doccomment">/// Corresponds to the host ABI function [`storage_get_item`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#storage_get_item).</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">storage_get_item</span>(
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">storage_get_item</span><span class="op">&lt;</span><span class="ident">L</span>: <span class="ident">OakLogger</span> <span class="op">+</span> <span class="ident">Clone</span><span class="op">&gt;</span>(
     <span class="ident">wasm_state</span>: <span class="kw-2">&amp;mut</span> <span class="ident">WasmState</span>,
-    <span class="ident">extension</span>: <span class="kw-2">&amp;mut</span> <span class="ident">LookupExtension</span>,
+    <span class="ident">extension</span>: <span class="kw-2">&amp;mut</span> <span class="ident">LookupData</span><span class="op">&lt;</span><span class="ident">L</span><span class="op">&gt;</span>,
     <span class="ident">key_ptr</span>: <span class="ident">AbiPointer</span>,
     <span class="ident">key_len</span>: <span class="ident">AbiPointerOffset</span>,
     <span class="ident">value_ptr_ptr</span>: <span class="ident">AbiPointer</span>,
@@ -231,27 +202,21 @@
         .<span class="ident">get_memory</span>()
         .<span class="ident">get</span>(<span class="ident">key_ptr</span>, <span class="ident">key_len</span> <span class="kw">as</span> <span class="ident">usize</span>)
         .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> {
-            <span class="ident">extension</span>.<span class="ident">logger</span>.<span class="ident">log_sensitive</span>(
-                <span class="ident">Level::Error</span>,
-                <span class="kw-2">&amp;</span><span class="macro">format!</span>(
-                    <span class="string">&quot;storage_get_item(): Unable to read key from guest memory: {:?}&quot;</span>,
-                    <span class="ident">err</span>
-                ),
-            );
+            <span class="ident">extension</span>.<span class="ident">log_error</span>(<span class="kw-2">&amp;</span><span class="macro">format!</span>(
+                <span class="string">&quot;storage_get_item(): Unable to read key from guest memory: {:?}&quot;</span>,
+                <span class="ident">err</span>
+            ));
             <span class="ident">OakStatus::ErrInvalidArgs</span>
         })<span class="question-mark">?</span>;
-    <span class="ident">extension</span>.<span class="ident">logger</span>.<span class="ident">log_sensitive</span>(
-        <span class="ident">Level::Debug</span>,
-        <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;storage_get_item(): key: {}&quot;</span>, <span class="ident">format_bytes</span>(<span class="kw-2">&amp;</span><span class="ident">key</span>)),
-    );
-    <span class="kw">match</span> <span class="ident">extension</span>.<span class="ident">lookup_data</span>.<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">key</span>) {
+    <span class="ident">extension</span>.<span class="ident">log_debug</span>(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;storage_get_item(): key: {}&quot;</span>, <span class="ident">format_bytes</span>(<span class="kw-2">&amp;</span><span class="ident">key</span>)));
+    <span class="kw">match</span> <span class="ident">extension</span>.<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">key</span>) {
         <span class="prelude-val">Some</span>(<span class="ident">value</span>) =&gt; {
             <span class="comment">// Truncate value for logging.</span>
             <span class="kw">let</span> <span class="ident">value_to_log</span> <span class="op">=</span> <span class="ident">value</span>.<span class="ident">clone</span>().<span class="ident">into_iter</span>().<span class="ident">take</span>(<span class="number">512</span>).<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>();
-            <span class="ident">extension</span>.<span class="ident">logger</span>.<span class="ident">log_sensitive</span>(
-                <span class="ident">Level::Debug</span>,
-                <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;storage_get_item(): value: {}&quot;</span>, <span class="ident">format_bytes</span>(<span class="kw-2">&amp;</span><span class="ident">value_to_log</span>)),
-            );
+            <span class="ident">extension</span>.<span class="ident">log_debug</span>(<span class="kw-2">&amp;</span><span class="macro">format!</span>(
+                <span class="string">&quot;storage_get_item(): value: {}&quot;</span>,
+                <span class="ident">format_bytes</span>(<span class="kw-2">&amp;</span><span class="ident">value_to_log</span>)
+            ));
             <span class="kw">let</span> <span class="ident">dest_ptr</span> <span class="op">=</span> <span class="ident">wasm_state</span>.<span class="ident">alloc</span>(<span class="ident">value</span>.<span class="ident">len</span>() <span class="kw">as</span> <span class="ident">u32</span>);
             <span class="ident">wasm_state</span>.<span class="ident">write_buffer_to_wasm_memory</span>(<span class="kw-2">&amp;</span><span class="ident">value</span>, <span class="ident">dest_ptr</span>)<span class="question-mark">?</span>;
             <span class="ident">wasm_state</span>.<span class="ident">write_u32_to_wasm_memory</span>(<span class="ident">dest_ptr</span>, <span class="ident">value_ptr_ptr</span>)<span class="question-mark">?</span>;
@@ -259,15 +224,16 @@
             <span class="prelude-val">Ok</span>(())
         }
         <span class="prelude-val">None</span> =&gt; {
-            <span class="ident">extension</span>
-                .<span class="ident">logger</span>
-                .<span class="ident">log_sensitive</span>(<span class="ident">Level::Debug</span>, <span class="string">&quot;storage_get_item(): value not found&quot;</span>);
+            <span class="ident">extension</span>.<span class="ident">log_debug</span>(<span class="string">&quot;storage_get_item(): value not found&quot;</span>);
             <span class="prelude-val">Err</span>(<span class="ident">OakStatus::ErrStorageItemNotFound</span>)
         }
     }
 }
 
-<span class="kw">impl</span> <span class="ident">OakApiNativeExtension</span> <span class="kw">for</span> <span class="ident">LookupExtension</span> {
+<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">L</span><span class="op">&gt;</span> <span class="ident">OakApiNativeExtension</span> <span class="kw">for</span> <span class="ident">LookupData</span><span class="op">&lt;</span><span class="ident">L</span><span class="op">&gt;</span>
+<span class="kw">where</span>
+    <span class="ident">L</span>: <span class="ident">OakLogger</span> <span class="op">+</span> <span class="ident">Clone</span>,
+{
     <span class="kw">fn</span> <span class="ident">invoke</span>(
         <span class="kw-2">&amp;mut</span> <span class="self">self</span>,
         <span class="ident">wasm_state</span>: <span class="kw-2">&amp;mut</span> <span class="ident">WasmState</span>,

@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["LookupData","Provides access to shared lookup data."],["LookupDataManager","Utility for managing lookup data."]],"type":[["Data",""]]});
