@@ -19,6 +19,7 @@ pub mod io;
 pub mod log;
 pub mod lookup;
 pub mod policy;
+pub mod session;
 pub mod wasmi;
 
 use maplit::btreemap;
@@ -63,17 +64,31 @@ fn main() -> anyhow::Result<()> {
 
     // Create Wasm sandbox service with references to services it can use.
     let services: BTreeMap<ServiceType, Arc<Box<dyn Service>>> = btreemap! {
-        ServiceType::Log => log,
-        ServiceType::Lookup => lookup,
+        ServiceType::Log => log.clone(),
+        ServiceType::Lookup => lookup.clone(),
     };
     let wasm: Arc<Box<dyn Service>> = Arc::new(Box::new(wasmi::WasmiService::new(services)));
 
     // Create the policy enforcment service that forwards data to the Wasm sandbox service.
-    let policy: Arc<Box<dyn Service>> = Arc::new(Box::new(policy::PolicyService::new(wasm)));
+    let session: Arc<Box<dyn Service>> =
+        Arc::new(Box::new(session::SessionService::new(wasm.clone())));
 
-    // Create the stream demultiplexer and configure it to send data via the policy enforcement
-    // service.
-    let demux = demux::Demux::new(policy);
+    // Create the policy enforcment service that forwards data to the Wasm sandbox service.
+    let policy: Arc<Box<dyn Service>> =
+        Arc::new(Box::new(policy::PolicyService::new(session.clone())));
+
+    // Create references to services that can be configured.
+    let config_services: BTreeMap<ServiceType, Arc<Box<dyn Service>>> = btreemap! {
+        ServiceType::Log => log,
+        ServiceType::Lookup => lookup,
+        ServiceType::Policy => policy.clone(),
+        ServiceType::Session => session,
+        ServiceType::Wasm => wasm,
+    };
+
+    // Create the stream demultiplexer and configure it to configure the other services and send
+    // data via the policy enforcement service.
+    let demux = demux::Demux::new(config_services, policy);
 
     // Create the fake IO listener and pretend to listen for incoming frames.
     let io = io::IoListener::new(demux);

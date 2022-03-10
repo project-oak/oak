@@ -14,27 +14,46 @@
 // limitations under the License.
 //
 
-use crate::Service;
-use std::sync::Arc;
+use crate::{Service, ServiceType};
+use std::{collections::BTreeMap, sync::Arc};
 
 /// A stream demultiplexer.
 pub struct Demux {
+    config_services: BTreeMap<ServiceType, Arc<Box<dyn Service>>>,
     next: Arc<Box<dyn Service>>,
 }
 
 impl Demux {
-    pub fn new(next: Arc<Box<dyn Service>>) -> Self {
-        Self { next }
+    pub fn new(
+        config_services: BTreeMap<ServiceType, Arc<Box<dyn Service>>>,
+        next: Arc<Box<dyn Service>>,
+    ) -> Self {
+        Self {
+            config_services,
+            next,
+        }
+    }
+
+    /// Handles a single admin frame from a multiplexed stream.
+    ///
+    /// This will likely be part of `handle_frame` in a real implementation, just with different
+    /// frametypes, but it is split out here for clarity.
+    pub fn handle_admin_frame(&self, data: &[u8]) -> anyhow::Result<()> {
+        eprintln!("config frame decapsulated");
+        for (_, service) in self.config_services.iter() {
+            service.configure(data)?;
+        }
+        Ok(())
     }
 
     /// Handles a single frame from a multiplexed stream.
     pub fn handle_frame(&self, data: &[u8]) -> anyhow::Result<Vec<u8>> {
-        eprintln!("decapsulated");
+        eprintln!("request frame decapsulated");
         // For now, just create a single request proxy and call it with the raw fram. A real
         // implementation would decapsulate the frame to reconstruct the individual streams
         // and re-encapsulate the results as frames to return in the main stream.
         let response = self.next.create_proxy().call(data)?;
-        eprintln!("encapsulated");
+        eprintln!("response frame encapsulated");
         Ok(response)
     }
 }

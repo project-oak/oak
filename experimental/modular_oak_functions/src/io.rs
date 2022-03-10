@@ -27,9 +27,14 @@ impl IoListener {
 
     pub fn listen(&self) -> anyhow::Result<()> {
         eprintln!("starting");
+        // Fake the configuration.
+        self.demux.handle_admin_frame(b"")?;
+        eprintln!("runtime configured");
+
         // In a real implementation it would listen on an IO stream here handle the incoming
         // frames, but for now we just create a fake frame, send it into the rest of the system and
         // print the response.
+        eprintln!("listening");
         let response = self.demux.handle_frame(b"test")?;
         println!("response: {}", std::str::from_utf8(&response)?);
         Ok(())

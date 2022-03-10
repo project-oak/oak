@@ -32,6 +32,7 @@ impl Service for LookupService {
         Box::new(LookupProxy::new())
     }
     fn configure(&self, _data: &[u8]) -> anyhow::Result<()> {
+        eprintln!("lookup configured");
         // Ignore configuration for now. In future this will be used to refresh the lookup data.
         Ok(())
     }

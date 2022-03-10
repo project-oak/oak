@@ -52,3 +52,12 @@ how data might flow through the system.
 
 In a real implementation each module will be implemented in a separate crate,
 and where possible will be `no_std`-compatible.
+
+The flow of data through the runtime is:
+
+- IoListener
+  - Demux
+    - PolicyProxy
+      - WasmiProxy
+        - LogProxy
+        - LookupProxy

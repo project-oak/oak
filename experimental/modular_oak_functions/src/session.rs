@@ -17,49 +17,51 @@
 use crate::{Service, ServiceProxy};
 use std::sync::Arc;
 
-/// Policy enforcement service.
-///
-/// Note: it might not be possible to enforce the fixed time policy using this service. It might
-/// have to be moved into the demux or io service.
-pub struct PolicyService {
-    // Policy configuration will also be stored here in future.
+/// Session state service.
+pub struct SessionService {
+    // Per-session state will also be stored here, likely in a LRU cache.
     next: Arc<Box<dyn Service>>,
 }
 
-impl PolicyService {
+impl SessionService {
     pub fn new(next: Arc<Box<dyn Service>>) -> Self {
         Self { next }
     }
 }
 
-impl Service for PolicyService {
+impl Service for SessionService {
     fn create_proxy(&self) -> Box<dyn ServiceProxy> {
-        Box::new(PolicyProxy::new(self.next.create_proxy()))
+        Box::new(SessionProxy::new(self.next.create_proxy()))
     }
     fn configure(&self, _data: &[u8]) -> anyhow::Result<()> {
-        eprintln!("policy configured");
-        // Ignore configuration for now. In future this will set the policy to use.
+        eprintln!("session configured");
+        // Ignore configuration for now.
         Ok(())
     }
 }
 
-/// Enforcer of the response policies
-pub struct PolicyProxy {
+/// Per session state handler.
+///
+/// This proxy will also handle the remote attestation handshake and encrypting/decypting session
+/// traffic.
+pub struct SessionProxy {
     // Reference to policy configuration will also be stored here in future.
     next: Box<dyn ServiceProxy>,
 }
 
-impl PolicyProxy {
+impl SessionProxy {
     fn new(next: Box<dyn ServiceProxy>) -> Self {
         Self { next }
     }
 }
 
-impl ServiceProxy for PolicyProxy {
+impl ServiceProxy for SessionProxy {
     fn call(&self, data: &[u8]) -> anyhow::Result<Vec<u8>> {
-        // The real implementation will enforce the policy, but for now we just pass through.
+        eprintln!("data decrypted");
+        // The real implementation will do the remote attesation handshake and encrypt/decrypt using
+        // the session keys, but for now we just pass through.
         let result = self.next.call(data)?;
-        eprintln!("policy applied");
+        eprintln!("data encrypted");
         Ok(result)
     }
 }

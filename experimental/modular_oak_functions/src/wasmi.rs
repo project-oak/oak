@@ -38,6 +38,7 @@ impl Service for WasmiService {
         Box::new(WasmiProxy::new(proxies))
     }
     fn configure(&self, _data: &[u8]) -> anyhow::Result<()> {
+        eprintln!("wasm engine configured");
         Ok(())
     }
 }

@@ -32,6 +32,7 @@ impl Service for LogService {
         Box::new(LogProxy::new())
     }
     fn configure(&self, _data: &[u8]) -> anyhow::Result<()> {
+        eprintln!("log configured");
         // Ignore configuration for now.
         Ok(())
     }
