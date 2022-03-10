@@ -191,7 +191,7 @@ where
 
         // Note that we only get here if no errors occured during the preceding
         // steps. If errors do occur the session state as tracked by the server
-        // is effectovely earsed. This allows the client to negotiate a new
+        // is effectively erased. This allows the client to negotiate a new
         // handshake.
         self.sessions_tracker
             .lock()
