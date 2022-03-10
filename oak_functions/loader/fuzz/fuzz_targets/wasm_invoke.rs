@@ -27,10 +27,10 @@ use oak_functions_abi::proto::Request;
 use oak_functions_loader::{
     logger::Logger,
     lookup::LookupFactory,
-    lookup_data::LookupData,
     metrics::PrivateMetricsProxyFactory,
     server::{BoxedExtensionFactory, WasmHandler},
 };
+use oak_functions_lookup::LookupDataManager;
 use oak_functions_metrics::{BucketConfig, PrivateMetricsConfig};
 use prost::Message;
 use std::{convert::Into, sync::Arc};
@@ -116,8 +116,8 @@ fuzz_target!(|instruction_list: Vec<ArbitraryInstruction>| {
     };
 
     let logger = Logger::for_test();
-    let lookup_data = Arc::new(LookupData::for_test(entries));
-    let lookup_factory = LookupFactory::new_boxed_extension_factory(lookup_data, logger.clone())
+    let lookup_data_manager = Arc::new(LookupDataManager::for_test(entries, logger.clone()));
+    let lookup_factory = LookupFactory::new_boxed_extension_factory(lookup_data_manager)
         .expect("could not create LookupFactory");
     let metrics_factory = create_metrics_factory();
 

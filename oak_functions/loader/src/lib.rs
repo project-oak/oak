@@ -34,13 +34,14 @@ use crate::{
     grpc::{create_and_start_grpc_server, create_wasm_handler, RequestModel},
     logger::Logger,
     lookup::LookupFactory,
-    lookup_data::{LookupData, LookupDataAuth, LookupDataSource},
+    lookup_data::{LookupDataAuth, LookupDataRefresher, LookupDataSource},
     server::Policy,
 };
 use anyhow::Context;
 use clap::Parser;
 use log::Level;
 use oak_functions_abi::proto::{ConfigurationInfo, ServerPolicy};
+use oak_functions_lookup::LookupDataManager;
 #[cfg(feature = "oak-metrics")]
 use oak_functions_metrics::PrivateMetricsConfig;
 #[cfg(feature = "oak-tf")]
@@ -146,7 +147,7 @@ pub struct Opt {
 }
 
 async fn background_refresh_lookup_data(
-    lookup_data: &LookupData,
+    lookup_data_refresher: &LookupDataRefresher,
     period: Duration,
     logger: &Logger,
 ) {
@@ -156,7 +157,7 @@ async fn background_refresh_lookup_data(
     loop {
         interval.tick().await;
         // If there is an error, we skip the current refresh and wait for the next tick.
-        if let Err(err) = lookup_data.refresh().await {
+        if let Err(err) = lookup_data_refresher.refresh().await {
             logger.log_public(
                 Level::Error,
                 &format!("error refreshing lookup data: {}", err),
@@ -188,12 +189,12 @@ pub fn lib_main() -> anyhow::Result<()> {
 async fn async_main(opt: Opt, config: Config, logger: Logger) -> anyhow::Result<()> {
     let (notify_sender, notify_receiver) = tokio::sync::oneshot::channel::<()>();
 
-    let lookup_data = load_lookup_data(&config, logger.clone()).await?;
+    let lookup_data_manager = load_lookup_data(&config, logger.clone()).await?;
 
     #[allow(unused_mut)]
     let mut extensions = Vec::new();
 
-    let lookup_factory = LookupFactory::new_boxed_extension_factory(lookup_data, logger.clone())?;
+    let lookup_factory = LookupFactory::new_boxed_extension_factory(lookup_data_manager)?;
     extensions.push(lookup_factory);
 
     #[cfg(feature = "oak-tf")]
@@ -274,7 +275,10 @@ async fn async_main(opt: Opt, config: Config, logger: Logger) -> anyhow::Result<
         .context("error while waiting for the server to terminate")?
 }
 
-async fn load_lookup_data(config: &Config, logger: Logger) -> anyhow::Result<Arc<LookupData>> {
+async fn load_lookup_data(
+    config: &Config,
+    logger: Logger,
+) -> anyhow::Result<Arc<LookupDataManager<Logger>>> {
     let lookup_data_source = match &config.lookup_data {
         Some(lookup_data) => match &lookup_data {
             Data::Url(url_string) => {
@@ -294,28 +298,32 @@ async fn load_lookup_data(config: &Config, logger: Logger) -> anyhow::Result<Arc
         },
         None => None,
     };
-    let lookup_data = Arc::new(LookupData::new_empty(
-        lookup_data_source.clone(),
-        logger.clone(),
-    ));
+    let lookup_data_manager = Arc::new(LookupDataManager::new_empty(logger.clone()));
     if lookup_data_source.is_some() {
+        let lookup_data_refresher = LookupDataRefresher::new(
+            lookup_data_source,
+            lookup_data_manager.clone(),
+            logger.clone(),
+        );
         // First load the lookup data upfront in a blocking fashion.
         // TODO(#1930): Retry the initial lookup a few times if it fails.
-        lookup_data
+        lookup_data_refresher
             .refresh()
             .await
             .context("Couldn't perform initial load of lookup data")?;
         if let Some(lookup_data_download_period) = config.lookup_data_download_period {
             // Create background task to periodically refresh the lookup data.
-            let lookup_data = lookup_data.clone();
-            let logger = logger.clone();
             tokio::spawn(async move {
-                background_refresh_lookup_data(&lookup_data, lookup_data_download_period, &logger)
-                    .await
+                background_refresh_lookup_data(
+                    &lookup_data_refresher,
+                    lookup_data_download_period,
+                    &logger,
+                )
+                .await
             });
         };
     }
-    Ok(lookup_data)
+    Ok(lookup_data_manager)
 }
 
 #[allow(unused_variables)]

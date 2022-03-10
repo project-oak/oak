@@ -17,9 +17,8 @@
 use lazy_static::lazy_static;
 use maplit::hashmap;
 use oak_functions_abi::proto::{Request, Response};
-use oak_functions_loader::{
-    logger::Logger, lookup::LookupFactory, lookup_data::LookupData, server::WasmHandler,
-};
+use oak_functions_loader::{logger::Logger, lookup::LookupFactory, server::WasmHandler};
+use oak_functions_lookup::LookupDataManager;
 use std::sync::Arc;
 
 lazy_static! {
@@ -37,8 +36,8 @@ lazy_static! {
 #[tokio::test]
 async fn test_read_write() {
     let logger = Logger::for_test();
-    let lookup_data = Arc::new(LookupData::for_test(hashmap! {}));
-    let lookup_factory = LookupFactory::new_boxed_extension_factory(lookup_data, logger.clone())
+    let lookup_data_manager = Arc::new(LookupDataManager::for_test(hashmap! {}, logger.clone()));
+    let lookup_factory = LookupFactory::new_boxed_extension_factory(lookup_data_manager)
         .expect("could not create LookupFactory");
 
     let wasm_handler = WasmHandler::create(&WASM_MODULE_BYTES, vec![lookup_factory], logger)
@@ -54,8 +53,8 @@ async fn test_read_write() {
 #[tokio::test]
 async fn test_double_read() {
     let logger = Logger::for_test();
-    let lookup_data = Arc::new(LookupData::for_test(hashmap! {}));
-    let lookup_factory = LookupFactory::new_boxed_extension_factory(lookup_data, logger.clone())
+    let lookup_data_manager = Arc::new(LookupDataManager::for_test(hashmap! {}, logger.clone()));
+    let lookup_factory = LookupFactory::new_boxed_extension_factory(lookup_data_manager)
         .expect("could not create LookupFactory");
 
     let wasm_handler = WasmHandler::create(&WASM_MODULE_BYTES, vec![lookup_factory], logger)
@@ -71,8 +70,8 @@ async fn test_double_read() {
 #[tokio::test]
 async fn test_double_write() {
     let logger = Logger::for_test();
-    let lookup_data = Arc::new(LookupData::for_test(hashmap! {}));
-    let lookup_factory = LookupFactory::new_boxed_extension_factory(lookup_data, logger.clone())
+    let lookup_data_manager = Arc::new(LookupDataManager::for_test(hashmap! {}, logger.clone()));
+    let lookup_factory = LookupFactory::new_boxed_extension_factory(lookup_data_manager)
         .expect("could not create LookupFactory");
 
     let wasm_handler = WasmHandler::create(&WASM_MODULE_BYTES, vec![lookup_factory], logger)
@@ -88,8 +87,8 @@ async fn test_double_write() {
 #[tokio::test]
 async fn test_write_log() {
     let logger = Logger::for_test();
-    let lookup_data = Arc::new(LookupData::for_test(hashmap! {}));
-    let lookup_factory = LookupFactory::new_boxed_extension_factory(lookup_data, logger.clone())
+    let lookup_data_manager = Arc::new(LookupDataManager::for_test(hashmap! {}, logger.clone()));
+    let lookup_factory = LookupFactory::new_boxed_extension_factory(lookup_data_manager)
         .expect("could not create LookupFactory");
 
     let wasm_handler = WasmHandler::create(&WASM_MODULE_BYTES, vec![lookup_factory], logger)
@@ -109,8 +108,8 @@ async fn test_storage_get_item() {
     };
 
     let logger = Logger::for_test();
-    let lookup_data = Arc::new(LookupData::for_test(entries));
-    let lookup_factory = LookupFactory::new_boxed_extension_factory(lookup_data, logger.clone())
+    let lookup_data_manager = Arc::new(LookupDataManager::for_test(entries, logger.clone()));
+    let lookup_factory = LookupFactory::new_boxed_extension_factory(lookup_data_manager)
         .expect("could not create LookupFactory");
 
     let wasm_handler = WasmHandler::create(&WASM_MODULE_BYTES, vec![lookup_factory], logger)
@@ -129,8 +128,8 @@ async fn test_storage_get_item_not_found() {
     let entries = hashmap! {};
 
     let logger = Logger::for_test();
-    let lookup_data = Arc::new(LookupData::for_test(entries));
-    let lookup_factory = LookupFactory::new_boxed_extension_factory(lookup_data, logger.clone())
+    let lookup_data_manager = Arc::new(LookupDataManager::for_test(entries, logger.clone()));
+    let lookup_factory = LookupFactory::new_boxed_extension_factory(lookup_data_manager)
         .expect("could not create LookupFactory");
 
     let wasm_handler = WasmHandler::create(&WASM_MODULE_BYTES, vec![lookup_factory], logger)

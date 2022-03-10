@@ -1015,6 +1015,7 @@ dependencies = [
  "oak_functions",
  "oak_functions_abi",
  "oak_functions_loader",
+ "oak_functions_lookup",
  "oak_functions_metrics",
  "prost",
  "prost-build",
@@ -1388,6 +1389,7 @@ dependencies = [
  "oak_functions",
  "oak_functions_abi",
  "oak_functions_loader",
+ "oak_functions_lookup",
  "prost",
  "test_utils",
  "tokio",
@@ -1886,6 +1888,7 @@ dependencies = [
  "maplit",
  "oak_functions_abi",
  "oak_functions_loader",
+ "oak_functions_lookup",
  "prost",
  "test_utils",
  "tokio",
@@ -1962,6 +1965,7 @@ dependencies = [
  "lookup_data_generator",
  "maplit",
  "oak_functions_abi",
+ "oak_functions_lookup",
  "oak_functions_metrics",
  "oak_functions_tf_inference",
  "oak_logger",
@@ -1996,6 +2000,15 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "oak_functions_loader",
+]
+
+[[package]]
+name = "oak_functions_lookup"
+version = "0.1.0"
+dependencies = [
+ "log",
+ "maplit",
+ "oak_logger",
 ]
 
 [[package]]
@@ -2671,9 +2684,9 @@ dependencies = [
 
 [[package]]
 name = "regex"
-version = "1.5.4"
+version = "1.5.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d07a8629359eb56f1e2fb1652bb04212c072a87ba68546a04065d525673ac461"
+checksum = "1a11647b6b25ff05a515cb92c365cec08801e83423a235b51e231e1808747286"
 dependencies = [
  "aho-corasick",
  "memchr",
@@ -3987,6 +4000,7 @@ dependencies = [
  "oak_functions",
  "oak_functions_abi",
  "oak_functions_loader",
+ "oak_functions_lookup",
  "prost",
  "rand 0.8.5",
  "serde",

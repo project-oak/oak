@@ -19,10 +19,11 @@ use anyhow::{anyhow, Context};
 use hyper::{body::Bytes, client::connect::Connect, Body, Client, Request};
 use hyper_rustls::HttpsConnectorBuilder;
 use log::Level;
+use oak_functions_lookup::LookupDataManager;
 use oak_logger::OakLogger;
 use prost::Message;
 use serde_derive::Deserialize;
-use std::{collections::HashMap, sync::RwLock, time::Instant};
+use std::{collections::HashMap, sync::Arc, time::Instant};
 
 #[derive(Copy, Clone, Deserialize, Debug)]
 pub enum LookupDataAuth {
@@ -42,33 +43,37 @@ pub enum LookupDataSource {
     File(std::path::PathBuf),
 }
 
-/// An in-memory lookup store instance that can refresh its internal entries from the provided data
-/// file URL.
+/// Utility for periodically refreshing lookup data from a data file using the provided file path or
+/// URL.
 ///
 /// Entries in the data file path must be consecutive binary encoded and length delimited
 /// protobuf messages according to the definition in `/oak_functions/proto/lookup_data.proto`.
-pub struct LookupData {
+pub struct LookupDataRefresher {
     lookup_data_source: Option<LookupDataSource>,
-    entries: RwLock<HashMap<Vec<u8>, Vec<u8>>>,
+    manager: Arc<LookupDataManager<Logger>>,
     logger: Logger,
 }
 
-impl LookupData {
-    /// Creates a new empty [`LookupData`] instance that can refresh its internal entries from the
-    /// provided data file URL.
+impl LookupDataRefresher {
+    /// Creates a new [`LookupDataRefresher`] instance that can refresh the backing data managed by
+    /// the lookup data manager by using the provided lookup data source.
     ///
-    /// The returned instance is empty, and must be populated by calling the [`LookupData::refresh`]
-    /// method at least once.
-    pub fn new_empty(lookup_data_source: Option<LookupDataSource>, logger: Logger) -> LookupData {
-        LookupData {
+    /// [`LookupDataRefresher::refresh`] must be called at least once for for lookup data for be
+    /// populated.
+    pub fn new(
+        lookup_data_source: Option<LookupDataSource>,
+        manager: Arc<LookupDataManager<Logger>>,
+        logger: Logger,
+    ) -> Self {
+        Self {
             lookup_data_source,
-            entries: RwLock::new(HashMap::new()),
+            manager,
             logger,
         }
     }
 
-    /// Refreshes the internal entries of this struct from the data file URL provided at
-    /// construction time.
+    /// Refreshes the entries in the backing data managed by the manager from the data source
+    /// provided at construction time.
     ///
     /// If the `lookup_data_auth` config setting is set to `GcpMetadataToken` a service account
     /// access token token will be downloaded from the GCP metadata service first and then used to
@@ -106,63 +111,17 @@ impl LookupData {
                     ),
                 );
 
-                // This block is here to emphasize and ensure that the write lock is only held for a
-                // very short time.
                 let start = Instant::now();
-                {
-                    *self
-                        .entries
-                        .write()
-                        .expect("could not lock entries for write") = entries;
-                }
+                self.manager.update_data(entries);
                 self.logger.log_public(
                     Level::Debug,
-                    &format!(
-                        "lookup data write lock acquisition time: {:.0?}",
-                        start.elapsed()
-                    ),
+                    &format!("updated entries in manager in: {:.0?}", start.elapsed()),
                 );
 
                 Ok(())
             }
             None => Ok(()),
         }
-    }
-
-    /// Creates an instance of LookupData populated with the given entries.
-    #[allow(dead_code)]
-    pub fn for_test(entries: HashMap<Vec<u8>, Vec<u8>>) -> Self {
-        LookupData {
-            lookup_data_source: None,
-            entries: RwLock::new(entries),
-            logger: Logger::for_test(),
-        }
-    }
-
-    /// Convenience getter for an individual entry that reduces lock contention by cloning the
-    /// resulting value as quickly as possible and returning it instead of a reference.
-    pub fn get(&self, key: &[u8]) -> Option<Vec<u8>> {
-        self.entries
-            .read()
-            .expect("could not lock entries for read")
-            .get(key)
-            .cloned()
-    }
-
-    #[allow(dead_code)]
-    pub fn len(&self) -> usize {
-        self.entries
-            .read()
-            .expect("could not lock entries for read")
-            .len()
-    }
-
-    #[allow(dead_code)]
-    pub fn is_empty(&self) -> bool {
-        self.entries
-            .read()
-            .expect("Could not lock entries for read")
-            .is_empty()
     }
 }
 
