@@ -75,7 +75,7 @@ fn main() -> anyhow::Result<()> {
     // service.
     let demux = demux::Demux::new(policy);
 
-    // Create the fake IO listener and pretend to lister for incoming frames.
+    // Create the fake IO listener and pretend to listen for incoming frames.
     let io = io::IoListener::new(demux);
     io.listen()
 }

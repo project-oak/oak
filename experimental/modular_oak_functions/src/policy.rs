@@ -57,6 +57,8 @@ impl PolicyProxy {
 impl ServiceProxy for PolicyProxy {
     fn call(&self, data: &[u8]) -> anyhow::Result<Vec<u8>> {
         // The real implementation will to the lookup, but for now we just pass through.
-        self.next.call(data)
+        let result = self.next.call(data)?;
+        eprintln!("policy applied");
+        Ok(result)
     }
 }

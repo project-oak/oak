@@ -55,6 +55,7 @@ impl WasmiProxy {
 
 impl ServiceProxy for WasmiProxy {
     fn call(&self, data: &[u8]) -> anyhow::Result<Vec<u8>> {
+        eprintln!("wasm engine invoked");
         let mut result = data.to_vec();
         // The real implemenation will execute the Wasm business logic and call the appropriate
         // service proxies based on ABI calls. For now, just call each proxy and replace the

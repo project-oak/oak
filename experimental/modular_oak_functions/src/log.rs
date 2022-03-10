@@ -56,9 +56,10 @@ impl LogProxy {
 
 impl ServiceProxy for LogProxy {
     fn call(&self, data: &[u8]) -> anyhow::Result<Vec<u8>> {
+        eprintln!("log called");
         // The real implementation will use the logger. For now we just interpret the data as a UTF8
         // string, write to stderr and echo the data base.
-        eprintln!("Logged: {}", std::str::from_utf8(data)?);
+        eprintln!("logged: {}", std::str::from_utf8(data)?);
         Ok(data.to_vec())
     }
 }

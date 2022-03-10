@@ -56,7 +56,9 @@ impl LookupProxy {
 
 impl ServiceProxy for LookupProxy {
     fn call(&self, data: &[u8]) -> anyhow::Result<Vec<u8>> {
-        // The real implementation will to the lookup, but for now we just echo the data back.
+        eprintln!("lookup called");
+
+        // The real implementation will do the lookup, but for now we just echo the data back.
         Ok(data.to_vec())
     }
 }
