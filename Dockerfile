@@ -15,8 +15,10 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 # > /etc/apt/sources.list
 
 # Getting curl and certificates dependecies.
+# We're rate-limiting HTTP requests to 500 kB/s as otherwise we may get timeout errors
+# when downloading from snapshot.debian.org.
 RUN apt-get --yes update \
-  && apt-get install --no-install-recommends --yes \
+  && apt-get install --no-install-recommends --yes --option Acquire::http::Dl-Limit=500 \
   apt-transport-https \
   build-essential \
   ca-certificates \
