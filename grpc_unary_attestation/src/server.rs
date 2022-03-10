@@ -196,8 +196,8 @@ where
             .lock()
             .expect("Couldn't lock session_state mutex")
             .put_session_state(request_inner.session_id, session_state);
-        return Ok(tonic::Response::new(UnaryResponse {
+        Ok(tonic::Response::new(UnaryResponse {
             body: response_body,
-        }));
+        }))
     }
 }
