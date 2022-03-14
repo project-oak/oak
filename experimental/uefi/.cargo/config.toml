@@ -1,6 +1,9 @@
 [build]
 target = "x86_64-unknown-uefi"
 
+[target.x86_64-unknown-uefi]
+runner = "qemu-system-x86_64 -nodefaults -nographic -bios /usr/share/OVMF/OVMF_CODE.fd -serial stdio -machine q35 -kernel"
+
 [unstable]
 build-std = ["core"]
 build-std-features = ["compiler-builtins-mem"]
