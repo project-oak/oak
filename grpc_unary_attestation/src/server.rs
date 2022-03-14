@@ -58,7 +58,10 @@ impl SessionsTracker {
     /// be put back into the SessionsTracker. This an intentional choice meant
     /// to ensure that faulty state that leads to errors when processing
     /// a request is not persistent.
-    pub fn pop_session_state(&mut self, session_id: SessionId) -> Result<SessionState, String> {
+    pub fn pop_session_state(
+        &mut self,
+        session_id: SessionId,
+    ) -> anyhow::Result<SessionState, String> {
         return match self.known_sessions.pop(&session_id) {
             None => match AttestationBehavior::create_self_attestation(&self.tee_certificate) {
                 Ok(behavior) => Ok(SessionState::HandshakeInProgress(Box::new(
@@ -136,7 +139,7 @@ where
     async fn message(
         &self,
         request: tonic::Request<UnaryRequest>,
-    ) -> Result<tonic::Response<UnaryResponse>, tonic::Status> {
+    ) -> anyhow::Result<tonic::Response<UnaryResponse>, tonic::Status> {
         let error_logger = self.error_logger.clone();
         let request_inner = request.into_inner();
 
