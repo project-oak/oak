@@ -39,6 +39,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "qemu-exit"
+version = "3.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9ff023245bfcc73fb890e1f8d5383825b3131cc920020a5c487d6f113dfc428a"
+
+[[package]]
 name = "quote"
 version = "1.0.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -65,14 +71,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bad643914094137d475641b6bab89462505316ec2ce70907ad20102d28a79ab8"
 dependencies = [
  "bit_field",
-]
-
-[[package]]
-name = "uefi"
-version = "0.1.0"
-dependencies = [
- "uefi 0.14.0",
- "uefi-services",
 ]
 
 [[package]]
@@ -106,7 +104,16 @@ checksum = "7840bddc6477dc443cc5652ca9683de9f10bd173691151c3160d734521bef3bd"
 dependencies = [
  "cfg-if",
  "log",
- "uefi 0.14.0",
+ "qemu-exit",
+ "uefi",
+]
+
+[[package]]
+name = "uefi-simple"
+version = "0.1.0"
+dependencies = [
+ "uefi",
+ "uefi-services",
 ]
 
 [[package]]

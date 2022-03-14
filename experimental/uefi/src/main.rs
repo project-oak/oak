@@ -17,22 +17,48 @@
 #![no_main]
 #![no_std]
 #![feature(abi_efiapi)]
+#![feature(custom_test_frameworks)]
+#![test_runner(crate::test_runner)]
+#![reexport_test_harness_main = "test_main"]
 
-use core::fmt::Write;
 use uefi::{prelude::*, table::runtime::ResetType, ResultExt};
 
 #[entry]
-fn main(_handle: Handle, mut system_table: SystemTable<Boot>) -> Status {
+fn _start(_handle: Handle, mut system_table: SystemTable<Boot>) -> Status {
     uefi_services::init(&mut system_table).unwrap_success();
+
+    let status = if cfg!(test) {
+        #[cfg(test)]
+        test_main();
+        Status::SUCCESS
+    } else {
+        main(_handle, &mut system_table)
+    };
+
+    system_table
+        .runtime_services()
+        .reset(ResetType::Shutdown, status, None);
+}
+
+fn main(_handle: Handle, system_table: &mut SystemTable<Boot>) -> Status {
+    use core::fmt::Write;
 
     let status = writeln!(system_table.stdout(), "Hello World!");
 
-    system_table.runtime_services().reset(
-        ResetType::Shutdown,
-        match status {
-            Ok(_) => Status::SUCCESS,
-            Err(core::fmt::Error) => Status::DEVICE_ERROR,
-        },
-        None,
-    );
+    match status {
+        Ok(_) => Status::SUCCESS,
+        Err(core::fmt::Error) => Status::DEVICE_ERROR,
+    }
+}
+
+#[cfg(test)]
+fn test_runner(tests: &[&dyn Fn()]) {
+    for test in tests {
+        test();
+    }
+}
+
+#[test_case]
+fn test_simple() {
+    assert_eq!(1, 1);
 }
