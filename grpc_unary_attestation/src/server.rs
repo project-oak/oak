@@ -42,10 +42,11 @@ struct SessionsTracker {
 
 impl SessionsTracker {
     pub fn create(tee_certificate: Vec<u8>, additional_info: Vec<u8>) -> Self {
+        let known_sessions = LruCache::new(10000);
         Self {
             tee_certificate,
             additional_info,
-            known_sessions: LruCache::new(10000),
+            known_sessions,
         }
     }
 
