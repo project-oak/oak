@@ -88,7 +88,7 @@ impl SessionsTracker {
     }
 
     pub fn put_session_state(&mut self, session_id: SessionId, session_state: SessionState) {
-        let _ = &self.known_sessions.put(session_id, session_state);
+        self.known_sessions.put(session_id, session_state);
     }
 }
 
