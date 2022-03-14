@@ -25,7 +25,7 @@ use uefi::{prelude::*, table::runtime::ResetType, ResultExt};
 fn main(_handle: Handle, mut system_table: SystemTable<Boot>) -> Status {
     uefi_services::init(&mut system_table).unwrap_success();
 
-    let status = write!(system_table.stdout(), "Hello World!\n");
+    let status = writeln!(system_table.stdout(), "Hello World!");
 
     system_table.runtime_services().reset(
         ResetType::Shutdown,
