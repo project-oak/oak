@@ -52,11 +52,11 @@ impl SessionsTracker {
     /// Consumes remote attestation state of an existing session. Creates
     /// intial state if the session is not known.
     ///
-    /// Note that getting the remote attestaion state of a session always
+    /// Note that getting the remote attestation state of a session always
     /// implicitly removes it from the set of tracked sessions. After
     /// using the state to process a request with this state it must explicitly
     /// be put back into the SessionsTracker. This an intentional choice meant
-    /// meant to ensure that faulty state that leads to errors when preocessing
+    /// to ensure that faulty state that leads to errors when processing
     /// a request is not persistent.
     pub fn pop_session_state(&mut self, session_id: SessionId) -> Result<SessionState, String> {
         return match self.known_sessions.pop(&session_id) {
