@@ -32,7 +32,6 @@ RUN apt-get --yes update \
   libssl-dev \
   musl-tools \
   openjdk-11-jdk \
-  ovmf \
   pkg-config \
   procps \
   python3 \
@@ -61,10 +60,11 @@ RUN echo "deb [arch=amd64] https://download.docker.com/linux/debian buster stabl
   && apt-get clean \
   && rm --recursive --force /var/lib/apt/lists/*
 
-# Use a later version of clang-format from buster-backports.
+# Use a later version of clang-format and OVMF (UEFI firmware) from buster-backports.
 RUN echo 'deb http://deb.debian.org/debian buster-backports main' > /etc/apt/sources.list.d/backports.list \
   && apt-get --yes update \
   && apt-get install --no-install-recommends --yes clang-format-8 \
+  && apt-get install --no-install-recommends --yes --target-release buster-backports ovmf \
   && apt-get clean \
   && rm --recursive --force /var/lib/apt/lists/* \
   && ln --symbolic --force clang-format-8 /usr/bin/clang-format
