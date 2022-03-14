@@ -18,11 +18,21 @@
 #![no_std]
 #![feature(abi_efiapi)]
 
-use uefi::{prelude::*, ResultExt};
+use core::fmt::Write;
+use uefi::{prelude::*, table::runtime::ResetType, ResultExt};
 
 #[entry]
 fn main(_handle: Handle, mut system_table: SystemTable<Boot>) -> Status {
     uefi_services::init(&mut system_table).unwrap_success();
 
-    Status::SUCCESS
+    let status = write!(system_table.stdout(), "Hello World!\n");
+
+    system_table.runtime_services().reset(
+        ResetType::Shutdown,
+        match status {
+            Ok(_) => Status::SUCCESS,
+            Err(core::fmt::Error) => Status::DEVICE_ERROR,
+        },
+        None,
+    );
 }
