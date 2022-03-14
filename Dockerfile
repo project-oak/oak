@@ -32,11 +32,13 @@ RUN apt-get --yes update \
   libssl-dev \
   musl-tools \
   openjdk-11-jdk \
+  ovmf \
   pkg-config \
   procps \
   python3 \
   python3-six \
   python3-distutils \
+  qemu-system-x86 \
   shellcheck \
   software-properties-common \
   vim \
