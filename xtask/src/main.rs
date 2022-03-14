@@ -707,7 +707,10 @@ fn run_cargo_test(opt: &RunTestsOpt, all_affected_crates: &ModifiedContent) -> S
                             test_run_step("run".to_string()),
                             Step::Single {
                                 name: "cleanup".to_string(),
-                                command: Cmd::new("rm", &["-rf", entry.with_file_name("target").to_str().unwrap()]),
+                                command: Cmd::new(
+                                    "rm",
+                                    &["-rf", entry.with_file_name("target").to_str().unwrap()],
+                                ),
                             },
                         ],
                     }

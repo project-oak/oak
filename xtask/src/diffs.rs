@@ -43,7 +43,7 @@ impl ModifiedContent {
                 .contains(&file_name.to_string())
     }
 
-    pub fn contains_path(&self, file_name: &PathBuf) -> bool {
+    pub fn contains_path(&self, file_name: &Path) -> bool {
         self.contains(file_name.to_str().unwrap())
     }
 }

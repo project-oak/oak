@@ -59,6 +59,8 @@ fn test_runner(tests: &[&dyn Fn()]) {
 }
 
 #[test_case]
+// Simple silly test just to prove that the test infrastructure works.
 fn test_simple() {
-    assert_eq!(1, 1);
+    let x = 1;
+    assert_eq!(x, 1);
 }

@@ -10,4 +10,4 @@ uefi = "*"
 uefi-services = "*"
 
 [dev-dependencies]
-uefi-services = {version = "*", features = ["qemu"]}
+uefi-services = { version = "*", features = ["qemu"] }
