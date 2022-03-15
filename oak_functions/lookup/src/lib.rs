@@ -27,8 +27,7 @@ use oak_logger::OakLogger;
 // TODO(#2593): Use no_std-compatible map.
 use std::collections::HashMap;
 
-// TODO(#2579): Use no_std-compatible RwLock implementation once available.
-use std::sync::RwLock;
+use oak_functions_util::sync::Mutex;
 
 pub type Data = HashMap<Vec<u8>, Vec<u8>>;
 
@@ -37,8 +36,13 @@ pub type Data = HashMap<Vec<u8>, Vec<u8>>;
 /// `LookupDataManager` can be used to create `LookupData` instances that share the underlying data.
 /// It can also update the underlying data. After updating the data, new `LookupData` instances will
 /// use the new data, but earlier instances will still used the earlier data.
+///
+/// Note that the data is never mutated in-place, but only ever replaced. So instead of the Rust
+/// idiom `Arc<Mutex<T>>` we have `Mutex<Arc<T>>`.
+///
+/// In the future we may replace both the mutex and the hash map with something like RCU.
 pub struct LookupDataManager<L: OakLogger + Clone> {
-    data: RwLock<Arc<Data>>,
+    data: Mutex<Arc<Data>>,
     logger: L,
 }
 
@@ -49,29 +53,25 @@ where
     /// Creates a new instance with empty backing data.
     pub fn new_empty(logger: L) -> Self {
         Self {
-            data: RwLock::new(Arc::new(HashMap::new())),
+            data: Mutex::new(Arc::new(HashMap::new())),
             logger,
         }
     }
 
     /// Creates an instance of LookupData populated with the given entries.
     pub fn for_test(entries: Data, logger: L) -> Self {
-        let data = RwLock::new(Arc::new(entries));
+        let data = Mutex::new(Arc::new(entries));
         Self { data, logger }
     }
 
     /// Updates the backing data that will be used by new `LookupData` instances.
     pub fn update_data(&self, data: Data) {
-        *self.data.write().expect("could not lock data for write") = Arc::new(data);
+        *self.data.lock() = Arc::new(data);
     }
 
     /// Creates a new `LookupData` instance with a reference to the current backing data.
     pub fn create_lookup_data(&self) -> LookupData<L> {
-        let data = self
-            .data
-            .read()
-            .expect("could not lock data for read")
-            .clone();
+        let data = self.data.lock().clone();
         LookupData::new(data, self.logger.clone())
     }
 }

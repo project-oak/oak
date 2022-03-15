@@ -11,6 +11,7 @@ default = []
 [dependencies]
 log = "*"
 oak_logger = { path = "../logger" }
+oak_functions_util = { path = "../util" }
 
 [dev-dependencies]
 maplit = "*"

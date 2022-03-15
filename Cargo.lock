@@ -1996,6 +1996,7 @@ dependencies = [
  "oak_functions_lookup",
  "oak_functions_metrics",
  "oak_functions_tf_inference",
+ "oak_functions_util",
  "oak_logger",
  "oak_remote_attestation",
  "oak_utils",
@@ -2036,6 +2037,7 @@ version = "0.1.0"
 dependencies = [
  "log",
  "maplit",
+ "oak_functions_util",
  "oak_logger",
 ]
 
@@ -2075,6 +2077,13 @@ dependencies = [
  "serde",
  "serde_derive",
  "tract-tensorflow 0.15.9-pre",
+]
+
+[[package]]
+name = "oak_functions_util"
+version = "0.1.0"
+dependencies = [
+ "lock_api",
 ]
 
 [[package]]

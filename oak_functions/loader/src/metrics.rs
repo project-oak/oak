@@ -21,11 +21,12 @@ use crate::{
         OakApiNativeExtension, WasmState, ABI_USIZE,
     },
 };
+use alloc::sync::Arc;
 use oak_functions_abi::proto::OakStatus;
 use oak_functions_metrics::{
     PrivateMetricsAggregator, PrivateMetricsConfig, PrivateMetricsExtension, PrivateMetricsProxy,
 };
-use std::sync::{Arc, Mutex};
+use oak_functions_util::sync::Mutex;
 use wasmi::ValueType;
 
 /// Host function name for reporting private metrics.
