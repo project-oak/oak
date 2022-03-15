@@ -63,7 +63,7 @@ impl SessionTracker {
     /// to ensure that faulty state that leads to errors when processing
     /// a request is not persistent.
     pub fn pop_session_state(&mut self, session_id: SessionId) -> anyhow::Result<SessionState> {
-        return match self.known_sessions.pop(&session_id) {
+        match self.known_sessions.pop(&session_id) {
             None => match AttestationBehavior::create_self_attestation(&self.tee_certificate) {
                 Ok(behavior) => Ok(SessionState::HandshakeInProgress(Box::new(
                     ServerHandshaker::new(behavior, self.additional_info.clone()),
@@ -85,7 +85,7 @@ impl SessionTracker {
             Some(SessionState::EncryptedMessageExchange(encryptor)) => {
                 Ok(SessionState::EncryptedMessageExchange(encryptor))
             }
-        };
+        }
     }
 
     /// Record a session in the tracker. Unlike `pop_session_state` it does not
