@@ -54,7 +54,7 @@ impl SessionsTracker {
     }
 
     /// Consumes remote attestation state of an existing session. Creates
-    /// intial state if the session is not known.
+    /// initial state if the session is not known.
     ///
     /// Note that getting the remote attestation state of a session always
     /// implicitly removes it from the set of tracked sessions. After
