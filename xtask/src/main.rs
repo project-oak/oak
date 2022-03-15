@@ -112,9 +112,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 fn match_cmd(opt: &Opt) -> Step {
     match opt.cmd {
-        Command::RunFunctionsExamples(ref run_opt) => run_functions_examples(run_opt, &opt.scope),
-        Command::BuildFunctionsExample(ref opts) => build_functions_example(opts, &opt.scope),
-        Command::BuildFunctionsServerVariants(ref opt) => build_functions_server_variants(opt),
+        Command::RunOakFunctionsExamples(ref run_opt) => {
+            run_oak_functions_examples(run_opt, &opt.scope)
+        }
+        Command::BuildOakFunctionsExample(ref opts) => {
+            build_oak_functions_example(opts, &opt.scope)
+        }
+        Command::BuildOakFunctionsServer(ref opt) => build_oak_functions_server_variants(opt),
         Command::RunTests => run_tests(),
         Command::RunCargoClippy => run_cargo_clippy(&opt.scope),
         Command::RunCargoTests(ref run_opt) => run_cargo_tests(run_opt, &opt.scope),

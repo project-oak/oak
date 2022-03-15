@@ -3,7 +3,7 @@ name = "metrics"
 [applications]
 
 [applications.rust]
-type = "Functions"
+type = "OakFunctions"
 wasm_path = "bin/metrics.wasm"
 target = { Cargo = { cargo_manifest = "oak_functions/examples/metrics/module/Cargo.toml" } }
 

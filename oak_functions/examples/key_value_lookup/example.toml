@@ -3,7 +3,7 @@ name = "key_value_lookup"
 [applications]
 
 [applications.rust]
-type = "Functions"
+type = "OakFunctions"
 wasm_path = "bin/key_value_lookup.wasm"
 target = { Cargo = { cargo_manifest = "oak_functions/examples/key_value_lookup/module/Cargo.toml" } }
 
