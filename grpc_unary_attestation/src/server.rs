@@ -32,7 +32,7 @@ enum SessionState {
 }
 
 /// Maintains remote attestation state for a number of sessions
-struct SessionsTracker {
+struct SessionTracker {
     /// PEM encoded X.509 certificate that signs TEE firmware key.
     tee_certificate: Vec<u8>,
     /// Configuration information to provide to the client for the attestation step.
@@ -43,7 +43,7 @@ struct SessionsTracker {
 /// Number of sessions that will be kept in memory.
 const SESSIONS_CACHE_SIZE: usize = 10000;
 
-impl SessionsTracker {
+impl SessionTracker {
     pub fn create(tee_certificate: Vec<u8>, additional_info: Vec<u8>) -> Self {
         let known_sessions = LruCache::new(SESSIONS_CACHE_SIZE);
         Self {
@@ -59,7 +59,7 @@ impl SessionsTracker {
     /// Note that getting the remote attestation state of a session always
     /// implicitly removes it from the set of tracked sessions. After
     /// using the state to process a request with this state it must explicitly
-    /// be put back into the SessionsTracker. This an intentional choice meant
+    /// be put back into the SessionTracker. This an intentional choice meant
     /// to ensure that faulty state that leads to errors when processing
     /// a request is not persistent.
     pub fn pop_session_state(
@@ -106,7 +106,7 @@ pub struct AttestationServer<F, L: LogError> {
     /// Error logging function that is required for logging attestation protocol errors.
     /// Errors are only logged on server side and are not sent to clients.
     error_logger: L,
-    sessions_tracker: Arc<Mutex<SessionsTracker>>,
+    sessions_tracker: Arc<Mutex<SessionTracker>>,
 }
 
 impl<F, S, L> AttestationServer<F, L>
@@ -121,7 +121,7 @@ where
         additional_info: Vec<u8>,
         error_logger: L,
     ) -> anyhow::Result<Self> {
-        let sessions_tracker = Arc::new(Mutex::new(SessionsTracker::create(
+        let sessions_tracker = Arc::new(Mutex::new(SessionTracker::create(
             tee_certificate,
             additional_info,
         )));
