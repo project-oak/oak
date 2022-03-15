@@ -62,19 +62,13 @@ impl SessionTracker {
     /// be put back into the SessionTracker. This an intentional choice meant
     /// to ensure that faulty state that leads to errors when processing
     /// a request is not persistent.
-    pub fn pop_session_state(
-        &mut self,
-        session_id: SessionId,
-    ) -> anyhow::Result<SessionState, String> {
+    pub fn pop_session_state(&mut self, session_id: SessionId) -> anyhow::Result<SessionState> {
         return match self.known_sessions.pop(&session_id) {
             None => match AttestationBehavior::create_self_attestation(&self.tee_certificate) {
                 Ok(behavior) => Ok(SessionState::HandshakeInProgress(Box::new(
                     ServerHandshaker::new(behavior, self.additional_info.clone()),
                 ))),
-                Err(error) => Err(format!(
-                    "Couldn't create self attestation behavior: {:?}",
-                    error
-                )),
+                Err(error) => Err(error.context("Couldn't create self attestation behavior")),
             },
             Some(SessionState::HandshakeInProgress(handshaker)) => {
                 // Completed handshakers are functionally just wrap an
@@ -84,7 +78,7 @@ impl SessionTracker {
                     false => Ok(SessionState::HandshakeInProgress(handshaker)),
                     true => match handshaker.get_encryptor() {
                         Ok(encryptor) => Ok(SessionState::EncryptedMessageExchange(encryptor)),
-                        Err(error) => Err(format!("Couldn't get encryptor: {:?}", error)),
+                        Err(error) => Err(error.context("Couldn't get encryptor")),
                     },
                 }
             }
@@ -153,7 +147,7 @@ where
                 .expect("Couldn't lock session_state mutex")
                 .pop_session_state(request_inner.session_id)
                 .map_err(|error| {
-                    error_logger.log_error(&error);
+                    error_logger.log_error(&format!("Couldn't pop session state: {:?}", error));
                     tonic::Status::internal("")
                 })?
         };
