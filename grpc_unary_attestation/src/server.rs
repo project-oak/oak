@@ -40,9 +40,12 @@ struct SessionsTracker {
     known_sessions: LruCache<SessionId, SessionState>,
 }
 
+/// Number of sessions that will be kept in memory.
+const SESSIONS_CACHE_SIZE: usize = 10000;
+
 impl SessionsTracker {
     pub fn create(tee_certificate: Vec<u8>, additional_info: Vec<u8>) -> Self {
-        let known_sessions = LruCache::new(10000);
+        let known_sessions = LruCache::new(SESSIONS_CACHE_SIZE);
         Self {
             tee_certificate,
             additional_info,
