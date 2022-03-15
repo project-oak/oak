@@ -37,7 +37,7 @@ impl AttestationClient {
         expected_tee_measurement: &[u8],
         server_verifier: ServerIdentityVerifier,
     ) -> anyhow::Result<Self> {
-        let session_id = 0;
+        let session_id: SessionId = rand::random();
         let channel = Channel::from_shared(uri.to_string())
             .context("Couldn't create gRPC channel")?
             .connect()
