@@ -94,6 +94,9 @@ impl SessionTracker {
         };
     }
 
+    /// Record a session in the tracker. Unlike `pop_session_state` it does not
+    /// normalize session state, instead relying on normalization occuring
+    /// at retrieval time.
     pub fn put_session_state(&mut self, session_id: SessionId, session_state: SessionState) {
         self.known_sessions.put(session_id, session_state);
     }
