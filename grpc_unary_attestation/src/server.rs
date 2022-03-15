@@ -21,7 +21,7 @@ use crate::proto::{unary_session_server::UnarySession, UnaryRequest, UnaryRespon
 use lru::LruCache;
 use oak_remote_attestation::handshaker::{AttestationBehavior, Encryptor, ServerHandshaker};
 use oak_utils::LogError;
-use std::sync::{Arc, Mutex};
+use std::sync::Mutex;
 use tonic;
 
 type SessionId = u64;
@@ -109,7 +109,7 @@ pub struct AttestationServer<F, L: LogError> {
     /// Error logging function that is required for logging attestation protocol errors.
     /// Errors are only logged on server side and are not sent to clients.
     error_logger: L,
-    sessions_tracker: Arc<Mutex<SessionTracker>>,
+    sessions_tracker: Mutex<SessionTracker>,
 }
 
 impl<F, S, L> AttestationServer<F, L>
@@ -124,10 +124,7 @@ where
         additional_info: Vec<u8>,
         error_logger: L,
     ) -> anyhow::Result<Self> {
-        let sessions_tracker = Arc::new(Mutex::new(SessionTracker::create(
-            tee_certificate,
-            additional_info,
-        )));
+        let sessions_tracker = Mutex::new(SessionTracker::create(tee_certificate, additional_info));
         Ok(Self {
             request_handler,
             error_logger,
