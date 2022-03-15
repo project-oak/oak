@@ -1539,7 +1539,6 @@ dependencies = [
  "log",
  "oak_functions_abi",
  "prost",
- "rand 0.5.6",
  "serde",
 ]
 
