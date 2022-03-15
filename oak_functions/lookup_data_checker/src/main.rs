@@ -67,11 +67,9 @@ fn main() -> anyhow::Result<()> {
         if entry.0.len() == LOCATION_SIZE {
             let location = location_from_bytes(&entry.0)
                 .with_context(|| format!("could not parse location {:?}", &entry.0))?;
-            let data = String::from_utf8(entry.1.to_vec())
-                .with_context(|| format!("could not parse data {:?}", &entry.1))?;
             weather_locations.insert(entry.0);
 
-            debug!("- {{{:?}: {:?}}} # Location", location, data);
+            debug!("- {{{:?}: {:?}}} # Location", location, entry.1.to_vec());
         } else {
             let cell_id = cell_id_from_bytes(&entry.0)
                 .with_context(|| format!("could not parse cell ID {:?}", &entry.0))?;
