@@ -15,5 +15,6 @@ additional_args = ["--config-path=./oak_functions/examples/echo/config.toml"]
 rust = { Cargo = { cargo_manifest = "oak_functions/client/rust/Cargo.toml" }, additional_args = [
   "--uri=http://localhost:8080",
   "--request=test",
-  "--expected-response-pattern=test"
+  "--expected-response-pattern=test",
+  "--unary-request-model"
 ] }

@@ -20,7 +20,7 @@
 use anyhow::Context;
 use clap::Parser;
 use oak_functions_abi::proto::{ConfigurationInfo, Request};
-use oak_functions_client::Client;
+use oak_functions_client::{Client, UnaryClient};
 use regex::Regex;
 
 #[derive(Parser, Clone)]
@@ -37,6 +37,8 @@ pub struct Opt {
     /// Optional, only for testing.
     #[clap(long, help = "expected response body, for testing")]
     expected_response_pattern: Option<String>,
+    #[clap(long, help = "communicate using unary requests")]
+    unary_request_model: bool,
 }
 
 #[tokio::main]
@@ -57,18 +59,24 @@ async fn main() -> anyhow::Result<()> {
         Ok(())
     };
 
-    let mut client = Client::new(&opt.uri, config_verifier)
-        .await
-        .context("Could not create Oak Functions client")?;
-
     let request = Request {
         body: opt.request.as_bytes().to_vec(),
     };
 
-    let response = client
-        .invoke(request)
-        .await
-        .context("Could not invoke Oak Functions")?;
+    let response = match opt.unary_request_model {
+        true => UnaryClient::new(&opt.uri, config_verifier)
+            .await
+            .context("Could not create Oak Functions client")?
+            .invoke(request)
+            .await
+            .context("Could not invoke Oak Functions")?,
+        false => Client::new(&opt.uri, config_verifier)
+            .await
+            .context("Could not create Oak Functions client")?
+            .invoke(request)
+            .await
+            .context("Could not invoke Oak Functions")?,
+    };
 
     let response_body = std::str::from_utf8(response.body().unwrap()).unwrap();
     println!("{}", response_body);

@@ -1,4 +1,5 @@
 worker_threads = 4
+grpc_request_model = "Unary"
 
 [policy]
 constant_response_size_bytes = 90

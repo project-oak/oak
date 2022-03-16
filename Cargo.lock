@@ -1936,6 +1936,7 @@ dependencies = [
  "ecdsa",
  "env_logger 0.9.0",
  "grpc_streaming_attestation",
+ "grpc_unary_attestation",
  "http",
  "log",
  "oak_functions_abi",
