@@ -7,6 +7,7 @@ license = "Apache-2.0"
 
 [dependencies]
 oak_remote_attestation = { path = "../remote_attestation/rust/" }
+oak_functions_abi = { path = "../oak_functions/abi/" }
 anyhow = "*"
 prost = "*"
 prost-types = "*"
@@ -22,6 +23,7 @@ oak_utils = { path = "../oak_utils" }
 tonic = "*"
 tower = "*"
 lru = "*"
+rand = "*"
 
 [build-dependencies]
 oak_utils = { path = "../oak_utils" }
