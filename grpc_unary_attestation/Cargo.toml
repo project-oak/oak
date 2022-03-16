@@ -22,6 +22,7 @@ tokio = { version = "*", features = [
 oak_utils = { path = "../oak_utils" }
 tonic = "*"
 tower = "*"
+lru = "*"
 rand = "*"
 
 [build-dependencies]
