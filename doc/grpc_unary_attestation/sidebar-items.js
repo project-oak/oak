@@ -1,1 +1,1 @@
-initSidebarItems({"mod":[["proto",""],["server","Server-side implementation of the bidirectional gRPC remote attestation handshake protocol."]]});
+initSidebarItems({"mod":[["client",""],["proto",""],["server","Server-side implementation of the bidirectional gRPC remote attestation handshake protocol."]]});
