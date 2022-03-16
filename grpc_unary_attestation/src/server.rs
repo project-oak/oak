@@ -103,7 +103,7 @@ pub struct AttestationServer<F, L: LogError> {
     /// Error logging function that is required for logging attestation protocol errors.
     /// Errors are only logged on server side and are not sent to clients.
     error_logger: L,
-    sessions_tracker: Mutex<SessionTracker>,
+    session_tracker: Mutex<SessionTracker>,
 }
 
 impl<F, S, L> AttestationServer<F, L>
@@ -118,11 +118,11 @@ where
         additional_info: Vec<u8>,
         error_logger: L,
     ) -> anyhow::Result<Self> {
-        let sessions_tracker = Mutex::new(SessionTracker::create(tee_certificate, additional_info));
+        let session_tracker = Mutex::new(SessionTracker::create(tee_certificate, additional_info));
         Ok(Self {
             request_handler,
             error_logger,
-            sessions_tracker,
+            session_tracker,
         })
     }
 }
@@ -142,7 +142,7 @@ where
         let request_inner = request.into_inner();
 
         let mut session_state = {
-            self.sessions_tracker
+            self.session_tracker
                 .lock()
                 .expect("Couldn't lock session_state mutex")
                 .pop_session_state(request_inner.session_id)
@@ -194,7 +194,7 @@ where
         // steps. If errors do occur the session state as tracked by the server
         // is effectively erased. This allows the client to negotiate a new
         // handshake.
-        self.sessions_tracker
+        self.session_tracker
             .lock()
             .expect("Couldn't lock session_state mutex")
             .put_session_state(request_inner.session_id, session_state);
