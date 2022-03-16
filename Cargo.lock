@@ -1100,9 +1100,12 @@ name = "grpc_unary_attestation"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "oak_functions_abi",
+ "oak_remote_attestation",
  "oak_utils",
  "prost",
  "prost-types",
+ "rand 0.4.6",
  "serde",
  "tokio",
  "tonic",
