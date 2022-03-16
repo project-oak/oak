@@ -683,6 +683,10 @@ fn run_cargo_test(opt: &RunTestsOpt, all_affected_crates: &ModifiedContent) -> S
             .filter(|path| !is_fuzzing_toml_file(path))
             .filter(|path| all_affected_crates.contains_path(path))
             .map(|entry| {
+                // Run `cargo test` in the directory of the crate, not the top-level directory.
+                // This is needed as otherwise any crate-specific `.cargo/config.toml` files would
+                // be ignored. If a crate does not have a config file, Cargo will just backtrack
+                // up the tree and pick up the `.cargo/config.toml` file from the root directory.
                 let test_run_step = |name| Step::Single {
                     name,
                     command: Cmd::new_in_dir(
