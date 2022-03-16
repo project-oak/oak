@@ -58,20 +58,32 @@ pub fn modified_files(scope: &Scope) -> ModifiedContent {
         Scope::DiffToMain => Some("main".to_owned()),
     };
 
-    let files: Option<Vec<String>> = args.map(|args| {
-        let vec = Command::new("git")
-            .args(spread!["diff".to_owned(), "--name-only".to_owned(), args,])
-            .output()
-            .expect("could not get modified files")
-            .stdout;
+    let files: Option<Vec<String>> = args
+        .and_then(|args| {
+            let output = Command::new("git")
+                .args(spread!["diff".to_owned(), "--name-only".to_owned(), args,])
+                .output()
+                .expect("could not get modified files");
 
-        // Extract the file names from the git output
-        String::from_utf8(vec)
-            .expect("could not convert to string")
-            .split('\n')
-            .map(|s| format!("./{}", s))
-            .collect()
-    });
+            if output.status.success() {
+                let vec = output.stdout;
+
+                // Extract the file names from the git output
+                Some(
+                    String::from_utf8(vec)
+                        .expect("could not convert to string")
+                        .split('\n')
+                        .map(|s| format!("./{}", s))
+                        .collect(),
+                )
+            } else {
+                eprintln!(
+                    "WARN: git diff failed with error ({}), running the command for the entire code base.",
+                    output.status
+                );
+                None
+            }
+        });
 
     // If something is changed in a Dockerfile, we'd want to run all CI steps, so set `files` to
     // `None` in `ModifiedContent`.
