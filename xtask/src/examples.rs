@@ -321,14 +321,14 @@ fn run_functions_example(example: &FunctionsExample) -> Step {
     }
 }
 
-pub fn build_functions_example(opt: &RunFunctionsExamples) -> Step {
+pub fn build_functions_example(opt: &RunFunctionsExamples, scope: &Scope) -> Step {
     let example_name = &opt
         .example_name
         .as_ref()
         .expect("--example-name must be specified")
         .clone();
 
-    let example: Example = example_toml_files(&Scope::DiffToMain)
+    let example: Example = example_toml_files(scope)
         .map(|path| {
             toml::from_str(&read_file(&path)).unwrap_or_else(|err| {
                 panic!("could not parse example manifest file {:?}: {}", path, err)
@@ -336,7 +336,7 @@ pub fn build_functions_example(opt: &RunFunctionsExamples) -> Step {
         })
         .find(|example: &Example| &example.name == example_name)
         .filter(|example| example.has_functions_app())
-        .expect("could not find the specified functions example");
+        .expect("could not find the specified functions example, try with `--scope=all`");
 
     // Build steps for building clients
     let build_client = Step::Multiple {
