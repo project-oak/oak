@@ -24,20 +24,12 @@ combination of hardware and software functionality. Enclaves protect data and
 code even from the operating system kernel and privileged software, and are
 intended to protect from most hardware attacks.
 
-Additionally, data are associated with policies when they enter the system, and
-policies are enforced and propagated as data move from enclave to enclave.
-
 Further information is included in the following documents:
 
 - [Oak Development](docs/development.md) covers practical steps for getting a
   development Oak system up and running.
-- [Oak Concepts](docs/concepts.md) describes the key concepts involved in Oak
-  applications.
-- [Oak ABI](docs/abi.md) documents the core Oak ABI.
-- [Oak SDK](docs/sdk.md) describes the SDK that is provided on top of the Oak
-  ABI, to allow more convenient development of Oak applications.
-- [Programming Oak](docs/programming-oak.md) discusses programming for the Oak
-  system.
+- [Oak Functions](oak_functions/README.md) presents our computing platform for
+  developing stateless applications in a privacy preserving way.
 
 ## Terminology
 
