@@ -787,8 +787,11 @@ version = "0.8.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a19187fea3ac7e84da7dacf48de0c45d63c6a76f9490dae389aead16c243fce3"
 dependencies = [
+ "atty",
+ "humantime",
  "log",
  "regex",
+ "termcolor",
 ]
 
 [[package]]
@@ -3824,6 +3827,65 @@ dependencies = [
  "prost-types",
  "tract-hir 0.15.9-pre",
  "tract-pulse 0.15.9-pre",
+]
+
+[[package]]
+name = "trusted_shuffler"
+version = "0.1.0"
+
+[[package]]
+name = "trusted_shuffler_backend"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "clap 3.0.14",
+ "env_logger 0.8.4",
+ "futures-core",
+ "futures-util",
+ "http",
+ "hyper",
+ "log",
+ "tokio",
+]
+
+[[package]]
+name = "trusted_shuffler_client"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "clap 3.0.14",
+ "env_logger 0.9.0",
+ "http",
+ "hyper",
+ "log",
+ "tokio",
+ "trusted_shuffler_common",
+]
+
+[[package]]
+name = "trusted_shuffler_common"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "http",
+ "hyper",
+ "tokio",
+]
+
+[[package]]
+name = "trusted_shuffler_server"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "clap 3.0.14",
+ "env_logger 0.8.4",
+ "futures-core",
+ "futures-util",
+ "http",
+ "hyper",
+ "log",
+ "tokio",
+ "trusted_shuffler_common",
 ]
 
 [[package]]
