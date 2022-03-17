@@ -80,7 +80,7 @@ jobs:
       - name: Run command
         if: github.event_name == 'pull_request'
         run: |
-          ./scripts/docker_run ./scripts/xtask --commands --scope=commits:1 ${{ matrix.cmd }}
+          ./scripts/docker_run ./scripts/xtask --commands --scope=all ${{ matrix.cmd }}
           df --human-readable
 
       - name: Run Command - Post-Merge
