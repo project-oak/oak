@@ -24,7 +24,10 @@ option java_package = "oak.session.unary.v1";
 message UnaryRequest {
   bytes body = 1;
   // Links a sequence of messages, declaring them as part of a single a session.
-  fixed64 session_id = 2;
+  // Note that this byte array is expected to be fixed length, as defined in the
+  // service implementation. Protobuf unfortunately does not support declaring
+  // the length here.
+  bytes session_id = 2;
 }
 
 message UnaryResponse {
