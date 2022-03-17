@@ -56,7 +56,9 @@ fn main(_handle: Handle, system_table: &mut SystemTable<Boot>) -> Status {
 
     let status = writeln!(system_table.stdout(), "Hello World!");
 
-    status.map(|_| Status::SUCCESS).unwrap_or(Status::DEVICE_ERROR)
+    status
+        .map(|_| Status::SUCCESS)
+        .unwrap_or(Status::DEVICE_ERROR)
 }
 
 #[cfg(test)]
