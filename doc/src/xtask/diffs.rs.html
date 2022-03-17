@@ -309,6 +309,18 @@
 <span id="304">304</span>
 <span id="305">305</span>
 <span id="306">306</span>
+<span id="307">307</span>
+<span id="308">308</span>
+<span id="309">309</span>
+<span id="310">310</span>
+<span id="311">311</span>
+<span id="312">312</span>
+<span id="313">313</span>
+<span id="314">314</span>
+<span id="315">315</span>
+<span id="316">316</span>
+<span id="317">317</span>
+<span id="318">318</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2021 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -369,20 +381,32 @@
         <span class="ident">Scope::DiffToMain</span> =&gt; <span class="prelude-val">Some</span>(<span class="string">&quot;main&quot;</span>.<span class="ident">to_owned</span>()),
     };
 
-    <span class="kw">let</span> <span class="ident">files</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">args</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">args</span><span class="op">|</span> {
-        <span class="kw">let</span> <span class="ident">vec</span> <span class="op">=</span> <span class="ident">Command::new</span>(<span class="string">&quot;git&quot;</span>)
-            .<span class="ident">args</span>(<span class="macro">spread!</span>[<span class="string">&quot;diff&quot;</span>.<span class="ident">to_owned</span>(), <span class="string">&quot;--name-only&quot;</span>.<span class="ident">to_owned</span>(), <span class="ident">args</span>,])
-            .<span class="ident">output</span>()
-            .<span class="ident">expect</span>(<span class="string">&quot;could not get modified files&quot;</span>)
-            .<span class="ident">stdout</span>;
+    <span class="kw">let</span> <span class="ident">files</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">args</span>
+        .<span class="ident">and_then</span>(<span class="op">|</span><span class="ident">args</span><span class="op">|</span> {
+            <span class="kw">let</span> <span class="ident">output</span> <span class="op">=</span> <span class="ident">Command::new</span>(<span class="string">&quot;git&quot;</span>)
+                .<span class="ident">args</span>(<span class="macro">spread!</span>[<span class="string">&quot;diff&quot;</span>.<span class="ident">to_owned</span>(), <span class="string">&quot;--name-only&quot;</span>.<span class="ident">to_owned</span>(), <span class="ident">args</span>,])
+                .<span class="ident">output</span>()
+                .<span class="ident">expect</span>(<span class="string">&quot;could not get modified files&quot;</span>);
 
-        <span class="comment">// Extract the file names from the git output</span>
-        <span class="ident">String::from_utf8</span>(<span class="ident">vec</span>)
-            .<span class="ident">expect</span>(<span class="string">&quot;could not convert to string&quot;</span>)
-            .<span class="ident">split</span>(<span class="string">&#39;\n&#39;</span>)
-            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">s</span><span class="op">|</span> <span class="macro">format!</span>(<span class="string">&quot;./{}&quot;</span>, <span class="ident">s</span>))
-            .<span class="ident">collect</span>()
-    });
+            <span class="kw">if</span> <span class="ident">output</span>.<span class="ident">status</span>.<span class="ident">success</span>() {
+                <span class="kw">let</span> <span class="ident">vec</span> <span class="op">=</span> <span class="ident">output</span>.<span class="ident">stdout</span>;
+
+                <span class="comment">// Extract the file names from the git output</span>
+                <span class="prelude-val">Some</span>(
+                    <span class="ident">String::from_utf8</span>(<span class="ident">vec</span>)
+                        .<span class="ident">expect</span>(<span class="string">&quot;could not convert to string&quot;</span>)
+                        .<span class="ident">split</span>(<span class="string">&#39;\n&#39;</span>)
+                        .<span class="ident">map</span>(<span class="op">|</span><span class="ident">s</span><span class="op">|</span> <span class="macro">format!</span>(<span class="string">&quot;./{}&quot;</span>, <span class="ident">s</span>))
+                        .<span class="ident">collect</span>(),
+                )
+            } <span class="kw">else</span> {
+                <span class="macro">eprintln!</span>(
+                    <span class="string">&quot;WARN: git diff failed with error ({}), running the command for the entire code base.&quot;</span>,
+                    <span class="ident">output</span>.<span class="ident">status</span>
+                );
+                <span class="prelude-val">None</span>
+            }
+        });
 
     <span class="comment">// If something is changed in a Dockerfile, we&#39;d want to run all CI steps, so set `files` to</span>
     <span class="comment">// `None` in `ModifiedContent`.</span>
