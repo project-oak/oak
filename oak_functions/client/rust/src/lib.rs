@@ -22,7 +22,8 @@ pub mod attestation;
 pub mod rekor;
 
 use crate::attestation::{into_server_identity_verifier, ConfigurationVerifier};
-use anyhow::{Context, Error};
+use anyhow::{Context, Error, Result};
+use async_trait::async_trait;
 use grpc_streaming_attestation::client::AttestationClient as StreamingAttestationClient;
 use grpc_unary_attestation::client::AttestationClient as UnaryAttestationClient;
 use oak_functions_abi::proto::{Request, Response};
@@ -33,6 +34,11 @@ mod tests;
 
 // TODO(#1867): Add remote attestation support.
 const TEE_MEASUREMENT: &[u8] = br"Test TEE measurement";
+
+#[async_trait]
+pub trait Session {
+    async fn invoke(&mut self, request: Request) -> anyhow::Result<Response>;
+}
 
 // Shared response handling logic for clients.
 fn handle_response(response: Result<Option<Vec<u8>>, Error>) -> anyhow::Result<Response> {
@@ -57,7 +63,11 @@ impl Client {
         .context("Could not create Oak Functions client")?;
         Ok(Client { inner })
     }
-    pub async fn invoke(&mut self, request: Request) -> anyhow::Result<Response> {
+}
+
+#[async_trait]
+impl Session for Client {
+    async fn invoke(&mut self, request: Request) -> anyhow::Result<Response> {
         handle_response(self.inner.send(request).await)
     }
 }
@@ -77,7 +87,11 @@ impl UnaryClient {
         .context("Could not create Oak Functions client")?;
         Ok(UnaryClient { inner })
     }
-    pub async fn invoke(&mut self, request: Request) -> anyhow::Result<Response> {
+}
+
+#[async_trait]
+impl Session for UnaryClient {
+    async fn invoke(&mut self, request: Request) -> anyhow::Result<Response> {
         handle_response(self.inner.send(request).await)
     }
 }

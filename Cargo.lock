@@ -1931,6 +1931,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-stream",
+ "async-trait",
  "base64",
  "clap 3.0.14",
  "ecdsa",

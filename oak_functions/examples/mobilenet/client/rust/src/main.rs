@@ -18,7 +18,7 @@
 
 use anyhow::Context;
 use oak_functions_abi::proto::{ConfigurationInfo, Request};
-use oak_functions_client::Client;
+use oak_functions_client::{Client, Session};
 use tract_tensorflow::prelude::*;
 
 // Shape of the input tensor

@@ -17,6 +17,7 @@
 use anyhow::Context;
 use bencher::stats::Stats;
 use oak_functions_abi::proto::Request;
+use oak_functions_client::{Client, Session};
 use std::time::Instant;
 
 // From https://pantheon.corp.google.com/api-gateway/gateway/weather-lookup-grpc/location/europe-west2?project=oak-ci.
@@ -27,7 +28,7 @@ const TOTAL_REQUESTS: usize = 50;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    let mut client = oak_functions_client::Client::new(URL, |_config| Ok(()))
+    let mut client = Client::new(URL, |_config| Ok(()))
         .await
         .context("Could not create client")?;
 
