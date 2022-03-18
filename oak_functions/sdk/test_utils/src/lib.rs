@@ -26,6 +26,7 @@ use oak_functions_abi::proto::{
     ConfigurationInfo, PrivateMetricsConfig, Request, Response, ServerPolicy,
 };
 
+use oak_functions_client::{Client, Session};
 use oak_remote_attestation::crypto::get_sha256;
 use prost::Message;
 use std::{
@@ -215,7 +216,7 @@ pub async fn make_request(port: u16, request_body: &[u8]) -> TestResult {
     let uri = format!("http://localhost:{}/", port);
 
     // Create client
-    let mut client = oak_functions_client::Client::new(&uri, |_config| Ok(()))
+    let mut client = Client::new(&uri, |_config| Ok(()))
         .await
         .expect("Could not create client");
 
