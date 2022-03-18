@@ -17,14 +17,16 @@
 //! Server-side implementation of the bidirectional gRPC remote attestation handshake
 //! protocol.
 
-use crate::proto::{unary_session_server::UnarySession, UnaryRequest, UnaryResponse};
+use crate::{
+    proto::{unary_session_server::UnarySession, UnaryRequest, UnaryResponse},
+    SessionId,
+};
 use lru::LruCache;
 use oak_remote_attestation::handshaker::{AttestationBehavior, Encryptor, ServerHandshaker};
 use oak_utils::LogError;
-use std::sync::Mutex;
+use std::{convert::TryInto, sync::Mutex};
 use tonic;
 
-type SessionId = u64;
 enum SessionState {
     // Boxed due to large size difference, ref: https://rust-lang.github.io/rust-clippy/master/index.html#large_enum_variant
     HandshakeInProgress(Box<ServerHandshaker>),
@@ -140,12 +142,16 @@ where
     ) -> anyhow::Result<tonic::Response<UnaryResponse>, tonic::Status> {
         let error_logger = self.error_logger.clone();
         let request_inner = request.into_inner();
+        let session_id: SessionId = request_inner.session_id.try_into().map_err(|error| {
+            error_logger.log_error(&format!("Received malformed session_id: {:?}", error));
+            tonic::Status::invalid_argument("")
+        })?;
 
         let mut session_state = {
             self.session_tracker
                 .lock()
                 .expect("Couldn't lock session_state mutex")
-                .pop_session_state(request_inner.session_id)
+                .pop_session_state(session_id)
                 .map_err(|error| {
                     error_logger.log_error(&format!("Couldn't pop session state: {:?}", error));
                     tonic::Status::internal("")
@@ -197,7 +203,7 @@ where
         self.session_tracker
             .lock()
             .expect("Couldn't lock session_state mutex")
-            .put_session_state(request_inner.session_id, session_state);
+            .put_session_state(session_id, session_state);
         Ok(tonic::Response::new(UnaryResponse {
             body: response_body,
         }))

@@ -14,15 +14,16 @@
 // limitations under the License.
 //
 
-use crate::proto::{unary_session_client::UnarySessionClient, UnaryRequest};
+use crate::{
+    proto::{unary_session_client::UnarySessionClient, UnaryRequest},
+    SessionId,
+};
 use anyhow::Context;
 use oak_functions_abi;
 use oak_remote_attestation::handshaker::{
     AttestationBehavior, ClientHandshaker, Encryptor, ServerIdentityVerifier,
 };
 use tonic::transport::Channel;
-
-type SessionId = u64;
 
 /// gRPC Attestation Service client implementation.
 pub struct AttestationClient {
@@ -55,7 +56,7 @@ impl AttestationClient {
         let mut response = client
             .message(UnaryRequest {
                 body: client_hello,
-                session_id,
+                session_id: session_id.to_vec(),
             })
             .await
             .context("Couldn't send client hello message")?
@@ -70,7 +71,7 @@ impl AttestationClient {
                 response = client
                     .message(UnaryRequest {
                         body: request,
-                        session_id,
+                        session_id: session_id.to_vec(),
                     })
                     .await
                     .context("Couldn't send client hello message")?
@@ -101,7 +102,7 @@ impl AttestationClient {
         let encrypted_response = self
             .client
             .message(UnaryRequest {
-                session_id: self.session_id,
+                session_id: self.session_id.to_vec(),
                 body: encrypted_request,
             })
             .await
