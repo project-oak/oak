@@ -142,17 +142,10 @@ where
     ) -> anyhow::Result<tonic::Response<UnaryResponse>, tonic::Status> {
         let error_logger = self.error_logger.clone();
         let request_inner = request.into_inner();
-        let session_id: SessionId = {
-            let boxed_slice: Box<SessionId> = request_inner
-                .session_id
-                .into_boxed_slice()
-                .try_into()
-                .map_err(|error| {
-                    error_logger.log_error(&format!("Received malformed session_id: {:?}", error));
-                    tonic::Status::invalid_argument("")
-                })?;
-            *boxed_slice
-        };
+        let session_id: SessionId = request_inner.session_id.try_into().map_err(|error| {
+            error_logger.log_error(&format!("Received malformed session_id: {:?}", error));
+            tonic::Status::invalid_argument("")
+        })?;
 
         let mut session_state = {
             self.session_tracker
