@@ -68,6 +68,7 @@
 <span id="63">63</span>
 <span id="64">64</span>
 <span id="65">65</span>
+<span id="66">66</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2021 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -87,6 +88,7 @@
 <span class="kw">use</span> <span class="ident">anyhow::Context</span>;
 <span class="kw">use</span> <span class="ident">bencher::stats::Stats</span>;
 <span class="kw">use</span> <span class="ident">oak_functions_abi::proto::Request</span>;
+<span class="kw">use</span> <span class="ident">oak_functions_client</span>::{<span class="ident">Client</span>, <span class="ident">Session</span>};
 <span class="kw">use</span> <span class="ident">std::time::Instant</span>;
 
 <span class="comment">// From https://pantheon.corp.google.com/api-gateway/gateway/weather-lookup-grpc/location/europe-west2?project=oak-ci.</span>
@@ -97,7 +99,7 @@
 
 <span class="attribute">#[<span class="ident">tokio::main</span>]</span>
 <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">main</span>() -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">client</span> <span class="op">=</span> <span class="ident">oak_functions_client::Client::new</span>(<span class="ident">URL</span>, <span class="op">|</span><span class="ident">_config</span><span class="op">|</span> <span class="prelude-val">Ok</span>(()))
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">client</span> <span class="op">=</span> <span class="ident">Client::new</span>(<span class="ident">URL</span>, <span class="op">|</span><span class="ident">_config</span><span class="op">|</span> <span class="prelude-val">Ok</span>(()))
         .<span class="kw">await</span>
         .<span class="ident">context</span>(<span class="string">&quot;Could not create client&quot;</span>)<span class="question-mark">?</span>;
 
