@@ -19,7 +19,7 @@
 use anyhow::Context;
 use clap::Parser;
 use oak_functions_abi::proto::Request;
-use oak_functions_client::{Client, Session};
+use oak_functions_client::{Session, UnaryClient};
 
 #[derive(Parser, Clone)]
 #[clap(about = "Oak Functions Client")]
@@ -36,7 +36,7 @@ pub struct Opt {
 async fn main() -> anyhow::Result<()> {
     let opt = Opt::parse();
 
-    let mut client = Client::new(&opt.uri, |_config| Ok(()))
+    let mut client = UnaryClient::new(&opt.uri, |_config| Ok(()))
         .await
         .context("Could not create Oak Functions client")?;
 
