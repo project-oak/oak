@@ -19,7 +19,7 @@
 use anyhow::Context;
 use clap::Parser;
 use oak_functions_abi::proto::Request;
-use oak_functions_client::{Client, Session};
+use oak_functions_client::{Session, UnaryClient as Client};
 
 #[derive(Parser, Clone)]
 #[clap(about = "Oak Functions Client")]
