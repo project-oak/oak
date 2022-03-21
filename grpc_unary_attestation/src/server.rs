@@ -24,7 +24,10 @@ use crate::{
 use lru::LruCache;
 use oak_remote_attestation::handshaker::{AttestationBehavior, Encryptor, ServerHandshaker};
 use oak_utils::LogError;
-use std::{convert::TryInto, sync::Mutex};
+use std::{
+    convert::TryInto,
+    sync::{Arc, Mutex},
+};
 use tonic;
 
 enum SessionState {
@@ -68,7 +71,7 @@ impl SessionTracker {
         match self.known_sessions.pop(&session_id) {
             None => match AttestationBehavior::create_self_attestation(&self.tee_certificate) {
                 Ok(behavior) => Ok(SessionState::HandshakeInProgress(Box::new(
-                    ServerHandshaker::new(behavior, self.additional_info.clone()),
+                    ServerHandshaker::new(behavior, Arc::new(self.additional_info.clone())),
                 ))),
                 Err(error) => Err(error.context("Couldn't create self attestation behavior")),
             },
