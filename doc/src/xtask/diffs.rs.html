@@ -321,6 +321,10 @@
 <span id="316">316</span>
 <span id="317">317</span>
 <span id="318">318</span>
+<span id="319">319</span>
+<span id="320">320</span>
+<span id="321">321</span>
+<span id="322">322</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2021 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -364,6 +368,10 @@
                 .<span class="ident">as_ref</span>()
                 .<span class="ident">unwrap</span>()
                 .<span class="ident">contains</span>(<span class="kw-2">&amp;</span><span class="ident">file_name</span>.<span class="ident">to_string</span>())
+    }
+
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">contains_path</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">file_name</span>: <span class="kw-2">&amp;</span><span class="ident">Path</span>) -&gt; <span class="ident">bool</span> {
+        <span class="self">self</span>.<span class="ident">contains</span>(<span class="ident">file_name</span>.<span class="ident">to_str</span>().<span class="ident">unwrap</span>())
     }
 }
 
