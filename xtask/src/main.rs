@@ -681,37 +681,45 @@ fn run_cargo_test(opt: &RunTestsOpt, all_affected_crates: &ModifiedContent) -> S
         steps: crate_manifest_files()
             // Exclude `fuzz` crates, as there are no tests and binaries should not be executed.
             .filter(|path| !is_fuzzing_toml_file(path))
-            .map(to_string)
-            .filter(|path| all_affected_crates.contains(path))
+            .filter(|path| all_affected_crates.contains_path(path))
             .map(|entry| {
+                // Run `cargo test` in the directory of the crate, not the top-level directory.
+                // This is needed as otherwise any crate-specific `.cargo/config.toml` files would
+                // be ignored. If a crate does not have a config file, Cargo will just backtrack
+                // up the tree and pick up the `.cargo/config.toml` file from the root directory.
                 let test_run_step = |name| Step::Single {
                     name,
-                    command: Cmd::new(
+                    command: Cmd::new_in_dir(
                         "cargo",
                         &[
                             "test",
                             "--all-features",
-                            &format!("--manifest-path={}", &entry),
+                            &format!(
+                                "--manifest-path={}",
+                                entry.file_name().unwrap().to_str().unwrap()
+                            ),
                         ],
+                        entry.parent().unwrap(),
                     ),
                 };
-                let target_path = &entry.replace("Cargo.toml", "target");
 
-                // If `cleanup` is enabled, add a cleanup step to remove the generated files. Do
-                // this only if `target_path` is a non-empty, valid target path.
-                if opt.cleanup && target_path.ends_with("/target") {
+                // If `cleanup` is enabled, add a cleanup step to remove the generated files.
+                if opt.cleanup {
                     Step::Multiple {
-                        name: entry.clone(),
+                        name: entry.to_str().unwrap().to_string(),
                         steps: vec![
                             test_run_step("run".to_string()),
                             Step::Single {
                                 name: "cleanup".to_string(),
-                                command: Cmd::new("rm", &["-rf", target_path]),
+                                command: Cmd::new(
+                                    "rm",
+                                    &["-rf", entry.with_file_name("target").to_str().unwrap()],
+                                ),
                             },
                         ],
                     }
                 } else {
-                    test_run_step(entry.clone())
+                    test_run_step(entry.to_str().unwrap().to_string())
                 }
             })
             .collect(),
