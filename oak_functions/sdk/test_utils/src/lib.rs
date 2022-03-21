@@ -26,6 +26,7 @@ use oak_functions_abi::proto::{
     ConfigurationInfo, PrivateMetricsConfig, Request, Response, ServerPolicy,
 };
 
+use oak_functions_client::{Client, Session};
 use oak_remote_attestation::crypto::get_sha256;
 use prost::Message;
 use std::{
@@ -44,7 +45,7 @@ use tokio::{sync::oneshot, task::JoinHandle};
 /// Returns the path to the Wasm file produced by compiling the provided `Cargo.toml` file.
 fn build_wasm_module_path(metadata: &cargo_metadata::Metadata) -> String {
     let package_name = &metadata.root_package().unwrap().name;
-    // Keep this in sync with `/runner/src/main.rs`.
+    // Keep this in sync with `/xtask/src/main.rs`.
     format!("{}/bin/{}.wasm", metadata.workspace_root, package_name)
 }
 
@@ -55,7 +56,7 @@ pub fn compile_rust_wasm(manifest_path: &str, release: bool) -> anyhow::Result<V
         .manifest_path(manifest_path)
         .exec()
         .unwrap();
-    // Keep this in sync with `/runner/src/main.rs`.
+    // Keep this in sync with `/xtask/src/main.rs`.
     // Keep this in sync with `/sdk/rust/oak_tests/src/lib.rs`.
     let mut args = vec![
         // `--out-dir` is unstable and requires `-Zunstable-options`.
@@ -215,7 +216,7 @@ pub async fn make_request(port: u16, request_body: &[u8]) -> TestResult {
     let uri = format!("http://localhost:{}/", port);
 
     // Create client
-    let mut client = oak_functions_client::Client::new(&uri, |_config| Ok(()))
+    let mut client = Client::new(&uri, |_config| Ok(()))
         .await
         .expect("Could not create client");
 

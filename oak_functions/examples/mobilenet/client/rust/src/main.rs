@@ -18,7 +18,7 @@
 
 use anyhow::Context;
 use oak_functions_abi::proto::{ConfigurationInfo, Request};
-use oak_functions_client::Client;
+use oak_functions_client::{Session, UnaryClient};
 use tract_tensorflow::prelude::*;
 
 // Shape of the input tensor
@@ -46,7 +46,7 @@ async fn main() -> anyhow::Result<()> {
         Ok(())
     };
 
-    let mut client = Client::new("http://localhost:8080", config_verifier)
+    let mut client = UnaryClient::new("http://localhost:8080", config_verifier)
         .await
         .context("Could not create Oak Functions client")?;
 

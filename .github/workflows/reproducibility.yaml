@@ -56,8 +56,8 @@ jobs:
       # Build artifacts that are supposed to be reproducible.
       - name: Build Functions server
         run: |
-          ./scripts/docker_run ./scripts/runner build-functions-server --server-variant=base
-          ./scripts/docker_run ./scripts/runner build-functions-server --server-variant=unsafe
+          ./scripts/docker_run ./scripts/xtask build-functions-server --server-variant=base
+          ./scripts/docker_run ./scripts/xtask build-functions-server --server-variant=unsafe
 
       # Generate an index of the hashes of the reproducible artifacts.
       - name: Generate Reproducibility Index

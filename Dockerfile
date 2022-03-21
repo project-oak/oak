@@ -1,6 +1,6 @@
 # Use fixed snapshot of Debian to create a deterministic environment.
 # Snapshot tags can be found at https://hub.docker.com/r/debian/snapshot/tags
-ARG debian_snapshot=sha256:eeed67d1ae0846429668170fdab5e8f7ed884234db1b2c8075471bd8365cf3a7
+ARG debian_snapshot=sha256:89f4b36d2e15a87382699808a2ca96c6da5f1db928eb0a5cd8bfa38e4edcc189
 FROM debian/snapshot@${debian_snapshot}
 
 # Set the SHELL option -o pipefail before RUN with a pipe in.
@@ -15,8 +15,10 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 # > /etc/apt/sources.list
 
 # Getting curl and certificates dependecies.
+# We're rate-limiting HTTP requests to 500 kB/s as otherwise we may get timeout errors
+# when downloading from snapshot.debian.org.
 RUN apt-get --yes update \
-  && apt-get install --no-install-recommends --yes \
+  && apt-get install --no-install-recommends --yes --option Acquire::http::Dl-Limit=500 \
   apt-transport-https \
   build-essential \
   ca-certificates \
@@ -35,6 +37,7 @@ RUN apt-get --yes update \
   python3 \
   python3-six \
   python3-distutils \
+  qemu-system-x86 \
   shellcheck \
   software-properties-common \
   vim \
@@ -57,10 +60,11 @@ RUN echo "deb [arch=amd64] https://download.docker.com/linux/debian buster stabl
   && apt-get clean \
   && rm --recursive --force /var/lib/apt/lists/*
 
-# Use a later version of clang-format from buster-backports.
+# Use a later version of clang-format and OVMF (UEFI firmware) from buster-backports.
 RUN echo 'deb http://deb.debian.org/debian buster-backports main' > /etc/apt/sources.list.d/backports.list \
   && apt-get --yes update \
   && apt-get install --no-install-recommends --yes clang-format-8 \
+  && apt-get install --no-install-recommends --yes --target-release buster-backports ovmf \
   && apt-get clean \
   && rm --recursive --force /var/lib/apt/lists/* \
   && ln --symbolic --force clang-format-8 /usr/bin/clang-format
@@ -320,8 +324,8 @@ RUN useradd --shell=/bin/bash --create-home --user-group docker
 # To make the scripts available to call from everywhere.
 ENV PATH "/workspace/scripts:${PATH}"
 
-# Add sourcing of runner_bash_completion file to .bashrc
-RUN echo -e "\n#activate runner auto-complete\nif [ -f /workspace/.runner_bash_completion ]; then\n  source /workspace/.runner_bash_completion \nfi" >> /home/docker/.bashrc
+# Add sourcing of xtask_bash_completion file to .bashrc
+RUN echo -e "\n#activate xtask auto-complete\nif [ -f /workspace/.xtask_bash_completion ]; then\n  source /workspace/.xtask_bash_completion \nfi" >> /home/docker/.bashrc
 
 # Define alias
 RUN echo -e "\nalias ll='ls -l'\n" >> /home/docker/.bashrc

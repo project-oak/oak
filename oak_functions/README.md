@@ -48,7 +48,7 @@ from the conventional computing model.
 
 <!-- From: -->
 <!-- https://docs.google.com/drawings/d/1ZPeJ93IkyOOJVI8CFSbEeEKn6wVozB-d6E1SekK2QyQ/edit -->
-<img src="images/ComputingModel.png" width="1000">
+<img src="../docs/images/ComputingModel.png" width="1000">
 
 ## Features
 

@@ -1,0 +1,20 @@
+name = "echo"
+
+[applications]
+
+[applications.rust]
+type = "Functions"
+wasm_path = "bin/echo.wasm"
+target = { Cargo = { cargo_manifest = "oak_functions/examples/echo/module/Cargo.toml" } }
+
+[server]
+additional_args = ["--config-path=./oak_functions/examples/echo/config.toml"]
+
+[clients]
+# Test request coordinates are defined in `oak_functions/lookup_data_generator/src/data.rs`.
+rust = { Cargo = { cargo_manifest = "oak_functions/client/rust/Cargo.toml" }, additional_args = [
+  "--uri=http://localhost:8080",
+  "--request=test",
+  "--expected-response-pattern=test",
+  "--unary-request-model"
+] }

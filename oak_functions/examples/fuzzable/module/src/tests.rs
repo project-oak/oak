@@ -16,18 +16,18 @@
 use crate::proto::{
     instruction::InstructionVariant, Instruction, Instructions, Panic, WriteResponse,
 };
-use maplit::hashmap;
+use maplit::btreemap;
 use oak_functions_abi::proto::{ServerPolicy, StatusCode};
 
 use oak_functions_loader::{
-    grpc::{create_and_start_grpc_server, create_wasm_handler},
+    grpc::{create_and_start_grpc_server, create_wasm_handler, RequestModel},
     logger::Logger,
     lookup::LookupFactory,
-    lookup_data::LookupData,
-    metrics::{BucketConfig, PrivateMetricsConfig, PrivateMetricsProxyFactory},
+    metrics::PrivateMetricsProxyFactory,
     server::BoxedExtensionFactory,
 };
-
+use oak_functions_lookup::LookupDataManager;
+use oak_functions_metrics::{BucketConfig, PrivateMetricsConfig};
 use prost::Message;
 use std::{
     net::{Ipv6Addr, SocketAddr},
@@ -55,8 +55,8 @@ async fn test_server() {
 
     let logger = Logger::for_test();
 
-    let lookup_data = Arc::new(LookupData::new_empty(None, logger.clone()));
-    let lookup_factory = LookupFactory::new_boxed_extension_factory(lookup_data, logger.clone())
+    let lookup_data_manager = Arc::new(LookupDataManager::new_empty(logger.clone()));
+    let lookup_factory = LookupFactory::new_boxed_extension_factory(lookup_data_manager)
         .expect("could not create LookupFactory");
     let metrics_factory = create_metrics_factory();
 
@@ -77,6 +77,7 @@ async fn test_server() {
             get_config_info(&wasm_module_bytes, policy, false, None),
             term,
             logger,
+            RequestModel::BidiStreaming,
         )
         .await
     });
@@ -146,7 +147,7 @@ fn create_metrics_factory() -> BoxedExtensionFactory {
     let metrics_config = PrivateMetricsConfig {
         epsilon: 1.0,
         batch_size: 20,
-        buckets: hashmap! {"count".to_string() => BucketConfig::Count },
+        buckets: btreemap! {"count".to_string() => BucketConfig::Count },
     };
 
     PrivateMetricsProxyFactory::new_boxed_extension_factory(

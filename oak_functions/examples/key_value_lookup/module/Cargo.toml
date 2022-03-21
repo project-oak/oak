@@ -12,8 +12,9 @@ crate-type = ["cdylib", "rlib"]
 oak_functions = { path = "../../../sdk/oak_functions" }
 
 [dev-dependencies]
-oak_functions_loader = { path = "../../../loader" }
 oak_functions_abi = { path = "../../../abi" }
+oak_functions_loader = { path = "../../../loader" }
+oak_functions_lookup = { path = "../../../lookup" }
 http = "*"
 hyper = { version = "*", features = ["client", "http2"] }
 maplit = "*"

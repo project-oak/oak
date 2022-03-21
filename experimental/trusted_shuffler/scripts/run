@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+
+readonly SCRIPTS_DIR="$(dirname "$0")"
+
+cargo build --manifest-path=experimental/trusted_shuffler/backend/Cargo.toml
+ "${SCRIPTS_DIR}/run_backend" &
+readonly BACKEND_PID=$!
+
+cargo build --manifest-path=experimental/trusted_shuffler/server/Cargo.toml
+"${SCRIPTS_DIR}/run_server" &
+readonly SERVER_PID=$!
+
+"${SCRIPTS_DIR}/run_client"
+
+kill -9 "${BACKEND_PID}"
+kill -9 "${SERVER_PID}"

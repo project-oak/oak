@@ -1,0 +1,14 @@
+[package]
+name = "oak_functions_metrics"
+version = "0.1.0"
+authors = ["Conrad Grobler <grobler@google.com>"]
+edition = "2021"
+license = "Apache-2.0"
+
+[dependencies]
+anyhow = "*"
+log = "*"
+maplit = "*"
+oak_logger = { path = "../../logger" }
+rand = "*"
+serde = { version = "*", features = ["derive"] }

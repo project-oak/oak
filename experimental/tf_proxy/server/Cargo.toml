@@ -12,10 +12,11 @@ bytes = "*"
 clap = { version = "*", features = ["derive"] }
 env_logger = "*"
 futures = "*"
-grpc_attestation = { path = "../../../grpc_attestation/" }
+grpc_streaming_attestation = { path = "../../../grpc_streaming_attestation/" }
 http = "*"
 log = "*"
 oak_functions_abi = { path = "../../../oak_functions/abi" }
+oak_utils = { path = "../../../oak_utils" }
 oak_remote_attestation = { path = "../../../remote_attestation/rust/" }
 prost = "*"
 prost-types = "*"

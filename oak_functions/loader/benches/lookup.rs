@@ -26,11 +26,9 @@ use criterion::{
 use lookup_data_generator::data::generate_and_serialize_random_entries;
 use oak_functions_abi::proto::{Request, StatusCode};
 use oak_functions_loader::{
-    logger::Logger,
-    lookup::LookupFactory,
-    lookup_data::{parse_lookup_entries, LookupData},
-    server::WasmHandler,
+    logger::Logger, lookup::LookupFactory, lookup_data::parse_lookup_entries, server::WasmHandler,
 };
+use oak_functions_lookup::LookupDataManager;
 use prost::Message;
 use proto::{benchmark_request::Action, BenchmarkRequest, LookupTest};
 use rand::SeedableRng;
@@ -131,9 +129,9 @@ fn run_benchmarks_with_input<M: Measurement>(
     expected_value: &[u8],
     size: usize,
 ) {
-    let lookup_data = Arc::new(LookupData::for_test(lookup_entries));
     let logger = Logger::for_test();
-    let lookup_factory = LookupFactory::new_boxed_extension_factory(lookup_data, logger.clone())
+    let lookup_data_manager = Arc::new(LookupDataManager::for_test(lookup_entries, logger.clone()));
+    let lookup_factory = LookupFactory::new_boxed_extension_factory(lookup_data_manager)
         .expect("could not create LookupFactory");
 
     let wasm_handler = WasmHandler::create(wasm_module_bytes, vec![lookup_factory], logger)

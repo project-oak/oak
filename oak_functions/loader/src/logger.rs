@@ -15,6 +15,7 @@
 
 use chrono::{SecondsFormat, Utc};
 use log::{Level, LevelFilter};
+use oak_logger::OakLogger;
 use std::default::Default;
 
 /// A simple logger that splits logging between writing logs that contain only public, non-sensitive
@@ -38,24 +39,6 @@ impl Logger {
         Self::new(LevelFilter::Debug)
     }
 
-    /// Logs the message at the specified `Level`, but only if the "oak-unsafe" feature is
-    /// enabled.
-    #[allow(unused_variables)]
-    pub fn log_sensitive(&self, level: Level, message: &str) {
-        #[cfg(feature = "oak-unsafe")]
-        {
-            self.log(level, message);
-        }
-    }
-
-    /// Logs a message that contains only public, non-sensitive content at the specified `Level`.
-    ///
-    /// All code that uses this function should be inspected to ensure that the message can never
-    /// contain any sensitive or non-public information.
-    pub fn log_public(&self, level: Level, message: &str) {
-        self.log(level, message);
-    }
-
     fn log(&self, level: Level, message: &str) {
         if level <= self.max_level {
             eprintln!(
@@ -71,5 +54,19 @@ impl Logger {
 impl Default for Logger {
     fn default() -> Self {
         Logger::new(LevelFilter::Debug)
+    }
+}
+
+impl OakLogger for Logger {
+    #[cfg(feature = "oak-unsafe")]
+    fn log_sensitive(&self, level: Level, message: &str) {
+        self.log(level, message);
+    }
+
+    #[cfg(not(feature = "oak-unsafe"))]
+    fn log_sensitive(&self, _level: Level, _message: &str) {}
+
+    fn log_public(&self, level: Level, message: &str) {
+        self.log(level, message);
     }
 }

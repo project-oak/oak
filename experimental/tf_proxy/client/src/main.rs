@@ -23,7 +23,7 @@ use clap::Parser;
 use log::{debug, info, trace};
 use maplit::hashmap;
 use oak_functions_abi::proto::{ConfigurationInfo, Request};
-use oak_functions_client::Client;
+use oak_functions_client::{Client, Session};
 use prost::Message;
 use proto::{
     oak::encap::GrpcRequest,

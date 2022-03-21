@@ -22,8 +22,10 @@ pub mod attestation;
 pub mod rekor;
 
 use crate::attestation::{into_server_identity_verifier, ConfigurationVerifier};
-use anyhow::Context;
-use grpc_attestation::client::AttestationClient;
+use anyhow::{Context, Error, Result};
+use async_trait::async_trait;
+use grpc_streaming_attestation::client::AttestationClient as StreamingAttestationClient;
+use grpc_unary_attestation::client::AttestationClient as UnaryAttestationClient;
 use oak_functions_abi::proto::{Request, Response};
 use prost::Message;
 
@@ -33,13 +35,26 @@ mod tests;
 // TODO(#1867): Add remote attestation support.
 const TEE_MEASUREMENT: &[u8] = br"Test TEE measurement";
 
+#[async_trait]
+pub trait Session {
+    async fn invoke(&mut self, request: Request) -> anyhow::Result<Response>;
+}
+
+// Shared response handling logic for clients.
+fn handle_response(response: Result<Option<Vec<u8>>, Error>) -> anyhow::Result<Response> {
+    response
+        .context("Error invoking Oak Functions instance")?
+        .ok_or_else(|| anyhow::anyhow!("Empty response"))
+        .and_then(|rsp| Response::decode(rsp.as_ref()).context("Could not decode the response"))
+}
+
 pub struct Client {
-    inner: AttestationClient,
+    inner: StreamingAttestationClient,
 }
 
 impl Client {
     pub async fn new(uri: &str, verifier: ConfigurationVerifier) -> anyhow::Result<Self> {
-        let inner = AttestationClient::create(
+        let inner = StreamingAttestationClient::create(
             uri,
             TEE_MEASUREMENT,
             into_server_identity_verifier(verifier),
@@ -48,14 +63,35 @@ impl Client {
         .context("Could not create Oak Functions client")?;
         Ok(Client { inner })
     }
-    pub async fn invoke(&mut self, request: Request) -> anyhow::Result<Response> {
-        let response = self
-            .inner
-            .send(request)
-            .await
-            .context("Error invoking Oak Functions instance")?;
-        response
-            .ok_or_else(|| anyhow::anyhow!("Empty response"))
-            .and_then(|rsp| Response::decode(rsp.as_ref()).context("Could not decode the response"))
+}
+
+#[async_trait]
+impl Session for Client {
+    async fn invoke(&mut self, request: Request) -> anyhow::Result<Response> {
+        handle_response(self.inner.send(request).await)
+    }
+}
+
+pub struct UnaryClient {
+    inner: UnaryAttestationClient,
+}
+
+impl UnaryClient {
+    pub async fn new(uri: &str, verifier: ConfigurationVerifier) -> anyhow::Result<Self> {
+        let inner = UnaryAttestationClient::create(
+            uri,
+            TEE_MEASUREMENT,
+            into_server_identity_verifier(verifier),
+        )
+        .await
+        .context("Could not create Oak Functions client")?;
+        Ok(UnaryClient { inner })
+    }
+}
+
+#[async_trait]
+impl Session for UnaryClient {
+    async fn invoke(&mut self, request: Request) -> anyhow::Result<Response> {
+        handle_response(self.inner.send(request).await)
     }
 }

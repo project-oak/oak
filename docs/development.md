@@ -4,7 +4,7 @@
 - [Meta-Advice](#meta-advice)
 - [Docker vs. Native](#docker-vs-native)
 - [Prerequisites](#prerequisites)
-- [Runner](#runner)
+- [Xtask](#xtask)
 - [Run Example Application](#run-example-application)
   - [Build Application](#build-application)
   - [Build Oak Functions Server](#build-oak-functions-server)
@@ -19,7 +19,7 @@ To build and run one of the Oak example applications under Docker, run (after
 
 ```bash
 ./scripts/docker_pull  # retrieve cached Docker image for faster builds
-./scripts/docker_run runner --logs --scope=all run-functions-examples --example-name=weather_lookup --client-variant=rust
+./scripts/docker_run xtask --logs --scope=all run-functions-examples --example-name=weather_lookup --client-variant=rust
 ```
 
 This should build the Runtime, an Oak Functions Application and a client for the
@@ -79,7 +79,7 @@ in which case allow that by clicking on "Download now" in the notification.
 To test that things work correctly, open a Rust file, start typing `std::`
 somewhere, and autocomplete results should start showing up. Note that it may
 take a while for the `rust-analyzer` extension to go through all the local code
-and build its index. Alternatively, try `runner run-tests`.
+and build its index. Alternatively, try `xtask run-tests`.
 
 On Linux you might have to
 [post-installation steps for Linux](https://docs.docker.com/engine/install/linux-postinstall/)
@@ -119,15 +119,15 @@ recommended, since it requires a lot of effort to manually install all the tool
 natively on your machine and keeping them up to date to the exact same version
 specified in Docker.
 
-## Runner
+## xtask
 
-`runner` is a utility binary to perform a number of common tasks within the Oak
-repository. It can be run by invoking `./scripts/runner` from the root of the
-repository, or also directly `runner`, and it has a number of flags and
+`xtask` is a utility binary to perform a number of common tasks within the Oak
+repository. It can be run by invoking `./scripts/xtask` from the root of the
+repository, or also directly `xtask`, and it has a number of flags and
 sub-commands available, which should be self-explanatory, and it also supports
 flag autocompletion when invoked from inside a Docker shell.
 
-For commands that use `cargo`, by default the `runner` runs the command only for
+For commands that use `cargo`, by default the `xtask` runs the command only for
 the modified files and the crates affected by those changes. Use `--scope=all`
 to run the command for the entire code base.
 
@@ -137,7 +137,7 @@ Running one of the example Oak applications will confirm that all core
 prerequisites have been installed. Run one inside Docker with:
 
 ```bash
-runner --logs --scope=all run-functions-examples --example-name=weather_lookup --client-variant=rust
+xtask --logs --scope=all run-functions-examples --example-name=weather_lookup --client-variant=rust
 ```
 
 That script:
@@ -163,7 +163,7 @@ to a WebAssembly module and then serializes it into a binary application
 configuration file to be loaded to the Oak Functions Server:
 
 ```bash
-runner --logs --scope=all run-functions-examples --example-name=weather_lookup --client-variant=none --run-server=false
+xtask --logs --scope=all run-functions-examples --example-name=weather_lookup --client-variant=none --run-server=false
 ```
 
 This binary application configuration file includes the compiled Wasm code for
@@ -176,7 +176,7 @@ will take some time, but subsequent builds should be cached and so run much
 faster.
 
 ```bash
-runner build-functions-server
+xtask build-functions-server
 ```
 
 ### Run Oak Functions Server
@@ -186,7 +186,7 @@ a specific Oak Application (which must already have been compiled into
 WebAssembly, as [described above](#build-application).
 
 ```bash
-runner --scope=all run-functions-examples --example-name=weather_lookup --client-variant=none
+xtask --scope=all --logs run-functions-examples --example-name=weather_lookup --client-variant=none
 ```
 
 In the end, you should end up with an Oak server running, end with log output
@@ -207,7 +207,7 @@ client of an example Oak Application (as [described above](#build-application)),
 and runs the client code locally.
 
 ```bash
-runner --scope=all --logs run-functions-examples --example-name=weather_lookup --run-server=false --client-variant=rust
+xtask --scope=all --logs run-functions-examples --example-name=weather_lookup --run-server=false --client-variant=rust
 ```
 
 The client should run to completion and give output something like:
@@ -230,20 +230,20 @@ OK [1s]
 
 We currently have fuzz testing enabled for Oak Functions on
 [OSS-Fuzz](https://github.com/google/oss-fuzz/tree/master/projects/oak). In
-addition, the runner has a command for running fuzz targets `run-fuzz-targets`.
+addition, the xtask has a command for running fuzz targets `run-fuzz-targets`.
 This command runs `cargo-fuzz` with the `-O` option for optimization, and
 supports all `libFuzzer` options. These options must be provided as the last
 argument. For instance, the following command runs all fuzz targets with a 2
 seconds timeout for each target.
 
 ```bash
-runner run-cargo-fuzz -- -max_total_time=2
+xtask run-cargo-fuzz -- -max_total_time=2
 ```
 
 The following lists all the `libFuzzer` options:
 
 ```bash
-runner --logs run-cargo-fuzz -- -help=1
+xtask --logs run-cargo-fuzz -- -help=1
 ```
 
 Moreover, `crate-name` alone or together with `target-name` could be specified
@@ -251,5 +251,5 @@ to run all targets for a specific crate, or to run a specific target,
 respectively.
 
 ```bash
-runner --logs run-cargo=fuzz --crate-name=loader --target-name=wasm_invoke -- -max_total_time=20
+xtask --logs run-cargo=fuzz --crate-name=loader --target-name=wasm_invoke -- -max_total_time=20
 ```

@@ -23,7 +23,7 @@ readonly OUT_DIR='./oak_functions/bin'
 mkdir --parents "${OUT_DIR}"
 
 cp \
-  ./oak_functions/proto/server.proto \
+  ./oak_functions/proto/streaming_server.proto \
   ./oak_functions/proto/invocation.proto \
   "${OUT_DIR}" \
   --force
@@ -35,7 +35,7 @@ protoc \
   --include_imports \
   --include_source_info \
   --descriptor_set_out="${OUT_DIR}/server.pb" \
-  server.proto
+  streaming_server.proto
 
 # See https://cloud.google.com/api-gateway/docs/deployment-model for more
 # details on the relationship between APIs, Configs and Gateways
@@ -43,7 +43,7 @@ protoc \
 # Create a config file from the template by replacing tokens.
 readonly API_TITLE='Oak Functions Weather Lookup Service'
 # Fetch the URL for the Cloud Run backend service instance.
-readonly CLOUD_RUN_URL="$(gcloud beta run services describe "${FUNCTIONS_INSTANCE_NAME}" --project="${GCP_PROJECT_ID}" --region=europe-west2 --platform=managed --format='value(status.url)')" 
+readonly CLOUD_RUN_URL="$(gcloud beta run services describe "${FUNCTIONS_INSTANCE_NAME}" --project="${GCP_PROJECT_ID}" --region=europe-west2 --platform=managed --format='value(status.url)')"
 readonly CLOUD_RUN_HOST="$(echo "${CLOUD_RUN_URL}" | cut -c 9-)"
 
 sed \

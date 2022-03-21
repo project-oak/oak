@@ -12,16 +12,16 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  runner:
+  xtask:
     runs-on: ubuntu-20.04
     timeout-minutes: 120
-    # We use the same job template, but parametrize the actual command to be passed to the runner
+    # We use the same job template, but parametrize the actual command to be passed to the xtask
     # binary using the matrix strategy, so that we get the commands running in parallel.
     strategy:
       fail-fast: false
       matrix:
         cmd:
-          # Do not add `run-ci` to these commands. We parse them for `runner run-ci`.
+          # Do not add `run-ci` to these commands. We parse them for `xtask run-ci`.
           - check-format
           - run-cargo-deny
           - run-cargo-udeps
@@ -78,15 +78,8 @@ jobs:
             cargo-cache-
 
       - name: Run command
-        if: github.event_name == 'pull_request'
         run: |
-          ./scripts/docker_run ./scripts/runner --commands --scope=commits:1 ${{ matrix.cmd }}
-          df --human-readable
-
-      - name: Run Command - Post-Merge
-        if: github.event_name == 'push'
-        run: |
-          ./scripts/docker_run ./scripts/runner --commands --scope=all ${{ matrix.cmd }}
+          ./scripts/docker_run ./scripts/xtask --commands --scope=all ${{ matrix.cmd }}
           df --human-readable
 
       - name: Generate root CA certs

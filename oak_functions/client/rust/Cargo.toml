@@ -12,7 +12,8 @@ base64 = "*"
 clap = { version = "*", features = ["derive"] }
 ecdsa = { version = "*", features = ["verify", "pkcs8", "pem"] }
 env_logger = "*"
-grpc_attestation = { path = "../../../grpc_attestation/" }
+grpc_streaming_attestation = { path = "../../../grpc_streaming_attestation/" }
+grpc_unary_attestation = { path = "../../../grpc_unary_attestation/" }
 http = "*"
 log = "*"
 oak_functions_abi = { path = "../../abi" }
@@ -31,6 +32,7 @@ tokio = { version = "*", features = [
   "rt-multi-thread"
 ] }
 tonic = { version = "*", features = ["tls", "tls-roots"] }
+async-trait = "*"
 
 [build-dependencies]
 oak_utils = { path = "../../../oak_utils" }

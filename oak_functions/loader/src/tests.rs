@@ -15,14 +15,15 @@
 //
 
 use crate::{
-    grpc::{create_and_start_grpc_server, create_wasm_handler},
+    grpc::{create_and_start_grpc_server, create_wasm_handler, RequestModel},
     logger::Logger,
     lookup::LookupFactory,
-    lookup_data::{parse_lookup_entries, LookupData, LookupDataAuth, LookupDataSource},
+    lookup_data::{parse_lookup_entries, LookupDataAuth, LookupDataRefresher, LookupDataSource},
     server::{apply_policy, format_bytes},
 };
 use maplit::hashmap;
 use oak_functions_abi::proto::{Response, ServerPolicy, StatusCode};
+use oak_functions_lookup::LookupDataManager;
 use prost::Message;
 use std::{
     io::{Seek, Write},
@@ -136,19 +137,20 @@ where
         b"key_2".to_vec() => br#"value_2"#.to_vec(),
     }));
 
-    let lookup_data = Arc::new(LookupData::new_empty(
+    let lookup_data_manager = Arc::new(LookupDataManager::new_empty(logger.clone()));
+    let lookup_data_refresher = LookupDataRefresher::new(
         Some(LookupDataSource::Http {
             url: format!("http://localhost:{}", static_server_port),
             auth: LookupDataAuth::default(),
         }),
+        lookup_data_manager.clone(),
         logger.clone(),
-    ));
-    lookup_data.refresh().await.unwrap();
+    );
+    lookup_data_refresher.refresh().await.unwrap();
     let tee_certificate = vec![];
 
-    let lookup_factory =
-        LookupFactory::new_boxed_extension_factory(lookup_data.clone(), logger.clone())
-            .expect("could not create LookupFactory");
+    let lookup_factory = LookupFactory::new_boxed_extension_factory(lookup_data_manager.clone())
+        .expect("could not create LookupFactory");
     let wasm_handler =
         create_wasm_handler(&wasm_module_bytes, vec![lookup_factory], logger.clone())
             .expect("could not create wasm_handler");
@@ -162,6 +164,7 @@ where
             get_config_info(&wasm_module_bytes, policy, false, None),
             term,
             logger,
+            RequestModel::BidiStreaming,
         )
         .await
     });
@@ -274,34 +277,41 @@ async fn lookup_data_refresh_http() {
             .await
     });
 
-    let lookup_data = crate::LookupData::new_empty(
+    let lookup_data_manager = Arc::new(LookupDataManager::new_empty(Logger::for_test()));
+    let lookup_data_refresher = LookupDataRefresher::new(
         Some(LookupDataSource::Http {
             url: format!("http://localhost:{}", static_server_port),
             auth: LookupDataAuth::default(),
         }),
+        lookup_data_manager.clone(),
         Logger::for_test(),
     );
+    let lookup_data = lookup_data_manager.create_lookup_data();
     assert!(lookup_data.is_empty());
 
     // Initially empty file, no entries.
-    lookup_data.refresh().await.unwrap();
+    lookup_data_refresher.refresh().await.unwrap();
+    let lookup_data = lookup_data_manager.create_lookup_data();
     assert!(lookup_data.is_empty());
 
     // Single entry.
     mock_static_server.set_response_body(ENTRY_0_LENGTH_DELIMITED.to_vec());
-    lookup_data.refresh().await.unwrap();
+    lookup_data_refresher.refresh().await.unwrap();
+    let lookup_data = lookup_data_manager.create_lookup_data();
     assert_eq!(lookup_data.len(), 1);
     assert_eq!(lookup_data.get(&[14, 12]), Some(vec![19, 88]));
     assert_eq!(lookup_data.get(b"Harry"), None);
 
     // Empty file again.
     mock_static_server.set_response_body(vec![]);
-    lookup_data.refresh().await.unwrap();
+    lookup_data_refresher.refresh().await.unwrap();
+    let lookup_data = lookup_data_manager.create_lookup_data();
     assert!(lookup_data.is_empty());
 
     // A different entry.
     mock_static_server.set_response_body(ENTRY_1_LENGTH_DELIMITED.to_vec());
-    lookup_data.refresh().await.unwrap();
+    lookup_data_refresher.refresh().await.unwrap();
+    let lookup_data = lookup_data_manager.create_lookup_data();
     assert_eq!(lookup_data.len(), 1);
     assert_eq!(lookup_data.get(&[14, 12]), None);
     assert_eq!(lookup_data.get(b"Harry"), Some(b"Potter".to_vec()));
@@ -310,7 +320,8 @@ async fn lookup_data_refresh_http() {
     let mut buf = ENTRY_0_LENGTH_DELIMITED.to_vec();
     buf.append(&mut ENTRY_1_LENGTH_DELIMITED.to_vec());
     mock_static_server.set_response_body(buf);
-    lookup_data.refresh().await.unwrap();
+    lookup_data_refresher.refresh().await.unwrap();
+    let lookup_data = lookup_data_manager.create_lookup_data();
     assert_eq!(lookup_data.len(), 2);
     assert_eq!(lookup_data.get(&[14, 12]), Some(vec![19, 88]));
     assert_eq!(lookup_data.get(b"Harry"), Some(b"Potter".to_vec()));
@@ -322,14 +333,18 @@ async fn lookup_data_refresh_http() {
 async fn lookup_data_refresh_file() {
     let temp_file = tempfile::NamedTempFile::new().unwrap();
 
-    let lookup_data = crate::LookupData::new_empty(
+    let lookup_data_manager = Arc::new(LookupDataManager::new_empty(Logger::for_test()));
+    let lookup_data_refresher = LookupDataRefresher::new(
         Some(LookupDataSource::File(temp_file.path().to_path_buf())),
+        lookup_data_manager.clone(),
         Logger::for_test(),
     );
+    let lookup_data = lookup_data_manager.create_lookup_data();
     assert!(lookup_data.is_empty());
 
     // Initially empty file, no entries.
-    lookup_data.refresh().await.unwrap();
+    lookup_data_refresher.refresh().await.unwrap();
+    let lookup_data = lookup_data_manager.create_lookup_data();
     assert!(lookup_data.is_empty());
 
     // Single entry.
@@ -339,7 +354,8 @@ async fn lookup_data_refresh_file() {
         .as_file()
         .write_all(ENTRY_0_LENGTH_DELIMITED)
         .unwrap();
-    lookup_data.refresh().await.unwrap();
+    lookup_data_refresher.refresh().await.unwrap();
+    let lookup_data = lookup_data_manager.create_lookup_data();
     assert_eq!(lookup_data.len(), 1);
     assert_eq!(lookup_data.get(&[14, 12]), Some(vec![19, 88]));
     assert_eq!(lookup_data.get(b"Harry"), None);
@@ -347,7 +363,8 @@ async fn lookup_data_refresh_file() {
     // Empty file again.
     temp_file.as_file().set_len(0).unwrap();
     temp_file.as_file().rewind().unwrap();
-    lookup_data.refresh().await.unwrap();
+    lookup_data_refresher.refresh().await.unwrap();
+    let lookup_data = lookup_data_manager.create_lookup_data();
     assert!(lookup_data.is_empty());
 
     // A different entry.
@@ -357,7 +374,8 @@ async fn lookup_data_refresh_file() {
         .as_file()
         .write_all(ENTRY_1_LENGTH_DELIMITED)
         .unwrap();
-    lookup_data.refresh().await.unwrap();
+    lookup_data_refresher.refresh().await.unwrap();
+    let lookup_data = lookup_data_manager.create_lookup_data();
     assert_eq!(lookup_data.len(), 1);
     assert_eq!(lookup_data.get(&[14, 12]), None);
     assert_eq!(lookup_data.get(b"Harry"), Some(b"Potter".to_vec()));
@@ -373,7 +391,8 @@ async fn lookup_data_refresh_file() {
         .as_file()
         .write_all(ENTRY_1_LENGTH_DELIMITED)
         .unwrap();
-    lookup_data.refresh().await.unwrap();
+    lookup_data_refresher.refresh().await.unwrap();
+    let lookup_data = lookup_data_manager.create_lookup_data();
     assert_eq!(lookup_data.len(), 2);
     assert_eq!(lookup_data.get(&[14, 12]), Some(vec![19, 88]));
     assert_eq!(lookup_data.get(b"Harry"), Some(b"Potter".to_vec()));
@@ -381,11 +400,15 @@ async fn lookup_data_refresh_file() {
 
 #[tokio::test]
 async fn lookup_data_refresh_no_lookup_source() {
-    let lookup_data = crate::LookupData::new_empty(None, Logger::for_test());
+    let lookup_data_manager = Arc::new(LookupDataManager::new_empty(Logger::for_test()));
+    let lookup_data_refresher =
+        LookupDataRefresher::new(None, lookup_data_manager.clone(), Logger::for_test());
+    let lookup_data = lookup_data_manager.create_lookup_data();
     assert!(lookup_data.is_empty());
 
     // Still empty, no errors.
-    lookup_data.refresh().await.unwrap();
+    lookup_data_refresher.refresh().await.unwrap();
+    let lookup_data = lookup_data_manager.create_lookup_data();
     assert!(lookup_data.is_empty());
 }
 

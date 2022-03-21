@@ -23,12 +23,13 @@ use lookup_data_generator::data::generate_and_serialize_sparse_weather_entries;
 use maplit::hashmap;
 use oak_functions_abi::proto::{Request, ServerPolicy, StatusCode};
 use oak_functions_loader::{
-    grpc::{create_and_start_grpc_server, create_wasm_handler},
+    grpc::{create_and_start_grpc_server, create_wasm_handler, RequestModel},
     logger::Logger,
     lookup::LookupFactory,
-    lookup_data::{parse_lookup_entries, LookupData, LookupDataAuth, LookupDataSource},
+    lookup_data::{parse_lookup_entries, LookupDataAuth, LookupDataRefresher, LookupDataSource},
     server::WasmHandler,
 };
+use oak_functions_lookup::LookupDataManager;
 use rand::{prelude::StdRng, SeedableRng};
 use std::{
     net::{Ipv6Addr, SocketAddr},
@@ -85,17 +86,18 @@ async fn test_server() {
     let tee_certificate = vec![];
 
     let logger = Logger::for_test();
-
-    let lookup_data = Arc::new(LookupData::new_empty(
+    let lookup_data_manager = Arc::new(LookupDataManager::new_empty(logger.clone()));
+    let lookup_data_refresher = LookupDataRefresher::new(
         Some(LookupDataSource::Http {
             url: format!("http://localhost:{}", static_server_port),
             auth: LookupDataAuth::default(),
         }),
+        lookup_data_manager.clone(),
         logger.clone(),
-    ));
-    lookup_data.refresh().await.unwrap();
+    );
+    lookup_data_refresher.refresh().await.unwrap();
 
-    let lookup_factory = LookupFactory::new_boxed_extension_factory(lookup_data, logger.clone())
+    let lookup_factory = LookupFactory::new_boxed_extension_factory(lookup_data_manager)
         .expect("could not create LookupFactory");
 
     let wasm_handler =
@@ -111,6 +113,7 @@ async fn test_server() {
             get_config_info(&wasm_module_bytes, policy, false, None),
             term,
             logger,
+            RequestModel::BidiStreaming,
         )
         .await
     });
@@ -206,9 +209,9 @@ fn bench_wasm_handler(bencher: &mut Bencher) {
     let buf = generate_and_serialize_sparse_weather_entries(&mut rng, entry_count).unwrap();
     let entries = parse_lookup_entries(buf).unwrap();
 
-    let lookup_data = Arc::new(LookupData::for_test(entries));
     let logger = Logger::for_test();
-    let lookup_factory = LookupFactory::new_boxed_extension_factory(lookup_data, logger.clone())
+    let lookup_data_manager = Arc::new(LookupDataManager::for_test(entries, logger.clone()));
+    let lookup_factory = LookupFactory::new_boxed_extension_factory(lookup_data_manager)
         .expect("could not create LookupFactory");
     let wasm_handler = WasmHandler::create(&wasm_module_bytes, vec![lookup_factory], logger)
         .expect("Couldn't create the server");
