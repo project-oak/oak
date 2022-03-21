@@ -53,7 +53,7 @@ impl ExtensionFactory for LookupFactory {
 }
 
 pub fn read_args<L: OakLogger + Clone>(
-    extension: &mut LookupData<L>,
+    extension: &LookupData<L>,
     wasm_state: &mut WasmState,
     key_ptr: AbiPointer,
     key_len: AbiPointerOffset,
