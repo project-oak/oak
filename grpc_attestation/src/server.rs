@@ -23,7 +23,7 @@ use crate::proto::{
 use anyhow::Context;
 use futures::{Stream, StreamExt};
 use oak_remote_attestation::handshaker::{AttestationBehavior, Encryptor, ServerHandshaker};
-use std::pin::Pin;
+use std::{pin::Pin, sync::Arc};
 use tonic::{Request, Response, Status, Streaming};
 
 /// Handler for subsequent encrypted requests from the stream after the handshake is completed.
@@ -97,7 +97,7 @@ pub struct AttestationServer<F, L> {
     /// Processes data from client requests and creates responses.
     request_handler: F,
     /// Configuration information to provide to the client for the attestation step.
-    additional_info: Vec<u8>,
+    additional_info: Arc<Vec<u8>>,
     /// Error logging function that is required for logging attestation protocol errors.
     /// Errors are only logged on server side and are not sent to clients.
     error_logger: L,
@@ -118,7 +118,7 @@ where
         Ok(Self {
             tee_certificate,
             request_handler,
-            additional_info,
+            additional_info: Arc::new(additional_info),
             error_logger,
         })
     }
@@ -140,8 +140,8 @@ where
     ) -> Result<Response<Self::StreamStream>, Status> {
         let tee_certificate = self.tee_certificate.clone();
         let request_handler = self.request_handler.clone();
-        let additional_info = self.additional_info.clone();
         let error_logger = self.error_logger.clone();
+        let additional_info = self.additional_info.clone();
 
         let response_stream = async_stream::try_stream! {
             let mut request_stream = request_stream.into_inner();
@@ -152,7 +152,7 @@ where
                         error_logger.log_error(&format!("Couldn't create self attestation behavior: {:?}", error));
                         Status::internal("")
                     })?,
-                    additional_info,
+                    additional_info
             );
             while !handshaker.is_completed() {
                 let incoming_message = request_stream.next()

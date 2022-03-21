@@ -18,7 +18,7 @@ use crate::crypto::{
     KEY_AGREEMENT_ALGORITHM_KEY_LENGTH, NONCE_LENGTH, SIGNATURE_LENGTH,
     SIGNING_ALGORITHM_KEY_LENGTH,
 };
-use alloc::vec::Vec;
+use alloc::{sync::Arc, vec::Vec};
 use anyhow::{anyhow, bail, Context};
 use bytes::{Buf, BufMut};
 
@@ -117,7 +117,7 @@ pub struct ServerIdentity {
     ///
     /// The server and the client must be able to agree on a canonical representation of the
     /// content to be able to deterministically compute the hash of this field.
-    pub additional_info: Vec<u8>,
+    pub additional_info: Arc<Vec<u8>>,
 }
 
 /// Client identity message containing remote attestation information and a public key for
@@ -215,7 +215,7 @@ impl ServerIdentity {
         random: [u8; REPLAY_PROTECTION_ARRAY_LENGTH],
         signing_public_key: [u8; SIGNING_ALGORITHM_KEY_LENGTH],
         attestation_info: Vec<u8>,
-        additional_info: Vec<u8>,
+        additional_info: Arc<Vec<u8>>,
     ) -> Self {
         Self {
             version: PROTOCOL_VERSION,
@@ -295,7 +295,7 @@ impl Deserializable for ServerIdentity {
         let mut signing_public_key = [0u8; SIGNING_ALGORITHM_KEY_LENGTH];
         input.copy_to_slice(&mut signing_public_key);
         let attestation_info = get_vec(&mut input)?;
-        let additional_info = get_vec(&mut input)?;
+        let additional_info = Arc::new(get_vec(&mut input)?);
 
         if input.has_remaining() {
             bail!(
