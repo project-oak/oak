@@ -52,16 +52,13 @@ impl ExtensionFactory for LookupFactory {
     }
 }
 
-/// Corresponds to the host ABI function [`storage_get_item`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#storage_get_item).
-pub fn storage_get_item<L: OakLogger + Clone>(
-    wasm_state: &mut WasmState,
+pub fn read_args<L: OakLogger + Clone>(
     extension: &mut LookupData<L>,
+    wasm_state: &mut WasmState,
     key_ptr: AbiPointer,
     key_len: AbiPointerOffset,
-    value_ptr_ptr: AbiPointer,
-    value_len_ptr: AbiPointer,
-) -> Result<(), OakStatus> {
-    let key = wasm_state
+) -> Result<Vec<u8>, OakStatus> {
+    wasm_state
         .get_memory()
         .get(key_ptr, key_len as usize)
         .map_err(|err| {
@@ -70,9 +67,17 @@ pub fn storage_get_item<L: OakLogger + Clone>(
                 err
             ));
             OakStatus::ErrInvalidArgs
-        })?;
-    extension.log_debug(&format!("storage_get_item(): key: {}", format_bytes(&key)));
-    match extension.get(&key) {
+        })
+}
+
+pub fn write_results<L: OakLogger + Clone>(
+    extension: &mut LookupData<L>,
+    wasm_state: &mut WasmState,
+    value: Option<Vec<u8>>,
+    value_ptr_ptr: AbiPointer,
+    value_len_ptr: AbiPointer,
+) -> Result<(), OakStatus> {
+    match value {
         Some(value) => {
             // Truncate value for logging.
             let value_to_log = value.clone().into_iter().take(512).collect::<Vec<_>>();
@@ -91,6 +96,21 @@ pub fn storage_get_item<L: OakLogger + Clone>(
             Err(OakStatus::ErrStorageItemNotFound)
         }
     }
+}
+
+/// Corresponds to the host ABI function [`storage_get_item`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#storage_get_item).
+pub fn storage_get_item<L: OakLogger + Clone>(
+    wasm_state: &mut WasmState,
+    extension: &mut LookupData<L>,
+    key_ptr: AbiPointer,
+    key_len: AbiPointerOffset,
+    value_ptr_ptr: AbiPointer,
+    value_len_ptr: AbiPointer,
+) -> Result<(), OakStatus> {
+    let key = read_args(extension, wasm_state, key_ptr, key_len)?;
+    extension.log_debug(&format!("storage_get_item(): key: {}", format_bytes(&key)));
+    let value = extension.get(&key);
+    write_results(extension, wasm_state, value, value_ptr_ptr, value_len_ptr)
 }
 
 impl<L> OakApiNativeExtension for LookupData<L>
