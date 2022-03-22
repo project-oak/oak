@@ -100,15 +100,13 @@ impl OakApiNativeExtension for PrivateMetricsExtension<Logger> {
     }
 }
 
-/// Corresponds to the host ABI function [`report_metric`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#report_metric).
-fn report_metric(
-    wasm_state: &mut WasmState,
+pub fn read_args(
     extension: &mut PrivateMetricsExtension<Logger>,
+    wasm_state: &mut WasmState,
     buf_ptr: AbiPointer,
     buf_len: AbiPointerOffset,
-    value: i64,
-) -> Result<(), OakStatus> {
-    let raw_label = wasm_state
+) -> Result<Vec<u8>, OakStatus> {
+    wasm_state
         .get_memory()
         .get(buf_ptr, buf_len as usize)
         .map_err(|err| {
@@ -117,7 +115,18 @@ fn report_metric(
                 err
             ));
             OakStatus::ErrInvalidArgs
-        })?;
+        })
+}
+
+/// Corresponds to the host ABI function [`report_metric`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#report_metric).
+fn report_metric(
+    wasm_state: &mut WasmState,
+    extension: &mut PrivateMetricsExtension<Logger>,
+    buf_ptr: AbiPointer,
+    buf_len: AbiPointerOffset,
+    value: i64,
+) -> Result<(), OakStatus> {
+    let raw_label = read_args(extension, wasm_state, buf_ptr, buf_len)?;
     let label = std::str::from_utf8(raw_label.as_slice()).map_err(|err| {
         extension.log_warning(&format!(
             "report_metric(): Not a valid UTF-8 encoded string: {:?}\nContent: {:?}",
