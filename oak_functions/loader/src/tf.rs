@@ -90,7 +90,6 @@ pub fn read_args(
 }
 
 pub fn write_results(
-    extension: &TensorFlowModel<Logger>,
     wasm_state: &mut WasmState,
     encoded_inference: Vec<u8>,
     inference_ptr_ptr: AbiPointer,
@@ -124,7 +123,6 @@ fn tf_model_infer(
     })?;
     let encoded_inference = inference.encode_to_vec();
     write_results(
-        tf_model,
         wasm_state,
         encoded_inference,
         inference_ptr_ptr,
