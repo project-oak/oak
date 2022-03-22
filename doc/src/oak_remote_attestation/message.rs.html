@@ -540,7 +540,7 @@
     <span class="ident">KEY_AGREEMENT_ALGORITHM_KEY_LENGTH</span>, <span class="ident">NONCE_LENGTH</span>, <span class="ident">SIGNATURE_LENGTH</span>,
     <span class="ident">SIGNING_ALGORITHM_KEY_LENGTH</span>,
 };
-<span class="kw">use</span> <span class="ident">alloc::vec::Vec</span>;
+<span class="kw">use</span> <span class="ident">alloc</span>::{<span class="ident">sync::Arc</span>, <span class="ident">vec::Vec</span>};
 <span class="kw">use</span> <span class="ident">anyhow</span>::{<span class="ident">anyhow</span>, <span class="ident">bail</span>, <span class="ident">Context</span>};
 <span class="kw">use</span> <span class="ident">bytes</span>::{<span class="ident">Buf</span>, <span class="ident">BufMut</span>};
 
@@ -639,7 +639,7 @@
     <span class="doccomment">///</span>
     <span class="doccomment">/// The server and the client must be able to agree on a canonical representation of the</span>
     <span class="doccomment">/// content to be able to deterministically compute the hash of this field.</span>
-    <span class="kw">pub</span> <span class="ident">additional_info</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span> <span class="ident">additional_info</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span>,
 }
 
 <span class="doccomment">/// Client identity message containing remote attestation information and a public key for</span>
@@ -737,7 +737,7 @@
         <span class="ident">random</span>: [<span class="ident">u8</span>; <span class="ident">REPLAY_PROTECTION_ARRAY_LENGTH</span>],
         <span class="ident">signing_public_key</span>: [<span class="ident">u8</span>; <span class="ident">SIGNING_ALGORITHM_KEY_LENGTH</span>],
         <span class="ident">attestation_info</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
-        <span class="ident">additional_info</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
+        <span class="ident">additional_info</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span>,
     ) -&gt; <span class="self">Self</span> {
         <span class="self">Self</span> {
             <span class="ident">version</span>: <span class="ident">PROTOCOL_VERSION</span>,
@@ -817,7 +817,7 @@
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">signing_public_key</span> <span class="op">=</span> [<span class="number">0u8</span>; <span class="ident">SIGNING_ALGORITHM_KEY_LENGTH</span>];
         <span class="ident">input</span>.<span class="ident">copy_to_slice</span>(<span class="kw-2">&amp;mut</span> <span class="ident">signing_public_key</span>);
         <span class="kw">let</span> <span class="ident">attestation_info</span> <span class="op">=</span> <span class="ident">get_vec</span>(<span class="kw-2">&amp;mut</span> <span class="ident">input</span>)<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">additional_info</span> <span class="op">=</span> <span class="ident">get_vec</span>(<span class="kw-2">&amp;mut</span> <span class="ident">input</span>)<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">additional_info</span> <span class="op">=</span> <span class="ident">Arc::new</span>(<span class="ident">get_vec</span>(<span class="kw-2">&amp;mut</span> <span class="ident">input</span>)<span class="question-mark">?</span>);
 
         <span class="kw">if</span> <span class="ident">input</span>.<span class="ident">has_remaining</span>() {
             <span class="macro">bail!</span>(

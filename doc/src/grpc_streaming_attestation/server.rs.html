@@ -228,7 +228,7 @@
 <span class="kw">use</span> <span class="ident">futures</span>::{<span class="ident">Stream</span>, <span class="ident">StreamExt</span>};
 <span class="kw">use</span> <span class="ident">oak_remote_attestation::handshaker</span>::{<span class="ident">AttestationBehavior</span>, <span class="ident">Encryptor</span>, <span class="ident">ServerHandshaker</span>};
 <span class="kw">use</span> <span class="ident">oak_utils::LogError</span>;
-<span class="kw">use</span> <span class="ident">std::pin::Pin</span>;
+<span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">pin::Pin</span>, <span class="ident">sync::Arc</span>};
 <span class="kw">use</span> <span class="ident">tonic</span>::{<span class="ident">Request</span>, <span class="ident">Response</span>, <span class="ident">Status</span>, <span class="ident">Streaming</span>};
 
 <span class="doccomment">/// Handler for subsequent encrypted requests from the stream after the handshake is completed.</span>
@@ -297,7 +297,7 @@
     <span class="doccomment">/// Processes data from client requests and creates responses.</span>
     <span class="ident">request_handler</span>: <span class="ident">F</span>,
     <span class="doccomment">/// Configuration information to provide to the client for the attestation step.</span>
-    <span class="ident">additional_info</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
+    <span class="ident">additional_info</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span>,
     <span class="doccomment">/// Error logging function that is required for logging attestation protocol errors.</span>
     <span class="doccomment">/// Errors are only logged on server side and are not sent to clients.</span>
     <span class="ident">error_logger</span>: <span class="ident">L</span>,
@@ -318,7 +318,7 @@
         <span class="prelude-val">Ok</span>(<span class="self">Self</span> {
             <span class="ident">tee_certificate</span>,
             <span class="ident">request_handler</span>,
-            <span class="ident">additional_info</span>,
+            <span class="ident">additional_info</span>: <span class="ident">Arc::new</span>(<span class="ident">additional_info</span>),
             <span class="ident">error_logger</span>,
         })
     }
@@ -340,8 +340,8 @@
     ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Response</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::StreamStream</span><span class="op">&gt;</span>, <span class="ident">Status</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">tee_certificate</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">tee_certificate</span>.<span class="ident">clone</span>();
         <span class="kw">let</span> <span class="ident">request_handler</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">request_handler</span>.<span class="ident">clone</span>();
-        <span class="kw">let</span> <span class="ident">additional_info</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">additional_info</span>.<span class="ident">clone</span>();
         <span class="kw">let</span> <span class="ident">error_logger</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">error_logger</span>.<span class="ident">clone</span>();
+        <span class="kw">let</span> <span class="ident">additional_info</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">additional_info</span>.<span class="ident">clone</span>();
 
         <span class="kw">let</span> <span class="ident">response_stream</span> <span class="op">=</span> <span class="macro">async_stream::try_stream!</span> {
             <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">request_stream</span> <span class="op">=</span> <span class="ident">request_stream</span>.<span class="ident">into_inner</span>();
@@ -352,7 +352,7 @@
                         <span class="ident">error_logger</span>.<span class="ident">log_error</span>(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;Couldn&#39;t create self attestation behavior: {:?}&quot;</span>, <span class="ident">error</span>));
                         <span class="ident">Status::internal</span>(<span class="string">&quot;&quot;</span>)
                     })<span class="question-mark">?</span>,
-                    <span class="ident">additional_info</span>,
+                    <span class="ident">additional_info</span>
             );
             <span class="kw">while</span> <span class="op">!</span><span class="ident">handshaker</span>.<span class="ident">is_completed</span>() {
                 <span class="kw">let</span> <span class="ident">incoming_message</span> <span class="op">=</span> <span class="ident">request_stream</span>.<span class="ident">next</span>()

@@ -770,7 +770,6 @@
 <span id="765">765</span>
 <span id="766">766</span>
 <span id="767">767</span>
-<span id="768">768</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2021 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -807,7 +806,7 @@
     },
     <span class="ident">proto</span>::{<span class="ident">AttestationInfo</span>, <span class="ident">AttestationReport</span>},
 };
-<span class="kw">use</span> <span class="ident">alloc</span>::{<span class="ident">boxed::Box</span>, <span class="ident">vec</span>, <span class="ident">vec::Vec</span>};
+<span class="kw">use</span> <span class="ident">alloc</span>::{<span class="ident">boxed::Box</span>, <span class="ident">sync::Arc</span>, <span class="ident">vec</span>, <span class="ident">vec::Vec</span>};
 <span class="kw">use</span> <span class="ident">anyhow</span>::{<span class="ident">anyhow</span>, <span class="ident">Context</span>};
 <span class="kw">use</span> <span class="ident">prost::Message</span>;
 
@@ -1104,13 +1103,13 @@
     <span class="ident">transcript</span>: <span class="ident">Transcript</span>,
     <span class="doccomment">/// Additional info about the server, including configuration information and proof of</span>
     <span class="doccomment">/// inclusion in a verifiable log.</span>
-    <span class="ident">additional_info</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
+    <span class="ident">additional_info</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">ServerHandshaker</span> {
     <span class="doccomment">/// Creates [`ServerHandshaker`] with `ServerHandshakerState::ExpectingClientIdentity`</span>
     <span class="doccomment">/// state.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">behavior</span>: <span class="ident">AttestationBehavior</span>, <span class="ident">additional_info</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>) -&gt; <span class="self">Self</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">behavior</span>: <span class="ident">AttestationBehavior</span>, <span class="ident">additional_info</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span>) -&gt; <span class="self">Self</span> {
         <span class="self">Self</span> {
             <span class="ident">behavior</span>,
             <span class="ident">state</span>: <span class="ident">ServerHandshakerState::ExpectingClientHello</span>,
@@ -1221,9 +1220,8 @@
                 .<span class="ident">as_ref</span>()
                 .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t get TEE certificate&quot;</span>)<span class="question-mark">?</span>;
 
-            <span class="kw">let</span> <span class="ident">additional_info</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">additional_info</span>.<span class="ident">clone</span>();
             <span class="kw">let</span> <span class="ident">attestation_info</span> <span class="op">=</span>
-                <span class="ident">create_attestation_info</span>(<span class="ident">signer</span>, <span class="ident">additional_info</span>.<span class="ident">as_ref</span>(), <span class="ident">tee_certificate</span>)
+                <span class="ident">create_attestation_info</span>(<span class="ident">signer</span>, <span class="self">self</span>.<span class="ident">additional_info</span>.<span class="ident">as_ref</span>(), <span class="ident">tee_certificate</span>)
                     .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t get attestation info&quot;</span>)<span class="question-mark">?</span>;
 
             <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">server_identity</span> <span class="op">=</span> <span class="ident">ServerIdentity::new</span>(
@@ -1233,7 +1231,7 @@
                     .<span class="ident">public_key</span>()
                     .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t get singing public key&quot;</span>)<span class="question-mark">?</span>,
                 <span class="ident">attestation_info</span>,
-                <span class="ident">additional_info</span>,
+                <span class="self">self</span>.<span class="ident">additional_info</span>.<span class="ident">clone</span>(),
             );
 
             <span class="comment">// Update current transcript.</span>
@@ -1260,7 +1258,7 @@
                 <span class="comment">// Attestation info.</span>
                 <span class="macro">vec!</span>[],
                 <span class="comment">// Additional info.</span>
-                <span class="macro">vec!</span>[],
+                <span class="ident">Arc::new</span>(<span class="macro">vec!</span>[]),
             )
         };
 

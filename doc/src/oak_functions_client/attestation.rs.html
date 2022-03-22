@@ -44,6 +44,7 @@
 <span id="39">39</span>
 <span id="40">40</span>
 <span id="41">41</span>
+<span id="42">42</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2021 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -76,7 +77,8 @@
     <span class="ident">config_verifier</span>: <span class="ident">ConfigurationVerifier</span>,
 ) -&gt; <span class="ident">ServerIdentityVerifier</span> {
     <span class="kw">let</span> <span class="ident">server_verifier</span> <span class="op">=</span> <span class="kw">move</span> <span class="op">|</span><span class="ident">server_identity</span>: <span class="ident">ServerIdentity</span><span class="op">|</span> -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">config</span> <span class="op">=</span> <span class="ident">ConfigurationInfo::decode</span>(<span class="ident">server_identity</span>.<span class="ident">additional_info</span>.<span class="ident">as_ref</span>())<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">config</span> <span class="op">=</span>
+            <span class="ident">ConfigurationInfo::decode</span>(<span class="ident">server_identity</span>.<span class="ident">additional_info</span>.<span class="ident">as_ref</span>().<span class="ident">as_slice</span>())<span class="question-mark">?</span>;
         <span class="comment">// TODO(#2347): Check that ConfigurationInfo does not have additional/unknown fields.</span>
         <span class="ident">config_verifier</span>(<span class="ident">config</span>)<span class="question-mark">?</span>;
         <span class="comment">// TODO(#2316): Verify proof of inclusion in Rekor.</span>
