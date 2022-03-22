@@ -57,7 +57,7 @@ pub struct Opt {
 pub enum Command {
     RunFunctionsExamples(RunFunctionsExamples),
     BuildFunctionsExample(RunFunctionsExamples),
-    BuildFunctionsServer(BuildFunctionsServer),
+    BuildFunctionsServerVariants(BuildFunctionsServer),
     Format,
     CheckFormat,
     RunTests,
@@ -198,8 +198,6 @@ impl std::str::FromStr for FunctionsServerVariant {
 
 #[derive(Parser, Clone, Debug)]
 pub struct BuildFunctionsServer {
-    #[clap(long, help = "server variant: [base, unsafe]", default_value = "base")]
-    pub server_variant: FunctionsServerVariant,
     #[clap(
         long,
         help = "rust toolchain override to use for the server compilation [e.g. stable, nightly, stage2]"

@@ -257,18 +257,18 @@ pub fn run_functions_examples(opt: &RunFunctionsExamples, scope: &Scope) -> Step
     }
 }
 
-pub fn build_functions_server(
-    server_variant: &FunctionsServerVariant,
-    opt: &BuildFunctionsServer,
-) -> Step {
-    build_rust_binary(
-        match server_variant {
-            FunctionsServerVariant::Base => "oak_functions/oak_functions_loader_base",
-            FunctionsServerVariant::Unsafe => "oak_functions/oak_functions_loader_unsafe",
-        },
-        opt,
-        &hashmap! {},
-    )
+pub fn build_functions_server_variants(opt: &BuildFunctionsServer) -> Step {
+    let variants = vec![
+        "oak_functions/oak_functions_loader_base",
+        "oak_functions/oak_functions_loader_unsafe",
+    ];
+    Step::Multiple {
+        name: "cargo build all variants of function server".to_string(),
+        steps: variants
+            .iter()
+            .map(|path| build_rust_binary(path, opt, &hashmap! {}))
+            .collect(),
+    }
 }
 
 fn run_functions_example(example: &FunctionsExample) -> Step {
@@ -297,10 +297,7 @@ fn run_functions_example(example: &FunctionsExample) -> Step {
             if opt.run_server.unwrap_or(true) {
                 // Build the server first so that when running it in the next step it will start up
                 // faster.
-                vec![build_functions_server(
-                    &example.example.server.server_variant,
-                    &opt.build_server,
-                )]
+                vec![build_functions_server_variants(&opt.build_server)]
             } else {
                 vec![]
             },
@@ -363,10 +360,7 @@ pub fn build_functions_example(opt: &RunFunctionsExamples, scope: &Scope) -> Ste
             functions_example.construct_application_build_steps(),
             // Build the server first so that when running it in the next step it will start up
             // faster.
-            vec![build_functions_server(
-                &example.server.server_variant,
-                &opt.build_server,
-            )],
+            vec![build_functions_server_variants(&opt.build_server)],
             if opt.build_docker {
                 vec![build_docker(&example)]
             } else {
@@ -683,7 +677,7 @@ fn build_rust_binary(
     env: &HashMap<String, String>,
 ) -> Step {
     Step::Single {
-        name: "build rust binary".to_string(),
+        name: format!("build rust binary {}", manifest_dir),
         command: Cmd::new_with_env(
             "cargo",
             spread![
