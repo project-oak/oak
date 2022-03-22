@@ -41,7 +41,7 @@ struct SessionTracker {
     /// PEM encoded X.509 certificate that signs TEE firmware key.
     tee_certificate: Vec<u8>,
     /// Configuration information to provide to the client for the attestation step.
-    additional_info: Vec<u8>,
+    additional_info: Arc<Vec<u8>>,
     known_sessions: LruCache<SessionId, SessionState>,
 }
 
@@ -53,7 +53,7 @@ impl SessionTracker {
         let known_sessions = LruCache::new(SESSIONS_CACHE_SIZE);
         Self {
             tee_certificate,
-            additional_info,
+            additional_info: Arc::new(additional_info),
             known_sessions,
         }
     }
@@ -71,7 +71,7 @@ impl SessionTracker {
         match self.known_sessions.pop(&session_id) {
             None => match AttestationBehavior::create_self_attestation(&self.tee_certificate) {
                 Ok(behavior) => Ok(SessionState::HandshakeInProgress(Box::new(
-                    ServerHandshaker::new(behavior, Arc::new(self.additional_info.clone())),
+                    ServerHandshaker::new(behavior, self.additional_info.clone()),
                 ))),
                 Err(error) => Err(error.context("Couldn't create self attestation behavior")),
             },
