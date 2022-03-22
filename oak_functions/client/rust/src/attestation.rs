@@ -30,7 +30,8 @@ pub fn into_server_identity_verifier(
     config_verifier: ConfigurationVerifier,
 ) -> ServerIdentityVerifier {
     let server_verifier = move |server_identity: ServerIdentity| -> anyhow::Result<()> {
-        let config = ConfigurationInfo::decode(server_identity.additional_info.as_ref())?;
+        let config =
+            ConfigurationInfo::decode(server_identity.additional_info.as_ref().as_slice())?;
         // TODO(#2347): Check that ConfigurationInfo does not have additional/unknown fields.
         config_verifier(config)?;
         // TODO(#2316): Verify proof of inclusion in Rekor.

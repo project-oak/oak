@@ -34,7 +34,7 @@ use crate::{
     },
     proto::{AttestationInfo, AttestationReport},
 };
-use alloc::{boxed::Box, vec, vec::Vec};
+use alloc::{boxed::Box, sync::Arc, vec, vec::Vec};
 use anyhow::{anyhow, Context};
 use prost::Message;
 
@@ -331,13 +331,13 @@ pub struct ServerHandshaker {
     transcript: Transcript,
     /// Additional info about the server, including configuration information and proof of
     /// inclusion in a verifiable log.
-    additional_info: Vec<u8>,
+    additional_info: Arc<Vec<u8>>,
 }
 
 impl ServerHandshaker {
     /// Creates [`ServerHandshaker`] with `ServerHandshakerState::ExpectingClientIdentity`
     /// state.
-    pub fn new(behavior: AttestationBehavior, additional_info: Vec<u8>) -> Self {
+    pub fn new(behavior: AttestationBehavior, additional_info: Arc<Vec<u8>>) -> Self {
         Self {
             behavior,
             state: ServerHandshakerState::ExpectingClientHello,
@@ -448,9 +448,8 @@ impl ServerHandshaker {
                 .as_ref()
                 .context("Couldn't get TEE certificate")?;
 
-            let additional_info = self.additional_info.clone();
             let attestation_info =
-                create_attestation_info(signer, additional_info.as_ref(), tee_certificate)
+                create_attestation_info(signer, self.additional_info.as_ref(), tee_certificate)
                     .context("Couldn't get attestation info")?;
 
             let mut server_identity = ServerIdentity::new(
@@ -460,7 +459,7 @@ impl ServerHandshaker {
                     .public_key()
                     .context("Couldn't get singing public key")?,
                 attestation_info,
-                additional_info,
+                self.additional_info.clone(),
             );
 
             // Update current transcript.
@@ -487,7 +486,7 @@ impl ServerHandshaker {
                 // Attestation info.
                 vec![],
                 // Additional info.
-                vec![],
+                Arc::new(vec![]),
             )
         };
 

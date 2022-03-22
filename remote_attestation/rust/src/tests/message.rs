@@ -25,7 +25,7 @@ use crate::{
         MAXIMUM_MESSAGE_SIZE, REPLAY_PROTECTION_ARRAY_LENGTH, SERVER_IDENTITY_HEADER,
     },
 };
-use alloc::{vec, vec::Vec};
+use alloc::{sync::Arc, vec, vec::Vec};
 use anyhow::{anyhow, Context};
 use assert_matches::assert_matches;
 use quickcheck::{quickcheck, TestResult};
@@ -96,7 +96,7 @@ fn test_serialize_server_identity() {
         transcript_signature: Vec<u8>,
         signing_public_key: Vec<u8>,
         attestation_info: Vec<u8>,
-        additional_info: Vec<u8>,
+        additional_info: Arc<Vec<u8>>,
     ) -> TestResult {
         if ephemeral_public_key.len() > KEY_AGREEMENT_ALGORITHM_KEY_LENGTH
             || random.len() > REPLAY_PROTECTION_ARRAY_LENGTH
@@ -131,7 +131,9 @@ fn test_serialize_server_identity() {
         assert!(result.is_ok());
         TestResult::from_bool(result.unwrap())
     }
-    quickcheck(property as fn(Vec<u8>, Vec<u8>, Vec<u8>, Vec<u8>, Vec<u8>, Vec<u8>) -> TestResult);
+    quickcheck(
+        property as fn(Vec<u8>, Vec<u8>, Vec<u8>, Vec<u8>, Vec<u8>, Arc<Vec<u8>>) -> TestResult,
+    );
 }
 
 #[test]
@@ -202,7 +204,7 @@ fn test_deserialize_message() {
         default_array(),
         default_array(),
         vec![],
-        vec![],
+        Arc::new(vec![]),
     );
     let deserialized_server_identity = deserialize_message(&server_identity.serialize().unwrap());
     assert_matches!(deserialized_server_identity, Ok(_));

@@ -24,7 +24,10 @@ use crate::{
 use lru::LruCache;
 use oak_remote_attestation::handshaker::{AttestationBehavior, Encryptor, ServerHandshaker};
 use oak_utils::LogError;
-use std::{convert::TryInto, sync::Mutex};
+use std::{
+    convert::TryInto,
+    sync::{Arc, Mutex},
+};
 use tonic;
 
 enum SessionState {
@@ -38,7 +41,7 @@ struct SessionTracker {
     /// PEM encoded X.509 certificate that signs TEE firmware key.
     tee_certificate: Vec<u8>,
     /// Configuration information to provide to the client for the attestation step.
-    additional_info: Vec<u8>,
+    additional_info: Arc<Vec<u8>>,
     known_sessions: LruCache<SessionId, SessionState>,
 }
 
@@ -50,7 +53,7 @@ impl SessionTracker {
         let known_sessions = LruCache::new(SESSIONS_CACHE_SIZE);
         Self {
             tee_certificate,
-            additional_info,
+            additional_info: Arc::new(additional_info),
             known_sessions,
         }
     }

@@ -22,7 +22,7 @@ use crate::{
     },
     tests::message::INVALID_MESSAGE_HEADER,
 };
-use alloc::{boxed::Box, vec};
+use alloc::{boxed::Box, sync::Arc, vec};
 use assert_matches::assert_matches;
 
 const TEE_MEASUREMENT: &str = "Test TEE measurement";
@@ -48,7 +48,8 @@ fn create_handshakers() -> (ClientHandshaker, ServerHandshaker) {
             .unwrap();
 
     let additional_info = br"Additional Info".to_vec();
-    let server_handshaker = ServerHandshaker::new(bidirectional_attestation, additional_info);
+    let server_handshaker =
+        ServerHandshaker::new(bidirectional_attestation, Arc::new(additional_info));
 
     (client_handshaker, server_handshaker)
 }
