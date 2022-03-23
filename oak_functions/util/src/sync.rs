@@ -14,11 +14,11 @@
 // limitations under the License.
 //
 
-use lock_api::{GuardSend, RawMutex};
-use std::{
+use core::{
     hint::spin_loop,
     sync::atomic::{AtomicBool, Ordering},
 };
+use lock_api::{GuardSend, RawMutex};
 
 pub struct SpinLock(AtomicBool);
 
@@ -28,11 +28,12 @@ unsafe impl RawMutex for SpinLock {
     const INIT: SpinLock = SpinLock(AtomicBool::new(false));
 
     fn lock(&self) {
-        while let Err(_) =
-            self.0
-                .compare_exchange_weak(false, true, Ordering::Acquire, Ordering::Relaxed)
+        while !self
+            .0
+            .compare_exchange_weak(false, true, Ordering::Acquire, Ordering::Relaxed)
+            .is_ok()
         {
-            // While spinning to acquire the lock, we should perform a read
+            // While spinning to acquire the lock, we should perform a read.
             while self.0.load(Ordering::Relaxed) {
                 spin_loop()
             }

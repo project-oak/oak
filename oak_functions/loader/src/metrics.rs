@@ -26,6 +26,7 @@ use oak_functions_abi::proto::OakStatus;
 use oak_functions_metrics::{
     PrivateMetricsAggregator, PrivateMetricsConfig, PrivateMetricsExtension, PrivateMetricsProxy,
 };
+// TODO(#2630): Use the std version of Mutex in environments where std is available.
 use oak_functions_util::sync::Mutex;
 use wasmi::ValueType;
 

@@ -21,10 +21,9 @@ use anyhow::Context;
 use log::Level;
 use oak_logger::OakLogger;
 // TODO(#2580): Convert to `no_std` compatible random number generation.
+use oak_functions_util::sync::Mutex;
 use rand::{distributions::Open01, rngs::StdRng, thread_rng, Rng, SeedableRng};
 use serde::Deserialize;
-// TODO(#2579): Replace with no_std compatible implementation once available.
-use std::sync::Mutex;
 
 /// Configuration for differentially-private metrics reporting.
 #[derive(Deserialize, Debug)]
@@ -323,11 +322,7 @@ impl PrivateMetricsProxy {
     ///
     /// See [PrivateMetricsAggregator::report_metrics] for more details.
     fn publish(self) -> Option<(usize, Vec<(String, i64)>)> {
-        if let Ok(mut aggregator) = self.aggregator.lock() {
-            aggregator.report_metrics(self.data)
-        } else {
-            None
-        }
+        self.aggregator.lock().report_metrics(self.data)
     }
 }
 

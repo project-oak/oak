@@ -2048,6 +2048,7 @@ dependencies = [
  "anyhow",
  "log",
  "maplit",
+ "oak_functions_util",
  "oak_logger",
  "rand 0.8.5",
  "serde",
