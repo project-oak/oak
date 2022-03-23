@@ -199,12 +199,10 @@ impl std::str::FromStr for FunctionsServerVariant {
 
 impl FunctionsServerVariant {
     // Get path to manifest for the variant.
-    pub fn path_to_manifest(&self) -> String {
+    pub fn path_to_manifest(&self) -> &'static str {
         match self {
-            FunctionsServerVariant::Base => "oak_functions/oak_functions_loader_base".to_string(),
-            FunctionsServerVariant::Unsafe => {
-                "oak_functions/oak_functions_loader_unsafe".to_string()
-            }
+            FunctionsServerVariant::Base => "oak_functions/oak_functions_loader_base",
+            FunctionsServerVariant::Unsafe => "oak_functions/oak_functions_loader_unsafe",
         }
     }
 }
