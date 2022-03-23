@@ -259,6 +259,8 @@ pub fn run_functions_examples(opt: &RunFunctionsExamples, scope: &Scope) -> Step
 }
 
 /// Build every variant of the function server.
+/// It's easier to always build all variants than to control which variant to build and
+/// the overhead of building all variants is acceptable.
 pub fn build_functions_server_variants(opt: &BuildFunctionsServer) -> Step {
     Step::Multiple {
         name: "cargo build all variants of function server".to_string(),
