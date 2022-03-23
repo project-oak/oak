@@ -17,6 +17,7 @@
 use crate::{files::*, internal::*};
 use maplit::hashmap;
 use std::collections::HashMap;
+use strum::IntoEnumIterator;
 
 #[cfg(target_os = "macos")]
 const DEFAULT_SERVER_RUST_TARGET: &str = "x86_64-apple-darwin";
@@ -259,15 +260,10 @@ pub fn run_functions_examples(opt: &RunFunctionsExamples, scope: &Scope) -> Step
 
 /// Build every variant of the function server.
 pub fn build_functions_server_variants(opt: &BuildFunctionsServer) -> Step {
-    let variants = vec![
-        "oak_functions/oak_functions_loader_base",
-        "oak_functions/oak_functions_loader_unsafe",
-    ];
     Step::Multiple {
         name: "cargo build all variants of function server".to_string(),
-        steps: variants
-            .iter()
-            .map(|path| build_rust_binary(path, opt, &hashmap! {}))
+        steps: FunctionsServerVariant::iter()
+            .map(|variant| build_rust_binary(&variant.path_to_manifest(), opt, &hashmap! {}))
             .collect(),
     }
 }

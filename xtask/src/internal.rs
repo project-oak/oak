@@ -24,6 +24,7 @@ use std::{
     path::{Path, PathBuf},
     time::Instant,
 };
+use strum_macros::EnumIter;
 use tokio::io::{empty, AsyncRead, AsyncReadExt};
 
 #[derive(Parser, Clone)]
@@ -168,7 +169,7 @@ pub struct BuildClient {
     pub client_rust_target: Option<String>,
 }
 
-#[derive(serde::Deserialize, Debug, Clone, PartialEq)]
+#[derive(serde::Deserialize, Debug, Clone, PartialEq, EnumIter)]
 pub enum FunctionsServerVariant {
     /// Production-like server variant, without logging or any of the experimental features enabled
     Base,
@@ -192,6 +193,18 @@ impl std::str::FromStr for FunctionsServerVariant {
                 "Failed to parse functions server variant {}",
                 variant
             )),
+        }
+    }
+}
+
+impl FunctionsServerVariant {
+    // Get path to manifest for the variant.
+    pub fn path_to_manifest(&self) -> String {
+        match self {
+            FunctionsServerVariant::Base => "oak_functions/oak_functions_loader_base".to_string(),
+            FunctionsServerVariant::Unsafe => {
+                "oak_functions/oak_functions_loader_unsafe".to_string()
+            }
         }
     }
 }
