@@ -176,7 +176,7 @@ will take some time, but subsequent builds should be cached and so run much
 faster.
 
 ```bash
-xtask build-functions-server
+xtask build-functions-server-variants
 ```
 
 ### Run Oak Functions Server
