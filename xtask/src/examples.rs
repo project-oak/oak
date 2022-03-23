@@ -265,7 +265,7 @@ pub fn build_functions_server_variants(opt: &BuildFunctionsServer) -> Step {
     Step::Multiple {
         name: "cargo build all variants of function server".to_string(),
         steps: FunctionsServerVariant::iter()
-            .map(|variant| build_rust_binary(&variant.path_to_manifest(), opt, &hashmap! {}))
+            .map(|variant| build_rust_binary(variant.path_to_manifest(), opt, &hashmap! {}))
             .collect(),
     }
 }
