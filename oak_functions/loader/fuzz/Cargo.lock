@@ -614,6 +614,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "33a33a362ce288760ec6a508b94caaec573ae7d3bbbd91b87aa0bad4456839db"
 
 [[package]]
+name = "lock_api"
+version = "0.4.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "88943dd7ef4a2e5a4bfa2753aaab3013e34ce2533d1996fb18ef591e315e2b3b"
+dependencies = [
+ "scopeguard",
+]
+
+[[package]]
 name = "log"
 version = "0.4.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -762,6 +771,7 @@ dependencies = [
  "oak_functions_abi",
  "oak_functions_lookup",
  "oak_functions_metrics",
+ "oak_functions_util",
  "oak_logger",
  "oak_remote_attestation",
  "oak_utils",
@@ -802,6 +812,7 @@ name = "oak_functions_lookup"
 version = "0.1.0"
 dependencies = [
  "log",
+ "oak_functions_util",
  "oak_logger",
 ]
 
@@ -812,9 +823,17 @@ dependencies = [
  "anyhow",
  "log",
  "maplit",
+ "oak_functions_util",
  "oak_logger",
  "rand",
  "serde",
+]
+
+[[package]]
+name = "oak_functions_util"
+version = "0.1.0"
+dependencies = [
+ "lock_api",
 ]
 
 [[package]]
@@ -1152,6 +1171,12 @@ dependencies = [
  "lazy_static",
  "winapi",
 ]
+
+[[package]]
+name = "scopeguard"
+version = "1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d29ab0c6d3fc0ee92fe66e2d99f700eab17a8d57d1c1d3b748380fb20baa78cd"
 
 [[package]]
 name = "sct"
