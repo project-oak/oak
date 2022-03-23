@@ -765,6 +765,7 @@ dependencies = [
  "oak_logger",
  "oak_remote_attestation",
  "oak_utils",
+ "parity-wasm",
  "prost",
  "rand",
  "serde",

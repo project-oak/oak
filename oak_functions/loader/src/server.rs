@@ -24,6 +24,12 @@ use oak_functions_abi::proto::{
     ChannelHandle, ChannelStatus, OakStatus, Request, Response, ServerPolicy, StatusCode,
 };
 use oak_logger::OakLogger;
+use parity_wasm::{
+    builder::DataSegmentBuilder,
+    elements::{
+        DataSegment, GlobalEntry, GlobalType, InitExpr, Instruction, MemoryType, Module, ValueType,
+    },
+};
 use serde::Deserialize;
 use std::{collections::HashMap, convert::TryInto, str, sync::Arc, time::Duration};
 use tokio::sync::mpsc::{
@@ -31,10 +37,11 @@ use tokio::sync::mpsc::{
     error::{TryRecvError, TrySendError},
     Receiver, Sender,
 };
-use wasmi::ValueType;
 
 const MAIN_FUNCTION_NAME: &str = "main";
 const ALLOC_FUNCTION_NAME: &str = "alloc";
+const WARMUP_FUNCTION_NAME: &str = "warmup";
+const MEMORY_SECTION_EXPORT_NAME: &str = "memory";
 
 /// Wasm host function index numbers for `wasmi` to map import names with. This numbering is not
 /// exposed to the Wasm client. See <https://docs.rs/wasmi/0.6.2/wasmi/trait.Externals.html>
@@ -61,11 +68,15 @@ pub type AbiPointerOffset = u32;
 pub type AbiChannelHandle = i32;
 /// Wasm type identifier for position/offset values in linear memory. Any future 64-bit version of
 /// Wasm would use a different value.
-pub const ABI_USIZE: ValueType = ValueType::I32;
+pub const ABI_USIZE: wasmi::ValueType = wasmi::ValueType::I32;
 
 /// Minimum size of constant response bytes. It is large enough to fit an error response, in case
 /// the policy is violated.
 const MIN_RESPONSE_SIZE: u32 = 50;
+
+/// Minimum number of consecutive bytes that must be zero before we consider it a large enough gap
+/// to create a new data segment.
+const MIN_DATA_SEGMENT_GAP: usize = 16;
 
 /// Similar to [`ServerPolicy`], but it is used for reading the policy provided in the config,
 /// and is therefore not guaranteed to be valid.
@@ -553,7 +564,7 @@ impl WasmState {
         check_export_function_signature(
             &instance,
             ALLOC_FUNCTION_NAME,
-            &wasmi::Signature::new(&[ValueType::I32][..], Some(ValueType::I32)),
+            &wasmi::Signature::new(&[wasmi::ValueType::I32][..], Some(wasmi::ValueType::I32)),
         )
         .context(" could not validate `alloc` export")?;
 
@@ -562,7 +573,7 @@ impl WasmState {
         // `memory` is not available.
         abi.memory = Some(
             instance
-                .export_by_name("memory")
+                .export_by_name(MEMORY_SECTION_EXPORT_NAME)
                 .context("could not find Wasm `memory` export")?
                 .as_memory()
                 .cloned()
@@ -696,8 +707,8 @@ impl WasmHandler {
         extension_factories: Vec<BoxedExtensionFactory>,
         logger: Logger,
     ) -> anyhow::Result<Self> {
-        let module = wasmi::Module::from_buffer(&wasm_module_bytes)
-            .map_err(|err| anyhow::anyhow!("could not load module from buffer: {:?}", err))?;
+        let module = parse_wasm_bytes(wasm_module_bytes, &extension_factories, logger.clone())
+            .context("couldn't parse wasm module bytes")?;
 
         Ok(WasmHandler {
             module: Arc::new(module),
@@ -779,6 +790,195 @@ impl WasmHandler {
     }
 }
 
+/// Parses the Wasm bytes to a Wasmi module.
+///
+/// If the module contains an exported function named "warmup" with the appropriate signature (no
+/// arguments, no result) the warmup function is executed and the module is updated to represent a
+/// snapshot of the state post-warmup.
+fn parse_wasm_bytes(
+    wasm_bytes: &[u8],
+    extension_factories: &[BoxedExtensionFactory],
+    logger: Logger,
+) -> anyhow::Result<wasmi::Module> {
+    let parity_module = Module::from_bytes(wasm_bytes)
+        .map_err(anyhow::Error::msg)
+        .context("couldn't load module from buffer")?;
+    let module = wasmi::Module::from_parity_wasm_module(parity_module.clone())
+        .map_err(anyhow::Error::msg)
+        .context("couldn't process module")?;
+
+    let mut extensions_indices = HashMap::new();
+    let mut extensions_metadata = HashMap::new();
+    let channel_switchboard = ChannelSwitchboard::new();
+
+    for (ind, factory) in extension_factories.iter().enumerate() {
+        let extension = factory.create()?;
+        match extension {
+            BoxedExtension::Native(ref native_extension) => {
+                let (name, signature) = native_extension.get_metadata();
+                extensions_indices.insert(ind + EXTENSION_INDEX_OFFSET, extension);
+                extensions_metadata.insert(name, (ind + EXTENSION_INDEX_OFFSET, signature));
+            }
+            BoxedExtension::Uwabi(_) => {
+                // UWABI extensions are not available during warmup.
+            }
+        }
+    }
+
+    let abi = WasmState {
+        request_bytes: Vec::new(),
+        response_bytes: Vec::new(),
+        instance: None,
+        memory: None,
+        logger,
+        extensions_indices: Some(extensions_indices),
+        extensions_metadata,
+        channel_switchboard,
+    };
+
+    // Create a module instance and, if a warmup function is exported, execute it and update the
+    // module with the post-warmup snapshot state.
+    let instance = wasmi::ModuleInstance::new(
+        &module,
+        &wasmi::ImportsBuilder::new().with_resolver("oak_functions", &abi),
+    )
+    .map_err(anyhow::Error::msg)
+    .context("couldn't instantiate module")?
+    .assert_no_start();
+    let result = if check_export_function_signature(
+        &instance,
+        WARMUP_FUNCTION_NAME,
+        &wasmi::Signature::new(&[][..], None),
+    )
+    .is_ok()
+    {
+        warmup_and_snapshot(parity_module, &instance).context("couldn't run warmup")?
+    } else {
+        module
+    };
+
+    Ok(result)
+}
+
+fn warmup_and_snapshot(
+    mut parity_module: Module,
+    instance: &wasmi::ModuleRef,
+) -> anyhow::Result<wasmi::Module> {
+    // Run warmup exported function.
+    instance
+        .invoke_export(WARMUP_FUNCTION_NAME, &[], &mut wasmi::NopExternals)
+        .map_err(anyhow::Error::msg)
+        .context("couldn't invoke warmup")?;
+
+    // Replace globals on the module.
+    let global_entries = parity_module
+        .global_section_mut()
+        .context("no globals section")?
+        .entries_mut();
+    global_entries.clear();
+    global_entries.extend(instance.globals().iter().map(global_reference_to_entry));
+
+    // Find the non-zero sequences in memory and use these to replace the data segments.
+    let memory = instance
+        .export_by_name(MEMORY_SECTION_EXPORT_NAME)
+        .context("could not find Wasm `memory` export")?
+        .as_memory()
+        .cloned()
+        .context("could not interpret Wasm `memory` export as memory")?;
+
+    let data_segments = parity_module
+        .data_section_mut()
+        .context("no data section")?
+        .entries_mut();
+
+    data_segments.clear();
+    data_segments.append(&mut memory_to_data_sections(
+        memory.direct_access().as_ref(),
+    ));
+
+    let memories = parity_module
+        .memory_section_mut()
+        .context("no data section")?
+        .entries_mut();
+
+    memories.clear();
+    memories.push(MemoryType::new(
+        memory.current_size().0 as u32,
+        memory.maximum().map(|value| value.0 as u32),
+    ));
+
+    wasmi::Module::from_parity_wasm_module(parity_module)
+        .map_err(anyhow::Error::msg)
+        .context("couldn't process snapshot module")
+}
+
+fn global_reference_to_entry(global_ref: &wasmi::GlobalRef) -> GlobalEntry {
+    match global_ref.get() {
+        wasmi::RuntimeValue::F32(value) => GlobalEntry::new(
+            GlobalType::new(ValueType::F32, global_ref.is_mutable()),
+            InitExpr::new(vec![
+                Instruction::F32Const(value.to_bits()),
+                Instruction::End,
+            ]),
+        ),
+        wasmi::RuntimeValue::F64(value) => GlobalEntry::new(
+            GlobalType::new(ValueType::F64, global_ref.is_mutable()),
+            InitExpr::new(vec![
+                Instruction::F64Const(value.to_bits()),
+                Instruction::End,
+            ]),
+        ),
+        wasmi::RuntimeValue::I32(value) => GlobalEntry::new(
+            GlobalType::new(ValueType::I32, global_ref.is_mutable()),
+            InitExpr::new(vec![Instruction::I32Const(value), Instruction::End]),
+        ),
+        wasmi::RuntimeValue::I64(value) => GlobalEntry::new(
+            GlobalType::new(ValueType::I64, global_ref.is_mutable()),
+            InitExpr::new(vec![Instruction::I64Const(value), Instruction::End]),
+        ),
+    }
+}
+
+/// Scans the linear memory to extract non-zero sequences as `DataSegment`s.
+///
+/// At least `MIN_DATA_SEGMENT_GAP` consecutive zero are required before we will split it into a new
+/// data segement.
+fn memory_to_data_sections(memory: &[u8]) -> Vec<DataSegment> {
+    let mut result = Vec::new();
+    let mut start = 0usize;
+    let mut end = 0usize;
+    let mut sequence = false;
+    for i in 0..memory.len() {
+        if memory[i] == 0 {
+            if sequence && end + MIN_DATA_SEGMENT_GAP <= i {
+                sequence = false;
+                result.push(
+                    DataSegmentBuilder::new()
+                        .offset(Instruction::I32Const(start as i32))
+                        .value(memory[start..=end].to_vec())
+                        .build(),
+                );
+            }
+        } else if sequence {
+            end = i;
+        } else {
+            sequence = true;
+            start = i;
+            end = i;
+        }
+    }
+    if sequence {
+        result.push(
+            DataSegmentBuilder::new()
+                .offset(Instruction::I32Const(start as i32))
+                .value(memory[start..=end].to_vec())
+                .build(),
+        );
+    }
+
+    result
+}
+
 /// A resolver function, mapping `oak_functions` host function names to an index and a type
 /// signature.
 fn oak_functions_resolve_func(field_name: &str) -> Option<(usize, wasmi::Signature)> {
@@ -792,7 +992,7 @@ fn oak_functions_resolve_func(field_name: &str) -> Option<(usize, wasmi::Signatu
                     ABI_USIZE, // buf_ptr_ptr
                     ABI_USIZE, // buf_len_ptr
                 ][..],
-                Some(ValueType::I32),
+                Some(wasmi::ValueType::I32),
             ),
         ),
         "write_response" => (
@@ -802,7 +1002,7 @@ fn oak_functions_resolve_func(field_name: &str) -> Option<(usize, wasmi::Signatu
                     ABI_USIZE, // buf_ptr
                     ABI_USIZE, // buf_len
                 ][..],
-                Some(ValueType::I32),
+                Some(wasmi::ValueType::I32),
             ),
         ),
         "write_log_message" => (
@@ -812,7 +1012,7 @@ fn oak_functions_resolve_func(field_name: &str) -> Option<(usize, wasmi::Signatu
                     ABI_USIZE, // buf_ptr
                     ABI_USIZE, // buf_len
                 ][..],
-                Some(ValueType::I32),
+                Some(wasmi::ValueType::I32),
             ),
         ),
         "channel_read" => (
@@ -823,7 +1023,7 @@ fn oak_functions_resolve_func(field_name: &str) -> Option<(usize, wasmi::Signatu
                     ABI_USIZE, // dest_buf_ptr_ptr
                     ABI_USIZE, // dest_buf_len_ptr
                 ][..],
-                Some(ValueType::I32),
+                Some(wasmi::ValueType::I32),
             ),
         ),
         "channel_write" => (
@@ -834,7 +1034,7 @@ fn oak_functions_resolve_func(field_name: &str) -> Option<(usize, wasmi::Signatu
                     ABI_USIZE, // src_buf_ptr
                     ABI_USIZE, // src_buf_len
                 ][..],
-                Some(ValueType::I32),
+                Some(wasmi::ValueType::I32),
             ),
         ),
         _ => return None,

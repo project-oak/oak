@@ -47,6 +47,32 @@ memory allocated from the WebAssembly module through `alloc`.
 A canonical implementation of `alloc` is
 [provided in the Oak Functions Rust SDK](/oak_functions/sdk/oak_functions/src/lib.rs).
 
+### `warmup` - Optional
+
+- no params
+- no results
+
+If the WebAssembly module exports a function called warmup, the runtime executes
+it after initially loading the module. Once execution of `warmup` is complete
+the runtime takes a snapshot of the
+[globals](https://webassembly.github.io/spec/core/syntax/modules.html#syntax-global)
+and
+[linear memory](https://webassembly.github.io/spec/core/syntax/modules.html#syntax-mem).
+The runtime then updates the in-memory copy of the module by replacing the
+globals and data segments. A new data segment is added for every non-zero
+section of linear memory. These data sections will be used to initialise the
+linear memory for invocations of main so that the state for each instance is the
+same as it was when the warmup completed.
+
+This is inspired by [Wizer](https://github.com/bytecodealliance/wizer), but only
+updates the in-memory copy of the WebAssembly module at application startup
+rather than rewriting the module ahead of time.
+
+This is used in the
+[Weather Lookup example](/oak_functions/examples/weather_lookup/module/src/lib.rs)
+to avoid redoing the expensive initialisation done by the
+[S2 geometry library](https://github.com/yjh0502/rust-s2) for every request.
+
 ## Imported Functions
 
 Each Oak Functions WebAssembly module can rely on the the Oak Functions runtime
