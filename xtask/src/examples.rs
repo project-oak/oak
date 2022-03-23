@@ -257,6 +257,7 @@ pub fn run_functions_examples(opt: &RunFunctionsExamples, scope: &Scope) -> Step
     }
 }
 
+/// Build every variant of the function server.
 pub fn build_functions_server_variants(opt: &BuildFunctionsServer) -> Step {
     let variants = vec![
         "oak_functions/oak_functions_loader_base",
@@ -295,8 +296,8 @@ fn run_functions_example(example: &FunctionsExample) -> Step {
         steps: vec![
             example.construct_application_build_steps(),
             if opt.run_server.unwrap_or(true) {
-                // Build the server first so that when running it in the next step it will start up
-                // faster.
+                // Build (all variants of) the server first so that when running a variant in the
+                // next step it will start up faster.
                 vec![build_functions_server_variants(&opt.build_server)]
             } else {
                 vec![]
