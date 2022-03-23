@@ -16,6 +16,8 @@
 
 #![feature(async_closure)]
 
+extern crate alloc;
+
 pub mod grpc;
 pub mod logger;
 pub mod lookup;
