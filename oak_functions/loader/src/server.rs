@@ -807,6 +807,8 @@ fn parse_wasm_bytes(
         .map_err(anyhow::Error::msg)
         .context("couldn't process module")?;
 
+    // We need a temporary Wasm state instance with extnsions to act as an import resolver,
+    // otherwise the module instance cannot be created.
     let mut extensions_indices = HashMap::new();
     let mut extensions_metadata = HashMap::new();
     let channel_switchboard = ChannelSwitchboard::new();
@@ -860,6 +862,12 @@ fn parse_wasm_bytes(
     Ok(result)
 }
 
+/// Invokes the warmup exported function and updates the module to contain a post-warmup snapshot of
+/// the memory and globals.
+///
+/// Inspired by ideas from https://github.com/bytecodealliance/wizer/blob/main/src/snapshot.rs, but
+/// simplified as Wasmi does not support dynamic linking of Wasm modules and only a single linear
+/// memory with index 0.
 fn warmup_and_snapshot(
     mut parity_module: Module,
     instance: &wasmi::ModuleRef,
@@ -896,6 +904,7 @@ fn warmup_and_snapshot(
         memory.direct_access().as_ref(),
     ));
 
+    // Update the minimum size of the memory to match the current size.
     let memories = parity_module
         .memory_section_mut()
         .context("no data section")?
@@ -941,8 +950,8 @@ fn global_reference_to_entry(global_ref: &wasmi::GlobalRef) -> GlobalEntry {
 
 /// Scans the linear memory to extract non-zero sequences as `DataSegment`s.
 ///
-/// At least `MIN_DATA_SEGMENT_GAP` consecutive zero are required before we will split it into a new
-/// data segement.
+/// At least `MIN_DATA_SEGMENT_GAP` consecutive zeros are required before we will split it into a
+/// new data segement.
 fn memory_to_data_sections(memory: &[u8]) -> Vec<DataSegment> {
     let mut result = Vec::new();
     let mut start = 0usize;
