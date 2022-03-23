@@ -25,13 +25,15 @@ pub struct SpinLock(AtomicBool);
 unsafe impl RawMutex for SpinLock {
     type GuardMarker = GuardSend;
 
+    // This should be replaced in the future by `const fn new() -> Self`.
+    #[allow(clippy::declare_interior_mutable_const)]
     const INIT: SpinLock = SpinLock(AtomicBool::new(false));
 
     fn lock(&self) {
-        while !self
+        while self
             .0
             .compare_exchange_weak(false, true, Ordering::Acquire, Ordering::Relaxed)
-            .is_ok()
+            .is_err()
         {
             // While spinning to acquire the lock, we should perform a read.
             while self.0.load(Ordering::Relaxed) {
