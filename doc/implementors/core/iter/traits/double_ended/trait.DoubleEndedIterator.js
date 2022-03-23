@@ -1,0 +1,3 @@
+(function() {var implementors = {};
+implementors["xtask"] = [{"text":"impl <a class=\"trait\" href=\"https://doc.rust-lang.org/nightly/core/iter/traits/double_ended/trait.DoubleEndedIterator.html\" title=\"trait core::iter::traits::double_ended::DoubleEndedIterator\">DoubleEndedIterator</a> for <a class=\"struct\" href=\"xtask/internal/struct.FunctionsServerVariantIter.html\" title=\"struct xtask::internal::FunctionsServerVariantIter\">FunctionsServerVariantIter</a>","synthetic":false,"types":["xtask::internal::FunctionsServerVariantIter"]}];
+if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

@@ -701,13 +701,6 @@
 <span id="696">696</span>
 <span id="697">697</span>
 <span id="698">698</span>
-<span id="699">699</span>
-<span id="700">700</span>
-<span id="701">701</span>
-<span id="702">702</span>
-<span id="703">703</span>
-<span id="704">704</span>
-<span id="705">705</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2021 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -727,6 +720,7 @@
 <span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">files</span>::<span class="kw-2">*</span>, <span class="ident">internal</span>::<span class="kw-2">*</span>};
 <span class="kw">use</span> <span class="ident">maplit::hashmap</span>;
 <span class="kw">use</span> <span class="ident">std::collections::HashMap</span>;
+<span class="kw">use</span> <span class="ident">strum::IntoEnumIterator</span>;
 
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">target_os</span> <span class="op">=</span> <span class="string">&quot;macos&quot;</span>)]</span>
 <span class="kw">const</span> <span class="ident">DEFAULT_SERVER_RUST_TARGET</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;x86_64-apple-darwin&quot;</span>;
@@ -967,18 +961,16 @@
     }
 }
 
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">build_functions_server</span>(
-    <span class="ident">server_variant</span>: <span class="kw-2">&amp;</span><span class="ident">FunctionsServerVariant</span>,
-    <span class="ident">opt</span>: <span class="kw-2">&amp;</span><span class="ident">BuildFunctionsServer</span>,
-) -&gt; <span class="ident">Step</span> {
-    <span class="ident">build_rust_binary</span>(
-        <span class="kw">match</span> <span class="ident">server_variant</span> {
-            <span class="ident">FunctionsServerVariant::Base</span> =&gt; <span class="string">&quot;oak_functions/oak_functions_loader_base&quot;</span>,
-            <span class="ident">FunctionsServerVariant::Unsafe</span> =&gt; <span class="string">&quot;oak_functions/oak_functions_loader_unsafe&quot;</span>,
-        },
-        <span class="ident">opt</span>,
-        <span class="kw-2">&amp;</span><span class="macro">hashmap!</span> {},
-    )
+<span class="doccomment">/// Build every variant of the function server.</span>
+<span class="doccomment">/// It&#39;s easier to always build all variants than to control which variant to build and</span>
+<span class="doccomment">/// the overhead of building all variants is acceptable.</span>
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">build_functions_server_variants</span>(<span class="ident">opt</span>: <span class="kw-2">&amp;</span><span class="ident">BuildFunctionsServer</span>) -&gt; <span class="ident">Step</span> {
+    <span class="ident">Step::Multiple</span> {
+        <span class="ident">name</span>: <span class="string">&quot;cargo build all variants of function server&quot;</span>.<span class="ident">to_string</span>(),
+        <span class="ident">steps</span>: <span class="ident">FunctionsServerVariant::iter</span>()
+            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">variant</span><span class="op">|</span> <span class="ident">build_rust_binary</span>(<span class="ident">variant</span>.<span class="ident">path_to_manifest</span>(), <span class="ident">opt</span>, <span class="kw-2">&amp;</span><span class="macro">hashmap!</span> {}))
+            .<span class="ident">collect</span>(),
+    }
 }
 
 <span class="kw">fn</span> <span class="ident">run_functions_example</span>(<span class="ident">example</span>: <span class="kw-2">&amp;</span><span class="ident">FunctionsExample</span>) -&gt; <span class="ident">Step</span> {
@@ -1005,12 +997,9 @@
         <span class="ident">steps</span>: <span class="macro">vec!</span>[
             <span class="ident">example</span>.<span class="ident">construct_application_build_steps</span>(),
             <span class="kw">if</span> <span class="ident">opt</span>.<span class="ident">run_server</span>.<span class="ident">unwrap_or</span>(<span class="bool-val">true</span>) {
-                <span class="comment">// Build the server first so that when running it in the next step it will start up</span>
-                <span class="comment">// faster.</span>
-                <span class="macro">vec!</span>[<span class="ident">build_functions_server</span>(
-                    <span class="kw-2">&amp;</span><span class="ident">example</span>.<span class="ident">example</span>.<span class="ident">server</span>.<span class="ident">server_variant</span>,
-                    <span class="kw-2">&amp;</span><span class="ident">opt</span>.<span class="ident">build_server</span>,
-                )]
+                <span class="comment">// Build (all variants of) the server first so that when running a variant in the</span>
+                <span class="comment">// next step it will start up faster.</span>
+                <span class="macro">vec!</span>[<span class="ident">build_functions_server_variants</span>(<span class="kw-2">&amp;</span><span class="ident">opt</span>.<span class="ident">build_server</span>)]
             } <span class="kw">else</span> {
                 <span class="macro">vec!</span>[]
             },
@@ -1073,10 +1062,7 @@
             <span class="ident">functions_example</span>.<span class="ident">construct_application_build_steps</span>(),
             <span class="comment">// Build the server first so that when running it in the next step it will start up</span>
             <span class="comment">// faster.</span>
-            <span class="macro">vec!</span>[<span class="ident">build_functions_server</span>(
-                <span class="kw-2">&amp;</span><span class="ident">example</span>.<span class="ident">server</span>.<span class="ident">server_variant</span>,
-                <span class="kw-2">&amp;</span><span class="ident">opt</span>.<span class="ident">build_server</span>,
-            )],
+            <span class="macro">vec!</span>[<span class="ident">build_functions_server_variants</span>(<span class="kw-2">&amp;</span><span class="ident">opt</span>.<span class="ident">build_server</span>)],
             <span class="kw">if</span> <span class="ident">opt</span>.<span class="ident">build_docker</span> {
                 <span class="macro">vec!</span>[<span class="ident">build_docker</span>(<span class="kw-2">&amp;</span><span class="ident">example</span>)]
             } <span class="kw">else</span> {
@@ -1393,7 +1379,7 @@
     <span class="ident">env</span>: <span class="kw-2">&amp;</span><span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">String</span><span class="op">&gt;</span>,
 ) -&gt; <span class="ident">Step</span> {
     <span class="ident">Step::Single</span> {
-        <span class="ident">name</span>: <span class="string">&quot;build rust binary&quot;</span>.<span class="ident">to_string</span>(),
+        <span class="ident">name</span>: <span class="macro">format!</span>(<span class="string">&quot;build rust binary {}&quot;</span>, <span class="ident">manifest_dir</span>),
         <span class="ident">command</span>: <span class="ident">Cmd::new_with_env</span>(
             <span class="string">&quot;cargo&quot;</span>,
             <span class="macro">spread!</span>[
