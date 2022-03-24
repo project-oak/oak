@@ -858,13 +858,6 @@
 <span id="853">853</span>
 <span id="854">854</span>
 <span id="855">855</span>
-<span id="856">856</span>
-<span id="857">857</span>
-<span id="858">858</span>
-<span id="859">859</span>
-<span id="860">860</span>
-<span id="861">861</span>
-<span id="862">862</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -894,7 +887,6 @@
 
 <span class="kw">use</span> <span class="ident">clap</span>::{<span class="ident">IntoApp</span>, <span class="ident">Parser</span>};
 <span class="kw">use</span> <span class="ident">colored</span>::<span class="kw-2">*</span>;
-<span class="kw">use</span> <span class="ident">maplit::hashmap</span>;
 <span class="kw">use</span> <span class="ident">once_cell::sync::Lazy</span>;
 <span class="kw">use</span> <span class="ident">std</span>::{
     <span class="ident">path</span>::{<span class="ident">Path</span>, <span class="ident">PathBuf</span>},
@@ -1520,7 +1512,7 @@
             .<span class="ident">filter</span>(<span class="op">|</span><span class="ident">path</span><span class="op">|</span> <span class="ident">modified_crates</span>.<span class="ident">contains</span>(<span class="ident">path</span>))
             .<span class="ident">map</span>(<span class="op">|</span><span class="ident">entry</span><span class="op">|</span> <span class="ident">Step::Single</span> {
                 <span class="ident">name</span>: <span class="ident">entry</span>.<span class="ident">clone</span>(),
-                <span class="ident">command</span>: <span class="ident">Cmd::new_with_env</span>(
+                <span class="ident">command</span>: <span class="ident">Cmd::new</span>(
                     <span class="string">&quot;cargo&quot;</span>,
                     <span class="macro">spread!</span>[
                         <span class="string">&quot;fmt&quot;</span>,
@@ -1530,12 +1522,6 @@
                             <span class="ident">FormatMode::Fix</span> =&gt; <span class="macro">vec!</span>[],
                         },
                     ],
-                    <span class="kw-2">&amp;</span><span class="macro">hashmap!</span> {
-                        <span class="comment">// rustfmt emits copious debug logs, leading to multi-minute</span>
-                        <span class="comment">// runs if the user&#39;s env happens to have RUST_LOG=debug, so</span>
-                        <span class="comment">// force a higher log level.</span>
-                        <span class="string">&quot;RUST_LOG&quot;</span>.<span class="ident">to_string</span>() =&gt; <span class="string">&quot;warn&quot;</span>.<span class="ident">to_string</span>(),
-                    },
                 ),
             })
             .<span class="ident">collect</span>(),
