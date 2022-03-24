@@ -152,12 +152,6 @@ trait OakExampleSteps {
 
     fn get_build_client(&self) -> &BuildClient;
 
-    /// Get the directory of the server manifest depending on the server variant.
-    fn get_server_manifest(server_variant: &ServerVariant) -> &'static str;
-
-    /// Get the server binary depending on the server variant.
-    fn get_server_binary(server_variant: &ServerVariant) -> &'static str;
-
     /// Constructs application build steps.
     fn construct_application_build_steps(&self) -> Vec<Step>;
 
@@ -239,24 +233,6 @@ impl OakExampleSteps for OakFunctionsExample<'_> {
         match self.applications.get(app_variant) {
             None => run_clients,
             Some(app) => app.construct_server_run_step(self, run_clients),
-        }
-    }
-
-    fn get_server_manifest(server_variant: &ServerVariant) -> &'static str {
-        match server_variant {
-            ServerVariant::Base => "./oak_functions/oak_functions_loader_base",
-            ServerVariant::Unsafe => "./oak_functions/oak_functions_loader_unsafe",
-        }
-    }
-
-    fn get_server_binary(server_variant: &ServerVariant) -> &'static str {
-        match server_variant {
-            ServerVariant::Base => {
-                "./target/x86_64-unknown-linux-musl/release/oak_functions_loader_base"
-            }
-            ServerVariant::Unsafe => {
-                "./target/x86_64-unknown-linux-musl/release/oak_functions_loader_unsafe"
-            }
         }
     }
 }
@@ -504,7 +480,7 @@ fn run_functions_example_server(
     application: &OakFunctionsApplication,
 ) -> Box<dyn Runnable> {
     Cmd::new(
-        OakFunctionsExample::get_server_binary(&server.server_variant),
+        &server.server_variant.path_to_executable(),
         spread![
             format!("--wasm-path={}", application.wasm_path),
             ...server.additional_args.clone(),

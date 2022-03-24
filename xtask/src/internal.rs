@@ -206,6 +206,18 @@ impl ServerVariant {
             ServerVariant::Unsafe => "oak_functions/oak_functions_loader_unsafe",
         }
     }
+
+    /// Get path to the executable server binary for the server variant.
+    pub fn path_to_executable(&self) -> &'static str {
+        match self {
+            ServerVariant::Base => {
+                "./target/x86_64-unknown-linux-musl/release/oak_functions_loader_base"
+            }
+            ServerVariant::Unsafe => {
+                "./target/x86_64-unknown-linux-musl/release/oak_functions_loader_unsafe"
+            }
+        }
+    }
 }
 
 #[derive(Parser, Clone, Debug)]
