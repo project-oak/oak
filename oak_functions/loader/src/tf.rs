@@ -72,21 +72,11 @@ impl OakApiNativeExtension for TensorFlowModel<Logger> {
 }
 
 pub fn read_args(
-    extension: &TensorFlowModel<Logger>,
     wasm_state: &mut WasmState,
     input_ptr: AbiPointer,
     input_len: AbiPointerOffset,
-) -> Result<Vec<u8>, OakStatus> {
-    wasm_state
-        .get_memory()
-        .get(input_ptr, input_len as usize)
-        .map_err(|err| {
-            extension.log_error(&format!(
-                "tf_model_infer(): Unable to read input from guest memory: {:?}",
-                err
-            ));
-            OakStatus::ErrInvalidArgs
-        })
+) -> Result<Vec<u8>, wasmi::Error> {
+    wasm_state.get_memory().get(input_ptr, input_len as usize)
 }
 
 pub fn write_results(
@@ -111,7 +101,13 @@ fn tf_model_infer(
     inference_ptr_ptr: AbiPointer,
     inference_len_ptr: AbiPointer,
 ) -> Result<(), OakStatus> {
-    let input = read_args(tf_model, wasm_state, input_ptr, input_len)?;
+    let input = read_args(wasm_state, input_ptr, input_len).map_err(|err| {
+        tf_model.log_error(&format!(
+            "tf_model_infer(): Unable to read input from guest memory: {:?}",
+            err
+        ));
+        OakStatus::ErrInvalidArgs
+    })?;
 
     // Get the inference, and convert it into a protobuf-encoded byte array
     let inference = tf_model.get_inference(&input).map_err(|err| {

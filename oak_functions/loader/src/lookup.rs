@@ -52,50 +52,25 @@ impl ExtensionFactory for LookupFactory {
     }
 }
 
-pub fn read_args<L: OakLogger + Clone>(
-    extension: &LookupData<L>,
+pub fn read_args(
     wasm_state: &mut WasmState,
     key_ptr: AbiPointer,
     key_len: AbiPointerOffset,
-) -> Result<Vec<u8>, OakStatus> {
-    wasm_state
-        .get_memory()
-        .get(key_ptr, key_len as usize)
-        .map_err(|err| {
-            extension.log_error(&format!(
-                "storage_get_item(): Unable to read key from guest memory: {:?}",
-                err
-            ));
-            OakStatus::ErrInvalidArgs
-        })
+) -> Result<Vec<u8>, wasmi::Error> {
+    wasm_state.get_memory().get(key_ptr, key_len as usize)
 }
 
-pub fn write_results<L: OakLogger + Clone>(
-    extension: &mut LookupData<L>,
+pub fn write_results(
     wasm_state: &mut WasmState,
-    value: Option<Vec<u8>>,
+    value: Vec<u8>,
     value_ptr_ptr: AbiPointer,
     value_len_ptr: AbiPointer,
 ) -> Result<(), OakStatus> {
-    match value {
-        Some(value) => {
-            // Truncate value for logging.
-            let value_to_log = value.clone().into_iter().take(512).collect::<Vec<_>>();
-            extension.log_debug(&format!(
-                "storage_get_item(): value: {}",
-                format_bytes(&value_to_log)
-            ));
-            let dest_ptr = wasm_state.alloc(value.len() as u32);
-            wasm_state.write_buffer_to_wasm_memory(&value, dest_ptr)?;
-            wasm_state.write_u32_to_wasm_memory(dest_ptr, value_ptr_ptr)?;
-            wasm_state.write_u32_to_wasm_memory(value.len() as u32, value_len_ptr)?;
-            Ok(())
-        }
-        None => {
-            extension.log_debug("storage_get_item(): value not found");
-            Err(OakStatus::ErrStorageItemNotFound)
-        }
-    }
+    let dest_ptr = wasm_state.alloc(value.len() as u32);
+    wasm_state.write_buffer_to_wasm_memory(&value, dest_ptr)?;
+    wasm_state.write_u32_to_wasm_memory(dest_ptr, value_ptr_ptr)?;
+    wasm_state.write_u32_to_wasm_memory(value.len() as u32, value_len_ptr)?;
+    Ok(())
 }
 
 /// Corresponds to the host ABI function [`storage_get_item`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#storage_get_item).
@@ -107,10 +82,32 @@ pub fn storage_get_item<L: OakLogger + Clone>(
     value_ptr_ptr: AbiPointer,
     value_len_ptr: AbiPointer,
 ) -> Result<(), OakStatus> {
-    let key = read_args(extension, wasm_state, key_ptr, key_len)?;
+    let key = read_args(wasm_state, key_ptr, key_len).map_err(|err| {
+        extension.log_error(&format!(
+            "storage_get_item(): Unable to read key from guest memory: {:?}",
+            err
+        ));
+        OakStatus::ErrInvalidArgs
+    })?;
+
     extension.log_debug(&format!("storage_get_item(): key: {}", format_bytes(&key)));
     let value = extension.get(&key);
-    write_results(extension, wasm_state, value, value_ptr_ptr, value_len_ptr)
+
+    match value {
+        Some(value) => {
+            // Truncate value for logging.
+            let value_to_log = value.clone().into_iter().take(512).collect::<Vec<_>>();
+            extension.log_debug(&format!(
+                "storage_get_item(): value: {}",
+                format_bytes(&value_to_log)
+            ));
+            write_results(wasm_state, value, value_ptr_ptr, value_len_ptr)
+        }
+        None => {
+            extension.log_debug("storage_get_item(): value not found");
+            Err(OakStatus::ErrStorageItemNotFound)
+        }
+    }
 }
 
 impl<L> OakApiNativeExtension for LookupData<L>

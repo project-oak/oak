@@ -101,21 +101,11 @@ impl OakApiNativeExtension for PrivateMetricsExtension<Logger> {
 }
 
 pub fn read_args(
-    extension: &mut PrivateMetricsExtension<Logger>,
     wasm_state: &mut WasmState,
     buf_ptr: AbiPointer,
     buf_len: AbiPointerOffset,
-) -> Result<Vec<u8>, OakStatus> {
-    wasm_state
-        .get_memory()
-        .get(buf_ptr, buf_len as usize)
-        .map_err(|err| {
-            extension.log_error(&format!(
-                "report_metric(): Unable to read label from guest memory: {:?}",
-                err
-            ));
-            OakStatus::ErrInvalidArgs
-        })
+) -> Result<Vec<u8>, wasmi::Error> {
+    wasm_state.get_memory().get(buf_ptr, buf_len as usize)
 }
 
 /// Corresponds to the host ABI function [`report_metric`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#report_metric).
@@ -126,7 +116,13 @@ fn report_metric(
     buf_len: AbiPointerOffset,
     value: i64,
 ) -> Result<(), OakStatus> {
-    let raw_label = read_args(extension, wasm_state, buf_ptr, buf_len)?;
+    let raw_label = read_args(wasm_state, buf_ptr, buf_len).map_err(|err| {
+        extension.log_error(&format!(
+            "report_metric(): Unable to read label from guest memory: {:?}",
+            err
+        ));
+        OakStatus::ErrInvalidArgs
+    })?;
     let label = std::str::from_utf8(raw_label.as_slice()).map_err(|err| {
         extension.log_warning(&format!(
             "report_metric(): Not a valid UTF-8 encoded string: {:?}\nContent: {:?}",
