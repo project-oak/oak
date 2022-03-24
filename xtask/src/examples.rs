@@ -480,7 +480,7 @@ fn run_functions_example_server(
     application: &OakFunctionsApplication,
 ) -> Box<dyn Runnable> {
     Cmd::new(
-        &server.server_variant.path_to_executable(),
+        server.server_variant.path_to_executable(),
         spread![
             format!("--wasm-path={}", application.wasm_path),
             ...server.additional_args.clone(),
