@@ -807,7 +807,7 @@ fn parse_wasm_bytes(
         .map_err(anyhow::Error::msg)
         .context("couldn't process module")?;
 
-    // We need a temporary Wasm state instance with extnsions to act as an import resolver,
+    // We need a temporary Wasm state instance with extensions to act as an import resolver,
     // otherwise the module instance cannot be created.
     // TODO(#2631): Simplify code when import resolver no longer requires full WasmState instance.
     let mut extensions_indices = HashMap::new();
