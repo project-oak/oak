@@ -865,9 +865,10 @@ fn parse_wasm_bytes(
 /// Invokes the warmup exported function and updates the module to contain a post-warmup snapshot of
 /// the memory and globals.
 ///
-/// Inspired by ideas from https://github.com/bytecodealliance/wizer/blob/main/src/snapshot.rs, but
-/// simplified as Wasmi does not support dynamic linking of Wasm modules and only a single linear
-/// memory with index 0.
+/// Inspired by ideas from
+/// [Wazer's snapshot implementation](https://github.com/bytecodealliance/wizer/blob/main/src/snapshot.rs),
+/// but simplified as Wasmi does not support dynamic linking of Wasm modules and only a single
+/// linear memory with index 0.
 fn warmup_and_snapshot(
     mut parity_module: Module,
     instance: &wasmi::ModuleRef,
