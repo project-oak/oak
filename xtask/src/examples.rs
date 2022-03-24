@@ -265,7 +265,7 @@ pub fn build_functions_server_variants(opt: &BuildFunctionsServer) -> Step {
     Step::Multiple {
         name: "cargo build all variants of function server".to_string(),
         steps: FunctionsServerVariant::iter()
-            .map(|variant| build_rust_binary(variant.path_to_manifest(), opt, &hashmap! {}))
+            .map(|variant| build_rust_binary(variant.path_to_manifest(), opt))
             .collect(),
     }
 }
@@ -466,7 +466,7 @@ fn run_functions_example_server(
     example_server: &ExampleServer,
     application: &ApplicationFunctions,
 ) -> Box<dyn Runnable> {
-    Cmd::new_with_env(
+    Cmd::new(
         match example_server.server_variant {
             FunctionsServerVariant::Base => {
                 "target/x86_64-unknown-linux-musl/release/oak_functions_loader_base"
@@ -479,7 +479,6 @@ fn run_functions_example_server(
             format!("--wasm-path={}", application.wasm_path),
             ...example_server.additional_args.clone(),
         ],
-        &hashmap! {},
     )
 }
 
@@ -670,14 +669,10 @@ fn run(
     }
 }
 
-fn build_rust_binary(
-    manifest_dir: &str,
-    opt: &BuildFunctionsServer,
-    env: &HashMap<String, String>,
-) -> Step {
+fn build_rust_binary(manifest_dir: &str, opt: &BuildFunctionsServer) -> Step {
     Step::Single {
         name: format!("build rust binary {}", manifest_dir),
-        command: Cmd::new_with_env(
+        command: Cmd::new(
             "cargo",
             spread![
                 ...match &opt.server_rust_toolchain {
@@ -692,7 +687,6 @@ fn build_rust_binary(
                 format!("--target={}", opt.server_rust_target.as_deref().unwrap_or(DEFAULT_SERVER_RUST_TARGET)),
                 "--release".to_string(),
             ],
-            env,
         ),
     }
 }
