@@ -58,7 +58,7 @@ pub struct Opt {
 pub enum Command {
     RunOakFunctionsExamples(RunOakExamplesOpt),
     BuildOakFunctionsExample(RunOakExamplesOpt),
-    BuildOakFunctionsServer(BuildServerOpt),
+    BuildOakFunctionsServerVariants(BuildServerOpt),
     Format,
     CheckFormat,
     RunTests,
