@@ -809,6 +809,7 @@ fn parse_wasm_bytes(
 
     // We need a temporary Wasm state instance with extnsions to act as an import resolver,
     // otherwise the module instance cannot be created.
+    // TODO(#2631): Simplify code when import resolver no longer requires full WasmState instance.
     let mut extensions_indices = HashMap::new();
     let mut extensions_metadata = HashMap::new();
     let channel_switchboard = ChannelSwitchboard::new();
