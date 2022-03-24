@@ -8,7 +8,7 @@ source "$SCRIPTS_DIR/common"
 source "$SCRIPTS_DIR/gcp_common"
 
 # Build Oak Functions server binary and the example application, and the client to test the connection.
-./scripts/docker_run ./scripts/xtask build-functions-example \
+./scripts/docker_run ./scripts/xtask build-oak-functions-example \
   --example-name="${EXAMPLE_NAME}" \
   --client-variant=rust
 
