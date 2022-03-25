@@ -26,7 +26,7 @@ use oak_functions_abi::proto::{
 use oak_logger::OakLogger;
 use serde::Deserialize;
 use std::{collections::HashMap, convert::TryInto, str, sync::Arc, time::Duration};
-use tokio::sync::mpsc::{channel, error::TryRecvError, Receiver, Sender};
+use tokio::sync::mpsc::{channel, Receiver, Sender};
 use wasmi::ValueType;
 
 const MAIN_FUNCTION_NAME: &str = "main";
@@ -37,7 +37,6 @@ const ALLOC_FUNCTION_NAME: &str = "alloc";
 const READ_REQUEST: usize = 0;
 const WRITE_RESPONSE: usize = 1;
 const WRITE_LOG_MESSAGE: usize = 3;
-const CHANNEL_READ: usize = 4;
 const EXTENSION_INDEX_OFFSET: usize = 10;
 
 // Type alias for a message sent over a channel through UWABI.
@@ -345,6 +344,7 @@ impl WasmState {
     }
 
     // Helper function to get the hosted Endpoint for the given channel handle.
+    #[allow(dead_code)]
     fn get_endpoint_from_channel_handle(
         &mut self,
         channel_handle: AbiChannelHandle,
@@ -356,26 +356,6 @@ impl WasmState {
             .get_mut(&channel_handle)
             .ok_or(ChannelStatus::ChannelHandleInvalid)?;
         Ok(endpoint)
-    }
-
-    pub fn channel_read(
-        &mut self,
-        channel_handle: AbiChannelHandle,
-        dest_ptr_ptr: AbiPointer,
-        dest_len_ptr: AbiPointer,
-    ) -> Result<(), ChannelStatus> {
-        // Read message from channel at channel_handle.
-        let endpoint = self.get_endpoint_from_channel_handle(channel_handle)?;
-        let receiver = &mut endpoint.receiver;
-        let message = receiver.try_recv().map_err(|e| match e {
-            TryRecvError::Empty => ChannelStatus::ChannelEmpty,
-            TryRecvError::Disconnected => ChannelStatus::ChannelEndpointDisconnected,
-        })?;
-
-        // Write message to memory of the Wasm module.
-        self.alloc_and_write_buffer_to_wasm_memory(message, dest_ptr_ptr, dest_len_ptr)?;
-
-        Ok(())
     }
 
     /// Corresponds to the host ABI function [`write_log_message`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#write_log_message).
@@ -451,11 +431,6 @@ impl wasmi::Externals for WasmState {
             WRITE_LOG_MESSAGE => from_oak_status_result(
                 self.write_log_message(args.nth_checked(0)?, args.nth_checked(1)?),
             ),
-            CHANNEL_READ => from_channel_status_result(self.channel_read(
-                args.nth_checked(0)?,
-                args.nth_checked(1)?,
-                args.nth_checked(2)?,
-            )),
 
             _ => {
                 let mut extensions_indices = self
@@ -807,17 +782,6 @@ fn oak_functions_resolve_func(field_name: &str) -> Option<(usize, wasmi::Signatu
                 Some(ValueType::I32),
             ),
         ),
-        "channel_read" => (
-            CHANNEL_READ,
-            wasmi::Signature::new(
-                &[
-                    ABI_USIZE, // channel_handle
-                    ABI_USIZE, // dest_buf_ptr_ptr
-                    ABI_USIZE, // dest_buf_len_ptr
-                ][..],
-                Some(ValueType::I32),
-            ),
-        ),
 
         _ => return None,
     };
@@ -841,6 +805,7 @@ fn from_oak_status_result(
 /// `wasmi` specific result type `Result<Option<wasmi::RuntimeValue>, wasmi::Trap>`, mapping:
 /// - `Ok(())` to `Ok(Some(ChannelStatus::Ok))`
 /// - `Err(x)` to `Ok(Some(x))`
+#[allow(dead_code)]
 fn from_channel_status_result(
     result: Result<(), ChannelStatus>,
 ) -> Result<Option<wasmi::RuntimeValue>, wasmi::Trap> {
@@ -922,7 +887,10 @@ mod tests {
     fn test_start_from_empty_endpoints() {
         fn check_empty(endpoint: &mut Endpoint) {
             let receiver = &mut endpoint.receiver;
-            assert_eq!(TryRecvError::Empty, receiver.try_recv().unwrap_err());
+            assert_eq!(
+                tokio::sync::mpsc::error::TryRecvError::Empty,
+                receiver.try_recv().unwrap_err()
+            );
         }
         let (mut module, mut runtime) = channel_create();
         check_empty(&mut module);
@@ -995,66 +963,6 @@ mod tests {
         assert!(stopped_receiving.await.unwrap());
     }
 
-    #[tokio::test]
-    async fn test_hosted_channel_read_no_message() {
-        let channel_handle = ChannelHandle::Testing as i32;
-        let (mut wasm_state, _uwabi_extensions) = create_test_wasm_state_and_extensions();
-        let result = wasm_state.channel_read(channel_handle, 0, 0);
-        assert!(result.is_err());
-        assert_eq!(ChannelStatus::ChannelEmpty, result.unwrap_err());
-    }
-
-    #[tokio::test]
-    async fn test_hosted_channel_read_channel_closed() {
-        let channel_handle = ChannelHandle::Testing;
-        let (mut wasm_state, mut uwabi_extensions) = create_test_wasm_state_and_extensions();
-        // Drop all extensions to close the runtime endpoint of the channels.
-        uwabi_extensions.clear();
-        let result = wasm_state.channel_read(channel_handle as i32, 0, 0);
-        assert!(result.is_err());
-        assert_eq!(
-            ChannelStatus::ChannelEndpointDisconnected,
-            result.unwrap_err()
-        );
-    }
-
-    #[tokio::test]
-    async fn test_hosted_channel_read_ok() {
-        let channel_handle = ChannelHandle::Testing;
-        let message = vec![42, 42, 232];
-        let (mut wasm_state, mut uwabi_extensions) = create_test_wasm_state_and_extensions();
-        let mut testing_extension =
-            extension_for_channel_handle(&mut uwabi_extensions, channel_handle);
-
-        write_to_runtime_endpoint(&mut testing_extension, message.clone()).await;
-
-        // Guess some memory addresses in linear Wasm memory.
-        let dest_ptr_ptr: AbiPointer = 100;
-        let dest_len_ptr: AbiPointer = 150;
-
-        let result = wasm_state.channel_read(channel_handle as i32, dest_ptr_ptr, dest_len_ptr);
-        assert!(result.is_ok());
-
-        // Get dest_len from dest_len_ptr.
-        let dest_len: u32 =
-            LittleEndian::read_u32(&wasm_state.get_memory().get(dest_len_ptr, 4).unwrap());
-
-        // Assert that dest_len holds length of message.
-        assert_eq!(dest_len as usize, message.len());
-
-        // Get dest_ptr from dest_ptr_ptr.
-        let dest_ptr: u32 =
-            LittleEndian::read_u32(&wasm_state.get_memory().get(dest_ptr_ptr, 4).unwrap());
-
-        // Assert that dest_ptr holds message.
-        assert_eq!(
-            wasm_state
-                .read_buffer_from_wasm_memory(dest_ptr, dest_len)
-                .unwrap(),
-            message
-        );
-    }
-
     fn create_test_wasm_handler() -> WasmHandler {
         let logger = Logger::for_test();
 
@@ -1072,30 +980,5 @@ mod tests {
         wasm_handler
             .init_wasm_state_and_extensions(b"".to_vec())
             .expect("could not create wasm_state")
-    }
-
-    // Helper function for testing to write to the endpoint of the given UWABI Extension.
-    async fn write_to_runtime_endpoint(
-        uwabi_extension: &mut Box<dyn UwabiExtension>,
-        message: UwabiMessage,
-    ) {
-        let endpoint = uwabi_extension.get_endpoint_mut();
-        let result = endpoint.sender.send(message.to_vec().clone()).await;
-        assert!(result.is_ok());
-    }
-
-    // Helper function for testing to find the Extension associated to ChannelHandle.
-    fn extension_for_channel_handle(
-        uwabi_extensions: &mut Vec<Box<dyn UwabiExtension>>,
-        channel_handle: ChannelHandle,
-    ) -> Box<dyn UwabiExtension> {
-        let pos_of_extension = uwabi_extensions
-            .iter()
-            .position(|uwabi_extension| {
-                let channel_handle_of_extension = uwabi_extension.get_channel_handle();
-                channel_handle_of_extension == channel_handle
-            })
-            .expect("No extension for channel handle.");
-        uwabi_extensions.remove(pos_of_extension)
     }
 }
