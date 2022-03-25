@@ -60,6 +60,7 @@ public class AttestationClient {
   private static final Logger logger = Logger.getLogger(AttestationClient.class.getName());
   // TODO(#1867): Add remote attestation support.
   private static final String TEST_TEE_MEASUREMENT = "Test TEE measurement";
+  private static final String SESSION_ID_BYTE_LENGTH = 8;
   private final Duration connectionTimeout;
   // HTTP/gRPC header for Google API keys.
   // https://cloud.google.com/apis/docs/system-parameters
@@ -126,7 +127,7 @@ public class AttestationClient {
     stub = UnarySessionGrpc.newBlockingStub(channel);
 
     SecureRandom random = new SecureRandom();
-    byte[] rawSessionId = new byte[8];
+    byte[] rawSessionId = new byte[SESSION_ID_BYTE_LENGTH];
     random.nextBytes(rawSessionId);
     sessionId = ByteString.copyFrom(rawSessionId);
 
