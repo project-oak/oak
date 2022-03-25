@@ -12,7 +12,7 @@ bytes = "*"
 clap = { version = "*", features = ["derive"] }
 env_logger = "*"
 futures = "*"
-grpc_streaming_attestation = { path = "../../../grpc_streaming_attestation/" }
+grpc_unary_attestation = { path = "../../../grpc_unary_attestation/" }
 http = "*"
 log = "*"
 oak_functions_abi = { path = "../../../oak_functions/abi" }

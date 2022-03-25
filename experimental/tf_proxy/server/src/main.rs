@@ -32,8 +32,8 @@ pub mod proto {
 use crate::grpc::handle_request;
 use anyhow::Context;
 use clap::Parser;
-use grpc_streaming_attestation::{
-    proto::streaming_session_server::StreamingSessionServer, server::AttestationServer,
+use grpc_unary_attestation::{
+    proto::unary_session_server::UnarySessionServer, server::AttestationServer,
 };
 use log::warn;
 use oak_functions_abi::proto::ConfigurationInfo;
@@ -105,7 +105,7 @@ async fn main() -> anyhow::Result<()> {
     let request_handler = async move |request| handle_request(client.clone(), request).await;
 
     Server::builder()
-        .add_service(StreamingSessionServer::new(AttestationServer::create(
+        .add_service(UnarySessionServer::new(AttestationServer::create(
             Vec::new(),
             request_handler,
             additional_info,
