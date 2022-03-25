@@ -26,7 +26,7 @@ use oak_functions_abi::proto::{
     ConfigurationInfo, PrivateMetricsConfig, Request, Response, ServerPolicy,
 };
 
-use oak_functions_client::{Client, Session};
+use oak_functions_client::Client;
 use oak_remote_attestation::crypto::get_sha256;
 use prost::Message;
 use std::{

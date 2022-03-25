@@ -22,7 +22,6 @@ byteorder = { version = "*", default-features = false }
 chrono = "*"
 clap = { version = "*", features = ["derive"] }
 futures = "*"
-grpc_streaming_attestation = { path = "../../grpc_streaming_attestation/" }
 grpc_unary_attestation = { path = "../../grpc_unary_attestation/" }
 http = "*"
 hyper = { version = "*", features = [

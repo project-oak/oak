@@ -20,7 +20,7 @@
 use anyhow::Context;
 use clap::Parser;
 use oak_functions_abi::proto::{ConfigurationInfo, Request};
-use oak_functions_client::{Client, Session, UnaryClient};
+use oak_functions_client::Client;
 use regex::Regex;
 
 #[derive(Parser, Clone)]
@@ -63,18 +63,9 @@ async fn main() -> anyhow::Result<()> {
         body: opt.request.as_bytes().to_vec(),
     };
 
-    let mut client: Box<dyn Session> = match opt.unary_request_model {
-        true => Box::new(
-            UnaryClient::new(&opt.uri, config_verifier)
-                .await
-                .context("Could not create Oak Functions client")?,
-        ),
-        false => Box::new(
-            Client::new(&opt.uri, config_verifier)
-                .await
-                .context("Could not create Oak Functions client")?,
-        ),
-    };
+    let mut client = Client::new(&opt.uri, config_verifier)
+        .await
+        .context("Could not create Oak Functions client")?;
 
     let response = client
         .invoke(request)
