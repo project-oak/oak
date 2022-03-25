@@ -250,6 +250,20 @@ impl WasmState {
         self.get_memory().get(buf_ptr, buf_len as usize)
     }
 
+    // Write result of exgtension to memory of Wasm module.
+    pub fn write_extension_result(
+        &mut self,
+        result: Vec<u8>,
+        result_ptr_ptr: AbiPointer,
+        result_len_ptr: AbiPointer,
+    ) -> Result<(), OakStatus> {
+        let buf_ptr = self.alloc(result.len() as u32);
+        self.write_buffer_to_wasm_memory(&result, buf_ptr)?;
+        self.write_u32_to_wasm_memory(buf_ptr, result_ptr_ptr)?;
+        self.write_u32_to_wasm_memory(result.len() as u32, result_len_ptr)?;
+        Ok(())
+    }
+
     /// Writes the buffer `source` at the address `dest` of the Wasm memory, if `source` fits in the
     /// allocated memory.
     pub fn write_buffer_to_wasm_memory(
