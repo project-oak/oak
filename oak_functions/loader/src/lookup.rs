@@ -75,24 +75,11 @@ pub fn write_results(
 
 /// Corresponds to the host ABI function [`storage_get_item`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#storage_get_item).
 pub fn storage_get_item<L: OakLogger + Clone>(
-    wasm_state: &mut WasmState,
     extension: &mut LookupData<L>,
-    key_ptr: AbiPointer,
-    key_len: AbiPointerOffset,
-    value_ptr_ptr: AbiPointer,
-    value_len_ptr: AbiPointer,
-) -> Result<(), OakStatus> {
-    let key = read_args(wasm_state, key_ptr, key_len).map_err(|err| {
-        extension.log_error(&format!(
-            "storage_get_item(): Unable to read key from guest memory: {:?}",
-            err
-        ));
-        OakStatus::ErrInvalidArgs
-    })?;
-
+    key: Vec<u8>,
+) -> Result<Vec<u8>, OakStatus> {
     extension.log_debug(&format!("storage_get_item(): key: {}", format_bytes(&key)));
     let value = extension.get(&key);
-
     match value {
         Some(value) => {
             // Truncate value for logging.
@@ -101,7 +88,7 @@ pub fn storage_get_item<L: OakLogger + Clone>(
                 "storage_get_item(): value: {}",
                 format_bytes(&value_to_log)
             ));
-            write_results(wasm_state, value, value_ptr_ptr, value_len_ptr)
+            Ok(value)
         }
         None => {
             extension.log_debug("storage_get_item(): value not found");
@@ -119,14 +106,28 @@ where
         wasm_state: &mut WasmState,
         args: wasmi::RuntimeArgs,
     ) -> Result<Result<(), OakStatus>, wasmi::Trap> {
-        Ok(storage_get_item(
-            wasm_state,
-            self,
-            args.nth_checked(0)?,
-            args.nth_checked(1)?,
-            args.nth_checked(2)?,
-            args.nth_checked(3)?,
-        ))
+        let key_ptr: AbiPointer = args.nth_checked(0)?;
+        let key_len: AbiPointerOffset = args.nth_checked(1)?;
+        let value_ptr_ptr: AbiPointer = args.nth_checked(2)?;
+        let value_len_ptr: AbiPointer = args.nth_checked(3)?;
+
+        let extension_args = wasm_state
+            .read_extension_args(key_ptr, key_len)
+            .map_err(|err| {
+                self.log_error(&format!(
+                    "storage_get_item(): Unable to read key from guest memory: {:?}",
+                    err
+                ));
+                OakStatus::ErrInvalidArgs
+            });
+
+        let extension_result = extension_args
+            .and_then(|key| storage_get_item(self, key))
+            .and_then(|value| {
+                wasm_state.write_extension_result(value, value_ptr_ptr, value_len_ptr)
+            });
+
+        Ok(extension_result)
     }
 
     fn get_metadata(&self) -> (String, wasmi::Signature) {
