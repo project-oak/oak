@@ -926,10 +926,6 @@ mod tests {
         assert!(&channel_switchboard
             .get_mut(&ChannelHandle::Unspecified)
             .is_none());
-
-        assert!(&channel_switchboard
-            .get_mut(&ChannelHandle::Testing)
-            .is_some());
     }
 
     #[tokio::test]
