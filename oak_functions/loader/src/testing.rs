@@ -17,8 +17,8 @@
 use crate::{
     logger::Logger,
     server::{
-        AbiPointer, AbiPointerOffset, BoxedExtension, BoxedExtensionFactory, Endpoint,
-        ExtensionFactory, OakApiNativeExtension, ABI_USIZE,
+        AbiPointer, AbiPointerOffset, BoxedExtension, BoxedExtensionFactory, ExtensionFactory,
+        OakApiNativeExtension, ABI_USIZE,
     },
 };
 
@@ -106,14 +106,13 @@ impl TestingFactory {
 
 impl ExtensionFactory for TestingFactory {
     fn create(&self) -> anyhow::Result<BoxedExtension> {
-        let extension = TestingExtension::new(None, self.logger.clone());
+        let extension = TestingExtension::new(self.logger.clone());
         Ok(Box::new(extension))
     }
 }
 
 #[allow(dead_code)]
 pub struct TestingExtension<L: oak_logger::OakLogger> {
-    endpoint: Option<Endpoint>,
     logger: L,
 }
 
@@ -121,8 +120,8 @@ impl<L> TestingExtension<L>
 where
     L: oak_logger::OakLogger,
 {
-    pub fn new(endpoint: Option<Endpoint>, logger: L) -> Self {
-        Self { endpoint, logger }
+    pub fn new(logger: L) -> Self {
+        Self { logger }
     }
 
     pub fn log_error(&self, message: &str) {

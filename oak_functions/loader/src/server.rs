@@ -23,7 +23,6 @@ use oak_functions_abi::proto::{OakStatus, Request, Response, ServerPolicy, Statu
 use oak_logger::OakLogger;
 use serde::Deserialize;
 use std::{collections::HashMap, convert::TryInto, str, sync::Arc, time::Duration};
-use tokio::sync::mpsc::{channel, Receiver, Sender};
 use wasmi::ValueType;
 
 const MAIN_FUNCTION_NAME: &str = "main";
@@ -35,14 +34,6 @@ const READ_REQUEST: usize = 0;
 const WRITE_RESPONSE: usize = 1;
 const WRITE_LOG_MESSAGE: usize = 3;
 const EXTENSION_INDEX_OFFSET: usize = 10;
-
-// Type alias for a message sent over a channel through UWABI.
-pub type UwabiMessage = Vec<u8>;
-
-// Bound on the amount of [`UwabiMessage`]s an [`Endpoint`] can hold on the sender and the
-// receiver individually. We fixed 100 arbitrarily, and it is the same for every Endpoint. We expect
-// UwabiMessages to be processed fast and do not expect to exceed the bound.
-const UWABI_CHANNEL_BOUND: usize = 100;
 
 // Type aliases for positions and offsets in Wasm linear memory. Any future 64-bit version
 // of Wasm would use different types.
@@ -723,76 +714,4 @@ pub fn format_bytes(v: &[u8]) -> String {
     std::str::from_utf8(v)
         .map(|s| s.to_string())
         .unwrap_or_else(|_| format!("{:?}", v))
-}
-
-// The Endpoint of a bidirectional channel.
-#[derive(Debug)]
-pub struct Endpoint {
-    pub sender: Sender<UwabiMessage>,
-    pub receiver: Receiver<UwabiMessage>,
-}
-
-/// Create a channel with two symmetrical endpoints. The [`UwabiMessage`] sent from one [`Endpoint`]
-/// are received at the other [`Endpoint`] and vice versa by connecting two unidirectional
-/// [tokio::mpsc channels](https://docs.rs/tokio/0.1.16/tokio/sync/mpsc/index.html).
-///
-/// In ASCII art:
-///
-/// ```text
-///   sender ____  ____ sender
-///              \/
-/// receiver ____/\____ receiver
-/// ```
-fn channel_create() -> (Endpoint, Endpoint) {
-    let (tx0, rx0) = channel::<UwabiMessage>(UWABI_CHANNEL_BOUND);
-    let (tx1, rx1) = channel::<UwabiMessage>(UWABI_CHANNEL_BOUND);
-    let endpoint0 = Endpoint {
-        sender: tx0,
-        receiver: rx1,
-    };
-    let endpoint1 = Endpoint {
-        sender: tx1,
-        receiver: rx0,
-    };
-    (endpoint0, endpoint1)
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_start_from_empty_endpoints() {
-        fn check_empty(endpoint: &mut Endpoint) {
-            let receiver = &mut endpoint.receiver;
-            assert_eq!(
-                tokio::sync::mpsc::error::TryRecvError::Empty,
-                receiver.try_recv().unwrap_err()
-            );
-        }
-        let (mut module, mut runtime) = channel_create();
-        check_empty(&mut module);
-        check_empty(&mut runtime);
-    }
-
-    #[tokio::test]
-    async fn test_crossed_write_read() {
-        async fn check_crossed_write_read(endpoint1: &mut Endpoint, endpoint2: &mut Endpoint) {
-            let message: UwabiMessage = vec![42, 21, 0];
-            let sender = &endpoint1.sender;
-            let send_result = sender.send(message.clone()).await;
-            assert!(send_result.is_ok());
-
-            let receiver = &mut endpoint2.receiver;
-            let received_message = receiver.recv().await.unwrap();
-
-            assert_eq!(message, received_message);
-        }
-
-        let (mut endpoint_1, mut endpoint_2) = channel_create();
-        // Check from endpoint_1 to endpoint_2.
-        check_crossed_write_read(&mut endpoint_1, &mut endpoint_2).await;
-        // Check the other direction from endpoint_2 to endpoint_1.
-        check_crossed_write_read(&mut endpoint_2, &mut endpoint_1).await;
-    }
 }
