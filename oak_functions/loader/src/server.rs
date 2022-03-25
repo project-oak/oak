@@ -241,6 +241,15 @@ impl WasmState {
             })
     }
 
+    /// Read arguments for extension from memory of Wasm module.
+    pub fn read_extension_args(
+        &self,
+        buf_ptr: AbiPointer,
+        buf_len: AbiPointerOffset,
+    ) -> Result<Vec<u8>, wasmi::Error> {
+        self.get_memory().get(buf_ptr, buf_len as usize)
+    }
+
     /// Writes the buffer `source` at the address `dest` of the Wasm memory, if `source` fits in the
     /// allocated memory.
     pub fn write_buffer_to_wasm_memory(

@@ -17,8 +17,8 @@
 use crate::{
     logger::Logger,
     server::{
-        AbiPointer, AbiPointerOffset, BoxedExtension, BoxedExtensionFactory, ExtensionFactory,
-        OakApiNativeExtension, WasmState, ABI_USIZE,
+        BoxedExtension, BoxedExtensionFactory, ExtensionFactory, OakApiNativeExtension, WasmState,
+        ABI_USIZE,
     },
 };
 use oak_functions_abi::proto::OakStatus;
@@ -71,13 +71,23 @@ impl OakApiNativeExtension for PrivateMetricsExtension<Logger> {
         wasm_state: &mut WasmState,
         args: wasmi::RuntimeArgs,
     ) -> Result<Result<(), OakStatus>, wasmi::Trap> {
-        Ok(report_metric(
-            wasm_state,
-            self,
-            args.nth_checked(0)?,
-            args.nth_checked(1)?,
-            args.nth_checked(2)?,
-        ))
+        let buf_ptr = args.nth_checked(0)?;
+        let buf_len = args.nth_checked(1)?;
+        let value = args.nth_checked(2)?;
+
+        let args = wasm_state
+            .read_extension_args(buf_ptr, buf_len)
+            .map_err(|err| {
+                self.log_error(&format!(
+                    "report_metric(): Unable to read label from guest memory: {:?}",
+                    err
+                ));
+                OakStatus::ErrInvalidArgs
+            });
+
+        let result = args.and_then(|raw_label| report_metric(self, raw_label, value));
+
+        Ok(result)
     }
 
     /// Each Oak Functions application can have at most one instance of PrivateMetricsProxy. So it
@@ -100,29 +110,12 @@ impl OakApiNativeExtension for PrivateMetricsExtension<Logger> {
     }
 }
 
-pub fn read_args(
-    wasm_state: &mut WasmState,
-    buf_ptr: AbiPointer,
-    buf_len: AbiPointerOffset,
-) -> Result<Vec<u8>, wasmi::Error> {
-    wasm_state.get_memory().get(buf_ptr, buf_len as usize)
-}
-
 /// Corresponds to the host ABI function [`report_metric`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#report_metric).
 fn report_metric(
-    wasm_state: &mut WasmState,
     extension: &mut PrivateMetricsExtension<Logger>,
-    buf_ptr: AbiPointer,
-    buf_len: AbiPointerOffset,
+    raw_label: Vec<u8>,
     value: i64,
 ) -> Result<(), OakStatus> {
-    let raw_label = read_args(wasm_state, buf_ptr, buf_len).map_err(|err| {
-        extension.log_error(&format!(
-            "report_metric(): Unable to read label from guest memory: {:?}",
-            err
-        ));
-        OakStatus::ErrInvalidArgs
-    })?;
     let label = std::str::from_utf8(raw_label.as_slice()).map_err(|err| {
         extension.log_warning(&format!(
             "report_metric(): Not a valid UTF-8 encoded string: {:?}\nContent: {:?}",
