@@ -5,9 +5,6 @@ authors = ["Razieh Behjati <razieh@google.com>"]
 edition = "2021"
 license = "Apache-2.0"
 
-[features]
-large-bench = []
-
 [lib]
 crate-type = ["cdylib", "rlib"]
 
@@ -34,3 +31,9 @@ tokio = { version = "*", features = [
   "rt-multi-thread"
 ] }
 tonic = "*"
+# Provide cargo with the dev version that is compatible with recent nightly Rust.
+# Once a new version is released, we should revert to loading this crate via crates.io.
+wizer = { git = 'https://github.com/bytecodealliance/wizer.git', rev = '7c33b0bc2bd40ceb98727482be8fd8f115c6ced6' }
+
+[package.metadata.cargo-udeps.ignore]
+development = ["wizer"]

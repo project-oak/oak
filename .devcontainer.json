@@ -4,7 +4,7 @@
 // - https://code.visualstudio.com/docs/remote/devcontainerjson-reference
 {
   // Do not modify manually. This value is automatically updated by ./scripts/docker_build .
-  "image": "sha256:d2ac0f6ad41502fdfe336b8074fbf1e4eff462fdb39b164f1cfba419f5eb3a60",
+  "image": "sha256:1efea0378c65660a81d23f82740f666da3f57108d8cb63d1217fcf67d908093c",
   "extensions": [
     "bazelbuild.vscode-bazel",
     "bodil.prettier-toml",

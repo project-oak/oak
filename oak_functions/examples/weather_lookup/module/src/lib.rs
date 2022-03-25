@@ -100,3 +100,12 @@ pub extern "C" fn main() {
     // Write the response.
     oak_functions::write_response(&response).expect("Couldn't write the response body.");
 }
+
+#[export_name = "wizer.initialize"]
+pub extern "C" fn init() {
+    // We perform a single S2 cell lookup to ensure that the lookup tables are initialised, as this
+    // initisalisation is quite expensive and we don't want to redo it for every request.
+    let level = location_utils::S2_DEFAULT_LEVEL;
+    let location = location_from_degrees(90., 45.);
+    let _ = find_cell(&location, level);
+}

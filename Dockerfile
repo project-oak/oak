@@ -234,6 +234,12 @@ RUN cargo install --version=${deadlinks_version} cargo-deadlinks
 # cf. https://github.com/rust-fuzz/cargo-fuzz/pull/277
 RUN cargo install --git https://github.com/rust-fuzz/cargo-fuzz/ --rev 8c964bf183c93cd49ad655eb2f3faecf543d0012
 
+# Install Wizer.
+# To allow running warmup initialisation on example Wasm modules.
+# https://github.com/bytecodealliance/wizer
+# The latest published version on crates.io is not compatible with recent nightly Rust.
+RUN cargo install --git https://github.com/bytecodealliance/wizer --rev 7c33b0bc2bd40ceb98727482be8fd8f115c6ced6 wizer --all-features
+
 # Where to install rust tooling
 ARG install_dir=${rustup_dir}/bin
 
