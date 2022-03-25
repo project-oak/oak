@@ -107,7 +107,7 @@ impl TestingFactory {
 impl ExtensionFactory for TestingFactory {
     fn create(&self) -> anyhow::Result<BoxedExtension> {
         let extension = TestingExtension::new(None, self.logger.clone());
-        Ok(BoxedExtension::Native(Box::new(extension)))
+        Ok(Box::new(extension))
     }
 }
 

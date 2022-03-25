@@ -48,7 +48,7 @@ impl LookupFactory {
 impl ExtensionFactory for LookupFactory {
     fn create(&self) -> anyhow::Result<BoxedExtension> {
         let extension = self.manager.create_lookup_data();
-        Ok(BoxedExtension::Native(Box::new(extension)))
+        Ok(Box::new(extension))
     }
 }
 

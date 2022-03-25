@@ -58,12 +58,10 @@ impl PrivateMetricsProxyFactory {
 impl ExtensionFactory for PrivateMetricsProxyFactory {
     fn create(&self) -> anyhow::Result<BoxedExtension> {
         let metrics_proxy = PrivateMetricsProxy::new(self.aggregator.clone());
-        Ok(BoxedExtension::Native(Box::new(PrivateMetricsExtension::<
-            Logger,
-        >::new(
+        Ok(Box::new(PrivateMetricsExtension::<Logger>::new(
             metrics_proxy,
             self.logger.clone(),
-        ))))
+        )))
     }
 }
 

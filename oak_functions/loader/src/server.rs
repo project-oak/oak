@@ -16,7 +16,6 @@
 use crate::logger::Logger;
 
 use anyhow::Context;
-use async_trait::async_trait;
 use byteorder::{ByteOrder, LittleEndian};
 use futures::future::FutureExt;
 use log::Level;
@@ -145,35 +144,9 @@ pub trait ExtensionFactory {
     fn create(&self) -> anyhow::Result<BoxedExtension>;
 }
 
-/// A BoxedExtension can either be a `Native extension called by a dedicated ABI function, or a
-/// `Uwabi` extension called by listening to a channel.
-pub enum BoxedExtension {
-    Native(Box<dyn OakApiNativeExtension + Send + Sync>),
-    Uwabi(Box<dyn UwabiExtension>),
-}
+pub type BoxedExtension = Box<dyn OakApiNativeExtension + Send + Sync>;
 
 pub type BoxedExtensionFactory = Box<dyn ExtensionFactory + Send + Sync>;
-
-/// Trait for implementing an extension which relies on UWABI.
-#[async_trait]
-pub trait UwabiExtension: Sync + Send {
-    /// Get the channel handle to address this extension.
-    fn get_channel_handle(&self) -> ChannelHandle;
-
-    /// Get the endpoint.
-    // TODO(#2508): Stop exposing the endpoint for an extension as soon as we have a way the
-    // extension handles how it reads/writes into the endpoint.
-    fn get_endpoint_mut(&mut self) -> &mut Endpoint;
-
-    /// Set the endpoint if it has not been set before.
-    // TODO(#2510) We cannot set the endpoint when we `create` the extension, as this would require
-    // to change the `BoxedExtensionFactory` trait. This helps to keep the changes to the
-    // (existing) Native extensions minimal.
-    fn set_endpoint(&mut self, endpoint: Endpoint);
-
-    // Run an UWABI extension by continously receiving messages on the endpoint and answering it.
-    async fn run(self: Box<Self>);
-}
 
 /// `WasmState` holds runtime values for a particular execution instance of Wasm, handling a
 /// single user request. The methods here correspond to the ABI host functions that allow the Wasm
@@ -438,10 +411,8 @@ impl wasmi::Externals for WasmState {
                     .take()
                     .expect("no extensions_indices is set");
                 let extension = match extensions_indices.get_mut(&index) {
-                    Some(BoxedExtension::Native(extension)) => Box::new(extension),
-                    Some(BoxedExtension::Uwabi(_)) => {
-                        panic!("Invoked Uwabi extension at index {} instead of reading/writing from channel.", index)
-                    }
+                    Some(extension) => Box::new(extension),
+
                     None => panic!("Unimplemented function at {}", index),
                 };
                 let result = from_oak_status_result(extension.invoke(self, args)?);
@@ -673,31 +644,17 @@ impl WasmHandler {
         })
     }
 
-    fn init_wasm_state_and_extensions(
-        &self,
-        request_bytes: Vec<u8>,
-    ) -> anyhow::Result<(WasmState, Vec<Box<dyn UwabiExtension>>)> {
+    fn init_wasm_state(&self, request_bytes: Vec<u8>) -> anyhow::Result<WasmState> {
         let mut extensions_indices = HashMap::new();
         let mut extensions_metadata = HashMap::new();
-        let mut uwabi_extensions: Vec<Box<dyn UwabiExtension>> = vec![];
 
-        let mut channel_switchboard = ChannelSwitchboard::new();
+        let channel_switchboard = ChannelSwitchboard::new();
 
         for (ind, factory) in self.extension_factories.iter().enumerate() {
             let extension = factory.create()?;
-            match extension {
-                BoxedExtension::Native(ref native_extension) => {
-                    let (name, signature) = native_extension.get_metadata();
-                    extensions_indices.insert(ind + EXTENSION_INDEX_OFFSET, extension);
-                    extensions_metadata.insert(name, (ind + EXTENSION_INDEX_OFFSET, signature));
-                }
-                BoxedExtension::Uwabi(mut uwabi_extension) => {
-                    let channel_handle = uwabi_extension.get_channel_handle();
-                    let endpoint = channel_switchboard.register(channel_handle);
-                    uwabi_extension.set_endpoint(endpoint);
-                    uwabi_extensions.push(uwabi_extension);
-                }
-            }
+            let (name, signature) = extension.get_metadata();
+            extensions_indices.insert(ind + EXTENSION_INDEX_OFFSET, extension);
+            extensions_metadata.insert(name, (ind + EXTENSION_INDEX_OFFSET, signature));
         }
 
         let wasm_state = WasmState::new(
@@ -709,40 +666,28 @@ impl WasmHandler {
             channel_switchboard,
         )?;
 
-        Ok((wasm_state, uwabi_extensions))
+        Ok(wasm_state)
     }
 
     pub async fn handle_invoke(&self, request: Request) -> anyhow::Result<Response> {
         let request_bytes = request.body;
-        let (mut wasm_state, uwabi_extensions) =
-            self.init_wasm_state_and_extensions(request_bytes)?;
-
-        for uwabi_extension in uwabi_extensions {
-            tokio::spawn(uwabi_extension.run());
-        }
+        let mut wasm_state = self.init_wasm_state(request_bytes)?;
 
         wasm_state.invoke();
-        for extension in wasm_state
+
+        for mut extension in wasm_state
             .extensions_indices
             .take()
             .expect("no extensions_indices is set in wasm_state")
             .into_values()
         {
-            if let BoxedExtension::Native(mut native_extension) = extension {
-                native_extension.terminate()?;
-            }
+            extension.terminate()?;
         }
 
         Ok(Response::create(
             StatusCode::Success,
             wasm_state.get_response_bytes(),
         ))
-
-        // Here we drop all endpoints of the Wasm module (i.e., the wasm_state.channel_switchboard).
-        // This indicates to the endpoints in the UWABI Extensions that they will not receive
-        // further messages and can stop. Note, that we do not do a clean shutdown of the receivers
-        // in the endpoints Wasm module, because there is no need to handle, or even log,
-        // the remaining messages.
     }
 }
 
@@ -920,7 +865,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_create_channel_switchboard_in_wasm_state() {
-        let (wasm_state, _) = create_test_wasm_state_and_extensions();
+        let wasm_state = create_test_wasm_state();
         let mut channel_switchboard = wasm_state.channel_switchboard;
 
         assert!(&channel_switchboard
@@ -930,7 +875,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_endpoint_from_channel_handle_out_of_range() {
-        let (mut wasm_state, _) = create_test_wasm_state_and_extensions();
+        let mut wasm_state = create_test_wasm_state();
         let result = wasm_state.get_endpoint_from_channel_handle(-1);
         assert!(result.is_err());
         assert_eq!(ChannelStatus::ChannelHandleInvalid, result.unwrap_err())
@@ -938,7 +883,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_endpoint_from_channel_handle_without_endpoint() {
-        let (mut wasm_state, _) = create_test_wasm_state_and_extensions();
+        let mut wasm_state = create_test_wasm_state();
         // Assumes ChannelHandle 0 will never have an Endpoint.
         let result = wasm_state.get_endpoint_from_channel_handle(0);
         assert!(result.is_err());
@@ -971,10 +916,10 @@ mod tests {
             .expect("could not create wasm_handler")
     }
 
-    fn create_test_wasm_state_and_extensions() -> (WasmState, Vec<Box<dyn UwabiExtension>>) {
+    fn create_test_wasm_state() -> WasmState {
         let wasm_handler = create_test_wasm_handler();
         wasm_handler
-            .init_wasm_state_and_extensions(b"".to_vec())
+            .init_wasm_state(b"".to_vec())
             .expect("could not create wasm_state")
     }
 }
