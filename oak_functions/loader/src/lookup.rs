@@ -17,8 +17,8 @@
 use crate::{
     logger::Logger,
     server::{
-        format_bytes, AbiPointer, AbiPointerOffset, BoxedExtension, BoxedExtensionFactory,
-        ExtensionFactory, OakApiNativeExtension, WasmState, ABI_USIZE,
+        format_bytes, BoxedExtension, BoxedExtensionFactory, ExtensionFactory,
+        OakApiNativeExtension, WasmState, ABI_USIZE,
     },
 };
 use oak_functions_abi::proto::OakStatus;
@@ -50,27 +50,6 @@ impl ExtensionFactory for LookupFactory {
         let extension = self.manager.create_lookup_data();
         Ok(BoxedExtension::Native(Box::new(extension)))
     }
-}
-
-pub fn read_args(
-    wasm_state: &mut WasmState,
-    key_ptr: AbiPointer,
-    key_len: AbiPointerOffset,
-) -> Result<Vec<u8>, wasmi::Error> {
-    wasm_state.get_memory().get(key_ptr, key_len as usize)
-}
-
-pub fn write_results(
-    wasm_state: &mut WasmState,
-    value: Vec<u8>,
-    value_ptr_ptr: AbiPointer,
-    value_len_ptr: AbiPointer,
-) -> Result<(), OakStatus> {
-    let dest_ptr = wasm_state.alloc(value.len() as u32);
-    wasm_state.write_buffer_to_wasm_memory(&value, dest_ptr)?;
-    wasm_state.write_u32_to_wasm_memory(dest_ptr, value_ptr_ptr)?;
-    wasm_state.write_u32_to_wasm_memory(value.len() as u32, value_len_ptr)?;
-    Ok(())
 }
 
 /// Provides logic for the host ABI function [`storage_get_item`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#storage_get_item).
@@ -106,10 +85,10 @@ where
         wasm_state: &mut WasmState,
         args: wasmi::RuntimeArgs,
     ) -> Result<Result<(), OakStatus>, wasmi::Trap> {
-        let key_ptr: AbiPointer = args.nth_checked(0)?;
-        let key_len: AbiPointerOffset = args.nth_checked(1)?;
-        let value_ptr_ptr: AbiPointer = args.nth_checked(2)?;
-        let value_len_ptr: AbiPointer = args.nth_checked(3)?;
+        let key_ptr = args.nth_checked(0)?;
+        let key_len = args.nth_checked(1)?;
+        let value_ptr_ptr = args.nth_checked(2)?;
+        let value_len_ptr = args.nth_checked(3)?;
 
         let extension_args = wasm_state
             .read_extension_args(key_ptr, key_len)
