@@ -144,8 +144,6 @@
 <span id="139">139</span>
 <span id="140">140</span>
 <span id="141">141</span>
-<span id="142">142</span>
-<span id="143">143</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2021 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -188,14 +186,32 @@
         <span class="ident">wasm_state</span>: <span class="kw-2">&amp;mut</span> <span class="ident">WasmState</span>,
         <span class="ident">args</span>: <span class="ident">wasmi::RuntimeArgs</span>,
     ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakStatus</span><span class="op">&gt;</span>, <span class="ident">wasmi::Trap</span><span class="op">&gt;</span> {
-        <span class="prelude-val">Ok</span>(<span class="ident">tf_model_infer</span>(
-            <span class="ident">wasm_state</span>,
-            <span class="self">self</span>,
-            <span class="ident">args</span>.<span class="ident">nth_checked</span>(<span class="number">0</span>)<span class="question-mark">?</span>,
-            <span class="ident">args</span>.<span class="ident">nth_checked</span>(<span class="number">1</span>)<span class="question-mark">?</span>,
-            <span class="ident">args</span>.<span class="ident">nth_checked</span>(<span class="number">2</span>)<span class="question-mark">?</span>,
-            <span class="ident">args</span>.<span class="ident">nth_checked</span>(<span class="number">3</span>)<span class="question-mark">?</span>,
-        ))
+        <span class="kw">let</span> <span class="ident">input_ptr</span>: <span class="ident">AbiPointer</span> <span class="op">=</span> <span class="ident">args</span>.<span class="ident">nth_checked</span>(<span class="number">0</span>)<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">input_len</span>: <span class="ident">AbiPointerOffset</span> <span class="op">=</span> <span class="ident">args</span>.<span class="ident">nth_checked</span>(<span class="number">1</span>)<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">inference_ptr_ptr</span>: <span class="ident">AbiPointer</span> <span class="op">=</span> <span class="ident">args</span>.<span class="ident">nth_checked</span>(<span class="number">2</span>)<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">inference_len_ptr</span>: <span class="ident">AbiPointer</span> <span class="op">=</span> <span class="ident">args</span>.<span class="ident">nth_checked</span>(<span class="number">3</span>)<span class="question-mark">?</span>;
+
+        <span class="kw">let</span> <span class="ident">extension_args</span> <span class="op">=</span> <span class="ident">wasm_state</span>
+            .<span class="ident">read_extension_args</span>(<span class="ident">input_ptr</span>, <span class="ident">input_len</span>)
+            .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> {
+                <span class="self">self</span>.<span class="ident">log_error</span>(<span class="kw-2">&amp;</span><span class="macro">format!</span>(
+                    <span class="string">&quot;tf_model_infer(): Unable to read input from guest memory: {:?}&quot;</span>,
+                    <span class="ident">err</span>
+                ));
+                <span class="ident">OakStatus::ErrInvalidArgs</span>
+            });
+
+        <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="ident">extension_args</span>
+            .<span class="ident">and_then</span>(<span class="op">|</span><span class="ident">input</span><span class="op">|</span> <span class="ident">tf_model_infer</span>(<span class="self">self</span>, <span class="ident">input</span>))
+            .<span class="ident">and_then</span>(<span class="op">|</span><span class="ident">encoded_inference</span><span class="op">|</span> {
+                <span class="ident">wasm_state</span>.<span class="ident">write_extension_result</span>(
+                    <span class="ident">encoded_inference</span>,
+                    <span class="ident">inference_ptr_ptr</span>,
+                    <span class="ident">inference_len_ptr</span>,
+                )
+            });
+
+        <span class="prelude-val">Ok</span>(<span class="ident">result</span>)
     }
 
     <span class="doccomment">/// Each Oak Functions application can have at most one instance of TensorFlowModule. So it is</span>
@@ -219,26 +235,11 @@
     }
 }
 
-<span class="doccomment">/// Corresponds to the host ABI function [`tf_model_infer`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#tf_model_infer).</span>
+<span class="doccomment">/// Provides logic for the host ABI function [`tf_model_infer`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#tf_model_infer).</span>
 <span class="kw">fn</span> <span class="ident">tf_model_infer</span>(
-    <span class="ident">wasm_state</span>: <span class="kw-2">&amp;mut</span> <span class="ident">WasmState</span>,
     <span class="ident">tf_model</span>: <span class="kw-2">&amp;</span><span class="ident">TensorFlowModel</span><span class="op">&lt;</span><span class="ident">Logger</span><span class="op">&gt;</span>,
-    <span class="ident">input_ptr</span>: <span class="ident">AbiPointer</span>,
-    <span class="ident">input_len</span>: <span class="ident">AbiPointerOffset</span>,
-    <span class="ident">inference_ptr_ptr</span>: <span class="ident">AbiPointer</span>,
-    <span class="ident">inference_len_ptr</span>: <span class="ident">AbiPointer</span>,
-) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakStatus</span><span class="op">&gt;</span> {
-    <span class="kw">let</span> <span class="ident">input</span> <span class="op">=</span> <span class="ident">wasm_state</span>
-        .<span class="ident">get_memory</span>()
-        .<span class="ident">get</span>(<span class="ident">input_ptr</span>, <span class="ident">input_len</span> <span class="kw">as</span> <span class="ident">usize</span>)
-        .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> {
-            <span class="ident">tf_model</span>.<span class="ident">log_error</span>(<span class="kw-2">&amp;</span><span class="macro">format!</span>(
-                <span class="string">&quot;tf_model_infer(): Unable to read input from guest memory: {:?}&quot;</span>,
-                <span class="ident">err</span>
-            ));
-            <span class="ident">OakStatus::ErrInvalidArgs</span>
-        })<span class="question-mark">?</span>;
-
+    <span class="ident">input</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
+) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span> {
     <span class="comment">// Get the inference, and convert it into a protobuf-encoded byte array</span>
     <span class="kw">let</span> <span class="ident">inference</span> <span class="op">=</span> <span class="ident">tf_model</span>.<span class="ident">get_inference</span>(<span class="kw-2">&amp;</span><span class="ident">input</span>).<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> {
         <span class="ident">tf_model</span>.<span class="ident">log_error</span>(<span class="kw-2">&amp;</span><span class="macro">format!</span>(
@@ -247,12 +248,7 @@
         ));
         <span class="ident">OakStatus::ErrBadTensorFlowModelInput</span>
     })<span class="question-mark">?</span>;
-    <span class="kw">let</span> <span class="ident">encoded_inference</span> <span class="op">=</span> <span class="ident">inference</span>.<span class="ident">encode_to_vec</span>();
-    <span class="kw">let</span> <span class="ident">buf_ptr</span> <span class="op">=</span> <span class="ident">wasm_state</span>.<span class="ident">alloc</span>(<span class="ident">encoded_inference</span>.<span class="ident">len</span>() <span class="kw">as</span> <span class="ident">u32</span>);
-    <span class="ident">wasm_state</span>.<span class="ident">write_buffer_to_wasm_memory</span>(<span class="kw-2">&amp;</span><span class="ident">encoded_inference</span>, <span class="ident">buf_ptr</span>)<span class="question-mark">?</span>;
-    <span class="ident">wasm_state</span>.<span class="ident">write_u32_to_wasm_memory</span>(<span class="ident">buf_ptr</span>, <span class="ident">inference_ptr_ptr</span>)<span class="question-mark">?</span>;
-    <span class="ident">wasm_state</span>.<span class="ident">write_u32_to_wasm_memory</span>(<span class="ident">encoded_inference</span>.<span class="ident">len</span>() <span class="kw">as</span> <span class="ident">u32</span>, <span class="ident">inference_len_ptr</span>)<span class="question-mark">?</span>;
-    <span class="prelude-val">Ok</span>(())
+    <span class="prelude-val">Ok</span>(<span class="ident">inference</span>.<span class="ident">encode_to_vec</span>())
 }
 
 <span class="doccomment">/// Read a tensorFlow model from the given path, into a byte array.</span>
