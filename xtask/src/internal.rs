@@ -24,6 +24,7 @@ use std::{
     path::{Path, PathBuf},
     time::Instant,
 };
+use strum_macros::EnumIter;
 use tokio::io::{empty, AsyncRead, AsyncReadExt};
 
 #[derive(Parser, Clone)]
@@ -57,7 +58,7 @@ pub struct Opt {
 pub enum Command {
     RunFunctionsExamples(RunFunctionsExamples),
     BuildFunctionsExample(RunFunctionsExamples),
-    BuildFunctionsServer(BuildFunctionsServer),
+    BuildFunctionsServerVariants(BuildFunctionsServer),
     Format,
     CheckFormat,
     RunTests,
@@ -168,7 +169,7 @@ pub struct BuildClient {
     pub client_rust_target: Option<String>,
 }
 
-#[derive(serde::Deserialize, Debug, Clone, PartialEq)]
+#[derive(serde::Deserialize, Debug, Clone, PartialEq, EnumIter)]
 pub enum FunctionsServerVariant {
     /// Production-like server variant, without logging or any of the experimental features enabled
     Base,
@@ -196,10 +197,18 @@ impl std::str::FromStr for FunctionsServerVariant {
     }
 }
 
+impl FunctionsServerVariant {
+    // Get path to manifest for the variant.
+    pub fn path_to_manifest(&self) -> &'static str {
+        match self {
+            FunctionsServerVariant::Base => "oak_functions/oak_functions_loader_base",
+            FunctionsServerVariant::Unsafe => "oak_functions/oak_functions_loader_unsafe",
+        }
+    }
+}
+
 #[derive(Parser, Clone, Debug)]
 pub struct BuildFunctionsServer {
-    #[clap(long, help = "server variant: [base, unsafe]", default_value = "base")]
-    pub server_variant: FunctionsServerVariant,
     #[clap(
         long,
         help = "rust toolchain override to use for the server compilation [e.g. stable, nightly, stage2]"
@@ -661,7 +670,6 @@ pub async fn run_step(context: &Context, step: Step, mut run_status: Status) -> 
 pub struct Cmd {
     executable: String,
     args: Vec<String>,
-    env: HashMap<String, String>,
     current_dir: Option<PathBuf>,
 }
 
@@ -674,20 +682,6 @@ impl Cmd {
         Box::new(Cmd {
             executable: executable.to_string(),
             args: args.into_iter().map(|s| s.as_ref().to_string()).collect(),
-            env: HashMap::new(),
-            current_dir: None,
-        })
-    }
-
-    pub fn new_with_env<I, S>(executable: &str, args: I, env: &HashMap<String, String>) -> Box<Self>
-    where
-        I: IntoIterator<Item = S>,
-        S: AsRef<str>,
-    {
-        Box::new(Cmd {
-            executable: executable.to_string(),
-            args: args.into_iter().map(|s| s.as_ref().to_string()).collect(),
-            env: env.clone(),
             current_dir: None,
         })
     }
@@ -700,17 +694,8 @@ impl Cmd {
         Box::new(Cmd {
             executable: executable.to_string(),
             args: args.into_iter().map(|s| s.as_ref().to_string()).collect(),
-            env: HashMap::new(),
             current_dir: Some(current_dir.to_path_buf()),
         })
-    }
-}
-
-/// If environment variable `name` is set in the current environment, pass it through
-/// so the same value for `name` is visible when the command is executed.
-fn env_passthru(cmd: &mut tokio::process::Command, name: &str) {
-    if let Ok(v) = std::env::var(name) {
-        cmd.env(name, v);
     }
 }
 
@@ -724,47 +709,6 @@ impl Runnable for Cmd {
     fn run(self: Box<Self>, opt: &Opt) -> Box<dyn Running> {
         let mut cmd = tokio::process::Command::new(&self.executable);
         cmd.args(&self.args);
-
-        // Clear the parent environment. Only the variables explicitly passed below are going to be
-        // available to the command, to avoid accidentally depending on extraneous ones.
-        cmd.env_clear();
-
-        // General variables.
-        cmd.env("HOME", std::env::var("HOME").unwrap());
-        cmd.env("PATH", std::env::var("PATH").unwrap());
-        env_passthru(&mut cmd, "USER");
-
-        // Python variables.
-        env_passthru(&mut cmd, "PYTHONPATH");
-
-        // Rust compilation variables.
-        env_passthru(&mut cmd, "RUSTUP_HOME");
-        env_passthru(&mut cmd, "CARGO_HOME");
-        env_passthru(&mut cmd, "CARGO_INCREMENTAL");
-        env_passthru(&mut cmd, "RUSTC_WRAPPER");
-
-        // See https://docs.rs/prost-build/latest/prost_build/#sourcing-protoc.
-        env_passthru(&mut cmd, "PROTOC");
-        env_passthru(&mut cmd, "PROTOC_INCLUDE");
-
-        // Rust runtime variables.
-        cmd.env(
-            "RUST_LOG",
-            std::env::var("RUST_LOG").unwrap_or_else(|_| "info".to_string()),
-        );
-        cmd.env("RUST_BACKTRACE", "1");
-
-        // Emscripten variables.
-        env_passthru(&mut cmd, "EMSDK");
-        env_passthru(&mut cmd, "EM_CACHE");
-        env_passthru(&mut cmd, "EM_CONFIG");
-
-        // OpenSSL variables.
-        env_passthru(&mut cmd, "PKG_CONFIG_ALLOW_CROSS");
-        env_passthru(&mut cmd, "OPENSSL_STATIC");
-        env_passthru(&mut cmd, "OPENSSL_DIR");
-
-        cmd.envs(&self.env);
 
         if opt.dry_run {
             Box::new(SingleStatusResult {

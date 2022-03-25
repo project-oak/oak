@@ -40,14 +40,32 @@ impl OakApiNativeExtension for TensorFlowModel<Logger> {
         wasm_state: &mut WasmState,
         args: wasmi::RuntimeArgs,
     ) -> Result<Result<(), OakStatus>, wasmi::Trap> {
-        Ok(tf_model_infer(
-            wasm_state,
-            self,
-            args.nth_checked(0)?,
-            args.nth_checked(1)?,
-            args.nth_checked(2)?,
-            args.nth_checked(3)?,
-        ))
+        let input_ptr: AbiPointer = args.nth_checked(0)?;
+        let input_len: AbiPointerOffset = args.nth_checked(1)?;
+        let inference_ptr_ptr: AbiPointer = args.nth_checked(2)?;
+        let inference_len_ptr: AbiPointer = args.nth_checked(3)?;
+
+        let extension_args = wasm_state
+            .read_extension_args(input_ptr, input_len)
+            .map_err(|err| {
+                self.log_error(&format!(
+                    "tf_model_infer(): Unable to read input from guest memory: {:?}",
+                    err
+                ));
+                OakStatus::ErrInvalidArgs
+            });
+
+        let result = extension_args
+            .and_then(|input| tf_model_infer(self, input))
+            .and_then(|encoded_inference| {
+                wasm_state.write_extension_result(
+                    encoded_inference,
+                    inference_ptr_ptr,
+                    inference_len_ptr,
+                )
+            });
+
+        Ok(result)
     }
 
     /// Each Oak Functions application can have at most one instance of TensorFlowModule. So it is
@@ -71,26 +89,11 @@ impl OakApiNativeExtension for TensorFlowModel<Logger> {
     }
 }
 
-/// Corresponds to the host ABI function [`tf_model_infer`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#tf_model_infer).
+/// Provides logic for the host ABI function [`tf_model_infer`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#tf_model_infer).
 fn tf_model_infer(
-    wasm_state: &mut WasmState,
     tf_model: &TensorFlowModel<Logger>,
-    input_ptr: AbiPointer,
-    input_len: AbiPointerOffset,
-    inference_ptr_ptr: AbiPointer,
-    inference_len_ptr: AbiPointer,
-) -> Result<(), OakStatus> {
-    let input = wasm_state
-        .get_memory()
-        .get(input_ptr, input_len as usize)
-        .map_err(|err| {
-            tf_model.log_error(&format!(
-                "tf_model_infer(): Unable to read input from guest memory: {:?}",
-                err
-            ));
-            OakStatus::ErrInvalidArgs
-        })?;
-
+    input: Vec<u8>,
+) -> Result<Vec<u8>, OakStatus> {
     // Get the inference, and convert it into a protobuf-encoded byte array
     let inference = tf_model.get_inference(&input).map_err(|err| {
         tf_model.log_error(&format!(
@@ -99,12 +102,7 @@ fn tf_model_infer(
         ));
         OakStatus::ErrBadTensorFlowModelInput
     })?;
-    let encoded_inference = inference.encode_to_vec();
-    let buf_ptr = wasm_state.alloc(encoded_inference.len() as u32);
-    wasm_state.write_buffer_to_wasm_memory(&encoded_inference, buf_ptr)?;
-    wasm_state.write_u32_to_wasm_memory(buf_ptr, inference_ptr_ptr)?;
-    wasm_state.write_u32_to_wasm_memory(encoded_inference.len() as u32, inference_len_ptr)?;
-    Ok(())
+    Ok(inference.encode_to_vec())
 }
 
 /// Read a tensorFlow model from the given path, into a byte array.

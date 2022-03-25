@@ -25,8 +25,7 @@ jobs:
           - check-format
           - run-cargo-deny
           - run-cargo-udeps
-          - build-functions-server --server-variant=unsafe
-          - build-functions-server --server-variant=base
+          - build-functions-server-variants
           - run-cargo-tests
           # TODO(#2538): Re-enable when bazel tests run on the main Docker image.
           # - run-bazel-tests
