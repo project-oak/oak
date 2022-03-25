@@ -202,8 +202,8 @@ impl ServerVariant {
     // Get path to manifest for the variant.
     pub fn path_to_manifest(&self) -> &'static str {
         match self {
-            ServerVariant::Base => "oak_functions/oak_functions_loader_base",
-            ServerVariant::Unsafe => "oak_functions/oak_functions_loader_unsafe",
+            ServerVariant::Base => "./oak_functions/oak_functions_loader_base",
+            ServerVariant::Unsafe => "./oak_functions/oak_functions_loader_unsafe",
         }
     }
 
