@@ -15,8 +15,8 @@ _xtask() {
             build-functions-example)
                 cmd+="__build__functions__example"
                 ;;
-            build-functions-server)
-                cmd+="__build__functions__server"
+            build-functions-server-variants)
+                cmd+="__build__functions__server__variants"
                 ;;
             check-format)
                 cmd+="__check__format"
@@ -67,7 +67,7 @@ _xtask() {
 
     case "${cmd}" in
         xtask)
-            opts="-h --help --dry-run --commands --logs --keep-going --scope run-functions-examples build-functions-example build-functions-server format check-format run-tests run-cargo-clippy run-cargo-tests run-bazel-tests run-cargo-fuzz run-cargo-deny run-cargo-udeps run-ci run-cargo-clean completion help"
+            opts="-h --help --dry-run --commands --logs --keep-going --scope run-functions-examples build-functions-example build-functions-server-variants format check-format run-tests run-cargo-clippy run-cargo-tests run-bazel-tests run-cargo-fuzz run-cargo-deny run-cargo-udeps run-ci run-cargo-clean completion help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 1 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -85,7 +85,7 @@ _xtask() {
             return 0
             ;;
         xtask__build__functions__example)
-            opts="-h --application-variant --example-name --client-variant --client-rust-toolchain --client-rust-target --server-variant --server-rust-toolchain --server-rust-target --run-server --client-additional-args --server-additional-args --build-docker --help"
+            opts="-h --application-variant --example-name --client-variant --client-rust-toolchain --client-rust-target --server-rust-toolchain --server-rust-target --run-server --client-additional-args --server-additional-args --build-docker --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -108,10 +108,6 @@ _xtask() {
                     return 0
                     ;;
                 --client-rust-target)
-                    COMPREPLY=($(compgen -f "${cur}"))
-                    return 0
-                    ;;
-                --server-variant)
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
                     ;;
@@ -142,17 +138,13 @@ _xtask() {
             COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
             return 0
             ;;
-        xtask__build__functions__server)
-            opts="-h --server-variant --server-rust-toolchain --server-rust-target --help"
+        xtask__build__functions__server__variants)
+            opts="-h --server-rust-toolchain --server-rust-target --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
             fi
             case "${prev}" in
-                --server-variant)
-                    COMPREPLY=($(compgen -f "${cur}"))
-                    return 0
-                    ;;
                 --server-rust-toolchain)
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
@@ -349,7 +341,7 @@ _xtask() {
             return 0
             ;;
         xtask__run__functions__examples)
-            opts="-h --application-variant --example-name --client-variant --client-rust-toolchain --client-rust-target --server-variant --server-rust-toolchain --server-rust-target --run-server --client-additional-args --server-additional-args --build-docker --help"
+            opts="-h --application-variant --example-name --client-variant --client-rust-toolchain --client-rust-target --server-rust-toolchain --server-rust-target --run-server --client-additional-args --server-additional-args --build-docker --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -372,10 +364,6 @@ _xtask() {
                     return 0
                     ;;
                 --client-rust-target)
-                    COMPREPLY=($(compgen -f "${cur}"))
-                    return 0
-                    ;;
-                --server-variant)
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
                     ;;

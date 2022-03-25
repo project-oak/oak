@@ -27,7 +27,6 @@
 
 use clap::{IntoApp, Parser};
 use colored::*;
-use maplit::hashmap;
 use once_cell::sync::Lazy;
 use std::{
     path::{Path, PathBuf},
@@ -115,7 +114,7 @@ fn match_cmd(opt: &Opt) -> Step {
     match opt.cmd {
         Command::RunFunctionsExamples(ref run_opt) => run_functions_examples(run_opt, &opt.scope),
         Command::BuildFunctionsExample(ref opts) => build_functions_example(opts, &opt.scope),
-        Command::BuildFunctionsServer(ref opt) => build_functions_server(&opt.server_variant, opt),
+        Command::BuildFunctionsServerVariants(ref opt) => build_functions_server_variants(opt),
         Command::RunTests => run_tests(),
         Command::RunCargoClippy => run_cargo_clippy(&opt.scope),
         Command::RunCargoTests(ref run_opt) => run_cargo_tests(run_opt, &opt.scope),
@@ -653,7 +652,7 @@ fn run_cargo_fmt(mode: FormatMode, modified_crates: &ModifiedContent) -> Step {
             .filter(|path| modified_crates.contains(path))
             .map(|entry| Step::Single {
                 name: entry.clone(),
-                command: Cmd::new_with_env(
+                command: Cmd::new(
                     "cargo",
                     spread![
                         "fmt",
@@ -663,12 +662,6 @@ fn run_cargo_fmt(mode: FormatMode, modified_crates: &ModifiedContent) -> Step {
                             FormatMode::Fix => vec![],
                         },
                     ],
-                    &hashmap! {
-                        // rustfmt emits copious debug logs, leading to multi-minute
-                        // runs if the user's env happens to have RUST_LOG=debug, so
-                        // force a higher log level.
-                        "RUST_LOG".to_string() => "warn".to_string(),
-                    },
                 ),
             })
             .collect(),
