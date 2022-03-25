@@ -35,8 +35,9 @@ import io.grpc.MethodDescriptor;
 import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
 import java.io.IOException;
-import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
+import java.security.SecureRandom;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -47,27 +48,27 @@ import java.util.logging.Logger;
 import oak.functions.abi.ConfigurationInfo;
 import oak.functions.invocation.Request;
 import oak.functions.invocation.Response;
-import oak.session.stream.v1.StreamingRequest;
-import oak.session.stream.v1.StreamingResponse;
-import oak.session.stream.v1.StreamingSessionGrpc;
-import oak.session.stream.v1.StreamingSessionGrpc.StreamingSessionStub;
+import oak.session.unary.v1.UnaryRequest;
+import oak.session.unary.v1.UnaryResponse;
+import oak.session.unary.v1.UnarySessionGrpc;
 
 /**
  * Client with remote attestation support for sending requests to an Oak Functions application.
  */
 public class AttestationClient {
-  static public final Duration DEFAULT_CONNECTION_TIMEOUT = Duration.ofSeconds(5);
+  public static final Duration DEFAULT_CONNECTION_TIMEOUT = Duration.ofSeconds(5);
   private static final Logger logger = Logger.getLogger(AttestationClient.class.getName());
   // TODO(#1867): Add remote attestation support.
   private static final String TEST_TEE_MEASUREMENT = "Test TEE measurement";
+  private static final Integer SESSION_ID_BYTE_LENGTH = 8;
   private final Duration connectionTimeout;
   // HTTP/gRPC header for Google API keys.
   // https://cloud.google.com/apis/docs/system-parameters
   // https://cloud.google.com/docs/authentication/api-keys
   private static final String API_KEY_HEADER = "x-goog-api-key";
+  private ByteString sessionId;
   private ManagedChannel channel;
-  private StreamObserver<StreamingRequest> requestObserver;
-  private BlockingQueue<StreamingResponse> messageQueue;
+  private UnarySessionGrpc.UnarySessionBlockingStub stub;
   private AeadEncryptor encryptor;
 
   /** Remote Attestation identity verification failure. */
@@ -123,46 +124,25 @@ public class AttestationClient {
       throw new NullPointerException("Channel must not be null.");
     }
     this.channel = channel;
-    StreamingSessionStub stub = StreamingSessionGrpc.newStub(channel);
+    stub = UnarySessionGrpc.newBlockingStub(channel);
 
-    // Create server response handler.
-    messageQueue = new ArrayBlockingQueue<>(1);
-    StreamObserver<StreamingResponse> responseObserver = new StreamObserver<StreamingResponse>() {
-      @Override
-      public void onNext(StreamingResponse response) {
-        try {
-          messageQueue.put(response);
-        } catch (Exception e) {
-          if (e instanceof InterruptedException) {
-            Thread.currentThread().interrupt();
-          }
-          logger.log(Level.WARNING, "Couldn't send server response to the message queue: " + e);
-        }
-      }
-
-      @Override
-      public void onError(Throwable t) {
-        Status status = Status.fromThrowable(t);
-        logger.log(Level.WARNING, "Couldn't receive response: " + status);
-      }
-
-      @Override
-      public void onCompleted() {}
-    };
-    requestObserver = stub.stream(responseObserver);
+    SecureRandom random = new SecureRandom();
+    byte[] rawSessionId = new byte[SESSION_ID_BYTE_LENGTH];
+    random.nextBytes(rawSessionId);
+    sessionId = ByteString.copyFrom(rawSessionId);
 
     // Generate client private/public key pair.
     ClientHandshaker handshaker = new ClientHandshaker(TEST_TEE_MEASUREMENT.getBytes(UTF_8));
 
     // Send client hello message.
     byte[] clientHello = handshaker.createClientHello();
-    StreamingRequest clientHelloRequest =
-        StreamingRequest.newBuilder().setBody(ByteString.copyFrom(clientHello)).build();
-    requestObserver.onNext(clientHelloRequest);
+    UnaryRequest clientHelloRequest = UnaryRequest.newBuilder()
+                                          .setBody(ByteString.copyFrom(clientHello))
+                                          .setSessionId(sessionId)
+                                          .build();
 
     // Receive server attestation identity containing server's ephemeral public key.
-    StreamingResponse serverIdentityResponse =
-        messageQueue.poll(connectionTimeout.getSeconds(), SECONDS);
+    UnaryResponse serverIdentityResponse = stub.message(clientHelloRequest);
     byte[] serverIdentity = serverIdentityResponse.getBody().toByteArray();
 
     // Verify ServerIdentity, including its configuration and proof of its inclusion in Rekor.
@@ -174,9 +154,11 @@ public class AttestationClient {
     // - Client attestation identity containing client's ephemeral public key
     // - Encryptor used for decrypting/encrypting messages between client and server
     byte[] clientIdentity = handshaker.processServerIdentity(serverIdentity);
-    StreamingRequest clientIdentityRequest =
-        StreamingRequest.newBuilder().setBody(ByteString.copyFrom(clientIdentity)).build();
-    requestObserver.onNext(clientIdentityRequest);
+    UnaryRequest clientIdentityRequest = UnaryRequest.newBuilder()
+                                             .setBody(ByteString.copyFrom(clientIdentity))
+                                             .setSessionId(sessionId)
+                                             .build();
+    stub.message(clientIdentityRequest);
     encryptor = handshaker.getEncryptor();
   }
 
@@ -217,15 +199,6 @@ public class AttestationClient {
   }
 
   /**
-   * Needs to be explicitly called so that Oak Functions server doesn't have to wait for Java
-   * garbage collector to stop a gRPC session.
-   */
-  @Override
-  public void finalize() {
-    requestObserver.onCompleted();
-  }
-
-  /**
    * Encrypts and sends a Request via an attested gRPC channel to the server and receives and
    * decrypts the response.
    *
@@ -236,17 +209,17 @@ public class AttestationClient {
   @SuppressWarnings("ProtoParseWithRegistry")
   public Response send(Request request)
       throws GeneralSecurityException, IOException, InterruptedException {
-    if (channel == null || requestObserver == null || encryptor == null) {
+    if (channel == null || encryptor == null || sessionId == null || stub == null) {
       throw new IllegalStateException("Session is not available");
     }
 
     byte[] encryptedData = encryptor.encrypt(request.getBody().toByteArray());
-    StreamingRequest streamingRequest =
-        StreamingRequest.newBuilder().setBody(ByteString.copyFrom(encryptedData)).build();
+    UnaryRequest unaryRequest = UnaryRequest.newBuilder()
+                                    .setBody(ByteString.copyFrom(encryptedData))
+                                    .setSessionId(sessionId)
+                                    .build();
 
-    requestObserver.onNext(streamingRequest);
-    StreamingResponse streamingResponse =
-        messageQueue.poll(connectionTimeout.getSeconds(), SECONDS);
+    UnaryResponse streamingResponse = stub.message(unaryRequest);
 
     byte[] responsePayload = streamingResponse.getBody().toByteArray();
     byte[] decryptedResponse = encryptor.decrypt(responsePayload);

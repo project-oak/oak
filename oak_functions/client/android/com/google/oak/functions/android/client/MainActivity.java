@@ -85,7 +85,6 @@ public class MainActivity extends Activity {
 
       // Send a request.
       Response response = client.send(request);
-      client.finalize();
 
       // Receive a response.
       StatusCode responseStatus = response.getStatus();
