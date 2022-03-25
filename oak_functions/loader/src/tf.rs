@@ -89,7 +89,7 @@ impl OakApiNativeExtension for TensorFlowModel<Logger> {
     }
 }
 
-/// Corresponds to the host ABI function [`tf_model_infer`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#tf_model_infer).
+/// Provides logic for the host ABI function [`tf_model_infer`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#tf_model_infer).
 fn tf_model_infer(
     tf_model: &TensorFlowModel<Logger>,
     input: Vec<u8>,

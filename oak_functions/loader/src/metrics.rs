@@ -110,7 +110,7 @@ impl OakApiNativeExtension for PrivateMetricsExtension<Logger> {
     }
 }
 
-/// Corresponds to the host ABI function [`report_metric`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#report_metric).
+/// Provides logic for the host ABI function [`report_metric`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#report_metric).
 fn report_metric(
     extension: &mut PrivateMetricsExtension<Logger>,
     raw_label: Vec<u8>,

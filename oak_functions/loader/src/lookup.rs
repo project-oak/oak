@@ -73,7 +73,7 @@ pub fn write_results(
     Ok(())
 }
 
-/// Corresponds to the host ABI function [`storage_get_item`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#storage_get_item).
+/// Provides logic for the host ABI function [`storage_get_item`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#storage_get_item).
 pub fn storage_get_item<L: OakLogger + Clone>(
     extension: &mut LookupData<L>,
     key: Vec<u8>,
