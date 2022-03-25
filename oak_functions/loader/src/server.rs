@@ -250,7 +250,7 @@ impl WasmState {
         self.get_memory().get(buf_ptr, buf_len as usize)
     }
 
-    // Write result of exgtension to memory of Wasm module.
+    // Write result of extension to memory of Wasm module.
     pub fn write_extension_result(
         &mut self,
         result: Vec<u8>,
