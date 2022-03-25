@@ -17,7 +17,7 @@
 //! Type, constant and Wasm host function definitions for the Oak-Functions application
 //! binary interface (ABI).
 
-use crate::proto::{ChannelHandle, ChannelStatus};
+use crate::proto::ChannelHandle;
 
 pub mod proto {
     include!(concat!(env!("OUT_DIR"), "/oak.functions.abi.rs"));
@@ -44,16 +44,6 @@ pub mod proto {
         pub fn body(&self) -> Result<&[u8], std::num::TryFromIntError> {
             let length = usize::try_from(self.length)?;
             Ok(&self.body.as_slice()[..length])
-        }
-    }
-
-    // Converts an OakStatus into a ChannelStatus.
-    impl From<ChannelStatus> for OakStatus {
-        fn from(channel_status: ChannelStatus) -> Self {
-            match channel_status {
-                ChannelStatus::ChannelInvalidArgs => OakStatus::ErrInvalidArgs,
-                _ => OakStatus::Unspecified,
-            }
         }
     }
 }
@@ -105,7 +95,7 @@ extern "C" {
         channel_handle: ChannelHandle,
         dest_buf_ptr_ptr: *mut *mut u8,
         dest_buf_len_ptr: *mut usize,
-    ) -> ChannelStatus;
+    ) -> i32;
 
     /// Writes a message, i.e., `src_buf_len` bytes, from `scr_buf_ptr` into the channel with
     /// `channel_handle`.
@@ -115,7 +105,7 @@ extern "C" {
         channel_handle: ChannelHandle,
         src_buf_ptr: *const u8,
         src_buf_len: usize,
-    ) -> ChannelStatus;
+    ) -> i32;
 
     /// Waits until at least one of the channels from the channel handles in the buffer at
     /// `channel_handle_buf_ptr` has a message to read, or
@@ -131,5 +121,5 @@ extern "C" {
         ready_channel_handle_buf_ptr: *mut *mut i32,
         ready_channel_handle_buf_len: *mut usize,
         deadline_ms: u32,
-    ) -> ChannelStatus;
+    ) -> i32;
 }
