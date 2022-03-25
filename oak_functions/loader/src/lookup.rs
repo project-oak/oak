@@ -17,8 +17,8 @@
 use crate::{
     logger::Logger,
     server::{
-        format_bytes, AbiPointer, AbiPointerOffset, BoxedExtension, BoxedExtensionFactory,
-        ExtensionFactory, OakApiNativeExtension, WasmState, ABI_USIZE,
+        format_bytes, BoxedExtension, BoxedExtensionFactory, ExtensionFactory,
+        OakApiNativeExtension, WasmState, ABI_USIZE,
     },
 };
 use oak_functions_abi::proto::OakStatus;
@@ -52,27 +52,14 @@ impl ExtensionFactory for LookupFactory {
     }
 }
 
-/// Corresponds to the host ABI function [`storage_get_item`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#storage_get_item).
+/// Provides logic for the host ABI function [`storage_get_item`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#storage_get_item).
 pub fn storage_get_item<L: OakLogger + Clone>(
-    wasm_state: &mut WasmState,
     extension: &mut LookupData<L>,
-    key_ptr: AbiPointer,
-    key_len: AbiPointerOffset,
-    value_ptr_ptr: AbiPointer,
-    value_len_ptr: AbiPointer,
-) -> Result<(), OakStatus> {
-    let key = wasm_state
-        .get_memory()
-        .get(key_ptr, key_len as usize)
-        .map_err(|err| {
-            extension.log_error(&format!(
-                "storage_get_item(): Unable to read key from guest memory: {:?}",
-                err
-            ));
-            OakStatus::ErrInvalidArgs
-        })?;
+    key: Vec<u8>,
+) -> Result<Vec<u8>, OakStatus> {
     extension.log_debug(&format!("storage_get_item(): key: {}", format_bytes(&key)));
-    match extension.get(&key) {
+    let value = extension.get(&key);
+    match value {
         Some(value) => {
             // Truncate value for logging.
             let value_to_log = value.clone().into_iter().take(512).collect::<Vec<_>>();
@@ -80,11 +67,7 @@ pub fn storage_get_item<L: OakLogger + Clone>(
                 "storage_get_item(): value: {}",
                 format_bytes(&value_to_log)
             ));
-            let dest_ptr = wasm_state.alloc(value.len() as u32);
-            wasm_state.write_buffer_to_wasm_memory(&value, dest_ptr)?;
-            wasm_state.write_u32_to_wasm_memory(dest_ptr, value_ptr_ptr)?;
-            wasm_state.write_u32_to_wasm_memory(value.len() as u32, value_len_ptr)?;
-            Ok(())
+            Ok(value)
         }
         None => {
             extension.log_debug("storage_get_item(): value not found");
@@ -102,14 +85,28 @@ where
         wasm_state: &mut WasmState,
         args: wasmi::RuntimeArgs,
     ) -> Result<Result<(), OakStatus>, wasmi::Trap> {
-        Ok(storage_get_item(
-            wasm_state,
-            self,
-            args.nth_checked(0)?,
-            args.nth_checked(1)?,
-            args.nth_checked(2)?,
-            args.nth_checked(3)?,
-        ))
+        let key_ptr = args.nth_checked(0)?;
+        let key_len = args.nth_checked(1)?;
+        let value_ptr_ptr = args.nth_checked(2)?;
+        let value_len_ptr = args.nth_checked(3)?;
+
+        let extension_args = wasm_state
+            .read_extension_args(key_ptr, key_len)
+            .map_err(|err| {
+                self.log_error(&format!(
+                    "storage_get_item(): Unable to read key from guest memory: {:?}",
+                    err
+                ));
+                OakStatus::ErrInvalidArgs
+            });
+
+        let extension_result = extension_args
+            .and_then(|key| storage_get_item(self, key))
+            .and_then(|value| {
+                wasm_state.write_extension_result(value, value_ptr_ptr, value_len_ptr)
+            });
+
+        Ok(extension_result)
     }
 
     fn get_metadata(&self) -> (String, wasmi::Signature) {
