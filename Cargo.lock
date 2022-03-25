@@ -3248,7 +3248,7 @@ dependencies = [
  "clap 3.0.14",
  "env_logger 0.9.0",
  "futures",
- "grpc_streaming_attestation",
+ "grpc_unary_attestation",
  "http",
  "log",
  "oak_functions_abi",
