@@ -20,7 +20,7 @@ use byteorder::{ByteOrder, LittleEndian};
 use futures::future::FutureExt;
 use log::Level;
 use oak_functions_abi::proto::{
-    ChannelHandle, ChannelStatus, OakStatus, Request, Response, ServerPolicy, StatusCode,
+    ChannelStatus, OakStatus, Request, Response, ServerPolicy, StatusCode,
 };
 use oak_logger::OakLogger;
 use serde::Deserialize;
@@ -152,7 +152,6 @@ pub type BoxedExtensionFactory = Box<dyn ExtensionFactory + Send + Sync>;
 /// single user request. The methods here correspond to the ABI host functions that allow the Wasm
 /// module to exchange the request and the response with the Oak functions server. These functions
 /// translate values between Wasm linear memory and Rust types.
-#[allow(dead_code)]
 pub struct WasmState {
     request_bytes: Vec<u8>,
     response_bytes: Vec<u8>,
@@ -163,8 +162,6 @@ pub struct WasmState {
     extensions_indices: Option<HashMap<usize, BoxedExtension>>,
     /// A mapping of host function names to metadata required for resolving the function.
     extensions_metadata: HashMap<String, (usize, wasmi::Signature)>,
-    /// A mapping from channel handles to the hosted endpoints of channels.
-    channel_switchboard: ChannelSwitchboard,
 }
 
 impl WasmState {
@@ -316,21 +313,6 @@ impl WasmState {
         Ok(())
     }
 
-    // Helper function to get the hosted Endpoint for the given channel handle.
-    #[allow(dead_code)]
-    fn get_endpoint_from_channel_handle(
-        &mut self,
-        channel_handle: AbiChannelHandle,
-    ) -> Result<&mut Endpoint, ChannelStatus> {
-        let channel_handle =
-            ChannelHandle::from_i32(channel_handle).ok_or(ChannelStatus::ChannelHandleInvalid)?;
-        let endpoint = self
-            .channel_switchboard
-            .get_mut(&channel_handle)
-            .ok_or(ChannelStatus::ChannelHandleInvalid)?;
-        Ok(endpoint)
-    }
-
     /// Corresponds to the host ABI function [`write_log_message`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#write_log_message).
     pub fn write_log_message(
         &mut self,
@@ -462,7 +444,6 @@ impl WasmState {
         logger: Logger,
         extensions_indices: HashMap<usize, BoxedExtension>,
         extensions_metadata: HashMap<String, (usize, wasmi::Signature)>,
-        channel_switchboard: ChannelSwitchboard,
     ) -> anyhow::Result<WasmState> {
         let mut abi = WasmState {
             request_bytes,
@@ -472,7 +453,6 @@ impl WasmState {
             logger,
             extensions_indices: Some(extensions_indices),
             extensions_metadata,
-            channel_switchboard,
         };
 
         let instance = wasmi::ModuleInstance::new(
@@ -648,8 +628,6 @@ impl WasmHandler {
         let mut extensions_indices = HashMap::new();
         let mut extensions_metadata = HashMap::new();
 
-        let channel_switchboard = ChannelSwitchboard::new();
-
         for (ind, factory) in self.extension_factories.iter().enumerate() {
             let extension = factory.create()?;
             let (name, signature) = extension.get_metadata();
@@ -663,7 +641,6 @@ impl WasmHandler {
             self.logger.clone(),
             extensions_indices,
             extensions_metadata,
-            channel_switchboard,
         )?;
 
         Ok(wasm_state)
@@ -799,34 +776,10 @@ fn channel_create() -> (Endpoint, Endpoint) {
     };
     (endpoint0, endpoint1)
 }
-struct ChannelSwitchboard(HashMap<ChannelHandle, Endpoint>);
-
-impl ChannelSwitchboard {
-    fn new() -> Self {
-        ChannelSwitchboard(HashMap::new())
-    }
-
-    // Creates a channel for `channel_handle`, adds one endpoint to the channel switchboard and
-    // returns the corresponding endpoint. Overwrites existing channels for `channel_handle`.
-    fn register(&mut self, channel_handle: ChannelHandle) -> Endpoint {
-        let (e1, e2) = channel_create();
-        self.0.insert(channel_handle, e2);
-        e1
-    }
-
-    // Get the endpoint registered for the channel_handle. To send to/receive from the endpoint, the
-    // endpoint has to be mutable.
-    fn get_mut(&mut self, channel_handle: &ChannelHandle) -> Option<&mut Endpoint> {
-        self.0.get_mut(channel_handle)
-    }
-}
 
 #[cfg(test)]
 mod tests {
-    use super::{
-        super::{grpc::create_wasm_handler, testing::*},
-        *,
-    };
+    use super::*;
 
     #[test]
     fn test_start_from_empty_endpoints() {
@@ -861,65 +814,5 @@ mod tests {
         check_crossed_write_read(&mut endpoint_1, &mut endpoint_2).await;
         // Check the other direction from endpoint_2 to endpoint_1.
         check_crossed_write_read(&mut endpoint_2, &mut endpoint_1).await;
-    }
-
-    #[tokio::test]
-    async fn test_create_channel_switchboard_in_wasm_state() {
-        let wasm_state = create_test_wasm_state();
-        let mut channel_switchboard = wasm_state.channel_switchboard;
-
-        assert!(&channel_switchboard
-            .get_mut(&ChannelHandle::Unspecified)
-            .is_none());
-    }
-
-    #[tokio::test]
-    async fn test_get_endpoint_from_channel_handle_out_of_range() {
-        let mut wasm_state = create_test_wasm_state();
-        let result = wasm_state.get_endpoint_from_channel_handle(-1);
-        assert!(result.is_err());
-        assert_eq!(ChannelStatus::ChannelHandleInvalid, result.unwrap_err())
-    }
-
-    #[tokio::test]
-    async fn test_get_endpoint_from_channel_handle_without_endpoint() {
-        let mut wasm_state = create_test_wasm_state();
-        // Assumes ChannelHandle 0 will never have an Endpoint.
-        let result = wasm_state.get_endpoint_from_channel_handle(0);
-        assert!(result.is_err());
-        assert_eq!(ChannelStatus::ChannelHandleInvalid, result.unwrap_err())
-    }
-
-    #[tokio::test]
-    async fn test_drop_channel_switchboard_stops_recv() {
-        let mut channel_switchboard = ChannelSwitchboard::new();
-        let mut endpoint_2 = channel_switchboard.register(ChannelHandle::Testing);
-
-        let stopped_receiving = tokio::spawn(async move {
-            endpoint_2.receiver.recv().await;
-            true
-        });
-
-        std::mem::drop(channel_switchboard);
-        assert!(stopped_receiving.await.unwrap());
-    }
-
-    fn create_test_wasm_handler() -> WasmHandler {
-        let logger = Logger::for_test();
-
-        let testing_factory = TestingFactory::new_boxed_extension_factory(logger.clone())
-            .expect("Could not create TestingFactory.");
-
-        let wasm_module_bytes = test_utils::create_echo_wasm_module_bytes();
-
-        create_wasm_handler(&wasm_module_bytes, vec![testing_factory], logger)
-            .expect("could not create wasm_handler")
-    }
-
-    fn create_test_wasm_state() -> WasmState {
-        let wasm_handler = create_test_wasm_handler();
-        wasm_handler
-            .init_wasm_state(b"".to_vec())
-            .expect("could not create wasm_state")
     }
 }
