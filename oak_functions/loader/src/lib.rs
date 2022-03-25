@@ -26,6 +26,9 @@ pub mod server;
 #[cfg(feature = "oak-tf")]
 pub mod tf;
 
+#[cfg(test)]
+pub mod testing;
+
 #[cfg(feature = "oak-metrics")]
 use crate::metrics::PrivateMetricsProxyFactory;
 #[cfg(feature = "oak-tf")]
