@@ -9,6 +9,7 @@ license = "Apache-2.0"
 anyhow = "*"
 log = "*"
 maplit = "*"
+oak_functions_util = { path = "../../util" }
 oak_logger = { path = "../../logger" }
 rand = "*"
 serde = { version = "*", features = ["derive"] }
