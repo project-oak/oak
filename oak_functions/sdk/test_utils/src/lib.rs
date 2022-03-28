@@ -49,7 +49,6 @@ fn build_wasm_module_path(metadata: &cargo_metadata::Metadata) -> String {
     format!("{}/bin/{}.wasm", metadata.workspace_root, package_name)
 }
 
-// TODO(#1965): Move this and the similar function in `oak/sdk` to a common crate.
 /// Uses cargo to compile a Rust manifest to Wasm bytes.
 pub fn compile_rust_wasm(manifest_path: &str, release: bool) -> anyhow::Result<Vec<u8>> {
     let metadata = cargo_metadata::MetadataCommand::new()

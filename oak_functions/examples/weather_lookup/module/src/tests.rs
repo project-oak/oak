@@ -191,20 +191,32 @@ async fn test_server() {
 }
 
 #[bench]
-fn bench_wasm_handler(bencher: &mut Bencher) {
-    // This benchmark test takes quite a long time when running with a realistic amount of lookup
-    // data. By default it uses a smaller number of entries. To run the bench with realistic data
-    // size, use `cargo bench --features large-bench`.
-    #[cfg(not(feature = "large-bench"))]
-    let (entry_count, elapsed_limit_millis) = (10_000, 20);
-    #[cfg(feature = "large-bench")]
-    let (entry_count, elapsed_limit_millis) = (200_000, 20);
+fn bench_wasm_handler_no_warmup(bencher: &mut Bencher) {
+    bench_wasm_handler(bencher, false);
+}
+
+#[bench]
+fn bench_wasm_handler_with_warmup(bencher: &mut Bencher) {
+    bench_wasm_handler(bencher, true);
+}
+
+/// Run a benchmark of the wasm module, optionally performing a warup-initialisation using Wizer.
+fn bench_wasm_handler(bencher: &mut Bencher, warmup: bool) {
+    let entry_count = 200_000;
+    let elapsed_limit_millis = 20;
 
     let mut manifest_path = std::env::current_dir().unwrap();
     manifest_path.push("Cargo.toml");
     let wasm_module_bytes =
         test_utils::compile_rust_wasm(manifest_path.to_str().expect("Invalid target dir"), true)
             .expect("Couldn't read Wasm module");
+    let wasm_module_bytes = if warmup {
+        wizer::Wizer::new()
+            .run(&wasm_module_bytes)
+            .expect("Couldn't initialise Wasm module")
+    } else {
+        wasm_module_bytes
+    };
     let mut rng = StdRng::seed_from_u64(42);
     let buf = generate_and_serialize_sparse_weather_entries(&mut rng, entry_count).unwrap();
     let entries = parse_lookup_entries(buf).unwrap();
