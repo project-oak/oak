@@ -19,6 +19,7 @@ use std::{collections::BTreeMap, sync::Arc};
 
 /// Container for the Wasm business logic code, in future to be implemented using Wasmi.
 pub struct WasmiService {
+    /// Services that can be called by the Wasm business logic.
     services: BTreeMap<ServiceType, Arc<Box<dyn Service>>>,
 }
 
@@ -37,6 +38,7 @@ impl Service for WasmiService {
             .collect();
         Box::new(WasmiProxy::new(proxies))
     }
+
     fn configure(&self, _data: &[u8]) -> anyhow::Result<()> {
         eprintln!("wasm engine configured");
         Ok(())

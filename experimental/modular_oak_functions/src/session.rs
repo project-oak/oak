@@ -19,8 +19,10 @@ use std::sync::Arc;
 
 /// Session state service.
 pub struct SessionService {
-    // Per-session state will also be stored here, likely in a LRU cache.
+    /// The service that will be called with the decrypted request, and that will supply the
+    /// cleartext response.
     next: Arc<Box<dyn Service>>,
+    // Per-session state will also be stored here, likely in a LRU cache.
 }
 
 impl SessionService {
@@ -45,8 +47,8 @@ impl Service for SessionService {
 /// This proxy will also handle the remote attestation handshake and encrypting/decypting session
 /// traffic.
 pub struct SessionProxy {
-    // Reference to policy configuration will also be stored here in future.
     next: Box<dyn ServiceProxy>,
+    // Reference to policy configuration will also be stored here in future.
 }
 
 impl SessionProxy {

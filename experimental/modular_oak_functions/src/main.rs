@@ -70,26 +70,28 @@ fn main() -> anyhow::Result<()> {
     };
     let wasm: Arc<Box<dyn Service>> = Arc::new(Box::new(wasmi::WasmiService::new(services)));
 
-    // Create the policy enforcment service that forwards data to the Wasm sandbox service.
-    let session: Arc<Box<dyn Service>> =
-        Arc::new(Box::new(session::SessionService::new(wasm.clone())));
-
-    // Create the policy enforcment service that forwards data to the Wasm sandbox service.
+    // Create the policy enforcement service that forwards data to the Wasm sandbox service and
+    // applies the fixed response-time and fixed response-size policies.
     let policy: Arc<Box<dyn Service>> =
-        Arc::new(Box::new(policy::PolicyService::new(session.clone())));
+        Arc::new(Box::new(policy::PolicyService::new(wasm.clone())));
+
+    // Create the session service that handles remote attestation handshakes and session encryption
+    // and decryption.
+    let session: Arc<Box<dyn Service>> =
+        Arc::new(Box::new(session::SessionService::new(policy.clone())));
 
     // Create references to services that can be configured.
     let config_services: BTreeMap<ServiceType, Arc<Box<dyn Service>>> = btreemap! {
         ServiceType::Log => log,
         ServiceType::Lookup => lookup,
-        ServiceType::Policy => policy.clone(),
-        ServiceType::Session => session,
+        ServiceType::Policy => policy,
+        ServiceType::Session => session.clone(),
         ServiceType::Wasm => wasm,
     };
 
     // Create the stream demultiplexer and configure it to configure the other services and send
-    // data via the policy enforcement service.
-    let demux = demux::Demux::new(config_services, policy);
+    // data via the session service.
+    let demux = demux::Demux::new(config_services, session);
 
     // Create the fake IO listener and pretend to listen for incoming frames.
     let io = io::IoListener::new(demux);

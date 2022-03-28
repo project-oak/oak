@@ -19,7 +19,9 @@ use std::{collections::BTreeMap, sync::Arc};
 
 /// A stream demultiplexer.
 pub struct Demux {
+    /// The services that can be configured from control frames.
     config_services: BTreeMap<ServiceType, Arc<Box<dyn Service>>>,
+    /// The service that will receive the split requests.
     next: Arc<Box<dyn Service>>,
 }
 
@@ -34,20 +36,20 @@ impl Demux {
         }
     }
 
-    /// Handles a single admin frame from a multiplexed stream.
+    /// Handles a single control frame from a multiplexed stream.
     ///
     /// This will likely be part of `handle_frame` in a real implementation, just with different
-    /// frametypes, but it is split out here for clarity.
-    pub fn handle_admin_frame(&self, data: &[u8]) -> anyhow::Result<()> {
-        eprintln!("config frame decapsulated");
+    /// frame types, but it is split out here for clarity.
+    pub fn handle_control_frame(&self, data: &[u8]) -> anyhow::Result<()> {
+        eprintln!("control frame decapsulated");
         for (_, service) in self.config_services.iter() {
             service.configure(data)?;
         }
         Ok(())
     }
 
-    /// Handles a single frame from a multiplexed stream.
-    pub fn handle_frame(&self, data: &[u8]) -> anyhow::Result<Vec<u8>> {
+    /// Handles a single data frame from a multiplexed stream.
+    pub fn handle_data_frame(&self, data: &[u8]) -> anyhow::Result<Vec<u8>> {
         eprintln!("request frame decapsulated");
         // For now, just create a single request proxy and call it with the raw frame. A real
         // implementation would decapsulate the frame to reconstruct the individual streams

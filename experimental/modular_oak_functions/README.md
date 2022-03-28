@@ -53,7 +53,8 @@ how data might flow through the system.
 In a real implementation each module will be implemented in a separate crate,
 and, where possible, will be `no_std`-compatible.
 
-The implementation starts with a configuration flow:
+The implementation starts with a configuration process, faking empty control
+frames to each of the configurable services:
 
 - IoListener
   - Demux
@@ -68,8 +69,12 @@ flow of data through the runtime is:
 
 - IoListener
   - Demux
-    - PolicyProxy
-      - SessionProxy
+    - SessionProxy
+      - PolicyProxy
         - WasmiProxy
           - LogProxy
           - LookupProxy
+      - PolicyProxy
+    - SessionProxy
+  - Demux
+- IoListener

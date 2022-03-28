@@ -22,8 +22,10 @@ use std::sync::Arc;
 /// Note: it might not be possible to enforce the fixed time policy using this service. It might
 /// have to be moved into the demux or io service.
 pub struct PolicyService {
-    // Policy configuration will also be stored here in future.
+    /// The service where the incoming request will be sent and that will supply the response to
+    /// which the policy will be applied.
     next: Arc<Box<dyn Service>>,
+    // Policy configuration will also be stored here in future.
 }
 
 impl PolicyService {
@@ -45,8 +47,8 @@ impl Service for PolicyService {
 
 /// Enforces the response policies.
 pub struct PolicyProxy {
-    // Reference to policy configuration will also be stored here in future.
     next: Box<dyn ServiceProxy>,
+    // Reference to policy configuration will also be stored here in future.
 }
 
 impl PolicyProxy {
