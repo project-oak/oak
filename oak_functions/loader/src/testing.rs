@@ -51,11 +51,9 @@ impl OakApiNativeExtension for TestingExtension<Logger> {
                 OakStatus::ErrInvalidArgs
             });
 
-        let result = extension_args
-            .and_then(|input| testing(input))
-            .and_then(|result| {
-                wasm_state.write_extension_result(result, result_ptr_ptr, result_len_ptr)
-            });
+        let result = extension_args.and_then(testing).and_then(|result| {
+            wasm_state.write_extension_result(result, result_ptr_ptr, result_len_ptr)
+        });
 
         Ok(result)
     }
