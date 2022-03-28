@@ -695,6 +695,30 @@
 <span id="690">690</span>
 <span id="691">691</span>
 <span id="692">692</span>
+<span id="693">693</span>
+<span id="694">694</span>
+<span id="695">695</span>
+<span id="696">696</span>
+<span id="697">697</span>
+<span id="698">698</span>
+<span id="699">699</span>
+<span id="700">700</span>
+<span id="701">701</span>
+<span id="702">702</span>
+<span id="703">703</span>
+<span id="704">704</span>
+<span id="705">705</span>
+<span id="706">706</span>
+<span id="707">707</span>
+<span id="708">708</span>
+<span id="709">709</span>
+<span id="710">710</span>
+<span id="711">711</span>
+<span id="712">712</span>
+<span id="713">713</span>
+<span id="714">714</span>
+<span id="715">715</span>
+<span id="716">716</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2021 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -772,6 +796,14 @@
 <span class="kw">struct</span> <span class="ident">ApplicationFunctions</span> {
     <span class="ident">wasm_path</span>: <span class="ident">String</span>,
     <span class="ident">target</span>: <span class="ident">Target</span>,
+    <span class="ident">wizer</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">WizerOpt</span><span class="op">&gt;</span>,
+}
+
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">serde::Deserialize</span>, <span class="ident">Debug</span>)]</span>
+<span class="attribute">#[<span class="ident">serde</span>(<span class="ident">deny_unknown_fields</span>)]</span>
+<span class="kw">struct</span> <span class="ident">WizerOpt</span> {
+    <span class="ident">input</span>: <span class="ident">String</span>,
+    <span class="ident">output</span>: <span class="ident">String</span>,
 }
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">serde::Deserialize</span>, <span class="ident">Debug</span>, <span class="ident">Default</span>)]</span>
@@ -815,7 +847,12 @@
 
 <span class="kw">impl</span> <span class="ident">ApplicationFunctions</span> {
     <span class="kw">fn</span> <span class="ident">construct_application_build_steps</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">example_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) -&gt; <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Step</span><span class="op">&gt;</span> {
-        <span class="macro">vec!</span>[<span class="ident">build_wasm_module</span>(<span class="ident">example_name</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">target</span>, <span class="ident">example_name</span>)]
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">result</span> <span class="op">=</span> <span class="macro">vec!</span>[<span class="ident">build_wasm_module</span>(<span class="ident">example_name</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">target</span>, <span class="ident">example_name</span>)];
+        <span class="comment">// If Wizer configuration is specified, run Wizer after the build.</span>
+        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">wizer</span>) <span class="op">=</span> <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">wizer</span> {
+            <span class="ident">result</span>.<span class="ident">push</span>(<span class="ident">run_wizer</span>(<span class="kw-2">&amp;</span><span class="ident">wizer</span>.<span class="ident">input</span>, <span class="kw-2">&amp;</span><span class="ident">wizer</span>.<span class="ident">output</span>));
+        }
+        <span class="ident">result</span>
     }
 
     <span class="kw">fn</span> <span class="ident">construct_example_server_run_step</span>(
@@ -1156,6 +1193,17 @@
         },
         <span class="ident">Target::Npm</span> { .. } =&gt; <span class="macro">todo!</span>(),
         <span class="ident">Target::Shell</span> { .. } =&gt; <span class="macro">todo!</span>(),
+    }
+}
+
+<span class="kw">fn</span> <span class="ident">run_wizer</span>(<span class="ident">input</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="ident">output</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) -&gt; <span class="ident">Step</span> {
+    <span class="ident">Step::Single</span> {
+        <span class="ident">name</span>: <span class="macro">format!</span>(<span class="string">&quot;wizer:{}:{}&quot;</span>, <span class="ident">input</span>, <span class="ident">output</span>),
+        <span class="ident">command</span>: <span class="ident">Cmd::new</span>(
+            <span class="string">&quot;wizer&quot;</span>,
+            <span class="comment">// See https://github.com/bytecodealliance/wizer#example-usage.</span>
+            <span class="macro">spread!</span>[<span class="macro">format!</span>(<span class="string">&quot;{}&quot;</span>, <span class="ident">input</span>), <span class="macro">format!</span>(<span class="string">&quot;-o={}&quot;</span>, <span class="ident">output</span>),],
+        ),
     }
 }
 
