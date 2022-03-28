@@ -1,0 +1,3 @@
+(function() {var implementors = {};
+implementors["oak_functions_util"] = [{"text":"impl RawMutex for <a class=\"struct\" href=\"oak_functions_util/sync/struct.SpinLock.html\" title=\"struct oak_functions_util::sync::SpinLock\">SpinLock</a>","synthetic":false,"types":["oak_functions_util::sync::SpinLock"]}];
+if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

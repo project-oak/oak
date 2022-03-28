@@ -24,6 +24,7 @@ sourcesIndex["oak_functions_lookup"] = {"name":"","files":["lib.rs"]};
 sourcesIndex["oak_functions_metrics"] = {"name":"","files":["lib.rs"]};
 sourcesIndex["oak_functions_sdk_abi_test"] = {"name":"","files":["lib.rs"]};
 sourcesIndex["oak_functions_tf_inference"] = {"name":"","files":["lib.rs"]};
+sourcesIndex["oak_functions_util"] = {"name":"","files":["lib.rs","sync.rs"]};
 sourcesIndex["oak_https_attestation"] = {"name":"","files":["main.rs","server.rs"]};
 sourcesIndex["oak_logger"] = {"name":"","files":["lib.rs"]};
 sourcesIndex["oak_proxy_attestation"] = {"name":"","files":["lib.rs"]};

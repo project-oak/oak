@@ -189,8 +189,7 @@
 <span class="comment">// TODO(#2593): Use no_std-compatible map.</span>
 <span class="kw">use</span> <span class="ident">std::collections::HashMap</span>;
 
-<span class="comment">// TODO(#2579): Use no_std-compatible RwLock implementation once available.</span>
-<span class="kw">use</span> <span class="ident">std::sync::RwLock</span>;
+<span class="kw">use</span> <span class="ident">oak_functions_util::sync::Mutex</span>;
 
 <span class="kw">pub</span> <span class="kw">type</span> <span class="ident">Data</span> <span class="op">=</span> <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>, <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span>;
 
@@ -199,8 +198,13 @@
 <span class="doccomment">/// `LookupDataManager` can be used to create `LookupData` instances that share the underlying data.</span>
 <span class="doccomment">/// It can also update the underlying data. After updating the data, new `LookupData` instances will</span>
 <span class="doccomment">/// use the new data, but earlier instances will still used the earlier data.</span>
+<span class="doccomment">///</span>
+<span class="doccomment">/// Note that the data is never mutated in-place, but only ever replaced. So instead of the Rust</span>
+<span class="doccomment">/// idiom `Arc&lt;Mutex&lt;T&gt;&gt;` we have `Mutex&lt;Arc&lt;T&gt;&gt;`.</span>
+<span class="doccomment">///</span>
+<span class="doccomment">/// In the future we may replace both the mutex and the hash map with something like RCU.</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">LookupDataManager</span><span class="op">&lt;</span><span class="ident">L</span>: <span class="ident">OakLogger</span> <span class="op">+</span> <span class="ident">Clone</span><span class="op">&gt;</span> {
-    <span class="ident">data</span>: <span class="ident">RwLock</span><span class="op">&lt;</span><span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">Data</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+    <span class="ident">data</span>: <span class="ident">Mutex</span><span class="op">&lt;</span><span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">Data</span><span class="op">&gt;</span><span class="op">&gt;</span>,
     <span class="ident">logger</span>: <span class="ident">L</span>,
 }
 
@@ -211,29 +215,25 @@
     <span class="doccomment">/// Creates a new instance with empty backing data.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new_empty</span>(<span class="ident">logger</span>: <span class="ident">L</span>) -&gt; <span class="self">Self</span> {
         <span class="self">Self</span> {
-            <span class="ident">data</span>: <span class="ident">RwLock::new</span>(<span class="ident">Arc::new</span>(<span class="ident">HashMap::new</span>())),
+            <span class="ident">data</span>: <span class="ident">Mutex::new</span>(<span class="ident">Arc::new</span>(<span class="ident">HashMap::new</span>())),
             <span class="ident">logger</span>,
         }
     }
 
     <span class="doccomment">/// Creates an instance of LookupData populated with the given entries.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">for_test</span>(<span class="ident">entries</span>: <span class="ident">Data</span>, <span class="ident">logger</span>: <span class="ident">L</span>) -&gt; <span class="self">Self</span> {
-        <span class="kw">let</span> <span class="ident">data</span> <span class="op">=</span> <span class="ident">RwLock::new</span>(<span class="ident">Arc::new</span>(<span class="ident">entries</span>));
+        <span class="kw">let</span> <span class="ident">data</span> <span class="op">=</span> <span class="ident">Mutex::new</span>(<span class="ident">Arc::new</span>(<span class="ident">entries</span>));
         <span class="self">Self</span> { <span class="ident">data</span>, <span class="ident">logger</span> }
     }
 
     <span class="doccomment">/// Updates the backing data that will be used by new `LookupData` instances.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">update_data</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">data</span>: <span class="ident">Data</span>) {
-        <span class="kw-2">*</span><span class="self">self</span>.<span class="ident">data</span>.<span class="ident">write</span>().<span class="ident">expect</span>(<span class="string">&quot;could not lock data for write&quot;</span>) <span class="op">=</span> <span class="ident">Arc::new</span>(<span class="ident">data</span>);
+        <span class="kw-2">*</span><span class="self">self</span>.<span class="ident">data</span>.<span class="ident">lock</span>() <span class="op">=</span> <span class="ident">Arc::new</span>(<span class="ident">data</span>);
     }
 
     <span class="doccomment">/// Creates a new `LookupData` instance with a reference to the current backing data.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">create_lookup_data</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">LookupData</span><span class="op">&lt;</span><span class="ident">L</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">data</span> <span class="op">=</span> <span class="self">self</span>
-            .<span class="ident">data</span>
-            .<span class="ident">read</span>()
-            .<span class="ident">expect</span>(<span class="string">&quot;could not lock data for read&quot;</span>)
-            .<span class="ident">clone</span>();
+        <span class="kw">let</span> <span class="ident">data</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">data</span>.<span class="ident">lock</span>().<span class="ident">clone</span>();
         <span class="ident">LookupData::new</span>(<span class="ident">data</span>, <span class="self">self</span>.<span class="ident">logger</span>.<span class="ident">clone</span>())
     }
 }

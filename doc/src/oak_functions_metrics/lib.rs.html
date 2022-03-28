@@ -508,11 +508,6 @@
 <span id="503">503</span>
 <span id="504">504</span>
 <span id="505">505</span>
-<span id="506">506</span>
-<span id="507">507</span>
-<span id="508">508</span>
-<span id="509">509</span>
-<span id="510">510</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2022 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -536,10 +531,9 @@
 <span class="kw">use</span> <span class="ident">log::Level</span>;
 <span class="kw">use</span> <span class="ident">oak_logger::OakLogger</span>;
 <span class="comment">// TODO(#2580): Convert to `no_std` compatible random number generation.</span>
+<span class="kw">use</span> <span class="ident">oak_functions_util::sync::Mutex</span>;
 <span class="kw">use</span> <span class="ident">rand</span>::{<span class="ident">distributions::Open01</span>, <span class="ident">rngs::StdRng</span>, <span class="ident">thread_rng</span>, <span class="ident">Rng</span>, <span class="ident">SeedableRng</span>};
 <span class="kw">use</span> <span class="ident">serde::Deserialize</span>;
-<span class="comment">// TODO(#2579): Replace with no_std compatible implementation once available.</span>
-<span class="kw">use</span> <span class="ident">std::sync::Mutex</span>;
 
 <span class="doccomment">/// Configuration for differentially-private metrics reporting.</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Deserialize</span>, <span class="ident">Debug</span>)]</span>
@@ -838,11 +832,7 @@
     <span class="doccomment">///</span>
     <span class="doccomment">/// See [PrivateMetricsAggregator::report_metrics] for more details.</span>
     <span class="kw">fn</span> <span class="ident">publish</span>(<span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span>(<span class="ident">usize</span>, <span class="ident">Vec</span><span class="op">&lt;</span>(<span class="ident">String</span>, <span class="ident">i64</span>)<span class="op">&gt;</span>)<span class="op">&gt;</span> {
-        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Ok</span>(<span class="kw-2">mut</span> <span class="ident">aggregator</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">aggregator</span>.<span class="ident">lock</span>() {
-            <span class="ident">aggregator</span>.<span class="ident">report_metrics</span>(<span class="self">self</span>.<span class="ident">data</span>)
-        } <span class="kw">else</span> {
-            <span class="prelude-val">None</span>
-        }
+        <span class="self">self</span>.<span class="ident">aggregator</span>.<span class="ident">lock</span>().<span class="ident">report_metrics</span>(<span class="self">self</span>.<span class="ident">data</span>)
     }
 }
 
