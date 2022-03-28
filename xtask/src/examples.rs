@@ -262,7 +262,7 @@ pub fn run_oak_functions_examples(opt: &RunOakExamplesOpt, scope: &Scope) -> Ste
 }
 
 /// Build every variant of the function server.
-/// It's easier to always build all variants than to control which variant to build and
+/// It's easier to always build all variants than to keep track of which variant to build and
 /// the overhead of building all variants is acceptable.
 pub fn build_oak_functions_server_variants(opt: &BuildServerOpt) -> Step {
     Step::Multiple {
@@ -475,7 +475,7 @@ fn run_wizer(input: &str, output: &str) -> Step {
     }
 }
 
-fn run_functions_example_server(
+fn run_oak_functions_server(
     server: &Server,
     application: &OakFunctionsApplication,
 ) -> Box<dyn Runnable> {
