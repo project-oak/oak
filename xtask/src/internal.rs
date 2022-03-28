@@ -56,9 +56,9 @@ pub struct Opt {
 
 #[derive(Subcommand, Clone, Debug)]
 pub enum Command {
-    RunFunctionsExamples(RunFunctionsExamples),
-    BuildFunctionsExample(RunFunctionsExamples),
-    BuildFunctionsServerVariants(BuildFunctionsServer),
+    RunOakFunctionsExamples(RunOakExamplesOpt),
+    BuildOakFunctionsExample(RunOakExamplesOpt),
+    BuildOakFunctionsServerVariants(BuildServerOpt),
     Format,
     CheckFormat,
     RunTests,
@@ -85,8 +85,9 @@ pub struct Completion {
     pub file_name: PathBuf,
 }
 
+/// Holds the options for running the example.
 #[derive(Parser, Clone, Debug)]
-pub struct RunFunctionsExamples {
+pub struct RunOakExamplesOpt {
     #[clap(
         long,
         help = "application variant: [rust, cpp]",
@@ -102,7 +103,7 @@ pub struct RunFunctionsExamples {
     #[clap(flatten)]
     pub build_client: BuildClient,
     #[clap(flatten)]
-    pub build_server: BuildFunctionsServer,
+    pub build_server: BuildServerOpt,
     #[clap(long, help = "run server [default: true]")]
     pub run_server: Option<bool>,
     #[clap(long, help = "additional arguments to pass to clients")]
@@ -170,25 +171,25 @@ pub struct BuildClient {
 }
 
 #[derive(serde::Deserialize, Debug, Clone, PartialEq, EnumIter)]
-pub enum FunctionsServerVariant {
+pub enum ServerVariant {
     /// Production-like server variant, without logging or any of the experimental features enabled
     Base,
     /// Debug server with logging and experimental features enabled
     Unsafe,
 }
 
-impl Default for FunctionsServerVariant {
+impl Default for ServerVariant {
     fn default() -> Self {
-        FunctionsServerVariant::Base
+        ServerVariant::Base
     }
 }
 
-impl std::str::FromStr for FunctionsServerVariant {
+impl std::str::FromStr for ServerVariant {
     type Err = String;
     fn from_str(variant: &str) -> Result<Self, Self::Err> {
         match variant {
-            "base" => Ok(FunctionsServerVariant::Base),
-            "unsafe" => Ok(FunctionsServerVariant::Unsafe),
+            "base" => Ok(ServerVariant::Base),
+            "unsafe" => Ok(ServerVariant::Unsafe),
             _ => Err(format!(
                 "Failed to parse functions server variant {}",
                 variant
@@ -197,18 +198,32 @@ impl std::str::FromStr for FunctionsServerVariant {
     }
 }
 
-impl FunctionsServerVariant {
+impl ServerVariant {
     // Get path to manifest for the variant.
     pub fn path_to_manifest(&self) -> &'static str {
         match self {
-            FunctionsServerVariant::Base => "oak_functions/oak_functions_loader_base",
-            FunctionsServerVariant::Unsafe => "oak_functions/oak_functions_loader_unsafe",
+            ServerVariant::Base => "./oak_functions/oak_functions_loader_base",
+            ServerVariant::Unsafe => "./oak_functions/oak_functions_loader_unsafe",
+        }
+    }
+
+    /// Get path to the executable server binary for the server variant.
+    pub fn path_to_executable(&self) -> &'static str {
+        match self {
+            ServerVariant::Base => {
+                "./target/x86_64-unknown-linux-musl/release/oak_functions_loader_base"
+            }
+            ServerVariant::Unsafe => {
+                "./target/x86_64-unknown-linux-musl/release/oak_functions_loader_unsafe"
+            }
         }
     }
 }
 
 #[derive(Parser, Clone, Debug)]
-pub struct BuildFunctionsServer {
+pub struct BuildServerOpt {
+    #[clap(long, help = "server variant: [base, unsafe]", default_value = "base")]
+    pub server_variant: ServerVariant,
     #[clap(
         long,
         help = "rust toolchain override to use for the server compilation [e.g. stable, nightly, stage2]"

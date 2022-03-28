@@ -32,47 +32,40 @@ const DEFAULT_EXAMPLE_BACKEND_RUST_TARGET: &str = "x86_64-unknown-linux-gnu";
 pub const ALL_CLIENTS: &str = "all";
 pub const NO_CLIENTS: &str = "none";
 
+/// Holds the components for running an example in Oak: a `server` running the given
+/// `applications` listening to the `clients` and passing requests to `backends`.
+/// Configured through `example.toml` files.
 #[derive(serde::Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
-pub struct Example {
+pub struct OakExample {
     name: String,
     #[serde(default)]
-    server: ExampleServer,
+    server: Server,
     #[serde(default)]
     backends: HashMap<String, Executable>,
     applications: HashMap<String, Application>,
     clients: HashMap<String, Executable>,
 }
 
-impl Example {
-    fn has_classic_app(&self) -> bool {
+impl OakExample {
+    fn has_oak_functions_application(&self) -> bool {
         self.applications.values().any(|app| match app {
-            Application::Functions(_) => false,
-        })
-    }
-
-    fn has_functions_app(&self) -> bool {
-        self.applications.values().any(|app| match app {
-            Application::Functions(_) => true,
+            Application::OakFunctions(_) => true,
         })
     }
 }
 
-/// A construct representing either an Oak Classic or an Oak Functions application.
-///
-/// The condition that only one of `classic` or `functions` should be non-empty is
-/// checked in each operation of this struct. If neither or both are empty, the
-/// operation panics with an error message.
+/// Identify the application the server runs.
 #[derive(serde::Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
 #[serde(tag = "type")]
 enum Application {
-    Functions(ApplicationFunctions),
+    OakFunctions(OakFunctionsApplication),
 }
 
 #[derive(serde::Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
-struct ApplicationFunctions {
+struct OakFunctionsApplication {
     wasm_path: String,
     target: Target,
     wizer: Option<WizerOpt>,
@@ -87,11 +80,11 @@ struct WizerOpt {
 
 #[derive(serde::Deserialize, Debug, Default)]
 #[serde(deny_unknown_fields)]
-struct ExampleServer {
+struct Server {
     #[serde(default)]
     additional_args: Vec<String>,
     #[serde(default)]
-    server_variant: FunctionsServerVariant,
+    server_variant: ServerVariant,
 }
 
 #[derive(serde::Deserialize, Debug)]
@@ -124,7 +117,7 @@ struct Executable {
     additional_args: Vec<String>,
 }
 
-impl ApplicationFunctions {
+impl OakFunctionsApplication {
     fn construct_application_build_steps(&self, example_name: &str) -> Vec<Step> {
         let mut result = vec![build_wasm_module(example_name, &self.target, example_name)];
         // If Wizer configuration is specified, run Wizer after the build.
@@ -134,13 +127,9 @@ impl ApplicationFunctions {
         result
     }
 
-    fn construct_example_server_run_step(
-        &self,
-        example: &FunctionsExample,
-        run_clients: Step,
-    ) -> Step {
+    fn construct_server_run_step(&self, example: &OakFunctionsExample, run_clients: Step) -> Step {
         let opt = &example.options;
-        let run_server = run_functions_example_server(&example.example.server, self);
+        let run_server = run_oak_functions_server(&example.example.server, self);
 
         if opt.build_client.client_variant == NO_CLIENTS {
             Step::Single {
@@ -157,7 +146,8 @@ impl ApplicationFunctions {
     }
 }
 
-trait OakExample {
+/// Construct run and build steps an `OakExample`.
+trait OakExampleSteps {
     fn get_backends(&self) -> &HashMap<String, Executable>;
 
     fn get_build_client(&self) -> &BuildClient;
@@ -166,7 +156,7 @@ trait OakExample {
     fn construct_application_build_steps(&self) -> Vec<Step>;
 
     /// Constructs run step for the example server.
-    fn construct_example_server_run_step(&self, run_clients: Step) -> Step;
+    fn construct_server_run_step(&self, run_clients: Step) -> Step;
 
     /// Constructs build steps for the backends.
     fn construct_backend_build_steps(&self) -> Vec<Step> {
@@ -194,26 +184,26 @@ trait OakExample {
             })
     }
 }
-pub struct FunctionsExample<'a> {
-    example: &'a Example,
-    applications: HashMap<String, &'a ApplicationFunctions>,
-    options: RunFunctionsExamples,
+pub struct OakFunctionsExample<'a> {
+    example: &'a OakExample,
+    applications: HashMap<String, &'a OakFunctionsApplication>,
+    options: RunOakExamplesOpt,
 }
 
-impl<'a> FunctionsExample<'a> {
-    fn new(example: &'a Example, options: RunFunctionsExamples) -> Self {
+impl<'a> OakFunctionsExample<'a> {
+    fn new(example: &'a OakExample, options: RunOakExamplesOpt) -> Self {
         let applications =
             example
                 .applications
                 .iter()
                 .fold(hashmap! {}, |mut apps, app| match app {
-                    (name, Application::Functions(ref app)) => {
+                    (name, Application::OakFunctions(ref app)) => {
                         apps.insert(name.clone(), app);
                         apps
                     }
                 });
 
-        FunctionsExample {
+        OakFunctionsExample {
             example,
             applications,
             options,
@@ -221,7 +211,7 @@ impl<'a> FunctionsExample<'a> {
     }
 }
 
-impl OakExample for FunctionsExample<'_> {
+impl OakExampleSteps for OakFunctionsExample<'_> {
     fn get_backends(&self) -> &HashMap<String, Executable> {
         &self.example.backends
     }
@@ -238,23 +228,23 @@ impl OakExample for FunctionsExample<'_> {
         }
     }
 
-    fn construct_example_server_run_step(&self, run_clients: Step) -> Step {
+    fn construct_server_run_step(&self, run_clients: Step) -> Step {
         let app_variant = self.options.application_variant.as_str();
         match self.applications.get(app_variant) {
             None => run_clients,
-            Some(app) => app.construct_example_server_run_step(self, run_clients),
+            Some(app) => app.construct_server_run_step(self, run_clients),
         }
     }
 }
 
-pub fn run_functions_examples(opt: &RunFunctionsExamples, scope: &Scope) -> Step {
-    let examples: Vec<Example> = example_toml_files(scope)
+pub fn run_oak_functions_examples(opt: &RunOakExamplesOpt, scope: &Scope) -> Step {
+    let examples: Vec<OakExample> = example_toml_files(scope)
         .map(|path| {
             toml::from_str(&read_file(&path)).unwrap_or_else(|err| {
                 panic!("could not parse example manifest file {:?}: {}", path, err)
             })
         })
-        .filter(|example: &Example| example.has_functions_app() && !example.has_classic_app())
+        .filter(|example: &OakExample| example.has_oak_functions_application())
         .collect();
 
     Step::Multiple {
@@ -265,25 +255,25 @@ pub fn run_functions_examples(opt: &RunFunctionsExamples, scope: &Scope) -> Step
                 Some(example_name) => &example.name == example_name,
                 None => true,
             })
-            .map(|example| FunctionsExample::new(example, opt.clone()))
-            .map(|example| run_functions_example(&example))
+            .map(|example| OakFunctionsExample::new(example, opt.clone()))
+            .map(|example| run_oak_functions_example(&example))
             .collect(),
     }
 }
 
 /// Build every variant of the function server.
-/// It's easier to always build all variants than to control which variant to build and
+/// It's easier to always build all variants than to keep track of which variant to build and
 /// the overhead of building all variants is acceptable.
-pub fn build_functions_server_variants(opt: &BuildFunctionsServer) -> Step {
+pub fn build_oak_functions_server_variants(opt: &BuildServerOpt) -> Step {
     Step::Multiple {
         name: "cargo build all variants of function server".to_string(),
-        steps: FunctionsServerVariant::iter()
+        steps: ServerVariant::iter()
             .map(|variant| build_rust_binary(variant.path_to_manifest(), opt))
             .collect(),
     }
 }
 
-fn run_functions_example(example: &FunctionsExample) -> Step {
+fn run_oak_functions_example(example: &OakFunctionsExample) -> Step {
     let opt = &example.options;
 
     // Build steps for running clients
@@ -296,7 +286,7 @@ fn run_functions_example(example: &FunctionsExample) -> Step {
     // Build any backend server
     #[allow(clippy::collapsible_if)]
     let run_backend_server_clients: Step = if opt.run_server.unwrap_or(true) {
-        let run_server_clients = example.construct_example_server_run_step(run_clients);
+        let run_server_clients = example.construct_server_run_step(run_clients);
         example.construct_backend_run_steps(run_server_clients)
     } else {
         run_clients
@@ -309,7 +299,7 @@ fn run_functions_example(example: &FunctionsExample) -> Step {
             if opt.run_server.unwrap_or(true) {
                 // Build (all variants of) the server first so that when running a variant in the
                 // next step it will start up faster.
-                vec![build_functions_server_variants(&opt.build_server)]
+                vec![build_oak_functions_server_variants(&opt.build_server)]
             } else {
                 vec![]
             },
@@ -330,21 +320,21 @@ fn run_functions_example(example: &FunctionsExample) -> Step {
     }
 }
 
-pub fn build_functions_example(opt: &RunFunctionsExamples, scope: &Scope) -> Step {
+pub fn build_oak_functions_example(opt: &RunOakExamplesOpt, scope: &Scope) -> Step {
     let example_name = &opt
         .example_name
         .as_ref()
         .expect("--example-name must be specified")
         .clone();
 
-    let example: Example = example_toml_files(scope)
+    let example: OakExample = example_toml_files(scope)
         .map(|path| {
             toml::from_str(&read_file(&path)).unwrap_or_else(|err| {
                 panic!("could not parse example manifest file {:?}: {}", path, err)
             })
         })
-        .find(|example: &Example| &example.name == example_name)
-        .filter(|example| example.has_functions_app())
+        .find(|example: &OakExample| &example.name == example_name)
+        .filter(|example| example.has_oak_functions_application())
         .expect("could not find the specified functions example, try with `--scope=all`");
 
     // Build steps for building clients
@@ -364,21 +354,21 @@ pub fn build_functions_example(opt: &RunFunctionsExamples, scope: &Scope) -> Ste
             .collect(),
     };
 
-    let functions_example = FunctionsExample::new(&example, opt.clone());
+    let oak_functions_example = OakFunctionsExample::new(&example, opt.clone());
 
     Step::Multiple {
         name: example.name.to_string(),
         steps: vec![
-            functions_example.construct_application_build_steps(),
+            oak_functions_example.construct_application_build_steps(),
             // Build the server first so that when running it in the next step it will start up
             // faster.
-            vec![build_functions_server_variants(&opt.build_server)],
+            vec![build_oak_functions_server_variants(&opt.build_server)],
             if opt.build_docker {
                 vec![build_docker(&example)]
             } else {
                 vec![]
             },
-            functions_example.construct_backend_build_steps(),
+            oak_functions_example.construct_backend_build_steps(),
             vec![build_client],
         ]
         .into_iter()
@@ -402,7 +392,6 @@ pub fn build_wasm_module(name: &str, target: &Target, example_name: &str) -> Ste
                 command: Cmd::new(
                     "cargo",
                     // Keep this in sync with `/oak_functions/sdk/test/utils/src/lib.rs`.
-                    // Keep this in sync with `/sdk/rust/oak_tests/src/lib.rs`.
                     spread![
                         // `--out-dir` is unstable and requires `-Zunstable-options`.
                         "-Zunstable-options".to_string(),
@@ -486,28 +475,21 @@ fn run_wizer(input: &str, output: &str) -> Step {
     }
 }
 
-fn run_functions_example_server(
-    example_server: &ExampleServer,
-    application: &ApplicationFunctions,
+fn run_oak_functions_server(
+    server: &Server,
+    application: &OakFunctionsApplication,
 ) -> Box<dyn Runnable> {
     Cmd::new(
-        match example_server.server_variant {
-            FunctionsServerVariant::Base => {
-                "target/x86_64-unknown-linux-musl/release/oak_functions_loader_base"
-            }
-            FunctionsServerVariant::Unsafe => {
-                "target/x86_64-unknown-linux-musl/release/oak_functions_loader_unsafe"
-            }
-        },
+        server.server_variant.path_to_executable(),
         spread![
             format!("--wasm-path={}", application.wasm_path),
-            ...example_server.additional_args.clone(),
+            ...server.additional_args.clone(),
         ],
     )
 }
 
 fn run_clients(
-    example: &Example,
+    example: &OakExample,
     build_client: &BuildClient,
     client_additional_args: Vec<String>,
 ) -> Step {
@@ -548,7 +530,7 @@ fn run_client(
     }
 }
 
-fn build_docker(example: &Example) -> Step {
+fn build_docker(example: &OakExample) -> Step {
     Step::Multiple {
         name: "docker".to_string(),
         steps: vec![
@@ -693,7 +675,7 @@ fn run(
     }
 }
 
-fn build_rust_binary(manifest_dir: &str, opt: &BuildFunctionsServer) -> Step {
+fn build_rust_binary(manifest_dir: &str, opt: &BuildServerOpt) -> Step {
     Step::Single {
         name: format!("build rust binary {}", manifest_dir),
         command: Cmd::new(

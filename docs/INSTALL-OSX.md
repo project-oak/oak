@@ -61,7 +61,7 @@ The Oak Functions Runtime and its dependencies are built with the following
 script:
 
 ```bash
-./scripts/xtask build-functions-server-variants
+./scripts/xtask build-oak-functions-server-variants
 ```
 
 Build a particular example, say `hello_world`, with:
