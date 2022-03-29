@@ -342,24 +342,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "grpc_streaming_attestation"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "async-stream",
- "futures",
- "oak_functions_abi",
- "oak_remote_attestation",
- "oak_utils",
- "prost",
- "prost-types",
- "serde",
- "tokio",
- "tonic",
- "tower",
-]
-
-[[package]]
 name = "grpc_unary_attestation"
 version = "0.1.0"
 dependencies = [
@@ -761,7 +743,6 @@ dependencies = [
  "chrono",
  "clap",
  "futures",
- "grpc_streaming_attestation",
  "grpc_unary_attestation",
  "http",
  "humantime-serde",

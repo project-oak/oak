@@ -1,5 +1,4 @@
 worker_threads = 4
-grpc_request_model = "Unary"
 
 [tf_model]
 path = "./oak_functions/examples/mobilenet/files/mobilenet_v2_1.4_224_frozen.pb"

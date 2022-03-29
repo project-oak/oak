@@ -17,7 +17,7 @@
 use anyhow::Context;
 use bencher::stats::Stats;
 use oak_functions_abi::proto::Request;
-use oak_functions_client::{Client, Session};
+use oak_functions_client::Client;
 use std::time::Instant;
 
 // From https://pantheon.corp.google.com/api-gateway/gateway/weather-lookup-grpc/location/europe-west2?project=oak-ci.

@@ -18,7 +18,6 @@ additional_args = [
 rust = { Cargo = { cargo_manifest = "oak_functions/client/rust/Cargo.toml" }, additional_args = [
   "--uri=http://localhost:8080",
   "--request={\"lat\":0,\"lng\":0}",
-  "--expected-response-pattern=\\{\"temperature_degrees_celsius\":.*\\}",
-  "--unary-request-model"
+  "--expected-response-pattern=\\{\"temperature_degrees_celsius\":.*\\}"
 ] }
 java = { Bazel = { bazel_target = "//oak_functions/examples/weather_lookup/client/java:client" } }

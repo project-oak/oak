@@ -18,7 +18,7 @@ extern crate test;
 use maplit::hashmap;
 use oak_functions_abi::proto::{Request, ServerPolicy, StatusCode};
 use oak_functions_loader::{
-    grpc::{create_and_start_grpc_server, create_wasm_handler, RequestModel},
+    grpc::{create_and_start_grpc_server, create_wasm_handler},
     logger::Logger,
     lookup::LookupFactory,
     lookup_data::{LookupDataAuth, LookupDataRefresher, LookupDataSource},
@@ -96,7 +96,6 @@ async fn test_server() {
             get_config_info(&wasm_module_bytes, policy, false, None),
             term,
             logger,
-            RequestModel::BidiStreaming,
         )
         .await
     });

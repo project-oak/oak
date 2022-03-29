@@ -11,7 +11,6 @@ members = [
   "experimental/trusted_shuffler/common",
   "experimental/trusted_shuffler/server",
   "experimental/trusted_shuffler/trusted_shuffler",
-  "grpc_streaming_attestation",
   "oak_functions/abi",
   "oak_functions/client/rust/Cargo.toml",
   "oak_functions/examples/benchmark/module",
