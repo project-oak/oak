@@ -82,10 +82,7 @@ extern "C" {
         inference_len_ptr: *mut usize,
     ) -> u32;
 
-    // TODO(mschett) Define what is written in result_ptr_ptr if result is empty, e.g. no storage
-    // item.
-    // TODO(mschett) Add handle as argument.
-    pub fn invoke_testing(
+    pub fn invoke(
         args_ptr: *const u8,
         args_len: usize,
         result_ptr_ptr: *mut *mut u8,

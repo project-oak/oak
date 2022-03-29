@@ -2443,10 +2443,7 @@ dependencies = [
 name = "oak_functions_sdk_abi_test_invoke_testing"
 version = "0.1.0"
 dependencies = [
- "anyhow",
- "assert_matches",
  "bincode",
- "maplit",
  "oak_functions",
  "oak_functions_abi",
  "serde",
