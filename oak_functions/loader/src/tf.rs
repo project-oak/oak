@@ -136,6 +136,6 @@ impl TensorFlowFactory {
 impl ExtensionFactory for TensorFlowFactory {
     fn create(&self) -> anyhow::Result<BoxedExtension> {
         let model = self.model.clone();
-        Ok(BoxedExtension::Native(Box::new(model)))
+        Ok(Box::new(model))
     }
 }
