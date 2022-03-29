@@ -182,7 +182,7 @@
 <span class="kw">impl</span> <span class="ident">ExtensionFactory</span> <span class="kw">for</span> <span class="ident">LookupFactory</span> {
     <span class="kw">fn</span> <span class="ident">create</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">BoxedExtension</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">extension</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">manager</span>.<span class="ident">create_lookup_data</span>();
-        <span class="prelude-val">Ok</span>(<span class="ident">BoxedExtension::Native</span>(<span class="ident">Box::new</span>(<span class="ident">extension</span>)))
+        <span class="prelude-val">Ok</span>(<span class="ident">Box::new</span>(<span class="ident">extension</span>))
     }
 }
 

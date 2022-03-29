@@ -134,8 +134,6 @@
 <span id="129">129</span>
 <span id="130">130</span>
 <span id="131">131</span>
-<span id="132">132</span>
-<span id="133">133</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2021 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -196,12 +194,10 @@
 <span class="kw">impl</span> <span class="ident">ExtensionFactory</span> <span class="kw">for</span> <span class="ident">PrivateMetricsProxyFactory</span> {
     <span class="kw">fn</span> <span class="ident">create</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">BoxedExtension</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">metrics_proxy</span> <span class="op">=</span> <span class="ident">PrivateMetricsProxy::new</span>(<span class="self">self</span>.<span class="ident">aggregator</span>.<span class="ident">clone</span>());
-        <span class="prelude-val">Ok</span>(<span class="ident">BoxedExtension::Native</span>(<span class="ident">Box::new</span>(<span class="ident">PrivateMetricsExtension</span>::<span class="op">&lt;</span>
-            <span class="ident">Logger</span>,
-        <span class="op">&gt;</span><span class="ident">::new</span>(
+        <span class="prelude-val">Ok</span>(<span class="ident">Box::new</span>(<span class="ident">PrivateMetricsExtension</span>::<span class="op">&lt;</span><span class="ident">Logger</span><span class="op">&gt;</span><span class="ident">::new</span>(
             <span class="ident">metrics_proxy</span>,
             <span class="self">self</span>.<span class="ident">logger</span>.<span class="ident">clone</span>(),
-        ))))
+        )))
     }
 }
 
