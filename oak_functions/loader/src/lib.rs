@@ -28,8 +28,7 @@ pub mod server;
 #[cfg(feature = "oak-tf")]
 pub mod tf;
 
-// Figure out how we can make testing extension available in integration tests.
-// #[cfg(test)]
+// TODO(#2642): Add #[cfg(oak-testing)]
 pub mod testing;
 
 #[cfg(feature = "oak-metrics")]
