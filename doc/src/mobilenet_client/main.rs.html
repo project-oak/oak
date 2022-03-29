@@ -109,7 +109,7 @@
 
 <span class="kw">use</span> <span class="ident">anyhow::Context</span>;
 <span class="kw">use</span> <span class="ident">oak_functions_abi::proto</span>::{<span class="ident">ConfigurationInfo</span>, <span class="ident">Request</span>};
-<span class="kw">use</span> <span class="ident">oak_functions_client</span>::{<span class="ident">Session</span>, <span class="ident">UnaryClient</span>};
+<span class="kw">use</span> <span class="ident">oak_functions_client::Client</span>;
 <span class="kw">use</span> <span class="ident">tract_tensorflow::prelude</span>::<span class="kw-2">*</span>;
 
 <span class="comment">// Shape of the input tensor</span>
@@ -137,7 +137,7 @@
         <span class="prelude-val">Ok</span>(())
     };
 
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">client</span> <span class="op">=</span> <span class="ident">UnaryClient::new</span>(<span class="string">&quot;http://localhost:8080&quot;</span>, <span class="ident">config_verifier</span>)
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">client</span> <span class="op">=</span> <span class="ident">Client::new</span>(<span class="string">&quot;http://localhost:8080&quot;</span>, <span class="ident">config_verifier</span>)
         .<span class="kw">await</span>
         .<span class="ident">context</span>(<span class="string">&quot;Could not create Oak Functions client&quot;</span>)<span class="question-mark">?</span>;
 

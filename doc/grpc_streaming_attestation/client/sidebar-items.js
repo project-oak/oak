@@ -1,1 +1,0 @@
-initSidebarItems({"struct":[["AttestationClient","gRPC Attestation Service client implementation."]]});

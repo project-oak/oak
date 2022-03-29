@@ -63,43 +63,6 @@
 <span id="58">58</span>
 <span id="59">59</span>
 <span id="60">60</span>
-<span id="61">61</span>
-<span id="62">62</span>
-<span id="63">63</span>
-<span id="64">64</span>
-<span id="65">65</span>
-<span id="66">66</span>
-<span id="67">67</span>
-<span id="68">68</span>
-<span id="69">69</span>
-<span id="70">70</span>
-<span id="71">71</span>
-<span id="72">72</span>
-<span id="73">73</span>
-<span id="74">74</span>
-<span id="75">75</span>
-<span id="76">76</span>
-<span id="77">77</span>
-<span id="78">78</span>
-<span id="79">79</span>
-<span id="80">80</span>
-<span id="81">81</span>
-<span id="82">82</span>
-<span id="83">83</span>
-<span id="84">84</span>
-<span id="85">85</span>
-<span id="86">86</span>
-<span id="87">87</span>
-<span id="88">88</span>
-<span id="89">89</span>
-<span id="90">90</span>
-<span id="91">91</span>
-<span id="92">92</span>
-<span id="93">93</span>
-<span id="94">94</span>
-<span id="95">95</span>
-<span id="96">96</span>
-<span id="97">97</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2021 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -117,17 +80,15 @@
 
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">proto</span> {
     <span class="attribute">#![<span class="ident">allow</span>(<span class="ident">clippy::return_self_not_must_use</span>)]</span>
-    <span class="macro">tonic::include_proto!</span>(<span class="string">&quot;oak.session.stream.v1&quot;</span>);
+    <span class="macro">tonic::include_proto!</span>(<span class="string">&quot;oak.session.unary.v1&quot;</span>);
 }
 
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">attestation</span>;
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">rekor</span>;
 
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::attestation</span>::{<span class="ident">into_server_identity_verifier</span>, <span class="ident">ConfigurationVerifier</span>};
-<span class="kw">use</span> <span class="ident">anyhow</span>::{<span class="ident">Context</span>, <span class="ident">Error</span>, <span class="prelude-ty">Result</span>};
-<span class="kw">use</span> <span class="ident">async_trait::async_trait</span>;
-<span class="kw">use</span> <span class="ident">grpc_streaming_attestation::client::AttestationClient</span> <span class="kw">as</span> <span class="ident">StreamingAttestationClient</span>;
-<span class="kw">use</span> <span class="ident">grpc_unary_attestation::client::AttestationClient</span> <span class="kw">as</span> <span class="ident">UnaryAttestationClient</span>;
+<span class="kw">use</span> <span class="ident">anyhow::Context</span>;
+<span class="kw">use</span> <span class="ident">grpc_unary_attestation::client::AttestationClient</span>;
 <span class="kw">use</span> <span class="ident">oak_functions_abi::proto</span>::{<span class="ident">Request</span>, <span class="ident">Response</span>};
 <span class="kw">use</span> <span class="ident">prost::Message</span>;
 
@@ -137,26 +98,13 @@
 <span class="comment">// TODO(#1867): Add remote attestation support.</span>
 <span class="kw">const</span> <span class="ident">TEE_MEASUREMENT</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>] <span class="op">=</span> <span class="string">br&quot;Test TEE measurement&quot;</span>;
 
-<span class="attribute">#[<span class="ident">async_trait</span>]</span>
-<span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">Session</span> {
-    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">invoke</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">request</span>: <span class="ident">Request</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">Response</span><span class="op">&gt;</span>;
-}
-
-<span class="comment">// Shared response handling logic for clients.</span>
-<span class="kw">fn</span> <span class="ident">handle_response</span>(<span class="ident">response</span>: <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span>, <span class="ident">Error</span><span class="op">&gt;</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">Response</span><span class="op">&gt;</span> {
-    <span class="ident">response</span>
-        .<span class="ident">context</span>(<span class="string">&quot;Error invoking Oak Functions instance&quot;</span>)<span class="question-mark">?</span>
-        .<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;Empty response&quot;</span>))
-        .<span class="ident">and_then</span>(<span class="op">|</span><span class="ident">rsp</span><span class="op">|</span> <span class="ident">Response::decode</span>(<span class="ident">rsp</span>.<span class="ident">as_ref</span>()).<span class="ident">context</span>(<span class="string">&quot;Could not decode the response&quot;</span>))
-}
-
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Client</span> {
-    <span class="ident">inner</span>: <span class="ident">StreamingAttestationClient</span>,
+    <span class="ident">inner</span>: <span class="ident">AttestationClient</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">Client</span> {
     <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">uri</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="ident">verifier</span>: <span class="ident">ConfigurationVerifier</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">inner</span> <span class="op">=</span> <span class="ident">StreamingAttestationClient::create</span>(
+        <span class="kw">let</span> <span class="ident">inner</span> <span class="op">=</span> <span class="ident">AttestationClient::create</span>(
             <span class="ident">uri</span>,
             <span class="ident">TEE_MEASUREMENT</span>,
             <span class="ident">into_server_identity_verifier</span>(<span class="ident">verifier</span>),
@@ -165,36 +113,14 @@
         .<span class="ident">context</span>(<span class="string">&quot;Could not create Oak Functions client&quot;</span>)<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(<span class="ident">Client</span> { <span class="ident">inner</span> })
     }
-}
 
-<span class="attribute">#[<span class="ident">async_trait</span>]</span>
-<span class="kw">impl</span> <span class="ident">Session</span> <span class="kw">for</span> <span class="ident">Client</span> {
-    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">invoke</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">request</span>: <span class="ident">Request</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">Response</span><span class="op">&gt;</span> {
-        <span class="ident">handle_response</span>(<span class="self">self</span>.<span class="ident">inner</span>.<span class="ident">send</span>(<span class="ident">request</span>).<span class="kw">await</span>)
-    }
-}
-
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">UnaryClient</span> {
-    <span class="ident">inner</span>: <span class="ident">UnaryAttestationClient</span>,
-}
-
-<span class="kw">impl</span> <span class="ident">UnaryClient</span> {
-    <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">uri</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="ident">verifier</span>: <span class="ident">ConfigurationVerifier</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">inner</span> <span class="op">=</span> <span class="ident">UnaryAttestationClient::create</span>(
-            <span class="ident">uri</span>,
-            <span class="ident">TEE_MEASUREMENT</span>,
-            <span class="ident">into_server_identity_verifier</span>(<span class="ident">verifier</span>),
-        )
-        .<span class="kw">await</span>
-        .<span class="ident">context</span>(<span class="string">&quot;Could not create Oak Functions client&quot;</span>)<span class="question-mark">?</span>;
-        <span class="prelude-val">Ok</span>(<span class="ident">UnaryClient</span> { <span class="ident">inner</span> })
-    }
-}
-
-<span class="attribute">#[<span class="ident">async_trait</span>]</span>
-<span class="kw">impl</span> <span class="ident">Session</span> <span class="kw">for</span> <span class="ident">UnaryClient</span> {
-    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">invoke</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">request</span>: <span class="ident">Request</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">Response</span><span class="op">&gt;</span> {
-        <span class="ident">handle_response</span>(<span class="self">self</span>.<span class="ident">inner</span>.<span class="ident">send</span>(<span class="ident">request</span>).<span class="kw">await</span>)
+    <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">invoke</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">request</span>: <span class="ident">Request</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">Response</span><span class="op">&gt;</span> {
+        <span class="self">self</span>.<span class="ident">inner</span>
+            .<span class="ident">send</span>(<span class="ident">request</span>)
+            .<span class="kw">await</span>
+            .<span class="ident">context</span>(<span class="string">&quot;Error invoking Oak Functions instance&quot;</span>)<span class="question-mark">?</span>
+            .<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;Empty response&quot;</span>))
+            .<span class="ident">and_then</span>(<span class="op">|</span><span class="ident">rsp</span><span class="op">|</span> <span class="ident">Response::decode</span>(<span class="ident">rsp</span>.<span class="ident">as_ref</span>()).<span class="ident">context</span>(<span class="string">&quot;Could not decode the response&quot;</span>))
     }
 }
 </code></pre></div>

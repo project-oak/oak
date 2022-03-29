@@ -1,1 +1,1 @@
-initSidebarItems({"mod":[["attestation",""],["proto",""],["rekor","This module provides structs for representing a Rekor LogEntry, as well as logic for parsing and verifying signatures in a Rekor LogEntry."]],"struct":[["Client",""],["UnaryClient",""]],"trait":[["Session",""]]});
+initSidebarItems({"mod":[["attestation",""],["proto",""],["rekor","This module provides structs for representing a Rekor LogEntry, as well as logic for parsing and verifying signatures in a Rekor LogEntry."]],"struct":[["Client",""]]});
