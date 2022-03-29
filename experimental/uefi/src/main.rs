@@ -78,16 +78,13 @@ fn echo_loop(serial: &mut uefi::proto::console::serial::Serial) -> Result<!, uef
         // the number of bytes read. The only error we're fine with is TIMEOUT, as we can simply
         // retry that (and we'll keep getting TIMEOUTs when nobody is talking to us). In case of
         // any other error, bail out.
-        let len = serial
-            .read(&mut buf)
-            .and_then(|_| Ok(buf.len()))
-            .or_else(|err| {
-                if err.status() == Status::TIMEOUT {
-                    Ok(*err.data())
-                } else {
-                    Err(err.status())
-                }
-            })?;
+        let len = serial.read(&mut buf).map(|_| buf.len()).or_else(|err| {
+            if err.status() == Status::TIMEOUT {
+                Ok(*err.data())
+            } else {
+                Err(err.status())
+            }
+        })?;
 
         // Write out what we read; if we get any errors, propagate them.
         if len > 0 {
@@ -113,9 +110,9 @@ fn serial_echo(handle: Handle, bt: &BootServices) -> Result<!, uefi::Error<()>> 
         OpenProtocolAttributes::Exclusive,
     )?;
     // Dereference the raw pointer we get to the serial interface.
-    let mut serial = unsafe { &mut *serial.interface.get() };
+    let serial = unsafe { &mut *serial.interface.get() };
 
-    echo_loop(&mut serial)
+    echo_loop(serial)
 }
 
 #[cfg(test)]
