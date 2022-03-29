@@ -28,7 +28,7 @@ use serde::{Deserialize, Serialize};
 use wasmi::ValueType;
 
 /// Host function name for testing.
-const TESTING_ABI_FUNCTION_NAME: &str = "testing";
+const TESTING_ABI_FUNCTION_NAME: &str = "invoke_testing";
 
 impl OakApiNativeExtension for TestingExtension<Logger> {
     fn invoke(

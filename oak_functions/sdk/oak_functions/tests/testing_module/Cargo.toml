@@ -1,5 +1,5 @@
 [package]
-name = "oak_functions_sdk_abi_test"
+name = "oak_functions_sdk_abi_test_invoke_testing"
 version = "0.1.0"
 authors = ["Maria Schett <mschett@google.com>"]
 edition = "2021"
@@ -14,3 +14,6 @@ maplit = "*"
 assert_matches = "*"
 oak_functions = { path = "../../../oak_functions" }
 oak_functions_abi = { path = "../../../../abi" }
+serde = "*"
+serde_derive = "*"
+bincode = "*"

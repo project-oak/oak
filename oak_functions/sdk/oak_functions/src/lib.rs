@@ -151,6 +151,28 @@ pub fn tf_model_infer(input_vector: &[u8]) -> Result<Inference, OakStatus> {
     }
 }
 
+// TODO(mschett) Add documentation.
+pub fn invoke_testing(args: Vec<u8>) -> Result<Option<Vec<u8>>, OakStatus> {
+    let mut result_ptr: *mut u8 = std::ptr::null_mut();
+    let mut result_len: usize = 0;
+    let status_code = unsafe {
+        oak_functions_abi::invoke_testing(
+            args.as_ptr(),
+            args.len(),
+            &mut result_ptr,
+            &mut result_len,
+        )
+    };
+    let status = OakStatus::from_i32(status_code as i32).ok_or(OakStatus::ErrInternal)?;
+    match status {
+        OakStatus::Ok => {
+            let value = from_alloc_buffer(result_ptr, result_len);
+            Ok(Some(value))
+        }
+        status => Err(status),
+    }
+}
+
 /// Logs a debug message.
 ///
 /// These log messages are considered sensitive, so will only be logged by the runtime if the
