@@ -70,7 +70,7 @@ fn main(handle: Handle, system_table: &mut SystemTable<Boot>) -> Status {
     serial_echo(handle, system_table.boot_services()).unwrap();
 }
 
-fn echo_loop(serial: &mut uefi::proto::console::serial::Serial) -> Result<!, uefi::Error<()>> {
+fn echo_loop(serial: &mut Serial) -> Result<!, uefi::Error<()>> {
     let mut buf: [u8; 1024] = [0; 1024];
 
     loop {
@@ -109,7 +109,9 @@ fn serial_echo(handle: Handle, bt: &BootServices) -> Result<!, uefi::Error<()>> 
         },
         OpenProtocolAttributes::Exclusive,
     )?;
-    // Dereference the raw pointer we get to the serial interface.
+    // Dereference the raw pointer (*mut Serial) we get to the serial interface.
+    // This is safe as according to the UEFI spec for the OpenProtocol call to succeed the
+    // interface must not be null (see Section 7.3 in the UEFI Specification, Version 2.9).
     let serial = unsafe { &mut *serial.interface.get() };
 
     echo_loop(serial)
