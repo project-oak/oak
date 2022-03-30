@@ -44,4 +44,4 @@ members = [
   "remote_attestation/rust",
   "xtask",
 ]
-exclude = ["experimental/uefi", "oak_functions/loader/fuzz"]
+exclude = ["experimental/uefi/app", "oak_functions/loader/fuzz"]
