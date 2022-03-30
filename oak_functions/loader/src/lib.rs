@@ -28,7 +28,7 @@ pub mod server;
 #[cfg(feature = "oak-tf")]
 pub mod tf;
 
-// TODO(#2642): Add #[cfg(oak-testing)]
+// TODO(#2642): Add #[cfg(oak-testing)].
 pub mod testing;
 
 #[cfg(feature = "oak-metrics")]
