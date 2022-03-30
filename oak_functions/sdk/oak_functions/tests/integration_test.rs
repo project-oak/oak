@@ -23,14 +23,8 @@ use std::{path::PathBuf, sync::Arc};
 
 lazy_static! {
     static ref PATH_TO_MODULES: PathBuf = {
-        let mut path_to_modules = std::path::PathBuf::new();
         // WORKSPACE_ROOT is set in .cargo/config.toml.
-        path_to_modules.push(env!("WORKSPACE_ROOT"));
-        path_to_modules.push("oak_functions");
-        path_to_modules.push("sdk");
-        path_to_modules.push("oak_functions");
-        path_to_modules.push("tests");
-        path_to_modules
+         [env!("WORKSPACE_ROOT"),"oak_functions", "sdk", "oak_functions", "tests"].iter().collect()
     };
     static ref LOOKUP_WASM_MODULE_BYTES: Vec<u8> = {
         let mut manifest_path = PATH_TO_MODULES.clone();

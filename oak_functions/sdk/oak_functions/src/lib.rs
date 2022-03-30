@@ -151,19 +151,24 @@ pub fn tf_model_infer(input_vector: &[u8]) -> Result<Inference, OakStatus> {
     }
 }
 
-// Currently, invokes the testing extension with the given args and returns an error if the testing
-// extension does not give a result.
-pub fn invoke(args: Vec<u8>) -> Result<Option<Vec<u8>>, OakStatus> {
-    let mut result_ptr: *mut u8 = std::ptr::null_mut();
-    let mut result_len: usize = 0;
+// Currently, invokes the testing extension with the given request and returns an error if the
+// testing extension does not give a result.
+pub fn invoke(request: &[u8]) -> Result<Vec<u8>, OakStatus> {
+    let mut response_ptr: *mut u8 = std::ptr::null_mut();
+    let mut response_len: usize = 0;
     let status_code = unsafe {
-        oak_functions_abi::invoke(args.as_ptr(), args.len(), &mut result_ptr, &mut result_len)
+        oak_functions_abi::invoke(
+            request.as_ptr(),
+            request.len(),
+            &mut response_ptr,
+            &mut response_len,
+        )
     };
     let status = OakStatus::from_i32(status_code as i32).ok_or(OakStatus::ErrInternal)?;
     match status {
         OakStatus::Ok => {
-            let value = from_alloc_buffer(result_ptr, result_len);
-            Ok(Some(value))
+            let response = from_alloc_buffer(response_ptr, response_len);
+            Ok(response)
         }
         status => Err(status),
     }

@@ -30,13 +30,12 @@ pub extern "C" fn main() {
     let request = oak_functions::read_request().expect("Fail to read request body.");
     let message_to_echo = String::from_utf8(request).expect("Fail to parse request");
 
-    // Serialze a EchoRequest with the message_to_echo.
+    // Serialize a EchoRequest with the message_to_echo.
     let echo_request = bincode::serialize(&TestingMessage::EchoRequest(message_to_echo))
         .expect("Fail to serialize testing message.");
     // We invoke the Testing extension with an EchoRequest.
-    let serialized_echo_response = oak_functions::invoke(echo_request)
-        .expect("Fail to invoke_testing")
-        .expect("No result returned.");
+    let serialized_echo_response =
+        oak_functions::invoke(&echo_request).expect("Fail to invoke_testing.");
 
     let echo_response = bincode::deserialize(&serialized_echo_response)
         .expect("Fail to deserialize testing message.");
@@ -44,8 +43,8 @@ pub extern "C" fn main() {
     let response_body = match echo_response {
         // Make sure we received a EchoResponse.
         TestingMessage::EchoResponse(echoed_message) => echoed_message,
-        _ => String::from("Fail to receive an echo response"),
+        _ => String::from("Fail to receive an echo response."),
     };
 
-    oak_functions::write_response(response_body.as_bytes()).expect("Couldn't write response body.");
+    oak_functions::write_response(response_body.as_bytes()).expect("Fail to write response body.");
 }
