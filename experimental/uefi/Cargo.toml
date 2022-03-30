@@ -6,8 +6,9 @@ edition = "2021"
 license = "Apache-2.0"
 
 [dependencies]
-uefi = "*"
+uefi = { version = "*", features = ["exts"] }
 uefi-services = "*"
+log = { version = "*" }
 
 [dev-dependencies]
 uefi-services = { version = "*", features = ["qemu"] }
