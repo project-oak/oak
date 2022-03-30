@@ -208,6 +208,7 @@ async fn test_report_metric() {
         WasmHandler::create(&METRICS_WASM_MODULE_BYTES, vec![metrics_factory], logger)
             .expect("Could not instantiate WasmHandler.");
 
+    // The request is ignored in the Wasm module.
     let request = Request {
         body: b"_".to_vec(),
     };

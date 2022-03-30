@@ -18,8 +18,6 @@
 
 #[cfg_attr(not(test), no_mangle)]
 pub extern "C" fn main() {
-    // Ignore the request.
-    let _request = oak_functions::read_request().expect("Fail to read request body.");
     // Keep in sync with test_report_metric.
     let label = "a";
     // Some randomly chosen fixed value to report.
@@ -30,6 +28,5 @@ pub extern "C" fn main() {
 
     // Keep in sync with test_report_metric.
     let response_body = "Reporting of Metric Ok";
-
     oak_functions::write_response(response_body.as_bytes()).expect("Fail to write response body.");
 }
