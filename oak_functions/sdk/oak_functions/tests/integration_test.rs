@@ -15,9 +15,14 @@
 //
 
 use lazy_static::lazy_static;
-use maplit::hashmap;
+use maplit::{btreemap, hashmap};
 use oak_functions_abi::proto::{Request, Response};
-use oak_functions_loader::{logger::Logger, lookup::LookupFactory, server::WasmHandler};
+use oak_functions_loader::{
+    logger::Logger,
+    lookup::LookupFactory,
+    metrics::{BucketConfig, PrivateMetricsConfig, PrivateMetricsProxyFactory},
+    server::WasmHandler,
+};
 use oak_functions_lookup::LookupDataManager;
 use std::{path::PathBuf, sync::Arc};
 
@@ -37,6 +42,14 @@ lazy_static! {
     static ref TESTING_WASM_MODULE_BYTES: Vec<u8> = {
         let mut manifest_path = PATH_TO_MODULES.clone();
         manifest_path.push("testing_module");
+        manifest_path.push("Cargo.toml");
+
+        test_utils::compile_rust_wasm(manifest_path.to_str().unwrap(), false)
+            .expect("Could not read Wasm module")
+    };
+    static ref METRICS_WASM_MODULE_BYTES: Vec<u8> = {
+        let mut manifest_path = PATH_TO_MODULES.clone();
+        manifest_path.push("metrics_module");
         manifest_path.push("Cargo.toml");
 
         test_utils::compile_rust_wasm(manifest_path.to_str().unwrap(), false)
@@ -172,4 +185,33 @@ async fn test_echo() {
 
     let response: Response = wasm_handler.handle_invoke(request).await.unwrap();
     test_utils::assert_response_body(response, message_to_echo);
+}
+
+#[tokio::test]
+async fn test_report_metric() {
+    let logger = Logger::for_test();
+
+    let label = "a";
+    let metrics_config = PrivateMetricsConfig {
+        epsilon: 1.0,
+        batch_size: 20,
+        buckets: btreemap![
+            label.to_string() => BucketConfig::Count,
+        ],
+    };
+
+    let metrics_factory =
+        PrivateMetricsProxyFactory::new_boxed_extension_factory(&metrics_config, logger.clone())
+            .expect("Fail to create metrics factory.");
+
+    let wasm_handler =
+        WasmHandler::create(&METRICS_WASM_MODULE_BYTES, vec![metrics_factory], logger)
+            .expect("Could not instantiate WasmHandler.");
+
+    let request = Request {
+        body: b"_".to_vec(),
+    };
+
+    let response: Response = wasm_handler.handle_invoke(request).await.unwrap();
+    test_utils::assert_response_body(response, "Reporting of Metric Ok");
 }
