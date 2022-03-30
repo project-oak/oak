@@ -17,6 +17,7 @@ oak-metrics = ["oak_functions_metrics"]
 anyhow = "*"
 async-trait = "*"
 async-stream = "*"
+bincode = "*"
 bytes = "*"
 byteorder = { version = "*", default-features = false }
 chrono = "*"
@@ -62,7 +63,6 @@ wasmi = { version = "*", default-features = false, features = ["core"] }
 signal-hook = "*"
 
 [dev-dependencies]
-bincode = "*"
 criterion = "*"
 lookup_data_generator = { path = "../lookup_data_generator" }
 maplit = "*"

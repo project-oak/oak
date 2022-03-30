@@ -81,4 +81,11 @@ extern "C" {
         inference_ptr_ptr: *mut *mut u8,
         inference_len_ptr: *mut usize,
     ) -> u32;
+
+    pub fn invoke(
+        request_ptr: *const u8,
+        request_len: usize,
+        response_ptr_ptr: *mut *mut u8,
+        response_len_ptr: *mut usize,
+    ) -> u32;
 }

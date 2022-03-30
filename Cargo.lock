@@ -2409,7 +2409,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "oak_functions_sdk_abi_test"
+name = "oak_functions_sdk_abi_test_get_storage_item"
 version = "0.1.0"
 dependencies = [
  "anyhow",
@@ -2417,6 +2417,17 @@ dependencies = [
  "maplit",
  "oak_functions",
  "oak_functions_abi",
+]
+
+[[package]]
+name = "oak_functions_sdk_abi_test_invoke_testing"
+version = "0.1.0"
+dependencies = [
+ "bincode",
+ "oak_functions",
+ "oak_functions_abi",
+ "serde",
+ "serde_derive",
 ]
 
 [[package]]

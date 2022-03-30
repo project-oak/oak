@@ -151,6 +151,29 @@ pub fn tf_model_infer(input_vector: &[u8]) -> Result<Inference, OakStatus> {
     }
 }
 
+// Currently, invokes the testing extension with the given request and returns an error if the
+// testing extension does not give a result.
+pub fn invoke(request: &[u8]) -> Result<Vec<u8>, OakStatus> {
+    let mut response_ptr: *mut u8 = std::ptr::null_mut();
+    let mut response_len: usize = 0;
+    let status_code = unsafe {
+        oak_functions_abi::invoke(
+            request.as_ptr(),
+            request.len(),
+            &mut response_ptr,
+            &mut response_len,
+        )
+    };
+    let status = OakStatus::from_i32(status_code as i32).ok_or(OakStatus::ErrInternal)?;
+    match status {
+        OakStatus::Ok => {
+            let response = from_alloc_buffer(response_ptr, response_len);
+            Ok(response)
+        }
+        status => Err(status),
+    }
+}
+
 /// Logs a debug message.
 ///
 /// These log messages are considered sensitive, so will only be logged by the runtime if the

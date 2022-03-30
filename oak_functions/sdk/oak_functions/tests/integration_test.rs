@@ -19,13 +19,24 @@ use maplit::hashmap;
 use oak_functions_abi::proto::{Request, Response};
 use oak_functions_loader::{logger::Logger, lookup::LookupFactory, server::WasmHandler};
 use oak_functions_lookup::LookupDataManager;
-use std::sync::Arc;
+use std::{path::PathBuf, sync::Arc};
 
 lazy_static! {
-    static ref WASM_MODULE_BYTES: Vec<u8> = {
-        let mut manifest_path = std::env::current_dir().unwrap();
-        manifest_path.push("tests");
-        manifest_path.push("module");
+    static ref PATH_TO_MODULES: PathBuf = {
+        // WORKSPACE_ROOT is set in .cargo/config.toml.
+         [env!("WORKSPACE_ROOT"),"oak_functions", "sdk", "oak_functions", "tests"].iter().collect()
+    };
+    static ref LOOKUP_WASM_MODULE_BYTES: Vec<u8> = {
+        let mut manifest_path = PATH_TO_MODULES.clone();
+        manifest_path.push("lookup_module");
+        manifest_path.push("Cargo.toml");
+
+        test_utils::compile_rust_wasm(manifest_path.to_str().unwrap(), false)
+            .expect("Could not read Wasm module")
+    };
+    static ref TESTING_WASM_MODULE_BYTES: Vec<u8> = {
+        let mut manifest_path = PATH_TO_MODULES.clone();
+        manifest_path.push("testing_module");
         manifest_path.push("Cargo.toml");
 
         test_utils::compile_rust_wasm(manifest_path.to_str().unwrap(), false)
@@ -40,7 +51,7 @@ async fn test_read_write() {
     let lookup_factory = LookupFactory::new_boxed_extension_factory(lookup_data_manager)
         .expect("could not create LookupFactory");
 
-    let wasm_handler = WasmHandler::create(&WASM_MODULE_BYTES, vec![lookup_factory], logger)
+    let wasm_handler = WasmHandler::create(&LOOKUP_WASM_MODULE_BYTES, vec![lookup_factory], logger)
         .expect("Could not instantiate WasmHandler.");
 
     let request = Request {
@@ -57,7 +68,7 @@ async fn test_double_read() {
     let lookup_factory = LookupFactory::new_boxed_extension_factory(lookup_data_manager)
         .expect("could not create LookupFactory");
 
-    let wasm_handler = WasmHandler::create(&WASM_MODULE_BYTES, vec![lookup_factory], logger)
+    let wasm_handler = WasmHandler::create(&LOOKUP_WASM_MODULE_BYTES, vec![lookup_factory], logger)
         .expect("Could not instantiate WasmHandler.");
 
     let request = Request {
@@ -74,7 +85,7 @@ async fn test_double_write() {
     let lookup_factory = LookupFactory::new_boxed_extension_factory(lookup_data_manager)
         .expect("could not create LookupFactory");
 
-    let wasm_handler = WasmHandler::create(&WASM_MODULE_BYTES, vec![lookup_factory], logger)
+    let wasm_handler = WasmHandler::create(&LOOKUP_WASM_MODULE_BYTES, vec![lookup_factory], logger)
         .expect("Could not instantiate WasmHandler.");
 
     let request = Request {
@@ -91,7 +102,7 @@ async fn test_write_log() {
     let lookup_factory = LookupFactory::new_boxed_extension_factory(lookup_data_manager)
         .expect("could not create LookupFactory");
 
-    let wasm_handler = WasmHandler::create(&WASM_MODULE_BYTES, vec![lookup_factory], logger)
+    let wasm_handler = WasmHandler::create(&LOOKUP_WASM_MODULE_BYTES, vec![lookup_factory], logger)
         .expect("Could not instantiate WasmHandler.");
 
     let request = Request {
@@ -112,7 +123,7 @@ async fn test_storage_get_item() {
     let lookup_factory = LookupFactory::new_boxed_extension_factory(lookup_data_manager)
         .expect("could not create LookupFactory");
 
-    let wasm_handler = WasmHandler::create(&WASM_MODULE_BYTES, vec![lookup_factory], logger)
+    let wasm_handler = WasmHandler::create(&LOOKUP_WASM_MODULE_BYTES, vec![lookup_factory], logger)
         .expect("Could not instantiate WasmHandler.");
 
     let request = Request {
@@ -132,7 +143,7 @@ async fn test_storage_get_item_not_found() {
     let lookup_factory = LookupFactory::new_boxed_extension_factory(lookup_data_manager)
         .expect("could not create LookupFactory");
 
-    let wasm_handler = WasmHandler::create(&WASM_MODULE_BYTES, vec![lookup_factory], logger)
+    let wasm_handler = WasmHandler::create(&LOOKUP_WASM_MODULE_BYTES, vec![lookup_factory], logger)
         .expect("Could not instantiate WasmHandler.");
 
     let request = Request {
@@ -140,4 +151,25 @@ async fn test_storage_get_item_not_found() {
     };
     let response: Response = wasm_handler.handle_invoke(request).await.unwrap();
     test_utils::assert_response_body(response, "No item found");
+}
+
+#[tokio::test]
+async fn test_echo() {
+    let logger = Logger::for_test();
+    let message_to_echo = "ECHO";
+
+    let testing_factory =
+        oak_functions_loader::testing::TestingFactory::new_boxed_extension_factory(logger.clone())
+            .expect("Fail to create testing extension factory.");
+
+    let wasm_handler =
+        WasmHandler::create(&TESTING_WASM_MODULE_BYTES, vec![testing_factory], logger)
+            .expect("Could not instantiate WasmHandler.");
+
+    let request = Request {
+        body: message_to_echo.as_bytes().to_vec(),
+    };
+
+    let response: Response = wasm_handler.handle_invoke(request).await.unwrap();
+    test_utils::assert_response_body(response, message_to_echo);
 }

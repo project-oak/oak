@@ -28,7 +28,7 @@ use serde::{Deserialize, Serialize};
 use wasmi::ValueType;
 
 /// Host function name for testing.
-const TESTING_ABI_FUNCTION_NAME: &str = "testing";
+const TESTING_ABI_FUNCTION_NAME: &str = "invoke";
 
 impl OakApiNativeExtension for TestingExtension<Logger> {
     fn invoke(
@@ -36,13 +36,13 @@ impl OakApiNativeExtension for TestingExtension<Logger> {
         wasm_state: &mut crate::server::WasmState,
         args: wasmi::RuntimeArgs,
     ) -> Result<Result<(), oak_functions_abi::proto::OakStatus>, wasmi::Trap> {
-        let args_ptr: AbiPointer = args.nth_checked(0)?;
-        let args_len: AbiPointerOffset = args.nth_checked(1)?;
-        let result_ptr_ptr: AbiPointer = args.nth_checked(2)?;
-        let result_len_ptr: AbiPointer = args.nth_checked(3)?;
+        let request_ptr: AbiPointer = args.nth_checked(0)?;
+        let request_len: AbiPointerOffset = args.nth_checked(1)?;
+        let response_ptr_ptr: AbiPointer = args.nth_checked(2)?;
+        let response_len_ptr: AbiPointer = args.nth_checked(3)?;
 
         let extension_args = wasm_state
-            .read_extension_args(args_ptr, args_len)
+            .read_extension_args(request_ptr, request_len)
             .map_err(|err| {
                 self.log_error(&format!(
                     "testing(): Unable to read input from guest memory: {:?}",
@@ -52,7 +52,7 @@ impl OakApiNativeExtension for TestingExtension<Logger> {
             });
 
         let result = extension_args.and_then(testing).and_then(|result| {
-            wasm_state.write_extension_result(result, result_ptr_ptr, result_len_ptr)
+            wasm_state.write_extension_result(result, response_ptr_ptr, response_len_ptr)
         });
 
         Ok(result)
@@ -61,10 +61,10 @@ impl OakApiNativeExtension for TestingExtension<Logger> {
     fn get_metadata(&self) -> (String, wasmi::Signature) {
         let signature = wasmi::Signature::new(
             &[
-                ABI_USIZE, // args_ptr
-                ABI_USIZE, // args_len
-                ABI_USIZE, // result_ptr_ptr
-                ABI_USIZE, // result_len_ptr
+                ABI_USIZE, // request_ptr
+                ABI_USIZE, // request_len
+                ABI_USIZE, // response_ptr_ptr
+                ABI_USIZE, // response_len_ptr
             ][..],
             Some(ValueType::I32),
         );
