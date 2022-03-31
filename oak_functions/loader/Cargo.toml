@@ -58,7 +58,7 @@ tokio = { version = "*", features = [
 ] }
 toml = "*"
 tonic = "*"
-tonic-web = {version = "*", optional = true}
+tonic-web = { version = "*", optional = true }
 url = "*"
 # Use wasmi in `no_std` mode.
 wasmi = { version = "*", default-features = false, features = ["core"] }
