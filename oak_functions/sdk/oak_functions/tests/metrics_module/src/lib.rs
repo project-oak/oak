@@ -27,6 +27,6 @@ pub extern "C" fn main() {
     assert!(result.is_ok());
 
     // Keep in sync with test_report_metric.
-    let response_body = "Reporting of Metric Ok";
+    let response_body = "MetricReported";
     oak_functions::write_response(response_body.as_bytes()).expect("Fail to write response body.");
 }

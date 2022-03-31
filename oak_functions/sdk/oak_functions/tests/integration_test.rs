@@ -191,10 +191,11 @@ async fn test_echo() {
 async fn test_report_metric() {
     let logger = Logger::for_test();
 
+    // Keep in sync with metrics_module.
     let label = "a";
     let metrics_config = PrivateMetricsConfig {
         epsilon: 1.0,
-        batch_size: 20,
+        batch_size: 1,
         buckets: btreemap![
             label.to_string() => BucketConfig::Count,
         ],
@@ -214,5 +215,5 @@ async fn test_report_metric() {
     };
 
     let response: Response = wasm_handler.handle_invoke(request).await.unwrap();
-    test_utils::assert_response_body(response, "Reporting of Metric Ok");
+    test_utils::assert_response_body(response, "MetricReported");
 }
