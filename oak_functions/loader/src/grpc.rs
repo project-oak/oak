@@ -100,7 +100,6 @@ pub async fn create_and_start_grpc_server<F: Future<Output = ()>>(
         #[cfg(feature = "oak-web")]
         tonic::transport::Server::builder()
             .accept_http1(true)
-            .add_service(grpc_unary_attestation_service.clone())
             .add_service(tonic_web::enable(grpc_unary_attestation_service))
             .serve_with_shutdown(*address, terminate)
             .await
