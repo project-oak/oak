@@ -24,11 +24,14 @@ use crate::{
 use alloc::sync::Arc;
 use oak_functions_abi::proto::OakStatus;
 use oak_functions_metrics::{
-    PrivateMetricsAggregator, PrivateMetricsConfig, PrivateMetricsExtension, PrivateMetricsProxy,
+    PrivateMetricsAggregator, PrivateMetricsExtension, PrivateMetricsProxy,
 };
 // TODO(#2630): Use the std version of Mutex in environments where std is available.
 use oak_functions_util::sync::Mutex;
 use wasmi::ValueType;
+
+// Export for use in integration test.
+pub use oak_functions_metrics::{BucketConfig, PrivateMetricsConfig};
 
 /// Host function name for reporting private metrics.
 const METRICS_ABI_FUNCTION_NAME: &str = "report_metric";

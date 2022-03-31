@@ -2431,6 +2431,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "oak_functions_sdk_abi_test_report_metric"
+version = "0.1.0"
+dependencies = [
+ "oak_functions",
+]
+
+[[package]]
 name = "oak_functions_tf_inference"
 version = "0.1.0"
 dependencies = [
