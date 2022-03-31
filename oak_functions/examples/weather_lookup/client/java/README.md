@@ -17,5 +17,5 @@ Build and run gRPC Attestation example (including server) with the following
 command:
 
 ```bash
-./scripts/xtask run-functions-examples --example-name=weather_lookup --client-variant=java
+./scripts/xtask run-oak-functions-examples --example-name=weather_lookup --client-variant=java
 ```
