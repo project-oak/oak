@@ -60,6 +60,6 @@ To run the example, use the following:
 ```bash
 ./scripts/docker_run ./scripts/xtask \
   --logs \
-  run-functions-examples \
+  run-oak-functions-examples \
   --example-name=metrics
 ```

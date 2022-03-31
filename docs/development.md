@@ -19,7 +19,7 @@ To build and run one of the Oak example applications under Docker, run (after
 
 ```bash
 ./scripts/docker_pull  # retrieve cached Docker image for faster builds
-./scripts/docker_run xtask --logs --scope=all run-functions-examples --example-name=weather_lookup --client-variant=rust
+./scripts/docker_run xtask --logs --scope=all run-oak-functions-examples --example-name=weather_lookup --client-variant=rust
 ```
 
 This should build the Runtime, an Oak Functions Application and a client for the
@@ -137,7 +137,7 @@ Running one of the example Oak applications will confirm that all core
 prerequisites have been installed. Run one inside Docker with:
 
 ```bash
-xtask --logs --scope=all run-functions-examples --example-name=weather_lookup --client-variant=rust
+xtask --logs --scope=all run-oak-functions-examples --example-name=weather_lookup --client-variant=rust
 ```
 
 That script:
@@ -163,7 +163,7 @@ to a WebAssembly module and then serializes it into a binary application
 configuration file to be loaded to the Oak Functions Server:
 
 ```bash
-xtask --logs --scope=all run-functions-examples --example-name=weather_lookup --client-variant=none --run-server=false
+xtask --logs --scope=all run-oak-functions-examples --example-name=weather_lookup --client-variant=none --run-server=false
 ```
 
 This binary application configuration file includes the compiled Wasm code for
@@ -186,7 +186,7 @@ a specific Oak Application (which must already have been compiled into
 WebAssembly, as [described above](#build-application).
 
 ```bash
-xtask --scope=all --logs run-functions-examples --example-name=weather_lookup --client-variant=none
+xtask --scope=all --logs run-oak-functions-examples --example-name=weather_lookup --client-variant=none
 ```
 
 In the end, you should end up with an Oak server running, end with log output
@@ -207,7 +207,7 @@ client of an example Oak Application (as [described above](#build-application)),
 and runs the client code locally.
 
 ```bash
-xtask --scope=all --logs run-functions-examples --example-name=weather_lookup --run-server=false --client-variant=rust
+xtask --scope=all --logs run-oak-functions-examples --example-name=weather_lookup --run-server=false --client-variant=rust
 ```
 
 The client should run to completion and give output something like:

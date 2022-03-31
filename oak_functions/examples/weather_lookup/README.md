@@ -148,7 +148,7 @@ To build and run this example manually follow these steps:
 Alternatively, the `xtask` could be used to run this example:
 
 ```shell
-./scripts/xtask run-functions-examples --example-name=weather_lookup
+./scripts/xtask run-oak-functions-examples --example-name=weather_lookup
 ```
 
 ## Cloud Run Deploy
@@ -156,7 +156,7 @@ Alternatively, the `xtask` could be used to run this example:
 Use the following script to deploy the service on Cloud Run.
 
 ```shell
-./oak_functions/examples/weather_lookup/scripts/cloud_run_deploy run-functions-examples --example-name=weather_lookup
+./oak_functions/examples/weather_lookup/scripts/cloud_run_deploy run-oak-functions-examples --example-name=weather_lookup
 ```
 
 The script:
