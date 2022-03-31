@@ -27,7 +27,6 @@ use oak_logger::OakLogger;
 use oak_utils::LogError;
 use prost::Message;
 use std::{future::Future, net::SocketAddr};
-use tonic_web;
 
 async fn handle_request(
     wasm_handler: WasmHandler,
@@ -98,6 +97,7 @@ pub async fn create_and_start_grpc_server<F: Future<Output = ()>>(
     // and start is handled entirely witin each respective conditional arm, as
     // the added service alters the type signature of the created server.
     if cfg!(feature = "oak-web") {
+        #[cfg(feature = "oak-web")]
         tonic::transport::Server::builder()
             .accept_http1(true)
             .add_service(grpc_unary_attestation_service.clone())
