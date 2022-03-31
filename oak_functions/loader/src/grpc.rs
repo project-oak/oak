@@ -82,21 +82,34 @@ pub async fn create_and_start_grpc_server<F: Future<Output = ()>>(
 
     let additional_info = config_info.encode_to_vec();
 
-    tonic::transport::Server::builder()
-        .add_service(
-            grpc_unary_attestation::proto::unary_session_server::UnarySessionServer::new(
-                grpc_unary_attestation::server::AttestationServer::create(
-                    tee_certificate,
-                    request_handler,
-                    additional_info,
-                    ErrorLogger { logger },
-                )
-                .context("Couldn't create remote attestation server")?,
-            ),
-        )
-        .serve_with_shutdown(*address, terminate)
-        .await
-        .context("Couldn't start server")?;
+    let grpc_unary_attestation_service =
+        grpc_unary_attestation::proto::unary_session_server::UnarySessionServer::new(
+            grpc_unary_attestation::server::AttestationServer::create(
+                tee_certificate,
+                request_handler,
+                additional_info,
+                ErrorLogger { logger },
+            )
+            .context("Couldn't create remote attestation server")?,
+        );
+
+    // Create a server and add the relevant service defintions. Server creation
+    // and start is handled entirely witin each respective conditional arm, as
+    // the added service alters the type signature of the created server.
+    if cfg!(feature = "oak-web") {
+        tonic::transport::Server::builder()
+            .add_service(grpc_unary_attestation_service.clone())
+            .add_service(tonic_web::enable(grpc_unary_attestation_service))
+            .serve_with_shutdown(*address, terminate)
+            .await
+            .context("Couldn't start server")?;
+    } else {
+        tonic::transport::Server::builder()
+            .add_service(grpc_unary_attestation_service)
+            .serve_with_shutdown(*address, terminate)
+            .await
+            .context("Couldn't start server")?;
+    };
 
     Ok(())
 }
