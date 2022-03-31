@@ -46,7 +46,7 @@ impl Oak for OakImpl {
 fn foo() {
     let s = OakImpl;
     let transport = s.serve();
-    let c = OakClient::new(transport);
+    let mut c = OakClient::new(transport);
     let res = c.lookup_data(vec![14, 12]).unwrap();
     assert_eq!(Some(vec![19, 88]), res);
 }

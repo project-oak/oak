@@ -39,6 +39,7 @@ impl From<TransportError> for ClientError {
 #[derive(Debug)]
 pub enum TransportError {
     InvalidMessage,
+    InvalidTransactionId,
     InvalidMethodId,
 }
 
@@ -50,7 +51,15 @@ type MethodId = u32;
 /// See <https://fuchsia.dev/fuchsia-src/reference/fidl/language/wire-format#transactional-messages>
 #[derive(Serialize, Deserialize)]
 pub struct Header {
+    /// Identifies the transaction over the underlying transport. Each transaction (a.k.a. call or
+    /// invocation) over the same transport must have a unique transaction id (regardless of the
+    /// method_id value).
+    ///
+    /// The client picks a unique transaction id to put in the request header, and when the server
+    /// replies to that message, it also uses the same transaction id in the response message.
     pub transaction_id: u32,
+
+    /// Identifies the method to be invoked, as defined by the IDL.
     pub method_id: MethodId,
 }
 
@@ -59,7 +68,7 @@ pub struct Header {
 /// The body field contains the serialized payload of the request or response.
 ///
 /// Note that the serialization of the body does not have to match the serialization of the Message
-/// itself. For instance, the Message may be serialized via bincode, but the paload may be
+/// itself. For instance, the Message may be serialized via bincode, but the payload may be
 /// serialized via protobuf.
 #[derive(Serialize, Deserialize)]
 pub struct Message {
@@ -68,24 +77,50 @@ pub struct Message {
 }
 
 /// A message-oriented transport that allows performing invocations.
+///
+/// Implementations of this trait are responsible for assigning a unique transaction id for each
+/// invocation request, and checking whether the transaction id on the response matches that of the
+/// request.
 pub trait Transport {
-    fn invoke(&self, request_message: &Message) -> Result<Message, TransportError>;
+    fn invoke(&mut self, request_message: Message) -> Result<Message, TransportError>;
 }
 
 /// A wrapper for a message-oriented channel handle, which implements the [`Transport`] trait.
-struct Handle(u32);
+struct Channel {
+    handle: u32,
+    next_transaction_id: u32,
+}
 
-impl Transport for Handle {
-    fn invoke(&self, request_message: &Message) -> Result<Message, TransportError> {
+impl Channel {
+    #[allow(dead_code)]
+    pub fn new(handle: u32) -> Self {
+        Self {
+            handle,
+            next_transaction_id: 0,
+        }
+    }
+}
+
+impl Transport for Channel {
+    fn invoke(&mut self, request_message: Message) -> Result<Message, TransportError> {
+        let transaction_id = self.next_transaction_id;
+        self.next_transaction_id += 1;
+        let mut request_message = request_message;
+        request_message.header.transaction_id = transaction_id;
         // The serialization of the outer message is fixed by the transport, since the header needs
         // to be deserializable by the other end of the transport, but the body of the
         // request / response is serialized at a higher level, and in potentially different format,
-        // since that's handled by the application.
+        // since that's handled by the application (client and server).
         let request_bytes =
             bincode::serialize(&request_message).map_err(|_| TransportError::InvalidMessage)?;
-        let response_bytes = invoke(self.0, &request_bytes)?;
-        let response_message =
+        let response_bytes = invoke(self.handle, &request_bytes)?;
+        let response_message: Message =
             bincode::deserialize(&response_bytes).map_err(|_| TransportError::InvalidMessage)?;
+
+        if response_message.header.transaction_id != transaction_id {
+            return Err(TransportError::InvalidTransactionId);
+        }
+
         Ok(response_message)
     }
 }
@@ -127,16 +162,17 @@ macro_rules! service {
                 }
 
                 $(
-                    pub fn $method(&self, $request_arg: $request_type) -> Result<$response_type, $crate::ClientError> {
+                    pub fn $method(&mut self, $request_arg: $request_type) -> Result<$response_type, $crate::ClientError> {
                         let request_body = bincode::serialize(&$request_arg).map_err(|_| $crate::ClientError::InvalidRequest)?;
                         let request_message = $crate::Message {
                             header: $crate::Header {
+                                // An appropriate transaction id is assigned by the underlying transport as part of each invocation.
                                 transaction_id: 0,
                                 method_id: $method_id,
                             },
                             body: request_body,
                         };
-                        let response_message = self.transport.invoke(&request_message)?;
+                        let response_message = self.transport.invoke(request_message)?;
                         let response = bincode::deserialize(&response_message.body).map_err(|_| $crate::ClientError::InvalidResponse)?;
                         Ok(response)
                     }
@@ -148,7 +184,7 @@ macro_rules! service {
             }
 
             impl <S: $name> $crate::Transport for [<$name "Server">]<S> {
-                fn invoke(&self, request_message: &$crate::Message) -> Result<$crate::Message, $crate::TransportError> {
+                fn invoke(&mut self, request_message: $crate::Message) -> Result<$crate::Message, $crate::TransportError> {
                     let response_header = $crate::Header {
                         transaction_id: request_message.header.transaction_id,
                         method_id: request_message.header.method_id,
