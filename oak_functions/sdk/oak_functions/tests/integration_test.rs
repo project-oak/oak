@@ -216,4 +216,6 @@ async fn test_report_metric() {
 
     let response: Response = wasm_handler.handle_invoke(request).await.unwrap();
     test_utils::assert_response_body(response, "MetricReported");
+
+    // TODO(#2646): Check in the runtime that the metric was reported there.
 }
