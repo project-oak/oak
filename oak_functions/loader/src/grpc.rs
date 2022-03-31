@@ -27,6 +27,7 @@ use oak_logger::OakLogger;
 use oak_utils::LogError;
 use prost::Message;
 use std::{future::Future, net::SocketAddr};
+use tonic_web;
 
 async fn handle_request(
     wasm_handler: WasmHandler,
