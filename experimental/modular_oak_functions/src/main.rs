@@ -14,6 +14,8 @@
 // limitations under the License.
 //
 
+extern crate alloc;
+
 pub mod demux;
 pub mod io;
 pub mod log;
@@ -22,13 +24,13 @@ pub mod policy;
 pub mod session;
 pub mod wasmi;
 
+use alloc::{collections::BTreeMap, sync::Arc};
 use maplit::btreemap;
-use std::{collections::BTreeMap, sync::Arc};
 
 /// Manages the shared state for a service.
 pub trait Service {
     /// Creates a new service proxy
-    fn create_proxy(&self) -> Box<dyn ServiceProxy>;
+    fn create_proxy(self: Arc<Self>) -> Box<dyn ServiceProxy>;
 
     /// Configures the servcice with the given data.
     ///
@@ -37,6 +39,9 @@ pub trait Service {
     /// Most services should only react to receiving configuration data once, except for the lookup
     /// service which will periodically receive lookup data refreshes through this interface.
     fn configure(&self, data: &[u8]) -> anyhow::Result<()>;
+
+    /// Processes the provided data and returns the result.
+    fn call(&self, data: &[u8]) -> anyhow::Result<Vec<u8>>;
 }
 
 /// Provides per-request processing with access to the service.
@@ -46,9 +51,9 @@ pub trait ServiceProxy {
     fn call(&self, data: &[u8]) -> anyhow::Result<Vec<u8>>;
 }
 
-/// The types of services we can support.
+/// The types of services that can be configured.
 #[derive(Clone, Copy, PartialEq, PartialOrd, Eq, Ord)]
-pub enum ServiceType {
+pub enum ConfigServiceType {
     Log,
     Lookup,
     Policy,
@@ -56,37 +61,42 @@ pub enum ServiceType {
     Wasm,
 }
 
+/// The types of services that can be called from a workload.
+#[derive(Clone, Copy, PartialEq, PartialOrd, Eq, Ord)]
+pub enum WorkloadServiceType {
+    Log,
+    Lookup,
+}
+
 fn main() -> anyhow::Result<()> {
     // Create the log service.
-    let log: Arc<Box<dyn Service>> = Arc::new(Box::new(log::LogService::new()));
+    let log: Arc<dyn Service> = Arc::new(log::LogService::new());
 
     // Create the lookup service.
-    let lookup: Arc<Box<dyn Service>> = Arc::new(Box::new(lookup::LookupService::new()));
+    let lookup: Arc<dyn Service> = Arc::new(lookup::LookupService::new());
 
     // Create Wasm sandbox service with references to the services it can use.
-    let services: BTreeMap<ServiceType, Arc<Box<dyn Service>>> = btreemap! {
-        ServiceType::Log => log.clone(),
-        ServiceType::Lookup => lookup.clone(),
+    let services: BTreeMap<WorkloadServiceType, Arc<dyn Service>> = btreemap! {
+        WorkloadServiceType::Log => log.clone(),
+        WorkloadServiceType::Lookup => lookup.clone(),
     };
-    let wasm: Arc<Box<dyn Service>> = Arc::new(Box::new(wasmi::WasmiService::new(services)));
+    let wasm: Arc<dyn Service> = Arc::new(wasmi::WasmiService::new(services));
 
     // Create the policy enforcement service that forwards data to the Wasm sandbox service and
     // applies the fixed response-time and fixed response-size policies.
-    let policy: Arc<Box<dyn Service>> =
-        Arc::new(Box::new(policy::PolicyService::new(wasm.clone())));
+    let policy: Arc<dyn Service> = Arc::new(policy::PolicyService::new(wasm.clone()));
 
     // Create the session service that handles remote attestation handshakes and session encryption
     // and decryption.
-    let session: Arc<Box<dyn Service>> =
-        Arc::new(Box::new(session::SessionService::new(policy.clone())));
+    let session: Arc<dyn Service> = Arc::new(session::SessionService::new(policy.clone()));
 
     // Create references to services that can be configured.
-    let config_services: BTreeMap<ServiceType, Arc<Box<dyn Service>>> = btreemap! {
-        ServiceType::Log => log,
-        ServiceType::Lookup => lookup,
-        ServiceType::Policy => policy,
-        ServiceType::Session => session.clone(),
-        ServiceType::Wasm => wasm,
+    let config_services: BTreeMap<ConfigServiceType, Arc<dyn Service>> = btreemap! {
+        ConfigServiceType::Log => log,
+        ConfigServiceType::Lookup => lookup,
+        ConfigServiceType::Policy => policy,
+        ConfigServiceType::Session => session.clone(),
+        ConfigServiceType::Wasm => wasm,
     };
 
     // Create the stream demultiplexer and configure it to configure the other services and send
@@ -94,6 +104,6 @@ fn main() -> anyhow::Result<()> {
     let demux = demux::Demux::new(config_services, session);
 
     // Create the fake IO listener and pretend to listen for incoming frames.
-    let io = io::IoListener::new(demux);
+    let io = io::IoListener::new(Arc::new(demux));
     io.listen()
 }

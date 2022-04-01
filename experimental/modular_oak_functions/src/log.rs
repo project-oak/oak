@@ -15,8 +15,9 @@
 //
 
 use crate::{Service, ServiceProxy};
+use alloc::sync::Arc;
 
-/// Service to provide loggin functionality.
+/// Service to provide logging functionality.
 pub struct LogService {
     // Logger instance will be stored here in future.
 }
@@ -28,14 +29,22 @@ impl LogService {
 }
 
 impl Service for LogService {
-    fn create_proxy(&self) -> Box<dyn ServiceProxy> {
-        Box::new(LogProxy::new())
+    fn create_proxy(self: Arc<Self>) -> Box<dyn ServiceProxy> {
+        Box::new(LogProxy::new(self.clone()))
     }
 
     fn configure(&self, _data: &[u8]) -> anyhow::Result<()> {
         eprintln!("log configured");
         // Ignore configuration for now.
         Ok(())
+    }
+
+    fn call(&self, data: &[u8]) -> anyhow::Result<Vec<u8>> {
+        eprintln!("log called on service");
+        // The real implementation will use the logger. For now we just interpret the data as a UTF8
+        // string, write to stderr and echo the data base.
+        eprintln!("logged: {}", core::str::from_utf8(data)?);
+        Ok(data.to_vec())
     }
 }
 
@@ -47,21 +56,18 @@ impl Default for LogService {
 
 /// Provides the per-request logging functionality.
 pub struct LogProxy {
-    // Logger instance will be stored here in future.
+    service: Arc<LogService>,
 }
 
 impl LogProxy {
-    fn new() -> Self {
-        Self {}
+    fn new(service: Arc<LogService>) -> Self {
+        Self { service }
     }
 }
 
 impl ServiceProxy for LogProxy {
     fn call(&self, data: &[u8]) -> anyhow::Result<Vec<u8>> {
-        eprintln!("log called");
-        // The real implementation will use the logger. For now we just interpret the data as a UTF8
-        // string, write to stderr and echo the data base.
-        eprintln!("logged: {}", std::str::from_utf8(data)?);
-        Ok(data.to_vec())
+        eprintln!("log called on proxy");
+        self.service.call(data)
     }
 }

@@ -15,30 +15,35 @@
 //
 
 use crate::{Service, ServiceProxy};
-use std::sync::Arc;
+use alloc::sync::Arc;
 
 /// Session state service.
 pub struct SessionService {
     /// The service that will be called with the decrypted request, and that will supply the
     /// cleartext response.
-    next: Arc<Box<dyn Service>>,
+    next: Arc<dyn Service>,
     // Per-session state will also be stored here, likely in a LRU cache.
 }
 
 impl SessionService {
-    pub fn new(next: Arc<Box<dyn Service>>) -> Self {
+    pub fn new(next: Arc<dyn Service>) -> Self {
         Self { next }
     }
 }
 
 impl Service for SessionService {
-    fn create_proxy(&self) -> Box<dyn ServiceProxy> {
-        Box::new(SessionProxy::new(self.next.create_proxy()))
+    fn create_proxy(self: Arc<Self>) -> Box<dyn ServiceProxy> {
+        Box::new(SessionProxy::new(self.next.clone().create_proxy()))
     }
+
     fn configure(&self, _data: &[u8]) -> anyhow::Result<()> {
         eprintln!("session configured");
         // Ignore configuration for now.
         Ok(())
+    }
+
+    fn call(&self, _data: &[u8]) -> anyhow::Result<Vec<u8>> {
+        unimplemented!();
     }
 }
 

@@ -15,7 +15,7 @@
 //
 
 use crate::{Service, ServiceProxy};
-use std::sync::Arc;
+use alloc::sync::Arc;
 
 /// Policy enforcement service.
 ///
@@ -24,24 +24,29 @@ use std::sync::Arc;
 pub struct PolicyService {
     /// The service where the incoming request will be sent and that will supply the response to
     /// which the policy will be applied.
-    next: Arc<Box<dyn Service>>,
+    next: Arc<dyn Service>,
     // Policy configuration will also be stored here in future.
 }
 
 impl PolicyService {
-    pub fn new(next: Arc<Box<dyn Service>>) -> Self {
+    pub fn new(next: Arc<dyn Service>) -> Self {
         Self { next }
     }
 }
 
 impl Service for PolicyService {
-    fn create_proxy(&self) -> Box<dyn ServiceProxy> {
-        Box::new(PolicyProxy::new(self.next.create_proxy()))
+    fn create_proxy(self: Arc<Self>) -> Box<dyn ServiceProxy> {
+        Box::new(PolicyProxy::new(self.next.clone().create_proxy()))
     }
+
     fn configure(&self, _data: &[u8]) -> anyhow::Result<()> {
         eprintln!("policy configured");
         // Ignore configuration for now. In future this will set the policy to use.
         Ok(())
+    }
+
+    fn call(&self, _data: &[u8]) -> anyhow::Result<Vec<u8>> {
+        unimplemented!();
     }
 }
 

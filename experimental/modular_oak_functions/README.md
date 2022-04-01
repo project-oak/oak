@@ -32,12 +32,12 @@ through a standardised interface.
 This single approach would support most of the existing components in the Oak
 Functions runtime, but we will need some additional services for things that do
 not operate at the same per-request level. One example is a stream
-demultiplexer. It will receive one multiplexed stream and split it into
-per-request streams. As it will not need to provide per-request proxies, the
-implementation would directly provide the ability to process messages. For now
-there are no traits for these, but new traits could be added if we want to
-implement e.g. different demux implementations for different runtimes or
-environments.
+demultiplexer. The external untrusted loader will multiplex all requests and
+configuration messages over a single stream, so the demultiplexer It will
+receive one multiplexed stream and split it into per-request streams. As it will
+not need to provide per-request proxies, the service implementation would
+directly provide the ability to process messages and not implement proxy
+creation.
 
 ## Implemenation Outline
 
@@ -53,8 +53,8 @@ how data might flow through the system.
 In a real implementation each module will be implemented in a separate crate,
 and, where possible, will be `no_std`-compatible.
 
-The implementation starts with a configuration process, faking empty control
-frames to each of the configurable services:
+The implementation starts with a configuration process, faking control frames to
+go to each of the configurable services:
 
 - IoListener
   - Demux

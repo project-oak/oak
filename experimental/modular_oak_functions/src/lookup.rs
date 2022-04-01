@@ -15,6 +15,7 @@
 //
 
 use crate::{Service, ServiceProxy};
+use alloc::sync::Arc;
 
 /// Container for the shared lookup data.
 pub struct LookupService {
@@ -28,7 +29,7 @@ impl LookupService {
 }
 
 impl Service for LookupService {
-    fn create_proxy(&self) -> Box<dyn ServiceProxy> {
+    fn create_proxy(self: Arc<Self>) -> Box<dyn ServiceProxy> {
         Box::new(LookupProxy::new())
     }
 
@@ -36,6 +37,10 @@ impl Service for LookupService {
         eprintln!("lookup configured");
         // Ignore configuration for now. In future this will be used to refresh the lookup data.
         Ok(())
+    }
+
+    fn call(&self, _data: &[u8]) -> anyhow::Result<Vec<u8>> {
+        unimplemented!();
     }
 }
 
@@ -58,7 +63,7 @@ impl LookupProxy {
 
 impl ServiceProxy for LookupProxy {
     fn call(&self, data: &[u8]) -> anyhow::Result<Vec<u8>> {
-        eprintln!("lookup called");
+        eprintln!("lookup called on proxy");
 
         // The real implementation will do the lookup, but for now we just echo the data back.
         Ok(data.to_vec())

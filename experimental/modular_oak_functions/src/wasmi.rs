@@ -14,27 +14,27 @@
 // limitations under the License.
 //
 
-use crate::{Service, ServiceProxy, ServiceType};
-use std::{collections::BTreeMap, sync::Arc};
+use crate::{Service, ServiceProxy, WorkloadServiceType};
+use alloc::{collections::BTreeMap, sync::Arc};
 
 /// Container for the Wasm business logic code, in future to be implemented using Wasmi.
 pub struct WasmiService {
     /// Services that can be called by the Wasm business logic.
-    services: BTreeMap<ServiceType, Arc<Box<dyn Service>>>,
+    services: BTreeMap<WorkloadServiceType, Arc<dyn Service>>,
 }
 
 impl WasmiService {
-    pub fn new(services: BTreeMap<ServiceType, Arc<Box<dyn Service>>>) -> Self {
+    pub fn new(services: BTreeMap<WorkloadServiceType, Arc<dyn Service>>) -> Self {
         Self { services }
     }
 }
 
 impl Service for WasmiService {
-    fn create_proxy(&self) -> Box<dyn ServiceProxy> {
-        let proxies: BTreeMap<ServiceType, Box<dyn ServiceProxy>> = self
+    fn create_proxy(self: Arc<Self>) -> Box<dyn ServiceProxy> {
+        let proxies: BTreeMap<WorkloadServiceType, Box<dyn ServiceProxy>> = self
             .services
             .iter()
-            .map(|(&service_type, service)| (service_type, service.create_proxy()))
+            .map(|(&service_type, service)| (service_type, service.clone().create_proxy()))
             .collect();
         Box::new(WasmiProxy::new(proxies))
     }
@@ -43,15 +43,19 @@ impl Service for WasmiService {
         eprintln!("wasm engine configured");
         Ok(())
     }
+
+    fn call(&self, _data: &[u8]) -> anyhow::Result<Vec<u8>> {
+        unimplemented!();
+    }
 }
 
 /// Provides the per-request Wasm sandbox execution.
 pub struct WasmiProxy {
-    proxies: BTreeMap<ServiceType, Box<dyn ServiceProxy>>,
+    proxies: BTreeMap<WorkloadServiceType, Box<dyn ServiceProxy>>,
 }
 
 impl WasmiProxy {
-    fn new(proxies: BTreeMap<ServiceType, Box<dyn ServiceProxy>>) -> Self {
+    fn new(proxies: BTreeMap<WorkloadServiceType, Box<dyn ServiceProxy>>) -> Self {
         Self { proxies }
     }
 }
