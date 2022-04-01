@@ -59,6 +59,7 @@ pub enum Command {
     RunOakFunctionsExamples(RunOakExamplesOpt),
     BuildOakFunctionsExample(RunOakExamplesOpt),
     BuildOakFunctionsServerVariants(BuildServerOpt),
+    RunOakTrustedShufflerExample(RunOakExamplesOpt),
     Format,
     CheckFormat,
     RunTests,

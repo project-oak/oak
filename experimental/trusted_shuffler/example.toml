@@ -1,0 +1,13 @@
+name = "oak_trusted_shuffler"
+
+[clients]
+rust = { Cargo = { cargo_manifest = "experimental/trusted_shuffler/client/Cargo.toml" }, additional_args = [
+    "--server-url=http://localhost:8080"
+] }
+
+[server]
+
+# Oak Trusted Shuffler currently does not have any applications.
+[applications]
+
+[backends]

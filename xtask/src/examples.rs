@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-use crate::{files::*, internal::*};
+use crate::{diffs::modified_files, files::*, internal::*};
 use maplit::hashmap;
 use std::collections::HashMap;
 use strum::IntoEnumIterator;
@@ -237,6 +237,34 @@ impl OakExampleSteps for OakFunctionsExample<'_> {
     }
 }
 
+pub fn run_oak_trusted_shuffler_example(opt: &RunOakExamplesOpt, scope: &Scope) -> Step {
+    // Build OakExample from example.toml file
+
+    // TODO(mschett) Change to not hard-coded path to `example.toml` of Trusted Shuffler.
+    let example_toml_path: std::path::PathBuf = [
+        // WORKSPACE_ROOT is set in .cargo/config.toml.
+        env!("WORKSPACE_ROOT"),
+        "experimental",
+        "trusted_shuffler",
+        "example.toml",
+    ]
+    .iter()
+    .collect();
+
+    let example: OakExample =
+        toml::from_str(&read_file(&example_toml_path)).unwrap_or_else(|err| {
+            panic!(
+                "could not parse example manifest file {:?}: {}",
+                example_toml_path, err
+            )
+        });
+
+    // TODO(mschett) Figure out when we want to run the Trusted Shuffler.
+    // if modified_files(scope).contains_path(&example_toml_path) {
+
+    run_oak_example(&example, &opt)
+}
+
 pub fn run_oak_functions_examples(opt: &RunOakExamplesOpt, scope: &Scope) -> Step {
     let examples: Vec<OakExample> = example_toml_files(scope)
         .map(|path| {
@@ -270,6 +298,21 @@ pub fn build_oak_functions_server_variants(opt: &BuildServerOpt) -> Step {
         steps: ServerVariant::iter()
             .map(|variant| build_rust_binary(variant.path_to_manifest(), opt))
             .collect(),
+    }
+}
+
+fn run_oak_example(example: &OakExample, opt: &RunOakExamplesOpt) -> Step {
+    // Steps for running clients.
+    let run_clients = run_clients(
+        example,
+        &opt.build_client,
+        opt.client_additional_args.clone(),
+    );
+
+    // Build steps for clients.
+    Step::Multiple {
+        name: example.name.to_string(),
+        steps: vec![run_clients],
     }
 }
 

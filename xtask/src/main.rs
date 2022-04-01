@@ -121,6 +121,9 @@ fn match_cmd(opt: &Opt) -> Step {
         Command::BuildOakFunctionsServerVariants(ref opt) => {
             build_oak_functions_server_variants(opt)
         }
+        Command::RunOakTrustedShufflerExample(ref run_opt) => {
+            run_oak_trusted_shuffler_example(run_opt, &opt.scope)
+        }
         Command::RunTests => run_tests(),
         Command::RunCargoClippy => run_cargo_clippy(&opt.scope),
         Command::RunCargoTests(ref run_opt) => run_cargo_tests(run_opt, &opt.scope),
