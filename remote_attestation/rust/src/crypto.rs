@@ -194,11 +194,15 @@ impl KeyNegotiator {
             .map_err(|error| anyhow!("Couldn't get public key: {:?}", error))?
             .as_ref()
             .to_vec();
-        public_key.as_slice().try_into().context(format!(
-            "Incorrect public key length, expected {}, found {}",
-            KEY_AGREEMENT_ALGORITHM_KEY_LENGTH,
-            public_key.len()
-        ))
+        public_key
+            .as_slice()
+            .try_into()
+            .map_err(anyhow::Error::msg)
+            .context(format!(
+                "Incorrect public key length, expected {}, found {}",
+                KEY_AGREEMENT_ALGORITHM_KEY_LENGTH,
+                public_key.len()
+            ))
     }
 
     /// Derives session keys from self and peer public keys and creates an [`AeadEncryptor`].
@@ -235,11 +239,14 @@ impl KeyNegotiator {
             &agreement::UnparsedPublicKey::new(KEY_AGREEMENT_ALGORITHM, peer_public_key),
             anyhow!("Couldn't derive session keys"),
             |key_material| {
-                let key_material = key_material.try_into().context(format!(
-                    "Incorrect key material length, expected {}, found {}",
-                    KEY_AGREEMENT_ALGORITHM_KEY_LENGTH,
-                    key_material.len()
-                ))?;
+                let key_material = key_material
+                    .try_into()
+                    .map_err(anyhow::Error::msg)
+                    .context(format!(
+                        "Incorrect key material length, expected {}, found {}",
+                        KEY_AGREEMENT_ALGORITHM_KEY_LENGTH,
+                        key_material.len()
+                    ))?;
                 let peer_public_key = *peer_public_key;
                 match type_ {
                     // On the server side `self_public_key` is the server key.
@@ -352,11 +359,15 @@ impl Signer {
 
     pub fn public_key(&self) -> anyhow::Result<[u8; SIGNING_ALGORITHM_KEY_LENGTH]> {
         let public_key = self.key_pair.public_key().as_ref().to_vec();
-        public_key.as_slice().try_into().context(format!(
-            "Incorrect public key length, expected {}, found {}",
-            SIGNING_ALGORITHM_KEY_LENGTH,
-            public_key.len()
-        ))
+        public_key
+            .as_slice()
+            .try_into()
+            .map_err(anyhow::Error::msg)
+            .context(format!(
+                "Incorrect public key length, expected {}, found {}",
+                SIGNING_ALGORITHM_KEY_LENGTH,
+                public_key.len()
+            ))
     }
 
     pub fn sign(&self, input: &[u8]) -> anyhow::Result<[u8; SIGNATURE_LENGTH]> {
@@ -367,11 +378,15 @@ impl Signer {
             .map_err(|error| anyhow!("Couldn't sign input: {:?}", error))?
             .as_ref()
             .to_vec();
-        signature.as_slice().try_into().context(format!(
-            "Incorrect signature length, expected {}, found {}",
-            SIGNATURE_LENGTH,
-            signature.len()
-        ))
+        signature
+            .as_slice()
+            .try_into()
+            .map_err(anyhow::Error::msg)
+            .context(format!(
+                "Incorrect signature length, expected {}, found {}",
+                SIGNATURE_LENGTH,
+                signature.len()
+            ))
     }
 }
 
