@@ -30,7 +30,7 @@ impl LogService {
 
 impl Service for LogService {
     fn create_proxy(self: Arc<Self>) -> Box<dyn ServiceProxy> {
-        Box::new(LogProxy::new(self.clone()))
+        Box::new(LogProxy::new(self))
     }
 
     fn configure(&self, _data: &[u8]) -> anyhow::Result<()> {

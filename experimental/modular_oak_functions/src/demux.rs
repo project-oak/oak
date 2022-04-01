@@ -78,7 +78,7 @@ impl Service for Demux {
         // A real implemenation would decode and decapsulate the frame to determine the frame type.
         // For now we just assume that an empty frame is a control frame, and all non-empty
         // frames are data frames.
-        if data.len() == 0 {
+        if data.is_empty() {
             self.handle_control_frame(data).map(|_| Vec::new())
         } else {
             self.handle_data_frame(data)
