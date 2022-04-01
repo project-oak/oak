@@ -2483,6 +2483,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "oak_idl"
+version = "0.1.0"
+dependencies = [
+ "bincode",
+ "maplit",
+ "paste",
+ "serde",
+]
+
+[[package]]
 name = "oak_logger"
 version = "0.1.0"
 dependencies = [

@@ -39,6 +39,7 @@ members = [
   "oak_functions/sdk/oak_functions/tests/metrics_module",
   "oak_functions/sdk/test_utils",
   "oak_functions/util",
+  "oak_idl",
   "remote_attestation/rust",
   "xtask",
 ]
