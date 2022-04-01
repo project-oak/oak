@@ -28,6 +28,7 @@ service! {
 
 struct OakImpl;
 
+/// An implementation of the [`Oak`] service trait for testing.
 impl Oak for OakImpl {
     fn lookup_data(&self, key: Vec<u8>) -> Option<Vec<u8>> {
         let h = maplit::hashmap! {
@@ -43,7 +44,7 @@ impl Oak for OakImpl {
 }
 
 #[test]
-fn foo() {
+fn test_lookup_data() {
     let s = OakImpl;
     let transport = s.serve();
     let mut c = OakClient::new(transport);
