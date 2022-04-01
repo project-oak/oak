@@ -27,6 +27,7 @@ sourcesIndex["oak_functions_sdk_abi_test_report_metric"] = {"name":"","files":["
 sourcesIndex["oak_functions_tf_inference"] = {"name":"","files":["lib.rs"]};
 sourcesIndex["oak_functions_util"] = {"name":"","files":["lib.rs","sync.rs"]};
 sourcesIndex["oak_https_attestation"] = {"name":"","files":["main.rs","server.rs"]};
+sourcesIndex["oak_idl"] = {"name":"","files":["lib.rs"]};
 sourcesIndex["oak_logger"] = {"name":"","files":["lib.rs"]};
 sourcesIndex["oak_proxy_attestation"] = {"name":"","files":["lib.rs"]};
 sourcesIndex["oak_proxy_attestation_bin"] = {"name":"","files":["main.rs"]};
