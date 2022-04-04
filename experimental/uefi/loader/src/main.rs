@@ -17,8 +17,14 @@
 use std::{fs, path::PathBuf};
 
 use clap::Parser;
-use qemu::Qemu;
-
+use futures::stream::StreamExt;
+use qemu::{Qemu, QemuParams};
+use tokio::{
+    io::{self, AsyncReadExt, AsyncWriteExt},
+    net::UnixStream,
+    signal,
+};
+use tokio_util::codec::Decoder;
 mod qemu;
 
 #[derive(Parser, Debug)]
@@ -34,6 +40,9 @@ struct Args {
     /// path to the UEFI app to execute
     #[clap(parse(from_os_str), validator = path_exists)]
     uefi_app: PathBuf,
+
+    // message to send to the app
+    message: String,
 }
 
 fn path_exists(s: &str) -> Result<(), String> {
@@ -48,12 +57,58 @@ fn path_exists(s: &str) -> Result<(), String> {
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cli = Args::parse();
 
-    let qemu = Qemu::start(
-        cli.qemu.as_path(),
-        cli.ovmf.as_path(),
-        cli.uefi_app.as_path(),
-    )?;
+    let console = UnixStream::pair()?;
+    let comms = UnixStream::pair()?;
 
+    let qemu = Qemu::start(QemuParams {
+        binary: cli.qemu.as_path(),
+        firmware: cli.ovmf.as_path(),
+        app: cli.uefi_app.as_path(),
+        console: console.0,
+        comms: comms.0,
+    })?;
+
+    // Log everything coming over the console channel.
+    tokio::spawn(async {
+        let codec = tokio_util::codec::LinesCodec::new();
+        let mut framed = codec.framed(console.1);
+
+        while let Some(line) = framed.next().await {
+            // The UEFI console uses ANSI escape codes to clear screen and set colours, so
+            // let's not just print the string out but rather the debug version of that.
+            println!("console: {:?}", line.unwrap())
+        }
+    });
+
+    // Bit hacky, but it's only temporary and turns out console I/O is complex.
+    let (mut rh, mut wh) = comms.1.into_split();
+    tokio::spawn(async move {
+        let mut buf = [0; 1];
+        loop {
+            let result = rh.read(&mut buf).await.unwrap();
+            if result == 0 {
+                break;
+            } else {
+                println!("received: {:?}", buf);
+            }
+        }
+    });
+    tokio::spawn(async move {
+        let mut buf = [0; 1];
+        loop {
+            let result = io::stdin().read(&mut buf).await.unwrap();
+            if result == 0 {
+                break;
+            } else {
+                println!("sending: {:?}", buf);
+                wh.write_all(&buf).await.unwrap();
+            }
+        }
+    });
+
+    signal::ctrl_c().await?;
+
+    // Clean up.
     qemu.kill().await?;
     Ok(())
 }

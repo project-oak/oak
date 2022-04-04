@@ -4797,7 +4797,9 @@ dependencies = [
  "anyhow",
  "clap 3.1.8",
  "command-fds",
+ "futures",
  "tokio",
+ "tokio-util",
 ]
 
 [[package]]

@@ -8,10 +8,15 @@ license = "Apache-2.0"
 [dependencies]
 anyhow = "*"
 clap = { version = "*", features = ["derive"] }
-command-fds = { verion = "*", features = ["tokio"] }
+command-fds = { version = "*", features = ["tokio"] }
+futures = "*"
 tokio = { version = "*", features = [
+    "io-std",
+    "io-util",
     "rt-multi-thread",
     "macros",
     "net",
-    "process"
+    "process",
+    "signal",
 ] }
+tokio-util = { version = "*", features = ["codec"] }
