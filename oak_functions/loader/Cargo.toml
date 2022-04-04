@@ -8,10 +8,11 @@ license = "Apache-2.0"
 [features]
 # Feature that allows logging of potentially sensitive content, or using experimental features.
 # Should only be used for debugging purposes or enabling experimental features.
-oak-unsafe = ["oak-tf", "oak-metrics"]
+oak-unsafe = ["oak-tf", "oak-metrics", "oak-web"]
 default = []
 oak-tf = ["oak_functions_tf_inference"]
 oak-metrics = ["oak_functions_metrics"]
+oak-web = ["tonic-web"]
 
 [dependencies]
 anyhow = "*"
@@ -57,6 +58,7 @@ tokio = { version = "*", features = [
 ] }
 toml = "*"
 tonic = "*"
+tonic-web = { version = "*", optional = true }
 url = "*"
 # Use wasmi in `no_std` mode.
 wasmi = { version = "*", default-features = false, features = ["core"] }
