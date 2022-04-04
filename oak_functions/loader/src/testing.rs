@@ -23,12 +23,12 @@ use crate::{
 };
 
 use log::Level;
-use oak_functions_abi::proto::OakStatus;
+use oak_functions_abi::{proto::OakStatus, ExtensionHandle};
 use serde::{Deserialize, Serialize};
 use wasmi::ValueType;
 
 /// Host function name for testing.
-const TESTING_ABI_FUNCTION_NAME: &str = "invoke";
+const TESTING_ABI_FUNCTION_NAME: &str = "testing";
 
 impl OakApiNativeExtension for TestingExtension<Logger> {
     fn invoke(
@@ -36,10 +36,11 @@ impl OakApiNativeExtension for TestingExtension<Logger> {
         wasm_state: &mut crate::server::WasmState,
         args: wasmi::RuntimeArgs,
     ) -> Result<Result<(), oak_functions_abi::proto::OakStatus>, wasmi::Trap> {
-        let request_ptr: AbiPointer = args.nth_checked(0)?;
-        let request_len: AbiPointerOffset = args.nth_checked(1)?;
-        let response_ptr_ptr: AbiPointer = args.nth_checked(2)?;
-        let response_len_ptr: AbiPointer = args.nth_checked(3)?;
+        // We still read the args after the ExtensionHandle at position 0.
+        let request_ptr: AbiPointer = args.nth_checked(1)?;
+        let request_len: AbiPointerOffset = args.nth_checked(2)?;
+        let response_ptr_ptr: AbiPointer = args.nth_checked(3)?;
+        let response_len_ptr: AbiPointer = args.nth_checked(4)?;
 
         let extension_args = wasm_state
             .read_extension_args(request_ptr, request_len)
@@ -58,7 +59,7 @@ impl OakApiNativeExtension for TestingExtension<Logger> {
         Ok(result)
     }
 
-    fn get_metadata(&self) -> (String, wasmi::Signature) {
+    fn get_metadata(&self) -> (String, wasmi::Signature, ExtensionHandle) {
         let signature = wasmi::Signature::new(
             &[
                 ABI_USIZE, // request_ptr
@@ -69,7 +70,11 @@ impl OakApiNativeExtension for TestingExtension<Logger> {
             Some(ValueType::I32),
         );
 
-        (TESTING_ABI_FUNCTION_NAME.to_string(), signature)
+        (
+            TESTING_ABI_FUNCTION_NAME.to_string(),
+            signature,
+            oak_functions_abi::ExtensionHandle::TestingHandle,
+        )
     }
 
     fn terminate(&mut self) -> anyhow::Result<()> {

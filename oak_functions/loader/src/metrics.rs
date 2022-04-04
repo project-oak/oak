@@ -22,7 +22,7 @@ use crate::{
     },
 };
 use alloc::sync::Arc;
-use oak_functions_abi::proto::OakStatus;
+use oak_functions_abi::{proto::OakStatus, ExtensionHandle};
 use oak_functions_metrics::{
     PrivateMetricsAggregator, PrivateMetricsExtension, PrivateMetricsProxy,
 };
@@ -95,7 +95,7 @@ impl OakApiNativeExtension for PrivateMetricsExtension<Logger> {
 
     /// Each Oak Functions application can have at most one instance of PrivateMetricsProxy. So it
     /// is fine to return a constant name in the metadata.
-    fn get_metadata(&self) -> (String, wasmi::Signature) {
+    fn get_metadata(&self) -> (String, wasmi::Signature, ExtensionHandle) {
         let signature = wasmi::Signature::new(
             &[
                 ABI_USIZE, // buf_ptr
@@ -105,7 +105,11 @@ impl OakApiNativeExtension for PrivateMetricsExtension<Logger> {
             Some(ValueType::I32),
         );
 
-        (METRICS_ABI_FUNCTION_NAME.to_string(), signature)
+        (
+            METRICS_ABI_FUNCTION_NAME.to_string(),
+            signature,
+            ExtensionHandle::MetricsHandle,
+        )
     }
 
     fn terminate(&mut self) -> anyhow::Result<()> {

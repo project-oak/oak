@@ -19,7 +19,9 @@ use anyhow::Context;
 use byteorder::{ByteOrder, LittleEndian};
 use futures::future::FutureExt;
 use log::Level;
-use oak_functions_abi::proto::{OakStatus, Request, Response, ServerPolicy, StatusCode};
+use oak_functions_abi::proto::{
+    ExtensionHandle, OakStatus, Request, Response, ServerPolicy, StatusCode,
+};
 use oak_logger::OakLogger;
 use serde::Deserialize;
 use std::{collections::HashMap, convert::TryInto, str, sync::Arc, time::Duration};
@@ -33,14 +35,15 @@ const ALLOC_FUNCTION_NAME: &str = "alloc";
 const READ_REQUEST: usize = 0;
 const WRITE_RESPONSE: usize = 1;
 const WRITE_LOG_MESSAGE: usize = 3;
+const INVOKE: usize = 4;
 const EXTENSION_INDEX_OFFSET: usize = 10;
 
 // Type aliases for positions and offsets in Wasm linear memory. Any future 64-bit version
 // of Wasm would use different types.
 pub type AbiPointer = u32;
 pub type AbiPointerOffset = u32;
-// Type alias for the ChannelHandle type, which has to be cast into a ChannelHandle.
-pub type AbiChannelHandle = i32;
+// Type alias for the ExtensionHandle type, which has to be cast into a ExtensionHandle.
+pub type AbiExtensionHandle = i32;
 /// Wasm type identifier for position/offset values in linear memory. Any future 64-bit version of
 /// Wasm would use a different value.
 pub const ABI_USIZE: ValueType = ValueType::I32;
@@ -121,9 +124,9 @@ pub trait OakApiNativeExtension {
         args: wasmi::RuntimeArgs,
     ) -> Result<Result<(), OakStatus>, wasmi::Trap>;
 
-    /// Metadata about this Extension, including the exported host function name, and the function's
-    /// signature.
-    fn get_metadata(&self) -> (String, wasmi::Signature);
+    /// Metadata about this Extension, including the exported host function name, the function's
+    /// signature, and the corresponding ExtensionHandle.
+    fn get_metadata(&self) -> (String, wasmi::Signature, ExtensionHandle);
 
     /// Performs any cleanup or terminating behavior necessary before destroying the WasmState.
     fn terminate(&mut self) -> anyhow::Result<()>;
@@ -332,6 +335,44 @@ impl WasmState {
         Ok(())
     }
 
+    pub fn invoke_extension_with_handle(
+        &mut self,
+        handle: AbiExtensionHandle,
+        args: wasmi::RuntimeArgs,
+    ) -> Result<Option<wasmi::RuntimeValue>, wasmi::Trap> {
+        let handle: ExtensionHandle = ExtensionHandle::from_i32(handle).unwrap();
+
+        // Quick solution following impelementation in `invoke_index`.
+
+        // First, we get all extensions from WasmState.
+        let mut extensions_indices = self
+            .extensions_indices
+            .take()
+            .expect("no extensions_indices is set");
+
+        // Then we get the extension which has the given handle by looking at the values of the
+        // extension_indices.
+        let extension = extensions_indices
+            .iter_mut()
+            .find_map(|(_, extension)| {
+                let (_, _, handle_of_extension) = extension.get_metadata();
+                if handle_of_extension == handle {
+                    Some(extension)
+                } else {
+                    None
+                }
+            })
+            .expect("Fail to find extension with given handle.");
+
+        // We invoke the found extension.
+        let result = from_oak_status_result(extension.invoke(self, args)?);
+
+        // We put the extension indices back.
+        self.extensions_indices = Some(extensions_indices);
+
+        result
+    }
+
     pub fn alloc(&mut self, len: u32) -> AbiPointer {
         let result = self.instance.as_ref().unwrap().invoke_export(
             ALLOC_FUNCTION_NAME,
@@ -371,6 +412,7 @@ impl wasmi::Externals for WasmState {
             WRITE_LOG_MESSAGE => from_oak_status_result(
                 self.write_log_message(args.nth_checked(0)?, args.nth_checked(1)?),
             ),
+            INVOKE => self.invoke_extension_with_handle(args.nth_checked(0)?, args),
 
             _ => {
                 let mut extensions_indices = self
@@ -615,7 +657,7 @@ impl WasmHandler {
 
         for (ind, factory) in self.extension_factories.iter().enumerate() {
             let extension = factory.create()?;
-            let (name, signature) = extension.get_metadata();
+            let (name, signature, _) = extension.get_metadata();
             extensions_indices.insert(ind + EXTENSION_INDEX_OFFSET, extension);
             extensions_metadata.insert(name, (ind + EXTENSION_INDEX_OFFSET, signature));
         }
@@ -689,7 +731,19 @@ fn oak_functions_resolve_func(field_name: &str) -> Option<(usize, wasmi::Signatu
                 Some(ValueType::I32),
             ),
         ),
-
+        "invoke" => (
+            INVOKE,
+            wasmi::Signature::new(
+                &[
+                    ABI_USIZE, // handle
+                    ABI_USIZE, // request_ptr
+                    ABI_USIZE, // request_len
+                    ABI_USIZE, // response_ptr_ptr
+                    ABI_USIZE, // response_len_ptr
+                ][..],
+                Some(ValueType::I32),
+            ),
+        ),
         _ => return None,
     };
 

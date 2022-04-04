@@ -23,7 +23,7 @@ use crate::{
 };
 use anyhow::Context;
 use bytes::Bytes;
-use oak_functions_abi::proto::OakStatus;
+use oak_functions_abi::proto::{ExtensionHandle, OakStatus};
 use oak_functions_tf_inference::{parse_model, TensorFlowModel};
 use prost::Message;
 use std::{fs::File, io::Read, sync::Arc};
@@ -70,7 +70,7 @@ impl OakApiNativeExtension for TensorFlowModel<Logger> {
 
     /// Each Oak Functions application can have at most one instance of TensorFlowModule. So it is
     /// fine to return a constant name in the metadata.
-    fn get_metadata(&self) -> (String, wasmi::Signature) {
+    fn get_metadata(&self) -> (String, wasmi::Signature, ExtensionHandle) {
         let signature = wasmi::Signature::new(
             &[
                 ABI_USIZE, // input_ptr
@@ -81,7 +81,11 @@ impl OakApiNativeExtension for TensorFlowModel<Logger> {
             Some(ValueType::I32),
         );
 
-        (TF_ABI_FUNCTION_NAME.to_string(), signature)
+        (
+            TF_ABI_FUNCTION_NAME.to_string(),
+            signature,
+            ExtensionHandle::TfHandle,
+        )
     }
 
     fn terminate(&mut self) -> anyhow::Result<()> {

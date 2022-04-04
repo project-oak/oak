@@ -21,7 +21,7 @@ use crate::{
         OakApiNativeExtension, WasmState, ABI_USIZE,
     },
 };
-use oak_functions_abi::proto::OakStatus;
+use oak_functions_abi::{proto::OakStatus, ExtensionHandle};
 use oak_functions_lookup::{LookupData, LookupDataManager};
 use oak_logger::OakLogger;
 use std::sync::Arc;
@@ -109,7 +109,7 @@ where
         Ok(extension_result)
     }
 
-    fn get_metadata(&self) -> (String, wasmi::Signature) {
+    fn get_metadata(&self) -> (String, wasmi::Signature, ExtensionHandle) {
         let signature = wasmi::Signature::new(
             &[
                 ABI_USIZE, // key_ptr
@@ -120,7 +120,11 @@ where
             Some(ValueType::I32),
         );
 
-        (LOOKUP_ABI_FUNCTION_NAME.to_string(), signature)
+        (
+            LOOKUP_ABI_FUNCTION_NAME.to_string(),
+            signature,
+            ExtensionHandle::LookupHandle,
+        )
     }
 
     fn terminate(&mut self) -> anyhow::Result<()> {

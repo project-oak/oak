@@ -21,14 +21,16 @@ package oak.functions.abi;
 option java_multiple_files = true;
 option java_package = "oak.functions.abi";
 
-// A ChannelHandle corresonds to a channel. The Endpoint which does not own the channel uses a
-// ChannelHandle to read, write, or wait on the corresponding channel.
-enum ChannelHandle {
-  CHANNEL_HANDLE_UNSPECIFIED = 0;
+
+// The handle indicates which extension to invoke in the runtime.
+// We assume every extension exposes exactly one method to invoke.
+enum ExtensionHandle {
+  INVALID_HANDLE = 0;
   // Handle for an extension used for testing Wasm modules.
-  TESTING = 1;
-  // Handle for an extension to look up a key in the lookup data.
-  LOOKUP_DATA = 2;
+  TESTING_HANDLE = 1;
+  LOOKUP_HANDLE = 2;
+  METRICS_HANDLE = 3;
+  TF_HANDLE = 4;
 }
 
 // Status values exchanged as i32 values across the Node Wasm interface.
