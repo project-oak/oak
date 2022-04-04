@@ -237,8 +237,13 @@ impl KeyNegotiator {
         let (encryption_key, decryption_key) = agreement::agree_ephemeral(
             self.private_key,
             &agreement::UnparsedPublicKey::new(KEY_AGREEMENT_ALGORITHM, peer_public_key),
-            anyhow!("Couldn't derive session keys"),
-            |key_material| {
+            |key_material| -> Result<
+                (
+                    Result<[u8; KEY_AGREEMENT_ALGORITHM_KEY_LENGTH], anyhow::Error>,
+                    Result<[u8; KEY_AGREEMENT_ALGORITHM_KEY_LENGTH], anyhow::Error>,
+                ),
+                anyhow::Error,
+            > {
                 let key_material = key_material
                     .try_into()
                     .map_err(anyhow::Error::msg)
@@ -284,6 +289,8 @@ impl KeyNegotiator {
                 }
             },
         )
+        .map_err(anyhow::Error::msg)
+        .context("Couldn't derive session keys")?
         .context("Couldn't agree on session keys")?;
         Ok((
             EncryptionKey(encryption_key.context("Couldn't derive encryption key")?),
@@ -351,8 +358,9 @@ impl Signer {
         let rng = ring::rand::SystemRandom::new();
         let key_pair_pkcs8 = EcdsaKeyPair::generate_pkcs8(SIGNING_ALGORITHM, &rng)
             .map_err(|error| anyhow!("Couldn't generate PKCS#8 key pair: {:?}", error))?;
-        let key_pair = EcdsaKeyPair::from_pkcs8(SIGNING_ALGORITHM, key_pair_pkcs8.as_ref())
-            .map_err(|error| anyhow!("Couldn't parse generated key pair: {:?}", error))?;
+        let key_pair =
+            EcdsaKeyPair::from_pkcs8(SIGNING_ALGORITHM, key_pair_pkcs8.as_ref(), &rng)
+                .map_err(|error| anyhow!("Couldn't parse generated key pair: {:?}", error))?;
 
         Ok(Self { key_pair })
     }
