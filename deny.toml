@@ -43,7 +43,6 @@ copyleft = "deny"
 
 [[licenses.clarify]]
 name = "ring"
-version = "*"
 expression = "MIT AND ISC AND OpenSSL"
 license-files = [{ path = "LICENSE", hash = 3171872035 }]
 
