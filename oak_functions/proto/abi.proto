@@ -21,9 +21,9 @@ package oak.functions.abi;
 option java_multiple_files = true;
 option java_package = "oak.functions.abi";
 
-
-// The handle indicates which extension to invoke in the runtime.
+// The `ExtensionHandle` indicates which extension to invoke in the Oak Functions runtime.
 // We assume every extension exposes exactly one method to invoke.
+// `ExtensionHandle`s are exchanged as `i32` values.
 enum ExtensionHandle {
   INVALID_HANDLE = 0;
   // Handle for an extension used for testing Wasm modules.

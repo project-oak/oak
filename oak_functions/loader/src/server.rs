@@ -340,9 +340,10 @@ impl WasmState {
         handle: AbiExtensionHandle,
         args: wasmi::RuntimeArgs,
     ) -> Result<Option<wasmi::RuntimeValue>, wasmi::Trap> {
-        let handle: ExtensionHandle = ExtensionHandle::from_i32(handle).unwrap();
+        let handle: ExtensionHandle =
+            ExtensionHandle::from_i32(handle).expect("Fail to parse handle.");
 
-        // Quick solution following impelementation in `invoke_index`.
+        // Quick solution following impelementation of invoking an extension in `invoke_index`.
 
         // First, we get all extensions from WasmState.
         let mut extensions_indices = self
