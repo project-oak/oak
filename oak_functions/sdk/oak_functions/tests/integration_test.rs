@@ -22,6 +22,7 @@ use oak_functions_loader::{
     lookup::LookupFactory,
     metrics::{BucketConfig, PrivateMetricsConfig, PrivateMetricsProxyFactory},
     server::WasmHandler,
+    tf::{TensorFlowFactory, TensorFlowModelConfig},
 };
 use oak_functions_lookup::LookupDataManager;
 use std::{path::PathBuf, sync::Arc};
@@ -50,6 +51,14 @@ lazy_static! {
     static ref METRICS_WASM_MODULE_BYTES: Vec<u8> = {
         let mut manifest_path = PATH_TO_MODULES.clone();
         manifest_path.push("metrics_module");
+        manifest_path.push("Cargo.toml");
+
+        test_utils::compile_rust_wasm(manifest_path.to_str().unwrap(), false)
+            .expect("Could not read Wasm module")
+    };
+    static ref TF_WASM_MODULE_BYTES: Vec<u8> = {
+        let mut manifest_path = PATH_TO_MODULES.clone();
+        manifest_path.push("tf_module");
         manifest_path.push("Cargo.toml");
 
         test_utils::compile_rust_wasm(manifest_path.to_str().unwrap(), false)
@@ -218,4 +227,34 @@ async fn test_report_metric() {
     test_utils::assert_response_body(response, "MetricReported");
 
     // TODO(#2646): Check in the runtime that the metric was reported there.
+}
+
+#[tokio::test]
+async fn test_tf_model_infer() {
+    let logger = Logger::for_test();
+
+    let tf_model_config = TensorFlowModelConfig {
+        path: String::from(""), // TODO(mschett): Figure out where to get a model from.
+        shape: vec![],          // TODO(mschett): Figure out what shape to use.
+    };
+
+    // TODO(mschett): Figure out what model to use.
+    let model = todo!();
+
+    let tf_factory = TensorFlowFactory::new_boxed_extension_factory(
+        model,
+        tf_model_config.shape.clone(),
+        logger.clone(),
+    )
+    .expect("Fail to create tf factory.");
+
+    let wasm_handler = WasmHandler::create(&TF_WASM_MODULE_BYTES, vec![tf_factory], logger)
+        .expect("Could not instantiate WasmHandler.");
+
+    let request = Request {
+        body: b"input_vector".to_vec(),
+    };
+
+    let response: Response = wasm_handler.handle_invoke(request).await.unwrap();
+    test_utils::assert_response_body(response, "_");
 }
