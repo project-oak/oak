@@ -76,7 +76,7 @@ impl Qemu {
         // Don't bother with default hardware, such as a VGA adapter, floppy drive, etc.
         cmd.arg("-nodefaults");
         // Use the more modern `q35` machine as the basis.
-        // TODO: q35 comes with a ton of stuff we don't need (eg a PC speaker). We should
+        // Note that q35 comes with a ton of stuff we don't need (eg a PC speaker). We should
         // use something simpler (microvm?), if possible.
         cmd.args(&[
             "-machine",
@@ -113,7 +113,6 @@ impl Qemu {
 
     pub async fn kill(mut self) -> Result<std::process::ExitStatus> {
         println!("Cleaning up and shutting down.");
-        // TODO: tell qemu to stop via QMP instead of just killing it.
         self.console.shutdown().await?;
         self.comms.shutdown().await?;
         self.qmp.shutdown().await?;

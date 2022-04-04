@@ -11,12 +11,12 @@ clap = { version = "*", features = ["derive"] }
 command-fds = { version = "*", features = ["tokio"] }
 futures = "*"
 tokio = { version = "*", features = [
-    "io-std",
-    "io-util",
-    "rt-multi-thread",
-    "macros",
-    "net",
-    "process",
-    "signal",
+  "io-std",
+  "io-util",
+  "rt-multi-thread",
+  "macros",
+  "net",
+  "process",
+  "signal",
 ] }
 tokio-util = { version = "*", features = ["codec"] }

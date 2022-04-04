@@ -1492,7 +1492,7 @@ dependencies = [
  "rand 0.8.5",
  "serde",
  "tokio",
- "tonic",
+ "tonic 0.7.0",
  "tower",
 ]
 
@@ -1511,7 +1511,7 @@ dependencies = [
  "indexmap",
  "slab",
  "tokio",
- "tokio-util",
+ "tokio-util 0.7.1",
  "tracing",
 ]
 
@@ -2177,7 +2177,7 @@ dependencies = [
  "oak_functions_abi",
  "oak_functions_client",
  "tokio",
- "tonic",
+ "tonic 0.7.0",
 ]
 
 [[package]]
@@ -2514,7 +2514,7 @@ dependencies = [
  "serde_json",
  "signature",
  "tokio",
- "tonic",
+ "tonic 0.7.0",
 ]
 
 [[package]]
@@ -2569,7 +2569,7 @@ dependencies = [
  "test_utils",
  "tokio",
  "toml",
- "tonic",
+ "tonic 0.7.0",
  "tonic-web",
  "url",
  "wasmi",
@@ -2722,7 +2722,7 @@ dependencies = [
  "openssl",
  "prost 0.10.0",
  "tokio",
- "tonic",
+ "tonic 0.7.0",
 ]
 
 [[package]]
@@ -4038,7 +4038,7 @@ dependencies = [
  "prost 0.10.0",
  "prost-types 0.10.0",
  "tokio",
- "tonic",
+ "tonic 0.7.0",
 ]
 
 [[package]]
@@ -4062,7 +4062,7 @@ dependencies = [
  "prost-types 0.10.0",
  "sync_wrapper",
  "tokio",
- "tonic",
+ "tonic 0.7.0",
  "tower",
 ]
 
@@ -4275,6 +4275,20 @@ dependencies = [
 
 [[package]]
 name = "tokio-util"
+version = "0.6.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9e99e1983e5d376cd8eb4b66604d2e99e79f5bd988c3055891dcd8c9e2604cc0"
+dependencies = [
+ "bytes",
+ "futures-core",
+ "futures-sink",
+ "log",
+ "pin-project-lite",
+ "tokio",
+]
+
+[[package]]
+name = "tokio-util"
 version = "0.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0edfdeb067411dba2044da6d1cb2df793dd35add7888d73c16e3381ded401764"
@@ -4323,7 +4337,7 @@ dependencies = [
  "tokio",
  "tokio-rustls 0.23.3",
  "tokio-stream",
- "tokio-util",
+ "tokio-util 0.7.1",
  "tower",
  "tower-layer",
  "tower-service",
@@ -4357,7 +4371,7 @@ dependencies = [
  "http-body",
  "hyper",
  "pin-project",
- "tonic",
+ "tonic 0.6.2",
  "tower-service",
  "tracing",
 ]
@@ -4376,7 +4390,7 @@ dependencies = [
  "rand 0.8.5",
  "slab",
  "tokio",
- "tokio-util",
+ "tokio-util 0.7.1",
  "tower-layer",
  "tower-service",
  "tracing",
@@ -4799,7 +4813,7 @@ dependencies = [
  "command-fds",
  "futures",
  "tokio",
- "tokio-util",
+ "tokio-util 0.7.1",
 ]
 
 [[package]]
@@ -5268,7 +5282,7 @@ dependencies = [
  "serde_json",
  "test_utils",
  "tokio",
- "tonic",
+ "tonic 0.7.0",
  "wizer",
 ]
 
