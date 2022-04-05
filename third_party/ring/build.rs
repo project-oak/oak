@@ -330,7 +330,17 @@ fn ring_build_rs_main() {
     // If `.git` doesn't exist then assume that this is a packaged build where
     // we want to optimize for minimizing the build tools required: No Perl,
     // no nasm, etc.
-    let use_pregenerated = !is_git;
+    //
+    // Oak Note:
+    // ring includes pre-generated objects in cargo releases. It uses logic in
+    // its build scripts to determine whether the build is from a version
+    // published on cargo, or from source code. This logic is somewhat naively
+    // implemented by checking for the absence of a `.git` directory. This
+    // check falesly leads ring to believe it is building from a version
+    // published on crates.io, and fails when it tries to include the
+    // pregenerated files not present in the source code. To build from source
+    // code we must patch this flag.
+    let use_pregenerated = false;
 
     // During local development, force warnings in non-Rust code to be treated
     // as errors. Since warnings are highly compiler-dependent and compilers
