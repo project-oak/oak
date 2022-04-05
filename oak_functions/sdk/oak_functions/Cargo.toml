@@ -20,6 +20,10 @@ maplit = "*"
 tokio = "*"
 
 [dependencies]
+bincode = "*"
 maplit = "*"
 oak_functions_abi = { path = "../../abi" }
 prost = "*"
+serde = "*"
+serde_derive = "*"
+serde_json = "*"

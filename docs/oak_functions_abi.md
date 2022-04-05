@@ -123,18 +123,17 @@ Log messages are considered sensitive, so logging is only possible if the
 
 ### `report_metric`
 
-- `param[0]: buf_ptr: i32`: address of the label buffer.
-- `param[1]: buf_len: i32`: number of bytes of the label buffer.
-- `param[2]: value: i64`: the metrics value to report.
+- `param[0]: buf_ptr: i32`: address of the buffer.
+- `param[1]: buf_len: i32`: number of bytes of the buffer.
 - `result[0]: i32`:
   [`OakStatus`](https://github.com/project-oak/oak/blob/main/oak_functions/proto/abi.proto)
   of the invocation
 
 The Oak Functions WebAssembly module invokes `report_metric` to report the
-metric value `value` for a sum-based metric bucket identified by a label. The
-Oak Functions runtime reads the label from the label buffer at address `buf_ptr`
-with the corresponding number of bytes `buf_len` from the WebAssembly module's
-memory. The Oak Functions runtime returns an
+metric value `value` for a sum-based metric bucket identified by a `label`. The
+Oak Functions runtime reads the label and value from the buffer at address
+`buf_ptr` with the corresponding number of bytes `buf_len` from the WebAssembly
+module's memory. The Oak Functions runtime returns an
 [`OakStatus`](https://github.com/project-oak/oak/blob/main/oak_functions/proto/abi.proto).
 
 The Oak Functions runtime attempts to interpret the bytes in the label buffer as

@@ -2447,12 +2447,16 @@ dependencies = [
 name = "oak_functions"
 version = "0.1.0"
 dependencies = [
+ "bincode",
  "lazy_static",
  "maplit",
  "oak_functions_abi",
  "oak_functions_loader",
  "oak_functions_lookup",
  "prost 0.10.0",
+ "serde",
+ "serde_derive",
+ "serde_json",
  "test_utils",
  "tokio",
 ]

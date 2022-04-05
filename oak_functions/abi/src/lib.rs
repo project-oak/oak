@@ -66,7 +66,7 @@ extern "C" {
     pub fn write_log_message(buf_ptr: *const u8, buf_len: usize) -> u32;
 
     /// See [`report_metric`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#report_metric).
-    pub fn report_metric(buf_ptr: *const u8, buf_len: usize, value: i64) -> u32;
+    pub fn report_metric(buf_ptr: *const u8, buf_len: usize) -> u32;
 
     /// See [`storage_get_item`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#storage_get_item).
     pub fn storage_get_item(
