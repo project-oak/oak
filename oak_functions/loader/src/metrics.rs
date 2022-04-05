@@ -95,7 +95,7 @@ impl OakApiNativeExtension for PrivateMetricsExtension<Logger> {
 
     /// Each Oak Functions application can have at most one instance of PrivateMetricsProxy. So it
     /// is fine to return a constant name in the metadata.
-    fn get_metadata(&self) -> (String, wasmi::Signature, ExtensionHandle) {
+    fn get_metadata(&self) -> (String, wasmi::Signature) {
         let signature = wasmi::Signature::new(
             &[
                 ABI_USIZE, // buf_ptr
@@ -105,15 +105,15 @@ impl OakApiNativeExtension for PrivateMetricsExtension<Logger> {
             Some(ValueType::I32),
         );
 
-        (
-            METRICS_ABI_FUNCTION_NAME.to_string(),
-            signature,
-            ExtensionHandle::MetricsHandle,
-        )
+        (METRICS_ABI_FUNCTION_NAME.to_string(), signature)
     }
 
     fn terminate(&mut self) -> anyhow::Result<()> {
         self.publish_metrics()
+    }
+
+    fn get_handle(&mut self) -> ExtensionHandle {
+        ExtensionHandle::MetricsHandle
     }
 }
 

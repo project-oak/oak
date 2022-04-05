@@ -126,10 +126,13 @@ pub trait OakApiNativeExtension {
 
     /// Metadata about this Extension, including the exported host function name, the function's
     /// signature, and the corresponding ExtensionHandle.
-    fn get_metadata(&self) -> (String, wasmi::Signature, ExtensionHandle);
+    fn get_metadata(&self) -> (String, wasmi::Signature);
 
     /// Performs any cleanup or terminating behavior necessary before destroying the WasmState.
     fn terminate(&mut self) -> anyhow::Result<()>;
+
+    /// Gets the `ExtensionHandle` for this extension.
+    fn get_handle(&mut self) -> ExtensionHandle;
 }
 
 pub trait ExtensionFactory {
@@ -343,7 +346,9 @@ impl WasmState {
         let handle: ExtensionHandle =
             ExtensionHandle::from_i32(handle).expect("Fail to parse handle.");
 
-        // Quick solution following impelementation of invoking an extension in `invoke_index`.
+        // TODO(#2664) Quick solution following impelementation of invoking an extension in
+        // `invoke_index`. Once we refactored the interface of `invoke` to not require
+        // `WasmState` any more, we can simplify this.
 
         // First, we get all extensions from WasmState.
         let mut extensions_indices = self
@@ -356,8 +361,7 @@ impl WasmState {
         let extension = extensions_indices
             .iter_mut()
             .find_map(|(_, extension)| {
-                let (_, _, handle_of_extension) = extension.get_metadata();
-                if handle_of_extension == handle {
+                if extension.get_handle() == handle {
                     Some(extension)
                 } else {
                     None
@@ -658,7 +662,7 @@ impl WasmHandler {
 
         for (ind, factory) in self.extension_factories.iter().enumerate() {
             let extension = factory.create()?;
-            let (name, signature, _) = extension.get_metadata();
+            let (name, signature) = extension.get_metadata();
             extensions_indices.insert(ind + EXTENSION_INDEX_OFFSET, extension);
             extensions_metadata.insert(name, (ind + EXTENSION_INDEX_OFFSET, signature));
         }

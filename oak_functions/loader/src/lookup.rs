@@ -109,7 +109,7 @@ where
         Ok(extension_result)
     }
 
-    fn get_metadata(&self) -> (String, wasmi::Signature, ExtensionHandle) {
+    fn get_metadata(&self) -> (String, wasmi::Signature) {
         let signature = wasmi::Signature::new(
             &[
                 ABI_USIZE, // key_ptr
@@ -120,14 +120,14 @@ where
             Some(ValueType::I32),
         );
 
-        (
-            LOOKUP_ABI_FUNCTION_NAME.to_string(),
-            signature,
-            ExtensionHandle::LookupHandle,
-        )
+        (LOOKUP_ABI_FUNCTION_NAME.to_string(), signature)
     }
 
     fn terminate(&mut self) -> anyhow::Result<()> {
         Ok(())
+    }
+
+    fn get_handle(&mut self) -> ExtensionHandle {
+        ExtensionHandle::LookupHandle
     }
 }

@@ -17,8 +17,8 @@
 use crate::{
     logger::Logger,
     server::{
-        AbiPointer, AbiPointerOffset, BoxedExtension, BoxedExtensionFactory, ExtensionFactory,
-        OakApiNativeExtension, ABI_USIZE,
+        AbiExtensionHandle, AbiPointer, AbiPointerOffset, BoxedExtension, BoxedExtensionFactory,
+        ExtensionFactory, OakApiNativeExtension, ABI_USIZE,
     },
 };
 
@@ -36,7 +36,9 @@ impl OakApiNativeExtension for TestingExtension<Logger> {
         wasm_state: &mut crate::server::WasmState,
         args: wasmi::RuntimeArgs,
     ) -> Result<Result<(), oak_functions_abi::proto::OakStatus>, wasmi::Trap> {
-        // We still read the args after the ExtensionHandle at position 0.
+        // For consistency we also get the first argument, but we do not need it, as we did read the
+        // handle already to decide to call the invoke of this extension.
+        let _handle: AbiExtensionHandle = args.nth_checked(0)?;
         let request_ptr: AbiPointer = args.nth_checked(1)?;
         let request_len: AbiPointerOffset = args.nth_checked(2)?;
         let response_ptr_ptr: AbiPointer = args.nth_checked(3)?;
@@ -59,7 +61,7 @@ impl OakApiNativeExtension for TestingExtension<Logger> {
         Ok(result)
     }
 
-    fn get_metadata(&self) -> (String, wasmi::Signature, ExtensionHandle) {
+    fn get_metadata(&self) -> (String, wasmi::Signature) {
         let signature = wasmi::Signature::new(
             &[
                 ABI_USIZE, // request_ptr
@@ -70,15 +72,15 @@ impl OakApiNativeExtension for TestingExtension<Logger> {
             Some(ValueType::I32),
         );
 
-        (
-            TESTING_ABI_FUNCTION_NAME.to_string(),
-            signature,
-            oak_functions_abi::ExtensionHandle::TestingHandle,
-        )
+        (TESTING_ABI_FUNCTION_NAME.to_string(), signature)
     }
 
     fn terminate(&mut self) -> anyhow::Result<()> {
         Ok(())
+    }
+
+    fn get_handle(&mut self) -> ExtensionHandle {
+        ExtensionHandle::TestingHandle
     }
 }
 

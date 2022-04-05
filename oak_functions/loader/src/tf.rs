@@ -70,7 +70,7 @@ impl OakApiNativeExtension for TensorFlowModel<Logger> {
 
     /// Each Oak Functions application can have at most one instance of TensorFlowModule. So it is
     /// fine to return a constant name in the metadata.
-    fn get_metadata(&self) -> (String, wasmi::Signature, ExtensionHandle) {
+    fn get_metadata(&self) -> (String, wasmi::Signature) {
         let signature = wasmi::Signature::new(
             &[
                 ABI_USIZE, // input_ptr
@@ -81,15 +81,15 @@ impl OakApiNativeExtension for TensorFlowModel<Logger> {
             Some(ValueType::I32),
         );
 
-        (
-            TF_ABI_FUNCTION_NAME.to_string(),
-            signature,
-            ExtensionHandle::TfHandle,
-        )
+        (TF_ABI_FUNCTION_NAME.to_string(), signature)
     }
 
     fn terminate(&mut self) -> anyhow::Result<()> {
         Ok(())
+    }
+
+    fn get_handle(&mut self) -> ExtensionHandle {
+        ExtensionHandle::TfHandle
     }
 }
 
