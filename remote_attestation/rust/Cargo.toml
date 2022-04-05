@@ -14,7 +14,7 @@ anyhow = { version = "*", default-features = false }
 bytes = { version = "*", default-features = false }
 log = "*"
 prost = { version = "*", default-features = false, features = ["prost-derive"] }
-ring = "*"
+ring = { path = "../../third_party/ring" }
 
 [build-dependencies]
 prost-build = "*"
