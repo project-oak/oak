@@ -224,6 +224,7 @@
 <span id="219">219</span>
 <span id="220">220</span>
 <span id="221">221</span>
+<span id="222">222</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2021 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -384,6 +385,7 @@
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">response_len</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">0</span>;
     <span class="kw">let</span> <span class="ident">status_code</span> <span class="op">=</span> <span class="kw">unsafe</span> {
         <span class="ident">oak_functions_abi::invoke</span>(
+            <span class="ident">oak_functions_abi::ExtensionHandle::TestingHandle</span>,
             <span class="ident">request</span>.<span class="ident">as_ptr</span>(),
             <span class="ident">request</span>.<span class="ident">len</span>(),
             <span class="kw-2">&amp;mut</span> <span class="ident">response_ptr</span>,

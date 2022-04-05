@@ -94,6 +94,9 @@
 <span id="89">89</span>
 <span id="90">90</span>
 <span id="91">91</span>
+<span id="92">92</span>
+<span id="93">93</span>
+<span id="94">94</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2021 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -112,6 +115,8 @@
 
 <span class="doccomment">//! Type, constant and Wasm host function definitions for the Oak-Functions application</span>
 <span class="doccomment">//! binary interface (ABI).</span>
+
+<span class="kw">pub</span> <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::proto::ExtensionHandle</span>;
 
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">proto</span> {
     <span class="macro">include!</span>(<span class="macro">concat!</span>(<span class="macro">env!</span>(<span class="string">&quot;OUT_DIR&quot;</span>), <span class="string">&quot;/oak.functions.abi.rs&quot;</span>));
@@ -179,6 +184,7 @@
     ) -&gt; <span class="ident">u32</span>;
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">invoke</span>(
+        <span class="ident">handle</span>: <span class="ident">ExtensionHandle</span>,
         <span class="ident">request_ptr</span>: <span class="kw-2">*const</span> <span class="ident">u8</span>,
         <span class="ident">request_len</span>: <span class="ident">usize</span>,
         <span class="ident">response_ptr_ptr</span>: <span class="kw-2">*mut</span> <span class="kw-2">*mut</span> <span class="ident">u8</span>,

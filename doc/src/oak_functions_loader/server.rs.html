@@ -720,6 +720,65 @@
 <span id="715">715</span>
 <span id="716">716</span>
 <span id="717">717</span>
+<span id="718">718</span>
+<span id="719">719</span>
+<span id="720">720</span>
+<span id="721">721</span>
+<span id="722">722</span>
+<span id="723">723</span>
+<span id="724">724</span>
+<span id="725">725</span>
+<span id="726">726</span>
+<span id="727">727</span>
+<span id="728">728</span>
+<span id="729">729</span>
+<span id="730">730</span>
+<span id="731">731</span>
+<span id="732">732</span>
+<span id="733">733</span>
+<span id="734">734</span>
+<span id="735">735</span>
+<span id="736">736</span>
+<span id="737">737</span>
+<span id="738">738</span>
+<span id="739">739</span>
+<span id="740">740</span>
+<span id="741">741</span>
+<span id="742">742</span>
+<span id="743">743</span>
+<span id="744">744</span>
+<span id="745">745</span>
+<span id="746">746</span>
+<span id="747">747</span>
+<span id="748">748</span>
+<span id="749">749</span>
+<span id="750">750</span>
+<span id="751">751</span>
+<span id="752">752</span>
+<span id="753">753</span>
+<span id="754">754</span>
+<span id="755">755</span>
+<span id="756">756</span>
+<span id="757">757</span>
+<span id="758">758</span>
+<span id="759">759</span>
+<span id="760">760</span>
+<span id="761">761</span>
+<span id="762">762</span>
+<span id="763">763</span>
+<span id="764">764</span>
+<span id="765">765</span>
+<span id="766">766</span>
+<span id="767">767</span>
+<span id="768">768</span>
+<span id="769">769</span>
+<span id="770">770</span>
+<span id="771">771</span>
+<span id="772">772</span>
+<span id="773">773</span>
+<span id="774">774</span>
+<span id="775">775</span>
+<span id="776">776</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2021 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -741,7 +800,9 @@
 <span class="kw">use</span> <span class="ident">byteorder</span>::{<span class="ident">ByteOrder</span>, <span class="ident">LittleEndian</span>};
 <span class="kw">use</span> <span class="ident">futures::future::FutureExt</span>;
 <span class="kw">use</span> <span class="ident">log::Level</span>;
-<span class="kw">use</span> <span class="ident">oak_functions_abi::proto</span>::{<span class="ident">OakStatus</span>, <span class="ident">Request</span>, <span class="ident">Response</span>, <span class="ident">ServerPolicy</span>, <span class="ident">StatusCode</span>};
+<span class="kw">use</span> <span class="ident">oak_functions_abi::proto</span>::{
+    <span class="ident">ExtensionHandle</span>, <span class="ident">OakStatus</span>, <span class="ident">Request</span>, <span class="ident">Response</span>, <span class="ident">ServerPolicy</span>, <span class="ident">StatusCode</span>,
+};
 <span class="kw">use</span> <span class="ident">oak_logger::OakLogger</span>;
 <span class="kw">use</span> <span class="ident">serde::Deserialize</span>;
 <span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">collections::HashMap</span>, <span class="ident">convert::TryInto</span>, <span class="ident">str</span>, <span class="ident">sync::Arc</span>, <span class="ident">time::Duration</span>};
@@ -755,14 +816,15 @@
 <span class="kw">const</span> <span class="ident">READ_REQUEST</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">0</span>;
 <span class="kw">const</span> <span class="ident">WRITE_RESPONSE</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">1</span>;
 <span class="kw">const</span> <span class="ident">WRITE_LOG_MESSAGE</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">3</span>;
+<span class="kw">const</span> <span class="ident">INVOKE</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">4</span>;
 <span class="kw">const</span> <span class="ident">EXTENSION_INDEX_OFFSET</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">10</span>;
 
 <span class="comment">// Type aliases for positions and offsets in Wasm linear memory. Any future 64-bit version</span>
 <span class="comment">// of Wasm would use different types.</span>
 <span class="kw">pub</span> <span class="kw">type</span> <span class="ident">AbiPointer</span> <span class="op">=</span> <span class="ident">u32</span>;
 <span class="kw">pub</span> <span class="kw">type</span> <span class="ident">AbiPointerOffset</span> <span class="op">=</span> <span class="ident">u32</span>;
-<span class="comment">// Type alias for the ChannelHandle type, which has to be cast into a ChannelHandle.</span>
-<span class="kw">pub</span> <span class="kw">type</span> <span class="ident">AbiChannelHandle</span> <span class="op">=</span> <span class="ident">i32</span>;
+<span class="comment">// Type alias for the ExtensionHandle type, which has to be cast into a ExtensionHandle.</span>
+<span class="kw">pub</span> <span class="kw">type</span> <span class="ident">AbiExtensionHandle</span> <span class="op">=</span> <span class="ident">i32</span>;
 <span class="doccomment">/// Wasm type identifier for position/offset values in linear memory. Any future 64-bit version of</span>
 <span class="doccomment">/// Wasm would use a different value.</span>
 <span class="kw">pub</span> <span class="kw">const</span> <span class="ident">ABI_USIZE</span>: <span class="ident">ValueType</span> <span class="op">=</span> <span class="ident">ValueType::I32</span>;
@@ -843,12 +905,15 @@
         <span class="ident">args</span>: <span class="ident">wasmi::RuntimeArgs</span>,
     ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakStatus</span><span class="op">&gt;</span>, <span class="ident">wasmi::Trap</span><span class="op">&gt;</span>;
 
-    <span class="doccomment">/// Metadata about this Extension, including the exported host function name, and the function&#39;s</span>
-    <span class="doccomment">/// signature.</span>
+    <span class="doccomment">/// Metadata about this Extension, including the exported host function name, the function&#39;s</span>
+    <span class="doccomment">/// signature, and the corresponding ExtensionHandle.</span>
     <span class="kw">fn</span> <span class="ident">get_metadata</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; (<span class="ident">String</span>, <span class="ident">wasmi::Signature</span>);
 
     <span class="doccomment">/// Performs any cleanup or terminating behavior necessary before destroying the WasmState.</span>
     <span class="kw">fn</span> <span class="ident">terminate</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span>;
+
+    <span class="doccomment">/// Gets the `ExtensionHandle` for this extension.</span>
+    <span class="kw">fn</span> <span class="ident">get_handle</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) -&gt; <span class="ident">ExtensionHandle</span>;
 }
 
 <span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">ExtensionFactory</span> {
@@ -1054,6 +1119,46 @@
         <span class="prelude-val">Ok</span>(())
     }
 
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">invoke_extension_with_handle</span>(
+        <span class="kw-2">&amp;mut</span> <span class="self">self</span>,
+        <span class="ident">handle</span>: <span class="ident">AbiExtensionHandle</span>,
+        <span class="ident">args</span>: <span class="ident">wasmi::RuntimeArgs</span>,
+    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">wasmi::RuntimeValue</span><span class="op">&gt;</span>, <span class="ident">wasmi::Trap</span><span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">handle</span>: <span class="ident">ExtensionHandle</span> <span class="op">=</span>
+            <span class="ident">ExtensionHandle::from_i32</span>(<span class="ident">handle</span>).<span class="ident">expect</span>(<span class="string">&quot;Fail to parse handle.&quot;</span>);
+
+        <span class="comment">// TODO(#2664): Quick solution following impelementation of invoking an extension in</span>
+        <span class="comment">// `invoke_index`. Once we refactored the interface of `invoke` to not require</span>
+        <span class="comment">// `WasmState` any more, we can simplify this.</span>
+
+        <span class="comment">// First, we get all extensions from WasmState.</span>
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">extensions_indices</span> <span class="op">=</span> <span class="self">self</span>
+            .<span class="ident">extensions_indices</span>
+            .<span class="ident">take</span>()
+            .<span class="ident">expect</span>(<span class="string">&quot;no extensions_indices is set&quot;</span>);
+
+        <span class="comment">// Then we get the extension which has the given handle by looking at the values of the</span>
+        <span class="comment">// extension_indices.</span>
+        <span class="kw">let</span> <span class="ident">extension</span> <span class="op">=</span> <span class="ident">extensions_indices</span>
+            .<span class="ident">iter_mut</span>()
+            .<span class="ident">find_map</span>(<span class="op">|</span>(<span class="kw">_</span>, <span class="ident">extension</span>)<span class="op">|</span> {
+                <span class="kw">if</span> <span class="ident">extension</span>.<span class="ident">get_handle</span>() <span class="op">==</span> <span class="ident">handle</span> {
+                    <span class="prelude-val">Some</span>(<span class="ident">extension</span>)
+                } <span class="kw">else</span> {
+                    <span class="prelude-val">None</span>
+                }
+            })
+            .<span class="ident">expect</span>(<span class="string">&quot;Fail to find extension with given handle.&quot;</span>);
+
+        <span class="comment">// We invoke the found extension.</span>
+        <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="ident">from_oak_status_result</span>(<span class="ident">extension</span>.<span class="ident">invoke</span>(<span class="self">self</span>, <span class="ident">args</span>)<span class="question-mark">?</span>);
+
+        <span class="comment">// We put the extension indices back.</span>
+        <span class="self">self</span>.<span class="ident">extensions_indices</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">extensions_indices</span>);
+
+        <span class="ident">result</span>
+    }
+
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">alloc</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">len</span>: <span class="ident">u32</span>) -&gt; <span class="ident">AbiPointer</span> {
         <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">instance</span>.<span class="ident">as_ref</span>().<span class="ident">unwrap</span>().<span class="ident">invoke_export</span>(
             <span class="ident">ALLOC_FUNCTION_NAME</span>,
@@ -1093,6 +1198,7 @@
             <span class="ident">WRITE_LOG_MESSAGE</span> =&gt; <span class="ident">from_oak_status_result</span>(
                 <span class="self">self</span>.<span class="ident">write_log_message</span>(<span class="ident">args</span>.<span class="ident">nth_checked</span>(<span class="number">0</span>)<span class="question-mark">?</span>, <span class="ident">args</span>.<span class="ident">nth_checked</span>(<span class="number">1</span>)<span class="question-mark">?</span>),
             ),
+            <span class="ident">INVOKE</span> =&gt; <span class="self">self</span>.<span class="ident">invoke_extension_with_handle</span>(<span class="ident">args</span>.<span class="ident">nth_checked</span>(<span class="number">0</span>)<span class="question-mark">?</span>, <span class="ident">args</span>),
 
             <span class="kw">_</span> =&gt; {
                 <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">extensions_indices</span> <span class="op">=</span> <span class="self">self</span>
@@ -1411,7 +1517,19 @@
                 <span class="prelude-val">Some</span>(<span class="ident">ValueType::I32</span>),
             ),
         ),
-
+        <span class="string">&quot;invoke&quot;</span> =&gt; (
+            <span class="ident">INVOKE</span>,
+            <span class="ident">wasmi::Signature::new</span>(
+                <span class="kw-2">&amp;</span>[
+                    <span class="ident">ABI_USIZE</span>, <span class="comment">// handle</span>
+                    <span class="ident">ABI_USIZE</span>, <span class="comment">// request_ptr</span>
+                    <span class="ident">ABI_USIZE</span>, <span class="comment">// request_len</span>
+                    <span class="ident">ABI_USIZE</span>, <span class="comment">// response_ptr_ptr</span>
+                    <span class="ident">ABI_USIZE</span>, <span class="comment">// response_len_ptr</span>
+                ][..],
+                <span class="prelude-val">Some</span>(<span class="ident">ValueType::I32</span>),
+            ),
+        ),
         <span class="kw">_</span> =&gt; <span class="kw">return</span> <span class="prelude-val">None</span>,
     };
 

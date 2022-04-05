@@ -144,6 +144,10 @@
 <span id="139">139</span>
 <span id="140">140</span>
 <span id="141">141</span>
+<span id="142">142</span>
+<span id="143">143</span>
+<span id="144">144</span>
+<span id="145">145</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2021 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -169,7 +173,7 @@
 };
 <span class="kw">use</span> <span class="ident">anyhow::Context</span>;
 <span class="kw">use</span> <span class="ident">bytes::Bytes</span>;
-<span class="kw">use</span> <span class="ident">oak_functions_abi::proto::OakStatus</span>;
+<span class="kw">use</span> <span class="ident">oak_functions_abi::proto</span>::{<span class="ident">ExtensionHandle</span>, <span class="ident">OakStatus</span>};
 <span class="kw">use</span> <span class="ident">oak_functions_tf_inference</span>::{<span class="ident">parse_model</span>, <span class="ident">TensorFlowModel</span>};
 <span class="kw">use</span> <span class="ident">prost::Message</span>;
 <span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">fs::File</span>, <span class="ident">io::Read</span>, <span class="ident">sync::Arc</span>};
@@ -232,6 +236,10 @@
 
     <span class="kw">fn</span> <span class="ident">terminate</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
         <span class="prelude-val">Ok</span>(())
+    }
+
+    <span class="kw">fn</span> <span class="ident">get_handle</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) -&gt; <span class="ident">ExtensionHandle</span> {
+        <span class="ident">ExtensionHandle::TfHandle</span>
     }
 }
 

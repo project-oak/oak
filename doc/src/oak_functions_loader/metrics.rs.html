@@ -137,6 +137,10 @@
 <span id="132">132</span>
 <span id="133">133</span>
 <span id="134">134</span>
+<span id="135">135</span>
+<span id="136">136</span>
+<span id="137">137</span>
+<span id="138">138</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2021 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -161,7 +165,7 @@
     },
 };
 <span class="kw">use</span> <span class="ident">alloc::sync::Arc</span>;
-<span class="kw">use</span> <span class="ident">oak_functions_abi::proto::OakStatus</span>;
+<span class="kw">use</span> <span class="ident">oak_functions_abi</span>::{<span class="ident">proto::OakStatus</span>, <span class="ident">ExtensionHandle</span>};
 <span class="kw">use</span> <span class="ident">oak_functions_metrics</span>::{
     <span class="ident">PrivateMetricsAggregator</span>, <span class="ident">PrivateMetricsExtension</span>, <span class="ident">PrivateMetricsProxy</span>,
 };
@@ -249,6 +253,10 @@
 
     <span class="kw">fn</span> <span class="ident">terminate</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
         <span class="self">self</span>.<span class="ident">publish_metrics</span>()
+    }
+
+    <span class="kw">fn</span> <span class="ident">get_handle</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) -&gt; <span class="ident">ExtensionHandle</span> {
+        <span class="ident">ExtensionHandle::MetricsHandle</span>
     }
 }
 

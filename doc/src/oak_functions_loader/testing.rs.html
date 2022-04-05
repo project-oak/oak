@@ -137,6 +137,13 @@
 <span id="132">132</span>
 <span id="133">133</span>
 <span id="134">134</span>
+<span id="135">135</span>
+<span id="136">136</span>
+<span id="137">137</span>
+<span id="138">138</span>
+<span id="139">139</span>
+<span id="140">140</span>
+<span id="141">141</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2021 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -156,18 +163,18 @@
 <span class="kw">use</span> <span class="kw">crate</span>::{
     <span class="ident">logger::Logger</span>,
     <span class="ident">server</span>::{
-        <span class="ident">AbiPointer</span>, <span class="ident">AbiPointerOffset</span>, <span class="ident">BoxedExtension</span>, <span class="ident">BoxedExtensionFactory</span>, <span class="ident">ExtensionFactory</span>,
-        <span class="ident">OakApiNativeExtension</span>, <span class="ident">ABI_USIZE</span>,
+        <span class="ident">AbiExtensionHandle</span>, <span class="ident">AbiPointer</span>, <span class="ident">AbiPointerOffset</span>, <span class="ident">BoxedExtension</span>, <span class="ident">BoxedExtensionFactory</span>,
+        <span class="ident">ExtensionFactory</span>, <span class="ident">OakApiNativeExtension</span>, <span class="ident">ABI_USIZE</span>,
     },
 };
 
 <span class="kw">use</span> <span class="ident">log::Level</span>;
-<span class="kw">use</span> <span class="ident">oak_functions_abi::proto::OakStatus</span>;
+<span class="kw">use</span> <span class="ident">oak_functions_abi</span>::{<span class="ident">proto::OakStatus</span>, <span class="ident">ExtensionHandle</span>};
 <span class="kw">use</span> <span class="ident">serde</span>::{<span class="ident">Deserialize</span>, <span class="ident">Serialize</span>};
 <span class="kw">use</span> <span class="ident">wasmi::ValueType</span>;
 
 <span class="doccomment">/// Host function name for testing.</span>
-<span class="kw">const</span> <span class="ident">TESTING_ABI_FUNCTION_NAME</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;invoke&quot;</span>;
+<span class="kw">const</span> <span class="ident">TESTING_ABI_FUNCTION_NAME</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;testing&quot;</span>;
 
 <span class="kw">impl</span> <span class="ident">OakApiNativeExtension</span> <span class="kw">for</span> <span class="ident">TestingExtension</span><span class="op">&lt;</span><span class="ident">Logger</span><span class="op">&gt;</span> {
     <span class="kw">fn</span> <span class="ident">invoke</span>(
@@ -175,10 +182,13 @@
         <span class="ident">wasm_state</span>: <span class="kw-2">&amp;mut</span> <span class="ident"><span class="kw">crate</span>::server::WasmState</span>,
         <span class="ident">args</span>: <span class="ident">wasmi::RuntimeArgs</span>,
     ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">oak_functions_abi::proto::OakStatus</span><span class="op">&gt;</span>, <span class="ident">wasmi::Trap</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">request_ptr</span>: <span class="ident">AbiPointer</span> <span class="op">=</span> <span class="ident">args</span>.<span class="ident">nth_checked</span>(<span class="number">0</span>)<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">request_len</span>: <span class="ident">AbiPointerOffset</span> <span class="op">=</span> <span class="ident">args</span>.<span class="ident">nth_checked</span>(<span class="number">1</span>)<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">response_ptr_ptr</span>: <span class="ident">AbiPointer</span> <span class="op">=</span> <span class="ident">args</span>.<span class="ident">nth_checked</span>(<span class="number">2</span>)<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">response_len_ptr</span>: <span class="ident">AbiPointer</span> <span class="op">=</span> <span class="ident">args</span>.<span class="ident">nth_checked</span>(<span class="number">3</span>)<span class="question-mark">?</span>;
+        <span class="comment">// For consistency we also get the first argument, but we do not need it, as we did read the</span>
+        <span class="comment">// handle already to decide to call the invoke of this extension.</span>
+        <span class="kw">let</span> <span class="ident">_handle</span>: <span class="ident">AbiExtensionHandle</span> <span class="op">=</span> <span class="ident">args</span>.<span class="ident">nth_checked</span>(<span class="number">0</span>)<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">request_ptr</span>: <span class="ident">AbiPointer</span> <span class="op">=</span> <span class="ident">args</span>.<span class="ident">nth_checked</span>(<span class="number">1</span>)<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">request_len</span>: <span class="ident">AbiPointerOffset</span> <span class="op">=</span> <span class="ident">args</span>.<span class="ident">nth_checked</span>(<span class="number">2</span>)<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">response_ptr_ptr</span>: <span class="ident">AbiPointer</span> <span class="op">=</span> <span class="ident">args</span>.<span class="ident">nth_checked</span>(<span class="number">3</span>)<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">response_len_ptr</span>: <span class="ident">AbiPointer</span> <span class="op">=</span> <span class="ident">args</span>.<span class="ident">nth_checked</span>(<span class="number">4</span>)<span class="question-mark">?</span>;
 
         <span class="kw">let</span> <span class="ident">extension_args</span> <span class="op">=</span> <span class="ident">wasm_state</span>
             .<span class="ident">read_extension_args</span>(<span class="ident">request_ptr</span>, <span class="ident">request_len</span>)
@@ -213,6 +223,10 @@
 
     <span class="kw">fn</span> <span class="ident">terminate</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
         <span class="prelude-val">Ok</span>(())
+    }
+
+    <span class="kw">fn</span> <span class="ident">get_handle</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) -&gt; <span class="ident">ExtensionHandle</span> {
+        <span class="ident">ExtensionHandle::TestingHandle</span>
     }
 }
 
