@@ -2469,7 +2469,6 @@ dependencies = [
  "prost-build 0.10.0",
  "serde",
  "serde_derive",
- "serde_json",
 ]
 
 [[package]]

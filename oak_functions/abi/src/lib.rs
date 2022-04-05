@@ -49,12 +49,14 @@ pub mod proto {
     }
 }
 
-/// Holds the `raw_label` and the value to report a metric.
+/// Holds the `raw_label` and the `value` to report a metric.
 #[derive(Serialize, Deserialize)]
 pub struct ReportMetricRequest {
     pub raw_label: Vec<u8>,
     pub value: i64,
 }
+
+// TODO(#2682): Add TestingMessage to ABI.
 
 // TODO(#1963): Add tests, in an example.
 
