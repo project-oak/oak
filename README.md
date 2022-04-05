@@ -17,10 +17,10 @@ with privileged access to the machine that handles the data) has unrestricted
 access to the machine hardware resources, and can leverage that to bypass any
 security mechanism on the machine itself and extract secret keys and data.
 
-[Oak Functions](/oak_functions) is a Trusted Runtime server binary that exposes
-a API that allows clients to send data, and the server to execute untrusted code
-over client-provided data in a controlled way, enforcing strong privacy
-guarantess about its execution.
+[Oak Functions](/oak_functions) is a server binary that exposes an API (over
+gRPC / HTTP) that allows clients to send data, and the server to execute
+untrusted business logic code over client-provided data in a controlled way,
+enforcing strong privacy guarantess about its execution.
 
 In order for these guarantees to be transferred to remote clients, Oak Functions
 is expected to be run in a
@@ -59,7 +59,8 @@ Further information is included in the following documents:
   - Platform Provider
   - Untrusted Business Logic Authors
 - **trusted-but-verifiable**:
-  - Oak Trusted Runtime Authors (and its transitive dependencies)
+  - Oak Trusted Runtime Authors (their actions are verifiable via
+    https://github.com/project-oak/transparent-release)
 - **trusted**:
   - TEE Manufacturer
 - **partly or conditionally trusted**:
