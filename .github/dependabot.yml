@@ -7,3 +7,5 @@ updates:
     directory: '/'
     schedule:
       interval: 'daily'
+    reviewers:
+      - 'project-oak/core'
