@@ -101,7 +101,7 @@ impl TryFrom<&LogEntry> for RekorSignatureBundle {
         let sig_base64 = log_entry
             .verification
             .as_ref()
-            .ok_or(anyhow::anyhow!("no verification field in the log entry"))?
+            .ok_or_else(|| anyhow::anyhow!("no verification field in the log entry"))?
             .signed_entry_timestamp
             .clone();
         let sig_bytes = sig_base64.as_str().as_bytes();
