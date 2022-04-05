@@ -346,7 +346,7 @@ impl WasmState {
         let handle: ExtensionHandle =
             ExtensionHandle::from_i32(handle).expect("Fail to parse handle.");
 
-        // TODO(#2664) Quick solution following impelementation of invoking an extension in
+        // TODO(#2664): Quick solution following impelementation of invoking an extension in
         // `invoke_index`. Once we refactored the interface of `invoke` to not require
         // `WasmState` any more, we can simplify this.
 
