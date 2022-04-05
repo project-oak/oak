@@ -24,7 +24,7 @@ hyper = { version = "*", features = [
 log = "*"
 oak_attestation_common = { version = "*", path = "../attestation_common" }
 # TODO(#2544): Update rustls.
-rustls = "0.19"
+rustls = "0.20"
 sha2 = "*"
 tokio = { version = "*", features = [
   "fs",
