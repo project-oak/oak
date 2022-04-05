@@ -15,7 +15,7 @@ log = "*"
 openssl = "*"
 ring = "*"
 # TODO(#2544): Update rustls.
-rustls = "0.19"
+rustls = "0.20"
 serde = { version = "*", features = ["derive"] }
 serde_json = "*"
 sha2 = "*"
