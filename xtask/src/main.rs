@@ -379,7 +379,7 @@ fn run_completion(completion: &Completion) -> Step {
     let mut file = std::fs::File::create(completion.file_name.clone()).expect("file not created");
     clap_complete::generate(
         clap_complete::Shell::Bash,
-        &mut Opt::into_app(),
+        &mut Opt::command(),
         "xtask",
         &mut file,
     );
