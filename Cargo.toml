@@ -12,6 +12,7 @@ members = [
   "experimental/trusted_shuffler/common",
   "experimental/trusted_shuffler/server",
   "experimental/trusted_shuffler/trusted_shuffler",
+  "experimental/uefi/loader",
   "oak_functions/abi",
   "oak_functions/client/rust",
   "oak_functions/examples/benchmark/module",
@@ -44,4 +45,4 @@ members = [
   "remote_attestation/rust",
   "xtask",
 ]
-exclude = ["experimental/uefi", "oak_functions/loader/fuzz"]
+exclude = ["experimental/uefi/app", "oak_functions/loader/fuzz"]
