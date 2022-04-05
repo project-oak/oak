@@ -18,6 +18,7 @@ use std::{fs, path::PathBuf};
 
 use clap::Parser;
 use futures::stream::StreamExt;
+use log::info;
 use qemu::{Qemu, QemuParams};
 use tokio::{
     io::{self, AsyncReadExt, AsyncWriteExt},
@@ -40,9 +41,6 @@ struct Args {
     /// path to the UEFI app to execute
     #[clap(parse(from_os_str), validator = path_exists)]
     uefi_app: PathBuf,
-
-    // message to send to the app
-    message: String,
 }
 
 fn path_exists(s: &str) -> Result<(), String> {
@@ -56,52 +54,53 @@ fn path_exists(s: &str) -> Result<(), String> {
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cli = Args::parse();
+    env_logger::init();
 
-    let console = UnixStream::pair()?;
-    let comms = UnixStream::pair()?;
+    let (console_qemu, console) = UnixStream::pair()?;
+    let (comms_qemu, comms) = UnixStream::pair()?;
 
     let qemu = Qemu::start(QemuParams {
         binary: cli.qemu.as_path(),
         firmware: cli.ovmf.as_path(),
         app: cli.uefi_app.as_path(),
-        console: console.0,
-        comms: comms.0,
+        console: console_qemu,
+        comms: comms_qemu,
     })?;
 
     // Log everything coming over the console channel.
     tokio::spawn(async {
         let codec = tokio_util::codec::LinesCodec::new();
-        let mut framed = codec.framed(console.1);
+        let mut framed = codec.framed(console);
 
         while let Some(line) = framed.next().await {
             // The UEFI console uses ANSI escape codes to clear screen and set colours, so
             // let's not just print the string out but rather the debug version of that.
-            println!("console: {:?}", line.unwrap())
+            info!("console: {:?}", line.unwrap())
         }
     });
 
     // Bit hacky, but it's only temporary and turns out console I/O is complex.
-    let (mut rh, mut wh) = comms.1.into_split();
+    let (mut rh, mut wh) = comms.into_split();
     tokio::spawn(async move {
-        let mut buf = [0; 1];
+        let mut buf = [0; 1024];
         loop {
             let result = rh.read(&mut buf).await.unwrap();
             if result == 0 {
                 break;
             } else {
-                println!("received: {:?}", buf);
+                info!("rx: {:?}", &buf[..result]);
             }
         }
     });
     tokio::spawn(async move {
-        let mut buf = [0; 1];
+        let mut buf = [0; 1024];
         loop {
             let result = io::stdin().read(&mut buf).await.unwrap();
             if result == 0 {
                 break;
             } else {
-                println!("sending: {:?}", buf);
-                wh.write_all(&buf).await.unwrap();
+                info!("tx: {:?}", &buf[..result]);
+                wh.write_all(&buf[..result]).await.unwrap();
             }
         }
     });

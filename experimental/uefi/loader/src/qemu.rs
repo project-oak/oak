@@ -18,6 +18,7 @@ use std::{ffi::OsStr, path::Path, process::Stdio};
 
 use anyhow::Result;
 use command_fds::{tokio::CommandFdAsyncExt, FdMapping};
+use log::info;
 use std::os::unix::io::AsRawFd;
 use tokio::{io::AsyncWriteExt, net::UnixStream};
 
@@ -45,7 +46,7 @@ impl Qemu {
         // There should not be any communication over stdin/stdout/stderr, but let's inherit
         // stderr just in case.
         cmd.stdin(Stdio::null());
-        cmd.stdout(Stdio::null());
+        cmd.stdout(Stdio::inherit());
         cmd.stderr(Stdio::inherit());
 
         // We're keeping the QMP socket to ourselves.
@@ -76,8 +77,8 @@ impl Qemu {
         // Don't bother with default hardware, such as a VGA adapter, floppy drive, etc.
         cmd.arg("-nodefaults");
         // Use the more modern `q35` machine as the basis.
-        // Note that q35 comes with a ton of stuff we don't need (eg a PC speaker). We should
-        // use something simpler (microvm?), if possible.
+        // TODO(#2679): q35 comes with a ton of stuff we don't need (eg a PC speaker). We
+        // should use something simpler (microvm?), if possible.
         cmd.args(&[
             "-machine",
             "q35,usb=off,sata=off,smbus=off,graphics=off,vmport=off,smm=off",
@@ -101,7 +102,7 @@ impl Qemu {
         // app.
         cmd.args(&[OsStr::new("-kernel"), params.app.as_os_str()]);
 
-        println!("Executing: {:?}", cmd);
+        info!("Executing: {:?}", cmd);
 
         Ok(Qemu {
             instance: cmd.spawn()?,
@@ -112,11 +113,11 @@ impl Qemu {
     }
 
     pub async fn kill(mut self) -> Result<std::process::ExitStatus> {
-        println!("Cleaning up and shutting down.");
+        info!("Cleaning up and shutting down.");
         self.console.shutdown().await?;
         self.comms.shutdown().await?;
         self.qmp.shutdown().await?;
-        self.instance.kill().await.map_err(anyhow::Error::from)?;
+        self.instance.start_kill()?;
         self.instance.wait().await.map_err(anyhow::Error::from)
     }
 }

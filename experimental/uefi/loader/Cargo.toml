@@ -10,6 +10,8 @@ anyhow = "*"
 clap = { version = "*", features = ["derive"] }
 command-fds = { version = "*", features = ["tokio"] }
 futures = "*"
+log = "*"
+env_logger = "*"
 tokio = { version = "*", features = [
   "io-std",
   "io-util",
