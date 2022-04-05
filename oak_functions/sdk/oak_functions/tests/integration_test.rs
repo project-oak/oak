@@ -22,7 +22,7 @@ use oak_functions_loader::{
     lookup::LookupFactory,
     metrics::{BucketConfig, PrivateMetricsConfig, PrivateMetricsProxyFactory},
     server::WasmHandler,
-    tf::{TensorFlowFactory, TensorFlowModelConfig},
+    tf::{read_model_from_path, TensorFlowFactory, TensorFlowModelConfig},
 };
 use oak_functions_lookup::LookupDataManager;
 use std::{path::PathBuf, sync::Arc};
@@ -233,13 +233,25 @@ async fn test_report_metric() {
 async fn test_tf_model_infer() {
     let logger = Logger::for_test();
 
+    // Re-use path and share from oak_functions/examples/mobilenet.
+    let path: PathBuf = [
+        env!("WORKSPACE_ROOT"),
+        "oak_functions",
+        "examples",
+        "mobilenet",
+        "files",
+        "mobilenet_v2_1.4_224_frozen.pb",
+    ]
+    .iter()
+    .collect();
+    let shape = vec![1, 224, 224, 3];
+
     let tf_model_config = TensorFlowModelConfig {
-        path: String::from(""), // TODO(mschett): Figure out where to get a model from.
-        shape: vec![],          // TODO(mschett): Figure out what shape to use.
+        path: path.into_os_string().into_string().unwrap(),
+        shape,
     };
 
-    // TODO(mschett): Figure out what model to use.
-    let model = todo!();
+    let model = read_model_from_path(&tf_model_config.path).expect("Fail to read model.");
 
     let tf_factory = TensorFlowFactory::new_boxed_extension_factory(
         model,
@@ -251,6 +263,7 @@ async fn test_tf_model_infer() {
     let wasm_handler = WasmHandler::create(&TF_WASM_MODULE_BYTES, vec![tf_factory], logger)
         .expect("Could not instantiate WasmHandler.");
 
+    // TODO(mschett) Try sensible input vector.
     let request = Request {
         body: b"input_vector".to_vec(),
     };

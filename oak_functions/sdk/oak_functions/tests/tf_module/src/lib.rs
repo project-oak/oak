@@ -21,10 +21,11 @@ pub extern "C" fn main() {
     // Read the input_vector from the request.
     let input_vector = oak_functions::read_request().expect("Fail to read request body.");
 
-    let result = oak_functions::tf_model_infer(input_vector);
+    let result = oak_functions::tf_model_infer(&input_vector);
+    // TODO(mschett): Currently, the assertion fails.
     assert!(result.is_ok());
 
-    // TODO(mschett): Add expected request.
-    let response_body = todo!();
-    oak_functions::write_response(response_body.as_bytes()).expect("Fail to write response body.");
+    // TODO(mschett): Replace response_body by result in a sensible way.
+    let response_body = b"expected result".to_vec();
+    oak_functions::write_response(&response_body).expect("Fail to write response body.");
 }
