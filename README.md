@@ -17,12 +17,18 @@ with privileged access to the machine that handles the data) has unrestricted
 access to the machine hardware resources, and can leverage that to bypass any
 security mechanism on the machine itself and extract secret keys and data.
 
-As part of Project Oak, data are end-to-end encrypted between _enclaves_, which
-are isolated computation compartments that can be created on-demand, and provide
-strong confidentiality, integrity, and attestation capabilities via a
-combination of hardware and software functionality. Enclaves protect data and
-code even from the operating system kernel and privileged software, and are
-intended to protect from most hardware attacks.
+[Oak Functions](/oak_functions) is a server binary that exposes an API (over
+gRPC / HTTP) that allows clients to send data, and the server to execute
+untrusted business logic code over client-provided data in a controlled way,
+enforcing strong privacy guarantess about its execution.
+
+In order for these guarantees to be transferred to remote clients, Oak Functions
+is expected to be run in a
+[Trusted Execution Environment (TEE)](https://en.wikipedia.org/wiki/Trusted_execution_environment),
+so that clients can perform
+[Remote Attestation](https://en.wikipedia.org/wiki/Trusted_Computing#REMOTE-ATTESTATION)
+in order to establish that a legitimate version of the Oak trusted runtime is
+indeed running server side, before actually sending any data to it.
 
 Further information is included in the following documents:
 
@@ -31,46 +37,40 @@ Further information is included in the following documents:
 - [Oak Functions](oak_functions/README.md) presents our computing platform for
   developing stateless applications in a privacy preserving way.
 
-## Terminology
+## Parties involved
 
-- **Enclave**: A secure CPU compartment that can be created on-demand,
-  containing code and data; it enforces isolation from the host and other
-  enclave instances running on the same system. It guarantees _confidentiality_
-  and _integrity_ of both data and code running within it, and it is capable of
-  creating hardware-backed _remote attestations_ to prove to other parties a
-  measurement (i.e. hash) of the code and data within the enclave itself. Also
-  known as Trusted Execution Environment (TEE).
-- **Enclave Manufacturer**: The entity in charge of manufacturing the CPU or
-  System on a Chip (SoC) supporting enclaves.
+- **Oak Trusted Runtime Authors**: The authors of the code in this repository;
+  mostly this corresponds to the Project Oak team, but also any contributors,
+  and, by extension, the authors of third party dependencies used in Oak.
+- **TEE Manufacturer**: The entity in charge of manufacturing the CPU or System
+  on a Chip (SoC) supporting the TEE, including hardware, software, and
+  cryptographic keys.
 - **Platform Provider**: The entity in charge of maintaining and running the
-  combined hardware and software stack surrounding the TEE, for instance in a
-  cloud context.
-- **Trusted Computing Base (TCB)**: The set of hardware, firmware, software
-  components critical to the security of the system; bugs or vulnerabilities
-  inside the TCB may jeopardise the security properties of the entire system.
-- **Independent Software Vendor (ISV)**: The entity or person providing the code
-  for the service running on top of the Project Oak; in the most common case
-  this may be a third party developer.
+  combined hardware and software stack surrounding the TEE, for instance a cloud
+  provider; this includes their software, hardware, and employees.
+- **Untrusted Business Logic Authors**: The authors of the untrusted business
+  logic, compiled to Wasm, that is executed by the Oak Functions Runtime.
 
 ## Threat Model
 
 - **untrusted**:
   - most hardware (memory, disk, motherboard, network card, external devices)
   - Operating System (kernel, drivers, libraries, applications)
-  - platform provider (hardware, software, employees)
-  - third-party developers
+  - Platform Provider
+  - Untrusted Business Logic Authors
 - **trusted-but-verifiable**:
-  - Project Oak codebase (and its transitive dependencies)
+  - Oak Trusted Runtime Authors (their actions are verifiable via
+    https://github.com/project-oak/transparent-release)
 - **trusted**:
-  - enclave manufacturer (and therefore at least some hardware / software)
+  - TEE Manufacturer
 - **partly or conditionally trusted**:
   - end users
 
 Side channels are out of scope for Project Oak software implementation. While we
-acknowledge that most existing enclaves have compromises and may be vulnerable
-to various kinds of attacks (and therefore we do need resistance to side
-channels) we leave their resolution to the respective enclave manufacturers and
-other researchers.
+acknowledge that most existing TEEs have compromises and may be vulnerable to
+various kinds of attacks (and therefore we do need resistance to side channels)
+we leave their resolution to the respective TEE Manufacturers and other
+researchers.
 
 End users are considered "partly trusted" in that we assume that when two users
 exchange data, there is a pre-existing basic trust relationship between them; in
