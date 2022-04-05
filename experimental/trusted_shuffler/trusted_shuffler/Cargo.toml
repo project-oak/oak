@@ -9,3 +9,19 @@ edition = "2021"
 license = "Apache-2.0"
 
 [dependencies]
+anyhow = "*"
+env_logger = "*"
+log = "*"
+rand = { version = "*", features = ["alloc", "getrandom"] }
+tokio = { version = "*", features = [
+  "fs",
+  "macros",
+  "net",
+  "signal",
+  "sync",
+  "rt-multi-thread"
+] }
+
+[dev-dependencies]
+assert_matches = "*"
+test_utils = { path = "../../../oak_functions/sdk/test_utils" }
