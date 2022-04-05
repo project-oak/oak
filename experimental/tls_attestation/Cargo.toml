@@ -33,4 +33,4 @@ tokio = { version = "*", features = [
   "sync",
   "rt-multi-thread"
 ] }
-tokio-rustls = "0.22"
+tokio-rustls = "0.23"
