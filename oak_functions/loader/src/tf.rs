@@ -23,7 +23,7 @@ use crate::{
 };
 use anyhow::Context;
 use bytes::Bytes;
-use oak_functions_abi::proto::OakStatus;
+use oak_functions_abi::proto::{ExtensionHandle, OakStatus};
 use oak_functions_tf_inference::{parse_model, TensorFlowModel};
 use prost::Message;
 use std::{fs::File, io::Read, sync::Arc};
@@ -86,6 +86,10 @@ impl OakApiNativeExtension for TensorFlowModel<Logger> {
 
     fn terminate(&mut self) -> anyhow::Result<()> {
         Ok(())
+    }
+
+    fn get_handle(&mut self) -> ExtensionHandle {
+        ExtensionHandle::TfHandle
     }
 }
 

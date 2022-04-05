@@ -17,18 +17,18 @@
 use crate::{
     logger::Logger,
     server::{
-        AbiPointer, AbiPointerOffset, BoxedExtension, BoxedExtensionFactory, ExtensionFactory,
-        OakApiNativeExtension, ABI_USIZE,
+        AbiExtensionHandle, AbiPointer, AbiPointerOffset, BoxedExtension, BoxedExtensionFactory,
+        ExtensionFactory, OakApiNativeExtension, ABI_USIZE,
     },
 };
 
 use log::Level;
-use oak_functions_abi::proto::OakStatus;
+use oak_functions_abi::{proto::OakStatus, ExtensionHandle};
 use serde::{Deserialize, Serialize};
 use wasmi::ValueType;
 
 /// Host function name for testing.
-const TESTING_ABI_FUNCTION_NAME: &str = "invoke";
+const TESTING_ABI_FUNCTION_NAME: &str = "testing";
 
 impl OakApiNativeExtension for TestingExtension<Logger> {
     fn invoke(
@@ -36,10 +36,13 @@ impl OakApiNativeExtension for TestingExtension<Logger> {
         wasm_state: &mut crate::server::WasmState,
         args: wasmi::RuntimeArgs,
     ) -> Result<Result<(), oak_functions_abi::proto::OakStatus>, wasmi::Trap> {
-        let request_ptr: AbiPointer = args.nth_checked(0)?;
-        let request_len: AbiPointerOffset = args.nth_checked(1)?;
-        let response_ptr_ptr: AbiPointer = args.nth_checked(2)?;
-        let response_len_ptr: AbiPointer = args.nth_checked(3)?;
+        // For consistency we also get the first argument, but we do not need it, as we did read the
+        // handle already to decide to call the invoke of this extension.
+        let _handle: AbiExtensionHandle = args.nth_checked(0)?;
+        let request_ptr: AbiPointer = args.nth_checked(1)?;
+        let request_len: AbiPointerOffset = args.nth_checked(2)?;
+        let response_ptr_ptr: AbiPointer = args.nth_checked(3)?;
+        let response_len_ptr: AbiPointer = args.nth_checked(4)?;
 
         let extension_args = wasm_state
             .read_extension_args(request_ptr, request_len)
@@ -74,6 +77,10 @@ impl OakApiNativeExtension for TestingExtension<Logger> {
 
     fn terminate(&mut self) -> anyhow::Result<()> {
         Ok(())
+    }
+
+    fn get_handle(&mut self) -> ExtensionHandle {
+        ExtensionHandle::TestingHandle
     }
 }
 

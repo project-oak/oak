@@ -17,6 +17,8 @@
 //! Type, constant and Wasm host function definitions for the Oak-Functions application
 //! binary interface (ABI).
 
+pub use crate::proto::ExtensionHandle;
+
 pub mod proto {
     include!(concat!(env!("OUT_DIR"), "/oak.functions.abi.rs"));
     include!(concat!(env!("OUT_DIR"), "/oak.functions.lookup_data.rs"));
@@ -83,6 +85,7 @@ extern "C" {
     ) -> u32;
 
     pub fn invoke(
+        handle: ExtensionHandle,
         request_ptr: *const u8,
         request_len: usize,
         response_ptr_ptr: *mut *mut u8,

@@ -21,7 +21,7 @@ use crate::{
         OakApiNativeExtension, WasmState, ABI_USIZE,
     },
 };
-use oak_functions_abi::proto::OakStatus;
+use oak_functions_abi::{proto::OakStatus, ExtensionHandle};
 use oak_functions_lookup::{LookupData, LookupDataManager};
 use oak_logger::OakLogger;
 use std::sync::Arc;
@@ -125,5 +125,9 @@ where
 
     fn terminate(&mut self) -> anyhow::Result<()> {
         Ok(())
+    }
+
+    fn get_handle(&mut self) -> ExtensionHandle {
+        ExtensionHandle::LookupHandle
     }
 }

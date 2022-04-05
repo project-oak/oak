@@ -22,7 +22,7 @@ use crate::{
     },
 };
 use alloc::sync::Arc;
-use oak_functions_abi::proto::OakStatus;
+use oak_functions_abi::{proto::OakStatus, ExtensionHandle};
 use oak_functions_metrics::{
     PrivateMetricsAggregator, PrivateMetricsExtension, PrivateMetricsProxy,
 };
@@ -110,6 +110,10 @@ impl OakApiNativeExtension for PrivateMetricsExtension<Logger> {
 
     fn terminate(&mut self) -> anyhow::Result<()> {
         self.publish_metrics()
+    }
+
+    fn get_handle(&mut self) -> ExtensionHandle {
+        ExtensionHandle::MetricsHandle
     }
 }
 

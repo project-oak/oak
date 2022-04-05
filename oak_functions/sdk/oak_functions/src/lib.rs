@@ -158,6 +158,7 @@ pub fn invoke(request: &[u8]) -> Result<Vec<u8>, OakStatus> {
     let mut response_len: usize = 0;
     let status_code = unsafe {
         oak_functions_abi::invoke(
+            oak_functions_abi::ExtensionHandle::TestingHandle,
             request.as_ptr(),
             request.len(),
             &mut response_ptr,
