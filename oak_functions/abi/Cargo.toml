@@ -7,6 +7,9 @@ license = "Apache-2.0"
 
 [dependencies]
 prost = "*"
+serde = "*"
+serde_derive = "*"
+serde_json = "*"
 
 [build-dependencies]
 prost-build = "*"

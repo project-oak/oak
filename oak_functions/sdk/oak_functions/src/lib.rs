@@ -19,9 +19,7 @@
 
 #[cfg(feature = "oak-tf")]
 use oak_functions_abi::proto::Inference;
-use oak_functions_abi::proto::OakStatus;
-#[cfg(feature = "oak-metrics")]
-use serde_derive::Serialize;
+use oak_functions_abi::{proto::OakStatus, ReportMetricRequest};
 use std::convert::AsRef;
 
 /// Reads and returns the user request.
@@ -93,14 +91,6 @@ pub fn report_event<T: AsRef<str>>(label: T) -> Result<(), OakStatus> {
     report_metric(label, 1)
 }
 
-// Keep in sync with metrics.rs.
-#[derive(Serialize)]
-#[cfg(feature = "oak-metrics")]
-struct MetricMessage {
-    raw_label: Vec<u8>,
-    value: i64,
-}
-
 /// Reports a metric value for a sum-based metrics bucket.
 ///
 /// If differentially-private metrics are enabled in the configuration the metrics bucket totals
@@ -118,15 +108,12 @@ struct MetricMessage {
 #[cfg(feature = "oak-metrics")]
 pub fn report_metric<T: AsRef<str>>(label: T, value: i64) -> Result<(), OakStatus> {
     let raw_label = label.as_ref().as_bytes().to_vec();
-    let metric_message = MetricMessage { raw_label, value };
+    let request = ReportMetricRequest { raw_label, value };
 
-    let serialized_metric_message =
-        bincode::serialize(&metric_message).expect("Fail to serialize metric message.");
+    let serialized_request =
+        bincode::serialize(&request).expect("Fail to serialize report metric request.");
     let status = unsafe {
-        oak_functions_abi::report_metric(
-            serialized_metric_message.as_ptr(),
-            serialized_metric_message.len(),
-        )
+        oak_functions_abi::report_metric(serialized_request.as_ptr(), serialized_request.len())
     };
     result_from_status(status as i32, ())
 }

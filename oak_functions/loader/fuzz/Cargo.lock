@@ -738,6 +738,9 @@ version = "0.1.0"
 dependencies = [
  "prost",
  "prost-build",
+ "serde",
+ "serde_derive",
+ "serde_json",
 ]
 
 [[package]]

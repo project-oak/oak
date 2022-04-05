@@ -18,6 +18,7 @@
 //! binary interface (ABI).
 
 pub use crate::proto::ExtensionHandle;
+use serde_derive::{Deserialize, Serialize};
 
 pub mod proto {
     include!(concat!(env!("OUT_DIR"), "/oak.functions.abi.rs"));
@@ -46,6 +47,13 @@ pub mod proto {
             Ok(&self.body.as_slice()[..length])
         }
     }
+}
+
+/// Holds the `raw_label` and the value to report a metric.
+#[derive(Serialize, Deserialize)]
+pub struct ReportMetricRequest {
+    pub raw_label: Vec<u8>,
+    pub value: i64,
 }
 
 // TODO(#1963): Add tests, in an example.

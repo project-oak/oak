@@ -22,13 +22,12 @@ use crate::{
     },
 };
 use alloc::sync::Arc;
-use oak_functions_abi::{proto::OakStatus, ExtensionHandle};
+use oak_functions_abi::{proto::OakStatus, ExtensionHandle, ReportMetricRequest};
 use oak_functions_metrics::{
     PrivateMetricsAggregator, PrivateMetricsExtension, PrivateMetricsProxy,
 };
 // TODO(#2630): Use the std version of Mutex in environments where std is available.
 use oak_functions_util::sync::Mutex;
-use serde::Deserialize;
 use wasmi::ValueType;
 
 // Export for use in integration test.
@@ -119,29 +118,23 @@ impl OakApiNativeExtension for PrivateMetricsExtension<Logger> {
 /// Provides logic for the host ABI function [`report_metric`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#report_metric).
 fn report_metric(
     extension: &mut PrivateMetricsExtension<Logger>,
-    metric_message: Vec<u8>,
+    request: Vec<u8>,
 ) -> Result<(), OakStatus> {
-    let metric_message: MetricMessage =
-        bincode::deserialize(&metric_message).expect("Fail to deserialize metric message.");
+    let request: ReportMetricRequest =
+        bincode::deserialize(&request).expect("Fail to deserialize report metric request.");
 
-    let label = std::str::from_utf8(metric_message.raw_label.as_slice()).map_err(|err| {
+    let label = std::str::from_utf8(request.raw_label.as_slice()).map_err(|err| {
         extension.log_warning(&format!(
             "report_metric(): Not a valid UTF-8 encoded string: {:?}\nContent: {:?}",
-            err, metric_message.raw_label
+            err, request.raw_label
         ));
         OakStatus::ErrInvalidArgs
     })?;
     extension.log_debug(&format!("report_metric(): {}", label));
     extension
-        .report_metric(label, metric_message.value)
+        .report_metric(label, request.value)
         .map_err(|err| {
             extension.log_error(&format!("report_metric(): {:?}", err));
             OakStatus::ErrInternal
         })
-}
-
-#[derive(Deserialize)]
-pub struct MetricMessage {
-    raw_label: Vec<u8>,
-    value: i64,
 }
