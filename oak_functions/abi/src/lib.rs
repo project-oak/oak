@@ -18,7 +18,6 @@
 //! binary interface (ABI).
 
 pub use crate::proto::ExtensionHandle;
-#[cfg(feature = "oak-metrics")]
 use serde_derive::{Deserialize, Serialize};
 
 pub mod proto {
@@ -58,7 +57,11 @@ pub struct ReportMetricRequest {
     pub value: i64,
 }
 
-// TODO(#2682): Add TestingMessage to ABI.
+#[derive(Serialize, Deserialize)]
+pub enum TestingMessage {
+    EchoRequest(String),
+    EchoResponse(String),
+}
 
 // TODO(#1963): Add tests, in an example.
 

@@ -15,14 +15,8 @@
 //
 
 //! Oak Functions ABI test for Testing Extension.
-use serde_derive::{Deserialize, Serialize};
 
-// TestingMessage needs to be kept in sync with TestingMessage in testing extension.
-#[derive(Serialize, Deserialize)]
-pub enum TestingMessage {
-    EchoRequest(String),
-    EchoResponse(String),
-}
+use oak_functions_abi::TestingMessage;
 
 #[cfg_attr(not(test), no_mangle)]
 pub extern "C" fn main() {

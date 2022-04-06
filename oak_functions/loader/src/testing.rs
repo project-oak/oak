@@ -23,8 +23,7 @@ use crate::{
 };
 
 use log::Level;
-use oak_functions_abi::{proto::OakStatus, ExtensionHandle};
-use serde::{Deserialize, Serialize};
+use oak_functions_abi::{proto::OakStatus, ExtensionHandle, TestingMessage};
 use wasmi::ValueType;
 
 /// Host function name for testing.
@@ -132,10 +131,4 @@ where
     pub fn log_error(&self, message: &str) {
         self.logger.log_sensitive(Level::Error, message)
     }
-}
-
-#[derive(Serialize, Deserialize)]
-pub enum TestingMessage {
-    EchoRequest(String),
-    EchoResponse(String),
 }
