@@ -18,7 +18,6 @@
 //! binary interface (ABI).
 
 pub use crate::proto::ExtensionHandle;
-#[cfg(feature = "oak-metrics")]
 use serde_derive::{Deserialize, Serialize};
 
 pub mod proto {
@@ -52,7 +51,6 @@ pub mod proto {
 
 /// Holds the `raw_label` and the `value` to report a metric.
 #[derive(Serialize, Deserialize)]
-#[cfg(feature = "oak-metrics")]
 pub struct ReportMetricRequest {
     pub label: String,
     pub value: i64,
