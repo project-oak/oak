@@ -202,8 +202,6 @@ writes the inference in the allocated buffer and the address of the allocated
 buffer to `inference_ptr_ptr` together with the address of the corresponding
 size to `inference_len_ptr`. The Oak Functions runtime returns an
 [`OakStatus`](https://github.com/project-oak/oak/blob/main/oak_functions/proto/abi.proto).
-In particular, if no TensorFlow model is present, the status is
-`ERR_TENSOR_FLOW_MODEL_NOT_FOUND`.
 
 `tf_model_infer` is experimental, and is only available when the `oak-tf`
 feature is enabled.
