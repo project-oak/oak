@@ -34,11 +34,7 @@ pub extern "C" fn main() {
     let echo_response = bincode::deserialize(&serialized_echo_response)
         .expect("Fail to deserialize testing message.");
 
-    let response_body = match echo_response {
-        // Make sure we received a EchoResponse.
-        TestingResponse::Echo(echoed_message) => echoed_message,
-        _ => String::from("Fail to receive an echo response."),
-    };
+    let TestingResponse::Echo(response_body) = echo_response;
 
     oak_functions::write_response(response_body.as_bytes()).expect("Fail to write response body.");
 }
