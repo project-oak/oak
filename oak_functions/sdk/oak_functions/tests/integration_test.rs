@@ -200,7 +200,7 @@ async fn test_echo() {
 async fn test_report_metric() {
     let logger = Logger::for_test();
 
-    // Keep in sync with metrics_module.
+    // Keep in sync with ./oak_functions/sdk/oak_functions/tests/metrics_module/src/lib.rs
     let label = "a";
     let metrics_config = PrivateMetricsConfig {
         epsilon: 1.0,
@@ -230,7 +230,7 @@ async fn test_report_metric() {
 }
 
 #[tokio::test]
-async fn test_tf_model_infer() {
+async fn test_tf_model_infer_bad_input() {
     let logger = Logger::for_test();
 
     // Re-use path and share from oak_functions/examples/mobilenet.
@@ -263,11 +263,10 @@ async fn test_tf_model_infer() {
     let wasm_handler = WasmHandler::create(&TF_WASM_MODULE_BYTES, vec![tf_factory], logger)
         .expect("Could not instantiate WasmHandler.");
 
-    // TODO(mschett) Try sensible input vector.
     let request = Request {
-        body: b"input_vector".to_vec(),
+        body: b"intentionally bad input vector".to_vec(),
     };
 
     let response: Response = wasm_handler.handle_invoke(request).await.unwrap();
-    test_utils::assert_response_body(response, "_");
+    test_utils::assert_response_body(response, "ErrBadTensorFlowModelInput");
 }

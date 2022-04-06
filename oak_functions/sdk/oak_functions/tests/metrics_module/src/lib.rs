@@ -18,7 +18,8 @@
 
 #[cfg_attr(not(test), no_mangle)]
 pub extern "C" fn main() {
-    // Keep in sync with test_report_metric.
+    // Keep in sync with test_report_metric in
+    // ./oak_functions/sdk/oak_functions/tests/integration_test.rs.
     let label = "a";
     // Some randomly chosen fixed value to report.
     let value = 42;

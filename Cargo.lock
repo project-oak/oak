@@ -2654,6 +2654,7 @@ name = "oak_functions_sdk_abi_test_report_tf"
 version = "0.1.0"
 dependencies = [
  "oak_functions",
+ "oak_functions_abi",
 ]
 
 [[package]]

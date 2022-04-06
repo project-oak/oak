@@ -16,16 +16,18 @@
 
 //! Oak Functions ABI Test for TF.
 
+use oak_functions_abi::proto::OakStatus;
+
 #[cfg_attr(not(test), no_mangle)]
 pub extern "C" fn main() {
     // Read the input_vector from the request.
     let input_vector = oak_functions::read_request().expect("Fail to read request body.");
 
     let result = oak_functions::tf_model_infer(&input_vector);
-    // TODO(mschett): Currently, the assertion fails.
-    assert!(result.is_ok());
+    assert!(result.is_err());
+    assert_eq!(OakStatus::ErrBadTensorFlowModelInput, result.unwrap_err());
 
-    // TODO(mschett): Replace response_body by result in a sensible way.
-    let response_body = b"expected result".to_vec();
+    // Reaching this line means we passed the asserts.
+    let response_body = b"ErrBadTensorFlowModelInput".to_vec();
     oak_functions::write_response(&response_body).expect("Fail to write response body.");
 }
