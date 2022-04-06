@@ -43,16 +43,6 @@
 <span id="38">38</span>
 <span id="39">39</span>
 <span id="40">40</span>
-<span id="41">41</span>
-<span id="42">42</span>
-<span id="43">43</span>
-<span id="44">44</span>
-<span id="45">45</span>
-<span id="46">46</span>
-<span id="47">47</span>
-<span id="48">48</span>
-<span id="49">49</span>
-<span id="50">50</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2021 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -70,14 +60,8 @@
 <span class="comment">//</span>
 
 <span class="doccomment">//! Oak Functions ABI test for Testing Extension.</span>
-<span class="kw">use</span> <span class="ident">serde_derive</span>::{<span class="ident">Deserialize</span>, <span class="ident">Serialize</span>};
 
-<span class="comment">// TestingMessage needs to be kept in sync with TestingMessage in testing extension.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Serialize</span>, <span class="ident">Deserialize</span>)]</span>
-<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">TestingMessage</span> {
-    <span class="ident">EchoRequest</span>(<span class="ident">String</span>),
-    <span class="ident">EchoResponse</span>(<span class="ident">String</span>),
-}
+<span class="kw">use</span> <span class="ident">oak_functions_abi</span>::{<span class="ident">TestingRequest</span>, <span class="ident">TestingResponse</span>};
 
 <span class="attribute">#[<span class="ident">cfg_attr</span>(<span class="ident">not</span>(<span class="ident">test</span>), <span class="ident">no_mangle</span>)]</span>
 <span class="kw">pub</span> <span class="kw">extern</span> <span class="string">&quot;C&quot;</span> <span class="kw">fn</span> <span class="ident">main</span>() {
@@ -86,7 +70,7 @@
     <span class="kw">let</span> <span class="ident">message_to_echo</span> <span class="op">=</span> <span class="ident">String::from_utf8</span>(<span class="ident">request</span>).<span class="ident">expect</span>(<span class="string">&quot;Fail to parse request&quot;</span>);
 
     <span class="comment">// Serialize a EchoRequest with the message_to_echo.</span>
-    <span class="kw">let</span> <span class="ident">echo_request</span> <span class="op">=</span> <span class="ident">bincode::serialize</span>(<span class="kw-2">&amp;</span><span class="ident">TestingMessage::EchoRequest</span>(<span class="ident">message_to_echo</span>))
+    <span class="kw">let</span> <span class="ident">echo_request</span> <span class="op">=</span> <span class="ident">bincode::serialize</span>(<span class="kw-2">&amp;</span><span class="ident">TestingRequest::Echo</span>(<span class="ident">message_to_echo</span>))
         .<span class="ident">expect</span>(<span class="string">&quot;Fail to serialize testing message.&quot;</span>);
     <span class="comment">// We invoke the Testing extension with an EchoRequest.</span>
     <span class="kw">let</span> <span class="ident">serialized_echo_response</span> <span class="op">=</span>
@@ -95,11 +79,7 @@
     <span class="kw">let</span> <span class="ident">echo_response</span> <span class="op">=</span> <span class="ident">bincode::deserialize</span>(<span class="kw-2">&amp;</span><span class="ident">serialized_echo_response</span>)
         .<span class="ident">expect</span>(<span class="string">&quot;Fail to deserialize testing message.&quot;</span>);
 
-    <span class="kw">let</span> <span class="ident">response_body</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">echo_response</span> {
-        <span class="comment">// Make sure we received a EchoResponse.</span>
-        <span class="ident">TestingMessage::EchoResponse</span>(<span class="ident">echoed_message</span>) =&gt; <span class="ident">echoed_message</span>,
-        <span class="kw">_</span> =&gt; <span class="ident">String::from</span>(<span class="string">&quot;Fail to receive an echo response.&quot;</span>),
-    };
+    <span class="kw">let</span> <span class="ident">TestingResponse::Echo</span>(<span class="ident">response_body</span>) <span class="op">=</span> <span class="ident">echo_response</span>;
 
     <span class="ident">oak_functions::write_response</span>(<span class="ident">response_body</span>.<span class="ident">as_bytes</span>()).<span class="ident">expect</span>(<span class="string">&quot;Fail to write response body.&quot;</span>);
 }

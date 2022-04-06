@@ -136,14 +136,6 @@
 <span id="131">131</span>
 <span id="132">132</span>
 <span id="133">133</span>
-<span id="134">134</span>
-<span id="135">135</span>
-<span id="136">136</span>
-<span id="137">137</span>
-<span id="138">138</span>
-<span id="139">139</span>
-<span id="140">140</span>
-<span id="141">141</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2021 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -169,8 +161,7 @@
 };
 
 <span class="kw">use</span> <span class="ident">log::Level</span>;
-<span class="kw">use</span> <span class="ident">oak_functions_abi</span>::{<span class="ident">proto::OakStatus</span>, <span class="ident">ExtensionHandle</span>};
-<span class="kw">use</span> <span class="ident">serde</span>::{<span class="ident">Deserialize</span>, <span class="ident">Serialize</span>};
+<span class="kw">use</span> <span class="ident">oak_functions_abi</span>::{<span class="ident">proto::OakStatus</span>, <span class="ident">ExtensionHandle</span>, <span class="ident">TestingRequest</span>, <span class="ident">TestingResponse</span>};
 <span class="kw">use</span> <span class="ident">wasmi::ValueType</span>;
 
 <span class="doccomment">/// Host function name for testing.</span>
@@ -235,11 +226,10 @@
         <span class="ident">bincode::deserialize</span>(<span class="kw-2">&amp;</span><span class="ident">message</span>).<span class="ident">expect</span>(<span class="string">&quot;Fail to deserialize testing message.&quot;</span>);
 
     <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">deserialized_testing_message</span> {
-        <span class="ident">TestingMessage::EchoRequest</span>(<span class="ident">echo_message</span>) =&gt; {
-            <span class="kw">let</span> <span class="ident">echo_response</span> <span class="op">=</span> <span class="ident">TestingMessage::EchoResponse</span>(<span class="ident">echo_message</span>);
+        <span class="ident">TestingRequest::Echo</span>(<span class="ident">echo_message</span>) =&gt; {
+            <span class="kw">let</span> <span class="ident">echo_response</span> <span class="op">=</span> <span class="ident">TestingResponse::Echo</span>(<span class="ident">echo_message</span>);
             <span class="ident">bincode::serialize</span>(<span class="kw-2">&amp;</span><span class="ident">echo_response</span>).<span class="ident">expect</span>(<span class="string">&quot;Fail to serialize testing message.&quot;</span>)
         }
-        <span class="kw">_</span> =&gt; <span class="macro">panic!</span>(<span class="string">&quot;Unexpected Testing Message: {:?}&quot;</span>, <span class="ident">message</span>),
     };
 
     <span class="prelude-val">Ok</span>(<span class="ident">result</span>)
@@ -278,12 +268,6 @@
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">log_error</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">message</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) {
         <span class="self">self</span>.<span class="ident">logger</span>.<span class="ident">log_sensitive</span>(<span class="ident">Level::Error</span>, <span class="ident">message</span>)
     }
-}
-
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Serialize</span>, <span class="ident">Deserialize</span>)]</span>
-<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">TestingMessage</span> {
-    <span class="ident">EchoRequest</span>(<span class="ident">String</span>),
-    <span class="ident">EchoResponse</span>(<span class="ident">String</span>),
 }
 </code></pre></div>
 </section><section id="search" class="content hidden"></section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="oak_functions_loader" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.60.0-nightly (75d9a0ae2 2022-02-16)" ></div>

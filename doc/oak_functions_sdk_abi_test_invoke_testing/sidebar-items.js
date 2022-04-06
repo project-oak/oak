@@ -1,1 +1,1 @@
-initSidebarItems({"enum":[["TestingMessage",""]],"fn":[["main",""]]});
+initSidebarItems({"fn":[["main",""]]});

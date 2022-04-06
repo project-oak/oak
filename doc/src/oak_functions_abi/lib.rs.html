@@ -109,6 +109,13 @@
 <span id="104">104</span>
 <span id="105">105</span>
 <span id="106">106</span>
+<span id="107">107</span>
+<span id="108">108</span>
+<span id="109">109</span>
+<span id="110">110</span>
+<span id="111">111</span>
+<span id="112">112</span>
+<span id="113">113</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2021 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -129,7 +136,6 @@
 <span class="doccomment">//! binary interface (ABI).</span>
 
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::proto::ExtensionHandle</span>;
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;oak-metrics&quot;</span>)]</span>
 <span class="kw">use</span> <span class="ident">serde_derive</span>::{<span class="ident">Deserialize</span>, <span class="ident">Serialize</span>};
 
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">proto</span> {
@@ -169,7 +175,15 @@
     <span class="kw">pub</span> <span class="ident">value</span>: <span class="ident">i64</span>,
 }
 
-<span class="comment">// TODO(#2682): Add TestingMessage to ABI.</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Serialize</span>, <span class="ident">Deserialize</span>)]</span>
+<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">TestingRequest</span> {
+    <span class="ident">Echo</span>(<span class="ident">String</span>),
+}
+
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Serialize</span>, <span class="ident">Deserialize</span>)]</span>
+<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">TestingResponse</span> {
+    <span class="ident">Echo</span>(<span class="ident">String</span>),
+}
 
 <span class="comment">// TODO(#1963): Add tests, in an example.</span>
 
