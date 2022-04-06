@@ -203,7 +203,8 @@ async fn test_echo() {
 async fn test_report_metric() {
     let logger = Logger::for_test();
 
-    // Keep in sync with ./oak_functions/sdk/oak_functions/tests/metrics_module/src/lib.rs
+    // Keep in sync with
+    // `workspace/oak_functions/sdk/oak_functions/tests/metrics_module/src/lib.rs`.
     let label = "a";
     let metrics_config = PrivateMetricsConfig {
         epsilon: 1.0,
@@ -227,6 +228,8 @@ async fn test_report_metric() {
     };
 
     let response: Response = wasm_handler.handle_invoke(request).await.unwrap();
+    // Keep in sync with
+    // `workspace/oak_functions/sdk/oak_functions/tests/metrics_module/src/lib.rs`.
     test_utils::assert_response_body(response, "MetricReported");
 
     // TODO(#2646): Check in the runtime that the metric was reported there.

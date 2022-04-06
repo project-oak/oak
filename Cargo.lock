@@ -2652,7 +2652,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "oak_functions_sdk_abi_test_report_tf"
+name = "oak_functions_sdk_abi_test_tf_model_infer"
 version = "0.1.0"
 dependencies = [
  "oak_functions",
