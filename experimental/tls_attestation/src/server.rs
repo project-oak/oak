@@ -51,12 +51,13 @@ pub async fn run_server(
     // Configure TLS settings.
     let identity = Identity::create(tee_certificate).context("Couldn't create TLS identity")?;
     let tls_config = {
-        let mut config = rustls::ServerConfig::new(rustls::NoClientAuth::new());
-        config
-            .set_single_cert(vec![identity.certificate], identity.private_key)
+        let mut config = rustls::ServerConfig::builder()
+            .with_safe_defaults()
+            .with_no_client_auth()
+            .with_single_cert(vec![identity.certificate], identity.private_key)
             .map_err(|error| anyhow!("Couldn't set TLS identity: {:?}", error))?;
-        // Configure ALPN to accept HTTP/1.1 and HTTP/2.
-        config.set_protocols(&[b"http/1.1".to_vec(), b"h2".to_vec()]);
+        config.alpn_protocols.push(b"http/1.1".to_vec());
+        config.alpn_protocols.push(b"h2".to_vec());
         std::sync::Arc::new(config)
     };
     let tls_acceptor = TlsAcceptor::from(tls_config);
@@ -118,7 +119,7 @@ impl Identity {
         let private_key = {
             let key_pair_pem = certificate_authority.get_private_key_pem()?;
             let mut cc_reader = std::io::BufReader::new(&key_pair_pem[..]);
-            let private_keys = rustls::internal::pemfile::pkcs8_private_keys(&mut cc_reader)
+            let private_keys = rustls_pemfile::pkcs8_private_keys(&mut cc_reader)
                 .map_err(|error| anyhow!("Couldn't parse private key: {:?}", error))?;
             if private_keys.len() != 1 {
                 return Err(anyhow!(
@@ -126,13 +127,13 @@ impl Identity {
                     private_keys.len()
                 ));
             }
-            private_keys[0].clone()
+            rustls::PrivateKey(private_keys[0].clone())
         };
 
         let certificate = {
             let root_certificate_pem = certificate_authority.get_root_certificate_pem()?;
             let mut cc_reader = std::io::BufReader::new(&root_certificate_pem[..]);
-            let certificates = rustls::internal::pemfile::certs(&mut cc_reader)
+            let certificates = rustls_pemfile::certs(&mut cc_reader)
                 .map_err(|error| anyhow!("Couldn't parse certificate: {:?}", error))?;
             if certificates.len() != 1 {
                 return Err(anyhow!(
@@ -140,7 +141,7 @@ impl Identity {
                     certificates.len()
                 ));
             }
-            certificates[0].clone()
+            rustls::Certificate(certificates[0].clone())
         };
 
         Ok(Self {

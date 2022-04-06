@@ -178,12 +178,13 @@ pub async fn run_server(
 ) -> anyhow::Result<()> {
     // Configure TLS settings.
     let tls_config = {
-        let mut config = rustls::ServerConfig::new(rustls::NoClientAuth::new());
-        config
-            .set_single_cert(vec![certificate], private_key)
+        let mut config = rustls::ServerConfig::builder()
+            .with_safe_defaults()
+            .with_no_client_auth()
+            .with_single_cert(vec![certificate], private_key)
             .map_err(|error| anyhow!("Couldn't set TLS identity: {:?}", error))?;
-        // Configure ALPN to accept HTTP/1.1 and HTTP/2.
-        config.set_protocols(&[b"http/1.1".to_vec(), b"h2".to_vec()]);
+        config.alpn_protocols.push(b"http/1.1".to_vec());
+        config.alpn_protocols.push(b"h2".to_vec());
         std::sync::Arc::new(config)
     };
     let tls_acceptor = TlsAcceptor::from(tls_config);

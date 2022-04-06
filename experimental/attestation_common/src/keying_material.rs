@@ -92,9 +92,9 @@ impl KeyingMaterial {
     /// Exports `KeyingMaterial` for a given TLS `session`.
     ///
     /// <https://tools.ietf.org/html/rfc5705#section-4>
-    fn export(
+    fn export<T>(
         // TLS session used to export `KeyingMaterial` from.
-        session: &dyn rustls::Session,
+        session: &rustls::ConnectionCommon<T>,
         // Label value that is needed to distinguish between application level protocols that rely
         // on `KeyingMaterial`.
         label: &str,
@@ -127,7 +127,7 @@ pub struct KeyingMaterialBundle {
 }
 
 impl KeyingMaterialBundle {
-    pub fn export(session: &dyn rustls::Session) -> anyhow::Result<Self> {
+    pub fn export<T>(session: &rustls::ConnectionCommon<T>) -> anyhow::Result<Self> {
         Ok(Self {
             client_keying_material: KeyingMaterial::export(
                 session,
