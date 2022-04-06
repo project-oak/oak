@@ -5,8 +5,13 @@ authors = ["Razieh Behjati <razieh@google.com>"]
 edition = "2021"
 license = "Apache-2.0"
 
+[features]
+oak-metrics = []
+
 [dependencies]
 prost = "*"
+serde = "*"
+serde_derive = "*"
 
 [build-dependencies]
 prost-build = "*"

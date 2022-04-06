@@ -9,7 +9,7 @@ license = "Apache-2.0"
 default = []
 oak-unsafe = ["oak-tf", "oak-metrics"]
 oak-tf = []
-oak-metrics = []
+oak-metrics = ["oak_functions_abi/oak-metrics"]
 
 [dev-dependencies]
 test_utils = { path = "../test_utils" }
@@ -20,6 +20,10 @@ maplit = "*"
 tokio = "*"
 
 [dependencies]
+bincode = "*"
 maplit = "*"
 oak_functions_abi = { path = "../../abi" }
 prost = "*"
+serde = "*"
+serde_derive = "*"
+serde_json = "*"

@@ -18,6 +18,8 @@
 //! binary interface (ABI).
 
 pub use crate::proto::ExtensionHandle;
+#[cfg(feature = "oak-metrics")]
+use serde_derive::{Deserialize, Serialize};
 
 pub mod proto {
     include!(concat!(env!("OUT_DIR"), "/oak.functions.abi.rs"));
@@ -48,6 +50,16 @@ pub mod proto {
     }
 }
 
+/// Holds the `label` and the `value` to report a metric.
+#[derive(Serialize, Deserialize)]
+#[cfg(feature = "oak-metrics")]
+pub struct ReportMetricRequest {
+    pub label: String,
+    pub value: i64,
+}
+
+// TODO(#2682): Add TestingMessage to ABI.
+
 // TODO(#1963): Add tests, in an example.
 
 // The Oak-Functions ABI primarily consists of a collection of Wasm host functions in the
@@ -66,7 +78,7 @@ extern "C" {
     pub fn write_log_message(buf_ptr: *const u8, buf_len: usize) -> u32;
 
     /// See [`report_metric`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#report_metric).
-    pub fn report_metric(buf_ptr: *const u8, buf_len: usize, value: i64) -> u32;
+    pub fn report_metric(buf_ptr: *const u8, buf_len: usize) -> u32;
 
     /// See [`storage_get_item`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#storage_get_item).
     pub fn storage_get_item(

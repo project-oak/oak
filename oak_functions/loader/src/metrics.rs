@@ -22,7 +22,7 @@ use crate::{
     },
 };
 use alloc::sync::Arc;
-use oak_functions_abi::{proto::OakStatus, ExtensionHandle};
+use oak_functions_abi::{proto::OakStatus, ExtensionHandle, ReportMetricRequest};
 use oak_functions_metrics::{
     PrivateMetricsAggregator, PrivateMetricsExtension, PrivateMetricsProxy,
 };
@@ -76,7 +76,6 @@ impl OakApiNativeExtension for PrivateMetricsExtension<Logger> {
     ) -> Result<Result<(), OakStatus>, wasmi::Trap> {
         let buf_ptr = args.nth_checked(0)?;
         let buf_len = args.nth_checked(1)?;
-        let value = args.nth_checked(2)?;
 
         let args = wasm_state
             .read_extension_args(buf_ptr, buf_len)
@@ -88,7 +87,7 @@ impl OakApiNativeExtension for PrivateMetricsExtension<Logger> {
                 OakStatus::ErrInvalidArgs
             });
 
-        let result = args.and_then(|raw_label| report_metric(self, raw_label, value));
+        let result = args.and_then(|metric_message| report_metric(self, metric_message));
 
         Ok(result)
     }
@@ -100,7 +99,6 @@ impl OakApiNativeExtension for PrivateMetricsExtension<Logger> {
             &[
                 ABI_USIZE, // buf_ptr
                 ABI_USIZE, // buf_len
-                ValueType::I64,
             ][..],
             Some(ValueType::I32),
         );
@@ -120,19 +118,16 @@ impl OakApiNativeExtension for PrivateMetricsExtension<Logger> {
 /// Provides logic for the host ABI function [`report_metric`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#report_metric).
 fn report_metric(
     extension: &mut PrivateMetricsExtension<Logger>,
-    raw_label: Vec<u8>,
-    value: i64,
+    request: Vec<u8>,
 ) -> Result<(), OakStatus> {
-    let label = std::str::from_utf8(raw_label.as_slice()).map_err(|err| {
-        extension.log_warning(&format!(
-            "report_metric(): Not a valid UTF-8 encoded string: {:?}\nContent: {:?}",
-            err, raw_label
-        ));
-        OakStatus::ErrInvalidArgs
-    })?;
-    extension.log_debug(&format!("report_metric(): {}", label));
-    extension.report_metric(label, value).map_err(|err| {
-        extension.log_error(&format!("report_metric(): {:?}", err));
-        OakStatus::ErrInternal
-    })
+    let request: ReportMetricRequest =
+        bincode::deserialize(&request).expect("Fail to deserialize report metric request.");
+
+    extension.log_debug(&format!("report_metric(): {}", request.label));
+    extension
+        .report_metric(&request.label, request.value)
+        .map_err(|err| {
+            extension.log_error(&format!("report_metric(): {:?}", err));
+            OakStatus::ErrInternal
+        })
 }
