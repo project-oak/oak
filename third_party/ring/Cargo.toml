@@ -1,0 +1,225 @@
+[package]
+authors = ["Brian Smith <brian@briansmith.org>"]
+build = "build.rs"
+categories = ["cryptography", "no-std"]
+description = "Safe, fast, small crypto using Rust."
+documentation = "https://briansmith.org/rustdoc/ring/"
+edition = "2018"
+keywords = ["crypto", "cryptography", "rand", "ECC", "RSA"]
+license-file = "LICENSE"
+name = "ring"
+readme = "doc/link-to-readme.md"
+repository = "https://github.com/briansmith/ring"
+resolver = "2"
+
+# Keep in sync with `links` below.
+version = "0.17.0-not-released-yet"
+
+# Keep in sync with `version` above.
+#
+# "ring_core_" + version, replacing punctuation with underscores.
+#
+# build.rs uses this to derive the prefix for FFI symbols and the file names
+# of the FFI libraries, so it must be a valid identifier prefix and a valid
+# filename prefix.
+links = "ring_core_0_17_0_not_released_yet"
+
+include = [
+    "LICENSE",
+    "Cargo.toml",
+
+    "pregenerated/*",
+
+    "benches/*.rs",
+    "build.rs",
+
+    "crypto/chacha/asm/chacha-armv4.pl",
+    "crypto/chacha/asm/chacha-armv8.pl",
+    "crypto/chacha/asm/chacha-x86.pl",
+    "crypto/chacha/asm/chacha-x86_64.pl",
+    "crypto/cipher_extra/test/aes_128_gcm_siv_tests.txt",
+    "crypto/cipher_extra/test/aes_256_gcm_siv_tests.txt",
+    "crypto/constant_time_test.c",
+    "crypto/cpu-intel.c",
+    "crypto/crypto.c",
+    "crypto/curve25519/asm/x25519-asm-arm.S",
+    "crypto/curve25519/curve25519.c",
+    "crypto/curve25519/curve25519_tables.h",
+    "crypto/curve25519/internal.h",
+    "crypto/fipsmodule/aes/aes_nohw.c",
+    "crypto/fipsmodule/aes/asm/aesni-x86.pl",
+    "crypto/fipsmodule/aes/asm/aesni-x86_64.pl",
+    "crypto/fipsmodule/aes/asm/aesv8-armx.pl",
+    "crypto/fipsmodule/aes/asm/bsaes-armv7.pl",
+    "crypto/fipsmodule/aes/asm/bsaes-x86_64.pl",
+    "crypto/fipsmodule/aes/asm/vsaes-armv7.pl",
+    "crypto/fipsmodule/aes/asm/vpaes-x86.pl",
+    "crypto/fipsmodule/aes/asm/vpaes-x86_64.pl",
+    "crypto/fipsmodule/bn/asm/armv4-mont.pl",
+    "crypto/fipsmodule/bn/asm/armv8-mont.pl",
+    "crypto/fipsmodule/bn/asm/x86-mont.pl",
+    "crypto/fipsmodule/bn/asm/x86_64-mont.pl",
+    "crypto/fipsmodule/bn/asm/x86_64-mont5.pl",
+    "crypto/fipsmodule/bn/internal.h",
+    "crypto/fipsmodule/bn/montgomery.c",
+    "crypto/fipsmodule/bn/montgomery_inv.c",
+    "crypto/fipsmodule/ec/asm/p256-x86_64-asm.pl",
+    "crypto/fipsmodule/ec/ecp_nistz.c",
+    "crypto/fipsmodule/ec/ecp_nistz.h",
+    "crypto/fipsmodule/ec/ecp_nistz384.h",
+    "crypto/fipsmodule/ec/ecp_nistz384.inl",
+    "crypto/fipsmodule/ec/gfp_p256.c",
+    "crypto/fipsmodule/ec/gfp_p384.c",
+    "crypto/fipsmodule/ec/p256.c",
+    "crypto/fipsmodule/ec/p256-x86_64-table.h",
+    "crypto/fipsmodule/ec/p256-x86_64.c",
+    "crypto/fipsmodule/ec/p256-x86_64.h",
+    "crypto/fipsmodule/ec/p256_shared.h",
+    "crypto/fipsmodule/ec/p256_table.h",
+    "crypto/fipsmodule/ec/util.h",
+    "crypto/fipsmodule/ecdsa/ecdsa_verify_tests.txt",
+    "crypto/fipsmodule/modes/asm/aesni-gcm-x86_64.pl",
+    "crypto/fipsmodule/modes/asm/ghash-armv4.pl",
+    "crypto/fipsmodule/modes/asm/ghash-x86.pl",
+    "crypto/fipsmodule/modes/asm/ghash-x86_64.pl",
+    "crypto/fipsmodule/modes/asm/ghashv8-armx.pl",
+    "crypto/fipsmodule/sha/asm/sha256-armv4.pl",
+    "crypto/fipsmodule/sha/asm/sha512-armv4.pl",
+    "crypto/fipsmodule/sha/asm/sha512-armv8.pl",
+    "crypto/fipsmodule/sha/asm/sha512-x86_64.pl",
+    "crypto/internal.h",
+    "crypto/limbs/limbs.c",
+    "crypto/limbs/limbs.h",
+    "crypto/limbs/limbs.inl",
+    "crypto/mem.c",
+    "crypto/perlasm/arm-xlate.pl",
+    "crypto/perlasm/x86asm.pl",
+    "crypto/perlasm/x86gas.pl",
+    "crypto/perlasm/x86nasm.pl",
+    "crypto/perlasm/x86_64-xlate.pl",
+    "crypto/poly1305/internal.h",
+    "crypto/poly1305/poly1305.c",
+    "crypto/poly1305/poly1305_arm.c",
+    "crypto/poly1305/poly1305_arm_asm.S",
+    "crypto/poly1305/poly1305_vec.c",
+    "crypto/cipher_extra/asm/chacha20_poly1305_x86_64.pl",
+    "doc/link-to-readme.md",
+    "examples/**/*.rs",
+    "include/ring-core/aes.h",
+    "include/ring-core/arm_arch.h",
+    "include/ring-core/base.h",
+    "include/ring-core/check.h",
+    "include/ring-core/cpu.h",
+    "include/ring-core/mem.h",
+    "include/ring-core/poly1305.h",
+    "include/ring-core/type_check.h",
+    "src/**/*.rs",
+    "src/aead/poly1305_test.txt",
+    "src/data/alg-rsa-encryption.der",
+    "src/ec/curve25519/ed25519/ed25519_pkcs8_v2_template.der",
+    "src/ec/suite_b/ecdsa/ecPublicKey_p256_pkcs8_v1_template.der",
+    "src/ec/suite_b/ecdsa/ecPublicKey_p384_pkcs8_v1_template.der",
+    "src/rsa/signature_rsa_example_private_key.der",
+    "src/rsa/signature_rsa_example_public_key.der",
+    "tests/**/*.rs",
+    "tests/ecdsa_test_private_key_p256.p8",
+    "tests/ecdsa_test_public_key_p256.der",
+    "tests/ecdsa_test_public_key_p256_debug.txt",
+    "tests/ed25519_test_private_key.bin",
+    "tests/ed25519_test_private_key.p8",
+    "tests/ed25519_test_public_key.bin",
+    "tests/ed25519_test_public_key.der",
+    "tests/rsa_test_private_key_2048.p8",
+    "tests/rsa_test_public_key_2048.der",
+    "tests/rsa_test_public_key_2048_debug.txt",
+    "tests/rsa_test_public_modulus.bin",
+    "third_party/fiat/curve25519_32.h",
+    "third_party/fiat/curve25519_64.h",
+    "third_party/fiat/p256_32.h",
+    "third_party/fiat/p256_64.h",
+    "third_party/fiat/LICENSE",
+    "third_party/NIST/SHAVS/SHA1LongMsg.rsp",
+    "third_party/NIST/SHAVS/SHA1Monte.rsp",
+    "third_party/NIST/SHAVS/SHA1ShortMsg.rsp",
+    "third_party/NIST/SHAVS/SHA224LongMsg.rsp",
+    "third_party/NIST/SHAVS/SHA224Monte.rsp",
+    "third_party/NIST/SHAVS/SHA224ShortMsg.rsp",
+    "third_party/NIST/SHAVS/SHA256LongMsg.rsp",
+    "third_party/NIST/SHAVS/SHA256Monte.rsp",
+    "third_party/NIST/SHAVS/SHA256ShortMsg.rsp",
+    "third_party/NIST/SHAVS/SHA384LongMsg.rsp",
+    "third_party/NIST/SHAVS/SHA384Monte.rsp",
+    "third_party/NIST/SHAVS/SHA384ShortMsg.rsp",
+    "third_party/NIST/SHAVS/SHA512LongMsg.rsp",
+    "third_party/NIST/SHAVS/SHA512Monte.rsp",
+    "third_party/NIST/SHAVS/SHA512ShortMsg.rsp",
+]
+
+[package.metadata.docs.rs]
+all-features = true
+
+[lib]
+name = "ring"
+
+[dependencies]
+untrusted = { version = "0.9" }
+
+[target.'cfg(any(target_arch = "x86",target_arch = "x86_64", all(any(target_arch = "aarch64", target_arch = "arm"), any(target_os = "android", target_os = "fuchsia", target_os = "linux", target_os = "windows"))))'.dependencies]
+spin = { version = "0.9.2", default-features = false, features = ["once"] }
+
+[target.'cfg(any(target_os = "android", target_os = "linux"))'.dependencies]
+libc = { version = "0.2.100", default-features = false }
+once_cell = { version = "1.8.0", default-features = false, features=["std"], optional = true }
+
+[target.'cfg(any(target_os = "dragonfly", target_os = "freebsd", target_os = "illumos", target_os = "netbsd", target_os = "openbsd", target_os = "redox", target_os = "solaris"))'.dependencies]
+once_cell = { version = "1.8.0", default-features = false, features=["std"] }
+
+[target.'cfg(all(target_arch = "wasm32", target_vendor = "unknown", target_os = "unknown", target_env = ""))'.dependencies]
+web-sys = { version = "0.3.51", default-features = false, features = ["Crypto", "Window"], optional = true }
+
+[target.'cfg(target_os = "windows")'.dependencies]
+winapi = { version = "0.3.9", default-features = false, features = ["ntsecapi", "wtypesbase", "processthreadsapi"] }
+
+[target.'cfg(target_arch = "wasm32")'.dev-dependencies]
+wasm-bindgen-test = { version = "0.3.26", default-features = false }
+
+[target.'cfg(any(unix, windows))'.dev-dependencies]
+libc = { version = "0.2.100", default-features = false }
+
+[build-dependencies]
+cc = { version = "1.0.69", default-features = false }
+
+[dev-dependencies]
+criterion = "0.3.5"
+
+[features]
+# These features are documented in the top-level module's documentation.
+default = ["alloc", "dev_urandom_fallback"]
+alloc = []
+dev_urandom_fallback = ["once_cell"]
+slow_tests = []
+std = ["alloc"]
+test_logging = []
+wasm32_unknown_unknown_js = ["web-sys"]
+
+# XXX: debug = false because of https://github.com/rust-lang/rust/issues/34122
+
+[profile.bench]
+opt-level = 3
+debug = false
+rpath = false
+lto = true
+debug-assertions = false
+codegen-units = 1
+
+[profile.release]
+opt-level = 3
+debug = false
+rpath = false
+lto = true
+debug-assertions = false
+codegen-units = 1
+
+[[bench]]
+name = "aead"
+harness = false
