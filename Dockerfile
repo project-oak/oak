@@ -52,6 +52,26 @@ RUN apt-get --yes update \
   && git --version \
   && shellcheck --version
 
+# We build our own fork of ring crate from its source. This requires some extra
+# build config that isn't needed for the version published on crates.io, which
+# includes pre-generated assets.
+# Ring requires nasm, and a specific version of clang & llvm
+ARG llvm_version=14
+RUN echo 'deb http://apt.llvm.org/buster/ llvm-toolchain-buster-14 main' >> /etc/apt/sources.list.d/llvm.list \
+  && curl https://apt.llvm.org/llvm-snapshot.gpg.key | apt-key add - \
+  && apt-get update --yes \
+  && apt-get install --no-install-recommends --yes \
+  clang-${llvm_version} \
+  llvm-${llvm_version} \
+  nasm \
+  && rm --recursive --force /var/lib/apt/lists/*
+
+# Ring epects these ENV variables in its build tooling
+ENV llvm_version=$llvm_version
+ENV CC_x86_64_unknown_uefi=clang-$llvm_version
+ENV AR_x86_64_unknown_uefi=llvm-ar-$llvm_version
+ENV NASM_EXECUTABLE=nasm
+
 # Install a version of docker CLI.
 RUN curl --fail --silent --show-error --location https://download.docker.com/linux/debian/gpg | apt-key add -
 RUN echo "deb [arch=amd64] https://download.docker.com/linux/debian buster stable"  > /etc/apt/sources.list.d/backports.list \
