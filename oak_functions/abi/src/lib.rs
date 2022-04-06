@@ -49,7 +49,7 @@ pub mod proto {
     }
 }
 
-/// Holds the `raw_label` and the `value` to report a metric.
+/// Holds the `label` and the `value` to report a metric.
 #[derive(Serialize, Deserialize)]
 pub struct ReportMetricRequest {
     pub label: String,
