@@ -30,3 +30,5 @@ prost = "*"
 serde = "*"
 serde_derive = "*"
 serde_json = "*"
+oak_functions_metrics = { optional = true, path = "../../experimental/metrics" }
+oak_functions_tf_inference = { optional = true, path = "../../experimental/tf_inference" }

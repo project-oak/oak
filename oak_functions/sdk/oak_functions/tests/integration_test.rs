@@ -20,11 +20,14 @@ use oak_functions_abi::proto::{Request, Response};
 use oak_functions_loader::{
     logger::Logger,
     lookup::LookupFactory,
-    metrics::{BucketConfig, PrivateMetricsConfig, PrivateMetricsProxyFactory},
+    metrics::PrivateMetricsProxyFactory,
     server::WasmHandler,
-    tf::{read_model_from_path, TensorFlowFactory, TensorFlowModelConfig},
+    tf::{read_model_from_path, TensorFlowFactory},
 };
 use oak_functions_lookup::LookupDataManager;
+use oak_functions_metrics::{BucketConfig, PrivateMetricsConfig};
+use oak_functions_tf_inference::TensorFlowModelConfig;
+
 use std::{path::PathBuf, sync::Arc};
 
 lazy_static! {

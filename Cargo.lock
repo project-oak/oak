@@ -2477,6 +2477,8 @@ dependencies = [
  "oak_functions_abi",
  "oak_functions_loader",
  "oak_functions_lookup",
+ "oak_functions_metrics",
+ "oak_functions_tf_inference",
  "prost 0.10.0",
  "serde",
  "serde_derive",

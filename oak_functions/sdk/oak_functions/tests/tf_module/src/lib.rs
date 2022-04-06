@@ -14,7 +14,8 @@
 // limitations under the License.
 //
 
-//! Oak Functions ABI Test for TF.
+//! Oak Functions ABI Test for TF on a bad input vector.
+//! For a valid TF input see `workspace/oak_functions/examples/mobilenet`.
 
 use oak_functions_abi::proto::OakStatus;
 
