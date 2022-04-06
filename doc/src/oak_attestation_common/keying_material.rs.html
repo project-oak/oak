@@ -241,9 +241,9 @@
     <span class="doccomment">/// Exports `KeyingMaterial` for a given TLS `session`.</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// &lt;https://tools.ietf.org/html/rfc5705#section-4&gt;</span>
-    <span class="kw">fn</span> <span class="ident">export</span>(
+    <span class="kw">fn</span> <span class="ident">export</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>(
         <span class="comment">// TLS session used to export `KeyingMaterial` from.</span>
-        <span class="ident">session</span>: <span class="kw-2">&amp;</span><span class="kw">dyn</span> <span class="ident">rustls::Session</span>,
+        <span class="ident">session</span>: <span class="kw-2">&amp;</span><span class="ident">rustls::ConnectionCommon</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>,
         <span class="comment">// Label value that is needed to distinguish between application level protocols that rely</span>
         <span class="comment">// on `KeyingMaterial`.</span>
         <span class="ident">label</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
@@ -276,7 +276,7 @@
 }
 
 <span class="kw">impl</span> <span class="ident">KeyingMaterialBundle</span> {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">export</span>(<span class="ident">session</span>: <span class="kw-2">&amp;</span><span class="kw">dyn</span> <span class="ident">rustls::Session</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">export</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>(<span class="ident">session</span>: <span class="kw-2">&amp;</span><span class="ident">rustls::ConnectionCommon</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
         <span class="prelude-val">Ok</span>(<span class="self">Self</span> {
             <span class="ident">client_keying_material</span>: <span class="ident">KeyingMaterial::export</span>(
                 <span class="ident">session</span>,

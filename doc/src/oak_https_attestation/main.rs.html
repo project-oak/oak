@@ -231,10 +231,10 @@
         .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">error</span><span class="op">|</span> <span class="macro">anyhow!</span>(<span class="string">&quot;Couldn&#39;t open file {}: {}&quot;</span>, <span class="ident">filename</span>, <span class="ident">error</span>))<span class="question-mark">?</span>;
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">reader</span> <span class="op">=</span> <span class="ident">std::io::BufReader::new</span>(<span class="ident">private_key_file</span>);
 
-    <span class="kw">let</span> <span class="ident">private_keys</span> <span class="op">=</span> <span class="ident">rustls::internal::pemfile::rsa_private_keys</span>(<span class="kw-2">&amp;mut</span> <span class="ident">reader</span>)
+    <span class="kw">let</span> <span class="ident">private_keys</span> <span class="op">=</span> <span class="ident">rustls_pemfile::rsa_private_keys</span>(<span class="kw-2">&amp;mut</span> <span class="ident">reader</span>)
         .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">error</span><span class="op">|</span> <span class="macro">anyhow!</span>(<span class="string">&quot;Couldn&#39;t parse private key: {:?}&quot;</span>, <span class="ident">error</span>))<span class="question-mark">?</span>;
     <span class="kw">if</span> <span class="ident">private_keys</span>.<span class="ident">len</span>() <span class="op">==</span> <span class="number">1</span> {
-        <span class="prelude-val">Ok</span>(<span class="ident">private_keys</span>[<span class="number">0</span>].<span class="ident">clone</span>())
+        <span class="prelude-val">Ok</span>(<span class="ident">rustls::PrivateKey</span>(<span class="ident">private_keys</span>[<span class="number">0</span>].<span class="ident">clone</span>()))
     } <span class="kw">else</span> {
         <span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(
             <span class="string">&quot;Incorrect number of private keys provided: {}, expected 1&quot;</span>,
@@ -249,10 +249,10 @@
         .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">error</span><span class="op">|</span> <span class="macro">anyhow!</span>(<span class="string">&quot;Couldn&#39;t open file {}: {}&quot;</span>, <span class="ident">filename</span>, <span class="ident">error</span>))<span class="question-mark">?</span>;
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">reader</span> <span class="op">=</span> <span class="ident">std::io::BufReader::new</span>(<span class="ident">certificate_file</span>);
 
-    <span class="kw">let</span> <span class="ident">certificates</span> <span class="op">=</span> <span class="ident">rustls::internal::pemfile::certs</span>(<span class="kw-2">&amp;mut</span> <span class="ident">reader</span>)
+    <span class="kw">let</span> <span class="ident">certificates</span> <span class="op">=</span> <span class="ident">rustls_pemfile::certs</span>(<span class="kw-2">&amp;mut</span> <span class="ident">reader</span>)
         .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">error</span><span class="op">|</span> <span class="macro">anyhow!</span>(<span class="string">&quot;Couldn&#39;t parse certificate: {:?}&quot;</span>, <span class="ident">error</span>))<span class="question-mark">?</span>;
     <span class="kw">if</span> <span class="ident">certificates</span>.<span class="ident">len</span>() <span class="op">==</span> <span class="number">1</span> {
-        <span class="prelude-val">Ok</span>(<span class="ident">certificates</span>[<span class="number">0</span>].<span class="ident">clone</span>())
+        <span class="prelude-val">Ok</span>(<span class="ident">rustls::Certificate</span>(<span class="ident">certificates</span>[<span class="number">0</span>].<span class="ident">clone</span>()))
     } <span class="kw">else</span> {
         <span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(
             <span class="string">&quot;Incorrect number of certificates provided: {}, expected 1&quot;</span>,

@@ -245,6 +245,7 @@
 <span id="240">240</span>
 <span id="241">241</span>
 <span id="242">242</span>
+<span id="243">243</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2021 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -425,12 +426,13 @@
 ) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
     <span class="comment">// Configure TLS settings.</span>
     <span class="kw">let</span> <span class="ident">tls_config</span> <span class="op">=</span> {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">config</span> <span class="op">=</span> <span class="ident">rustls::ServerConfig::new</span>(<span class="ident">rustls::NoClientAuth::new</span>());
-        <span class="ident">config</span>
-            .<span class="ident">set_single_cert</span>(<span class="macro">vec!</span>[<span class="ident">certificate</span>], <span class="ident">private_key</span>)
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">config</span> <span class="op">=</span> <span class="ident">rustls::ServerConfig::builder</span>()
+            .<span class="ident">with_safe_defaults</span>()
+            .<span class="ident">with_no_client_auth</span>()
+            .<span class="ident">with_single_cert</span>(<span class="macro">vec!</span>[<span class="ident">certificate</span>], <span class="ident">private_key</span>)
             .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">error</span><span class="op">|</span> <span class="macro">anyhow!</span>(<span class="string">&quot;Couldn&#39;t set TLS identity: {:?}&quot;</span>, <span class="ident">error</span>))<span class="question-mark">?</span>;
-        <span class="comment">// Configure ALPN to accept HTTP/1.1 and HTTP/2.</span>
-        <span class="ident">config</span>.<span class="ident">set_protocols</span>(<span class="kw-2">&amp;</span>[<span class="string">b&quot;http/1.1&quot;</span>.<span class="ident">to_vec</span>(), <span class="string">b&quot;h2&quot;</span>.<span class="ident">to_vec</span>()]);
+        <span class="ident">config</span>.<span class="ident">alpn_protocols</span>.<span class="ident">push</span>(<span class="string">b&quot;http/1.1&quot;</span>.<span class="ident">to_vec</span>());
+        <span class="ident">config</span>.<span class="ident">alpn_protocols</span>.<span class="ident">push</span>(<span class="string">b&quot;h2&quot;</span>.<span class="ident">to_vec</span>());
         <span class="ident">std::sync::Arc::new</span>(<span class="ident">config</span>)
     };
     <span class="kw">let</span> <span class="ident">tls_acceptor</span> <span class="op">=</span> <span class="ident">TlsAcceptor::from</span>(<span class="ident">tls_config</span>);
