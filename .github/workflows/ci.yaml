@@ -62,6 +62,9 @@ jobs:
       # See https://doc.rust-lang.org/nightly/cargo/guide/cargo-home.html#caching-the-cargo-home-in-ci
       - name: Cache Rust artifacts
         uses: actions/cache@v2
+        env:
+          # Increment this value to invalidate previous cache entries.
+          CACHE_VERSION: 1
         with:
           path: |
             ./cargo-cache/bin
@@ -71,10 +74,10 @@ jobs:
             ./sccache-cache
             ./target
           key: |
-            cargo-cache-${{ matrix.cmd }}-${{ hashFiles('**/Cargo.lock') }}
+            cargo-cache-${{ env.CACHE_VERSION }}-${{ matrix.cmd }}-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: |
-            cargo-cache-${{ matrix.cmd }}-
-            cargo-cache-
+            cargo-cache-${{ env.CACHE_VERSION }}-${{ matrix.cmd }}-
+            cargo-cache-${{ env.CACHE_VERSION }}-
 
       - name: Run command
         run: |
