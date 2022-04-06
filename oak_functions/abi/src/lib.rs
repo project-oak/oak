@@ -58,9 +58,13 @@ pub struct ReportMetricRequest {
 }
 
 #[derive(Serialize, Deserialize)]
-pub enum TestingMessage {
-    EchoRequest(String),
-    EchoResponse(String),
+pub enum TestingRequest {
+    Echo(String),
+}
+
+#[derive(Serialize, Deserialize)]
+pub enum TestingResponse {
+    Echo(String),
 }
 
 // TODO(#1963): Add tests, in an example.
