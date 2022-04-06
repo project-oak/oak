@@ -21,6 +21,8 @@ oak_functions_lookup = { path = "../../lookup" }
 lazy_static = "*"
 maplit = "*"
 tokio = "*"
+oak_functions_metrics = { path = "../../experimental/metrics" }
+oak_functions_tf_inference = { path = "../../experimental/tf_inference" }
 
 [dependencies]
 bincode = "*"
@@ -30,5 +32,3 @@ prost = "*"
 serde = "*"
 serde_derive = "*"
 serde_json = "*"
-oak_functions_metrics = { optional = true, path = "../../experimental/metrics" }
-oak_functions_tf_inference = { optional = true, path = "../../experimental/tf_inference" }
