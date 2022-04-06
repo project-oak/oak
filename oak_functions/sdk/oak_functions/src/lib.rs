@@ -19,7 +19,9 @@
 
 #[cfg(feature = "oak-tf")]
 use oak_functions_abi::proto::Inference;
-use oak_functions_abi::{proto::OakStatus, ReportMetricRequest};
+use oak_functions_abi::proto::OakStatus;
+#[cfg(feature = "oak-metrics")]
+use oak_functions_abi::ReportMetricRequest;
 use std::convert::AsRef;
 
 /// Reads and returns the user request.
@@ -107,8 +109,8 @@ pub fn report_event<T: AsRef<str>>(label: T) -> Result<(), OakStatus> {
 /// See [`report_metric`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#report_metric).
 #[cfg(feature = "oak-metrics")]
 pub fn report_metric<T: AsRef<str>>(label: T, value: i64) -> Result<(), OakStatus> {
-    let raw_label = label.as_ref().as_bytes().to_vec();
-    let request = ReportMetricRequest { raw_label, value };
+    let label = String::from(label.as_ref());
+    let request = ReportMetricRequest { label, value };
 
     let serialized_request =
         bincode::serialize(&request).expect("Fail to serialize report metric request.");

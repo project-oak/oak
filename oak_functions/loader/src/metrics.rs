@@ -22,7 +22,10 @@ use crate::{
     },
 };
 use alloc::sync::Arc;
-use oak_functions_abi::{proto::OakStatus, ExtensionHandle, ReportMetricRequest};
+#[cfg(feature = "oak-metrics")]
+use oak_functions_abi::ReportMetricRequest;
+
+use oak_functions_abi::{proto::OakStatus, ExtensionHandle};
 use oak_functions_metrics::{
     PrivateMetricsAggregator, PrivateMetricsExtension, PrivateMetricsProxy,
 };
@@ -123,16 +126,9 @@ fn report_metric(
     let request: ReportMetricRequest =
         bincode::deserialize(&request).expect("Fail to deserialize report metric request.");
 
-    let label = std::str::from_utf8(request.raw_label.as_slice()).map_err(|err| {
-        extension.log_warning(&format!(
-            "report_metric(): Not a valid UTF-8 encoded string: {:?}\nContent: {:?}",
-            err, request.raw_label
-        ));
-        OakStatus::ErrInvalidArgs
-    })?;
-    extension.log_debug(&format!("report_metric(): {}", label));
+    extension.log_debug(&format!("report_metric(): {}", request.label));
     extension
-        .report_metric(label, request.value)
+        .report_metric(&request.label, request.value)
         .map_err(|err| {
             extension.log_error(&format!("report_metric(): {:?}", err));
             OakStatus::ErrInternal
