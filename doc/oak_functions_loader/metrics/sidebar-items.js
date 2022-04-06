@@ -1,1 +1,1 @@
-initSidebarItems({"enum":[["BucketConfig","Configuration for metrics buckets."]],"struct":[["PrivateMetricsConfig","Configuration for differentially-private metrics reporting."],["PrivateMetricsProxyFactory",""]]});
+initSidebarItems({"struct":[["PrivateMetricsProxyFactory",""]]});
