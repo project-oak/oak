@@ -78,10 +78,10 @@ fn load_private_key(filename: &str) -> anyhow::Result<rustls::PrivateKey> {
         .map_err(|error| anyhow!("Couldn't open file {}: {}", filename, error))?;
     let mut reader = std::io::BufReader::new(private_key_file);
 
-    let private_keys = rustls::internal::pemfile::rsa_private_keys(&mut reader)
+    let private_keys = rustls_pemfile::rsa_private_keys(&mut reader)
         .map_err(|error| anyhow!("Couldn't parse private key: {:?}", error))?;
     if private_keys.len() == 1 {
-        Ok(private_keys[0].clone())
+        Ok(rustls::PrivateKey(private_keys[0].clone()))
     } else {
         Err(anyhow!(
             "Incorrect number of private keys provided: {}, expected 1",
@@ -96,10 +96,10 @@ fn load_certificate(filename: &str) -> anyhow::Result<rustls::Certificate> {
         .map_err(|error| anyhow!("Couldn't open file {}: {}", filename, error))?;
     let mut reader = std::io::BufReader::new(certificate_file);
 
-    let certificates = rustls::internal::pemfile::certs(&mut reader)
+    let certificates = rustls_pemfile::certs(&mut reader)
         .map_err(|error| anyhow!("Couldn't parse certificate: {:?}", error))?;
     if certificates.len() == 1 {
-        Ok(certificates[0].clone())
+        Ok(rustls::Certificate(certificates[0].clone()))
     } else {
         Err(anyhow!(
             "Incorrect number of certificates provided: {}, expected 1",
