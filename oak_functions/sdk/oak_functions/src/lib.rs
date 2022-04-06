@@ -109,7 +109,7 @@ pub fn report_event<T: AsRef<str>>(label: T) -> Result<(), OakStatus> {
 /// See [`report_metric`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#report_metric).
 #[cfg(feature = "oak-metrics")]
 pub fn report_metric<T: AsRef<str>>(label: T, value: i64) -> Result<(), OakStatus> {
-    let label = String::from(label.as_ref());
+    let label = label.as_ref().to_owned();
     let request = ReportMetricRequest { label, value };
 
     let serialized_request =

@@ -22,10 +22,7 @@ use crate::{
     },
 };
 use alloc::sync::Arc;
-#[cfg(feature = "oak-metrics")]
-use oak_functions_abi::ReportMetricRequest;
-
-use oak_functions_abi::{proto::OakStatus, ExtensionHandle};
+use oak_functions_abi::{proto::OakStatus, ExtensionHandle, ReportMetricRequest};
 use oak_functions_metrics::{
     PrivateMetricsAggregator, PrivateMetricsExtension, PrivateMetricsProxy,
 };
