@@ -13,11 +13,16 @@ oak-metrics = ["oak_functions_abi/oak-metrics"]
 
 [dev-dependencies]
 test_utils = { path = "../test_utils" }
-oak_functions_loader = { path = "../../loader", features = ["oak-metrics"] }
+oak_functions_loader = { path = "../../loader", features = [
+  "oak-metrics",
+  "oak-tf"
+] }
 oak_functions_lookup = { path = "../../lookup" }
 lazy_static = "*"
 maplit = "*"
 tokio = "*"
+oak_functions_metrics = { path = "../../experimental/metrics" }
+oak_functions_tf_inference = { path = "../../experimental/tf_inference" }
 
 [dependencies]
 bincode = "*"

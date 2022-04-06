@@ -2477,6 +2477,8 @@ dependencies = [
  "oak_functions_abi",
  "oak_functions_loader",
  "oak_functions_lookup",
+ "oak_functions_metrics",
+ "oak_functions_tf_inference",
  "prost 0.10.0",
  "serde",
  "serde_derive",
@@ -2647,6 +2649,14 @@ name = "oak_functions_sdk_abi_test_report_metric"
 version = "0.1.0"
 dependencies = [
  "oak_functions",
+]
+
+[[package]]
+name = "oak_functions_sdk_abi_test_tf_model_infer"
+version = "0.1.0"
+dependencies = [
+ "oak_functions",
+ "oak_functions_abi",
 ]
 
 [[package]]

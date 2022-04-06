@@ -20,10 +20,14 @@ use oak_functions_abi::proto::{Request, Response};
 use oak_functions_loader::{
     logger::Logger,
     lookup::LookupFactory,
-    metrics::{BucketConfig, PrivateMetricsConfig, PrivateMetricsProxyFactory},
+    metrics::PrivateMetricsProxyFactory,
     server::WasmHandler,
+    tf::{read_model_from_path, TensorFlowFactory},
 };
 use oak_functions_lookup::LookupDataManager;
+use oak_functions_metrics::{BucketConfig, PrivateMetricsConfig};
+use oak_functions_tf_inference::TensorFlowModelConfig;
+
 use std::{path::PathBuf, sync::Arc};
 
 lazy_static! {
@@ -50,6 +54,14 @@ lazy_static! {
     static ref METRICS_WASM_MODULE_BYTES: Vec<u8> = {
         let mut manifest_path = PATH_TO_MODULES.clone();
         manifest_path.push("metrics_module");
+        manifest_path.push("Cargo.toml");
+
+        test_utils::compile_rust_wasm(manifest_path.to_str().unwrap(), false)
+            .expect("Could not read Wasm module")
+    };
+    static ref TF_WASM_MODULE_BYTES: Vec<u8> = {
+        let mut manifest_path = PATH_TO_MODULES.clone();
+        manifest_path.push("tf_module");
         manifest_path.push("Cargo.toml");
 
         test_utils::compile_rust_wasm(manifest_path.to_str().unwrap(), false)
@@ -191,7 +203,8 @@ async fn test_echo() {
 async fn test_report_metric() {
     let logger = Logger::for_test();
 
-    // Keep in sync with metrics_module.
+    // Keep in sync with
+    // `workspace/oak_functions/sdk/oak_functions/tests/metrics_module/src/lib.rs`.
     let label = "a";
     let metrics_config = PrivateMetricsConfig {
         epsilon: 1.0,
@@ -215,7 +228,51 @@ async fn test_report_metric() {
     };
 
     let response: Response = wasm_handler.handle_invoke(request).await.unwrap();
+    // Keep in sync with
+    // `workspace/oak_functions/sdk/oak_functions/tests/metrics_module/src/lib.rs`.
     test_utils::assert_response_body(response, "MetricReported");
 
     // TODO(#2646): Check in the runtime that the metric was reported there.
+}
+
+#[tokio::test]
+async fn test_tf_model_infer_bad_input() {
+    let logger = Logger::for_test();
+
+    // Re-use path and share from oak_functions/examples/mobilenet.
+    let path: PathBuf = [
+        env!("WORKSPACE_ROOT"),
+        "oak_functions",
+        "examples",
+        "mobilenet",
+        "files",
+        "mobilenet_v2_1.4_224_frozen.pb",
+    ]
+    .iter()
+    .collect();
+    let shape = vec![1, 224, 224, 3];
+
+    let tf_model_config = TensorFlowModelConfig {
+        path: path.into_os_string().into_string().unwrap(),
+        shape,
+    };
+
+    let model = read_model_from_path(&tf_model_config.path).expect("Fail to read model.");
+
+    let tf_factory = TensorFlowFactory::new_boxed_extension_factory(
+        model,
+        tf_model_config.shape.clone(),
+        logger.clone(),
+    )
+    .expect("Fail to create tf factory.");
+
+    let wasm_handler = WasmHandler::create(&TF_WASM_MODULE_BYTES, vec![tf_factory], logger)
+        .expect("Could not instantiate WasmHandler.");
+
+    let request = Request {
+        body: b"intentionally bad input vector".to_vec(),
+    };
+
+    let response: Response = wasm_handler.handle_invoke(request).await.unwrap();
+    test_utils::assert_response_body(response, "ErrBadTensorFlowModelInput");
 }

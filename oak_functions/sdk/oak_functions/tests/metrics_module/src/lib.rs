@@ -18,7 +18,8 @@
 
 #[cfg_attr(not(test), no_mangle)]
 pub extern "C" fn main() {
-    // Keep in sync with test_report_metric.
+    // Keep in sync with test_report_metric in
+    // `workspace/oak_functions/sdk/oak_functions/tests/integration_test.rs`.
     let label = "a";
     // Some randomly chosen fixed value to report.
     let value = 42;
@@ -26,7 +27,8 @@ pub extern "C" fn main() {
     let result = oak_functions::report_metric(label, value);
     assert!(result.is_ok());
 
-    // Keep in sync with test_report_metric.
+    // Keep in sync with test_report_metric in
+    // `workspace/oak_functions/sdk/oak_functions/tests/integration_test.rs`.
     let response_body = "MetricReported";
     oak_functions::write_response(response_body.as_bytes()).expect("Fail to write response body.");
 }
