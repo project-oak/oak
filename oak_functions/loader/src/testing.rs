@@ -23,8 +23,7 @@ use crate::{
 };
 
 use log::Level;
-use oak_functions_abi::{proto::OakStatus, ExtensionHandle};
-use serde::{Deserialize, Serialize};
+use oak_functions_abi::{proto::OakStatus, ExtensionHandle, TestingRequest, TestingResponse};
 use wasmi::ValueType;
 
 /// Host function name for testing.
@@ -89,11 +88,10 @@ fn testing(message: Vec<u8>) -> Result<Vec<u8>, OakStatus> {
         bincode::deserialize(&message).expect("Fail to deserialize testing message.");
 
     let result = match deserialized_testing_message {
-        TestingMessage::EchoRequest(echo_message) => {
-            let echo_response = TestingMessage::EchoResponse(echo_message);
+        TestingRequest::Echo(echo_message) => {
+            let echo_response = TestingResponse::Echo(echo_message);
             bincode::serialize(&echo_response).expect("Fail to serialize testing message.")
         }
-        _ => panic!("Unexpected Testing Message: {:?}", message),
     };
 
     Ok(result)
@@ -132,10 +130,4 @@ where
     pub fn log_error(&self, message: &str) {
         self.logger.log_sensitive(Level::Error, message)
     }
-}
-
-#[derive(Serialize, Deserialize)]
-pub enum TestingMessage {
-    EchoRequest(String),
-    EchoResponse(String),
 }

@@ -15,14 +15,8 @@
 //
 
 //! Oak Functions ABI test for Testing Extension.
-use serde_derive::{Deserialize, Serialize};
 
-// TestingMessage needs to be kept in sync with TestingMessage in testing extension.
-#[derive(Serialize, Deserialize)]
-pub enum TestingMessage {
-    EchoRequest(String),
-    EchoResponse(String),
-}
+use oak_functions_abi::{TestingRequest, TestingResponse};
 
 #[cfg_attr(not(test), no_mangle)]
 pub extern "C" fn main() {
@@ -31,7 +25,7 @@ pub extern "C" fn main() {
     let message_to_echo = String::from_utf8(request).expect("Fail to parse request");
 
     // Serialize a EchoRequest with the message_to_echo.
-    let echo_request = bincode::serialize(&TestingMessage::EchoRequest(message_to_echo))
+    let echo_request = bincode::serialize(&TestingRequest::Echo(message_to_echo))
         .expect("Fail to serialize testing message.");
     // We invoke the Testing extension with an EchoRequest.
     let serialized_echo_response =
@@ -40,11 +34,7 @@ pub extern "C" fn main() {
     let echo_response = bincode::deserialize(&serialized_echo_response)
         .expect("Fail to deserialize testing message.");
 
-    let response_body = match echo_response {
-        // Make sure we received a EchoResponse.
-        TestingMessage::EchoResponse(echoed_message) => echoed_message,
-        _ => String::from("Fail to receive an echo response."),
-    };
+    let TestingResponse::Echo(response_body) = echo_response;
 
     oak_functions::write_response(response_body.as_bytes()).expect("Fail to write response body.");
 }
