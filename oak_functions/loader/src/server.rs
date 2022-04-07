@@ -122,6 +122,7 @@ pub trait OakApiNativeExtension {
         &mut self,
         wasm_state: &mut WasmState,
         args: wasmi::RuntimeArgs,
+        request: Vec<u8>,
     ) -> Result<Result<(), OakStatus>, wasmi::Trap>;
 
     /// Metadata about this Extension, including the exported host function name, the function's
@@ -369,13 +370,29 @@ impl WasmState {
             })
             .expect("Fail to find extension with given handle.");
 
-        // We invoke the found extension.
-        let result = from_oak_status_result(extension.invoke(self, args)?);
+        // We read the request from the Wasm memory.
+        let request_ptr: AbiPointer = args.nth_checked(1)?;
+        let request_len: AbiPointerOffset = args.nth_checked(2)?;
+
+        let request = self
+            .read_extension_args(request_ptr, request_len)
+            .map_err(|err| {
+                self.log_error(&format!(
+                    "Handle {:?}: Unable to read input from guest memory: {:?}",
+                    handle, err
+                ));
+                OakStatus::ErrInvalidArgs
+            });
+
+        let result = match request {
+            Ok(request) => extension.invoke(self, args, request)?,
+            Err(err) => Err(err),
+        };
 
         // We put the extension indices back.
         self.extensions_indices = Some(extensions_indices);
 
-        result
+        from_oak_status_result(result)
     }
 
     pub fn alloc(&mut self, len: u32) -> AbiPointer {
@@ -393,6 +410,10 @@ impl WasmState {
             wasmi::RuntimeValue::I32(v) => v as u32,
             _ => panic!("invalid value type returned from `alloc`"),
         }
+    }
+
+    fn log_error(&self, message: &str) {
+        self.logger.log_sensitive(Level::Error, message)
     }
 }
 
@@ -429,9 +450,31 @@ impl wasmi::Externals for WasmState {
 
                     None => panic!("Unimplemented function at {}", index),
                 };
-                let result = from_oak_status_result(extension.invoke(self, args)?);
+
+                // Careful: We assume that here for the ABI call the first two arguments are the
+                // request (which is true). We will remove this, when we call every
+                // extension through `invoke`.
+                let request_ptr: AbiPointer = args.nth_checked(0)?;
+                let request_len: AbiPointerOffset = args.nth_checked(1)?;
+
+                let request = self
+                    .read_extension_args(request_ptr, request_len)
+                    .map_err(|err| {
+                        self.log_error(&format!(
+                            "Handle {:?}: Unable to read input from guest memory: {:?}",
+                            extension.get_handle(),
+                            err
+                        ));
+                        OakStatus::ErrInvalidArgs
+                    });
+
+                let result = match request {
+                    Ok(request) => extension.invoke(self, args, request)?,
+                    Err(err) => Err(err),
+                };
+
                 self.extensions_indices = Some(extensions_indices);
-                result
+                from_oak_status_result(result)
             }
         }
     }
