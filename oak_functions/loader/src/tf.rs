@@ -41,7 +41,7 @@ impl OakApiNativeExtension for TensorFlowModel<Logger> {
         args: wasmi::RuntimeArgs,
         request: Vec<u8>,
     ) -> Result<Result<(), OakStatus>, wasmi::Trap> {
-        // TODO(#2699, #2664): Do not write inference to Wasm State here.
+        // TODO(#2699), TODO(#2664): Do not write inference to Wasm State here.
         let inference_ptr_ptr: AbiPointer = args.nth_checked(2)?;
         let inference_len_ptr: AbiPointer = args.nth_checked(3)?;
 

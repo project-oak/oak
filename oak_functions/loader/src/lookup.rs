@@ -86,7 +86,7 @@ where
         args: wasmi::RuntimeArgs,
         request: Vec<u8>,
     ) -> Result<Result<(), OakStatus>, wasmi::Trap> {
-        // TODO(#2699, #2664): Do not write value to Wasm State here.
+        // TODO(#2699), TODO(#2664): Do not write value to Wasm State here.
         let value_ptr_ptr = args.nth_checked(2)?;
         let value_len_ptr = args.nth_checked(3)?;
 

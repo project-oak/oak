@@ -36,7 +36,7 @@ impl OakApiNativeExtension for TestingExtension<Logger> {
         args: wasmi::RuntimeArgs,
         request: Vec<u8>,
     ) -> Result<Result<(), oak_functions_abi::proto::OakStatus>, wasmi::Trap> {
-        // TODO(#2699, #2664): Do not write response to Wasm State here.
+        // TODO(#2699), TODO(#2664): Do not write response to Wasm State here.
         let response_ptr_ptr: AbiPointer = args.nth_checked(3)?;
         let response_len_ptr: AbiPointer = args.nth_checked(4)?;
 
