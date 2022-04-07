@@ -17,8 +17,8 @@
 use crate::{
     logger::Logger,
     server::{
-        AbiExtensionHandle, AbiPointer, AbiPointerOffset, BoxedExtension, BoxedExtensionFactory,
-        ExtensionFactory, OakApiNativeExtension, ABI_USIZE,
+        AbiPointer, BoxedExtension, BoxedExtensionFactory, ExtensionFactory, OakApiNativeExtension,
+        ABI_USIZE,
     },
 };
 
@@ -34,26 +34,13 @@ impl OakApiNativeExtension for TestingExtension<Logger> {
         &mut self,
         wasm_state: &mut crate::server::WasmState,
         args: wasmi::RuntimeArgs,
+        request: Vec<u8>,
     ) -> Result<Result<(), oak_functions_abi::proto::OakStatus>, wasmi::Trap> {
-        // For consistency we also get the first argument, but we do not need it, as we did read the
-        // handle already to decide to call the invoke of this extension.
-        let _handle: AbiExtensionHandle = args.nth_checked(0)?;
-        let request_ptr: AbiPointer = args.nth_checked(1)?;
-        let request_len: AbiPointerOffset = args.nth_checked(2)?;
+        // TODO(#2699, #2664): Do not write response to Wasm State here.
         let response_ptr_ptr: AbiPointer = args.nth_checked(3)?;
         let response_len_ptr: AbiPointer = args.nth_checked(4)?;
 
-        let extension_args = wasm_state
-            .read_extension_args(request_ptr, request_len)
-            .map_err(|err| {
-                self.log_error(&format!(
-                    "testing(): Unable to read input from guest memory: {:?}",
-                    err
-                ));
-                OakStatus::ErrInvalidArgs
-            });
-
-        let result = extension_args.and_then(testing).and_then(|result| {
+        let result = testing(request).and_then(|result| {
             wasm_state.write_extension_result(result, response_ptr_ptr, response_len_ptr)
         });
 

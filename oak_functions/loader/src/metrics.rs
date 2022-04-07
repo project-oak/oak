@@ -69,24 +69,12 @@ impl ExtensionFactory for PrivateMetricsProxyFactory {
 impl OakApiNativeExtension for PrivateMetricsExtension<Logger> {
     fn invoke(
         &mut self,
-        wasm_state: &mut WasmState,
-        args: wasmi::RuntimeArgs,
+        _wasm_state: &mut WasmState,
+        _args: wasmi::RuntimeArgs,
+        request: Vec<u8>,
     ) -> Result<Result<(), OakStatus>, wasmi::Trap> {
-        let buf_ptr = args.nth_checked(0)?;
-        let buf_len = args.nth_checked(1)?;
-
-        let args = wasm_state
-            .read_extension_args(buf_ptr, buf_len)
-            .map_err(|err| {
-                self.log_error(&format!(
-                    "report_metric(): Unable to read label from guest memory: {:?}",
-                    err
-                ));
-                OakStatus::ErrInvalidArgs
-            });
-
-        let result = args.and_then(|metric_message| report_metric(self, metric_message));
-
+        // TODO(#2664): Remove WasmState from invoke.
+        let result = report_metric(self, request);
         Ok(result)
     }
 

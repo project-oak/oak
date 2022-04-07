@@ -84,27 +84,17 @@ where
         &mut self,
         wasm_state: &mut WasmState,
         args: wasmi::RuntimeArgs,
+        request: Vec<u8>,
     ) -> Result<Result<(), OakStatus>, wasmi::Trap> {
-        let key_ptr = args.nth_checked(0)?;
-        let key_len = args.nth_checked(1)?;
+        // TODO(#2699, #2664): Do not write value to Wasm State here.
         let value_ptr_ptr = args.nth_checked(2)?;
         let value_len_ptr = args.nth_checked(3)?;
 
-        let extension_args = wasm_state
-            .read_extension_args(key_ptr, key_len)
-            .map_err(|err| {
-                self.log_error(&format!(
-                    "storage_get_item(): Unable to read key from guest memory: {:?}",
-                    err
-                ));
-                OakStatus::ErrInvalidArgs
-            });
-
-        let extension_result = extension_args
-            .and_then(|key| storage_get_item(self, key))
-            .and_then(|value| {
-                wasm_state.write_extension_result(value, value_ptr_ptr, value_len_ptr)
-            });
+        // The request is the key to lookup.
+        let key = request;
+        let extension_result = storage_get_item(self, key).and_then(|value| {
+            wasm_state.write_extension_result(value, value_ptr_ptr, value_len_ptr)
+        });
 
         Ok(extension_result)
     }
