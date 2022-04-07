@@ -67,8 +67,6 @@ pub enum TestingResponse {
     Echo(String),
 }
 
-// TODO(#1963): Add tests, in an example.
-
 // The Oak-Functions ABI primarily consists of a collection of Wasm host functions in the
 // "oak_functions" module that are made available to WebAssembly modules running as Oak-Functions
 // workloads.
