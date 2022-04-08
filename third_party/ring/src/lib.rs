@@ -48,7 +48,10 @@
     missing_debug_implementations,
     non_camel_case_types,
     non_snake_case,
-    unsafe_code
+    unsafe_code,
+    // Oak Note: Do not warn when building deprecated code. Ring includes
+    // code that is, and our CI fails on warnings
+    deprecated
 )]
 // `#[derive(...)]` uses `trivial_numeric_casts` and `unused_qualifications`
 // internally.
