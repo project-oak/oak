@@ -20,10 +20,10 @@ readonly DOCKER_IMAGE_NAME='gcr.io/oak-ci/oak:latest'
 # from a registry first.
 
 # Do not modify manually. This value is automatically updated by ./scripts/docker_build .
-readonly DOCKER_IMAGE_ID='sha256:19b8ab40fa585bc10d3f311b8f91a27dead5ac1c4f97235a90b32052c691eca2'
+readonly DOCKER_IMAGE_ID='sha256:ab889141f07b886f02ca3ec664341d7dfada94826c5538842b795b005bc1a417'
 
 # Do not modify manually. This value is automatically updated by ./scripts/docker_push .
-readonly DOCKER_IMAGE_REPO_DIGEST='gcr.io/oak-ci/oak@sha256:cf991dc36f6070b2810c2ee17e3bc7bb108c0899eb6a82a07fdeb7e4ac3c5899'
+readonly DOCKER_IMAGE_REPO_DIGEST='gcr.io/oak-ci/oak@sha256:8189809db8f834acb9c56c71f7a80e5ed00f8057ea3ac014b771443356534b1d'
 
 readonly SERVER_DOCKER_IMAGE_NAME='gcr.io/oak-ci/oak-server'
 

@@ -57,7 +57,7 @@ RUN apt-get --yes update \
 # includes pre-generated assets.
 # Ring requires nasm, and a specific version of clang & llvm
 ARG llvm_version=14
-RUN echo 'deb http://apt.llvm.org/buster/ llvm-toolchain-buster-14 main' >> /etc/apt/sources.list.d/llvm.list \
+RUN echo "deb http://apt.llvm.org/buster/ llvm-toolchain-buster-$llvm_version main" >> /etc/apt/sources.list.d/llvm.list \
   && curl https://apt.llvm.org/llvm-snapshot.gpg.key | apt-key add - \
   && apt-get update --yes \
   && apt-get install --no-install-recommends --yes \
