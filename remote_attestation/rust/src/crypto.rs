@@ -234,11 +234,10 @@ impl KeyNegotiator {
     ) -> anyhow::Result<(EncryptionKey, DecryptionKey)> {
         let type_ = self.type_.clone();
         let self_public_key = self.public_key().context("Couldn't get self public key")?;
-        let (encryption_key, decryption_key) = agreement::agree_ephemeral(
+        agreement::agree_ephemeral(
             self.private_key,
             &agreement::UnparsedPublicKey::new(KEY_AGREEMENT_ALGORITHM, peer_public_key),
-            anyhow!("Couldn't derive session keys"),
-            |key_material| {
+            |key_material| -> anyhow::Result<(EncryptionKey, DecryptionKey)> {
                 let key_material = key_material
                     .try_into()
                     .map_err(anyhow::Error::msg)
@@ -251,44 +250,54 @@ impl KeyNegotiator {
                 match type_ {
                     // On the server side `self_public_key` is the server key.
                     KeyNegotiatorType::Server => {
-                        let encryption_key = Self::key_derivation_function(
-                            key_material,
-                            SERVER_KEY_PURPOSE,
-                            &self_public_key,
-                            &peer_public_key,
+                        let encryption_key = EncryptionKey(
+                            Self::key_derivation_function(
+                                key_material,
+                                SERVER_KEY_PURPOSE,
+                                &self_public_key,
+                                &peer_public_key,
+                            )
+                            .context("Couldn't derive decryption key")?,
                         );
-                        let decryption_key = Self::key_derivation_function(
-                            key_material,
-                            CLIENT_KEY_PURPOSE,
-                            &self_public_key,
-                            &peer_public_key,
+                        let decryption_key = DecryptionKey(
+                            Self::key_derivation_function(
+                                key_material,
+                                CLIENT_KEY_PURPOSE,
+                                &self_public_key,
+                                &peer_public_key,
+                            )
+                            .context("Couldn't derive encryption key")?,
                         );
                         Ok((encryption_key, decryption_key))
                     }
                     // On the client side `peer_public_key` is the server key.
                     KeyNegotiatorType::Client => {
-                        let encryption_key = Self::key_derivation_function(
-                            key_material,
-                            CLIENT_KEY_PURPOSE,
-                            &peer_public_key,
-                            &self_public_key,
+                        let encryption_key = EncryptionKey(
+                            Self::key_derivation_function(
+                                key_material,
+                                CLIENT_KEY_PURPOSE,
+                                &peer_public_key,
+                                &self_public_key,
+                            )
+                            .context("Couldn't derive decryption key")?,
                         );
-                        let decryption_key = Self::key_derivation_function(
-                            key_material,
-                            SERVER_KEY_PURPOSE,
-                            &peer_public_key,
-                            &self_public_key,
+                        let decryption_key = DecryptionKey(
+                            Self::key_derivation_function(
+                                key_material,
+                                SERVER_KEY_PURPOSE,
+                                &peer_public_key,
+                                &self_public_key,
+                            )
+                            .context("Couldn't derive encryption key")?,
                         );
                         Ok((encryption_key, decryption_key))
                     }
                 }
             },
         )
-        .context("Couldn't agree on session keys")?;
-        Ok((
-            EncryptionKey(encryption_key.context("Couldn't derive encryption key")?),
-            DecryptionKey(decryption_key.context("Couldn't derive decryption key")?),
-        ))
+        .map_err(anyhow::Error::msg)
+        .context("Couldn't derive session keys")?
+        .context("Couldn't agree on session keys")
     }
 
     /// Derives a session key from `key_material` using HKDF.
@@ -351,8 +360,9 @@ impl Signer {
         let rng = ring::rand::SystemRandom::new();
         let key_pair_pkcs8 = EcdsaKeyPair::generate_pkcs8(SIGNING_ALGORITHM, &rng)
             .map_err(|error| anyhow!("Couldn't generate PKCS#8 key pair: {:?}", error))?;
-        let key_pair = EcdsaKeyPair::from_pkcs8(SIGNING_ALGORITHM, key_pair_pkcs8.as_ref())
-            .map_err(|error| anyhow!("Couldn't parse generated key pair: {:?}", error))?;
+        let key_pair =
+            EcdsaKeyPair::from_pkcs8(SIGNING_ALGORITHM, key_pair_pkcs8.as_ref(), &rng)
+                .map_err(|error| anyhow!("Couldn't parse generated key pair: {:?}", error))?;
 
         Ok(Self { key_pair })
     }
