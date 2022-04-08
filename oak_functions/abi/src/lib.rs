@@ -60,6 +60,7 @@ pub struct ReportMetricRequest {
 #[derive(Serialize, Deserialize)]
 pub enum TestingRequest {
     Echo(String),
+    Blackhole(String),
 }
 
 #[derive(Serialize, Deserialize)]

@@ -381,21 +381,19 @@ impl WasmState {
                 OakStatus::ErrInvalidArgs
             });
 
-        // TODO(mschett): Make this idiomatic.
         let result = match request {
             Ok(request) => {
                 let response = extension.invoke(request);
+                let response_ptr_ptr: AbiPointer = args.nth_checked(3)?;
+                let response_len_ptr: AbiPointer = args.nth_checked(4)?;
                 match response {
                     Ok(Some(response)) => {
-                        let response_ptr_ptr: AbiPointer = args.nth_checked(3)?;
-                        let response_len_ptr: AbiPointer = args.nth_checked(4)?;
                         self.write_extension_result(response, response_ptr_ptr, response_len_ptr)
                     }
                     Ok(None) =>
-                    // No response was expected.
-                    // TODO(mschett) Figure out if we should write 0 to the response_len_ptr.
+                    // No response was expected. We write the empty response.
                     {
-                        Ok(())
+                        self.write_extension_result(vec![], response_ptr_ptr, response_len_ptr)
                     }
                     Err(err) => Err(err),
                 }
@@ -482,7 +480,6 @@ impl wasmi::Externals for WasmState {
                         OakStatus::ErrInvalidArgs
                     });
 
-                // TODO(mschett): Make this idiomatic.
                 let result = match request {
                     Ok(request) => {
                         let response = extension.invoke(request);
@@ -502,8 +499,6 @@ impl wasmi::Externals for WasmState {
                             }
                             Ok(None) =>
                             // No response was expected.
-                            // TODO(mschett): Figure out if we should write 0 to the
-                            // response_len_ptr.
                             {
                                 Ok(())
                             }
@@ -514,6 +509,7 @@ impl wasmi::Externals for WasmState {
                 };
 
                 self.extensions_indices = Some(extensions_indices);
+
                 from_oak_status_result(result)
             }
         }

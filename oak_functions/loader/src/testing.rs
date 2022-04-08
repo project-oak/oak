@@ -23,6 +23,7 @@ use crate::{
 
 use log::Level;
 use oak_functions_abi::{proto::OakStatus, ExtensionHandle, TestingRequest, TestingResponse};
+use oak_logger::OakLogger;
 use wasmi::ValueType;
 
 /// Host function name for testing.
@@ -35,11 +36,17 @@ impl OakApiNativeExtension for TestingExtension<Logger> {
         let response = match request {
             TestingRequest::Echo(echo_message) => {
                 let echo_response = TestingResponse::Echo(echo_message);
-                bincode::serialize(&echo_response).expect("Fail to serialize testing request.")
+                let response =
+                    bincode::serialize(&echo_response).expect("Fail to serialize testing request.");
+                Some(response)
+            }
+            TestingRequest::Blackhole(message) => {
+                self.logger.log_sensitive(Level::Debug, &message);
+                None
+                // We don't expect the BlackholeRequest to give back a result.
             }
         };
-
-        Ok(Some(response))
+        Ok(response)
     }
 
     fn get_metadata(&self) -> (String, wasmi::Signature) {

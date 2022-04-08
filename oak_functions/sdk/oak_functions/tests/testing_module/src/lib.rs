@@ -22,19 +22,42 @@ use oak_functions_abi::{TestingRequest, TestingResponse};
 pub extern "C" fn main() {
     // Read the message to echo from the request.
     let request = oak_functions::read_request().expect("Fail to read request body.");
-    let message_to_echo = String::from_utf8(request).expect("Fail to parse request");
+    let request = String::from_utf8(request).expect("Fail to parse request");
 
-    // Serialize a EchoRequest with the message_to_echo.
-    let echo_request = bincode::serialize(&TestingRequest::Echo(message_to_echo))
-        .expect("Fail to serialize testing message.");
-    // We invoke the Testing extension with an EchoRequest.
-    let serialized_echo_response =
-        oak_functions::invoke(&echo_request).expect("Fail to invoke_testing.");
+    match request.as_str() {
+        "ECHO" => {
+            // Serialize a EchoRequest. Note that the message to echo is the request itself.
+            let echo_request = bincode::serialize(&TestingRequest::Echo(request))
+                .expect("Fail to serialize testing message.");
+            // We invoke the Testing extension with an EchoRequest.
+            let serialized_echo_response =
+                oak_functions::invoke(&echo_request).expect("Fail to invoke testing.");
 
-    let echo_response = bincode::deserialize(&serialized_echo_response)
-        .expect("Fail to deserialize testing message.");
+            let echo_response = bincode::deserialize(&serialized_echo_response)
+                .expect("Fail to deserialize testing message.");
 
-    let TestingResponse::Echo(response_body) = echo_response;
+            let TestingResponse::Echo(response_body) = echo_response;
 
-    oak_functions::write_response(response_body.as_bytes()).expect("Fail to write response body.");
+            oak_functions::write_response(response_body.as_bytes())
+                .expect("Fail to write response body.");
+        }
+        "BLACKHOLE" => {
+            // Keep in sync with test_blackhole in
+            // `workspace/oak_functions/sdk/oak_functions/tests/integration_test.rs`.
+            let blackhole_request = bincode::serialize(&TestingRequest::Blackhole(request))
+                .expect("Fail to serialize testing message.");
+
+            let blackhole_response =
+                oak_functions::invoke(&blackhole_request).expect("Fail to invoke testing.");
+            // We expect an empty response, because blackhole does not give back a result.
+            assert!(blackhole_response.is_empty());
+
+            // If we reached here, the assert did not fail and we send a response back. This helps
+            // us to distinguish from a failure in the Wasm module, where also an
+            // empty response would be sent.
+            oak_functions::write_response("Blackholed".as_bytes())
+                .expect("Fail to write response body.");
+        }
+        _ => panic!("Request not recognized"),
+    }
 }
