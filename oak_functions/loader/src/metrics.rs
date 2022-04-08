@@ -17,8 +17,7 @@
 use crate::{
     logger::Logger,
     server::{
-        BoxedExtension, BoxedExtensionFactory, ExtensionFactory, OakApiNativeExtension, WasmState,
-        ABI_USIZE,
+        BoxedExtension, BoxedExtensionFactory, ExtensionFactory, OakApiNativeExtension, ABI_USIZE,
     },
 };
 use alloc::sync::Arc;
@@ -67,15 +66,20 @@ impl ExtensionFactory for PrivateMetricsProxyFactory {
 }
 
 impl OakApiNativeExtension for PrivateMetricsExtension<Logger> {
-    fn invoke(
-        &mut self,
-        _wasm_state: &mut WasmState,
-        _args: wasmi::RuntimeArgs,
-        request: Vec<u8>,
-    ) -> Result<Result<(), OakStatus>, wasmi::Trap> {
-        // TODO(#2664): Remove WasmState from invoke.
-        let result = report_metric(self, request);
-        Ok(result)
+    fn invoke(&mut self, request: Vec<u8>) -> Result<Option<Vec<u8>>, OakStatus> {
+        let request: ReportMetricRequest =
+            bincode::deserialize(&request).expect("Fail to deserialize report metric request.");
+
+        self.log_debug(&format!("report_metric(): {}", request.label));
+        let _ = self
+            .report_metric(&request.label, request.value)
+            .map_err(|err| {
+                self.log_error(&format!("report_metric(): {:?}", err));
+                OakStatus::ErrInternal
+            })?;
+
+        // No result is expected from computing metric.
+        Ok(None)
     }
 
     /// Each Oak Functions application can have at most one instance of PrivateMetricsProxy. So it
@@ -99,21 +103,4 @@ impl OakApiNativeExtension for PrivateMetricsExtension<Logger> {
     fn get_handle(&mut self) -> ExtensionHandle {
         ExtensionHandle::MetricsHandle
     }
-}
-
-/// Provides logic for the host ABI function [`report_metric`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#report_metric).
-fn report_metric(
-    extension: &mut PrivateMetricsExtension<Logger>,
-    request: Vec<u8>,
-) -> Result<(), OakStatus> {
-    let request: ReportMetricRequest =
-        bincode::deserialize(&request).expect("Fail to deserialize report metric request.");
-
-    extension.log_debug(&format!("report_metric(): {}", request.label));
-    extension
-        .report_metric(&request.label, request.value)
-        .map_err(|err| {
-            extension.log_error(&format!("report_metric(): {:?}", err));
-            OakStatus::ErrInternal
-        })
 }

@@ -17,8 +17,7 @@
 use crate::{
     logger::Logger,
     server::{
-        AbiPointer, BoxedExtension, BoxedExtensionFactory, ExtensionFactory, OakApiNativeExtension,
-        ABI_USIZE,
+        BoxedExtension, BoxedExtensionFactory, ExtensionFactory, OakApiNativeExtension, ABI_USIZE,
     },
 };
 
@@ -30,21 +29,17 @@ use wasmi::ValueType;
 const TESTING_ABI_FUNCTION_NAME: &str = "testing";
 
 impl OakApiNativeExtension for TestingExtension<Logger> {
-    fn invoke(
-        &mut self,
-        wasm_state: &mut crate::server::WasmState,
-        args: wasmi::RuntimeArgs,
-        request: Vec<u8>,
-    ) -> Result<Result<(), oak_functions_abi::proto::OakStatus>, wasmi::Trap> {
-        // TODO(#2699), TODO(#2664): Do not write response to Wasm State here.
-        let response_ptr_ptr: AbiPointer = args.nth_checked(3)?;
-        let response_len_ptr: AbiPointer = args.nth_checked(4)?;
+    fn invoke(&mut self, request: Vec<u8>) -> Result<Option<Vec<u8>>, OakStatus> {
+        let request = bincode::deserialize(&request).expect("Fail to deserialize testing request.");
 
-        let result = testing(request).and_then(|result| {
-            wasm_state.write_extension_result(result, response_ptr_ptr, response_len_ptr)
-        });
+        let response = match request {
+            TestingRequest::Echo(echo_message) => {
+                let echo_response = TestingResponse::Echo(echo_message);
+                bincode::serialize(&echo_response).expect("Fail to serialize testing request.")
+            }
+        };
 
-        Ok(result)
+        Ok(Some(response))
     }
 
     fn get_metadata(&self) -> (String, wasmi::Signature) {
@@ -69,21 +64,6 @@ impl OakApiNativeExtension for TestingExtension<Logger> {
         ExtensionHandle::TestingHandle
     }
 }
-
-fn testing(message: Vec<u8>) -> Result<Vec<u8>, OakStatus> {
-    let deserialized_testing_message =
-        bincode::deserialize(&message).expect("Fail to deserialize testing message.");
-
-    let result = match deserialized_testing_message {
-        TestingRequest::Echo(echo_message) => {
-            let echo_response = TestingResponse::Echo(echo_message);
-            bincode::serialize(&echo_response).expect("Fail to serialize testing message.")
-        }
-    };
-
-    Ok(result)
-}
-
 pub struct TestingFactory {
     logger: Logger,
 }

@@ -17,8 +17,7 @@
 use crate::{
     logger::Logger,
     server::{
-        AbiPointer, BoxedExtension, BoxedExtensionFactory, ExtensionFactory, OakApiNativeExtension,
-        WasmState, ABI_USIZE,
+        BoxedExtension, BoxedExtensionFactory, ExtensionFactory, OakApiNativeExtension, ABI_USIZE,
     },
 };
 use anyhow::Context;
@@ -35,27 +34,19 @@ const TF_ABI_FUNCTION_NAME: &str = "tf_model_infer";
 // TODO(#2576): Move extension implementation to `tf_inference` crate once the Extension-related
 // structs are in a separate crate.
 impl OakApiNativeExtension for TensorFlowModel<Logger> {
-    fn invoke(
-        &mut self,
-        wasm_state: &mut WasmState,
-        args: wasmi::RuntimeArgs,
-        request: Vec<u8>,
-    ) -> Result<Result<(), OakStatus>, wasmi::Trap> {
-        // TODO(#2699), TODO(#2664): Do not write inference to Wasm State here.
-        let inference_ptr_ptr: AbiPointer = args.nth_checked(2)?;
-        let inference_len_ptr: AbiPointer = args.nth_checked(3)?;
-
+    fn invoke(&mut self, request: Vec<u8>) -> Result<Option<Vec<u8>>, OakStatus> {
         let input = request;
 
-        let result = tf_model_infer(self, input).and_then(|encoded_inference| {
-            wasm_state.write_extension_result(
-                encoded_inference,
-                inference_ptr_ptr,
-                inference_len_ptr,
-            )
-        });
-
-        Ok(result)
+        // Get the inference, and convert it into a protobuf-encoded byte array
+        let inference = self.get_inference(&input).map_err(|err| {
+            self.log_error(&format!(
+                "tf_model_infer(): Unable to run inference: {:?}",
+                err
+            ));
+            // TODO(#2701): Remove ErrBadTensorFlowModelInput from OakStatus.
+            OakStatus::ErrBadTensorFlowModelInput
+        })?;
+        Ok(Some(inference.encode_to_vec()))
     }
 
     /// Each Oak Functions application can have at most one instance of TensorFlowModule. So it is
@@ -81,22 +72,6 @@ impl OakApiNativeExtension for TensorFlowModel<Logger> {
     fn get_handle(&mut self) -> ExtensionHandle {
         ExtensionHandle::TfHandle
     }
-}
-
-/// Provides logic for the host ABI function [`tf_model_infer`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#tf_model_infer).
-fn tf_model_infer(
-    tf_model: &TensorFlowModel<Logger>,
-    input: Vec<u8>,
-) -> Result<Vec<u8>, OakStatus> {
-    // Get the inference, and convert it into a protobuf-encoded byte array
-    let inference = tf_model.get_inference(&input).map_err(|err| {
-        tf_model.log_error(&format!(
-            "tf_model_infer(): Unable to run inference: {:?}",
-            err
-        ));
-        OakStatus::ErrBadTensorFlowModelInput
-    })?;
-    Ok(inference.encode_to_vec())
 }
 
 /// Read a tensorFlow model from the given path, into a byte array.

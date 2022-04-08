@@ -116,14 +116,11 @@ impl FixedSizeBodyPadder for Response {
 
 /// Trait for implementing extensions, to implement new native functionality.
 pub trait OakApiNativeExtension {
-    /// Similar to `invoke_index` in [`wasmi::Externals`], but may return a result to be
-    /// written into the memory of the `WasmState`.
-    fn invoke(
-        &mut self,
-        wasm_state: &mut WasmState,
-        args: wasmi::RuntimeArgs,
-        request: Vec<u8>,
-    ) -> Result<Result<(), OakStatus>, wasmi::Trap>;
+    /// Invokes the extension with the given request and optionally returns a result. If no result
+    /// is expected, it returns None.  An error within the extension is reflected in the
+    /// `OakStatus`.
+    /// TODO(#2701): Stop returning OakStatus for errors internal to extensions.
+    fn invoke(&mut self, request: Vec<u8>) -> Result<Option<Vec<u8>>, OakStatus>;
 
     /// Metadata about this Extension, including the exported host function name, the function's
     /// signature, and the corresponding ExtensionHandle.
@@ -384,8 +381,25 @@ impl WasmState {
                 OakStatus::ErrInvalidArgs
             });
 
+        // TODO(mschett): Make this idiomatic.
         let result = match request {
-            Ok(request) => extension.invoke(self, args, request)?,
+            Ok(request) => {
+                let response = extension.invoke(request);
+                match response {
+                    Ok(Some(response)) => {
+                        let response_ptr_ptr: AbiPointer = args.nth_checked(3)?;
+                        let response_len_ptr: AbiPointer = args.nth_checked(4)?;
+                        self.write_extension_result(response, response_ptr_ptr, response_len_ptr)
+                    }
+                    Ok(None) =>
+                    // No response was expected.
+                    // TODO(mschett) Figure out if we should write 0 to the response_len_ptr.
+                    {
+                        Ok(())
+                    }
+                    Err(err) => Err(err),
+                }
+            }
             Err(err) => Err(err),
         };
 
@@ -468,8 +482,34 @@ impl wasmi::Externals for WasmState {
                         OakStatus::ErrInvalidArgs
                     });
 
+                // TODO(mschett): Make this idiomatic.
                 let result = match request {
-                    Ok(request) => extension.invoke(self, args, request)?,
+                    Ok(request) => {
+                        let response = extension.invoke(request);
+                        match response {
+                            Ok(Some(response)) => {
+                                // Careful: We assume every ABI call which returns a response
+                                // provides these arguments (which
+                                // is true). We will remove this, when we call every
+                                // extension through `invoke`.
+                                let response_ptr_ptr: AbiPointer = args.nth_checked(2)?;
+                                let response_len_ptr: AbiPointer = args.nth_checked(3)?;
+                                self.write_extension_result(
+                                    response,
+                                    response_ptr_ptr,
+                                    response_len_ptr,
+                                )
+                            }
+                            Ok(None) =>
+                            // No response was expected.
+                            // TODO(mschett): Figure out if we should write 0 to the
+                            // response_len_ptr.
+                            {
+                                Ok(())
+                            }
+                            Err(err) => Err(err),
+                        }
+                    }
                     Err(err) => Err(err),
                 };
 

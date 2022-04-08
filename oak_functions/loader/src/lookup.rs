@@ -18,7 +18,7 @@ use crate::{
     logger::Logger,
     server::{
         format_bytes, BoxedExtension, BoxedExtensionFactory, ExtensionFactory,
-        OakApiNativeExtension, WasmState, ABI_USIZE,
+        OakApiNativeExtension, ABI_USIZE,
     },
 };
 use oak_functions_abi::{proto::OakStatus, ExtensionHandle};
@@ -52,51 +52,31 @@ impl ExtensionFactory for LookupFactory {
     }
 }
 
-/// Provides logic for the host ABI function [`storage_get_item`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#storage_get_item).
-pub fn storage_get_item<L: OakLogger + Clone>(
-    extension: &mut LookupData<L>,
-    key: Vec<u8>,
-) -> Result<Vec<u8>, OakStatus> {
-    extension.log_debug(&format!("storage_get_item(): key: {}", format_bytes(&key)));
-    let value = extension.get(&key);
-    match value {
-        Some(value) => {
-            // Truncate value for logging.
-            let value_to_log = value.clone().into_iter().take(512).collect::<Vec<_>>();
-            extension.log_debug(&format!(
-                "storage_get_item(): value: {}",
-                format_bytes(&value_to_log)
-            ));
-            Ok(value)
-        }
-        None => {
-            extension.log_debug("storage_get_item(): value not found");
-            Err(OakStatus::ErrStorageItemNotFound)
-        }
-    }
-}
-
 impl<L> OakApiNativeExtension for LookupData<L>
 where
     L: OakLogger + Clone,
 {
-    fn invoke(
-        &mut self,
-        wasm_state: &mut WasmState,
-        args: wasmi::RuntimeArgs,
-        request: Vec<u8>,
-    ) -> Result<Result<(), OakStatus>, wasmi::Trap> {
-        // TODO(#2699), TODO(#2664): Do not write value to Wasm State here.
-        let value_ptr_ptr = args.nth_checked(2)?;
-        let value_len_ptr = args.nth_checked(3)?;
-
+    fn invoke(&mut self, request: Vec<u8>) -> Result<Option<Vec<u8>>, OakStatus> {
         // The request is the key to lookup.
         let key = request;
-        let extension_result = storage_get_item(self, key).and_then(|value| {
-            wasm_state.write_extension_result(value, value_ptr_ptr, value_len_ptr)
-        });
-
-        Ok(extension_result)
+        self.log_debug(&format!("storage_get_item(): key: {}", format_bytes(&key)));
+        let value = self.get(&key);
+        match value {
+            Some(value) => {
+                // Truncate value for logging.
+                let value_to_log = value.clone().into_iter().take(512).collect::<Vec<_>>();
+                self.log_debug(&format!(
+                    "storage_get_item(): value: {}",
+                    format_bytes(&value_to_log)
+                ));
+                Ok(Some(value))
+            }
+            // TODO(#2701): Remove ErrStorageItemNotFound from OakStatus.
+            None => {
+                self.log_debug("storage_get_item(): value not found");
+                Err(OakStatus::ErrStorageItemNotFound)
+            }
+        }
     }
 
     fn get_metadata(&self) -> (String, wasmi::Signature) {
