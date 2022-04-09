@@ -29,6 +29,4 @@ tokio-serde-cbor = "*"
 # fixed to 0.6 because of tokio-serde-cbor
 tokio-util = { version = "~0.6", features = ["codec"] }
 tonic = "*"
-
-[build-dependencies]
-tonic-build = "*"
+uefi-proto = { path = "../proto" }

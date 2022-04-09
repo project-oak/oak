@@ -19,14 +19,10 @@ use futures::Future;
 use std::net::SocketAddr;
 use tonic::{transport::Server, Request, Response, Status};
 
-use pb::{
+use uefi_proto::{
     echo_server::{Echo, EchoServer},
     EchoRequest, EchoResponse,
 };
-
-pub mod pb {
-    tonic::include_proto!("oak.experimental.uefi");
-}
 
 pub struct EchoImpl {
     channel: UnboundedRequestSender<String, anyhow::Result<String>>,
