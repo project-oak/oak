@@ -23,6 +23,7 @@ use qemu::{Qemu, QemuParams};
 use tokio::{io::AsyncReadExt, net::UnixStream, signal};
 use tokio_serde_cbor::Codec;
 use tokio_util::codec::Decoder;
+
 mod qemu;
 mod server;
 
@@ -57,7 +58,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let (console_qemu, console) = UnixStream::pair()?;
     let (comms_qemu, mut comms) = UnixStream::pair()?;
 
-    let qemu = Qemu::start(QemuParams {
+    let mut qemu = Qemu::start(QemuParams {
         binary: cli.qemu.as_path(),
         firmware: cli.ovmf.as_path(),
         app: cli.uefi_app.as_path(),
@@ -88,9 +89,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
     info!("Leading junk on comms: {:?}", std::str::from_utf8(&junk));
 
-    // Use a bmrng channel for serial communication
-    let (tx, mut rx) =
-        bmrng::unbounded_channel::<String, Result<String, tokio_serde_cbor::Error>>();
+    // Use a bmrng channel for serial communication. The good thing about spawning a separate
+    // task for the serial communication is that it serializes (no pun intended) the communication,
+    // as right now we don't have any mechanisms to track multiple requests in flight.
+    let (tx, mut rx) = bmrng::unbounded_channel::<String, anyhow::Result<String>>();
 
     tokio::spawn(async move {
         // Set up the CBOR codec to handle the comms.
@@ -100,7 +102,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             responder
                 .respond({
                     if let Err(err) = channel.send(input).await {
-                        Err(err)
+                        Err(anyhow::Error::from(err))
                     } else {
                         // Sometimes next() gives us a None. Figure out what's going on in there.
                         let mut response;
@@ -110,16 +112,21 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 break;
                             }
                         }
-                        response.unwrap()
+                        response.unwrap().map_err(anyhow::Error::from)
                     }
                 })
                 .unwrap();
         }
     });
 
-    server::server("127.0.0.1:8000".parse()?, tx).await?;
-    signal::ctrl_c().await?;
+    let server_future = server::server("127.0.0.1:8000".parse()?, tx);
 
+    // Wait until something dies or we get a signal to terminate.
+    tokio::select! {
+        _ = signal::ctrl_c() => {},
+        _ = server_future => {},
+        _ = qemu.wait() => {},
+    }
     // Clean up.
     qemu.kill().await?;
     Ok(())

@@ -112,12 +112,16 @@ impl Qemu {
         })
     }
 
+    pub async fn wait(&mut self) -> Result<std::process::ExitStatus> {
+        self.instance.wait().await.map_err(anyhow::Error::from)
+    }
+
     pub async fn kill(mut self) -> Result<std::process::ExitStatus> {
         info!("Cleaning up and shutting down.");
         self.console.shutdown().await?;
         self.comms.shutdown().await?;
         self.qmp.shutdown().await?;
         self.instance.start_kill()?;
-        self.instance.wait().await.map_err(anyhow::Error::from)
+        self.wait().await
     }
 }

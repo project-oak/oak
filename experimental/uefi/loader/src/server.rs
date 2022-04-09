@@ -29,7 +29,7 @@ pub mod pb {
 }
 
 pub struct EchoImpl {
-    channel: UnboundedRequestSender<String, Result<String, tokio_serde_cbor::Error>>, /* Arc<Mutex<Framed<UnixStream, Codec<String, String>>>>, */
+    channel: UnboundedRequestSender<String, anyhow::Result<String>>,
 }
 
 #[tonic::async_trait]
@@ -37,20 +37,24 @@ impl Echo for EchoImpl {
     async fn echo(&self, request: Request<EchoRequest>) -> Result<Response<EchoResponse>, Status> {
         let request = request.into_inner();
 
-        let response = self
+        // There's two nested errors: one for communicating over the channel, and one for
+        // communicating over the serial port with the UEFI app.
+        // We probably want to log the error in the future and serve something more
+        // ambiguous to the end user, but for now that'll do.
+        let message = self
             .channel
             .send_receive(request.message)
             .await
             .map_err(|err| Status::internal(format!("{:?}", err)))?
             .map_err(|err| Status::internal(format!("{:?}", err)))?;
 
-        Ok(Response::new(EchoResponse { message: response }))
+        Ok(Response::new(EchoResponse { message }))
     }
 }
 
 pub fn server(
     addr: SocketAddr,
-    channel: UnboundedRequestSender<String, Result<String, tokio_serde_cbor::Error>>,
+    channel: UnboundedRequestSender<String, anyhow::Result<String>>,
 ) -> impl Future<Output = Result<(), tonic::transport::Error>> {
     let server_impl = EchoImpl { channel };
     Server::builder()
