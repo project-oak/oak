@@ -11,7 +11,8 @@
     "bungcip.better-toml",
     "esbenp.prettier-vscode",
     "matklad.rust-analyzer",
-    "xaver.clang-format"
+    "xaver.clang-format",
+    "zxh404.vscode-proto3"
   ],
   "settings": {
     // Use the `rust-analyzer` binary installed in the Docker image.
