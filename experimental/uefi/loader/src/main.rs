@@ -91,7 +91,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Set up the CBOR codec to handle the comms.
     let codec: Codec<std::string::String, std::string::String> = Codec::new();
 
-    server::server("[::1]:8000".parse()?, codec.framed(comms)).await;
+    server::server("127.0.0.1:8000".parse()?, codec.framed(comms)).await?;
     signal::ctrl_c().await?;
 
     // Clean up.

@@ -14,11 +14,11 @@
 // limitations under the License.
 //
 
-use std::net::SocketAddr;
+use std::{net::SocketAddr, sync::Arc};
 
 use futures::{stream::StreamExt, Future, SinkExt};
 use log::error;
-use tokio::net::UnixStream;
+use tokio::{net::UnixStream, sync::Mutex};
 use tokio_serde_cbor::Codec;
 use tokio_util::codec::Framed;
 use tonic::{transport::Server, Request, Response, Status};
@@ -33,7 +33,7 @@ pub mod pb {
 }
 
 pub struct EchoImpl {
-    channel: Framed<UnixStream, Codec<String, String>>,
+    channel: Arc<Mutex<Framed<UnixStream, Codec<String, String>>>>,
 }
 
 #[tonic::async_trait]
@@ -41,7 +41,9 @@ impl Echo for EchoImpl {
     async fn echo(&self, request: Request<EchoRequest>) -> Result<Response<EchoResponse>, Status> {
         let request = request.into_inner();
 
-        if let Err(err) = self.channel.send(request.message).await {
+        let mut channel = self.channel.lock().await;
+
+        if let Err(err) = channel.send(request.message).await {
             error!("Error sending message over channel: {:?}", err);
             Err(Status::internal(""))
         } else {
@@ -50,7 +52,7 @@ impl Echo for EchoImpl {
         // Sometimes next() gives us a None. Figure out what's going on in there.
         let mut response;
         loop {
-            response = self.channel.next().await;
+            response = channel.next().await;
             if response.is_some() {
                 break;
             }
@@ -64,11 +66,13 @@ impl Echo for EchoImpl {
     }
 }
 
-pub async fn server(
+pub fn server(
     addr: SocketAddr,
     channel: Framed<UnixStream, Codec<String, String>>,
 ) -> impl Future<Output = Result<(), tonic::transport::Error>> {
-    let server_impl = EchoImpl { channel };
+    let server_impl = EchoImpl {
+        channel: Arc::new(Mutex::new(channel)),
+    };
     Server::builder()
         .add_service(EchoServer::new(server_impl))
         .serve(addr)
