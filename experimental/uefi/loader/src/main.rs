@@ -17,7 +17,7 @@
 use std::{fs, path::PathBuf};
 
 use clap::Parser;
-use futures::stream::StreamExt;
+use futures::{stream::StreamExt, SinkExt};
 use log::info;
 use qemu::{Qemu, QemuParams};
 use tokio::{io::AsyncReadExt, net::UnixStream, signal};
@@ -88,10 +88,36 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
     info!("Leading junk on comms: {:?}", std::str::from_utf8(&junk));
 
-    // Set up the CBOR codec to handle the comms.
-    let codec: Codec<std::string::String, std::string::String> = Codec::new();
+    // Use a bmrng channel for serial communication
+    let (tx, mut rx) =
+        bmrng::unbounded_channel::<String, Result<String, tokio_serde_cbor::Error>>();
 
-    server::server("127.0.0.1:8000".parse()?, codec.framed(comms)).await?;
+    tokio::spawn(async move {
+        // Set up the CBOR codec to handle the comms.
+        let codec: Codec<String, String> = Codec::new();
+        let mut channel = codec.framed(comms);
+        while let Ok((input, responder)) = rx.recv().await {
+            responder
+                .respond({
+                    if let Err(err) = channel.send(input).await {
+                        Err(err)
+                    } else {
+                        // Sometimes next() gives us a None. Figure out what's going on in there.
+                        let mut response;
+                        loop {
+                            response = channel.next().await;
+                            if response.is_some() {
+                                break;
+                            }
+                        }
+                        response.unwrap()
+                    }
+                })
+                .unwrap();
+        }
+    });
+
+    server::server("127.0.0.1:8000".parse()?, tx).await?;
     signal::ctrl_c().await?;
 
     // Clean up.

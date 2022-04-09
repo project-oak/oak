@@ -351,6 +351,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "bmrng"
+version = "0.5.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d54df9073108f1558f90ae6c5bf5ab9c917c4185f5527b280c87a993cbead0ac"
+dependencies = [
+ "futures-core",
+ "tokio",
+]
+
+[[package]]
 name = "bstr"
 version = "0.2.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4817,6 +4827,7 @@ name = "uefi-loader"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "bmrng",
  "clap 3.1.8",
  "command-fds",
  "env_logger 0.9.0",
