@@ -17,17 +17,14 @@
 use std::{fs, path::PathBuf};
 
 use clap::Parser;
-use futures::{stream::StreamExt, SinkExt};
+use futures::stream::StreamExt;
 use log::info;
 use qemu::{Qemu, QemuParams};
-use tokio::{
-    io::{self, AsyncReadExt},
-    net::UnixStream,
-    signal,
-};
+use tokio::{io::AsyncReadExt, net::UnixStream, signal};
 use tokio_serde_cbor::Codec;
 use tokio_util::codec::Decoder;
 mod qemu;
+mod server;
 
 #[derive(Parser, Debug)]
 struct Args {
@@ -93,35 +90,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Set up the CBOR codec to handle the comms.
     let codec: Codec<std::string::String, std::string::String> = Codec::new();
-    let (mut sink, mut stream) = codec.framed(comms).split();
 
-    // Bit hacky, but it's only temporary and turns out console I/O is complex.
-    tokio::spawn(async move {
-        loop {
-            if let Some(result) = stream.next().await {
-                match result {
-                    Ok(msg) => info!("rx: {:?}", msg),
-                    Err(e) => {
-                        info!("recv error: {:?}", e);
-                    }
-                };
-            }
-        }
-    });
-    tokio::spawn(async move {
-        let mut buf = [0; 1024];
-        loop {
-            let result = io::stdin().read(&mut buf).await.unwrap();
-            if result == 0 {
-                break;
-            } else {
-                let msg = std::str::from_utf8(&buf[..result]).unwrap().to_string();
-                info!("tx: {:?}", &msg);
-                sink.send(msg).await.unwrap();
-            }
-        }
-    });
-
+    server::server("[::1]:8000".parse()?, codec.framed(comms)).await;
     signal::ctrl_c().await?;
 
     // Clean up.

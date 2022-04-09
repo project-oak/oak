@@ -4822,10 +4822,13 @@ dependencies = [
  "env_logger 0.9.0",
  "futures",
  "log",
+ "prost 0.10.0",
  "serde",
  "tokio",
  "tokio-serde-cbor",
  "tokio-util 0.6.9",
+ "tonic",
+ "tonic-build",
 ]
 
 [[package]]
