@@ -3,7 +3,7 @@
 /**
  *
   Stub function for win64 error handler API call inserted by nasm.
-  Stubbed as it unavailable in UEFI.
+  Stubbed as it is unavailable in UEFI.
   Ref: https://github.com/openssl/openssl/issues/12712.
   Inspired by: https://github.com/tianocore/edk2/blob/7c0ad2c33810ead45b7919f8f8d0e282dae52e71/CryptoPkg/Library/OpensslLib/X64/ApiHooks.c
 **/
@@ -16,8 +16,8 @@ __imp_RtlVirtualUnwind (
 }
 
 /**
-  Stub function for win64 routine used for exceedomgy large variable calls.
-  Inserted MinGW, stubbed as it unavailable in UEFI.
+  Stub function for win64 routine used for exceedingly large variables.
+  Inserted Mby inGW, stubbed as it is unavailable in UEFI.
   Ref: https://metricpanda.com/rival-fortress-update-45-dealing-with-__chkstk-__chkstk_ms-when-cross-compiling-for-windows/
 **/
 void *
