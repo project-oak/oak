@@ -372,6 +372,7 @@ dependencies = [
 name = "uefi-simple"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "log",
  "oak_remote_attestation",
  "uefi",
