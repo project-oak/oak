@@ -18,13 +18,11 @@ __imp_RtlVirtualUnwind (
 /**
   Stub function for win64 routine used for exceedingly large variables.
   Inserted Mby inGW, stubbed as it is unavailable in UEFI.
-  Ref: https://metricpanda.com/rival-fortress-update-45-dealing-with-__chkstk-__chkstk_ms-when-cross-compiling-for-windows/
+  Ref 1: https://metricpanda.com/rival-fortress-update-45-dealing-with-__chkstk-__chkstk_ms-when-cross-compiling-for-windows/
+  Ref 2: https://github.com/golang/go/issues/6305
+  Inspired by: https://android.googlesource.com/platform/external/compiler-rt/+/ccaafe6%5E%21/#F1
 **/
-void *
-___chkstk_ms (
-  void  *Args
-  )
+void ___chkstk_ms(void)
 {
-  return NULL;
 }
 
