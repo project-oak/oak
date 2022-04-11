@@ -456,7 +456,7 @@ impl wasmi::Externals for WasmState {
                 let extension = &mut self
                     .extensions_indices
                     .get_mut(&index)
-                    .expect(&format!("Unimplemented function at {}", index));
+                    .unwrap_or_else(|| panic!("Unimplemented function at {}", index));
 
                 let result = match request {
                     Ok(request) => {
@@ -537,7 +537,7 @@ impl WasmState {
             instance: None,
             memory: None,
             logger,
-            extensions_indices: extensions_indices,
+            extensions_indices,
             extensions_metadata,
         };
 
