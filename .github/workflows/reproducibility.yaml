@@ -22,6 +22,22 @@ jobs:
       pull-requests: write
 
     steps:
+      # Upload artifacts to Ent
+      - name: Download Ent CLI
+        run: |
+          curl https://ent-store.ew.r.appspot.com/raw/sha256:c1da952c1a58563902441bede92132658e4ec1b671c3121f668413b5e9a5c583 > /usr/local/bin/ent
+          chmod +x /usr/local/bin/ent
+          ent --help
+          cat <<EOF > ~/.config/ent.toml
+          [[remotes]]
+          name = 'ent-store'
+          url = 'https://ent-store.ew.r.appspot.com/'
+          write = true
+          api_key = '${{ secrets.ENT_API_KEY }}'
+          EOF
+          cat ~/.config/ent.toml
+          ent put BUILD
+
       - name: Checkout branch
         uses: actions/checkout@v2
 
@@ -57,6 +73,11 @@ jobs:
       - name: Build Functions server
         run: |
           ./scripts/docker_run ./scripts/xtask build-oak-functions-server-variants
+
+      - name: Upload to Ent
+        run: |
+          ent put ./target/x86_64-unknown-linux-musl/release/oak_functions_loader_base
+          ent put ./target/x86_64-unknown-linux-musl/release/oak_functions_loader_unsafe
 
       # Generate an index of the hashes of the reproducible artifacts.
       - name: Generate Reproducibility Index
