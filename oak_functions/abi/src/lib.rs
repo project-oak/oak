@@ -102,6 +102,7 @@ extern "C" {
         inference_len_ptr: *mut usize,
     ) -> u32;
 
+    /// See [`invoke`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#invoke).
     pub fn invoke(
         handle: ExtensionHandle,
         request_ptr: *const u8,

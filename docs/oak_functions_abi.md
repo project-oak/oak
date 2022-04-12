@@ -205,3 +205,31 @@ size to `inference_len_ptr`. The Oak Functions runtime returns an
 
 `tf_model_infer` is experimental, and is only available when the `oak-tf`
 feature is enabled.
+
+### `invoke`
+
+- `param[0]: handle: i32`:
+  [`ExtensionHandle`](https://github.com/project-oak/oak/blob/main/oak_functions/proto/abi.proto)
+  to address the extension.
+- `param[1]: request_ptr: i32`: address of the request buffer.
+- `param[2]: request_len: i32`: number of bytes of the request buffer.
+- `param[3]: response_ptr_ptr: i32`: address where the Oak Functions runtime
+  will write the address of the buffer containing the response.
+- `param[4]: response_len_ptr: i32`: address where the Oak Functions runtime
+  will write the number of bytes of the newly allocated response buffer (as a
+  little-endian u32).
+- `result[0]: i32`:
+  [`OakStatus`](https://github.com/project-oak/oak/blob/main/oak_functions/proto/abi.proto)
+  of the invocation
+
+The Oak Functions WebAssembly module invokes `invoke` to send a reqeuest to an
+extension of the Oak Functions runtime. The Oak Functions runtime reads the
+request from the request buffer `request_ptr` with the corresponding number of
+bytes `request_len` from the WebAssembly module's memory. The request is passed
+to the extension addressed by the given `handle`. If the extension returns a
+response, the Oak Functions runtime uses `alloc` to allocate a buffer of the
+exact size to contain the item and writes the item in the allocated buffer. Then
+the Oak Functions runtime writes the address of the allocated buffer to
+`response_ptr_ptr` together with the address of the corresponding size to
+`response_len_ptr`. The Oak Functions runtime returns an
+[`OakStatus`](https://github.com/project-oak/oak/blob/main/oak_functions/proto/abi.proto).
