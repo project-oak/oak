@@ -200,6 +200,30 @@ async fn test_echo() {
 }
 
 #[tokio::test]
+async fn test_blackhole() {
+    // Keep in sync with
+    // `workspace/oak_functions/sdk/oak_functions/tests/testing_module/src/lib.rs`.
+
+    let logger = Logger::for_test();
+    let message_to_blackhole = "BLACKHOLE";
+
+    let testing_factory =
+        oak_functions_loader::testing::TestingFactory::new_boxed_extension_factory(logger.clone())
+            .expect("Fail to create testing extension factory.");
+
+    let wasm_handler =
+        WasmHandler::create(&TESTING_WASM_MODULE_BYTES, vec![testing_factory], logger)
+            .expect("Could not instantiate WasmHandler.");
+
+    let request = Request {
+        body: message_to_blackhole.as_bytes().to_vec(),
+    };
+
+    let response: Response = wasm_handler.handle_invoke(request).await.unwrap();
+    test_utils::assert_response_body(response, "Blackholed");
+}
+
+#[tokio::test]
 async fn test_report_metric() {
     let logger = Logger::for_test();
 

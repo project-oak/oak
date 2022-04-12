@@ -116,14 +116,11 @@ impl FixedSizeBodyPadder for Response {
 
 /// Trait for implementing extensions, to implement new native functionality.
 pub trait OakApiNativeExtension {
-    /// Similar to `invoke_index` in [`wasmi::Externals`], but may return a result to be
-    /// written into the memory of the `WasmState`.
-    fn invoke(
-        &mut self,
-        wasm_state: &mut WasmState,
-        args: wasmi::RuntimeArgs,
-        request: Vec<u8>,
-    ) -> Result<Result<(), OakStatus>, wasmi::Trap>;
+    /// Invokes the extension with the given request and returns a result. If no result
+    /// is expected, the result is empty.  An error within the extension is reflected in the
+    /// `OakStatus`.
+    /// TODO(#2701): Stop returning OakStatus for errors internal to extensions.
+    fn invoke(&mut self, request: Vec<u8>) -> Result<Vec<u8>, OakStatus>;
 
     /// Metadata about this Extension, including the exported host function name, the function's
     /// signature, and the corresponding ExtensionHandle.
@@ -155,7 +152,7 @@ pub struct WasmState {
     memory: Option<wasmi::MemoryRef>,
     logger: Logger,
     /// A mapping of internal host functions to the corresponding [`OakApiNativeExtension`].
-    extensions_indices: Option<HashMap<usize, BoxedExtension>>,
+    extensions_indices: HashMap<usize, BoxedExtension>,
     /// A mapping of host function names to metadata required for resolving the function.
     extensions_metadata: HashMap<String, (usize, wasmi::Signature)>,
 }
@@ -339,27 +336,20 @@ impl WasmState {
         Ok(())
     }
 
-    pub fn invoke_extension_with_handle(
+    // Finds the extension parsing the given i32 handle. Returns appropriate OakStatus, if
+    // the handle is invalid or no extension with this handle can be found in the extension of
+    // WasmState.
+    fn find_extension(
         &mut self,
         handle: AbiExtensionHandle,
-        args: wasmi::RuntimeArgs,
-    ) -> Result<Option<wasmi::RuntimeValue>, wasmi::Trap> {
-        let handle: ExtensionHandle =
-            ExtensionHandle::from_i32(handle).expect("Fail to parse handle.");
+    ) -> Result<&mut BoxedExtension, OakStatus> {
+        let handle: ExtensionHandle = ExtensionHandle::from_i32(handle).ok_or({
+            self.log_error(&format!("Fail to parse handle {:?}.", handle));
+            OakStatus::ErrInvalidArgs
+        })?;
 
-        // TODO(#2664): Quick solution following impelementation of invoking an extension in
-        // `invoke_index`. Once we refactored the interface of `invoke` to not require
-        // `WasmState` any more, we can simplify this.
-
-        // First, we get all extensions from WasmState.
-        let mut extensions_indices = self
-            .extensions_indices
-            .take()
-            .expect("no extensions_indices is set");
-
-        // Then we get the extension which has the given handle by looking at the values of the
-        // extension_indices.
-        let extension = extensions_indices
+        // TODO(#2707): Refactor to return OakStatus::ErrInvalidHandle. Add logging.
+        self.extensions_indices
             .iter_mut()
             .find_map(|(_, extension)| {
                 if extension.get_handle() == handle {
@@ -368,12 +358,17 @@ impl WasmState {
                     None
                 }
             })
-            .expect("Fail to find extension with given handle.");
+            .ok_or(OakStatus::ErrInvalidArgs)
+    }
 
-        // We read the request from the Wasm memory.
-        let request_ptr: AbiPointer = args.nth_checked(1)?;
-        let request_len: AbiPointerOffset = args.nth_checked(2)?;
-
+    pub fn invoke_extension_with_handle(
+        &mut self,
+        handle: AbiExtensionHandle,
+        request_ptr: AbiPointer,
+        request_len: AbiPointerOffset,
+        response_ptr_ptr: AbiPointer,
+        response_len_ptr: AbiPointer,
+    ) -> Result<(), OakStatus> {
         let request = self
             .read_extension_args(request_ptr, request_len)
             .map_err(|err| {
@@ -382,17 +377,10 @@ impl WasmState {
                     handle, err
                 ));
                 OakStatus::ErrInvalidArgs
-            });
-
-        let result = match request {
-            Ok(request) => extension.invoke(self, args, request)?,
-            Err(err) => Err(err),
-        };
-
-        // We put the extension indices back.
-        self.extensions_indices = Some(extensions_indices);
-
-        from_oak_status_result(result)
+            })?;
+        let extension = self.find_extension(handle)?;
+        let response = extension.invoke(request)?;
+        self.write_extension_result(response, response_ptr_ptr, response_len_ptr)
     }
 
     pub fn alloc(&mut self, len: u32) -> AbiPointer {
@@ -438,22 +426,21 @@ impl wasmi::Externals for WasmState {
             WRITE_LOG_MESSAGE => from_oak_status_result(
                 self.write_log_message(args.nth_checked(0)?, args.nth_checked(1)?),
             ),
-            INVOKE => self.invoke_extension_with_handle(args.nth_checked(0)?, args),
+            INVOKE => from_oak_status_result(self.invoke_extension_with_handle(
+                args.nth_checked(0)?,
+                args.nth_checked(1)?,
+                args.nth_checked(2)?,
+                args.nth_checked(3)?,
+                args.nth_checked(4)?,
+            )),
 
+            // TODO(#2710), TODO(#2711), TODO(#2712): Remove the following code, once all extensions
+            // are called via handles.
             _ => {
-                let mut extensions_indices = self
-                    .extensions_indices
-                    .take()
-                    .expect("no extensions_indices is set");
-                let extension = match extensions_indices.get_mut(&index) {
-                    Some(extension) => Box::new(extension),
-
-                    None => panic!("Unimplemented function at {}", index),
-                };
-
                 // Careful: We assume that here for the ABI call the first two arguments are the
                 // request (which is true). We will remove this, when we call every
-                // extension through `invoke`.
+                // extension through `invoke`. Here, args are off-by-one compared to
+                // `invoke_extension_with_handle` because there `args[0]` is the handle.
                 let request_ptr: AbiPointer = args.nth_checked(0)?;
                 let request_len: AbiPointerOffset = args.nth_checked(1)?;
 
@@ -461,19 +448,42 @@ impl wasmi::Externals for WasmState {
                     .read_extension_args(request_ptr, request_len)
                     .map_err(|err| {
                         self.log_error(&format!(
-                            "Handle {:?}: Unable to read input from guest memory: {:?}",
-                            extension.get_handle(),
+                            "Unable to read input from guest memory: {:?}",
                             err
                         ));
                         OakStatus::ErrInvalidArgs
                     });
 
+                let extension = &mut self
+                    .extensions_indices
+                    .get_mut(&index)
+                    .unwrap_or_else(|| panic!("Unimplemented function at {}", index));
+
                 let result = match request {
-                    Ok(request) => extension.invoke(self, args, request)?,
+                    Ok(request) => {
+                        let response = extension.invoke(request);
+                        match response {
+                            Ok(response) => {
+                                if !response.is_empty() {
+                                    // Careful: We assume every ABI call which returns a non-emtpy
+                                    // response provides these arguments
+                                    // (which is true).
+                                    let response_ptr_ptr: AbiPointer = args.nth_checked(2)?;
+                                    let response_len_ptr: AbiPointer = args.nth_checked(3)?;
+                                    self.write_extension_result(
+                                        response,
+                                        response_ptr_ptr,
+                                        response_len_ptr,
+                                    )
+                                } else {
+                                    Ok(())
+                                }
+                            }
+                            Err(err) => Err(err),
+                        }
+                    }
                     Err(err) => Err(err),
                 };
-
-                self.extensions_indices = Some(extensions_indices);
                 from_oak_status_result(result)
             }
         }
@@ -526,7 +536,7 @@ impl WasmState {
             instance: None,
             memory: None,
             logger,
-            extensions_indices: Some(extensions_indices),
+            extensions_indices,
             extensions_metadata,
         };
 
@@ -727,12 +737,7 @@ impl WasmHandler {
 
         wasm_state.invoke();
 
-        for mut extension in wasm_state
-            .extensions_indices
-            .take()
-            .expect("no extensions_indices is set in wasm_state")
-            .into_values()
-        {
+        for (_, extension) in wasm_state.extensions_indices.iter_mut() {
             extension.terminate()?;
         }
 
