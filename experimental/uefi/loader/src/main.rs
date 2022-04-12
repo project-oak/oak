@@ -80,8 +80,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
-    // Unfortunately OVMF writes some garbage (clear screen etc?) + our Hello World to the
-    // other serial port, so let's skip some bytes before we set up the CBOR codec.
+    // TODO(#2709): Unfortunately OVMF writes some garbage (clear screen etc?) + our Hello
+    // World to the other serial port, so let's skip some bytes before we set up the CBOR codec.
+    // The length of 71 characters has been determined experimentally and will change if we
+    // change what we write to stdout in the UEFI app.
     let mut junk = [0; 71];
     let mut len = 0;
     while len < junk.len() {
