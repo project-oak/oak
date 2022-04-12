@@ -441,10 +441,13 @@ impl wasmi::Externals for WasmState {
             ),
             INVOKE => self.invoke_extension_with_handle(args),
 
+            // TODO(#2710), TODO(#2711), TODO(#2712): Remove the following code, once all extensions
+            // are called via handles.
             _ => {
                 // Careful: We assume that here for the ABI call the first two arguments are the
                 // request (which is true). We will remove this, when we call every
-                // extension through `invoke`.
+                // extension through `invoke`. Here, args are off-by-one compared to
+                // `invoke_extension_with_handle` because there `args[0]` is the handle.
                 let request_ptr: AbiPointer = args.nth_checked(0)?;
                 let request_len: AbiPointerOffset = args.nth_checked(1)?;
 
