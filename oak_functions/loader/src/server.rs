@@ -336,13 +336,33 @@ impl WasmState {
         Ok(())
     }
 
+    // Finds the extension parsing the given i32 handle. Returns appropriate OakStatus, if
+    // the handle is invalid or no extension with this handle can be found in the extension of
+    // WasmState.
+    fn find_extension(&mut self, handle: i32) -> Result<&mut BoxedExtension, OakStatus> {
+        let handle: ExtensionHandle = ExtensionHandle::from_i32(handle).ok_or({
+            self.log_error(&format!("Fail to parse handle {:?}.", handle));
+            OakStatus::ErrInvalidArgs
+        })?;
+
+        // TODO(#2707): Refactor to return OakStatus::ErrInvalidHandle. Add logging.
+        self.extensions_indices
+            .iter_mut()
+            .find_map(|(_, extension)| {
+                if extension.get_handle() == handle {
+                    Some(extension)
+                } else {
+                    None
+                }
+            })
+            .ok_or(OakStatus::ErrInvalidArgs)
+    }
+
     pub fn invoke_extension_with_handle(
         &mut self,
         args: wasmi::RuntimeArgs,
     ) -> Result<Option<wasmi::RuntimeValue>, wasmi::Trap> {
         let handle = args.nth_checked(0)?;
-        let handle: ExtensionHandle =
-            ExtensionHandle::from_i32(handle).expect("Fail to parse handle.");
 
         let request_ptr: AbiPointer = args.nth_checked(1)?;
         let request_len: AbiPointerOffset = args.nth_checked(2)?;
@@ -356,21 +376,10 @@ impl WasmState {
                 OakStatus::ErrInvalidArgs
             });
 
-        // TODO(#2707): Refactor to return OakStatus::ErrInvalidHandle.
-        let extension = self
-            .extensions_indices
-            .iter_mut()
-            .find_map(|(_, extension)| {
-                if extension.get_handle() == handle {
-                    Some(extension)
-                } else {
-                    None
-                }
-            })
-            .expect("Fail to find extension with given handle.");
+        let extension = self.find_extension(handle);
 
-        let result = match request {
-            Ok(request) => {
+        let result = match (extension, request) {
+            (Ok(extension), Ok(request)) => {
                 let response = extension.invoke(request);
                 let response_ptr_ptr: AbiPointer = args.nth_checked(3)?;
                 let response_len_ptr: AbiPointer = args.nth_checked(4)?;
@@ -381,7 +390,8 @@ impl WasmState {
                     Err(err) => Err(err),
                 }
             }
-            Err(err) => Err(err),
+            (Err(err), _) => Err(err),
+            (_, Err(err)) => Err(err),
         };
         from_oak_status_result(result)
     }
