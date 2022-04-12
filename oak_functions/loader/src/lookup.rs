@@ -56,7 +56,7 @@ impl<L> OakApiNativeExtension for LookupData<L>
 where
     L: OakLogger + Clone,
 {
-    fn invoke(&mut self, request: Vec<u8>) -> Result<Option<Vec<u8>>, OakStatus> {
+    fn invoke(&mut self, request: Vec<u8>) -> Result<Vec<u8>, OakStatus> {
         // The request is the key to lookup.
         let key = request;
         self.log_debug(&format!("storage_get_item(): key: {}", format_bytes(&key)));
@@ -69,7 +69,7 @@ where
                     "storage_get_item(): value: {}",
                     format_bytes(&value_to_log)
                 ));
-                Ok(Some(value))
+                Ok(value)
             }
             // TODO(#2701): Remove ErrStorageItemNotFound from OakStatus.
             None => {

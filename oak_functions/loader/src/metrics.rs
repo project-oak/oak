@@ -66,7 +66,7 @@ impl ExtensionFactory for PrivateMetricsProxyFactory {
 }
 
 impl OakApiNativeExtension for PrivateMetricsExtension<Logger> {
-    fn invoke(&mut self, request: Vec<u8>) -> Result<Option<Vec<u8>>, OakStatus> {
+    fn invoke(&mut self, request: Vec<u8>) -> Result<Vec<u8>, OakStatus> {
         let request: ReportMetricRequest =
             bincode::deserialize(&request).expect("Fail to deserialize report metric request.");
 
@@ -79,7 +79,7 @@ impl OakApiNativeExtension for PrivateMetricsExtension<Logger> {
             })?;
 
         // No result is expected from computing metric.
-        Ok(None)
+        Ok(vec![])
     }
 
     /// Each Oak Functions application can have at most one instance of PrivateMetricsProxy. So it

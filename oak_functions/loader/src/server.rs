@@ -116,11 +116,11 @@ impl FixedSizeBodyPadder for Response {
 
 /// Trait for implementing extensions, to implement new native functionality.
 pub trait OakApiNativeExtension {
-    /// Invokes the extension with the given request and optionally returns a result. If no result
-    /// is expected, it returns None.  An error within the extension is reflected in the
+    /// Invokes the extension with the given request and returns a result. If no result
+    /// is expected, the result is empty.  An error within the extension is reflected in the
     /// `OakStatus`.
     /// TODO(#2701): Stop returning OakStatus for errors internal to extensions.
-    fn invoke(&mut self, request: Vec<u8>) -> Result<Option<Vec<u8>>, OakStatus>;
+    fn invoke(&mut self, request: Vec<u8>) -> Result<Vec<u8>, OakStatus>;
 
     /// Metadata about this Extension, including the exported host function name, the function's
     /// signature, and the corresponding ExtensionHandle.
@@ -375,13 +375,8 @@ impl WasmState {
                 let response_ptr_ptr: AbiPointer = args.nth_checked(3)?;
                 let response_len_ptr: AbiPointer = args.nth_checked(4)?;
                 match response {
-                    Ok(Some(response)) => {
+                    Ok(response) => {
                         self.write_extension_result(response, response_ptr_ptr, response_len_ptr)
-                    }
-                    Ok(None) =>
-                    // No response was expected. We write the empty response.
-                    {
-                        self.write_extension_result(vec![], response_ptr_ptr, response_len_ptr)
                     }
                     Err(err) => Err(err),
                 }
@@ -462,23 +457,21 @@ impl wasmi::Externals for WasmState {
                     Ok(request) => {
                         let response = extension.invoke(request);
                         match response {
-                            Ok(Some(response)) => {
-                                // Careful: We assume every ABI call which returns a response
-                                // provides these arguments (which
-                                // is true). We will remove this, when we call every
-                                // extension through `invoke`.
-                                let response_ptr_ptr: AbiPointer = args.nth_checked(2)?;
-                                let response_len_ptr: AbiPointer = args.nth_checked(3)?;
-                                self.write_extension_result(
-                                    response,
-                                    response_ptr_ptr,
-                                    response_len_ptr,
-                                )
-                            }
-                            Ok(None) =>
-                            // No response was expected.
-                            {
-                                Ok(())
+                            Ok(response) => {
+                                if !response.is_empty() {
+                                    // Careful: We assume every ABI call which returns a non-emtpy
+                                    // response provides these arguments
+                                    // (which is true).
+                                    let response_ptr_ptr: AbiPointer = args.nth_checked(2)?;
+                                    let response_len_ptr: AbiPointer = args.nth_checked(3)?;
+                                    self.write_extension_result(
+                                        response,
+                                        response_ptr_ptr,
+                                        response_len_ptr,
+                                    )
+                                } else {
+                                    Ok(())
+                                }
                             }
                             Err(err) => Err(err),
                         }

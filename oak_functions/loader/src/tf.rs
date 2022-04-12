@@ -34,7 +34,7 @@ const TF_ABI_FUNCTION_NAME: &str = "tf_model_infer";
 // TODO(#2576): Move extension implementation to `tf_inference` crate once the Extension-related
 // structs are in a separate crate.
 impl OakApiNativeExtension for TensorFlowModel<Logger> {
-    fn invoke(&mut self, request: Vec<u8>) -> Result<Option<Vec<u8>>, OakStatus> {
+    fn invoke(&mut self, request: Vec<u8>) -> Result<Vec<u8>, OakStatus> {
         let input = request;
 
         // Get the inference, and convert it into a protobuf-encoded byte array
@@ -46,7 +46,7 @@ impl OakApiNativeExtension for TensorFlowModel<Logger> {
             // TODO(#2701): Remove ErrBadTensorFlowModelInput from OakStatus.
             OakStatus::ErrBadTensorFlowModelInput
         })?;
-        Ok(Some(inference.encode_to_vec()))
+        Ok(inference.encode_to_vec())
     }
 
     /// Each Oak Functions application can have at most one instance of TensorFlowModule. So it is

@@ -30,7 +30,7 @@ use wasmi::ValueType;
 const TESTING_ABI_FUNCTION_NAME: &str = "testing";
 
 impl OakApiNativeExtension for TestingExtension<Logger> {
-    fn invoke(&mut self, request: Vec<u8>) -> Result<Option<Vec<u8>>, OakStatus> {
+    fn invoke(&mut self, request: Vec<u8>) -> Result<Vec<u8>, OakStatus> {
         let request = bincode::deserialize(&request).expect("Fail to deserialize testing request.");
 
         let response = match request {
@@ -38,12 +38,12 @@ impl OakApiNativeExtension for TestingExtension<Logger> {
                 let echo_response = TestingResponse::Echo(echo_message);
                 let response =
                     bincode::serialize(&echo_response).expect("Fail to serialize testing request.");
-                Some(response)
+                response
             }
             TestingRequest::Blackhole(message) => {
                 self.logger.log_sensitive(Level::Debug, &message);
-                None
                 // We don't expect the BlackholeRequest to give back a result.
+                vec![]
             }
         };
         Ok(response)
