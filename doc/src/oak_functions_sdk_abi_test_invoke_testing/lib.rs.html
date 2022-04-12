@@ -43,6 +43,29 @@
 <span id="38">38</span>
 <span id="39">39</span>
 <span id="40">40</span>
+<span id="41">41</span>
+<span id="42">42</span>
+<span id="43">43</span>
+<span id="44">44</span>
+<span id="45">45</span>
+<span id="46">46</span>
+<span id="47">47</span>
+<span id="48">48</span>
+<span id="49">49</span>
+<span id="50">50</span>
+<span id="51">51</span>
+<span id="52">52</span>
+<span id="53">53</span>
+<span id="54">54</span>
+<span id="55">55</span>
+<span id="56">56</span>
+<span id="57">57</span>
+<span id="58">58</span>
+<span id="59">59</span>
+<span id="60">60</span>
+<span id="61">61</span>
+<span id="62">62</span>
+<span id="63">63</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2021 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -67,21 +90,44 @@
 <span class="kw">pub</span> <span class="kw">extern</span> <span class="string">&quot;C&quot;</span> <span class="kw">fn</span> <span class="ident">main</span>() {
     <span class="comment">// Read the message to echo from the request.</span>
     <span class="kw">let</span> <span class="ident">request</span> <span class="op">=</span> <span class="ident">oak_functions::read_request</span>().<span class="ident">expect</span>(<span class="string">&quot;Fail to read request body.&quot;</span>);
-    <span class="kw">let</span> <span class="ident">message_to_echo</span> <span class="op">=</span> <span class="ident">String::from_utf8</span>(<span class="ident">request</span>).<span class="ident">expect</span>(<span class="string">&quot;Fail to parse request&quot;</span>);
+    <span class="kw">let</span> <span class="ident">request</span> <span class="op">=</span> <span class="ident">String::from_utf8</span>(<span class="ident">request</span>).<span class="ident">expect</span>(<span class="string">&quot;Fail to parse request&quot;</span>);
 
-    <span class="comment">// Serialize a EchoRequest with the message_to_echo.</span>
-    <span class="kw">let</span> <span class="ident">echo_request</span> <span class="op">=</span> <span class="ident">bincode::serialize</span>(<span class="kw-2">&amp;</span><span class="ident">TestingRequest::Echo</span>(<span class="ident">message_to_echo</span>))
-        .<span class="ident">expect</span>(<span class="string">&quot;Fail to serialize testing message.&quot;</span>);
-    <span class="comment">// We invoke the Testing extension with an EchoRequest.</span>
-    <span class="kw">let</span> <span class="ident">serialized_echo_response</span> <span class="op">=</span>
-        <span class="ident">oak_functions::invoke</span>(<span class="kw-2">&amp;</span><span class="ident">echo_request</span>).<span class="ident">expect</span>(<span class="string">&quot;Fail to invoke_testing.&quot;</span>);
+    <span class="kw">match</span> <span class="ident">request</span>.<span class="ident">as_str</span>() {
+        <span class="string">&quot;ECHO&quot;</span> =&gt; {
+            <span class="comment">// Serialize a EchoRequest. Note that the message to echo is the request itself.</span>
+            <span class="kw">let</span> <span class="ident">echo_request</span> <span class="op">=</span> <span class="ident">bincode::serialize</span>(<span class="kw-2">&amp;</span><span class="ident">TestingRequest::Echo</span>(<span class="ident">request</span>))
+                .<span class="ident">expect</span>(<span class="string">&quot;Fail to serialize testing message.&quot;</span>);
+            <span class="comment">// We invoke the Testing extension with an EchoRequest.</span>
+            <span class="kw">let</span> <span class="ident">serialized_echo_response</span> <span class="op">=</span>
+                <span class="ident">oak_functions::invoke</span>(<span class="kw-2">&amp;</span><span class="ident">echo_request</span>).<span class="ident">expect</span>(<span class="string">&quot;Fail to invoke testing.&quot;</span>);
 
-    <span class="kw">let</span> <span class="ident">echo_response</span> <span class="op">=</span> <span class="ident">bincode::deserialize</span>(<span class="kw-2">&amp;</span><span class="ident">serialized_echo_response</span>)
-        .<span class="ident">expect</span>(<span class="string">&quot;Fail to deserialize testing message.&quot;</span>);
+            <span class="kw">let</span> <span class="ident">echo_response</span> <span class="op">=</span> <span class="ident">bincode::deserialize</span>(<span class="kw-2">&amp;</span><span class="ident">serialized_echo_response</span>)
+                .<span class="ident">expect</span>(<span class="string">&quot;Fail to deserialize testing message.&quot;</span>);
 
-    <span class="kw">let</span> <span class="ident">TestingResponse::Echo</span>(<span class="ident">response_body</span>) <span class="op">=</span> <span class="ident">echo_response</span>;
+            <span class="kw">let</span> <span class="ident">TestingResponse::Echo</span>(<span class="ident">response_body</span>) <span class="op">=</span> <span class="ident">echo_response</span>;
 
-    <span class="ident">oak_functions::write_response</span>(<span class="ident">response_body</span>.<span class="ident">as_bytes</span>()).<span class="ident">expect</span>(<span class="string">&quot;Fail to write response body.&quot;</span>);
+            <span class="ident">oak_functions::write_response</span>(<span class="ident">response_body</span>.<span class="ident">as_bytes</span>())
+                .<span class="ident">expect</span>(<span class="string">&quot;Fail to write response body.&quot;</span>);
+        }
+        <span class="string">&quot;BLACKHOLE&quot;</span> =&gt; {
+            <span class="comment">// Keep in sync with test_blackhole in</span>
+            <span class="comment">// `workspace/oak_functions/sdk/oak_functions/tests/integration_test.rs`.</span>
+            <span class="kw">let</span> <span class="ident">blackhole_request</span> <span class="op">=</span> <span class="ident">bincode::serialize</span>(<span class="kw-2">&amp;</span><span class="ident">TestingRequest::Blackhole</span>(<span class="ident">request</span>))
+                .<span class="ident">expect</span>(<span class="string">&quot;Fail to serialize testing message.&quot;</span>);
+
+            <span class="kw">let</span> <span class="ident">blackhole_response</span> <span class="op">=</span>
+                <span class="ident">oak_functions::invoke</span>(<span class="kw-2">&amp;</span><span class="ident">blackhole_request</span>).<span class="ident">expect</span>(<span class="string">&quot;Fail to invoke testing.&quot;</span>);
+            <span class="comment">// We expect an empty response, because blackhole does not give back a result.</span>
+            <span class="macro">assert!</span>(<span class="ident">blackhole_response</span>.<span class="ident">is_empty</span>());
+
+            <span class="comment">// If we reached here, the assert did not fail and we send a response back. This helps</span>
+            <span class="comment">// us to distinguish from a failure in the Wasm module, where also an</span>
+            <span class="comment">// empty response would be sent.</span>
+            <span class="ident">oak_functions::write_response</span>(<span class="string">&quot;Blackholed&quot;</span>.<span class="ident">as_bytes</span>())
+                .<span class="ident">expect</span>(<span class="string">&quot;Fail to write response body.&quot;</span>);
+        }
+        <span class="kw">_</span> =&gt; <span class="macro">panic!</span>(<span class="string">&quot;Request not recognized&quot;</span>),
+    }
 }
 </code></pre></div>
 </section><section id="search" class="content hidden"></section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="oak_functions_sdk_abi_test_invoke_testing" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.60.0-nightly (75d9a0ae2 2022-02-16)" ></div>

@@ -108,21 +108,6 @@
 <span id="103">103</span>
 <span id="104">104</span>
 <span id="105">105</span>
-<span id="106">106</span>
-<span id="107">107</span>
-<span id="108">108</span>
-<span id="109">109</span>
-<span id="110">110</span>
-<span id="111">111</span>
-<span id="112">112</span>
-<span id="113">113</span>
-<span id="114">114</span>
-<span id="115">115</span>
-<span id="116">116</span>
-<span id="117">117</span>
-<span id="118">118</span>
-<span id="119">119</span>
-<span id="120">120</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2021 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -142,34 +127,34 @@
 <span class="kw">use</span> <span class="kw">crate</span>::{
     <span class="ident">logger::Logger</span>,
     <span class="ident">server</span>::{
-        <span class="ident">AbiPointer</span>, <span class="ident">BoxedExtension</span>, <span class="ident">BoxedExtensionFactory</span>, <span class="ident">ExtensionFactory</span>, <span class="ident">OakApiNativeExtension</span>,
-        <span class="ident">ABI_USIZE</span>,
+        <span class="ident">BoxedExtension</span>, <span class="ident">BoxedExtensionFactory</span>, <span class="ident">ExtensionFactory</span>, <span class="ident">OakApiNativeExtension</span>, <span class="ident">ABI_USIZE</span>,
     },
 };
 
 <span class="kw">use</span> <span class="ident">log::Level</span>;
 <span class="kw">use</span> <span class="ident">oak_functions_abi</span>::{<span class="ident">proto::OakStatus</span>, <span class="ident">ExtensionHandle</span>, <span class="ident">TestingRequest</span>, <span class="ident">TestingResponse</span>};
+<span class="kw">use</span> <span class="ident">oak_logger::OakLogger</span>;
 <span class="kw">use</span> <span class="ident">wasmi::ValueType</span>;
 
 <span class="doccomment">/// Host function name for testing.</span>
 <span class="kw">const</span> <span class="ident">TESTING_ABI_FUNCTION_NAME</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;testing&quot;</span>;
 
 <span class="kw">impl</span> <span class="ident">OakApiNativeExtension</span> <span class="kw">for</span> <span class="ident">TestingExtension</span><span class="op">&lt;</span><span class="ident">Logger</span><span class="op">&gt;</span> {
-    <span class="kw">fn</span> <span class="ident">invoke</span>(
-        <span class="kw-2">&amp;mut</span> <span class="self">self</span>,
-        <span class="ident">wasm_state</span>: <span class="kw-2">&amp;mut</span> <span class="ident"><span class="kw">crate</span>::server::WasmState</span>,
-        <span class="ident">args</span>: <span class="ident">wasmi::RuntimeArgs</span>,
-        <span class="ident">request</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">oak_functions_abi::proto::OakStatus</span><span class="op">&gt;</span>, <span class="ident">wasmi::Trap</span><span class="op">&gt;</span> {
-        <span class="comment">// TODO(#2699), TODO(#2664): Do not write response to Wasm State here.</span>
-        <span class="kw">let</span> <span class="ident">response_ptr_ptr</span>: <span class="ident">AbiPointer</span> <span class="op">=</span> <span class="ident">args</span>.<span class="ident">nth_checked</span>(<span class="number">3</span>)<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">response_len_ptr</span>: <span class="ident">AbiPointer</span> <span class="op">=</span> <span class="ident">args</span>.<span class="ident">nth_checked</span>(<span class="number">4</span>)<span class="question-mark">?</span>;
+    <span class="kw">fn</span> <span class="ident">invoke</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">request</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">request</span> <span class="op">=</span> <span class="ident">bincode::deserialize</span>(<span class="kw-2">&amp;</span><span class="ident">request</span>).<span class="ident">expect</span>(<span class="string">&quot;Fail to deserialize testing request.&quot;</span>);
 
-        <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="ident">testing</span>(<span class="ident">request</span>).<span class="ident">and_then</span>(<span class="op">|</span><span class="ident">result</span><span class="op">|</span> {
-            <span class="ident">wasm_state</span>.<span class="ident">write_extension_result</span>(<span class="ident">result</span>, <span class="ident">response_ptr_ptr</span>, <span class="ident">response_len_ptr</span>)
-        });
-
-        <span class="prelude-val">Ok</span>(<span class="ident">result</span>)
+        <span class="kw">let</span> <span class="ident">response</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">request</span> {
+            <span class="ident">TestingRequest::Echo</span>(<span class="ident">echo_message</span>) =&gt; {
+                <span class="kw">let</span> <span class="ident">echo_response</span> <span class="op">=</span> <span class="ident">TestingResponse::Echo</span>(<span class="ident">echo_message</span>);
+                <span class="ident">bincode::serialize</span>(<span class="kw-2">&amp;</span><span class="ident">echo_response</span>).<span class="ident">expect</span>(<span class="string">&quot;Fail to serialize testing request.&quot;</span>)
+            }
+            <span class="ident">TestingRequest::Blackhole</span>(<span class="ident">message</span>) =&gt; {
+                <span class="self">self</span>.<span class="ident">logger</span>.<span class="ident">log_sensitive</span>(<span class="ident">Level::Debug</span>, <span class="kw-2">&amp;</span><span class="ident">message</span>);
+                <span class="comment">// We don&#39;t expect the BlackholeRequest to give back a result.</span>
+                <span class="macro">vec!</span>[]
+            }
+        };
+        <span class="prelude-val">Ok</span>(<span class="ident">response</span>)
     }
 
     <span class="kw">fn</span> <span class="ident">get_metadata</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; (<span class="ident">String</span>, <span class="ident">wasmi::Signature</span>) {
@@ -194,21 +179,6 @@
         <span class="ident">ExtensionHandle::TestingHandle</span>
     }
 }
-
-<span class="kw">fn</span> <span class="ident">testing</span>(<span class="ident">message</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span> {
-    <span class="kw">let</span> <span class="ident">deserialized_testing_message</span> <span class="op">=</span>
-        <span class="ident">bincode::deserialize</span>(<span class="kw-2">&amp;</span><span class="ident">message</span>).<span class="ident">expect</span>(<span class="string">&quot;Fail to deserialize testing message.&quot;</span>);
-
-    <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">deserialized_testing_message</span> {
-        <span class="ident">TestingRequest::Echo</span>(<span class="ident">echo_message</span>) =&gt; {
-            <span class="kw">let</span> <span class="ident">echo_response</span> <span class="op">=</span> <span class="ident">TestingResponse::Echo</span>(<span class="ident">echo_message</span>);
-            <span class="ident">bincode::serialize</span>(<span class="kw-2">&amp;</span><span class="ident">echo_response</span>).<span class="ident">expect</span>(<span class="string">&quot;Fail to serialize testing message.&quot;</span>)
-        }
-    };
-
-    <span class="prelude-val">Ok</span>(<span class="ident">result</span>)
-}
-
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">TestingFactory</span> {
     <span class="ident">logger</span>: <span class="ident">Logger</span>,
 }
