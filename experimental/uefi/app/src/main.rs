@@ -140,6 +140,8 @@ fn test_simple() {
 #[test_case]
 fn random_test() {
     let rng = ring::rand::SystemRandom::new();
-    let mut buf = alloc::vec::Vec::with_capacity(8);
-    assert_eq!(rng.fill(&mut buf).is_err(), false);
+    let mut buf = [0u8; 8];
+    let result = rng.fill(&mut buf).is_err();
+    log::info!("{:?}", buf);
+    assert_eq!(result, false);
 }
