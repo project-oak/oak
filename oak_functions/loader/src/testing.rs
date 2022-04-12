@@ -36,9 +36,7 @@ impl OakApiNativeExtension for TestingExtension<Logger> {
         let response = match request {
             TestingRequest::Echo(echo_message) => {
                 let echo_response = TestingResponse::Echo(echo_message);
-                let response =
-                    bincode::serialize(&echo_response).expect("Fail to serialize testing request.");
-                response
+                bincode::serialize(&echo_response).expect("Fail to serialize testing request.")
             }
             TestingRequest::Blackhole(message) => {
                 self.logger.log_sensitive(Level::Debug, &message);
