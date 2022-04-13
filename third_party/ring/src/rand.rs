@@ -444,15 +444,22 @@ mod uefi {
     #[cfg(any(target_arch = "x86_64"))]
     fn fill_impl(dest: &mut [u8]) -> Result<(), error::Unspecified> {
         fn is_avaiable() -> bool {
-            // TODO(xiaoyuxlu): use cpu::intel::RDRAND.avaiable when cpu.rs updated
-            // https://github.com/briansmith/ring/pull/1406#discussion_r720394928
-            // Current implementation may cause problem on AMD cpu. REF:
-            // https://github.com/nagisa/rust_rdrand/blob/f2fdd528a6103c946a2e9d0961c0592498b36493/src/lib.rs#L161
-            prefixed_extern! {
-                static mut OPENSSL_ia32cap_P: [u32; 4];
-            }
+            // Oak Note: OPENSSL_ia32cap_P[1] is used in the orignal UEFI patch
+            // to get CPU featue bits. However, it evaluates to 0
+            // regardless of the CPU model used. Hence we use the rust core lib
+            // to get the CPU feature bits instead. That implementation is
+            // copied from https://github.com/nagisa/rust_rdrand/blob/f2fdd528a6103c946a2e9d0961c0592498b36493/src/lib.rs#L161.
+            // See the discussion on the UEFI patch's open PR as well. The patch
+            // originally used the rdrand crate to handle feature detection
+            // (among other things) before switching to OPENSSL_ia32cap_P[1] as
+            // a temporary implementation while CPU feature detection in ring is
+            // undergoing wider changes.
+            // Ref: https://github.com/briansmith/ring/pull/1406#discussion_r720394928
+            let cpu_feature_bits = unsafe { core::arch::x86_64::__cpuid(1).ecx };
+
             const FLAG: u32 = 1 << 30;
-            unsafe { OPENSSL_ia32cap_P[1] & FLAG == FLAG }
+
+            cpu_feature_bits & FLAG == FLAG
         }
 
         // We must make sure current cpu support `rdrand`
