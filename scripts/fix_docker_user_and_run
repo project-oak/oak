@@ -12,6 +12,7 @@ set -o xtrace
 set -o pipefail
 
 groupmod --gid="${HOST_GID}" docker
-usermod --uid="${HOST_UID}" --gid="${HOST_GID}" docker
+groupadd --gid="${HOST_KVM_GID}" kvm
+usermod --uid="${HOST_UID}" --gid="${HOST_GID}" --groups="${HOST_KVM_GID}" docker
 chown "${HOST_UID}":"${HOST_GID}" "/home/docker" "/home/docker/.cache"
 su docker --session-command="$*"
