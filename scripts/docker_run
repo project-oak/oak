@@ -50,6 +50,15 @@ docker_run_flags=(
   "--group-add=$HOST_DOCKER_GID"
 )
 
+# If the host supports KVM, allow the image to use it
+if [[ -e "/dev/kvm" ]]; then
+  readonly HOST_KVM_GID="$(getent group kvm | cut -d: -f3)"
+  docker_run_flags+=(
+    "--device=/dev/kvm"
+    "--env=HOST_KVM_GID=${HOST_KVM_GID}"
+  )
+fi
+
 # Some CI systems (GitHub actions) do not run with an interactive TTY attached.
 if [[ -z "${CI:-}" ]]; then
   docker_run_flags+=('--interactive')
