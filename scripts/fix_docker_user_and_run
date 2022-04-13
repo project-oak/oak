@@ -13,6 +13,11 @@ set -o pipefail
 
 groupmod --gid="${HOST_GID}" docker
 groupadd --gid="${HOST_KVM_GID}" kvm
-usermod --uid="${HOST_UID}" --gid="${HOST_GID}" --groups="${HOST_KVM_GID}" docker
+usermod --uid="${HOST_UID}" --gid="${HOST_GID}" docker
+
+if [[ -n "${HOST_KVM_GID}" ]]; then
+  usermod --groups="${HOST_KVM_GID}" docker
+fi
+
 chown "${HOST_UID}":"${HOST_GID}" "/home/docker" "/home/docker/.cache"
 su docker --session-command="$*"

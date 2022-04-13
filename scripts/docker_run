@@ -15,11 +15,6 @@ else
   readonly HOST_DOCKER_GID="$(getent group docker | cut -d: -f3)"
 fi
 
-# In order to use KVM inside docker we need permissions for the user with the
-# same KVM gid as the host
-readonly HOST_KVM_GID="$(getent group kvm | cut -d: -f3)"
-export HOST_KVM_GID
-
 mkdir -p './bazel-cache'
 mkdir -p './cargo-cache'
 mkdir -p './sccache-cache'
@@ -53,10 +48,16 @@ docker_run_flags=(
   # To do that, we map the socket from the host and add the right group
   '--volume=/var/run/docker.sock:/var/run/docker.sock'
   "--group-add=$HOST_DOCKER_GID"
-  #
-  "--device=/dev/kvm"
-  '--env=HOST_KVM_GID'
 )
+
+# If the host supports KVM, allow the image to use it
+if [[ -e "/dev/kvm" ]]; then
+  readonly HOST_KVM_GID="$(getent group kvm | cut -d: -f3)"
+  docker_run_flags+=(
+    "--device=/dev/kvm"
+    "--env=HOST_KVM_GID=${HOST_KVM_GID}"
+  )
+fi
 
 # Some CI systems (GitHub actions) do not run with an interactive TTY attached.
 if [[ -z "${CI:-}" ]]; then
