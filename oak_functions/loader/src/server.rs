@@ -130,7 +130,7 @@ pub trait OakApiNativeExtension {
     fn terminate(&mut self) -> anyhow::Result<()>;
 
     /// Gets the `ExtensionHandle` for this extension.
-    fn get_handle(&mut self) -> ExtensionHandle;
+    fn get_handle(&self) -> ExtensionHandle;
 }
 
 pub trait ExtensionFactory {
@@ -138,6 +138,12 @@ pub trait ExtensionFactory {
 }
 
 pub type BoxedExtension = Box<dyn OakApiNativeExtension + Send + Sync>;
+
+impl std::fmt::Debug for BoxedExtension {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "ExtensionHandle: {:?}", self.get_handle())
+    }
+}
 
 pub type BoxedExtensionFactory = Box<dyn ExtensionFactory + Send + Sync>;
 
@@ -152,6 +158,7 @@ pub struct WasmState {
     memory: Option<wasmi::MemoryRef>,
     logger: Logger,
     /// A mapping of internal host functions to the corresponding [`OakApiNativeExtension`].
+    /// TODO(#2715): Replace by a map from `ExtensionHandles` to `BoxedExtensions`.
     extensions_indices: HashMap<usize, BoxedExtension>,
     /// A mapping of host function names to metadata required for resolving the function.
     extensions_metadata: HashMap<String, (usize, wasmi::Signature)>,
@@ -336,31 +343,6 @@ impl WasmState {
         Ok(())
     }
 
-    // Finds the extension parsing the given i32 handle. Returns appropriate OakStatus, if
-    // the handle is invalid or no extension with this handle can be found in the extension of
-    // WasmState.
-    fn find_extension(
-        &mut self,
-        handle: AbiExtensionHandle,
-    ) -> Result<&mut BoxedExtension, OakStatus> {
-        let handle: ExtensionHandle = ExtensionHandle::from_i32(handle).ok_or({
-            self.log_error(&format!("Fail to parse handle {:?}.", handle));
-            OakStatus::ErrInvalidArgs
-        })?;
-
-        // TODO(#2707): Refactor to return OakStatus::ErrInvalidHandle. Add logging.
-        self.extensions_indices
-            .iter_mut()
-            .find_map(|(_, extension)| {
-                if extension.get_handle() == handle {
-                    Some(extension)
-                } else {
-                    None
-                }
-            })
-            .ok_or(OakStatus::ErrInvalidArgs)
-    }
-
     pub fn invoke_extension_with_handle(
         &mut self,
         handle: AbiExtensionHandle,
@@ -369,6 +351,11 @@ impl WasmState {
         response_ptr_ptr: AbiPointer,
         response_len_ptr: AbiPointer,
     ) -> Result<(), OakStatus> {
+        let handle: ExtensionHandle = ExtensionHandle::from_i32(handle).ok_or({
+            self.log_error(&format!("Fail to convert handle from i32 {:?}.", handle));
+            OakStatus::ErrInvalidHandle
+        })?;
+
         let request = self
             .read_extension_args(request_ptr, request_len)
             .map_err(|err| {
@@ -378,7 +365,17 @@ impl WasmState {
                 ));
                 OakStatus::ErrInvalidArgs
             })?;
-        let extension = self.find_extension(handle)?;
+
+        let extension = self
+            .extensions_indices
+            .values_mut()
+            .find(|extension| extension.get_handle() == handle)
+            .ok_or({
+                // TODO(#2715): Add logging, which will be easier when we have a lookup to
+                // extension_indices.
+                // self.log_error(&format!("Cannot find extension with handle {:?}.", handle));
+                OakStatus::ErrInvalidHandle
+            })?;
         let response = extension.invoke(request)?;
         self.write_extension_result(response, response_ptr_ptr, response_len_ptr)
     }
@@ -821,4 +818,59 @@ pub fn format_bytes(v: &[u8]) -> String {
     std::str::from_utf8(v)
         .map(|s| s.to_string())
         .unwrap_or_else(|_| format!("{:?}", v))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{
+        super::{grpc::create_wasm_handler, testing::*},
+        *,
+    };
+
+    #[tokio::test]
+    async fn test_invoke_extension_with_handle() {
+        let mut wasm_state = create_test_wasm_state();
+        // Assumes there is no negative ExtensionHandle. The remaining arguments don't matter, hence
+        // they are 0.
+        let extension = wasm_state.invoke_extension_with_handle(-1, 0, 0, 0, 0);
+        assert!(extension.is_err());
+        assert_eq!(OakStatus::ErrInvalidHandle, extension.unwrap_err())
+    }
+
+    #[tokio::test]
+    async fn test_find_extension_not_available() {
+        let mut wasm_state = create_test_wasm_state();
+        // Assumes we have add no TF extension to our test wasm_state.
+        let extension = wasm_state.find_extension(ExtensionHandle::TfHandle);
+        assert!(extension.is_err());
+        assert_eq!(OakStatus::ErrInvalidHandle, extension.unwrap_err())
+    }
+
+    #[tokio::test]
+    async fn test_find_extension() {
+        let mut wasm_state = create_test_wasm_state();
+        // Assumes we have a Testing extension in our test wasm_state.
+        let extension = wasm_state.find_extension(ExtensionHandle::TestingHandle);
+        assert!(extension.is_ok());
+
+        assert_eq!(
+            extension.unwrap().get_handle(),
+            ExtensionHandle::TestingHandle
+        )
+    }
+
+    fn create_test_wasm_state() -> WasmState {
+        let logger = Logger::for_test();
+
+        let testing_factory = TestingFactory::new_boxed_extension_factory(logger.clone())
+            .expect("Could not create TestingFactory.");
+
+        let wasm_module_bytes = test_utils::create_echo_wasm_module_bytes();
+
+        let wasm_handler = create_wasm_handler(&wasm_module_bytes, vec![testing_factory], logger)
+            .expect("Could not create WasmHandler.");
+        wasm_handler
+            .init_wasm_state(b"".to_vec())
+            .expect("Could not create WasmState.")
+    }
 }
