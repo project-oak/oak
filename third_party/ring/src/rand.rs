@@ -469,6 +469,9 @@ mod uefi {
             // however it’s nearly unthinkable that any cpuid implementation
             // doesn’t extend to leaf 1.
             // Ref: https://www.geoffchappell.com/studies/windows/km/cpu/cpuid/00000001h/index.htm?tx=255
+            // Important to note that on older AMD CPUs RDRAND is available but
+            // retuns non random data. This fn does _not_ account for that, going
+            // only what is reported by the CPU. Ref: https://github.com/nagisa/rust_rdrand/blob/f2fdd528a6103c946a2e9d0961c0592498b36493/src/lib.rs#L161
             let cpu_feature_bits = unsafe { core::arch::x86_64::__cpuid(1).ecx };
 
             const FLAG: u32 = 1 << 30;
