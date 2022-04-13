@@ -69,7 +69,8 @@ async fn trusted_shuffler_test() {
     // let trusted_shuffler_arc_clone = trusted_shuffler_arc.clone();
     let trusted_shuffler_clone = trusted_shuffler.clone();
 
-    let background = test_utils::background(|_| async move {
+    let join_handle = tokio::spawn(async move {
+    // let background = test_utils::background(|_| async move {
         // let trusted_shuffler_arc_clone = &mut *trusted_shuffler_arc_clone;
         // let request = trusted_shuffler_arc_clone.pop_request().await;
         let request = trusted_shuffler_clone.pop_request().await;

@@ -22,8 +22,10 @@ mod tests;
 use anyhow::{anyhow, Context};
 use rand::{seq::SliceRandom, thread_rng};
 use std::{
-    collections::{HashMap, HashSet},
+    collections::{HashMap, HashSet, VecDeque},
+    future::Future,
     sync::{Arc, Mutex},
+    marker::{Send, Sync},
 };
 use tokio::sync::{
     mpsc::{self, Receiver, Sender},
@@ -77,106 +79,68 @@ impl RequestIdGenerator {
 }
 
 #[derive(Clone)]
-struct Message<R: std::marker::Send> {
+struct Message<R: Send + Sync + Clone> {
     id: RequestId,
     data: R,
 }
 
-#[derive(Clone)]
-struct AsyncQueue<T: std::marker::Send> {
-    sender: Sender<T>,
-    // receiver: Receiver<T>,
-    // sender: Arc<Mutex<Sender<T>>>,
-    receiver: Arc<Mutex<Receiver<T>>>,
-    phantom: std::marker::PhantomData<T>,
+struct MessageWithCallack<R, S>
+where
+    R: Send + Sync + Clone,
+    S: Send + Sync + Clone,
+{
+    data: R,
+    sender: Sender<S>,
 }
 
-impl<T: std::marker::Send> AsyncQueue<T> {
-    pub fn new(buffer_size: usize) -> Self {
-        let (sender, receiver) = mpsc::channel(buffer_size);
-        Self {
-            sender,
-            // receiver,
-            // sender: Arc::new(Mutex::new(sender)),
-            receiver: Arc::new(Mutex::new(receiver)),
-            phantom: std::marker::PhantomData,
-        }
-    }
-
-    pub async fn get(&self) -> anyhow::Result<T> {
-        self.receiver
-            .lock()
-            .map_err(|error| anyhow!("Couldn't lock mutex: {:?}", error))?
-            .recv()
-            .await
-            .context("Channel closed")
-    }
-
-    pub async fn put(&self, item: T) -> anyhow::Result<()> {
-        self.sender
-            // .lock()
-            // .map_err(|error| anyhow!("Couldn't lock mutex: {:?}", error))?
-            .send(item)
-            .await
-            .map_err(|_| anyhow!("Channel closed"))
-    }
-}
-
-//------------------------------------------------------------------------------
-// pub struct TrustedShufflerClientFacingPart<R, S> {
-//     // Value k that represents k-anonymity.
-//     anonymity_value: usize,
-
-//     // Generator for creating unique IDs for incoming requests.
-//     request_id_generator: Arc<Mutex<RequestIdGenerator>>,
-
-//     // Map for sending responses back to the clients.
-//     request_promise_map: Arc<Mutex<HashMap<RequestId, oneshot::Sender<S>>>>,
-
-//     // Queue of incoming requests to be shuffled.
-//     incoming_request_sender: Sender<Message<R>>,
+// #[derive(Clone)]
+// struct AsyncQueue<T: std::marker::Send>{
+//     sender: Sender<T>,
+//     receiver: Receiver<T>,
+//     // sender: Arc<Mutex<Sender<T>>>,
+//     // receiver: Arc<Mutex<Receiver<T>>>,
+//     phantom: std::marker::PhantomData<T>,
 // }
 
-// pub struct TrustedShufflerForwardPart<R, S> {
-//     // Queue of incoming requests to be shuffled.
-//     incoming_request_receiver: Arc<Receiver<R>>,
+// impl<T: std::marker::Send> AsyncQueue<T> {
+//     pub fn new(buffer_size: usize) -> Self {
+//         let (sender, receiver) = mpsc::channel(buffer_size);
+//         Self {
+//             sender,
+//             receiver,
+//             // sender: Arc::new(Mutex::new(sender)),
+//             // receiver: Arc::new(Mutex::new(receiver)),
+//             phantom: std::marker::PhantomData,
+//         }
+//     }
 
-//     // Queue of shuffled requests to be sent out.
-//     // outgoing_request_queue: AsyncQueue<Message<R>>,
-//     outgoing_request_sender: Sender<Message<R>>,
+//     pub async fn get(&self) -> anyhow::Result<T> {
+//         self.receiver
+//             // .lock()
+//             // .map_err(|error| anyhow!("Couldn't lock mutex: {:?}", error))?
+//             .recv()
+//             .await
+//             .context("Channel closed")
+//     }
+
+//     pub async fn put(&self, item: T) -> anyhow::Result<()> {
+//         self.sender
+//             // .lock()
+//             // .map_err(|error| anyhow!("Couldn't lock mutex: {:?}", error))?
+//             .send(item)
+//             .await
+//             .map_err(|_| anyhow!("Channel closed"))
+//     }
 // }
-
-// pub struct TrustedShufflerBackwardPart<R, S> {
-//     // Map for sending responses back to the clients.
-//     request_promise_map: Arc<Mutex<HashMap<RequestId, oneshot::Sender<S>>>>,
-
-//     // Queue of incoming batched responses to be shuffled.
-//     incoming_response_receiver: Receiver<Vec<Message<S>>>,
-// }
-
-// pub struct TrustedShufflerBackendFacingPart<R, S> {
-//     // Queue of shuffled requests to be sent out.
-//     outgoing_request_receiver: Receiver<Message<R>>,
-// }
-
-// pub struct TrustedShufflerBackendFacingPartPerRequest<R, S> {
-//     // Map containing batches of responses to be received from the backend.
-//     // Once a particular item receives all of the responses, they are being
-//     // shuffled back to the clients.
-//     response_promise_map: Arc<Mutex<HashMap<BatchId, (HashSet<RequestId>, Vec<Message<S>>)>>>,
-
-//     // Queue of incoming batched responses to be shuffled.
-//     incoming_response_sender: Sender<Vec<Message<S>>>,
-// }
-//------------------------------------------------------------------------------
 
 // Trusted Shuffler inmpelentation.
 // Generic parameter `R` represents a request type, and `S` a response type.
 #[derive(Clone)]
-pub struct TrustedShuffler<R, S>
+pub struct TrustedShuffler<R, S, F>
 where
-    R: std::marker::Send,
-    S: std::marker::Send,
+    R: Send + Sync + Clone,
+    S: Send + Sync + Clone,
+    F: Send + Sync + Clone + FnOnce(Message<R>) -> dyn Future<Output = S>,
 {
     // Value k that represents k-anonymity.
     anonymity_value: usize,
@@ -188,10 +152,12 @@ where
     request_promise_map: Arc<Mutex<HashMap<RequestId, oneshot::Sender<S>>>>,
 
     // Queue of incoming requests to be shuffled.
-    incoming_request_queue: AsyncQueue<Message<R>>,
+    incoming_request_queue: Arc<Mutex<VecDeque<Message<R>>>>,
+    // incoming_request_queue: AsyncQueue<Message<R>>,
 
     // Queue of shuffled requests to be sent out.
-    outgoing_request_queue: AsyncQueue<Message<R>>,
+    // outgoing_request_queue: VecDeque<Message<R>>,
+    // outgoing_request_queue: AsyncQueue<Message<R>>,
 
     // Map containing batches of responses to be received from the backend.
     // Once a particular item receives all of the responses, they are being
@@ -199,29 +165,35 @@ where
     response_promise_map: Arc<Mutex<HashMap<BatchId, (HashSet<RequestId>, Vec<Message<S>>)>>>,
 
     // Queue of incoming batched responses to be shuffled.
-    incoming_response_queue: AsyncQueue<Vec<Message<S>>>,
+    // incoming_response_queue: VecDeque<Vec<Message<S>>>,
+    // incoming_response_queue: AsyncQueue<Vec<Message<S>>>,
+
+    // Async function that sends a request to the backend and returns a
+    // responce.
+    request_sender: F,
 }
 
-impl<R, S> TrustedShuffler<R, S>
+impl<R, S, F> TrustedShuffler<R, S, F>
 where
-    R: std::marker::Send,
-    S: std::marker::Send,
+    R: Send + Sync + Clone,
+    S: Send + Sync + Clone,
+    F: Send + Sync + Clone + FnOnce(Message<R>) -> dyn Future<Output = S>,
 {
-    pub fn new(anonymity_value: usize) -> Self {
+    pub fn new(anonymity_value: usize, request_sender: F) -> Self {
         Self {
             anonymity_value,
             request_id_generator: Arc::new(Mutex::new(RequestIdGenerator::new(anonymity_value))),
             request_promise_map: Arc::new(Mutex::new(HashMap::new())),
-            incoming_request_queue: AsyncQueue::new(CHANNEL_BUFFER_SIZE),
-            outgoing_request_queue: AsyncQueue::new(CHANNEL_BUFFER_SIZE),
+            // incoming_request_queue: AsyncQueue::new(CHANNEL_BUFFER_SIZE),
+            incoming_request_queue: Arc::new(Mutex::new(VecDeque::new())),
+            // outgoing_request_queue: AsyncQueue::new(CHANNEL_BUFFER_SIZE),
+            // outgoing_request_queue: VecDeque::new(),
             response_promise_map: Arc::new(Mutex::new(HashMap::new())),
-            incoming_response_queue: AsyncQueue::new(CHANNEL_BUFFER_SIZE),
+            // incoming_response_queue: AsyncQueue::new(CHANNEL_BUFFER_SIZE),
+            // incoming_response_queue: VecDeque::new(),
+            request_sender,
         }
     }
-
-    // pub async fn generate(&mut self) {
-    //     self.request_id_generator.lock().unwrap().generate();
-    // }
 
     // Asynchronously handles incoming requests.
     pub async fn invoke(&self, request: R) -> anyhow::Result<S> {
@@ -231,10 +203,8 @@ where
             data: request,
         };
 
-        self.incoming_request_queue
-            .put(request)
-            .await
-            .context("Couldn't put request in a queue")?;
+        let mut incoming_request_queue = self.incoming_request_queue.lock().unwrap();
+        incoming_request_queue.push_back(request);
 
         let (sender, receiver) = oneshot::channel();
         self.request_promise_map
@@ -242,17 +212,15 @@ where
             .unwrap()
             .insert(request_id, sender);
 
-        receiver.await.context("Couldn't receive response")
-    }
+        if incoming_request_queue.len() >= self.anonymity_value {
+            let batch = incoming_request_queue
+                .drain(..)
+                .take(self.anonymity_value)
+                .collect();
+            self.shuffle_forward(batch);
+        }
 
-    // Returns a request from the shuffled queue to be sent to the backend.
-    pub async fn pop_request(&mut self) -> anyhow::Result<(RequestId, R)> {
-        let request = self
-            .outgoing_request_queue
-            .get()
-            .await
-            .context("Couldn't get request")?;
-        Ok((request.id, request.data))
+        receiver.await.context("Couldn't receive response")
     }
 
     // Pushes a backend response through the Trusted Shuffler back to the client.
@@ -287,41 +255,34 @@ where
         }
 
         if !full_response_batch.is_empty() {
-            self.incoming_response_queue
-                .put(full_response_batch.drain(..).collect())
-                .await
-                .context("Couldn't put response in a queue")?;
+            self.shuffle_backward(full_response_batch);
             response_promise_map.remove(&request_id.batch_id);
         }
 
         Ok(())
     }
 
-    pub async fn shuffle_forward(&mut self) -> anyhow::Result<()> {
-        let mut current_batch = vec![];
-        loop {
-            let request = self
-                .incoming_request_queue
-                .get()
-                .await
-                .context("Couldn't get request from an incoming request queue")?;
-            current_batch.push(request);
+    pub fn shuffle_forward(&self, batch: Vec<Message<R>>) {
+        batch.shuffle(&mut thread_rng());
 
-            if current_batch.len() >= self.anonymity_value {
-                current_batch.shuffle(&mut thread_rng());
-                for request in current_batch.drain(..) {
-                    self.outgoing_request_queue
-                        .put(request)
-                        .await
-                        .context("Couldn't put request to an outgoing request queue")?;
-                }
-                // TODO(): Populate the response promise map.
-                assert!(current_batch.is_empty());
-            }
+        for request in batch.drain(..) {
+            let request_sender = self.request_sender.clone();
+            let join_handle = tokio::spawn(async move {
+                (request_sender)(request);
+            });
         }
     }
 
-    pub async fn shuffle_backward(batch_id: BatchId) {
-        loop {}
+    pub fn shuffle_backward(&self, batch: Vec<Message<S>>) {
+        batch.shuffle(&mut thread_rng());
+
+        let request_promise_map = self.request_promise_map.lock().unwrap();
+        for response in batch.drain(..) {
+            if let Some(promise) = request_promise_map.remove(&response.id) {
+                let join_handle = tokio::spawn(async move {
+                    promise.send(response.data);
+                });
+            }
+        }
     }
 }
