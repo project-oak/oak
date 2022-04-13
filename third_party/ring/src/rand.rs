@@ -455,6 +455,20 @@ mod uefi {
             // a temporary implementation while CPU feature detection in ring is
             // undergoing wider changes.
             // Ref: https://github.com/briansmith/ring/pull/1406#discussion_r720394928
+            //
+            // Invoking the CPUID instruction with input 1 in eax to returns the
+            // relevant feature bits in ecx. See 3-236 of Vol. 2A of the Intel®
+            // 64 and IA-32 Architectures Software Developer’s Manual or page 50
+            // of the Open-Source Register Reference For AMD Family 17h
+            // Processors Models 00h-2Fh1.
+            //
+            // Safety: CPUID is supported on all x86_64 CPUs, and most x86 CPUs.
+            // Strictly speaking, cpuid leaf 1 is like any other in that it
+            // should be treated as unsupported unless the maximum leaf that’s
+            // returned in eax from cpuid leaf 0 is at least 1. In practice
+            // however it’s nearly unthinkable that any cpuid implementation
+            // doesn’t extend to leaf 1.
+            // Ref: https://www.geoffchappell.com/studies/windows/km/cpu/cpuid/00000001h/index.htm?tx=255
             let cpu_feature_bits = unsafe { core::arch::x86_64::__cpuid(1).ecx };
 
             const FLAG: u32 = 1 << 30;
