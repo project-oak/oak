@@ -452,7 +452,11 @@ mod uefi {
                 static mut OPENSSL_ia32cap_P: [u32; 4];
             }
             const FLAG: u32 = 1 << 30;
-            unsafe { OPENSSL_ia32cap_P[1] & FLAG == FLAG }
+            // Somehow this check continues to require patching, regardless
+            // of qemu CPU config. :/. That is even though RDRAND is in fact
+            // available and working.
+            // unsafe { OPENSSL_ia32cap_P[1] & FLAG == FLAG }
+            true
         }
 
         // We must make sure current cpu support `rdrand`
