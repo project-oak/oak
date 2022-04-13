@@ -22,6 +22,8 @@ use oak_functions_abi::proto::Inference;
 use oak_functions_abi::proto::OakStatus;
 #[cfg(feature = "oak-metrics")]
 use oak_functions_abi::ReportMetricRequest;
+#[cfg(feature = "oak-tf")]
+use oak_functions_abi::{TfModelInferError, TfModelInferResponse};
 use std::convert::AsRef;
 
 /// Reads and returns the user request.
@@ -150,10 +152,24 @@ pub fn tf_model_infer(input_vector: &[u8]) -> Result<Inference, OakStatus> {
         )
     };
     let status = OakStatus::from_i32(status_code as i32).ok_or(OakStatus::ErrInternal)?;
+
     match status {
         OakStatus::Ok => {
-            let inference_bytes = from_alloc_buffer(inference_ptr, inference_len);
-            Inference::decode(&*inference_bytes).map_err(|_| OakStatus::ErrInvalidArgs)
+            let response = from_alloc_buffer(inference_ptr, inference_len);
+            let response: TfModelInferResponse =
+                bincode::deserialize(&response).expect("Fail to deserialize tf response.");
+            let result: Result<Vec<u8>, TfModelInferError> = response.result;
+            match result {
+                Ok(inference_bytes) => {
+                    let inference = Inference::decode(&*inference_bytes);
+                    // TODO(mschett): We currently need to return an OakStatus here.
+                    inference.map_err(|_| OakStatus::ErrInvalidArgs)
+                }
+                // TODO(mschett): We currently need to return an OakStatus here.
+                Err(TfModelInferError::BadTensorFlowModelInput) => {
+                    Err(OakStatus::ErrBadTensorFlowModelInput)
+                }
+            }
         }
         status => Err(status),
     }
