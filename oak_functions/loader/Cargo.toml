@@ -10,7 +10,7 @@ license = "Apache-2.0"
 # Should only be used for debugging purposes or enabling experimental features.
 oak-unsafe = ["oak-tf", "oak-metrics", "oak-web"]
 default = []
-oak-tf = ["oak_functions_tf_inference"]
+oak-tf = ["oak_functions_tf_inference", "oak_functions_abi/oak-tf"]
 oak-metrics = ["oak_functions_metrics", "oak_functions_abi/oak-metrics"]
 oak-web = ["tonic-web"]
 

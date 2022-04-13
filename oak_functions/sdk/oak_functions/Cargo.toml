@@ -8,7 +8,7 @@ license = "Apache-2.0"
 [features]
 default = []
 oak-unsafe = ["oak-tf", "oak-metrics"]
-oak-tf = []
+oak-tf = ["oak_functions_abi/oak-tf"]
 oak-metrics = ["oak_functions_abi/oak-metrics"]
 
 [dev-dependencies]

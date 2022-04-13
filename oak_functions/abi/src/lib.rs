@@ -58,16 +58,13 @@ pub struct ReportMetricRequest {
 }
 
 #[derive(Serialize, Deserialize)]
-// TODO(mschett) Figure out how to feature-gate.
-// #[cfg(feature = "oak-tf")]
+#[cfg(feature = "oak-tf")]
 pub enum TfModelInferError {
     BadTensorFlowModelInput,
 }
 
 #[derive(Serialize, Deserialize)]
-// TODO(mschett) Figure out how to feature-gate.
-
-// #[cfg(feature = "oak-tf")]
+#[cfg(feature = "oak-tf")]
 pub struct TfModelInferResponse {
     pub result: Result<Vec<u8>, TfModelInferError>,
 }
