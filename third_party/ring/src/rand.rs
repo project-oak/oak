@@ -456,7 +456,7 @@ mod uefi {
             // undergoing wider changes.
             // Ref: https://github.com/briansmith/ring/pull/1406#discussion_r720394928
             //
-            // Invoking the CPUID instruction with input 1 in eax to returns the
+            // Invoking the CPUID instruction with input 1 in eax returns the
             // relevant feature bits in ecx. See 3-236 of Vol. 2A of the Intel®
             // 64 and IA-32 Architectures Software Developer’s Manual or page 50
             // of the Open-Source Register Reference For AMD Family 17h
