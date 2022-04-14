@@ -444,19 +444,39 @@ mod uefi {
     #[cfg(any(target_arch = "x86_64"))]
     fn fill_impl(dest: &mut [u8]) -> Result<(), error::Unspecified> {
         fn is_avaiable() -> bool {
-            // TODO(xiaoyuxlu): use cpu::intel::RDRAND.avaiable when cpu.rs updated
-            // https://github.com/briansmith/ring/pull/1406#discussion_r720394928
-            // Current implementation may cause problem on AMD cpu. REF:
-            // https://github.com/nagisa/rust_rdrand/blob/f2fdd528a6103c946a2e9d0961c0592498b36493/src/lib.rs#L161
-            prefixed_extern! {
-                static mut OPENSSL_ia32cap_P: [u32; 4];
-            }
+            // Oak Note: OPENSSL_ia32cap_P[1] is used in the orignal UEFI patch
+            // to get CPU featue bits. However, it evaluates to 0
+            // regardless of the CPU model used. Hence we use the rust core lib
+            // to get the CPU feature bits instead. That implementation is
+            // copied from https://github.com/nagisa/rust_rdrand/blob/f2fdd528a6103c946a2e9d0961c0592498b36493/src/lib.rs#L161.
+            // See the discussion on the UEFI patch's open PR as well. The patch
+            // originally used the rdrand crate to handle feature detection
+            // (among other things) before switching to OPENSSL_ia32cap_P[1] as
+            // a temporary implementation while CPU feature detection in ring is
+            // undergoing wider changes.
+            // Ref: https://github.com/briansmith/ring/pull/1406#discussion_r720394928
+            //
+            // Invoking the CPUID instruction with input 1 in eax returns the
+            // relevant feature bits in ecx. See 3-236 of Vol. 2A of the Intel®
+            // 64 and IA-32 Architectures Software Developer’s Manual or page 50
+            // of the Open-Source Register Reference For AMD Family 17h
+            // Processors Models 00h-2Fh1.
+            //
+            // Safety: CPUID is supported on all x86_64 CPUs, and most x86 CPUs.
+            // Strictly speaking, cpuid leaf 1 is like any other in that it
+            // should be treated as unsupported unless the maximum leaf that’s
+            // returned in eax from cpuid leaf 0 is at least 1. In practice
+            // however it’s nearly unthinkable that any cpuid implementation
+            // doesn’t extend to leaf 1.
+            // Ref: https://www.geoffchappell.com/studies/windows/km/cpu/cpuid/00000001h/index.htm?tx=255
+            // Important to note that on older AMD CPUs RDRAND is available but
+            // retuns non random data. This fn does _not_ account for that, going
+            // only what is reported by the CPU. Ref: https://github.com/nagisa/rust_rdrand/blob/f2fdd528a6103c946a2e9d0961c0592498b36493/src/lib.rs#L161
+            let cpu_feature_bits = unsafe { core::arch::x86_64::__cpuid(1).ecx };
+
             const FLAG: u32 = 1 << 30;
-            // Somehow this check continues to require patching, regardless
-            // of qemu CPU config. :/. That is even though RDRAND is in fact
-            // available and working.
-            // unsafe { OPENSSL_ia32cap_P[1] & FLAG == FLAG }
-            true
+
+            cpu_feature_bits & FLAG == FLAG
         }
 
         // We must make sure current cpu support `rdrand`
