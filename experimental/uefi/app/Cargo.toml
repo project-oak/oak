@@ -6,8 +6,8 @@ edition = "2021"
 license = "Apache-2.0"
 
 [features]
-default = []
-kvm = []
+default = ["support_emulated_runner"]
+support_emulated_runner = []
 
 [dependencies]
 uefi = { version = "*", features = ["exts"] }
