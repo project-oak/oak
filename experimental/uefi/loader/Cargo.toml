@@ -12,6 +12,7 @@ command-fds = { version = "*", features = ["tokio"] }
 futures = "*"
 log = "*"
 env_logger = "*"
+serde = "*"
 tokio = { version = "*", features = [
   "io-std",
   "io-util",
@@ -21,4 +22,6 @@ tokio = { version = "*", features = [
   "process",
   "signal",
 ] }
-tokio-util = { version = "*", features = ["codec"] }
+tokio-serde-cbor = "*"
+# fixed to 0.6 because of tokio-serde-cbor
+tokio-util = { version = "~0.6", features = ["codec"] }

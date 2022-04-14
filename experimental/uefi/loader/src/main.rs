@@ -17,14 +17,15 @@
 use std::{fs, path::PathBuf};
 
 use clap::Parser;
-use futures::stream::StreamExt;
+use futures::{stream::StreamExt, SinkExt};
 use log::info;
 use qemu::{Qemu, QemuParams};
 use tokio::{
-    io::{self, AsyncReadExt, AsyncWriteExt},
+    io::{self, AsyncReadExt},
     net::UnixStream,
     signal,
 };
+use tokio_serde_cbor::Codec;
 use tokio_util::codec::Decoder;
 mod qemu;
 
@@ -57,7 +58,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     env_logger::init();
 
     let (console_qemu, console) = UnixStream::pair()?;
-    let (comms_qemu, comms) = UnixStream::pair()?;
+    let (comms_qemu, mut comms) = UnixStream::pair()?;
 
     let qemu = Qemu::start(QemuParams {
         binary: cli.qemu.as_path(),
@@ -79,16 +80,31 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
+    // TODO(#2709): Unfortunately OVMF writes some garbage (clear screen etc?) + our Hello
+    // World to the other serial port, so let's skip some bytes before we set up the CBOR codec.
+    // The length of 71 characters has been determined experimentally and will change if we
+    // change what we write to stdout in the UEFI app.
+    let mut junk = [0; 71];
+    let mut len = 0;
+    while len < junk.len() {
+        len += comms.read(&mut junk[len..]).await.unwrap();
+    }
+    info!("Leading junk on comms: {:?}", std::str::from_utf8(&junk));
+
+    // Set up the CBOR codec to handle the comms.
+    let codec: Codec<std::string::String, std::string::String> = Codec::new();
+    let (mut sink, mut stream) = codec.framed(comms).split();
+
     // Bit hacky, but it's only temporary and turns out console I/O is complex.
-    let (mut rh, mut wh) = comms.into_split();
     tokio::spawn(async move {
-        let mut buf = [0; 1024];
         loop {
-            let result = rh.read(&mut buf).await.unwrap();
-            if result == 0 {
-                break;
-            } else {
-                info!("rx: {:?}", &buf[..result]);
+            if let Some(result) = stream.next().await {
+                match result {
+                    Ok(msg) => info!("rx: {:?}", msg),
+                    Err(e) => {
+                        info!("recv error: {:?}", e);
+                    }
+                };
             }
         }
     });
@@ -99,8 +115,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             if result == 0 {
                 break;
             } else {
-                info!("tx: {:?}", &buf[..result]);
-                wh.write_all(&buf[..result]).await.unwrap();
+                let msg = std::str::from_utf8(&buf[..result]).unwrap().to_string();
+                info!("tx: {:?}", &msg);
+                sink.send(msg).await.unwrap();
             }
         }
     });
