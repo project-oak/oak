@@ -375,7 +375,6 @@ dependencies = [
  "anyhow",
  "log",
  "oak_remote_attestation",
- "ring",
  "uefi",
  "uefi-services",
 ]

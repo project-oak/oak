@@ -43,9 +43,6 @@ use uefi::{
     },
 };
 
-#[cfg(test)]
-use ring::rand::SecureRandom;
-
 // The main entry point of the UEFI application.
 //
 // The choice of name (`_start`) is entirely arbitrary; what matters is that
@@ -143,15 +140,6 @@ fn test_simple() {
 
 #[cfg(test)]
 const EMPTY_ARRAY: [u8; 8] = [0, 0, 0, 0, 0, 0, 0, 0];
-
-// Simple test source of randomness, for more straightforward debugging
-#[test_case]
-fn random_test() {
-    let rng = ring::rand::SystemRandom::new();
-    let mut array = EMPTY_ARRAY.clone();
-    assert_eq!(rng.fill(&mut array).is_err(), false);
-    assert_ne!(array, EMPTY_ARRAY);
-}
 
 #[cfg(test)]
 const TEE_MEASUREMENT: &str = "Test TEE measurement";
