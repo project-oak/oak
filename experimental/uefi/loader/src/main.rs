@@ -104,7 +104,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     if let Err(err) = channel.send(input).await {
                         Err(anyhow::Error::from(err))
                     } else {
-                        // Sometimes next() gives us a None. Figure out what's going on in there.
+                        // TODO(#2726): Sometimes next() gives us a None. Figure out what's going on in there.
                         let mut response;
                         loop {
                             response = channel.next().await;
