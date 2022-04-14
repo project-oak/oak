@@ -1,12 +1,7 @@
 [build]
 target = "x86_64-unknown-uefi"
 
-# Test runners get only one serial port, routed to stdio.
-[target.'cfg(test)']
-runner = "qemu-system-x86_64 -nodefaults -nographic -bios /usr/share/OVMF/OVMF_CODE.fd -serial stdio -machine q35 -device isa-debug-exit,iobase=0xf4,iosize=0x04 -kernel"
-
-# Otherwise, (a) the first serial port gets routed to a log, and (b) the second serial gets attached to stdio.
-[target.'cfg(not(test))']
+[target.x86_64-unknown-uefi]
 runner = "qemu-system-x86_64 -nodefaults -nographic -bios /usr/share/OVMF/OVMF_CODE.fd -serial file:target/console.log -serial stdio -machine q35 -device isa-debug-exit,iobase=0xf4,iosize=0x04 -kernel"
 
 [unstable]
