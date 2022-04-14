@@ -19,7 +19,11 @@ use futures::Future;
 use std::net::SocketAddr;
 use tonic::{transport::Server, Request, Response, Status};
 
-use uefi_proto::{
+pub mod proto {
+    tonic::include_proto!("oak.experimental.uefi");
+}
+
+use proto::{
     echo_server::{Echo, EchoServer},
     EchoRequest, EchoResponse,
 };

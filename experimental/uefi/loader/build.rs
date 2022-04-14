@@ -14,7 +14,17 @@
 // limitations under the License.
 //
 
+use oak_utils::{generate_grpc_code, CodegenOptions};
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    tonic_build::compile_protos("proto/echo.proto")?;
+    generate_grpc_code(
+        "../../../",
+        &["experimental/uefi/proto/echo.proto"],
+        CodegenOptions {
+            build_client: false,
+            build_server: true,
+            extern_paths: vec![],
+        },
+    )?;
     Ok(())
 }

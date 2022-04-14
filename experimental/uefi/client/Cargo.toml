@@ -7,6 +7,9 @@ license = "Apache-2.0"
 
 [dependencies]
 clap = { version = "*", features = ["derive"] }
+prost = "*"
 tokio = { version = "*", features = ["macros", "rt-multi-thread"] }
 tonic = "*"
-uefi-proto = { path = "../proto" }
+
+[build-dependencies]
+oak_utils = { path = "../../../oak_utils" }

@@ -14,13 +14,17 @@
 // limitations under the License.
 //
 
-pub mod oak {
-    pub mod experimental {
-        pub mod uefi {
-            tonic::include_proto!("oak.experimental.uefi");
-        }
-    }
-}
+use oak_utils::{generate_grpc_code, CodegenOptions};
 
-pub use oak::experimental::uefi::*;
-pub use tonic;
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    generate_grpc_code(
+        "../../../",
+        &["experimental/uefi/proto/echo.proto"],
+        CodegenOptions {
+            build_client: true,
+            build_server: false,
+            extern_paths: vec![],
+        },
+    )?;
+    Ok(())
+}

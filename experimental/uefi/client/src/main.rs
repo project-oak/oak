@@ -18,7 +18,12 @@ use std::io::{stdin, BufRead};
 
 use clap::Parser;
 use tonic::Request;
-use uefi_proto::{echo_client::EchoClient, EchoRequest};
+
+pub mod proto {
+    tonic::include_proto!("oak.experimental.uefi");
+}
+
+use proto::{echo_client::EchoClient, EchoRequest};
 
 #[derive(Parser, Debug)]
 struct Args {
