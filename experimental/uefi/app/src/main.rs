@@ -136,12 +136,14 @@ fn test_simple() {
     assert_eq!(x, 1);
 }
 
+#[cfg(test)]
+const EMPTY_ARRAY: [u8; 8] = [0, 0, 0, 0, 0, 0, 0, 0];
+
 // Simple test source of randomness, for more straightforward debugging
 #[test_case]
 fn random_test() {
     let rng = ring::rand::SystemRandom::new();
-    let mut buf = [0u8; 8];
-    let result = rng.fill(&mut buf).is_err();
-    log::info!("{:?}", buf);
-    assert_eq!(result, false);
+    let mut array = EMPTY_ARRAY.clone();
+    assert_eq!(rng.fill(&mut array).is_err(), false);
+    assert_ne!(array, EMPTY_ARRAY);
 }
