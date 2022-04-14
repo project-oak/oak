@@ -25,6 +25,9 @@ pub struct Serial<'boot> {
     serial: &'boot mut serial::Serial<'boot>,
 }
 
+// qemu emulates the 16550A UART controller, which has a maximum FIFO depth of 16 bytes.
+const SERIAL_RECEIVE_FIFO_DEPTH: u32 = 16;
+
 impl<'boot> Serial<'boot> {
     pub fn get(handle: Handle, bt: &BootServices, index: usize) -> Result<Serial, Error<()>> {
         // Expect (at least) two serial ports on the system; the first will be used
@@ -46,10 +49,9 @@ impl<'boot> Serial<'boot> {
         // interface must not be null (see Section 7.3 in the UEFI Specification, Version 2.9).
         let serial = unsafe { &mut *serial.interface.get() };
 
-        // Increase the FIFO size from the default 1 byte to something bigger. Experiments with
-        // qemu suggest 16 is the best we can do.
+        // Increase the FIFO size from the default 1 byte to something bigger.
         let mut io_mode = *serial.io_mode();
-        io_mode.receive_fifo_depth = 16;
+        io_mode.receive_fifo_depth = SERIAL_RECEIVE_FIFO_DEPTH;
         serial.set_attributes(&io_mode)?;
         Ok(Serial { serial })
     }
