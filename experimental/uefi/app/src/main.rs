@@ -220,7 +220,4 @@ fn test_handshake() {
         .decrypt(&encrypted_server_data)
         .expect("Couldn't decrypt server data");
     assert_eq!(decrypted_server_data, DATA);
-
-    log::info!("{:?}", decrypted_server_data);
-    log::info!("hallelujah");
 }
