@@ -138,7 +138,9 @@ pub fn write_log_message<T: AsRef<str>>(message: T) -> Result<(), OakStatus> {
 ///
 /// See [`tf_model_infer`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#tf_model_infer).
 #[cfg(feature = "oak-tf")]
-pub fn tf_model_infer(input_vector: &[u8]) -> Result<Inference, OakStatus> {
+pub fn tf_model_infer(
+    input_vector: &[u8],
+) -> Result<Result<Inference, TfModelInferError>, OakStatus> {
     use prost::Message;
 
     let mut inference_ptr: *mut u8 = std::ptr::null_mut();
@@ -153,25 +155,22 @@ pub fn tf_model_infer(input_vector: &[u8]) -> Result<Inference, OakStatus> {
     };
     let status = OakStatus::from_i32(status_code as i32).ok_or(OakStatus::ErrInternal)?;
 
-    match status {
-        OakStatus::Ok => {
-            let response = from_alloc_buffer(inference_ptr, inference_len);
-            let response: TfModelInferResponse =
-                bincode::deserialize(&response).expect("Fail to deserialize tf response.");
-            let result: Result<Vec<u8>, TfModelInferError> = response.result;
-            match result {
-                Ok(inference_bytes) => {
-                    let inference = Inference::decode(&*inference_bytes);
-                    // TODO(mschett): We currently need to return an OakStatus here.
-                    inference.map_err(|_| OakStatus::ErrInvalidArgs)
-                }
-                // TODO(mschett): We currently need to return an OakStatus here.
-                Err(TfModelInferError::BadTensorFlowModelInput) => {
-                    Err(OakStatus::ErrBadTensorFlowModelInput)
-                }
-            }
-        }
-        status => Err(status),
+    if let OakStatus::Ok = status {
+        // We read and interpret the response.
+        let response = from_alloc_buffer(inference_ptr, inference_len);
+        let response: TfModelInferResponse =
+            bincode::deserialize(&response).expect("Fail to deserialize tf response.");
+
+        // We decode the inference bytes.
+        let tf_result = response.result.and_then(|inference_bytes| {
+            Inference::decode(&*inference_bytes)
+                .map_err(|_| TfModelInferError::ErrorDecodingInference)
+        });
+
+        Ok(tf_result)
+    } else {
+        // We pass the OakStatus as an error on.
+        Err(status)
     }
 }
 

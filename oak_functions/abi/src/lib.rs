@@ -57,10 +57,13 @@ pub struct ReportMetricRequest {
     pub value: i64,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 #[cfg(feature = "oak-tf")]
 pub enum TfModelInferError {
+    // Error when running the TensorFlow model, due to bad input tensor.
     BadTensorFlowModelInput,
+    // Error when decoding the inference bytes.
+    ErrorDecodingInference,
 }
 
 #[derive(Serialize, Deserialize)]

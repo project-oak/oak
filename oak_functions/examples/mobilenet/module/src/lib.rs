@@ -45,9 +45,10 @@ pub extern "C" fn main() {
 fn handle_request() -> anyhow::Result<Inference> {
     // Get the image from the request
     let request_bytes = oak_functions::read_request()
-        .map_err(|err| anyhow::anyhow!("could not read request body: {:?}", err))?;
+        .map_err(|err| anyhow::anyhow!("Could not read request body: {:?}.", err))?;
 
     // Get image category
-    oak_functions::tf_model_infer(&request_bytes)
-        .map_err(|err| anyhow::anyhow!("could not get inference: {:?}", err))
+    let result = oak_functions::tf_model_infer(&request_bytes)
+        .map_err(|err| anyhow::anyhow!("Could not get inference: {:?}.", err))?;
+    result.map_err(|err| anyhow::anyhow!("Could not get inference: {:?}.", err))
 }
