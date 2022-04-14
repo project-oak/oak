@@ -38,20 +38,14 @@ const TF_ABI_FUNCTION_NAME: &str = "tf_model_infer";
 // structs are in a separate crate.
 impl OakApiNativeExtension for TensorFlowModel<Logger> {
     fn invoke(&mut self, request: Vec<u8>) -> Result<Vec<u8>, OakStatus> {
-        let input = request;
-
-        // Get the inference, and convert it into a protobuf-encoded byte array
-        let result = match self.get_inference(&input) {
-            Ok(inference) => Ok(inference.encode_to_vec()),
-            Err(err) => {
-                self.log_error(&format!(
-                    "tf_model_infer(): Unable to run inference: {:?}",
-                    err
-                ));
-                Err(TfModelInferError::BadTensorFlowModelInput)
-            }
-        };
-
+        let inference = self.get_inference(&request).map_err(|err| {
+            self.log_error(&format!(
+                "tf_model_infer(): Unable to run inference: {:?}",
+                err
+            ));
+            TfModelInferError::BadTensorFlowModelInput
+        });
+        let result = inference.map(|inference| inference.encode_to_vec());
         let response = bincode::serialize(&TfModelInferResponse { result })
             .expect("Fail to serialize tf response.");
 
