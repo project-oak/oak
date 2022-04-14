@@ -26,15 +26,12 @@
 
 #[macro_use]
 extern crate log;
+extern crate alloc;
 
-use uefi::{
-    prelude::*,
-    proto::console::serial::Serial,
-    table::{
-        boot::{OpenProtocolAttributes, OpenProtocolParams},
-        runtime::ResetType,
-    },
-};
+use ciborium::{de, ser};
+use uefi::{prelude::*, table::runtime::ResetType};
+
+mod serial;
 
 // The main entry point of the UEFI application.
 //
@@ -70,51 +67,33 @@ fn main(handle: Handle, system_table: &mut SystemTable<Boot>) -> Status {
     serial_echo(handle, system_table.boot_services()).unwrap();
 }
 
-fn echo_loop(serial: &mut Serial) -> Result<!, uefi::Error<()>> {
-    let mut buf: [u8; 1024] = [0; 1024];
-
-    loop {
-        // read() returns Ok if it managed to fill the whole buffer, or the error will contain
-        // the number of bytes read. The only error we're fine with is TIMEOUT, as we can simply
-        // retry that (and we'll keep getting TIMEOUTs when nobody is talking to us). In case of
-        // any other error, bail out.
-        let len = serial.read(&mut buf).map(|_| buf.len()).or_else(|err| {
-            if err.status() == Status::TIMEOUT {
-                Ok(*err.data())
-            } else {
-                Err(err.status())
-            }
-        })?;
-
-        // Write out what we read; if we get any errors, propagate them.
-        if len > 0 {
-            info!("Read data: {:?}", &buf[..len]);
-            serial.write(&buf[..len]).discard_errdata()?;
-        }
-    }
-}
+// Run the echo on the first serial port in the system (the UEFI console will
+// use the first serial port in the system)
+const ECHO_SERIAL_PORT_INDEX: usize = 1;
 
 fn serial_echo(handle: Handle, bt: &BootServices) -> Result<!, uefi::Error<()>> {
-    // Expect (at least) two serial ports on the system; the first will be used
-    // for stdio, and we can use the second one for our echo example. If we don't
-    // seem to have a second serial port, err out with the (arbitrarily chosen)
-    // NO_MAPPING error.
-    let serial_handles = bt.find_handles::<Serial>()?;
-    let serial_handle = serial_handles.get(1).ok_or(Status::NO_MAPPING)?;
-    let serial = bt.open_protocol::<Serial>(
-        OpenProtocolParams {
-            handle: *serial_handle,
-            agent: handle,
-            controller: None,
-        },
-        OpenProtocolAttributes::Exclusive,
-    )?;
-    // Dereference the raw pointer (*mut Serial) we get to the serial interface.
-    // This is safe as according to the UEFI spec for the OpenProtocol call to succeed the
-    // interface must not be null (see Section 7.3 in the UEFI Specification, Version 2.9).
-    let serial = unsafe { &mut *serial.interface.get() };
-
-    echo_loop(serial)
+    let mut serial = serial::Serial::get(handle, bt, ECHO_SERIAL_PORT_INDEX)?;
+    loop {
+        let msg: alloc::string::String = de::from_reader(&mut serial).map_err(|err| match err {
+            de::Error::Io(err) => err,
+            de::Error::Syntax(idx) => {
+                error!("Error reading data at index {}", idx);
+                uefi::Error::from(Status::INVALID_PARAMETER)
+            }
+            de::Error::Semantic(_, err) => {
+                error!("Error parsing cbor data: {:?}", err);
+                uefi::Error::from(Status::INVALID_PARAMETER)
+            }
+            de::Error::RecursionLimitExceeded => uefi::Error::from(Status::ABORTED),
+        })?;
+        ser::into_writer(&msg, &mut serial).map_err(|err| match err {
+            ser::Error::Io(err) => err,
+            ser::Error::Value(msg) => {
+                error!("Error serializing value: {}", msg);
+                uefi::Error::from(Status::INVALID_PARAMETER)
+            }
+        })?;
+    }
 }
 
 #[cfg(test)]
