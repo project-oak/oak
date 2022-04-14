@@ -18,11 +18,10 @@ qemu_flags=(
   '-device' 'isa-debug-exit,iobase=0xf4,iosize=0x04'
 )
 
-# Use kvm if supported, as it is required for certain features (that are gated
-# behind the cargo `kvm` feature flag. Note that systems that support kvm still
-# need to enable the cargo `kvm` feature for this crate in order to include
-# code that requires kvm in the compiled firmware. Ideally this check would
-# check the cargo `kvm` flag itself. However, cargo does not expose this
+# Use kvm if supported, as it is required for certain features. Note
+# that hosts that support kvm still need to enable the `kvm` feature in cargo
+# to include code that requires kvm in the compiled firmware. Ideally this check
+# would rely on the cargo `kvm` flag itself. However, cargo does not expose this
 # information to the runner.
 # Ref: https://doc.rust-lang.org/cargo/reference/environment-variables.html
 if [[ -e "/dev/kvm" ]]; then
