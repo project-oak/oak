@@ -9,7 +9,6 @@ license = "Apache-2.0"
 uefi = { version = "*", features = ["exts"] }
 uefi-services = "*"
 log = { version = "*" }
-anyhow = { version = "*", default-features = false }
 oak_remote_attestation = { path = "../../../remote_attestation/rust" }
 
 [dev-dependencies]

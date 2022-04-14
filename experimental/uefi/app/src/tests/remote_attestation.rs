@@ -25,6 +25,8 @@
 //! and UEFI targets. Due to concerns related to the workspace this is presently
 //! not possible. Ref: https://github.com/project-oak/oak/issues/2654
 
+extern crate alloc;
+
 use alloc::{boxed::Box, sync::Arc};
 use oak_remote_attestation::handshaker::{AttestationBehavior, ClientHandshaker, ServerHandshaker};
 
@@ -59,8 +61,6 @@ fn create_handshakers() -> (ClientHandshaker, ServerHandshaker) {
 
 #[test_case]
 fn test_handshake() {
-    log::info!("henlo");
-
     let (mut client_handshaker, mut server_handshaker) = create_handshakers();
 
     let client_hello = client_handshaker
