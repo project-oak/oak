@@ -25,6 +25,28 @@ jobs:
       - name: Checkout branch
         uses: actions/checkout@v2
 
+      # Download the Ent CLI and configure a remote with write access using a private API key, if
+      # available (GitHub secrets are not available on forks, see
+      # https://docs.github.com/en/actions/security-guides/encrypted-secrets#using-encrypted-secrets-in-a-workflow).
+      # If this step is run from a fork, the API key will be empty, and Ent will work in read-only
+      # mode.
+      # See https://github.com/google/ent
+      - name: Download Ent CLI
+        env:
+          ENT_URL: https://ent-server-62sa4xcfia-ew.a.run.app
+          ENT_DIGEST: sha256:944a34854a2bf9c5d32f3bffa93885ee1c7ef8ab0f4fcc30898a981050ae4233
+        run: |
+          curl ${ENT_URL}/raw/${ENT_DIGEST} > /usr/local/bin/ent
+          chmod +x /usr/local/bin/ent
+          ent
+          cat <<EOF > ~/.config/ent.toml
+          [[remotes]]
+          name = 'ent-store'
+          url = '${ENT_URL}'
+          write = true
+          api_key = '${{ secrets.ENT_API_KEY }}'
+          EOF
+
       - name: Checkout hashes
         uses: actions/checkout@v2
         with:
@@ -57,6 +79,15 @@ jobs:
       - name: Build Functions server
         run: |
           ./scripts/docker_run ./scripts/xtask build-oak-functions-server-variants
+
+      # Upload artifacts to Ent, where they will be retained and publicly accessible by their hash.
+      # This only applies to `push` events, since it needs access to a valid Ent API key (which is
+      # not available on forks / PRs).
+      - name: Upload to Ent
+        if: github.event_name == 'push'
+        run: |
+          ent put ./target/x86_64-unknown-linux-musl/release/oak_functions_loader_base
+          ent put ./target/x86_64-unknown-linux-musl/release/oak_functions_loader_unsafe
 
       # Generate an index of the hashes of the reproducible artifacts.
       - name: Generate Reproducibility Index
