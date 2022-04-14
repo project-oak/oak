@@ -14,4 +14,7 @@
 // limitations under the License.
 //
 
+// Requires advanced CPU features that are unavailable when running using
+// emulation.
+#[cfg(feature = "kvm")]
 mod remote_attestation;

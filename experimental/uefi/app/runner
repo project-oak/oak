@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+
+# Thin shell script invoked as a cargo runner to run the compiled efi firmware
+# in QEMU. Detects if kvm is supported, and sets qemu flags based on that.
+# Instead of this single runner script it would be preferable to use a different
+# runner based on whether the kvm feature is set. However, cargo does not
+# currently allow this. Ref: https://github.com/rust-lang/cargo/issues/8170
+
+readonly TARGET=$1
+
+qemu_flags=(
+  '-nodefaults'
+  '-nographic'
+  '-bios' '/usr/share/OVMF/OVMF_CODE.fd'
+  '-serial' 'file:target/console.log'
+  '-serial' 'stdio'
+  '-machine' 'q35'
+  '-device' 'isa-debug-exit,iobase=0xf4,iosize=0x04'
+)
+
+# If the host supports KVM, allow the image to use it. Ideally this check
+# should be based on whether the kvm cargo feature is available. However, cargo
+# does not expose this information to the runner.
+# Ref: https://doc.rust-lang.org/cargo/reference/environment-variables.html
+if [[ -e "/dev/kvm" ]]; then
+  qemu_flags+=(
+    '-enable-kvm'
+    '-cpu' 'Broadwell-IBRS'
+  )
+fi
+
+qemu-system-x86_64 "${qemu_flags[@]}" -kernel "${TARGET}"
+
