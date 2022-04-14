@@ -14,6 +14,7 @@
 // limitations under the License.
 //
 
-// Uses advanced CPU features not available
+// Uses advanced CPU features not available when using running tests in qemu
+// with CPU emulation.
 #[cfg(not(feature = "support_emulated_runner"))]
 mod remote_attestation;
