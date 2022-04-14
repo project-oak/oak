@@ -12,4 +12,5 @@ log = { version = "*" }
 oak_remote_attestation = { path = "../../../remote_attestation/rust" }
 
 [dev-dependencies]
+anyhow = { version = "*", default-features = false }
 uefi-services = { version = "*", features = ["qemu"] }
