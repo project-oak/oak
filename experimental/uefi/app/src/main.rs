@@ -63,7 +63,6 @@ fn _start(handle: Handle, mut system_table: SystemTable<Boot>) -> Status {
 // use the first serial port in the system)
 const ECHO_SERIAL_PORT_INDEX: usize = 1;
 
-
 fn main(handle: Handle, system_table: &mut SystemTable<Boot>) -> Status {
     use core::fmt::Write;
 
@@ -72,14 +71,15 @@ fn main(handle: Handle, system_table: &mut SystemTable<Boot>) -> Status {
     serial_echo(handle, system_table.boot_services(), ECHO_SERIAL_PORT_INDEX).unwrap();
 }
 
-
-// Opens the index-th serial port on the system and echoes back all frames sent over the serial port.
+// Opens the index-th serial port on the system and echoes back all frames sent over the serial
+// port.
 //
 // Panics if the index-th serial port does not exist.
 //
 // Arguments:
 //    * `handle` - UEFI handle of the agent (eg of the UEFI app)
-//    * `boot_services` - reference to the UEFI Boot Services struct (obtained from the system table)
+//    * `boot_services` - reference to the UEFI Boot Services struct (obtained from the system
+//      table)
 //    * `index` - index of the serial port, zero-based.
 //
 //  Normally does not return, unless an error is raised.
