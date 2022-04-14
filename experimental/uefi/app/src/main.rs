@@ -67,8 +67,12 @@ fn main(handle: Handle, system_table: &mut SystemTable<Boot>) -> Status {
     serial_echo(handle, system_table.boot_services()).unwrap();
 }
 
+// Run the echo on the first serial port in the system (the UEFI console will
+// use the first serial port in the system)
+const ECHO_SERIAL_PORT_INDEX: usize = 1;
+
 fn serial_echo(handle: Handle, bt: &BootServices) -> Result<!, uefi::Error<()>> {
-    let mut serial = serial::Serial::get(handle, bt, 1)?;
+    let mut serial = serial::Serial::get(handle, bt, ECHO_SERIAL_PORT_INDEX)?;
     loop {
         let msg: alloc::string::String = de::from_reader(&mut serial).map_err(|err| match err {
             de::Error::Io(err) => err,
