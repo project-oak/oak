@@ -1,1 +1,1 @@
-initSidebarItems({"fn":[["main",""],["path_exists",""]],"mod":[["qemu",""]],"struct":[["Args",""]]});
+initSidebarItems({"fn":[["main",""],["path_exists",""]],"mod":[["qemu",""],["server",""]],"struct":[["Args",""]]});

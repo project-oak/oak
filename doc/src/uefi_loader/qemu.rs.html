@@ -126,6 +126,10 @@
 <span id="121">121</span>
 <span id="122">122</span>
 <span id="123">123</span>
+<span id="124">124</span>
+<span id="125">125</span>
+<span id="126">126</span>
+<span id="127">127</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2022 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -240,13 +244,17 @@
         })
     }
 
+    <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">wait</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">std::process::ExitStatus</span><span class="op">&gt;</span> {
+        <span class="self">self</span>.<span class="ident">instance</span>.<span class="ident">wait</span>().<span class="kw">await</span>.<span class="ident">map_err</span>(<span class="ident">anyhow::Error::from</span>)
+    }
+
     <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">kill</span>(<span class="kw-2">mut</span> <span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">std::process::ExitStatus</span><span class="op">&gt;</span> {
         <span class="macro">info!</span>(<span class="string">&quot;Cleaning up and shutting down.&quot;</span>);
         <span class="self">self</span>.<span class="ident">console</span>.<span class="ident">shutdown</span>().<span class="kw">await</span><span class="question-mark">?</span>;
         <span class="self">self</span>.<span class="ident">comms</span>.<span class="ident">shutdown</span>().<span class="kw">await</span><span class="question-mark">?</span>;
         <span class="self">self</span>.<span class="ident">qmp</span>.<span class="ident">shutdown</span>().<span class="kw">await</span><span class="question-mark">?</span>;
         <span class="self">self</span>.<span class="ident">instance</span>.<span class="ident">start_kill</span>()<span class="question-mark">?</span>;
-        <span class="self">self</span>.<span class="ident">instance</span>.<span class="ident">wait</span>().<span class="kw">await</span>.<span class="ident">map_err</span>(<span class="ident">anyhow::Error::from</span>)
+        <span class="self">self</span>.<span class="ident">wait</span>().<span class="kw">await</span>
     }
 }
 </code></pre></div>
