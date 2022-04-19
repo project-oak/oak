@@ -1498,7 +1498,7 @@ dependencies = [
  "oak_remote_attestation",
  "oak_utils",
  "prost 0.10.0",
- "prost-types 0.10.0",
+ "prost-types 0.9.0",
  "rand 0.8.5",
  "serde",
  "tokio",
@@ -3151,7 +3151,7 @@ dependencies = [
  "multimap",
  "petgraph",
  "prost 0.10.0",
- "prost-types 0.10.0",
+ "prost-types 0.10.1",
  "regex",
  "tempfile",
  "which",
@@ -3195,9 +3195,9 @@ dependencies = [
 
 [[package]]
 name = "prost-types"
-version = "0.10.0"
+version = "0.10.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "926681c118ae6e512a3ccefd4abbe5521a14f4cc1e207356d4d00c0b7f2006fd"
+checksum = "2d0a014229361011dc8e69c8a1ec6c2e8d0f2af7c91e3ea3f5b2170298461e68"
 dependencies = [
  "bytes",
  "prost 0.10.0",
@@ -4004,7 +4004,7 @@ dependencies = [
  "oak_functions_client",
  "oak_utils",
  "prost 0.10.0",
- "prost-types 0.10.0",
+ "prost-types 0.10.1",
  "tokio",
  "tonic",
 ]
@@ -4027,7 +4027,7 @@ dependencies = [
  "oak_utils",
  "pin-project-lite",
  "prost 0.10.0",
- "prost-types 0.10.0",
+ "prost-types 0.10.1",
  "sync_wrapper",
  "tokio",
  "tonic",
