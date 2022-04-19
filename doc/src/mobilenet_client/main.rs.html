@@ -171,7 +171,7 @@
         .<span class="ident">context</span>(<span class="string">&quot;Could not invoke Oak Functions&quot;</span>)<span class="question-mark">?</span>;
 
     <span class="kw">let</span> <span class="ident">response_body</span> <span class="op">=</span> <span class="ident">std::str::from_utf8</span>(<span class="ident">response</span>.<span class="ident">body</span>().<span class="ident">unwrap</span>()).<span class="ident">unwrap</span>();
-    <span class="macro">assert_eq!</span>(<span class="ident">response_body</span>, <span class="string">&quot;Best result: Some((0.1752324, 789))&quot;</span>);
+    <span class="macro">assert_eq!</span>(<span class="ident">response_body</span>, <span class="string">&quot;Best result: Some((0.17523259, 789))&quot;</span>);
 
     <span class="prelude-val">Ok</span>(())
 }
