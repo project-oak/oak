@@ -29,7 +29,10 @@ if [[ -n "$(ls "${TARGET_DIR}"/*)" ]]; then
   exit 1
 fi
 
-cargo doc --no-deps --target-dir="${TARGET_DIR}"
+# Build all workspace, excluding those require special build flags as these
+# flags cannot currently be specified in the workspace file.
+# Ref: https://github.com/rust-lang/cargo/issues/9451
+cargo doc --no-deps --target-dir="${TARGET_DIR}" --workspace --exclude=uefi-simple
 
 # Remove non-doc artifacts from the target dir.
 rm --recursive --force "${TARGET_DIR}/debug"

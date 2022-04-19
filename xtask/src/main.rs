@@ -57,6 +57,14 @@ use check_build_licenses::CheckBuildLicenses;
 
 static PROCESSES: Lazy<Mutex<Vec<i32>>> = Lazy::new(|| Mutex::new(Vec::new()));
 
+// While these packages are part of the workspace, they cannot be built as
+// usual. This is because they target UEFI. To build them, extra flags need to
+// be passed. The flags cannot currently be specified in the workspace file.
+// Ref: https://github.com/rust-lang/cargo/issues/9451
+// In the interim, they are listed here, and so xtask can invoke them
+// appropriately.
+const NON_STANDARD_CRATES: &[&str] = &["uefi-simple"];
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     std::panic::set_hook(Box::new(|panic_info| {
@@ -731,7 +739,7 @@ fn run_cargo_test(opt: &RunTestsOpt, all_affected_crates: &ModifiedContent) -> S
 fn run_cargo_doc(all_affected_crates: &ModifiedContent) -> Step {
     Step::Multiple {
         name: "cargo doc".to_string(),
-        steps: crate_manifest_files()
+        steps: workspace_manifest_files()
             .map(to_string)
             .filter(|path| all_affected_crates.contains(path))
             .map(|entry| {
@@ -740,7 +748,15 @@ fn run_cargo_doc(all_affected_crates: &ModifiedContent) -> Step {
                 let path = to_string(path).replace("./", "");
                 Step::Single {
                     name: path.clone(),
-                    command: Cmd::new("bash", &["./scripts/check_docs", &path]),
+                    command: Cmd::new(
+                        "bash",
+                        &[
+                            "./scripts/check_docs",
+                            // TODO(#2654): Pass the appropiate flags, instead of filtering
+                            &format!("--exclude={}", NON_STANDARD_CRATES.join(",")),
+                            &path,
+                        ],
+                    ),
                 }
             })
             .collect(),
@@ -801,7 +817,7 @@ fn run_cargo_udeps(scope: &Scope) -> Step {
 
     Step::Multiple {
         name: "cargo udeps".to_string(),
-        steps: workspace_manifest_files()
+        steps: crate_manifest_files()
             .map(to_string)
             .filter(|path| all_affected_crates.contains(path))
             .map(|entry| Step::Single {
@@ -814,7 +830,9 @@ fn run_cargo_udeps(scope: &Scope) -> Step {
                         "--all-targets",
                         // The depinfo backend seems much faster and precise.
                         "--backend=depinfo",
+                        // TODO(#2654): Pass the appropiate flags, instead of filtering
                         "--workspace",
+                        &format!("--exclude={}", NON_STANDARD_CRATES.join(",")),
                     ],
                 ),
             })

@@ -46,9 +46,6 @@ members = [
   "oak_idl",
   "remote_attestation/rust",
   "xtask",
-]
-exclude = [
   "experimental/uefi/app",
-  "oak_functions/loader/fuzz",
-  "third_party/ring"
 ]
+exclude = ["oak_functions/loader/fuzz", "third_party/ring"]

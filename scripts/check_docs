@@ -6,7 +6,9 @@ readonly SCRIPTS_DIR="$(dirname "$0")"
 # shellcheck source=scripts/common
 source "$SCRIPTS_DIR/common"
 
-DOCS_OUT="$(cargo doc --document-private-items --no-deps 2>&1)"
+readonly CARGO_FLAGS=$1
+
+DOCS_OUT="$(cargo doc --document-private-items --no-deps "${CARGO_FLAGS}" 2>&1)"
 
 # `cargo doc` produces warnings for incorrect paths. These warnings cannot be promoted to errors, so we use grep to detect them.
 if grep --ignore-case --quiet --regexp='^warning' <<< "$DOCS_OUT"; then
