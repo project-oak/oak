@@ -12,6 +12,7 @@ members = [
   "experimental/trusted_shuffler/common",
   "experimental/trusted_shuffler/server",
   "experimental/trusted_shuffler/trusted_shuffler",
+  "experimental/uefi/client",
   "experimental/uefi/loader",
   "oak_functions/abi",
   "oak_functions/client/rust",

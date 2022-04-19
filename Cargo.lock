@@ -351,6 +351,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "bmrng"
+version = "0.5.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d54df9073108f1558f90ae6c5bf5ab9c917c4185f5527b280c87a993cbead0ac"
+dependencies = [
+ "futures-core",
+ "tokio",
+]
+
+[[package]]
 name = "bstr"
 version = "0.2.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4640,19 +4650,34 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "56dee185309b50d1f11bfedef0fe6d036842e3fb77413abef29f8f8d1c5d4c1c"
 
 [[package]]
+name = "uefi-client"
+version = "0.1.0"
+dependencies = [
+ "clap 3.1.8",
+ "oak_utils",
+ "prost 0.10.0",
+ "tokio",
+ "tonic",
+]
+
+[[package]]
 name = "uefi-loader"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "bmrng",
  "clap 3.1.8",
  "command-fds",
  "env_logger 0.9.0",
  "futures",
  "log",
+ "oak_utils",
+ "prost 0.10.0",
  "serde",
  "tokio",
  "tokio-serde-cbor",
  "tokio-util 0.6.9",
+ "tonic",
 ]
 
 [[package]]
