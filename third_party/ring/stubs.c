@@ -18,7 +18,7 @@ __imp_RtlVirtualUnwind (
 
 /**
   Stub function for win64 routine used for exceedingly large variables.
-  Inserted Mby inGW, stubbed as it is unavailable in UEFI. Given that this 
+  Inserted nasm, stubbed as it is unavailable in UEFI. Given that this 
   routine is used for very large variable it appears unlikely to ever be
   invoked in deployment.
   Ref: https://github.com/golang/go/issues/6305

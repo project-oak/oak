@@ -14,7 +14,8 @@
 // limitations under the License.
 //
 
-//! Integration Test of Remote Attestation in UEFI
+//! Integration Test of Remote Attestation in UEFI.
+//!
 //! This tests that remote attestion works inside the UEFI app. While the test
 //! code is identical to (a subset of) the tests in the remote attestation crate
 //! they here utilize the qemu runner configured in the UEFI app. This means
