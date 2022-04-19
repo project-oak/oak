@@ -14,12 +14,16 @@
 // limitations under the License.
 //
 
-use crate::{AsyncQueue, RequestIdGenerator, TrustedShuffler};
+use crate::{RequestIdGenerator, TrustedShuffler};
 use assert_matches::assert_matches;
 use std::{collections::HashSet, sync::Arc};
 
 const TEST_ANONYMITY_VALUE: usize = 10;
 const CHANNEL_BUFFER_SIZE: usize = 100;
+
+async fn send_request(request: Vec<u8>) -> Vec<u8> {
+    "Test response".to_string().as_bytes().to_vec()
+}
 
 #[test]
 fn test_id_generator() {
@@ -64,7 +68,7 @@ fn test_id_generator() {
 
 #[tokio::test]
 async fn trusted_shuffler_test() {
-    let trusted_shuffler: TrustedShuffler<String, String> = TrustedShuffler::new(TEST_ANONYMITY_VALUE);
+    let trusted_shuffler= TrustedShuffler::new(TEST_ANONYMITY_VALUE, send_request);
     // let trusted_shuffler_arc = Arc::new(trusted_shuffler);
     // let trusted_shuffler_arc_clone = trusted_shuffler_arc.clone();
     let trusted_shuffler_clone = trusted_shuffler.clone();
@@ -77,7 +81,7 @@ async fn trusted_shuffler_test() {
     });
 
     // trusted_shuffler_arc.invoke("Test request".to_string());
-    trusted_shuffler.invoke("Test request".to_string());
+    trusted_shuffler.invoke("Test request".to_string().as_bytes().to_vec());
 }
 
 // #[tokio::test]
