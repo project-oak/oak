@@ -585,6 +585,9 @@ fn run_clang_format(mode: FormatMode) -> Step {
                     "--recursive",
                     "--exclude",
                     "*/node_modules",
+                    // TODO(#2654): Remove once all crates are part of the same workspace again
+                    "--exclude",
+                    "*/target",
                     "--exclude",
                     "third_party",
                     "oak_functions",
