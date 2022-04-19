@@ -747,6 +747,10 @@ impl Runnable for Cmd {
                 cmd.current_dir(current_dir);
             }
 
+            if opt.logs {
+                eprint!("{:?}", cmd);
+            }
+
             let child = cmd
                 // Close stdin to avoid hanging.
                 .stdin(std::process::Stdio::null())
