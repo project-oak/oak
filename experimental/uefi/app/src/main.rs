@@ -121,3 +121,6 @@ fn test_simple() {
     let x = 1;
     assert_eq!(x, 1);
 }
+
+#[cfg(test)]
+mod tests;

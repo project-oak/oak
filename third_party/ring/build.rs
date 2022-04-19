@@ -55,6 +55,7 @@ const RING_SRCS: &[(&[&str], &str)] = &[
     (&[X86], "crypto/chacha/asm/chacha-x86.pl"),
     (&[X86], "crypto/fipsmodule/modes/asm/ghash-x86.pl"),
 
+    (&[X86_64], "stubs.c"),
     (&[X86_64], "crypto/chacha/asm/chacha-x86_64.pl"),
     (&[X86_64], "crypto/fipsmodule/aes/asm/aesni-x86_64.pl"),
     (&[X86_64], "crypto/fipsmodule/aes/asm/vpaes-x86_64.pl"),
