@@ -14,7 +14,4 @@ oak_logger = { path = "../../logger" }
 prost = "*"
 serde = "*"
 serde_derive = "*"
-# Provide cargo with version 0.15.9-pre, which includes our reproducibility
-# patch: https://github.com/sonos/tract/pull/601. Once 0.15.9 is released, we
-# should revert to loading this crate via crates.io
-tract-tensorflow = { git = 'https://github.com/sonos/tract.git', rev = '124dc4c8d31f01ae73a2ec3cc02c0cf3db7a13d4' }
+tract-tensorflow = "*"
