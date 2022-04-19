@@ -63,7 +63,7 @@ static PROCESSES: Lazy<Mutex<Vec<i32>>> = Lazy::new(|| Mutex::new(Vec::new()));
 // Ref: https://github.com/rust-lang/cargo/issues/9451
 // In the interim, they are listed here, and so xtask can invoke them
 // appropriately.
-const NON_STANDARD_CRATES: &[&str] = &["uefi-simple"];
+const UEFI_CRATES: &[&str] = &["uefi-simple"];
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -739,24 +739,41 @@ fn run_cargo_test(opt: &RunTestsOpt, all_affected_crates: &ModifiedContent) -> S
 fn run_cargo_doc(all_affected_crates: &ModifiedContent) -> Step {
     Step::Multiple {
         name: "cargo doc".to_string(),
-        steps: workspace_manifest_files()
+        steps: crate_manifest_files()
             .map(to_string)
             .filter(|path| all_affected_crates.contains(path))
             .map(|entry| {
                 let mut path = PathBuf::from(entry);
                 path.pop();
                 let path = to_string(path).replace("./", "");
-                Step::Single {
+                Step::Multiple {
                     name: path.clone(),
-                    command: Cmd::new(
-                        "bash",
-                        &[
-                            "./scripts/check_docs",
-                            // TODO(#2654): Pass the appropiate flags, instead of filtering
-                            &format!("--exclude={}", NON_STANDARD_CRATES.join(",")),
-                            &path,
-                        ],
-                    ),
+                    steps: vec![
+                        Step::Single {
+                            name: format!("{}, excluding {:?}", path.clone(), UEFI_CRATES),
+                            command: Cmd::new(
+                                "bash",
+                                &[
+                                    "./scripts/check_docs",
+                                    "--workspace",
+                                    &format!("--exclude={}", UEFI_CRATES.join(",")),
+                                ],
+                            ),
+                        },
+                        Step::Single {
+                            name: format!("{}, only {:?}", path.clone(), UEFI_CRATES),
+                            command: Cmd::new(
+                                "bash",
+                                &[
+                                    "./scripts/check_docs",
+                                    "--target=x86_64-unknown-uefi",
+                                    "-Zbuild-std=core,alloc",
+                                    "-Zbuild-std-features=compiler-builtins-mem",
+                                    &format!("--package={}", UEFI_CRATES.join(",")),
+                                ],
+                            ),
+                        },
+                    ],
                 }
             })
             .collect(),
@@ -832,7 +849,7 @@ fn run_cargo_udeps(scope: &Scope) -> Step {
                         "--backend=depinfo",
                         // TODO(#2654): Pass the appropiate flags, instead of filtering
                         "--workspace",
-                        &format!("--exclude={}", NON_STANDARD_CRATES.join(",")),
+                        &format!("--exclude={}", UEFI_CRATES.join(",")),
                     ],
                 ),
             })
