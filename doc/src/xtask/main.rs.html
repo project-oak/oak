@@ -864,6 +864,9 @@
 <span id="859">859</span>
 <span id="860">860</span>
 <span id="861">861</span>
+<span id="862">862</span>
+<span id="863">863</span>
+<span id="864">864</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -1451,6 +1454,9 @@
                     <span class="string">&quot;--recursive&quot;</span>,
                     <span class="string">&quot;--exclude&quot;</span>,
                     <span class="string">&quot;*/node_modules&quot;</span>,
+                    <span class="comment">// TODO(#2654): Remove once all crates are part of the same workspace again</span>
+                    <span class="string">&quot;--exclude&quot;</span>,
+                    <span class="string">&quot;*/target&quot;</span>,
                     <span class="string">&quot;--exclude&quot;</span>,
                     <span class="string">&quot;third_party&quot;</span>,
                     <span class="string">&quot;oak_functions&quot;</span>,
