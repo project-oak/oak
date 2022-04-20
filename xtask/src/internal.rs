@@ -31,8 +31,6 @@ use tokio::io::{empty, AsyncRead, AsyncReadExt};
 pub struct Opt {
     #[clap(long, help = "do not execute commands")]
     dry_run: bool,
-    #[clap(long, help = "print commands")]
-    commands: bool,
     #[clap(long, help = "show logs of commands")]
     logs: bool,
     #[clap(long, help = "continue execution after error")]
@@ -564,14 +562,12 @@ pub async fn run_step(context: &Context, step: Step, mut run_status: Status) -> 
 
             eprintln!("{}{}", prefix(&run_status), context.header());
 
-            if context.opt.commands || context.opt.dry_run {
-                eprintln!(
-                    "{}{} {}",
-                    prefix(&run_status),
-                    context.margin(),
-                    command.description().blue()
-                );
-            }
+            eprintln!(
+                "{}{} {}",
+                prefix(&run_status),
+                context.margin(),
+                command.description().blue()
+            );
 
             let status = command.run(&context.opt).result().await;
             let end = Instant::now();
@@ -650,14 +646,12 @@ pub async fn run_step(context: &Context, step: Step, mut run_status: Status) -> 
             let context = context.child(&name);
             eprintln!("{}{}", prefix(&run_status), context.header());
 
-            if context.opt.commands || context.opt.dry_run {
-                eprintln!(
-                    "{}{} {}",
-                    prefix(&run_status),
-                    context.margin(),
-                    background.description().blue()
-                );
-            }
+            eprintln!(
+                "{}{} {}",
+                prefix(&run_status),
+                context.margin(),
+                background.description().blue()
+            );
 
             let mut running_background = background.run(&context.opt);
 
