@@ -97,7 +97,7 @@
 };
 
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">EchoImpl</span> {
-    <span class="ident">channel</span>: <span class="ident">UnboundedRequestSender</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+    <span class="ident">channel</span>: <span class="ident">UnboundedRequestSender</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>, <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>,
 }
 
 <span class="attribute">#[<span class="ident">tonic::async_trait</span>]</span>
@@ -122,7 +122,7 @@
 
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">server</span>(
     <span class="ident">addr</span>: <span class="ident">SocketAddr</span>,
-    <span class="ident">channel</span>: <span class="ident">UnboundedRequestSender</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+    <span class="ident">channel</span>: <span class="ident">UnboundedRequestSender</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>, <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>,
 ) -&gt; <span class="kw">impl</span> <span class="ident">Future</span><span class="op">&lt;</span><span class="ident">Output</span> <span class="op">=</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">tonic::transport::Error</span><span class="op">&gt;</span><span class="op">&gt;</span> {
     <span class="kw">let</span> <span class="ident">server_impl</span> <span class="op">=</span> <span class="ident">EchoImpl</span> { <span class="ident">channel</span> };
     <span class="ident">Server::builder</span>()

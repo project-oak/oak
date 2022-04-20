@@ -99,13 +99,13 @@
 <span id="94">94</span>
 </pre><pre class="rust"><code><span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">PartialEq</span>, <span class="ident">::prost::Message</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">EchoRequest</span> {
-    <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">string</span>, <span class="ident">tag</span><span class="op">=</span><span class="string">&quot;1&quot;</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">message</span>: <span class="ident">::prost::alloc::string::String</span>,
+    <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">bytes</span><span class="op">=</span><span class="string">&quot;vec&quot;</span>, <span class="ident">tag</span><span class="op">=</span><span class="string">&quot;1&quot;</span>)]</span>
+    <span class="kw">pub</span> <span class="ident">message</span>: <span class="ident">::prost::alloc::vec::Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
 }
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">PartialEq</span>, <span class="ident">::prost::Message</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">EchoResponse</span> {
-    <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">string</span>, <span class="ident">tag</span><span class="op">=</span><span class="string">&quot;1&quot;</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">message</span>: <span class="ident">::prost::alloc::string::String</span>,
+    <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">bytes</span><span class="op">=</span><span class="string">&quot;vec&quot;</span>, <span class="ident">tag</span><span class="op">=</span><span class="string">&quot;1&quot;</span>)]</span>
+    <span class="kw">pub</span> <span class="ident">message</span>: <span class="ident">::prost::alloc::vec::Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
 }
 <span class="doccomment">/// Generated client implementations.</span>
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">echo_client</span> {
