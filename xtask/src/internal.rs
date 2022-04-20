@@ -394,7 +394,7 @@ impl Status {
 /// annotating the log lines.
 impl std::fmt::Display for Status {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "E:{},O:{},R:{}", self.error, self.ok, self.remaining)
+        write!(f, "✓:{},✗:{},⠇:{}", self.ok, self.error, self.remaining)
     }
 }
 
@@ -423,6 +423,31 @@ impl Context {
 
     fn depth(&self) -> usize {
         self.prefix.len()
+    }
+
+    fn header(&self) -> String {
+        let margin = "│".repeat(self.depth() - 1);
+        format!("{}┌[{}]", margin, self.prefix.last().unwrap().cyan())
+    }
+
+    /// Prints a footer that repeats information from the header.
+    ///
+    /// Useful when footer and header are expected to be far away from each other.
+    fn footer_long(&self) -> String {
+        let margin = "│".repeat(self.depth() - 1);
+        format!("{}└[{}]─▶", margin, self.prefix.last().unwrap().cyan())
+    }
+
+    /// Prints a footer that does not repeat information from the header.
+    ///
+    /// Useful when it follows the header almost immediately.
+    fn footer_short(&self) -> String {
+        let margin = "│".repeat(self.depth() - 1);
+        format!("{}└─▶", margin)
+    }
+
+    fn margin(&self) -> String {
+        "│".repeat(self.depth())
     }
 }
 
@@ -526,47 +551,74 @@ where
 #[async_recursion]
 pub async fn run_step(context: &Context, step: Step, mut run_status: Status) -> StepResult {
     let mut step_result = StepResult::new();
-    let now = chrono::Utc::now();
-    let time_of_day = now.format("%H:%M:%S");
+    fn prefix(run_status: &Status) -> String {
+        let now = chrono::Utc::now();
+        let time_of_day = now.format("%H:%M:%S");
+        format!("[{} {}] ", time_of_day, run_status)
+    }
     match step {
         Step::Single { name, command } => {
             let context = context.child(&name);
 
             let start = Instant::now();
 
+            eprintln!("{}{}", prefix(&run_status), context.header());
+
             if context.opt.commands || context.opt.dry_run {
                 eprintln!(
-                    "[{}; {}]: {} ⊢ [{}] ... ",
-                    time_of_day,
-                    run_status,
-                    context,
+                    "{}{} {}",
+                    prefix(&run_status),
+                    context.margin(),
                     command.description().blue()
                 );
             }
 
-            eprint!("[{}; {}]: {} ⊢ ", time_of_day, run_status, context);
             let status = command.run(&context.opt).result().await;
             let end = Instant::now();
             let elapsed = end.duration_since(start);
-            eprintln!("{} [{:.0?}]", status.value, elapsed);
 
             let step_failed = status.value == StatusResultValue::Error;
             if (step_failed || context.opt.logs) && !status.logs.is_empty() {
-                eprintln!("{} {}", context, "╔════════════════════════".blue());
+                eprintln!(
+                    "{}{} {}",
+                    prefix(&run_status),
+                    context.margin(),
+                    "╔════════════════════════".blue()
+                );
                 for line in status.logs.lines() {
-                    eprintln!("{} {} {}", context, "║".blue(), line);
+                    eprintln!(
+                        "{}{} {} {}",
+                        prefix(&run_status),
+                        context.margin(),
+                        "║".blue(),
+                        line
+                    );
                 }
-                eprintln!("{} {}", context, "╚════════════════════════".blue());
+                eprintln!(
+                    "{}{} {}",
+                    prefix(&run_status),
+                    context.margin(),
+                    "╚════════════════════════".blue()
+                );
                 step_result
                     .failed_steps_prefixes
                     .push(format!("{}", context));
             }
+
+            eprintln!(
+                "{}{}{} {:.0?}",
+                prefix(&run_status),
+                context.footer_short(),
+                status.value,
+                elapsed
+            );
+
             step_result.values.insert(status.value);
             run_status.update(&context, step_failed);
         }
         Step::Multiple { name, steps } => {
             let context = context.child(&name);
-            eprintln!("[{}; {}]: {} {{", time_of_day, run_status, context);
+            eprintln!("{}{}", prefix(&run_status), context.header());
             let start = Instant::now();
             for step in steps {
                 let mut result = run_step(&context, step, run_status.clone()).await;
@@ -583,10 +635,9 @@ pub async fn run_step(context: &Context, step: Step, mut run_status: Status) -> 
             let end = Instant::now();
             let elapsed = end.duration_since(start);
             eprintln!(
-                "[{}; {}]: {} }} ⊢ {} [{:.0?}]",
-                time_of_day,
-                run_status,
-                context,
+                "{}{}{} {:.0?}",
+                prefix(&run_status),
+                context.footer_long(),
                 values_to_string(&step_result.values),
                 elapsed
             );
@@ -597,17 +648,16 @@ pub async fn run_step(context: &Context, step: Step, mut run_status: Status) -> 
             foreground,
         } => {
             let context = context.child(&name);
-            eprintln!("[{}; {}]: {} {{", time_of_day, run_status, context);
+            eprintln!("{}{}", prefix(&run_status), context.header());
 
-            let background_command = if context.opt.commands || context.opt.dry_run {
-                format!("[{}]", background.description().blue())
-            } else {
-                "".to_string()
-            };
-            eprintln!(
-                "[{}; {}]: {} ⊢ {} (background) ...",
-                time_of_day, run_status, context, background_command
-            );
+            if context.opt.commands || context.opt.dry_run {
+                eprintln!(
+                    "{}{} {}",
+                    prefix(&run_status),
+                    context.margin(),
+                    background.description().blue()
+                );
+            }
 
             let mut running_background = background.run(&context.opt);
 
@@ -640,11 +690,17 @@ pub async fn run_step(context: &Context, step: Step, mut run_status: Status) -> 
 
             let logs = format_logs(&stdout, &stderr);
 
-            eprintln!("[{}; {}]: {} ⊢ (waiting)", time_of_day, run_status, context);
+            eprintln!(
+                "{}{} (waiting for completion)",
+                prefix(&run_status),
+                context.margin(),
+            );
             let background_status = running_background.result().await;
             eprintln!(
-                "[{}; {}]: {} ⊢ (finished) {}",
-                time_of_day, run_status, context, background_status.value
+                "{}{}{}",
+                prefix(&run_status),
+                context.footer_long(),
+                background_status.value,
             );
 
             if (background_status.value == StatusResultValue::Error
