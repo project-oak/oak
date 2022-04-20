@@ -31,8 +31,6 @@ use tokio::io::{empty, AsyncRead, AsyncReadExt};
 pub struct Opt {
     #[clap(long, help = "do not execute commands")]
     dry_run: bool,
-    #[clap(long, help = "print commands")]
-    commands: bool,
     #[clap(long, help = "show logs of commands")]
     logs: bool,
     #[clap(long, help = "continue execution after error")]
@@ -534,15 +532,13 @@ pub async fn run_step(context: &Context, step: Step, mut run_status: Status) -> 
 
             let start = Instant::now();
 
-            if context.opt.commands || context.opt.dry_run {
-                eprintln!(
-                    "[{}; {}]: {} ⊢ [{}] ... ",
-                    time_of_day,
-                    run_status,
-                    context,
-                    command.description().blue()
-                );
-            }
+            eprintln!(
+                "[{}; {}]: {} ⊢ [{}] ... ",
+                time_of_day,
+                run_status,
+                context,
+                command.description().blue()
+            );
 
             eprint!("[{}; {}]: {} ⊢ ", time_of_day, run_status, context);
             let status = command.run(&context.opt).result().await;
@@ -599,11 +595,7 @@ pub async fn run_step(context: &Context, step: Step, mut run_status: Status) -> 
             let context = context.child(&name);
             eprintln!("[{}; {}]: {} {{", time_of_day, run_status, context);
 
-            let background_command = if context.opt.commands || context.opt.dry_run {
-                format!("[{}]", background.description().blue())
-            } else {
-                "".to_string()
-            };
+            let background_command = format!("[{}]", background.description().blue());
             eprintln!(
                 "[{}; {}]: {} ⊢ {} (background) ...",
                 time_of_day, run_status, context, background_command

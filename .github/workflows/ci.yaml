@@ -81,7 +81,7 @@ jobs:
 
       - name: Run command
         run: |
-          ./scripts/docker_run ./scripts/xtask --commands --scope=all ${{ matrix.cmd }}
+          ./scripts/docker_run ./scripts/xtask --scope=all ${{ matrix.cmd }}
           df --human-readable
 
       - name: Generate root CA certs
