@@ -92,11 +92,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Use a bmrng channel for serial communication. The good thing about spawning a separate
     // task for the serial communication is that it serializes (no pun intended) the communication,
     // as right now we don't have any mechanisms to track multiple requests in flight.
-    let (tx, mut rx) = bmrng::unbounded_channel::<String, anyhow::Result<String>>();
+    let (tx, mut rx) = bmrng::unbounded_channel::<Vec<u8>, anyhow::Result<Vec<u8>>>();
 
     tokio::spawn(async move {
         // Set up the CBOR codec to handle the comms.
-        let codec: Codec<String, String> = Codec::new();
+        let codec: Codec<Vec<u8>, Vec<u8>> = Codec::new();
         let mut channel = codec.framed(comms);
         while let Ok((input, responder)) = rx.recv().await {
             responder

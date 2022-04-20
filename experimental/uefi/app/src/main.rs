@@ -86,7 +86,7 @@ fn main(handle: Handle, system_table: &mut SystemTable<Boot>) -> Status {
 fn serial_echo(handle: Handle, bt: &BootServices, index: usize) -> Result<!, uefi::Error<()>> {
     let mut serial = serial::Serial::get(handle, bt, index)?;
     loop {
-        let msg: alloc::string::String = de::from_reader(&mut serial).map_err(|err| match err {
+        let msg: alloc::vec::Vec<u8> = de::from_reader(&mut serial).map_err(|err| match err {
             de::Error::Io(err) => err,
             de::Error::Syntax(idx) => {
                 error!("Error reading data at index {}", idx);

@@ -29,7 +29,7 @@ use proto::{
 };
 
 pub struct EchoImpl {
-    channel: UnboundedRequestSender<String, anyhow::Result<String>>,
+    channel: UnboundedRequestSender<Vec<u8>, anyhow::Result<Vec<u8>>>,
 }
 
 #[tonic::async_trait]
@@ -54,7 +54,7 @@ impl Echo for EchoImpl {
 
 pub fn server(
     addr: SocketAddr,
-    channel: UnboundedRequestSender<String, anyhow::Result<String>>,
+    channel: UnboundedRequestSender<Vec<u8>, anyhow::Result<Vec<u8>>>,
 ) -> impl Future<Output = Result<(), tonic::transport::Error>> {
     let server_impl = EchoImpl { channel };
     Server::builder()
