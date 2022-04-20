@@ -40,10 +40,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     for line in stdin().lock().lines() {
         let request = Request::new(EchoRequest {
-            message: line.unwrap(),
+            message: line.unwrap().as_bytes().to_vec(),
         });
         let response = client.echo(request).await?;
-        println!("Response: {:?}", response);
+        println!(
+            "Response: {:?}",
+            core::str::from_utf8(&response.into_inner().message)
+        );
     }
 
     println!("Hello, world!");
