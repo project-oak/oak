@@ -1,0 +1,11 @@
+{
+    "tests": [
+        {
+            "test_name": "run",
+            "command": "pytest tests/test_run_reference_vmm.py",
+            "platform": [
+                "x86_64"
+            ]
+        }
+    ]
+}

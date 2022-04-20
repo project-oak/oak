@@ -33,6 +33,8 @@ include = [
     "benches/*.rs",
     "build.rs",
 
+    "stubs.c",
+
     "crypto/chacha/asm/chacha-armv4.pl",
     "crypto/chacha/asm/chacha-armv8.pl",
     "crypto/chacha/asm/chacha-x86.pl",

@@ -20,14 +20,12 @@ use clap::Parser;
 use futures::{stream::StreamExt, SinkExt};
 use log::info;
 use qemu::{Qemu, QemuParams};
-use tokio::{
-    io::{self, AsyncReadExt},
-    net::UnixStream,
-    signal,
-};
+use tokio::{io::AsyncReadExt, net::UnixStream, signal};
 use tokio_serde_cbor::Codec;
 use tokio_util::codec::Decoder;
+
 mod qemu;
+mod server;
 
 #[derive(Parser, Debug)]
 struct Args {
@@ -60,7 +58,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let (console_qemu, console) = UnixStream::pair()?;
     let (comms_qemu, mut comms) = UnixStream::pair()?;
 
-    let qemu = Qemu::start(QemuParams {
+    let mut qemu = Qemu::start(QemuParams {
         binary: cli.qemu.as_path(),
         firmware: cli.ovmf.as_path(),
         app: cli.uefi_app.as_path(),
@@ -91,39 +89,45 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
     info!("Leading junk on comms: {:?}", std::str::from_utf8(&junk));
 
-    // Set up the CBOR codec to handle the comms.
-    let codec: Codec<std::string::String, std::string::String> = Codec::new();
-    let (mut sink, mut stream) = codec.framed(comms).split();
+    // Use a bmrng channel for serial communication. The good thing about spawning a separate
+    // task for the serial communication is that it serializes (no pun intended) the communication,
+    // as right now we don't have any mechanisms to track multiple requests in flight.
+    let (tx, mut rx) = bmrng::unbounded_channel::<String, anyhow::Result<String>>();
 
-    // Bit hacky, but it's only temporary and turns out console I/O is complex.
     tokio::spawn(async move {
-        loop {
-            if let Some(result) = stream.next().await {
-                match result {
-                    Ok(msg) => info!("rx: {:?}", msg),
-                    Err(e) => {
-                        info!("recv error: {:?}", e);
+        // Set up the CBOR codec to handle the comms.
+        let codec: Codec<String, String> = Codec::new();
+        let mut channel = codec.framed(comms);
+        while let Ok((input, responder)) = rx.recv().await {
+            responder
+                .respond({
+                    if let Err(err) = channel.send(input).await {
+                        Err(anyhow::Error::from(err))
+                    } else {
+                        // TODO(#2726): Sometimes next() gives us a None. Figure out what's going on
+                        // in there.
+                        let mut response;
+                        loop {
+                            response = channel.next().await;
+                            if response.is_some() {
+                                break;
+                            }
+                        }
+                        response.unwrap().map_err(anyhow::Error::from)
                     }
-                };
-            }
-        }
-    });
-    tokio::spawn(async move {
-        let mut buf = [0; 1024];
-        loop {
-            let result = io::stdin().read(&mut buf).await.unwrap();
-            if result == 0 {
-                break;
-            } else {
-                let msg = std::str::from_utf8(&buf[..result]).unwrap().to_string();
-                info!("tx: {:?}", &msg);
-                sink.send(msg).await.unwrap();
-            }
+                })
+                .unwrap();
         }
     });
 
-    signal::ctrl_c().await?;
+    let server_future = server::server("127.0.0.1:8000".parse()?, tx);
 
+    // Wait until something dies or we get a signal to terminate.
+    tokio::select! {
+        _ = signal::ctrl_c() => {},
+        _ = server_future => {},
+        _ = qemu.wait() => {},
+    }
     // Clean up.
     qemu.kill().await?;
     Ok(())

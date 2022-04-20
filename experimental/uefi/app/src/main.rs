@@ -39,7 +39,7 @@ mod serial;
 // there's exactly one function with the `#[entry]` attribute in the
 // dependency graph.
 #[entry]
-fn _start(_handle: Handle, mut system_table: SystemTable<Boot>) -> Status {
+fn _start(handle: Handle, mut system_table: SystemTable<Boot>) -> Status {
     uefi_services::init(&mut system_table).unwrap();
 
     // As we're not relying on the normal Rust test harness, we need to call
@@ -49,7 +49,7 @@ fn _start(_handle: Handle, mut system_table: SystemTable<Boot>) -> Status {
         test_main();
         Status::SUCCESS
     } else {
-        main(_handle, &mut system_table)
+        main(handle, &mut system_table)
     };
 
     // After we're done running our code, we also tell the UEFI runtime to shut
@@ -59,20 +59,32 @@ fn _start(_handle: Handle, mut system_table: SystemTable<Boot>) -> Status {
         .reset(ResetType::Shutdown, status, None);
 }
 
+// Run the echo on the first serial port in the system (the UEFI console will
+// use the first serial port in the system)
+const ECHO_SERIAL_PORT_INDEX: usize = 1;
+
 fn main(handle: Handle, system_table: &mut SystemTable<Boot>) -> Status {
     use core::fmt::Write;
 
     writeln!(system_table.stdout(), "Hello World!").unwrap();
 
-    serial_echo(handle, system_table.boot_services()).unwrap();
+    serial_echo(handle, system_table.boot_services(), ECHO_SERIAL_PORT_INDEX).unwrap();
 }
 
-// Run the echo on the first serial port in the system (the UEFI console will
-// use the first serial port in the system)
-const ECHO_SERIAL_PORT_INDEX: usize = 1;
-
-fn serial_echo(handle: Handle, bt: &BootServices) -> Result<!, uefi::Error<()>> {
-    let mut serial = serial::Serial::get(handle, bt, ECHO_SERIAL_PORT_INDEX)?;
+// Opens the index-th serial port on the system and echoes back all frames sent over the serial
+// port.
+//
+// Panics if the index-th serial port does not exist.
+//
+// Arguments:
+//    * `handle` - UEFI handle of the agent (eg of the UEFI app)
+//    * `boot_services` - reference to the UEFI Boot Services struct (obtained from the system
+//      table)
+//    * `index` - index of the serial port, zero-based.
+//
+//  Normally does not return, unless an error is raised.
+fn serial_echo(handle: Handle, bt: &BootServices, index: usize) -> Result<!, uefi::Error<()>> {
+    let mut serial = serial::Serial::get(handle, bt, index)?;
     loop {
         let msg: alloc::string::String = de::from_reader(&mut serial).map_err(|err| match err {
             de::Error::Io(err) => err,
@@ -109,3 +121,6 @@ fn test_simple() {
     let x = 1;
     assert_eq!(x, 1);
 }
+
+#[cfg(test)]
+mod tests;

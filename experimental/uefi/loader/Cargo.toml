@@ -7,11 +7,13 @@ license = "Apache-2.0"
 
 [dependencies]
 anyhow = "*"
+bmrng = "*"
 clap = { version = "*", features = ["derive"] }
 command-fds = { version = "*", features = ["tokio"] }
 futures = "*"
 log = "*"
 env_logger = "*"
+prost = "*"
 serde = "*"
 tokio = { version = "*", features = [
   "io-std",
@@ -21,7 +23,12 @@ tokio = { version = "*", features = [
   "net",
   "process",
   "signal",
+  "sync",
 ] }
 tokio-serde-cbor = "*"
 # fixed to 0.6 because of tokio-serde-cbor
 tokio-util = { version = "~0.6", features = ["codec"] }
+tonic = "*"
+
+[build-dependencies]
+oak_utils = { path = "../../../oak_utils" }
