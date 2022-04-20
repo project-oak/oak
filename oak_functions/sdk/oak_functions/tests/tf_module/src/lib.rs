@@ -24,9 +24,9 @@ pub extern "C" fn main() {
     // Read the input_vector from the request.
     let input_vector = oak_functions::read_request().expect("Fail to read request body.");
 
-    let transport = oak_functions::tf_model_infer(&input_vector);
-    assert!(transport.is_ok());
-    let result = transport.unwrap();
+    let outer_result = oak_functions::tf_model_infer(&input_vector);
+    assert!(outer_result.is_ok());
+    let result = outer_result.unwrap();
     assert!(result.is_err());
     matches!(
         result.unwrap_err(),
