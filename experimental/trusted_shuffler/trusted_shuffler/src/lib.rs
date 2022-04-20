@@ -97,8 +97,11 @@ where
 //     R: Send + Sync + Clone + Sized + 'static,
 //     S: Send + Sync + Clone + Sized + 'static,
 //     F: Send + Sync + Clone + 'static + FnOnce(R) -> dyn Future<Output = S>,
-    F: Send + Sync + Clone + 'static + FnOnce(Request) -> O,
-    O: Future<Output = Response> + std::marker::Send,
+    F: Send + Sync + 'static + FnOnce(Request) -> O,
+    O: Send + Sync + Future<Output = Response>,
+    // F: Send + Sync + Clone + 'static + FnOnce(Request) -> O,
+    // O: Send + Sync + Clone + Future<Output = Response>,
+    // O: Future<Output = Response> + std::marker::Send,
     // F: Send + Sync + Clone + 'static + FnOnce(Request) -> impl Future<Output = Response>,
 {
     // Value k that represents k-anonymity.
@@ -139,7 +142,7 @@ where
 //     R: Send + Sync + Clone + Sized + 'static,
 //     S: Send + Sync + Clone + Sized + 'static,
     F: Send + Sync + Clone + 'static + FnOnce(Request) -> O,
-    O: Send + Sync + Future<Output = Response>,
+    O: Send + Sync + Clone + Future<Output = Response>,
     // F: Send + Sync + Clone + 'static + FnOnce(Request) -> impl Future<Output = Response>,
 {
     pub fn new(anonymity_value: usize, request_sender: F) -> Self {
@@ -225,24 +228,24 @@ where
         Ok(())
     }
 
-    pub fn shuffle_forward(&self, batch: Vec<Message>) {
+    fn shuffle_forward(&self, mut batch: Vec<Message>) {
         batch.shuffle(&mut thread_rng());
 
         for request in batch.drain(..) {
             let request_sender = self.request_sender.clone();
-            let join_handle = tokio::spawn(async move {
+            tokio::spawn(async move {
                 let response = (request_sender)(request.data).await;
             });
         }
     }
 
-    pub fn shuffle_backward(&self, batch: Vec<Message>) {
+    fn shuffle_backward(&self, mut batch: Vec<Message>) {
         batch.shuffle(&mut thread_rng());
 
-        let request_promise_map = self.request_promise_map.lock().unwrap();
+        let mut request_promise_map = self.request_promise_map.lock().unwrap();
         for response in batch.drain(..) {
             if let Some(promise) = request_promise_map.remove(&response.id) {
-                let join_handle = tokio::spawn(async move {
+                tokio::spawn(async move {
                     promise.send(response.data);
                 });
             }

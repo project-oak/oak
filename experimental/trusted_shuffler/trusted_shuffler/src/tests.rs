@@ -15,7 +15,7 @@
 //
 
 use crate::{RequestIdGenerator, TrustedShuffler};
-use assert_matches::assert_matches;
+// use assert_matches::assert_matches;
 use std::{collections::HashSet, sync::Arc};
 
 const TEST_ANONYMITY_VALUE: usize = 10;
