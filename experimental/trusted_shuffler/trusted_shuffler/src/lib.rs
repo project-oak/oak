@@ -97,8 +97,12 @@ where
 //     R: Send + Sync + Clone + Sized + 'static,
 //     S: Send + Sync + Clone + Sized + 'static,
 //     F: Send + Sync + Clone + 'static + FnOnce(R) -> dyn Future<Output = S>,
+    
     F: Send + Sync + 'static + FnOnce(Request) -> O,
     O: Send + Sync + Future<Output = Response>,
+    // F: 'static + fn(Request) -> O,
+    // O: Send + Sync + Future<Output = Response>,
+
     // F: Send + Sync + Clone + 'static + FnOnce(Request) -> O,
     // O: Send + Sync + Clone + Future<Output = Response>,
     // O: Future<Output = Response> + std::marker::Send,
@@ -142,7 +146,7 @@ where
 //     R: Send + Sync + Clone + Sized + 'static,
 //     S: Send + Sync + Clone + Sized + 'static,
     F: Send + Sync + Clone + 'static + FnOnce(Request) -> O,
-    O: Send + Sync + Clone + Future<Output = Response>,
+    O: Send + Sync + Future<Output = Response>,
     // F: Send + Sync + Clone + 'static + FnOnce(Request) -> impl Future<Output = Response>,
 {
     pub fn new(anonymity_value: usize, request_sender: F) -> Self {

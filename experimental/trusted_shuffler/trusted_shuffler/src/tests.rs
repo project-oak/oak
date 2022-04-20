@@ -69,19 +69,20 @@ fn test_id_generator() {
 #[tokio::test]
 async fn trusted_shuffler_test() {
     let trusted_shuffler= TrustedShuffler::new(TEST_ANONYMITY_VALUE, send_request);
-    // let trusted_shuffler_arc = Arc::new(trusted_shuffler);
-    // let trusted_shuffler_arc_clone = trusted_shuffler_arc.clone();
-    let trusted_shuffler_clone = trusted_shuffler.clone();
+    let trusted_shuffler_arc = Arc::new(trusted_shuffler);
+    let trusted_shuffler_arc_clone = trusted_shuffler_arc.clone();
+    // let trusted_shuffler_clone = trusted_shuffler.clone();
 
-    let join_handle = tokio::spawn(async move {
+    tokio::spawn(async move {
     // let background = test_utils::background(|_| async move {
         // let trusted_shuffler_arc_clone = &mut *trusted_shuffler_arc_clone;
         // let request = trusted_shuffler_arc_clone.pop_request().await;
-        let request = trusted_shuffler_clone.pop_request().await;
+        // let request = trusted_shuffler_clone.pop_request().await;
+        trusted_shuffler_arc_clone.invoke("Test request 1".to_string().as_bytes().to_vec());
     });
 
-    // trusted_shuffler_arc.invoke("Test request".to_string());
-    trusted_shuffler.invoke("Test request".to_string().as_bytes().to_vec());
+    trusted_shuffler_arc.invoke("Test request 2".to_string().as_bytes().to_vec());
+    // trusted_shuffler.invoke("Test request".to_string().as_bytes().to_vec());
 }
 
 // #[tokio::test]
