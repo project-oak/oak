@@ -47,7 +47,7 @@ impl OakApiNativeExtension for TensorFlowModel<Logger> {
         });
         let result = inference.map(|inference| inference.encode_to_vec());
         let response = bincode::serialize(&TfModelInferResponse { result })
-            .expect("Fail to serialize tf response.");
+            .expect("Failed to serialize TF response.");
 
         Ok(response)
     }

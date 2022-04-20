@@ -159,12 +159,14 @@ pub fn tf_model_infer(
         // We read and interpret the response.
         let response = from_alloc_buffer(inference_ptr, inference_len);
         let response: TfModelInferResponse =
-            bincode::deserialize(&response).expect("Fail to deserialize tf response.");
+            bincode::deserialize(&response).expect("Failed to deserialize TF response.");
 
         // We decode the inference bytes.
         let tf_result = response.result.and_then(|inference_bytes| {
-            Inference::decode(&*inference_bytes)
-                .map_err(|_| TfModelInferError::ErrorDecodingInference)
+            Inference::decode(&*inference_bytes).map_err(|err| {
+                log!("Failed to decode: {}", err);
+                TfModelInferError::ErrorDecodingInference
+            })
         });
 
         Ok(tf_result)
