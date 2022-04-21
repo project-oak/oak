@@ -69,7 +69,7 @@ impl OakApiNativeExtension for TensorFlowModel<Logger> {
         Ok(())
     }
 
-    fn get_handle(&mut self) -> ExtensionHandle {
+    fn get_handle(&self) -> ExtensionHandle {
         ExtensionHandle::TfHandle
     }
 }

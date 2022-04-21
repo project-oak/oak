@@ -100,7 +100,7 @@ impl OakApiNativeExtension for PrivateMetricsExtension<Logger> {
         self.publish_metrics()
     }
 
-    fn get_handle(&mut self) -> ExtensionHandle {
+    fn get_handle(&self) -> ExtensionHandle {
         ExtensionHandle::MetricsHandle
     }
 }
