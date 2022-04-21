@@ -2694,8 +2694,6 @@ dependencies = [
  "assert_matches",
  "bytes",
  "log",
- "lru",
- "oak_utils",
  "prost 0.10.1",
  "prost-build 0.10.1",
  "quickcheck",
