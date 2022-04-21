@@ -134,47 +134,24 @@ pub fn write_log_message<T: AsRef<str>>(message: T) -> Result<(), OakStatus> {
     result_from_status(status as i32, ())
 }
 
-/// Uses the TensorFlow model to perform inference for the given input.
-///
-/// See [`tf_model_infer`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#tf_model_infer).
+/// Performs inference for the given input vector with the TensorFlow model specified in the Oak
+/// Functions runtime.
 #[cfg(feature = "oak-tf")]
 pub fn tf_model_infer(
     input_vector: &[u8],
 ) -> Result<Result<Inference, TfModelInferError>, OakStatus> {
     use prost::Message;
-
-    let mut inference_ptr: *mut u8 = std::ptr::null_mut();
-    let mut inference_len: usize = 0;
-    let status_code = unsafe {
-        oak_functions_abi::invoke(
-            oak_functions_abi::ExtensionHandle::TfHandle,
-            input_vector.as_ptr(),
-            input_vector.len(),
-            &mut inference_ptr,
-            &mut inference_len,
-        )
-    };
-    let status = OakStatus::from_i32(status_code as i32).ok_or(OakStatus::ErrInternal)?;
-
-    if let OakStatus::Ok = status {
-        // We read and interpret the response.
-        let response = from_alloc_buffer(inference_ptr, inference_len);
-        let response: TfModelInferResponse =
-            bincode::deserialize(&response).expect("Failed to deserialize TF response.");
-
-        // We decode the inference bytes.
-        let tf_result = response.result.and_then(|inference_bytes| {
-            Inference::decode(&*inference_bytes).map_err(|err| {
-                log!("Failed to decode: {}", err);
-                TfModelInferError::ErrorDecodingInference
-            })
-        });
-
-        Ok(tf_result)
-    } else {
-        // We pass the OakStatus as an error on.
-        Err(status)
-    }
+    let response = invoke(oak_functions_abi::ExtensionHandle::TfHandle, input_vector)?;
+    let response: TfModelInferResponse =
+        bincode::deserialize(&response).expect("Failed to deserialize TF response.");
+    // We decode the inference bytes.
+    let tf_result = response.result.and_then(|inference_bytes| {
+        Inference::decode(&*inference_bytes).map_err(|err| {
+            log!("Failed to decode: {}", err);
+            TfModelInferError::ErrorDecodingInference
+        })
+    });
+    Ok(tf_result)
 }
 
 // Call the testing extension from the SDK.

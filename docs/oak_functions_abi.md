@@ -179,33 +179,6 @@ corresponding size to `value_len_ptr`. The Oak Functions runtime returns an
 In particular, if no item with the given key is found, the status is
 `ERR_STORAGE_ITEM_NOT_FOUND`.
 
-### `tf_model_infer`
-
-- `param[0]: input_ptr: i32`: address of the input buffer.
-- `param[1]: input_len: i32`: number of bytes of the input buffer.
-- `param[2]: inference_ptr_ptr: i32`: address where the Oak Functions runtime
-  will write the address of the newly allocated inference buffer.
-- `param[3]: inference_len_ptr: i32`: address where the Oak Functions runtime
-  will write the number of bytes of the newly allocated inference buffer (as a
-  little-endian u32).
-- `result[0]: i32`:
-  [`OakStatus`](https://github.com/project-oak/oak/blob/main/oak_functions/proto/abi.proto)
-  of the invocation
-
-The Oak Functions WebAssembly module invokes `tf_model_infer` to run the
-specified TensorFlow model for the given input. The Oak Functions runtime reads
-the input from the input buffer `input_ptr` with the corresponding number of
-bytes `input_len` from the WebAssembly module's memory. Then the Oak Functions
-runtime computes the inference vector and uses `alloc` to allocate a buffer of
-the exact size to contain the inference vector. Next the Oak Functions runtime
-writes the inference in the allocated buffer and the address of the allocated
-buffer to `inference_ptr_ptr` together with the address of the corresponding
-size to `inference_len_ptr`. The Oak Functions runtime returns an
-[`OakStatus`](https://github.com/project-oak/oak/blob/main/oak_functions/proto/abi.proto).
-
-`tf_model_infer` is experimental, and is only available when the `oak-tf`
-feature is enabled.
-
 ### `invoke`
 
 - `param[0]: handle: i32`:
@@ -233,3 +206,13 @@ the Oak Functions runtime writes the address of the allocated buffer to
 `response_ptr_ptr` together with the address of the corresponding size to
 `response_len_ptr`. The Oak Functions runtime returns an
 [`OakStatus`](https://github.com/project-oak/oak/blob/main/oak_functions/proto/abi.proto).
+
+The following
+[`ExtensionHandles`](https://github.com/project-oak/oak/blob/main/oak_functions/proto/abi.proto)
+are currently supported:
+
+- `TfHandle`: The Oak Functions runtime runs the TensorFlow model specified in
+  the Oak Functions runtime configuration on the given input vector. The
+  extesion returns an error if either the input vector was malformed or the
+  decoding of the resulting inference failed. This is experimental, and only
+  available when the `oak-tf` feature is enabled.
