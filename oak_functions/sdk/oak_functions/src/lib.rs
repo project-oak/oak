@@ -154,7 +154,8 @@ pub fn tf_model_infer(
     Ok(tf_result)
 }
 
-// Call the testing extension from the SDK.
+/// Calls the testing extension with the given request. The response is directly passed on, as it is
+/// decoded by the caller.
 pub fn testing(request: &[u8]) -> Result<Vec<u8>, OakStatus> {
     invoke(oak_functions_abi::ExtensionHandle::TestingHandle, request)
 }
