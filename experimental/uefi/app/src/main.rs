@@ -28,9 +28,11 @@
 extern crate log;
 extern crate alloc;
 
+use crate::remote_attestation::AttestationHandler;
 use ciborium::{de, ser};
 use uefi::{prelude::*, table::runtime::ResetType};
 
+mod remote_attestation;
 mod serial;
 
 // The main entry point of the UEFI application.
@@ -71,6 +73,8 @@ fn main(handle: Handle, system_table: &mut SystemTable<Boot>) -> Status {
     serial_echo(handle, system_table.boot_services(), ECHO_SERIAL_PORT_INDEX).unwrap();
 }
 
+const MOCK_SESSION_ID: [u8; 8] = [0; 8];
+
 // Opens the index-th serial port on the system and echoes back all frames sent over the serial
 // port.
 //
@@ -85,6 +89,7 @@ fn main(handle: Handle, system_table: &mut SystemTable<Boot>) -> Status {
 //  Normally does not return, unless an error is raised.
 fn serial_echo(handle: Handle, bt: &BootServices, index: usize) -> Result<!, uefi::Error<()>> {
     let mut serial = serial::Serial::get(handle, bt, index)?;
+    let attestation_handler = &mut AttestationHandler::create(|v| v);
     loop {
         let msg: alloc::vec::Vec<u8> = de::from_reader(&mut serial).map_err(|err| match err {
             de::Error::Io(err) => err,
@@ -98,7 +103,8 @@ fn serial_echo(handle: Handle, bt: &BootServices, index: usize) -> Result<!, uef
             }
             de::Error::RecursionLimitExceeded => uefi::Error::from(Status::ABORTED),
         })?;
-        ser::into_writer(&msg, &mut serial).map_err(|err| match err {
+        let response = attestation_handler.message(MOCK_SESSION_ID, msg);
+        ser::into_writer(&response, &mut serial).map_err(|err| match err {
             ser::Error::Io(err) => err,
             ser::Error::Value(msg) => {
                 error!("Error serializing value: {}", msg);
