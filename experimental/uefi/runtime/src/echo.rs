@@ -29,10 +29,12 @@ pub enum Error<T> {
 }
 
 // Echoes all input on the interface back out.
-pub fn echo<I, E>(mut interface: I) -> Result<!, Error<E>> where
-   E: core::fmt::Debug,
-   I: ciborium_io::Write<Error = E>,
-   I: ciborium_io::Read<Error = E>  {
+pub fn echo<I, E>(mut interface: I) -> Result<!, Error<E>>
+where
+    E: core::fmt::Debug,
+    I: ciborium_io::Write<Error = E>,
+    I: ciborium_io::Read<Error = E>,
+{
     loop {
         let msg: String = de::from_reader(&mut interface).map_err(Error::De)?;
         ser::into_writer(&msg, &mut interface).map_err(Error::Ser)?;
