@@ -12,7 +12,6 @@ support_emulated_runner = []
 [dependencies]
 uefi = { version = "*", features = ["exts"] }
 uefi-services = "*"
-ciborium-io = "*"
 oak_remote_attestation = { path = "../../../remote_attestation/rust" }
 runtime = { path = "../runtime" }
 

@@ -28,13 +28,38 @@ pub enum Error<T> {
     Ser(ciborium::ser::Error<T>),
 }
 
+/// Basic hardware abstraction layer for sending data.
+pub trait Interface {
+    type Error;
+
+    fn send(&mut self, data: &[u8]) -> Result<(), Self::Error>;
+    fn recv(&mut self, data: &mut [u8]) -> Result<(), Self::Error>;
+}
+
+impl<E> ciborium_io::Write for &mut dyn Interface<Error = E> {
+    type Error = E;
+
+    fn write_all(&mut self, data: &[u8]) -> Result<(), Self::Error> {
+        self.send(data)
+    }
+
+    fn flush(&mut self) -> Result<(), Self::Error> {
+        Ok(())
+    }
+}
+
+impl<E> ciborium_io::Read for &mut dyn Interface<Error = E> {
+    type Error = E;
+
+    fn read_exact(&mut self, data: &mut [u8]) -> Result<(), Self::Error> {
+        self.recv(data)
+    }
+}
+
 // Echoes all input on the interface back out.
-pub fn echo<I, E>(mut interface: I) -> Result<!, Error<E>>
-where
-    E: core::fmt::Debug,
-    I: ciborium_io::Write<Error = E>,
-    I: ciborium_io::Read<Error = E>,
-{
+pub fn echo<E: core::fmt::Debug>(
+    mut interface: &mut dyn Interface<Error = E>,
+) -> Result<!, Error<E>> {
     loop {
         let msg: Vec<u8> = de::from_reader(&mut interface).map_err(Error::De)?;
         ser::into_writer(&msg, &mut interface).map_err(Error::Ser)?;
