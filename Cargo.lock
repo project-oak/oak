@@ -1504,6 +1504,7 @@ dependencies = [
  "anyhow",
  "oak_functions_abi",
  "oak_remote_attestation",
+ "oak_remote_attestation_sessions",
  "oak_utils",
  "prost 0.10.1",
  "prost-types 0.10.1",
@@ -2694,13 +2695,20 @@ dependencies = [
  "assert_matches",
  "bytes",
  "log",
- "lru",
- "oak_utils",
  "prost 0.10.1",
  "prost-build 0.10.1",
  "quickcheck",
  "quickcheck_macros",
  "ring 0.17.0-not-released-yet",
+]
+
+[[package]]
+name = "oak_remote_attestation_sessions"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "lru",
+ "oak_remote_attestation",
 ]
 
 [[package]]

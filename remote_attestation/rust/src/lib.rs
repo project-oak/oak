@@ -27,6 +27,5 @@ pub mod crypto;
 pub mod handshaker;
 pub mod message;
 pub mod report;
-pub mod sessions;
 #[cfg(test)]
 mod tests;

@@ -14,12 +14,15 @@
 // limitations under the License.
 //
 
-//! Server side logic for performing remote attestation in multiple several sessions
+//! Logic for performing remote attestation in multiple sessions
 
-use crate::handshaker::{AttestationBehavior, Encryptor, ServerHandshaker};
-use alloc::sync::Arc;
+#![no_std]
+
+extern crate alloc;
+
+use alloc::{boxed::Box, sync::Arc, vec::Vec};
 use lru::LruCache;
-use oak_utils::LogError;
+use oak_remote_attestation::handshaker::{AttestationBehavior, Encryptor, ServerHandshaker};
 
 pub type SessionId = [u8; 8];
 

@@ -19,13 +19,13 @@ syntax = "proto3";
 package oak.experimental.uefi;
 
 message EchoRequest {
-    bytes message = 1;
+  bytes message = 1;
 }
 
 message EchoResponse {
-    bytes message = 1;
+  bytes message = 1;
 }
 
 service Echo {
-    rpc Echo(EchoRequest) returns (EchoResponse) {}
+  rpc Echo(EchoRequest) returns (EchoResponse) {}
 }
