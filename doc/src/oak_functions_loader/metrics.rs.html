@@ -211,7 +211,7 @@
         <span class="self">self</span>.<span class="ident">publish_metrics</span>()
     }
 
-    <span class="kw">fn</span> <span class="ident">get_handle</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) -&gt; <span class="ident">ExtensionHandle</span> {
+    <span class="kw">fn</span> <span class="ident">get_handle</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">ExtensionHandle</span> {
         <span class="ident">ExtensionHandle::MetricsHandle</span>
     }
 }
