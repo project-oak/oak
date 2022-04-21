@@ -37,6 +37,11 @@
 <span id="32">32</span>
 <span id="33">33</span>
 <span id="34">34</span>
+<span id="35">35</span>
+<span id="36">36</span>
+<span id="37">37</span>
+<span id="38">38</span>
+<span id="39">39</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2022 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -56,16 +61,21 @@
 <span class="doccomment">//! Oak Functions ABI Test for TF on a bad input vector.</span>
 <span class="doccomment">//! For a valid TF input see `workspace/oak_functions/examples/mobilenet`.</span>
 
-<span class="kw">use</span> <span class="ident">oak_functions_abi::proto::OakStatus</span>;
+<span class="kw">use</span> <span class="ident">oak_functions_abi::TfModelInferError</span>;
 
 <span class="attribute">#[<span class="ident">cfg_attr</span>(<span class="ident">not</span>(<span class="ident">test</span>), <span class="ident">no_mangle</span>)]</span>
 <span class="kw">pub</span> <span class="kw">extern</span> <span class="string">&quot;C&quot;</span> <span class="kw">fn</span> <span class="ident">main</span>() {
     <span class="comment">// Read the input_vector from the request.</span>
     <span class="kw">let</span> <span class="ident">input_vector</span> <span class="op">=</span> <span class="ident">oak_functions::read_request</span>().<span class="ident">expect</span>(<span class="string">&quot;Fail to read request body.&quot;</span>);
 
-    <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="ident">oak_functions::tf_model_infer</span>(<span class="kw-2">&amp;</span><span class="ident">input_vector</span>);
+    <span class="kw">let</span> <span class="ident">outer_result</span> <span class="op">=</span> <span class="ident">oak_functions::tf_model_infer</span>(<span class="kw-2">&amp;</span><span class="ident">input_vector</span>);
+    <span class="macro">assert!</span>(<span class="ident">outer_result</span>.<span class="ident">is_ok</span>());
+    <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="ident">outer_result</span>.<span class="ident">unwrap</span>();
     <span class="macro">assert!</span>(<span class="ident">result</span>.<span class="ident">is_err</span>());
-    <span class="macro">assert_eq!</span>(<span class="ident">OakStatus::ErrBadTensorFlowModelInput</span>, <span class="ident">result</span>.<span class="ident">unwrap_err</span>());
+    <span class="macro">matches!</span>(
+        <span class="ident">result</span>.<span class="ident">unwrap_err</span>(),
+        <span class="ident">TfModelInferError::BadTensorFlowModelInput</span>,
+    );
 
     <span class="comment">// Reaching this line means we passed the asserts.</span>
     <span class="kw">let</span> <span class="ident">response_body</span> <span class="op">=</span> <span class="string">b&quot;ErrBadTensorFlowModelInput&quot;</span>.<span class="ident">to_vec</span>();
