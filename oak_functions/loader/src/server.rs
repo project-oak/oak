@@ -842,7 +842,7 @@ mod tests {
     #[tokio::test]
     async fn test_find_extension_not_available() {
         let mut wasm_state = create_test_wasm_state();
-        // Assumes we have add no TF extension to our test wasm_state. The remaining arguments don't
+        // Assumes we have no TF extension in our test wasm_state. The remaining arguments don't
         // matter, hence they are 0.
         let extension =
             wasm_state.invoke_extension_with_handle(ExtensionHandle::TfHandle as i32, 0, 0, 0, 0);
