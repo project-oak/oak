@@ -33,6 +33,7 @@ sourcesIndex["oak_logger"] = {"name":"","files":["lib.rs"]};
 sourcesIndex["oak_proxy_attestation"] = {"name":"","files":["lib.rs"]};
 sourcesIndex["oak_proxy_attestation_bin"] = {"name":"","files":["main.rs"]};
 sourcesIndex["oak_remote_attestation"] = {"name":"","files":["crypto.rs","handshaker.rs","lib.rs","message.rs","report.rs"]};
+sourcesIndex["oak_remote_attestation_sessions"] = {"name":"","files":["lib.rs"]};
 sourcesIndex["oak_tls_attestation"] = {"name":"","files":["main.rs","server.rs"]};
 sourcesIndex["oak_utils"] = {"name":"","files":["lib.rs"]};
 sourcesIndex["tensorflow_client"] = {"name":"","files":["data.rs","main.rs"]};
