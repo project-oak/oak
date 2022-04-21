@@ -13,9 +13,9 @@ env_logger = "*"
 log = "*"
 offline_attestation_shared = { path = "../shared" }
 tokio = { version = "*", features = [
-    "macros",
-    "process",
-    "sync",
-    "rt-multi-thread"
+  "macros",
+  "process",
+  "sync",
+  "rt-multi-thread"
 ] }
 warp = "*"

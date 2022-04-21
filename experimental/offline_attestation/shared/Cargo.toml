@@ -6,4 +6,8 @@ edition = "2021"
 license = "Apache-2.0"
 
 [dependencies]
-ring = { path = "../../../third_party/ring", default-features = false }
+anyhow = "*"
+oak_remote_attestation = { path = "../../../remote_attestation/rust/" }
+serde = { version = "*", features = ["derive"] }
+tink-core = "*"
+tink-hybrid = "*"

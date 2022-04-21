@@ -14,11 +14,18 @@
 // limitations under the License.
 //
 
+use anyhow::anyhow;
 use clap::Parser;
 use log::info;
+use offline_attestation_shared::{
+    decrypt, encrypt, generate_private_key, init, serialize_public_key, EncryptedRequest,
+    EncryptedResponse, PublicKeyInfo,
+};
 use url::Url;
 
 const ECHO_PATH: &str = "encrypted_echo";
+
+const PUBLIC_KEY_INFO_PATH: &str = "public_key_info";
 
 #[derive(Parser, Clone)]
 #[clap(about = "Offline Attestation Client")]
@@ -40,13 +47,50 @@ pub struct Opt {
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     env_logger::init();
+    init();
     let opt = Opt::parse();
-    let base = Url::parse(&opt.url)?;
-    let echo = base.join(ECHO_PATH)?;
-    let body = opt.message.as_bytes().to_vec();
+    let base_url = Url::parse(&opt.url)?;
+    let echo_url = base_url.join(ECHO_PATH)?;
+    let public_key_info_url = base_url.join(PUBLIC_KEY_INFO_PATH)?;
 
-    let response = reqwest::Client::new().post(echo).body(body).send().await?;
-    let result = String::from_utf8(response.bytes().await?.to_vec())?;
+    let message = opt.message.as_bytes().to_vec();
+
+    let client = reqwest::Client::new();
+
+    // Get and validate the server's public key.
+    // In a real implementation this would happen out of band and be provided to the client.
+    let public_key_response = client.get(public_key_info_url).send().await?;
+    let public_key_info: PublicKeyInfo = public_key_response.json().await?;
+    public_key_info.validate()?;
+    let request_public_key_handle = public_key_info.get_public_key_handle()?;
+
+    // Encrypt the message with the server's public key.
+    let ciphertext = encrypt(&request_public_key_handle, &message)?;
+
+    // Generate a private key for decrypting the response.
+    let private_key_handle = generate_private_key()?;
+    // Get the associated public key so that the server can use it for encrypting the response.
+    let response_public_key_handle = private_key_handle
+        .public()
+        .map_err(|error| anyhow!("Couldn't get public key: {}", error))?;
+    let response_public_key = serialize_public_key(&response_public_key_handle)?;
+
+    // Build the encrypted request to send to the server.
+    let encrypted_request = EncryptedRequest {
+        ciphertext,
+        response_public_key,
+    };
+
+    // Post the JSON-encoded encrypted request to the server.
+    let response = client
+        .post(echo_url)
+        .json(&encrypted_request)
+        .send()
+        .await?;
+    let encrypted_response: EncryptedResponse = response.json().await?;
+    // Decrypt the response.
+    let response = decrypt(&private_key_handle, &encrypted_response.ciphertext)?;
+    let result = String::from_utf8(response)?;
     info!("Result: {}", result);
     Ok(())
 }

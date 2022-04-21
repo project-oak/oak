@@ -11,11 +11,11 @@ clap = { version = "3", features = ["derive"] }
 env_logger = "*"
 log = "*"
 offline_attestation_shared = { path = "../shared" }
-reqwest = "*"
+reqwest = { version = "*", features = ["json"] }
 tokio = { version = "*", features = [
-    "macros",
-    "process",
-    "sync",
-    "rt-multi-thread"
+  "macros",
+  "process",
+  "sync",
+  "rt-multi-thread"
 ] }
 url = "*"
