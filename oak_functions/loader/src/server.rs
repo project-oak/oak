@@ -822,13 +822,15 @@ pub fn format_bytes(v: &[u8]) -> String {
 
 #[cfg(test)]
 mod tests {
+    use oak_functions_abi::{TestingRequest, TestingResponse};
+
     use super::{
         super::{grpc::create_wasm_handler, testing::*},
         *,
     };
 
     #[tokio::test]
-    async fn test_invoke_extension_with_handle() {
+    async fn test_invoke_extension_with_invalid_handle() {
         let mut wasm_state = create_test_wasm_state();
         // Assumes there is no negative ExtensionHandle. The remaining arguments don't matter, hence
         // they are 0.
@@ -843,24 +845,59 @@ mod tests {
         // Assumes we have add no TF extension to our test wasm_state. The remaining arguments don't
         // matter, hence they are 0.
         let extension =
-            wasm_state.invoke_extension_with_handle(ExtensionHandle::TfHandle, 0, 0, 0, 0);
+            wasm_state.invoke_extension_with_handle(ExtensionHandle::TfHandle as i32, 0, 0, 0, 0);
         assert!(extension.is_err());
         assert_eq!(OakStatus::ErrInvalidHandle, extension.unwrap_err())
     }
 
     #[tokio::test]
-    async fn test_find_extension() {
+    async fn test_invoke_extension() {
         let mut wasm_state = create_test_wasm_state();
-        // Assumes we have a Testing extension in our test wasm_state. The remaining arguments don't
-        // matter, hence they are 0.
-        let extension =
-            wasm_state.invoke_extension_with_handle(ExtensionHandle::TestingHandle, 0, 0, 0, 0);
-        assert!(extension.is_ok());
 
+        // Assumes we have a Testing extension in our test wasm_state.
+        let message = "Hello!".to_owned();
+        let request = bincode::serialize(&TestingRequest::Echo(message.clone()))
+            .expect("Failed to serialize request.");
+
+        // Guess some memory addresses in linear Wasm memory to write the request to.
+        let request_ptr: AbiPointer = 100;
+        let result = wasm_state.write_buffer_to_wasm_memory(&request, request_ptr);
+        assert!(result.is_ok());
+
+        // Guess some memory addresses in linear Wasm memory to write the response to.
+        let response_ptr_ptr: AbiPointer = 200;
+        let response_len_ptr: AbiPointer = 250;
+
+        let result = wasm_state.invoke_extension_with_handle(
+            ExtensionHandle::TestingHandle as i32,
+            request_ptr,
+            request.len() as u32,
+            response_ptr_ptr,
+            response_len_ptr,
+        );
+        assert!(result.is_ok());
+
+        let expected_response = bincode::serialize(&TestingResponse::Echo(message))
+            .expect("Failed to serialize response.");
+
+        // Get response_len from response_len_ptr.
+        let response_len: AbiPointerOffset =
+            LittleEndian::read_u32(&wasm_state.get_memory().get(response_len_ptr, 4).unwrap());
+
+        // Assert that response_len holds length of expected response.
+        assert_eq!(response_len as usize, expected_response.len());
+
+        // Get response_ptr from resposne_ptr_ptr.
+        let response_ptr: AbiPointer =
+            LittleEndian::read_u32(&wasm_state.get_memory().get(response_ptr_ptr, 4).unwrap());
+
+        // Assert that reponse_ptr holds expected response.
         assert_eq!(
-            extension.unwrap().get_handle(),
-            ExtensionHandle::TestingHandle
-        )
+            wasm_state
+                .read_buffer_from_wasm_memory(response_ptr, response_len)
+                .unwrap(),
+            expected_response
+        );
     }
 
     fn create_test_wasm_state() -> WasmState {
