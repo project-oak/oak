@@ -17,8 +17,9 @@
 use crate::proto::{unary_session_client::UnarySessionClient, UnaryRequest};
 use anyhow::Context;
 use oak_functions_abi;
-use oak_remote_attestation::handshaker::{
-    AttestationBehavior, ClientHandshaker, Encryptor, ServerIdentityVerifier,
+use oak_remote_attestation::{
+    handshaker::{AttestationBehavior, ClientHandshaker, Encryptor, ServerIdentityVerifier},
+    sessions::SessionId,
 };
 use oak_remote_attestation_sessions::SessionId;
 use tonic::transport::Channel;
