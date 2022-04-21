@@ -1502,7 +1502,6 @@ name = "grpc_unary_attestation"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "lru",
  "oak_functions_abi",
  "oak_remote_attestation",
  "oak_utils",
@@ -2695,6 +2694,8 @@ dependencies = [
  "assert_matches",
  "bytes",
  "log",
+ "lru",
+ "oak_utils",
  "prost 0.10.1",
  "prost-build 0.10.1",
  "quickcheck",

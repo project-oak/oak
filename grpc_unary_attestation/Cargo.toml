@@ -19,10 +19,8 @@ tokio = { version = "*", features = [
   "sync",
   "rt-multi-thread"
 ] }
-oak_utils = { path = "../oak_utils" }
 tonic = "*"
 tower = "*"
-lru = "*"
 rand = "*"
 
 [build-dependencies]
