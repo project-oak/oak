@@ -176,14 +176,22 @@ pub fn tf_model_infer(
     }
 }
 
-// Currently, invokes the testing extension with the given request and returns an error if the
-// testing extension does not give a result.
-pub fn invoke(request: &[u8]) -> Result<Vec<u8>, OakStatus> {
+// Call the testing extension from the SDK.
+pub fn testing(request: &[u8]) -> Result<Vec<u8>, OakStatus> {
+    invoke(oak_functions_abi::ExtensionHandle::TestingHandle, request)
+}
+
+// Passes the given request to the extension behind the extension handle and returns the extension's
+// response.
+fn invoke(
+    handle: oak_functions_abi::ExtensionHandle,
+    request: &[u8],
+) -> Result<Vec<u8>, OakStatus> {
     let mut response_ptr: *mut u8 = std::ptr::null_mut();
     let mut response_len: usize = 0;
     let status_code = unsafe {
         oak_functions_abi::invoke(
-            oak_functions_abi::ExtensionHandle::TestingHandle,
+            handle,
             request.as_ptr(),
             request.len(),
             &mut response_ptr,
