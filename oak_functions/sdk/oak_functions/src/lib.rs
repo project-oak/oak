@@ -146,7 +146,8 @@ pub fn tf_model_infer(
     let mut inference_ptr: *mut u8 = std::ptr::null_mut();
     let mut inference_len: usize = 0;
     let status_code = unsafe {
-        oak_functions_abi::tf_model_infer(
+        oak_functions_abi::invoke(
+            oak_functions_abi::ExtensionHandle::TfHandle,
             input_vector.as_ptr(),
             input_vector.len(),
             &mut inference_ptr,
