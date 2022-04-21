@@ -78,6 +78,8 @@ impl<'boot> runtime::echo::Interface for Serial<'boot> {
         self.serial.write(data).discard_errdata()
     }
 
+    // Try to fill the buffer, ignoring any timeout errors. Any other errors
+    // are propagated upward.
     fn recv(&mut self, data: &mut [u8]) -> Result<(), Self::Error> {
         let mut bytes_read = 0;
         while bytes_read < data.len() {
