@@ -16,7 +16,7 @@
 
 use anyhow::anyhow;
 use clap::Parser;
-use log::info;
+use log::{debug, info};
 use offline_attestation_shared::{
     decrypt, encrypt, generate_private_key, init, serialize_public_key, EncryptedRequest,
     EncryptedResponse, PublicKeyInfo,
@@ -54,13 +54,18 @@ async fn main() -> anyhow::Result<()> {
     let public_key_info_url = base_url.join(PUBLIC_KEY_INFO_PATH)?;
 
     let message = opt.message.as_bytes().to_vec();
+    debug!("Cleartext message: {:?}", message);
 
     let client = reqwest::Client::new();
 
-    // Get and validate the server's public key.
-    // In a real implementation this would happen out of band and be provided to the client.
+    // For this example we fetch and validate the server's public key. In a more reslistic
+    // implementation this would happen out of band and be provided to the client.
     let public_key_response = client.get(public_key_info_url).send().await?;
     let public_key_info: PublicKeyInfo = public_key_response.json().await?;
+    debug!(
+        "Received server's public key: {:?}",
+        serde_json::to_string(&public_key_info)?
+    );
     public_key_info.validate()?;
     let request_public_key_handle = public_key_info.get_public_key_handle()?;
 
@@ -81,6 +86,11 @@ async fn main() -> anyhow::Result<()> {
         response_public_key,
     };
 
+    debug!(
+        "Encrypted request: {}",
+        serde_json::to_string(&encrypted_request)?
+    );
+
     // Post the JSON-encoded encrypted request to the server.
     let response = client
         .post(echo_url)
@@ -88,6 +98,11 @@ async fn main() -> anyhow::Result<()> {
         .send()
         .await?;
     let encrypted_response: EncryptedResponse = response.json().await?;
+    debug!(
+        "Encrypted response: {}",
+        serde_json::to_string(&encrypted_response)?
+    );
+
     // Decrypt the response.
     let response = decrypt(&private_key_handle, &encrypted_response.ciphertext)?;
     let result = String::from_utf8(response)?;

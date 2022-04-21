@@ -3142,6 +3142,7 @@ dependencies = [
  "log",
  "offline_attestation_shared",
  "reqwest",
+ "serde_json",
  "tokio",
  "url",
 ]
@@ -3156,6 +3157,7 @@ dependencies = [
  "env_logger 0.9.0",
  "log",
  "offline_attestation_shared",
+ "serde_json",
  "tokio",
  "warp",
 ]

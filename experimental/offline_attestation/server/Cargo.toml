@@ -12,6 +12,7 @@ clap = { version = "3", features = ["derive"] }
 env_logger = "*"
 log = "*"
 offline_attestation_shared = { path = "../shared" }
+serde_json = "*"
 tokio = { version = "*", features = [
   "macros",
   "process",

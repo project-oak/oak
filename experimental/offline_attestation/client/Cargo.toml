@@ -12,6 +12,7 @@ env_logger = "*"
 log = "*"
 offline_attestation_shared = { path = "../shared" }
 reqwest = { version = "*", features = ["json"] }
+serde_json = "*"
 tokio = { version = "*", features = [
   "macros",
   "process",

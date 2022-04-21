@@ -18,6 +18,7 @@
 
 use anyhow::anyhow;
 use clap::Parser;
+use log::{debug, info};
 use offline_attestation_shared::{
     decrypt, encrypt, generate_private_key, init, EncryptedRequest, EncryptedResponse, Handle,
     PublicKeyInfo,
@@ -46,11 +47,17 @@ async fn main() -> anyhow::Result<()> {
     let opt = Opt::parse();
     let address = SocketAddr::from((Ipv6Addr::UNSPECIFIED, opt.port));
 
+    debug!("Generating private key");
     let private_key_handle = Arc::new(generate_private_key()?);
     let public_key_handle = private_key_handle
         .public()
         .map_err(|error| anyhow!("Couldn't get public key: {}", error))?;
+
     let public_key_info = Arc::new(PublicKeyInfo::new(&public_key_handle)?);
+    debug!(
+        "Constructed public key info: {}",
+        serde_json::to_string(public_key_info.as_ref())?
+    );
 
     let root_filer = create_root_filter(private_key_handle, public_key_info);
 
@@ -88,9 +95,22 @@ fn encrypted_echo(
 
 fn handle(encrypted_request: EncryptedRequest, private_key_handle: Arc<Handle>) -> Response {
     let result: anyhow::Result<EncryptedResponse> = try {
+        debug!(
+            "Received encrypted request: {}",
+            serde_json::to_string(&encrypted_request)?
+        );
+
         let clear_text = decrypt(private_key_handle.as_ref(), &encrypted_request.ciphertext)?;
+        info!("Received cleartext: {:?}", clear_text);
         let ciphertext = encrypt(&encrypted_request.get_public_key_handle()?, &clear_text)?;
-        EncryptedResponse { ciphertext }
+        let response = EncryptedResponse { ciphertext };
+
+        debug!(
+            "Sending encrypted respone: {}",
+            serde_json::to_string(&response)?
+        );
+
+        response
     };
     match result {
         Ok(response) => warp::reply::json(&response).into_response(),
