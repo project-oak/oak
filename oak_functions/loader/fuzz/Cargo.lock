@@ -355,9 +355,9 @@ name = "grpc_unary_attestation"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "lru",
  "oak_functions_abi",
  "oak_remote_attestation",
+ "oak_remote_attestation_sessions",
  "oak_utils",
  "prost",
  "prost-types",
@@ -846,6 +846,15 @@ dependencies = [
  "prost",
  "prost-build",
  "ring 0.17.0-not-released-yet",
+]
+
+[[package]]
+name = "oak_remote_attestation_sessions"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "lru",
+ "oak_remote_attestation",
 ]
 
 [[package]]

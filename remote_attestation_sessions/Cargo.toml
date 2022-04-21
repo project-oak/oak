@@ -1,0 +1,11 @@
+[package]
+name = "oak_remote_attestation_sessions"
+version = "0.1.0"
+authors = ["Juliette Pretot <julsh@google.com>"]
+edition = "2021"
+license = "Apache-2.0"
+
+[dependencies]
+anyhow = { version = "*", default-features = false }
+oak_remote_attestation = { path = "../remote_attestation/rust/" }
+lru = "*"
