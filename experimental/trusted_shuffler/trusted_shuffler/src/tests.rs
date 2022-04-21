@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-use crate::{RequestIdGenerator, TrustedShuffler};
+use crate::TrustedShuffler;
 // use assert_matches::assert_matches;
 use std::{collections::HashSet, sync::Arc};
 
@@ -25,24 +25,24 @@ async fn send_request(request: Vec<u8>) -> Vec<u8> {
     "Test response".to_string().as_bytes().to_vec()
 }
 
-#[test]
-fn test_id_generator() {
-    let mut generator = RequestIdGenerator::new(TEST_ANONYMITY_VALUE);
+// #[test]
+// fn test_id_generator() {
+//     let mut generator = RequestIdGenerator::new(TEST_ANONYMITY_VALUE);
 
-    let mut request_id_set = HashSet::new();
-    let mut batch_id_set = HashSet::new();
-    for _ in 0..TEST_ANONYMITY_VALUE {
-        let request_id = generator.generate();
-        batch_id_set.insert(request_id.batch_id.clone());
-        request_id_set.insert(request_id);
-    }
-    assert_eq!(request_id_set.len(), TEST_ANONYMITY_VALUE);
-    assert_eq!(batch_id_set.len(), 1);
+//     let mut request_id_set = HashSet::new();
+//     let mut batch_id_set = HashSet::new();
+//     for _ in 0..TEST_ANONYMITY_VALUE {
+//         let request_id = generator.generate();
+//         batch_id_set.insert(request_id.batch_id.clone());
+//         request_id_set.insert(request_id);
+//     }
+//     assert_eq!(request_id_set.len(), TEST_ANONYMITY_VALUE);
+//     assert_eq!(batch_id_set.len(), 1);
 
-    let prev_batch_id = batch_id_set.iter().cloned().next().unwrap();
-    let new_request_id = generator.generate();
-    assert_ne!(prev_batch_id, new_request_id.batch_id);
-}
+//     let prev_batch_id = batch_id_set.iter().cloned().next().unwrap();
+//     let new_request_id = generator.generate();
+//     assert_ne!(prev_batch_id, new_request_id.batch_id);
+// }
 
 // #[tokio::test]
 // async fn async_queue_test() {
@@ -68,13 +68,13 @@ fn test_id_generator() {
 
 #[tokio::test]
 async fn trusted_shuffler_test() {
-    let trusted_shuffler= TrustedShuffler::new(TEST_ANONYMITY_VALUE, send_request);
+    let trusted_shuffler = TrustedShuffler::new(TEST_ANONYMITY_VALUE, send_request);
     let trusted_shuffler_arc = Arc::new(trusted_shuffler);
     let trusted_shuffler_arc_clone = trusted_shuffler_arc.clone();
     // let trusted_shuffler_clone = trusted_shuffler.clone();
 
     tokio::spawn(async move {
-    // let background = test_utils::background(|_| async move {
+        // let background = test_utils::background(|_| async move {
         // let trusted_shuffler_arc_clone = &mut *trusted_shuffler_arc_clone;
         // let request = trusted_shuffler_arc_clone.pop_request().await;
         // let request = trusted_shuffler_clone.pop_request().await;
@@ -87,9 +87,9 @@ async fn trusted_shuffler_test() {
 
 // #[tokio::test]
 // async fn test() {
-//     let trusted_shuffler: TrustedShuffler<String, String> = TrustedShuffler::new(TEST_ANONYMITY_VALUE);
-//     let trusted_shuffler_arc = Arc::new(trusted_shuffler);
-//     let trusted_shuffler_arc_clone = trusted_shuffler_arc.clone();
+//     let trusted_shuffler: TrustedShuffler<String, String> =
+// TrustedShuffler::new(TEST_ANONYMITY_VALUE);     let trusted_shuffler_arc =
+// Arc::new(trusted_shuffler);     let trusted_shuffler_arc_clone = trusted_shuffler_arc.clone();
 
 //     let background = test_utils::background(|_| async move {
 //         // let trusted_shuffler_arc_clone = &mut *trusted_shuffler_arc_clone;

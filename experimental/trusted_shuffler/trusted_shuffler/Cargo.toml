@@ -11,6 +11,9 @@ license = "Apache-2.0"
 [dependencies]
 anyhow = "*"
 env_logger = "*"
+futures = "*"
+futures-core = "*"
+futures-util = "*"
 log = "*"
 rand = { version = "*", features = ["alloc", "getrandom"] }
 tokio = { version = "*", features = [
