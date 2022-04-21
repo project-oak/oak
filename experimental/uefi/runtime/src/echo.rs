@@ -16,7 +16,7 @@
 
 extern crate alloc;
 
-use alloc::string::String;
+use alloc::vec::Vec;
 use ciborium::{de, ser};
 
 #[derive(Debug)]
@@ -36,7 +36,7 @@ where
     I: ciborium_io::Read<Error = E>,
 {
     loop {
-        let msg: String = de::from_reader(&mut interface).map_err(Error::De)?;
+        let msg: Vec<u8> = de::from_reader(&mut interface).map_err(Error::De)?;
         ser::into_writer(&msg, &mut interface).map_err(Error::Ser)?;
     }
 }
