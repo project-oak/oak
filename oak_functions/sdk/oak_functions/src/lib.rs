@@ -22,6 +22,8 @@ use oak_functions_abi::proto::Inference;
 use oak_functions_abi::proto::OakStatus;
 #[cfg(feature = "oak-metrics")]
 use oak_functions_abi::ReportMetricRequest;
+#[cfg(feature = "oak-tf")]
+use oak_functions_abi::{TfModelInferError, TfModelInferResponse};
 use std::convert::AsRef;
 
 /// Reads and returns the user request.
@@ -136,7 +138,9 @@ pub fn write_log_message<T: AsRef<str>>(message: T) -> Result<(), OakStatus> {
 ///
 /// See [`tf_model_infer`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#tf_model_infer).
 #[cfg(feature = "oak-tf")]
-pub fn tf_model_infer(input_vector: &[u8]) -> Result<Inference, OakStatus> {
+pub fn tf_model_infer(
+    input_vector: &[u8],
+) -> Result<Result<Inference, TfModelInferError>, OakStatus> {
     use prost::Message;
 
     let mut inference_ptr: *mut u8 = std::ptr::null_mut();
@@ -150,12 +154,25 @@ pub fn tf_model_infer(input_vector: &[u8]) -> Result<Inference, OakStatus> {
         )
     };
     let status = OakStatus::from_i32(status_code as i32).ok_or(OakStatus::ErrInternal)?;
-    match status {
-        OakStatus::Ok => {
-            let inference_bytes = from_alloc_buffer(inference_ptr, inference_len);
-            Inference::decode(&*inference_bytes).map_err(|_| OakStatus::ErrInvalidArgs)
-        }
-        status => Err(status),
+
+    if let OakStatus::Ok = status {
+        // We read and interpret the response.
+        let response = from_alloc_buffer(inference_ptr, inference_len);
+        let response: TfModelInferResponse =
+            bincode::deserialize(&response).expect("Failed to deserialize TF response.");
+
+        // We decode the inference bytes.
+        let tf_result = response.result.and_then(|inference_bytes| {
+            Inference::decode(&*inference_bytes).map_err(|err| {
+                log!("Failed to decode: {}", err);
+                TfModelInferError::ErrorDecodingInference
+            })
+        });
+
+        Ok(tf_result)
+    } else {
+        // We pass the OakStatus as an error on.
+        Err(status)
     }
 }
 

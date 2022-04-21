@@ -22,7 +22,10 @@ use crate::{
 };
 use anyhow::Context;
 use bytes::Bytes;
-use oak_functions_abi::proto::{ExtensionHandle, OakStatus};
+use oak_functions_abi::{
+    proto::{ExtensionHandle, OakStatus},
+    TfModelInferError, TfModelInferResponse,
+};
 use oak_functions_tf_inference::{parse_model, TensorFlowModel};
 use prost::Message;
 use std::{fs::File, io::Read, sync::Arc};
@@ -35,18 +38,18 @@ const TF_ABI_FUNCTION_NAME: &str = "tf_model_infer";
 // structs are in a separate crate.
 impl OakApiNativeExtension for TensorFlowModel<Logger> {
     fn invoke(&mut self, request: Vec<u8>) -> Result<Vec<u8>, OakStatus> {
-        let input = request;
-
-        // Get the inference, and convert it into a protobuf-encoded byte array
-        let inference = self.get_inference(&input).map_err(|err| {
+        let inference = self.get_inference(&request).map_err(|err| {
             self.log_error(&format!(
                 "tf_model_infer(): Unable to run inference: {:?}",
                 err
             ));
-            // TODO(#2701): Remove ErrBadTensorFlowModelInput from OakStatus.
-            OakStatus::ErrBadTensorFlowModelInput
-        })?;
-        Ok(inference.encode_to_vec())
+            TfModelInferError::BadTensorFlowModelInput
+        });
+        let result = inference.map(|inference| inference.encode_to_vec());
+        let response = bincode::serialize(&TfModelInferResponse { result })
+            .expect("Failed to serialize TF response.");
+
+        Ok(response)
     }
 
     /// Each Oak Functions application can have at most one instance of TensorFlowModule. So it is

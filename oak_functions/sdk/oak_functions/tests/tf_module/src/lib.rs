@@ -17,16 +17,21 @@
 //! Oak Functions ABI Test for TF on a bad input vector.
 //! For a valid TF input see `workspace/oak_functions/examples/mobilenet`.
 
-use oak_functions_abi::proto::OakStatus;
+use oak_functions_abi::TfModelInferError;
 
 #[cfg_attr(not(test), no_mangle)]
 pub extern "C" fn main() {
     // Read the input_vector from the request.
     let input_vector = oak_functions::read_request().expect("Fail to read request body.");
 
-    let result = oak_functions::tf_model_infer(&input_vector);
+    let outer_result = oak_functions::tf_model_infer(&input_vector);
+    assert!(outer_result.is_ok());
+    let result = outer_result.unwrap();
     assert!(result.is_err());
-    assert_eq!(OakStatus::ErrBadTensorFlowModelInput, result.unwrap_err());
+    matches!(
+        result.unwrap_err(),
+        TfModelInferError::BadTensorFlowModelInput,
+    );
 
     // Reaching this line means we passed the asserts.
     let response_body = b"ErrBadTensorFlowModelInput".to_vec();
