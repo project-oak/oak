@@ -16,10 +16,10 @@
 
 use crate::{
     logger::Logger,
-    server::{
-        BoxedExtension, BoxedExtensionFactory, ExtensionFactory, OakApiNativeExtension, ABI_USIZE,
-    },
+    server::{BoxedExtensionFactory, ExtensionFactory, ABI_USIZE},
 };
+use oak_functions_extension::{BoxedExtension, OakApiNativeExtension};
+
 use anyhow::Context;
 use bytes::Bytes;
 use oak_functions_abi::{

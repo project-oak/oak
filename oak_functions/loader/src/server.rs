@@ -22,6 +22,7 @@ use log::Level;
 use oak_functions_abi::proto::{
     ExtensionHandle, OakStatus, Request, Response, ServerPolicy, StatusCode,
 };
+use oak_functions_extension::{BoxedExtension, OakApiNativeExtension};
 use oak_logger::OakLogger;
 use serde::Deserialize;
 use std::{collections::HashMap, convert::TryInto, str, sync::Arc, time::Duration};
@@ -113,39 +114,6 @@ impl FixedSizeBodyPadder for Response {
         }
     }
 }
-
-/// Trait for implementing extensions, to implement new native functionality.
-pub trait OakApiNativeExtension {
-    /// Invokes the extension with the given request and returns a result. If no result
-    /// is expected, the result is empty.  An error within the extension is reflected in the
-    /// `OakStatus`.
-    /// TODO(#2701): Stop returning OakStatus for errors internal to extensions.
-    fn invoke(&mut self, request: Vec<u8>) -> Result<Vec<u8>, OakStatus>;
-
-    /// Metadata about this Extension, including the exported host function name, the function's
-    /// signature, and the corresponding ExtensionHandle.
-    fn get_metadata(&self) -> (String, wasmi::Signature);
-
-    /// Performs any cleanup or terminating behavior necessary before destroying the WasmState.
-    fn terminate(&mut self) -> anyhow::Result<()>;
-
-    /// Gets the `ExtensionHandle` for this extension.
-    fn get_handle(&self) -> ExtensionHandle;
-}
-
-pub trait ExtensionFactory {
-    fn create(&self) -> anyhow::Result<BoxedExtension>;
-}
-
-pub type BoxedExtension = Box<dyn OakApiNativeExtension + Send + Sync>;
-
-impl std::fmt::Debug for BoxedExtension {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "ExtensionHandle: {:?}", self.get_handle())
-    }
-}
-
-pub type BoxedExtensionFactory = Box<dyn ExtensionFactory + Send + Sync>;
 
 /// `WasmState` holds runtime values for a particular execution instance of Wasm, handling a
 /// single user request. The methods here correspond to the ABI host functions that allow the Wasm

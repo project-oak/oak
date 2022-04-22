@@ -16,10 +16,9 @@
 
 use crate::{
     logger::Logger,
-    server::{
-        BoxedExtension, BoxedExtensionFactory, ExtensionFactory, OakApiNativeExtension, ABI_USIZE,
-    },
+    server::{BoxedExtensionFactory, ExtensionFactory, ABI_USIZE},
 };
+use oak_functions_extension::{BoxedExtension, OakApiNativeExtension};
 
 use log::Level;
 use oak_functions_abi::{proto::OakStatus, ExtensionHandle, TestingRequest, TestingResponse};
