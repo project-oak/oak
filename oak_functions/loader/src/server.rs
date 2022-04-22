@@ -22,7 +22,7 @@ use log::Level;
 use oak_functions_abi::proto::{
     ExtensionHandle, OakStatus, Request, Response, ServerPolicy, StatusCode,
 };
-use oak_functions_extension::{BoxedExtension, BoxedExtensionFactory, OakApiNativeExtension};
+use oak_functions_extension::{BoxedExtension, BoxedExtensionFactory};
 use oak_logger::OakLogger;
 use serde::Deserialize;
 use std::{collections::HashMap, convert::TryInto, str, sync::Arc, time::Duration};

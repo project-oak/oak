@@ -2627,14 +2627,17 @@ name = "oak_functions_tf_inference"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "bincode",
  "bytes",
  "log",
  "oak_functions_abi",
+ "oak_functions_extension",
  "oak_logger",
  "prost 0.10.1",
  "serde",
  "serde_derive",
  "tract-tensorflow",
+ "wasmi",
 ]
 
 [[package]]

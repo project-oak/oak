@@ -22,14 +22,10 @@ pub mod grpc;
 pub mod logger;
 pub mod lookup_data;
 pub mod server;
-#[cfg(feature = "oak-tf")]
-pub mod tf;
 
 // TODO(#2642): Add #[cfg(oak-testing)].
 pub mod testing;
 
-#[cfg(feature = "oak-tf")]
-use crate::tf::{read_model_from_path, TensorFlowFactory};
 use crate::{
     grpc::{create_and_start_grpc_server, create_wasm_handler},
     logger::Logger,
@@ -46,7 +42,7 @@ use oak_functions_metrics::PrivateMetricsConfig;
 #[cfg(feature = "oak-metrics")]
 use oak_functions_metrics::PrivateMetricsProxyFactory;
 #[cfg(feature = "oak-tf")]
-use oak_functions_tf_inference::TensorFlowModelConfig;
+use oak_functions_tf_inference::{read_model_from_path, TensorFlowFactory, TensorFlowModelConfig};
 use oak_logger::OakLogger;
 use oak_remote_attestation::crypto::get_sha256;
 use serde_derive::Deserialize;
@@ -192,7 +188,7 @@ async fn async_main(opt: Opt, config: Config, logger: Logger) -> anyhow::Result<
     #[allow(unused_mut)]
     let mut extensions = Vec::new();
 
-    let lookup_factory = LookupFactory::new_boxed_extension_factory::<Logger>(lookup_data_manager)?;
+    let lookup_factory = LookupFactory::new_boxed_extension_factory(lookup_data_manager)?;
     extensions.push(lookup_factory);
 
     #[cfg(feature = "oak-tf")]
