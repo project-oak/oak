@@ -109,14 +109,6 @@ extern "C" {
         value_len_ptr: *mut usize,
     ) -> u32;
 
-    /// See [`tf_model_infer`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#tf_model_infer).
-    pub fn tf_model_infer(
-        input_ptr: *const u8,
-        input_len: usize,
-        inference_ptr_ptr: *mut *mut u8,
-        inference_len_ptr: *mut usize,
-    ) -> u32;
-
     /// See [`invoke`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#invoke).
     pub fn invoke(
         handle: ExtensionHandle,

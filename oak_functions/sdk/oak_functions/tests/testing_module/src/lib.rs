@@ -31,7 +31,7 @@ pub extern "C" fn main() {
                 .expect("Fail to serialize testing message.");
             // We invoke the Testing extension with an EchoRequest.
             let serialized_echo_response =
-                oak_functions::invoke(&echo_request).expect("Fail to invoke testing.");
+                oak_functions::testing(&echo_request).expect("Fail to invoke testing.");
 
             let echo_response = bincode::deserialize(&serialized_echo_response)
                 .expect("Fail to deserialize testing message.");
@@ -48,7 +48,7 @@ pub extern "C" fn main() {
                 .expect("Fail to serialize testing message.");
 
             let blackhole_response =
-                oak_functions::invoke(&blackhole_request).expect("Fail to invoke testing.");
+                oak_functions::testing(&blackhole_request).expect("Fail to invoke testing.");
             // We expect an empty response, because blackhole does not give back a result.
             assert!(blackhole_response.is_empty());
 
