@@ -125,7 +125,7 @@ pub struct WasmState {
     instance: Option<wasmi::ModuleRef>,
     memory: Option<wasmi::MemoryRef>,
     logger: Logger,
-    /// A mapping of internal host functions to the corresponding [`OakApiNativeExtension`].
+    /// A mapping of internal host functions to the corresponding BoxedExtension.
     /// TODO(#2715): Replace by a map from `ExtensionHandles` to `BoxedExtensions`.
     extensions_indices: HashMap<usize, BoxedExtension>,
     /// A mapping of host function names to metadata required for resolving the function.
