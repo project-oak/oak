@@ -60,7 +60,10 @@ impl SessionTracker {
     /// be put back into the SessionTracker. This an intentional choice meant
     /// to ensure that faulty state that leads to errors when processing
     /// a request is not persistent.
-    pub fn pop_session_state(&mut self, session_id: SessionId) -> anyhow::Result<SessionState> {
+    pub fn pop_or_create_session_state(
+        &mut self,
+        session_id: SessionId,
+    ) -> anyhow::Result<SessionState> {
         match self.known_sessions.pop(&session_id) {
             None => match AttestationBehavior::create_self_attestation(&self.tee_certificate) {
                 Ok(behavior) => Ok(SessionState::HandshakeInProgress(Box::new(
@@ -86,7 +89,7 @@ impl SessionTracker {
         }
     }
 
-    /// Record a session in the tracker. Unlike `pop_session_state` it does not
+    /// Record a session in the tracker. Unlike `pop_or_create_session_state` it does not
     /// normalize session state, instead relying on normalization occuring
     /// at retrieval time.
     pub fn put_session_state(&mut self, session_id: SessionId, session_state: SessionState) {
