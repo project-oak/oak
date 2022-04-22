@@ -18,7 +18,7 @@ use crate::{
     grpc::{create_and_start_grpc_server, create_wasm_handler},
     logger::Logger,
     lookup_data::{parse_lookup_entries, LookupDataAuth, LookupDataRefresher, LookupDataSource},
-    server::{apply_policy, format_bytes},
+    server::apply_policy,
 };
 use maplit::hashmap;
 use oak_functions_abi::proto::{Response, ServerPolicy, StatusCode};
@@ -450,12 +450,4 @@ async fn test_apply_policy() {
             policy.constant_response_size_bytes as usize
         );
     }
-}
-
-#[test]
-fn test_format_bytes() {
-    // Valid UTF-8 string.
-    assert_eq!("🚀oak⭐", format_bytes("🚀oak⭐".as_bytes()));
-    // Incorrect UTF-8 bytes, as per https://doc.rust-lang.org/std/string/struct.String.html#examples-3.
-    assert_eq!("[0, 159, 146, 150]", format_bytes(&[0, 159, 146, 150]));
 }

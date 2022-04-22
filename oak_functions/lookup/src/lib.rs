@@ -22,6 +22,7 @@ extern crate std;
 
 use alloc::{
     boxed::Box,
+    format,
     string::{String, ToString},
     sync::Arc,
     vec::Vec,
@@ -77,18 +78,16 @@ impl<L: OakLogger> OakApiNativeExtension for LookupData<L> {
     fn invoke(&mut self, request: Vec<u8>) -> Result<Vec<u8>, OakStatus> {
         // The request is the key to lookup.
         let key = request;
-        // TODO(mschett) Add logging back.
-        // self.log_debug(&format!("storage_get_item(): key: {}", format_bytes(&key)));
+        self.log_debug(&format!("storage_get_item(): key: {}", format_bytes(&key)));
         let value = self.get(&key);
         match value {
             Some(value) => {
                 // Truncate value for logging.
-                let _value_to_log = value.clone().into_iter().take(512).collect::<Vec<_>>();
-                // TODO(mschett) Add logging back.
-                //  self.log_debug(&format!(
-                //      "storage_get_item(): value: {}",
-                //      format_bytes(&value_to_log)
-                //  ));
+                let value_to_log = value.clone().into_iter().take(512).collect::<Vec<_>>();
+                self.log_debug(&format!(
+                    "storage_get_item(): value: {}",
+                    format_bytes(&value_to_log)
+                ));
                 Ok(value)
             }
             // TODO(#2701): Remove ErrStorageItemNotFound from OakStatus.
@@ -213,6 +212,14 @@ where
     }
 }
 
+/// Converts a binary sequence to a string if it is a valid UTF-8 string, or formats it as a numeric
+/// vector of bytes otherwise.
+pub fn format_bytes(v: &[u8]) -> String {
+    std::str::from_utf8(v)
+        .map(|s| s.to_string())
+        .unwrap_or_else(|_| format!("{:?}", v))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -246,5 +253,13 @@ mod tests {
         assert_eq!(lookup_data_0.len(), 0);
         assert_eq!(lookup_data_1.len(), 1);
         assert_eq!(lookup_data_2.len(), 2);
+    }
+
+    #[test]
+    fn test_format_bytes() {
+        // Valid UTF-8 string.
+        assert_eq!("🚀oak⭐", format_bytes("🚀oak⭐".as_bytes()));
+        // Incorrect UTF-8 bytes, as per https://doc.rust-lang.org/std/string/struct.String.html#examples-3.
+        assert_eq!("[0, 159, 146, 150]", format_bytes(&[0, 159, 146, 150]));
     }
 }

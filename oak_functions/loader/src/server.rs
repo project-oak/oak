@@ -780,14 +780,6 @@ fn from_oak_status_result(
     Ok(Some(wasmi_value))
 }
 
-/// Converts a binary sequence to a string if it is a valid UTF-8 string, or formats it as a numeric
-/// vector of bytes otherwise.
-pub fn format_bytes(v: &[u8]) -> String {
-    std::str::from_utf8(v)
-        .map(|s| s.to_string())
-        .unwrap_or_else(|_| format!("{:?}", v))
-}
-
 #[cfg(test)]
 mod tests {
     use oak_functions_abi::{TestingRequest, TestingResponse};
