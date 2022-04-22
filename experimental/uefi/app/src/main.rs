@@ -24,15 +24,9 @@
 #![test_runner(crate::test_runner)]
 #![reexport_test_harness_main = "test_main"]
 
-#[macro_use]
-extern crate log;
-extern crate alloc;
-
-use crate::remote_attestation::AttestationHandler;
-use ciborium::{de, ser};
+use runtime::echo;
 use uefi::{prelude::*, table::runtime::ResetType};
 
-mod remote_attestation;
 mod serial;
 
 // The main entry point of the UEFI application.
@@ -70,53 +64,9 @@ fn main(handle: Handle, system_table: &mut SystemTable<Boot>) -> Status {
 
     writeln!(system_table.stdout(), "Hello World!").unwrap();
 
-    serial_echo(handle, system_table.boot_services(), ECHO_SERIAL_PORT_INDEX).unwrap();
-}
-
-const MOCK_SESSION_ID: [u8; 8] = [0; 8];
-
-// Opens the index-th serial port on the system and echoes back all frames sent over the serial
-// port.
-//
-// Panics if the index-th serial port does not exist.
-//
-// Arguments:
-//    * `handle` - UEFI handle of the agent (eg of the UEFI app)
-//    * `boot_services` - reference to the UEFI Boot Services struct (obtained from the system
-//      table)
-//    * `index` - index of the serial port, zero-based.
-//
-//  Normally does not return, unless an error is raised.
-fn serial_echo(handle: Handle, bt: &BootServices, index: usize) -> Result<!, uefi::Error<()>> {
-    let mut serial = serial::Serial::get(handle, bt, index)?;
-    let attestation_handler = &mut AttestationHandler::create(|v| v);
-    loop {
-        let msg: alloc::vec::Vec<u8> = de::from_reader(&mut serial).map_err(|err| match err {
-            de::Error::Io(err) => err,
-            de::Error::Syntax(idx) => {
-                error!("Error reading data at index {}", idx);
-                uefi::Error::from(Status::INVALID_PARAMETER)
-            }
-            de::Error::Semantic(_, err) => {
-                error!("Error parsing cbor data: {:?}", err);
-                uefi::Error::from(Status::INVALID_PARAMETER)
-            }
-            de::Error::RecursionLimitExceeded => uefi::Error::from(Status::ABORTED),
-        })?;
-        let response = attestation_handler
-            .message(MOCK_SESSION_ID, msg)
-            .map_err(|err| {
-                error!("Error handling remote attestation: {:?}", err);
-                uefi::Error::from(Status::PROTOCOL_ERROR)
-            })?;
-        ser::into_writer(&response, &mut serial).map_err(|err| match err {
-            ser::Error::Io(err) => err,
-            ser::Error::Value(msg) => {
-                error!("Error serializing value: {}", msg);
-                uefi::Error::from(Status::INVALID_PARAMETER)
-            }
-        })?;
-    }
+    let mut serial =
+        serial::Serial::get(handle, system_table.boot_services(), ECHO_SERIAL_PORT_INDEX).unwrap();
+    echo::echo(&mut serial).unwrap();
 }
 
 #[cfg(test)]

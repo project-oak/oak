@@ -20,6 +20,8 @@
 //! A simplified version of the implementation from the `grpc_unary_attestation`
 //! crate. TODO(#2741): Refactor this to share more code between the two runtimes.
 
+extern crate alloc;
+
 use alloc::vec::Vec;
 use anyhow::Context;
 use oak_remote_attestation_sessions::{SessionId, SessionState, SessionTracker};

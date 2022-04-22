@@ -370,6 +370,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "runtime"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "ciborium",
+ "ciborium-io",
+ "oak_remote_attestation_sessions",
+]
+
+[[package]]
 name = "serde"
 version = "1.0.136"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -469,11 +479,8 @@ name = "uefi-simple"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "ciborium",
- "ciborium-io",
- "log",
  "oak_remote_attestation",
- "oak_remote_attestation_sessions",
+ "runtime",
  "uefi",
  "uefi-services",
 ]
