@@ -36,6 +36,7 @@ sourcesIndex["oak_remote_attestation"] = {"name":"","files":["crypto.rs","handsh
 sourcesIndex["oak_remote_attestation_sessions"] = {"name":"","files":["lib.rs"]};
 sourcesIndex["oak_tls_attestation"] = {"name":"","files":["main.rs","server.rs"]};
 sourcesIndex["oak_utils"] = {"name":"","files":["lib.rs"]};
+sourcesIndex["runtime"] = {"name":"","files":["echo.rs","lib.rs"]};
 sourcesIndex["tensorflow_client"] = {"name":"","files":["data.rs","main.rs"]};
 sourcesIndex["tensorflow_proxy"] = {"name":"","files":["grpc.rs","main.rs"]};
 sourcesIndex["test_utils"] = {"name":"","files":["lib.rs"]};
