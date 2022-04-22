@@ -39,7 +39,7 @@ pub struct EncryptedRequest {
 }
 
 impl EncryptedRequest {
-    /// Deserialises the `response_publlic_key` as a keyset handle.
+    /// Deserialises the `response_public_key` as a keyset handle.
     pub fn get_public_key_handle(&self) -> anyhow::Result<Handle> {
         deserialize_public_key(&self.response_public_key)
     }
