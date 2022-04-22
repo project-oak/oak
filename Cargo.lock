@@ -2573,12 +2573,16 @@ name = "oak_functions_metrics"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "bincode",
  "log",
  "maplit",
+ "oak_functions_abi",
+ "oak_functions_extension",
  "oak_functions_util",
  "oak_logger",
  "rand 0.8.5",
  "serde",
+ "wasmi",
 ]
 
 [[package]]

@@ -21,8 +21,6 @@ extern crate alloc;
 pub mod grpc;
 pub mod logger;
 pub mod lookup_data;
-#[cfg(feature = "oak-metrics")]
-pub mod metrics;
 pub mod server;
 #[cfg(feature = "oak-tf")]
 pub mod tf;
@@ -30,8 +28,6 @@ pub mod tf;
 // TODO(#2642): Add #[cfg(oak-testing)].
 pub mod testing;
 
-#[cfg(feature = "oak-metrics")]
-use crate::metrics::PrivateMetricsProxyFactory;
 #[cfg(feature = "oak-tf")]
 use crate::tf::{read_model_from_path, TensorFlowFactory};
 use crate::{
@@ -47,6 +43,8 @@ use oak_functions_abi::proto::{ConfigurationInfo, ServerPolicy};
 use oak_functions_lookup::{LookupDataManager, LookupFactory};
 #[cfg(feature = "oak-metrics")]
 use oak_functions_metrics::PrivateMetricsConfig;
+#[cfg(feature = "oak-metrics")]
+use oak_functions_metrics::PrivateMetricsProxyFactory;
 #[cfg(feature = "oak-tf")]
 use oak_functions_tf_inference::TensorFlowModelConfig;
 use oak_logger::OakLogger;
