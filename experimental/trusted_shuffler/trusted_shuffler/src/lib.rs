@@ -42,7 +42,6 @@ struct Message {
 }
 
 // Trusted Shuffler inmpelentation.
-// Generic parameter `R` represents a request type, and `S` a response type.
 pub struct TrustedShuffler<F, O>
 where
     F: Send + Sync + 'static + FnOnce(Request) -> O,
