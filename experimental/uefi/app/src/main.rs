@@ -103,7 +103,12 @@ fn serial_echo(handle: Handle, bt: &BootServices, index: usize) -> Result<!, uef
             }
             de::Error::RecursionLimitExceeded => uefi::Error::from(Status::ABORTED),
         })?;
-        let response = attestation_handler.message(MOCK_SESSION_ID, msg);
+        let response = attestation_handler
+            .message(MOCK_SESSION_ID, msg)
+            .map_err(|err| {
+                error!("Error handling remote attestation: {:?}", err);
+                uefi::Error::from(Status::PROTOCOL_ERROR)
+            })?;
         ser::into_writer(&response, &mut serial).map_err(|err| match err {
             ser::Error::Io(err) => err,
             ser::Error::Value(msg) => {

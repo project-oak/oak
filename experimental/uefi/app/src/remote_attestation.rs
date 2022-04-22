@@ -21,6 +21,7 @@
 //! crate. TODO(#2741): Refactor this to share more code between the two runtimes.
 
 use alloc::vec::Vec;
+use anyhow::Context;
 use oak_remote_attestation_sessions::{SessionId, SessionState, SessionTracker};
 
 /// Number of sessions that will be kept in memory.
@@ -51,7 +52,7 @@ where
         }
     }
 
-    pub fn message(&mut self, session_id: SessionId, request: Vec<u8>) -> Vec<u8> {
+    pub fn message(&mut self, session_id: SessionId, request: Vec<u8>) -> anyhow::Result<Vec<u8>> {
         let mut session_state = {
             self.session_tracker
                 .pop_session_state(session_id)
@@ -61,7 +62,7 @@ where
             SessionState::HandshakeInProgress(ref mut handshaker) => {
                 handshaker
                     .next_step(&request)
-                    .expect("Couldn't process handshake message")
+                    .context("Couldn't process handshake message")?
                     // After receiving a valid `ClientIdentity` message
                     // (the last step of the key exchange)
                     // ServerHandshaker.next_step returns `None`. For unary
@@ -73,19 +74,19 @@ where
             SessionState::EncryptedMessageExchange(ref mut encryptor) => {
                 let decrypted_request = encryptor
                     .decrypt(&request)
-                    .expect("Couldn't decrypt response");
+                    .context("Couldn't decrypt response")?;
 
                 let response = (self.request_handler.clone())(decrypted_request);
 
                 encryptor
                     .encrypt(&response)
-                    .expect("Couldn't encrypt response")
+                    .context("Couldn't encrypt response")?
             }
         };
 
         self.session_tracker
             .put_session_state(session_id, session_state);
 
-        response_body
+        Ok(response_body)
     }
 }
