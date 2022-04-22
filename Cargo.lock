@@ -2471,6 +2471,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "oak_functions_extension"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "oak_functions_abi",
+ "wasmi",
+]
+
+[[package]]
 name = "oak_functions_load_test"
 version = "0.1.0"
 dependencies = [
@@ -2505,6 +2514,7 @@ dependencies = [
  "lookup_data_generator",
  "maplit",
  "oak_functions_abi",
+ "oak_functions_extension",
  "oak_functions_lookup",
  "oak_functions_metrics",
  "oak_functions_tf_inference",
@@ -2548,10 +2558,14 @@ dependencies = [
 name = "oak_functions_lookup"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "log",
  "maplit",
+ "oak_functions_abi",
+ "oak_functions_extension",
  "oak_functions_util",
  "oak_logger",
+ "wasmi",
 ]
 
 [[package]]

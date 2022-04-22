@@ -16,12 +16,11 @@
 
 use crate::{
     logger::Logger,
-    server::{
-        BoxedExtension, BoxedExtensionFactory, ExtensionFactory, OakApiNativeExtension, ABI_USIZE,
-    },
+    server::{BoxedExtensionFactory, ExtensionFactory, ABI_USIZE},
 };
 use alloc::sync::Arc;
 use oak_functions_abi::{proto::OakStatus, ExtensionHandle, ReportMetricRequest};
+use oak_functions_extension::{BoxedExtension, OakApiNativeExtension};
 use oak_functions_metrics::{
     PrivateMetricsAggregator, PrivateMetricsExtension, PrivateMetricsProxy,
 };
