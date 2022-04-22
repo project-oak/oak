@@ -29,14 +29,14 @@ pub enum Error<T> {
 }
 
 /// Basic hardware abstraction layer for sending data.
-pub trait Interface {
+pub trait Channel {
     type Error;
 
     fn send(&mut self, data: &[u8]) -> Result<(), Self::Error>;
     fn recv(&mut self, data: &mut [u8]) -> Result<(), Self::Error>;
 }
 
-impl<E> ciborium_io::Write for &mut dyn Interface<Error = E> {
+impl<E> ciborium_io::Write for &mut dyn Channel<Error = E> {
     type Error = E;
 
     fn write_all(&mut self, data: &[u8]) -> Result<(), Self::Error> {
@@ -48,7 +48,7 @@ impl<E> ciborium_io::Write for &mut dyn Interface<Error = E> {
     }
 }
 
-impl<E> ciborium_io::Read for &mut dyn Interface<Error = E> {
+impl<E> ciborium_io::Read for &mut dyn Channel<Error = E> {
     type Error = E;
 
     fn read_exact(&mut self, data: &mut [u8]) -> Result<(), Self::Error> {
@@ -57,11 +57,9 @@ impl<E> ciborium_io::Read for &mut dyn Interface<Error = E> {
 }
 
 // Echoes all input on the interface back out.
-pub fn echo<E: core::fmt::Debug>(
-    mut interface: &mut dyn Interface<Error = E>,
-) -> Result<!, Error<E>> {
+pub fn echo<E: core::fmt::Debug>(mut channel: &mut dyn Channel<Error = E>) -> Result<!, Error<E>> {
     loop {
-        let msg: Vec<u8> = de::from_reader(&mut interface).map_err(Error::De)?;
-        ser::into_writer(&msg, &mut interface).map_err(Error::Ser)?;
+        let msg: Vec<u8> = de::from_reader(&mut channel).map_err(Error::De)?;
+        ser::into_writer(&msg, &mut channel).map_err(Error::Ser)?;
     }
 }

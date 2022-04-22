@@ -71,7 +71,7 @@ impl<'boot> Serial<'boot> {
     }
 }
 
-impl<'boot> runtime::echo::Interface for Serial<'boot> {
+impl<'boot> runtime::echo::Channel for Serial<'boot> {
     type Error = Error<()>;
 
     fn send(&mut self, data: &[u8]) -> Result<(), Self::Error> {
