@@ -20,8 +20,8 @@ use anyhow::anyhow;
 use clap::Parser;
 use log::{debug, info};
 use offline_attestation_shared::{
-    decrypt, encrypt, generate_private_key, init, EncryptedRequest, EncryptedResponse, Handle,
-    PublicKeyInfo,
+    decrypt, encrypt, generate_private_key, AttestationReport, EncryptedRequest, EncryptedResponse,
+    Handle, PublicKeyInfo,
 };
 use std::{
     net::{Ipv6Addr, SocketAddr},
@@ -43,7 +43,7 @@ pub struct Opt {
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     env_logger::init();
-    init();
+    offline_attestation_shared::init();
     let opt = Opt::parse();
     let address = SocketAddr::from((Ipv6Addr::UNSPECIFIED, opt.port));
 
@@ -57,8 +57,11 @@ async fn main() -> anyhow::Result<()> {
         .public()
         .map_err(|error| anyhow!("Couldn't get public key: {}", error))?;
 
-    // Combine the public key with an attesation report in preparation for publishing it.
-    let public_key_info = Arc::new(PublicKeyInfo::new(&public_key_handle)?);
+    let attestation_report = generate_attestation_report(&public_key_handle)?;
+
+    // Combine the public key with an attesation report in preparation for making it available to
+    // clients.
+    let public_key_info = Arc::new(PublicKeyInfo::new(&public_key_handle, &attestation_report)?);
     debug!(
         "Constructed public key info: {}",
         serde_json::to_string(public_key_info.as_ref())?
@@ -98,7 +101,7 @@ fn encrypted_echo(
 ) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
     warp::post()
         .and(warp::path(ECHO_PATH))
-        // Limit the maximum request body size to 4kb.
+        // Limit the maximum request body size to 4KiB.
         .and(warp::body::content_length_limit(1024 * 4))
         .and(warp::body::json())
         .map(move |request: EncryptedRequest| handle(request, private_key_handle.clone()))
@@ -127,8 +130,14 @@ fn handle(encrypted_request: EncryptedRequest, private_key_handle: Arc<Handle>) 
 
         response
     };
-    match result {
-        Ok(response) => warp::reply::json(&response).into_response(),
-        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
-    }
+
+    result
+        .map(|raw_response| warp::reply::json(&raw_response).into_response())
+        .unwrap_or_else(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())
+}
+
+fn generate_attestation_report(_public_key_handle: &Handle) -> anyhow::Result<AttestationReport> {
+    // In a real implementation this would ask the enclave for an attestation report that binds
+    // the public key to the enclave and the code. For now we just use a placehoder.
+    Ok(AttestationReport {})
 }

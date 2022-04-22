@@ -54,6 +54,9 @@ pub struct EncryptedResponse {
     pub ciphertext: Vec<u8>,
 }
 
+/// Placeholder for an attestation report.
+pub struct AttestationReport {}
+
 /// Information about the public key that should be used for encrypting requests.
 #[derive(Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -73,10 +76,11 @@ pub struct PublicKeyInfo {
 
 impl PublicKeyInfo {
     /// Constructs a new `PublicKeyInfo` instance from the public key handle.
-    pub fn new(public_key_handle: &Handle) -> anyhow::Result<Self> {
-        // In a real implementation this would ask the enclave for an attestation report that binds
-        // the private key to the enclave. For now we just use and empty vector.
-        let attestation = Vec::new();
+    pub fn new(
+        public_key_handle: &Handle,
+        attestation_report: &AttestationReport,
+    ) -> anyhow::Result<Self> {
+        let attestation = serialize_attestation_report(attestation_report)?;
         let request_public_key = serialize_public_key(public_key_handle)?;
         Ok(Self {
             request_public_key,
@@ -149,4 +153,20 @@ pub fn deserialize_public_key(data: &[u8]) -> anyhow::Result<Handle> {
     let mut reader = tink_core::keyset::BinaryReader::new(data);
     Handle::read_with_no_secrets(&mut reader)
         .map_err(|error| anyhow!("Couldn't deserialise public key: {}", error))
+}
+
+/// Serialises the attestation report to a binary representation.
+///
+/// For now we just use an empty vector as a placeholder.
+pub fn serialize_attestation_report(
+    _attestation_report: &AttestationReport,
+) -> anyhow::Result<Vec<u8>> {
+    Ok(Vec::new())
+}
+
+/// Deserialises the attestation report from a binary representation.
+///
+/// For now we just use return the empty placeholder.
+pub fn deserialize_attestation_report(_attestation: &[u8]) -> anyhow::Result<AttestationReport> {
+    Ok(AttestationReport {})
 }

@@ -7,7 +7,7 @@ the runtime. For some scenarios it might be preferable to avoid the handshake.
 The offline attestation approach splits the attestation process into two
 distinct parts:
 
-- Key generation and publication: A single asymmetric key-pair is generated. The
+- Key generation and export: A single asymmetric key-pair is generated. The
   public key is bound to an attestation report that provides evidence about the
   enclave that generated the private key. The public key and attestation report
   are then made availble to clients.
@@ -17,13 +17,14 @@ distinct parts:
   additional information (e.g. the client's public key) in the request to allow
   the server to encrypt the response.
 
-Since the same public key is used for encrypting all requests this approach does
-not have the same forward secrecy that is provided by ephemeral keys in the
-interactive handshake. Avoiding the need for a handshake has some advantages
-though:
-
-- Reduced bandwith and latency
-- No need for sticky sessions in a load-balanced environment
+- This approach has some advantages compared to the interactive handshake-based
+  approach:
+  - Reduced bandwith and latency
+  - No need for sticky sessions in a load-balanced environment
+- And some disadvantages:
+  - No forward secrecy since the same public key is used for encrypting all
+    requests
+  - No built-in replay protection
 
 ## Implementation Details
 
@@ -31,7 +32,7 @@ This experimental example provides simplified client and server implementations.
 
 ### Server
 
-The server generates an assymetric key-pair at startup. It then generates an
+The server generates an asymmetric key-pair at startup. It then generates an
 attestation report that binds the public key to the enclave hardware and the
 version of the server code. For this example we just generate a fake empty
 attestation report that is always accepted by the client.
@@ -77,7 +78,7 @@ report should include checks to ensure that the code would treat the decrypted
 data appropriately and not leak the private key from the enclave.
 
 Once the client has the server's public key it encrypts the request. The client
-also generates its own assymetric key-pair and includes the public key in the
+also generates its own asymmetric key-pair and includes the public key in the
 request. This provides a mechansim for the server to encrypt the response back
 to the client.
 

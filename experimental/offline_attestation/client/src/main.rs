@@ -18,8 +18,8 @@ use anyhow::anyhow;
 use clap::Parser;
 use log::{debug, info};
 use offline_attestation_shared::{
-    decrypt, encrypt, generate_private_key, init, serialize_public_key, EncryptedRequest,
-    EncryptedResponse, PublicKeyInfo,
+    decrypt, encrypt, generate_private_key, serialize_public_key, EncryptedRequest,
+    EncryptedResponse, Handle, PublicKeyInfo,
 };
 use url::Url;
 
@@ -47,13 +47,13 @@ pub struct Opt {
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     env_logger::init();
-    init();
+    offline_attestation_shared::init();
     let opt = Opt::parse();
     let base_url = Url::parse(&opt.url)?;
     let echo_url = base_url.join(ECHO_PATH)?;
     let public_key_info_url = base_url.join(PUBLIC_KEY_INFO_PATH)?;
 
-    let message = opt.message.as_bytes().to_vec();
+    let message = opt.message.as_bytes();
     debug!("Cleartext message: {:?}", message);
 
     let client = reqwest::Client::new();
@@ -67,24 +67,9 @@ async fn main() -> anyhow::Result<()> {
         serde_json::to_string(&public_key_info)?
     );
     public_key_info.validate()?;
-    let request_public_key_handle = public_key_info.get_public_key_handle()?;
 
-    // Encrypt the message with the server's public key.
-    let ciphertext = encrypt(&request_public_key_handle, &message)?;
-
-    // Generate a private key for decrypting the response.
-    let private_key_handle = generate_private_key()?;
-    // Get the associated public key so that the server can use it for encrypting the response.
-    let response_public_key_handle = private_key_handle
-        .public()
-        .map_err(|error| anyhow!("Couldn't get public key: {}", error))?;
-    let response_public_key = serialize_public_key(&response_public_key_handle)?;
-
-    // Build the encrypted request to send to the server.
-    let encrypted_request = EncryptedRequest {
-        ciphertext,
-        response_public_key,
-    };
+    let request_helper = RequestHelper::new(&public_key_info, message)?;
+    let encrypted_request = request_helper.generate_encrypted_request()?;
 
     debug!(
         "Encrypted request: {}",
@@ -103,9 +88,58 @@ async fn main() -> anyhow::Result<()> {
         serde_json::to_string(&encrypted_response)?
     );
 
-    // Decrypt the response.
-    let response = decrypt(&private_key_handle, &encrypted_response.ciphertext)?;
+    let response = request_helper.decrypt_response(encrypted_response)?;
+
     let result = String::from_utf8(response)?;
     info!("Result: {}", result);
     Ok(())
+}
+
+/// Utility for creating encrypted requests and decrypting the server response.
+struct RequestHelper {
+    /// Handle to the server's public key for encrypting requests.
+    server_public_key_handle: Handle,
+    /// Handle to private key for decrypting the server's response.
+    private_key_handle: Handle,
+    /// The clear-text message to encrypt as part of the request.
+    message: Vec<u8>,
+}
+
+impl RequestHelper {
+    /// Creates a new instance for handling a single request-response pair.
+    fn new(server_public_key_info: &PublicKeyInfo, message: &[u8]) -> anyhow::Result<Self> {
+        let server_public_key_handle = server_public_key_info.get_public_key_handle()?;
+        // Generate a new ephemeral private key for decrypting the response.
+        let private_key_handle = generate_private_key()?;
+        let message = message.to_vec();
+        Ok(RequestHelper {
+            server_public_key_handle,
+            private_key_handle,
+            message,
+        })
+    }
+
+    /// Generates an encrypted request to send to the server.
+    fn generate_encrypted_request(&self) -> anyhow::Result<EncryptedRequest> {
+        // Encrypt the message with the server's public key.
+        let ciphertext = encrypt(&self.server_public_key_handle, &self.message)?;
+
+        // Get the public key for the current private key so that the server can use it for
+        // encrypting the response.
+        let response_public_key_handle = self
+            .private_key_handle
+            .public()
+            .map_err(|error| anyhow!("Couldn't get public key: {}", error))?;
+        let response_public_key = serialize_public_key(&response_public_key_handle)?;
+
+        Ok(EncryptedRequest {
+            ciphertext,
+            response_public_key,
+        })
+    }
+
+    /// Consumes the helper and decrypts the encrypted response from the server.
+    fn decrypt_response(self, encrypted_response: EncryptedResponse) -> anyhow::Result<Vec<u8>> {
+        decrypt(&self.private_key_handle, &encrypted_response.ciphertext)
+    }
 }
