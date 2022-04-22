@@ -12,14 +12,14 @@ distinct parts:
   enclave that generated the private key. The public key and attestation report
   are then made availble to clients.
 - Encrypted communications: Clients use the public key (once they are satisfied
-  byt the evidence that only appropriate enclaves would have access to the
+  by the evidence that only appropriate enclaves would have access to the
   private key) to encrypt requests to the server. Clients also provide
   additional information (e.g. the client's public key) in the request to allow
   the server to encrypt the response.
 
 Since the same public key is used for encrypting all requests this approach does
 not have the same forward secrecy that is provided by ephemeral keys in the
-interactive handshake. Avoiding the need to a handshake has some advantages
+interactive handshake. Avoiding the need for a handshake has some advantages
 though:
 
 - Reduced bandwith and latency
@@ -37,8 +37,8 @@ version of the server code. For this example we just generate a fake empty
 attestation report that is always accepted by the client.
 
 For more realistic implementations that support load-balancing a
-key-provisioning mechanism is required to ensure all instances of the server
-have access to the private key. This could be done in two ways:
+key-provisioning mechanism is required to ensure that all instances of the
+server have access to the private key. This could be done in two ways:
 
 - A separate key management server (KMS): The KMS would generate the key-pair
   and attestation report. When a server instance starts up it sets up a
@@ -89,7 +89,7 @@ using is private key and processes the cleartext content.
 This example uses Tink's implementation of
 [ECIES hybrid encryption](https://github.com/project-oak/tink-rust/tree/main/hybrid):
 
-- Key agreement: ECDH with the NIST P-256 curve
+- Key agreement: ECDH using the NIST P-256 curve
 - Key derivation: HKDF using SHA256 with an empty salt
 - Authenticated encryption: 128-bit AES_GCM
 
