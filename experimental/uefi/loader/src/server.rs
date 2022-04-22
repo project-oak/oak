@@ -20,12 +20,12 @@ use std::net::SocketAddr;
 use tonic::{transport::Server, Request, Response, Status};
 
 pub mod proto {
-    tonic::include_proto!("oak.experimental.uefi");
+    tonic::include_proto!("oak.session.unary.v1");
 }
 
 use proto::{
-    echo_server::{Echo, EchoServer},
-    EchoRequest, EchoResponse,
+    unary_session_server::{UnarySession, UnarySessionServer},
+    UnaryRequest, UnaryResponse,
 };
 
 pub struct EchoImpl {
@@ -33,22 +33,25 @@ pub struct EchoImpl {
 }
 
 #[tonic::async_trait]
-impl Echo for EchoImpl {
-    async fn echo(&self, request: Request<EchoRequest>) -> Result<Response<EchoResponse>, Status> {
+impl UnarySession for EchoImpl {
+    async fn message(
+        &self,
+        request: Request<UnaryRequest>,
+    ) -> Result<Response<UnaryResponse>, Status> {
         let request = request.into_inner();
 
         // There's two nested errors: one for communicating over the channel, and one for
         // communicating over the serial port with the UEFI app.
         // We probably want to log the error in the future and serve something more
         // ambiguous to the end user, but for now that'll do.
-        let message = self
+        let body = self
             .channel
-            .send_receive(request.message)
+            .send_receive(request.body)
             .await
             .map_err(|err| Status::internal(format!("{:?}", err)))?
             .map_err(|err| Status::internal(format!("{:?}", err)))?;
 
-        Ok(Response::new(EchoResponse { message }))
+        Ok(Response::new(UnaryResponse { body }))
     }
 }
 
@@ -58,6 +61,6 @@ pub fn server(
 ) -> impl Future<Output = Result<(), tonic::transport::Error>> {
     let server_impl = EchoImpl { channel };
     Server::builder()
-        .add_service(EchoServer::new(server_impl))
+        .add_service(UnarySessionServer::new(server_impl))
         .serve(addr)
 }
