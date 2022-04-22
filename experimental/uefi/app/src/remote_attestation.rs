@@ -55,7 +55,7 @@ where
     pub fn message(&mut self, session_id: SessionId, request: Vec<u8>) -> anyhow::Result<Vec<u8>> {
         let mut session_state = {
             self.session_tracker
-                .pop_session_state(session_id)
+                .pop_or_create_session_state(session_id)
                 .expect("Couldn't pop session state")
         };
         let response_body = match session_state {
