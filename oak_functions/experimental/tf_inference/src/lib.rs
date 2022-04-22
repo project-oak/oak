@@ -151,16 +151,13 @@ pub struct TensorFlowModelConfig {
 }
 
 #[derive(Clone)]
-pub struct TensorFlowModel<L: OakLogger + Clone> {
+pub struct TensorFlowModel<L: OakLogger> {
     model: Arc<Model>,
     shape: Vec<u8>,
     logger: L,
 }
 
-impl<L> TensorFlowModel<L>
-where
-    L: OakLogger + Clone,
-{
+impl<L: OakLogger> TensorFlowModel<L> {
     pub fn new(model: Arc<Model>, shape: Vec<u8>, logger: L) -> Self {
         Self {
             model,

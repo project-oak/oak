@@ -45,16 +45,13 @@ use oak_functions_util::sync::Mutex;
 // Host function name for invoking lookup in lookup data.
 const LOOKUP_ABI_FUNCTION_NAME: &str = "storage_get_item";
 
-pub struct LookupFactory<L>
-where
-    L: OakLogger + Clone,
-{
+pub struct LookupFactory<L: OakLogger> {
     manager: Arc<LookupDataManager<L>>,
 }
 
 impl<L> LookupFactory<L>
 where
-    L: OakLogger + Clone + Send + Sync + 'static,
+    L: OakLogger + 'static,
 {
     pub fn new_boxed_extension_factory(
         manager: Arc<LookupDataManager<L>>,
@@ -68,7 +65,7 @@ where
 // traits are in a separate crate.
 impl<L> ExtensionFactory<L> for LookupFactory<L>
 where
-    L: OakLogger + Clone + Send + Sync + 'static,
+    L: OakLogger + 'static,
 {
     fn create(&self) -> anyhow::Result<BoxedExtension> {
         let extension = self.manager.create_lookup_data();
@@ -76,10 +73,7 @@ where
     }
 }
 
-impl<L> OakApiNativeExtension for LookupData<L>
-where
-    L: OakLogger + Clone,
-{
+impl<L: OakLogger> OakApiNativeExtension for LookupData<L> {
     fn invoke(&mut self, request: Vec<u8>) -> Result<Vec<u8>, OakStatus> {
         // The request is the key to lookup.
         let key = request;

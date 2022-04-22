@@ -37,17 +37,14 @@ const ABI_USIZE: ValueType = ValueType::I32;
 /// Host function name for reporting private metrics.
 const METRICS_ABI_FUNCTION_NAME: &str = "report_metric";
 
-pub struct PrivateMetricsProxyFactory<L>
-where
-    L: OakLogger + Clone,
-{
+pub struct PrivateMetricsProxyFactory<L: OakLogger> {
     aggregator: Arc<Mutex<PrivateMetricsAggregator>>,
     logger: L,
 }
 
 impl<L> PrivateMetricsProxyFactory<L>
 where
-    L: OakLogger + Clone + Send + Sync + 'static,
+    L: OakLogger + 'static,
 {
     pub fn new_boxed_extension_factory(
         config: &PrivateMetricsConfig,
@@ -67,7 +64,7 @@ where
 // traits are in a separate crate.
 impl<L> ExtensionFactory<L> for PrivateMetricsProxyFactory<L>
 where
-    L: OakLogger + Clone + Send + Sync + 'static,
+    L: OakLogger + 'static,
 {
     fn create(&self) -> anyhow::Result<BoxedExtension> {
         let metrics_proxy = PrivateMetricsProxy::new(self.aggregator.clone());
@@ -78,10 +75,7 @@ where
     }
 }
 
-impl<L> OakApiNativeExtension for PrivateMetricsExtension<L>
-where
-    L: OakLogger + Clone,
-{
+impl<L: OakLogger> OakApiNativeExtension for PrivateMetricsExtension<L> {
     fn invoke(&mut self, request: Vec<u8>) -> Result<Vec<u8>, OakStatus> {
         let request: ReportMetricRequest =
             bincode::deserialize(&request).expect("Fail to deserialize report metric request.");
