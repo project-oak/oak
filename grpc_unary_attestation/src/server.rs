@@ -83,7 +83,7 @@ where
             self.session_tracker
                 .lock()
                 .expect("Couldn't lock session_state mutex")
-                .pop_session_state(session_id)
+                .pop_or_create_session_state(session_id)
                 .map_err(|error| {
                     error_logger.log_error(&format!("Couldn't pop session state: {:?}", error));
                     tonic::Status::internal("")
