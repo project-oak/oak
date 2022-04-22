@@ -89,12 +89,19 @@ RUN echo 'deb http://deb.debian.org/debian buster-backports main' > /etc/apt/sou
   && rm --recursive --force /var/lib/apt/lists/* \
   && ln --symbolic --force clang-format-8 /usr/bin/clang-format
 
+# Install Ent CLI. We mostly then just use it in order to simplify the logic around fetching
+# artifacts by URL and ensuring that their digest is correct, in order to ensure reproducibility.
+ARG ent_server_url=https://ent-server-62sa4xcfia-ew.a.run.app
+ARG ent_digest=sha256:b2e999bda4c90fc58c924e19787f5f7037f9d48fd83e7deebd06e3e1d5b31e8d
+RUN curl --location ${ent_server_url}/raw/${ent_digest} > /usr/local/bin/ent \
+  && chmod +x /usr/local/bin/ent \
+  && ent
+
 # Use a fixed version of Bazel.
 ARG bazel_version=4.2.0
-ARG bazel_sha256=89b14fa0d9ce5637f4e0b66df56a531e1e3c50d88614311334d192531cf1e0fa
+ARG bazel_digest=sha256:89b14fa0d9ce5637f4e0b66df56a531e1e3c50d88614311334d192531cf1e0fa
 ARG bazel_url=https://storage.googleapis.com/bazel-apt/pool/jdk1.8/b/bazel/bazel_${bazel_version}_amd64.deb
-RUN curl --location "${bazel_url}" > bazel.deb \
-  && sha256sum --binary bazel.deb && echo "${bazel_sha256} *bazel.deb" | sha256sum --check \
+RUN ent get ${bazel_digest} --url=${bazel_url} > bazel.deb \
   && apt-get install --no-install-recommends --yes ./bazel.deb \
   && rm bazel.deb \
   && apt-get clean \
@@ -109,13 +116,12 @@ ARG emscripten_version=1.39.17
 # Pick compatible Node version by grepping "node" in the emscripten.zip
 # Node is needed to expose npm needed for installing Prettier.
 ARG emscripten_node_version_directory=12.9.1_64bit
-ARG emscripten_sha256=925dd5ca7dd783d0b367386e81847eaf680d54ae86017c4b5846dea951e17dc9
+ARG emscripten_digest=sha256:925dd5ca7dd783d0b367386e81847eaf680d54ae86017c4b5846dea951e17dc9
 
 ARG emscripten_dir=/usr/local/emsdk
 ARG emscripten_temp=/tmp/emscripten.zip
 RUN mkdir --parents ${emscripten_dir} \
-  && curl --location https://github.com/emscripten-core/emsdk/archive/${emscripten_version}.tar.gz > ${emscripten_temp} \
-  && sha256sum --binary ${emscripten_temp} && echo "${emscripten_sha256} *${emscripten_temp}" | sha256sum --check \
+  && ent get ${emscripten_digest} --url=https://github.com/emscripten-core/emsdk/archive/${emscripten_version}.tar.gz > ${emscripten_temp} \
   && tar --extract --gzip --file=${emscripten_temp} --directory=${emscripten_dir} --strip-components=1 \
   && rm ${emscripten_temp} \
   && ${emscripten_dir}/emsdk install ${emscripten_version} \
@@ -132,7 +138,7 @@ RUN mkdir -p "/.npm" && chmod a+rwx "/.npm" & mkdir -p "/.config" && chmod a+rwx
 
 # Install Go.
 ARG golang_version=1.17.7
-ARG golang_sha256=02b111284bedbfa35a7e5b74a06082d18632eff824fd144312f6063943d49259
+ARG golang_digest=sha256:02b111284bedbfa35a7e5b74a06082d18632eff824fd144312f6063943d49259
 ARG golang_temp=/tmp/golang.tar.gz
 ENV GOROOT /usr/local/go
 ENV GOPATH ${HOME}/go
@@ -143,8 +149,7 @@ ENV PATH "${GOPATH}/bin:${PATH}"
 # See https://dev.to/maelvls/why-is-go111module-everywhere-and-everything-about-go-modules-24k
 ENV GO111MODULE on
 RUN mkdir --parents ${GOROOT} \
-  && curl --location https://dl.google.com/go/go${golang_version}.linux-amd64.tar.gz > ${golang_temp} \
-  && sha256sum --binary ${golang_temp} && echo "${golang_sha256} *${golang_temp}" | sha256sum --check \
+  && ent get ${golang_digest} --url=https://dl.google.com/go/go${golang_version}.linux-amd64.tar.gz > ${golang_temp} \
   && tar --extract --gzip --file=${golang_temp} --directory=${GOROOT} --strip-components=1 \
   && rm ${golang_temp} \
   && go version
@@ -176,37 +181,34 @@ RUN npm install --global \
 # Install hadolint.
 # https://github.com/hadolint/hadolint
 ARG hadolint_version=2.8.0
-ARG hadolint_sha256=9dfc155139a1e1e9b3b28f3de9907736b9dfe7cead1c3a0ae7ff0158f3191674
+ARG hadolint_digest=sha256:9dfc155139a1e1e9b3b28f3de9907736b9dfe7cead1c3a0ae7ff0158f3191674
 ARG hadolint_dir=/usr/local/hadolint/bin
 ARG hadolint_bin=${hadolint_dir}/hadolint
 ENV PATH "${hadolint_dir}:${PATH}"
 RUN mkdir --parents ${hadolint_dir} \
-  && curl --location https://github.com/hadolint/hadolint/releases/download/v${hadolint_version}/hadolint-Linux-x86_64 > ${hadolint_bin} \
-  && sha256sum --binary ${hadolint_bin} && echo "${hadolint_sha256} *${hadolint_bin}" | sha256sum --check \
+  && ent get ${hadolint_digest} --url=https://github.com/hadolint/hadolint/releases/download/v${hadolint_version}/hadolint-Linux-x86_64 > ${hadolint_bin} \
   && chmod +x ${hadolint_bin} \
   && hadolint --version
 
 # Install buildifier.
 # https://github.com/bazelbuild/buildtools/tree/master/buildifier
 ARG bazel_tools_version=5.0.0
-ARG buildifier_sha256=18a518a4b9b83bb96a115a681099ae6c115217e925a2dacfb263089e3a791b5d
+ARG buildifier_digest=sha256:18a518a4b9b83bb96a115a681099ae6c115217e925a2dacfb263089e3a791b5d
 ARG buildifier_dir=/usr/local/buildifier/bin
 ARG buildifier_bin=${buildifier_dir}/buildifier
 ENV PATH "${buildifier_dir}:${PATH}"
 RUN mkdir --parents ${buildifier_dir} \
-  && curl --location https://github.com/bazelbuild/buildtools/releases/download/${bazel_tools_version}/buildifier-linux-amd64 > ${buildifier_bin} \
-  && sha256sum --binary ${buildifier_bin} && echo "${buildifier_sha256} *${buildifier_bin}" | sha256sum --check \
+  && ent get ${buildifier_digest} --url=https://github.com/bazelbuild/buildtools/releases/download/${bazel_tools_version}/buildifier-linux-amd64 > ${buildifier_bin} \
   && chmod +x ${buildifier_bin} \
   && buildifier --version
 
 # Install Protobuf compiler.
 ARG protobuf_version=3.19.4
-ARG protobuf_sha256=058d29255a08f8661c8096c92961f3676218704cbd516d3916ec468e139cbd87
+ARG protobuf_digest=sha256:058d29255a08f8661c8096c92961f3676218704cbd516d3916ec468e139cbd87
 ARG protobuf_dir=/usr/local/protobuf
 ARG protobuf_temp=/tmp/protobuf.zip
 ENV PATH "${protobuf_dir}/bin:${PATH}"
-RUN curl --location https://github.com/protocolbuffers/protobuf/releases/download/v${protobuf_version}/protoc-${protobuf_version}-linux-x86_64.zip > ${protobuf_temp} \
-  && sha256sum --binary ${protobuf_temp} && echo "${protobuf_sha256} *${protobuf_temp}" | sha256sum --check \
+RUN ent get ${protobuf_digest} --url=https://github.com/protocolbuffers/protobuf/releases/download/v${protobuf_version}/protoc-${protobuf_version}-linux-x86_64.zip > ${protobuf_temp} \
   && unzip ${protobuf_temp} -d ${protobuf_dir} \
   && rm ${protobuf_temp} \
   && chmod --recursive a+rwx ${protobuf_dir} \
