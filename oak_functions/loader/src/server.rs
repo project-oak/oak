@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::logger::Logger;
+use crate::{logger::Logger, OakFunctionsBoxedExtensionFactory};
 
 use anyhow::Context;
 use byteorder::{ByteOrder, LittleEndian};
@@ -22,7 +22,7 @@ use log::Level;
 use oak_functions_abi::proto::{
     ExtensionHandle, OakStatus, Request, Response, ServerPolicy, StatusCode,
 };
-use oak_functions_extension::{BoxedExtension, BoxedExtensionFactory};
+use oak_functions_extension::BoxedExtension;
 use oak_logger::OakLogger;
 use serde::Deserialize;
 use std::{collections::HashMap, convert::TryInto, str, sync::Arc, time::Duration};
@@ -648,23 +648,20 @@ where
     )
 }
 
-// Helper type to instantiate BoxedExtensionFactory with Logger in runtime.
-pub type RuntimeBoxedExtensionFactory = BoxedExtensionFactory<Logger>;
-
 // An ephemeral request handler with a Wasm module for handling the requests.
 #[derive(Clone)]
 pub struct WasmHandler {
     // Wasm module to be served on each invocation. `Arc` is needed to make `WasmHandler`
     // cloneable.
     module: Arc<wasmi::Module>,
-    extension_factories: Arc<Vec<RuntimeBoxedExtensionFactory>>,
+    extension_factories: Arc<Vec<OakFunctionsBoxedExtensionFactory>>,
     logger: Logger,
 }
 
 impl WasmHandler {
     pub fn create(
         wasm_module_bytes: &[u8],
-        extension_factories: Vec<RuntimeBoxedExtensionFactory>,
+        extension_factories: Vec<OakFunctionsBoxedExtensionFactory>,
         logger: Logger,
     ) -> anyhow::Result<Self> {
         let module = wasmi::Module::from_buffer(&wasm_module_bytes)

@@ -14,10 +14,7 @@
 // limitations under the License.
 //
 
-use crate::{
-    logger::Logger,
-    server::{RuntimeBoxedExtensionFactory, ABI_USIZE},
-};
+use crate::{logger::Logger, server::ABI_USIZE, OakFunctionsBoxedExtensionFactory};
 use oak_functions_extension::{BoxedExtension, ExtensionFactory, OakApiNativeExtension};
 
 use log::Level;
@@ -75,7 +72,7 @@ pub struct TestingFactory {
 impl TestingFactory {
     pub fn new_boxed_extension_factory(
         logger: Logger,
-    ) -> anyhow::Result<RuntimeBoxedExtensionFactory> {
+    ) -> anyhow::Result<OakFunctionsBoxedExtensionFactory> {
         Ok(Box::new(Self { logger }))
     }
 }
@@ -86,21 +83,12 @@ impl ExtensionFactory<Logger> for TestingFactory {
         Ok(Box::new(extension))
     }
 }
-
-#[allow(dead_code)]
-pub struct TestingExtension<L: oak_logger::OakLogger> {
-    logger: L,
+struct TestingExtension<Logger> {
+    logger: Logger,
 }
 
-impl<L> TestingExtension<L>
-where
-    L: oak_logger::OakLogger,
-{
-    pub fn new(logger: L) -> Self {
+impl TestingExtension<Logger> {
+    pub fn new(logger: Logger) -> Self {
         Self { logger }
-    }
-
-    pub fn log_error(&self, message: &str) {
-        self.logger.log_sensitive(Level::Error, message)
     }
 }
