@@ -31,8 +31,8 @@ use serde::Deserialize;
 
 use wasmi::ValueType;
 
-// TODO(mschett): Remove this again.
-pub const ABI_USIZE: ValueType = ValueType::I32;
+// TODO(#2752): Remove once we call all extensions with invoke.
+const ABI_USIZE: ValueType = ValueType::I32;
 
 /// Host function name for reporting private metrics.
 const METRICS_ABI_FUNCTION_NAME: &str = "report_metric";
@@ -83,7 +83,6 @@ where
     L: OakLogger + Clone,
 {
     fn invoke(&mut self, request: Vec<u8>) -> Result<Vec<u8>, OakStatus> {
-        // TODO(mschett): Check if I can use bincode.
         let request: ReportMetricRequest =
             bincode::deserialize(&request).expect("Fail to deserialize report metric request.");
 

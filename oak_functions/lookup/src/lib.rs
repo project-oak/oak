@@ -34,8 +34,8 @@ use oak_functions_extension::{
 use oak_logger::OakLogger;
 use wasmi::ValueType;
 
-// TODO(mschett): Remove this again.
-pub const ABI_USIZE: ValueType = ValueType::I32;
+// TODO(#2752): Remove once we call all extensions with invoke.
+const ABI_USIZE: ValueType = ValueType::I32;
 
 // TODO(#2593): Use no_std-compatible map.
 use std::collections::HashMap;

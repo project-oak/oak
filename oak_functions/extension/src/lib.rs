@@ -26,6 +26,7 @@ pub trait OakApiNativeExtension {
 
     /// Metadata about this Extension, including the exported host function name, the function's
     /// signature, and the corresponding ExtensionHandle.
+    /// TODO(#2752): Remove once we call all extensions with invoke.
     fn get_metadata(&self) -> (String, wasmi::Signature);
 
     /// Performs any cleanup or terminating behavior necessary before destroying the WasmState.

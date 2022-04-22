@@ -35,8 +35,8 @@ use tract_tensorflow::prelude::{
 };
 use wasmi::ValueType;
 
-// TODO(mschett): Remove this again.
-pub const ABI_USIZE: ValueType = ValueType::I32;
+// TODO(#2752): Remove once we call all extensions with invoke.
+const ABI_USIZE: ValueType = ValueType::I32;
 
 /// Host function name for invoking TensorFlow model inference.
 const TF_ABI_FUNCTION_NAME: &str = "tf_model_infer";
@@ -89,7 +89,7 @@ where
 
 /// Read a tensorFlow model from the given path, into a byte array.
 pub fn read_model_from_path(path: &str) -> anyhow::Result<Bytes> {
-    // TODO(mschett) Check whether we can use File
+    // TODO(#2753): Read config in loader.
     let mut f = File::open(path).context("could not open TensorFlow model file")?;
     let mut buf = vec![];
     f.read_to_end(&mut buf)
