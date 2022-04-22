@@ -23,9 +23,7 @@ use oak_functions_abi::{
     proto::{Inference, OakStatus},
     ExtensionHandle, TfModelInferError, TfModelInferResponse,
 };
-use oak_functions_extension::{
-    BoxedExtension, BoxedExtensionFactory, ExtensionFactory, OakApiNativeExtension,
-};
+use oak_functions_extension::{BoxedExtensionFactory, ExtensionFactory, OakApiNativeExtension};
 use oak_logger::OakLogger;
 use prost::Message;
 use serde_derive::Deserialize;
@@ -126,7 +124,7 @@ impl<L> ExtensionFactory<L> for TensorFlowFactory<L>
 where
     L: OakLogger + Clone + Send + Sync + 'static,
 {
-    fn create(&self) -> anyhow::Result<BoxedExtension> {
+    fn create(&self) -> anyhow::Result<Box<dyn OakApiNativeExtension>> {
         let model = self.model.clone();
         Ok(Box::new(model))
     }

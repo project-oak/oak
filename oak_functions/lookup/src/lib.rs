@@ -29,9 +29,7 @@ use alloc::{
 };
 use log::Level;
 use oak_functions_abi::{proto::OakStatus, ExtensionHandle};
-use oak_functions_extension::{
-    BoxedExtension, BoxedExtensionFactory, ExtensionFactory, OakApiNativeExtension,
-};
+use oak_functions_extension::{BoxedExtensionFactory, ExtensionFactory, OakApiNativeExtension};
 use oak_logger::OakLogger;
 use wasmi::ValueType;
 
@@ -68,7 +66,7 @@ impl<L> ExtensionFactory<L> for LookupFactory<L>
 where
     L: OakLogger + 'static,
 {
-    fn create(&self) -> anyhow::Result<BoxedExtension> {
+    fn create(&self) -> anyhow::Result<Box<dyn OakApiNativeExtension>> {
         let extension = self.manager.create_lookup_data();
         Ok(Box::new(extension))
     }

@@ -15,7 +15,7 @@
 //
 
 use crate::{logger::Logger, server::ABI_USIZE, OakFunctionsBoxedExtensionFactory};
-use oak_functions_extension::{BoxedExtension, ExtensionFactory, OakApiNativeExtension};
+use oak_functions_extension::{ExtensionFactory, OakApiNativeExtension};
 
 use log::Level;
 use oak_functions_abi::{proto::OakStatus, ExtensionHandle, TestingRequest, TestingResponse};
@@ -78,7 +78,7 @@ impl TestingFactory {
 }
 
 impl ExtensionFactory<Logger> for TestingFactory {
-    fn create(&self) -> anyhow::Result<BoxedExtension> {
+    fn create(&self) -> anyhow::Result<Box<dyn OakApiNativeExtension>> {
         let extension = TestingExtension::new(self.logger.clone());
         Ok(Box::new(extension))
     }

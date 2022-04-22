@@ -22,7 +22,7 @@ use log::Level;
 use oak_functions_abi::proto::{
     ExtensionHandle, OakStatus, Request, Response, ServerPolicy, StatusCode,
 };
-use oak_functions_extension::BoxedExtension;
+use oak_functions_extension::OakApiNativeExtension;
 use oak_logger::OakLogger;
 use serde::Deserialize;
 use std::{collections::HashMap, convert::TryInto, str, sync::Arc, time::Duration};
@@ -127,7 +127,7 @@ pub struct WasmState {
     logger: Logger,
     /// A mapping of internal host functions to the corresponding BoxedExtension.
     /// TODO(#2715): Replace by a map from `ExtensionHandles` to `BoxedExtensions`.
-    extensions_indices: HashMap<usize, BoxedExtension>,
+    extensions_indices: HashMap<usize, Box<dyn OakApiNativeExtension>>,
     /// A mapping of host function names to metadata required for resolving the function.
     extensions_metadata: HashMap<String, (usize, wasmi::Signature)>,
 }
@@ -492,7 +492,7 @@ impl WasmState {
         module: &wasmi::Module,
         request_bytes: Vec<u8>,
         logger: Logger,
-        extensions_indices: HashMap<usize, BoxedExtension>,
+        extensions_indices: HashMap<usize, Box<dyn OakApiNativeExtension>>,
         extensions_metadata: HashMap<String, (usize, wasmi::Signature)>,
     ) -> anyhow::Result<WasmState> {
         let mut abi = WasmState {
