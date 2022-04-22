@@ -16,9 +16,9 @@
 
 extern crate alloc;
 
+use crate::Channel;
 use alloc::vec::Vec;
 use ciborium::{de, ser};
-use crate::Channel;
 
 #[derive(Debug)]
 pub enum Error<T> {
