@@ -18,6 +18,7 @@
 #![feature(never_type)]
 
 pub mod echo;
+mod remote_attestation;
 
 /// Basic hardware abstraction layer for sending data.
 pub trait Channel {

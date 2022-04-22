@@ -16,17 +16,20 @@
 
 extern crate alloc;
 
-use crate::Channel;
+use crate::{remote_attestation::AttestationHandler, Channel};
 use alloc::vec::Vec;
 use ciborium::{de, ser};
 
 #[derive(Debug)]
 pub enum Error<T> {
     // An error occured while deserializing.
-    De(ciborium::de::Error<T>),
+    Deserialization(ciborium::de::Error<T>),
 
     // An error occured while serializing.
-    Ser(ciborium::ser::Error<T>),
+    Serialization(ciborium::ser::Error<T>),
+
+    // An error occured in remote attestation.
+    Attestation(anyhow::Error),
 }
 
 impl<E> ciborium_io::Write for &mut dyn Channel<Error = E> {
@@ -49,10 +52,16 @@ impl<E> ciborium_io::Read for &mut dyn Channel<Error = E> {
     }
 }
 
+const MOCK_SESSION_ID: [u8; 8] = [0; 8];
+
 // Echoes all input on the interface back out.
 pub fn echo<E: core::fmt::Debug>(mut channel: &mut dyn Channel<Error = E>) -> Result<!, Error<E>> {
+    let attestation_handler = &mut AttestationHandler::create(|v| v);
     loop {
-        let msg: Vec<u8> = de::from_reader(&mut channel).map_err(Error::De)?;
-        ser::into_writer(&msg, &mut channel).map_err(Error::Ser)?;
+        let msg: Vec<u8> = de::from_reader(&mut channel).map_err(Error::Deserialization)?;
+        let response = attestation_handler
+            .message(MOCK_SESSION_ID, msg)
+            .map_err(Error::Attestation)?;
+        ser::into_writer(&response, &mut channel).map_err(Error::Serialization)?;
     }
 }
