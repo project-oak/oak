@@ -624,14 +624,13 @@ fn check_export_function_signature(
 /// response may be padded by a number of trailing 0s before encoding the response as a binary
 /// protobuf message. In this case, the `length` in the response will contain the effective length
 /// of the `body`. This response is guaranteed to comply with the policy's size restriction.
-pub async fn apply_policy<F, S>(policy: ServerPolicy, function: F) -> anyhow::Result<Response>
+pub async fn apply_policy<F>(policy: ServerPolicy, function: F) -> anyhow::Result<Response>
 where
-    F: std::marker::Send + 'static + FnOnce() -> S,
-    S: std::future::Future<Output = anyhow::Result<Response>> + std::marker::Send,
+    F: std::marker::Send + 'static + FnOnce() -> anyhow::Result<Response>,
 {
     // Use tokio::spawn to actually run the tasks in parallel, for more accurate measurement
     // of time.
-    let task = tokio::spawn(async move { function().await });
+    let task = tokio::spawn(async move { function() });
     // Sleep until the policy times out
     tokio::time::sleep(Duration::from_millis(
         policy.constant_processing_time_ms.into(),
@@ -728,7 +727,7 @@ impl WasmHandler {
         Ok(wasm_state)
     }
 
-    pub async fn handle_invoke(&self, request: Request) -> anyhow::Result<Response> {
+    pub fn handle_invoke(&self, request: Request) -> anyhow::Result<Response> {
         let request_bytes = request.body;
         let mut wasm_state = self.init_wasm_state(request_bytes)?;
 

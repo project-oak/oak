@@ -36,7 +36,7 @@ async fn handle_request(
     let request = Request {
         body: decrypted_request,
     };
-    let function = async move || wasm_handler.clone().handle_invoke(request).await;
+    let function = move || wasm_handler.clone().handle_invoke(request);
     let policy = policy.clone();
     let response = apply_policy(policy, function)
         .await
