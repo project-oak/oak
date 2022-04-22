@@ -17,7 +17,7 @@ use oak_functions_abi::proto::{ExtensionHandle, OakStatus};
 use oak_logger::OakLogger;
 
 /// A OakApiNativeExtension implements new functionality for the Oak Functions Runtime.
-pub trait OakApiNativeExtension {
+pub trait OakApiNativeExtension: Send + Sync {
     /// Invokes the extension with the given request and returns a result. If no result
     /// is expected, the result is empty.  An error within the extension is reflected in the
     /// `OakStatus`.
@@ -36,13 +36,7 @@ pub trait OakApiNativeExtension {
     fn get_handle(&self) -> ExtensionHandle;
 }
 
-pub type BoxedExtension = Box<dyn OakApiNativeExtension + Send + Sync>;
-
-impl std::fmt::Debug for BoxedExtension {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "ExtensionHandle: {:?}", self.get_handle())
-    }
-}
+pub type BoxedExtension = Box<dyn OakApiNativeExtension>;
 
 pub trait ExtensionFactory<L>
 where
