@@ -16,11 +16,11 @@
 
 use crate::{
     logger::Logger,
-    server::{BoxedExtensionFactory, ExtensionFactory, ABI_USIZE},
+    server::{RuntimeBoxedExtensionFactory, ABI_USIZE},
 };
 use alloc::sync::Arc;
 use oak_functions_abi::{proto::OakStatus, ExtensionHandle, ReportMetricRequest};
-use oak_functions_extension::{BoxedExtension, OakApiNativeExtension};
+use oak_functions_extension::{BoxedExtension, ExtensionFactory, OakApiNativeExtension};
 use oak_functions_metrics::{
     PrivateMetricsAggregator, PrivateMetricsExtension, PrivateMetricsProxy,
 };
@@ -41,7 +41,7 @@ impl PrivateMetricsProxyFactory {
     pub fn new_boxed_extension_factory(
         config: &PrivateMetricsConfig,
         logger: Logger,
-    ) -> anyhow::Result<BoxedExtensionFactory> {
+    ) -> anyhow::Result<RuntimeBoxedExtensionFactory> {
         config.validate()?;
         let aggregator = PrivateMetricsAggregator::new(config)?;
         let metrics_factory = Self {
@@ -54,7 +54,7 @@ impl PrivateMetricsProxyFactory {
 
 // TODO(#2576): Move extension trait implementation to the metrics crate once the extension-related
 // traits are in a separate crate.
-impl ExtensionFactory for PrivateMetricsProxyFactory {
+impl ExtensionFactory<Logger> for PrivateMetricsProxyFactory {
     fn create(&self) -> anyhow::Result<BoxedExtension> {
         let metrics_proxy = PrivateMetricsProxy::new(self.aggregator.clone());
         Ok(Box::new(PrivateMetricsExtension::<Logger>::new(

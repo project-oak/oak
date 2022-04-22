@@ -2475,6 +2475,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "oak_functions_abi",
+ "oak_logger",
  "wasmi",
 ]
 

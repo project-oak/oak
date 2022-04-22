@@ -16,9 +16,9 @@
 
 use crate::{
     logger::Logger,
-    server::{BoxedExtensionFactory, ExtensionFactory, ABI_USIZE},
+    server::{RuntimeBoxedExtensionFactory, ABI_USIZE},
 };
-use oak_functions_extension::{BoxedExtension, OakApiNativeExtension};
+use oak_functions_extension::{BoxedExtension, ExtensionFactory, OakApiNativeExtension};
 
 use anyhow::Context;
 use bytes::Bytes;
@@ -98,14 +98,14 @@ impl TensorFlowFactory {
         bytes: Bytes,
         shape: Vec<u8>,
         logger: Logger,
-    ) -> anyhow::Result<BoxedExtensionFactory> {
+    ) -> anyhow::Result<RuntimeBoxedExtensionFactory> {
         let parsed_model = parse_model(bytes, &shape).context("couldn't parse model")?;
         let model = TensorFlowModel::new(Arc::new(parsed_model), shape, logger);
         Ok(Box::new(Self { model }))
     }
 }
 
-impl ExtensionFactory for TensorFlowFactory {
+impl ExtensionFactory<Logger> for TensorFlowFactory {
     fn create(&self) -> anyhow::Result<BoxedExtension> {
         let model = self.model.clone();
         Ok(Box::new(model))

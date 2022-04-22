@@ -14,6 +14,7 @@
 // limitations under the License.
 
 use oak_functions_abi::proto::{ExtensionHandle, OakStatus};
+use oak_logger::OakLogger;
 
 /// A OakApiNativeExtension implements new functionality for the Oak Functions Runtime.
 pub trait OakApiNativeExtension {
@@ -42,8 +43,11 @@ impl std::fmt::Debug for BoxedExtension {
     }
 }
 
-pub trait ExtensionFactory {
+pub trait ExtensionFactory<L>
+where
+    L: OakLogger + Clone,
+{
     fn create(&self) -> anyhow::Result<BoxedExtension>;
 }
 
-pub type BoxedExtensionFactory = Box<dyn ExtensionFactory + Send + Sync>;
+pub type BoxedExtensionFactory<L> = Box<dyn ExtensionFactory<L> + Send + Sync>;

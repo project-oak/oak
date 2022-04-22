@@ -18,7 +18,7 @@
 
 use crate::{
     logger::Logger,
-    server::{apply_policy, BoxedExtensionFactory, WasmHandler},
+    server::{apply_policy, RuntimeBoxedExtensionFactory, WasmHandler},
 };
 use anyhow::Context;
 use log::Level;
@@ -48,7 +48,7 @@ async fn handle_request(
 /// extensions.
 pub fn create_wasm_handler(
     wasm_module_bytes: &[u8],
-    extensions: Vec<BoxedExtensionFactory>,
+    extensions: Vec<RuntimeBoxedExtensionFactory>,
     logger: Logger,
 ) -> anyhow::Result<WasmHandler> {
     let wasm_handler = WasmHandler::create(wasm_module_bytes, extensions, logger)?;

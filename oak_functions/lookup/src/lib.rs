@@ -45,14 +45,20 @@ use oak_functions_util::sync::Mutex;
 // Host function name for invoking lookup in lookup data.
 const LOOKUP_ABI_FUNCTION_NAME: &str = "storage_get_item";
 
-pub struct LookupFactory {
-    manager: Arc<LookupDataManager<Logger>>,
+pub struct LookupFactory<L>
+where
+    L: OakLogger + Clone,
+{
+    manager: Arc<LookupDataManager<L>>,
 }
 
-impl LookupFactory {
+impl<L> LookupFactory<L>
+where
+    L: OakLogger + Clone + Send + Sync + 'static,
+{
     pub fn new_boxed_extension_factory(
-        manager: Arc<LookupDataManager<Logger>>,
-    ) -> anyhow::Result<BoxedExtensionFactory> {
+        manager: Arc<LookupDataManager<L>>,
+    ) -> anyhow::Result<BoxedExtensionFactory<L>> {
         let lookup_factory = Self { manager };
         Ok(Box::new(lookup_factory))
     }
@@ -60,7 +66,10 @@ impl LookupFactory {
 
 // TODO(#2576): Move extension trait implementations to the lookup crate once the extension-related
 // traits are in a separate crate.
-impl ExtensionFactory for LookupFactory {
+impl<L> ExtensionFactory<L> for LookupFactory<L>
+where
+    L: OakLogger + Clone + Send + Sync + 'static,
+{
     fn create(&self) -> anyhow::Result<BoxedExtension> {
         let extension = self.manager.create_lookup_data();
         Ok(Box::new(extension))
@@ -80,7 +89,7 @@ where
         match value {
             Some(value) => {
                 // Truncate value for logging.
-                let value_to_log = value.clone().into_iter().take(512).collect::<Vec<_>>();
+                let _value_to_log = value.clone().into_iter().take(512).collect::<Vec<_>>();
                 // TODO(mschett) Add logging back.
                 //  self.log_debug(&format!(
                 //      "storage_get_item(): value: {}",
