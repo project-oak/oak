@@ -36,7 +36,7 @@ use anyhow::Context;
 use clap::Parser;
 use log::Level;
 use oak_functions_abi::proto::{ConfigurationInfo, ServerPolicy};
-use oak_functions_extension::BoxedExtensionFactory;
+use oak_functions_extension::ExtensionFactory;
 use oak_functions_lookup::{LookupDataManager, LookupFactory};
 #[cfg(feature = "oak-metrics")]
 use oak_functions_metrics::PrivateMetricsConfig;
@@ -61,7 +61,7 @@ use std::{
 mod tests;
 
 // Instantiate BoxedExtensionFactory with Logger from the Oak Functions runtime.
-pub type OakFunctionsBoxedExtensionFactory = BoxedExtensionFactory<Logger>;
+pub type OakFunctionsBoxedExtensionFactory = Box<dyn ExtensionFactory<Logger>>;
 
 /// Runtime Configuration of Runtime.
 ///

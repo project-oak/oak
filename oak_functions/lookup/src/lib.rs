@@ -29,7 +29,7 @@ use alloc::{
 };
 use log::Level;
 use oak_functions_abi::{proto::OakStatus, ExtensionHandle};
-use oak_functions_extension::{BoxedExtensionFactory, ExtensionFactory, OakApiNativeExtension};
+use oak_functions_extension::{ExtensionFactory, OakApiNativeExtension};
 use oak_logger::OakLogger;
 use wasmi::ValueType;
 
@@ -54,7 +54,7 @@ where
 {
     pub fn new_boxed_extension_factory(
         manager: Arc<LookupDataManager<L>>,
-    ) -> anyhow::Result<BoxedExtensionFactory<L>> {
+    ) -> anyhow::Result<Box<dyn ExtensionFactory<L>>> {
         let lookup_factory = Self { manager };
         Ok(Box::new(lookup_factory))
     }

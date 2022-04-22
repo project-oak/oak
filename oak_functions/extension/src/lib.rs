@@ -36,8 +36,7 @@ pub trait OakApiNativeExtension: Send + Sync {
     fn get_handle(&self) -> ExtensionHandle;
 }
 
-pub trait ExtensionFactory<L: OakLogger> {
+/// An ExtensionFactory creates a new [`OakApiNativeExtension`].
+pub trait ExtensionFactory<L: OakLogger>: Send + Sync {
     fn create(&self) -> anyhow::Result<Box<dyn OakApiNativeExtension>>;
 }
-
-pub type BoxedExtensionFactory<L> = Box<dyn ExtensionFactory<L> + Send + Sync>;

@@ -23,7 +23,7 @@ use oak_functions_abi::{
     proto::{Inference, OakStatus},
     ExtensionHandle, TfModelInferError, TfModelInferResponse,
 };
-use oak_functions_extension::{BoxedExtensionFactory, ExtensionFactory, OakApiNativeExtension};
+use oak_functions_extension::{ExtensionFactory, OakApiNativeExtension};
 use oak_logger::OakLogger;
 use prost::Message;
 use serde_derive::Deserialize;
@@ -41,10 +41,7 @@ const TF_ABI_FUNCTION_NAME: &str = "tf_model_infer";
 
 // TODO(#2576): Move extension implementation to `tf_inference` crate once the Extension-related
 // structs are in a separate crate.
-impl<L> OakApiNativeExtension for TensorFlowModel<L>
-where
-    L: OakLogger + Clone,
-{
+impl<L: OakLogger> OakApiNativeExtension for TensorFlowModel<L> {
     fn invoke(&mut self, request: Vec<u8>) -> Result<Vec<u8>, OakStatus> {
         let inference = self.get_inference(&request).map_err(|err| {
             self.log_error(&format!(
@@ -96,16 +93,13 @@ pub fn read_model_from_path(path: &str) -> anyhow::Result<Bytes> {
     Ok(Bytes::from(buf))
 }
 
-pub struct TensorFlowFactory<L>
-where
-    L: OakLogger + Clone,
-{
+pub struct TensorFlowFactory<L: OakLogger> {
     model: TensorFlowModel<L>,
 }
 
 impl<L> TensorFlowFactory<L>
 where
-    L: OakLogger + Clone + Send + Sync + 'static,
+    L: OakLogger + 'static,
 {
     /// Creates an instance of TensorFlowFactory, by loading the model from the given byte array and
     /// optimizing it using the given shape.
@@ -113,7 +107,7 @@ where
         bytes: Bytes,
         shape: Vec<u8>,
         logger: L,
-    ) -> anyhow::Result<BoxedExtensionFactory<L>> {
+    ) -> anyhow::Result<Box<dyn ExtensionFactory<L>>> {
         let parsed_model = parse_model(bytes, &shape).context("couldn't parse model")?;
         let model = TensorFlowModel::new(Arc::new(parsed_model), shape, logger);
         Ok(Box::new(Self { model }))
@@ -122,7 +116,7 @@ where
 
 impl<L> ExtensionFactory<L> for TensorFlowFactory<L>
 where
-    L: OakLogger + Clone + Send + Sync + 'static,
+    L: OakLogger + 'static,
 {
     fn create(&self) -> anyhow::Result<Box<dyn OakApiNativeExtension>> {
         let model = self.model.clone();

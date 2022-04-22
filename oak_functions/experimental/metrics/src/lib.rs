@@ -20,7 +20,7 @@ use alloc::{collections::BTreeMap, sync::Arc};
 use anyhow::Context;
 use log::Level;
 use oak_functions_abi::{proto::OakStatus, ExtensionHandle, ReportMetricRequest};
-use oak_functions_extension::{BoxedExtensionFactory, ExtensionFactory, OakApiNativeExtension};
+use oak_functions_extension::{ExtensionFactory, OakApiNativeExtension};
 use oak_logger::OakLogger;
 // TODO(#2580): Convert to `no_std` compatible random number generation.
 use oak_functions_util::sync::Mutex;
@@ -47,7 +47,7 @@ where
     pub fn new_boxed_extension_factory(
         config: &PrivateMetricsConfig,
         logger: L,
-    ) -> anyhow::Result<BoxedExtensionFactory<L>> {
+    ) -> anyhow::Result<Box<dyn ExtensionFactory<L>>> {
         config.validate()?;
         let aggregator = PrivateMetricsAggregator::new(config)?;
         let metrics_factory = Self {
