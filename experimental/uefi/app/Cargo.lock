@@ -472,7 +472,6 @@ dependencies = [
  "ciborium",
  "ciborium-io",
  "log",
- "lru",
  "oak_remote_attestation",
  "oak_remote_attestation_sessions",
  "uefi",
