@@ -1,1 +1,1 @@
-initSidebarItems({"fn":[["main",""]],"mod":[["proto",""]],"struct":[["Args",""]]});
+initSidebarItems({"constant":[["MOCK_SESSION_ID",""]],"fn":[["main",""]],"mod":[["proto",""]],"struct":[["Args",""]]});

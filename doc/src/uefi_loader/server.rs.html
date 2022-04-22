@@ -66,6 +66,9 @@
 <span id="61">61</span>
 <span id="62">62</span>
 <span id="63">63</span>
+<span id="64">64</span>
+<span id="65">65</span>
+<span id="66">66</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2022 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -88,12 +91,12 @@
 <span class="kw">use</span> <span class="ident">tonic</span>::{<span class="ident">transport::Server</span>, <span class="ident">Request</span>, <span class="ident">Response</span>, <span class="ident">Status</span>};
 
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">proto</span> {
-    <span class="macro">tonic::include_proto!</span>(<span class="string">&quot;oak.experimental.uefi&quot;</span>);
+    <span class="macro">tonic::include_proto!</span>(<span class="string">&quot;oak.session.unary.v1&quot;</span>);
 }
 
 <span class="kw">use</span> <span class="ident">proto</span>::{
-    <span class="ident">echo_server</span>::{<span class="ident">Echo</span>, <span class="ident">EchoServer</span>},
-    <span class="ident">EchoRequest</span>, <span class="ident">EchoResponse</span>,
+    <span class="ident">unary_session_server</span>::{<span class="ident">UnarySession</span>, <span class="ident">UnarySessionServer</span>},
+    <span class="ident">UnaryRequest</span>, <span class="ident">UnaryResponse</span>,
 };
 
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">EchoImpl</span> {
@@ -101,22 +104,25 @@
 }
 
 <span class="attribute">#[<span class="ident">tonic::async_trait</span>]</span>
-<span class="kw">impl</span> <span class="ident">Echo</span> <span class="kw">for</span> <span class="ident">EchoImpl</span> {
-    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">echo</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">request</span>: <span class="ident">Request</span><span class="op">&lt;</span><span class="ident">EchoRequest</span><span class="op">&gt;</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Response</span><span class="op">&lt;</span><span class="ident">EchoResponse</span><span class="op">&gt;</span>, <span class="ident">Status</span><span class="op">&gt;</span> {
+<span class="kw">impl</span> <span class="ident">UnarySession</span> <span class="kw">for</span> <span class="ident">EchoImpl</span> {
+    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">message</span>(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        <span class="ident">request</span>: <span class="ident">Request</span><span class="op">&lt;</span><span class="ident">UnaryRequest</span><span class="op">&gt;</span>,
+    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Response</span><span class="op">&lt;</span><span class="ident">UnaryResponse</span><span class="op">&gt;</span>, <span class="ident">Status</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">request</span> <span class="op">=</span> <span class="ident">request</span>.<span class="ident">into_inner</span>();
 
         <span class="comment">// There&#39;s two nested errors: one for communicating over the channel, and one for</span>
         <span class="comment">// communicating over the serial port with the UEFI app.</span>
         <span class="comment">// We probably want to log the error in the future and serve something more</span>
         <span class="comment">// ambiguous to the end user, but for now that&#39;ll do.</span>
-        <span class="kw">let</span> <span class="ident">message</span> <span class="op">=</span> <span class="self">self</span>
+        <span class="kw">let</span> <span class="ident">body</span> <span class="op">=</span> <span class="self">self</span>
             .<span class="ident">channel</span>
-            .<span class="ident">send_receive</span>(<span class="ident">request</span>.<span class="ident">message</span>)
+            .<span class="ident">send_receive</span>(<span class="ident">request</span>.<span class="ident">body</span>)
             .<span class="kw">await</span>
             .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> <span class="ident">Status::internal</span>(<span class="macro">format!</span>(<span class="string">&quot;{:?}&quot;</span>, <span class="ident">err</span>)))<span class="question-mark">?</span>
             .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> <span class="ident">Status::internal</span>(<span class="macro">format!</span>(<span class="string">&quot;{:?}&quot;</span>, <span class="ident">err</span>)))<span class="question-mark">?</span>;
 
-        <span class="prelude-val">Ok</span>(<span class="ident">Response::new</span>(<span class="ident">EchoResponse</span> { <span class="ident">message</span> }))
+        <span class="prelude-val">Ok</span>(<span class="ident">Response::new</span>(<span class="ident">UnaryResponse</span> { <span class="ident">body</span> }))
     }
 }
 
@@ -126,7 +132,7 @@
 ) -&gt; <span class="kw">impl</span> <span class="ident">Future</span><span class="op">&lt;</span><span class="ident">Output</span> <span class="op">=</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">tonic::transport::Error</span><span class="op">&gt;</span><span class="op">&gt;</span> {
     <span class="kw">let</span> <span class="ident">server_impl</span> <span class="op">=</span> <span class="ident">EchoImpl</span> { <span class="ident">channel</span> };
     <span class="ident">Server::builder</span>()
-        .<span class="ident">add_service</span>(<span class="ident">EchoServer::new</span>(<span class="ident">server_impl</span>))
+        .<span class="ident">add_service</span>(<span class="ident">UnarySessionServer::new</span>(<span class="ident">server_impl</span>))
         .<span class="ident">serve</span>(<span class="ident">addr</span>)
 }
 </code></pre></div>

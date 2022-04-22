@@ -1,1 +1,1 @@
-initSidebarItems({"mod":[["echo_server","Generated server implementations."]],"struct":[["EchoRequest",""],["EchoResponse",""]]});
+initSidebarItems({"mod":[["unary_session_server","Generated server implementations."]],"struct":[["UnaryRequest",""],["UnaryResponse",""]]});
