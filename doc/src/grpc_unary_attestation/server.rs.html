@@ -231,7 +231,7 @@
             <span class="self">self</span>.<span class="ident">session_tracker</span>
                 .<span class="ident">lock</span>()
                 .<span class="ident">expect</span>(<span class="string">&quot;Couldn&#39;t lock session_state mutex&quot;</span>)
-                .<span class="ident">pop_session_state</span>(<span class="ident">session_id</span>)
+                .<span class="ident">pop_or_create_session_state</span>(<span class="ident">session_id</span>)
                 .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">error</span><span class="op">|</span> {
                     <span class="ident">error_logger</span>.<span class="ident">log_error</span>(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;Couldn&#39;t pop session state: {:?}&quot;</span>, <span class="ident">error</span>));
                     <span class="ident">tonic::Status::internal</span>(<span class="string">&quot;&quot;</span>)
