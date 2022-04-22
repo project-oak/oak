@@ -178,20 +178,6 @@ impl WasmState {
         self.get_memory().get(buf_ptr, buf_len as usize)
     }
 
-    // Write result of extension to memory of Wasm module.
-    pub fn write_extension_result(
-        &mut self,
-        result: Vec<u8>,
-        result_ptr_ptr: AbiPointer,
-        result_len_ptr: AbiPointer,
-    ) -> Result<(), OakStatus> {
-        let buf_ptr = self.alloc(result.len() as u32);
-        self.write_buffer_to_wasm_memory(&result, buf_ptr)?;
-        self.write_u32_to_wasm_memory(buf_ptr, result_ptr_ptr)?;
-        self.write_u32_to_wasm_memory(result.len() as u32, result_len_ptr)?;
-        Ok(())
-    }
-
     /// Writes the buffer `source` at the address `dest` of the Wasm memory, if `source` fits in the
     /// allocated memory.
     pub fn write_buffer_to_wasm_memory(
@@ -345,7 +331,7 @@ impl WasmState {
                 OakStatus::ErrInvalidHandle
             })?;
         let response = extension.invoke(request)?;
-        self.write_extension_result(response, response_ptr_ptr, response_len_ptr)
+        self.alloc_and_write_buffer_to_wasm_memory(response, response_ptr_ptr, response_len_ptr)
     }
 
     pub fn alloc(&mut self, len: u32) -> AbiPointer {
@@ -435,7 +421,7 @@ impl wasmi::Externals for WasmState {
                                     // (which is true).
                                     let response_ptr_ptr: AbiPointer = args.nth_checked(2)?;
                                     let response_len_ptr: AbiPointer = args.nth_checked(3)?;
-                                    self.write_extension_result(
+                                    self.alloc_and_write_buffer_to_wasm_memory(
                                         response,
                                         response_ptr_ptr,
                                         response_len_ptr,
@@ -811,6 +797,35 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_alloc_and_write_empty() {
+        let mut wasm_state = create_test_wasm_state();
+        // Guess some memory addresses in linear Wasm memory to write to.
+        let dest_ptr_ptr: AbiPointer = 100;
+        let dest_len_ptr: AbiPointer = 150;
+        let write_status =
+            wasm_state.alloc_and_write_buffer_to_wasm_memory(vec![], dest_ptr_ptr, dest_len_ptr);
+
+        // Assert that we can write the empty vector.
+        assert!(write_status.is_ok());
+
+        // Get dest_len from dest_len_ptr.
+        let dest_len: AbiPointerOffset =
+            LittleEndian::read_u32(&wasm_state.get_memory().get(dest_len_ptr, 4).unwrap());
+
+        // Assert that we write a vector of length 0.
+        assert_eq!(dest_len, 0);
+
+        let dest_ptr: AbiPointer =
+            LittleEndian::read_u32(&wasm_state.get_memory().get(dest_ptr_ptr, 4).unwrap());
+
+        // Assert that reponse_ptr holds expected empty vector.
+        assert!(wasm_state
+            .read_buffer_from_wasm_memory(dest_ptr, dest_len)
+            .unwrap()
+            .is_empty());
+    }
+
+    #[tokio::test]
     async fn test_invoke_extension() {
         let mut wasm_state = create_test_wasm_state();
 
@@ -847,7 +862,7 @@ mod tests {
         // Assert that response_len holds length of expected response.
         assert_eq!(response_len as usize, expected_response.len());
 
-        // Get response_ptr from resposne_ptr_ptr.
+        // Get response_ptr from response_ptr_ptr.
         let response_ptr: AbiPointer =
             LittleEndian::read_u32(&wasm_state.get_memory().get(response_ptr_ptr, 4).unwrap());
 
