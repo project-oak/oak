@@ -17,7 +17,6 @@ ciborium = { version = "*", default-features = false }
 ciborium-io = "*"
 oak_remote_attestation = { path = "../../../remote_attestation/rust" }
 oak_remote_attestation_sessions = { path = "../../../remote_attestation_sessions" }
-lru = "*"
 anyhow = { version = "*", default-features = false }
 
 [dev-dependencies]
