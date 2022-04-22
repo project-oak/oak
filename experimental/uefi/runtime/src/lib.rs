@@ -18,3 +18,11 @@
 #![feature(never_type)]
 
 pub mod echo;
+
+/// Basic hardware abstraction layer for sending data.
+pub trait Channel {
+    type Error;
+
+    fn send(&mut self, data: &[u8]) -> Result<(), Self::Error>;
+    fn recv(&mut self, data: &mut [u8]) -> Result<(), Self::Error>;
+}

@@ -18,6 +18,7 @@ extern crate alloc;
 
 use alloc::vec::Vec;
 use ciborium::{de, ser};
+use crate::Channel;
 
 #[derive(Debug)]
 pub enum Error<T> {
@@ -26,14 +27,6 @@ pub enum Error<T> {
 
     // An error occured while serializing.
     Ser(ciborium::ser::Error<T>),
-}
-
-/// Basic hardware abstraction layer for sending data.
-pub trait Channel {
-    type Error;
-
-    fn send(&mut self, data: &[u8]) -> Result<(), Self::Error>;
-    fn recv(&mut self, data: &mut [u8]) -> Result<(), Self::Error>;
 }
 
 impl<E> ciborium_io::Write for &mut dyn Channel<Error = E> {
