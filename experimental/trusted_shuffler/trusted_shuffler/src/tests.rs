@@ -15,88 +15,86 @@
 //
 
 use crate::TrustedShuffler;
-// use assert_matches::assert_matches;
-use std::{collections::HashSet, sync::Arc};
+use futures::future::join_all;
+use std::{sync::Arc, time::Duration};
+use tokio::time::timeout;
 
 const TEST_ANONYMITY_VALUE: usize = 10;
-const CHANNEL_BUFFER_SIZE: usize = 100;
+const TEST_TIMEOUT_MILLISECONDS: u64 = 100;
 
 async fn send_request(request: Vec<u8>) -> Vec<u8> {
-    "Test response".to_string().as_bytes().to_vec()
+    request
 }
-
-// #[test]
-// fn test_id_generator() {
-//     let mut generator = RequestIdGenerator::new(TEST_ANONYMITY_VALUE);
-
-//     let mut request_id_set = HashSet::new();
-//     let mut batch_id_set = HashSet::new();
-//     for _ in 0..TEST_ANONYMITY_VALUE {
-//         let request_id = generator.generate();
-//         batch_id_set.insert(request_id.batch_id.clone());
-//         request_id_set.insert(request_id);
-//     }
-//     assert_eq!(request_id_set.len(), TEST_ANONYMITY_VALUE);
-//     assert_eq!(batch_id_set.len(), 1);
-
-//     let prev_batch_id = batch_id_set.iter().cloned().next().unwrap();
-//     let new_request_id = generator.generate();
-//     assert_ne!(prev_batch_id, new_request_id.batch_id);
-// }
-
-// #[tokio::test]
-// async fn async_queue_test() {
-//     let test_values = vec![1, 2, 3, 4, 5];
-//     let queue = Arc::new(AsyncQueue::new(CHANNEL_BUFFER_SIZE));
-
-//     let cloned_test_values = test_values.clone();
-//     let cloned_queue = queue.clone();
-//     let background = test_utils::background(|_| async move {
-//         for value in cloned_test_values.iter() {
-//             cloned_queue.put(value.clone()).await;
-//         }
-//     });
-
-//     for expected_value in test_values.iter() {
-//         let value = queue.get().await;
-//         assert!(value.is_ok());
-//         assert_eq!(value.unwrap(), *expected_value);
-//     }
-
-//     background.terminate_and_join().await;
-// }
 
 #[tokio::test]
 async fn trusted_shuffler_test() {
-    let trusted_shuffler = TrustedShuffler::new(TEST_ANONYMITY_VALUE, send_request);
-    let trusted_shuffler_arc = Arc::new(trusted_shuffler);
-    let trusted_shuffler_arc_clone = trusted_shuffler_arc.clone();
-    // let trusted_shuffler_clone = trusted_shuffler.clone();
+    let trusted_shuffler = Arc::new(TrustedShuffler::new(2, send_request));
 
-    tokio::spawn(async move {
-        // let background = test_utils::background(|_| async move {
-        // let trusted_shuffler_arc_clone = &mut *trusted_shuffler_arc_clone;
-        // let request = trusted_shuffler_arc_clone.pop_request().await;
-        // let request = trusted_shuffler_clone.pop_request().await;
-        trusted_shuffler_arc_clone.invoke("Test request 1".to_string().as_bytes().to_vec());
+    let request = "Test request".to_string().as_bytes().to_vec();
+    let background_request = "Test request background".to_string().as_bytes().to_vec();
+
+    let trusted_shuffler_clone = trusted_shuffler.clone();
+    let background_request_clone = background_request.clone();
+    let background_result = tokio::spawn(async move {
+        trusted_shuffler_clone
+            .invoke(background_request_clone)
+            .await
     });
 
-    trusted_shuffler_arc.invoke("Test request 2".to_string().as_bytes().to_vec());
-    // trusted_shuffler.invoke("Test request".to_string().as_bytes().to_vec());
+    let response = trusted_shuffler.invoke(request.clone()).await;
+    assert!(response.is_ok());
+    assert_eq!(request, response.unwrap());
+
+    let background_result = background_result.await;
+    assert!(background_result.is_ok());
+    let background_response = background_result.unwrap();
+    assert!(background_response.is_ok());
+    assert_eq!(background_request, background_response.unwrap());
 }
 
-// #[tokio::test]
-// async fn test() {
-//     let trusted_shuffler: TrustedShuffler<String, String> =
-// TrustedShuffler::new(TEST_ANONYMITY_VALUE);     let trusted_shuffler_arc =
-// Arc::new(trusted_shuffler);     let trusted_shuffler_arc_clone = trusted_shuffler_arc.clone();
+#[tokio::test]
+async fn trusted_shuffler_waiting_test() {
+    let trusted_shuffler = Arc::new(TrustedShuffler::new(3, send_request));
 
-//     let background = test_utils::background(|_| async move {
-//         // let trusted_shuffler_arc_clone = &mut *trusted_shuffler_arc_clone;
-//         // let request = trusted_shuffler_arc_clone.pop_request().await;
-//         trusted_shuffler_arc_clone.generate();
-//     });
+    let request_1 = "Test request 1".to_string().as_bytes().to_vec();
+    let request_2 = "Test request 2".to_string().as_bytes().to_vec();
 
-//     // trusted_shuffler_arc.invoke("Test request".to_string());
-//     trusted_shuffler_arc.generate();
-// }
+    let trusted_shuffler_clone = trusted_shuffler.clone();
+    tokio::spawn(async move { trusted_shuffler_clone.invoke(request_1).await });
+
+    let response_future = trusted_shuffler.invoke(request_2);
+    let result = timeout(
+        Duration::from_millis(TEST_TIMEOUT_MILLISECONDS),
+        response_future,
+    )
+    .await;
+    assert!(result.is_err());
+}
+
+#[tokio::test]
+async fn trusted_shuffler_background_test() {
+    let trusted_shuffler = Arc::new(TrustedShuffler::new(TEST_ANONYMITY_VALUE, send_request));
+
+    let requests: Vec<Vec<u8>> = (0..TEST_ANONYMITY_VALUE)
+        .collect::<Vec<_>>()
+        .iter()
+        .map(|k| format!("Test request {}", k).as_bytes().to_vec())
+        .collect();
+
+    let mut result_futures = vec![];
+    for request in requests.iter() {
+        let trusted_shuffler_clone = trusted_shuffler.clone();
+        let request_clone = request.clone();
+        let result_future =
+            tokio::spawn(async move { trusted_shuffler_clone.invoke(request_clone).await });
+        result_futures.push(result_future);
+    }
+    let results = join_all(result_futures).await;
+
+    for (request, result) in requests.iter().zip(results.iter()) {
+        assert!(result.is_ok());
+        let response = result.as_ref().unwrap();
+        assert!(response.is_ok());
+        assert_eq!(request.clone(), *response.as_ref().unwrap());
+    }
+}

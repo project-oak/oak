@@ -31,7 +31,6 @@ use std::{
 };
 use tokio::sync::oneshot;
 
-const CHANNEL_BUFFER_SIZE: usize = 100;
 type Request = Vec<u8>;
 type Response = Vec<u8>;
 
@@ -96,7 +95,11 @@ where
                 // Shuffle current requests and send them to the backend.
                 let request_sender = self.request_sender.clone();
                 tokio::spawn(async move {
-                    TrustedShuffler::shuffle_requests(requests, request_sender).await;
+                    if let Err(error) =
+                        TrustedShuffler::shuffle_requests(requests, request_sender).await
+                    {
+                        log::error!("Shuffling error: {:?}", error);
+                    }
                 });
             }
         }
@@ -106,10 +109,9 @@ where
 
     // Shuffles requests and sends them to the backend using the
     // [`TrustedShuffler::request_sender`].
-    async fn shuffle_requests(mut requests: Vec<Message>, request_sender: F) {
+    async fn shuffle_requests(mut requests: Vec<Message>, request_sender: F) -> anyhow::Result<()> {
         requests.shuffle(&mut thread_rng());
 
-        // let response_futures: Vec<impl Future<Output = Message>> = requests
         let response_futures: Vec<_> = requests
             .drain(..)
             .into_iter()
@@ -126,16 +128,20 @@ where
             .collect();
         let responses = join_all(response_futures).await;
 
-        TrustedShuffler::shuffle_responses(responses);
+        Self::shuffle_responses(responses)
     }
 
     // Shuffles received backend responses and sends them back to the client async tasks using
     // corresponding channels defined in the [`Message::response_sender`].
-    fn shuffle_responses(mut responses: Vec<Message>) {
+    fn shuffle_responses(mut responses: Vec<Message>) -> anyhow::Result<()> {
         responses.shuffle(&mut thread_rng());
 
         for response in responses.drain(..) {
-            response.response_sender.send(response.data.clone());
+            response
+                .response_sender
+                .send(response.data.clone())
+                .map_err(|error| anyhow!("Couldn't send the response: {:?}", error))?;
         }
+        Ok(())
     }
 }
