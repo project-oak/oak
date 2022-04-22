@@ -39,8 +39,6 @@ const ABI_USIZE: ValueType = ValueType::I32;
 /// Host function name for invoking TensorFlow model inference.
 const TF_ABI_FUNCTION_NAME: &str = "tf_model_infer";
 
-// TODO(#2576): Move extension implementation to `tf_inference` crate once the Extension-related
-// structs are in a separate crate.
 impl<L: OakLogger> OakApiNativeExtension for TensorFlowModel<L> {
     fn invoke(&mut self, request: Vec<u8>) -> Result<Vec<u8>, OakStatus> {
         let inference = self.get_inference(&request).map_err(|err| {

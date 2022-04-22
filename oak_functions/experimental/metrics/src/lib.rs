@@ -58,8 +58,6 @@ where
     }
 }
 
-// TODO(#2576): Move extension trait implementation to the metrics crate once the extension-related
-// traits are in a separate crate.
 impl<L> ExtensionFactory<L> for PrivateMetricsProxyFactory<L>
 where
     L: OakLogger + 'static,

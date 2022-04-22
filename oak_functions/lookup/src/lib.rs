@@ -60,8 +60,6 @@ where
     }
 }
 
-// TODO(#2576): Move extension trait implementations to the lookup crate once the extension-related
-// traits are in a separate crate.
 impl<L> ExtensionFactory<L> for LookupFactory<L>
 where
     L: OakLogger + 'static,
