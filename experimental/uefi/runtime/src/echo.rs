@@ -52,15 +52,29 @@ impl<E> ciborium_io::Read for &mut dyn Channel<Error = E> {
     }
 }
 
-const MOCK_SESSION_ID: [u8; 8] = [0; 8];
+fn deserialize_request(request: Vec<u8>) -> ([u8; 8], Vec<u8>) {
+    let mut session_id: [u8; 8] = [0; 8];
+    let mut request_body: Vec<u8> = Vec::with_capacity(request.len() - 8);
+
+    for (index, byte) in request.into_iter().enumerate() {
+        if index <= 8 {
+            session_id[index] = byte;
+        } else {
+            request_body.push(byte);
+        }
+    }
+
+    (session_id, request_body)
+}
 
 // Echoes all input on the interface back out.
 pub fn echo<E: core::fmt::Debug>(mut channel: &mut dyn Channel<Error = E>) -> Result<!, Error<E>> {
     let attestation_handler = &mut AttestationHandler::create(|v| v);
     loop {
         let msg: Vec<u8> = de::from_reader(&mut channel).map_err(Error::Deserialization)?;
+        let (session_id, request_body) = deserialize_request(msg);
         let response = attestation_handler
-            .message(MOCK_SESSION_ID, msg)
+            .message(session_id, request_body)
             .map_err(Error::Attestation)?;
         ser::into_writer(&response, &mut channel).map_err(Error::Serialization)?;
     }

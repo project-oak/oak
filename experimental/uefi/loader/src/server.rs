@@ -28,6 +28,16 @@ use proto::{
     UnaryRequest, UnaryResponse,
 };
 
+fn serialize_request(request: UnaryRequest) -> Vec<u8> {
+    // The payload is the request's body prepended with the 8 byte session_id.
+    // This takes adavantage of the session_id's fixed size to avoid needing
+    // to use a key/value binary serialization protocol.
+    let mut payload: Vec<u8> = Vec::with_capacity(request.body.len() + 8);
+    payload.extend(request.session_id);
+    payload.extend(request.body);
+    payload
+}
+
 pub struct EchoImpl {
     channel: UnboundedRequestSender<Vec<u8>, anyhow::Result<Vec<u8>>>,
 }
@@ -46,7 +56,7 @@ impl UnarySession for EchoImpl {
         // ambiguous to the end user, but for now that'll do.
         let body = self
             .channel
-            .send_receive(request.body)
+            .send_receive(serialize_request(request))
             .await
             .map_err(|err| Status::internal(format!("{:?}", err)))?
             .map_err(|err| Status::internal(format!("{:?}", err)))?;
