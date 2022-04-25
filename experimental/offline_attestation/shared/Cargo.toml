@@ -1,0 +1,12 @@
+[package]
+name = "offline_attestation_shared"
+version = "0.1.0"
+authors = ["Conrad Grobler <grobler@google.com>"]
+edition = "2021"
+license = "Apache-2.0"
+
+[dependencies]
+anyhow = "*"
+serde = { version = "*", features = ["derive"] }
+tink-core = "*"
+tink-hybrid = "*"

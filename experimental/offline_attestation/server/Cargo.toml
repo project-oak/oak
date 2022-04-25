@@ -1,0 +1,22 @@
+[package]
+name = "offline_attestation_server"
+version = "0.1.0"
+authors = ["Conrad Grobler <grobler@google.com>"]
+edition = "2021"
+license = "Apache-2.0"
+
+[dependencies]
+anyhow = "*"
+bytes = "*"
+clap = { version = "3", features = ["derive"] }
+env_logger = "*"
+log = "*"
+offline_attestation_shared = { path = "../shared" }
+serde_json = "*"
+tokio = { version = "*", features = [
+  "macros",
+  "process",
+  "sync",
+  "rt-multi-thread"
+] }
+warp = "*"
