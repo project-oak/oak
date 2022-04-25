@@ -355,7 +355,6 @@ name = "grpc_unary_attestation"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "oak_functions_abi",
  "oak_remote_attestation",
  "oak_remote_attestation_sessions",
  "oak_utils",
