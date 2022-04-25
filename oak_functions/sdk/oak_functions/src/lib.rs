@@ -122,7 +122,7 @@ pub fn report_metric<T: AsRef<str>>(
     )?;
 
     let response: ReportMetricResponse =
-        bincode::deserialize(&response).expect("Failed to deserialize TF response.");
+        bincode::deserialize(&response).expect("Failed to deserialize report metric response.");
 
     Ok(response.result)
 }
