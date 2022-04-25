@@ -5422,7 +5422,10 @@ checksum = "56dee185309b50d1f11bfedef0fe6d036842e3fb77413abef29f8f8d1c5d4c1c"
 name = "uefi-client"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "clap 3.1.10",
+ "grpc_unary_attestation",
+ "oak_remote_attestation",
  "oak_utils",
  "prost 0.10.1",
  "tokio",
