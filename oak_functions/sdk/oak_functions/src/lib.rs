@@ -21,7 +21,7 @@
 use oak_functions_abi::proto::Inference;
 use oak_functions_abi::proto::OakStatus;
 #[cfg(feature = "oak-metrics")]
-use oak_functions_abi::ReportMetricRequest;
+use oak_functions_abi::{ReportMetricError, ReportMetricRequest, ReportMetricResponse};
 #[cfg(feature = "oak-tf")]
 use oak_functions_abi::{TfModelInferError, TfModelInferResponse};
 use std::convert::AsRef;
@@ -91,7 +91,7 @@ pub fn storage_get_item(key: &[u8]) -> Result<Option<Vec<u8>>, OakStatus> {
 ///
 /// See [`report_metric`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#report_metric).
 #[cfg(feature = "oak-metrics")]
-pub fn report_event<T: AsRef<str>>(label: T) -> Result<(), OakStatus> {
+pub fn report_event<T: AsRef<str>>(label: T) -> Result<Result<(), ReportMetricError>, OakStatus> {
     report_metric(label, 1)
 }
 
@@ -110,16 +110,25 @@ pub fn report_event<T: AsRef<str>>(label: T) -> Result<(), OakStatus> {
 ///
 /// See [`report_metric`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#report_metric).
 #[cfg(feature = "oak-metrics")]
-pub fn report_metric<T: AsRef<str>>(label: T, value: i64) -> Result<(), OakStatus> {
+pub fn report_metric<T: AsRef<str>>(
+    label: T,
+    value: i64,
+) -> Result<Result<(), ReportMetricError>, OakStatus> {
     let label = label.as_ref().to_owned();
     let request = ReportMetricRequest { label, value };
 
     let serialized_request =
         bincode::serialize(&request).expect("Fail to serialize report metric request.");
-    let status = unsafe {
-        oak_functions_abi::report_metric(serialized_request.as_ptr(), serialized_request.len())
-    };
-    result_from_status(status as i32, ())
+
+    let response = invoke(
+        oak_functions_abi::ExtensionHandle::MetricsHandle,
+        &serialized_request,
+    )?;
+
+    let response: ReportMetricResponse =
+        bincode::deserialize(&response).expect("Failed to deserialize TF response.");
+
+    Ok(response.result)
 }
 
 /// Writes a debug log message.

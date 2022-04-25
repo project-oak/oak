@@ -13,6 +13,7 @@ oak-tf = []
 prost = "*"
 serde = "*"
 serde_derive = "*"
+thiserror = "1.0"
 
 [build-dependencies]
 prost-build = "*"

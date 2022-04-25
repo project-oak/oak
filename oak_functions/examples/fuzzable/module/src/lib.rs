@@ -58,6 +58,7 @@ pub extern "C" fn main() {
                 oak_functions::report_event(
                     std::str::from_utf8(&label).expect("Couldn't convert bytes to string"),
                 )
+                .expect("Transmitting event failed.")
                 .expect("Couldn't report event.")
             }
             None => (),
