@@ -77,21 +77,20 @@ impl<L: OakLogger> OakApiNativeExtension for LookupData<L> {
         self.log_debug(&format!("storage_get_item(): key: {}", format_bytes(&key)));
         let value = self.get(&key);
 
-        // Log value.
-        // TODO(mschett): Simplify logging.
-        match value {
-            Some(ref value) => {
+        // Log found value.
+        value.clone().map_or_else(
+            || {
+                self.log_debug("storage_get_item(): value not found");
+            },
+            |value| {
                 // Truncate value for logging.
                 let value_to_log = value.clone().into_iter().take(512).collect::<Vec<_>>();
                 self.log_debug(&format!(
                     "storage_get_item(): value: {}",
                     format_bytes(&value_to_log)
-                ))
-            }
-            None => {
-                self.log_debug("storage_get_item(): value not found");
-            }
-        }
+                ));
+            },
+        );
 
         let response = bincode::serialize(&StorageGetItemResponse { value })
             .expect("Failed to serialze get storage item response.");
