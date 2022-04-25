@@ -66,7 +66,7 @@ fn main(handle: Handle, system_table: &mut SystemTable<Boot>) -> Status {
 
     let mut serial =
         serial::Serial::get(handle, system_table.boot_services(), ECHO_SERIAL_PORT_INDEX).unwrap();
-    echo::echo(&mut serial).unwrap();
+    runtime::echo::echo(&mut serial).unwrap();
 }
 
 #[cfg(test)]

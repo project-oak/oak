@@ -173,7 +173,7 @@ impl crate::sealed::Sealed for SystemRandom {}
         not(feature = "dev_urandom_fallback")
     ),
     target_arch = "wasm32",
-    windows
+    windows,
 ))]
 use self::sysrand::fill as fill_impl;
 
@@ -200,7 +200,7 @@ use self::darwin::fill as fill_impl;
 #[cfg(any(target_os = "fuchsia"))]
 use self::fuchsia::fill as fill_impl;
 
-#[cfg(any(target_os = "uefi"))]
+#[cfg(any(target_os = "uefi", target_os = "none"))]
 use self::uefi::fill as fill_impl;
 
 #[cfg(any(target_os = "android", target_os = "linux"))]
@@ -428,7 +428,7 @@ mod fuchsia {
     }
 }
 
-#[cfg(any(target_os = "uefi"))]
+#[cfg(any(target_os = "uefi", target_os = "none"))]
 mod uefi {
     use crate::error;
 

@@ -56,6 +56,7 @@ members = [
 ]
 exclude = [
   "experimental/uefi/app",
+  "experimental/uefi/baremetal",
   "oak_functions/loader/fuzz",
   "third_party/ring"
 ]

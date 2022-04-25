@@ -1,0 +1,6 @@
+[build]
+target = "target.json"
+
+[unstable]
+build-std = ["core", "alloc"]
+build-std-features = ["compiler-builtins-mem"]
