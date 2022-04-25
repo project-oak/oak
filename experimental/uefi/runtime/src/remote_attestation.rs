@@ -29,7 +29,7 @@ use oak_remote_attestation_sessions::{SessionId, SessionState, SessionTracker, S
 const SESSIONS_CACHE_SIZE: usize = 10000;
 
 fn deserialize_msg(msg: Vec<u8>) -> anyhow::Result<(SessionId, Vec<u8>)> {
-    let mut session_id: [u8; SESSION_ID_LENGTH] = [0; SESSION_ID_LENGTH];
+    let mut session_id: SessionId = [0; SESSION_ID_LENGTH];
     let mut request_body: Vec<u8> = Vec::with_capacity(msg.len() - SESSION_ID_LENGTH);
 
     if msg.len() < SESSION_ID_LENGTH {
