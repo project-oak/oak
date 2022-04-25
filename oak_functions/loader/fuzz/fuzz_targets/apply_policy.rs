@@ -60,7 +60,7 @@ lazy_static::lazy_static! {
 fuzz_target!(|data: ResponseAndValidPolicy| {
     let constant_response_size_bytes = data.policy.constant_response_size_bytes;
     let policy = data.policy.clone();
-    let function = async move || Ok(data.response);
+    let function = || Ok(data.response);
     let response = RUNTIME.block_on(apply_policy(policy, function)).unwrap();
 
     // Check the response size

@@ -34,14 +34,12 @@ use prost::Message;
 use proto::{benchmark_request::Action, BenchmarkRequest, LookupTest};
 use rand::SeedableRng;
 use std::{collections::HashMap, sync::Arc};
-use tokio::runtime::Runtime;
 
 const MANIFEST_PATH: &str = "examples/benchmark/module/Cargo.toml";
 const SINGLE_REQUEST_ITERATIONS: u32 = 1;
 const MULTI_REQUEST_ITERATIONS: u32 = 101;
 
 fn key_size(c: &mut Criterion) {
-    let rt = Runtime::new().unwrap();
     let wasm_module_bytes = build_wasm_module(MANIFEST_PATH);
 
     let mut group = c.benchmark_group("key_size");
@@ -54,7 +52,6 @@ fn key_size(c: &mut Criterion) {
             entries,
         } = generate_random_test_data_for_bench(size, 256, 1_000);
         run_benchmarks_with_input(
-            &rt,
             &mut group,
             &wasm_module_bytes,
             entries,
@@ -67,7 +64,6 @@ fn key_size(c: &mut Criterion) {
 }
 
 fn value_size(c: &mut Criterion) {
-    let rt = Runtime::new().unwrap();
     let wasm_module_bytes = build_wasm_module(MANIFEST_PATH);
 
     let mut group = c.benchmark_group("value_size");
@@ -80,7 +76,6 @@ fn value_size(c: &mut Criterion) {
             entries,
         } = generate_random_test_data_for_bench(32, size, 1_000);
         run_benchmarks_with_input(
-            &rt,
             &mut group,
             &wasm_module_bytes,
             entries,
@@ -93,7 +88,6 @@ fn value_size(c: &mut Criterion) {
 }
 
 fn entry_count(c: &mut Criterion) {
-    let rt = Runtime::new().unwrap();
     let wasm_module_bytes = build_wasm_module(MANIFEST_PATH);
 
     let mut group = c.benchmark_group("entry_count");
@@ -106,7 +100,6 @@ fn entry_count(c: &mut Criterion) {
             entries,
         } = generate_random_test_data_for_bench(64, 256, count);
         run_benchmarks_with_input(
-            &rt,
             &mut group,
             &wasm_module_bytes,
             entries,
@@ -122,7 +115,6 @@ criterion_group!(benches, key_size, value_size, entry_count);
 criterion_main!(benches);
 
 fn run_benchmarks_with_input<M: Measurement>(
-    rt: &Runtime,
     group: &mut BenchmarkGroup<M>,
     wasm_module_bytes: &[u8],
     lookup_entries: HashMap<Vec<u8>, Vec<u8>>,
@@ -154,17 +146,14 @@ fn run_benchmarks_with_input<M: Measurement>(
     .encode_to_vec();
 
     group.bench_with_input(BenchmarkId::new("single", size), &size, |b, _size| {
-        b.iter(|| {
-            run_lookup_iteration(rt, &wasm_handler, &single_benchmark_request, expected_value)
-        })
+        b.iter(|| run_lookup_iteration(&wasm_handler, &single_benchmark_request, expected_value))
     });
     group.bench_with_input(BenchmarkId::new("multi", size), &size, |b, _size| {
-        b.iter(|| run_lookup_iteration(rt, &wasm_handler, &multi_benchmark_request, expected_value))
+        b.iter(|| run_lookup_iteration(&wasm_handler, &multi_benchmark_request, expected_value))
     });
 }
 
 fn run_lookup_iteration(
-    rt: &Runtime,
     wasm_handler: &WasmHandler,
     benchmark_request: &[u8],
     expected_value: &[u8],
@@ -172,7 +161,7 @@ fn run_lookup_iteration(
     let request = Request {
         body: benchmark_request.to_owned(),
     };
-    let resp = rt.block_on(wasm_handler.handle_invoke(request)).unwrap();
+    let resp = wasm_handler.handle_invoke(request).unwrap();
     assert_eq!(resp.status, StatusCode::Success as i32);
     assert_eq!(&resp.body, expected_value);
 }

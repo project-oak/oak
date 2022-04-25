@@ -426,7 +426,7 @@ async fn test_apply_policy() {
     {
         // Wasm response with small enough body is serialized with padding, and no other change
         let small_success_response = Response::create(StatusCode::Success, vec![b'x'; size]);
-        let function = async move || Ok(small_success_response);
+        let function = move || Ok(small_success_response);
         let res = apply_policy(policy.clone(), function).await;
         assert!(res.is_ok());
         let response = res.unwrap();
@@ -440,7 +440,7 @@ async fn test_apply_policy() {
     {
         // Success Wasm response with a large body is discarded, and replaced with an error response
         let large_success_response = Response::create(StatusCode::Success, vec![b'x'; size + 1]);
-        let function = async move || Ok(large_success_response);
+        let function = || Ok(large_success_response);
         let res = apply_policy(policy.clone(), function).await;
         assert!(res.is_ok());
         let response = res.unwrap();

@@ -78,12 +78,6 @@ lazy_static::lazy_static! {
     static ref WASM_MODULE_BYTES: Vec<u8> = include_bytes!("./data/fuzzable.wasm").to_vec();
 }
 
-// Create the `tokio::runtime::Runtime` only once, instead of creating a new instance in each
-// testcase.
-lazy_static::lazy_static! {
-    static ref RUNTIME: tokio::runtime::Runtime = tokio::runtime::Runtime::new().unwrap();
-}
-
 /// To avoid timeouts, allow executing a limited number of instructions. On oss-fuzz, the timeout is
 /// set to 25s. On average, the slowest instruction is ReadRequest. A maximum of 10_000 instructions
 /// should give a good margin to avoid timeouts.
@@ -125,7 +119,7 @@ fuzz_target!(|instruction_list: Vec<ArbitraryInstruction>| {
     )
     .expect("Could not instantiate WasmHandler");
 
-    let result = RUNTIME.block_on(wasm_handler.handle_invoke(request));
+    let result = wasm_handler.handle_invoke(request);
     assert!(result.is_ok(), "Error: {:?}", result);
     // Cannot check the exact response value, since the wasm function may panic at any point.
 });
