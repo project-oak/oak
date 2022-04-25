@@ -20,25 +20,15 @@ extern crate alloc;
 
 pub mod grpc;
 pub mod logger;
-pub mod lookup;
 pub mod lookup_data;
-#[cfg(feature = "oak-metrics")]
-pub mod metrics;
 pub mod server;
-#[cfg(feature = "oak-tf")]
-pub mod tf;
 
 // TODO(#2642): Add #[cfg(oak-testing)].
 pub mod testing;
 
-#[cfg(feature = "oak-metrics")]
-use crate::metrics::PrivateMetricsProxyFactory;
-#[cfg(feature = "oak-tf")]
-use crate::tf::{read_model_from_path, TensorFlowFactory};
 use crate::{
     grpc::{create_and_start_grpc_server, create_wasm_handler},
     logger::Logger,
-    lookup::LookupFactory,
     lookup_data::{LookupDataAuth, LookupDataRefresher, LookupDataSource},
     server::Policy,
 };
@@ -46,11 +36,14 @@ use anyhow::Context;
 use clap::Parser;
 use log::Level;
 use oak_functions_abi::proto::{ConfigurationInfo, ServerPolicy};
-use oak_functions_lookup::LookupDataManager;
+use oak_functions_extension::ExtensionFactory;
+use oak_functions_lookup::{LookupDataManager, LookupFactory};
 #[cfg(feature = "oak-metrics")]
 use oak_functions_metrics::PrivateMetricsConfig;
+#[cfg(feature = "oak-metrics")]
+use oak_functions_metrics::PrivateMetricsProxyFactory;
 #[cfg(feature = "oak-tf")]
-use oak_functions_tf_inference::TensorFlowModelConfig;
+use oak_functions_tf_inference::{read_model_from_path, TensorFlowFactory, TensorFlowModelConfig};
 use oak_logger::OakLogger;
 use oak_remote_attestation::crypto::get_sha256;
 use serde_derive::Deserialize;
@@ -66,6 +59,9 @@ use std::{
 
 #[cfg(test)]
 mod tests;
+
+// Instantiate BoxedExtensionFactory with Logger from the Oak Functions runtime.
+pub type OakFunctionsBoxedExtensionFactory = Box<dyn ExtensionFactory<Logger>>;
 
 /// Runtime Configuration of Runtime.
 ///

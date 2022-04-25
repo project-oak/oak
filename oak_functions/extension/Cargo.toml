@@ -1,0 +1,13 @@
+[package]
+name = "oak_functions_extension"
+version = "0.1.0"
+authors = ["Maria Schett <mschett@google.com>"]
+edition = "2021"
+license = "Apache-2.0"
+
+[dependencies]
+anyhow = "*"
+oak_functions_abi = { path = "../abi" }
+oak_logger = { path = "../logger" }
+# Use wasmi in `no_std` mode.
+wasmi = { version = "*", default-features = false, features = ["core"] }

@@ -26,9 +26,10 @@ use criterion::{
 use lookup_data_generator::data::generate_and_serialize_random_entries;
 use oak_functions_abi::proto::{Request, StatusCode};
 use oak_functions_loader::{
-    logger::Logger, lookup::LookupFactory, lookup_data::parse_lookup_entries, server::WasmHandler,
+    logger::Logger, lookup_data::parse_lookup_entries, server::WasmHandler,
 };
-use oak_functions_lookup::LookupDataManager;
+
+use oak_functions_lookup::{LookupDataManager, LookupFactory};
 use prost::Message;
 use proto::{benchmark_request::Action, BenchmarkRequest, LookupTest};
 use rand::SeedableRng;

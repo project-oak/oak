@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::logger::Logger;
+use crate::{logger::Logger, OakFunctionsBoxedExtensionFactory};
 
 use anyhow::Context;
 use byteorder::{ByteOrder, LittleEndian};
@@ -22,6 +22,7 @@ use log::Level;
 use oak_functions_abi::proto::{
     ExtensionHandle, OakStatus, Request, Response, ServerPolicy, StatusCode,
 };
+use oak_functions_extension::OakApiNativeExtension;
 use oak_logger::OakLogger;
 use serde::Deserialize;
 use std::{collections::HashMap, convert::TryInto, str, sync::Arc, time::Duration};
@@ -114,39 +115,6 @@ impl FixedSizeBodyPadder for Response {
     }
 }
 
-/// Trait for implementing extensions, to implement new native functionality.
-pub trait OakApiNativeExtension {
-    /// Invokes the extension with the given request and returns a result. If no result
-    /// is expected, the result is empty.  An error within the extension is reflected in the
-    /// `OakStatus`.
-    /// TODO(#2701): Stop returning OakStatus for errors internal to extensions.
-    fn invoke(&mut self, request: Vec<u8>) -> Result<Vec<u8>, OakStatus>;
-
-    /// Metadata about this Extension, including the exported host function name, the function's
-    /// signature, and the corresponding ExtensionHandle.
-    fn get_metadata(&self) -> (String, wasmi::Signature);
-
-    /// Performs any cleanup or terminating behavior necessary before destroying the WasmState.
-    fn terminate(&mut self) -> anyhow::Result<()>;
-
-    /// Gets the `ExtensionHandle` for this extension.
-    fn get_handle(&self) -> ExtensionHandle;
-}
-
-pub trait ExtensionFactory {
-    fn create(&self) -> anyhow::Result<BoxedExtension>;
-}
-
-pub type BoxedExtension = Box<dyn OakApiNativeExtension + Send + Sync>;
-
-impl std::fmt::Debug for BoxedExtension {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "ExtensionHandle: {:?}", self.get_handle())
-    }
-}
-
-pub type BoxedExtensionFactory = Box<dyn ExtensionFactory + Send + Sync>;
-
 /// `WasmState` holds runtime values for a particular execution instance of Wasm, handling a
 /// single user request. The methods here correspond to the ABI host functions that allow the Wasm
 /// module to exchange the request and the response with the Oak functions server. These functions
@@ -157,9 +125,9 @@ pub struct WasmState {
     instance: Option<wasmi::ModuleRef>,
     memory: Option<wasmi::MemoryRef>,
     logger: Logger,
-    /// A mapping of internal host functions to the corresponding [`OakApiNativeExtension`].
+    /// A mapping of internal host functions to the corresponding BoxedExtension.
     /// TODO(#2715): Replace by a map from `ExtensionHandles` to `BoxedExtensions`.
-    extensions_indices: HashMap<usize, BoxedExtension>,
+    extensions_indices: HashMap<usize, Box<dyn OakApiNativeExtension>>,
     /// A mapping of host function names to metadata required for resolving the function.
     extensions_metadata: HashMap<String, (usize, wasmi::Signature)>,
 }
@@ -524,7 +492,7 @@ impl WasmState {
         module: &wasmi::Module,
         request_bytes: Vec<u8>,
         logger: Logger,
-        extensions_indices: HashMap<usize, BoxedExtension>,
+        extensions_indices: HashMap<usize, Box<dyn OakApiNativeExtension>>,
         extensions_metadata: HashMap<String, (usize, wasmi::Signature)>,
     ) -> anyhow::Result<WasmState> {
         let mut abi = WasmState {
@@ -686,14 +654,14 @@ pub struct WasmHandler {
     // Wasm module to be served on each invocation. `Arc` is needed to make `WasmHandler`
     // cloneable.
     module: Arc<wasmi::Module>,
-    extension_factories: Arc<Vec<BoxedExtensionFactory>>,
+    extension_factories: Arc<Vec<OakFunctionsBoxedExtensionFactory>>,
     logger: Logger,
 }
 
 impl WasmHandler {
     pub fn create(
         wasm_module_bytes: &[u8],
-        extension_factories: Vec<BoxedExtensionFactory>,
+        extension_factories: Vec<OakFunctionsBoxedExtensionFactory>,
         logger: Logger,
     ) -> anyhow::Result<Self> {
         let module = wasmi::Module::from_buffer(&wasm_module_bytes)
@@ -810,14 +778,6 @@ fn from_oak_status_result(
     let oak_status_from_result = result.map_or_else(|x: OakStatus| x, |()| OakStatus::Ok);
     let wasmi_value = wasmi::RuntimeValue::I32(oak_status_from_result as i32);
     Ok(Some(wasmi_value))
-}
-
-/// Converts a binary sequence to a string if it is a valid UTF-8 string, or formats it as a numeric
-/// vector of bytes otherwise.
-pub fn format_bytes(v: &[u8]) -> String {
-    std::str::from_utf8(v)
-        .map(|s| s.to_string())
-        .unwrap_or_else(|_| format!("{:?}", v))
 }
 
 #[cfg(test)]

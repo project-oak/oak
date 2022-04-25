@@ -25,13 +25,10 @@ use libfuzzer_sys::fuzz_target;
 use maplit::{btreemap, hashmap};
 use oak_functions_abi::proto::Request;
 use oak_functions_loader::{
-    logger::Logger,
-    lookup::LookupFactory,
-    metrics::PrivateMetricsProxyFactory,
-    server::{BoxedExtensionFactory, WasmHandler},
+    logger::Logger, server::WasmHandler, OakFunctionsBoxedExtensionFactory,
 };
-use oak_functions_lookup::LookupDataManager;
-use oak_functions_metrics::{BucketConfig, PrivateMetricsConfig};
+use oak_functions_lookup::{LookupDataManager, LookupFactory};
+use oak_functions_metrics::{BucketConfig, PrivateMetricsConfig, PrivateMetricsProxyFactory};
 use prost::Message;
 use std::{convert::Into, sync::Arc};
 
@@ -168,7 +165,7 @@ impl From<&ArbitraryInstruction> for crate::proto::Instruction {
     }
 }
 
-fn create_metrics_factory() -> BoxedExtensionFactory {
+fn create_metrics_factory() -> OakFunctionsBoxedExtensionFactory {
     // TODO(#2252): Use `Arbitrary` to generate metrics configuration.
     let metrics_config = PrivateMetricsConfig {
         epsilon: 1.0,
