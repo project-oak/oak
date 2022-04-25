@@ -18,7 +18,7 @@ use std::{fs, path::PathBuf};
 
 use clap::Parser;
 use futures::{stream::StreamExt, SinkExt};
-use log::info;
+use log;
 use qemu::{Qemu, QemuParams};
 use tokio::{io::AsyncReadExt, net::UnixStream, signal};
 use tokio_serde_cbor::Codec;
@@ -27,19 +27,29 @@ use tokio_util::codec::Decoder;
 mod qemu;
 mod server;
 
+#[derive(clap::ArgEnum, Clone, Debug, PartialEq)]
+enum Mode {
+    UEFI,
+    BIOS,
+}
+
 #[derive(Parser, Debug)]
 struct Args {
     /// path to the `qemu-system-x86_64` binary
     #[clap(long, parse(from_os_str), validator = path_exists, default_value_os_t = PathBuf::from("/usr/bin/qemu-system-x86_64"))]
     qemu: PathBuf,
 
+    /// execute either in UEFI mode or BIOS mode
+    #[clap(arg_enum, long, default_value = "uefi")]
+    mode: Mode,
+
     /// path to the OVMF firmware file
-    #[clap(long, parse(from_os_str), validator = path_exists, default_value_os_t = PathBuf::from("/usr/share/OVMF/OVMF_CODE.fd"))]
+    #[clap(long, parse(from_os_str), required_if_eq("mode", "uefi"), validator = path_exists, default_value_os_t = PathBuf::from("/usr/share/OVMF/OVMF_CODE.fd"))]
     ovmf: PathBuf,
 
     /// path to the UEFI app to execute
     #[clap(parse(from_os_str), validator = path_exists)]
-    uefi_app: PathBuf,
+    app: PathBuf,
 }
 
 fn path_exists(s: &str) -> Result<(), String> {
@@ -60,8 +70,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let mut qemu = Qemu::start(QemuParams {
         binary: cli.qemu.as_path(),
-        firmware: cli.ovmf.as_path(),
-        app: cli.uefi_app.as_path(),
+        firmware: if cli.mode == Mode::UEFI {
+            Some(cli.ovmf.as_path())
+        } else {
+            None
+        },
+        app: cli.app.as_path(),
         console: console_qemu,
         comms: comms_qemu,
     })?;
@@ -74,7 +88,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         while let Some(line) = framed.next().await {
             // The UEFI console uses ANSI escape codes to clear screen and set colours, so
             // let's not just print the string out but rather the debug version of that.
-            info!("console: {:?}", line.unwrap())
+            log::info!("console: {:?}", line.unwrap())
         }
     });
 
@@ -82,12 +96,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // World to the other serial port, so let's skip some bytes before we set up the CBOR codec.
     // The length of 71 characters has been determined experimentally and will change if we
     // change what we write to stdout in the UEFI app.
-    let mut junk = [0; 71];
-    let mut len = 0;
-    while len < junk.len() {
-        len += comms.read(&mut junk[len..]).await.unwrap();
+    if cli.mode == Mode::UEFI {
+        let mut junk = [0; 71];
+        let mut len = 0;
+        while len < junk.len() {
+            len += comms.read(&mut junk[len..]).await.unwrap();
+        }
+        log::info!("Leading junk on comms: {:?}", std::str::from_utf8(&junk));
     }
-    info!("Leading junk on comms: {:?}", std::str::from_utf8(&junk));
 
     // Use a bmrng channel for serial communication. The good thing about spawning a separate
     // task for the serial communication is that it serializes (no pun intended) the communication,
@@ -124,11 +140,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Wait until something dies or we get a signal to terminate.
     tokio::select! {
-        _ = signal::ctrl_c() => {},
-        _ = server_future => {},
-        _ = qemu.wait() => {},
+        _ = signal::ctrl_c() => {
+            qemu.kill().await?;
+        },
+        _ = server_future => {
+            qemu.kill().await?;
+        },
+        val = qemu.wait() => {
+            log::error!("Unexpected qemu exit, status: {:?}", val);
+        },
     }
-    // Clean up.
-    qemu.kill().await?;
     Ok(())
 }

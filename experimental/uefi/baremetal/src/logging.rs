@@ -59,5 +59,5 @@ static mut LOGGER: Option<Logger> = None;
 pub unsafe fn init_logging() {
     LOGGER = Some(Logger::new());
     log::set_logger(LOGGER.as_ref().unwrap()).unwrap();
-    log::set_max_level(log::LevelFilter::Info);
+    log::set_max_level(log::LevelFilter::Debug);
 }

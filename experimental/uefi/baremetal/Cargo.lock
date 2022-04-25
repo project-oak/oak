@@ -408,6 +408,7 @@ dependencies = [
  "anyhow",
  "ciborium",
  "ciborium-io",
+ "log",
  "oak_remote_attestation_sessions",
 ]
 
