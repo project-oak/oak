@@ -14,7 +14,9 @@
 // limitations under the License.
 //
 
-use log::Level;
+#![no_std]
+
+pub use log::Level;
 
 pub trait OakLogger: Send + Sync + Clone {
     /// Logs the message, which might contain sensitive information, at the specified `Level`.

@@ -13,6 +13,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#![no_std]
+
+extern crate alloc;
+
+use alloc::{boxed::Box, vec::Vec};
 use oak_functions_abi::proto::{ExtensionHandle, OakStatus};
 use oak_logger::OakLogger;
 

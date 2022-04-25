@@ -2790,6 +2790,7 @@ dependencies = [
  "oak_functions_loader",
  "oak_functions_lookup",
  "oak_functions_metrics",
+ "oak_functions_testing_extension",
  "oak_functions_tf_inference",
  "oak_functions_workload_logging",
  "prost 0.10.1",
@@ -2888,6 +2889,7 @@ dependencies = [
  "oak_functions_metrics",
  "oak_functions_tf_inference",
  "oak_functions_util",
+ "oak_functions_wasm",
  "oak_functions_workload_logging",
  "oak_logger",
  "oak_remote_attestation",
@@ -2992,6 +2994,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "oak_functions_testing_extension"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "bincode",
+ "chrono",
+ "oak_functions_abi",
+ "oak_functions_extension",
+ "oak_logger",
+]
+
+[[package]]
 name = "oak_functions_tf_inference"
 version = "0.1.0"
 dependencies = [
@@ -3013,6 +3027,23 @@ name = "oak_functions_util"
 version = "0.1.0"
 dependencies = [
  "lock_api",
+]
+
+[[package]]
+name = "oak_functions_wasm"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "bincode",
+ "byteorder",
+ "hashbrown",
+ "log",
+ "oak_functions_abi",
+ "oak_functions_extension",
+ "oak_functions_testing_extension",
+ "oak_logger",
+ "test_utils",
+ "wasmi",
 ]
 
 [[package]]

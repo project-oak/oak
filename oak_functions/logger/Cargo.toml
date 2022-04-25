@@ -6,4 +6,5 @@ edition = "2021"
 license = "Apache-2.0"
 
 [dependencies]
-log = "*"
+# Logging via the log crate is disabled and only available using our own custom logger.
+log = { version = "*", features = ["max_level_off", "release_max_level_off"] }
