@@ -19,11 +19,97 @@ extern crate alloc;
 use alloc::{collections::BTreeMap, sync::Arc};
 use anyhow::Context;
 use log::Level;
+use oak_functions_abi::{proto::OakStatus, ExtensionHandle, ReportMetricRequest};
+use oak_functions_extension::{ExtensionFactory, OakApiNativeExtension};
 use oak_logger::OakLogger;
 // TODO(#2580): Convert to `no_std` compatible random number generation.
 use oak_functions_util::sync::Mutex;
 use rand::{distributions::Open01, rngs::StdRng, thread_rng, Rng, SeedableRng};
 use serde::Deserialize;
+
+use wasmi::ValueType;
+
+// TODO(#2752): Remove once we call all extensions with invoke.
+const ABI_USIZE: ValueType = ValueType::I32;
+
+/// Host function name for reporting private metrics.
+const METRICS_ABI_FUNCTION_NAME: &str = "report_metric";
+
+pub struct PrivateMetricsProxyFactory<L: OakLogger> {
+    aggregator: Arc<Mutex<PrivateMetricsAggregator>>,
+    logger: L,
+}
+
+impl<L> PrivateMetricsProxyFactory<L>
+where
+    L: OakLogger + 'static,
+{
+    pub fn new_boxed_extension_factory(
+        config: &PrivateMetricsConfig,
+        logger: L,
+    ) -> anyhow::Result<Box<dyn ExtensionFactory<L>>> {
+        config.validate()?;
+        let aggregator = PrivateMetricsAggregator::new(config)?;
+        let metrics_factory = Self {
+            aggregator: Arc::new(Mutex::new(aggregator)),
+            logger,
+        };
+        Ok(Box::new(metrics_factory))
+    }
+}
+
+impl<L> ExtensionFactory<L> for PrivateMetricsProxyFactory<L>
+where
+    L: OakLogger + 'static,
+{
+    fn create(&self) -> anyhow::Result<Box<dyn OakApiNativeExtension>> {
+        let metrics_proxy = PrivateMetricsProxy::new(self.aggregator.clone());
+        Ok(Box::new(PrivateMetricsExtension::<L>::new(
+            metrics_proxy,
+            self.logger.clone(),
+        )))
+    }
+}
+
+impl<L: OakLogger> OakApiNativeExtension for PrivateMetricsExtension<L> {
+    fn invoke(&mut self, request: Vec<u8>) -> Result<Vec<u8>, OakStatus> {
+        let request: ReportMetricRequest =
+            bincode::deserialize(&request).expect("Fail to deserialize report metric request.");
+
+        self.log_debug(&format!("report_metric(): {}", request.label));
+        let _ = self
+            .report_metric(&request.label, request.value)
+            .map_err(|err| {
+                self.log_error(&format!("report_metric(): {:?}", err));
+                OakStatus::ErrInternal
+            })?;
+
+        // No result is expected from computing metric.
+        Ok(vec![])
+    }
+
+    /// Each Oak Functions application can have at most one instance of PrivateMetricsProxy. So it
+    /// is fine to return a constant name in the metadata.
+    fn get_metadata(&self) -> (String, wasmi::Signature) {
+        let signature = wasmi::Signature::new(
+            &[
+                ABI_USIZE, // buf_ptr
+                ABI_USIZE, // buf_len
+            ][..],
+            Some(ValueType::I32),
+        );
+
+        (METRICS_ABI_FUNCTION_NAME.to_string(), signature)
+    }
+
+    fn terminate(&mut self) -> anyhow::Result<()> {
+        self.publish_metrics()
+    }
+
+    fn get_handle(&self) -> ExtensionHandle {
+        ExtensionHandle::MetricsHandle
+    }
+}
 
 /// Configuration for differentially-private metrics reporting.
 #[derive(Deserialize, Debug)]

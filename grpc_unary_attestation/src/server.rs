@@ -17,89 +17,14 @@
 //! Server-side implementation of the bidirectional gRPC remote attestation handshake
 //! protocol.
 
-use crate::{
-    proto::{unary_session_server::UnarySession, UnaryRequest, UnaryResponse},
-    SessionId,
-};
-use lru::LruCache;
-use oak_remote_attestation::handshaker::{AttestationBehavior, Encryptor, ServerHandshaker};
+use crate::proto::{unary_session_server::UnarySession, UnaryRequest, UnaryResponse};
+use oak_remote_attestation_sessions::{SessionId, SessionState, SessionTracker};
 use oak_utils::LogError;
-use std::{
-    convert::TryInto,
-    sync::{Arc, Mutex},
-};
+use std::{convert::TryInto, sync::Mutex};
 use tonic;
-
-enum SessionState {
-    // Boxed due to large size difference, ref: https://rust-lang.github.io/rust-clippy/master/index.html#large_enum_variant
-    HandshakeInProgress(Box<ServerHandshaker>),
-    EncryptedMessageExchange(Encryptor),
-}
-
-/// Maintains remote attestation state for a number of sessions
-struct SessionTracker {
-    /// PEM encoded X.509 certificate that signs TEE firmware key.
-    tee_certificate: Vec<u8>,
-    /// Configuration information to provide to the client for the attestation step.
-    additional_info: Arc<Vec<u8>>,
-    known_sessions: LruCache<SessionId, SessionState>,
-}
 
 /// Number of sessions that will be kept in memory.
 const SESSIONS_CACHE_SIZE: usize = 10000;
-
-impl SessionTracker {
-    pub fn create(tee_certificate: Vec<u8>, additional_info: Vec<u8>) -> Self {
-        let known_sessions = LruCache::new(SESSIONS_CACHE_SIZE);
-        Self {
-            tee_certificate,
-            additional_info: Arc::new(additional_info),
-            known_sessions,
-        }
-    }
-
-    /// Consumes remote attestation state of an existing session. Creates
-    /// initial state if the session is not known.
-    ///
-    /// Note that getting the remote attestation state of a session always
-    /// implicitly removes it from the set of tracked sessions. After
-    /// using the state to process a request with this state it must explicitly
-    /// be put back into the SessionTracker. This an intentional choice meant
-    /// to ensure that faulty state that leads to errors when processing
-    /// a request is not persistent.
-    pub fn pop_session_state(&mut self, session_id: SessionId) -> anyhow::Result<SessionState> {
-        match self.known_sessions.pop(&session_id) {
-            None => match AttestationBehavior::create_self_attestation(&self.tee_certificate) {
-                Ok(behavior) => Ok(SessionState::HandshakeInProgress(Box::new(
-                    ServerHandshaker::new(behavior, self.additional_info.clone()),
-                ))),
-                Err(error) => Err(error.context("Couldn't create self attestation behavior")),
-            },
-            Some(SessionState::HandshakeInProgress(handshaker)) => {
-                // Completed handshakers are functionally just wrap an
-                // encryptor. In that case the underlying handshaker is
-                // returned, ensuring consistent state representation.
-                match handshaker.is_completed() {
-                    false => Ok(SessionState::HandshakeInProgress(handshaker)),
-                    true => match handshaker.get_encryptor() {
-                        Ok(encryptor) => Ok(SessionState::EncryptedMessageExchange(encryptor)),
-                        Err(error) => Err(error.context("Couldn't get encryptor")),
-                    },
-                }
-            }
-            Some(SessionState::EncryptedMessageExchange(encryptor)) => {
-                Ok(SessionState::EncryptedMessageExchange(encryptor))
-            }
-        }
-    }
-
-    /// Record a session in the tracker. Unlike `pop_session_state` it does not
-    /// normalize session state, instead relying on normalization occuring
-    /// at retrieval time.
-    pub fn put_session_state(&mut self, session_id: SessionId, session_state: SessionState) {
-        self.known_sessions.put(session_id, session_state);
-    }
-}
 
 /// gRPC Attestation Service implementation.
 pub struct AttestationServer<F, L: LogError> {
@@ -123,7 +48,11 @@ where
         additional_info: Vec<u8>,
         error_logger: L,
     ) -> anyhow::Result<Self> {
-        let session_tracker = Mutex::new(SessionTracker::create(tee_certificate, additional_info));
+        let session_tracker = Mutex::new(SessionTracker::create(
+            SESSIONS_CACHE_SIZE,
+            tee_certificate,
+            additional_info,
+        ));
         Ok(Self {
             request_handler,
             error_logger,
@@ -154,7 +83,7 @@ where
             self.session_tracker
                 .lock()
                 .expect("Couldn't lock session_state mutex")
-                .pop_session_state(session_id)
+                .pop_or_create_session_state(session_id)
                 .map_err(|error| {
                     error_logger.log_error(&format!("Couldn't pop session state: {:?}", error));
                     tonic::Status::internal("")

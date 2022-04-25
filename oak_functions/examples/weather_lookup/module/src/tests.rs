@@ -25,11 +25,10 @@ use oak_functions_abi::proto::{Request, ServerPolicy, StatusCode};
 use oak_functions_loader::{
     grpc::{create_and_start_grpc_server, create_wasm_handler},
     logger::Logger,
-    lookup::LookupFactory,
     lookup_data::{parse_lookup_entries, LookupDataAuth, LookupDataRefresher, LookupDataSource},
     server::WasmHandler,
 };
-use oak_functions_lookup::LookupDataManager;
+use oak_functions_lookup::{LookupDataManager, LookupFactory};
 use rand::{prelude::StdRng, SeedableRng};
 use std::{
     net::{Ipv6Addr, SocketAddr},

@@ -355,9 +355,9 @@ name = "grpc_unary_attestation"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "lru",
  "oak_functions_abi",
  "oak_remote_attestation",
+ "oak_remote_attestation_sessions",
  "oak_utils",
  "prost",
  "prost-types",
@@ -743,6 +743,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "oak_functions_extension"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "oak_functions_abi",
+ "oak_logger",
+ "wasmi",
+]
+
+[[package]]
 name = "oak_functions_loader"
 version = "0.1.0"
 dependencies = [
@@ -762,6 +772,7 @@ dependencies = [
  "hyper-rustls",
  "log",
  "oak_functions_abi",
+ "oak_functions_extension",
  "oak_functions_lookup",
  "oak_functions_metrics",
  "oak_functions_util",
@@ -804,9 +815,13 @@ dependencies = [
 name = "oak_functions_lookup"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "log",
+ "oak_functions_abi",
+ "oak_functions_extension",
  "oak_functions_util",
  "oak_logger",
+ "wasmi",
 ]
 
 [[package]]
@@ -814,12 +829,16 @@ name = "oak_functions_metrics"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "bincode",
  "log",
  "maplit",
+ "oak_functions_abi",
+ "oak_functions_extension",
  "oak_functions_util",
  "oak_logger",
  "rand",
  "serde",
+ "wasmi",
 ]
 
 [[package]]
@@ -846,6 +865,15 @@ dependencies = [
  "prost",
  "prost-build",
  "ring 0.17.0-not-released-yet",
+]
+
+[[package]]
+name = "oak_remote_attestation_sessions"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "lru",
+ "oak_remote_attestation",
 ]
 
 [[package]]

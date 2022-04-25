@@ -5,11 +5,19 @@ authors = ["Conrad Grobler <grobler@google.com>"]
 edition = "2021"
 license = "Apache-2.0"
 
+[features]
+oak-metrics = ["oak_functions_abi/oak-metrics"]
+
 [dependencies]
 anyhow = "*"
+bincode = "*"
 log = "*"
 maplit = "*"
+oak_functions_abi = { path = "../../abi" }
+oak_functions_extension = { path = "../../extension" }
 oak_functions_util = { path = "../../util" }
 oak_logger = { path = "../../logger" }
 rand = "*"
 serde = { version = "*", features = ["derive"] }
+# Use wasmi in `no_std` mode.
+wasmi = { version = "*", default-features = false, features = ["core"] }

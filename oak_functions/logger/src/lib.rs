@@ -16,7 +16,7 @@
 
 use log::Level;
 
-pub trait OakLogger {
+pub trait OakLogger: Send + Sync + Clone {
     /// Logs the message, which might contain sensitive information, at the specified `Level`.
     ///
     /// Only insecure debug-only implementations may provide a non-empty implementation. Production

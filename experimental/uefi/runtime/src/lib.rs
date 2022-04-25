@@ -14,18 +14,16 @@
 // limitations under the License.
 //
 
-syntax = "proto3";
+#![no_std]
+#![feature(never_type)]
 
-package oak.experimental.uefi;
+pub mod echo;
+mod remote_attestation;
 
-message EchoRequest {
-    bytes message = 1;
-}
+/// Basic hardware abstraction layer for sending data.
+pub trait Channel {
+    type Error;
 
-message EchoResponse {
-    bytes message = 1;
-}
-
-service Echo {
-    rpc Echo(EchoRequest) returns (EchoResponse) {}
+    fn send(&mut self, data: &[u8]) -> Result<(), Self::Error>;
+    fn recv(&mut self, data: &mut [u8]) -> Result<(), Self::Error>;
 }

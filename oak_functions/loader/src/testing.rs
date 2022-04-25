@@ -14,12 +14,8 @@
 // limitations under the License.
 //
 
-use crate::{
-    logger::Logger,
-    server::{
-        BoxedExtension, BoxedExtensionFactory, ExtensionFactory, OakApiNativeExtension, ABI_USIZE,
-    },
-};
+use crate::{logger::Logger, server::ABI_USIZE, OakFunctionsBoxedExtensionFactory};
+use oak_functions_extension::{ExtensionFactory, OakApiNativeExtension};
 
 use log::Level;
 use oak_functions_abi::{proto::OakStatus, ExtensionHandle, TestingRequest, TestingResponse};
@@ -74,32 +70,25 @@ pub struct TestingFactory {
 }
 
 impl TestingFactory {
-    pub fn new_boxed_extension_factory(logger: Logger) -> anyhow::Result<BoxedExtensionFactory> {
+    pub fn new_boxed_extension_factory(
+        logger: Logger,
+    ) -> anyhow::Result<OakFunctionsBoxedExtensionFactory> {
         Ok(Box::new(Self { logger }))
     }
 }
 
-impl ExtensionFactory for TestingFactory {
-    fn create(&self) -> anyhow::Result<BoxedExtension> {
+impl ExtensionFactory<Logger> for TestingFactory {
+    fn create(&self) -> anyhow::Result<Box<dyn OakApiNativeExtension>> {
         let extension = TestingExtension::new(self.logger.clone());
         Ok(Box::new(extension))
     }
 }
-
-#[allow(dead_code)]
-pub struct TestingExtension<L: oak_logger::OakLogger> {
-    logger: L,
+struct TestingExtension<Logger> {
+    logger: Logger,
 }
 
-impl<L> TestingExtension<L>
-where
-    L: oak_logger::OakLogger,
-{
-    pub fn new(logger: L) -> Self {
+impl TestingExtension<Logger> {
+    pub fn new(logger: Logger) -> Self {
         Self { logger }
-    }
-
-    pub fn log_error(&self, message: &str) {
-        self.logger.log_sensitive(Level::Error, message)
     }
 }

@@ -17,16 +17,10 @@
 use lazy_static::lazy_static;
 use maplit::{btreemap, hashmap};
 use oak_functions_abi::proto::{Request, Response};
-use oak_functions_loader::{
-    logger::Logger,
-    lookup::LookupFactory,
-    metrics::PrivateMetricsProxyFactory,
-    server::WasmHandler,
-    tf::{read_model_from_path, TensorFlowFactory},
-};
-use oak_functions_lookup::LookupDataManager;
-use oak_functions_metrics::{BucketConfig, PrivateMetricsConfig};
-use oak_functions_tf_inference::TensorFlowModelConfig;
+use oak_functions_loader::{logger::Logger, server::WasmHandler};
+use oak_functions_lookup::{LookupDataManager, LookupFactory};
+use oak_functions_metrics::{BucketConfig, PrivateMetricsConfig, PrivateMetricsProxyFactory};
+use oak_functions_tf_inference::{read_model_from_path, TensorFlowFactory, TensorFlowModelConfig};
 
 use std::{path::PathBuf, sync::Arc};
 

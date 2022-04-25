@@ -20,10 +20,12 @@ use clap::Parser;
 use tonic::Request;
 
 pub mod proto {
-    tonic::include_proto!("oak.experimental.uefi");
+    tonic::include_proto!("oak.session.unary.v1");
 }
 
-use proto::{echo_client::EchoClient, EchoRequest};
+use proto::{unary_session_client::UnarySessionClient, UnaryRequest};
+
+const MOCK_SESSION_ID: [u8; 8] = [0; 8];
 
 #[derive(Parser, Debug)]
 struct Args {
@@ -36,16 +38,17 @@ struct Args {
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cli = Args::parse();
 
-    let mut client = EchoClient::connect(cli.server).await?;
+    let mut client = UnarySessionClient::connect(cli.server).await?;
 
     for line in stdin().lock().lines() {
-        let request = Request::new(EchoRequest {
-            message: line.unwrap().as_bytes().to_vec(),
+        let request = Request::new(UnaryRequest {
+            body: line.unwrap().as_bytes().to_vec(),
+            session_id: MOCK_SESSION_ID.to_vec(),
         });
-        let response = client.echo(request).await?;
+        let response = client.message(request).await?;
         println!(
             "Response: {:?}",
-            core::str::from_utf8(&response.into_inner().message)
+            core::str::from_utf8(&response.into_inner().body)
         );
     }
 

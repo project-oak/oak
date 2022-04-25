@@ -14,16 +14,113 @@
 // limitations under the License.
 //
 
+use std::{fs::File, io::Read, sync::Arc};
+
 use anyhow::Context;
 use bytes::Bytes;
 use log::Level;
-use oak_functions_abi::proto::Inference;
+use oak_functions_abi::{
+    proto::{Inference, OakStatus},
+    ExtensionHandle, TfModelInferError, TfModelInferResponse,
+};
+use oak_functions_extension::{ExtensionFactory, OakApiNativeExtension};
 use oak_logger::OakLogger;
+use prost::Message;
 use serde_derive::Deserialize;
 use tract_tensorflow::prelude::{
     tract_ndarray::{ArrayBase, Dim, IxDynImpl, ViewRepr},
     *,
 };
+use wasmi::ValueType;
+
+// TODO(#2752): Remove once we call all extensions with invoke.
+const ABI_USIZE: ValueType = ValueType::I32;
+
+/// Host function name for invoking TensorFlow model inference.
+const TF_ABI_FUNCTION_NAME: &str = "tf_model_infer";
+
+impl<L: OakLogger> OakApiNativeExtension for TensorFlowModel<L> {
+    fn invoke(&mut self, request: Vec<u8>) -> Result<Vec<u8>, OakStatus> {
+        let inference = self.get_inference(&request).map_err(|err| {
+            self.log_error(&format!(
+                "tf_model_infer(): Unable to run inference: {:?}",
+                err
+            ));
+            TfModelInferError::BadTensorFlowModelInput
+        });
+        let result = inference.map(|inference| inference.encode_to_vec());
+        let response = bincode::serialize(&TfModelInferResponse { result })
+            .expect("Failed to serialize TF response.");
+
+        Ok(response)
+    }
+
+    /// Each Oak Functions application can have at most one instance of TensorFlowModule. So it is
+    /// fine to return a constant name in the metadata.
+    fn get_metadata(&self) -> (String, wasmi::Signature) {
+        let signature = wasmi::Signature::new(
+            &[
+                ABI_USIZE, // input_ptr
+                ABI_USIZE, // input_len
+                ABI_USIZE, // inference_ptr_ptr
+                ABI_USIZE, // inference_len_ptr
+            ][..],
+            Some(ValueType::I32),
+        );
+
+        (TF_ABI_FUNCTION_NAME.to_string(), signature)
+    }
+
+    fn terminate(&mut self) -> anyhow::Result<()> {
+        Ok(())
+    }
+
+    fn get_handle(&self) -> ExtensionHandle {
+        ExtensionHandle::TfHandle
+    }
+}
+
+/// Read a tensorFlow model from the given path, into a byte array.
+pub fn read_model_from_path(path: &str) -> anyhow::Result<Bytes> {
+    // TODO(#2753): Read config in loader.
+    let mut f = File::open(path).context("could not open TensorFlow model file")?;
+    let mut buf = vec![];
+    f.read_to_end(&mut buf)
+        .context("could not read TensorFlow model from file")?;
+
+    Ok(Bytes::from(buf))
+}
+
+pub struct TensorFlowFactory<L: OakLogger> {
+    model: TensorFlowModel<L>,
+}
+
+impl<L> TensorFlowFactory<L>
+where
+    L: OakLogger + 'static,
+{
+    /// Creates an instance of TensorFlowFactory, by loading the model from the given byte array and
+    /// optimizing it using the given shape.
+    pub fn new_boxed_extension_factory(
+        bytes: Bytes,
+        shape: Vec<u8>,
+        logger: L,
+    ) -> anyhow::Result<Box<dyn ExtensionFactory<L>>> {
+        let parsed_model = parse_model(bytes, &shape).context("couldn't parse model")?;
+        let model = TensorFlowModel::new(Arc::new(parsed_model), shape, logger);
+        Ok(Box::new(Self { model }))
+    }
+}
+
+impl<L> ExtensionFactory<L> for TensorFlowFactory<L>
+where
+    L: OakLogger + 'static,
+{
+    fn create(&self) -> anyhow::Result<Box<dyn OakApiNativeExtension>> {
+        let model = self.model.clone();
+        Ok(Box::new(model))
+    }
+}
 
 /// An optimized TypeModel with [`TypedFact`] and [`TypedOp`]. If optimization performed by `tract`
 /// is not required, InferenceModel with [`InferenceFact`] and `InferenceOp` could be used
@@ -44,16 +141,13 @@ pub struct TensorFlowModelConfig {
 }
 
 #[derive(Clone)]
-pub struct TensorFlowModel<L: OakLogger + Clone> {
+pub struct TensorFlowModel<L: OakLogger> {
     model: Arc<Model>,
     shape: Vec<u8>,
     logger: L,
 }
 
-impl<L> TensorFlowModel<L>
-where
-    L: OakLogger + Clone,
-{
+impl<L: OakLogger> TensorFlowModel<L> {
     pub fn new(model: Arc<Model>, shape: Vec<u8>, logger: L) -> Self {
         Self {
             model,

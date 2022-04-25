@@ -22,12 +22,10 @@ use oak_functions_abi::proto::{ServerPolicy, StatusCode};
 use oak_functions_loader::{
     grpc::{create_and_start_grpc_server, create_wasm_handler},
     logger::Logger,
-    lookup::LookupFactory,
-    metrics::PrivateMetricsProxyFactory,
-    server::BoxedExtensionFactory,
+    OakFunctionsBoxedExtensionFactory,
 };
-use oak_functions_lookup::LookupDataManager;
-use oak_functions_metrics::{BucketConfig, PrivateMetricsConfig};
+use oak_functions_lookup::{LookupDataManager, LookupFactory};
+use oak_functions_metrics::{BucketConfig, PrivateMetricsConfig, PrivateMetricsProxyFactory};
 use prost::Message;
 use std::{
     net::{Ipv6Addr, SocketAddr},
@@ -142,7 +140,7 @@ async fn test_server() {
     assert!(res.is_ok());
 }
 
-fn create_metrics_factory() -> BoxedExtensionFactory {
+fn create_metrics_factory() -> OakFunctionsBoxedExtensionFactory {
     let metrics_config = PrivateMetricsConfig {
         epsilon: 1.0,
         batch_size: 20,

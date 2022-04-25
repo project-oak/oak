@@ -71,24 +71,16 @@ impl<'boot> Serial<'boot> {
     }
 }
 
-impl<'boot> ciborium_io::Write for Serial<'boot> {
+impl<'boot> runtime::Channel for Serial<'boot> {
     type Error = Error<()>;
 
-    fn write_all(&mut self, data: &[u8]) -> Result<(), Self::Error> {
+    fn send(&mut self, data: &[u8]) -> Result<(), Self::Error> {
         self.serial.write(data).discard_errdata()
     }
 
-    fn flush(&mut self) -> Result<(), Self::Error> {
-        Ok(())
-    }
-}
-
-impl<'boot> ciborium_io::Read for Serial<'boot> {
-    type Error = Error<()>;
-
     // Try to fill the buffer, ignoring any timeout errors. Any other errors
     // are propagated upward.
-    fn read_exact(&mut self, data: &mut [u8]) -> Result<(), Self::Error> {
+    fn recv(&mut self, data: &mut [u8]) -> Result<(), Self::Error> {
         let mut bytes_read = 0;
         while bytes_read < data.len() {
             let len = self.read(&mut data[bytes_read..])?;

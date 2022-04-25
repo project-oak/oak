@@ -20,14 +20,102 @@ extern crate alloc;
 // read-write lock.
 extern crate std;
 
-use alloc::{sync::Arc, vec::Vec};
+use alloc::{
+    boxed::Box,
+    format,
+    string::{String, ToString},
+    sync::Arc,
+    vec::Vec,
+};
 use log::Level;
+use oak_functions_abi::{proto::OakStatus, ExtensionHandle};
+use oak_functions_extension::{ExtensionFactory, OakApiNativeExtension};
 use oak_logger::OakLogger;
+use wasmi::ValueType;
+
+// TODO(#2752): Remove once we call all extensions with invoke.
+const ABI_USIZE: ValueType = ValueType::I32;
 
 // TODO(#2593): Use no_std-compatible map.
 use std::collections::HashMap;
 
 use oak_functions_util::sync::Mutex;
+
+// Host function name for invoking lookup in lookup data.
+const LOOKUP_ABI_FUNCTION_NAME: &str = "storage_get_item";
+
+pub struct LookupFactory<L: OakLogger> {
+    manager: Arc<LookupDataManager<L>>,
+}
+
+impl<L> LookupFactory<L>
+where
+    L: OakLogger + 'static,
+{
+    pub fn new_boxed_extension_factory(
+        manager: Arc<LookupDataManager<L>>,
+    ) -> anyhow::Result<Box<dyn ExtensionFactory<L>>> {
+        let lookup_factory = Self { manager };
+        Ok(Box::new(lookup_factory))
+    }
+}
+
+impl<L> ExtensionFactory<L> for LookupFactory<L>
+where
+    L: OakLogger + 'static,
+{
+    fn create(&self) -> anyhow::Result<Box<dyn OakApiNativeExtension>> {
+        let extension = self.manager.create_lookup_data();
+        Ok(Box::new(extension))
+    }
+}
+
+impl<L: OakLogger> OakApiNativeExtension for LookupData<L> {
+    fn invoke(&mut self, request: Vec<u8>) -> Result<Vec<u8>, OakStatus> {
+        // The request is the key to lookup.
+        let key = request;
+        self.log_debug(&format!("storage_get_item(): key: {}", format_bytes(&key)));
+        let value = self.get(&key);
+        match value {
+            Some(value) => {
+                // Truncate value for logging.
+                let value_to_log = value.clone().into_iter().take(512).collect::<Vec<_>>();
+                self.log_debug(&format!(
+                    "storage_get_item(): value: {}",
+                    format_bytes(&value_to_log)
+                ));
+                Ok(value)
+            }
+            // TODO(#2701): Remove ErrStorageItemNotFound from OakStatus.
+            None => {
+                self.log_debug("storage_get_item(): value not found");
+                Err(OakStatus::ErrStorageItemNotFound)
+            }
+        }
+    }
+
+    fn get_metadata(&self) -> (String, wasmi::Signature) {
+        let signature = wasmi::Signature::new(
+            &[
+                ABI_USIZE, // key_ptr
+                ABI_USIZE, // key_len
+                ABI_USIZE, // value_ptr_ptr
+                ABI_USIZE, // value_len_ptr
+            ][..],
+            Some(ValueType::I32),
+        );
+
+        (LOOKUP_ABI_FUNCTION_NAME.to_string(), signature)
+    }
+
+    fn terminate(&mut self) -> anyhow::Result<()> {
+        Ok(())
+    }
+
+    fn get_handle(&self) -> ExtensionHandle {
+        ExtensionHandle::LookupHandle
+    }
+}
 
 pub type Data = HashMap<Vec<u8>, Vec<u8>>;
 
@@ -120,6 +208,14 @@ where
     }
 }
 
+/// Converts a binary sequence to a string if it is a valid UTF-8 string, or formats it as a numeric
+/// vector of bytes otherwise.
+pub fn format_bytes(v: &[u8]) -> String {
+    std::str::from_utf8(v)
+        .map(|s| s.to_string())
+        .unwrap_or_else(|_| format!("{:?}", v))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -153,5 +249,13 @@ mod tests {
         assert_eq!(lookup_data_0.len(), 0);
         assert_eq!(lookup_data_1.len(), 1);
         assert_eq!(lookup_data_2.len(), 2);
+    }
+
+    #[test]
+    fn test_format_bytes() {
+        // Valid UTF-8 string.
+        assert_eq!("🚀oak⭐", format_bytes("🚀oak⭐".as_bytes()));
+        // Incorrect UTF-8 bytes, as per https://doc.rust-lang.org/std/string/struct.String.html#examples-3.
+        assert_eq!("[0, 159, 146, 150]", format_bytes(&[0, 159, 146, 150]));
     }
 }

@@ -38,6 +38,7 @@ humantime-serde = "*"
 # Logging via the log crate is disabled and only available using our own custom logger.
 log = { version = "*", features = ["max_level_off", "release_max_level_off"] }
 oak_functions_abi = { path = "../abi" }
+oak_functions_extension = { path = "../extension" }
 oak_functions_lookup = { path = "../lookup" }
 oak_functions_util = { path = "../util" }
 oak_functions_metrics = { optional = true, path = "../experimental/metrics" }

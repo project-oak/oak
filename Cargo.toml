@@ -3,6 +3,9 @@ resolver = "2"
 members = [
   "experimental/attestation_common",
   "experimental/https_attestation",
+  "experimental/offline_attestation/client",
+  "experimental/offline_attestation/server",
+  "experimental/offline_attestation/shared",
   "experimental/proxy_attestation",
   "experimental/tf_proxy/client",
   "experimental/tf_proxy/server",
@@ -14,6 +17,7 @@ members = [
   "experimental/trusted_shuffler/trusted_shuffler",
   "experimental/uefi/client",
   "experimental/uefi/loader",
+  "experimental/uefi/runtime",
   "oak_functions/abi",
   "oak_functions/client/rust",
   "oak_functions/examples/benchmark/module",
@@ -27,6 +31,7 @@ members = [
   "oak_functions/examples/weather_lookup/module",
   "oak_functions/experimental/tf_inference",
   "oak_functions/experimental/metrics",
+  "oak_functions/extension",
   "oak_functions/load_test",
   "oak_functions/loader",
   "oak_functions/location_utils",
@@ -45,6 +50,7 @@ members = [
   "oak_functions/util",
   "oak_idl",
   "remote_attestation/rust",
+  "remote_attestation_sessions",
   "xtask",
 ]
 exclude = [
