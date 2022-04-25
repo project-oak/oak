@@ -212,6 +212,18 @@ impl WasmState {
         })
     }
 
+    //// Read the u32 value at the `address` from the Wasm memory.
+    pub fn read_u32_from_wasm_memory(&self, address: AbiPointer) -> Result<u32, OakStatus> {
+        let address = self.get_memory().get(address, 4).map_err(|err| {
+            self.logger.log_sensitive(
+                Level::Error,
+                &format!("Unable to read u32 value from guest memory: {:?}", err),
+            );
+            OakStatus::ErrInvalidArgs
+        })?;
+        Ok(LittleEndian::read_u32(&address))
+    }
+
     /// Writes the given `buffer` by allocating `buffer.len()` Wasm memory and writing the address
     /// of the allocated memory to `dest_ptr_ptr` and the length to `dest_len_ptr`.
     pub fn alloc_and_write_buffer_to_wasm_memory(
@@ -796,6 +808,18 @@ mod tests {
         assert_eq!(OakStatus::ErrInvalidHandle, extension.unwrap_err())
     }
 
+    #[test]
+    fn test_read_write_u32_in_wasm_memory() {
+        let wasm_state = create_test_wasm_state();
+        // Guess some memory address in linear Wasm memory to write to.
+        let address: AbiPointer = 100;
+        let value: u32 = 32;
+        let write_status = wasm_state.write_u32_to_wasm_memory(value, address);
+        assert!(write_status.is_ok());
+        let read_value = wasm_state.read_u32_from_wasm_memory(address).unwrap();
+        assert_eq!(read_value, value);
+    }
+
     #[tokio::test]
     async fn test_alloc_and_write_empty() {
         let mut wasm_state = create_test_wasm_state();
@@ -810,19 +834,50 @@ mod tests {
 
         // Get dest_len from dest_len_ptr.
         let dest_len: AbiPointerOffset =
-            LittleEndian::read_u32(&wasm_state.get_memory().get(dest_len_ptr, 4).unwrap());
+            wasm_state.read_u32_from_wasm_memory(dest_len_ptr).unwrap();
 
         // Assert that we write a vector of length 0.
         assert_eq!(dest_len, 0);
 
-        let dest_ptr: AbiPointer =
-            LittleEndian::read_u32(&wasm_state.get_memory().get(dest_ptr_ptr, 4).unwrap());
+        let dest_ptr: AbiPointer = wasm_state.read_u32_from_wasm_memory(dest_ptr_ptr).unwrap();
 
         // Assert that reponse_ptr holds expected empty vector.
         assert!(wasm_state
             .read_buffer_from_wasm_memory(dest_ptr, dest_len)
             .unwrap()
             .is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_alloc_and_write() {
+        let mut wasm_state = create_test_wasm_state();
+        let bfr = vec![42];
+        // Guess some memory addresses in linear Wasm memory to write to.
+        let dest_ptr_ptr: AbiPointer = 100;
+        let dest_len_ptr: AbiPointer = 150;
+        let write_status = wasm_state.alloc_and_write_buffer_to_wasm_memory(
+            bfr.clone(),
+            dest_ptr_ptr,
+            dest_len_ptr,
+        );
+        assert!(write_status.is_ok());
+
+        // Get dest_len from dest_len_ptr.
+        let dest_len: AbiPointerOffset =
+            wasm_state.read_u32_from_wasm_memory(dest_len_ptr).unwrap();
+
+        // Assert that we write a vector of correct length.
+        assert_eq!(dest_len, bfr.len() as u32);
+
+        let dest_ptr: AbiPointer = wasm_state.read_u32_from_wasm_memory(dest_ptr_ptr).unwrap();
+
+        // Assert that reponse_ptr holds expected empty vector.
+        assert_eq!(
+            wasm_state
+                .read_buffer_from_wasm_memory(dest_ptr, dest_len)
+                .unwrap(),
+            bfr
+        );
     }
 
     #[tokio::test]
@@ -856,15 +911,17 @@ mod tests {
             .expect("Failed to serialize response.");
 
         // Get response_len from response_len_ptr.
-        let response_len: AbiPointerOffset =
-            LittleEndian::read_u32(&wasm_state.get_memory().get(response_len_ptr, 4).unwrap());
+        let response_len: AbiPointerOffset = wasm_state
+            .read_u32_from_wasm_memory(response_len_ptr)
+            .unwrap();
 
         // Assert that response_len holds length of expected response.
         assert_eq!(response_len as usize, expected_response.len());
 
         // Get response_ptr from response_ptr_ptr.
-        let response_ptr: AbiPointer =
-            LittleEndian::read_u32(&wasm_state.get_memory().get(response_ptr_ptr, 4).unwrap());
+        let response_ptr: AbiPointer = wasm_state
+            .read_u32_from_wasm_memory(response_ptr_ptr)
+            .unwrap();
 
         // Assert that reponse_ptr holds expected response.
         assert_eq!(
