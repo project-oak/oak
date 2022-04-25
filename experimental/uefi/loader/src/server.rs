@@ -15,6 +15,7 @@
 //
 
 use bmrng::unbounded::UnboundedRequestSender;
+use core::iter::Chain;
 use futures::Future;
 use oak_remote_attestation_sessions::SESSION_ID_LENGTH;
 use std::net::SocketAddr;
@@ -33,10 +34,11 @@ fn serialize_request(request: UnaryRequest) -> Vec<u8> {
     // The payload is the request's body prepended with the 8 byte session_id.
     // This takes adavantage of the session_id's fixed size to avoid needing
     // to use a key/value binary serialization protocol.
-    let mut payload: Vec<u8> = Vec::with_capacity(request.body.len() + SESSION_ID_LENGTH);
-    payload.extend(request.session_id);
-    payload.extend(request.body);
-    payload
+    request
+        .session_id
+        .into_iter()
+        .chain(request.body.into_iter())
+        .collect()
 }
 
 pub struct EchoImpl {
