@@ -1,1 +1,0 @@
-initSidebarItems({"mod":[["unary_session_client","Generated client implementations."]],"struct":[["UnaryRequest",""],["UnaryResponse",""]]});
