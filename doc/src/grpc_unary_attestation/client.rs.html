@@ -116,10 +116,6 @@
 <span id="111">111</span>
 <span id="112">112</span>
 <span id="113">113</span>
-<span id="114">114</span>
-<span id="115">115</span>
-<span id="116">116</span>
-<span id="117">117</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2022 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -138,7 +134,6 @@
 
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::proto</span>::{<span class="ident">unary_session_client::UnarySessionClient</span>, <span class="ident">UnaryRequest</span>};
 <span class="kw">use</span> <span class="ident">anyhow::Context</span>;
-<span class="kw">use</span> <span class="ident">oak_functions_abi</span>;
 <span class="kw">use</span> <span class="ident">oak_remote_attestation::handshaker</span>::{
     <span class="ident">AttestationBehavior</span>, <span class="ident">ClientHandshaker</span>, <span class="ident">Encryptor</span>, <span class="ident">ServerIdentityVerifier</span>,
 };
@@ -211,13 +206,10 @@
     }
 
     <span class="doccomment">/// Sends data encrypted by the [`Encryptor`] to the server and decrypts the server responses.</span>
-    <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">send</span>(
-        <span class="kw-2">&amp;mut</span> <span class="self">self</span>,
-        <span class="ident">request</span>: <span class="ident">oak_functions_abi::proto::Request</span>,
-    ) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">send</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">payload</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">encrypted_request</span> <span class="op">=</span> <span class="self">self</span>
             .<span class="ident">encryptor</span>
-            .<span class="ident">encrypt</span>(<span class="kw-2">&amp;</span><span class="ident">request</span>.<span class="ident">body</span>)
+            .<span class="ident">encrypt</span>(<span class="kw-2">&amp;</span><span class="ident">payload</span>)
             .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t encrypt request&quot;</span>)<span class="question-mark">?</span>;
         <span class="kw">let</span> <span class="ident">encrypted_response</span> <span class="op">=</span> <span class="self">self</span>
             .<span class="ident">client</span>

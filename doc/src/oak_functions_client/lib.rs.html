@@ -116,7 +116,7 @@
 
     <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">invoke</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">request</span>: <span class="ident">Request</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">Response</span><span class="op">&gt;</span> {
         <span class="self">self</span>.<span class="ident">inner</span>
-            .<span class="ident">send</span>(<span class="ident">request</span>)
+            .<span class="ident">send</span>(<span class="ident">request</span>.<span class="ident">body</span>)
             .<span class="kw">await</span>
             .<span class="ident">context</span>(<span class="string">&quot;Error invoking Oak Functions instance&quot;</span>)<span class="question-mark">?</span>
             .<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;Empty response&quot;</span>))
