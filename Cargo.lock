@@ -2806,6 +2806,7 @@ dependencies = [
  "prost-build 0.10.1",
  "serde",
  "serde_derive",
+ "thiserror",
 ]
 
 [[package]]

@@ -19,6 +19,8 @@
 
 pub use crate::proto::ExtensionHandle;
 use serde_derive::{Deserialize, Serialize};
+#[cfg(feature = "oak-metrics")]
+use thiserror::Error;
 
 pub mod proto {
     include!(concat!(env!("OUT_DIR"), "/oak.functions.abi.rs"));
@@ -55,6 +57,19 @@ pub mod proto {
 pub struct ReportMetricRequest {
     pub label: String,
     pub value: i64,
+}
+
+#[derive(Serialize, Deserialize, Debug, Error)]
+#[cfg(feature = "oak-metrics")]
+pub enum ReportMetricError {
+    #[error("proxy has already been consumed")]
+    ProxyAlreadyConsumed,
+}
+
+#[derive(Serialize, Deserialize)]
+#[cfg(feature = "oak-metrics")]
+pub struct ReportMetricResponse {
+    pub result: Result<(), ReportMetricError>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -97,9 +112,6 @@ extern "C" {
 
     /// See [`write_log_message`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#write_log_message).
     pub fn write_log_message(buf_ptr: *const u8, buf_len: usize) -> u32;
-
-    /// See [`report_metric`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#report_metric).
-    pub fn report_metric(buf_ptr: *const u8, buf_len: usize) -> u32;
 
     /// See [`storage_get_item`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#storage_get_item).
     pub fn storage_get_item(

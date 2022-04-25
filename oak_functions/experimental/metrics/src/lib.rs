@@ -19,7 +19,9 @@ extern crate alloc;
 use alloc::{collections::BTreeMap, sync::Arc};
 use anyhow::Context;
 use log::Level;
-use oak_functions_abi::{proto::OakStatus, ExtensionHandle, ReportMetricRequest};
+use oak_functions_abi::{
+    proto::OakStatus, ExtensionHandle, ReportMetricError, ReportMetricRequest, ReportMetricResponse,
+};
 use oak_functions_extension::{ExtensionFactory, OakApiNativeExtension};
 use oak_logger::OakLogger;
 // TODO(#2580): Convert to `no_std` compatible random number generation.
@@ -77,15 +79,12 @@ impl<L: OakLogger> OakApiNativeExtension for PrivateMetricsExtension<L> {
             bincode::deserialize(&request).expect("Fail to deserialize report metric request.");
 
         self.log_debug(&format!("report_metric(): {}", request.label));
-        let _ = self
-            .report_metric(&request.label, request.value)
-            .map_err(|err| {
-                self.log_error(&format!("report_metric(): {:?}", err));
-                OakStatus::ErrInternal
-            })?;
+        let result = self.report_metric(&request.label, request.value);
 
-        // No result is expected from computing metric.
-        Ok(vec![])
+        let response = bincode::serialize(&ReportMetricResponse { result })
+            .expect("Failed to serialize report metric response.");
+
+        Ok(response)
     }
 
     /// Each Oak Functions application can have at most one instance of PrivateMetricsProxy. So it
@@ -323,12 +322,16 @@ where
         }
     }
 
-    pub fn report_metric(&mut self, label: &str, value: i64) -> anyhow::Result<()> {
+    pub fn report_metric(
+        &mut self,
+        label: &str,
+        value: i64,
+    ) -> anyhow::Result<(), ReportMetricError> {
         if let Some(metrics_proxy) = self.metrics_proxy.as_mut() {
             metrics_proxy.report_metric(label, value);
             Ok(())
         } else {
-            Err(anyhow::Error::msg("proxy has already been consumed"))
+            Err(ReportMetricError::ProxyAlreadyConsumed)
         }
     }
 
