@@ -70,6 +70,7 @@
 <span id="65">65</span>
 <span id="66">66</span>
 <span id="67">67</span>
+<span id="68">68</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2021 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -130,6 +131,7 @@
                 <span class="ident">oak_functions::report_event</span>(
                     <span class="ident">std::str::from_utf8</span>(<span class="kw-2">&amp;</span><span class="ident">label</span>).<span class="ident">expect</span>(<span class="string">&quot;Couldn&#39;t convert bytes to string&quot;</span>),
                 )
+                .<span class="ident">expect</span>(<span class="string">&quot;Transmitting event failed.&quot;</span>)
                 .<span class="ident">expect</span>(<span class="string">&quot;Couldn&#39;t report event.&quot;</span>)
             }
             <span class="prelude-val">None</span> =&gt; (),

@@ -28,6 +28,8 @@
 <span id="23">23</span>
 <span id="24">24</span>
 <span id="25">25</span>
+<span id="26">26</span>
+<span id="27">27</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2021 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -51,7 +53,9 @@
     <span class="kw">let</span> <span class="ident">request</span> <span class="op">=</span> <span class="ident">oak_functions::read_request</span>().<span class="ident">expect</span>(<span class="string">&quot;Couldn&#39;t read request body.&quot;</span>);
     <span class="kw">let</span> <span class="ident">label</span> <span class="op">=</span>
         <span class="ident">std::str::from_utf8</span>(<span class="ident">request</span>.<span class="ident">as_ref</span>()).<span class="ident">expect</span>(<span class="string">&quot;Request body is not a valid UTF-8 string.&quot;</span>);
-    <span class="ident">oak_functions::report_event</span>(<span class="ident">label</span>).<span class="ident">expect</span>(<span class="string">&quot;Couldn&#39;t report event.&quot;</span>);
+    <span class="ident">oak_functions::report_event</span>(<span class="ident">label</span>)
+        .<span class="ident">expect</span>(<span class="string">&quot;Transmit event failed.&quot;</span>)
+        .<span class="ident">expect</span>(<span class="string">&quot;Couldn&#39;t report event.&quot;</span>);
 }
 </code></pre></div>
 </section><section id="search" class="content hidden"></section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="metrics" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.62.0-nightly (de1bc0008 2022-04-21)" ></div>

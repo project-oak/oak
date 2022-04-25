@@ -594,6 +594,9 @@
 <span id="589">589</span>
 <span id="590">590</span>
 <span id="591">591</span>
+<span id="592">592</span>
+<span id="593">593</span>
+<span id="594">594</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2022 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -615,7 +618,9 @@
 <span class="kw">use</span> <span class="ident">alloc</span>::{<span class="ident">collections::BTreeMap</span>, <span class="ident">sync::Arc</span>};
 <span class="kw">use</span> <span class="ident">anyhow::Context</span>;
 <span class="kw">use</span> <span class="ident">log::Level</span>;
-<span class="kw">use</span> <span class="ident">oak_functions_abi</span>::{<span class="ident">proto::OakStatus</span>, <span class="ident">ExtensionHandle</span>, <span class="ident">ReportMetricRequest</span>};
+<span class="kw">use</span> <span class="ident">oak_functions_abi</span>::{
+    <span class="ident">proto::OakStatus</span>, <span class="ident">ExtensionHandle</span>, <span class="ident">ReportMetricError</span>, <span class="ident">ReportMetricRequest</span>, <span class="ident">ReportMetricResponse</span>,
+};
 <span class="kw">use</span> <span class="ident">oak_functions_extension</span>::{<span class="ident">ExtensionFactory</span>, <span class="ident">OakApiNativeExtension</span>};
 <span class="kw">use</span> <span class="ident">oak_logger::OakLogger</span>;
 <span class="comment">// TODO(#2580): Convert to `no_std` compatible random number generation.</span>
@@ -673,15 +678,12 @@
             <span class="ident">bincode::deserialize</span>(<span class="kw-2">&amp;</span><span class="ident">request</span>).<span class="ident">expect</span>(<span class="string">&quot;Fail to deserialize report metric request.&quot;</span>);
 
         <span class="self">self</span>.<span class="ident">log_debug</span>(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;report_metric(): {}&quot;</span>, <span class="ident">request</span>.<span class="ident">label</span>));
-        <span class="kw">let</span> <span class="kw">_</span> <span class="op">=</span> <span class="self">self</span>
-            .<span class="ident">report_metric</span>(<span class="kw-2">&amp;</span><span class="ident">request</span>.<span class="ident">label</span>, <span class="ident">request</span>.<span class="ident">value</span>)
-            .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> {
-                <span class="self">self</span>.<span class="ident">log_error</span>(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;report_metric(): {:?}&quot;</span>, <span class="ident">err</span>));
-                <span class="ident">OakStatus::ErrInternal</span>
-            })<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">report_metric</span>(<span class="kw-2">&amp;</span><span class="ident">request</span>.<span class="ident">label</span>, <span class="ident">request</span>.<span class="ident">value</span>);
 
-        <span class="comment">// No result is expected from computing metric.</span>
-        <span class="prelude-val">Ok</span>(<span class="macro">vec!</span>[])
+        <span class="kw">let</span> <span class="ident">response</span> <span class="op">=</span> <span class="ident">bincode::serialize</span>(<span class="kw-2">&amp;</span><span class="ident">ReportMetricResponse</span> { <span class="ident">result</span> })
+            .<span class="ident">expect</span>(<span class="string">&quot;Failed to serialize report metric response.&quot;</span>);
+
+        <span class="prelude-val">Ok</span>(<span class="ident">response</span>)
     }
 
     <span class="doccomment">/// Each Oak Functions application can have at most one instance of PrivateMetricsProxy. So it</span>
@@ -919,12 +921,16 @@
         }
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">report_metric</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">label</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="ident">value</span>: <span class="ident">i64</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">report_metric</span>(
+        <span class="kw-2">&amp;mut</span> <span class="self">self</span>,
+        <span class="ident">label</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
+        <span class="ident">value</span>: <span class="ident">i64</span>,
+    ) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span>(), <span class="ident">ReportMetricError</span><span class="op">&gt;</span> {
         <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">metrics_proxy</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">metrics_proxy</span>.<span class="ident">as_mut</span>() {
             <span class="ident">metrics_proxy</span>.<span class="ident">report_metric</span>(<span class="ident">label</span>, <span class="ident">value</span>);
             <span class="prelude-val">Ok</span>(())
         } <span class="kw">else</span> {
-            <span class="prelude-val">Err</span>(<span class="ident">anyhow::Error::msg</span>(<span class="string">&quot;proxy has already been consumed&quot;</span>))
+            <span class="prelude-val">Err</span>(<span class="ident">ReportMetricError::ProxyAlreadyConsumed</span>)
         }
     }
 
