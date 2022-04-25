@@ -24,7 +24,8 @@ use alloc::{boxed::Box, sync::Arc, vec::Vec};
 use lru::LruCache;
 use oak_remote_attestation::handshaker::{AttestationBehavior, Encryptor, ServerHandshaker};
 
-pub type SessionId = [u8; 8];
+pub const SESSION_ID_LENGTH: usize = 8;
+pub type SessionId = [u8; SESSION_ID_LENGTH];
 
 pub enum SessionState {
     // Boxed due to large size difference, ref: https://rust-lang.github.io/rust-clippy/master/index.html#large_enum_variant

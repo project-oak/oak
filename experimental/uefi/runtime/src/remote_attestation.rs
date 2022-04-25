@@ -22,11 +22,30 @@
 extern crate alloc;
 
 use alloc::vec::Vec;
-use anyhow::Context;
-use oak_remote_attestation_sessions::{SessionId, SessionState, SessionTracker};
+use anyhow::{bail, Context};
+use oak_remote_attestation_sessions::{SessionId, SessionState, SessionTracker, SESSION_ID_LENGTH};
 
 /// Number of sessions that will be kept in memory.
 const SESSIONS_CACHE_SIZE: usize = 10000;
+
+fn deserialize_msg(msg: Vec<u8>) -> anyhow::Result<(SessionId, Vec<u8>)> {
+    let mut session_id: [u8; SESSION_ID_LENGTH] = [0; SESSION_ID_LENGTH];
+    let mut request_body: Vec<u8> = Vec::with_capacity(msg.len() - SESSION_ID_LENGTH);
+
+    if msg.len() < SESSION_ID_LENGTH {
+        bail!("Message too short to contain a session_id.");
+    }
+
+    for (index, byte) in msg.into_iter().enumerate() {
+        if index <= SESSION_ID_LENGTH {
+            session_id[index] = byte;
+        } else {
+            request_body.push(byte);
+        }
+    }
+
+    Ok((session_id, request_body))
+}
 
 pub struct AttestationHandler<F> {
     session_tracker: SessionTracker,
@@ -53,7 +72,9 @@ where
         }
     }
 
-    pub fn message(&mut self, session_id: SessionId, request: Vec<u8>) -> anyhow::Result<Vec<u8>> {
+    pub fn message(&mut self, msg: Vec<u8>) -> anyhow::Result<Vec<u8>> {
+        let (session_id, request) = deserialize_msg(msg).context("Couldn't deserialize message")?;
+
         let mut session_state = {
             self.session_tracker
                 .pop_or_create_session_state(session_id)
