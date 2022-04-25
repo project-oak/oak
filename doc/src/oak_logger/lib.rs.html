@@ -52,7 +52,7 @@
 
 <span class="kw">use</span> <span class="ident">log::Level</span>;
 
-<span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">OakLogger</span> {
+<span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">OakLogger</span>: <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span> <span class="op">+</span> <span class="ident">Clone</span> {
     <span class="doccomment">/// Logs the message, which might contain sensitive information, at the specified `Level`.</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// Only insecure debug-only implementations may provide a non-empty implementation. Production</span>

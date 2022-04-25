@@ -880,46 +880,6 @@
 <span id="875">875</span>
 <span id="876">876</span>
 <span id="877">877</span>
-<span id="878">878</span>
-<span id="879">879</span>
-<span id="880">880</span>
-<span id="881">881</span>
-<span id="882">882</span>
-<span id="883">883</span>
-<span id="884">884</span>
-<span id="885">885</span>
-<span id="886">886</span>
-<span id="887">887</span>
-<span id="888">888</span>
-<span id="889">889</span>
-<span id="890">890</span>
-<span id="891">891</span>
-<span id="892">892</span>
-<span id="893">893</span>
-<span id="894">894</span>
-<span id="895">895</span>
-<span id="896">896</span>
-<span id="897">897</span>
-<span id="898">898</span>
-<span id="899">899</span>
-<span id="900">900</span>
-<span id="901">901</span>
-<span id="902">902</span>
-<span id="903">903</span>
-<span id="904">904</span>
-<span id="905">905</span>
-<span id="906">906</span>
-<span id="907">907</span>
-<span id="908">908</span>
-<span id="909">909</span>
-<span id="910">910</span>
-<span id="911">911</span>
-<span id="912">912</span>
-<span id="913">913</span>
-<span id="914">914</span>
-<span id="915">915</span>
-<span id="916">916</span>
-<span id="917">917</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2021 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -935,7 +895,7 @@
 <span class="comment">// See the License for the specific language governing permissions and</span>
 <span class="comment">// limitations under the License.</span>
 
-<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::logger::Logger</span>;
+<span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">logger::Logger</span>, <span class="ident">OakFunctionsBoxedExtensionFactory</span>};
 
 <span class="kw">use</span> <span class="ident">anyhow::Context</span>;
 <span class="kw">use</span> <span class="ident">byteorder</span>::{<span class="ident">ByteOrder</span>, <span class="ident">LittleEndian</span>};
@@ -944,6 +904,7 @@
 <span class="kw">use</span> <span class="ident">oak_functions_abi::proto</span>::{
     <span class="ident">ExtensionHandle</span>, <span class="ident">OakStatus</span>, <span class="ident">Request</span>, <span class="ident">Response</span>, <span class="ident">ServerPolicy</span>, <span class="ident">StatusCode</span>,
 };
+<span class="kw">use</span> <span class="ident">oak_functions_extension::OakApiNativeExtension</span>;
 <span class="kw">use</span> <span class="ident">oak_logger::OakLogger</span>;
 <span class="kw">use</span> <span class="ident">serde::Deserialize</span>;
 <span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">collections::HashMap</span>, <span class="ident">convert::TryInto</span>, <span class="ident">str</span>, <span class="ident">sync::Arc</span>, <span class="ident">time::Duration</span>};
@@ -1036,39 +997,6 @@
     }
 }
 
-<span class="doccomment">/// Trait for implementing extensions, to implement new native functionality.</span>
-<span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">OakApiNativeExtension</span> {
-    <span class="doccomment">/// Invokes the extension with the given request and returns a result. If no result</span>
-    <span class="doccomment">/// is expected, the result is empty.  An error within the extension is reflected in the</span>
-    <span class="doccomment">/// `OakStatus`.</span>
-    <span class="doccomment">/// TODO(#2701): Stop returning OakStatus for errors internal to extensions.</span>
-    <span class="kw">fn</span> <span class="ident">invoke</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">request</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span>;
-
-    <span class="doccomment">/// Metadata about this Extension, including the exported host function name, the function&#39;s</span>
-    <span class="doccomment">/// signature, and the corresponding ExtensionHandle.</span>
-    <span class="kw">fn</span> <span class="ident">get_metadata</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; (<span class="ident">String</span>, <span class="ident">wasmi::Signature</span>);
-
-    <span class="doccomment">/// Performs any cleanup or terminating behavior necessary before destroying the WasmState.</span>
-    <span class="kw">fn</span> <span class="ident">terminate</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span>;
-
-    <span class="doccomment">/// Gets the `ExtensionHandle` for this extension.</span>
-    <span class="kw">fn</span> <span class="ident">get_handle</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">ExtensionHandle</span>;
-}
-
-<span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">ExtensionFactory</span> {
-    <span class="kw">fn</span> <span class="ident">create</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">BoxedExtension</span><span class="op">&gt;</span>;
-}
-
-<span class="kw">pub</span> <span class="kw">type</span> <span class="ident">BoxedExtension</span> <span class="op">=</span> <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">OakApiNativeExtension</span> <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span><span class="op">&gt;</span>;
-
-<span class="kw">impl</span> <span class="ident">std::fmt::Debug</span> <span class="kw">for</span> <span class="ident">BoxedExtension</span> {
-    <span class="kw">fn</span> <span class="ident">fmt</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">f</span>: <span class="kw-2">&amp;mut</span> <span class="ident">std::fmt::Formatter</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>) -&gt; <span class="ident">std::fmt::Result</span> {
-        <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;ExtensionHandle: {:?}&quot;</span>, <span class="self">self</span>.<span class="ident">get_handle</span>())
-    }
-}
-
-<span class="kw">pub</span> <span class="kw">type</span> <span class="ident">BoxedExtensionFactory</span> <span class="op">=</span> <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">ExtensionFactory</span> <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span><span class="op">&gt;</span>;
-
 <span class="doccomment">/// `WasmState` holds runtime values for a particular execution instance of Wasm, handling a</span>
 <span class="doccomment">/// single user request. The methods here correspond to the ABI host functions that allow the Wasm</span>
 <span class="doccomment">/// module to exchange the request and the response with the Oak functions server. These functions</span>
@@ -1079,9 +1007,9 @@
     <span class="ident">instance</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">wasmi::ModuleRef</span><span class="op">&gt;</span>,
     <span class="ident">memory</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">wasmi::MemoryRef</span><span class="op">&gt;</span>,
     <span class="ident">logger</span>: <span class="ident">Logger</span>,
-    <span class="doccomment">/// A mapping of internal host functions to the corresponding [`OakApiNativeExtension`].</span>
+    <span class="doccomment">/// A mapping of internal host functions to the corresponding BoxedExtension.</span>
     <span class="doccomment">/// TODO(#2715): Replace by a map from `ExtensionHandles` to `BoxedExtensions`.</span>
-    <span class="ident">extensions_indices</span>: <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">usize</span>, <span class="ident">BoxedExtension</span><span class="op">&gt;</span>,
+    <span class="ident">extensions_indices</span>: <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">usize</span>, <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">OakApiNativeExtension</span><span class="op">&gt;</span><span class="op">&gt;</span>,
     <span class="doccomment">/// A mapping of host function names to metadata required for resolving the function.</span>
     <span class="ident">extensions_metadata</span>: <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">String</span>, (<span class="ident">usize</span>, <span class="ident">wasmi::Signature</span>)<span class="op">&gt;</span>,
 }
@@ -1446,7 +1374,7 @@
         <span class="ident">module</span>: <span class="kw-2">&amp;</span><span class="ident">wasmi::Module</span>,
         <span class="ident">request_bytes</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
         <span class="ident">logger</span>: <span class="ident">Logger</span>,
-        <span class="ident">extensions_indices</span>: <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">usize</span>, <span class="ident">BoxedExtension</span><span class="op">&gt;</span>,
+        <span class="ident">extensions_indices</span>: <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">usize</span>, <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">OakApiNativeExtension</span><span class="op">&gt;</span><span class="op">&gt;</span>,
         <span class="ident">extensions_metadata</span>: <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">String</span>, (<span class="ident">usize</span>, <span class="ident">wasmi::Signature</span>)<span class="op">&gt;</span>,
     ) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">WasmState</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">abi</span> <span class="op">=</span> <span class="ident">WasmState</span> {
@@ -1608,14 +1536,14 @@
     <span class="comment">// Wasm module to be served on each invocation. `Arc` is needed to make `WasmHandler`</span>
     <span class="comment">// cloneable.</span>
     <span class="ident">module</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">wasmi::Module</span><span class="op">&gt;</span>,
-    <span class="ident">extension_factories</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">BoxedExtensionFactory</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+    <span class="ident">extension_factories</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">OakFunctionsBoxedExtensionFactory</span><span class="op">&gt;</span><span class="op">&gt;</span>,
     <span class="ident">logger</span>: <span class="ident">Logger</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">WasmHandler</span> {
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">create</span>(
         <span class="ident">wasm_module_bytes</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>],
-        <span class="ident">extension_factories</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">BoxedExtensionFactory</span><span class="op">&gt;</span>,
+        <span class="ident">extension_factories</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">OakFunctionsBoxedExtensionFactory</span><span class="op">&gt;</span>,
         <span class="ident">logger</span>: <span class="ident">Logger</span>,
     ) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">module</span> <span class="op">=</span> <span class="ident">wasmi::Module::from_buffer</span>(<span class="kw-2">&amp;</span><span class="ident">wasm_module_bytes</span>)
@@ -1732,14 +1660,6 @@
     <span class="kw">let</span> <span class="ident">oak_status_from_result</span> <span class="op">=</span> <span class="ident">result</span>.<span class="ident">map_or_else</span>(<span class="op">|</span><span class="ident">x</span>: <span class="ident">OakStatus</span><span class="op">|</span> <span class="ident">x</span>, <span class="op">|</span>()<span class="op">|</span> <span class="ident">OakStatus::Ok</span>);
     <span class="kw">let</span> <span class="ident">wasmi_value</span> <span class="op">=</span> <span class="ident">wasmi::RuntimeValue::I32</span>(<span class="ident">oak_status_from_result</span> <span class="kw">as</span> <span class="ident">i32</span>);
     <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(<span class="ident">wasmi_value</span>))
-}
-
-<span class="doccomment">/// Converts a binary sequence to a string if it is a valid UTF-8 string, or formats it as a numeric</span>
-<span class="doccomment">/// vector of bytes otherwise.</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">format_bytes</span>(<span class="ident">v</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) -&gt; <span class="ident">String</span> {
-    <span class="ident">std::str::from_utf8</span>(<span class="ident">v</span>)
-        .<span class="ident">map</span>(<span class="op">|</span><span class="ident">s</span><span class="op">|</span> <span class="ident">s</span>.<span class="ident">to_string</span>())
-        .<span class="ident">unwrap_or_else</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="macro">format!</span>(<span class="string">&quot;{:?}&quot;</span>, <span class="ident">v</span>))
 }
 
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>

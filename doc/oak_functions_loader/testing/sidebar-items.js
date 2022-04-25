@@ -1,1 +1,1 @@
-initSidebarItems({"struct":[["TestingExtension",""],["TestingFactory",""]]});
+initSidebarItems({"struct":[["TestingFactory",""]]});

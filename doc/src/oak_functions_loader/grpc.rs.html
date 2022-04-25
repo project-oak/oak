@@ -137,6 +137,7 @@
 <span id="132">132</span>
 <span id="133">133</span>
 <span id="134">134</span>
+<span id="135">135</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2021 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -157,7 +158,8 @@
 
 <span class="kw">use</span> <span class="kw">crate</span>::{
     <span class="ident">logger::Logger</span>,
-    <span class="ident">server</span>::{<span class="ident">apply_policy</span>, <span class="ident">BoxedExtensionFactory</span>, <span class="ident">WasmHandler</span>},
+    <span class="ident">server</span>::{<span class="ident">apply_policy</span>, <span class="ident">WasmHandler</span>},
+    <span class="ident">OakFunctionsBoxedExtensionFactory</span>,
 };
 <span class="kw">use</span> <span class="ident">anyhow::Context</span>;
 <span class="kw">use</span> <span class="ident">log::Level</span>;
@@ -187,7 +189,7 @@
 <span class="doccomment">/// extensions.</span>
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">create_wasm_handler</span>(
     <span class="ident">wasm_module_bytes</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>],
-    <span class="ident">extensions</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">BoxedExtensionFactory</span><span class="op">&gt;</span>,
+    <span class="ident">extensions</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">OakFunctionsBoxedExtensionFactory</span><span class="op">&gt;</span>,
     <span class="ident">logger</span>: <span class="ident">Logger</span>,
 ) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">WasmHandler</span><span class="op">&gt;</span> {
     <span class="kw">let</span> <span class="ident">wasm_handler</span> <span class="op">=</span> <span class="ident">WasmHandler::create</span>(<span class="ident">wasm_module_bytes</span>, <span class="ident">extensions</span>, <span class="ident">logger</span>)<span class="question-mark">?</span>;

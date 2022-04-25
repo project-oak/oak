@@ -360,10 +360,6 @@
 <span id="355">355</span>
 <span id="356">356</span>
 <span id="357">357</span>
-<span id="358">358</span>
-<span id="359">359</span>
-<span id="360">360</span>
-<span id="361">361</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2021 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -386,25 +382,15 @@
 
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">grpc</span>;
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">logger</span>;
-<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">lookup</span>;
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">lookup_data</span>;
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;oak-metrics&quot;</span>)]</span>
-<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">metrics</span>;
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">server</span>;
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;oak-tf&quot;</span>)]</span>
-<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">tf</span>;
 
 <span class="comment">// TODO(#2642): Add #[cfg(oak-testing)].</span>
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">testing</span>;
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;oak-metrics&quot;</span>)]</span>
-<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::metrics::PrivateMetricsProxyFactory</span>;
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;oak-tf&quot;</span>)]</span>
-<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::tf</span>::{<span class="ident">read_model_from_path</span>, <span class="ident">TensorFlowFactory</span>};
 <span class="kw">use</span> <span class="kw">crate</span>::{
     <span class="ident">grpc</span>::{<span class="ident">create_and_start_grpc_server</span>, <span class="ident">create_wasm_handler</span>},
     <span class="ident">logger::Logger</span>,
-    <span class="ident">lookup::LookupFactory</span>,
     <span class="ident">lookup_data</span>::{<span class="ident">LookupDataAuth</span>, <span class="ident">LookupDataRefresher</span>, <span class="ident">LookupDataSource</span>},
     <span class="ident">server::Policy</span>,
 };
@@ -412,11 +398,14 @@
 <span class="kw">use</span> <span class="ident">clap::Parser</span>;
 <span class="kw">use</span> <span class="ident">log::Level</span>;
 <span class="kw">use</span> <span class="ident">oak_functions_abi::proto</span>::{<span class="ident">ConfigurationInfo</span>, <span class="ident">ServerPolicy</span>};
-<span class="kw">use</span> <span class="ident">oak_functions_lookup::LookupDataManager</span>;
+<span class="kw">use</span> <span class="ident">oak_functions_extension::ExtensionFactory</span>;
+<span class="kw">use</span> <span class="ident">oak_functions_lookup</span>::{<span class="ident">LookupDataManager</span>, <span class="ident">LookupFactory</span>};
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;oak-metrics&quot;</span>)]</span>
 <span class="kw">use</span> <span class="ident">oak_functions_metrics::PrivateMetricsConfig</span>;
+<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;oak-metrics&quot;</span>)]</span>
+<span class="kw">use</span> <span class="ident">oak_functions_metrics::PrivateMetricsProxyFactory</span>;
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;oak-tf&quot;</span>)]</span>
-<span class="kw">use</span> <span class="ident">oak_functions_tf_inference::TensorFlowModelConfig</span>;
+<span class="kw">use</span> <span class="ident">oak_functions_tf_inference</span>::{<span class="ident">read_model_from_path</span>, <span class="ident">TensorFlowFactory</span>, <span class="ident">TensorFlowModelConfig</span>};
 <span class="kw">use</span> <span class="ident">oak_logger::OakLogger</span>;
 <span class="kw">use</span> <span class="ident">oak_remote_attestation::crypto::get_sha256</span>;
 <span class="kw">use</span> <span class="ident">serde_derive::Deserialize</span>;
@@ -432,6 +421,9 @@
 
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
 <span class="kw">mod</span> <span class="ident">tests</span>;
+
+<span class="comment">// Instantiate BoxedExtensionFactory with Logger from the Oak Functions runtime.</span>
+<span class="kw">pub</span> <span class="kw">type</span> <span class="ident">OakFunctionsBoxedExtensionFactory</span> <span class="op">=</span> <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">ExtensionFactory</span><span class="op">&lt;</span><span class="ident">Logger</span><span class="op">&gt;</span><span class="op">&gt;</span>;
 
 <span class="doccomment">/// Runtime Configuration of Runtime.</span>
 <span class="doccomment">///</span>

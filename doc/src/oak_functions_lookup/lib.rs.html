@@ -160,6 +160,110 @@
 <span id="155">155</span>
 <span id="156">156</span>
 <span id="157">157</span>
+<span id="158">158</span>
+<span id="159">159</span>
+<span id="160">160</span>
+<span id="161">161</span>
+<span id="162">162</span>
+<span id="163">163</span>
+<span id="164">164</span>
+<span id="165">165</span>
+<span id="166">166</span>
+<span id="167">167</span>
+<span id="168">168</span>
+<span id="169">169</span>
+<span id="170">170</span>
+<span id="171">171</span>
+<span id="172">172</span>
+<span id="173">173</span>
+<span id="174">174</span>
+<span id="175">175</span>
+<span id="176">176</span>
+<span id="177">177</span>
+<span id="178">178</span>
+<span id="179">179</span>
+<span id="180">180</span>
+<span id="181">181</span>
+<span id="182">182</span>
+<span id="183">183</span>
+<span id="184">184</span>
+<span id="185">185</span>
+<span id="186">186</span>
+<span id="187">187</span>
+<span id="188">188</span>
+<span id="189">189</span>
+<span id="190">190</span>
+<span id="191">191</span>
+<span id="192">192</span>
+<span id="193">193</span>
+<span id="194">194</span>
+<span id="195">195</span>
+<span id="196">196</span>
+<span id="197">197</span>
+<span id="198">198</span>
+<span id="199">199</span>
+<span id="200">200</span>
+<span id="201">201</span>
+<span id="202">202</span>
+<span id="203">203</span>
+<span id="204">204</span>
+<span id="205">205</span>
+<span id="206">206</span>
+<span id="207">207</span>
+<span id="208">208</span>
+<span id="209">209</span>
+<span id="210">210</span>
+<span id="211">211</span>
+<span id="212">212</span>
+<span id="213">213</span>
+<span id="214">214</span>
+<span id="215">215</span>
+<span id="216">216</span>
+<span id="217">217</span>
+<span id="218">218</span>
+<span id="219">219</span>
+<span id="220">220</span>
+<span id="221">221</span>
+<span id="222">222</span>
+<span id="223">223</span>
+<span id="224">224</span>
+<span id="225">225</span>
+<span id="226">226</span>
+<span id="227">227</span>
+<span id="228">228</span>
+<span id="229">229</span>
+<span id="230">230</span>
+<span id="231">231</span>
+<span id="232">232</span>
+<span id="233">233</span>
+<span id="234">234</span>
+<span id="235">235</span>
+<span id="236">236</span>
+<span id="237">237</span>
+<span id="238">238</span>
+<span id="239">239</span>
+<span id="240">240</span>
+<span id="241">241</span>
+<span id="242">242</span>
+<span id="243">243</span>
+<span id="244">244</span>
+<span id="245">245</span>
+<span id="246">246</span>
+<span id="247">247</span>
+<span id="248">248</span>
+<span id="249">249</span>
+<span id="250">250</span>
+<span id="251">251</span>
+<span id="252">252</span>
+<span id="253">253</span>
+<span id="254">254</span>
+<span id="255">255</span>
+<span id="256">256</span>
+<span id="257">257</span>
+<span id="258">258</span>
+<span id="259">259</span>
+<span id="260">260</span>
+<span id="261">261</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2022 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -182,14 +286,102 @@
 <span class="comment">// read-write lock.</span>
 <span class="kw">extern</span> <span class="kw">crate</span> <span class="ident">std</span>;
 
-<span class="kw">use</span> <span class="ident">alloc</span>::{<span class="ident">sync::Arc</span>, <span class="ident">vec::Vec</span>};
+<span class="kw">use</span> <span class="ident">alloc</span>::{
+    <span class="ident">boxed::Box</span>,
+    <span class="ident">format</span>,
+    <span class="ident">string</span>::{<span class="ident">String</span>, <span class="ident">ToString</span>},
+    <span class="ident">sync::Arc</span>,
+    <span class="ident">vec::Vec</span>,
+};
 <span class="kw">use</span> <span class="ident">log::Level</span>;
+<span class="kw">use</span> <span class="ident">oak_functions_abi</span>::{<span class="ident">proto::OakStatus</span>, <span class="ident">ExtensionHandle</span>};
+<span class="kw">use</span> <span class="ident">oak_functions_extension</span>::{<span class="ident">ExtensionFactory</span>, <span class="ident">OakApiNativeExtension</span>};
 <span class="kw">use</span> <span class="ident">oak_logger::OakLogger</span>;
+<span class="kw">use</span> <span class="ident">wasmi::ValueType</span>;
+
+<span class="comment">// TODO(#2752): Remove once we call all extensions with invoke.</span>
+<span class="kw">const</span> <span class="ident">ABI_USIZE</span>: <span class="ident">ValueType</span> <span class="op">=</span> <span class="ident">ValueType::I32</span>;
 
 <span class="comment">// TODO(#2593): Use no_std-compatible map.</span>
 <span class="kw">use</span> <span class="ident">std::collections::HashMap</span>;
 
 <span class="kw">use</span> <span class="ident">oak_functions_util::sync::Mutex</span>;
+
+<span class="comment">// Host function name for invoking lookup in lookup data.</span>
+<span class="kw">const</span> <span class="ident">LOOKUP_ABI_FUNCTION_NAME</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;storage_get_item&quot;</span>;
+
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">LookupFactory</span><span class="op">&lt;</span><span class="ident">L</span>: <span class="ident">OakLogger</span><span class="op">&gt;</span> {
+    <span class="ident">manager</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">LookupDataManager</span><span class="op">&lt;</span><span class="ident">L</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+}
+
+<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">L</span><span class="op">&gt;</span> <span class="ident">LookupFactory</span><span class="op">&lt;</span><span class="ident">L</span><span class="op">&gt;</span>
+<span class="kw">where</span>
+    <span class="ident">L</span>: <span class="ident">OakLogger</span> <span class="op">+</span> <span class="lifetime">&#39;static</span>,
+{
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new_boxed_extension_factory</span>(
+        <span class="ident">manager</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">LookupDataManager</span><span class="op">&lt;</span><span class="ident">L</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+    ) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">ExtensionFactory</span><span class="op">&lt;</span><span class="ident">L</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">lookup_factory</span> <span class="op">=</span> <span class="self">Self</span> { <span class="ident">manager</span> };
+        <span class="prelude-val">Ok</span>(<span class="ident">Box::new</span>(<span class="ident">lookup_factory</span>))
+    }
+}
+
+<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">L</span><span class="op">&gt;</span> <span class="ident">ExtensionFactory</span><span class="op">&lt;</span><span class="ident">L</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">LookupFactory</span><span class="op">&lt;</span><span class="ident">L</span><span class="op">&gt;</span>
+<span class="kw">where</span>
+    <span class="ident">L</span>: <span class="ident">OakLogger</span> <span class="op">+</span> <span class="lifetime">&#39;static</span>,
+{
+    <span class="kw">fn</span> <span class="ident">create</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">OakApiNativeExtension</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">extension</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">manager</span>.<span class="ident">create_lookup_data</span>();
+        <span class="prelude-val">Ok</span>(<span class="ident">Box::new</span>(<span class="ident">extension</span>))
+    }
+}
+
+<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">L</span>: <span class="ident">OakLogger</span><span class="op">&gt;</span> <span class="ident">OakApiNativeExtension</span> <span class="kw">for</span> <span class="ident">LookupData</span><span class="op">&lt;</span><span class="ident">L</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">invoke</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">request</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span> {
+        <span class="comment">// The request is the key to lookup.</span>
+        <span class="kw">let</span> <span class="ident">key</span> <span class="op">=</span> <span class="ident">request</span>;
+        <span class="self">self</span>.<span class="ident">log_debug</span>(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;storage_get_item(): key: {}&quot;</span>, <span class="ident">format_bytes</span>(<span class="kw-2">&amp;</span><span class="ident">key</span>)));
+        <span class="kw">let</span> <span class="ident">value</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">key</span>);
+        <span class="kw">match</span> <span class="ident">value</span> {
+            <span class="prelude-val">Some</span>(<span class="ident">value</span>) =&gt; {
+                <span class="comment">// Truncate value for logging.</span>
+                <span class="kw">let</span> <span class="ident">value_to_log</span> <span class="op">=</span> <span class="ident">value</span>.<span class="ident">clone</span>().<span class="ident">into_iter</span>().<span class="ident">take</span>(<span class="number">512</span>).<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>();
+                <span class="self">self</span>.<span class="ident">log_debug</span>(<span class="kw-2">&amp;</span><span class="macro">format!</span>(
+                    <span class="string">&quot;storage_get_item(): value: {}&quot;</span>,
+                    <span class="ident">format_bytes</span>(<span class="kw-2">&amp;</span><span class="ident">value_to_log</span>)
+                ));
+                <span class="prelude-val">Ok</span>(<span class="ident">value</span>)
+            }
+            <span class="comment">// TODO(#2701): Remove ErrStorageItemNotFound from OakStatus.</span>
+            <span class="prelude-val">None</span> =&gt; {
+                <span class="self">self</span>.<span class="ident">log_debug</span>(<span class="string">&quot;storage_get_item(): value not found&quot;</span>);
+                <span class="prelude-val">Err</span>(<span class="ident">OakStatus::ErrStorageItemNotFound</span>)
+            }
+        }
+    }
+
+    <span class="kw">fn</span> <span class="ident">get_metadata</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; (<span class="ident">String</span>, <span class="ident">wasmi::Signature</span>) {
+        <span class="kw">let</span> <span class="ident">signature</span> <span class="op">=</span> <span class="ident">wasmi::Signature::new</span>(
+            <span class="kw-2">&amp;</span>[
+                <span class="ident">ABI_USIZE</span>, <span class="comment">// key_ptr</span>
+                <span class="ident">ABI_USIZE</span>, <span class="comment">// key_len</span>
+                <span class="ident">ABI_USIZE</span>, <span class="comment">// value_ptr_ptr</span>
+                <span class="ident">ABI_USIZE</span>, <span class="comment">// value_len_ptr</span>
+            ][..],
+            <span class="prelude-val">Some</span>(<span class="ident">ValueType::I32</span>),
+        );
+
+        (<span class="ident">LOOKUP_ABI_FUNCTION_NAME</span>.<span class="ident">to_string</span>(), <span class="ident">signature</span>)
+    }
+
+    <span class="kw">fn</span> <span class="ident">terminate</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+        <span class="prelude-val">Ok</span>(())
+    }
+
+    <span class="kw">fn</span> <span class="ident">get_handle</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">ExtensionHandle</span> {
+        <span class="ident">ExtensionHandle::LookupHandle</span>
+    }
+}
 
 <span class="kw">pub</span> <span class="kw">type</span> <span class="ident">Data</span> <span class="op">=</span> <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>, <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span>;
 
@@ -282,6 +474,14 @@
     }
 }
 
+<span class="doccomment">/// Converts a binary sequence to a string if it is a valid UTF-8 string, or formats it as a numeric</span>
+<span class="doccomment">/// vector of bytes otherwise.</span>
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">format_bytes</span>(<span class="ident">v</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) -&gt; <span class="ident">String</span> {
+    <span class="ident">std::str::from_utf8</span>(<span class="ident">v</span>)
+        .<span class="ident">map</span>(<span class="op">|</span><span class="ident">s</span><span class="op">|</span> <span class="ident">s</span>.<span class="ident">to_string</span>())
+        .<span class="ident">unwrap_or_else</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="macro">format!</span>(<span class="string">&quot;{:?}&quot;</span>, <span class="ident">v</span>))
+}
+
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
 <span class="kw">mod</span> <span class="ident">tests</span> {
     <span class="kw">use</span> <span class="kw">super</span>::<span class="kw-2">*</span>;
@@ -315,6 +515,14 @@
         <span class="macro">assert_eq!</span>(<span class="ident">lookup_data_0</span>.<span class="ident">len</span>(), <span class="number">0</span>);
         <span class="macro">assert_eq!</span>(<span class="ident">lookup_data_1</span>.<span class="ident">len</span>(), <span class="number">1</span>);
         <span class="macro">assert_eq!</span>(<span class="ident">lookup_data_2</span>.<span class="ident">len</span>(), <span class="number">2</span>);
+    }
+
+    <span class="attribute">#[<span class="ident">test</span>]</span>
+    <span class="kw">fn</span> <span class="ident">test_format_bytes</span>() {
+        <span class="comment">// Valid UTF-8 string.</span>
+        <span class="macro">assert_eq!</span>(<span class="string">&quot;🚀oak⭐&quot;</span>, <span class="ident">format_bytes</span>(<span class="string">&quot;🚀oak⭐&quot;</span>.<span class="ident">as_bytes</span>()));
+        <span class="comment">// Incorrect UTF-8 bytes, as per https://doc.rust-lang.org/std/string/struct.String.html#examples-3.</span>
+        <span class="macro">assert_eq!</span>(<span class="string">&quot;[0, 159, 146, 150]&quot;</span>, <span class="ident">format_bytes</span>(<span class="kw-2">&amp;</span>[<span class="number">0</span>, <span class="number">159</span>, <span class="number">146</span>, <span class="number">150</span>]));
     }
 }
 </code></pre></div>
