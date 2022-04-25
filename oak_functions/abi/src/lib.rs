@@ -19,6 +19,7 @@
 
 pub use crate::proto::ExtensionHandle;
 use serde_derive::{Deserialize, Serialize};
+#[cfg(feature = "oak-metrics")]
 use thiserror::Error;
 
 pub mod proto {
