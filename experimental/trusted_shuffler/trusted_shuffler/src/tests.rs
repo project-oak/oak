@@ -22,16 +22,37 @@ use tokio::time::timeout;
 const TEST_ANONYMITY_VALUE: usize = 10;
 const TEST_TIMEOUT_MILLISECONDS: u64 = 100;
 
-async fn send_request(request: Vec<u8>) -> Vec<u8> {
-    request
+// A test function that processes requests.
+// In the real use-case, this function should send requests to the backend and
+// return responses.
+async fn handle_request(request: Vec<u8>) -> Vec<u8> {
+    generate_response(request)
+}
+
+// Non-async version of the `handle_request` function used to create expected responses.
+fn generate_response(request: Vec<u8>) -> Vec<u8> {
+    let parsed_request = String::from_utf8(request).expect("Couldn't parse request");
+    format!("Response for: {}", parsed_request)
+        .to_string()
+        .as_bytes()
+        .to_vec()
+}
+
+// Generates a request and a corresponding response from a string.
+fn generate_request_response(data: &str) -> (Vec<u8>, Vec<u8>) {
+    let request = format!("Request: {}", data).to_string().as_bytes().to_vec();
+    let response = generate_response(request.clone());
+    (request, response)
 }
 
 #[tokio::test]
 async fn trusted_shuffler_test() {
-    let trusted_shuffler = Arc::new(TrustedShuffler::new(2, send_request));
+    let anonymity_value = 2;
+    let trusted_shuffler = Arc::new(TrustedShuffler::new(anonymity_value, handle_request));
 
-    let request = "Test request".to_string().as_bytes().to_vec();
-    let background_request = "Test request background".to_string().as_bytes().to_vec();
+    let (request, expected_response) = generate_request_response("Test");
+    let (background_request, expected_background_response) =
+        generate_request_response("Background test");
 
     let trusted_shuffler_clone = trusted_shuffler.clone();
     let background_request_clone = background_request.clone();
@@ -43,21 +64,21 @@ async fn trusted_shuffler_test() {
 
     let response = trusted_shuffler.invoke(request.clone()).await;
     assert!(response.is_ok());
-    assert_eq!(request, response.unwrap());
+    assert_eq!(expected_response, response.unwrap());
 
     let background_result = background_result.await;
     assert!(background_result.is_ok());
     let background_response = background_result.unwrap();
     assert!(background_response.is_ok());
-    assert_eq!(background_request, background_response.unwrap());
+    assert_eq!(expected_background_response, background_response.unwrap());
 }
 
 #[tokio::test]
 async fn trusted_shuffler_waiting_test() {
-    let trusted_shuffler = Arc::new(TrustedShuffler::new(3, send_request));
+    let trusted_shuffler = Arc::new(TrustedShuffler::new(3, handle_request));
 
-    let request_1 = "Test request 1".to_string().as_bytes().to_vec();
-    let request_2 = "Test request 2".to_string().as_bytes().to_vec();
+    let (request_1, _) = generate_request_response("Test 1");
+    let (request_2, _) = generate_request_response("Test 2");
 
     let trusted_shuffler_clone = trusted_shuffler.clone();
     tokio::spawn(async move { trusted_shuffler_clone.invoke(request_1).await });
@@ -72,14 +93,16 @@ async fn trusted_shuffler_waiting_test() {
 }
 
 #[tokio::test]
-async fn trusted_shuffler_background_test() {
-    let trusted_shuffler = Arc::new(TrustedShuffler::new(TEST_ANONYMITY_VALUE, send_request));
+async fn trusted_shuffler_join_test() {
+    let trusted_shuffler = Arc::new(TrustedShuffler::new(TEST_ANONYMITY_VALUE, handle_request));
 
-    let requests: Vec<Vec<u8>> = (0..TEST_ANONYMITY_VALUE)
+    let (requests, expected_responses): (Vec<Vec<u8>>, Vec<Vec<u8>>) = (0..TEST_ANONYMITY_VALUE)
         .collect::<Vec<_>>()
         .iter()
-        .map(|k| format!("Test request {}", k).as_bytes().to_vec())
-        .collect();
+        .map(|k| generate_request_response(&format!("Test {}", k)))
+        .unzip();
+    // .collect::<Vec<_>>();
+    // .collect::<Vec<(_, _)>>();
 
     let mut result_futures = vec![];
     for request in requests.iter() {
@@ -91,10 +114,10 @@ async fn trusted_shuffler_background_test() {
     }
     let results = join_all(result_futures).await;
 
-    for (request, result) in requests.iter().zip(results.iter()) {
+    for (expected_response, result) in expected_responses.iter().zip(results.iter()) {
         assert!(result.is_ok());
         let response = result.as_ref().unwrap();
         assert!(response.is_ok());
-        assert_eq!(request.clone(), *response.as_ref().unwrap());
+        assert_eq!(expected_response.clone(), *response.as_ref().unwrap());
     }
 }

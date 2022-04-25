@@ -21,7 +21,6 @@ mod tests;
 
 use anyhow::{anyhow, Context};
 use futures::future::join_all;
-use rand::{seq::SliceRandom, thread_rng};
 use std::{
     future::Future,
     marker::{Send, Sync},
@@ -41,7 +40,7 @@ struct Message {
     response_sender: oneshot::Sender<Response>,
 }
 
-// Trusted Shuffler inmpelentation.
+// Trusted Shuffler implementation.
 pub struct TrustedShuffler<F, O>
 where
     F: Send + Sync + 'static + FnOnce(Request) -> O,
@@ -51,10 +50,11 @@ where
     anonymity_value: usize,
 
     // Current batch of requests to be shuffled.
+    // Mutex is used because messages are collected from different async tasks.
     current_requests: Arc<Mutex<Vec<Message>>>,
 
     // Async function that sends a request to the backend and returns a response.
-    request_sender: F,
+    request_handler: F,
 }
 
 impl<F, O> TrustedShuffler<F, O>
@@ -62,21 +62,21 @@ where
     F: Send + Sync + Clone + 'static + FnOnce(Request) -> O,
     O: Send + Sync + Future<Output = Response>,
 {
-    pub fn new(anonymity_value: usize, request_sender: F) -> Self {
+    pub fn new(anonymity_value: usize, request_handler: F) -> Self {
         Self {
             anonymity_value,
             current_requests: Arc::new(Mutex::new(vec![])),
-            request_sender,
+            request_handler,
         }
     }
 
     // Asynchronously handles an incoming request.
     pub async fn invoke(&self, request: Request) -> anyhow::Result<Response> {
-        let (sender, receiver) = oneshot::channel();
+        let (response_sender, response_receiver) = oneshot::channel();
 
         let request = Message {
             data: request,
-            response_sender: sender,
+            response_sender,
         };
 
         // Check if the request batch is filled and create a separate task for shuffling requests.
@@ -92,10 +92,10 @@ where
                 let requests = replace(current_requests.deref_mut(), vec![]);
 
                 // Shuffle current requests and send them to the backend.
-                let request_sender = self.request_sender.clone();
+                let request_handler = self.request_handler.clone();
                 tokio::spawn(async move {
                     if let Err(error) =
-                        TrustedShuffler::shuffle_requests(requests, request_sender).await
+                        TrustedShuffler::shuffle_requests(requests, request_handler).await
                     {
                         log::error!("Shuffling error: {:?}", error);
                     }
@@ -103,39 +103,38 @@ where
             }
         }
 
-        receiver.await.context("Couldn't receive response")
+        response_receiver.await.context("Couldn't receive response")
     }
 
-    // Shuffles requests and sends them to the backend using the
+    // Lexicographically sorts requests and sends them to the backend using the
     // [`TrustedShuffler::request_sender`].
-    async fn shuffle_requests(mut requests: Vec<Message>, request_sender: F) -> anyhow::Result<()> {
-        requests.shuffle(&mut thread_rng());
+    async fn shuffle_requests(
+        mut requests: Vec<Message>,
+        request_handler: F,
+    ) -> anyhow::Result<()> {
+        requests.sort_by(|first, second| first.data.cmp(&second.data));
 
-        let response_futures: Vec<_> = requests
-            .drain(..)
-            .into_iter()
-            .map(|request| {
-                let request_sender_clone = request_sender.clone();
-                async move {
-                    let response = (request_sender_clone)(request.data).await;
-                    Message {
-                        data: response,
-                        response_sender: request.response_sender,
-                    }
+        let response_futures = requests.into_iter().map(|request| {
+            let request_handler_clone = request_handler.clone();
+            async move {
+                let response = (request_handler_clone)(request.data).await;
+                Message {
+                    data: response,
+                    response_sender: request.response_sender,
                 }
-            })
-            .collect();
+            }
+        });
         let responses = join_all(response_futures).await;
 
         Self::shuffle_responses(responses)
     }
 
-    // Shuffles received backend responses and sends them back to the client async tasks using
-    // corresponding channels defined in the [`Message::response_sender`].
+    // Lexicographically sorts received backend responses and sends them back to the client async
+    // tasks using corresponding channels defined in the [`Message::response_sender`].
     fn shuffle_responses(mut responses: Vec<Message>) -> anyhow::Result<()> {
-        responses.shuffle(&mut thread_rng());
+        responses.sort_by(|first, second| first.data.cmp(&second.data));
 
-        for response in responses.drain(..) {
+        for response in responses {
             response
                 .response_sender
                 .send(response.data.clone())

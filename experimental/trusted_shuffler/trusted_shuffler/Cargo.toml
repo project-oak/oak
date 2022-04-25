@@ -15,7 +15,6 @@ futures = "*"
 futures-core = "*"
 futures-util = "*"
 log = "*"
-rand = { version = "*", features = ["alloc", "getrandom"] }
 tokio = { version = "*", features = [
   "fs",
   "macros",

@@ -5328,7 +5328,6 @@ dependencies = [
  "futures-core",
  "futures-util",
  "log",
- "rand 0.8.5",
  "test_utils",
  "tokio",
 ]
