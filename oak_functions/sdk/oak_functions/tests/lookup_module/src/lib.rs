@@ -85,7 +85,7 @@ impl TestManager<'static> {
         assert_matches!(result, Ok(_));
     }
 
-    /// Tests [`oak_functions_abi::storage_get_item`] when the key is in the lookup data. The lookup
+    /// Tests `storage_get_item` when the key is in the lookup data. The lookup
     /// data is set in the integration test. The value has to be checked in the integration
     /// test.
     fn test_storage_get(key: &str) {
@@ -97,7 +97,7 @@ impl TestManager<'static> {
         oak_functions::write_response(&value.unwrap()).expect("Failed to write response.");
     }
 
-    /// Tests [`oak_functions_abi::storage_get_item`] when the key is not in the lookup data. The
+    /// Tests `storage_get_item` when the key is not in the lookup data. The
     /// lookup data is set in the integration test. When no value is found,
     /// `oak_functions::storage_get_item` returns None.
     fn test_storage_get_item_not_found(key: &str) {
@@ -113,10 +113,6 @@ impl TestManager<'static> {
         };
         oak_functions::write_response(&response_msg).expect("Failed to write response.")
     }
-
-    // TODO(#2415): Add tests for report_metric.
-
-    // TODO(#2416): Add tests for tf_model_infer.
 }
 
 #[cfg_attr(not(test), no_mangle)]

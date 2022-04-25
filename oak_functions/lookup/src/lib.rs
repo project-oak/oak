@@ -84,7 +84,7 @@ impl<L: OakLogger> OakApiNativeExtension for LookupData<L> {
             },
             |value| {
                 // Truncate value for logging.
-                let value_to_log = value.clone().into_iter().take(512).collect::<Vec<_>>();
+                let value_to_log = value.into_iter().take(512).collect::<Vec<_>>();
                 self.log_debug(&format!(
                     "storage_get_item(): value: {}",
                     format_bytes(&value_to_log)
