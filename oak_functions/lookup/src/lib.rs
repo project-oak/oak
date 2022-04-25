@@ -28,7 +28,7 @@ use alloc::{
     vec::Vec,
 };
 use log::Level;
-use oak_functions_abi::{proto::OakStatus, ExtensionHandle};
+use oak_functions_abi::{proto::OakStatus, ExtensionHandle, StorageGetItemResponse};
 use oak_functions_extension::{ExtensionFactory, OakApiNativeExtension};
 use oak_logger::OakLogger;
 use wasmi::ValueType;
@@ -76,22 +76,26 @@ impl<L: OakLogger> OakApiNativeExtension for LookupData<L> {
         let key = request;
         self.log_debug(&format!("storage_get_item(): key: {}", format_bytes(&key)));
         let value = self.get(&key);
+
+        // Log value.
+        // TODO(mschett): Simplify logging.
         match value {
-            Some(value) => {
+            Some(ref value) => {
                 // Truncate value for logging.
                 let value_to_log = value.clone().into_iter().take(512).collect::<Vec<_>>();
                 self.log_debug(&format!(
                     "storage_get_item(): value: {}",
                     format_bytes(&value_to_log)
-                ));
-                Ok(value)
+                ))
             }
-            // TODO(#2701): Remove ErrStorageItemNotFound from OakStatus.
             None => {
                 self.log_debug("storage_get_item(): value not found");
-                Err(OakStatus::ErrStorageItemNotFound)
             }
         }
+
+        let response = bincode::serialize(&StorageGetItemResponse { value })
+            .expect("Failed to serialze get storage item response.");
+        Ok(response)
     }
 
     fn get_metadata(&self) -> (String, wasmi::Signature) {

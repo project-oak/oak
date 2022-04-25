@@ -123,6 +123,8 @@ Log messages are considered sensitive, so logging is only possible if the
 
 ### `storage_get_item`
 
+// TODO(mschett): Update docu.
+
 - `param[0]: key_ptr: i32`: address of the key buffer.
 - `param[1]: key_len: i32`: number of bytes of the key buffer.
 - `param[2]: value_ptr_ptr: i32`: address where the Oak Functions runtime will

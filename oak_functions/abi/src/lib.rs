@@ -51,6 +51,12 @@ pub mod proto {
     }
 }
 
+/// Holds the optional value from the storage.
+#[derive(Serialize, Deserialize)]
+pub struct StorageGetItemResponse {
+    pub value: Option<Vec<u8>>,
+}
+
 /// Holds the `label` and the `value` to report a metric.
 #[derive(Serialize, Deserialize)]
 #[cfg(feature = "oak-metrics")]
@@ -112,14 +118,6 @@ extern "C" {
 
     /// See [`write_log_message`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#write_log_message).
     pub fn write_log_message(buf_ptr: *const u8, buf_len: usize) -> u32;
-
-    /// See [`storage_get_item`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#storage_get_item).
-    pub fn storage_get_item(
-        key_ptr: *const u8,
-        key_len: usize,
-        value_ptr_ptr: *mut *mut u8,
-        value_len_ptr: *mut usize,
-    ) -> u32;
 
     /// See [`invoke`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#invoke).
     pub fn invoke(
