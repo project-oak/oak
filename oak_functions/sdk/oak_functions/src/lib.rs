@@ -88,8 +88,6 @@ pub fn storage_get_item(key: &[u8]) -> Result<Option<Vec<u8>>, OakStatus> {
 /// If differentially-private metrics are enabled in the configuration the metrics bucket totals
 /// will be logged in batches after sufficient noise has been added. If events for the same bucket
 /// are reported multiple times in a single request it will be counted only once.
-///
-/// See [`report_metric`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#report_metric).
 #[cfg(feature = "oak-metrics")]
 pub fn report_event<T: AsRef<str>>(label: T) -> Result<Result<(), ReportMetricError>, OakStatus> {
     report_metric(label, 1)
@@ -107,8 +105,6 @@ pub fn report_event<T: AsRef<str>>(label: T) -> Result<Result<(), ReportMetricEr
 /// was reported. If the minimum value of the bucket is larger than 0 it would then be clamped to
 /// the configured minimum. This could lead to unexpected bias in the results, so minimum values
 /// above 0 should be used with care.
-///
-/// See [`report_metric`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#report_metric).
 #[cfg(feature = "oak-metrics")]
 pub fn report_metric<T: AsRef<str>>(
     label: T,
