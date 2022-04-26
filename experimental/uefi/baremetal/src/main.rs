@@ -30,7 +30,6 @@ mod serial;
 #[macro_use]
 extern crate log;
 
-//#[cfg(not(test))]
 use core::panic::PanicInfo;
 use rust_hypervisor_firmware_subset::{boot, paging, pvh};
 
@@ -45,6 +44,7 @@ pub extern "C" fn rust64_start(rdi: &pvh::StartInfo) -> ! {
     if cfg!(test) {
         #[cfg(test)]
         test_main();
+        unreachable!("tests should have exited qemu");
     } else {
         main(rdi);
     }
@@ -56,10 +56,27 @@ fn main(info: &dyn boot::Info) -> ! {
     runtime::echo::echo(&mut serial).unwrap();
 }
 
-//#[cfg(not(test))]
+// These exit codes are from https://os.phil-opp.com/testing/.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[repr(u32)]
+pub enum QemuExitCode {
+    Success = 0x10,
+    Failed = 0x11,
+}
+
+pub fn exit_qemu(exit_code: QemuExitCode) {
+    use x86_64::instructions::port::Port;
+
+    unsafe {
+        let mut port = Port::new(0xf4);
+        port.write(exit_code as u32);
+    }
+}
+
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
     error!("PANIC: {}", info);
+    exit_qemu(QemuExitCode::Failed);
     loop {}
 }
 
@@ -68,4 +85,5 @@ fn test_runner(tests: &[&dyn Fn()]) {
     for test in tests {
         test();
     }
+    exit_qemu(QemuExitCode::Success);
 }

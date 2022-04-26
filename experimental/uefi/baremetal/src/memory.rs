@@ -91,7 +91,6 @@ pub fn init_allocator(info: &dyn boot::Info) {
     }
 }
 
-#[cfg(not(test))]
 #[alloc_error_handler]
 fn out_of_memory(layout: ::core::alloc::Layout) -> ! {
     panic!("Error allocating memory: {:#?}", layout);

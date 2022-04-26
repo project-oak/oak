@@ -5,12 +5,6 @@ authors = ["Andri Saar <andrisaar@google.com>"]
 edition = "2021"
 license = "Apache-2.0"
 
-[profile.dev]
-panic = "abort"
-
-[profile.release]
-panic = "abort"
-
 [dependencies]
 atomic_refcell = "*"
 linked_list_allocator = { version = "*" }
@@ -19,6 +13,3 @@ runtime = { path = "../runtime" }
 uart_16550 = "*"
 rust-hypervisor-firmware-subset = { path = "../../../third_party/rust-hypervisor-firmware-subset" }
 x86_64 = "*"
-
-[dev-dependencies]
-qemu-exit = "*"

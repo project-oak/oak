@@ -11,7 +11,8 @@ readonly TARGET=$1
 qemu_flags=(
   '-nodefaults'
   '-nographic'
-  '-serial' 'file:target/console.log'
+  '-no-reboot'
+  '-serial' 'file:/dev/stdout'
   '-serial' 'stdio'
   '-machine' 'q35'
   '-device' 'isa-debug-exit,iobase=0xf4,iosize=0x04'
@@ -26,9 +27,9 @@ qemu_flags=(
 if [[ -e "/dev/kvm" ]]; then
   qemu_flags+=(
     '-enable-kvm'
-    '-cpu' 'Broadwell-IBRS'
+    '-cpu' 'IvyBridge-IBRS,enforce'
   )
 fi
 
-echo qemu-system-x86_64 "${qemu_flags[@]}" -kernel "${TARGET}"
+qemu-system-x86_64 "${qemu_flags[@]}" -kernel "${TARGET}"
 
