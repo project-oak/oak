@@ -5,6 +5,12 @@ authors = ["Andri Saar <andrisaar@google.com>"]
 edition = "2021"
 license = "Apache-2.0"
 
+[profile.dev]
+panic = "abort"
+
+[profile.release]
+panic = "abort"
+
 [dependencies]
 atomic_refcell = "*"
 linked_list_allocator = { version = "*" }

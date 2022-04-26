@@ -80,8 +80,8 @@ impl Qemu {
         cmd.arg("-nographic");
         // Don't bother with default hardware, such as a VGA adapter, floppy drive, etc.
         cmd.arg("-nodefaults");
-        // If the VM exits for some reason, don't reboot. Exit qemu as well, as that's an
-        // erroneous situation.
+        // If the VM exits for some reason, don't reboot, but rather exit qemu as well, as
+        // that's an erroneous situation.
         cmd.arg("-no-reboot");
         // Use the more modern `q35` machine as the basis.
         // TODO(#2679): q35 comes with a ton of stuff we don't need (eg a PC speaker). We

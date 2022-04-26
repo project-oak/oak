@@ -42,6 +42,7 @@ impl runtime::Channel for Serial {
     }
 
     fn recv(&mut self, data: &mut [u8]) -> Result<(), Self::Error> {
+        #[allow(clippy::needless_range_loop)]
         for i in 0..data.len() {
             data[i] = self.port.borrow_mut().receive();
         }

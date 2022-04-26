@@ -18,6 +18,8 @@
 #![feature(never_type)]
 
 extern crate alloc;
+#[cfg(test)]
+extern crate std;
 
 use alloc::vec::Vec;
 use anyhow::bail;

@@ -173,7 +173,7 @@ impl crate::sealed::Sealed for SystemRandom {}
         not(feature = "dev_urandom_fallback")
     ),
     target_arch = "wasm32",
-    windows,
+    windows
 ))]
 use self::sysrand::fill as fill_impl;
 

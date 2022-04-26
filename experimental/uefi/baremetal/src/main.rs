@@ -13,7 +13,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-// Portions Copyright © 2019 Intel Corporation
 
 #![no_std]
 #![no_main]
@@ -26,6 +25,7 @@ mod serial;
 #[macro_use]
 extern crate log;
 
+#[cfg(not(test))]
 use core::panic::PanicInfo;
 use rust_hypervisor_firmware_subset::{boot, paging, pvh};
 
@@ -46,6 +46,7 @@ fn main(info: &dyn boot::Info) -> ! {
     runtime::echo::echo(&mut serial).unwrap();
 }
 
+#[cfg(not(test))]
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
     error!("PANIC: {}", info);
