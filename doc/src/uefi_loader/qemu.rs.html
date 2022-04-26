@@ -210,7 +210,7 @@
         <span class="comment">// Needed to expose advanced CPU features to the UEFI app. Specifically</span>
         <span class="comment">// RDRAND which is required for remote attestation.</span>
         <span class="ident">cmd</span>.<span class="ident">arg</span>(<span class="string">&quot;-enable-kvm&quot;</span>);
-        <span class="ident">cmd</span>.<span class="ident">args</span>(<span class="kw-2">&amp;</span>[<span class="string">&quot;-cpu&quot;</span>, <span class="string">&quot;Broadwell-IBRS&quot;</span>]);
+        <span class="ident">cmd</span>.<span class="ident">args</span>(<span class="kw-2">&amp;</span>[<span class="string">&quot;-cpu&quot;</span>, <span class="string">&quot;IvyBridge-IBRS,enforce&quot;</span>]);
         <span class="comment">// We&#39;re going to run qemu as a noninteractive embedded program, so disable any</span>
         <span class="comment">// graphical outputs.</span>
         <span class="ident">cmd</span>.<span class="ident">arg</span>(<span class="string">&quot;-nographic&quot;</span>);
