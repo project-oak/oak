@@ -116,9 +116,6 @@ extern "C" {
     /// See [`write_response`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#write_response).
     pub fn write_response(buf_ptr: *const u8, buf_len: usize) -> u32;
 
-    /// See [`write_log_message`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#write_log_message).
-    pub fn write_log_message(buf_ptr: *const u8, buf_len: usize) -> u32;
-
     /// See [`invoke`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#invoke).
     pub fn invoke(
         handle: ExtensionHandle,
