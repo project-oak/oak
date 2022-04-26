@@ -16,6 +16,7 @@
 
 #![no_std]
 #![no_main]
+#![feature(lang_items)]
 #![feature(alloc_error_handler)]
 #![feature(custom_test_frameworks)]
 // As we're in a `no_std` environment, testing requires special handling. This
@@ -79,6 +80,9 @@ fn panic(info: &PanicInfo) -> ! {
     exit_qemu(QemuExitCode::Failed);
     loop {}
 }
+
+#[lang = "eh_personality"]
+extern "C" fn eh_personality() {}
 
 #[cfg(test)]
 fn test_runner(tests: &[&dyn Fn()]) {

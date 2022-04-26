@@ -33,3 +33,10 @@ fi
 
 qemu-system-x86_64 "${qemu_flags[@]}" -kernel "${TARGET}"
 
+# Massive hack: if we return 33 ((0x10 << 1) | 1) call it a success.
+# The return val 0x10 is defined as QemuExitCode::Success in main.rs.
+status=$?
+if test $status -eq 33; then 
+  exit 0
+fi
+exit $status
