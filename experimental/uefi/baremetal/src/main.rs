@@ -17,6 +17,11 @@
 #![no_std]
 #![no_main]
 #![feature(alloc_error_handler)]
+#![feature(custom_test_frameworks)]
+// As we're in a `no_std` environment, testing requires special handling. This
+// approach was inspired by https://os.phil-opp.com/testing/.
+#![test_runner(crate::test_runner)]
+#![reexport_test_harness_main = "test_main"]
 
 mod logging;
 mod memory;
@@ -25,7 +30,7 @@ mod serial;
 #[macro_use]
 extern crate log;
 
-#[cfg(not(test))]
+//#[cfg(not(test))]
 use core::panic::PanicInfo;
 use rust_hypervisor_firmware_subset::{boot, paging, pvh};
 
@@ -37,7 +42,12 @@ pub extern "C" fn rust64_start(rdi: &pvh::StartInfo) -> ! {
     paging::setup();
     memory::init_allocator(rdi);
 
-    main(rdi)
+    if cfg!(test) {
+        #[cfg(test)]
+        test_main();
+    } else {
+        main(rdi);
+    }
 }
 
 fn main(info: &dyn boot::Info) -> ! {
@@ -46,9 +56,16 @@ fn main(info: &dyn boot::Info) -> ! {
     runtime::echo::echo(&mut serial).unwrap();
 }
 
-#[cfg(not(test))]
+//#[cfg(not(test))]
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
     error!("PANIC: {}", info);
     loop {}
+}
+
+#[cfg(test)]
+fn test_runner(tests: &[&dyn Fn()]) {
+    for test in tests {
+        test();
+    }
 }

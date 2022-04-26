@@ -18,7 +18,6 @@ use std::{fs, path::PathBuf};
 
 use clap::Parser;
 use futures::{stream::StreamExt, SinkExt};
-use log;
 use qemu::{Qemu, QemuParams};
 use tokio::{io::AsyncReadExt, net::UnixStream, signal};
 use tokio_serde_cbor::Codec;
@@ -29,8 +28,8 @@ mod server;
 
 #[derive(clap::ArgEnum, Clone, Debug, PartialEq)]
 enum Mode {
-    UEFI,
-    BIOS,
+    Uefi,
+    Bios,
 }
 
 #[derive(Parser, Debug)]
@@ -70,7 +69,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let mut qemu = Qemu::start(QemuParams {
         binary: cli.qemu.as_path(),
-        firmware: if cli.mode == Mode::UEFI {
+        firmware: if cli.mode == Mode::Uefi {
             Some(cli.ovmf.as_path())
         } else {
             None
@@ -96,7 +95,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // World to the other serial port, so let's skip some bytes before we set up the CBOR codec.
     // The length of 71 characters has been determined experimentally and will change if we
     // change what we write to stdout in the UEFI app.
-    if cli.mode == Mode::UEFI {
+    if cli.mode == Mode::Uefi {
         let mut junk = [0; 71];
         let mut len = 0;
         while len < junk.len() {
