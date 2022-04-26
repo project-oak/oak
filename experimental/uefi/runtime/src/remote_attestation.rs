@@ -33,7 +33,12 @@ fn deserialize_request(msg: Vec<u8>) -> anyhow::Result<(SessionId, Vec<u8>)> {
     let mut request_body: Vec<u8> = Vec::with_capacity(msg.len() - SESSION_ID_LENGTH);
 
     if msg.len() < SESSION_ID_LENGTH {
-        bail!("Message too short to contain a SessionId. The length of a SessionId is {} bytes, the message received contained only {} bytes", SESSION_ID_LENGTH, msg.len());
+        bail!(
+            "Message too short to contain a SessionId. The length of a SessionId
+            is {} bytes, the message received contained only {} bytes",
+            SESSION_ID_LENGTH,
+            msg.len()
+        );
     }
 
     for (index, byte) in msg.into_iter().enumerate() {
