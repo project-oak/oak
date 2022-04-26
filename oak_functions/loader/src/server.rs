@@ -293,14 +293,14 @@ impl WasmState {
                 OakStatus::ErrInvalidArgs
             })?;
 
-        // TODO(mschett): Make more idiomatic
         let extension = match self.extensions.get_mut(&handle) {
-            Some(extension) => extension,
+            // Can't convince the borrow checker to use `ok_or_else` to `self.log_error`.
+            Some(extension) => Ok(extension),
             None => {
                 self.log_error(&format!("Cannot find extension with handle {:?}.", handle));
-                return Err(OakStatus::ErrInvalidHandle);
+                Err(OakStatus::ErrInvalidHandle)
             }
-        };
+        }?;
 
         let response = extension.invoke(request)?;
         self.alloc_and_write_buffer_to_wasm_memory(response, response_ptr_ptr, response_len_ptr)
@@ -354,9 +354,8 @@ impl wasmi::Externals for WasmState {
                 args.nth_checked(4)?,
             )),
             _ => {
-                // TODO(mschett): Should we use host error instead?
-                // Err(wasmi::Trap::new(wasmi::TrapKind::Host(host_error)))
-                Err(wasmi::Trap::new(wasmi::TrapKind::TableAccessOutOfBounds))
+                // Following https://paritytech.github.io/wasmi/wasmi/trait.Externals.html#examples.
+                panic!("Unimplemented function at {}.", index)
             }
         }
     }
@@ -369,26 +368,18 @@ impl wasmi::ModuleImportResolver for WasmState {
         signature: &wasmi::Signature,
     ) -> Result<wasmi::FuncRef, wasmi::Error> {
         // Look for the function (i.e., `field_name`) in the statically registered functions.
+        let (index, expected_signature) = oak_functions_resolve_func(field_name).ok_or(
+            wasmi::Error::Instantiation(format!("Export {} not found", field_name)),
+        )?;
 
-        // TODO(mschett): Make following more idiomatic
-        let (index, expected_signature) = match oak_functions_resolve_func(field_name) {
-            Some(sig) => sig,
-            None => {
-                return Err(wasmi::Error::Instantiation(format!(
-                    "Export {} not found",
-                    field_name
-                )))
-            }
-        };
-
-        if signature != &expected_signature {
-            return Err(wasmi::Error::Instantiation(format!(
+        if signature == &expected_signature {
+            Ok(wasmi::FuncInstance::alloc_host(expected_signature, index))
+        } else {
+            Err(wasmi::Error::Instantiation(format!(
                 "Export `{}` doesn't match expected signature; got: {:?}, expected: {:?}",
                 field_name, signature, expected_signature
-            )));
+            )))
         }
-
-        Ok(wasmi::FuncInstance::alloc_host(expected_signature, index))
     }
 }
 
@@ -599,10 +590,11 @@ impl WasmHandler {
 
         wasm_state.invoke();
 
-        // TODO(mschett): Make more idiomatic.
-        for extension in wasm_state.extensions.values_mut() {
-            extension.terminate()?;
-        }
+        wasm_state
+            .extensions
+            .values_mut()
+            .map(|e| e.terminate())
+            .collect::<Result<_, _>>()?;
 
         Ok(Response::create(
             StatusCode::Success,
