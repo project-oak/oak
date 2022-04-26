@@ -31,18 +31,11 @@ use log::Level;
 use oak_functions_abi::{proto::OakStatus, ExtensionHandle, StorageGetItemResponse};
 use oak_functions_extension::{ExtensionFactory, OakApiNativeExtension};
 use oak_logger::OakLogger;
-use wasmi::ValueType;
-
-// TODO(#2752): Remove once we call all extensions with invoke.
-const ABI_USIZE: ValueType = ValueType::I32;
 
 // TODO(#2593): Use no_std-compatible map.
 use std::collections::HashMap;
 
 use oak_functions_util::sync::Mutex;
-
-// Host function name for invoking lookup in lookup data.
-const LOOKUP_ABI_FUNCTION_NAME: &str = "storage_get_item";
 
 pub struct LookupFactory<L: OakLogger> {
     manager: Arc<LookupDataManager<L>>,
@@ -95,20 +88,6 @@ impl<L: OakLogger> OakApiNativeExtension for LookupData<L> {
         let response = bincode::serialize(&StorageGetItemResponse { value })
             .expect("Failed to serialze get storage item response.");
         Ok(response)
-    }
-
-    fn get_metadata(&self) -> (String, wasmi::Signature) {
-        let signature = wasmi::Signature::new(
-            &[
-                ABI_USIZE, // key_ptr
-                ABI_USIZE, // key_len
-                ABI_USIZE, // value_ptr_ptr
-                ABI_USIZE, // value_len_ptr
-            ][..],
-            Some(ValueType::I32),
-        );
-
-        (LOOKUP_ABI_FUNCTION_NAME.to_string(), signature)
     }
 
     fn terminate(&mut self) -> anyhow::Result<()> {

@@ -14,16 +14,12 @@
 // limitations under the License.
 //
 
-use crate::{logger::Logger, server::ABI_USIZE, OakFunctionsBoxedExtensionFactory};
+use crate::{logger::Logger, OakFunctionsBoxedExtensionFactory};
 use oak_functions_extension::{ExtensionFactory, OakApiNativeExtension};
 
 use log::Level;
 use oak_functions_abi::{proto::OakStatus, ExtensionHandle, TestingRequest, TestingResponse};
 use oak_logger::OakLogger;
-use wasmi::ValueType;
-
-/// Host function name for testing.
-const TESTING_ABI_FUNCTION_NAME: &str = "testing";
 
 impl OakApiNativeExtension for TestingExtension<Logger> {
     fn invoke(&mut self, request: Vec<u8>) -> Result<Vec<u8>, OakStatus> {
@@ -41,20 +37,6 @@ impl OakApiNativeExtension for TestingExtension<Logger> {
             }
         };
         Ok(response)
-    }
-
-    fn get_metadata(&self) -> (String, wasmi::Signature) {
-        let signature = wasmi::Signature::new(
-            &[
-                ABI_USIZE, // request_ptr
-                ABI_USIZE, // request_len
-                ABI_USIZE, // response_ptr_ptr
-                ABI_USIZE, // response_len_ptr
-            ][..],
-            Some(ValueType::I32),
-        );
-
-        (TESTING_ABI_FUNCTION_NAME.to_string(), signature)
     }
 
     fn terminate(&mut self) -> anyhow::Result<()> {
