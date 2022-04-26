@@ -1372,11 +1372,8 @@ version = "0.8.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a19187fea3ac7e84da7dacf48de0c45d63c6a76f9490dae389aead16c243fce3"
 dependencies = [
- "atty",
- "humantime",
  "log",
  "regex",
- "termcolor",
 ]
 
 [[package]]
@@ -5322,14 +5319,11 @@ name = "trusted_shuffler"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "assert_matches",
  "async-trait",
- "env_logger 0.8.4",
  "futures",
  "futures-core",
  "futures-util",
  "log",
- "test_utils",
  "tokio",
 ]
 
