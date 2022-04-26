@@ -368,9 +368,10 @@ impl wasmi::ModuleImportResolver for WasmState {
         signature: &wasmi::Signature,
     ) -> Result<wasmi::FuncRef, wasmi::Error> {
         // Look for the function (i.e., `field_name`) in the statically registered functions.
-        let (index, expected_signature) = oak_functions_resolve_func(field_name).ok_or(
-            wasmi::Error::Instantiation(format!("Export {} not found", field_name)),
-        )?;
+        let (index, expected_signature) =
+            oak_functions_resolve_func(field_name).ok_or_else(|| {
+                wasmi::Error::Instantiation(format!("Export {} not found", field_name))
+            })?;
 
         if signature == &expected_signature {
             Ok(wasmi::FuncInstance::alloc_host(expected_signature, index))
@@ -593,8 +594,7 @@ impl WasmHandler {
         wasm_state
             .extensions
             .values_mut()
-            .map(|e| e.terminate())
-            .collect::<Result<_, _>>()?;
+            .try_for_each(|e| e.terminate())?;
 
         Ok(Response::create(
             StatusCode::Success,
