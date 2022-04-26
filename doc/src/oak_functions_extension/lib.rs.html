@@ -39,12 +39,6 @@
 <span id="34">34</span>
 <span id="35">35</span>
 <span id="36">36</span>
-<span id="37">37</span>
-<span id="38">38</span>
-<span id="39">39</span>
-<span id="40">40</span>
-<span id="41">41</span>
-<span id="42">42</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2022 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -68,13 +62,7 @@
     <span class="doccomment">/// Invokes the extension with the given request and returns a result. If no result</span>
     <span class="doccomment">/// is expected, the result is empty.  An error within the extension is reflected in the</span>
     <span class="doccomment">/// `OakStatus`.</span>
-    <span class="doccomment">/// TODO(#2701): Stop returning OakStatus for errors internal to extensions.</span>
     <span class="kw">fn</span> <span class="ident">invoke</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">request</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span>;
-
-    <span class="doccomment">/// Metadata about this Extension, including the exported host function name, the function&#39;s</span>
-    <span class="doccomment">/// signature, and the corresponding ExtensionHandle.</span>
-    <span class="doccomment">/// TODO(#2752): Remove once we call all extensions with invoke.</span>
-    <span class="kw">fn</span> <span class="ident">get_metadata</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; (<span class="ident">String</span>, <span class="ident">wasmi::Signature</span>);
 
     <span class="doccomment">/// Performs any cleanup or terminating behavior necessary before destroying the WasmState.</span>
     <span class="kw">fn</span> <span class="ident">terminate</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span>;
