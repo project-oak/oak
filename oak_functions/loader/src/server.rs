@@ -282,7 +282,7 @@ impl WasmState {
         response_ptr_ptr: AbiPointer,
         response_len_ptr: AbiPointer,
     ) -> Result<(), OakStatus> {
-        let handle: ExtensionHandle = ExtensionHandle::from_i32(handle).ok_or({
+        let handle: ExtensionHandle = ExtensionHandle::from_i32(handle).ok_or_else(|| {
             self.log_error(&format!("Fail to convert handle from i32 {:?}.", handle));
             OakStatus::ErrInvalidHandle
         })?;
