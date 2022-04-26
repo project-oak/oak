@@ -32,11 +32,13 @@ fn serialize_request(request: UnaryRequest) -> Vec<u8> {
     // The payload is the request's body prepended with the 8 byte session_id.
     // This takes adavantage of the session_id's fixed size to avoid needing
     // to use a key/value pair binary serialization protocol.
-    request
-        .session_id
-        .into_iter()
-        .chain(request.body.into_iter())
-        .collect()
+    let mut serialized_request: Vec<u8> =
+        Vec::with_capacity(request.session_id.len() + request.body.len());
+
+    serialized_request.extend(request.session_id);
+    serialized_request.extend(request.body);
+
+    serialized_request
 }
 
 pub struct EchoImpl {
