@@ -2846,7 +2846,6 @@ dependencies = [
  "anyhow",
  "oak_functions_abi",
  "oak_logger",
- "wasmi",
 ]
 
 [[package]]
@@ -2937,7 +2936,6 @@ dependencies = [
  "oak_functions_extension",
  "oak_functions_util",
  "oak_logger",
- "wasmi",
 ]
 
 [[package]]
@@ -2954,7 +2952,6 @@ dependencies = [
  "oak_logger",
  "rand 0.8.5",
  "serde",
- "wasmi",
 ]
 
 [[package]]
@@ -3009,7 +3006,6 @@ dependencies = [
  "serde",
  "serde_derive",
  "tract-tensorflow",
- "wasmi",
 ]
 
 [[package]]
@@ -3028,7 +3024,6 @@ dependencies = [
  "oak_functions_abi",
  "oak_functions_extension",
  "oak_logger",
- "wasmi",
 ]
 
 [[package]]
