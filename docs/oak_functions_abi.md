@@ -121,34 +121,6 @@ Each invocation produces a log message.
 Log messages are considered sensitive, so logging is only possible if the
 `oak_unsafe` feature is enabled.
 
-### `storage_get_item`
-
-// TODO(mschett): Update docu.
-
-- `param[0]: key_ptr: i32`: address of the key buffer.
-- `param[1]: key_len: i32`: number of bytes of the key buffer.
-- `param[2]: value_ptr_ptr: i32`: address where the Oak Functions runtime will
-  write the address of the buffer containing the item.
-- `param[3]: value_len_ptr: i32`: address where the Oak Functions runtime will
-  write the number of bytes of the newly allocated value buffer (as a
-  little-endian u32).
-- `result[0]: i32`:
-  [`OakStatus`](https://github.com/project-oak/oak/blob/main/oak_functions/proto/abi.proto)
-  of the invocation
-
-The Oak Functions WebAssembly module invokes `storage_get_item` to retrieve a
-single item for the given key from the lookup data in-memory store of the Oak
-Functions runtime. The Oak Functions runtime reads the key from the key buffer
-`key_ptr` with the corresponding number of bytes `key_len` from the WebAssembly
-module's memory. If the Oak Functions runtime finds the item, it uses `alloc` to
-allocate a buffer of the exact size to contain the item and writes the item in
-the allocated buffer. Then the Oak Functions runtime writes the address of the
-allocated buffer to `value_ptr_ptr` together with the address of the
-corresponding size to `value_len_ptr`. The Oak Functions runtime returns an
-[`OakStatus`](https://github.com/project-oak/oak/blob/main/oak_functions/proto/abi.proto).
-In particular, if no item with the given key is found, the status is
-`ERR_STORAGE_ITEM_NOT_FOUND`.
-
 ### `invoke`
 
 - `param[0]: handle: i32`:
@@ -203,3 +175,7 @@ are currently supported:
   only the last reported value will be used for that request. If values are not
   reported for some buckets during a request it will be treated as if values of
   0 were reported for those buckets.
+
+- `LookupHandle`: The Oak Functions runtime retrieves a single (optional) item
+  for the given key from the lookup data in-memory store of the Oak Functions
+  runtime. If no item with the given key is found, it returns `None`.
