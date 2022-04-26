@@ -596,7 +596,7 @@ where
 {
     // Use tokio::spawn to actually run the tasks in parallel, for more accurate measurement
     // of time.
-    let task = tokio::spawn(async move { function() });
+    let task = tokio::task::spawn_blocking(function);
     // Sleep until the policy times out
     tokio::time::sleep(Duration::from_millis(
         policy.constant_processing_time_ms.into(),
