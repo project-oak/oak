@@ -20,9 +20,9 @@
 mod tests;
 
 use anyhow::{anyhow, Context};
+use async_trait::async_trait;
 use futures::future::join_all;
 use std::{
-    future::Future,
     marker::{Send, Sync},
     mem::replace,
     ops::DerefMut,
@@ -40,32 +40,29 @@ struct Message {
     response_sender: oneshot::Sender<Response>,
 }
 
+#[async_trait]
+pub trait RequestHandler: Send + Sync {
+    async fn handle(&self, request: Vec<u8>) -> Vec<u8>;
+}
+
 // Trusted Shuffler implementation.
-pub struct TrustedShuffler<F, O>
-where
-    F: Send + Sync + 'static + FnOnce(Request) -> O,
-    O: Send + Sync + Future<Output = Response>,
-{
+pub struct TrustedShuffler {
     // Value k that represents k-anonymity.
     anonymity_value: usize,
 
     // Current batch of requests to be shuffled.
     // Mutex is used because messages are collected from different async tasks.
-    current_requests: Arc<Mutex<Vec<Message>>>,
+    requests_to_shuffle: Arc<Mutex<Vec<Message>>>,
 
     // Async function that sends a request to the backend and returns a response.
-    request_handler: F,
+    request_handler: Arc<dyn RequestHandler>,
 }
 
-impl<F, O> TrustedShuffler<F, O>
-where
-    F: Send + Sync + Clone + 'static + FnOnce(Request) -> O,
-    O: Send + Sync + Future<Output = Response>,
-{
-    pub fn new(anonymity_value: usize, request_handler: F) -> Self {
+impl TrustedShuffler {
+    pub fn new(anonymity_value: usize, request_handler: Arc<dyn RequestHandler>) -> Self {
         Self {
             anonymity_value,
-            current_requests: Arc::new(Mutex::new(vec![])),
+            requests_to_shuffle: Arc::new(Mutex::new(vec![])),
             request_handler,
         }
     }
@@ -81,17 +78,17 @@ where
 
         // Check if the request batch is filled and create a separate task for shuffling requests.
         {
-            let mut current_requests = self
-                .current_requests
+            let mut requests_to_shuffle = self
+                .requests_to_shuffle
                 .lock()
                 .map_err(|error| anyhow!("Couldn't lock current messages mutex: {:?}", error))?;
-            current_requests.push(request);
+            requests_to_shuffle.push(request);
 
-            if current_requests.len() >= self.anonymity_value {
+            if requests_to_shuffle.len() >= self.anonymity_value {
                 // Replace current requests with an empty vector.
-                let requests = replace(current_requests.deref_mut(), vec![]);
+                let requests = replace(requests_to_shuffle.deref_mut(), vec![]);
 
-                // Shuffle current requests and send them to the backend.
+                // Shuffle requests and spawn async tasks for sending them to the backend.
                 let request_handler = self.request_handler.clone();
                 tokio::spawn(async move {
                     if let Err(error) =
@@ -110,14 +107,14 @@ where
     // [`TrustedShuffler::request_sender`].
     async fn shuffle_requests(
         mut requests: Vec<Message>,
-        request_handler: F,
+        request_handler: Arc<dyn RequestHandler>,
     ) -> anyhow::Result<()> {
-        requests.sort_by(|first, second| first.data.cmp(&second.data));
+        requests.sort_by_key(|v| v.data.clone());
 
         let response_futures = requests.into_iter().map(|request| {
             let request_handler_clone = request_handler.clone();
             async move {
-                let response = (request_handler_clone)(request.data).await;
+                let response = request_handler_clone.handle(request.data).await;
                 Message {
                     data: response,
                     response_sender: request.response_sender,
@@ -134,12 +131,19 @@ where
     fn shuffle_responses(mut responses: Vec<Message>) -> anyhow::Result<()> {
         responses.sort_by(|first, second| first.data.cmp(&second.data));
 
-        for response in responses {
-            response
-                .response_sender
-                .send(response.data.clone())
-                .map_err(|error| anyhow!("Couldn't send the response: {:?}", error))?;
-        }
-        Ok(())
+        responses
+            .into_iter()
+            .map(
+                |Message {
+                     data,
+                     response_sender,
+                 }| {
+                    response_sender
+                        .send(data)
+                        .map_err(|_| anyhow!("Couldn't send response"))
+                },
+            )
+            .collect::<Result<Vec<_>, _>>()
+            .map(|_: Vec<()>| ())
     }
 }
