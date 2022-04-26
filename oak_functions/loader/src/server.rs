@@ -279,7 +279,7 @@ impl WasmState {
         response_len_ptr: AbiPointer,
     ) -> Result<(), OakStatus> {
         let handle: ExtensionHandle = ExtensionHandle::from_i32(handle).ok_or_else(|| {
-            self.log_error(&format!("Fail to convert handle from i32 {:?}.", handle));
+            self.log_error(&format!("Fail to convert handle {:?} from i32.", handle));
             OakStatus::ErrInvalidHandle
         })?;
 
@@ -293,11 +293,15 @@ impl WasmState {
                 OakStatus::ErrInvalidArgs
             })?;
 
-        let extension = self.extensions.get_mut(&handle).ok_or({
-            // TODO(mschett): Fix logging.
-            // self.log_error(&format!("Cannot find extension with handle {:?}.", handle));
-            OakStatus::ErrInvalidHandle
-        })?;
+        // TODO(mschett): Make more idiomatic
+        let extension = match self.extensions.get_mut(&handle) {
+            Some(extension) => extension,
+            None => {
+                self.log_error(&format!("Cannot find extension with handle {:?}.", handle));
+                return Err(OakStatus::ErrInvalidHandle);
+            }
+        };
+
         let response = extension.invoke(request)?;
         self.alloc_and_write_buffer_to_wasm_memory(response, response_ptr_ptr, response_len_ptr)
     }
@@ -349,8 +353,11 @@ impl wasmi::Externals for WasmState {
                 args.nth_checked(3)?,
                 args.nth_checked(4)?,
             )),
-            // TODO(mschett): Figure out what we should return here.
-            _ => panic!("Unimplemented function at {}", index),
+            _ => {
+                // TODO(mschett): Should we use host error instead?
+                // Err(wasmi::Trap::new(wasmi::TrapKind::Host(host_error)))
+                Err(wasmi::Trap::new(wasmi::TrapKind::TableAccessOutOfBounds))
+            }
         }
     }
 }
@@ -593,7 +600,7 @@ impl WasmHandler {
         wasm_state.invoke();
 
         // TODO(mschett): Make more idiomatic.
-        for (_, extension) in wasm_state.extensions.iter_mut() {
+        for extension in wasm_state.extensions.values_mut() {
             extension.terminate()?;
         }
 
