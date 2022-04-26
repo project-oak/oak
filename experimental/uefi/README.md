@@ -1,38 +1,37 @@
 # Experimental UEFI app and untrusted loader
 
-This directory contains a bare-bones UEFI app and an "untrusted loader" built
-around `qemu` that communicates with said app. The goal of the experiment is to
-try out different communication mechanisms etc to see how Oak could run in a
-trusted environment as an UEFI app with minimal dependencies, with code that
-doesn't need to be trusted left outside the trusted environment.
+This directory contains the following crates:
 
-To run:
+- `runtime`: common business logic that should run in a VM
+- `app`: UEFI application that wraps `runtime` for execution under UEFI
+- `loader`: wrapper around `qemu` that loads the above and exposes
+  and gRPC server for communicating with the runtime
+- `client`: a trivial gRPC client for communicating with the loader/runtime.
 
-- build the UEFI app (note that the app is not part of the normal workspace
-  because of #2654)
-- run
-  `RUST_LOG=info cargo run -- /workspace/experimental/uefi/app/target/x86_64-unknown-uefi/debug/uefi-simple.efi`
-  (note that the path assumes you're in the dev container)
+## Loader
 
-This will start `qemu` and wire up the sockets. Any input (remember to press
-enter) will be sent to the app, which will dutifully echo it back.
+To run the loader, build the loader and `app`, and run:
 
-To quit, press `^C`; you may need to press an extra Enter for the process to
-actually terminate because consoles are hard.
+```shell
+RUST_LOG=debug target/debug/uefi-loader experimental/uefi/app/target/x86_64-unknown-uefi/debug/uefi-simple.efi
+```
 
-## UEFI app
+This will start listening for connections on `127.0.0.1:8000` by default.
 
-The UEFI app assumes that there's two serial ports on the system:
+## Client
 
-- the first one will be used for UEFI stdio and any logs produced by the app
-- the second serial port is used by the app to echo back every byte written to
-  it.
+Running the client requires no specific arguments:
 
-## Untrusted loader
+```shell
+target/debug/uefi-client
+```
 
-The loader wraps `qemu` and sets up the plumbing to communicate with the UEFI
-app.
+The client will read lines from stdin and sends a gRPC request to the loader for
+each line. Responses are printed to stdout.
 
-- any output to the first serial port will be logged
-- communication over the second serial port will also be logged
-- any input to stdin will be sent to the UEFI app.
+## Communication between VM code and the outside world
+
+We assume there's two serial ports on the system:
+
+- the first one will be used for console stdio and any logs produced by the app
+- the second serial port is used by the app.
