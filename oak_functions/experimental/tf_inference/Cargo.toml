@@ -20,5 +20,3 @@ prost = "*"
 serde = "*"
 serde_derive = "*"
 tract-tensorflow = "*"
-# Use wasmi in `no_std` mode.
-wasmi = { version = "*", default-features = false, features = ["core"] }

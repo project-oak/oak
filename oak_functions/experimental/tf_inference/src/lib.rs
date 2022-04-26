@@ -31,13 +31,6 @@ use tract_tensorflow::prelude::{
     tract_ndarray::{ArrayBase, Dim, IxDynImpl, ViewRepr},
     *,
 };
-use wasmi::ValueType;
-
-// TODO(#2752): Remove once we call all extensions with invoke.
-const ABI_USIZE: ValueType = ValueType::I32;
-
-/// Host function name for invoking TensorFlow model inference.
-const TF_ABI_FUNCTION_NAME: &str = "tf_model_infer";
 
 impl<L: OakLogger> OakApiNativeExtension for TensorFlowModel<L> {
     fn invoke(&mut self, request: Vec<u8>) -> Result<Vec<u8>, OakStatus> {
@@ -55,26 +48,12 @@ impl<L: OakLogger> OakApiNativeExtension for TensorFlowModel<L> {
         Ok(response)
     }
 
-    /// Each Oak Functions application can have at most one instance of TensorFlowModule. So it is
-    /// fine to return a constant name in the metadata.
-    fn get_metadata(&self) -> (String, wasmi::Signature) {
-        let signature = wasmi::Signature::new(
-            &[
-                ABI_USIZE, // input_ptr
-                ABI_USIZE, // input_len
-                ABI_USIZE, // inference_ptr_ptr
-                ABI_USIZE, // inference_len_ptr
-            ][..],
-            Some(ValueType::I32),
-        );
-
-        (TF_ABI_FUNCTION_NAME.to_string(), signature)
-    }
-
     fn terminate(&mut self) -> anyhow::Result<()> {
         Ok(())
     }
 
+    /// Each Oak Functions application can have at most one instance of TensorFlowModule. So it is
+    /// fine to have one TensorFlow handle.
     fn get_handle(&self) -> ExtensionHandle {
         ExtensionHandle::TfHandle
     }

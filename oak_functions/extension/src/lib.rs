@@ -21,13 +21,7 @@ pub trait OakApiNativeExtension: Send + Sync {
     /// Invokes the extension with the given request and returns a result. If no result
     /// is expected, the result is empty.  An error within the extension is reflected in the
     /// `OakStatus`.
-    /// TODO(#2701): Stop returning OakStatus for errors internal to extensions.
     fn invoke(&mut self, request: Vec<u8>) -> Result<Vec<u8>, OakStatus>;
-
-    /// Metadata about this Extension, including the exported host function name, the function's
-    /// signature, and the corresponding ExtensionHandle.
-    /// TODO(#2752): Remove once we call all extensions with invoke.
-    fn get_metadata(&self) -> (String, wasmi::Signature);
 
     /// Performs any cleanup or terminating behavior necessary before destroying the WasmState.
     fn terminate(&mut self) -> anyhow::Result<()>;

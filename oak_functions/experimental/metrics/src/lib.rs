@@ -29,14 +29,6 @@ use oak_functions_util::sync::Mutex;
 use rand::{distributions::Open01, rngs::StdRng, thread_rng, Rng, SeedableRng};
 use serde::Deserialize;
 
-use wasmi::ValueType;
-
-// TODO(#2752): Remove once we call all extensions with invoke.
-const ABI_USIZE: ValueType = ValueType::I32;
-
-/// Host function name for reporting private metrics.
-const METRICS_ABI_FUNCTION_NAME: &str = "report_metric";
-
 pub struct PrivateMetricsProxyFactory<L: OakLogger> {
     aggregator: Arc<Mutex<PrivateMetricsAggregator>>,
     logger: L,
@@ -87,24 +79,12 @@ impl<L: OakLogger> OakApiNativeExtension for PrivateMetricsExtension<L> {
         Ok(response)
     }
 
-    /// Each Oak Functions application can have at most one instance of PrivateMetricsProxy. So it
-    /// is fine to return a constant name in the metadata.
-    fn get_metadata(&self) -> (String, wasmi::Signature) {
-        let signature = wasmi::Signature::new(
-            &[
-                ABI_USIZE, // buf_ptr
-                ABI_USIZE, // buf_len
-            ][..],
-            Some(ValueType::I32),
-        );
-
-        (METRICS_ABI_FUNCTION_NAME.to_string(), signature)
-    }
-
     fn terminate(&mut self) -> anyhow::Result<()> {
         self.publish_metrics()
     }
 
+    /// Each Oak Functions application can have at most one instance of PrivateMetricsProxy. So it
+    /// is fine to have only one handle.
     fn get_handle(&self) -> ExtensionHandle {
         ExtensionHandle::MetricsHandle
     }

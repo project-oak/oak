@@ -749,7 +749,6 @@ dependencies = [
  "anyhow",
  "oak_functions_abi",
  "oak_logger",
- "wasmi",
 ]
 
 [[package]]
@@ -823,7 +822,6 @@ dependencies = [
  "oak_functions_extension",
  "oak_functions_util",
  "oak_logger",
- "wasmi",
 ]
 
 [[package]]
@@ -840,7 +838,6 @@ dependencies = [
  "oak_logger",
  "rand",
  "serde",
- "wasmi",
 ]
 
 [[package]]
@@ -859,7 +856,6 @@ dependencies = [
  "oak_functions_abi",
  "oak_functions_extension",
  "oak_logger",
- "wasmi",
 ]
 
 [[package]]
