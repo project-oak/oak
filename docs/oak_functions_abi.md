@@ -96,31 +96,6 @@ sent to the client. If the Oak Functions WebAssembly module never invokes
 `write_response`, the Oak Functions runtime sends an empty response to the
 client.
 
-### `write_log_message`
-
-- `param[0]: buf_ptr: i32`: address of the log message buffer.
-- `param[1]: buf_len: i32`: number of bytes of the log message buffer.
-- `result[0]: i32`:
-  [`OakStatus`](https://github.com/project-oak/oak/blob/main/oak_functions/proto/abi.proto)
-  of the invocation
-
-The Oak Functions WebAssembly module invokes `write_log_message` to write a log
-message to the log message buffer. The Oak Functions runtime reads the log
-message from the log message buffer at address `buf_ptr` with the corresponding
-number of bytes `buf_len` from the Oak Functions WebAssembly module's memory.
-The Oak Functions runtime returns an
-[`OakStatus`](https://github.com/project-oak/oak/blob/main/oak_functions/proto/abi.proto).
-
-The Oak Functions runtime attempts to interpret the bytes in the log message
-buffer as a UTF-8 encoded string. If successful, the string is logged as a debug
-message. If the bytes are not a valid UTF-8 string a warning message containing
-the UTF-8 decoding error and the raw bytes is logged.
-
-Each invocation produces a log message.
-
-Log messages are considered sensitive, so logging is only possible if the
-`oak_unsafe` feature is enabled.
-
 ### `invoke`
 
 - `param[0]: handle: i32`:
@@ -179,3 +154,9 @@ are currently supported:
 - `LookupHandle`: The Oak Functions runtime retrieves a single (optional) item
   for the given key from the lookup data in-memory store of the Oak Functions
   runtime. If no item with the given key is found, it returns `None`.
+- `LoggingHandle`: The Oak Functions runtime attempts to interpret the bytes in
+  the log message buffer as a UTF-8 encoded string. If successful, the string is
+  logged as a debug message. If the bytes are not a valid UTF-8 string a warning
+  message containing the UTF-8 decoding error and the raw bytes is logged. Each
+  invocation produces a log message. Log messages are considered sensitive, so
+  logging is only possible if the `oak_unsafe` feature is enabled.

@@ -18,11 +18,12 @@ oak_functions_loader = { path = "../../loader", features = [
   "oak-tf"
 ] }
 oak_functions_lookup = { path = "../../lookup" }
+oak_functions_metrics = { path = "../../experimental/metrics" }
+oak_functions_tf_inference = { path = "../../experimental/tf_inference" }
+oak_functions_workload_logging = { path = "../../workload_logging" }
 lazy_static = "*"
 maplit = "*"
 tokio = "*"
-oak_functions_metrics = { path = "../../experimental/metrics" }
-oak_functions_tf_inference = { path = "../../experimental/tf_inference" }
 
 [dependencies]
 bincode = "*"

@@ -776,6 +776,7 @@ dependencies = [
  "oak_functions_lookup",
  "oak_functions_metrics",
  "oak_functions_util",
+ "oak_functions_workload_logging",
  "oak_logger",
  "oak_remote_attestation",
  "oak_utils",
@@ -847,6 +848,18 @@ name = "oak_functions_util"
 version = "0.1.0"
 dependencies = [
  "lock_api",
+]
+
+[[package]]
+name = "oak_functions_workload_logging"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "log",
+ "oak_functions_abi",
+ "oak_functions_extension",
+ "oak_logger",
+ "wasmi",
 ]
 
 [[package]]

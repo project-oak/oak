@@ -26,6 +26,7 @@ use oak_functions_loader::{
 };
 use oak_functions_lookup::{LookupDataManager, LookupFactory};
 use oak_functions_metrics::{BucketConfig, PrivateMetricsConfig, PrivateMetricsProxyFactory};
+use oak_functions_workload_logging::WorkloadLoggingFactory;
 use prost::Message;
 use std::{
     net::{Ipv6Addr, SocketAddr},
@@ -53,6 +54,9 @@ async fn test_server() {
 
     let logger = Logger::for_test();
 
+    let workload_logging_factory =
+        WorkloadLoggingFactory::new_boxed_extension_factory(logger.clone())
+            .expect("could not create WorkloadLoggingFactory");
     let lookup_data_manager = Arc::new(LookupDataManager::new_empty(logger.clone()));
     let lookup_factory = LookupFactory::new_boxed_extension_factory(lookup_data_manager)
         .expect("could not create LookupFactory");
@@ -61,7 +65,7 @@ async fn test_server() {
     let tee_certificate = vec![];
     let wasm_handler = create_wasm_handler(
         &wasm_module_bytes,
-        vec![lookup_factory, metrics_factory],
+        vec![workload_logging_factory, lookup_factory, metrics_factory],
         logger.clone(),
     )
     .expect("could not create wasm_handler");
