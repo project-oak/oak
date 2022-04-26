@@ -85,7 +85,7 @@ impl TrustedShuffler {
                 data: request,
                 response_sender,
             };
-            
+
             requests_to_shuffle.push(request);
 
             if requests_to_shuffle.len() >= self.anonymity_value {
