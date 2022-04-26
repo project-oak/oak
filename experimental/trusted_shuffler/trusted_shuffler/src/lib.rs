@@ -34,6 +34,8 @@ type Request = Vec<u8>;
 type Response = Vec<u8>;
 
 struct Message {
+    // Determines the original order in which messages arrived.
+    number: usize,
     // Arbitrary message data.
     data: Vec<u8>,
     // Channel for sending responses back to the client async tasks.
@@ -71,17 +73,19 @@ impl TrustedShuffler {
     pub async fn invoke(&self, request: Request) -> anyhow::Result<Response> {
         let (response_sender, response_receiver) = oneshot::channel();
 
-        let request = Message {
-            data: request,
-            response_sender,
-        };
-
         // Check if the request batch is filled and create a separate task for shuffling requests.
         {
             let mut requests_to_shuffle = self
                 .requests_to_shuffle
                 .lock()
                 .map_err(|error| anyhow!("Couldn't lock current messages mutex: {:?}", error))?;
+
+            let request = Message {
+                number: requests_to_shuffle.len(),
+                data: request,
+                response_sender,
+            };
+            
             requests_to_shuffle.push(request);
 
             if requests_to_shuffle.len() >= self.anonymity_value {
@@ -116,6 +120,7 @@ impl TrustedShuffler {
             async move {
                 let response = request_handler_clone.handle(request.data).await;
                 Message {
+                    number: request.number,
                     data: response,
                     response_sender: request.response_sender,
                 }
@@ -126,15 +131,16 @@ impl TrustedShuffler {
         Self::shuffle_responses(responses)
     }
 
-    // Lexicographically sorts received backend responses and sends them back to the client async
+    // Restores the original order in which messages arrived and sends them back to the client async
     // tasks using corresponding channels defined in the [`Message::response_sender`].
     fn shuffle_responses(mut responses: Vec<Message>) -> anyhow::Result<()> {
-        responses.sort_by(|first, second| first.data.cmp(&second.data));
+        responses.sort_by(|first, second| first.number.cmp(&second.number));
 
         responses
             .into_iter()
             .map(
                 |Message {
+                     number: _,
                      data,
                      response_sender,
                  }| {
