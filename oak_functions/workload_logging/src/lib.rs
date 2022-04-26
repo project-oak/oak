@@ -17,23 +17,11 @@
 
 extern crate alloc;
 
-use alloc::{
-    boxed::Box,
-    format,
-    string::{String, ToString},
-    vec::Vec,
-};
+use alloc::{boxed::Box, format, vec::Vec};
 use log::Level;
 use oak_functions_abi::{proto::OakStatus, ExtensionHandle};
 use oak_functions_extension::{ExtensionFactory, OakApiNativeExtension};
 use oak_logger::OakLogger;
-use wasmi::ValueType;
-
-// TODO(#2752): Remove once we call all extensions with invoke.
-const ABI_USIZE: ValueType = ValueType::I32;
-
-// Host function name for invoking lookup in lookup data.
-const LOG_ABI_FUNCTION_NAME: &str = "write_log_message";
 
 pub struct WorkloadLoggingFactory<L: OakLogger> {
     logger: L,
@@ -89,18 +77,6 @@ impl<L: OakLogger> OakApiNativeExtension for WorkloadLogger<L> {
         self.logger
             .log_sensitive(Level::Debug, &format!("[Wasm] {}", log_message));
         Ok(Vec::new())
-    }
-
-    fn get_metadata(&self) -> (String, wasmi::Signature) {
-        let signature = wasmi::Signature::new(
-            &[
-                ABI_USIZE, // buf_ptr
-                ABI_USIZE, // buf_len
-            ][..],
-            Some(ValueType::I32),
-        );
-
-        (LOG_ABI_FUNCTION_NAME.to_string(), signature)
     }
 
     fn terminate(&mut self) -> anyhow::Result<()> {
