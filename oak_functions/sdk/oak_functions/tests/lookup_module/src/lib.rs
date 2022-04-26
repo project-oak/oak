@@ -97,9 +97,9 @@ impl TestManager<'static> {
         oak_functions::write_response(&value.unwrap()).expect("Failed to write response.");
     }
 
-    /// Tests `storage_get_item` when the key is not in the lookup data. The
-    /// lookup data is set in the integration test. When no value is found,
-    /// `oak_functions::storage_get_item` returns None.
+    /// Tests `storage_get_item` when the key is not in the lookup data. The lookup data is set in
+    /// the integration test. When no value is found, `oak_functions::storage_get_item` returns
+    /// None.
     fn test_storage_get_item_not_found(key: &str) {
         let value = oak_functions::storage_get_item(key.as_bytes());
         let response_msg = match value {
