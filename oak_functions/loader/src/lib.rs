@@ -44,6 +44,7 @@ use oak_functions_metrics::PrivateMetricsConfig;
 use oak_functions_metrics::PrivateMetricsProxyFactory;
 #[cfg(feature = "oak-tf")]
 use oak_functions_tf_inference::{read_model_from_path, TensorFlowFactory, TensorFlowModelConfig};
+use oak_functions_workload_logging::WorkloadLoggingFactory;
 use oak_logger::OakLogger;
 use oak_remote_attestation::crypto::get_sha256;
 use serde_derive::Deserialize;
@@ -191,6 +192,10 @@ async fn async_main(opt: Opt, config: Config, logger: Logger) -> anyhow::Result<
 
     #[allow(unused_mut)]
     let mut extensions = Vec::new();
+
+    let workload_logging_factory =
+        WorkloadLoggingFactory::new_boxed_extension_factory(logger.clone())?;
+    extensions.push(workload_logging_factory);
 
     let lookup_factory = LookupFactory::new_boxed_extension_factory(lookup_data_manager)?;
     extensions.push(lookup_factory);

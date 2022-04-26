@@ -96,89 +96,6 @@ sent to the client. If the Oak Functions WebAssembly module never invokes
 `write_response`, the Oak Functions runtime sends an empty response to the
 client.
 
-### `write_log_message`
-
-- `param[0]: buf_ptr: i32`: address of the log message buffer.
-- `param[1]: buf_len: i32`: number of bytes of the log message buffer.
-- `result[0]: i32`:
-  [`OakStatus`](https://github.com/project-oak/oak/blob/main/oak_functions/proto/abi.proto)
-  of the invocation
-
-The Oak Functions WebAssembly module invokes `write_log_message` to write a log
-message to the log message buffer. The Oak Functions runtime reads the log
-message from the log message buffer at address `buf_ptr` with the corresponding
-number of bytes `buf_len` from the Oak Functions WebAssembly module's memory.
-The Oak Functions runtime returns an
-[`OakStatus`](https://github.com/project-oak/oak/blob/main/oak_functions/proto/abi.proto).
-
-The Oak Functions runtime attempts to interpret the bytes in the log message
-buffer as a UTF-8 encoded string. If successful, the string is logged as a debug
-message. If the bytes are not a valid UTF-8 string a warning message containing
-the UTF-8 decoding error and the raw bytes is logged.
-
-Each invocation produces a log message.
-
-Log messages are considered sensitive, so logging is only possible if the
-`oak_unsafe` feature is enabled.
-
-### `report_metric`
-
-- `param[0]: buf_ptr: i32`: address of the buffer.
-- `param[1]: buf_len: i32`: number of bytes of the buffer.
-- `result[0]: i32`:
-  [`OakStatus`](https://github.com/project-oak/oak/blob/main/oak_functions/proto/abi.proto)
-  of the invocation
-
-The Oak Functions WebAssembly module invokes `report_metric` to report the
-metric value `value` for a sum-based metric bucket identified by a `label`. The
-Oak Functions runtime reads the label and value from the buffer at address
-`buf_ptr` with the corresponding number of bytes `buf_len` from the WebAssembly
-module's memory. The Oak Functions runtime returns an
-[`OakStatus`](https://github.com/project-oak/oak/blob/main/oak_functions/proto/abi.proto).
-
-The Oak Functions runtime attempts to interpret the bytes in the label buffer as
-a UTF-8 encoded string. If the decoding is successful, the string is used as a
-label to identify the bucket. If the bytes are not a valid UTF-8 string or the
-string does not match the label of a configured bucket the metric value will be
-ignored.
-
-If differentially-private metrics are enabled in the configuration the
-aggregated bucket totals per label will be logged in batches after the required
-amount of noise has been added. Only buckets that are explicitly allowed in the
-configuration will be tracked and included in the results.
-
-If metrics are reported for the same bucket multiple times in a single request
-only the last reported value will be used for that request.
-
-If values are not reported for some buckets during a request it will be treated
-as if values of 0 were reported for those buckets.
-
-### `storage_get_item`
-
-- `param[0]: key_ptr: i32`: address of the key buffer.
-- `param[1]: key_len: i32`: number of bytes of the key buffer.
-- `param[2]: value_ptr_ptr: i32`: address where the Oak Functions runtime will
-  write the address of the buffer containing the item.
-- `param[3]: value_len_ptr: i32`: address where the Oak Functions runtime will
-  write the number of bytes of the newly allocated value buffer (as a
-  little-endian u32).
-- `result[0]: i32`:
-  [`OakStatus`](https://github.com/project-oak/oak/blob/main/oak_functions/proto/abi.proto)
-  of the invocation
-
-The Oak Functions WebAssembly module invokes `storage_get_item` to retrieve a
-single item for the given key from the lookup data in-memory store of the Oak
-Functions runtime. The Oak Functions runtime reads the key from the key buffer
-`key_ptr` with the corresponding number of bytes `key_len` from the WebAssembly
-module's memory. If the Oak Functions runtime finds the item, it uses `alloc` to
-allocate a buffer of the exact size to contain the item and writes the item in
-the allocated buffer. Then the Oak Functions runtime writes the address of the
-allocated buffer to `value_ptr_ptr` together with the address of the
-corresponding size to `value_len_ptr`. The Oak Functions runtime returns an
-[`OakStatus`](https://github.com/project-oak/oak/blob/main/oak_functions/proto/abi.proto).
-In particular, if no item with the given key is found, the status is
-`ERR_STORAGE_ITEM_NOT_FOUND`.
-
 ### `invoke`
 
 - `param[0]: handle: i32`:
@@ -216,3 +133,30 @@ are currently supported:
   extesion returns an error if either the input vector was malformed or the
   decoding of the resulting inference failed. This is experimental, and only
   available when the `oak-tf` feature is enabled.
+- `MetricsHandle`: The Oak Functions WebAssembly module reports the metric value
+  `value` for a sum-based metric bucket identified by a `label` from the
+  `ReportMetricsRequest`. The Oak Functions runtime attempts to interpret the
+  bytes in the label buffer as a UTF-8 encoded string. If the decoding is
+  successful, the string is used as a label to identify the bucket. If the bytes
+  are not a valid UTF-8 string or the string does not match the label of a
+  configured bucket the metric value will be ignored.
+
+  If differentially-private metrics are enabled in the configuration the
+  aggregated bucket totals per label will be logged in batches after the
+  required amount of noise has been added. Only buckets that are explicitly
+  allowed in the configuration will be tracked and included in the results.
+
+  If metrics are reported for the same bucket multiple times in a single request
+  only the last reported value will be used for that request. If values are not
+  reported for some buckets during a request it will be treated as if values of
+  0 were reported for those buckets.
+
+- `LookupHandle`: The Oak Functions runtime retrieves a single (optional) item
+  for the given key from the lookup data in-memory store of the Oak Functions
+  runtime. If no item with the given key is found, it returns `None`.
+- `LoggingHandle`: The Oak Functions runtime attempts to interpret the bytes in
+  the log message buffer as a UTF-8 encoded string. If successful, the string is
+  logged as a debug message. If the bytes are not a valid UTF-8 string a warning
+  message containing the UTF-8 decoding error and the raw bytes is logged. Each
+  invocation produces a log message. Log messages are considered sensitive, so
+  logging is only possible if the `oak_unsafe` feature is enabled.

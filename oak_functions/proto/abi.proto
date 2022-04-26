@@ -29,8 +29,9 @@ enum ExtensionHandle {
   // Handle for an extension used for testing Wasm modules.
   TESTING_HANDLE = 1;
   LOOKUP_HANDLE = 2;
-  METRICS_HANDLE = 3;
-  TF_HANDLE = 4;
+  LOGGING_HANDLE = 3;
+  METRICS_HANDLE = 4;
+  TF_HANDLE = 5;
 }
 
 // Status values exchanged as i32 values across the Node Wasm interface.
@@ -42,10 +43,8 @@ enum OakStatus {
   ERR_INVALID_ARGS = 2;
   // Internal error.
   ERR_INTERNAL = 3;
-  // Lookup storage item not found.
-  ERR_STORAGE_ITEM_NOT_FOUND = 4;
   // Error when the given number is not a valid handle.
-  ERR_INVALID_HANDLE = 5;
+  ERR_INVALID_HANDLE = 4;
 }
 
 // The inference from a TensorFlow model, containing an inference vector of floats, and a shape

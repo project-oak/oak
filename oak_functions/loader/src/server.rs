@@ -35,7 +35,6 @@ const ALLOC_FUNCTION_NAME: &str = "alloc";
 /// exposed to the Wasm client. See <https://docs.rs/wasmi/0.6.2/wasmi/trait.Externals.html>
 const READ_REQUEST: usize = 0;
 const WRITE_RESPONSE: usize = 1;
-const WRITE_LOG_MESSAGE: usize = 3;
 const INVOKE: usize = 4;
 const EXTENSION_INDEX_OFFSET: usize = 10;
 
@@ -275,40 +274,6 @@ impl WasmState {
         Ok(())
     }
 
-    /// Corresponds to the host ABI function [`write_log_message`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#write_log_message).
-    pub fn write_log_message(
-        &mut self,
-        buf_ptr: AbiPointer,
-        buf_len: AbiPointerOffset,
-    ) -> Result<(), OakStatus> {
-        let raw_log = self
-            .get_memory()
-            .get(buf_ptr, buf_len as usize)
-            .map_err(|err| {
-                self.logger.log_sensitive(
-                    Level::Error,
-                    &format!(
-                        "write_log_message(): Unable to read message from guest memory: {:?}",
-                        err
-                    ),
-                );
-                OakStatus::ErrInvalidArgs
-            })?;
-        let log_message = str::from_utf8(raw_log.as_slice()).map_err(|err| {
-            self.logger.log_sensitive(
-                Level::Warn,
-                &format!(
-                    "write_log_message(): Not a valid UTF-8 encoded string: {:?}\nContent: {:?}",
-                    err, raw_log
-                ),
-            );
-            OakStatus::ErrInvalidArgs
-        })?;
-        self.logger
-            .log_sensitive(Level::Debug, &format!("[Wasm] {}", log_message));
-        Ok(())
-    }
-
     pub fn invoke_extension_with_handle(
         &mut self,
         handle: AbiExtensionHandle,
@@ -317,7 +282,7 @@ impl WasmState {
         response_ptr_ptr: AbiPointer,
         response_len_ptr: AbiPointer,
     ) -> Result<(), OakStatus> {
-        let handle: ExtensionHandle = ExtensionHandle::from_i32(handle).ok_or({
+        let handle: ExtensionHandle = ExtensionHandle::from_i32(handle).ok_or_else(|| {
             self.log_error(&format!("Fail to convert handle from i32 {:?}.", handle));
             OakStatus::ErrInvalidHandle
         })?;
@@ -385,9 +350,6 @@ impl wasmi::Externals for WasmState {
             ),
             WRITE_RESPONSE => from_oak_status_result(
                 self.write_response(args.nth_checked(0)?, args.nth_checked(1)?),
-            ),
-            WRITE_LOG_MESSAGE => from_oak_status_result(
-                self.write_log_message(args.nth_checked(0)?, args.nth_checked(1)?),
             ),
             INVOKE => from_oak_status_result(self.invoke_extension_with_handle(
                 args.nth_checked(0)?,
@@ -596,13 +558,15 @@ where
 {
     // Use tokio::spawn to actually run the tasks in parallel, for more accurate measurement
     // of time.
-    let task = tokio::task::spawn_blocking(function);
-    // Sleep until the policy times out
-    tokio::time::sleep(Duration::from_millis(
+    let sleep = tokio::spawn(tokio::time::sleep(Duration::from_millis(
         policy.constant_processing_time_ms.into(),
-    ))
-    .await;
+    )));
+    let task = tokio::task::spawn_blocking(function);
 
+    // Sleep until the policy times out
+    sleep.await?;
+
+    // Get the result whether the task has finnished or not.
     let function_response = task.now_or_never();
 
     let response = match function_response {
@@ -728,16 +692,6 @@ fn oak_functions_resolve_func(field_name: &str) -> Option<(usize, wasmi::Signatu
         ),
         "write_response" => (
             WRITE_RESPONSE,
-            wasmi::Signature::new(
-                &[
-                    ABI_USIZE, // buf_ptr
-                    ABI_USIZE, // buf_len
-                ][..],
-                Some(ValueType::I32),
-            ),
-        ),
-        "write_log_message" => (
-            WRITE_LOG_MESSAGE,
             wasmi::Signature::new(
                 &[
                     ABI_USIZE, // buf_ptr

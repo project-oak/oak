@@ -29,6 +29,7 @@ use oak_functions_loader::{
     server::WasmHandler,
 };
 use oak_functions_lookup::{LookupDataManager, LookupFactory};
+use oak_functions_workload_logging::WorkloadLoggingFactory;
 use rand::{prelude::StdRng, SeedableRng};
 use std::{
     net::{Ipv6Addr, SocketAddr},
@@ -85,6 +86,9 @@ async fn test_server() {
     let tee_certificate = vec![];
 
     let logger = Logger::for_test();
+    let workload_logging_factory =
+        WorkloadLoggingFactory::new_boxed_extension_factory(logger.clone())
+            .expect("could not create WorkloadLoggingFactory");
     let lookup_data_manager = Arc::new(LookupDataManager::new_empty(logger.clone()));
     let lookup_data_refresher = LookupDataRefresher::new(
         Some(LookupDataSource::Http {
@@ -99,9 +103,12 @@ async fn test_server() {
     let lookup_factory = LookupFactory::new_boxed_extension_factory(lookup_data_manager)
         .expect("could not create LookupFactory");
 
-    let wasm_handler =
-        create_wasm_handler(&wasm_module_bytes, vec![lookup_factory], logger.clone())
-            .expect("could not create wasm_handler");
+    let wasm_handler = create_wasm_handler(
+        &wasm_module_bytes,
+        vec![lookup_factory, workload_logging_factory],
+        logger.clone(),
+    )
+    .expect("could not create wasm_handler");
 
     let server_background = test_utils::background(|term| async move {
         create_and_start_grpc_server(

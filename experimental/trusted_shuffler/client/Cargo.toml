@@ -10,7 +10,7 @@ license = "Apache-2.0"
 
 [dependencies]
 anyhow = "*"
-clap = { version = "3.0.14", features = ["derive"] }
+clap = { version = "3.1.12", features = ["derive"] }
 env_logger = "*"
 http = "*"
 hyper = { version = "*", features = ["client", "http1", "http2", "runtime"] }

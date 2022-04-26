@@ -21,6 +21,7 @@ use oak_functions_loader::{logger::Logger, server::WasmHandler};
 use oak_functions_lookup::{LookupDataManager, LookupFactory};
 use oak_functions_metrics::{BucketConfig, PrivateMetricsConfig, PrivateMetricsProxyFactory};
 use oak_functions_tf_inference::{read_model_from_path, TensorFlowFactory, TensorFlowModelConfig};
+use oak_functions_workload_logging::WorkloadLoggingFactory;
 
 use std::{path::PathBuf, sync::Arc};
 
@@ -120,9 +121,16 @@ async fn test_write_log() {
     let lookup_data_manager = Arc::new(LookupDataManager::for_test(hashmap! {}, logger.clone()));
     let lookup_factory = LookupFactory::new_boxed_extension_factory(lookup_data_manager)
         .expect("could not create LookupFactory");
+    let workload_logging_factory =
+        WorkloadLoggingFactory::new_boxed_extension_factory(logger.clone())
+            .expect("could not create WorkloadLoggingFactory");
 
-    let wasm_handler = WasmHandler::create(&LOOKUP_WASM_MODULE_BYTES, vec![lookup_factory], logger)
-        .expect("Could not instantiate WasmHandler.");
+    let wasm_handler = WasmHandler::create(
+        &LOOKUP_WASM_MODULE_BYTES,
+        vec![lookup_factory, workload_logging_factory],
+        logger,
+    )
+    .expect("Could not instantiate WasmHandler.");
 
     let request = Request {
         body: b"WriteLog".to_vec(),
