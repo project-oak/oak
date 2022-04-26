@@ -27,7 +27,7 @@ qemu_flags=(
 if [[ -e "/dev/kvm" ]]; then
   qemu_flags+=(
     '-enable-kvm'
-    '-cpu' 'Broadwell-IBRS'
+    '-cpu' 'IvyBridge-IBRS,enforce'
   )
 fi
 

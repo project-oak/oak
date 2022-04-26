@@ -74,7 +74,7 @@ impl Qemu {
         // Needed to expose advanced CPU features to the UEFI app. Specifically
         // RDRAND which is required for remote attestation.
         cmd.arg("-enable-kvm");
-        cmd.args(&["-cpu", "Broadwell-IBRS"]);
+        cmd.args(&["-cpu", "IvyBridge-IBRS,enforce"]);
         // We're going to run qemu as a noninteractive embedded program, so disable any
         // graphical outputs.
         cmd.arg("-nographic");
