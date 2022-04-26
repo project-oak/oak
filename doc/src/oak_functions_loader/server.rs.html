@@ -905,52 +905,6 @@
 <span id="900">900</span>
 <span id="901">901</span>
 <span id="902">902</span>
-<span id="903">903</span>
-<span id="904">904</span>
-<span id="905">905</span>
-<span id="906">906</span>
-<span id="907">907</span>
-<span id="908">908</span>
-<span id="909">909</span>
-<span id="910">910</span>
-<span id="911">911</span>
-<span id="912">912</span>
-<span id="913">913</span>
-<span id="914">914</span>
-<span id="915">915</span>
-<span id="916">916</span>
-<span id="917">917</span>
-<span id="918">918</span>
-<span id="919">919</span>
-<span id="920">920</span>
-<span id="921">921</span>
-<span id="922">922</span>
-<span id="923">923</span>
-<span id="924">924</span>
-<span id="925">925</span>
-<span id="926">926</span>
-<span id="927">927</span>
-<span id="928">928</span>
-<span id="929">929</span>
-<span id="930">930</span>
-<span id="931">931</span>
-<span id="932">932</span>
-<span id="933">933</span>
-<span id="934">934</span>
-<span id="935">935</span>
-<span id="936">936</span>
-<span id="937">937</span>
-<span id="938">938</span>
-<span id="939">939</span>
-<span id="940">940</span>
-<span id="941">941</span>
-<span id="942">942</span>
-<span id="943">943</span>
-<span id="944">944</span>
-<span id="945">945</span>
-<span id="946">946</span>
-<span id="947">947</span>
-<span id="948">948</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2021 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -988,7 +942,6 @@
 <span class="doccomment">/// exposed to the Wasm client. See &lt;https://docs.rs/wasmi/0.6.2/wasmi/trait.Externals.html&gt;</span>
 <span class="kw">const</span> <span class="ident">READ_REQUEST</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">0</span>;
 <span class="kw">const</span> <span class="ident">WRITE_RESPONSE</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">1</span>;
-<span class="kw">const</span> <span class="ident">WRITE_LOG_MESSAGE</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">3</span>;
 <span class="kw">const</span> <span class="ident">INVOKE</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">4</span>;
 <span class="kw">const</span> <span class="ident">EXTENSION_INDEX_OFFSET</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">10</span>;
 
@@ -1228,40 +1181,6 @@
         <span class="prelude-val">Ok</span>(())
     }
 
-    <span class="doccomment">/// Corresponds to the host ABI function [`write_log_message`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#write_log_message).</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">write_log_message</span>(
-        <span class="kw-2">&amp;mut</span> <span class="self">self</span>,
-        <span class="ident">buf_ptr</span>: <span class="ident">AbiPointer</span>,
-        <span class="ident">buf_len</span>: <span class="ident">AbiPointerOffset</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakStatus</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">raw_log</span> <span class="op">=</span> <span class="self">self</span>
-            .<span class="ident">get_memory</span>()
-            .<span class="ident">get</span>(<span class="ident">buf_ptr</span>, <span class="ident">buf_len</span> <span class="kw">as</span> <span class="ident">usize</span>)
-            .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> {
-                <span class="self">self</span>.<span class="ident">logger</span>.<span class="ident">log_sensitive</span>(
-                    <span class="ident">Level::Error</span>,
-                    <span class="kw-2">&amp;</span><span class="macro">format!</span>(
-                        <span class="string">&quot;write_log_message(): Unable to read message from guest memory: {:?}&quot;</span>,
-                        <span class="ident">err</span>
-                    ),
-                );
-                <span class="ident">OakStatus::ErrInvalidArgs</span>
-            })<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">log_message</span> <span class="op">=</span> <span class="ident">str::from_utf8</span>(<span class="ident">raw_log</span>.<span class="ident">as_slice</span>()).<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> {
-            <span class="self">self</span>.<span class="ident">logger</span>.<span class="ident">log_sensitive</span>(
-                <span class="ident">Level::Warn</span>,
-                <span class="kw-2">&amp;</span><span class="macro">format!</span>(
-                    <span class="string">&quot;write_log_message(): Not a valid UTF-8 encoded string: {:?}\nContent: {:?}&quot;</span>,
-                    <span class="ident">err</span>, <span class="ident">raw_log</span>
-                ),
-            );
-            <span class="ident">OakStatus::ErrInvalidArgs</span>
-        })<span class="question-mark">?</span>;
-        <span class="self">self</span>.<span class="ident">logger</span>
-            .<span class="ident">log_sensitive</span>(<span class="ident">Level::Debug</span>, <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;[Wasm] {}&quot;</span>, <span class="ident">log_message</span>));
-        <span class="prelude-val">Ok</span>(())
-    }
-
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">invoke_extension_with_handle</span>(
         <span class="kw-2">&amp;mut</span> <span class="self">self</span>,
         <span class="ident">handle</span>: <span class="ident">AbiExtensionHandle</span>,
@@ -1270,7 +1189,7 @@
         <span class="ident">response_ptr_ptr</span>: <span class="ident">AbiPointer</span>,
         <span class="ident">response_len_ptr</span>: <span class="ident">AbiPointer</span>,
     ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakStatus</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">handle</span>: <span class="ident">ExtensionHandle</span> <span class="op">=</span> <span class="ident">ExtensionHandle::from_i32</span>(<span class="ident">handle</span>).<span class="ident">ok_or</span>({
+        <span class="kw">let</span> <span class="ident">handle</span>: <span class="ident">ExtensionHandle</span> <span class="op">=</span> <span class="ident">ExtensionHandle::from_i32</span>(<span class="ident">handle</span>).<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> {
             <span class="self">self</span>.<span class="ident">log_error</span>(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;Fail to convert handle from i32 {:?}.&quot;</span>, <span class="ident">handle</span>));
             <span class="ident">OakStatus::ErrInvalidHandle</span>
         })<span class="question-mark">?</span>;
@@ -1338,9 +1257,6 @@
             ),
             <span class="ident">WRITE_RESPONSE</span> =&gt; <span class="ident">from_oak_status_result</span>(
                 <span class="self">self</span>.<span class="ident">write_response</span>(<span class="ident">args</span>.<span class="ident">nth_checked</span>(<span class="number">0</span>)<span class="question-mark">?</span>, <span class="ident">args</span>.<span class="ident">nth_checked</span>(<span class="number">1</span>)<span class="question-mark">?</span>),
-            ),
-            <span class="ident">WRITE_LOG_MESSAGE</span> =&gt; <span class="ident">from_oak_status_result</span>(
-                <span class="self">self</span>.<span class="ident">write_log_message</span>(<span class="ident">args</span>.<span class="ident">nth_checked</span>(<span class="number">0</span>)<span class="question-mark">?</span>, <span class="ident">args</span>.<span class="ident">nth_checked</span>(<span class="number">1</span>)<span class="question-mark">?</span>),
             ),
             <span class="ident">INVOKE</span> =&gt; <span class="ident">from_oak_status_result</span>(<span class="self">self</span>.<span class="ident">invoke_extension_with_handle</span>(
                 <span class="ident">args</span>.<span class="ident">nth_checked</span>(<span class="number">0</span>)<span class="question-mark">?</span>,
@@ -1549,13 +1465,15 @@
 {
     <span class="comment">// Use tokio::spawn to actually run the tasks in parallel, for more accurate measurement</span>
     <span class="comment">// of time.</span>
-    <span class="kw">let</span> <span class="ident">task</span> <span class="op">=</span> <span class="ident">tokio::spawn</span>(<span class="kw">async</span> <span class="kw">move</span> { <span class="ident">function</span>() });
-    <span class="comment">// Sleep until the policy times out</span>
-    <span class="ident">tokio::time::sleep</span>(<span class="ident">Duration::from_millis</span>(
+    <span class="kw">let</span> <span class="ident">sleep</span> <span class="op">=</span> <span class="ident">tokio::spawn</span>(<span class="ident">tokio::time::sleep</span>(<span class="ident">Duration::from_millis</span>(
         <span class="ident">policy</span>.<span class="ident">constant_processing_time_ms</span>.<span class="ident">into</span>(),
-    ))
-    .<span class="kw">await</span>;
+    )));
+    <span class="kw">let</span> <span class="ident">task</span> <span class="op">=</span> <span class="ident">tokio::spawn</span>(<span class="kw">async</span> <span class="kw">move</span> { <span class="ident">function</span>() });
 
+    <span class="comment">// Sleep until the policy times out</span>
+    <span class="ident">sleep</span>.<span class="kw">await</span><span class="question-mark">?</span>;
+
+    <span class="comment">// Get the result whether the task has finnished or not.</span>
     <span class="kw">let</span> <span class="ident">function_response</span> <span class="op">=</span> <span class="ident">task</span>.<span class="ident">now_or_never</span>();
 
     <span class="kw">let</span> <span class="ident">response</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">function_response</span> {
@@ -1681,16 +1599,6 @@
         ),
         <span class="string">&quot;write_response&quot;</span> =&gt; (
             <span class="ident">WRITE_RESPONSE</span>,
-            <span class="ident">wasmi::Signature::new</span>(
-                <span class="kw-2">&amp;</span>[
-                    <span class="ident">ABI_USIZE</span>, <span class="comment">// buf_ptr</span>
-                    <span class="ident">ABI_USIZE</span>, <span class="comment">// buf_len</span>
-                ][..],
-                <span class="prelude-val">Some</span>(<span class="ident">ValueType::I32</span>),
-            ),
-        ),
-        <span class="string">&quot;write_log_message&quot;</span> =&gt; (
-            <span class="ident">WRITE_LOG_MESSAGE</span>,
             <span class="ident">wasmi::Signature::new</span>(
                 <span class="kw-2">&amp;</span>[
                     <span class="ident">ABI_USIZE</span>, <span class="comment">// buf_ptr</span>

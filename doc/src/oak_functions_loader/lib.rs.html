@@ -360,6 +360,11 @@
 <span id="355">355</span>
 <span id="356">356</span>
 <span id="357">357</span>
+<span id="358">358</span>
+<span id="359">359</span>
+<span id="360">360</span>
+<span id="361">361</span>
+<span id="362">362</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2021 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -406,6 +411,7 @@
 <span class="kw">use</span> <span class="ident">oak_functions_metrics::PrivateMetricsProxyFactory</span>;
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;oak-tf&quot;</span>)]</span>
 <span class="kw">use</span> <span class="ident">oak_functions_tf_inference</span>::{<span class="ident">read_model_from_path</span>, <span class="ident">TensorFlowFactory</span>, <span class="ident">TensorFlowModelConfig</span>};
+<span class="kw">use</span> <span class="ident">oak_functions_workload_logging::WorkloadLoggingFactory</span>;
 <span class="kw">use</span> <span class="ident">oak_logger::OakLogger</span>;
 <span class="kw">use</span> <span class="ident">oak_remote_attestation::crypto::get_sha256</span>;
 <span class="kw">use</span> <span class="ident">serde_derive::Deserialize</span>;
@@ -553,6 +559,10 @@
 
     <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">unused_mut</span>)]</span>
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">extensions</span> <span class="op">=</span> <span class="ident">Vec::new</span>();
+
+    <span class="kw">let</span> <span class="ident">workload_logging_factory</span> <span class="op">=</span>
+        <span class="ident">WorkloadLoggingFactory::new_boxed_extension_factory</span>(<span class="ident">logger</span>.<span class="ident">clone</span>())<span class="question-mark">?</span>;
+    <span class="ident">extensions</span>.<span class="ident">push</span>(<span class="ident">workload_logging_factory</span>);
 
     <span class="kw">let</span> <span class="ident">lookup_factory</span> <span class="op">=</span> <span class="ident">LookupFactory::new_boxed_extension_factory</span>(<span class="ident">lookup_data_manager</span>)<span class="question-mark">?</span>;
     <span class="ident">extensions</span>.<span class="ident">push</span>(<span class="ident">lookup_factory</span>);

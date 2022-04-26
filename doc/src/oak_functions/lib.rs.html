@@ -221,8 +221,6 @@
 <span id="216">216</span>
 <span id="217">217</span>
 <span id="218">218</span>
-<span id="219">219</span>
-<span id="220">220</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2021 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -337,12 +335,10 @@
 <span class="doccomment">///</span>
 <span class="doccomment">/// These log messages are considered sensitive, so will only be logged by the runtime if the</span>
 <span class="doccomment">/// `oak_unsafe` feature is enabled.</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// See [`write_log_message`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#write_log_message).</span>
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">write_log_message</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">AsRef</span><span class="op">&lt;</span><span class="ident">str</span><span class="op">&gt;</span><span class="op">&gt;</span>(<span class="ident">message</span>: <span class="ident">T</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakStatus</span><span class="op">&gt;</span> {
     <span class="kw">let</span> <span class="ident">buf</span> <span class="op">=</span> <span class="ident">message</span>.<span class="ident">as_ref</span>().<span class="ident">as_bytes</span>();
-    <span class="kw">let</span> <span class="ident">status</span> <span class="op">=</span> <span class="kw">unsafe</span> { <span class="ident">oak_functions_abi::write_log_message</span>(<span class="ident">buf</span>.<span class="ident">as_ptr</span>(), <span class="ident">buf</span>.<span class="ident">len</span>()) };
-    <span class="ident">result_from_status</span>(<span class="ident">status</span> <span class="kw">as</span> <span class="ident">i32</span>, ())
+    <span class="ident">invoke</span>(<span class="ident">oak_functions_abi::ExtensionHandle::LoggingHandle</span>, <span class="ident">buf</span>)<span class="question-mark">?</span>;
+    <span class="prelude-val">Ok</span>(())
 }
 
 <span class="doccomment">/// Performs inference for the given input vector with the TensorFlow model specified in the Oak</span>
