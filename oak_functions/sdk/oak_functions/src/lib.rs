@@ -19,7 +19,7 @@
 
 #[cfg(feature = "oak-tf")]
 use oak_functions_abi::proto::Inference;
-use oak_functions_abi::proto::OakStatus;
+use oak_functions_abi::{proto::OakStatus, StorageGetItemResponse};
 #[cfg(feature = "oak-metrics")]
 use oak_functions_abi::{ReportMetricError, ReportMetricRequest, ReportMetricResponse};
 #[cfg(feature = "oak-tf")]
@@ -32,8 +32,6 @@ use std::convert::AsRef;
 ///
 /// See [`read_request`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#read_request).
 pub fn read_request() -> Result<Vec<u8>, OakStatus> {
-    // TODO(#1989): Share this logic with other similar methods.
-
     let mut buf_ptr: *mut u8 = std::ptr::null_mut();
     let mut buf_len: usize = 0;
     let status_code = unsafe { oak_functions_abi::read_request(&mut buf_ptr, &mut buf_len) };
@@ -59,28 +57,11 @@ pub fn write_response(buf: &[u8]) -> Result<(), OakStatus> {
 }
 
 /// Looks up an item from the in-memory lookup store.
-///
-/// If an entry is not found, returns `Ok(None)` for convenience, instead of
-/// `Err(OakStatus::ErrStorageItemNotFound)`.
-///
-/// See [`storage_get_item`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#storage_get_item).
 pub fn storage_get_item(key: &[u8]) -> Result<Option<Vec<u8>>, OakStatus> {
-    // TODO(#1989): Share this logic with other similar methods.
-
-    let mut value_ptr: *mut u8 = std::ptr::null_mut();
-    let mut value_len: usize = 0;
-    let status_code = unsafe {
-        oak_functions_abi::storage_get_item(key.as_ptr(), key.len(), &mut value_ptr, &mut value_len)
-    };
-    let status = OakStatus::from_i32(status_code as i32).ok_or(OakStatus::ErrInternal)?;
-    match status {
-        OakStatus::Ok => {
-            let value = from_alloc_buffer(value_ptr, value_len);
-            Ok(Some(value))
-        }
-        OakStatus::ErrStorageItemNotFound => Ok(None),
-        status => Err(status),
-    }
+    let response = invoke(oak_functions_abi::ExtensionHandle::LookupHandle, key)?;
+    let result: StorageGetItemResponse =
+        bincode::deserialize(&response).expect("Failed to deserialize storage get item response.");
+    Ok(result.value)
 }
 
 /// Reports an event for a count-based metrics bucket.

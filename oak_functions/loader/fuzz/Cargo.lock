@@ -816,6 +816,7 @@ name = "oak_functions_lookup"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "bincode",
  "log",
  "oak_functions_abi",
  "oak_functions_extension",

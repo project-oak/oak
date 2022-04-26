@@ -42,10 +42,8 @@ enum OakStatus {
   ERR_INVALID_ARGS = 2;
   // Internal error.
   ERR_INTERNAL = 3;
-  // Lookup storage item not found.
-  ERR_STORAGE_ITEM_NOT_FOUND = 4;
   // Error when the given number is not a valid handle.
-  ERR_INVALID_HANDLE = 5;
+  ERR_INVALID_HANDLE = 4;
 }
 
 // The inference from a TensorFlow model, containing an inference vector of floats, and a shape
