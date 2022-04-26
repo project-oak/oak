@@ -7,9 +7,9 @@ license = "Apache-2.0"
 
 [dependencies]
 atomic_refcell = "*"
-bitflags = "*"
 linked_list_allocator = { version = "*" }
 log = "*"
 runtime = { path = "../runtime" }
 uart_16550 = "*"
+rust-hypervisor-firmware-subset = { path = "../../../third_party/rust-hypervisor-firmware-subset" }
 x86_64 = "*"

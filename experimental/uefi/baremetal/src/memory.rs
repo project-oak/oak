@@ -15,9 +15,9 @@
 //
 // Portions Copyright © 2019 Intel Corporation.
 
-use crate::boot;
 use core::ffi::c_void;
 use linked_list_allocator::LockedHeap;
+use rust_hypervisor_firmware_subset::boot;
 
 #[global_allocator]
 static ALLOCATOR: LockedHeap = LockedHeap::empty();
@@ -65,6 +65,7 @@ pub fn init_allocator(info: &dyn boot::Info) {
             size,
             entry_type
         );
+
         if entry.entry_type == boot::E820Entry::RAM_TYPE
             && largest.map_or(0, |e| e.size) < entry.size
         {
@@ -74,11 +75,13 @@ pub fn init_allocator(info: &dyn boot::Info) {
 
     // If we really have no memory at all, crash and burn.
     let mut entry = largest.unwrap();
-    // Don't allocate over existing structures.
+
+    // Ensure we don't clash with existing structures.
     if entry.addr < stack_start {
         entry.size -= stack_start - entry.addr;
         entry.addr = stack_start;
     }
+
     info!("Using {:?} for heap.", entry);
     unsafe {
         ALLOCATOR.lock().init(

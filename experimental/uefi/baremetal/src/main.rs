@@ -19,20 +19,15 @@
 #![no_main]
 #![feature(alloc_error_handler)]
 
-mod asm;
-mod boot;
-mod common;
-mod gdt;
 mod logging;
 mod memory;
-mod paging;
-mod pvh;
 mod serial;
 
 #[macro_use]
 extern crate log;
 
 use core::panic::PanicInfo;
+use rust_hypervisor_firmware_subset::{boot, paging, pvh};
 
 #[no_mangle]
 pub extern "C" fn rust64_start(rdi: &pvh::StartInfo) -> ! {
