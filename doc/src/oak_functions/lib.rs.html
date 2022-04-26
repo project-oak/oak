@@ -223,25 +223,6 @@
 <span id="218">218</span>
 <span id="219">219</span>
 <span id="220">220</span>
-<span id="221">221</span>
-<span id="222">222</span>
-<span id="223">223</span>
-<span id="224">224</span>
-<span id="225">225</span>
-<span id="226">226</span>
-<span id="227">227</span>
-<span id="228">228</span>
-<span id="229">229</span>
-<span id="230">230</span>
-<span id="231">231</span>
-<span id="232">232</span>
-<span id="233">233</span>
-<span id="234">234</span>
-<span id="235">235</span>
-<span id="236">236</span>
-<span id="237">237</span>
-<span id="238">238</span>
-<span id="239">239</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2021 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -263,7 +244,7 @@
 
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;oak-tf&quot;</span>)]</span>
 <span class="kw">use</span> <span class="ident">oak_functions_abi::proto::Inference</span>;
-<span class="kw">use</span> <span class="ident">oak_functions_abi::proto::OakStatus</span>;
+<span class="kw">use</span> <span class="ident">oak_functions_abi</span>::{<span class="ident">proto::OakStatus</span>, <span class="ident">StorageGetItemResponse</span>};
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;oak-metrics&quot;</span>)]</span>
 <span class="kw">use</span> <span class="ident">oak_functions_abi</span>::{<span class="ident">ReportMetricError</span>, <span class="ident">ReportMetricRequest</span>, <span class="ident">ReportMetricResponse</span>};
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;oak-tf&quot;</span>)]</span>
@@ -276,8 +257,6 @@
 <span class="doccomment">///</span>
 <span class="doccomment">/// See [`read_request`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#read_request).</span>
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">read_request</span>() -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span> {
-    <span class="comment">// TODO(#1989): Share this logic with other similar methods.</span>
-
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">buf_ptr</span>: <span class="kw-2">*mut</span> <span class="ident">u8</span> <span class="op">=</span> <span class="ident">std::ptr::null_mut</span>();
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">buf_len</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">0</span>;
     <span class="kw">let</span> <span class="ident">status_code</span> <span class="op">=</span> <span class="kw">unsafe</span> { <span class="ident">oak_functions_abi::read_request</span>(<span class="kw-2">&amp;mut</span> <span class="ident">buf_ptr</span>, <span class="kw-2">&amp;mut</span> <span class="ident">buf_len</span>) };
@@ -303,28 +282,11 @@
 }
 
 <span class="doccomment">/// Looks up an item from the in-memory lookup store.</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// If an entry is not found, returns `Ok(None)` for convenience, instead of</span>
-<span class="doccomment">/// `Err(OakStatus::ErrStorageItemNotFound)`.</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// See [`storage_get_item`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#storage_get_item).</span>
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">storage_get_item</span>(<span class="ident">key</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span> {
-    <span class="comment">// TODO(#1989): Share this logic with other similar methods.</span>
-
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">value_ptr</span>: <span class="kw-2">*mut</span> <span class="ident">u8</span> <span class="op">=</span> <span class="ident">std::ptr::null_mut</span>();
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">value_len</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">0</span>;
-    <span class="kw">let</span> <span class="ident">status_code</span> <span class="op">=</span> <span class="kw">unsafe</span> {
-        <span class="ident">oak_functions_abi::storage_get_item</span>(<span class="ident">key</span>.<span class="ident">as_ptr</span>(), <span class="ident">key</span>.<span class="ident">len</span>(), <span class="kw-2">&amp;mut</span> <span class="ident">value_ptr</span>, <span class="kw-2">&amp;mut</span> <span class="ident">value_len</span>)
-    };
-    <span class="kw">let</span> <span class="ident">status</span> <span class="op">=</span> <span class="ident">OakStatus::from_i32</span>(<span class="ident">status_code</span> <span class="kw">as</span> <span class="ident">i32</span>).<span class="ident">ok_or</span>(<span class="ident">OakStatus::ErrInternal</span>)<span class="question-mark">?</span>;
-    <span class="kw">match</span> <span class="ident">status</span> {
-        <span class="ident">OakStatus::Ok</span> =&gt; {
-            <span class="kw">let</span> <span class="ident">value</span> <span class="op">=</span> <span class="ident">from_alloc_buffer</span>(<span class="ident">value_ptr</span>, <span class="ident">value_len</span>);
-            <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(<span class="ident">value</span>))
-        }
-        <span class="ident">OakStatus::ErrStorageItemNotFound</span> =&gt; <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>),
-        <span class="ident">status</span> =&gt; <span class="prelude-val">Err</span>(<span class="ident">status</span>),
-    }
+    <span class="kw">let</span> <span class="ident">response</span> <span class="op">=</span> <span class="ident">invoke</span>(<span class="ident">oak_functions_abi::ExtensionHandle::LookupHandle</span>, <span class="ident">key</span>)<span class="question-mark">?</span>;
+    <span class="kw">let</span> <span class="ident">result</span>: <span class="ident">StorageGetItemResponse</span> <span class="op">=</span>
+        <span class="ident">bincode::deserialize</span>(<span class="kw-2">&amp;</span><span class="ident">response</span>).<span class="ident">expect</span>(<span class="string">&quot;Failed to deserialize storage get item response.&quot;</span>);
+    <span class="prelude-val">Ok</span>(<span class="ident">result</span>.<span class="ident">value</span>)
 }
 
 <span class="doccomment">/// Reports an event for a count-based metrics bucket.</span>
