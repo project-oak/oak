@@ -28,7 +28,7 @@ use oak_remote_attestation_sessions::{SessionId, SessionState, SessionTracker, S
 /// Number of sessions that will be kept in memory.
 const SESSIONS_CACHE_SIZE: usize = 10000;
 
-fn deserialize_msg(msg: Vec<u8>) -> anyhow::Result<(SessionId, Vec<u8>)> {
+fn deserialize_request(msg: Vec<u8>) -> anyhow::Result<(SessionId, Vec<u8>)> {
     let mut session_id: SessionId = [0; SESSION_ID_LENGTH];
     let mut request_body: Vec<u8> = Vec::with_capacity(msg.len() - SESSION_ID_LENGTH);
 
@@ -73,7 +73,8 @@ where
     }
 
     pub fn message(&mut self, msg: Vec<u8>) -> anyhow::Result<Vec<u8>> {
-        let (session_id, request) = deserialize_msg(msg).context("Couldn't deserialize message")?;
+        let (session_id, request) =
+            deserialize_request(msg).context("Couldn't deserialize message")?;
 
         let mut session_state = {
             self.session_tracker

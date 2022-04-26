@@ -28,7 +28,7 @@ use proto::{
     UnaryRequest, UnaryResponse,
 };
 
-fn serialize_msg(request: UnaryRequest) -> Vec<u8> {
+fn serialize_request(request: UnaryRequest) -> Vec<u8> {
     // The payload is the request's body prepended with the 8 byte session_id.
     // This takes adavantage of the session_id's fixed size to avoid needing
     // to use a key/value pair binary serialization protocol.
@@ -57,7 +57,7 @@ impl UnarySession for EchoImpl {
         // ambiguous to the end user, but for now that'll do.
         let body = self
             .channel
-            .send_receive(serialize_msg(request))
+            .send_receive(serialize_request(request))
             .await
             .map_err(|err| Status::internal(format!("{:?}", err)))?
             .map_err(|err| Status::internal(format!("{:?}", err)))?;
