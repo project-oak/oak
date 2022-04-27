@@ -49,7 +49,7 @@ impl TryFrom<&[u8]> for SerializeableRequest {
         if serialized_request.len() < SESSION_ID_LENGTH {
             bail!(
                 "Message too short to contain a SessionId. The length of a SessionId
-              is {} bytes, the message received contained only {} bytes",
+                is {} bytes, the message received contained only {} bytes",
                 SESSION_ID_LENGTH,
                 serialized_request.len()
             );
