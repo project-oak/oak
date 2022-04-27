@@ -27,16 +27,17 @@ pub struct SerializeableRequest {
     pub body: Vec<u8>,
 }
 
-impl Into<Vec<u8>> for SerializeableRequest {
-    fn into(self) -> Vec<u8> {
+impl From<SerializeableRequest> for Vec<u8> {
+    fn from(serializeable_request: SerializeableRequest) -> Vec<u8> {
         // The payload is the request's body prepended with the 8 byte session_id.
         // This takes adavantage of the session_id's fixed size to avoid needing
         // to use a key/value pair binary serialization protocol.
-        let mut serialized_request: Vec<u8> =
-            Vec::with_capacity(self.session_id.len() + self.body.len());
+        let mut serialized_request: Vec<u8> = Vec::with_capacity(
+            serializeable_request.session_id.len() + serializeable_request.body.len(),
+        );
 
-        serialized_request.extend(self.session_id);
-        serialized_request.extend(self.body);
+        serialized_request.extend(serializeable_request.session_id);
+        serialized_request.extend(serializeable_request.body);
 
         serialized_request
     }
