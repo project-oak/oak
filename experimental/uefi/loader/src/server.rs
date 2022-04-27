@@ -70,7 +70,7 @@ impl UnarySession for EchoImpl {
     ) -> Result<Response<UnaryResponse>, Status> {
         let request = request.into_inner();
         let serialized_request: Vec<u8> = SerializeableRequest::try_from(request)
-            .map_err(|err| Status::internal(format!("{:?}", err)))?
+            .map_err(|err| Status::invalid_argument(format!("{:?}", err)))?
             .into();
 
         // There's two nested errors: one for communicating over the channel, and one for
