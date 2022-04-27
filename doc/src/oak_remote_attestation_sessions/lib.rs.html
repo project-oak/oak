@@ -101,6 +101,7 @@
 <span id="96">96</span>
 <span id="97">97</span>
 <span id="98">98</span>
+<span id="99">99</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2022 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -127,7 +128,8 @@
 <span class="kw">use</span> <span class="ident">lru::LruCache</span>;
 <span class="kw">use</span> <span class="ident">oak_remote_attestation::handshaker</span>::{<span class="ident">AttestationBehavior</span>, <span class="ident">Encryptor</span>, <span class="ident">ServerHandshaker</span>};
 
-<span class="kw">pub</span> <span class="kw">type</span> <span class="ident">SessionId</span> <span class="op">=</span> [<span class="ident">u8</span>; <span class="number">8</span>];
+<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">SESSION_ID_LENGTH</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">8</span>;
+<span class="kw">pub</span> <span class="kw">type</span> <span class="ident">SessionId</span> <span class="op">=</span> [<span class="ident">u8</span>; <span class="ident">SESSION_ID_LENGTH</span>];
 
 <span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">SessionState</span> {
     <span class="comment">// Boxed due to large size difference, ref: https://rust-lang.github.io/rust-clippy/master/index.html#large_enum_variant</span>

@@ -1,1 +1,1 @@
-initSidebarItems({"mod":[["echo",""]],"trait":[["Channel","Basic hardware abstraction layer for sending data."]]});
+initSidebarItems({"mod":[["echo",""]],"struct":[["SerializeableRequest",""]],"trait":[["Channel","Basic hardware abstraction layer for sending data."]]});
