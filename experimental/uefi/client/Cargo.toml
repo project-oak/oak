@@ -10,6 +10,9 @@ clap = { version = "*", features = ["derive"] }
 prost = "*"
 tokio = { version = "*", features = ["macros", "rt-multi-thread"] }
 tonic = "*"
+grpc_unary_attestation = { path = "../../../grpc_unary_attestation/" }
+oak_remote_attestation = { path = "../../../remote_attestation/rust/" }
+anyhow = "*"
 
 [build-dependencies]
 oak_utils = { path = "../../../oak_utils" }

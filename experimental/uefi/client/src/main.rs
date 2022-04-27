@@ -14,18 +14,13 @@
 // limitations under the License.
 //
 
+use anyhow::Context;
+use grpc_unary_attestation::client::AttestationClient;
 use std::io::{stdin, BufRead};
 
 use clap::Parser;
-use tonic::Request;
 
-pub mod proto {
-    tonic::include_proto!("oak.session.unary.v1");
-}
-
-use proto::{unary_session_client::UnarySessionClient, UnaryRequest};
-
-const MOCK_SESSION_ID: [u8; 8] = [0; 8];
+const TEE_MEASUREMENT: &[u8] = br"Test TEE measurement";
 
 #[derive(Parser, Debug)]
 struct Args {
@@ -38,18 +33,18 @@ struct Args {
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cli = Args::parse();
 
-    let mut client = UnarySessionClient::connect(cli.server).await?;
+    let mut client =
+        AttestationClient::create(&cli.server, TEE_MEASUREMENT, Box::new(|_config| Ok(())))
+            .await
+            .context("Could not create client")?;
 
     for line in stdin().lock().lines() {
-        let request = Request::new(UnaryRequest {
-            body: line.unwrap().as_bytes().to_vec(),
-            session_id: MOCK_SESSION_ID.to_vec(),
-        });
-        let response = client.message(request).await?;
-        println!(
-            "Response: {:?}",
-            core::str::from_utf8(&response.into_inner().body)
-        );
+        let response = client
+            .send(line.unwrap().as_bytes().to_vec())
+            .await
+            .context("Error invoking Oak Functions instance")?
+            .ok_or_else(|| anyhow::anyhow!("Empty response"))?;
+        println!("Response: {:?}", core::str::from_utf8(&response));
     }
 
     println!("Hello, world!");

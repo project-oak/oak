@@ -19,9 +19,9 @@
 
 #[cfg(feature = "oak-tf")]
 use oak_functions_abi::proto::Inference;
-use oak_functions_abi::proto::OakStatus;
+use oak_functions_abi::{proto::OakStatus, StorageGetItemResponse};
 #[cfg(feature = "oak-metrics")]
-use oak_functions_abi::ReportMetricRequest;
+use oak_functions_abi::{ReportMetricError, ReportMetricRequest, ReportMetricResponse};
 #[cfg(feature = "oak-tf")]
 use oak_functions_abi::{TfModelInferError, TfModelInferResponse};
 use std::convert::AsRef;
@@ -32,8 +32,6 @@ use std::convert::AsRef;
 ///
 /// See [`read_request`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#read_request).
 pub fn read_request() -> Result<Vec<u8>, OakStatus> {
-    // TODO(#1989): Share this logic with other similar methods.
-
     let mut buf_ptr: *mut u8 = std::ptr::null_mut();
     let mut buf_len: usize = 0;
     let status_code = unsafe { oak_functions_abi::read_request(&mut buf_ptr, &mut buf_len) };
@@ -59,28 +57,11 @@ pub fn write_response(buf: &[u8]) -> Result<(), OakStatus> {
 }
 
 /// Looks up an item from the in-memory lookup store.
-///
-/// If an entry is not found, returns `Ok(None)` for convenience, instead of
-/// `Err(OakStatus::ErrStorageItemNotFound)`.
-///
-/// See [`storage_get_item`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#storage_get_item).
 pub fn storage_get_item(key: &[u8]) -> Result<Option<Vec<u8>>, OakStatus> {
-    // TODO(#1989): Share this logic with other similar methods.
-
-    let mut value_ptr: *mut u8 = std::ptr::null_mut();
-    let mut value_len: usize = 0;
-    let status_code = unsafe {
-        oak_functions_abi::storage_get_item(key.as_ptr(), key.len(), &mut value_ptr, &mut value_len)
-    };
-    let status = OakStatus::from_i32(status_code as i32).ok_or(OakStatus::ErrInternal)?;
-    match status {
-        OakStatus::Ok => {
-            let value = from_alloc_buffer(value_ptr, value_len);
-            Ok(Some(value))
-        }
-        OakStatus::ErrStorageItemNotFound => Ok(None),
-        status => Err(status),
-    }
+    let response = invoke(oak_functions_abi::ExtensionHandle::LookupHandle, key)?;
+    let result: StorageGetItemResponse =
+        bincode::deserialize(&response).expect("Failed to deserialize storage get item response.");
+    Ok(result.value)
 }
 
 /// Reports an event for a count-based metrics bucket.
@@ -88,10 +69,8 @@ pub fn storage_get_item(key: &[u8]) -> Result<Option<Vec<u8>>, OakStatus> {
 /// If differentially-private metrics are enabled in the configuration the metrics bucket totals
 /// will be logged in batches after sufficient noise has been added. If events for the same bucket
 /// are reported multiple times in a single request it will be counted only once.
-///
-/// See [`report_metric`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#report_metric).
 #[cfg(feature = "oak-metrics")]
-pub fn report_event<T: AsRef<str>>(label: T) -> Result<(), OakStatus> {
+pub fn report_event<T: AsRef<str>>(label: T) -> Result<Result<(), ReportMetricError>, OakStatus> {
     report_metric(label, 1)
 }
 
@@ -107,31 +86,36 @@ pub fn report_event<T: AsRef<str>>(label: T) -> Result<(), OakStatus> {
 /// was reported. If the minimum value of the bucket is larger than 0 it would then be clamped to
 /// the configured minimum. This could lead to unexpected bias in the results, so minimum values
 /// above 0 should be used with care.
-///
-/// See [`report_metric`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#report_metric).
 #[cfg(feature = "oak-metrics")]
-pub fn report_metric<T: AsRef<str>>(label: T, value: i64) -> Result<(), OakStatus> {
+pub fn report_metric<T: AsRef<str>>(
+    label: T,
+    value: i64,
+) -> Result<Result<(), ReportMetricError>, OakStatus> {
     let label = label.as_ref().to_owned();
     let request = ReportMetricRequest { label, value };
 
     let serialized_request =
         bincode::serialize(&request).expect("Fail to serialize report metric request.");
-    let status = unsafe {
-        oak_functions_abi::report_metric(serialized_request.as_ptr(), serialized_request.len())
-    };
-    result_from_status(status as i32, ())
+
+    let response = invoke(
+        oak_functions_abi::ExtensionHandle::MetricsHandle,
+        &serialized_request,
+    )?;
+
+    let response: ReportMetricResponse =
+        bincode::deserialize(&response).expect("Failed to deserialize report metric response.");
+
+    Ok(response.result)
 }
 
 /// Writes a debug log message.
 ///
 /// These log messages are considered sensitive, so will only be logged by the runtime if the
 /// `oak_unsafe` feature is enabled.
-///
-/// See [`write_log_message`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#write_log_message).
 pub fn write_log_message<T: AsRef<str>>(message: T) -> Result<(), OakStatus> {
     let buf = message.as_ref().as_bytes();
-    let status = unsafe { oak_functions_abi::write_log_message(buf.as_ptr(), buf.len()) };
-    result_from_status(status as i32, ())
+    invoke(oak_functions_abi::ExtensionHandle::LoggingHandle, buf)?;
+    Ok(())
 }
 
 /// Performs inference for the given input vector with the TensorFlow model specified in the Oak

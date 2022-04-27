@@ -23,6 +23,7 @@ use crate::{
 use maplit::hashmap;
 use oak_functions_abi::proto::{Response, ServerPolicy, StatusCode};
 use oak_functions_lookup::{LookupDataManager, LookupFactory};
+use oak_functions_workload_logging::WorkloadLoggingFactory;
 use prost::Message;
 use std::{
     io::{Seek, Write},
@@ -150,11 +151,17 @@ where
     lookup_data_refresher.refresh().await.unwrap();
     let tee_certificate = vec![];
 
+    let workload_logging_factory =
+        WorkloadLoggingFactory::new_boxed_extension_factory(logger.clone())
+            .expect("could not create WorkloadLoggingFactory");
     let lookup_factory = LookupFactory::new_boxed_extension_factory(lookup_data_manager.clone())
         .expect("could not create LookupFactory");
-    let wasm_handler =
-        create_wasm_handler(&wasm_module_bytes, vec![lookup_factory], logger.clone())
-            .expect("could not create wasm_handler");
+    let wasm_handler = create_wasm_handler(
+        &wasm_module_bytes,
+        vec![lookup_factory, workload_logging_factory],
+        logger.clone(),
+    )
+    .expect("could not create wasm_handler");
 
     let server_background = test_utils::background(|term| async move {
         create_and_start_grpc_server(

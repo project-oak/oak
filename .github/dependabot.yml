@@ -7,5 +7,4 @@ updates:
     directory: '/'
     schedule:
       interval: 'daily'
-    reviewers:
-      - 'project-oak/core'
+    # We do not set an explicit reviewer, as that is already automatically assigned via CODEOWNERS.

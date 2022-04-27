@@ -739,6 +739,7 @@ dependencies = [
  "prost-build",
  "serde",
  "serde_derive",
+ "thiserror",
 ]
 
 [[package]]
@@ -748,7 +749,6 @@ dependencies = [
  "anyhow",
  "oak_functions_abi",
  "oak_logger",
- "wasmi",
 ]
 
 [[package]]
@@ -775,6 +775,7 @@ dependencies = [
  "oak_functions_lookup",
  "oak_functions_metrics",
  "oak_functions_util",
+ "oak_functions_workload_logging",
  "oak_logger",
  "oak_remote_attestation",
  "oak_utils",
@@ -815,12 +816,12 @@ name = "oak_functions_lookup"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "bincode",
  "log",
  "oak_functions_abi",
  "oak_functions_extension",
  "oak_functions_util",
  "oak_logger",
- "wasmi",
 ]
 
 [[package]]
@@ -837,7 +838,6 @@ dependencies = [
  "oak_logger",
  "rand",
  "serde",
- "wasmi",
 ]
 
 [[package]]
@@ -845,6 +845,17 @@ name = "oak_functions_util"
 version = "0.1.0"
 dependencies = [
  "lock_api",
+]
+
+[[package]]
+name = "oak_functions_workload_logging"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "log",
+ "oak_functions_abi",
+ "oak_functions_extension",
+ "oak_logger",
 ]
 
 [[package]]
@@ -1366,6 +1377,26 @@ name = "textwrap"
 version = "0.14.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0066c8d12af8b5acd21e00547c3797fde4e8677254a7ee429176ccebbe93dd80"
+
+[[package]]
+name = "thiserror"
+version = "1.0.30"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "854babe52e4df1653706b98fcfc05843010039b406875930a70e4d9644e5c417"
+dependencies = [
+ "thiserror-impl",
+]
+
+[[package]]
+name = "thiserror-impl"
+version = "1.0.30"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "aa32fd3f627f367fe16f893e2597ae3c05020f8bba2666a4e6ea73d377e5714b"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
 
 [[package]]
 name = "time"
