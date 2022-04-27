@@ -40,7 +40,7 @@ SECTIONS
   .stack (NOLOAD) : ALIGN(4K) { . += 128K; }
   stack_start = .;
   /* ram32.s only maps the first 2 MiB, and that must include the stack. */
-  ASSERT((. <= 2M), "Stack overflows initial identity-mapped memory region")
+  ASSERT((. <= 1024M), "Stack overflows initial identity-mapped memory region")
 
   /* Strip symbols from the output binary (comment out to get symbols) */
   /DISCARD/ : {
