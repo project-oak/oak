@@ -30,6 +30,7 @@ tokio-serde-cbor = "*"
 tokio-util = { version = "~0.6", features = ["codec"] }
 tonic = "*"
 oak_remote_attestation_sessions = { path = "../../../remote_attestation_sessions" }
+runtime = { path = "../../../experimental/uefi/runtime" }
 
 [build-dependencies]
 oak_utils = { path = "../../../oak_utils" }

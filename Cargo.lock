@@ -4049,7 +4049,6 @@ dependencies = [
  "ciborium",
  "ciborium-io",
  "oak_remote_attestation_sessions",
- "uefi-loader",
 ]
 
 [[package]]
@@ -5459,6 +5458,7 @@ dependencies = [
  "oak_remote_attestation_sessions",
  "oak_utils",
  "prost 0.10.1",
+ "runtime",
  "serde",
  "tokio",
  "tokio-serde-cbor",
