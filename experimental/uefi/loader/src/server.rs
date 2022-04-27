@@ -14,8 +14,11 @@
 // limitations under the License.
 //
 
+use anyhow::bail;
 use bmrng::unbounded::UnboundedRequestSender;
 use futures::Future;
+use oak_remote_attestation_sessions::{SessionId, SESSION_ID_LENGTH};
+use runtime::SerializeableRequest;
 use std::net::SocketAddr;
 use tonic::{transport::Server, Request, Response, Status};
 
@@ -28,6 +31,33 @@ use proto::{
     UnaryRequest, UnaryResponse,
 };
 
+// Since the SerializeableRequest struct essentially mirrors the UnaryRequest
+// proto message conversion between them is simple. We do not use
+// proto serialization directly to avoid creating a dependecy on protobuf in
+// the trusted runtime.
+impl TryFrom<UnaryRequest> for SerializeableRequest {
+    type Error = anyhow::Error;
+
+    fn try_from(unary_request: UnaryRequest) -> Result<Self, Self::Error> {
+        let mut session_id: SessionId = [0; SESSION_ID_LENGTH];
+
+        if unary_request.session_id.len() != SESSION_ID_LENGTH {
+            bail!(
+                "session_id must be {} bytes in length, found a length of {} bytes instead",
+                SESSION_ID_LENGTH,
+                unary_request.session_id.len()
+            );
+        }
+
+        session_id.copy_from_slice(&unary_request.session_id);
+
+        Ok(Self {
+            session_id,
+            body: unary_request.body,
+        })
+    }
+}
+
 pub struct EchoImpl {
     channel: UnboundedRequestSender<Vec<u8>, anyhow::Result<Vec<u8>>>,
 }
@@ -39,6 +69,9 @@ impl UnarySession for EchoImpl {
         request: Request<UnaryRequest>,
     ) -> Result<Response<UnaryResponse>, Status> {
         let request = request.into_inner();
+        let serialized_request: Vec<u8> = SerializeableRequest::try_from(request)
+            .map_err(|err| Status::invalid_argument(format!("{:?}", err)))?
+            .into();
 
         // There's two nested errors: one for communicating over the channel, and one for
         // communicating over the serial port with the UEFI app.
@@ -46,7 +79,7 @@ impl UnarySession for EchoImpl {
         // ambiguous to the end user, but for now that'll do.
         let body = self
             .channel
-            .send_receive(request.body)
+            .send_receive(serialized_request)
             .await
             .map_err(|err| Status::internal(format!("{:?}", err)))?
             .map_err(|err| Status::internal(format!("{:?}", err)))?;

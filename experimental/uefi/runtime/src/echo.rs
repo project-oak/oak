@@ -52,15 +52,13 @@ impl<E> ciborium_io::Read for &mut dyn Channel<Error = E> {
     }
 }
 
-const MOCK_SESSION_ID: [u8; 8] = [0; 8];
-
 // Echoes all input on the interface back out.
 pub fn echo<E: core::fmt::Debug>(mut channel: &mut dyn Channel<Error = E>) -> Result<!, Error<E>> {
     let attestation_handler = &mut AttestationHandler::create(|v| v);
     loop {
         let msg: Vec<u8> = de::from_reader(&mut channel).map_err(Error::Deserialization)?;
         let response = attestation_handler
-            .message(MOCK_SESSION_ID, msg)
+            .message(msg)
             .map_err(Error::Attestation)?;
         ser::into_writer(&response, &mut channel).map_err(Error::Serialization)?;
     }

@@ -21,9 +21,10 @@
 
 extern crate alloc;
 
+use crate::SerializeableRequest;
 use alloc::vec::Vec;
 use anyhow::Context;
-use oak_remote_attestation_sessions::{SessionId, SessionState, SessionTracker};
+use oak_remote_attestation_sessions::{SessionState, SessionTracker};
 
 /// Number of sessions that will be kept in memory.
 const SESSIONS_CACHE_SIZE: usize = 10000;
@@ -53,16 +54,19 @@ where
         }
     }
 
-    pub fn message(&mut self, session_id: SessionId, request: Vec<u8>) -> anyhow::Result<Vec<u8>> {
+    pub fn message(&mut self, msg: Vec<u8>) -> anyhow::Result<Vec<u8>> {
+        let request = SerializeableRequest::try_from(msg.as_slice())
+            .context("Couldn't deserialize message")?;
+
         let mut session_state = {
             self.session_tracker
-                .pop_or_create_session_state(session_id)
+                .pop_or_create_session_state(request.session_id)
                 .expect("Couldn't pop session state")
         };
         let response_body = match session_state {
             SessionState::HandshakeInProgress(ref mut handshaker) => {
                 handshaker
-                    .next_step(&request)
+                    .next_step(&request.body)
                     .context("Couldn't process handshake message")?
                     // After receiving a valid `ClientIdentity` message
                     // (the last step of the key exchange)
@@ -74,7 +78,7 @@ where
             }
             SessionState::EncryptedMessageExchange(ref mut encryptor) => {
                 let decrypted_request = encryptor
-                    .decrypt(&request)
+                    .decrypt(&request.body)
                     .context("Couldn't decrypt response")?;
 
                 let response = (self.request_handler.clone())(decrypted_request);
@@ -86,7 +90,7 @@ where
         };
 
         self.session_tracker
-            .put_session_state(session_id, session_state);
+            .put_session_state(request.session_id, session_state);
 
         Ok(response_body)
     }
