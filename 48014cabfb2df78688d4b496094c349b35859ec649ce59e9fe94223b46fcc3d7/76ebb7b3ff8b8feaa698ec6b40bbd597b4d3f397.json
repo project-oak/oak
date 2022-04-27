@@ -1,0 +1,36 @@
+{
+  "_type": "https://in-toto.io/Statement/v0.1",
+  "subject": [
+    {
+      "name": "oak_functions",
+      "digest": {
+        "sha256": "48014cabfb2df78688d4b496094c349b35859ec649ce59e9fe94223b46fcc3d7"
+      }
+    }
+  ],
+  "predicateType": "https://slsa.dev/provenance/v0.2",
+  "predicate": {
+    "builder": {
+      "id": "https://github.com/project-oak/transparent-release"
+    },
+    "buildType": "https://github.com/project-oak/transparent-release/schema/amber-slsa-buildtype/v1/provenance.json",
+    "buildConfig": {
+      "command": [ "./scripts/xtask", "build-oak-functions-server-variants" ],
+      "outputPath": "./target/x86_64-unknown-linux-musl/release/oak_functions_loader_base"
+    },
+    "materials": [
+      {
+        "uri": "gcr.io/oak-ci/oak@sha256:80f5f24876d3db7c712ff17946d847177901227a5272030e21fd79d364200d19",
+        "digest": {
+          "sha256": "80f5f24876d3db7c712ff17946d847177901227a5272030e21fd79d364200d19"
+        }
+      },
+      {
+        "uri": "https://github.com/project-oak/oak",
+        "digest": {
+          "sha1": "76ebb7b3ff8b8feaa698ec6b40bbd597b4d3f397"
+        }
+      }
+    ]
+  }
+}
