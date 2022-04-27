@@ -81,7 +81,12 @@ async fn test_server() {
 
     let policy = ServerPolicy {
         constant_response_size_bytes: 100,
-        constant_processing_time_ms: 200,
+        // Multiply the constant_processing_time_ms since runtime performance
+        // is expected to be slower when running tests. Cargo's test profile
+        // builds the WASM engine without optimizations. Based on test config
+        // the WASM module itself may also not be optimized. Creating lookup
+        // tables for the weather example is computationally expensive.
+        constant_processing_time_ms: 200 * 10,
     };
     let tee_certificate = vec![];
 

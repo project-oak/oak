@@ -498,7 +498,7 @@ where
     let sleep = tokio::spawn(tokio::time::sleep(Duration::from_millis(
         policy.constant_processing_time_ms.into(),
     )));
-    let task = tokio::spawn(async move { function() });
+    let task = tokio::task::spawn_blocking(function);
 
     // Sleep until the policy times out
     sleep.await?;
