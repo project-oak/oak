@@ -14,6 +14,7 @@
 // limitations under the License.
 //
 
+use crate::lib::SessionRequest;
 use bmrng::unbounded::UnboundedRequestSender;
 use futures::Future;
 use std::net::SocketAddr;
