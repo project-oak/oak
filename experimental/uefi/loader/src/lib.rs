@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-//! Serialization prmitives for the loader <-> runtime channel.
+//! Serialization logic for the loader <-> trusted runtime communication channel.
 
 extern crate alloc;
 
@@ -22,12 +22,27 @@ use alloc::vec::Vec;
 use anyhow::bail;
 use oak_remote_attestation_sessions::{SessionId, SESSION_ID_LENGTH};
 
-pub struct SessionRequest {
-    session_id: SessionId,
-    body: Vec<u8>,
+pub struct SerializeableRequest {
+    pub session_id: SessionId,
+    pub body: Vec<u8>,
 }
 
-impl TryFrom<&[u8]> for SessionRequest {
+impl Into<Vec<u8>> for SerializeableRequest {
+    fn into(self) -> Vec<u8> {
+        // The payload is the request's body prepended with the 8 byte session_id.
+        // This takes adavantage of the session_id's fixed size to avoid needing
+        // to use a key/value pair binary serialization protocol.
+        let mut serialized_request: Vec<u8> =
+            Vec::with_capacity(self.session_id.len() + self.body.len());
+
+        serialized_request.extend(self.session_id);
+        serialized_request.extend(self.body);
+
+        serialized_request
+    }
+}
+
+impl TryFrom<&[u8]> for SerializeableRequest {
     type Error = anyhow::Error;
 
     fn try_from(serialized_request: &[u8]) -> Result<Self, Self::Error> {
@@ -47,22 +62,5 @@ impl TryFrom<&[u8]> for SessionRequest {
         let body = request_body_slice.to_vec();
 
         Ok(Self { session_id, body })
-    }
-}
-
-impl TryInto<Vec<u8>> for SessionRequest {
-    type Error = anyhow::Error;
-
-    fn try_into(self) -> Result<Vec<u8>, Self::Error> {
-        // The payload is the request's body prepended with the 8 byte session_id.
-        // This takes adavantage of the session_id's fixed size to avoid needing
-        // to use a key/value pair binary serialization protocol.
-        let mut serialized_request: Vec<u8> =
-            Vec::with_capacity(self.session_id.len() + self.body.len());
-
-        serialized_request.extend(self.session_id);
-        serialized_request.extend(self.body);
-
-        Ok(serialized_request)
     }
 }

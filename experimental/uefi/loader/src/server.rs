@@ -14,11 +14,12 @@
 // limitations under the License.
 //
 
-use crate::lib::SessionRequest;
 use bmrng::unbounded::UnboundedRequestSender;
 use futures::Future;
+use oak_remote_attestation_sessions::{SessionId, SESSION_ID_LENGTH};
 use std::net::SocketAddr;
 use tonic::{transport::Server, Request, Response, Status};
+use uefi_loader::SerializeableRequest;
 
 pub mod proto {
     tonic::include_proto!("oak.session.unary.v1");
@@ -29,17 +30,20 @@ use proto::{
     UnaryRequest, UnaryResponse,
 };
 
-fn serialize_request(request: UnaryRequest) -> Vec<u8> {
-    // The payload is the request's body prepended with the 8 byte session_id.
-    // This takes adavantage of the session_id's fixed size to avoid needing
-    // to use a key/value pair binary serialization protocol.
-    let mut serialized_request: Vec<u8> =
-        Vec::with_capacity(request.session_id.len() + request.body.len());
+// Since the SerializeableRequest struct essentially mirrors the UnaryRequest
+// proto message conversion between them is simple. We do not use
+// proto serialization directly to avoid creating a dependecy on protobuf in
+// the trusted runtime.
+impl From<UnaryRequest> for SerializeableRequest {
+    fn from(unary_request: UnaryRequest) -> Self {
+        let mut session_id: SessionId = [0; SESSION_ID_LENGTH];
+        session_id.copy_from_slice(&unary_request.session_id);
 
-    serialized_request.extend(request.session_id);
-    serialized_request.extend(request.body);
-
-    serialized_request
+        Self {
+            session_id,
+            body: unary_request.body,
+        }
+    }
 }
 
 pub struct EchoImpl {
@@ -53,6 +57,7 @@ impl UnarySession for EchoImpl {
         request: Request<UnaryRequest>,
     ) -> Result<Response<UnaryResponse>, Status> {
         let request = request.into_inner();
+        let serialized_request: Vec<u8> = SerializeableRequest::from(request).into();
 
         // There's two nested errors: one for communicating over the channel, and one for
         // communicating over the serial port with the UEFI app.
@@ -60,7 +65,7 @@ impl UnarySession for EchoImpl {
         // ambiguous to the end user, but for now that'll do.
         let body = self
             .channel
-            .send_receive(serialize_request(request))
+            .send_receive(serialized_request)
             .await
             .map_err(|err| Status::internal(format!("{:?}", err)))?
             .map_err(|err| Status::internal(format!("{:?}", err)))?;

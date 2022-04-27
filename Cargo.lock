@@ -4037,6 +4037,7 @@ dependencies = [
  "ciborium",
  "ciborium-io",
  "oak_remote_attestation_sessions",
+ "uefi-loader",
 ]
 
 [[package]]
