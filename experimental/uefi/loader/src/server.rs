@@ -14,6 +14,7 @@
 // limitations under the License.
 //
 
+use anyhow::bail;
 use bmrng::unbounded::UnboundedRequestSender;
 use futures::Future;
 use oak_remote_attestation_sessions::{SessionId, SESSION_ID_LENGTH};
@@ -34,15 +35,26 @@ use proto::{
 // proto message conversion between them is simple. We do not use
 // proto serialization directly to avoid creating a dependecy on protobuf in
 // the trusted runtime.
-impl From<UnaryRequest> for SerializeableRequest {
-    fn from(unary_request: UnaryRequest) -> Self {
+impl TryFrom<UnaryRequest> for SerializeableRequest {
+    type Error = anyhow::Error;
+
+    fn try_from(unary_request: UnaryRequest) -> Result<Self, Self::Error> {
         let mut session_id: SessionId = [0; SESSION_ID_LENGTH];
+
+        if unary_request.session_id.len() != SESSION_ID_LENGTH {
+            bail!(
+                "session_id must be {} bytes in length, found a length of {} bytes instead",
+                SESSION_ID_LENGTH,
+                unary_request.session_id.len()
+            );
+        }
+
         session_id.copy_from_slice(&unary_request.session_id);
 
-        Self {
+        Ok(Self {
             session_id,
             body: unary_request.body,
-        }
+        })
     }
 }
 
@@ -57,7 +69,9 @@ impl UnarySession for EchoImpl {
         request: Request<UnaryRequest>,
     ) -> Result<Response<UnaryResponse>, Status> {
         let request = request.into_inner();
-        let serialized_request: Vec<u8> = SerializeableRequest::from(request).into();
+        let serialized_request: Vec<u8> = SerializeableRequest::try_from(request)
+            .map_err(|err| Status::internal(format!("{:?}", err)))?
+            .into();
 
         // There's two nested errors: one for communicating over the channel, and one for
         // communicating over the serial port with the UEFI app.
