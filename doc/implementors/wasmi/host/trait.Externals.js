@@ -1,3 +1,3 @@
 (function() {var implementors = {};
-implementors["oak_functions_loader"] = [{"text":"impl Externals for <a class=\"struct\" href=\"oak_functions_loader/server/struct.WasmState.html\" title=\"struct oak_functions_loader::server::WasmState\">WasmState</a>","synthetic":false,"types":["oak_functions_loader::server::WasmState"]}];
+implementors["oak_functions_wasm"] = [{"text":"impl&lt;L&gt; Externals for <a class=\"struct\" href=\"oak_functions_wasm/struct.WasmState.html\" title=\"struct oak_functions_wasm::WasmState\">WasmState</a>&lt;L&gt; <span class=\"where fmt-newline\">where<br>&nbsp;&nbsp;&nbsp;&nbsp;L: <a class=\"trait\" href=\"oak_logger/trait.OakLogger.html\" title=\"trait oak_logger::OakLogger\">OakLogger</a>,&nbsp;</span>","synthetic":false,"types":["oak_functions_wasm::WasmState"]}];
 if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()
