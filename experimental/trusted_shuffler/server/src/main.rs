@@ -30,6 +30,12 @@ use log::info;
 pub struct Opt {
     #[structopt(
         long,
+        help = "Anonymity value",
+        default_value = 10
+    )]
+    k: usize,
+    #[structopt(
+        long,
         help = "Address to listen on for the Trusted Shuffler server",
         default_value = "[::]:8888"
     )]
@@ -57,7 +63,7 @@ async fn main() -> anyhow::Result<()> {
         "Starting the Trusted Shuffler server at {:?}",
         listen_address
     );
-    let server = Server::bind(&listen_address).serve(ServiceBuilder { backend_url });
+    let server = Server::bind(&listen_address).serve(ServiceBuilder::new(opt.k, backend_url));
     tokio::select!(
         result = server => {
             result.context("Couldn't run server")?;
