@@ -1,0 +1,22 @@
+[package]
+name = "oak_functions_wasm"
+version = "0.1.0"
+authors = ["Conrad Grobler <grobler@google.com>"]
+edition = "2021"
+license = "Apache-2.0"
+
+[dependencies]
+anyhow = "*"
+byteorder = { version = "*", default-features = false }
+hashbrown = "*"
+log = "*"
+oak_logger = { path = "../logger" }
+oak_functions_abi = { path = "../abi" }
+oak_functions_extension = { path = "../extension" }
+# Use wasmi in `no_std` mode.
+wasmi = { version = "*", default-features = false, features = ["core"] }
+
+[dev-dependencies]
+bincode = "*"
+oak_functions_testing_extension = { path = "../testing" }
+test_utils = { path = "../sdk/test_utils" }

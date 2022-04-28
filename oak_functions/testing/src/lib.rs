@@ -14,14 +14,17 @@
 // limitations under the License.
 //
 
-use crate::{logger::Logger, OakFunctionsBoxedExtensionFactory};
-use oak_functions_extension::{ExtensionFactory, OakApiNativeExtension};
+//! Extension to support testing.
 
-use log::Level;
+use chrono::{SecondsFormat, Utc};
 use oak_functions_abi::{proto::OakStatus, ExtensionHandle, TestingRequest, TestingResponse};
-use oak_logger::OakLogger;
+use oak_functions_extension::{ExtensionFactory, OakApiNativeExtension};
+use oak_logger::{Level, OakLogger};
 
-impl OakApiNativeExtension for TestingExtension<Logger> {
+impl<L> OakApiNativeExtension for TestingExtension<L>
+where
+    L: OakLogger,
+{
     fn invoke(&mut self, request: Vec<u8>) -> Result<Vec<u8>, OakStatus> {
         let request = bincode::deserialize(&request).expect("Fail to deserialize testing request.");
 
@@ -33,7 +36,7 @@ impl OakApiNativeExtension for TestingExtension<Logger> {
             TestingRequest::Blackhole(message) => {
                 self.logger.log_sensitive(Level::Debug, &message);
                 // We don't expect the BlackholeRequest to give back a result.
-                vec![]
+                Vec::new()
             }
         };
         Ok(response)
@@ -47,30 +50,67 @@ impl OakApiNativeExtension for TestingExtension<Logger> {
         ExtensionHandle::TestingHandle
     }
 }
-pub struct TestingFactory {
-    logger: Logger,
+pub struct TestingFactory<L: OakLogger> {
+    logger: L,
 }
 
-impl TestingFactory {
-    pub fn new_boxed_extension_factory(
-        logger: Logger,
-    ) -> anyhow::Result<OakFunctionsBoxedExtensionFactory> {
+impl<L> TestingFactory<L>
+where
+    L: OakLogger + 'static,
+{
+    pub fn new_boxed_extension_factory(logger: L) -> anyhow::Result<Box<dyn ExtensionFactory<L>>> {
         Ok(Box::new(Self { logger }))
     }
 }
 
-impl ExtensionFactory<Logger> for TestingFactory {
+impl<L> ExtensionFactory<L> for TestingFactory<L>
+where
+    L: OakLogger + 'static,
+{
     fn create(&self) -> anyhow::Result<Box<dyn OakApiNativeExtension>> {
         let extension = TestingExtension::new(self.logger.clone());
         Ok(Box::new(extension))
     }
 }
-struct TestingExtension<Logger> {
-    logger: Logger,
+struct TestingExtension<L: OakLogger> {
+    logger: L,
 }
 
-impl TestingExtension<Logger> {
-    pub fn new(logger: Logger) -> Self {
+impl<L> TestingExtension<L>
+where
+    L: OakLogger,
+{
+    pub fn new(logger: L) -> Self {
         Self { logger }
+    }
+}
+
+/// Implemenation of the `oak_loggger::OakLogger` trait to support testing with the `TestExtension`
+/// without needing a reference to the implementation in the Oak Functions Loader.
+#[derive(Clone)]
+pub struct TestingLogger {}
+
+// TODO(#2417): Implement a testing logger that collects all messages. See also #2783.
+impl TestingLogger {
+    pub fn for_test() -> Self {
+        Self {}
+    }
+
+    fn log(&self, message: &str) {
+        eprintln!(
+            "{} TEST - {}",
+            Utc::now().to_rfc3339_opts(SecondsFormat::Secs, true),
+            message,
+        );
+    }
+}
+
+impl OakLogger for TestingLogger {
+    fn log_sensitive(&self, _level: Level, message: &str) {
+        self.log(message);
+    }
+
+    fn log_public(&self, _level: Level, message: &str) {
+        self.log(message);
     }
 }

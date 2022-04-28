@@ -23,9 +23,6 @@ pub mod logger;
 pub mod lookup_data;
 pub mod server;
 
-// TODO(#2642): Add #[cfg(oak-testing)].
-pub mod testing;
-
 use crate::{
     grpc::{create_and_start_grpc_server, create_wasm_handler},
     logger::Logger,

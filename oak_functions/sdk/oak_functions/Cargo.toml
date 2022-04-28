@@ -29,6 +29,7 @@ tokio = "*"
 bincode = "*"
 maplit = "*"
 oak_functions_abi = { path = "../../abi" }
+oak_functions_testing_extension = { path = "../../testing" }
 prost = "*"
 serde = "*"
 serde_derive = "*"
