@@ -9,3 +9,20 @@ edition = "2021"
 license = "Apache-2.0"
 
 [dependencies]
+anyhow = "*"
+async-trait = "*"
+futures = "*"
+futures-core = "*"
+futures-util = "*"
+log = "*"
+tokio = { version = "*", features = [
+  "fs",
+  "macros",
+  "net",
+  "signal",
+  "sync",
+  "time",
+  "rt-multi-thread"
+] }
+
+[dev-dependencies]

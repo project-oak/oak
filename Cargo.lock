@@ -5359,6 +5359,15 @@ dependencies = [
 [[package]]
 name = "trusted_shuffler"
 version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "futures",
+ "futures-core",
+ "futures-util",
+ "log",
+ "tokio",
+]
 
 [[package]]
 name = "trusted_shuffler_backend"
