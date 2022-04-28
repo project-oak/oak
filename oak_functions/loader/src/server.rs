@@ -20,6 +20,7 @@ use oak_functions_abi::proto::{Response, ServerPolicy, StatusCode};
 use serde::Deserialize;
 use std::{convert::TryInto, str, time::Duration};
 
+// TODO(#2776): Refactor and move the type alias somewhere more appropriate.
 pub type WasmHandler = oak_functions_wasm::WasmHandler<Logger>;
 
 /// Minimum size of constant response bytes. It is large enough to fit an error response, in case
