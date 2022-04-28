@@ -24,7 +24,7 @@ use async_trait::async_trait;
 use futures::{stream::FuturesOrdered, StreamExt};
 use std::{
     marker::{Send, Sync},
-    mem::replace,
+    mem::take,
     ops::DerefMut,
     sync::{Arc, Mutex},
 };
@@ -91,7 +91,7 @@ impl TrustedShuffler {
 
             if requests_to_shuffle.len() >= self.k {
                 // Replace current requests with an empty vector.
-                let requests = replace(requests_to_shuffle.deref_mut(), vec![]);
+                let requests = take(requests_to_shuffle.deref_mut());
 
                 // Shuffle requests and spawn async tasks for sending them to the backend.
                 let request_handler = self.request_handler.clone();
