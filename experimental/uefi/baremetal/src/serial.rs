@@ -21,6 +21,7 @@ pub struct Serial {
     port: AtomicRefCell<SerialPort>,
 }
 
+// Base I/O port for the second serial port in the system (colloquially known as COM2)
 static COM2_BASE: u16 = 0x2f8;
 
 impl Serial {
