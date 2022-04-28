@@ -16,23 +16,25 @@
 
 use atomic_refcell::AtomicRefCell;
 use core::fmt::Write;
+use lazy_static::lazy_static;
 use uart_16550::SerialPort;
 
 extern crate log;
 
-struct Logger {
-    port: AtomicRefCell<SerialPort>,
+// Base I/O port for the first serial port in the system (colloquially known as COM1)
+static COM1_BASE: u16 = 0x3f8;
+
+lazy_static! {
+    static ref SERIAL1: AtomicRefCell<SerialPort> = {
+        // Our contract with the loader requires the first serial port to be
+        // available, so assuming the loader adheres to it, this is safe.
+        let mut port = unsafe { SerialPort::new(COM1_BASE) };
+        port.init();
+        AtomicRefCell::new(port)
+    };
 }
 
-impl Logger {
-    pub unsafe fn new() -> Self {
-        let mut port = SerialPort::new(0x3f8);
-        port.init();
-        Logger {
-            port: AtomicRefCell::new(port),
-        }
-    }
-}
+struct Logger {}
 
 impl log::Log for Logger {
     fn enabled(&self, _metadata: &log::Metadata) -> bool {
@@ -41,7 +43,7 @@ impl log::Log for Logger {
 
     fn log(&self, record: &log::Record) {
         writeln!(
-            self.port.borrow_mut(),
+            SERIAL1.borrow_mut(),
             "{}: {}",
             record.level(),
             record.args()
@@ -54,10 +56,9 @@ impl log::Log for Logger {
     }
 }
 
-static mut LOGGER: Option<Logger> = None;
+static LOGGER: Logger = Logger {};
 
-pub unsafe fn init_logging() {
-    LOGGER = Some(Logger::new());
-    log::set_logger(LOGGER.as_ref().unwrap()).unwrap();
+pub fn init_logging() {
+    log::set_logger(&LOGGER).unwrap();
     log::set_max_level(log::LevelFilter::Debug);
 }

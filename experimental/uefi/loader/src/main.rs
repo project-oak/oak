@@ -34,19 +34,19 @@ enum Mode {
 
 #[derive(Parser, Debug)]
 struct Args {
-    /// path to the `qemu-system-x86_64` binary
+    /// Path to the `qemu-system-x86_64` binary.
     #[clap(long, parse(from_os_str), validator = path_exists, default_value_os_t = PathBuf::from("/usr/bin/qemu-system-x86_64"))]
     qemu: PathBuf,
 
-    /// execute either in UEFI mode or BIOS mode
+    /// Execute either in UEFI mode or BIOS mode.
     #[clap(arg_enum, long, default_value = "uefi")]
     mode: Mode,
 
-    /// path to the OVMF firmware file
+    /// Path to the OVMF firmware file.
     #[clap(long, parse(from_os_str), required_if_eq("mode", "uefi"), validator = path_exists, default_value_os_t = PathBuf::from("/usr/share/OVMF/OVMF_CODE.fd"))]
     ovmf: PathBuf,
 
-    /// path to the UEFI app to execute
+    /// Path to the UEFI app to execute.
     #[clap(parse(from_os_str), validator = path_exists)]
     app: PathBuf,
 }

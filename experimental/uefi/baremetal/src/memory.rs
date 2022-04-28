@@ -13,37 +13,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-// Portions Copyright © 2019 Intel Corporation.
 
-use core::ffi::c_void;
 use linked_list_allocator::LockedHeap;
 use rust_hypervisor_firmware_subset::boot;
 
 #[global_allocator]
 static ALLOCATOR: LockedHeap = LockedHeap::empty();
 
-const PAGE_SIZE: u64 = 4096;
-
-extern "C" {
-    #[link_name = "ram_min"]
-    static RAM_MIN: c_void;
-    #[link_name = "text_start"]
-    static TEXT_START: c_void;
-    #[link_name = "text_end"]
-    static TEXT_END: c_void;
-    #[link_name = "stack_start"]
-    static STACK_START: c_void;
-}
-
 pub fn init_allocator(info: &dyn boot::Info) {
-    let ram_min = unsafe { &RAM_MIN as *const _ as u64 };
-    let text_start = unsafe { &TEXT_START as *const _ as u64 };
-    let text_end = unsafe { &TEXT_END as *const _ as u64 };
-    let stack_start = unsafe { &STACK_START as *const _ as u64 };
-    assert!(ram_min % PAGE_SIZE == 0);
-    assert!(text_start % PAGE_SIZE == 0);
-    assert!(text_end % PAGE_SIZE == 0);
-    assert!(stack_start % PAGE_SIZE == 0);
+    let ram_min = rust_hypervisor_firmware_subset::ram_min();
+    let text_start = rust_hypervisor_firmware_subset::text_start();
+    let text_end = rust_hypervisor_firmware_subset::text_end();
+    let stack_start = rust_hypervisor_firmware_subset::stack_start();
 
     info!("RAM_MIN: {}", ram_min);
     info!("TEXT_START: {}", text_start);
@@ -83,6 +64,7 @@ pub fn init_allocator(info: &dyn boot::Info) {
     }
 
     info!("Using {:?} for heap.", entry);
+    // This is safe as we know the memory is available based on the e820 map.
     unsafe {
         ALLOCATOR.lock().init(
             entry.addr.try_into().unwrap(),

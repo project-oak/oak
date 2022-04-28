@@ -21,9 +21,13 @@ pub struct Serial {
     port: AtomicRefCell<SerialPort>,
 }
 
+static COM2_BASE: u16 = 0x2f8;
+
 impl Serial {
     pub fn new() -> Serial {
-        let mut port = unsafe { SerialPort::new(0x2f8) };
+        // Our contract with the loader requires the second serial port to be
+        // available, so assuming the loader adheres to it, this is safe.
+        let mut port = unsafe { SerialPort::new(COM2_BASE) };
         port.init();
         Serial {
             port: AtomicRefCell::new(port),

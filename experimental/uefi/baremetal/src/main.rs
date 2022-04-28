@@ -36,9 +36,7 @@ use rust_hypervisor_firmware_subset::{boot, paging, pvh};
 
 #[no_mangle]
 pub extern "C" fn rust64_start(rdi: &pvh::StartInfo) -> ! {
-    unsafe {
-        logging::init_logging();
-    }
+    logging::init_logging();
     paging::setup();
     memory::init_allocator(rdi);
 
@@ -69,6 +67,9 @@ pub fn exit_qemu(exit_code: QemuExitCode) {
     use x86_64::instructions::port::Port;
 
     unsafe {
+        // 0xF4 is the port commonly used for the qemu isa-exit-device.
+        // We expect the device to be enabled by the loader at said
+        // common address.
         let mut port = Port::new(0xf4);
         port.write(exit_code as u32);
     }
