@@ -21,7 +21,7 @@ mod tests;
 
 use anyhow::{anyhow, Context};
 use async_trait::async_trait;
-use futures::future::join_all;
+use futures::{stream::FuturesOrdered, StreamExt};
 use std::{
     marker::{Send, Sync},
     mem::replace,
@@ -35,7 +35,8 @@ type Response = Vec<u8>;
 
 struct Message {
     // Determines the original order in which messages arrived.
-    number: usize,
+    // Index is used to send requests back to the client in the order of arrival.
+    index: usize,
     // Arbitrary message data.
     data: Vec<u8>,
     // Channel for sending responses back to the client async tasks.
@@ -50,10 +51,10 @@ pub trait RequestHandler: Send + Sync {
 // Trusted Shuffler implementation.
 pub struct TrustedShuffler {
     // Value k that represents k-anonymity.
-    anonymity_value: usize,
+    k: usize,
 
     // Current batch of requests to be shuffled.
-    // Mutex is used because messages are collected from different async tasks.
+    // Mutex is used because messages are collected in different async tasks.
     requests_to_shuffle: Arc<Mutex<Vec<Message>>>,
 
     // Async function that sends a request to the backend and returns a response.
@@ -61,9 +62,9 @@ pub struct TrustedShuffler {
 }
 
 impl TrustedShuffler {
-    pub fn new(anonymity_value: usize, request_handler: Arc<dyn RequestHandler>) -> Self {
+    pub fn new(k: usize, request_handler: Arc<dyn RequestHandler>) -> Self {
         Self {
-            anonymity_value,
+            k,
             requests_to_shuffle: Arc::new(Mutex::new(vec![])),
             request_handler,
         }
@@ -81,14 +82,14 @@ impl TrustedShuffler {
                 .map_err(|error| anyhow!("Couldn't lock current messages mutex: {:?}", error))?;
 
             let request = Message {
-                number: requests_to_shuffle.len(),
+                index: requests_to_shuffle.len(),
                 data: request,
                 response_sender,
             };
 
             requests_to_shuffle.push(request);
 
-            if requests_to_shuffle.len() >= self.anonymity_value {
+            if requests_to_shuffle.len() >= self.k {
                 // Replace current requests with an empty vector.
                 let requests = replace(requests_to_shuffle.deref_mut(), vec![]);
 
@@ -108,25 +109,31 @@ impl TrustedShuffler {
     }
 
     // Lexicographically sorts requests and sends them to the backend using the
-    // [`TrustedShuffler::request_sender`].
+    // [`TrustedShuffler::request_handler`].
     async fn shuffle_requests(
         mut requests: Vec<Message>,
         request_handler: Arc<dyn RequestHandler>,
     ) -> anyhow::Result<()> {
-        requests.sort_by_key(|v| v.data.clone());
+        requests.sort_by(|first, second| first.data.cmp(&second.data));
 
-        let response_futures = requests.into_iter().map(|request| {
-            let request_handler_clone = request_handler.clone();
-            async move {
-                let response = request_handler_clone.handle(request.data).await;
-                Message {
-                    number: request.number,
-                    data: response,
-                    response_sender: request.response_sender,
+        let mut response_futures: FuturesOrdered<_> = requests
+            .into_iter()
+            .map(|request| {
+                let request_handler_clone = request_handler.clone();
+                async move {
+                    let response = request_handler_clone.handle(request.data).await;
+                    Message {
+                        index: request.index,
+                        data: response,
+                        response_sender: request.response_sender,
+                    }
                 }
-            }
-        });
-        let responses = join_all(response_futures).await;
+            })
+            .collect();
+        let mut responses = vec![];
+        while let Some(response) = response_futures.next().await {
+            responses.push(response);
+        }
 
         Self::shuffle_responses(responses)
     }
@@ -134,13 +141,13 @@ impl TrustedShuffler {
     // Restores the original order in which messages arrived and sends them back to the client async
     // tasks using corresponding channels defined in the [`Message::response_sender`].
     fn shuffle_responses(mut responses: Vec<Message>) -> anyhow::Result<()> {
-        responses.sort_by(|first, second| first.number.cmp(&second.number));
+        responses.sort_by_key(|response| response.index);
 
         responses
             .into_iter()
             .map(
                 |Message {
-                     number: _,
+                     index: _,
                      data,
                      response_sender,
                  }| {

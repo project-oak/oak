@@ -37,30 +37,27 @@ impl RequestHandler for TestRequestHandler {
 // Non-async version of the `handle_request` function used to create expected responses.
 fn generate_response(request: Vec<u8>) -> Vec<u8> {
     let parsed_request = String::from_utf8(request).expect("Couldn't parse request");
-    format!("Response for: {}", parsed_request)
-        .to_string()
-        .as_bytes()
-        .to_vec()
+    format!("Response for: {}", parsed_request).into_bytes()
 }
 
 // Generates a request and a corresponding response from a string.
-fn generate_request_response(data: &str) -> (Vec<u8>, Vec<u8>) {
-    let request = format!("Request: {}", data).to_string().as_bytes().to_vec();
-    let response = generate_response(request.clone());
-    (request, response)
+fn generate_request_and_expected_response(data: &str) -> (Vec<u8>, Vec<u8>) {
+    let request = format!("Request: {}", data).into_bytes();
+    let expected_response = generate_response(request.clone());
+    (request, expected_response)
 }
 
 #[tokio::test]
-async fn trusted_shuffler_k2_test() {
+async fn anonymity_value_2_test() {
     let anonymity_value = 2;
     let trusted_shuffler = Arc::new(TrustedShuffler::new(
         anonymity_value,
         Arc::new(TestRequestHandler {}),
     ));
 
-    let (request, expected_response) = generate_request_response("Test");
+    let (request, expected_response) = generate_request_and_expected_response("Test");
     let (background_request, expected_background_response) =
-        generate_request_response("Background test");
+        generate_request_and_expected_response("Background test");
 
     let trusted_shuffler_clone = trusted_shuffler.clone();
     let background_result =
@@ -78,7 +75,7 @@ async fn trusted_shuffler_k2_test() {
 }
 
 #[tokio::test]
-async fn trusted_shuffler_k10_test() {
+async fn anonymity_value_10_test() {
     let anonymity_value = 10;
     let trusted_shuffler = Arc::new(TrustedShuffler::new(
         anonymity_value,
@@ -88,7 +85,7 @@ async fn trusted_shuffler_k10_test() {
     let (requests, expected_responses): (Vec<Vec<u8>>, Vec<Vec<u8>>) = (0..anonymity_value)
         .collect::<Vec<_>>()
         .iter()
-        .map(|k| generate_request_response(&format!("Test {}", k)))
+        .map(|k| generate_request_and_expected_response(&format!("Test {}", k)))
         .unzip();
 
     let mut result_futures = vec![];
@@ -105,22 +102,22 @@ async fn trusted_shuffler_k10_test() {
         assert!(result.is_ok());
         let response = result.as_ref().unwrap();
         assert!(response.is_ok());
-        assert_eq!(expected_response.clone(), *response.as_ref().unwrap());
+        assert_eq!(*expected_response, *response.as_ref().unwrap());
     }
 }
 
-// Test that the Trusted Shuffler with k=3 waits for the 3rd client and doesn't
-// process requests from only 2 clients.
+// Test that the Trusted Shuffler with the anonymity value equal to 3 waits for the 3rd client and
+// doesn't process requests from only 2 clients.
 #[tokio::test]
-async fn trusted_shuffler_waiting_test() {
+async fn waiting_for_enough_requests_test() {
     let anonymity_value = 3;
     let trusted_shuffler = Arc::new(TrustedShuffler::new(
         anonymity_value,
         Arc::new(TestRequestHandler {}),
     ));
 
-    let (request_1, _) = generate_request_response("Test 1");
-    let (request_2, _) = generate_request_response("Test 2");
+    let (request_1, _) = generate_request_and_expected_response("Test 1");
+    let (request_2, _) = generate_request_and_expected_response("Test 2");
 
     let trusted_shuffler_clone = trusted_shuffler.clone();
     tokio::spawn(async move { trusted_shuffler_clone.invoke(request_1).await });
