@@ -116,7 +116,7 @@ impl TrustedShuffler {
     ) -> anyhow::Result<()> {
         requests.sort_by(|first, second| first.data.cmp(&second.data));
 
-        let mut response_futures: FuturesOrdered<_> = requests
+        let response_futures: FuturesOrdered<_> = requests
             .into_iter()
             .map(|request| {
                 let request_handler_clone = request_handler.clone();
@@ -130,10 +130,7 @@ impl TrustedShuffler {
                 }
             })
             .collect();
-        let mut responses = vec![];
-        while let Some(response) = response_futures.next().await {
-            responses.push(response);
-        }
+        let responses = response_futures.collect::<Vec<_>>().await;
 
         Self::shuffle_responses(responses)
     }
@@ -153,7 +150,7 @@ impl TrustedShuffler {
                  }| {
                     response_sender
                         .send(data)
-                        .map_err(|_| anyhow!("Couldn't send response"))
+                        .map_err(|_data| anyhow!("Couldn't send response"))
                 },
             )
             .collect::<Result<Vec<_>, _>>()
