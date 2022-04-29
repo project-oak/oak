@@ -37,6 +37,12 @@ pub struct Opt {
     server_url: String,
     #[structopt(long, help = "The QPS we are aiming to simulate", default_value = "10")]
     qps: u32,
+    #[structopt(
+        long,
+        help = "How many rounds, i.e., seconds, we sent requests",
+        default_value = "1"
+    )]
+    rounds: u32,
 }
 
 #[tokio::main]
@@ -45,6 +51,8 @@ async fn main() -> anyhow::Result<()> {
     let opt = Opt::parse();
 
     let expected_qps = opt.qps;
+    let rounds = opt.rounds;
+    let total_queries = expected_qps * rounds;
 
     // Give 10 ms lee-way for stuff. Distribute the qps evently over the remaining 900 ms.
     let sleep_between_qs = 900 / expected_qps;
@@ -56,7 +64,7 @@ async fn main() -> anyhow::Result<()> {
     eprintln!("phase,id,request_elapsed_in_ms,response_elapsed_in_ms");
     let mut clients = vec![];
 
-    for p in Sieve::new().iter().take(expected_qps as usize) {
+    for p in Sieve::new().iter().take(total_queries as usize) {
         let server_url = opt.server_url.clone();
 
         clients.push(tokio::spawn(async move {
@@ -90,7 +98,11 @@ async fn main() -> anyhow::Result<()> {
 
     // Estimate how many qps we actually achieved by checking how much time we spent between
     // starting and ending the loop.
-    eprintln!("Actual time taken {:?}", &start_time.elapsed());
+    eprintln!(
+        "Rounds: {}. Actual time taken {:?}",
+        rounds,
+        &start_time.elapsed()
+    );
 
     Ok(())
 }
