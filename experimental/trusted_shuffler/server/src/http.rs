@@ -47,10 +47,7 @@ impl RequestHandler for HttpRequestHandler {
                     error
                 ))
             },
-            |response| {
-                info!("Received response from the backend: {:?}", response);
-                Ok(response)
-            },
+            |response| Ok(response),
         )
     }
 }

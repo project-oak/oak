@@ -7,7 +7,7 @@ cargo build --manifest-path=experimental/trusted_shuffler/backend/Cargo.toml
 cargo build --manifest-path=experimental/trusted_shuffler/client/Cargo.toml
 
 RUST_LOG=info cargo run --manifest-path=experimental/trusted_shuffler/server/Cargo.toml -- \
-  --k=1 --listen-address="[::]:8080" --backend-url="http://localhost:8888" &
+  --k=10 --listen-address="[::]:8080" --backend-url="http://localhost:8888" &
 sleep 1
 readonly SERVER_PID=$!
 
@@ -17,7 +17,7 @@ sleep 1
 readonly BACKEND_PID=$!
 
 RUST_LOG=info cargo run --manifest-path=experimental/trusted_shuffler/client/Cargo.toml -- \
-  --server-url="http://localhost:8080"
+  --server-url="http://localhost:8080" --qps=40
 
 kill -9 "${SERVER_PID}"
 kill -9 "${BACKEND_PID}"
