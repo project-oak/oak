@@ -16,6 +16,8 @@
 
 //! Backend server for the Trusted Shuffler example.
 
+use std::time::Instant;
+
 use anyhow::Context;
 use clap::Parser;
 use futures_util::FutureExt;
@@ -23,6 +25,7 @@ use hyper::{
     service::{make_service_fn, service_fn},
     Body, Method, Request, Response, Server, StatusCode,
 };
+use lazy_static::lazy_static;
 use log::info;
 
 #[derive(Parser, Clone)]
@@ -36,12 +39,24 @@ pub struct Opt {
     listen_address: String,
 }
 
+lazy_static! {
+    static ref START_TIME: Instant = Instant::now();
+}
+
 async fn handler(request: Request<Body>) -> Result<Response<Body>, hyper::Error> {
     match (request.method(), request.uri().path()) {
         (&Method::POST, "/request") => {
             let body = hyper::body::to_bytes(request.into_body()).await?;
-            info!("Received request: {:?}", body);
-            // Send back the response body.
+
+            let request_start = START_TIME.elapsed();
+            // We assume no time elapsed between request and response.
+            eprintln!(
+                "backend,{:?},{},{}",
+                body,
+                request_start.as_millis(),
+                request_start.as_millis()
+            );
+            // Echo back the response body.
             Ok(Response::new(Body::from(body)))
         }
 

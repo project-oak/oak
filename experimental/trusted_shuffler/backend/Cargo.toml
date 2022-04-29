@@ -22,6 +22,7 @@ hyper = { version = "*", features = [
   "runtime",
   "server"
 ] }
+lazy_static = "*"
 log = "*"
 tokio = { version = "*", features = [
   "fs",

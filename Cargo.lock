@@ -3565,6 +3565,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "primes"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "68a61082d8bceecd71a3870e9162002bb75f7ba9c7aa8b76227e887782fef9c8"
+
+[[package]]
 name = "proc-macro-error"
 version = "1.0.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5389,6 +5395,7 @@ dependencies = [
  "futures-util",
  "http",
  "hyper",
+ "lazy_static",
  "log",
  "tokio",
 ]
@@ -5403,6 +5410,7 @@ dependencies = [
  "http",
  "hyper",
  "log",
+ "primes",
  "tokio",
  "trusted_shuffler_common",
 ]
@@ -5429,6 +5437,7 @@ dependencies = [
  "futures-util",
  "http",
  "hyper",
+ "lazy_static",
  "log",
  "tokio",
  "trusted_shuffler",

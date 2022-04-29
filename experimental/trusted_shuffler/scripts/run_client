@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
 
 RUST_LOG=info cargo run --manifest-path=experimental/trusted_shuffler/client/Cargo.toml -- \
-  --server-url="http://localhost:8080"
+  --server-url="http://localhost:8080" --qps=10
+  
+

@@ -15,6 +15,7 @@ env_logger = "*"
 http = "*"
 hyper = { version = "*", features = ["client", "http1", "http2", "runtime"] }
 log = "*"
+primes = "*"
 tokio = { version = "*", features = [
   "fs",
   "macros",
