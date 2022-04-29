@@ -18,9 +18,11 @@
 
 use anyhow::Context;
 use clap::Parser;
+use futures::future::join_all;
 use hyper::Method;
 use primes::{PrimeSet, Sieve};
 use std::time::{Duration, Instant};
+
 use tokio::time::sleep;
 use trusted_shuffler_common::send_request;
 
@@ -50,13 +52,14 @@ async fn main() -> anyhow::Result<()> {
     // Start with giving one second iterations.
     let start_time = Instant::now();
 
-    //
+    // Header of table
     eprintln!("phase,id,request_elapsed_in_ms,response_elapsed_in_ms");
+    let mut clients = vec![];
 
     for p in Sieve::new().iter().take(expected_qps as usize) {
         let server_url = opt.server_url.clone();
 
-        tokio::spawn(async move {
+        clients.push(tokio::spawn(async move {
             let request = format!("{}", p);
             let request_start = start_time.elapsed();
 
@@ -79,9 +82,11 @@ async fn main() -> anyhow::Result<()> {
                     request_duration.as_millis(),
                 );
             }
-        });
+        }));
         sleep(Duration::from_millis(sleep_between_qs.into())).await;
     }
+
+    join_all(clients).await;
 
     // Estimate how many qps we actually achieved by checking how much time we spent between
     // starting and ending the loop.
