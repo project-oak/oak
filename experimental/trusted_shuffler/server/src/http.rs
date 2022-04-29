@@ -78,7 +78,7 @@ impl hyper::service::Service<Request<Body>> for Service {
                     match trusted_shuffler.invoke(body.to_vec()).await {
                         Ok(response) => {
                             let response_time = START_TIME.elapsed();
-                            eprintln!(
+                            log::info!(
                                 "server, {:?},{},{}",
                                 body,
                                 request_start.as_millis(),

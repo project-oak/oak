@@ -50,7 +50,7 @@ async fn handler(request: Request<Body>) -> Result<Response<Body>, hyper::Error>
 
             let request_start = START_TIME.elapsed();
             // We assume no time elapsed between request and response.
-            eprintln!(
+            log::info!(
                 "backend,{:?},{},{}",
                 body,
                 request_start.as_millis(),

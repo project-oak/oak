@@ -61,7 +61,7 @@ async fn main() -> anyhow::Result<()> {
     let start_time = Instant::now();
 
     // Header of table
-    eprintln!("phase,id,request_elapsed_in_ms,response_elapsed_in_ms");
+    log::info!("phase,id,request_elapsed_in_ms,response_elapsed_in_ms");
     let mut clients = vec![];
 
     for p in Sieve::new().iter().take(total_queries as usize) {
@@ -83,7 +83,7 @@ async fn main() -> anyhow::Result<()> {
                 let _parsed_response =
                     String::from_utf8(response).context("Couldn't decode response body");
 
-                eprintln!(
+                log::info!(
                     "client,{},{},{}",
                     p,
                     request_start.as_millis(),
@@ -98,7 +98,7 @@ async fn main() -> anyhow::Result<()> {
 
     // Estimate how many qps we actually achieved by checking how much time we spent between
     // starting and ending the loop.
-    eprintln!("Actual time taken {:?}", &start_time.elapsed());
+    log::info!("Actual time taken {:?}", &start_time.elapsed());
 
     Ok(())
 }
