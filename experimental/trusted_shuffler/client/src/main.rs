@@ -98,11 +98,7 @@ async fn main() -> anyhow::Result<()> {
 
     // Estimate how many qps we actually achieved by checking how much time we spent between
     // starting and ending the loop.
-    eprintln!(
-        "Rounds: {}. Actual time taken {:?}",
-        rounds,
-        &start_time.elapsed()
-    );
+    eprintln!("Actual time taken {:?}", &start_time.elapsed());
 
     Ok(())
 }
