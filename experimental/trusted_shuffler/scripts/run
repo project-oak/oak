@@ -2,9 +2,9 @@
 
 readonly SCRIPTS_DIR="$(dirname "$0")"
 
-readonly K=10
-readonly QPS=40
-readonly ROUNDS=3
+readonly K=1000
+readonly QPS=400
+readonly ROUNDS=5
 
 cargo build --manifest-path=experimental/trusted_shuffler/server/Cargo.toml
 cargo build --manifest-path=experimental/trusted_shuffler/backend/Cargo.toml

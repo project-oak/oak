@@ -45,7 +45,7 @@ pub struct Opt {
     rounds: u32,
 }
 
-#[tokio::main]
+#[tokio::main(flavor = "multi_thread", worker_threads = 2)]
 async fn main() -> anyhow::Result<()> {
     env_logger::init();
     let opt = Opt::parse();
