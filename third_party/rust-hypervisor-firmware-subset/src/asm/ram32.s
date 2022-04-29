@@ -7,6 +7,13 @@ ram32_start:
     movl %ebx, %edi
 
 setup_page_tables:
+    # First L3 entry identity maps [0, 1 GiB)
+    movl $0b10000011, (L3_TABLE)
+    # First L4 entry points to L3 table
+    movl $L3_TABLE, %eax
+    orb  $0b00000011, %al # writable (bit 1), present (bit 0)
+    movl %eax, (L4_TABLE)
+/*
     # First L2 entry identity maps [0, 2 MiB)
     movl $0b10000011, (L2_TABLES) # huge (bit 7), writable (bit 1), present (bit 0)
     # First L3 entry points to L2 table
@@ -17,6 +24,7 @@ setup_page_tables:
     movl $L3_TABLE, %eax
     orb  $0b00000011, %al # writable (bit 1), present (bit 0)
     movl %eax, (L4_TABLE)
+*/
 
 enable_paging:
     # Load page table root into CR3
@@ -53,3 +61,4 @@ jump_to_64bit:
     # Set CS to a 64-bit segment and jump to 64-bit Rust code.
     # PVH start_info is in %rdi, the first paramter of the System V ABI.
     ljmpl $0x08, $rust64_start
+

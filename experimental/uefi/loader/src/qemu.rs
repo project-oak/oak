@@ -32,7 +32,7 @@ pub struct Qemu {
 #[derive(Debug)]
 pub struct QemuParams<'a> {
     pub binary: &'a Path,
-    pub firmware: &'a Path,
+    pub firmware: Option<&'a Path>,
     pub app: &'a Path,
 
     pub console: UnixStream,
@@ -80,6 +80,9 @@ impl Qemu {
         cmd.arg("-nographic");
         // Don't bother with default hardware, such as a VGA adapter, floppy drive, etc.
         cmd.arg("-nodefaults");
+        // If the VM exits for some reason, don't reboot, but rather exit qemu as well, as
+        // that's an erroneous situation.
+        cmd.arg("-no-reboot");
         // Use the more modern `q35` machine as the basis.
         // TODO(#2679): q35 comes with a ton of stuff we don't need (eg a PC speaker). We
         // should use something simpler (microvm?), if possible.
@@ -99,8 +102,10 @@ impl Qemu {
         // Expose the QEMU monitor (QMP) over a socket as well.
         cmd.args(&["-chardev", "socket,id=qmpsock,fd=12"]);
         cmd.args(&["-qmp", "chardev:qmpsock"]);
-        // Point to the UEFI firmware
-        cmd.args(&[OsStr::new("-bios"), params.firmware.as_os_str()]);
+        if params.firmware.is_some() {
+            // Point to the UEFI firmware.
+            cmd.args(&[OsStr::new("-bios"), params.firmware.unwrap().as_os_str()]);
+        }
         // And finally -- say that the "kernel" is our UEFI app. Although according to docs
         // this is Linux-specific, OVMF seems to be fine with the "kernel" pointing to an UEFI
         // app.

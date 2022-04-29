@@ -200,7 +200,7 @@ use self::darwin::fill as fill_impl;
 #[cfg(any(target_os = "fuchsia"))]
 use self::fuchsia::fill as fill_impl;
 
-#[cfg(any(target_os = "uefi"))]
+#[cfg(any(target_os = "uefi", target_os = "none"))]
 use self::uefi::fill as fill_impl;
 
 #[cfg(any(target_os = "android", target_os = "linux"))]
@@ -428,7 +428,7 @@ mod fuchsia {
     }
 }
 
-#[cfg(any(target_os = "uefi"))]
+#[cfg(any(target_os = "uefi", target_os = "none"))]
 mod uefi {
     use crate::error;
 

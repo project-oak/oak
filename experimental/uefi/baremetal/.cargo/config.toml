@@ -1,0 +1,9 @@
+[build]
+target = "../../../third_party/rust-hypervisor-firmware-subset/target.json"
+
+[target.target]
+runner = "./runner"
+
+[unstable]
+build-std = ["core", "alloc"]
+build-std-features = ["compiler-builtins-mem"]

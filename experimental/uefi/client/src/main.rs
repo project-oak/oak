@@ -46,7 +46,5 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .ok_or_else(|| anyhow::anyhow!("Empty response"))?;
         println!("Response: {:?}", core::str::from_utf8(&response));
     }
-
-    println!("Hello, world!");
     Ok(())
 }
