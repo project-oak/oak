@@ -24,7 +24,7 @@
 #![test_runner(crate::test_runner)]
 #![reexport_test_harness_main = "test_main"]
 
-use runtime::echo;
+use runtime::framing;
 use uefi::{prelude::*, table::runtime::ResetType};
 
 mod serial;
@@ -66,7 +66,7 @@ fn main(handle: Handle, system_table: &mut SystemTable<Boot>) -> Status {
 
     let mut serial =
         serial::Serial::get(handle, system_table.boot_services(), ECHO_SERIAL_PORT_INDEX).unwrap();
-    echo::echo(&mut serial).unwrap();
+    framing::handle_frames(&mut serial).unwrap();
 }
 
 #[cfg(test)]

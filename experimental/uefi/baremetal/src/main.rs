@@ -52,7 +52,7 @@ pub extern "C" fn rust64_start(rdi: &pvh::StartInfo) -> ! {
 fn main(info: &dyn boot::Info) -> ! {
     info!("In main! Boot protocol:  {}", info.name());
     let mut serial = serial::Serial::new();
-    runtime::echo::echo(&mut serial).unwrap();
+    runtime::framing::handle_frames(&mut serial).unwrap();
 }
 
 // These exit codes are from https://os.phil-opp.com/testing/.

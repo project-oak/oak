@@ -17,12 +17,16 @@
 //! Type, constant and Wasm host function definitions for the Oak-Functions application
 //! binary interface (ABI).
 
+#![no_std]
+
+extern crate alloc;
+
 pub use crate::proto::ExtensionHandle;
+use alloc::{string::String, vec::Vec};
 use serde_derive::{Deserialize, Serialize};
-#[cfg(feature = "oak-metrics")]
-use thiserror::Error;
 
 pub mod proto {
+    use alloc::vec::Vec;
     include!(concat!(env!("OUT_DIR"), "/oak.functions.abi.rs"));
     include!(concat!(env!("OUT_DIR"), "/oak.functions.lookup_data.rs"));
     include!(concat!(env!("OUT_DIR"), "/oak.functions.invocation.rs"));
@@ -44,7 +48,7 @@ pub mod proto {
         ///
         /// Uses the effective length of the body, in `self.length`, to remove the trailing 0s.
         /// Returns as error if `self.length` cannot be converted to `usize` due to an overflow.
-        pub fn body(&self) -> Result<&[u8], std::num::TryFromIntError> {
+        pub fn body(&self) -> Result<&[u8], core::num::TryFromIntError> {
             let length = usize::try_from(self.length)?;
             Ok(&self.body.as_slice()[..length])
         }
@@ -65,10 +69,9 @@ pub struct ReportMetricRequest {
     pub value: i64,
 }
 
-#[derive(Serialize, Deserialize, Debug, Error)]
+#[derive(Serialize, Deserialize, Debug)]
 #[cfg(feature = "oak-metrics")]
 pub enum ReportMetricError {
-    #[error("proxy has already been consumed")]
     ProxyAlreadyConsumed,
 }
 

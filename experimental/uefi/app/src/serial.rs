@@ -72,18 +72,21 @@ impl<'boot> Serial<'boot> {
 }
 
 impl<'boot> runtime::Channel for Serial<'boot> {
-    type Error = Error<()>;
-
-    fn send(&mut self, data: &[u8]) -> Result<(), Self::Error> {
-        self.serial.write(data).discard_errdata()
+    fn send(&mut self, data: &[u8]) -> anyhow::Result<()> {
+        self.serial
+            .write(data)
+            .discard_errdata()
+            .map_err(|status| anyhow::anyhow!("serial write failed with status {:?}", status))
     }
 
     // Try to fill the buffer, ignoring any timeout errors. Any other errors
     // are propagated upward.
-    fn recv(&mut self, data: &mut [u8]) -> Result<(), Self::Error> {
+    fn recv(&mut self, data: &mut [u8]) -> anyhow::Result<()> {
         let mut bytes_read = 0;
         while bytes_read < data.len() {
-            let len = self.read(&mut data[bytes_read..])?;
+            let len = self.read(&mut data[bytes_read..]).map_err(|status| {
+                anyhow::anyhow!("serial write failed with status {:?}", status)
+            })?;
             if len > 0 {
                 bytes_read += len;
             }

@@ -2818,7 +2818,6 @@ dependencies = [
  "prost-build 0.10.1",
  "serde",
  "serde_derive",
- "thiserror",
 ]
 
 [[package]]
@@ -4088,6 +4087,10 @@ dependencies = [
  "anyhow",
  "ciborium",
  "ciborium-io",
+ "log",
+ "oak_functions_wasm",
+ "oak_functions_workload_logging",
+ "oak_logger",
  "oak_remote_attestation_sessions",
 ]
 

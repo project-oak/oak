@@ -463,7 +463,12 @@ where
     }
 
     pub fn handle_invoke(&self, request: Request) -> anyhow::Result<Response> {
-        let request_bytes = request.body;
+        let response_bytes = self.handle_raw_invoke(request.body)?;
+        Ok(Response::create(StatusCode::Success, response_bytes))
+    }
+
+    /// Handles an invocation using raw bytes and returns the response as raw bytes.
+    pub fn handle_raw_invoke(&self, request_bytes: Vec<u8>) -> anyhow::Result<Vec<u8>> {
         let mut wasm_state = self.init_wasm_state(request_bytes)?;
 
         wasm_state.invoke();
@@ -473,10 +478,7 @@ where
             .values_mut()
             .try_for_each(|e| e.terminate())?;
 
-        Ok(Response::create(
-            StatusCode::Success,
-            wasm_state.get_response_bytes(),
-        ))
+        Ok(wasm_state.get_response_bytes())
     }
 }
 
