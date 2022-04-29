@@ -44,6 +44,7 @@ sourcesIndex["offline_attestation_client"] = {"name":"","files":["main.rs"]};
 sourcesIndex["offline_attestation_server"] = {"name":"","files":["main.rs"]};
 sourcesIndex["offline_attestation_shared"] = {"name":"","files":["lib.rs"]};
 sourcesIndex["runtime"] = {"name":"","files":["echo.rs","lib.rs","remote_attestation.rs"]};
+sourcesIndex["rust_hypervisor_firmware_subset"] = {"name":"","dirs":[{"name":"asm","files":["mod.rs"]}],"files":["boot.rs","common.rs","gdt.rs","lib.rs","paging.rs","pvh.rs"]};
 sourcesIndex["tensorflow_client"] = {"name":"","files":["data.rs","main.rs"]};
 sourcesIndex["tensorflow_proxy"] = {"name":"","files":["grpc.rs","main.rs"]};
 sourcesIndex["test_utils"] = {"name":"","files":["lib.rs"]};
