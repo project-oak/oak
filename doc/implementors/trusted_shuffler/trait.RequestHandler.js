@@ -1,0 +1,3 @@
+(function() {var implementors = {};
+implementors["trusted_shuffler_server"] = [{"text":"impl <a class=\"trait\" href=\"trusted_shuffler/trait.RequestHandler.html\" title=\"trait trusted_shuffler::RequestHandler\">RequestHandler</a> for <a class=\"struct\" href=\"trusted_shuffler_server/http/struct.HttpRequestHandler.html\" title=\"struct trusted_shuffler_server::http::HttpRequestHandler\">HttpRequestHandler</a>","synthetic":false,"types":["trusted_shuffler_server::http::HttpRequestHandler"]}];
+if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()
