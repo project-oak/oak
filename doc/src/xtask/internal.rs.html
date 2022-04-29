@@ -1011,6 +1011,16 @@
 <span id="1006">1006</span>
 <span id="1007">1007</span>
 <span id="1008">1008</span>
+<span id="1009">1009</span>
+<span id="1010">1010</span>
+<span id="1011">1011</span>
+<span id="1012">1012</span>
+<span id="1013">1013</span>
+<span id="1014">1014</span>
+<span id="1015">1015</span>
+<span id="1016">1016</span>
+<span id="1017">1017</span>
+<span id="1018">1018</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -1779,7 +1789,17 @@
 
 <span class="kw">impl</span> <span class="ident">Runnable</span> <span class="kw">for</span> <span class="ident">Cmd</span> {
     <span class="kw">fn</span> <span class="ident">description</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">String</span> {
-        <span class="macro">format!</span>(<span class="string">&quot;{} {}&quot;</span>, <span class="self">self</span>.<span class="ident">executable</span>, <span class="self">self</span>.<span class="ident">args</span>.<span class="ident">join</span>(<span class="string">&quot; &quot;</span>))
+        <span class="macro">format!</span>(
+            <span class="string">&quot;{} {}{}&quot;</span>,
+            <span class="self">self</span>.<span class="ident">executable</span>,
+            <span class="self">self</span>.<span class="ident">args</span>.<span class="ident">join</span>(<span class="string">&quot; &quot;</span>),
+            <span class="self">self</span>.<span class="ident">current_dir</span>
+                .<span class="ident">as_ref</span>()
+                .<span class="ident">map_or</span>(<span class="string">&quot;&quot;</span>.<span class="ident">to_string</span>(), <span class="op">|</span><span class="ident">dir</span><span class="op">|</span> <span class="macro">format!</span>(
+                    <span class="string">&quot; (in directory {})&quot;</span>,
+                    <span class="ident">dir</span>.<span class="ident">display</span>()
+                ))
+        )
     }
     <span class="doccomment">/// Run the provided command, printing a status message with the current prefix.</span>
     <span class="doccomment">/// TODO(#396): Return one of three results: pass, fail, or internal error (e.g. if the binary</span>
