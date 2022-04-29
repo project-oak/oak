@@ -121,22 +121,13 @@ impl TrustedShuffler {
             .map(|request| {
                 let request_handler_clone = request_handler.clone();
                 async move {
-                    // let response = request_handler_clone.handle(request.data).await;
-                    // Message {
-                    //     index: request.index,
-                    //     data: response,
-                    //     response_sender: request.response_sender,
-                    // }
-
                     request_handler_clone
                         .handle(request.data)
                         .await
-                        .map(|response| {
-                            Message {
-                                index: request.index,
-                                data: response,
-                                response_sender: request.response_sender,
-                            }
+                        .map(|response| Message {
+                            index: request.index,
+                            data: response,
+                            response_sender: request.response_sender,
                         })
                 }
             })
