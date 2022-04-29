@@ -766,7 +766,17 @@ impl Cmd {
 
 impl Runnable for Cmd {
     fn description(&self) -> String {
-        format!("{} {}", self.executable, self.args.join(" "))
+        format!(
+            "{} {}{}",
+            self.executable,
+            self.args.join(" "),
+            self.current_dir
+                .as_ref()
+                .map_or("".to_string(), |dir| format!(
+                    " (in directory {})",
+                    dir.display()
+                ))
+        )
     }
     /// Run the provided command, printing a status message with the current prefix.
     /// TODO(#396): Return one of three results: pass, fail, or internal error (e.g. if the binary
