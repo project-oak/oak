@@ -29,8 +29,8 @@ impl RequestHandler for TestRequestHandler {
     // A test function that processes requests.
     // In the real use-case, this function should send requests to the backend and
     // return responses.
-    async fn handle(&self, request: Vec<u8>) -> Vec<u8> {
-        generate_response(request)
+    async fn handle(&self, request: Vec<u8>) -> anyhow::Result<Vec<u8>> {
+        Ok(generate_response(request))
     }
 }
 

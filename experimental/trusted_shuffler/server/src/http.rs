@@ -14,17 +14,44 @@
 // limitations under the License.
 //
 
+use anyhow::anyhow;
+use async_trait::async_trait;
 use hyper::{Body, Method, Request, Response, StatusCode};
 use log::{error, info};
 use std::{
     future::Future,
     pin::Pin,
+    sync::Arc,
     task::{Context, Poll},
 };
+use trusted_shuffler::{RequestHandler, TrustedShuffler};
 use trusted_shuffler_common::send_request;
 
-pub struct Service {
+struct HttpRequestHandler {
     backend_url: String,
+}
+
+#[async_trait]
+impl RequestHandler for HttpRequestHandler {
+    async fn handle(&self, request: Vec<u8>) -> anyhow::Result<Vec<u8>> {
+        let response = send_request(&self.backend_url, Method::POST, &request).await;
+        response.map_or_else(
+            |error| {
+                Err(anyhow!(
+                    "Couldn't receive response from the backend: {:?}",
+                    error
+                ))
+            },
+            |response| {
+                info!("Received response from the backend: {:?}", response);
+                Ok(response)
+            },
+        )
+    }
+}
+
+pub struct Service {
+    trusted_shuffler: Arc<TrustedShuffler>,
 }
 
 impl hyper::service::Service<Request<Body>> for Service {
@@ -37,7 +64,7 @@ impl hyper::service::Service<Request<Body>> for Service {
     }
 
     fn call(&mut self, request: Request<Body>) -> Self::Future {
-        let backend_url = self.backend_url.clone();
+        let trusted_shuffler = self.trusted_shuffler.clone();
         let response = async move {
             match (request.method(), request.uri().path()) {
                 (&Method::POST, "/request") => {
@@ -46,22 +73,19 @@ impl hyper::service::Service<Request<Body>> for Service {
                         .expect("Couldn't read request body");
                     info!("Received request: {:?}", body);
 
-                    // TODO(#2614): Use Trusted Shuffler logic.
-                    let response = send_request(&backend_url, Method::POST, &body).await;
-                    response.map_or_else(
-                        |error| {
+                    match trusted_shuffler.invoke(body.to_vec()).await {
+                        Ok(response) => {
+                            info!("Received response: {:?}", response);
+                            Ok(Response::new(Body::from(response)))
+                        }
+                        Err(error) => {
                             error!("Couldn't receive response: {:?}", error);
                             let mut internal_error = Response::default();
                             *internal_error.status_mut() = StatusCode::INTERNAL_SERVER_ERROR;
                             Ok(internal_error)
-                        },
-                        |response| {
-                            info!("Received response: {:?}", response);
-                            Ok(Response::new(Body::from(response)))
-                        },
-                    )
+                        }
+                    }
                 }
-
                 _ => {
                     let mut not_found = Response::default();
                     *not_found.status_mut() = StatusCode::NOT_FOUND;
@@ -75,7 +99,19 @@ impl hyper::service::Service<Request<Body>> for Service {
 }
 
 pub struct ServiceBuilder {
-    pub backend_url: String,
+    trusted_shuffler: Arc<TrustedShuffler>,
+}
+
+impl ServiceBuilder {
+    pub fn new(k: usize, backend_url: &str) -> Self {
+        let trusted_shuffler = Arc::new(TrustedShuffler::new(
+            k,
+            Arc::new(HttpRequestHandler {
+                backend_url: backend_url.to_string(),
+            }),
+        ));
+        Self { trusted_shuffler }
+    }
 }
 
 impl<T> hyper::service::Service<T> for ServiceBuilder {
@@ -88,8 +124,8 @@ impl<T> hyper::service::Service<T> for ServiceBuilder {
     }
 
     fn call(&mut self, _: T) -> Self::Future {
-        let backend_url = self.backend_url.clone();
-        let future = async move { Ok(Service { backend_url }) };
+        let trusted_shuffler = self.trusted_shuffler.clone();
+        let future = async move { Ok(Service { trusted_shuffler }) };
         Box::pin(future)
     }
 }

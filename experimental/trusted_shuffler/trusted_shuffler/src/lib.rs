@@ -45,7 +45,7 @@ struct Message {
 
 #[async_trait]
 pub trait RequestHandler: Send + Sync {
-    async fn handle(&self, request: Vec<u8>) -> Vec<u8>;
+    async fn handle(&self, request: Vec<u8>) -> anyhow::Result<Vec<u8>>;
 }
 
 // Trusted Shuffler implementation.
@@ -121,16 +121,23 @@ impl TrustedShuffler {
             .map(|request| {
                 let request_handler_clone = request_handler.clone();
                 async move {
-                    let response = request_handler_clone.handle(request.data).await;
-                    Message {
-                        index: request.index,
-                        data: response,
-                        response_sender: request.response_sender,
-                    }
+                    request_handler_clone
+                        .handle(request.data)
+                        .await
+                        .map(|response| Message {
+                            index: request.index,
+                            data: response,
+                            response_sender: request.response_sender,
+                        })
                 }
             })
             .collect();
-        let responses = response_futures.collect::<Vec<_>>().await;
+        let responses = response_futures
+            .collect::<Vec<Result<_, _>>>()
+            .await
+            .into_iter()
+            .collect::<Result<Vec<_>, _>>()
+            .context("Couldn't send responses")?;
 
         Self::shuffle_responses(responses)
     }
