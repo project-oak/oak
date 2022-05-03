@@ -141,7 +141,7 @@
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> <span class="ident">AttestationHandler</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>
 <span class="kw">where</span>
-    <span class="ident">F</span>: <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span> <span class="op">+</span> <span class="ident">Clone</span> <span class="op">+</span> <span class="ident">FnOnce</span>(<span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>) -&gt; <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
+    <span class="ident">F</span>: <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span> <span class="op">+</span> <span class="ident">Clone</span> <span class="op">+</span> <span class="ident">FnOnce</span>(<span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span>,
 {
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">create</span>(<span class="ident">request_handler</span>: <span class="ident">F</span>) -&gt; <span class="self">Self</span> {
         <span class="kw">let</span> <span class="ident">session_tracker</span> <span class="op">=</span> <span class="ident">SessionTracker::create</span>(
@@ -183,7 +183,7 @@
                     .<span class="ident">decrypt</span>(<span class="kw-2">&amp;</span><span class="ident">request</span>.<span class="ident">body</span>)
                     .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t decrypt response&quot;</span>)<span class="question-mark">?</span>;
 
-                <span class="kw">let</span> <span class="ident">response</span> <span class="op">=</span> (<span class="self">self</span>.<span class="ident">request_handler</span>.<span class="ident">clone</span>())(<span class="ident">decrypted_request</span>);
+                <span class="kw">let</span> <span class="ident">response</span> <span class="op">=</span> (<span class="self">self</span>.<span class="ident">request_handler</span>.<span class="ident">clone</span>())(<span class="ident">decrypted_request</span>)<span class="question-mark">?</span>;
 
                 <span class="ident">encryptor</span>
                     .<span class="ident">encrypt</span>(<span class="kw-2">&amp;</span><span class="ident">response</span>)
