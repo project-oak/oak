@@ -2,28 +2,40 @@
 
 readonly SCRIPTS_DIR="$(dirname "$0")"
 
-readonly K=2
-readonly QPS=10
-readonly ROUNDS=2
+readonly ROUNDS=20 
+readonly LOG_LEVEL=error
+# ROUNDS * QPS has to be a multiple of K
 
 cargo build --manifest-path=experimental/trusted_shuffler/server/Cargo.toml
 cargo build --manifest-path=experimental/trusted_shuffler/backend/Cargo.toml
 cargo build --manifest-path=experimental/trusted_shuffler/client/Cargo.toml
 
-RUST_LOG=info cargo run --manifest-path=experimental/trusted_shuffler/server/Cargo.toml -- \
-  --k=${K} --listen-address="[::]:8080" --backend-url="http://localhost:8888" &
-sleep 1
-readonly SERVER_PID=$!
+# Write into file.
+echo "k,qps,rounds,delay_in_ms,actual_time" > data.csv
 
-RUST_LOG=info cargo run --manifest-path=experimental/trusted_shuffler/backend/Cargo.toml -- \
-  --listen-address="[::]:8888" &
-sleep 1
-readonly BACKEND_PID=$!
+for K in 500 1000 2000
+do
+  for QPS in $(seq 100 100 1000)
+  do
+    # Echo progress.
+    echo "Starting: $K, $QPS"
 
-RUST_LOG=info cargo run --manifest-path=experimental/trusted_shuffler/client/Cargo.toml -- \
-  --server-url="http://localhost:8080" --qps=${QPS} --rounds=${ROUNDS}
+    RUST_LOG=$LOG_LEVEL cargo run --manifest-path=experimental/trusted_shuffler/server/Cargo.toml -- \
+      --k=${K} --listen-address="[::]:8080" --backend-url="http://localhost:8888" &
+    sleep 1
+    SERVER_PID=$!
 
-echo "k=${K}, qps=${QPS}, rounds=${ROUNDS}"
+    RUST_LOG=$LOG_LEVEL cargo run --manifest-path=experimental/trusted_shuffler/backend/Cargo.toml -- \
+      --listen-address="[::]:8888" &
+    sleep 1
+    BACKEND_PID=$!
 
-kill -9 "${SERVER_PID}"
-kill -9 "${BACKEND_PID}"
+    CLIENT_OUTPUT=$(RUST_LOG=$LOG_LEVEL cargo run --manifest-path=experimental/trusted_shuffler/client/Cargo.toml -- \
+     --server-url="http://localhost:8080" --qps=${QPS} --rounds=${ROUNDS})
+
+    echo "${K},${QPS},${ROUNDS},${CLIENT_OUTPUT}" >> data.csv 
+
+    kill -9 "${SERVER_PID}"
+    kill -9 "${BACKEND_PID}"
+  done 
+done

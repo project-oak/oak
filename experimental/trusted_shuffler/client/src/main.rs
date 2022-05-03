@@ -133,6 +133,6 @@ async fn main() -> anyhow::Result<()> {
     // Estimate how many qps we actually achieved by checking how much time we spent between
     // starting and ending the loop.
     log::info!("Actual time taken {:?}", &start_time.elapsed());
-    println!("{}", avg_delay.as_millis());
+    println!("{},{:?}", avg_delay.as_millis(), &start_time.elapsed());
     Ok(())
 }
