@@ -28,6 +28,10 @@ enum Variant {
 }
 
 impl Variant {
+    pub fn enabled(&self) -> bool {
+        !matches!(self, Variant::Baremetal)
+    }
+
     pub fn payload_crate_path(&self) -> &'static str {
         match self {
             Variant::Uefi => "./experimental/uefi/app",
@@ -55,7 +59,10 @@ impl Variant {
 pub fn run_vm_test() -> Step {
     Step::Multiple {
         name: "VM end-to-end test".to_string(),
-        steps: Variant::iter().map(run_variant).collect(),
+        steps: Variant::iter()
+            .filter(|v| v.enabled())
+            .map(run_variant)
+            .collect(),
     }
 }
 
@@ -68,7 +75,7 @@ fn run_variant(variant: Variant) -> Step {
             Step::WithBackground {
                 name: "background loader".to_string(),
                 background: run_loader(variant),
-                foreground: Box::new(run_client()),
+                foreground: Box::new(run_client("test")),
             },
         ],
     }
@@ -91,7 +98,7 @@ fn run_loader(variant: Variant) -> Box<dyn Runnable> {
     )
 }
 
-fn run_client() -> Step {
+fn run_client(message: &str) -> Step {
     Step::Multiple {
         name: "build and run client".to_string(),
         steps: vec![
@@ -100,7 +107,7 @@ fn run_client() -> Step {
                 name: "run client".to_string(),
                 command: Cmd::new(
                     "./target/debug/uefi-client",
-                    vec!["--request", "test", "--response", "test"],
+                    vec!["--request", message, "--response", message],
                 ),
             },
         ],
