@@ -19,6 +19,7 @@
 use anyhow::Context;
 use oak_functions_abi::proto::{ConfigurationInfo, Request};
 use oak_functions_client::Client;
+use regex::Regex;
 use tract_tensorflow::prelude::*;
 
 // Shape of the input tensor
@@ -80,7 +81,13 @@ async fn main() -> anyhow::Result<()> {
         .context("Could not invoke Oak Functions")?;
 
     let response_body = std::str::from_utf8(response.body().unwrap()).unwrap();
-    assert_eq!(response_body, "Best result: Some((0.17523259, 789))");
+    let regex = Regex::new(r"^Best result: Some\(\(0.175232\d+, 789\)\)$").unwrap();
+    assert!(
+        regex.is_match(response_body),
+        "Response \"{}\" does not match regex \"{}\"",
+        response_body,
+        regex.as_str()
+    );
 
     Ok(())
 }
