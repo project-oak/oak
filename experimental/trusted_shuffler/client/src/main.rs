@@ -75,7 +75,8 @@ async fn main() -> anyhow::Result<()> {
         // client for every round.
         clients.push(tokio::spawn(async move {
             let request = format!("{}", p);
-            let request_start = start_time.elapsed();
+            let request_sent = start_time.elapsed();
+            log::info!("Client Request {}: {}", p, request_sent.as_millis());
 
             let url = format!("{}/request", server_url);
             let response = send_request(&url, Method::POST, request.as_bytes())
@@ -83,18 +84,14 @@ async fn main() -> anyhow::Result<()> {
                 .context("Couldn't receive response")
                 .unwrap();
 
-            let request_duration = start_time.elapsed();
+            let response_received = start_time.elapsed();
 
             // We don't check whether response is exepected response.
             let _parsed_response =
                 String::from_utf8(response).context("Couldn't decode response body");
 
-            log::info!(
-                "client,{},{},{}",
-                p,
-                request_start.as_millis(),
-                request_duration.as_millis(),
-            );
+            log::info!("Client Response {}: {}", p, response_received.as_millis(),);
+            response_received - request_sent
         }));
 
         // Compute current round from queries already sent.
@@ -127,11 +124,15 @@ async fn main() -> anyhow::Result<()> {
         sleep(delta).await;
     }
 
-    join_all(clients).await;
+    let mut total_delay = Duration::from_secs(0);
+    for duration in join_all(clients).await {
+        total_delay = total_delay + duration.unwrap()
+    }
+    let avg_delay = total_delay / (expected_qps * rounds);
 
     // Estimate how many qps we actually achieved by checking how much time we spent between
     // starting and ending the loop.
     log::info!("Actual time taken {:?}", &start_time.elapsed());
-
+    println!("{}", avg_delay.as_millis());
     Ok(())
 }

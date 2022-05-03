@@ -76,13 +76,17 @@ impl hyper::service::Service<Request<Body>> for Service {
                         .expect("Couldn't read request body");
 
                     let request_start = START_TIME.elapsed();
+                    log::info!(
+                        "Server Request: {}, {}",
+                        String::from_utf8(body.to_vec()).unwrap(),
+                        request_start.as_millis()
+                    );
                     match trusted_shuffler.invoke(body.to_vec()).await {
                         Ok(response) => {
                             let response_time = START_TIME.elapsed();
                             log::info!(
-                                "server,{},{},{}",
+                                "Server Response: {},{}",
                                 String::from_utf8(body.to_vec()).unwrap(),
-                                request_start.as_millis(),
                                 response_time.as_millis()
                             );
                             Ok(Response::new(Body::from(response)))

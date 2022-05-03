@@ -50,13 +50,11 @@ async fn handler(request: Request<Body>) -> Result<Response<Body>, hyper::Error>
 
             let request_start = START_TIME.elapsed();
             // Currently we assume the backend takes no time, i.e., no time elapsed between request
-            // and response. For consistency with client and server we give the time
-            // twice.
+            // and response.
             log::info!(
-                "backend,{},{},{}",
+                "Backend Response: {},{}",
                 String::from_utf8(body.to_vec()).unwrap(),
                 request_start.as_millis(),
-                request_start.as_millis()
             );
             // Echo back the response body.
             Ok(Response::new(Body::from(body)))
