@@ -14,26 +14,13 @@
 // limitations under the License.
 //
 
-extern crate alloc;
-
 use crate::{remote_attestation::AttestationHandler, Channel};
 use alloc::vec::Vec;
+use anyhow::Context;
 use ciborium::{de, ser};
 
-#[derive(Debug)]
-pub enum Error<T> {
-    // An error occured while deserializing.
-    Deserialization(ciborium::de::Error<T>),
-
-    // An error occured while serializing.
-    Serialization(ciborium::ser::Error<T>),
-
-    // An error occured in remote attestation.
-    Attestation(anyhow::Error),
-}
-
-impl<E> ciborium_io::Write for &mut dyn Channel<Error = E> {
-    type Error = E;
+impl ciborium_io::Write for &mut dyn Channel {
+    type Error = anyhow::Error;
 
     fn write_all(&mut self, data: &[u8]) -> Result<(), Self::Error> {
         self.send(data)
@@ -44,22 +31,28 @@ impl<E> ciborium_io::Write for &mut dyn Channel<Error = E> {
     }
 }
 
-impl<E> ciborium_io::Read for &mut dyn Channel<Error = E> {
-    type Error = E;
+impl ciborium_io::Read for &mut dyn Channel {
+    type Error = anyhow::Error;
 
     fn read_exact(&mut self, data: &mut [u8]) -> Result<(), Self::Error> {
         self.recv(data)
     }
 }
 
-// Echoes all input on the interface back out.
-pub fn echo<E: core::fmt::Debug>(mut channel: &mut dyn Channel<Error = E>) -> Result<!, Error<E>> {
-    let attestation_handler = &mut AttestationHandler::create(|v| v);
+// Processes incoming frames.
+pub fn handle_frames(mut channel: &mut dyn Channel) -> anyhow::Result<!> {
+    let wasm_handler = crate::wasm::new_wasm_handler()?;
+    let attestation_handler =
+        &mut AttestationHandler::create(move |v| wasm_handler.handle_raw_invoke(v));
     loop {
-        let msg: Vec<u8> = de::from_reader(&mut channel).map_err(Error::Deserialization)?;
+        let msg: Vec<u8> = de::from_reader(&mut channel)
+            .map_err(anyhow::Error::msg)
+            .context("couldn't deserialize message")?;
         let response = attestation_handler
             .message(msg)
-            .map_err(Error::Attestation)?;
-        ser::into_writer(&response, &mut channel).map_err(Error::Serialization)?;
+            .context("attestation failed")?;
+        ser::into_writer(&response, &mut channel)
+            .map_err(anyhow::Error::msg)
+            .context("couldn't serialize response")?;
     }
 }

@@ -37,16 +37,14 @@ impl Serial {
 }
 
 impl runtime::Channel for Serial {
-    type Error = ();
-
-    fn send(&mut self, data: &[u8]) -> Result<(), Self::Error> {
+    fn send(&mut self, data: &[u8]) -> anyhow::Result<()> {
         for byte in data {
             self.port.borrow_mut().send(*byte);
         }
         Ok(())
     }
 
-    fn recv(&mut self, data: &mut [u8]) -> Result<(), Self::Error> {
+    fn recv(&mut self, data: &mut [u8]) -> anyhow::Result<()> {
         #[allow(clippy::needless_range_loop)]
         for i in 0..data.len() {
             data[i] = self.port.borrow_mut().receive();

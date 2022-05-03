@@ -23,15 +23,15 @@ use alloc::vec::Vec;
 use anyhow::bail;
 use oak_remote_attestation_sessions::{SessionId, SESSION_ID_LENGTH};
 
-pub mod echo;
+pub mod framing;
+mod logger;
 mod remote_attestation;
+mod wasm;
 
 /// Basic hardware abstraction layer for sending data.
 pub trait Channel {
-    type Error;
-
-    fn send(&mut self, data: &[u8]) -> Result<(), Self::Error>;
-    fn recv(&mut self, data: &mut [u8]) -> Result<(), Self::Error>;
+    fn send(&mut self, data: &[u8]) -> anyhow::Result<()>;
+    fn recv(&mut self, data: &mut [u8]) -> anyhow::Result<()>;
 }
 
 pub struct SerializeableRequest {

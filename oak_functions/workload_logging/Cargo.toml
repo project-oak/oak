@@ -6,7 +6,7 @@ edition = "2021"
 license = "Apache-2.0"
 
 [dependencies]
-anyhow = "*"
+anyhow = { version = "*", default-features = false }
 log = "*"
 oak_logger = { path = "../logger" }
 oak_functions_abi = { path = "../abi" }

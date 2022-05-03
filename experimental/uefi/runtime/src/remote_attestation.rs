@@ -39,7 +39,7 @@ const MOCK_ADDITIONAL_INFO: [u8; 0] = [];
 
 impl<F> AttestationHandler<F>
 where
-    F: Send + Sync + Clone + FnOnce(Vec<u8>) -> Vec<u8>,
+    F: Send + Sync + Clone + FnOnce(Vec<u8>) -> anyhow::Result<Vec<u8>>,
 {
     pub fn create(request_handler: F) -> Self {
         let session_tracker = SessionTracker::create(
@@ -81,7 +81,7 @@ where
                     .decrypt(&request.body)
                     .context("Couldn't decrypt response")?;
 
-                let response = (self.request_handler.clone())(decrypted_request);
+                let response = (self.request_handler.clone())(decrypted_request)?;
 
                 encryptor
                     .encrypt(&response)
