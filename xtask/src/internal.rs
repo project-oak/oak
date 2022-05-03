@@ -54,6 +54,7 @@ pub struct Opt {
 
 #[derive(Subcommand, Clone, Debug)]
 pub enum Command {
+    RunVmTest,
     RunOakFunctionsExamples(RunOakExamplesOpt),
     BuildOakFunctionsExample(RunOakExamplesOpt),
     BuildOakFunctionsServerVariants(BuildServerOpt),

@@ -55,6 +55,8 @@ use check_license::CheckLicense;
 mod check_build_licenses;
 use check_build_licenses::CheckBuildLicenses;
 
+mod vm;
+
 static PROCESSES: Lazy<Mutex<Vec<i32>>> = Lazy::new(|| Mutex::new(Vec::new()));
 
 #[tokio::main]
@@ -112,6 +114,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 fn match_cmd(opt: &Opt) -> Step {
     match opt.cmd {
+        Command::RunVmTest => vm::run_vm_test(),
         Command::RunOakFunctionsExamples(ref run_opt) => {
             run_oak_functions_examples(run_opt, &opt.scope)
         }
