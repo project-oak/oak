@@ -119,10 +119,10 @@ async fn main() -> anyhow::Result<()> {
         // we sleep until the second has elapsed.
         let delta = time_still_left_this_round
             .checked_div(queries_still_to_fit_this_round)
-            .unwrap_or(
+            .unwrap_or_else(|| {
                 Duration::checked_sub(Duration::from_secs(1), time_elapsed_this_round)
-                    .unwrap_or(Duration::from_secs(0)),
-            );
+                    .unwrap_or(Duration::from_secs(0))
+            });
 
         sleep(delta).await;
     }
