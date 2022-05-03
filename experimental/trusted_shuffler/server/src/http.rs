@@ -80,8 +80,8 @@ impl hyper::service::Service<Request<Body>> for Service {
                         Ok(response) => {
                             let response_time = START_TIME.elapsed();
                             log::info!(
-                                "server, {:?},{},{}",
-                                body,
+                                "server,{},{},{}",
+                                String::from_utf8(body.to_vec()).unwrap(),
                                 request_start.as_millis(),
                                 response_time.as_millis()
                             );

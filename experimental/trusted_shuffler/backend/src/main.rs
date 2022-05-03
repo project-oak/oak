@@ -53,8 +53,8 @@ async fn handler(request: Request<Body>) -> Result<Response<Body>, hyper::Error>
             // and response. For consistency with client and server we give the time
             // twice.
             log::info!(
-                "backend,{:?},{},{}",
-                body,
+                "backend,{},{},{}",
+                String::from_utf8(body.to_vec()).unwrap(),
                 request_start.as_millis(),
                 request_start.as_millis()
             );
