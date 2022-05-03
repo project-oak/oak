@@ -58,9 +58,6 @@ async fn main() -> anyhow::Result<()> {
     let expected_qps = opt.qps;
     let rounds = opt.rounds;
 
-    // Give 10 ms lee-way for stuff. Distribute the qps evently over the remaining 900 ms.
-    let sleep_between_qs = 900 / expected_qps;
-
     // Start with giving one second iterations.
     let start_time = Instant::now();
 
@@ -69,7 +66,11 @@ async fn main() -> anyhow::Result<()> {
 
     let mut clients = vec![];
 
-    for p in Sieve::new().iter().take((expected_qps * rounds) as usize) {
+    for (n, p) in Sieve::new()
+        .iter()
+        .take((expected_qps * rounds) as usize)
+        .enumerate()
+    {
         let server_url = opt.server_url.clone();
 
         // We currently spawn a new client for every new request. Alternatively we could re-use the
@@ -98,7 +99,35 @@ async fn main() -> anyhow::Result<()> {
                 );
             }
         }));
-        sleep(Duration::from_millis(sleep_between_qs.into())).await;
+
+        // Compute current round from queries already sent.
+        let current_round = n as u32 / expected_qps;
+
+        // Adapt the sleep_time depending on how many queries still have to fit.
+        let queries_sent_this_round = (n + 1) as u32 % expected_qps;
+        let queries_still_to_fit_this_round = expected_qps - queries_sent_this_round;
+
+        let time_elapsed_this_round = Duration::checked_sub(
+            start_time.elapsed(),
+            Duration::from_secs(current_round as u64),
+        )
+        .expect("The time elapsed is shorter than current round.");
+
+        // If there is no time left, we set time_still_left to 0.
+        let time_still_left_this_round =
+            Duration::checked_sub(Duration::from_secs(1), time_elapsed_this_round)
+                .unwrap_or(Duration::from_secs(0));
+
+        // If there are no queries still to fit in this round and there is time left in the round,
+        // we sleep until the second has elapsed.
+        let delta = time_still_left_this_round
+            .checked_div(queries_still_to_fit_this_round)
+            .unwrap_or(
+                Duration::checked_sub(Duration::from_secs(1), time_elapsed_this_round)
+                    .unwrap_or(Duration::from_secs(0)),
+            );
+
+        sleep(delta).await;
     }
 
     join_all(clients).await;
