@@ -40,6 +40,7 @@ pub struct Opt {
 }
 
 lazy_static! {
+    // We use START_TIME to time the time elapsed between every request and response.
     static ref START_TIME: Instant = Instant::now();
 }
 
@@ -49,7 +50,9 @@ async fn handler(request: Request<Body>) -> Result<Response<Body>, hyper::Error>
             let body = hyper::body::to_bytes(request.into_body()).await?;
 
             let request_start = START_TIME.elapsed();
-            // We assume no time elapsed between request and response.
+            // Currently we assume the backend takes no time, i.e., no time elapsed between request
+            // and response. For consistency with client and server we give the time
+            // twice.
             log::info!(
                 "backend,{:?},{},{}",
                 body,

@@ -57,7 +57,6 @@ async fn main() -> anyhow::Result<()> {
 
     let expected_qps = opt.qps;
     let rounds = opt.rounds;
-    let total_queries = expected_qps * rounds;
 
     // Give 10 ms lee-way for stuff. Distribute the qps evently over the remaining 900 ms.
     let sleep_between_qs = 900 / expected_qps;
@@ -65,13 +64,16 @@ async fn main() -> anyhow::Result<()> {
     // Start with giving one second iterations.
     let start_time = Instant::now();
 
-    // Header of table
+    // Header of table printed by logger.
     log::info!("phase,id,request_elapsed_in_ms,response_elapsed_in_ms");
+
     let mut clients = vec![];
 
-    for p in Sieve::new().iter().take(total_queries as usize) {
+    for p in Sieve::new().iter().take((expected_qps * rounds) as usize) {
         let server_url = opt.server_url.clone();
 
+        // We currently spawn a new client for every new request. Alternatively we could re-use the
+        // client for every round.
         clients.push(tokio::spawn(async move {
             let request = format!("{}", p);
             let request_start = start_time.elapsed();

@@ -30,6 +30,7 @@ use trusted_shuffler::{RequestHandler, TrustedShuffler};
 use trusted_shuffler_common::send_request;
 
 lazy_static! {
+    // We use START_TIME to time the time elapsed between every request and response.
     static ref START_TIME: Instant = Instant::now();
 }
 struct HttpRequestHandler {
@@ -47,7 +48,7 @@ impl RequestHandler for HttpRequestHandler {
                     error
                 ))
             },
-            |response| Ok(response),
+            Ok,
         )
     }
 }
