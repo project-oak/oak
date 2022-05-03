@@ -16,8 +16,6 @@
 
 //! Backend server for the Trusted Shuffler example.
 
-use std::time::Instant;
-
 use anyhow::Context;
 use clap::Parser;
 use futures_util::FutureExt;
@@ -27,6 +25,7 @@ use hyper::{
 };
 use lazy_static::lazy_static;
 use log::info;
+use std::time::Instant;
 
 #[derive(Parser, Clone)]
 #[clap(about = "Backend for Trusted Shuffler Example")]

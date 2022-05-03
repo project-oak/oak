@@ -22,7 +22,6 @@ use futures::future::join_all;
 use hyper::Method;
 use primes::{PrimeSet, Sieve};
 use std::time::{Duration, Instant};
-
 use tokio::time::sleep;
 use trusted_shuffler_common::send_request;
 
@@ -35,7 +34,7 @@ pub struct Opt {
         default_value = "http://localhost:8080"
     )]
     server_url: String,
-    #[structopt(long, help = "The QPS we are aiming to simulate", default_value = "10")]
+    #[structopt(long, help = "The QPS to simulate", default_value = "10")]
     qps: u32,
     #[structopt(
         long,
@@ -58,7 +57,6 @@ async fn main() -> anyhow::Result<()> {
     let expected_qps = opt.qps;
     let rounds = opt.rounds;
 
-    // Start with giving one second iterations.
     let start_time = Instant::now();
 
     // Header of table printed by logger.
@@ -82,22 +80,21 @@ async fn main() -> anyhow::Result<()> {
             let url = format!("{}/request", server_url);
             let response = send_request(&url, Method::POST, request.as_bytes())
                 .await
-                .context("Couldn't receive response");
+                .context("Couldn't receive response")
+                .unwrap();
 
             let request_duration = start_time.elapsed();
 
-            if let Ok(response) = response {
-                // We don't check whether response is exepected response.
-                let _parsed_response =
-                    String::from_utf8(response).context("Couldn't decode response body");
+            // We don't check whether response is exepected response.
+            let _parsed_response =
+                String::from_utf8(response).context("Couldn't decode response body");
 
-                log::info!(
-                    "client,{},{},{}",
-                    p,
-                    request_start.as_millis(),
-                    request_duration.as_millis(),
-                );
-            }
+            log::info!(
+                "client,{},{},{}",
+                p,
+                request_start.as_millis(),
+                request_duration.as_millis(),
+            );
         }));
 
         // Compute current round from queries already sent.
