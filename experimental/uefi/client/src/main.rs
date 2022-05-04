@@ -29,12 +29,12 @@ struct Args {
     server: String,
 
     /// message to be sent to the server. If not specified (with a response), uses stdio.
-    #[clap(long, requires = "response")]
+    #[clap(long, requires = "expected-response")]
     request: Option<String>,
 
     /// expected response from the server. If not specified (with a request), uses stdio.
     #[clap(long, requires = "request")]
-    response: Option<String>,
+    expected_response: Option<String>,
 }
 
 async fn chat(client: &mut AttestationClient, message: String) -> anyhow::Result<String> {
@@ -44,7 +44,7 @@ async fn chat(client: &mut AttestationClient, message: String) -> anyhow::Result
         .context("Error invoking Oak Functions instance")?
         .ok_or_else(|| anyhow::anyhow!("Empty response"))?;
 
-    String::from_utf8(response).map_err(|err| anyhow::anyhow!(err))
+    String::from_utf8(response).map_err(Into::into)
 }
 
 #[tokio::main]
@@ -56,13 +56,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .await
             .context("Could not create client")?;
 
-    if cli.request.is_some() && cli.response.is_some() {
-        let response = chat(&mut client, cli.request.unwrap()).await?;
-        assert_eq!(response, cli.response.unwrap());
-    } else {
-        for line in stdin().lock().lines() {
-            let response = chat(&mut client, line.unwrap()).await?;
-            println!("Response: {:?}", response);
+    match (cli.request, cli.expected_response) {
+        (Some(request), Some(expected_response)) => {
+            let response = chat(&mut client, request).await?;
+            assert_eq!(response, expected_response);
+        }
+        _ => {
+            let mut lines = stdin().lock().lines();
+            while let Some(Ok(line)) = lines.next() {
+                let response = chat(&mut client, line).await?;
+                println!("Response: {:?}", response);
+            }
         }
     }
     Ok(())

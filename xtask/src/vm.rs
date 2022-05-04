@@ -29,7 +29,9 @@ enum Variant {
 
 impl Variant {
     pub fn enabled(&self) -> bool {
-        !matches!(self, Variant::Baremetal)
+        // The bare metal variant is disabled for now, because the crypto library we use right now
+        // doesn't work on bare metal.
+        self != &Variant::Baremetal
     }
 
     pub fn payload_crate_path(&self) -> &'static str {
@@ -107,7 +109,7 @@ fn run_client(message: &str) -> Step {
                 name: "run client".to_string(),
                 command: Cmd::new(
                     "./target/debug/uefi-client",
-                    vec!["--request", message, "--response", message],
+                    vec!["--request", message, "--expected-response", message],
                 ),
             },
         ],
