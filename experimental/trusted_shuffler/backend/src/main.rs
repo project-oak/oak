@@ -68,7 +68,7 @@ async fn handler(request: Request<Body>) -> Result<Response<Body>, hyper::Error>
     }
 }
 
-#[tokio::main(flavor = "multi_thread", worker_threads = 2)]
+#[tokio::main(flavor = "multi_thread")]
 async fn main() -> anyhow::Result<()> {
     env_logger::builder()
         .format_timestamp(None)

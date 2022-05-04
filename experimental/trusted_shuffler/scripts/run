@@ -3,8 +3,11 @@
 readonly SCRIPTS_DIR="$(dirname "$0")"
 
 readonly ROUNDS=20 
-readonly LOG_LEVEL=info
+readonly LOG_LEVEL=error
 # ROUNDS * QPS has to be a multiple of K
+
+KS=(500 1000 2000)
+QPSS=$(seq 100 100 1000)
 
 cargo build --manifest-path=experimental/trusted_shuffler/server/Cargo.toml
 cargo build --manifest-path=experimental/trusted_shuffler/backend/Cargo.toml
@@ -13,9 +16,9 @@ cargo build --manifest-path=experimental/trusted_shuffler/client/Cargo.toml
 # Write into file.
 echo "k,qps,rounds,actual_time,delay_in_ms" > data.csv
 
-for K in 500 1000 2000
+for K in $KS
 do
-  for QPS in $(seq 100 100 1000)
+  for QPS in $QPSS
   do
     # Echo progress.
     echo "Starting: $K, $QPS"

@@ -44,7 +44,7 @@ pub struct Opt {
     rounds: u32,
 }
 
-#[tokio::main(flavor = "multi_thread", worker_threads = 2)]
+#[tokio::main(flavor = "multi_thread")]
 async fn main() -> anyhow::Result<()> {
     env_logger::builder()
         .format_timestamp(None)
@@ -134,7 +134,7 @@ async fn main() -> anyhow::Result<()> {
     }
     let avg_delay = total_delay / (target_qps * rounds);
 
-    println!("{:?},{:?}", actual_time_taken, avg_delay);
+    println!("{:?},{:?}", actual_time_taken, avg_delay.as_millis());
 
     Ok(())
 }
