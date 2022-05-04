@@ -153,9 +153,6 @@
 <span id="148">148</span>
 <span id="149">149</span>
 <span id="150">150</span>
-<span id="151">151</span>
-<span id="152">152</span>
-<span id="153">153</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2022 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -255,10 +252,7 @@
     <span class="comment">// change what we write to stdout in the UEFI app.</span>
     <span class="kw">if</span> <span class="ident">cli</span>.<span class="ident">mode</span> <span class="op">==</span> <span class="ident">Mode::Uefi</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">junk</span> <span class="op">=</span> [<span class="number">0</span>; <span class="number">71</span>];
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">len</span> <span class="op">=</span> <span class="number">0</span>;
-        <span class="kw">while</span> <span class="ident">len</span> <span class="op">&lt;</span> <span class="ident">junk</span>.<span class="ident">len</span>() {
-            <span class="ident">len</span> <span class="op">+</span><span class="op">=</span> <span class="ident">comms</span>.<span class="ident">read</span>(<span class="kw-2">&amp;mut</span> <span class="ident">junk</span>[<span class="ident">len</span>..]).<span class="kw">await</span>.<span class="ident">unwrap</span>();
-        }
+        <span class="ident">comms</span>.<span class="ident">read_exact</span>(<span class="kw-2">&amp;mut</span> <span class="ident">junk</span>).<span class="kw">await</span>.<span class="ident">unwrap</span>();
         <span class="macro">log::info!</span>(<span class="string">&quot;Leading junk on comms: {:?}&quot;</span>, <span class="ident">std::str::from_utf8</span>(<span class="kw-2">&amp;</span><span class="ident">junk</span>));
     }
 
