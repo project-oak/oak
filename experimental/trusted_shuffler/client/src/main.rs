@@ -54,20 +54,19 @@ async fn main() -> anyhow::Result<()> {
         .init();
     let opt = Opt::parse();
 
-    let expected_qps = opt.qps;
+    let target_qps = opt.qps;
     let rounds = opt.rounds;
+
+    // Currently every client sends only one request and terminates.
+    let mut clients = vec![];
 
     let start_time = Instant::now();
 
-    // Header of table printed by logger.
-    log::info!("phase,id,request_elapsed_in_ms,response_elapsed_in_ms");
-
-    let mut clients = vec![];
-
-    for (n, p) in Sieve::new()
-        .iter()
-        .take((expected_qps * rounds) as usize)
-        .enumerate()
+    for (n, p) in // (1..(target_qps * rounds)).enumerate()
+        Sieve::new()
+            .iter()
+            .take((target_qps * rounds) as usize)
+            .enumerate()
     {
         let server_url = opt.server_url.clone();
 
@@ -95,11 +94,11 @@ async fn main() -> anyhow::Result<()> {
         }));
 
         // Compute current round from queries already sent.
-        let current_round = n as u32 / expected_qps;
+        let current_round = n as u32 / target_qps;
 
         // Adapt the sleep_time depending on how many queries still have to fit.
-        let queries_sent_this_round = (n + 1) as u32 % expected_qps;
-        let queries_still_to_fit_this_round = expected_qps - queries_sent_this_round;
+        let queries_sent_this_round = (n + 1) as u32 % target_qps;
+        let queries_still_to_fit_this_round = target_qps - queries_sent_this_round;
 
         let time_elapsed_this_round = Duration::checked_sub(
             start_time.elapsed(),
@@ -124,15 +123,18 @@ async fn main() -> anyhow::Result<()> {
         sleep(delta).await;
     }
 
+    // Estimate how many qps we actually achieved by checking how much time we spent between
+    // starting and ending the loop.
+    let actual_time_taken = &start_time.elapsed();
+    log::info!("Actual time taken {:?}", actual_time_taken);
+
     let mut total_delay = Duration::from_secs(0);
     for duration in join_all(clients).await {
         total_delay = total_delay + duration.unwrap()
     }
-    let avg_delay = total_delay / (expected_qps * rounds);
+    let avg_delay = total_delay / (target_qps * rounds);
 
-    // Estimate how many qps we actually achieved by checking how much time we spent between
-    // starting and ending the loop.
-    log::info!("Actual time taken {:?}", &start_time.elapsed());
-    println!("{},{:?}", avg_delay.as_millis(), &start_time.elapsed());
+    println!("{:?},{:?}", actual_time_taken, avg_delay);
+
     Ok(())
 }
