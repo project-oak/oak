@@ -16,7 +16,7 @@ cargo build --manifest-path=experimental/trusted_shuffler/client/Cargo.toml
 # Write into file.
 echo "k,qps,rounds,actual_time,delay_in_ms" > data.csv
 
-for K in $KS
+for K in "${KS[@]}"
 do
   for QPS in $QPSS
   do
@@ -24,7 +24,7 @@ do
     echo "Starting: $K, $QPS"
 
     RUST_LOG=$LOG_LEVEL cargo run --manifest-path=experimental/trusted_shuffler/server/Cargo.toml -- \
-      --k=${K} --listen-address="[::]:8080" --backend-url="http://localhost:8888" &
+      --k="${K}" --listen-address="[::]:8080" --backend-url="http://localhost:8888" &
     sleep 1
     SERVER_PID=$!
 
@@ -34,7 +34,7 @@ do
     BACKEND_PID=$!
 
     CLIENT_OUTPUT=$(RUST_LOG=$LOG_LEVEL cargo run --manifest-path=experimental/trusted_shuffler/client/Cargo.toml -- \
-     --server-url="http://localhost:8080" --qps=${QPS} --rounds=${ROUNDS})
+     --server-url="http://localhost:8080" --qps="${QPS}" --rounds="${ROUNDS}")
 
     echo "${K},${QPS},${ROUNDS},${CLIENT_OUTPUT}" >> data.csv 
 

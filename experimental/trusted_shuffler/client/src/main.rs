@@ -130,7 +130,7 @@ async fn main() -> anyhow::Result<()> {
 
     let mut total_delay = Duration::from_secs(0);
     for duration in join_all(clients).await {
-        total_delay = total_delay + duration.unwrap()
+        total_delay += duration.unwrap()
     }
     let avg_delay = total_delay / (target_qps * rounds);
 
