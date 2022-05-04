@@ -1,1 +1,1 @@
-initSidebarItems({"constant":[["TEE_MEASUREMENT",""]],"fn":[["main",""]],"struct":[["Args",""]]});
+initSidebarItems({"constant":[["TEE_MEASUREMENT",""]],"fn":[["chat",""],["main",""]],"struct":[["Args",""]]});

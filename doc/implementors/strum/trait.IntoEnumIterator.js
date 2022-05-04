@@ -1,3 +1,3 @@
 (function() {var implementors = {};
-implementors["xtask"] = [{"text":"impl IntoEnumIterator for <a class=\"enum\" href=\"xtask/internal/enum.ServerVariant.html\" title=\"enum xtask::internal::ServerVariant\">ServerVariant</a>","synthetic":false,"types":["xtask::internal::ServerVariant"]}];
+implementors["xtask"] = [{"text":"impl IntoEnumIterator for <a class=\"enum\" href=\"xtask/internal/enum.ServerVariant.html\" title=\"enum xtask::internal::ServerVariant\">ServerVariant</a>","synthetic":false,"types":["xtask::internal::ServerVariant"]},{"text":"impl IntoEnumIterator for <a class=\"enum\" href=\"xtask/vm/enum.Variant.html\" title=\"enum xtask::vm::Variant\">Variant</a>","synthetic":false,"types":["xtask::vm::Variant"]}];
 if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

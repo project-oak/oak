@@ -56,5 +56,5 @@ sourcesIndex["trusted_shuffler_server"] = {"name":"","files":["http.rs","main.rs
 sourcesIndex["uefi_client"] = {"name":"","files":["main.rs"]};
 sourcesIndex["uefi_loader"] = {"name":"","files":["main.rs","qemu.rs","server.rs"]};
 sourcesIndex["weather_lookup"] = {"name":"","files":["lib.rs"]};
-sourcesIndex["xtask"] = {"name":"","files":["check_build_licenses.rs","check_license.rs","check_todo.rs","diffs.rs","examples.rs","files.rs","internal.rs","main.rs"]};
+sourcesIndex["xtask"] = {"name":"","files":["check_build_licenses.rs","check_license.rs","check_todo.rs","diffs.rs","examples.rs","files.rs","internal.rs","main.rs","vm.rs"]};
 createSourceSidebar();
