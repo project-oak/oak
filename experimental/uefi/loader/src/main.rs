@@ -97,10 +97,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // change what we write to stdout in the UEFI app.
     if cli.mode == Mode::Uefi {
         let mut junk = [0; 71];
-        let mut len = 0;
-        while len < junk.len() {
-            len += comms.read(&mut junk[len..]).await.unwrap();
-        }
+        comms.read_exact(&mut junk).await.unwrap();
         log::info!("Leading junk on comms: {:?}", std::str::from_utf8(&junk));
     }
 
