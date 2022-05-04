@@ -3280,16 +3280,28 @@ checksum = "624a8340c38c1b80fd549087862da4ba43e08858af025b236e509b6649fc13d5"
 
 [[package]]
 name = "openssl"
-version = "0.10.38"
+version = "0.10.40"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0c7ae222234c30df141154f159066c5093ff73b63204dcda7121eb082fc56a95"
+checksum = "fb81a6430ac911acb25fe5ac8f1d2af1b4ea8a4fdfda0f1ee4292af2e2d8eb0e"
 dependencies = [
  "bitflags",
  "cfg-if",
  "foreign-types",
  "libc",
  "once_cell",
+ "openssl-macros",
  "openssl-sys",
+]
+
+[[package]]
+name = "openssl-macros"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b501e44f11665960c7e7fcf062c7d96a14ade4aa98116c004b2e37b5be7d736c"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]
@@ -3300,9 +3312,9 @@ checksum = "ff011a302c396a5197692431fc1948019154afc178baf7d8e37367442a4601cf"
 
 [[package]]
 name = "openssl-sys"
-version = "0.9.72"
+version = "0.9.73"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7e46109c383602735fa0a2e48dd2b7c892b048e1bf69e5c3b1d804b7d9c203cb"
+checksum = "9d5fd19fb3e0a8191c1e34935718976a3e70c112ab9a24af6d7cadccd9d90bc0"
 dependencies = [
  "autocfg",
  "cc",
@@ -5247,9 +5259,9 @@ dependencies = [
 
 [[package]]
 name = "tract-core"
-version = "0.16.4"
+version = "0.16.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "74f2d8ee91a9ad22f260e41fd434acb1361055d562486ae270c271991b3879f8"
+checksum = "7ae63f5e21145b87b7812ac050f692ebd9fae5c31146c37e03f07b1a31ff7ab4"
 dependencies = [
  "anyhow",
  "bit-set",
@@ -5270,9 +5282,9 @@ dependencies = [
 
 [[package]]
 name = "tract-data"
-version = "0.16.4"
+version = "0.16.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4f3d76e0765c8f971ab71a91b04ab71510828e782850efeb550f6ca45ccb0cfc"
+checksum = "9aeb135db1d5d5824666edf10be35b01c8a84bf993cc64a5321bc13070624840"
 dependencies = [
  "anyhow",
  "educe",
@@ -5289,9 +5301,9 @@ dependencies = [
 
 [[package]]
 name = "tract-hir"
-version = "0.16.4"
+version = "0.16.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b2fecd4dcef42cb54f1226ad00f4db2919a4362a08e982df8bfb0e51fd4c067f"
+checksum = "dd9b6e42023e0949688b47f512e36f0d4691e6ee7ddb014bc514ea03d2d5122f"
 dependencies = [
  "derive-new",
  "educe",
@@ -5301,9 +5313,9 @@ dependencies = [
 
 [[package]]
 name = "tract-linalg"
-version = "0.16.4"
+version = "0.16.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0203e1a40d1027fba6047310ee5678345b4e301379c641dd5e65136a16e9b21f"
+checksum = "a98190bce172d691ee230d423e5881cbb546b61df768f521611c51d52511d660"
 dependencies = [
  "cc",
  "derive-new",
@@ -5325,9 +5337,9 @@ dependencies = [
 
 [[package]]
 name = "tract-nnef"
-version = "0.16.4"
+version = "0.16.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c01c6d3c5a5e64d3964f18631d804d1cc17ba15171772da4761b2dfb6c92acfd"
+checksum = "3b2cc0350faa927c1d895e06ed28cebf4e4e9437642aa5ac65942462006ab342"
 dependencies = [
  "byteorder",
  "flate2",
@@ -5340,9 +5352,9 @@ dependencies = [
 
 [[package]]
 name = "tract-pulse"
-version = "0.16.4"
+version = "0.16.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "83c890d54755e01ab9316e61d98a2c092cdae2c48261e477ad487345e8ee8159"
+checksum = "111327b44f8f54612fdda06d8cc27b845593d022dbaffba97bbe3e143ef50e99"
 dependencies = [
  "downcast-rs",
  "lazy_static",
@@ -5351,9 +5363,9 @@ dependencies = [
 
 [[package]]
 name = "tract-pulse-opl"
-version = "0.16.4"
+version = "0.16.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "267e88f8dde04d4175d7676710943ced28adb03426ecc1855837258364cc4b68"
+checksum = "e4ac9848dd6e8cc0597f9aceabbd21c310f8fa6acf09e814de34a926c091f83a"
 dependencies = [
  "downcast-rs",
  "lazy_static",
@@ -5362,9 +5374,9 @@ dependencies = [
 
 [[package]]
 name = "tract-tensorflow"
-version = "0.16.4"
+version = "0.16.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2851880e7e0a75d2563ae6a5fe13192e0895dd0bb5876943ec2594f4087e59f7"
+checksum = "c34df1924abf6f8c87435cdff09f4a7ae330b8f7652c3cb1017fd0fd26782d10"
 dependencies = [
  "bytes",
  "derive-new",
