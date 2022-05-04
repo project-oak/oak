@@ -80,6 +80,8 @@ async fn main() -> anyhow::Result<()> {
         .await
         .context("Could not invoke Oak Functions")?;
 
+    // Allow some small variance in the result, as the number can change slightly between different
+    // versions of libraries. We still want the test to fail for any significant changes, though.
     let response_body = std::str::from_utf8(response.body().unwrap()).unwrap();
     let regex = Regex::new(r"^Best result: Some\(\(0.175232\d+, 789\)\)$").unwrap();
     assert!(
