@@ -11,7 +11,6 @@
   "linker": "rust-lld",
   "panic-strategy": "abort",
   "disable-redzone": true,
-  "features": "-mmx,-sse,+soft-float",
   "relocation-model": "pic",
   "pre-link-args": {
     "ld.lld": ["--script=layout.ld"]
