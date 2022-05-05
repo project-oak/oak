@@ -651,33 +651,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "ciborium"
-version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b0c137568cc60b904a7724001b35ce2630fd00d5d84805fbb608ab89509d788f"
-dependencies = [
- "ciborium-io",
- "ciborium-ll",
- "serde",
-]
-
-[[package]]
-name = "ciborium-io"
-version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "346de753af073cc87b52b2083a506b38ac176a44cfb05497b622e27be899b369"
-
-[[package]]
-name = "ciborium-ll"
-version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "213030a2b5a4e0c0892b6652260cf6ccac84827b83a85a534e178e3906c4cf1b"
-dependencies = [
- "ciborium-io",
- "half",
-]
-
-[[package]]
 name = "cipher"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4106,8 +4079,6 @@ name = "runtime"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "ciborium",
- "ciborium-io",
  "log",
  "oak_functions_wasm",
  "oak_functions_workload_logging",
@@ -5033,18 +5004,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "tokio-serde-cbor"
-version = "0.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "23c8004e322e2509b9c7c4c0a48b7770a9657d8f1772791ea7c2f6c39e82568e"
-dependencies = [
- "bytes",
- "serde",
- "serde_cbor",
- "tokio-util 0.6.9",
-]
-
-[[package]]
 name = "tokio-stream"
 version = "0.1.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5545,7 +5504,6 @@ dependencies = [
  "runtime",
  "serde",
  "tokio",
- "tokio-serde-cbor",
  "tokio-util 0.6.9",
  "tonic",
 ]

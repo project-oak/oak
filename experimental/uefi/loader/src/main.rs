@@ -17,10 +17,14 @@
 use std::{fs, path::PathBuf};
 
 use clap::Parser;
-use futures::{stream::StreamExt, SinkExt};
+use futures::stream::StreamExt;
 use qemu::{Qemu, QemuParams};
-use tokio::{io::AsyncReadExt, net::UnixStream, signal};
-use tokio_serde_cbor::Codec;
+use runtime::{Frame, FrameLength, FRAME_LENGTH_BYTES_SIZE};
+use tokio::{
+    io::{AsyncReadExt, AsyncWriteExt},
+    net::UnixStream,
+    signal,
+};
 use tokio_util::codec::Decoder;
 
 mod qemu;
@@ -92,7 +96,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     });
 
     // TODO(#2709): Unfortunately OVMF writes some garbage (clear screen etc?) + our Hello
-    // World to the other serial port, so let's skip some bytes before we set up the CBOR codec.
+    // World to the other serial port, so let's skip some bytes before we set up framing.
     // The length of 71 characters has been determined experimentally and will change if we
     // change what we write to stdout in the UEFI app.
     if cli.mode == Mode::Uefi {
@@ -107,28 +111,41 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let (tx, mut rx) = bmrng::unbounded_channel::<Vec<u8>, anyhow::Result<Vec<u8>>>();
 
     tokio::spawn(async move {
-        // Set up the CBOR codec to handle the comms.
-        let codec: Codec<Vec<u8>, Vec<u8>> = Codec::new();
-        let mut channel = codec.framed(comms);
+        async fn write_input_to_socket(
+            wh: &mut tokio::net::unix::OwnedWriteHalf,
+            input: Vec<u8>,
+        ) -> anyhow::Result<()> {
+            let encoded_frame = Frame { body: input }.encode()?;
+            wh.write_all(&encoded_frame).await?;
+            Ok(())
+        }
+
+        async fn read_frame_from_socket(
+            rh: &mut tokio::net::unix::OwnedReadHalf,
+        ) -> anyhow::Result<Frame> {
+            let mut length_buf = [0; FRAME_LENGTH_BYTES_SIZE];
+            rh.read_exact(&mut length_buf).await?;
+            let length = FrameLength::from_be_bytes(length_buf);
+            let mut body: Vec<u8> = vec![0; length.into()];
+            rh.read_exact(&mut body).await?;
+            Ok(Frame { body })
+        }
+
+        async fn respond(
+            mut rh: &mut tokio::net::unix::OwnedReadHalf,
+            mut wh: &mut tokio::net::unix::OwnedWriteHalf,
+            input: Vec<u8>,
+        ) -> anyhow::Result<Vec<u8>> {
+            write_input_to_socket(&mut wh, input).await?;
+            read_frame_from_socket(&mut rh)
+                .await
+                .and_then(|frame| Ok(frame.body))
+        }
+
+        let (mut rh, mut wh) = comms.into_split();
         while let Ok((input, responder)) = rx.recv().await {
-            responder
-                .respond({
-                    if let Err(err) = channel.send(input).await {
-                        Err(anyhow::Error::from(err))
-                    } else {
-                        // TODO(#2726): Sometimes next() gives us a None. Figure out what's going on
-                        // in there.
-                        let mut response;
-                        loop {
-                            response = channel.next().await;
-                            if response.is_some() {
-                                break;
-                            }
-                        }
-                        response.unwrap().map_err(anyhow::Error::from)
-                    }
-                })
-                .unwrap();
+            let response = respond(&mut rh, &mut wh, input).await;
+            responder.respond(response).unwrap();
         }
     });
 

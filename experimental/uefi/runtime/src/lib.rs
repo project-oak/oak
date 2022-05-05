@@ -34,6 +34,26 @@ pub trait Channel {
     fn recv(&mut self, data: &mut [u8]) -> anyhow::Result<()>;
 }
 
+pub type FrameLength = u16;
+// The frame length is a u16, which is two bytes encoded.
+pub const FRAME_LENGTH_ENCODED_SIZE: usize = 2;
+
+pub struct Frame {
+    pub body: Vec<u8>,
+}
+
+impl Frame {
+    pub fn encode(self) -> anyhow::Result<Vec<u8>> {
+        let length: FrameLength =
+            FrameLength::try_from(self.body.len()).map_err(anyhow::Error::msg)?;
+        let encoded_length = length.to_be_bytes();
+        let mut encoded_frame: Vec<u8> = Vec::with_capacity(encoded_length.len() + self.body.len());
+        encoded_frame.extend(encoded_length);
+        encoded_frame.extend(self.body);
+        Ok(encoded_frame)
+    }
+}
+
 pub struct SerializeableRequest {
     pub session_id: SessionId,
     pub body: Vec<u8>,

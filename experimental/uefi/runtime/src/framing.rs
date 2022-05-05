@@ -14,45 +14,36 @@
 // limitations under the License.
 //
 
-use crate::{remote_attestation::AttestationHandler, Channel};
-use alloc::vec::Vec;
+use crate::{
+    remote_attestation::AttestationHandler, Channel, Frame, FrameLength, FRAME_LENGTH_BYTES_SIZE,
+};
+use alloc::{vec, vec::Vec};
 use anyhow::Context;
-use ciborium::{de, ser};
 
-impl ciborium_io::Write for &mut dyn Channel {
-    type Error = anyhow::Error;
-
-    fn write_all(&mut self, data: &[u8]) -> Result<(), Self::Error> {
-        self.send(data)
-    }
-
-    fn flush(&mut self) -> Result<(), Self::Error> {
-        Ok(())
-    }
+fn read_frame_from_channel(channel: &mut dyn Channel) -> anyhow::Result<Frame> {
+    let mut length_buf = [0; FRAME_LENGTH_BYTES_SIZE];
+    channel.recv(&mut length_buf)?;
+    let length = FrameLength::from_be_bytes(length_buf);
+    let mut body: Vec<u8> = vec![0; length.into()];
+    channel.recv(&mut body)?;
+    Ok(Frame { body })
 }
-
-impl ciborium_io::Read for &mut dyn Channel {
-    type Error = anyhow::Error;
-
-    fn read_exact(&mut self, data: &mut [u8]) -> Result<(), Self::Error> {
-        self.recv(data)
-    }
-}
-
 // Processes incoming frames.
-pub fn handle_frames(mut channel: &mut dyn Channel) -> anyhow::Result<!> {
+pub fn handle_frames(channel: &mut dyn Channel) -> anyhow::Result<!> {
     let wasm_handler = crate::wasm::new_wasm_handler()?;
     let attestation_handler =
         &mut AttestationHandler::create(move |v| wasm_handler.handle_raw_invoke(v));
     loop {
-        let msg: Vec<u8> = de::from_reader(&mut channel)
-            .map_err(anyhow::Error::msg)
-            .context("couldn't deserialize message")?;
+        let frame = read_frame_from_channel(channel).context("couldn't receive message")?;
         let response = attestation_handler
-            .message(msg)
+            .message(frame.body)
             .context("attestation failed")?;
-        ser::into_writer(&response, &mut channel)
-            .map_err(anyhow::Error::msg)
-            .context("couldn't serialize response")?;
+
+        let encoded_response = Frame { body: response }
+            .encode()
+            .context("couldn't encode response")?;
+        channel
+            .send(&encoded_response)
+            .context("couldn't send response")?;
     }
 }
