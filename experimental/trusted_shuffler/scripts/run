@@ -14,7 +14,7 @@ cargo build --manifest-path=experimental/trusted_shuffler/backend/Cargo.toml
 cargo build --manifest-path=experimental/trusted_shuffler/client/Cargo.toml
 
 # Write into file.
-echo "k,qps,rounds,actual_time,delay_in_ms" > data.csv
+echo "k,qps,rounds,actual_time,avg_delay_in_s,max_delay_in_s" > data.csv
 
 for K in "${KS[@]}"
 do

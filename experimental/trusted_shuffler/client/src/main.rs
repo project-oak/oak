@@ -75,21 +75,25 @@ async fn main() -> anyhow::Result<()> {
         clients.push(tokio::spawn(async move {
             let request = format!("{}", p);
             let request_sent = start_time.elapsed();
-            log::info!("Client Request {}: {}", p, request_sent.as_millis());
+            log::info!("Client Request {}", p);
 
             let url = format!("{}/request", server_url);
             let response = send_request(&url, Method::POST, request.as_bytes())
                 .await
-                .context("Couldn't receive response")
-                .unwrap();
+                .context("Couldn't receive response");
 
             let response_received = start_time.elapsed();
 
-            // We don't check whether response is exepected response.
-            let _parsed_response =
-                String::from_utf8(response).context("Couldn't decode response body");
+            let parsed_response =
+                String::from_utf8(response.unwrap()).context("Couldn't decode response body");
 
-            log::info!("Client Response {}: {}", p, response_received.as_millis(),);
+            assert_eq!(parsed_response.unwrap(), p.to_string());
+
+            log::info!(
+                "Client Response {}: {:?}",
+                p,
+                response_received - request_sent,
+            );
             response_received - request_sent
         }));
 
@@ -100,11 +104,13 @@ async fn main() -> anyhow::Result<()> {
         let queries_sent_this_round = (n + 1) as u32 % target_qps;
         let queries_still_to_fit_this_round = target_qps - queries_sent_this_round;
 
+        // If more than one maximal time in this round elapsed, we set to the maximal time per
+        // round. The maximal time is one second.
         let time_elapsed_this_round = Duration::checked_sub(
             start_time.elapsed(),
             Duration::from_secs(current_round as u64),
         )
-        .expect("The time elapsed is shorter than current round.");
+        .unwrap_or(Duration::from_secs(1));
 
         // If there is no time left, we set time_still_left to 0.
         let time_still_left_this_round =
@@ -113,28 +119,35 @@ async fn main() -> anyhow::Result<()> {
 
         // If there are no queries still to fit in this round and there is time left in the round,
         // we sleep until the second has elapsed.
-        let delta = time_still_left_this_round
+        let _delta = time_still_left_this_round
             .checked_div(queries_still_to_fit_this_round)
             .unwrap_or_else(|| {
                 Duration::checked_sub(Duration::from_secs(1), time_elapsed_this_round)
                     .unwrap_or(Duration::from_secs(0))
             });
 
-        sleep(delta).await;
+        sleep(Duration::from_micros(1)).await;
     }
 
     // Estimate how many qps we actually achieved by checking how much time we spent between
     // starting and ending the loop.
     let actual_time_taken = &start_time.elapsed();
-    log::info!("Actual time taken {:?}", actual_time_taken);
+    // log::info!("Actual time taken {:?}", actual_time_taken);
 
     let mut total_delay = Duration::from_secs(0);
+    let mut max_delay = Duration::from_secs(0);
+
     for duration in join_all(clients).await {
-        total_delay += duration.unwrap()
+        let duration = duration.unwrap();
+        total_delay += duration;
+        if duration > max_delay {
+            max_delay = duration;
+        }
     }
     let avg_delay = total_delay / (target_qps * rounds);
 
-    println!("{:?},{:?}", actual_time_taken, avg_delay.as_millis());
+    // println!("Avg Delag: {:?}", avg_delay.as_millis());
+    println!("{:?},{:?},{:?}", actual_time_taken, avg_delay, max_delay);
 
     Ok(())
 }

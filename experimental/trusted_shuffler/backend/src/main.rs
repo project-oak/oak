@@ -49,12 +49,17 @@ async fn handler(request: Request<Body>) -> Result<Response<Body>, hyper::Error>
             let body = hyper::body::to_bytes(request.into_body()).await?;
 
             let request_start = START_TIME.elapsed();
+            log::info!(
+                "Backend Request: {},{:?}",
+                String::from_utf8(body.to_vec()).unwrap(),
+                request_start,
+            );
+
             // Currently we assume the backend takes no time, i.e., no time elapsed between request
             // and response.
             log::info!(
-                "Backend Response: {},{}",
+                "Backend Response: {}",
                 String::from_utf8(body.to_vec()).unwrap(),
-                request_start.as_millis(),
             );
             // Echo back the response body.
             Ok(Response::new(Body::from(body)))
