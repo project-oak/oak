@@ -90,18 +90,27 @@ pub fn report_metric<T: AsRef<str>>(
     let label = label.as_ref().to_owned();
     let request = ReportMetricRequest { label, value };
 
-    let serialized_request =
-        bincode::serialize(&request).expect("Fail to serialize report metric request.");
+    let response = match bincode::serialize(&request) {
+        Ok(serialized_request) => invoke(
+            oak_functions_abi::ExtensionHandle::MetricsHandle,
+            &serialized_request,
+        ),
+        Err(_) => return Ok(Err(ReportMetricError::SerializingRequestFailed)),
+    };
 
-    let response = invoke(
-        oak_functions_abi::ExtensionHandle::MetricsHandle,
-        &serialized_request,
-    )?;
+    // Transform OakStatus to ReportMetricError for consistency.
+    let response = match response {
+        Err(OakStatus::ErrSerializingResponse) => {
+            return Ok(Err(ReportMetricError::SerializingResponseFailed))
+        }
+        x => x,
+    }?;
 
-    let response: ReportMetricResponse =
-        bincode::deserialize(&response).expect("Failed to deserialize report metric response.");
-
-    Ok(response.result)
+    let response: Result<ReportMetricResponse, _> = bincode::deserialize(&response);
+    match response {
+        Ok(response) => Ok(response.result),
+        Err(_) => Ok(Err(ReportMetricError::DeserializingResponseFailed)),
+    }
 }
 
 /// Writes a debug log message.
