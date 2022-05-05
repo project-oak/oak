@@ -14,18 +14,16 @@
 // limitations under the License.
 //
 
-use std::{fs, path::PathBuf};
-
 use clap::Parser;
-use futures::stream::StreamExt;
 use qemu::{Qemu, QemuParams};
-use runtime::{Frame, FrameLength, FRAME_LENGTH_BYTES_SIZE};
-use tokio::{
-    io::{AsyncReadExt, AsyncWriteExt},
-    net::UnixStream,
-    signal,
+use runtime::{Channel, Frame};
+use std::{
+    fs,
+    io::{BufRead, BufReader, Read, Write},
+    os::unix::net::UnixStream,
+    path::PathBuf,
 };
-use tokio_util::codec::Decoder;
+use tokio::signal;
 
 mod qemu;
 mod server;
@@ -63,6 +61,19 @@ fn path_exists(s: &str) -> Result<(), String> {
     }
 }
 
+struct CommsChannel {
+    inner: UnixStream,
+}
+
+impl Channel for CommsChannel {
+    fn send(&mut self, data: &[u8]) -> anyhow::Result<()> {
+        self.inner.write_all(data).map_err(anyhow::Error::msg)
+    }
+    fn recv(&mut self, data: &mut [u8]) -> anyhow::Result<()> {
+        self.inner.read_exact(data).map_err(anyhow::Error::msg)
+    }
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cli = Args::parse();
@@ -85,13 +96,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Log everything coming over the console channel.
     tokio::spawn(async {
-        let codec = tokio_util::codec::LinesCodec::new();
-        let mut framed = codec.framed(console);
+        let mut reader = BufReader::new(console);
 
-        while let Some(line) = framed.next().await {
+        let mut line = String::new();
+        while reader.read_line(&mut line).expect("failed to read line") > 0 {
             // The UEFI console uses ANSI escape codes to clear screen and set colours, so
             // let's not just print the string out but rather the debug version of that.
-            log::info!("console: {:?}", line.unwrap())
+            log::info!("console: {:?}", line);
+            line.clear();
         }
     });
 
@@ -101,7 +113,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // change what we write to stdout in the UEFI app.
     if cli.mode == Mode::Uefi {
         let mut junk = [0; 71];
-        comms.read_exact(&mut junk).await.unwrap();
+        comms.read_exact(&mut junk).unwrap();
         log::info!("Leading junk on comms: {:?}", std::str::from_utf8(&junk));
     }
 
@@ -111,40 +123,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let (tx, mut rx) = bmrng::unbounded_channel::<Vec<u8>, anyhow::Result<Vec<u8>>>();
 
     tokio::spawn(async move {
-        async fn write_input_to_socket(
-            wh: &mut tokio::net::unix::OwnedWriteHalf,
-            input: Vec<u8>,
-        ) -> anyhow::Result<()> {
-            let encoded_frame = Frame { body: input }.encode()?;
-            wh.write_all(&encoded_frame).await?;
-            Ok(())
+        let mut comms_channel = CommsChannel { inner: comms };
+        fn respond(comms_channel: &mut CommsChannel, input: Vec<u8>) -> anyhow::Result<Vec<u8>> {
+            Frame { body: input }.write_to_channel(comms_channel)?;
+            let response_frame = Frame::read_from_channel(comms_channel)?;
+            Ok(response_frame.body)
         }
 
-        async fn read_frame_from_socket(
-            rh: &mut tokio::net::unix::OwnedReadHalf,
-        ) -> anyhow::Result<Frame> {
-            let mut length_buf = [0; FRAME_LENGTH_BYTES_SIZE];
-            rh.read_exact(&mut length_buf).await?;
-            let length = FrameLength::from_be_bytes(length_buf);
-            let mut body: Vec<u8> = vec![0; length.into()];
-            rh.read_exact(&mut body).await?;
-            Ok(Frame { body })
-        }
-
-        async fn respond(
-            mut rh: &mut tokio::net::unix::OwnedReadHalf,
-            mut wh: &mut tokio::net::unix::OwnedWriteHalf,
-            input: Vec<u8>,
-        ) -> anyhow::Result<Vec<u8>> {
-            write_input_to_socket(&mut wh, input).await?;
-            read_frame_from_socket(&mut rh)
-                .await
-                .and_then(|frame| Ok(frame.body))
-        }
-
-        let (mut rh, mut wh) = comms.into_split();
         while let Ok((input, responder)) = rx.recv().await {
-            let response = respond(&mut rh, &mut wh, input).await;
+            let response = respond(&mut comms_channel, input);
             responder.respond(response).unwrap();
         }
     });

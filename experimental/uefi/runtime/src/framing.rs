@@ -14,36 +14,20 @@
 // limitations under the License.
 //
 
-use crate::{
-    remote_attestation::AttestationHandler, Channel, Frame, FrameLength, FRAME_LENGTH_BYTES_SIZE,
-};
-use alloc::{vec, vec::Vec};
+use crate::{remote_attestation::AttestationHandler, Channel, Frame};
 use anyhow::Context;
 
-fn read_frame_from_channel(channel: &mut dyn Channel) -> anyhow::Result<Frame> {
-    let mut length_buf = [0; FRAME_LENGTH_BYTES_SIZE];
-    channel.recv(&mut length_buf)?;
-    let length = FrameLength::from_be_bytes(length_buf);
-    let mut body: Vec<u8> = vec![0; length.into()];
-    channel.recv(&mut body)?;
-    Ok(Frame { body })
-}
 // Processes incoming frames.
 pub fn handle_frames(channel: &mut dyn Channel) -> anyhow::Result<!> {
     let wasm_handler = crate::wasm::new_wasm_handler()?;
     let attestation_handler =
         &mut AttestationHandler::create(move |v| wasm_handler.handle_raw_invoke(v));
     loop {
-        let frame = read_frame_from_channel(channel).context("couldn't receive message")?;
+        let frame = Frame::read_from_channel(channel).context("couldn't receive message")?;
         let response = attestation_handler
             .message(frame.body)
             .context("attestation failed")?;
-
-        let encoded_response = Frame { body: response }
-            .encode()
-            .context("couldn't encode response")?;
-        channel
-            .send(&encoded_response)
-            .context("couldn't send response")?;
+        let reponse_frame = Frame { body: response };
+        reponse_frame.write_to_channel(channel)?
     }
 }
