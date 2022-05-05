@@ -22,8 +22,8 @@
 #[cfg(not(any(feature = "ring-crypto", feature = "rust-crypto")))]
 compile_error!("A cryptographic implementation must be specified.");
 
-// When all both implementations are selected (e.g. when testing with all features) we use the
-// `ring` implementation.
+// When both implementations are selected (e.g. when testing with all features) we use the `ring`
+// implementation.
 #[cfg(all(feature = "rust-crypto", not(feature = "ring-crypto")))]
 mod rust_crypto;
 
