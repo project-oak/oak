@@ -68,6 +68,26 @@
 <span id="63">63</span>
 <span id="64">64</span>
 <span id="65">65</span>
+<span id="66">66</span>
+<span id="67">67</span>
+<span id="68">68</span>
+<span id="69">69</span>
+<span id="70">70</span>
+<span id="71">71</span>
+<span id="72">72</span>
+<span id="73">73</span>
+<span id="74">74</span>
+<span id="75">75</span>
+<span id="76">76</span>
+<span id="77">77</span>
+<span id="78">78</span>
+<span id="79">79</span>
+<span id="80">80</span>
+<span id="81">81</span>
+<span id="82">82</span>
+<span id="83">83</span>
+<span id="84">84</span>
+<span id="85">85</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2022 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -89,16 +109,25 @@
 <span class="comment">// Should be kept in sync with the Java implementation of the remote attestation</span>
 <span class="comment">// protocol.</span>
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">not</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;ring-crypto&quot;</span>))]</span>
-<span class="macro">compiler_error!</span>(<span class="string">&quot;A cryptographic implementation must be specified.&quot;</span>);
+<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">not</span>(<span class="ident">any</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;ring-crypto&quot;</span>, <span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;rust-crypto&quot;</span>)))]</span>
+<span class="macro">compile_error!</span>(<span class="string">&quot;A cryptographic implementation must be specified.&quot;</span>);
+
+<span class="comment">// When both implementations are selected (e.g. when testing with all features) we use the `ring`</span>
+<span class="comment">// implementation.</span>
+<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">all</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;rust-crypto&quot;</span>, <span class="ident">not</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;ring-crypto&quot;</span>)))]</span>
+<span class="kw">mod</span> <span class="ident">rust_crypto</span>;
+
+<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">all</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;rust-crypto&quot;</span>, <span class="ident">not</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;ring-crypto&quot;</span>)))]</span>
+<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">rust_crypto</span>::{
+    <span class="ident">get_random</span>, <span class="ident">get_sha256</span>, <span class="ident">AeadEncryptor</span>, <span class="ident">KeyNegotiator</span>, <span class="ident">SignatureVerifier</span>, <span class="ident">Signer</span>,
+};
 
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;ring-crypto&quot;</span>)]</span>
 <span class="kw">mod</span> <span class="ident">ring_crypto</span>;
 
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;ring-crypto&quot;</span>)]</span>
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">ring_crypto</span>::{
-    <span class="ident">get_random</span>, <span class="ident">get_sha256</span>, <span class="ident">AeadEncryptor</span>, <span class="ident">KeyNegotiator</span>, <span class="ident">KeyNegotiatorType</span>, <span class="ident">SignatureVerifier</span>,
-    <span class="ident">Signer</span>,
+    <span class="ident">get_random</span>, <span class="ident">get_sha256</span>, <span class="ident">AeadEncryptor</span>, <span class="ident">KeyNegotiator</span>, <span class="ident">SignatureVerifier</span>, <span class="ident">Signer</span>,
 };
 
 <span class="doccomment">/// Length of the encryption nonce.</span>
@@ -125,6 +154,17 @@
 <span class="doccomment">/// &lt;https://datatracker.ietf.org/doc/html/rfc6979&gt;</span>
 <span class="doccomment">/// &lt;https://standards.ieee.org/standard/1363-2000.html&gt;</span>
 <span class="kw">pub</span> <span class="kw">const</span> <span class="ident">SIGNATURE_LENGTH</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">64</span>;
+
+<span class="doccomment">/// Defines the type of key negotiator and the set of session keys created by it.</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>)]</span>
+<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">KeyNegotiatorType</span> {
+    <span class="doccomment">/// Defines a key negotiator which provides server session key for encryption and client</span>
+    <span class="doccomment">/// session key for decryption.</span>
+    <span class="ident">Server</span>,
+    <span class="doccomment">/// Defines a key negotiator which provides client session key for encryption and server</span>
+    <span class="doccomment">/// session key for decryption.</span>
+    <span class="ident">Client</span>,
+}
 
 <span class="doccomment">/// Convenience struct for passing an encryption key as an argument.</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">PartialEq</span>)]</span>

@@ -1012,7 +1012,7 @@
             <span class="self">self</span>.<span class="ident">transcript</span>
                 .<span class="ident">append</span>(<span class="kw-2">&amp;</span><span class="ident">server_identity_no_signature</span>)
                 .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t append server identity to the transcript&quot;</span>)<span class="question-mark">?</span>;
-            <span class="kw">let</span> <span class="ident">verifier</span> <span class="op">=</span> <span class="ident">SignatureVerifier::new</span>(<span class="kw-2">&amp;</span><span class="ident">server_identity</span>.<span class="ident">signing_public_key</span>);
+            <span class="kw">let</span> <span class="ident">verifier</span> <span class="op">=</span> <span class="ident">SignatureVerifier::new</span>(<span class="kw-2">&amp;</span><span class="ident">server_identity</span>.<span class="ident">signing_public_key</span>)<span class="question-mark">?</span>;
             <span class="ident">verifier</span>
                 .<span class="ident">verify</span>(
                     <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">transcript</span>.<span class="ident">get_sha256</span>(),
@@ -1285,7 +1285,7 @@
             <span class="self">self</span>.<span class="ident">transcript</span>
                 .<span class="ident">append</span>(<span class="kw-2">&amp;</span><span class="ident">client_identity_no_signature</span>)
                 .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t append client identity to the transcript&quot;</span>)<span class="question-mark">?</span>;
-            <span class="kw">let</span> <span class="ident">verifier</span> <span class="op">=</span> <span class="ident">SignatureVerifier::new</span>(<span class="kw-2">&amp;</span><span class="ident">client_identity</span>.<span class="ident">signing_public_key</span>);
+            <span class="kw">let</span> <span class="ident">verifier</span> <span class="op">=</span> <span class="ident">SignatureVerifier::new</span>(<span class="kw-2">&amp;</span><span class="ident">client_identity</span>.<span class="ident">signing_public_key</span>)<span class="question-mark">?</span>;
             <span class="ident">verifier</span>
                 .<span class="ident">verify</span>(
                     <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">transcript</span>.<span class="ident">get_sha256</span>(),

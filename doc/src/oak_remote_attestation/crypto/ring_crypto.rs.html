@@ -407,17 +407,6 @@
 <span id="402">402</span>
 <span id="403">403</span>
 <span id="404">404</span>
-<span id="405">405</span>
-<span id="406">406</span>
-<span id="407">407</span>
-<span id="408">408</span>
-<span id="409">409</span>
-<span id="410">410</span>
-<span id="411">411</span>
-<span id="412">412</span>
-<span id="413">413</span>
-<span id="414">414</span>
-<span id="415">415</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2021 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -438,9 +427,9 @@
 
 <span class="kw">use</span> <span class="kw">crate</span>::{
     <span class="ident">crypto</span>::{
-        <span class="ident">DecryptionKey</span>, <span class="ident">EncryptionKey</span>, <span class="ident">AEAD_ALGORITHM_KEY_LENGTH</span>, <span class="ident">CLIENT_KEY_PURPOSE</span>,
-        <span class="ident">KEY_AGREEMENT_ALGORITHM_KEY_LENGTH</span>, <span class="ident">KEY_DERIVATION_SALT</span>, <span class="ident">NONCE_LENGTH</span>, <span class="ident">SERVER_KEY_PURPOSE</span>,
-        <span class="ident">SHA256_HASH_LENGTH</span>, <span class="ident">SIGNATURE_LENGTH</span>, <span class="ident">SIGNING_ALGORITHM_KEY_LENGTH</span>,
+        <span class="ident">DecryptionKey</span>, <span class="ident">EncryptionKey</span>, <span class="ident">KeyNegotiatorType</span>, <span class="ident">AEAD_ALGORITHM_KEY_LENGTH</span>,
+        <span class="ident">CLIENT_KEY_PURPOSE</span>, <span class="ident">KEY_AGREEMENT_ALGORITHM_KEY_LENGTH</span>, <span class="ident">KEY_DERIVATION_SALT</span>, <span class="ident">NONCE_LENGTH</span>,
+        <span class="ident">SERVER_KEY_PURPOSE</span>, <span class="ident">SHA256_HASH_LENGTH</span>, <span class="ident">SIGNATURE_LENGTH</span>, <span class="ident">SIGNING_ALGORITHM_KEY_LENGTH</span>,
     },
     <span class="ident">message::EncryptedData</span>,
 };
@@ -733,17 +722,6 @@
     }
 }
 
-<span class="doccomment">/// Defines the type of key negotiator and the set of session keys created by it.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>)]</span>
-<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">KeyNegotiatorType</span> {
-    <span class="doccomment">/// Defines a key negotiator which provides server session key for encryption and client</span>
-    <span class="doccomment">/// session key for decryption.</span>
-    <span class="ident">Server</span>,
-    <span class="doccomment">/// Defines a key negotiator which provides client session key for encryption and server</span>
-    <span class="doccomment">/// session key for decryption.</span>
-    <span class="ident">Client</span>,
-}
-
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Signer</span> {
     <span class="doccomment">/// Parsed PKCS#8 v2 key pair representation.</span>
     <span class="ident">key_pair</span>: <span class="ident">EcdsaKeyPair</span>,
@@ -800,10 +778,10 @@
 }
 
 <span class="kw">impl</span> <span class="ident">SignatureVerifier</span> {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">public_key_bytes</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>; <span class="ident">SIGNING_ALGORITHM_KEY_LENGTH</span>]) -&gt; <span class="self">Self</span> {
-        <span class="self">Self</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">public_key_bytes</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>; <span class="ident">SIGNING_ALGORITHM_KEY_LENGTH</span>]) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
+        <span class="prelude-val">Ok</span>(<span class="self">Self</span> {
             <span class="ident">public_key_bytes</span>: <span class="kw-2">*</span><span class="ident">public_key_bytes</span>,
-        }
+        })
     }
 
     <span class="doccomment">/// Verifies the signature validity.</span>
