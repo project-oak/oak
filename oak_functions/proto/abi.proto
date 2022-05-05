@@ -45,6 +45,8 @@ enum OakStatus {
   ERR_INTERNAL = 3;
   // Error when the given number is not a valid handle.
   ERR_INVALID_HANDLE = 4;
+  // Error when serializing the response failed.
+  ERR_SERIALIZING_RESPONSE = 5;
 }
 
 // The inference from a TensorFlow model, containing an inference vector of floats, and a shape
