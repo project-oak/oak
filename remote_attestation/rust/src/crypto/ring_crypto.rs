@@ -14,12 +14,16 @@
 // limitations under the License.
 //
 
-// Crypto primitives used by the remote attestation protocol.
-//
-// Should be kept in sync with the Java implementation of the remote attestation
-// protocol.
+//! Implementation of the crypto primitives used for remote attestation based on the `ring` crate.
 
-use crate::message::EncryptedData;
+use crate::{
+    crypto::{
+        DecryptionKey, EncryptionKey, AEAD_ALGORITHM_KEY_LENGTH, CLIENT_KEY_PURPOSE,
+        KEY_AGREEMENT_ALGORITHM_KEY_LENGTH, KEY_DERIVATION_SALT, NONCE_LENGTH, SERVER_KEY_PURPOSE,
+        SHA256_HASH_LENGTH, SIGNATURE_LENGTH, SIGNING_ALGORITHM_KEY_LENGTH,
+    },
+    message::EncryptedData,
+};
 use alloc::{format, vec, vec::Vec};
 use anyhow::{anyhow, Context};
 use core::convert::TryInto;
@@ -32,67 +36,21 @@ use ring::{
     signature::{EcdsaKeyPair, EcdsaSigningAlgorithm, EcdsaVerificationAlgorithm, KeyPair},
 };
 
-/// Length of the encryption nonce.
-/// `ring::aead` uses 96-bit (12-byte) nonces.
-/// <https://briansmith.org/rustdoc/ring/aead/constant.NONCE_LEN.html>
-pub const NONCE_LENGTH: usize = aead::NONCE_LEN;
-pub const SHA256_HASH_LENGTH: usize = 32;
 /// Algorithm used for encrypting/decrypting messages.
 /// <https://datatracker.ietf.org/doc/html/rfc5288>
 static AEAD_ALGORITHM: &aead::Algorithm = &aead::AES_256_GCM;
-pub const AEAD_ALGORITHM_KEY_LENGTH: usize = 32;
+
 /// Algorithm used for negotiating a session key.
 /// <https://datatracker.ietf.org/doc/html/rfc7748>
 static KEY_AGREEMENT_ALGORITHM: &agreement::Algorithm = &agreement::X25519;
-pub const KEY_AGREEMENT_ALGORITHM_KEY_LENGTH: usize = 32;
-/// Salt used for key derivation with HKDF.
-/// <https://datatracker.ietf.org/doc/html/rfc5869>
-pub const KEY_DERIVATION_SALT: &str = "Remote Attestation Protocol v1";
-/// Purpose string used for deriving server session keys with HKDF.
-pub const SERVER_KEY_PURPOSE: &str = "Remote Attestation Protocol Server Session Key";
-/// Purpose string used for deriving client session keys with HKDF.
-pub const CLIENT_KEY_PURPOSE: &str = "Remote Attestation Protocol Client Session Key";
+
 /// Algorithm used to create cryptographic signatures.
 static SIGNING_ALGORITHM: &EcdsaSigningAlgorithm =
     &ring::signature::ECDSA_P256_SHA256_FIXED_SIGNING;
-/// OpenSSL ECDSA-P256 key public key length, which is represented as
-/// `0x04 | X: 32-byte | Y: 32-byte`.
-/// Where X and Y are big-endian coordinates of an Elliptic Curve point.
-/// <https://datatracker.ietf.org/doc/html/rfc6979>
-pub const SIGNING_ALGORITHM_KEY_LENGTH: usize = 65;
-// TODO(#2277): Use OpenSSL signature format (which is 72 bytes).
-/// IEEE-P1363 encoded ECDSA-P256 signature length.
-/// <https://datatracker.ietf.org/doc/html/rfc6979>
-/// <https://standards.ieee.org/standard/1363-2000.html>
-pub const SIGNATURE_LENGTH: usize = 64;
+
 /// Algorithm used to verify cryptographic signatures.
 static VERIFICATION_ALGORITHM: &EcdsaVerificationAlgorithm =
     &ring::signature::ECDSA_P256_SHA256_FIXED;
-
-/// Nonce implementation used by [`AeadEncryptor`].
-/// It returns a single nonce once and then only returns errors.
-struct OneNonceSequence(Option<aead::Nonce>);
-
-impl OneNonceSequence {
-    fn new(nonce: [u8; NONCE_LENGTH]) -> Self {
-        let nonce = aead::Nonce::assume_unique_for_key(nonce);
-        Self(Some(nonce))
-    }
-}
-
-impl aead::NonceSequence for OneNonceSequence {
-    fn advance(&mut self) -> Result<aead::Nonce, ring::error::Unspecified> {
-        self.0.take().ok_or(ring::error::Unspecified)
-    }
-}
-
-/// Convenience struct for passing an encryption key as an argument.
-#[derive(PartialEq)]
-pub(crate) struct EncryptionKey(pub(crate) [u8; KEY_AGREEMENT_ALGORITHM_KEY_LENGTH]);
-
-/// Convenience struct for passing a decryption key as an argument.
-#[derive(PartialEq)]
-pub(crate) struct DecryptionKey(pub(crate) [u8; KEY_AGREEMENT_ALGORITHM_KEY_LENGTH]);
 
 /// Implementation of Authenticated Encryption with Associated Data (AEAD).
 ///
@@ -168,6 +126,23 @@ impl AeadEncryptor {
     /// Generate a random nonce.
     fn generate_nonce() -> anyhow::Result<[u8; NONCE_LENGTH]> {
         get_random()
+    }
+}
+
+/// Nonce implementation used by [`AeadEncryptor`].
+/// It returns a single nonce once and then only returns errors.
+struct OneNonceSequence(Option<aead::Nonce>);
+
+impl OneNonceSequence {
+    fn new(nonce: [u8; NONCE_LENGTH]) -> Self {
+        let nonce = aead::Nonce::assume_unique_for_key(nonce);
+        Self(Some(nonce))
+    }
+}
+
+impl aead::NonceSequence for OneNonceSequence {
+    fn advance(&mut self) -> Result<aead::Nonce, ring::error::Unspecified> {
+        self.0.take().ok_or(ring::error::Unspecified)
     }
 }
 
