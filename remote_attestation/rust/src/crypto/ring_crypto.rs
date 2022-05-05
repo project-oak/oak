@@ -18,9 +18,9 @@
 
 use crate::{
     crypto::{
-        DecryptionKey, EncryptionKey, AEAD_ALGORITHM_KEY_LENGTH, CLIENT_KEY_PURPOSE,
-        KEY_AGREEMENT_ALGORITHM_KEY_LENGTH, KEY_DERIVATION_SALT, NONCE_LENGTH, SERVER_KEY_PURPOSE,
-        SHA256_HASH_LENGTH, SIGNATURE_LENGTH, SIGNING_ALGORITHM_KEY_LENGTH,
+        DecryptionKey, EncryptionKey, KeyNegotiatorType, AEAD_ALGORITHM_KEY_LENGTH,
+        CLIENT_KEY_PURPOSE, KEY_AGREEMENT_ALGORITHM_KEY_LENGTH, KEY_DERIVATION_SALT, NONCE_LENGTH,
+        SERVER_KEY_PURPOSE, SHA256_HASH_LENGTH, SIGNATURE_LENGTH, SIGNING_ALGORITHM_KEY_LENGTH,
     },
     message::EncryptedData,
 };
@@ -313,17 +313,6 @@ impl KeyNegotiator {
     }
 }
 
-/// Defines the type of key negotiator and the set of session keys created by it.
-#[derive(Clone)]
-pub enum KeyNegotiatorType {
-    /// Defines a key negotiator which provides server session key for encryption and client
-    /// session key for decryption.
-    Server,
-    /// Defines a key negotiator which provides client session key for encryption and server
-    /// session key for decryption.
-    Client,
-}
-
 pub struct Signer {
     /// Parsed PKCS#8 v2 key pair representation.
     key_pair: EcdsaKeyPair,
@@ -380,10 +369,10 @@ pub struct SignatureVerifier {
 }
 
 impl SignatureVerifier {
-    pub fn new(public_key_bytes: &[u8; SIGNING_ALGORITHM_KEY_LENGTH]) -> Self {
-        Self {
+    pub fn new(public_key_bytes: &[u8; SIGNING_ALGORITHM_KEY_LENGTH]) -> anyhow::Result<Self> {
+        Ok(Self {
             public_key_bytes: *public_key_bytes,
-        }
+        })
     }
 
     /// Verifies the signature validity.

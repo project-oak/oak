@@ -19,16 +19,25 @@
 // Should be kept in sync with the Java implementation of the remote attestation
 // protocol.
 
-#[cfg(not(feature = "ring-crypto"))]
-compiler_error!("A cryptographic implementation must be specified.");
+#[cfg(not(any(feature = "ring-crypto", feature = "rust-crypto")))]
+compile_error!("A cryptographic implementation must be specified.");
+
+// When both implementations are selected (e.g. when testing with all features) we use the `ring`
+// implementation.
+#[cfg(all(feature = "rust-crypto", not(feature = "ring-crypto")))]
+mod rust_crypto;
+
+#[cfg(all(feature = "rust-crypto", not(feature = "ring-crypto")))]
+pub use rust_crypto::{
+    get_random, get_sha256, AeadEncryptor, KeyNegotiator, SignatureVerifier, Signer,
+};
 
 #[cfg(feature = "ring-crypto")]
 mod ring_crypto;
 
 #[cfg(feature = "ring-crypto")]
 pub use ring_crypto::{
-    get_random, get_sha256, AeadEncryptor, KeyNegotiator, KeyNegotiatorType, SignatureVerifier,
-    Signer,
+    get_random, get_sha256, AeadEncryptor, KeyNegotiator, SignatureVerifier, Signer,
 };
 
 /// Length of the encryption nonce.
@@ -55,6 +64,17 @@ pub const SIGNING_ALGORITHM_KEY_LENGTH: usize = 65;
 /// <https://datatracker.ietf.org/doc/html/rfc6979>
 /// <https://standards.ieee.org/standard/1363-2000.html>
 pub const SIGNATURE_LENGTH: usize = 64;
+
+/// Defines the type of key negotiator and the set of session keys created by it.
+#[derive(Clone)]
+pub enum KeyNegotiatorType {
+    /// Defines a key negotiator which provides server session key for encryption and client
+    /// session key for decryption.
+    Server,
+    /// Defines a key negotiator which provides client session key for encryption and server
+    /// session key for decryption.
+    Client,
+}
 
 /// Convenience struct for passing an encryption key as an argument.
 #[derive(PartialEq)]
