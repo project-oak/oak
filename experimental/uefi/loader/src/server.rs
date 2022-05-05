@@ -79,7 +79,7 @@ impl UnarySession for EchoImpl {
         // ambiguous to the end user, but for now that'll do.
         let body = self
             .channel
-            .send_receive(serialized_request)
+            .send_receive(serialized_request.0)
             .await
             .map_err(|err| Status::internal(format!("{:?}", err)))?
             .map_err(|err| Status::internal(format!("{:?}", err)))?;

@@ -38,7 +38,7 @@ pub struct SerializeableRequest {
     pub session_id: SessionId,
     pub body: Vec<u8>,
 }
-pub type SerializedRequest = Vec<u8>;
+pub struct SerializedRequest(pub Vec<u8>);
 
 impl From<SerializeableRequest> for SerializedRequest {
     fn from(serializeable_request: SerializeableRequest) -> SerializedRequest {
@@ -52,7 +52,7 @@ impl From<SerializeableRequest> for SerializedRequest {
         serialized_request.extend(serializeable_request.session_id);
         serialized_request.extend(serializeable_request.body);
 
-        serialized_request
+        SerializedRequest(serialized_request)
     }
 }
 
@@ -60,16 +60,17 @@ impl TryFrom<SerializedRequest> for SerializeableRequest {
     type Error = anyhow::Error;
 
     fn try_from(serialized_request: SerializedRequest) -> Result<Self, Self::Error> {
-        if serialized_request.len() < SESSION_ID_LENGTH {
+        if serialized_request.0.len() < SESSION_ID_LENGTH {
             bail!(
                 "Message too short to contain a SessionId. The length of a SessionId
                 is {} bytes, the message received contained only {} bytes",
                 SESSION_ID_LENGTH,
-                serialized_request.len()
+                serialized_request.0.len()
             );
         }
 
-        let (session_id_slice, request_body_slice) = serialized_request.split_at(SESSION_ID_LENGTH);
+        let (session_id_slice, request_body_slice) =
+            serialized_request.0.split_at(SESSION_ID_LENGTH);
 
         let mut session_id: SessionId = [0; SESSION_ID_LENGTH];
         session_id.copy_from_slice(session_id_slice);

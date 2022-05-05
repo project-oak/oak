@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-use crate::{remote_attestation::AttestationHandler, Channel, SerializedRequest};
+use crate::{remote_attestation::AttestationHandler, Channel, SerializedRequest, Vec};
 use anyhow::Context;
 use ciborium::{de, ser};
 
@@ -44,9 +44,10 @@ pub fn handle_frames(mut channel: &mut dyn Channel) -> anyhow::Result<!> {
     let attestation_handler =
         &mut AttestationHandler::create(move |v| wasm_handler.handle_raw_invoke(v));
     loop {
-        let serialized_request: SerializedRequest = de::from_reader(&mut channel)
+        let msg: Vec<u8> = de::from_reader(&mut channel)
             .map_err(anyhow::Error::msg)
             .context("couldn't deserialize message")?;
+        let serialized_request = SerializedRequest(msg);
         let response = attestation_handler
             .message(serialized_request)
             .context("attestation failed")?;
