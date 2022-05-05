@@ -18,7 +18,7 @@ use anyhow::bail;
 use bmrng::unbounded::UnboundedRequestSender;
 use futures::Future;
 use oak_remote_attestation_sessions::{SessionId, SESSION_ID_LENGTH};
-use runtime::SerializeableRequest;
+use runtime::{SerializeableRequest, SerializedRequest};
 use std::net::SocketAddr;
 use tonic::{transport::Server, Request, Response, Status};
 
@@ -69,7 +69,7 @@ impl UnarySession for EchoImpl {
         request: Request<UnaryRequest>,
     ) -> Result<Response<UnaryResponse>, Status> {
         let request = request.into_inner();
-        let serialized_request: Vec<u8> = SerializeableRequest::try_from(request)
+        let serialized_request: SerializedRequest = SerializeableRequest::try_from(request)
             .map_err(|err| Status::invalid_argument(format!("{:?}", err)))?
             .into();
 

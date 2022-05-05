@@ -21,7 +21,7 @@
 
 extern crate alloc;
 
-use crate::SerializeableRequest;
+use crate::{SerializeableRequest, SerializedRequest};
 use alloc::vec::Vec;
 use anyhow::Context;
 use oak_remote_attestation_sessions::{SessionState, SessionTracker};
@@ -54,8 +54,8 @@ where
         }
     }
 
-    pub fn message(&mut self, msg: Vec<u8>) -> anyhow::Result<Vec<u8>> {
-        let request = SerializeableRequest::try_from(msg.as_slice())
+    pub fn message(&mut self, serialized_request: SerializedRequest) -> anyhow::Result<Vec<u8>> {
+        let request = SerializeableRequest::try_from(serialized_request)
             .context("Couldn't deserialize message")?;
 
         let mut session_state = {

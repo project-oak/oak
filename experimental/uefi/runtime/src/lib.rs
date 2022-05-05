@@ -38,9 +38,10 @@ pub struct SerializeableRequest {
     pub session_id: SessionId,
     pub body: Vec<u8>,
 }
+pub type SerializedRequest = Vec<u8>;
 
-impl From<SerializeableRequest> for Vec<u8> {
-    fn from(serializeable_request: SerializeableRequest) -> Vec<u8> {
+impl From<SerializeableRequest> for SerializedRequest {
+    fn from(serializeable_request: SerializeableRequest) -> SerializedRequest {
         // The payload is the request's body prepended with the 8 byte session_id.
         // This takes adavantage of the session_id's fixed size to avoid needing
         // to use a key/value pair binary serialization protocol.
@@ -55,10 +56,10 @@ impl From<SerializeableRequest> for Vec<u8> {
     }
 }
 
-impl TryFrom<&[u8]> for SerializeableRequest {
+impl TryFrom<SerializedRequest> for SerializeableRequest {
     type Error = anyhow::Error;
 
-    fn try_from(serialized_request: &[u8]) -> Result<Self, Self::Error> {
+    fn try_from(serialized_request: SerializedRequest) -> Result<Self, Self::Error> {
         if serialized_request.len() < SESSION_ID_LENGTH {
             bail!(
                 "Message too short to contain a SessionId. The length of a SessionId
