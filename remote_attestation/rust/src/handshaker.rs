@@ -240,7 +240,7 @@ impl ClientHandshaker {
             self.transcript
                 .append(&server_identity_no_signature)
                 .context("Couldn't append server identity to the transcript")?;
-            let verifier = SignatureVerifier::new(&server_identity.signing_public_key);
+            let verifier = SignatureVerifier::new(&server_identity.signing_public_key)?;
             verifier
                 .verify(
                     &self.transcript.get_sha256(),
@@ -513,7 +513,7 @@ impl ServerHandshaker {
             self.transcript
                 .append(&client_identity_no_signature)
                 .context("Couldn't append client identity to the transcript")?;
-            let verifier = SignatureVerifier::new(&client_identity.signing_public_key);
+            let verifier = SignatureVerifier::new(&client_identity.signing_public_key)?;
             verifier
                 .verify(
                     &self.transcript.get_sha256(),

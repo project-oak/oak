@@ -207,7 +207,7 @@ fn test_create_signer() {
 
 #[test]
 fn test_verify() {
-    let verifier = SignatureVerifier::new(&SIGNING_PUBLIC_KEY);
+    let verifier = SignatureVerifier::new(&SIGNING_PUBLIC_KEY).unwrap();
     let result = verifier.verify(&DATA, &DATA_SIGNATURE);
     assert!(result.is_ok());
     let result = verifier.verify(&DATA, &INVALID_DATA_SIGNATURE);
@@ -222,7 +222,7 @@ fn test_sign(data: Vec<u8>) -> bool {
         .expect("Couldn't get signing public key");
     let signature = signer.sign(&data).expect("Couldn't sign data");
 
-    let verifier = SignatureVerifier::new(&public_key);
+    let verifier = SignatureVerifier::new(&public_key).unwrap();
     let result = verifier.verify(&data, &signature);
     result.is_ok()
 }
