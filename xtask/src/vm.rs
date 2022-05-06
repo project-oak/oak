@@ -29,9 +29,10 @@ enum Variant {
 
 impl Variant {
     pub fn enabled(&self) -> bool {
-        // The bare metal variant is disabled for now, because the crypto library we use right now
-        // doesn't work on bare metal.
-        self != &Variant::Baremetal
+        match self {
+            Variant::Baremetal => true,
+            Variant::Uefi => true,
+        }
     }
 
     pub fn payload_crate_path(&self) -> &'static str {

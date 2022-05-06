@@ -3140,6 +3140,7 @@ dependencies = [
  "anyhow",
  "assert_matches",
  "bytes",
+ "getrandom 0.2.6",
  "hkdf 0.12.3",
  "log",
  "p256 0.10.1",
