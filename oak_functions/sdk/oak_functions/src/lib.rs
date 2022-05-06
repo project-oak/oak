@@ -95,22 +95,21 @@ pub fn report_metric<T: AsRef<str>>(
             oak_functions_abi::ExtensionHandle::MetricsHandle,
             &serialized_request,
         ),
-        Err(_) => return Ok(Err(ReportMetricError::SerializingRequestFailed)),
-    };
-
-    // Transform OakStatus to ReportMetricError for consistency.
-    let response = match response {
-        Err(OakStatus::ErrSerializingResponse) => {
-            return Ok(Err(ReportMetricError::SerializingResponseFailed))
+        Err(err) => {
+            log!("Failed to serialize request: {}", err);
+            return Ok(Err(ReportMetricError::DeOrSerializingFailed));
         }
-        x => x,
     }?;
 
     let response: Result<ReportMetricResponse, _> = bincode::deserialize(&response);
-    match response {
-        Ok(response) => Ok(response.result),
-        Err(_) => Ok(Err(ReportMetricError::DeserializingResponseFailed)),
-    }
+    let result = match response {
+        Ok(response) => response.result,
+        Err(err) => {
+            log!("Failed to deserialize response: {}", err);
+            Err(ReportMetricError::DeOrSerializingFailed)
+        }
+    };
+    Ok(result)
 }
 
 /// Writes a debug log message.

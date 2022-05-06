@@ -71,10 +71,7 @@ pub struct ReportMetricRequest {
 #[derive(Serialize, Deserialize, Debug)]
 pub enum ReportMetricError {
     ProxyAlreadyConsumed,
-    SerializingRequestFailed,
-    DeserializingRequestFailed,
-    SerializingResponseFailed,
-    DeserializingResponseFailed,
+    DeOrSerializingFailed,
 }
 
 #[derive(Serialize, Deserialize)]
