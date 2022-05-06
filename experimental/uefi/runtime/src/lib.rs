@@ -38,14 +38,11 @@ pub type FrameLength = u16;
 // The frame length is a u16, which is two bytes encoded.
 pub const FRAME_LENGTH_ENCODED_SIZE: usize = 2;
 
-pub struct Framed<T> {
+pub struct Framed<T: Channel> {
     inner: T,
 }
 
-impl<T> Framed<T>
-where
-    T: Channel,
-{
+impl<T: Channel> Framed<T> {
     pub fn new(channel: T) -> Self {
         Self { inner: channel }
     }
