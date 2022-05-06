@@ -23,7 +23,6 @@ use hyper::{
     service::{make_service_fn, service_fn},
     Body, Method, Request, Response, Server, StatusCode,
 };
-use lazy_static::lazy_static;
 use log::info;
 use std::time::Instant;
 
@@ -38,17 +37,12 @@ pub struct Opt {
     listen_address: String,
 }
 
-lazy_static! {
-    // We use START_TIME to time the time elapsed between every request and response.
-    static ref START_TIME: Instant = Instant::now();
-}
-
 async fn handler(request: Request<Body>) -> Result<Response<Body>, hyper::Error> {
     match (request.method(), request.uri().path()) {
         (&Method::POST, "/request") => {
             let body = hyper::body::to_bytes(request.into_body()).await?;
 
-            let request_start = START_TIME.elapsed();
+            let request_start = Instant::now();
             log::info!(
                 "Backend Request: {},{:?}",
                 String::from_utf8(body.to_vec()).unwrap(),
@@ -58,8 +52,9 @@ async fn handler(request: Request<Body>) -> Result<Response<Body>, hyper::Error>
             // Currently we assume the backend takes no time, i.e., no time elapsed between request
             // and response.
             log::info!(
-                "Backend Response: {}",
+                "Backend Response: {},{:?}",
                 String::from_utf8(body.to_vec()).unwrap(),
+                request_start,
             );
             // Echo back the response body.
             Ok(Response::new(Body::from(body)))

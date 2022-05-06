@@ -5395,7 +5395,6 @@ dependencies = [
  "futures-util",
  "http",
  "hyper",
- "lazy_static",
  "log",
  "tokio",
 ]
@@ -5438,7 +5437,6 @@ dependencies = [
  "futures-util",
  "http",
  "hyper",
- "lazy_static",
  "log",
  "tokio",
  "trusted_shuffler",

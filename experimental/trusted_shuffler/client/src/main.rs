@@ -38,10 +38,10 @@ pub struct Opt {
     qps: u32,
     #[structopt(
         long,
-        help = "How many rounds, i.e., seconds, we sent requests",
+        help = "How many seconds the clients sent requests. Otherwise the Trusted Shuffler gets stuck because the last batch does not reach k requests.",
         default_value = "1"
     )]
-    rounds: u32,
+    seconds: u32,
 }
 
 #[tokio::main(flavor = "multi_thread")]
@@ -55,18 +55,17 @@ async fn main() -> anyhow::Result<()> {
     let opt = Opt::parse();
 
     let target_qps = opt.qps;
-    let rounds = opt.rounds;
+    let seconds = opt.seconds;
 
     // Currently every client sends only one request and terminates.
     let mut clients = vec![];
 
     let start_time = Instant::now();
 
-    for (n, p) in // (1..(target_qps * rounds)).enumerate()
-        Sieve::new()
-            .iter()
-            .take((target_qps * rounds) as usize)
-            .enumerate()
+    for (n, p) in Sieve::new()
+        .iter()
+        .take((target_qps * seconds) as usize)
+        .enumerate()
     {
         let server_url = opt.server_url.clone();
 
@@ -119,21 +118,23 @@ async fn main() -> anyhow::Result<()> {
 
         // If there are no queries still to fit in this round and there is time left in the round,
         // we sleep until the second has elapsed.
-        let _delta = time_still_left_this_round
+        let delta = time_still_left_this_round
             .checked_div(queries_still_to_fit_this_round)
             .unwrap_or_else(|| {
                 Duration::checked_sub(Duration::from_secs(1), time_elapsed_this_round)
                     .unwrap_or(Duration::from_secs(0))
             });
 
-        sleep(Duration::from_micros(1)).await;
+        // Note: If we remove this sleep, the clients crash.
+        sleep(delta).await;
     }
 
     // Estimate how many qps we actually achieved by checking how much time we spent between
     // starting and ending the loop.
     let actual_time_taken = &start_time.elapsed();
-    // log::info!("Actual time taken {:?}", actual_time_taken);
+    log::info!("Actual time taken {:?}", actual_time_taken);
 
+    // Initialize total_delay and
     let mut total_delay = Duration::from_secs(0);
     let mut max_delay = Duration::from_secs(0);
 
@@ -144,10 +145,15 @@ async fn main() -> anyhow::Result<()> {
             max_delay = duration;
         }
     }
-    let avg_delay = total_delay / (target_qps * rounds);
+    let avg_delay = total_delay / (target_qps * seconds);
 
-    // println!("Avg Delag: {:?}", avg_delay.as_millis());
-    println!("{:?},{:?},{:?}", actual_time_taken, avg_delay, max_delay);
+    // For every call to clients we measure the actual time, the avg delay and the max delay.
+    println!(
+        "{:?},{:?},{:?}",
+        actual_time_taken,
+        avg_delay.as_millis(),
+        max_delay.as_millis()
+    );
 
     Ok(())
 }

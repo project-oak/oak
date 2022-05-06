@@ -2,9 +2,11 @@
 
 readonly SCRIPTS_DIR="$(dirname "$0")"
 
-readonly ROUNDS=20 
-readonly LOG_LEVEL=error
-# ROUNDS * QPS has to be a multiple of K
+# Note: SECONDS_TO_RUN * QPS has to be a multiple of K
+# Otherwise the Trusted Shuffler gets stuck because the last batch does not reach K requests.
+readonly SECONDS_TO_RUN=20 # Don't use $SECONDS.
+readonly LOG_LEVEL=error # error or info, note info makes the experiments significantly slower.
+readonly OUTPUT_FILE="trusted_shuffler_experiment.csv" 
 
 KS=(500 1000 2000)
 QPSS=$(seq 100 100 1000)
@@ -13,8 +15,7 @@ cargo build --manifest-path=experimental/trusted_shuffler/server/Cargo.toml
 cargo build --manifest-path=experimental/trusted_shuffler/backend/Cargo.toml
 cargo build --manifest-path=experimental/trusted_shuffler/client/Cargo.toml
 
-# Write into file.
-echo "k,qps,rounds,actual_time,avg_delay_in_s,max_delay_in_s" > data.csv
+echo "k,qps,seconds,actual_seconds_taken,avg_delay_in_ms,max_delay_in_ms" > ${OUTPUT_FILE}
 
 for K in "${KS[@]}"
 do
@@ -34,9 +35,9 @@ do
     BACKEND_PID=$!
 
     CLIENT_OUTPUT=$(RUST_LOG=$LOG_LEVEL cargo run --manifest-path=experimental/trusted_shuffler/client/Cargo.toml -- \
-     --server-url="http://localhost:8080" --qps="${QPS}" --rounds="${ROUNDS}")
+     --server-url="http://localhost:8080" --qps="${QPS}" --seconds="${SECONDS_TO_RUN}")
 
-    echo "${K},${QPS},${ROUNDS},${CLIENT_OUTPUT}" >> data.csv 
+    echo "${K},${QPS},${SECONDS_TO_RUN},${CLIENT_OUTPUT}" >> ${OUTPUT_FILE}
 
     kill -9 "${SERVER_PID}"
     kill -9 "${BACKEND_PID}"

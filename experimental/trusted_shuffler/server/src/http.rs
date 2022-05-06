@@ -17,7 +17,6 @@
 use anyhow::anyhow;
 use async_trait::async_trait;
 use hyper::{Body, Method, Request, Response, StatusCode};
-use lazy_static::lazy_static;
 use log::error;
 use std::{
     future::Future,
@@ -29,10 +28,6 @@ use std::{
 use trusted_shuffler::{RequestHandler, TrustedShuffler};
 use trusted_shuffler_common::send_request;
 
-lazy_static! {
-    // We use START_TIME to time the time elapsed between every request and response.
-    static ref START_TIME: Instant = Instant::now();
-}
 struct HttpRequestHandler {
     backend_url: String,
 }
@@ -75,14 +70,14 @@ impl hyper::service::Service<Request<Body>> for Service {
                         .await
                         .expect("Couldn't read request body");
 
-                    let _request_start = START_TIME.elapsed();
+                    let request_start = Instant::now();
                     log::info!(
                         "Server Request: {}",
                         String::from_utf8(body.to_vec()).unwrap()
                     );
                     match trusted_shuffler.invoke(body.to_vec()).await {
                         Ok(response) => {
-                            let _response_time = START_TIME.elapsed();
+                            let _response_time = request_start.elapsed();
                             log::info!(
                                 "Server Response: {}",
                                 String::from_utf8(body.to_vec()).unwrap()
