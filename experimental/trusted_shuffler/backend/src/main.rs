@@ -24,6 +24,7 @@ use hyper::{
     Body, Method, Request, Response, Server, StatusCode,
 };
 use log::info;
+use std::time::Instant;
 
 #[derive(Parser, Clone)]
 #[clap(about = "Backend for Trusted Shuffler Example")]
@@ -40,8 +41,22 @@ async fn handler(request: Request<Body>) -> Result<Response<Body>, hyper::Error>
     match (request.method(), request.uri().path()) {
         (&Method::POST, "/request") => {
             let body = hyper::body::to_bytes(request.into_body()).await?;
-            info!("Received request: {:?}", body);
-            // Send back the response body.
+
+            let request_start = Instant::now();
+            log::info!(
+                "Backend Request: {},{:?}",
+                String::from_utf8(body.to_vec()).unwrap(),
+                request_start,
+            );
+
+            // Currently we assume the backend takes no time, i.e., no time elapsed between request
+            // and response.
+            log::info!(
+                "Backend Response: {},{:?}",
+                String::from_utf8(body.to_vec()).unwrap(),
+                request_start,
+            );
+            // Echo back the response body.
             Ok(Response::new(Body::from(body)))
         }
 
@@ -53,9 +68,14 @@ async fn handler(request: Request<Body>) -> Result<Response<Body>, hyper::Error>
     }
 }
 
-#[tokio::main]
+#[tokio::main(flavor = "multi_thread")]
 async fn main() -> anyhow::Result<()> {
-    env_logger::init();
+    env_logger::builder()
+        .format_timestamp(None)
+        .format_level(false)
+        .format_module_path(false)
+        .format_target(false)
+        .init();
     let opt = Opt::parse();
 
     let address = opt
