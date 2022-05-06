@@ -1,0 +1,41 @@
+language: rust
+
+rust:
+  - stable
+  - nightly
+
+env:
+  # Tests the u32 backend
+  - TEST_COMMAND=test EXTRA_FLAGS='--no-default-features' FEATURES='std u32_backend'
+  # Tests the u64 backend
+  - TEST_COMMAND=test EXTRA_FLAGS='--no-default-features' FEATURES='std u64_backend'
+  # Tests the fiat_u32 backend
+  - TEST_COMMAND=test EXTRA_FLAGS='--no-default-features' FEATURES='std fiat_u32_backend'
+  # Tests the fiat_u64 backend
+  - TEST_COMMAND=test EXTRA_FLAGS='--no-default-features' FEATURES='std fiat_u64_backend'
+  # Tests the simd backend
+  - TEST_COMMAND=test EXTRA_FLAGS='--no-default-features' FEATURES='std simd_backend'
+  # Tests serde support and default feature selection
+  - TEST_COMMAND=test EXTRA_FLAGS='' FEATURES='serde'
+  # Tests building without std. We have to select a backend, so we select the one
+  # most likely to be useful in an embedded environment.
+  - TEST_COMMAND=build EXTRA_FLAGS='--no-default-features' FEATURES='u32_backend'
+  # Tests no_std+alloc usage using the most embedded-friendly backend
+  - TEST_COMMAND=test EXTRA_FLAGS='--lib --no-default-features' FEATURES='alloc u32_backend'
+
+matrix:
+  exclude:
+    # Test the simd backend only on nightly
+    - rust: stable
+      env: TEST_COMMAND=test EXTRA_FLAGS='--no-default-features' FEATURES='std simd_backend'
+    # Test no_std+alloc only on nightly
+    - rust: stable
+      env: TEST_COMMAND=test EXTRA_FLAGS='--lib --no-default-features' FEATURES='alloc u32_backend'
+
+script:
+  - cargo $TEST_COMMAND --features="$FEATURES" $EXTRA_FLAGS
+
+notifications:
+  slack:
+    rooms:
+      - dalek-cryptography:Xxv9WotKYWdSoKlgKNqXiHoD#dalek-bots
