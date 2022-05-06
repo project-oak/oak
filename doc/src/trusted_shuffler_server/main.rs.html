@@ -76,6 +76,11 @@
 <span id="71">71</span>
 <span id="72">72</span>
 <span id="73">73</span>
+<span id="74">74</span>
+<span id="75">75</span>
+<span id="76">76</span>
+<span id="77">77</span>
+<span id="78">78</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2022 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -122,9 +127,14 @@
     <span class="ident">backend_url</span>: <span class="ident">String</span>,
 }
 
-<span class="attribute">#[<span class="ident">tokio::main</span>]</span>
+<span class="attribute">#[<span class="ident">tokio::main</span>(<span class="ident">flavor</span> <span class="op">=</span> <span class="string">&quot;multi_thread&quot;</span>)]</span>
 <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">main</span>() -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-    <span class="ident">env_logger::init</span>();
+    <span class="ident">env_logger::builder</span>()
+        .<span class="ident">format_timestamp</span>(<span class="prelude-val">None</span>)
+        .<span class="ident">format_level</span>(<span class="bool-val">false</span>)
+        .<span class="ident">format_module_path</span>(<span class="bool-val">false</span>)
+        .<span class="ident">format_target</span>(<span class="bool-val">false</span>)
+        .<span class="ident">init</span>();
     <span class="kw">let</span> <span class="ident">opt</span> <span class="op">=</span> <span class="ident">Opt::parse</span>();
 
     <span class="kw">let</span> <span class="ident">listen_address</span> <span class="op">=</span> <span class="ident">opt</span>

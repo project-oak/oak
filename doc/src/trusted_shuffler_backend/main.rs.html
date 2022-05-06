@@ -84,6 +84,26 @@
 <span id="79">79</span>
 <span id="80">80</span>
 <span id="81">81</span>
+<span id="82">82</span>
+<span id="83">83</span>
+<span id="84">84</span>
+<span id="85">85</span>
+<span id="86">86</span>
+<span id="87">87</span>
+<span id="88">88</span>
+<span id="89">89</span>
+<span id="90">90</span>
+<span id="91">91</span>
+<span id="92">92</span>
+<span id="93">93</span>
+<span id="94">94</span>
+<span id="95">95</span>
+<span id="96">96</span>
+<span id="97">97</span>
+<span id="98">98</span>
+<span id="99">99</span>
+<span id="100">100</span>
+<span id="101">101</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2022 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -110,6 +130,7 @@
     <span class="ident">Body</span>, <span class="ident">Method</span>, <span class="ident">Request</span>, <span class="ident">Response</span>, <span class="ident">Server</span>, <span class="ident">StatusCode</span>,
 };
 <span class="kw">use</span> <span class="ident">log::info</span>;
+<span class="kw">use</span> <span class="ident">std::time::Instant</span>;
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Parser</span>, <span class="ident">Clone</span>)]</span>
 <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">about</span> <span class="op">=</span> <span class="string">&quot;Backend for Trusted Shuffler Example&quot;</span>)]</span>
@@ -126,8 +147,22 @@
     <span class="kw">match</span> (<span class="ident">request</span>.<span class="ident">method</span>(), <span class="ident">request</span>.<span class="ident">uri</span>().<span class="ident">path</span>()) {
         (<span class="kw-2">&amp;</span><span class="ident">Method::POST</span>, <span class="string">&quot;/request&quot;</span>) =&gt; {
             <span class="kw">let</span> <span class="ident">body</span> <span class="op">=</span> <span class="ident">hyper::body::to_bytes</span>(<span class="ident">request</span>.<span class="ident">into_body</span>()).<span class="kw">await</span><span class="question-mark">?</span>;
-            <span class="macro">info!</span>(<span class="string">&quot;Received request: {:?}&quot;</span>, <span class="ident">body</span>);
-            <span class="comment">// Send back the response body.</span>
+
+            <span class="kw">let</span> <span class="ident">request_start</span> <span class="op">=</span> <span class="ident">Instant::now</span>();
+            <span class="macro">log::info!</span>(
+                <span class="string">&quot;Backend Request: {},{:?}&quot;</span>,
+                <span class="ident">String::from_utf8</span>(<span class="ident">body</span>.<span class="ident">to_vec</span>()).<span class="ident">unwrap</span>(),
+                <span class="ident">request_start</span>,
+            );
+
+            <span class="comment">// Currently we assume the backend takes no time, i.e., no time elapsed between request</span>
+            <span class="comment">// and response.</span>
+            <span class="macro">log::info!</span>(
+                <span class="string">&quot;Backend Response: {},{:?}&quot;</span>,
+                <span class="ident">String::from_utf8</span>(<span class="ident">body</span>.<span class="ident">to_vec</span>()).<span class="ident">unwrap</span>(),
+                <span class="ident">request_start</span>,
+            );
+            <span class="comment">// Echo back the response body.</span>
             <span class="prelude-val">Ok</span>(<span class="ident">Response::new</span>(<span class="ident">Body::from</span>(<span class="ident">body</span>)))
         }
 
@@ -139,9 +174,14 @@
     }
 }
 
-<span class="attribute">#[<span class="ident">tokio::main</span>]</span>
+<span class="attribute">#[<span class="ident">tokio::main</span>(<span class="ident">flavor</span> <span class="op">=</span> <span class="string">&quot;multi_thread&quot;</span>)]</span>
 <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">main</span>() -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-    <span class="ident">env_logger::init</span>();
+    <span class="ident">env_logger::builder</span>()
+        .<span class="ident">format_timestamp</span>(<span class="prelude-val">None</span>)
+        .<span class="ident">format_level</span>(<span class="bool-val">false</span>)
+        .<span class="ident">format_module_path</span>(<span class="bool-val">false</span>)
+        .<span class="ident">format_target</span>(<span class="bool-val">false</span>)
+        .<span class="ident">init</span>();
     <span class="kw">let</span> <span class="ident">opt</span> <span class="op">=</span> <span class="ident">Opt::parse</span>();
 
     <span class="kw">let</span> <span class="ident">address</span> <span class="op">=</span> <span class="ident">opt</span>
