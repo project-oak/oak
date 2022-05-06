@@ -28,14 +28,20 @@ mod logging;
 mod memory;
 mod serial;
 
+extern crate alloc;
 #[macro_use]
 extern crate log;
 
 use core::panic::PanicInfo;
 use rust_hypervisor_firmware_subset::{boot, paging, pvh};
+use x86_64::registers::{
+    control::{Cr0, Cr0Flags, Cr4, Cr4Flags},
+    xcontrol::{XCr0, XCr0Flags},
+};
 
 #[no_mangle]
 pub extern "C" fn rust64_start(rdi: &pvh::StartInfo) -> ! {
+    enable_avx();
     logging::init_logging();
     paging::setup();
     memory::init_allocator(rdi);
@@ -53,6 +59,24 @@ fn main(info: &dyn boot::Info) -> ! {
     info!("In main! Boot protocol:  {}", info.name());
     let serial = serial::Serial::new();
     runtime::framing::handle_frames(serial).unwrap();
+}
+
+/// Enables Advanced Vector Extensions (AVX)
+fn enable_avx() {
+    unsafe {
+        let mut cr0 = Cr0::read();
+        cr0 &= !Cr0Flags::EMULATE_COPROCESSOR;
+        cr0 |= Cr0Flags::MONITOR_COPROCESSOR;
+        Cr0::write(cr0);
+        let cr0 = Cr0::read();
+        assert!(cr0 & Cr0Flags::TASK_SWITCHED != Cr0Flags::TASK_SWITCHED);
+        let mut cr4 = Cr4::read();
+        cr4 |= Cr4Flags::OSFXSR | Cr4Flags::OSXMMEXCPT_ENABLE | Cr4Flags::OSXSAVE;
+        Cr4::write(cr4);
+        let mut xcr0 = XCr0::read();
+        xcr0 |= XCr0Flags::X87 | XCr0Flags::SSE | XCr0Flags::AVX;
+        XCr0::write(xcr0);
+    }
 }
 
 // These exit codes are from https://os.phil-opp.com/testing/.

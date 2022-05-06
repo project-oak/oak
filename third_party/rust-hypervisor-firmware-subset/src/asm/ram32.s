@@ -51,6 +51,11 @@ jump_to_64bit:
     lgdtl GDT64_PTR
     # Initialize the stack pointer (Rust code always uses the stack)
     movl $stack_start, %esp
+    # Push 8 bytes to fix stack alignment issue. Because we enter rust64_start
+    # with a jmp rather than a call the function prologue means that the stack
+    # is no loger 16-byte aligned.
+    pushl $0
+    pushl $0
     # Set segment registers to a 64-bit segment.
     movw $0x10, %ax
     movw %ax, %ds

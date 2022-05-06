@@ -39,7 +39,7 @@ SECTIONS
   /* Our stack grows down and is page-aligned. TODO: Add stack guard pages. */
   .stack (NOLOAD) : ALIGN(4K) { . += 128K; }
   stack_start = .;
-  /* ram32.s only maps the first 2 MiB, and that must include the stack. */
+  /* ram32.s maps the first 1 GiB, and that must include the stack. */
   ASSERT((. <= 1024M), "Stack overflows initial identity-mapped memory region")
 
   /* Strip symbols from the output binary (comment out to get symbols) */
