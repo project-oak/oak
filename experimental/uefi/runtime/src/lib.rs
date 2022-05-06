@@ -38,31 +38,43 @@ pub type FrameLength = u16;
 // The frame length is a u16, which is two bytes encoded.
 pub const FRAME_LENGTH_ENCODED_SIZE: usize = 2;
 
-pub struct Frame {
-    pub body: Vec<u8>,
+pub struct Framed<T> {
+    inner: T,
 }
 
-impl Frame {
-    pub fn read_from_channel<T: Channel>(channel: &mut T) -> anyhow::Result<Self> {
+impl<T> Framed<T>
+where
+    T: Channel,
+{
+    pub fn new(channel: T) -> Self {
+        Self { inner: channel }
+    }
+
+    pub fn read_frame(&mut self) -> anyhow::Result<Frame> {
         let mut length_buf = [0; FRAME_LENGTH_ENCODED_SIZE];
-        channel.recv(&mut length_buf)?;
+        self.inner.recv(&mut length_buf)?;
         let length = FrameLength::from_be_bytes(length_buf);
         let mut body: Vec<u8> = vec![0; length.into()];
-        channel.recv(&mut body)?;
+        self.inner.recv(&mut body)?;
         Ok(Frame { body })
     }
 
-    pub fn write_to_channel<T: Channel>(self, channel: &mut T) -> anyhow::Result<()> {
-        let length: FrameLength = FrameLength::try_from(self.body.len())
+    pub fn write_frame(&mut self, frame: Frame) -> anyhow::Result<()> {
+        let length: FrameLength = FrameLength::try_from(frame.body.len())
             .map_err(anyhow::Error::msg)
             .context("the frame body is too large")?;
         let encoded_length = length.to_be_bytes();
-        let mut encoded_frame: Vec<u8> = Vec::with_capacity(encoded_length.len() + self.body.len());
+        let mut encoded_frame: Vec<u8> =
+            Vec::with_capacity(encoded_length.len() + frame.body.len());
         encoded_frame.extend(encoded_length);
-        encoded_frame.extend(self.body);
-        channel.send(&encoded_frame)?;
+        encoded_frame.extend(frame.body);
+        self.inner.send(&encoded_frame)?;
         Ok(())
     }
+}
+
+pub struct Frame {
+    pub body: Vec<u8>,
 }
 
 pub struct SerializeableRequest {

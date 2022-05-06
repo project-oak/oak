@@ -14,23 +14,24 @@
 // limitations under the License.
 //
 
-use crate::{remote_attestation::AttestationHandler, Channel, Frame};
+use crate::{remote_attestation::AttestationHandler, Channel, Frame, Framed};
 use anyhow::Context;
 
 // Processes incoming frames.
-pub fn handle_frames<T>(channel: &mut T) -> anyhow::Result<!>
+pub fn handle_frames<T>(channel: T) -> anyhow::Result<!>
 where
     T: Channel,
 {
     let wasm_handler = crate::wasm::new_wasm_handler()?;
     let attestation_handler =
         &mut AttestationHandler::create(move |v| wasm_handler.handle_raw_invoke(v));
+    let framed = &mut Framed::new(channel);
     loop {
-        let frame = Frame::read_from_channel(channel).context("couldn't receive message")?;
+        let frame = framed.read_frame().context("couldn't receive message")?;
         let response = attestation_handler
             .message(frame.body)
             .context("attestation failed")?;
         let reponse_frame = Frame { body: response };
-        reponse_frame.write_to_channel(channel)?
+        framed.write_frame(reponse_frame)?
     }
 }

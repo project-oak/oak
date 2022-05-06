@@ -16,7 +16,7 @@
 
 use clap::Parser;
 use qemu::{Qemu, QemuParams};
-use runtime::{Channel, Frame};
+use runtime::{Channel, Frame, Framed};
 use std::{
     fs,
     io::{BufRead, BufReader, Read, Write},
@@ -123,15 +123,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let (tx, mut rx) = bmrng::unbounded_channel::<Vec<u8>, anyhow::Result<Vec<u8>>>();
 
     tokio::spawn(async move {
-        let mut comms_channel = CommsChannel { inner: comms };
-        fn respond(comms_channel: &mut CommsChannel, input: Vec<u8>) -> anyhow::Result<Vec<u8>> {
-            Frame { body: input }.write_to_channel(comms_channel)?;
-            let response_frame = Frame::read_from_channel(comms_channel)?;
+        let comms_channel = CommsChannel { inner: comms };
+        let mut framed = Framed::new(comms_channel);
+        fn respond(framed: &mut Framed<CommsChannel>, input: Vec<u8>) -> anyhow::Result<Vec<u8>> {
+            framed.write_frame(Frame { body: input })?;
+            let response_frame = framed.read_frame()?;
             Ok(response_frame.body)
         }
 
         while let Ok((input, responder)) = rx.recv().await {
-            let response = respond(&mut comms_channel, input);
+            let response = respond(&mut framed, input);
             responder.respond(response).unwrap();
         }
     });
