@@ -153,6 +153,11 @@
 <span id="148">148</span>
 <span id="149">149</span>
 <span id="150">150</span>
+<span id="151">151</span>
+<span id="152">152</span>
+<span id="153">153</span>
+<span id="154">154</span>
+<span id="155">155</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2022 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -169,14 +174,16 @@
 <span class="comment">// limitations under the License.</span>
 <span class="comment">//</span>
 
-<span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">fs</span>, <span class="ident">path::PathBuf</span>};
-
 <span class="kw">use</span> <span class="ident">clap::Parser</span>;
-<span class="kw">use</span> <span class="ident">futures</span>::{<span class="ident">stream::StreamExt</span>, <span class="ident">SinkExt</span>};
 <span class="kw">use</span> <span class="ident">qemu</span>::{<span class="ident">Qemu</span>, <span class="ident">QemuParams</span>};
-<span class="kw">use</span> <span class="ident">tokio</span>::{<span class="ident">io::AsyncReadExt</span>, <span class="ident">net::UnixStream</span>, <span class="ident">signal</span>};
-<span class="kw">use</span> <span class="ident">tokio_serde_cbor::Codec</span>;
-<span class="kw">use</span> <span class="ident">tokio_util::codec::Decoder</span>;
+<span class="kw">use</span> <span class="ident">runtime</span>::{<span class="ident">Channel</span>, <span class="ident">Frame</span>, <span class="ident">Framed</span>};
+<span class="kw">use</span> <span class="ident">std</span>::{
+    <span class="ident">fs</span>,
+    <span class="ident">io</span>::{<span class="ident">BufRead</span>, <span class="ident">BufReader</span>, <span class="ident">Read</span>, <span class="ident">Write</span>},
+    <span class="ident">os::unix::net::UnixStream</span>,
+    <span class="ident">path::PathBuf</span>,
+};
+<span class="kw">use</span> <span class="ident">tokio::signal</span>;
 
 <span class="kw">mod</span> <span class="ident">qemu</span>;
 <span class="kw">mod</span> <span class="ident">server</span>;
@@ -214,6 +221,19 @@
     }
 }
 
+<span class="kw">struct</span> <span class="ident">CommsChannel</span> {
+    <span class="ident">inner</span>: <span class="ident">UnixStream</span>,
+}
+
+<span class="kw">impl</span> <span class="ident">Channel</span> <span class="kw">for</span> <span class="ident">CommsChannel</span> {
+    <span class="kw">fn</span> <span class="ident">send</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">data</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+        <span class="self">self</span>.<span class="ident">inner</span>.<span class="ident">write_all</span>(<span class="ident">data</span>).<span class="ident">map_err</span>(<span class="ident">anyhow::Error::msg</span>)
+    }
+    <span class="kw">fn</span> <span class="ident">recv</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">data</span>: <span class="kw-2">&amp;mut</span> [<span class="ident">u8</span>]) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+        <span class="self">self</span>.<span class="ident">inner</span>.<span class="ident">read_exact</span>(<span class="ident">data</span>).<span class="ident">map_err</span>(<span class="ident">anyhow::Error::msg</span>)
+    }
+}
+
 <span class="attribute">#[<span class="ident">tokio::main</span>]</span>
 <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">main</span>() -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">std::error::Error</span><span class="op">&gt;</span><span class="op">&gt;</span> {
     <span class="kw">let</span> <span class="ident">cli</span> <span class="op">=</span> <span class="ident">Args::parse</span>();
@@ -236,23 +256,24 @@
 
     <span class="comment">// Log everything coming over the console channel.</span>
     <span class="ident">tokio::spawn</span>(<span class="kw">async</span> {
-        <span class="kw">let</span> <span class="ident">codec</span> <span class="op">=</span> <span class="ident">tokio_util::codec::LinesCodec::new</span>();
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">framed</span> <span class="op">=</span> <span class="ident">codec</span>.<span class="ident">framed</span>(<span class="ident">console</span>);
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">reader</span> <span class="op">=</span> <span class="ident">BufReader::new</span>(<span class="ident">console</span>);
 
-        <span class="kw">while</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">line</span>) <span class="op">=</span> <span class="ident">framed</span>.<span class="ident">next</span>().<span class="kw">await</span> {
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">line</span> <span class="op">=</span> <span class="ident">String::new</span>();
+        <span class="kw">while</span> <span class="ident">reader</span>.<span class="ident">read_line</span>(<span class="kw-2">&amp;mut</span> <span class="ident">line</span>).<span class="ident">expect</span>(<span class="string">&quot;failed to read line&quot;</span>) <span class="op">&gt;</span> <span class="number">0</span> {
             <span class="comment">// The UEFI console uses ANSI escape codes to clear screen and set colours, so</span>
             <span class="comment">// let&#39;s not just print the string out but rather the debug version of that.</span>
-            <span class="macro">log::info!</span>(<span class="string">&quot;console: {:?}&quot;</span>, <span class="ident">line</span>.<span class="ident">unwrap</span>())
+            <span class="macro">log::info!</span>(<span class="string">&quot;console: {:?}&quot;</span>, <span class="ident">line</span>);
+            <span class="ident">line</span>.<span class="ident">clear</span>();
         }
     });
 
     <span class="comment">// TODO(#2709): Unfortunately OVMF writes some garbage (clear screen etc?) + our Hello</span>
-    <span class="comment">// World to the other serial port, so let&#39;s skip some bytes before we set up the CBOR codec.</span>
+    <span class="comment">// World to the other serial port, so let&#39;s skip some bytes before we set up framing.</span>
     <span class="comment">// The length of 71 characters has been determined experimentally and will change if we</span>
     <span class="comment">// change what we write to stdout in the UEFI app.</span>
     <span class="kw">if</span> <span class="ident">cli</span>.<span class="ident">mode</span> <span class="op">==</span> <span class="ident">Mode::Uefi</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">junk</span> <span class="op">=</span> [<span class="number">0</span>; <span class="number">71</span>];
-        <span class="ident">comms</span>.<span class="ident">read_exact</span>(<span class="kw-2">&amp;mut</span> <span class="ident">junk</span>).<span class="kw">await</span>.<span class="ident">unwrap</span>();
+        <span class="ident">comms</span>.<span class="ident">read_exact</span>(<span class="kw-2">&amp;mut</span> <span class="ident">junk</span>).<span class="ident">unwrap</span>();
         <span class="macro">log::info!</span>(<span class="string">&quot;Leading junk on comms: {:?}&quot;</span>, <span class="ident">std::str::from_utf8</span>(<span class="kw-2">&amp;</span><span class="ident">junk</span>));
     }
 
@@ -262,28 +283,17 @@
     <span class="kw">let</span> (<span class="ident">tx</span>, <span class="kw-2">mut</span> <span class="ident">rx</span>) <span class="op">=</span> <span class="ident">bmrng::unbounded_channel</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>, <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>();
 
     <span class="ident">tokio::spawn</span>(<span class="kw">async</span> <span class="kw">move</span> {
-        <span class="comment">// Set up the CBOR codec to handle the comms.</span>
-        <span class="kw">let</span> <span class="ident">codec</span>: <span class="ident">Codec</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>, <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Codec::new</span>();
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">channel</span> <span class="op">=</span> <span class="ident">codec</span>.<span class="ident">framed</span>(<span class="ident">comms</span>);
+        <span class="kw">let</span> <span class="ident">comms_channel</span> <span class="op">=</span> <span class="ident">CommsChannel</span> { <span class="ident">inner</span>: <span class="ident">comms</span> };
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">framed</span> <span class="op">=</span> <span class="ident">Framed::new</span>(<span class="ident">comms_channel</span>);
+        <span class="kw">fn</span> <span class="ident">respond</span>(<span class="ident">framed</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Framed</span><span class="op">&lt;</span><span class="ident">CommsChannel</span><span class="op">&gt;</span>, <span class="ident">input</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+            <span class="ident">framed</span>.<span class="ident">write_frame</span>(<span class="ident">Frame</span> { <span class="ident">body</span>: <span class="ident">input</span> })<span class="question-mark">?</span>;
+            <span class="kw">let</span> <span class="ident">response_frame</span> <span class="op">=</span> <span class="ident">framed</span>.<span class="ident">read_frame</span>()<span class="question-mark">?</span>;
+            <span class="prelude-val">Ok</span>(<span class="ident">response_frame</span>.<span class="ident">body</span>)
+        }
+
         <span class="kw">while</span> <span class="kw">let</span> <span class="prelude-val">Ok</span>((<span class="ident">input</span>, <span class="ident">responder</span>)) <span class="op">=</span> <span class="ident">rx</span>.<span class="ident">recv</span>().<span class="kw">await</span> {
-            <span class="ident">responder</span>
-                .<span class="ident">respond</span>({
-                    <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">err</span>) <span class="op">=</span> <span class="ident">channel</span>.<span class="ident">send</span>(<span class="ident">input</span>).<span class="kw">await</span> {
-                        <span class="prelude-val">Err</span>(<span class="ident">anyhow::Error::from</span>(<span class="ident">err</span>))
-                    } <span class="kw">else</span> {
-                        <span class="comment">// TODO(#2726): Sometimes next() gives us a None. Figure out what&#39;s going on</span>
-                        <span class="comment">// in there.</span>
-                        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">response</span>;
-                        <span class="kw">loop</span> {
-                            <span class="ident">response</span> <span class="op">=</span> <span class="ident">channel</span>.<span class="ident">next</span>().<span class="kw">await</span>;
-                            <span class="kw">if</span> <span class="ident">response</span>.<span class="ident">is_some</span>() {
-                                <span class="kw">break</span>;
-                            }
-                        }
-                        <span class="ident">response</span>.<span class="ident">unwrap</span>().<span class="ident">map_err</span>(<span class="ident">anyhow::Error::from</span>)
-                    }
-                })
-                .<span class="ident">unwrap</span>();
+            <span class="kw">let</span> <span class="ident">response</span> <span class="op">=</span> <span class="ident">respond</span>(<span class="kw-2">&amp;mut</span> <span class="ident">framed</span>, <span class="ident">input</span>);
+            <span class="ident">responder</span>.<span class="ident">respond</span>(<span class="ident">response</span>).<span class="ident">unwrap</span>();
         }
     });
 
