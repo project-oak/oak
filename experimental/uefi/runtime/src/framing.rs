@@ -18,7 +18,10 @@ use crate::{remote_attestation::AttestationHandler, Channel, Frame};
 use anyhow::Context;
 
 // Processes incoming frames.
-pub fn handle_frames(channel: &mut dyn Channel) -> anyhow::Result<!> {
+pub fn handle_frames<T>(channel: &mut T) -> anyhow::Result<!>
+where
+    T: Channel,
+{
     let wasm_handler = crate::wasm::new_wasm_handler()?;
     let attestation_handler =
         &mut AttestationHandler::create(move |v| wasm_handler.handle_raw_invoke(v));

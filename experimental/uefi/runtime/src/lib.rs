@@ -43,7 +43,10 @@ pub struct Frame {
 }
 
 impl Frame {
-    pub fn read_from_channel(channel: &mut dyn Channel) -> anyhow::Result<Self> {
+    pub fn read_from_channel<T>(channel: &mut T) -> anyhow::Result<Self>
+    where
+        T: Channel,
+    {
         let mut length_buf = [0; FRAME_LENGTH_ENCODED_SIZE];
         channel.recv(&mut length_buf)?;
         let length = FrameLength::from_be_bytes(length_buf);
@@ -52,7 +55,10 @@ impl Frame {
         Ok(Frame { body })
     }
 
-    pub fn write_to_channel(self, channel: &mut dyn Channel) -> anyhow::Result<()> {
+    pub fn write_to_channel<T>(self, channel: &mut T) -> anyhow::Result<()>
+    where
+        T: Channel,
+    {
         let length: FrameLength = FrameLength::try_from(self.body.len())
             .map_err(anyhow::Error::msg)
             .context("the frame body is too large")?;
