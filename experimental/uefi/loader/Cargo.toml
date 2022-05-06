@@ -16,8 +16,6 @@ env_logger = "*"
 prost = "*"
 serde = "*"
 tokio = { version = "*", features = [
-  "io-std",
-  "io-util",
   "rt-multi-thread",
   "macros",
   "net",
@@ -25,9 +23,6 @@ tokio = { version = "*", features = [
   "signal",
   "sync",
 ] }
-tokio-serde-cbor = "*"
-# fixed to 0.6 because of tokio-serde-cbor
-tokio-util = { version = "~0.6", features = ["codec"] }
 tonic = "*"
 oak_remote_attestation_sessions = { path = "../../../remote_attestation_sessions" }
 runtime = { path = "../../../experimental/uefi/runtime" }

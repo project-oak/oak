@@ -14,14 +14,16 @@
 // limitations under the License.
 //
 
-use std::{fs, path::PathBuf};
-
 use clap::Parser;
-use futures::{stream::StreamExt, SinkExt};
 use qemu::{Qemu, QemuParams};
-use tokio::{io::AsyncReadExt, net::UnixStream, signal};
-use tokio_serde_cbor::Codec;
-use tokio_util::codec::Decoder;
+use runtime::{Channel, Frame, Framed};
+use std::{
+    fs,
+    io::{BufRead, BufReader, Read, Write},
+    os::unix::net::UnixStream,
+    path::PathBuf,
+};
+use tokio::signal;
 
 mod qemu;
 mod server;
@@ -59,6 +61,19 @@ fn path_exists(s: &str) -> Result<(), String> {
     }
 }
 
+struct CommsChannel {
+    inner: UnixStream,
+}
+
+impl Channel for CommsChannel {
+    fn send(&mut self, data: &[u8]) -> anyhow::Result<()> {
+        self.inner.write_all(data).map_err(anyhow::Error::msg)
+    }
+    fn recv(&mut self, data: &mut [u8]) -> anyhow::Result<()> {
+        self.inner.read_exact(data).map_err(anyhow::Error::msg)
+    }
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cli = Args::parse();
@@ -81,23 +96,24 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Log everything coming over the console channel.
     tokio::spawn(async {
-        let codec = tokio_util::codec::LinesCodec::new();
-        let mut framed = codec.framed(console);
+        let mut reader = BufReader::new(console);
 
-        while let Some(line) = framed.next().await {
+        let mut line = String::new();
+        while reader.read_line(&mut line).expect("failed to read line") > 0 {
             // The UEFI console uses ANSI escape codes to clear screen and set colours, so
             // let's not just print the string out but rather the debug version of that.
-            log::info!("console: {:?}", line.unwrap())
+            log::info!("console: {:?}", line);
+            line.clear();
         }
     });
 
     // TODO(#2709): Unfortunately OVMF writes some garbage (clear screen etc?) + our Hello
-    // World to the other serial port, so let's skip some bytes before we set up the CBOR codec.
+    // World to the other serial port, so let's skip some bytes before we set up framing.
     // The length of 71 characters has been determined experimentally and will change if we
     // change what we write to stdout in the UEFI app.
     if cli.mode == Mode::Uefi {
         let mut junk = [0; 71];
-        comms.read_exact(&mut junk).await.unwrap();
+        comms.read_exact(&mut junk).unwrap();
         log::info!("Leading junk on comms: {:?}", std::str::from_utf8(&junk));
     }
 
@@ -107,28 +123,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let (tx, mut rx) = bmrng::unbounded_channel::<Vec<u8>, anyhow::Result<Vec<u8>>>();
 
     tokio::spawn(async move {
-        // Set up the CBOR codec to handle the comms.
-        let codec: Codec<Vec<u8>, Vec<u8>> = Codec::new();
-        let mut channel = codec.framed(comms);
+        let comms_channel = CommsChannel { inner: comms };
+        let mut framed = Framed::new(comms_channel);
+        fn respond(framed: &mut Framed<CommsChannel>, input: Vec<u8>) -> anyhow::Result<Vec<u8>> {
+            framed.write_frame(Frame { body: input })?;
+            let response_frame = framed.read_frame()?;
+            Ok(response_frame.body)
+        }
+
         while let Ok((input, responder)) = rx.recv().await {
-            responder
-                .respond({
-                    if let Err(err) = channel.send(input).await {
-                        Err(anyhow::Error::from(err))
-                    } else {
-                        // TODO(#2726): Sometimes next() gives us a None. Figure out what's going on
-                        // in there.
-                        let mut response;
-                        loop {
-                            response = channel.next().await;
-                            if response.is_some() {
-                                break;
-                            }
-                        }
-                        response.unwrap().map_err(anyhow::Error::from)
-                    }
-                })
-                .unwrap();
+            let response = respond(&mut framed, input);
+            responder.respond(response).unwrap();
         }
     });
 

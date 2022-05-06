@@ -19,8 +19,10 @@ use std::{ffi::OsStr, path::Path, process::Stdio};
 use anyhow::Result;
 use command_fds::{tokio::CommandFdAsyncExt, FdMapping};
 use log::info;
-use std::os::unix::io::AsRawFd;
-use tokio::{io::AsyncWriteExt, net::UnixStream};
+use std::{
+    net::Shutdown,
+    os::unix::{io::AsRawFd, net::UnixStream},
+};
 
 pub struct Qemu {
     console: UnixStream,
@@ -127,9 +129,9 @@ impl Qemu {
 
     pub async fn kill(mut self) -> Result<std::process::ExitStatus> {
         info!("Cleaning up and shutting down.");
-        self.console.shutdown().await?;
-        self.comms.shutdown().await?;
-        self.qmp.shutdown().await?;
+        self.console.shutdown(Shutdown::Both)?;
+        self.comms.shutdown(Shutdown::Both)?;
+        self.qmp.shutdown(Shutdown::Both)?;
         self.instance.start_kill()?;
         self.wait().await
     }

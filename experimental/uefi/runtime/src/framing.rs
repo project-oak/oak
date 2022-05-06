@@ -14,45 +14,24 @@
 // limitations under the License.
 //
 
-use crate::{remote_attestation::AttestationHandler, Channel};
-use alloc::vec::Vec;
+use crate::{remote_attestation::AttestationHandler, Channel, Frame, Framed};
 use anyhow::Context;
-use ciborium::{de, ser};
-
-impl ciborium_io::Write for &mut dyn Channel {
-    type Error = anyhow::Error;
-
-    fn write_all(&mut self, data: &[u8]) -> Result<(), Self::Error> {
-        self.send(data)
-    }
-
-    fn flush(&mut self) -> Result<(), Self::Error> {
-        Ok(())
-    }
-}
-
-impl ciborium_io::Read for &mut dyn Channel {
-    type Error = anyhow::Error;
-
-    fn read_exact(&mut self, data: &mut [u8]) -> Result<(), Self::Error> {
-        self.recv(data)
-    }
-}
 
 // Processes incoming frames.
-pub fn handle_frames(mut channel: &mut dyn Channel) -> anyhow::Result<!> {
+pub fn handle_frames<T>(channel: T) -> anyhow::Result<!>
+where
+    T: Channel,
+{
     let wasm_handler = crate::wasm::new_wasm_handler()?;
     let attestation_handler =
         &mut AttestationHandler::create(move |v| wasm_handler.handle_raw_invoke(v));
+    let framed = &mut Framed::new(channel);
     loop {
-        let msg: Vec<u8> = de::from_reader(&mut channel)
-            .map_err(anyhow::Error::msg)
-            .context("couldn't deserialize message")?;
+        let frame = framed.read_frame().context("couldn't receive message")?;
         let response = attestation_handler
-            .message(msg)
+            .message(frame.body)
             .context("attestation failed")?;
-        ser::into_writer(&response, &mut channel)
-            .map_err(anyhow::Error::msg)
-            .context("couldn't serialize response")?;
+        let reponse_frame = Frame { body: response };
+        framed.write_frame(reponse_frame)?
     }
 }

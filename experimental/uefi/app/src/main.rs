@@ -64,9 +64,9 @@ fn main(handle: Handle, system_table: &mut SystemTable<Boot>) -> Status {
 
     writeln!(system_table.stdout(), "Hello World!").unwrap();
 
-    let mut serial =
+    let serial =
         serial::Serial::get(handle, system_table.boot_services(), ECHO_SERIAL_PORT_INDEX).unwrap();
-    framing::handle_frames(&mut serial).unwrap();
+    framing::handle_frames(serial).unwrap();
 }
 
 #[cfg(test)]
