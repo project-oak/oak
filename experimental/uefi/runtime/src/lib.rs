@@ -38,6 +38,10 @@ pub type FrameLength = u16;
 // The frame length is a u16, which is two bytes encoded.
 pub const FRAME_LENGTH_ENCODED_SIZE: usize = 2;
 
+pub struct Frame {
+    pub body: Vec<u8>,
+}
+
 pub struct Framed<T: Channel> {
     inner: T,
 }
@@ -68,10 +72,6 @@ impl<T: Channel> Framed<T> {
         self.inner.send(&encoded_frame)?;
         Ok(())
     }
-}
-
-pub struct Frame {
-    pub body: Vec<u8>,
 }
 
 pub struct SerializeableRequest {
