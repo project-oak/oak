@@ -187,93 +187,9 @@ fn run_bazel_tests() -> Step {
 }
 
 pub fn run_cargo_fuzz(opt: &RunCargoFuzz) -> Step {
-    let steps = if opt.build_deps {
-        vec![build_fuzz_dependencies(opt), run_fuzz_targets(opt)]
-    } else {
-        vec![run_fuzz_targets(opt)]
-    };
-
     Step::Multiple {
         name: "cargo fuzz".to_string(),
-        steps,
-    }
-}
-
-pub fn build_fuzz_dependencies(opt: &RunCargoFuzz) -> Step {
-    let fuzz_configs: Vec<FuzzConfig> = fuzz_config_toml_files()
-        .filter(|path| match &opt.crate_name {
-            Some(crate_name) => {
-                let mut crate_path = path.clone();
-                crate_path.pop();
-                crate_path.pop();
-                crate_path.file_name().and_then(|s| s.to_str()).unwrap() == crate_name.as_str()
-            }
-            None => true,
-        })
-        .map(|path| {
-            toml::from_str(&read_file(&path)).unwrap_or_else(|err| {
-                panic!("could not parse example manifest file {:?}: {}", path, err)
-            })
-        })
-        .collect();
-
-    Step::Multiple {
-        name: "configure fuzzing".to_string(),
-        steps: fuzz_configs.iter().map(run_fuzz_config).collect(),
-    }
-}
-
-fn run_fuzz_config(config: &FuzzConfig) -> Step {
-    Step::Multiple {
-        name: "run".to_string(),
-        steps: config
-            .examples
-            .iter()
-            .map(|config| {
-                let target = Target::Cargo {
-                    cargo_manifest: config.manifest_path.clone(),
-                    additional_build_args: vec![],
-                };
-
-                Step::Multiple {
-                    name: config.name.clone(),
-                    steps: vec![
-                        // Build the .wasm file
-                        build_wasm_module(&config.name, &target, &config.name),
-                        // Additional step for copying `.wasm` file to the desired output dir
-                        copy_wasm_file(config),
-                    ],
-                }
-            })
-            .collect(),
-    }
-}
-
-fn copy_wasm_file(config: &FuzzableExample) -> Step {
-    let metadata = cargo_metadata::MetadataCommand::new()
-        .manifest_path(&config.manifest_path)
-        .exec()
-        .unwrap();
-    let command = Cmd::new(
-        "cp",
-        vec![
-            format!("{}/bin/{}.wasm", metadata.workspace_root, &config.name),
-            format!("{}/{}.wasm", &config.out_dir, &config.name),
-        ],
-    );
-
-    Step::Multiple {
-        name: "copy to dir".to_string(),
-        steps: vec![
-            Step::Single {
-                name: "mkdir".to_string(),
-                command: Cmd::new("mkdir", vec!["--parents", &config.out_dir]),
-            },
-            Step::Single {
-                name: "copy".to_string(),
-                command,
-            },
-        ],
+        steps: vec![run_fuzz_targets(opt)],
     }
 }
 

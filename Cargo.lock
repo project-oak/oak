@@ -1649,25 +1649,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "fuzzable"
-version = "0.1.0"
-dependencies = [
- "log",
- "maplit",
- "oak_functions",
- "oak_functions_abi",
- "oak_functions_loader",
- "oak_functions_lookup",
- "oak_functions_metrics",
- "oak_functions_workload_logging",
- "prost 0.10.3",
- "prost-build 0.10.3",
- "rand 0.8.5",
- "test_utils",
- "tokio",
-]
-
-[[package]]
 name = "generic-array"
 version = "0.12.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"

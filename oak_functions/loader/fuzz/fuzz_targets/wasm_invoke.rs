@@ -30,7 +30,7 @@ use oak_functions_loader::{
 use oak_functions_lookup::{LookupDataManager, LookupFactory};
 use oak_functions_metrics::{BucketConfig, PrivateMetricsConfig, PrivateMetricsProxyFactory};
 use prost::Message;
-use std::{convert::Into, sync::Arc};
+use std::{convert::Into, path::PathBuf, sync::Arc};
 
 #[derive(Arbitrary, Debug, Clone, PartialEq)]
 enum ArbitraryInstruction {
@@ -75,7 +75,26 @@ impl From<&LookupKey> for Vec<u8> {
 const FIXED_KEY: &[u8] = b"key";
 
 lazy_static::lazy_static! {
-    static ref WASM_MODULE_BYTES: Vec<u8> = include_bytes!("./data/fuzzable.wasm").to_vec();
+    static ref PATH_TO_MODULES: PathBuf = {
+        // WORKSPACE_ROOT is set in .cargo/config.toml.
+         [env!("WORKSPACE_ROOT"),"oak_functions", "loader", "fuzz", "fuzzable"].iter().collect()
+    };
+    // static ref WASM_MODULE_BYTES: Vec<u8> = include_bytes!("./data/fuzzable.wasm").to_vec();
+    static ref WASM_MODULE_BYTES: Vec<u8> = {
+        let mut manifest_path = PATH_TO_MODULES.clone();
+        manifest_path.push("module");
+        manifest_path.push("Cargo.toml");
+
+        let path = manifest_path.to_str().unwrap().to_string();
+        let path = if path.starts_with("/src/oak") {
+            path.replace("/src/oak", "/out")
+        } else {
+            path
+        };
+
+        test_utils::compile_rust_wasm(&path, false)
+            .expect("Could not read Wasm module")
+    };
 }
 
 /// To avoid timeouts, allow executing a limited number of instructions. On oss-fuzz, the timeout is
@@ -85,6 +104,8 @@ const MAX_INSTRUCTIONS_COUNT: usize = 10_000;
 
 // Generate a random list of `Instruction`s and send them to the Wasm module to run.
 fuzz_target!(|instruction_list: Vec<ArbitraryInstruction>| {
+    assert!(WASM_MODULE_BYTES.len() > 0);
+
     let mut instructions: Vec<crate::proto::Instruction> = instruction_list
         .iter()
         .map(crate::proto::Instruction::from)

@@ -251,5 +251,5 @@ to run all targets for a specific crate, or to run a specific target,
 respectively.
 
 ```bash
-xtask --logs run-cargo=fuzz --crate-name=loader --target-name=wasm_invoke -- -max_total_time=20
+xtask --logs run-cargo-fuzz --crate-name=loader --target-name=wasm_invoke -- -max_total_time=20
 ```

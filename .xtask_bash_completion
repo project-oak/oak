@@ -288,7 +288,7 @@ _xtask() {
             return 0
             ;;
         xtask__run__cargo__fuzz)
-            opts="-h --crate-name --target-name --build-deps --help <ARGS>..."
+            opts="-h --crate-name --target-name --help <ARGS>..."
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0

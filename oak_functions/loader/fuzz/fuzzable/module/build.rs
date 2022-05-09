@@ -18,7 +18,8 @@ extern crate prost_build;
 
 fn main() {
     let file_paths = ["oak_functions/loader/fuzz/proto/instructions.proto"];
-    prost_build::compile_protos(&file_paths, &["../../../.."]).expect("Proto compilation failed");
+    prost_build::compile_protos(&file_paths, &["../../../../.."])
+        .expect("Proto compilation failed");
 
     // Tell cargo to rerun this build script if the proto file has changed.
     // https://doc.rust-lang.org/cargo/reference/build-scripts.html#cargorerun-if-changedpath
