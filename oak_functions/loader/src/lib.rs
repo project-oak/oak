@@ -162,9 +162,15 @@ async fn background_refresh_lookup_data(
     }
 }
 
+// Indicates which extensions factories the Oak Functions Runtime is initialized with.
+pub enum ExtensionConfig {
+    Base,
+    Unsafe,
+}
+
 /// This crate is just a library so this function does not get executed directly by anything, it
 /// needs to be wrapped in the "actual" `main` from a bin crate.
-pub fn lib_main() -> anyhow::Result<()> {
+pub fn lib_main(extension_config: ExtensionConfig) -> anyhow::Result<()> {
     let opt = Opt::parse();
     let config_file_bytes = fs::read(&opt.config_path)
         .with_context(|| format!("Couldn't read config file {}", &opt.config_path))?;
@@ -178,48 +184,22 @@ pub fn lib_main() -> anyhow::Result<()> {
         .enable_all()
         .build()
         .unwrap()
-        .block_on(async_main(opt, config, logger))
+        .block_on(async_main(opt, config, logger, extension_config))
 }
 
 /// Main execution point for the Oak Functions Loader.
-async fn async_main(opt: Opt, config: Config, logger: Logger) -> anyhow::Result<()> {
+async fn async_main(
+    opt: Opt,
+    config: Config,
+    logger: Logger,
+    extension_config: ExtensionConfig,
+) -> anyhow::Result<()> {
     let (notify_sender, notify_receiver) = tokio::sync::oneshot::channel::<()>();
-
-    let lookup_data_manager = load_lookup_data(&config, logger.clone()).await?;
-
-    #[allow(unused_mut)]
-    let mut extensions = Vec::new();
-
-    let workload_logging_factory =
-        WorkloadLoggingFactory::new_boxed_extension_factory(logger.clone())?;
-    extensions.push(workload_logging_factory);
-
-    let lookup_factory = LookupFactory::new_boxed_extension_factory(lookup_data_manager)?;
-    extensions.push(lookup_factory);
-
-    #[cfg(feature = "oak-tf")]
-    if let Some(tf_model_config) = &config.tf_model {
-        // Load the TensorFlow model from the given path in the config
-        let model = read_model_from_path(&tf_model_config.path)?;
-        let tf_model_factory = TensorFlowFactory::new_boxed_extension_factory(
-            model,
-            tf_model_config.shape.clone(),
-            logger.clone(),
-        )?;
-        extensions.push(tf_model_factory);
-    }
-
-    #[cfg(feature = "oak-metrics")]
-    if let Some(metrics_config) = &config.metrics {
-        let metrics_factory = PrivateMetricsProxyFactory::new_boxed_extension_factory(
-            metrics_config,
-            logger.clone(),
-        )?;
-        extensions.push(metrics_factory);
-    }
 
     let wasm_module_bytes = fs::read(&opt.wasm_path)
         .with_context(|| format!("Couldn't read Wasm file {}", &opt.wasm_path))?;
+    let extensions = create_extension_factories(extension_config, &config, logger.clone()).await?;
+    let wasm_handler = create_wasm_handler(&wasm_module_bytes, extensions, logger.clone())?;
 
     // Make sure that a policy is specified and is valid.
     let policy = config
@@ -230,8 +210,6 @@ async fn async_main(opt: Opt, config: Config, logger: Logger) -> anyhow::Result<
 
     let address = SocketAddr::from((Ipv6Addr::UNSPECIFIED, opt.http_listen_port));
     let tee_certificate = vec![];
-
-    let wasm_handler = create_wasm_handler(&wasm_module_bytes, extensions, logger.clone())?;
 
     let config_info = get_config_info(&wasm_module_bytes, policy.clone(), &config)?;
 
@@ -356,4 +334,50 @@ fn get_config_info(
         ml_inference,
         metrics,
     })
+}
+
+// Create
+async fn create_extension_factories(
+    extension_config: ExtensionConfig,
+    config: &Config,
+    logger: Logger,
+) -> anyhow::Result<Vec<Box<dyn ExtensionFactory<Logger>>>> {
+    let mut extensions = Vec::new();
+
+    // For Base we add the Logging extension factory
+    let workload_logging_factory =
+        WorkloadLoggingFactory::new_boxed_extension_factory(logger.clone())?;
+    extensions.push(workload_logging_factory);
+
+    // For Base we add the Lookup extension factory
+    let lookup_data_manager = load_lookup_data(&config, logger.clone()).await?;
+    let lookup_factory = LookupFactory::new_boxed_extension_factory(lookup_data_manager)?;
+    extensions.push(lookup_factory);
+
+    // For Unsafe we additionally add the TensorFlow and the Metrics extension.
+    // TODO(mschett): Add the the testing extension, too.
+    if let ExtensionConfig::Unsafe = extension_config {
+        #[cfg(feature = "oak-tf")]
+        if let Some(tf_model_config) = &config.tf_model {
+            // Load the TensorFlow model from the given path in the config
+            let model = read_model_from_path(&tf_model_config.path)?;
+            let tf_model_factory = TensorFlowFactory::new_boxed_extension_factory(
+                model,
+                tf_model_config.shape.clone(),
+                logger.clone(),
+            )?;
+            extensions.push(tf_model_factory);
+        }
+
+        #[cfg(feature = "oak-metrics")]
+        if let Some(metrics_config) = &config.metrics {
+            let metrics_factory = PrivateMetricsProxyFactory::new_boxed_extension_factory(
+                metrics_config,
+                logger.clone(),
+            )?;
+            extensions.push(metrics_factory);
+        }
+    }
+
+    Ok(extensions)
 }
