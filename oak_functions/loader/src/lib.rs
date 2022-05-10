@@ -35,8 +35,8 @@ use log::Level;
 use oak_functions_abi::proto::{ConfigurationInfo, ServerPolicy};
 use oak_functions_extension::ExtensionFactory;
 use oak_functions_lookup::{LookupDataManager, LookupFactory};
-use oak_functions_metrics::{PrivateMetricsConfig, PrivateMetricsProxyFactory};
-use oak_functions_tf_inference::{read_model_from_path, TensorFlowFactory, TensorFlowModelConfig};
+use oak_functions_metrics::PrivateMetricsConfig;
+use oak_functions_tf_inference::TensorFlowModelConfig;
 use oak_functions_workload_logging::WorkloadLoggingFactory;
 use oak_logger::OakLogger;
 use oak_remote_attestation::crypto::get_sha256;
@@ -94,10 +94,10 @@ pub struct Config {
     policy: Option<Policy>,
     /// Configuration for TensorFlow model
     #[serde(default)]
-    tf_model: Option<TensorFlowModelConfig>,
+    pub tf_model: Option<TensorFlowModelConfig>,
     /// Differentially private metrics configuration.
     #[serde(default)]
-    metrics: Option<PrivateMetricsConfig>,
+    pub metrics: Option<PrivateMetricsConfig>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -156,26 +156,20 @@ async fn background_refresh_lookup_data(
     }
 }
 
-// Indicates which extensions factories the Oak Functions Runtime is initialized with.
-pub enum ExtensionConfig {
-    Base,
-    Unsafe,
-}
-
 /// This crate is just a library so this function does not get executed directly by anything, it
 /// needs to be wrapped in the "actual" `main` from a bin crate.
 pub fn lib_main(
     opt: Opt,
     config: Config,
     logger: Logger,
-    extension_config: ExtensionConfig,
+    extension_factories: Vec<Box<dyn ExtensionFactory<Logger>>>,
 ) -> anyhow::Result<()> {
     tokio::runtime::Builder::new_multi_thread()
         .worker_threads(config.worker_threads.unwrap_or(4))
         .enable_all()
         .build()
         .unwrap()
-        .block_on(async_main(opt, config, logger, extension_config))
+        .block_on(async_main(opt, config, logger, extension_factories))
 }
 
 /// Main execution point for the Oak Functions Loader.
@@ -183,13 +177,18 @@ async fn async_main(
     opt: Opt,
     config: Config,
     logger: Logger,
-    extension_config: ExtensionConfig,
+    extension_factories: Vec<Box<dyn ExtensionFactory<Logger>>>,
 ) -> anyhow::Result<()> {
     let (notify_sender, notify_receiver) = tokio::sync::oneshot::channel::<()>();
 
     let wasm_module_bytes = fs::read(&opt.wasm_path)
         .with_context(|| format!("Couldn't read Wasm file {}", &opt.wasm_path))?;
-    let extensions = create_extension_factories(extension_config, &config, logger.clone()).await?;
+    let mut extensions = create_base_extension_factories(&config, logger.clone()).await?;
+
+    for extension_factory in extension_factories {
+        extensions.push(extension_factory);
+    }
+
     let wasm_handler = create_wasm_handler(&wasm_module_bytes, extensions, logger.clone())?;
 
     // Make sure that a policy is specified and is valid.
@@ -321,8 +320,7 @@ fn get_config_info(
     })
 }
 
-pub async fn create_extension_factories(
-    extension_config: ExtensionConfig,
+pub async fn create_base_extension_factories(
     config: &Config,
     logger: Logger,
 ) -> anyhow::Result<Vec<Box<dyn ExtensionFactory<Logger>>>> {
@@ -338,26 +336,5 @@ pub async fn create_extension_factories(
     let lookup_factory = LookupFactory::new_boxed_extension_factory(lookup_data_manager)?;
     extensions.push(lookup_factory);
 
-    // For Unsafe we additionally add the TensorFlow and the Metrics extension.
-    if let ExtensionConfig::Unsafe = extension_config {
-        if let Some(tf_model_config) = &config.tf_model {
-            // Load the TensorFlow model from the given path in the config
-            let model = read_model_from_path(&tf_model_config.path)?;
-            let tf_model_factory = TensorFlowFactory::new_boxed_extension_factory(
-                model,
-                tf_model_config.shape.clone(),
-                logger.clone(),
-            )?;
-            extensions.push(tf_model_factory);
-        }
-
-        if let Some(metrics_config) = &config.metrics {
-            let metrics_factory = PrivateMetricsProxyFactory::new_boxed_extension_factory(
-                metrics_config,
-                logger.clone(),
-            )?;
-            extensions.push(metrics_factory);
-        }
-    }
     Ok(extensions)
 }

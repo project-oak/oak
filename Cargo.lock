@@ -2909,6 +2909,7 @@ dependencies = [
  "anyhow",
  "clap 3.1.17",
  "log",
+ "oak_functions_extension",
  "oak_functions_loader",
  "oak_logger",
  "toml",
@@ -2921,7 +2922,10 @@ dependencies = [
  "anyhow",
  "clap 3.1.17",
  "log",
+ "oak_functions_extension",
  "oak_functions_loader",
+ "oak_functions_metrics",
+ "oak_functions_tf_inference",
  "oak_logger",
  "toml",
 ]

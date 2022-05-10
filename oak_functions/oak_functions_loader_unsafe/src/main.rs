@@ -22,6 +22,8 @@ use anyhow::Context;
 use clap::Parser;
 use log::Level;
 use oak_functions_loader::{logger::Logger, Config, Opt};
+use oak_functions_metrics::PrivateMetricsProxyFactory;
+use oak_functions_tf_inference::{read_model_from_path, TensorFlowFactory};
 use oak_logger::OakLogger;
 use std::fs;
 
@@ -35,10 +37,28 @@ pub fn main() -> anyhow::Result<()> {
     let logger = Logger::default();
     logger.log_public(Level::Info, &format!("parsed config file:\n{:#?}", config));
 
-    oak_functions_loader::lib_main(
-        opt,
-        config,
-        logger,
-        oak_functions_loader::ExtensionConfig::Unsafe,
-    )
+    let mut extension_factories = vec![];
+
+    if let Some(tf_model_config) = &config.tf_model {
+        // Load the TensorFlow model from the given path in the config
+        let model = read_model_from_path(&tf_model_config.path)?;
+        let tf_model_factory = TensorFlowFactory::new_boxed_extension_factory(
+            model,
+            tf_model_config.shape.clone(),
+            logger.clone(),
+        )?;
+        extension_factories.push(tf_model_factory);
+        logger.log_public(Level::Info, "Added TensorFlow extension.");
+    }
+
+    if let Some(metrics_config) = &config.metrics {
+        let metrics_factory = PrivateMetricsProxyFactory::new_boxed_extension_factory(
+            metrics_config,
+            logger.clone(),
+        )?;
+        extension_factories.push(metrics_factory);
+        logger.log_public(Level::Info, "Added Metrics extension.");
+    }
+
+    oak_functions_loader::lib_main(opt, config, logger, extension_factories)
 }

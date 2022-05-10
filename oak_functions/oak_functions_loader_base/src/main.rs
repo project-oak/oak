@@ -34,10 +34,7 @@ pub fn main() -> anyhow::Result<()> {
     let logger = Logger::default();
     logger.log_public(Level::Info, &format!("parsed config file:\n{:#?}", config));
 
-    oak_functions_loader::lib_main(
-        opt,
-        config,
-        logger,
-        oak_functions_loader::ExtensionConfig::Base,
-    )
+    let extension_factories = vec![];
+
+    oak_functions_loader::lib_main(opt, config, logger, extension_factories)
 }
