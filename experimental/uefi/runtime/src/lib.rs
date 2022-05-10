@@ -19,8 +19,8 @@
 
 extern crate alloc;
 
-use alloc::vec::Vec;
-use anyhow::bail;
+use alloc::{vec, vec::Vec};
+use anyhow::{bail, Context};
 use oak_remote_attestation_sessions::{SessionId, SESSION_ID_LENGTH};
 
 pub mod framing;
@@ -32,6 +32,46 @@ mod wasm;
 pub trait Channel {
     fn send(&mut self, data: &[u8]) -> anyhow::Result<()>;
     fn recv(&mut self, data: &mut [u8]) -> anyhow::Result<()>;
+}
+
+pub type FrameLength = u16;
+// The frame length is a u16, which is two bytes encoded.
+pub const FRAME_LENGTH_ENCODED_SIZE: usize = 2;
+
+pub struct Frame {
+    pub body: Vec<u8>,
+}
+
+pub struct Framed<T: Channel> {
+    inner: T,
+}
+
+impl<T: Channel> Framed<T> {
+    pub fn new(channel: T) -> Self {
+        Self { inner: channel }
+    }
+
+    pub fn read_frame(&mut self) -> anyhow::Result<Frame> {
+        let mut length_buf = [0; FRAME_LENGTH_ENCODED_SIZE];
+        self.inner.recv(&mut length_buf)?;
+        let length = FrameLength::from_be_bytes(length_buf);
+        let mut body: Vec<u8> = vec![0; length.into()];
+        self.inner.recv(&mut body)?;
+        Ok(Frame { body })
+    }
+
+    pub fn write_frame(&mut self, frame: Frame) -> anyhow::Result<()> {
+        let length: FrameLength = FrameLength::try_from(frame.body.len())
+            .map_err(anyhow::Error::msg)
+            .context("the frame body is too large")?;
+        let encoded_length = length.to_be_bytes();
+        let mut encoded_frame: Vec<u8> =
+            Vec::with_capacity(encoded_length.len() + frame.body.len());
+        encoded_frame.extend(encoded_length);
+        encoded_frame.extend(frame.body);
+        self.inner.send(&encoded_frame)?;
+        Ok(())
+    }
 }
 
 pub struct SerializeableRequest {

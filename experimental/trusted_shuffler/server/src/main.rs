@@ -44,9 +44,14 @@ pub struct Opt {
     backend_url: String,
 }
 
-#[tokio::main]
+#[tokio::main(flavor = "multi_thread")]
 async fn main() -> anyhow::Result<()> {
-    env_logger::init();
+    env_logger::builder()
+        .format_timestamp(None)
+        .format_level(false)
+        .format_module_path(false)
+        .format_target(false)
+        .init();
     let opt = Opt::parse();
 
     let listen_address = opt

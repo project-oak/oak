@@ -17,12 +17,13 @@
 use anyhow::anyhow;
 use async_trait::async_trait;
 use hyper::{Body, Method, Request, Response, StatusCode};
-use log::{error, info};
+use log::error;
 use std::{
     future::Future,
     pin::Pin,
     sync::Arc,
     task::{Context, Poll},
+    time::Instant,
 };
 use trusted_shuffler::{RequestHandler, TrustedShuffler};
 use trusted_shuffler_common::send_request;
@@ -42,10 +43,7 @@ impl RequestHandler for HttpRequestHandler {
                     error
                 ))
             },
-            |response| {
-                info!("Received response from the backend: {:?}", response);
-                Ok(response)
-            },
+            Ok,
         )
     }
 }
@@ -71,11 +69,19 @@ impl hyper::service::Service<Request<Body>> for Service {
                     let body = hyper::body::to_bytes(request.into_body())
                         .await
                         .expect("Couldn't read request body");
-                    info!("Received request: {:?}", body);
 
+                    let request_start = Instant::now();
+                    log::info!(
+                        "Server Request: {}",
+                        String::from_utf8(body.to_vec()).unwrap()
+                    );
                     match trusted_shuffler.invoke(body.to_vec()).await {
                         Ok(response) => {
-                            info!("Received response: {:?}", response);
+                            let _response_time = request_start.elapsed();
+                            log::info!(
+                                "Server Response: {}",
+                                String::from_utf8(body.to_vec()).unwrap()
+                            );
                             Ok(Response::new(Body::from(response)))
                         }
                         Err(error) => {

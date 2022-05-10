@@ -7,8 +7,6 @@ license = "Apache-2.0"
 
 [dependencies]
 anyhow = { version = "*", default-features = false }
-ciborium = { version = "*", default-features = false }
-ciborium-io = "*"
 log = "*"
 oak_functions_wasm = { path = "../../../oak_functions/wasm" }
 oak_functions_workload_logging = { path = "../../../oak_functions/workload_logging" }
