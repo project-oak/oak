@@ -1,5 +1,6 @@
 [build]
-target = "../../../third_party/rust-hypervisor-firmware-subset/target.json"
+#target = "../../../third_party/rust-hypervisor-firmware-subset/target.json"
+target = "target.json"
 
 [target.target]
 runner = "./runner"

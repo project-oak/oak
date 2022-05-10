@@ -42,7 +42,6 @@ dependencies = [
  "linked_list_allocator",
  "log",
  "runtime",
- "rust-hypervisor-firmware-subset",
  "uart_16550",
  "x86_64",
 ]
@@ -495,15 +494,6 @@ dependencies = [
  "oak_functions_workload_logging",
  "oak_logger",
  "oak_remote_attestation_sessions",
-]
-
-[[package]]
-name = "rust-hypervisor-firmware-subset"
-version = "0.1.0"
-dependencies = [
- "bitflags",
- "log",
- "x86_64",
 ]
 
 [[package]]

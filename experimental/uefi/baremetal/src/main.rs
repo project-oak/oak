@@ -24,6 +24,8 @@
 #![test_runner(crate::test_runner)]
 #![reexport_test_harness_main = "test_main"]
 
+mod asm;
+mod bootparam;
 mod logging;
 mod memory;
 mod serial;
@@ -32,53 +34,30 @@ mod serial;
 extern crate log;
 
 use core::panic::PanicInfo;
-use rust_hypervisor_firmware_subset::{boot, paging, pvh};
 
 #[no_mangle]
-pub extern "C" fn rust64_start(rdi: &pvh::StartInfo) -> ! {
+pub extern "C" fn rust64_start(_rdi: u64, rsi: &bootparam::boot_params) -> ! {
     logging::init_logging();
-    paging::setup();
-    memory::init_allocator(rdi);
+    memory::init_allocator(&rsi);
 
     if cfg!(test) {
         #[cfg(test)]
         test_main();
         unreachable!("tests should have exited qemu");
     } else {
-        main(rdi);
+        main(rsi);
     }
 }
 
-fn main(info: &dyn boot::Info) -> ! {
-    info!("In main! Boot protocol:  {}", info.name());
+fn main(_info: &bootparam::boot_params) -> ! {
+    info!("In main!");
     let serial = serial::Serial::new();
     runtime::framing::handle_frames(serial).unwrap();
-}
-
-// These exit codes are from https://os.phil-opp.com/testing/.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[repr(u32)]
-pub enum QemuExitCode {
-    Success = 0x10,
-    Failed = 0x11,
-}
-
-pub fn exit_qemu(exit_code: QemuExitCode) {
-    use x86_64::instructions::port::Port;
-
-    unsafe {
-        // 0xF4 is the port commonly used for the qemu isa-exit-device.
-        // We expect the device to be enabled by the loader at said
-        // common address.
-        let mut port = Port::new(0xf4);
-        port.write(exit_code as u32);
-    }
 }
 
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
     error!("PANIC: {}", info);
-    exit_qemu(QemuExitCode::Failed);
     loop {}
 }
 
@@ -90,7 +69,6 @@ fn test_runner(tests: &[&dyn Fn()]) {
     for test in tests {
         test();
     }
-    exit_qemu(QemuExitCode::Success);
 }
 
 // Make libm implementations available to the linker.

@@ -1,4 +1,5 @@
-// Copyright © 2019 Intel Corporation
+//
+// Copyright 2022 The Project Oak Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -11,17 +12,8 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+//
 
-// SAFETY: Requires that addr point to a static, null-terminated C-string.
-// The returned slice does not include the null-terminator.
-pub unsafe fn from_cstring(addr: u64) -> &'static [u8] {
-    if addr == 0 {
-        return &[];
-    }
-    let start = addr as *const u8;
-    let mut size: usize = 0;
-    while start.add(size).read() != 0 {
-        size += 1;
-    }
-    core::slice::from_raw_parts(start, size)
-}
+use core::arch::global_asm;
+
+global_asm!(include_str!("boot.s"), options(att_syntax, raw));

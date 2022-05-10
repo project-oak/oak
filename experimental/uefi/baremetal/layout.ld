@@ -14,4 +14,51 @@
  * limitations under the License.
 */
 
-INCLUDE ../../../third_party/rust-hypervisor-firmware-subset/layout.ld
+ENTRY(_start)
+
+PHDRS
+{
+    ram  PT_LOAD FLAGS(5);
+}
+
+SECTIONS {
+    /* Crosvm loads data to 0x200000 + p_addr, so we need to make the virtual
+     * address match what will be loaded into memory while keeping the physical
+     * address at 0x0.
+     * The start point of execution is 0x200200.
+     */
+    .boot 0x200000 : AT(0x0) {
+        *(.boot)
+    } : ram
+
+    data_start = .;
+    text_start = .;
+
+    .text : {
+        KEEP(*(.text.rust64_start))
+        *(.text .text.*)
+    } : ram
+
+    text_end = .;
+
+    .rodata : {
+        *(.rodata .rodata.*)
+    } : ram
+
+    .data : {
+        *(.data .data.*)
+    } : ram
+
+    data_end = .;
+
+    .bss : {
+        bss_start = .;
+        *(.bss .bss.*)
+        bss_size = . - bss_start;
+    }
+
+    .stack (NOLOAD) : ALIGN(4K) {
+        . += 128K;
+    }
+    stack_end = .;
+}
