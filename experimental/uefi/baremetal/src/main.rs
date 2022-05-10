@@ -38,7 +38,7 @@ use core::panic::PanicInfo;
 #[no_mangle]
 pub extern "C" fn rust64_start(_rdi: u64, rsi: &bootparam::boot_params) -> ! {
     logging::init_logging();
-    memory::init_allocator(&rsi);
+    memory::init_allocator(rsi);
 
     if cfg!(test) {
         #[cfg(test)]
