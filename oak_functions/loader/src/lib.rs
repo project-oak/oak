@@ -338,7 +338,7 @@ async fn create_extension_factories(
     extensions.push(workload_logging_factory);
 
     // For Base we add the Lookup extension factory
-    let lookup_data_manager = load_lookup_data(&config, logger.clone()).await?;
+    let lookup_data_manager = load_lookup_data(config, logger.clone()).await?;
     let lookup_factory = LookupFactory::new_boxed_extension_factory(lookup_data_manager)?;
     extensions.push(lookup_factory);
 
