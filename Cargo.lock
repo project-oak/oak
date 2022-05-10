@@ -328,7 +328,7 @@ version = "0.1.0"
 dependencies = [
  "oak_functions",
  "prost 0.10.1",
- "prost-build 0.10.1",
+ "prost-build 0.10.3",
 ]
 
 [[package]]
@@ -1657,7 +1657,7 @@ dependencies = [
  "oak_functions_metrics",
  "oak_functions_workload_logging",
  "prost 0.10.1",
- "prost-build 0.10.1",
+ "prost-build 0.10.3",
  "rand 0.8.5",
  "test_utils",
  "tokio",
@@ -2821,7 +2821,7 @@ name = "oak_functions_abi"
 version = "0.1.0"
 dependencies = [
  "prost 0.10.1",
- "prost-build 0.10.1",
+ "prost-build 0.10.3",
  "serde",
  "serde_derive",
 ]
@@ -3144,7 +3144,7 @@ dependencies = [
  "log",
  "p256 0.10.1",
  "prost 0.10.1",
- "prost-build 0.10.1",
+ "prost-build 0.10.3",
  "quickcheck",
  "quickcheck_macros",
  "rand_core 0.6.3",
@@ -3191,7 +3191,7 @@ version = "0.1.0"
 dependencies = [
  "proc-macro2",
  "prost 0.10.1",
- "prost-build 0.10.1",
+ "prost-build 0.9.0",
  "quote",
  "tempfile",
  "tonic-build",
@@ -3699,9 +3699,9 @@ dependencies = [
 
 [[package]]
 name = "prost-build"
-version = "0.10.1"
+version = "0.10.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "120fbe7988713f39d780a58cf1a7ef0d7ef66c6d87e5aa3438940c05357929f4"
+checksum = "65a1118354442de7feb8a2a76f3d80ef01426bd45542c8c1fdffca41a758f846"
 dependencies = [
  "bytes",
  "cfg-if",
@@ -5144,7 +5144,7 @@ checksum = "4d17087af5c80e5d5fc8ba9878e60258065a0a757e35efe7a05b7904bece1943"
 dependencies = [
  "prettyplease",
  "proc-macro2",
- "prost-build 0.10.1",
+ "prost-build 0.10.3",
  "quote",
  "syn",
 ]
