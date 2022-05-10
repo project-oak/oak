@@ -35,11 +35,7 @@ use log::Level;
 use oak_functions_abi::proto::{ConfigurationInfo, ServerPolicy};
 use oak_functions_extension::ExtensionFactory;
 use oak_functions_lookup::{LookupDataManager, LookupFactory};
-#[cfg(feature = "oak-metrics")]
-use oak_functions_metrics::PrivateMetricsConfig;
-#[cfg(feature = "oak-metrics")]
-use oak_functions_metrics::PrivateMetricsProxyFactory;
-#[cfg(feature = "oak-tf")]
+use oak_functions_metrics::{PrivateMetricsConfig, PrivateMetricsProxyFactory};
 use oak_functions_tf_inference::{read_model_from_path, TensorFlowFactory, TensorFlowModelConfig};
 use oak_functions_workload_logging::WorkloadLoggingFactory;
 use oak_logger::OakLogger;
@@ -97,11 +93,9 @@ struct Config {
     /// Security policy guaranteed by the server.
     policy: Option<Policy>,
     /// Configuration for TensorFlow model
-    #[cfg(feature = "oak-tf")]
     #[serde(default)]
     tf_model: Option<TensorFlowModelConfig>,
     /// Differentially private metrics configuration.
-    #[cfg(feature = "oak-metrics")]
     #[serde(default)]
     metrics: Option<PrivateMetricsConfig>,
 }
@@ -309,7 +303,6 @@ fn get_config_info(
     policy: ServerPolicy,
     config: &Config,
 ) -> anyhow::Result<ConfigurationInfo> {
-    #[cfg(feature = "oak-metrics")]
     let metrics = match &config.metrics {
         Some(ref metrics_config) => Some(oak_functions_abi::proto::PrivateMetricsConfig {
             epsilon: metrics_config.epsilon,
@@ -320,13 +313,8 @@ fn get_config_info(
         }),
         None => None,
     };
-    #[cfg(not(feature = "oak-metrics"))]
-    let metrics = None;
 
-    #[cfg(feature = "oak-tf")]
     let ml_inference = config.tf_model.is_some();
-    #[cfg(not(feature = "oak-tf"))]
-    let ml_inference = false;
 
     Ok(ConfigurationInfo {
         wasm_hash: get_sha256(wasm_module_bytes).to_vec(),
@@ -355,9 +343,7 @@ async fn create_extension_factories(
     extensions.push(lookup_factory);
 
     // For Unsafe we additionally add the TensorFlow and the Metrics extension.
-    // TODO(mschett): Add the the testing extension, too.
     if let ExtensionConfig::Unsafe = extension_config {
-        #[cfg(feature = "oak-tf")]
         if let Some(tf_model_config) = &config.tf_model {
             // Load the TensorFlow model from the given path in the config
             let model = read_model_from_path(&tf_model_config.path)?;
@@ -369,7 +355,6 @@ async fn create_extension_factories(
             extensions.push(tf_model_factory);
         }
 
-        #[cfg(feature = "oak-metrics")]
         if let Some(metrics_config) = &config.metrics {
             let metrics_factory = PrivateMetricsProxyFactory::new_boxed_extension_factory(
                 metrics_config,

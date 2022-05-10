@@ -17,13 +17,11 @@
 //! SDK functionality that provides idiomatic Rust wrappers around the underlying Oak Functions
 //! platform functionality.
 
-#[cfg(feature = "oak-tf")]
-use oak_functions_abi::proto::Inference;
-use oak_functions_abi::{proto::OakStatus, StorageGetItemResponse};
-#[cfg(feature = "oak-metrics")]
-use oak_functions_abi::{ReportMetricError, ReportMetricRequest, ReportMetricResponse};
-#[cfg(feature = "oak-tf")]
-use oak_functions_abi::{TfModelInferError, TfModelInferResponse};
+use oak_functions_abi::{
+    proto::{Inference, OakStatus},
+    ReportMetricError, ReportMetricRequest, ReportMetricResponse, StorageGetItemResponse,
+    TfModelInferError, TfModelInferResponse,
+};
 use std::convert::AsRef;
 
 /// Reads and returns the user request.
@@ -69,7 +67,6 @@ pub fn storage_get_item(key: &[u8]) -> Result<Option<Vec<u8>>, OakStatus> {
 /// If differentially-private metrics are enabled in the configuration the metrics bucket totals
 /// will be logged in batches after sufficient noise has been added. If events for the same bucket
 /// are reported multiple times in a single request it will be counted only once.
-#[cfg(feature = "oak-metrics")]
 pub fn report_event<T: AsRef<str>>(label: T) -> Result<Result<(), ReportMetricError>, OakStatus> {
     report_metric(label, 1)
 }
@@ -86,7 +83,6 @@ pub fn report_event<T: AsRef<str>>(label: T) -> Result<Result<(), ReportMetricEr
 /// was reported. If the minimum value of the bucket is larger than 0 it would then be clamped to
 /// the configured minimum. This could lead to unexpected bias in the results, so minimum values
 /// above 0 should be used with care.
-#[cfg(feature = "oak-metrics")]
 pub fn report_metric<T: AsRef<str>>(
     label: T,
     value: i64,
@@ -120,7 +116,6 @@ pub fn write_log_message<T: AsRef<str>>(message: T) -> Result<(), OakStatus> {
 
 /// Performs inference for the given input vector with the TensorFlow model specified in the Oak
 /// Functions runtime.
-#[cfg(feature = "oak-tf")]
 pub fn tf_model_infer(
     input_vector: &[u8],
 ) -> Result<Result<Inference, TfModelInferError>, OakStatus> {

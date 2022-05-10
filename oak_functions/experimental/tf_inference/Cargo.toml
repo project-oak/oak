@@ -5,9 +5,6 @@ authors = ["Conrad Grobler <grobler@google.com>"]
 edition = "2021"
 license = "Apache-2.0"
 
-[features]
-oak-tf = ["oak_functions_abi/oak-tf"]
-
 [dependencies]
 anyhow = "*"
 bytes = "*"
