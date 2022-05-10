@@ -65,7 +65,7 @@ pub type OakFunctionsBoxedExtensionFactory = Box<dyn ExtensionFactory<Logger>>;
 /// as a type safe version of regular command line flags.
 #[derive(Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
-struct Config {
+pub struct Config {
     /// URL of a file containing key / value entries in protobuf binary format for lookup.
     ///
     /// If empty or not provided, no data is available for lookup.
@@ -133,7 +133,7 @@ pub struct Opt {
         long,
         help = "Path to a file containing configuration parameters in TOML format."
     )]
-    config_path: String,
+    pub config_path: String,
 }
 
 async fn background_refresh_lookup_data(
@@ -164,15 +164,12 @@ pub enum ExtensionConfig {
 
 /// This crate is just a library so this function does not get executed directly by anything, it
 /// needs to be wrapped in the "actual" `main` from a bin crate.
-pub fn lib_main(extension_config: ExtensionConfig) -> anyhow::Result<()> {
-    let opt = Opt::parse();
-    let config_file_bytes = fs::read(&opt.config_path)
-        .with_context(|| format!("Couldn't read config file {}", &opt.config_path))?;
-    let config: Config =
-        toml::from_slice(&config_file_bytes).context("Couldn't parse config file")?;
-    // TODO(#1971): Make maximum log level configurable.
-    let logger = Logger::default();
-    logger.log_public(Level::Info, &format!("parsed config file:\n{:#?}", config));
+pub fn lib_main(
+    opt: Opt,
+    config: Config,
+    logger: Logger,
+    extension_config: ExtensionConfig,
+) -> anyhow::Result<()> {
     tokio::runtime::Builder::new_multi_thread()
         .worker_threads(config.worker_threads.unwrap_or(4))
         .enable_all()
@@ -324,8 +321,7 @@ fn get_config_info(
     })
 }
 
-// Create
-async fn create_extension_factories(
+pub async fn create_extension_factories(
     extension_config: ExtensionConfig,
     config: &Config,
     logger: Logger,
@@ -363,6 +359,5 @@ async fn create_extension_factories(
             extensions.push(metrics_factory);
         }
     }
-
     Ok(extensions)
 }

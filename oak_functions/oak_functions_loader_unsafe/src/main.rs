@@ -18,6 +18,27 @@
 //!
 //! Useful for testing and debugging, but not meant for production use.
 
+use anyhow::Context;
+use clap::Parser;
+use log::Level;
+use oak_functions_loader::{logger::Logger, Config, Opt};
+use oak_logger::OakLogger;
+use std::fs;
+
 pub fn main() -> anyhow::Result<()> {
-    oak_functions_loader::lib_main(oak_functions_loader::ExtensionConfig::Unsafe)
+    let opt = Opt::parse();
+    let config_file_bytes = fs::read(&opt.config_path)
+        .with_context(|| format!("Couldn't read config file {}", &opt.config_path))?;
+    let config: Config =
+        toml::from_slice(&config_file_bytes).context("Couldn't parse config file")?;
+    // TODO(#1971): Make maximum log level configurable.
+    let logger = Logger::default();
+    logger.log_public(Level::Info, &format!("parsed config file:\n{:#?}", config));
+
+    oak_functions_loader::lib_main(
+        opt,
+        config,
+        logger,
+        oak_functions_loader::ExtensionConfig::Unsafe,
+    )
 }
