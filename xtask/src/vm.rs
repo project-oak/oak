@@ -28,13 +28,6 @@ enum Variant {
 }
 
 impl Variant {
-    pub fn enabled(&self) -> bool {
-        match self {
-            Variant::Baremetal => true,
-            Variant::Uefi => true,
-        }
-    }
-
     pub fn payload_crate_path(&self) -> &'static str {
         match self {
             Variant::Uefi => "./experimental/uefi/app",
@@ -62,10 +55,7 @@ impl Variant {
 pub fn run_vm_test() -> Step {
     Step::Multiple {
         name: "VM end-to-end test".to_string(),
-        steps: Variant::iter()
-            .filter(|v| v.enabled())
-            .map(run_variant)
-            .collect(),
+        steps: Variant::iter().map(run_variant).collect(),
     }
 }
 

@@ -61,7 +61,9 @@ fn main(info: &dyn boot::Info) -> ! {
     runtime::framing::handle_frames(serial).unwrap();
 }
 
-/// Enables Advanced Vector Extensions (AVX)
+/// Enables Streaming SIMD Extensions (SEE) and Advanced Vector Extensions (AVX).
+///
+/// See https://wiki.osdev.org/SSE for more information.
 fn enable_avx() {
     unsafe {
         let mut cr0 = Cr0::read();
