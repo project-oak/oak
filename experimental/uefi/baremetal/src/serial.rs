@@ -39,7 +39,7 @@ impl Serial {
 impl runtime::Channel for Serial {
     fn send(&mut self, data: &[u8]) -> anyhow::Result<()> {
         for byte in data {
-            self.port.borrow_mut().send(*byte);
+            self.port.borrow_mut().send_raw(*byte);
         }
         Ok(())
     }
