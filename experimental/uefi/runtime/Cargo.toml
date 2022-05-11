@@ -5,10 +5,16 @@ authors = ["Andri Saar <andrisaar@google.com>"]
 edition = "2021"
 license = "Apache-2.0"
 
+[features]
+default = ["ring-crypto", "wasm"]
+ring-crypto = ["oak_remote_attestation_sessions/ring-crypto"]
+rust-crypto = ["oak_remote_attestation_sessions/rust-crypto"]
+wasm = []
+
 [dependencies]
 anyhow = { version = "*", default-features = false }
 log = "*"
 oak_functions_wasm = { path = "../../../oak_functions/wasm" }
 oak_functions_workload_logging = { path = "../../../oak_functions/workload_logging" }
-oak_remote_attestation_sessions = { path = "../../../remote_attestation_sessions" }
+oak_remote_attestation_sessions = { path = "../../../remote_attestation_sessions", default-features = false }
 oak_logger = { path = "../../../oak_functions/logger" }

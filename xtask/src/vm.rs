@@ -28,12 +28,6 @@ enum Variant {
 }
 
 impl Variant {
-    pub fn enabled(&self) -> bool {
-        // The bare metal variant is disabled for now, because the crypto library we use right now
-        // doesn't work on bare metal.
-        self != &Variant::Baremetal
-    }
-
     pub fn payload_crate_path(&self) -> &'static str {
         match self {
             Variant::Uefi => "./experimental/uefi/app",
@@ -61,10 +55,7 @@ impl Variant {
 pub fn run_vm_test() -> Step {
     Step::Multiple {
         name: "VM end-to-end test".to_string(),
-        steps: Variant::iter()
-            .filter(|v| v.enabled())
-            .map(run_variant)
-            .collect(),
+        steps: Variant::iter().map(run_variant).collect(),
     }
 }
 

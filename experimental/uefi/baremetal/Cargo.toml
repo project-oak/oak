@@ -8,11 +8,15 @@ license = "Apache-2.0"
 [dependencies]
 anyhow = { version = "*", default-features = false }
 atomic_refcell = "*"
+getrandom = { version = "0.2", features = ["rdrand"] }
 lazy_static = { version = "*", features = ["spin_no_std"] }
 libm = "*"
 linked_list_allocator = { version = "*" }
 log = "*"
-runtime = { path = "../runtime" }
+rand_core = { version = "*", features = ["getrandom"] }
+runtime = { path = "../runtime", default-features = false, features = [
+  "rust-crypto"
+] }
 uart_16550 = "*"
 rust-hypervisor-firmware-subset = { path = "../../../third_party/rust-hypervisor-firmware-subset" }
 x86_64 = "*"

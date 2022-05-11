@@ -18,28 +18,34 @@ repository = "https://github.com/dalek-cryptography/x25519-dalek"
 homepage = "https://dalek.rs/"
 documentation = "https://docs.rs/x25519-dalek"
 categories = ["cryptography", "no-std"]
-keywords = ["cryptography", "curve25519", "key-exchange", "x25519", "diffie-hellman"]
-description = "X25519 elliptic curve Diffie-Hellman key exchange in pure-Rust, using curve25519-dalek."
-exclude = [
-    ".gitignore",
-    ".travis.yml",
-    "CONTRIBUTING.md",
+keywords = [
+    "cryptography",
+    "curve25519",
+    "key-exchange",
+    "x25519",
+    "diffie-hellman"
 ]
+description = "X25519 elliptic curve Diffie-Hellman key exchange in pure-Rust, using curve25519-dalek."
+exclude = [".gitignore", ".travis.yml", "CONTRIBUTING.md"]
 
 [badges]
-travis-ci = { repository = "dalek-cryptography/x25519-dalek", branch = "master"}
+travis-ci = { repository = "dalek-cryptography/x25519-dalek", branch = "master" }
 
 [package.metadata.docs.rs]
 #rustdoc-args = ["--html-in-header", ".cargo/registry/src/github.com-1ecc6299db9ec823/curve25519-dalek-1.0.1/docs/assets/rustdoc-include-katex-header.html"]
 features = ["nightly", "reusable_secrets", "serde"]
 
 [dependencies]
-curve25519-dalek = { version = "3", default-features = false }
-rand_core = { version = "0.5", default-features = false }
+curve25519-dalek = { path = "../curve25519-dalek", default-features = false }
+rand_core = { version = "0.6", default-features = false }
 # `serde` is renamed to `our_serde` in order to avoid a name collision between
 # importing the serde dependency and enabling the curve25519-dalek/serde feature
-our_serde = { package = "serde", version = "1", default-features = false, optional = true, features = ["derive"] }
-zeroize = { version = "=1.3", default-features = false, features = ["zeroize_derive"] }
+our_serde = { package = "serde", version = "1", default-features = false, optional = true, features = [
+    "derive"
+] }
+zeroize = { version = "=1.3", default-features = false, features = [
+    "zeroize_derive"
+] }
 
 [dev-dependencies]
 bincode = "1"

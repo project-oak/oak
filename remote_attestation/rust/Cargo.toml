@@ -11,24 +11,27 @@ std = ["anyhow/std", "prost/std"]
 ring-crypto = ["ring"]
 rust-crypto = [
   "aes-gcm",
+  "getrandom/rdrand",
   "hkdf",
   "p256",
   "rand_core",
   "sha2",
   "signature",
-  "x25519-dalek"
+  "x25519-dalek",
 ]
 
 [dependencies]
 aes-gcm = { version = "*", optional = true }
 anyhow = { version = "*", default-features = false }
 bytes = { version = "*", default-features = false }
+getrandom = { version = "*", optional = true }
 hkdf = { version = "*", optional = true }
 log = "*"
 p256 = { version = "*", default-features = false, optional = true, features = [
   "ecdsa"
 ] }
 prost = { version = "*", default-features = false, features = ["prost-derive"] }
+# Restrict the rand_core to a version that is compatible with x25519-dalek.
 rand_core = { version = "*", optional = true, default-features = false, features = [
   "alloc",
   "getrandom"
@@ -36,7 +39,7 @@ rand_core = { version = "*", optional = true, default-features = false, features
 ring = { path = "../../third_party/ring", default-features = false, optional = true }
 sha2 = { version = "*", optional = true, default-features = false }
 signature = { version = "*", optional = true, default-features = false }
-x25519-dalek = { version = "*", optional = true, default-features = false, features = [
+x25519-dalek = { path = "../../third_party/x25519-dalek", optional = true, default-features = false, features = [
   "u64_backend"
 ] }
 
