@@ -23,7 +23,7 @@ use clap::Parser;
 use log::Level;
 use oak_functions_loader::{
     logger::Logger, lookup_data::LookupDataAuth, server::Policy, Data, ExtensionConfigurationInfo,
-    LookupDataConfig, Opt,
+    LoadLookupDataConfig, Opt,
 };
 use oak_functions_metrics::{PrivateMetricsConfig, PrivateMetricsProxyFactory};
 use oak_functions_tf_inference::{read_model_from_path, TensorFlowFactory, TensorFlowModelConfig};
@@ -44,16 +44,16 @@ pub struct Config {
     ///
     /// If empty or not provided, no data is available for lookup.
     #[serde(default)]
-    pub lookup_data: Option<Data>,
+    lookup_data: Option<Data>,
     /// How often to refresh the lookup data.
     ///
     /// If empty or not provided, data is only loaded once at startup.
     #[serde(default, with = "humantime_serde")]
-    pub lookup_data_download_period: Option<Duration>,
+    lookup_data_download_period: Option<Duration>,
     /// Whether to use the GCP metadata service to obtain an authentication token for downloading
     /// the lookup data.
     #[serde(default = "LookupDataAuth::default")]
-    pub lookup_data_auth: LookupDataAuth,
+    lookup_data_auth: LookupDataAuth,
     /// Number of worker threads available to the async runtime.
     ///
     /// Defaults to 4 if unset.
@@ -63,15 +63,15 @@ pub struct Config {
     /// instance.
     ///
     /// See <https://docs.rs/tokio/1.5.0/tokio/runtime/struct.Builder.html#method.worker_threads>.
-    pub worker_threads: Option<usize>,
+    worker_threads: Option<usize>,
     /// Security policy guaranteed by the server.
-    pub policy: Option<Policy>,
+    policy: Option<Policy>,
     /// Configuration for TensorFlow model
     #[serde(default)]
-    pub tf_model: Option<TensorFlowModelConfig>,
+    tf_model: Option<TensorFlowModelConfig>,
     /// Differentially private metrics configuration.
     #[serde(default)]
-    pub metrics: Option<PrivateMetricsConfig>,
+    metrics: Option<PrivateMetricsConfig>,
 }
 
 pub fn main() -> anyhow::Result<()> {
@@ -112,7 +112,7 @@ pub fn main() -> anyhow::Result<()> {
     oak_functions_loader::lib_main(
         opt,
         logger,
-        LookupDataConfig::new(
+        LoadLookupDataConfig::new(
             config.lookup_data,
             config.lookup_data_download_period,
             config.lookup_data_auth,
@@ -120,7 +120,7 @@ pub fn main() -> anyhow::Result<()> {
         config.worker_threads,
         config.policy,
         extension_factories,
-        Some(extension_configuration_info),
+        extension_configuration_info,
     )
 }
 
@@ -138,8 +138,5 @@ fn get_extension_config_info(config: &Config) -> anyhow::Result<ExtensionConfigu
 
     let ml_inference = config.tf_model.is_some();
 
-    Ok(ExtensionConfigurationInfo {
-        ml_inference,
-        metrics,
-    })
+    Ok(ExtensionConfigurationInfo::new(ml_inference, metrics))
 }

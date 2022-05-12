@@ -105,11 +105,11 @@ async fn background_refresh_lookup_data(
 pub fn lib_main(
     opt: Opt,
     logger: Logger,
-    lookup_data_config: LookupDataConfig,
+    load_lookup_data_config: LoadLookupDataConfig,
     worker_threads: Option<usize>,
     policy: Option<Policy>,
     extension_factories: Vec<Box<dyn ExtensionFactory<Logger>>>,
-    extension_configuration_info: Option<ExtensionConfigurationInfo>,
+    extension_configuration_info: ExtensionConfigurationInfo,
 ) -> anyhow::Result<()> {
     tokio::runtime::Builder::new_multi_thread()
         .worker_threads(worker_threads.unwrap_or(4))
@@ -119,53 +119,53 @@ pub fn lib_main(
         .block_on(async_main(
             opt,
             logger,
-            lookup_data_config,
+            load_lookup_data_config,
             policy,
             extension_factories,
             extension_configuration_info,
         ))
 }
 
-pub struct LookupDataConfig {
-    lookup_data: Option<Data>,
-    lookup_data_download_period: Option<Duration>,
-    lookup_data_auth: LookupDataAuth,
+/// Workaround to pass values for ConfigurationInfo from Config.
+pub struct ExtensionConfigurationInfo {
+    ml_inference: bool,
+    metrics: Option<oak_functions_abi::proto::PrivateMetricsConfig>,
 }
 
-impl LookupDataConfig {
+impl ExtensionConfigurationInfo {
     pub fn new(
-        lookup_data: Option<Data>,
-        lookup_data_download_period: Option<Duration>,
-        lookup_data_auth: LookupDataAuth,
-    ) -> LookupDataConfig {
-        LookupDataConfig {
-            lookup_data,
-            lookup_data_download_period,
-            lookup_data_auth,
+        ml_inference: bool,
+        metrics: Option<oak_functions_abi::proto::PrivateMetricsConfig>,
+    ) -> Self {
+        ExtensionConfigurationInfo {
+            ml_inference,
+            metrics,
         }
     }
-}
 
-pub struct ExtensionConfigurationInfo {
-    pub ml_inference: bool,
-    pub metrics: Option<oak_functions_abi::proto::PrivateMetricsConfig>,
+    pub fn base() -> ExtensionConfigurationInfo {
+        ExtensionConfigurationInfo {
+            ml_inference: false,
+            metrics: None,
+        }
+    }
 }
 
 /// Main execution point for the Oak Functions Loader.
 async fn async_main(
     opt: Opt,
     logger: Logger,
-    lookup_data_config: LookupDataConfig,
+    load_lookup_data_config: LoadLookupDataConfig,
     policy: Option<Policy>,
     extension_factories: Vec<Box<dyn ExtensionFactory<Logger>>>,
-    extension_configuration_info: Option<ExtensionConfigurationInfo>,
+    extension_configuration_info: ExtensionConfigurationInfo,
 ) -> anyhow::Result<()> {
     let (notify_sender, notify_receiver) = tokio::sync::oneshot::channel::<()>();
 
     let wasm_module_bytes = fs::read(&opt.wasm_path)
         .with_context(|| format!("Couldn't read Wasm file {}", &opt.wasm_path))?;
     let mut extensions =
-        create_base_extension_factories(lookup_data_config, logger.clone()).await?;
+        create_base_extension_factories(load_lookup_data_config, logger.clone()).await?;
 
     for extension_factory in extension_factories {
         extensions.push(extension_factory);
@@ -182,11 +182,12 @@ async fn async_main(
     let address = SocketAddr::from((Ipv6Addr::UNSPECIFIED, opt.http_listen_port));
     let tee_certificate = vec![];
 
-    let config_info = get_config_info(
-        &wasm_module_bytes,
-        policy.clone(),
-        extension_configuration_info,
-    )?;
+    let config_info = ConfigurationInfo {
+        wasm_hash: get_sha256(&wasm_module_bytes).to_vec(),
+        policy: Some(policy.clone()),
+        ml_inference: extension_configuration_info.ml_inference,
+        metrics: extension_configuration_info.metrics,
+    };
 
     // Start server.
     let server_handle = tokio::spawn(async move {
@@ -238,22 +239,41 @@ pub enum Data {
     File(String),
 }
 
+/// Configuration to load the LookupData.
+pub struct LoadLookupDataConfig {
+    lookup_data: Option<Data>,
+    lookup_data_download_period: Option<Duration>,
+    lookup_data_auth: LookupDataAuth,
+}
+
+impl LoadLookupDataConfig {
+    pub fn new(
+        lookup_data: Option<Data>,
+        lookup_data_download_period: Option<Duration>,
+        lookup_data_auth: LookupDataAuth,
+    ) -> LoadLookupDataConfig {
+        LoadLookupDataConfig {
+            lookup_data,
+            lookup_data_download_period,
+            lookup_data_auth,
+        }
+    }
+}
+
 /// Creates LookupDataManager and sets up LookupDataRefresher.
 pub async fn load_lookup_data(
-    lookup_data: &Option<Data>,
-    lookup_data_auth: &LookupDataAuth,
-    lookup_data_download_period: Option<Duration>,
+    config: LoadLookupDataConfig,
     logger: Logger,
 ) -> anyhow::Result<Arc<LookupDataManager<Logger>>> {
     // Allow lookup data to be loaded by an untrusted launcher.
-    let lookup_data_source = match &lookup_data {
+    let lookup_data_source = match &config.lookup_data {
         Some(lookup_data) => match &lookup_data {
             Data::Url(url_string) => {
                 let url = url::Url::parse(url_string).context("Couldn't parse lookup data URL")?;
                 match url.scheme() {
                     "http" | "https" => Some(LookupDataSource::Http {
                         url: url_string.clone(),
-                        auth: *lookup_data_auth,
+                        auth: config.lookup_data_auth,
                     }),
                     scheme => anyhow::bail!(
                         "Unknown URL scheme in lookup data: expected 'http' or 'https', found {}",
@@ -278,7 +298,7 @@ pub async fn load_lookup_data(
             .refresh()
             .await
             .context("Couldn't perform initial load of lookup data")?;
-        if let Some(lookup_data_download_period) = lookup_data_download_period {
+        if let Some(lookup_data_download_period) = config.lookup_data_download_period {
             // Create background task to periodically refresh the lookup data.
             tokio::spawn(async move {
                 background_refresh_lookup_data(
@@ -293,30 +313,8 @@ pub async fn load_lookup_data(
     Ok(lookup_data_manager)
 }
 
-#[allow(unused_variables)]
-fn get_config_info(
-    wasm_module_bytes: &[u8],
-    policy: ServerPolicy,
-    extension_configuration_info: Option<ExtensionConfigurationInfo>,
-) -> anyhow::Result<ConfigurationInfo> {
-    let (ml_inference, metrics) = match extension_configuration_info {
-        Some(extension_configuration_info) => (
-            extension_configuration_info.ml_inference,
-            extension_configuration_info.metrics,
-        ),
-        None => (false, None),
-    };
-
-    Ok(ConfigurationInfo {
-        wasm_hash: get_sha256(wasm_module_bytes).to_vec(),
-        policy: Some(policy),
-        ml_inference,
-        metrics,
-    })
-}
-
 pub async fn create_base_extension_factories(
-    lookup_data_config: LookupDataConfig,
+    load_lookup_data_config: LoadLookupDataConfig,
     logger: Logger,
 ) -> anyhow::Result<Vec<Box<dyn ExtensionFactory<Logger>>>> {
     let mut extensions = Vec::new();
@@ -327,13 +325,7 @@ pub async fn create_base_extension_factories(
     extensions.push(workload_logging_factory);
 
     // For Base we add the Lookup extension factory
-    let lookup_data_manager = load_lookup_data(
-        &lookup_data_config.lookup_data,
-        &lookup_data_config.lookup_data_auth,
-        lookup_data_config.lookup_data_download_period,
-        logger.clone(),
-    )
-    .await?;
+    let lookup_data_manager = load_lookup_data(load_lookup_data_config, logger.clone()).await?;
     let lookup_factory = LookupFactory::new_boxed_extension_factory(lookup_data_manager)?;
     extensions.push(lookup_factory);
 
