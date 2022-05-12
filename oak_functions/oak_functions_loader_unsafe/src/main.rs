@@ -21,7 +21,9 @@
 use anyhow::Context;
 use clap::Parser;
 use log::Level;
-use oak_functions_loader::{logger::Logger, Config, Opt};
+use oak_functions_loader::{
+    logger::Logger, Config, ExtensionConfigurationInfo, LookupDataConfig, Opt,
+};
 use oak_functions_metrics::PrivateMetricsProxyFactory;
 use oak_functions_tf_inference::{read_model_from_path, TensorFlowFactory};
 use oak_logger::OakLogger;
@@ -60,5 +62,39 @@ pub fn main() -> anyhow::Result<()> {
         logger.log_public(Level::Info, "Added Metrics extension.");
     }
 
-    oak_functions_loader::lib_main(opt, config, logger, extension_factories)
+    let extension_configuration_info = get_extension_config_info(&config)?;
+
+    oak_functions_loader::lib_main(
+        opt,
+        logger,
+        LookupDataConfig {
+            lookup_data: config.lookup_data,
+            lookup_data_download_period: config.lookup_data_download_period,
+            lookup_data_auth: config.lookup_data_auth,
+        },
+        config.worker_threads,
+        config.policy,
+        extension_factories,
+        Some(extension_configuration_info),
+    )
+}
+
+fn get_extension_config_info(config: &Config) -> anyhow::Result<ExtensionConfigurationInfo> {
+    let metrics = match &config.metrics {
+        Some(ref metrics_config) => Some(oak_functions_abi::proto::PrivateMetricsConfig {
+            epsilon: metrics_config.epsilon,
+            batch_size: metrics_config
+                .batch_size
+                .try_into()
+                .context("could not convert usize to u32")?,
+        }),
+        None => None,
+    };
+
+    let ml_inference = config.tf_model.is_some();
+
+    Ok(ExtensionConfigurationInfo {
+        ml_inference,
+        metrics,
+    })
 }

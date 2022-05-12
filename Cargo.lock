@@ -2921,6 +2921,7 @@ dependencies = [
  "anyhow",
  "clap 3.1.18",
  "log",
+ "oak_functions_abi",
  "oak_functions_extension",
  "oak_functions_loader",
  "oak_functions_metrics",

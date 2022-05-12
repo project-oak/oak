@@ -19,7 +19,7 @@
 use anyhow::Context;
 use clap::Parser;
 use log::Level;
-use oak_functions_loader::{logger::Logger, Config, Opt};
+use oak_functions_loader::{logger::Logger, Config, LookupDataConfig, Opt};
 use oak_logger::OakLogger;
 
 use std::fs;
@@ -36,5 +36,17 @@ pub fn main() -> anyhow::Result<()> {
 
     let extension_factories = vec![];
 
-    oak_functions_loader::lib_main(opt, config, logger, extension_factories)
+    oak_functions_loader::lib_main(
+        opt,
+        logger,
+        LookupDataConfig {
+            lookup_data: config.lookup_data,
+            lookup_data_download_period: config.lookup_data_download_period,
+            lookup_data_auth: config.lookup_data_auth,
+        },
+        config.worker_threads,
+        config.policy,
+        extension_factories,
+        None,
+    )
 }

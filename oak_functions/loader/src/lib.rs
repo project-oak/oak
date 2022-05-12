@@ -70,16 +70,16 @@ pub struct Config {
     ///
     /// If empty or not provided, no data is available for lookup.
     #[serde(default)]
-    lookup_data: Option<Data>,
+    pub lookup_data: Option<Data>,
     /// How often to refresh the lookup data.
     ///
     /// If empty or not provided, data is only loaded once at startup.
     #[serde(default, with = "humantime_serde")]
-    lookup_data_download_period: Option<Duration>,
+    pub lookup_data_download_period: Option<Duration>,
     /// Whether to use the GCP metadata service to obtain an authentication token for downloading
     /// the lookup data.
     #[serde(default = "LookupDataAuth::default")]
-    lookup_data_auth: LookupDataAuth,
+    pub lookup_data_auth: LookupDataAuth,
     /// Number of worker threads available to the async runtime.
     ///
     /// Defaults to 4 if unset.
@@ -89,9 +89,9 @@ pub struct Config {
     /// instance.
     ///
     /// See <https://docs.rs/tokio/1.5.0/tokio/runtime/struct.Builder.html#method.worker_threads>.
-    worker_threads: Option<usize>,
+    pub worker_threads: Option<usize>,
     /// Security policy guaranteed by the server.
-    policy: Option<Policy>,
+    pub policy: Option<Policy>,
     /// Configuration for TensorFlow model
     #[serde(default)]
     pub tf_model: Option<TensorFlowModelConfig>,
@@ -149,30 +149,49 @@ async fn background_refresh_lookup_data(
 /// needs to be wrapped in the "actual" `main` from a bin crate.
 pub fn lib_main(
     opt: Opt,
-    config: Config,
     logger: Logger,
+    lookup_data_config: LookupDataConfig,
+    worker_threads: Option<usize>,
+    policy: Option<Policy>,
     extension_factories: Vec<Box<dyn ExtensionFactory<Logger>>>,
+    extension_configuration_info: Option<ExtensionConfigurationInfo>,
 ) -> anyhow::Result<()> {
     tokio::runtime::Builder::new_multi_thread()
-        .worker_threads(config.worker_threads.unwrap_or(4))
+        .worker_threads(worker_threads.unwrap_or(4))
         .enable_all()
         .build()
         .unwrap()
-        .block_on(async_main(opt, config, logger, extension_factories))
+        .block_on(async_main(
+            opt,
+            logger,
+            lookup_data_config,
+            policy,
+            extension_factories,
+            extension_configuration_info,
+        ))
+}
+
+pub struct LookupDataConfig {
+    pub lookup_data: Option<Data>,
+    pub lookup_data_download_period: Option<Duration>,
+    pub lookup_data_auth: LookupDataAuth,
 }
 
 /// Main execution point for the Oak Functions Loader.
 async fn async_main(
     opt: Opt,
-    config: Config,
     logger: Logger,
+    lookup_data_config: LookupDataConfig,
+    policy: Option<Policy>,
     extension_factories: Vec<Box<dyn ExtensionFactory<Logger>>>,
+    extension_configuration_info: Option<ExtensionConfigurationInfo>,
 ) -> anyhow::Result<()> {
     let (notify_sender, notify_receiver) = tokio::sync::oneshot::channel::<()>();
 
     let wasm_module_bytes = fs::read(&opt.wasm_path)
         .with_context(|| format!("Couldn't read Wasm file {}", &opt.wasm_path))?;
-    let mut extensions = create_base_extension_factories(&config, logger.clone()).await?;
+    let mut extensions =
+        create_base_extension_factories(lookup_data_config, logger.clone()).await?;
 
     for extension_factory in extension_factories {
         extensions.push(extension_factory);
@@ -181,8 +200,7 @@ async fn async_main(
     let wasm_handler = create_wasm_handler(&wasm_module_bytes, extensions, logger.clone())?;
 
     // Make sure that a policy is specified and is valid.
-    let policy = config
-        .policy
+    let policy = policy
         .as_ref()
         .ok_or_else(|| anyhow::anyhow!("a valid policy must be provided"))
         .and_then(|policy| policy.validate())?;
@@ -190,7 +208,11 @@ async fn async_main(
     let address = SocketAddr::from((Ipv6Addr::UNSPECIFIED, opt.http_listen_port));
     let tee_certificate = vec![];
 
-    let config_info = get_config_info(&wasm_module_bytes, policy.clone(), &config)?;
+    let config_info = get_config_info(
+        &wasm_module_bytes,
+        policy.clone(),
+        extension_configuration_info,
+    )?;
 
     // Start server.
     let server_handle = tokio::spawn(async move {
@@ -297,24 +319,24 @@ pub async fn load_lookup_data(
     Ok(lookup_data_manager)
 }
 
+pub struct ExtensionConfigurationInfo {
+    pub ml_inference: bool,
+    pub metrics: Option<oak_functions_abi::proto::PrivateMetricsConfig>,
+}
+
 #[allow(unused_variables)]
 fn get_config_info(
     wasm_module_bytes: &[u8],
     policy: ServerPolicy,
-    config: &Config,
+    extension_configuration_info: Option<ExtensionConfigurationInfo>,
 ) -> anyhow::Result<ConfigurationInfo> {
-    let metrics = match &config.metrics {
-        Some(ref metrics_config) => Some(oak_functions_abi::proto::PrivateMetricsConfig {
-            epsilon: metrics_config.epsilon,
-            batch_size: metrics_config
-                .batch_size
-                .try_into()
-                .context("could not convert usize to u32")?,
-        }),
-        None => None,
+    let (ml_inference, metrics) = match extension_configuration_info {
+        Some(extension_configuration_info) => (
+            extension_configuration_info.ml_inference,
+            extension_configuration_info.metrics,
+        ),
+        None => (false, None),
     };
-
-    let ml_inference = config.tf_model.is_some();
 
     Ok(ConfigurationInfo {
         wasm_hash: get_sha256(wasm_module_bytes).to_vec(),
@@ -325,7 +347,7 @@ fn get_config_info(
 }
 
 pub async fn create_base_extension_factories(
-    config: &Config,
+    lookup_data_config: LookupDataConfig,
     logger: Logger,
 ) -> anyhow::Result<Vec<Box<dyn ExtensionFactory<Logger>>>> {
     let mut extensions = Vec::new();
@@ -337,9 +359,9 @@ pub async fn create_base_extension_factories(
 
     // For Base we add the Lookup extension factory
     let lookup_data_manager = load_lookup_data(
-        &config.lookup_data,
-        &config.lookup_data_auth,
-        config.lookup_data_download_period,
+        &lookup_data_config.lookup_data,
+        &lookup_data_config.lookup_data_auth,
+        lookup_data_config.lookup_data_download_period,
         logger.clone(),
     )
     .await?;
