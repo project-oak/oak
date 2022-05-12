@@ -19,10 +19,50 @@
 use anyhow::Context;
 use clap::Parser;
 use log::Level;
-use oak_functions_loader::{logger::Logger, Config, LookupDataConfig, Opt};
+use oak_functions_loader::{
+    logger::Logger, lookup_data::LookupDataAuth, server::Policy, Data, LookupDataConfig, Opt,
+};
 use oak_logger::OakLogger;
+use serde_derive::Deserialize;
 
-use std::fs;
+use std::{fs, time::Duration};
+
+/// Runtime Configuration of Base Runtime.
+///
+/// This struct serves as a schema for a static TOML config file provided by
+/// application developers. In deployment, this static config file is typically
+/// bundled with the Oak Runtime binary. Config values captured in it serve
+/// as a type safe version of regular command line flags.
+#[derive(Deserialize, Debug)]
+#[serde(deny_unknown_fields)]
+pub struct Config {
+    /// URL of a file containing key / value entries in protobuf binary format for lookup.
+    ///
+    /// If empty or not provided, no data is available for lookup.
+    #[serde(default)]
+    pub lookup_data: Option<Data>,
+    /// How often to refresh the lookup data.
+    ///
+    /// If empty or not provided, data is only loaded once at startup.
+    #[serde(default, with = "humantime_serde")]
+    pub lookup_data_download_period: Option<Duration>,
+    /// Whether to use the GCP metadata service to obtain an authentication token for downloading
+    /// the lookup data.
+    #[serde(default = "LookupDataAuth::default")]
+    pub lookup_data_auth: LookupDataAuth,
+    /// Number of worker threads available to the async runtime.
+    ///
+    /// Defaults to 4 if unset.
+    ///
+    /// Note that the CPU core detection logic does not seem to work reliably on Google Cloud Run,
+    /// so it is advisable to set this value to the number of cores available on the Cloud Run
+    /// instance.
+    ///
+    /// See <https://docs.rs/tokio/1.5.0/tokio/runtime/struct.Builder.html#method.worker_threads>.
+    pub worker_threads: Option<usize>,
+    /// Security policy guaranteed by the server.
+    pub policy: Option<Policy>,
+}
 
 pub fn main() -> anyhow::Result<()> {
     let opt = Opt::parse();
@@ -39,11 +79,11 @@ pub fn main() -> anyhow::Result<()> {
     oak_functions_loader::lib_main(
         opt,
         logger,
-        LookupDataConfig {
-            lookup_data: config.lookup_data,
-            lookup_data_download_period: config.lookup_data_download_period,
-            lookup_data_auth: config.lookup_data_auth,
-        },
+        LookupDataConfig::new(
+            config.lookup_data,
+            config.lookup_data_download_period,
+            config.lookup_data_auth,
+        ),
         config.worker_threads,
         config.policy,
         extension_factories,

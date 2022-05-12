@@ -35,8 +35,6 @@ use log::Level;
 use oak_functions_abi::proto::{ConfigurationInfo, ServerPolicy};
 use oak_functions_extension::ExtensionFactory;
 use oak_functions_lookup::{LookupDataManager, LookupFactory};
-use oak_functions_metrics::PrivateMetricsConfig;
-use oak_functions_tf_inference::TensorFlowModelConfig;
 use oak_functions_workload_logging::WorkloadLoggingFactory;
 use oak_logger::OakLogger;
 use oak_remote_attestation::crypto::get_sha256;
@@ -56,49 +54,6 @@ mod tests;
 
 // Instantiate BoxedExtensionFactory with Logger from the Oak Functions runtime.
 pub type OakFunctionsBoxedExtensionFactory = Box<dyn ExtensionFactory<Logger>>;
-
-/// Runtime Configuration of Runtime.
-///
-/// This struct serves as a schema for a static TOML config file provided by
-/// application developers. In deployment, this static config file is typically
-/// bundled with the Oak Runtime binary. Config values captured in it serve
-/// as a type safe version of regular command line flags.
-#[derive(Deserialize, Debug)]
-#[serde(deny_unknown_fields)]
-pub struct Config {
-    /// URL of a file containing key / value entries in protobuf binary format for lookup.
-    ///
-    /// If empty or not provided, no data is available for lookup.
-    #[serde(default)]
-    pub lookup_data: Option<Data>,
-    /// How often to refresh the lookup data.
-    ///
-    /// If empty or not provided, data is only loaded once at startup.
-    #[serde(default, with = "humantime_serde")]
-    pub lookup_data_download_period: Option<Duration>,
-    /// Whether to use the GCP metadata service to obtain an authentication token for downloading
-    /// the lookup data.
-    #[serde(default = "LookupDataAuth::default")]
-    pub lookup_data_auth: LookupDataAuth,
-    /// Number of worker threads available to the async runtime.
-    ///
-    /// Defaults to 4 if unset.
-    ///
-    /// Note that the CPU core detection logic does not seem to work reliably on Google Cloud Run,
-    /// so it is advisable to set this value to the number of cores available on the Cloud Run
-    /// instance.
-    ///
-    /// See <https://docs.rs/tokio/1.5.0/tokio/runtime/struct.Builder.html#method.worker_threads>.
-    pub worker_threads: Option<usize>,
-    /// Security policy guaranteed by the server.
-    pub policy: Option<Policy>,
-    /// Configuration for TensorFlow model
-    #[serde(default)]
-    pub tf_model: Option<TensorFlowModelConfig>,
-    /// Differentially private metrics configuration.
-    #[serde(default)]
-    pub metrics: Option<PrivateMetricsConfig>,
-}
 
 /// Command line options for the Oak loader.
 ///
@@ -172,9 +127,28 @@ pub fn lib_main(
 }
 
 pub struct LookupDataConfig {
-    pub lookup_data: Option<Data>,
-    pub lookup_data_download_period: Option<Duration>,
-    pub lookup_data_auth: LookupDataAuth,
+    lookup_data: Option<Data>,
+    lookup_data_download_period: Option<Duration>,
+    lookup_data_auth: LookupDataAuth,
+}
+
+impl LookupDataConfig {
+    pub fn new(
+        lookup_data: Option<Data>,
+        lookup_data_download_period: Option<Duration>,
+        lookup_data_auth: LookupDataAuth,
+    ) -> LookupDataConfig {
+        LookupDataConfig {
+            lookup_data,
+            lookup_data_download_period,
+            lookup_data_auth,
+        }
+    }
+}
+
+pub struct ExtensionConfigurationInfo {
+    pub ml_inference: bool,
+    pub metrics: Option<oak_functions_abi::proto::PrivateMetricsConfig>,
 }
 
 /// Main execution point for the Oak Functions Loader.
@@ -317,11 +291,6 @@ pub async fn load_lookup_data(
         };
     }
     Ok(lookup_data_manager)
-}
-
-pub struct ExtensionConfigurationInfo {
-    pub ml_inference: bool,
-    pub metrics: Option<oak_functions_abi::proto::PrivateMetricsConfig>,
 }
 
 #[allow(unused_variables)]

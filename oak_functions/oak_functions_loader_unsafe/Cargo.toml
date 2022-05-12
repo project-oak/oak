@@ -7,6 +7,7 @@ license = "Apache-2.0"
 [dependencies]
 anyhow = "*"
 clap = { version = "*", features = ["derive"] }
+humantime-serde = "*"
 # Logging via the log crate is disabled and only available using our own custom logger that
 # implements the OakLogger trait defined in oak_functions/logger/src/lib.rs.
 #
@@ -20,4 +21,7 @@ oak_functions_loader = { path = "../loader" }
 oak_logger = { path = "../logger" }
 oak_functions_tf_inference = { path = "../experimental/tf_inference" }
 oak_functions_metrics = { path = "../experimental/metrics" }
+serde = "*"
+serde_derive = "*"
+serde_json = "*"
 toml = "*"

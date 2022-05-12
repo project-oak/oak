@@ -2878,8 +2878,6 @@ dependencies = [
  "oak_functions_abi",
  "oak_functions_extension",
  "oak_functions_lookup",
- "oak_functions_metrics",
- "oak_functions_tf_inference",
  "oak_functions_util",
  "oak_functions_wasm",
  "oak_functions_workload_logging",
@@ -2907,10 +2905,14 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "clap 3.1.18",
+ "humantime-serde",
  "log",
  "oak_functions_extension",
  "oak_functions_loader",
  "oak_logger",
+ "serde",
+ "serde_derive",
+ "serde_json",
  "toml",
 ]
 
@@ -2920,6 +2922,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "clap 3.1.18",
+ "humantime-serde",
  "log",
  "oak_functions_abi",
  "oak_functions_extension",
@@ -2927,6 +2930,9 @@ dependencies = [
  "oak_functions_metrics",
  "oak_functions_tf_inference",
  "oak_logger",
+ "serde",
+ "serde_derive",
+ "serde_json",
  "toml",
 ]
 
