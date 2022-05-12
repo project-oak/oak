@@ -100,17 +100,6 @@ pub struct Config {
     pub metrics: Option<PrivateMetricsConfig>,
 }
 
-#[derive(Deserialize, Debug)]
-#[serde(deny_unknown_fields)]
-enum Data {
-    /// Download data file via HTTP GET.
-    /// Supported URL schemes: `http`, `https`.
-    Url(String),
-    /// Read data file from the local file system.
-    /// File path is relative to the current `$PWD` (*not* relative to the config file).
-    File(String),
-}
-
 /// Command line options for the Oak loader.
 ///
 /// In general, when adding new configuration parameters, they should go in the `Config` struct
@@ -242,18 +231,33 @@ async fn async_main(
         .context("error while waiting for the server to terminate")?
 }
 
-async fn load_lookup_data(
-    config: &Config,
+#[derive(Deserialize, Debug)]
+#[serde(deny_unknown_fields)]
+pub enum Data {
+    /// Download data file via HTTP GET.
+    /// Supported URL schemes: `http`, `https`.
+    Url(String),
+    /// Read data file from the local file system.
+    /// File path is relative to the current `$PWD` (*not* relative to the config file).
+    File(String),
+}
+
+/// Creates LookupDataManager and sets up LookupDataRefresher.
+pub async fn load_lookup_data(
+    lookup_data: &Option<Data>,
+    lookup_data_auth: &LookupDataAuth,
+    lookup_data_download_period: Option<Duration>,
     logger: Logger,
 ) -> anyhow::Result<Arc<LookupDataManager<Logger>>> {
-    let lookup_data_source = match &config.lookup_data {
+    // Allow lookup data to be loaded by an untrusted launcher.
+    let lookup_data_source = match &lookup_data {
         Some(lookup_data) => match &lookup_data {
             Data::Url(url_string) => {
                 let url = url::Url::parse(url_string).context("Couldn't parse lookup data URL")?;
                 match url.scheme() {
                     "http" | "https" => Some(LookupDataSource::Http {
                         url: url_string.clone(),
-                        auth: config.lookup_data_auth,
+                        auth: *lookup_data_auth,
                     }),
                     scheme => anyhow::bail!(
                         "Unknown URL scheme in lookup data: expected 'http' or 'https', found {}",
@@ -278,7 +282,7 @@ async fn load_lookup_data(
             .refresh()
             .await
             .context("Couldn't perform initial load of lookup data")?;
-        if let Some(lookup_data_download_period) = config.lookup_data_download_period {
+        if let Some(lookup_data_download_period) = lookup_data_download_period {
             // Create background task to periodically refresh the lookup data.
             tokio::spawn(async move {
                 background_refresh_lookup_data(
@@ -332,7 +336,13 @@ pub async fn create_base_extension_factories(
     extensions.push(workload_logging_factory);
 
     // For Base we add the Lookup extension factory
-    let lookup_data_manager = load_lookup_data(config, logger.clone()).await?;
+    let lookup_data_manager = load_lookup_data(
+        &config.lookup_data,
+        &config.lookup_data_auth,
+        config.lookup_data_download_period,
+        logger.clone(),
+    )
+    .await?;
     let lookup_factory = LookupFactory::new_boxed_extension_factory(lookup_data_manager)?;
     extensions.push(lookup_factory);
 
