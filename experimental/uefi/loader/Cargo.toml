@@ -26,6 +26,7 @@ tokio = { version = "*", features = [
 tonic = "*"
 oak_remote_attestation_sessions = { path = "../../../remote_attestation_sessions" }
 runtime = { path = "../../../experimental/uefi/runtime" }
+core2 = "*"
 
 [build-dependencies]
 oak_utils = { path = "../../../oak_utils" }

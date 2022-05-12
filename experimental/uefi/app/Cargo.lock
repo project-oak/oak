@@ -71,6 +71,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "core2"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b49ba7ef1ad6107f8824dbe97de947cbaac53c44e7f9756a1fba0d37c1eec505"
+dependencies = [
+ "memchr",
+]
+
+[[package]]
 name = "downcast-rs"
 version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -195,6 +204,12 @@ checksum = "32613e41de4c47ab04970c348ca7ae7382cf116625755af070b008a15516a889"
 dependencies = [
  "hashbrown 0.11.2",
 ]
+
+[[package]]
+name = "memchr"
+version = "2.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2dffe52ecf27772e601905b7522cb4ef790d2cc203488bbd0e2fe85fcb74566d"
 
 [[package]]
 name = "memory_units"
@@ -461,6 +476,7 @@ name = "runtime"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "core2",
  "log",
  "oak_functions_wasm",
  "oak_functions_workload_logging",
@@ -565,6 +581,7 @@ name = "uefi-simple"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "core2",
  "runtime",
  "uefi",
  "uefi-services",

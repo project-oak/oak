@@ -71,26 +71,31 @@ impl<'boot> Serial<'boot> {
     }
 }
 
-impl<'boot> runtime::Channel for Serial<'boot> {
-    fn send(&mut self, data: &[u8]) -> anyhow::Result<()> {
+impl<'boot> core2::io::Write for Serial<'boot> {
+    fn write(&mut self, src: &[u8]) -> Result<usize, core2::io::Error> {
         self.serial
-            .write(data)
+            .write(src)
             .discard_errdata()
-            .map_err(|status| anyhow::anyhow!("serial write failed with status {:?}", status))
+            .map(|_| src.len())
+            .map_err(|status| core2::io::Error::new(core2::io::ErrorKind::Other, "Write failed"))
     }
 
-    // Try to fill the buffer, ignoring any timeout errors. Any other errors
-    // are propagated upward.
-    fn recv(&mut self, data: &mut [u8]) -> anyhow::Result<()> {
+    fn flush(&mut self) -> Result<(), core2::io::Error> {
+        Ok(())
+    }
+}
+
+impl<'boot> core2::io::Read for Serial<'boot> {
+    fn read(&mut self, dst: &mut [u8]) -> Result<usize, core2::io::Error> {
         let mut bytes_read = 0;
-        while bytes_read < data.len() {
-            let len = self.read(&mut data[bytes_read..]).map_err(|status| {
-                anyhow::anyhow!("serial write failed with status {:?}", status)
+        while bytes_read < dst.len() {
+            let len = self.read(&mut dst[bytes_read..]).map_err(|_status| {
+                core2::io::Error::new(core2::io::ErrorKind::Other, "Read failed")
             })?;
             if len > 0 {
                 bytes_read += len;
             }
         }
-        Ok(())
+        Ok((dst.len()))
     }
 }

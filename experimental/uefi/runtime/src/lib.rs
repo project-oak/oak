@@ -21,18 +21,13 @@ extern crate alloc;
 
 use alloc::{vec, vec::Vec};
 use anyhow::{bail, Context};
+use core2::io::{Read, Write};
 use oak_remote_attestation_sessions::{SessionId, SESSION_ID_LENGTH};
 
 pub mod framing;
 mod logger;
 mod remote_attestation;
 mod wasm;
-
-/// Basic hardware abstraction layer for sending data.
-pub trait Channel {
-    fn send(&mut self, data: &[u8]) -> anyhow::Result<()>;
-    fn recv(&mut self, data: &mut [u8]) -> anyhow::Result<()>;
-}
 
 pub type FrameLength = u16;
 // The frame length is a u16, which is two bytes encoded.
@@ -42,21 +37,25 @@ pub struct Frame {
     pub body: Vec<u8>,
 }
 
-pub struct Framed<T: Channel> {
+pub struct Framed<T: Read + Write> {
     inner: T,
 }
 
-impl<T: Channel> Framed<T> {
+impl<T: Read + Write> Framed<T> {
     pub fn new(channel: T) -> Self {
         Self { inner: channel }
     }
 
     pub fn read_frame(&mut self) -> anyhow::Result<Frame> {
         let mut length_buf = [0; FRAME_LENGTH_ENCODED_SIZE];
-        self.inner.recv(&mut length_buf)?;
+        self.inner
+            .read_exact(&mut length_buf)
+            .map_err(anyhow::Error::msg)?;
         let length = FrameLength::from_be_bytes(length_buf);
         let mut body: Vec<u8> = vec![0; length.into()];
-        self.inner.recv(&mut body)?;
+        self.inner
+            .read_exact(&mut body)
+            .map_err(anyhow::Error::msg)?;
         Ok(Frame { body })
     }
 
@@ -69,7 +68,9 @@ impl<T: Channel> Framed<T> {
             Vec::with_capacity(encoded_length.len() + frame.body.len());
         encoded_frame.extend(encoded_length);
         encoded_frame.extend(frame.body);
-        self.inner.send(&encoded_frame)?;
+        self.inner
+            .write_all(&encoded_frame)
+            .map_err(anyhow::Error::msg)?;
         Ok(())
     }
 }

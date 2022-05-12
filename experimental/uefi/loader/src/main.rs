@@ -16,10 +16,10 @@
 
 use clap::Parser;
 use qemu::{Qemu, QemuParams};
-use runtime::{Channel, Frame, Framed};
+use runtime::{Frame, Framed};
 use std::{
     fs,
-    io::{BufRead, BufReader, Read, Write},
+    io::{BufRead, BufReader, Read},
     os::unix::net::UnixStream,
     path::PathBuf,
 };
@@ -65,12 +65,19 @@ struct CommsChannel {
     inner: UnixStream,
 }
 
-impl Channel for CommsChannel {
-    fn send(&mut self, data: &[u8]) -> anyhow::Result<()> {
-        self.inner.write_all(data).map_err(anyhow::Error::msg)
+impl core2::io::Write for CommsChannel {
+    fn write(&mut self, src: &[u8]) -> Result<usize, core2::io::Error> {
+        self.inner.write(src)
     }
-    fn recv(&mut self, data: &mut [u8]) -> anyhow::Result<()> {
-        self.inner.read_exact(data).map_err(anyhow::Error::msg)
+
+    fn flush(&mut self) -> Result<(), core2::io::Error> {
+        self.inner.flush()
+    }
+}
+
+impl core2::io::Read for CommsChannel {
+    fn read(&mut self, dst: &mut [u8]) -> Result<usize, core2::io::Error> {
+        self.inner.read(dst)
     }
 }
 

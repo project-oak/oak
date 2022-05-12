@@ -18,3 +18,4 @@ oak_functions_wasm = { path = "../../../oak_functions/wasm" }
 oak_functions_workload_logging = { path = "../../../oak_functions/workload_logging" }
 oak_remote_attestation_sessions = { path = "../../../remote_attestation_sessions", default-features = false }
 oak_logger = { path = "../../../oak_functions/logger" }
+core2 = { version = "*", features = ["alloc"], default-features = false }

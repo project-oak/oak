@@ -14,6 +14,7 @@ anyhow = { version = "*", default-features = false }
 runtime = { path = "../runtime" }
 uefi = { version = "*", features = ["exts"] }
 uefi-services = "*"
+core2 = { version = "*", features = ["alloc"], default-features = false }
 
 [dev-dependencies]
 uefi-services = { version = "*", features = ["qemu"] }
