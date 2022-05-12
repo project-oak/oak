@@ -58,7 +58,6 @@ tokio = { version = "*", features = [
   "sync",
   "rt-multi-thread"
 ] }
-toml = "*"
 tonic = "*"
 tonic-web = { version = "*", optional = true }
 url = "*"
