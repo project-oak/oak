@@ -20,20 +20,23 @@
 use anyhow::Context;
 use ecdsa::Signature;
 use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
 use signature::Verifier;
 use std::{cmp::Ordering, str::FromStr};
+
+/// Number of bytes required for storing a SHA256 hash.
+pub const SHA256_HASH_LENGTH: usize = 32;
 
 /// Struct representing a Rekor LogEntry.
 #[derive(Debug, Deserialize, PartialEq, Serialize)]
 pub struct LogEntry {
-    /// We cannot directly use the type Body here, since body is Base64-encoded here.
+    /// We cannot directly use the type `Body` here, since body is Base64-encoded.
     #[serde(rename = "body")]
     pub body: String,
 
     #[serde(rename = "integratedTime")]
     pub integrated_time: usize,
 
-    // TODO(#2316): should this be verified?
     /// This is the SHA256 hash of the DER-encoded public key for the log at the time the entry was
     /// included in the log
     /// Pattern: ^[0-9a-fA-F]{64}$
@@ -69,12 +72,12 @@ pub struct Spec {
 /// Struct representing the hashed data in the body of a Rekor LogEntry.
 #[derive(Debug, Deserialize, PartialEq, Serialize)]
 pub struct Data {
-    pub hash: Digest,
+    pub hash: Hash,
 }
 
-/// Struct representing a digest.
+/// Struct representing a hash digest.
 #[derive(Debug, Deserialize, PartialEq, Serialize)]
-pub struct Digest {
+pub struct Hash {
     pub algorithm: String,
     pub value: String,
 }
@@ -188,8 +191,6 @@ pub fn verify_rekor_log_entry(
     // Verify the body in the Rekor LogEntry
     verify_rekor_body(&body, endorsement_bytes, oak_public_key_bytes)?;
 
-    // TODO(#2316): check that the endorsement has the same hash as the one in the body.
-
     Ok(())
 }
 
@@ -214,7 +215,7 @@ pub fn verify_rekor_signature(
     .context("failed to verify signedEntryTimestamp of the Rekor LogEntry")
 }
 
-/// Verifies the given signature over the given endorsement bytes, using the public key in
+/// Verifies the signature in the `body` over the `endorsement_bytes`, using the public key in
 /// `pem_encoded_public_key_bytes`.
 ///
 /// Returns `Ok(())` if the verification succeeds, otherwise returns `Err()`.
@@ -230,12 +231,29 @@ pub fn verify_rekor_body(
         )
     }
 
-    // TODO: check endorsement hash
+    // For now, we only support `sha256` as the hashing algorithm.
+    if body.spec.data.hash.algorithm != "sha256" {
+        anyhow::bail!(
+            "unsupported hash algorithm: {}; only sha256 is supported",
+            body.spec.data.hash.algorithm
+        )
+    }
+
+    // Check that hash of the endorsement statement matches the hash of the data in the Body.
+    let endorsement_hash = get_sha256(endorsement_bytes);
+    let endorsement_hash_hex = hex::encode(endorsement_hash);
+    if endorsement_hash_hex != body.spec.data.hash.value {
+        anyhow::bail!(
+            "the hash of the endorsement file ({:?}) does not match the hash of the data in the body of the rekor entry ({:?})",
+            endorsement_hash_hex,
+            body.spec.data.hash.value
+        )
+    }
 
     // Check that the public key in the body matches the given public key. This in fact checks the
     // consistency of the Rekor LogEntry, and we expect these public keys to always be the same.
-    let public_key_bytes =
-        base64::decode(body.spec.signature.public_key.content.as_bytes()).expect("base64 decode");
+    let public_key_bytes = base64::decode(body.spec.signature.public_key.content.as_bytes())
+        .expect("failed to base64-decode the public key bytes in the Rekor LogEntry body");
     if compare_keys(&public_key_bytes, pem_encoded_public_key_bytes)? != Ordering::Equal {
         anyhow::bail!(
             "the given public key is different from the public key in the rekor entry: {:?} vs. {:?}",
@@ -245,7 +263,7 @@ pub fn verify_rekor_body(
     }
 
     verify_signature(
-        &body.spec.signature.content.as_str().as_bytes().to_vec(),
+        body.spec.signature.content.as_str().as_bytes(),
         endorsement_bytes,
         pem_encoded_public_key_bytes,
     )
@@ -265,7 +283,7 @@ pub fn verify_signature(
     let signature = Signature::from_der(&sig).context("invalid ASN.1 signature")?;
     let key = unmarshal_pem_to_p256_public_key(pem_encoded_public_key_bytes)?;
 
-    key.verify(&content_bytes, &signature)
+    key.verify(content_bytes, &signature)
         .context("failed to verify signature")
 }
 
@@ -289,12 +307,19 @@ fn rekor_signature_bundle(log_entry_bytes: &[u8]) -> anyhow::Result<RekorSignatu
     RekorSignatureBundle::try_from(entry)
 }
 
-/// Compared two pem-encoded ECDSA public keys. Instead of comparing the bytes, we parse the bytes
+/// Compares two pem-encoded ECDSA public keys. Instead of comparing the bytes, we parse the bytes
 /// and compare p256 keys. Keys are considered equal if they are the same on the elliptic curve.
-/// Therefore, they could have different bytes, but still be the same key.
+/// This means that the keys could have different bytes, but still be the same key.
 fn compare_keys(public_key_bytes_a: &[u8], public_key_bytes_b: &[u8]) -> anyhow::Result<Ordering> {
     let key_a = unmarshal_pem_to_p256_public_key(public_key_bytes_a)?;
     let key_b = unmarshal_pem_to_p256_public_key(public_key_bytes_b)?;
 
     Ok(key_a.cmp(&key_b))
+}
+
+/// Computes a SHA-256 digest of `input` and returns it in a form of raw bytes.
+pub fn get_sha256(input: &[u8]) -> [u8; SHA256_HASH_LENGTH] {
+    let mut hasher = Sha256::new();
+    hasher.update(input);
+    hasher.finalize().into()
 }

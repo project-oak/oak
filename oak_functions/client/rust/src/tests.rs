@@ -48,7 +48,7 @@ fn test_verify_rekor_log_entry() {
         &pubkey_pem_bytes,
         &endorsement_bytes,
     );
-    assert!(result.is_ok());
+    assert!(result.is_ok(), "{:?}", result);
 }
 
 #[test]
