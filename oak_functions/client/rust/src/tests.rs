@@ -31,6 +31,8 @@ fn test_verify_rekor_log_entry() {
     // The resulting entry in Rekor has UUID
     // `bb05be1bd813f8afb7b77b2d9f7be5ae25b396d111c7a26a04b785c48c277372`.
     let log_entry_path = "testdata/logentry.json";
+
+    // Public key of the product team that signed the endorsement file.
     let pubkey_path = "testdata/ec_public.pem";
 
     // Public key of the Rekor instance hosted by sigstore.dev. It is downloaded from https://rekor.sigstore.dev/api/v1/log/publicKey.
@@ -40,7 +42,8 @@ fn test_verify_rekor_log_entry() {
     let log_entry_bytes = fs::read(log_entry_path).expect("Couldn't read log entry file.");
     let rekor_pem_bytes =
         fs::read(rekor_pubkey_path).expect("Couldn't read Rekor's public key file.");
-    let pubkey_pem_bytes = fs::read(pubkey_path).expect("Couldn't read Rekor's public key file.");
+    let pubkey_pem_bytes =
+        fs::read(pubkey_path).expect("Couldn't read product team's public key file.");
 
     let result = verify_rekor_log_entry(
         &log_entry_bytes,
