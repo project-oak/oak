@@ -40,6 +40,7 @@
 <span id="35">35</span>
 <span id="36">36</span>
 <span id="37">37</span>
+<span id="38">38</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2022 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -56,13 +57,14 @@
 <span class="comment">// limitations under the License.</span>
 <span class="comment">//</span>
 
-<span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">remote_attestation::AttestationHandler</span>, <span class="ident">Channel</span>, <span class="ident">Frame</span>, <span class="ident">Framed</span>};
+<span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">remote_attestation::AttestationHandler</span>, <span class="ident">Frame</span>, <span class="ident">Framed</span>};
 <span class="kw">use</span> <span class="ident">anyhow::Context</span>;
+<span class="kw">use</span> <span class="ident">ciborium_io</span>::{<span class="ident">Read</span>, <span class="ident">Write</span>};
 
 <span class="comment">// Processes incoming frames.</span>
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">handle_frames</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>(<span class="ident">channel</span>: <span class="ident">T</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="op">!</span><span class="op">&gt;</span>
 <span class="kw">where</span>
-    <span class="ident">T</span>: <span class="ident">Channel</span>,
+    <span class="ident">T</span>: <span class="ident">Read</span><span class="op">&lt;</span><span class="ident">Error</span> <span class="op">=</span> <span class="ident">anyhow::Error</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Write</span><span class="op">&lt;</span><span class="ident">Error</span> <span class="op">=</span> <span class="ident">anyhow::Error</span><span class="op">&gt;</span>,
 {
     <span class="kw">let</span> <span class="ident">wasm_handler</span> <span class="op">=</span> <span class="ident"><span class="kw">crate</span>::wasm::new_wasm_handler</span>()<span class="question-mark">?</span>;
     <span class="kw">let</span> <span class="ident">attestation_handler</span> <span class="op">=</span>

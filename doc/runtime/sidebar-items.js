@@ -1,1 +1,1 @@
-initSidebarItems({"mod":[["framing",""]],"struct":[["Frame",""],["Framed",""],["SerializeableRequest",""]],"trait":[["Channel","Basic hardware abstraction layer for sending data."]],"type":[["FrameLength","Length of the entire frame, including the header."]]});
+initSidebarItems({"mod":[["framing",""]],"struct":[["Frame",""],["Framed",""],["SerializeableRequest",""]],"type":[["FrameLength","Length of the entire frame, including the header."]]});
