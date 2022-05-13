@@ -32,7 +32,7 @@ use crate::{
 use anyhow::Context;
 use clap::Parser;
 use log::Level;
-use oak_functions_abi::proto::{ConfigurationInfo, ServerPolicy};
+use oak_functions_abi::proto::ConfigurationInfo;
 use oak_functions_extension::ExtensionFactory;
 use oak_functions_lookup::{LookupDataManager, LookupFactory};
 use oak_functions_workload_logging::WorkloadLoggingFactory;
