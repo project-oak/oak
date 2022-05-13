@@ -16,6 +16,7 @@
 
 use crate::proto::AttestationReport;
 
+// TODO(#2842): Generate the remote attestation report from hardware.
 const TEST_TEE_MEASUREMENT: &str = "Test TEE measurement";
 
 impl AttestationReport {
