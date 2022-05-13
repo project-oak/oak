@@ -84,9 +84,6 @@ jobs:
           ./scripts/docker_run ./scripts/xtask --scope=all ${{ matrix.cmd }}
           df --human-readable
 
-      - name: Generate root CA certs
-        run: ./scripts/docker_run ./scripts/generate_root_ca_certs
-
         # Ensure that the previous steps did not modify our source-code and that
         # relevant build artifacts are ignored by git.
       - name: Git check diff
