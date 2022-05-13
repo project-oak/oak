@@ -20,3 +20,4 @@ runtime = { path = "../runtime", default-features = false, features = [
 uart_16550 = "*"
 rust-hypervisor-firmware-subset = { path = "../../../third_party/rust-hypervisor-firmware-subset" }
 x86_64 = "*"
+ciborium-io = { version = "*", default-features = false }

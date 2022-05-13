@@ -16,7 +16,7 @@
 
 use clap::Parser;
 use qemu::{Qemu, QemuParams};
-use runtime::{Channel, Frame, Framed};
+use runtime::{Frame, Framed};
 use std::{
     fs,
     io::{BufRead, BufReader, Read, Write},
@@ -65,11 +65,22 @@ struct CommsChannel {
     inner: UnixStream,
 }
 
-impl Channel for CommsChannel {
-    fn send(&mut self, data: &[u8]) -> anyhow::Result<()> {
+impl ciborium_io::Write for CommsChannel {
+    type Error = anyhow::Error;
+
+    fn write_all(&mut self, data: &[u8]) -> Result<(), Self::Error> {
         self.inner.write_all(data).map_err(anyhow::Error::msg)
     }
-    fn recv(&mut self, data: &mut [u8]) -> anyhow::Result<()> {
+
+    fn flush(&mut self) -> Result<(), Self::Error> {
+        self.inner.flush().map_err(anyhow::Error::msg)
+    }
+}
+
+impl ciborium_io::Read for CommsChannel {
+    type Error = anyhow::Error;
+
+    fn read_exact(&mut self, data: &mut [u8]) -> Result<(), Self::Error> {
         self.inner.read_exact(data).map_err(anyhow::Error::msg)
     }
 }

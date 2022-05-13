@@ -651,6 +651,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "ciborium-io"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "346de753af073cc87b52b2083a506b38ac176a44cfb05497b622e27be899b369"
+
+[[package]]
 name = "cipher"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4095,6 +4101,7 @@ name = "runtime"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "ciborium-io",
  "log",
  "oak_functions_wasm",
  "oak_functions_workload_logging",
@@ -5502,6 +5509,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "bmrng",
+ "ciborium-io",
  "clap 3.1.18",
  "command-fds",
  "env_logger 0.9.0",

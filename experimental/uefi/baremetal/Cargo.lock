@@ -72,6 +72,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "atomic_refcell",
+ "ciborium-io",
  "getrandom",
  "lazy_static",
  "libm",
@@ -143,6 +144,12 @@ name = "cfg-if"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
+
+[[package]]
+name = "ciborium-io"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "346de753af073cc87b52b2083a506b38ac176a44cfb05497b622e27be899b369"
 
 [[package]]
 name = "cipher"
@@ -809,6 +816,7 @@ name = "runtime"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "ciborium-io",
  "log",
  "oak_functions_wasm",
  "oak_functions_workload_logging",

@@ -36,15 +36,25 @@ impl Serial {
     }
 }
 
-impl runtime::Channel for Serial {
-    fn send(&mut self, data: &[u8]) -> anyhow::Result<()> {
+impl ciborium_io::Write for Serial {
+    type Error = anyhow::Error;
+
+    fn write_all(&mut self, data: &[u8]) -> Result<(), Self::Error> {
         for byte in data {
             self.port.borrow_mut().send_raw(*byte);
         }
         Ok(())
     }
 
-    fn recv(&mut self, data: &mut [u8]) -> anyhow::Result<()> {
+    fn flush(&mut self) -> Result<(), Self::Error> {
+        Ok(())
+    }
+}
+
+impl ciborium_io::Read for Serial {
+    type Error = anyhow::Error;
+
+    fn read_exact(&mut self, data: &mut [u8]) -> Result<(), Self::Error> {
         #[allow(clippy::needless_range_loop)]
         for i in 0..data.len() {
             data[i] = self.port.borrow_mut().receive();
