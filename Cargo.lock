@@ -638,6 +638,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "channel"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "ciborium-io",
+ "oak_remote_attestation_sessions",
+]
+
+[[package]]
 name = "chrono"
 version = "0.4.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4101,6 +4110,7 @@ name = "runtime"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "channel",
  "ciborium-io",
  "log",
  "oak_functions_wasm",
@@ -5509,6 +5519,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "bmrng",
+ "channel",
  "ciborium-io",
  "clap 3.1.18",
  "command-fds",
@@ -5518,7 +5529,6 @@ dependencies = [
  "oak_remote_attestation_sessions",
  "oak_utils",
  "prost 0.10.3",
- "runtime",
  "serde",
  "tokio",
  "tonic",

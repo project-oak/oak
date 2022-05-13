@@ -21,9 +21,9 @@
 
 extern crate alloc;
 
-use crate::SerializeableRequest;
 use alloc::vec::Vec;
 use anyhow::Context;
+use channel::SerializeableRequest;
 use oak_remote_attestation_sessions::{SessionState, SessionTracker};
 
 /// Number of sessions that will be kept in memory.

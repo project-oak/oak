@@ -14,9 +14,9 @@
 // limitations under the License.
 //
 
+use channel::{Frame, Framed};
 use clap::Parser;
 use qemu::{Qemu, QemuParams};
-use runtime::{Frame, Framed};
 use std::{
     fs,
     io::{BufRead, BufReader, Read, Write},

@@ -15,6 +15,7 @@ members = [
   "experimental/trusted_shuffler/common",
   "experimental/trusted_shuffler/server",
   "experimental/trusted_shuffler/trusted_shuffler",
+  "experimental/uefi/channel",
   "experimental/uefi/client",
   "experimental/uefi/loader",
   "experimental/uefi/runtime",

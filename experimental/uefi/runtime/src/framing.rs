@@ -14,8 +14,9 @@
 // limitations under the License.
 //
 
-use crate::{remote_attestation::AttestationHandler, Frame, Framed};
+use crate::remote_attestation::AttestationHandler;
 use anyhow::Context;
+use channel::{Frame, Framed};
 use ciborium_io::{Read, Write};
 
 // Processes incoming frames.

@@ -14,6 +14,7 @@ wasm = []
 [dependencies]
 anyhow = { version = "*", default-features = false }
 log = "*"
+channel = { path = "../../../experimental/uefi/channel" }
 oak_functions_wasm = { path = "../../../oak_functions/wasm" }
 oak_functions_workload_logging = { path = "../../../oak_functions/workload_logging" }
 oak_remote_attestation_sessions = { path = "../../../remote_attestation_sessions", default-features = false }

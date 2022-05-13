@@ -25,7 +25,7 @@ tokio = { version = "*", features = [
 ] }
 tonic = "*"
 oak_remote_attestation_sessions = { path = "../../../remote_attestation_sessions" }
-runtime = { path = "../../../experimental/uefi/runtime" }
+channel = { path = "../../../experimental/uefi/channel" }
 ciborium-io = "*"
 
 [build-dependencies]
