@@ -127,6 +127,7 @@ pub fn lib_main(
 }
 
 /// Workaround to pass values for ConfigurationInfo from Config.
+/// TODO(#2851): Refactor to remove `ExtensionConfigurationInfo`.
 pub struct ExtensionConfigurationInfo {
     ml_inference: bool,
     metrics: Option<oak_functions_abi::proto::PrivateMetricsConfig>,

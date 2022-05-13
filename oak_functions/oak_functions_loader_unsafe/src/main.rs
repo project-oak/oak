@@ -40,6 +40,7 @@ use std::{fs, time::Duration};
 #[derive(Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
 pub struct Config {
+    /// TODO(#2852): Combine the lookup data specific fields in one struct.
     /// URL of a file containing key / value entries in protobuf binary format for lookup.
     ///
     /// If empty or not provided, no data is available for lookup.
