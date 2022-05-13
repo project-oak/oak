@@ -34,9 +34,9 @@ pub trait Channel {
     fn recv(&mut self, data: &mut [u8]) -> anyhow::Result<()>;
 }
 
-pub type FrameLength = u16;
-// The frame length is a u16, which is two bytes encoded.
-pub const FRAME_LENGTH_ENCODED_SIZE: usize = 2;
+/// Length of the entire frame, including the header.
+pub type FrameLength = u32;
+const FRAME_BYTES_SIZE: usize = 4;
 
 pub struct Frame {
     pub body: Vec<u8>,
@@ -52,24 +52,36 @@ impl<T: Channel> Framed<T> {
     }
 
     pub fn read_frame(&mut self) -> anyhow::Result<Frame> {
-        let mut length_buf = [0; FRAME_LENGTH_ENCODED_SIZE];
-        self.inner.recv(&mut length_buf)?;
-        let length = FrameLength::from_be_bytes(length_buf);
-        let mut body: Vec<u8> = vec![0; length.into()];
-        self.inner.recv(&mut body)?;
+        let length = {
+            let mut length_bytes = [0; FRAME_BYTES_SIZE];
+            self.inner.recv(&mut length_bytes)?;
+            FrameLength::from_le_bytes(length_bytes)
+        };
+
+        let body = {
+            let body_length: u32 = length - FRAME_BYTES_SIZE as u32;
+            let mut body: Vec<u8> = vec![
+                0;
+                usize::try_from(body_length).expect(
+                    "the supported pointer size is smaller than the frame length"
+                )
+            ];
+            self.inner.recv(&mut body)?;
+            body
+        };
+
         Ok(Frame { body })
     }
 
     pub fn write_frame(&mut self, frame: Frame) -> anyhow::Result<()> {
-        let length: FrameLength = FrameLength::try_from(frame.body.len())
-            .map_err(anyhow::Error::msg)
-            .context("the frame body is too large")?;
-        let encoded_length = length.to_be_bytes();
-        let mut encoded_frame: Vec<u8> =
-            Vec::with_capacity(encoded_length.len() + frame.body.len());
-        encoded_frame.extend(encoded_length);
-        encoded_frame.extend(frame.body);
-        self.inner.send(&encoded_frame)?;
+        let length_bytes = {
+            let length = FrameLength::try_from(FRAME_BYTES_SIZE + frame.body.len())
+                .map_err(anyhow::Error::msg)
+                .context("the frame is too large")?;
+            length.to_le_bytes()
+        };
+        self.inner.send(&length_bytes)?;
+        self.inner.send(&frame.body)?;
         Ok(())
     }
 }
