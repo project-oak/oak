@@ -18,9 +18,7 @@ use crate::{RequestHandler, TrustedShuffler};
 use async_trait::async_trait;
 use futures::future::join_all;
 use std::{sync::Arc, time::Duration};
-use tokio::time::timeout;
-
-const TEST_TIMEOUT_MILLISECONDS: u64 = 100;
+use tokio::{pin, time::sleep};
 
 struct TestRequestHandler;
 
@@ -117,16 +115,28 @@ async fn waiting_for_enough_requests_test() {
     ));
 
     let (request_1, _) = generate_request_and_expected_response("Test 1");
-    let (request_2, _) = generate_request_and_expected_response("Test 2");
+    let (request_2, expected_response) = generate_request_and_expected_response("Test 2");
 
     let trusted_shuffler_clone = trusted_shuffler.clone();
     tokio::spawn(async move { trusted_shuffler_clone.invoke(request_1).await });
 
     let response_future = trusted_shuffler.invoke(request_2);
-    let result = timeout(
-        Duration::from_millis(TEST_TIMEOUT_MILLISECONDS),
-        response_future,
-    )
-    .await;
-    assert!(result.is_err());
+
+    // Assert that after 200 ms no response for request_2 was received.
+    pin!(response_future); // Pin to check it will be received after anonymity value is reached.
+    let slept = tokio::select! {
+        _ = sleep(Duration::from_millis(200)) => { true },
+        _ = &mut response_future => { false }
+    };
+    assert!(slept);
+
+    // Assert that after the third request was sent, request 2 is received.
+    let (request_3, _) = generate_request_and_expected_response("Test 3");
+    let trusted_shuffler_clone = trusted_shuffler.clone();
+    tokio::spawn(async move { trusted_shuffler_clone.invoke(request_3).await });
+
+    let result = response_future.await;
+    assert!(result.is_ok());
+    let response = result.unwrap();
+    assert_eq!(expected_response, response);
 }
