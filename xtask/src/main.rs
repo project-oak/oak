@@ -582,7 +582,7 @@ fn run_clang_format(mode: FormatMode) -> Step {
         FormatMode::Check => Step::Single {
             name: "clang format".to_string(),
             command: Cmd::new(
-                "python",
+                "python3",
                 &[
                     "./third_party/run-clang-format/run-clang-format.py",
                     "--recursive",
