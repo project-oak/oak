@@ -21,18 +21,13 @@ extern crate alloc;
 
 use alloc::{vec, vec::Vec};
 use anyhow::{bail, Context};
+use ciborium_io::{Read, Write};
 use oak_remote_attestation_sessions::{SessionId, SESSION_ID_LENGTH};
 
 pub mod framing;
 mod logger;
 mod remote_attestation;
 mod wasm;
-
-/// Basic hardware abstraction layer for sending data.
-pub trait Channel {
-    fn send(&mut self, data: &[u8]) -> anyhow::Result<()>;
-    fn recv(&mut self, data: &mut [u8]) -> anyhow::Result<()>;
-}
 
 /// Length of the entire frame, including the header.
 pub type FrameLength = u32;
@@ -42,11 +37,16 @@ pub struct Frame {
     pub body: Vec<u8>,
 }
 
-pub struct Framed<T: Channel> {
+pub struct Framed<T: Read + Write> {
     inner: T,
 }
 
-impl<T: Channel> Framed<T> {
+impl<T> Framed<T>
+where
+    T: Read + Write,
+    anyhow::Error: From<<T as ciborium_io::Read>::Error>,
+    anyhow::Error: From<<T as ciborium_io::Write>::Error>,
+{
     pub fn new(channel: T) -> Self {
         Self { inner: channel }
     }
@@ -54,7 +54,7 @@ impl<T: Channel> Framed<T> {
     pub fn read_frame(&mut self) -> anyhow::Result<Frame> {
         let length = {
             let mut length_bytes = [0; FRAME_BYTES_SIZE];
-            self.inner.recv(&mut length_bytes)?;
+            self.inner.read_exact(&mut length_bytes)?;
             FrameLength::from_le_bytes(length_bytes)
         };
 
@@ -66,7 +66,7 @@ impl<T: Channel> Framed<T> {
                     "the supported pointer size is smaller than the frame length"
                 )
             ];
-            self.inner.recv(&mut body)?;
+            self.inner.read_exact(&mut body)?;
             body
         };
 
@@ -80,8 +80,8 @@ impl<T: Channel> Framed<T> {
                 .context("the frame is too large")?;
             length.to_le_bytes()
         };
-        self.inner.send(&length_bytes)?;
-        self.inner.send(&frame.body)?;
+        self.inner.write_all(&length_bytes)?;
+        self.inner.write_all(&frame.body)?;
         Ok(())
     }
 }

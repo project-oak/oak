@@ -14,13 +14,16 @@
 // limitations under the License.
 //
 
-use crate::{remote_attestation::AttestationHandler, Channel, Frame, Framed};
+use crate::{remote_attestation::AttestationHandler, Frame, Framed};
 use anyhow::Context;
+use ciborium_io::{Read, Write};
 
 // Processes incoming frames.
 pub fn handle_frames<T>(channel: T) -> anyhow::Result<!>
 where
-    T: Channel,
+    T: Read + Write,
+    anyhow::Error: From<<T as ciborium_io::Read>::Error>,
+    anyhow::Error: From<<T as ciborium_io::Write>::Error>,
 {
     let wasm_handler = crate::wasm::new_wasm_handler()?;
     let attestation_handler =
