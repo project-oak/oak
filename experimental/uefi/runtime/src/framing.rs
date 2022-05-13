@@ -21,9 +21,7 @@ use ciborium_io::{Read, Write};
 // Processes incoming frames.
 pub fn handle_frames<T>(channel: T) -> anyhow::Result<!>
 where
-    T: Read + Write,
-    anyhow::Error: From<<T as ciborium_io::Read>::Error>,
-    anyhow::Error: From<<T as ciborium_io::Write>::Error>,
+    T: Read<Error = anyhow::Error> + Write<Error = anyhow::Error>,
 {
     let wasm_handler = crate::wasm::new_wasm_handler()?;
     let attestation_handler =

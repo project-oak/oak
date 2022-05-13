@@ -43,9 +43,7 @@ pub struct Framed<T: Read + Write> {
 
 impl<T> Framed<T>
 where
-    T: Read + Write,
-    anyhow::Error: From<<T as ciborium_io::Read>::Error>,
-    anyhow::Error: From<<T as ciborium_io::Write>::Error>,
+    T: Read<Error = anyhow::Error> + Write<Error = anyhow::Error>,
 {
     pub fn new(channel: T) -> Self {
         Self { inner: channel }
