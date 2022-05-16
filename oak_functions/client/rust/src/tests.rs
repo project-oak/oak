@@ -32,7 +32,7 @@ fn test_verify_rekor_log_entry() {
     // `bb05be1bd813f8afb7b77b2d9f7be5ae25b396d111c7a26a04b785c48c277372`.
     let log_entry_path = "testdata/logentry.json";
 
-    // Public key of the product team that signed the endorsement file.
+    // Test public key, representing the product team that signed the endorsement file.
     let pubkey_path = "testdata/ec_public.pem";
 
     // Public key of the Rekor instance hosted by sigstore.dev. It is downloaded from https://rekor.sigstore.dev/api/v1/log/publicKey.

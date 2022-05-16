@@ -24,10 +24,8 @@ use sha2::{Digest, Sha256};
 use signature::Verifier;
 use std::{cmp::Ordering, str::FromStr};
 
-/// Number of bytes required for storing a SHA256 hash.
-pub const SHA256_HASH_LENGTH: usize = 32;
-
 /// Struct representing a Rekor LogEntry.
+/// Based on <https://github.com/sigstore/rekor/blob/2978cdc26fdf8f5bfede8459afd9735f0f231a2a/pkg/generated/models/log_entry.go#L89.>
 #[derive(Debug, Deserialize, PartialEq, Serialize)]
 pub struct LogEntry {
     /// We cannot directly use the type `Body` here, since body is Base64-encoded.
@@ -63,6 +61,7 @@ pub struct Body {
 }
 
 /// Struct representing the `specs` in the body of a Rekor LogEntry.
+/// Based on <https://github.com/sigstore/rekor/blob/2978cdc26fdf8f5bfede8459afd9735f0f231a2a/pkg/generated/models/hashedrekord_v001_schema.go#L39.>
 #[derive(Debug, Deserialize, PartialEq, Serialize)]
 pub struct Spec {
     pub data: Data,
@@ -70,12 +69,14 @@ pub struct Spec {
 }
 
 /// Struct representing the hashed data in the body of a Rekor LogEntry.
+/// Based on <https://github.com/sigstore/rekor/blob/2978cdc26fdf8f5bfede8459afd9735f0f231a2a/pkg/generated/models/hashedrekord_v001_schema.go#L179.>
 #[derive(Debug, Deserialize, PartialEq, Serialize)]
 pub struct Data {
     pub hash: Hash,
 }
 
 /// Struct representing a hash digest.
+/// Based on <https://github.com/sigstore/rekor/blob/2978cdc26fdf8f5bfede8459afd9735f0f231a2a/pkg/generated/models/hashedrekord_v001_schema.go#L269.>
 #[derive(Debug, Deserialize, PartialEq, Serialize)]
 pub struct Hash {
     pub algorithm: String,
@@ -85,6 +86,7 @@ pub struct Hash {
 /// Struct representing a signature in the body of a Rekor LogEntry.
 #[derive(Debug, Deserialize, PartialEq, Serialize)]
 pub struct GenericSignature {
+    /// Base64 content that is signed.
     pub content: String,
     pub format: String,
     #[serde(rename = "publicKey")]
@@ -92,8 +94,10 @@ pub struct GenericSignature {
 }
 
 /// Struct representing a public key included in the body of a Rekor LogEntry.
+/// Based on <https://github.com/sigstore/rekor/blob/2978cdc26fdf8f5bfede8459afd9735f0f231a2a/pkg/generated/models/hashedrekord_v001_schema.go#L468.>
 #[derive(Debug, Deserialize, PartialEq, Serialize)]
 pub struct PublicKey {
+    /// Base64 content of a public key.
     pub content: String,
 }
 
@@ -215,13 +219,13 @@ pub fn verify_rekor_signature(
     .context("failed to verify signedEntryTimestamp of the Rekor LogEntry")
 }
 
-/// Verifies the signature in the `body` over the `endorsement_bytes`, using the public key in
+/// Verifies the signature in the `body` over the `contents_bytes`, using the public key in
 /// `pem_encoded_public_key_bytes`.
 ///
 /// Returns `Ok(())` if the verification succeeds, otherwise returns `Err()`.
 pub fn verify_rekor_body(
     body: &Body,
-    endorsement_bytes: &[u8],
+    contents_bytes: &[u8],
     pem_encoded_public_key_bytes: &[u8],
 ) -> anyhow::Result<()> {
     if body.spec.signature.format != "x509" {
@@ -240,12 +244,12 @@ pub fn verify_rekor_body(
     }
 
     // Check that hash of the endorsement statement matches the hash of the data in the Body.
-    let endorsement_hash = get_sha256(endorsement_bytes);
-    let endorsement_hash_hex = hex::encode(endorsement_hash);
-    if endorsement_hash_hex != body.spec.data.hash.value {
+    let contents_hash = get_sha256(contents_bytes);
+    let contents_hash_hex = hex::encode(contents_hash);
+    if contents_hash_hex != body.spec.data.hash.value {
         anyhow::bail!(
             "the hash of the endorsement file ({:?}) does not match the hash of the data in the body of the rekor entry ({:?})",
-            endorsement_hash_hex,
+            contents_hash_hex,
             body.spec.data.hash.value
         )
     }
@@ -264,7 +268,7 @@ pub fn verify_rekor_body(
 
     verify_signature(
         body.spec.signature.content.as_str().as_bytes(),
-        endorsement_bytes,
+        contents_bytes,
         pem_encoded_public_key_bytes,
     )
     .context("failed to verify signature over the endorsement file")
@@ -318,7 +322,8 @@ fn compare_keys(public_key_bytes_a: &[u8], public_key_bytes_b: &[u8]) -> anyhow:
 }
 
 /// Computes a SHA-256 digest of `input` and returns it in a form of raw bytes.
-pub fn get_sha256(input: &[u8]) -> [u8; SHA256_HASH_LENGTH] {
+/// Returns the hash as a 32-bytes array.
+pub fn get_sha256(input: &[u8]) -> [u8; 32] {
     let mut hasher = Sha256::new();
     hasher.update(input);
     hasher.finalize().into()
