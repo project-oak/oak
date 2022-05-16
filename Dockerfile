@@ -28,6 +28,7 @@ RUN apt-get --yes update \
   git \
   gnupg2 \
   gnupg-agent \
+  libcap-dev \
   libfl2 \
   libncurses5 \
   libssl-dev \
@@ -254,6 +255,10 @@ RUN cargo install --git https://github.com/rust-fuzz/cargo-fuzz/ --rev 8c964bf18
 # https://github.com/bytecodealliance/wizer
 # The latest published version on crates.io is not compatible with recent nightly Rust.
 RUN cargo install --git https://github.com/bytecodealliance/wizer --rev 7c33b0bc2bd40ceb98727482be8fd8f115c6ced6 wizer --all-features
+
+# Install crosvm.
+# We're not interested in most of the features in crosvm (e.g. wayland support), but GDB support would be nice.
+RUN cargo install --git https://chromium.googlesource.com/chromiumos/platform/crosvm/ --rev df8201cfc6c9729ebe01f454f07f70e9781433f4 crosvm --no-default-features --features gdb
 
 # Where to install rust tooling
 ARG install_dir=${rustup_dir}/bin

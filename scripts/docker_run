@@ -42,6 +42,7 @@ docker_run_flags=(
   "--volume=$PWD/cargo-cache:/home/docker/.cargo"
   "--volume=$PWD/sccache-cache:/home/docker/.cache/sccache"
   "--volume=$PWD:/workspace"
+  '--volume=/dev/log:/dev/log'
   '--workdir=/workspace'
   '--network=host'
   # We need to use Docker from inside the container, but only for build.

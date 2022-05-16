@@ -4,7 +4,7 @@
 // - https://code.visualstudio.com/docs/remote/devcontainerjson-reference
 {
   // Do not modify manually. This value is automatically updated by ./scripts/docker_build .
-  "image": "sha256:99af98da89e8de7901189516ab2c764bb73ef7a3926f6511bcd722e0b72c3de7",
+  "image": "sha256:6074ea9f7c5fb76ae350d4be3a0f374f20fca4bae1cb5774ea8b215bb1fc4d1e",
   "extensions": [
     "bazelbuild.vscode-bazel",
     "bodil.prettier-toml",
@@ -13,6 +13,10 @@
     "matklad.rust-analyzer",
     "xaver.clang-format",
     "zxh404.vscode-proto3"
+  ],
+  "mounts" : [
+    // Crosvm wants access to syslog.
+    "source=/dev/log,target=/dev/log,type=bind"
   ],
   "settings": {
     // Use the `rust-analyzer` binary installed in the Docker image.
