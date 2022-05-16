@@ -1,1 +1,1 @@
-initSidebarItems({"fn":[["main",""]]});
+initSidebarItems({"fn":[["main",""]],"struct":[["Config","Runtime Configuration of Base Runtime."]]});

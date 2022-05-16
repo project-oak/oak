@@ -26,6 +26,126 @@
 <span id="21">21</span>
 <span id="22">22</span>
 <span id="23">23</span>
+<span id="24">24</span>
+<span id="25">25</span>
+<span id="26">26</span>
+<span id="27">27</span>
+<span id="28">28</span>
+<span id="29">29</span>
+<span id="30">30</span>
+<span id="31">31</span>
+<span id="32">32</span>
+<span id="33">33</span>
+<span id="34">34</span>
+<span id="35">35</span>
+<span id="36">36</span>
+<span id="37">37</span>
+<span id="38">38</span>
+<span id="39">39</span>
+<span id="40">40</span>
+<span id="41">41</span>
+<span id="42">42</span>
+<span id="43">43</span>
+<span id="44">44</span>
+<span id="45">45</span>
+<span id="46">46</span>
+<span id="47">47</span>
+<span id="48">48</span>
+<span id="49">49</span>
+<span id="50">50</span>
+<span id="51">51</span>
+<span id="52">52</span>
+<span id="53">53</span>
+<span id="54">54</span>
+<span id="55">55</span>
+<span id="56">56</span>
+<span id="57">57</span>
+<span id="58">58</span>
+<span id="59">59</span>
+<span id="60">60</span>
+<span id="61">61</span>
+<span id="62">62</span>
+<span id="63">63</span>
+<span id="64">64</span>
+<span id="65">65</span>
+<span id="66">66</span>
+<span id="67">67</span>
+<span id="68">68</span>
+<span id="69">69</span>
+<span id="70">70</span>
+<span id="71">71</span>
+<span id="72">72</span>
+<span id="73">73</span>
+<span id="74">74</span>
+<span id="75">75</span>
+<span id="76">76</span>
+<span id="77">77</span>
+<span id="78">78</span>
+<span id="79">79</span>
+<span id="80">80</span>
+<span id="81">81</span>
+<span id="82">82</span>
+<span id="83">83</span>
+<span id="84">84</span>
+<span id="85">85</span>
+<span id="86">86</span>
+<span id="87">87</span>
+<span id="88">88</span>
+<span id="89">89</span>
+<span id="90">90</span>
+<span id="91">91</span>
+<span id="92">92</span>
+<span id="93">93</span>
+<span id="94">94</span>
+<span id="95">95</span>
+<span id="96">96</span>
+<span id="97">97</span>
+<span id="98">98</span>
+<span id="99">99</span>
+<span id="100">100</span>
+<span id="101">101</span>
+<span id="102">102</span>
+<span id="103">103</span>
+<span id="104">104</span>
+<span id="105">105</span>
+<span id="106">106</span>
+<span id="107">107</span>
+<span id="108">108</span>
+<span id="109">109</span>
+<span id="110">110</span>
+<span id="111">111</span>
+<span id="112">112</span>
+<span id="113">113</span>
+<span id="114">114</span>
+<span id="115">115</span>
+<span id="116">116</span>
+<span id="117">117</span>
+<span id="118">118</span>
+<span id="119">119</span>
+<span id="120">120</span>
+<span id="121">121</span>
+<span id="122">122</span>
+<span id="123">123</span>
+<span id="124">124</span>
+<span id="125">125</span>
+<span id="126">126</span>
+<span id="127">127</span>
+<span id="128">128</span>
+<span id="129">129</span>
+<span id="130">130</span>
+<span id="131">131</span>
+<span id="132">132</span>
+<span id="133">133</span>
+<span id="134">134</span>
+<span id="135">135</span>
+<span id="136">136</span>
+<span id="137">137</span>
+<span id="138">138</span>
+<span id="139">139</span>
+<span id="140">140</span>
+<span id="141">141</span>
+<span id="142">142</span>
+<span id="143">143</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2022 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -46,8 +166,128 @@
 <span class="doccomment">//!</span>
 <span class="doccomment">//! Useful for testing and debugging, but not meant for production use.</span>
 
+<span class="kw">use</span> <span class="ident">anyhow::Context</span>;
+<span class="kw">use</span> <span class="ident">clap::Parser</span>;
+<span class="kw">use</span> <span class="ident">log::Level</span>;
+<span class="kw">use</span> <span class="ident">oak_functions_loader</span>::{
+    <span class="ident">logger::Logger</span>, <span class="ident">lookup_data::LookupDataAuth</span>, <span class="ident">server::Policy</span>, <span class="ident">Data</span>, <span class="ident">ExtensionConfigurationInfo</span>,
+    <span class="ident">LoadLookupDataConfig</span>, <span class="ident">Opt</span>,
+};
+<span class="kw">use</span> <span class="ident">oak_functions_metrics</span>::{<span class="ident">PrivateMetricsConfig</span>, <span class="ident">PrivateMetricsProxyFactory</span>};
+<span class="kw">use</span> <span class="ident">oak_functions_tf_inference</span>::{<span class="ident">read_model_from_path</span>, <span class="ident">TensorFlowFactory</span>, <span class="ident">TensorFlowModelConfig</span>};
+<span class="kw">use</span> <span class="ident">oak_logger::OakLogger</span>;
+<span class="kw">use</span> <span class="ident">serde_derive::Deserialize</span>;
+<span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">fs</span>, <span class="ident">time::Duration</span>};
+
+<span class="doccomment">/// Runtime Configuration of Unsafe Runtime.</span>
+<span class="doccomment">///</span>
+<span class="doccomment">/// This struct serves as a schema for a static TOML config file provided by</span>
+<span class="doccomment">/// application developers. In deployment, this static config file is typically</span>
+<span class="doccomment">/// bundled with the Oak Runtime binary. Config values captured in it serve</span>
+<span class="doccomment">/// as a type safe version of regular command line flags.</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Deserialize</span>, <span class="ident">Debug</span>)]</span>
+<span class="attribute">#[<span class="ident">serde</span>(<span class="ident">deny_unknown_fields</span>)]</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Config</span> {
+    <span class="doccomment">/// TODO(#2852): Combine the lookup data specific fields in one struct.</span>
+    <span class="doccomment">/// URL of a file containing key / value entries in protobuf binary format for lookup.</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// If empty or not provided, no data is available for lookup.</span>
+    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span>)]</span>
+    <span class="ident">lookup_data</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Data</span><span class="op">&gt;</span>,
+    <span class="doccomment">/// How often to refresh the lookup data.</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// If empty or not provided, data is only loaded once at startup.</span>
+    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span>, <span class="ident">with</span> <span class="op">=</span> <span class="string">&quot;humantime_serde&quot;</span>)]</span>
+    <span class="ident">lookup_data_download_period</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Duration</span><span class="op">&gt;</span>,
+    <span class="doccomment">/// Whether to use the GCP metadata service to obtain an authentication token for downloading</span>
+    <span class="doccomment">/// the lookup data.</span>
+    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span> <span class="op">=</span> <span class="string">&quot;LookupDataAuth::default&quot;</span>)]</span>
+    <span class="ident">lookup_data_auth</span>: <span class="ident">LookupDataAuth</span>,
+    <span class="doccomment">/// Number of worker threads available to the async runtime.</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// Defaults to 4 if unset.</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// Note that the CPU core detection logic does not seem to work reliably on Google Cloud Run,</span>
+    <span class="doccomment">/// so it is advisable to set this value to the number of cores available on the Cloud Run</span>
+    <span class="doccomment">/// instance.</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// See &lt;https://docs.rs/tokio/1.5.0/tokio/runtime/struct.Builder.html#method.worker_threads&gt;.</span>
+    <span class="ident">worker_threads</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span>,
+    <span class="doccomment">/// Security policy guaranteed by the server.</span>
+    <span class="ident">policy</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Policy</span><span class="op">&gt;</span>,
+    <span class="doccomment">/// Configuration for TensorFlow model</span>
+    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span>)]</span>
+    <span class="ident">tf_model</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">TensorFlowModelConfig</span><span class="op">&gt;</span>,
+    <span class="doccomment">/// Differentially private metrics configuration.</span>
+    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span>)]</span>
+    <span class="ident">metrics</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">PrivateMetricsConfig</span><span class="op">&gt;</span>,
+}
+
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">main</span>() -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-    <span class="ident">oak_functions_loader::lib_main</span>()
+    <span class="kw">let</span> <span class="ident">opt</span> <span class="op">=</span> <span class="ident">Opt::parse</span>();
+    <span class="kw">let</span> <span class="ident">config_file_bytes</span> <span class="op">=</span> <span class="ident">fs::read</span>(<span class="kw-2">&amp;</span><span class="ident">opt</span>.<span class="ident">config_path</span>)
+        .<span class="ident">with_context</span>(<span class="op">|</span><span class="op">|</span> <span class="macro">format!</span>(<span class="string">&quot;Couldn&#39;t read config file {}&quot;</span>, <span class="kw-2">&amp;</span><span class="ident">opt</span>.<span class="ident">config_path</span>))<span class="question-mark">?</span>;
+    <span class="kw">let</span> <span class="ident">config</span>: <span class="ident">Config</span> <span class="op">=</span>
+        <span class="ident">toml::from_slice</span>(<span class="kw-2">&amp;</span><span class="ident">config_file_bytes</span>).<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t parse config file&quot;</span>)<span class="question-mark">?</span>;
+    <span class="comment">// TODO(#1971): Make maximum log level configurable.</span>
+    <span class="kw">let</span> <span class="ident">logger</span> <span class="op">=</span> <span class="ident">Logger::default</span>();
+    <span class="ident">logger</span>.<span class="ident">log_public</span>(<span class="ident">Level::Info</span>, <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;parsed config file:\n{:#?}&quot;</span>, <span class="ident">config</span>));
+
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">extension_factories</span> <span class="op">=</span> <span class="macro">vec!</span>[];
+
+    <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">tf_model_config</span>) <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">config</span>.<span class="ident">tf_model</span> {
+        <span class="comment">// Load the TensorFlow model from the given path in the config</span>
+        <span class="kw">let</span> <span class="ident">model</span> <span class="op">=</span> <span class="ident">read_model_from_path</span>(<span class="kw-2">&amp;</span><span class="ident">tf_model_config</span>.<span class="ident">path</span>)<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">tf_model_factory</span> <span class="op">=</span> <span class="ident">TensorFlowFactory::new_boxed_extension_factory</span>(
+            <span class="ident">model</span>,
+            <span class="ident">tf_model_config</span>.<span class="ident">shape</span>.<span class="ident">clone</span>(),
+            <span class="ident">logger</span>.<span class="ident">clone</span>(),
+        )<span class="question-mark">?</span>;
+        <span class="ident">extension_factories</span>.<span class="ident">push</span>(<span class="ident">tf_model_factory</span>);
+        <span class="ident">logger</span>.<span class="ident">log_public</span>(<span class="ident">Level::Info</span>, <span class="string">&quot;Added TensorFlow extension.&quot;</span>);
+    }
+
+    <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">metrics_config</span>) <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">config</span>.<span class="ident">metrics</span> {
+        <span class="kw">let</span> <span class="ident">metrics_factory</span> <span class="op">=</span> <span class="ident">PrivateMetricsProxyFactory::new_boxed_extension_factory</span>(
+            <span class="ident">metrics_config</span>,
+            <span class="ident">logger</span>.<span class="ident">clone</span>(),
+        )<span class="question-mark">?</span>;
+        <span class="ident">extension_factories</span>.<span class="ident">push</span>(<span class="ident">metrics_factory</span>);
+        <span class="ident">logger</span>.<span class="ident">log_public</span>(<span class="ident">Level::Info</span>, <span class="string">&quot;Added Metrics extension.&quot;</span>);
+    }
+
+    <span class="kw">let</span> <span class="ident">extension_configuration_info</span> <span class="op">=</span> <span class="ident">get_extension_config_info</span>(<span class="kw-2">&amp;</span><span class="ident">config</span>)<span class="question-mark">?</span>;
+
+    <span class="ident">oak_functions_loader::lib_main</span>(
+        <span class="ident">opt</span>,
+        <span class="ident">logger</span>,
+        <span class="ident">LoadLookupDataConfig::new</span>(
+            <span class="ident">config</span>.<span class="ident">lookup_data</span>,
+            <span class="ident">config</span>.<span class="ident">lookup_data_download_period</span>,
+            <span class="ident">config</span>.<span class="ident">lookup_data_auth</span>,
+        ),
+        <span class="ident">config</span>.<span class="ident">worker_threads</span>,
+        <span class="ident">config</span>.<span class="ident">policy</span>,
+        <span class="ident">extension_factories</span>,
+        <span class="ident">extension_configuration_info</span>,
+    )
+}
+
+<span class="kw">fn</span> <span class="ident">get_extension_config_info</span>(<span class="ident">config</span>: <span class="kw-2">&amp;</span><span class="ident">Config</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">ExtensionConfigurationInfo</span><span class="op">&gt;</span> {
+    <span class="kw">let</span> <span class="ident">metrics</span> <span class="op">=</span> <span class="kw">match</span> <span class="kw-2">&amp;</span><span class="ident">config</span>.<span class="ident">metrics</span> {
+        <span class="prelude-val">Some</span>(<span class="kw-2">ref</span> <span class="ident">metrics_config</span>) =&gt; <span class="prelude-val">Some</span>(<span class="ident">oak_functions_abi::proto::PrivateMetricsConfig</span> {
+            <span class="ident">epsilon</span>: <span class="ident">metrics_config</span>.<span class="ident">epsilon</span>,
+            <span class="ident">batch_size</span>: <span class="ident">metrics_config</span>
+                .<span class="ident">batch_size</span>
+                .<span class="ident">try_into</span>()
+                .<span class="ident">context</span>(<span class="string">&quot;could not convert usize to u32&quot;</span>)<span class="question-mark">?</span>,
+        }),
+        <span class="prelude-val">None</span> =&gt; <span class="prelude-val">None</span>,
+    };
+
+    <span class="kw">let</span> <span class="ident">ml_inference</span> <span class="op">=</span> <span class="ident">config</span>.<span class="ident">tf_model</span>.<span class="ident">is_some</span>();
+
+    <span class="prelude-val">Ok</span>(<span class="ident">ExtensionConfigurationInfo::new</span>(<span class="ident">ml_inference</span>, <span class="ident">metrics</span>))
 }
 </code></pre></div>
 </section><section id="search" class="content hidden"></section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="oak_functions_loader_unsafe" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.62.0-nightly (de1bc0008 2022-04-21)" ></div>

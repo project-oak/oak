@@ -337,31 +337,6 @@
 <span id="332">332</span>
 <span id="333">333</span>
 <span id="334">334</span>
-<span id="335">335</span>
-<span id="336">336</span>
-<span id="337">337</span>
-<span id="338">338</span>
-<span id="339">339</span>
-<span id="340">340</span>
-<span id="341">341</span>
-<span id="342">342</span>
-<span id="343">343</span>
-<span id="344">344</span>
-<span id="345">345</span>
-<span id="346">346</span>
-<span id="347">347</span>
-<span id="348">348</span>
-<span id="349">349</span>
-<span id="350">350</span>
-<span id="351">351</span>
-<span id="352">352</span>
-<span id="353">353</span>
-<span id="354">354</span>
-<span id="355">355</span>
-<span id="356">356</span>
-<span id="357">357</span>
-<span id="358">358</span>
-<span id="359">359</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2021 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -396,15 +371,9 @@
 <span class="kw">use</span> <span class="ident">anyhow::Context</span>;
 <span class="kw">use</span> <span class="ident">clap::Parser</span>;
 <span class="kw">use</span> <span class="ident">log::Level</span>;
-<span class="kw">use</span> <span class="ident">oak_functions_abi::proto</span>::{<span class="ident">ConfigurationInfo</span>, <span class="ident">ServerPolicy</span>};
+<span class="kw">use</span> <span class="ident">oak_functions_abi::proto::ConfigurationInfo</span>;
 <span class="kw">use</span> <span class="ident">oak_functions_extension::ExtensionFactory</span>;
 <span class="kw">use</span> <span class="ident">oak_functions_lookup</span>::{<span class="ident">LookupDataManager</span>, <span class="ident">LookupFactory</span>};
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;oak-metrics&quot;</span>)]</span>
-<span class="kw">use</span> <span class="ident">oak_functions_metrics::PrivateMetricsConfig</span>;
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;oak-metrics&quot;</span>)]</span>
-<span class="kw">use</span> <span class="ident">oak_functions_metrics::PrivateMetricsProxyFactory</span>;
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;oak-tf&quot;</span>)]</span>
-<span class="kw">use</span> <span class="ident">oak_functions_tf_inference</span>::{<span class="ident">read_model_from_path</span>, <span class="ident">TensorFlowFactory</span>, <span class="ident">TensorFlowModelConfig</span>};
 <span class="kw">use</span> <span class="ident">oak_functions_workload_logging::WorkloadLoggingFactory</span>;
 <span class="kw">use</span> <span class="ident">oak_logger::OakLogger</span>;
 <span class="kw">use</span> <span class="ident">oak_remote_attestation::crypto::get_sha256</span>;
@@ -424,62 +393,6 @@
 
 <span class="comment">// Instantiate BoxedExtensionFactory with Logger from the Oak Functions runtime.</span>
 <span class="kw">pub</span> <span class="kw">type</span> <span class="ident">OakFunctionsBoxedExtensionFactory</span> <span class="op">=</span> <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">ExtensionFactory</span><span class="op">&lt;</span><span class="ident">Logger</span><span class="op">&gt;</span><span class="op">&gt;</span>;
-
-<span class="doccomment">/// Runtime Configuration of Runtime.</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// This struct serves as a schema for a static TOML config file provided by</span>
-<span class="doccomment">/// application developers. In deployment, this static config file is typically</span>
-<span class="doccomment">/// bundled with the Oak Runtime binary. Config values captured in it serve</span>
-<span class="doccomment">/// as a type safe version of regular command line flags.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Deserialize</span>, <span class="ident">Debug</span>)]</span>
-<span class="attribute">#[<span class="ident">serde</span>(<span class="ident">deny_unknown_fields</span>)]</span>
-<span class="kw">struct</span> <span class="ident">Config</span> {
-    <span class="doccomment">/// URL of a file containing key / value entries in protobuf binary format for lookup.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// If empty or not provided, no data is available for lookup.</span>
-    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span>)]</span>
-    <span class="ident">lookup_data</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Data</span><span class="op">&gt;</span>,
-    <span class="doccomment">/// How often to refresh the lookup data.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// If empty or not provided, data is only loaded once at startup.</span>
-    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span>, <span class="ident">with</span> <span class="op">=</span> <span class="string">&quot;humantime_serde&quot;</span>)]</span>
-    <span class="ident">lookup_data_download_period</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Duration</span><span class="op">&gt;</span>,
-    <span class="doccomment">/// Whether to use the GCP metadata service to obtain an authentication token for downloading</span>
-    <span class="doccomment">/// the lookup data.</span>
-    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span> <span class="op">=</span> <span class="string">&quot;LookupDataAuth::default&quot;</span>)]</span>
-    <span class="ident">lookup_data_auth</span>: <span class="ident">LookupDataAuth</span>,
-    <span class="doccomment">/// Number of worker threads available to the async runtime.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// Defaults to 4 if unset.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// Note that the CPU core detection logic does not seem to work reliably on Google Cloud Run,</span>
-    <span class="doccomment">/// so it is advisable to set this value to the number of cores available on the Cloud Run</span>
-    <span class="doccomment">/// instance.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// See &lt;https://docs.rs/tokio/1.5.0/tokio/runtime/struct.Builder.html#method.worker_threads&gt;.</span>
-    <span class="ident">worker_threads</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span>,
-    <span class="doccomment">/// Security policy guaranteed by the server.</span>
-    <span class="ident">policy</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Policy</span><span class="op">&gt;</span>,
-    <span class="doccomment">/// Configuration for TensorFlow model</span>
-    <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;oak-tf&quot;</span>)]</span>
-    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span>)]</span>
-    <span class="ident">tf_model</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">TensorFlowModelConfig</span><span class="op">&gt;</span>,
-    <span class="doccomment">/// Differentially private metrics configuration.</span>
-    <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;oak-metrics&quot;</span>)]</span>
-    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span>)]</span>
-    <span class="ident">metrics</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">PrivateMetricsConfig</span><span class="op">&gt;</span>,
-}
-
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Deserialize</span>, <span class="ident">Debug</span>)]</span>
-<span class="attribute">#[<span class="ident">serde</span>(<span class="ident">deny_unknown_fields</span>)]</span>
-<span class="kw">enum</span> <span class="ident">Data</span> {
-    <span class="doccomment">/// Download data file via HTTP GET.</span>
-    <span class="doccomment">/// Supported URL schemes: `http`, `https`.</span>
-    <span class="ident">Url</span>(<span class="ident">String</span>),
-    <span class="doccomment">/// Read data file from the local file system.</span>
-    <span class="doccomment">/// File path is relative to the current `$PWD` (*not* relative to the config file).</span>
-    <span class="ident">File</span>(<span class="ident">String</span>),
-}
 
 <span class="doccomment">/// Command line options for the Oak loader.</span>
 <span class="doccomment">///</span>
@@ -503,7 +416,7 @@
         <span class="ident">long</span>,
         <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;Path to a file containing configuration parameters in TOML format.&quot;</span>
     )]</span>
-    <span class="ident">config_path</span>: <span class="ident">String</span>,
+    <span class="kw">pub</span> <span class="ident">config_path</span>: <span class="ident">String</span>,
 }
 
 <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">background_refresh_lookup_data</span>(
@@ -528,66 +441,80 @@
 
 <span class="doccomment">/// This crate is just a library so this function does not get executed directly by anything, it</span>
 <span class="doccomment">/// needs to be wrapped in the &quot;actual&quot; `main` from a bin crate.</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">lib_main</span>() -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-    <span class="kw">let</span> <span class="ident">opt</span> <span class="op">=</span> <span class="ident">Opt::parse</span>();
-    <span class="kw">let</span> <span class="ident">config_file_bytes</span> <span class="op">=</span> <span class="ident">fs::read</span>(<span class="kw-2">&amp;</span><span class="ident">opt</span>.<span class="ident">config_path</span>)
-        .<span class="ident">with_context</span>(<span class="op">|</span><span class="op">|</span> <span class="macro">format!</span>(<span class="string">&quot;Couldn&#39;t read config file {}&quot;</span>, <span class="kw-2">&amp;</span><span class="ident">opt</span>.<span class="ident">config_path</span>))<span class="question-mark">?</span>;
-    <span class="kw">let</span> <span class="ident">config</span>: <span class="ident">Config</span> <span class="op">=</span>
-        <span class="ident">toml::from_slice</span>(<span class="kw-2">&amp;</span><span class="ident">config_file_bytes</span>).<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t parse config file&quot;</span>)<span class="question-mark">?</span>;
-    <span class="comment">// TODO(#1971): Make maximum log level configurable.</span>
-    <span class="kw">let</span> <span class="ident">logger</span> <span class="op">=</span> <span class="ident">Logger::default</span>();
-    <span class="ident">logger</span>.<span class="ident">log_public</span>(<span class="ident">Level::Info</span>, <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;parsed config file:\n{:#?}&quot;</span>, <span class="ident">config</span>));
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">lib_main</span>(
+    <span class="ident">opt</span>: <span class="ident">Opt</span>,
+    <span class="ident">logger</span>: <span class="ident">Logger</span>,
+    <span class="ident">load_lookup_data_config</span>: <span class="ident">LoadLookupDataConfig</span>,
+    <span class="ident">worker_threads</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span>,
+    <span class="ident">policy</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Policy</span><span class="op">&gt;</span>,
+    <span class="ident">extension_factories</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">ExtensionFactory</span><span class="op">&lt;</span><span class="ident">Logger</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+    <span class="ident">extension_configuration_info</span>: <span class="ident">ExtensionConfigurationInfo</span>,
+) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
     <span class="ident">tokio::runtime::Builder::new_multi_thread</span>()
-        .<span class="ident">worker_threads</span>(<span class="ident">config</span>.<span class="ident">worker_threads</span>.<span class="ident">unwrap_or</span>(<span class="number">4</span>))
+        .<span class="ident">worker_threads</span>(<span class="ident">worker_threads</span>.<span class="ident">unwrap_or</span>(<span class="number">4</span>))
         .<span class="ident">enable_all</span>()
         .<span class="ident">build</span>()
         .<span class="ident">unwrap</span>()
-        .<span class="ident">block_on</span>(<span class="ident">async_main</span>(<span class="ident">opt</span>, <span class="ident">config</span>, <span class="ident">logger</span>))
+        .<span class="ident">block_on</span>(<span class="ident">async_main</span>(
+            <span class="ident">opt</span>,
+            <span class="ident">logger</span>,
+            <span class="ident">load_lookup_data_config</span>,
+            <span class="ident">policy</span>,
+            <span class="ident">extension_factories</span>,
+            <span class="ident">extension_configuration_info</span>,
+        ))
+}
+
+<span class="doccomment">/// Workaround to pass values for ConfigurationInfo from Config.</span>
+<span class="doccomment">/// TODO(#2851): Refactor to remove `ExtensionConfigurationInfo`.</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">ExtensionConfigurationInfo</span> {
+    <span class="ident">ml_inference</span>: <span class="ident">bool</span>,
+    <span class="ident">metrics</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">oak_functions_abi::proto::PrivateMetricsConfig</span><span class="op">&gt;</span>,
+}
+
+<span class="kw">impl</span> <span class="ident">ExtensionConfigurationInfo</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(
+        <span class="ident">ml_inference</span>: <span class="ident">bool</span>,
+        <span class="ident">metrics</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">oak_functions_abi::proto::PrivateMetricsConfig</span><span class="op">&gt;</span>,
+    ) -&gt; <span class="self">Self</span> {
+        <span class="ident">ExtensionConfigurationInfo</span> {
+            <span class="ident">ml_inference</span>,
+            <span class="ident">metrics</span>,
+        }
+    }
+
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">base</span>() -&gt; <span class="ident">ExtensionConfigurationInfo</span> {
+        <span class="ident">ExtensionConfigurationInfo</span> {
+            <span class="ident">ml_inference</span>: <span class="bool-val">false</span>,
+            <span class="ident">metrics</span>: <span class="prelude-val">None</span>,
+        }
+    }
 }
 
 <span class="doccomment">/// Main execution point for the Oak Functions Loader.</span>
-<span class="kw">async</span> <span class="kw">fn</span> <span class="ident">async_main</span>(<span class="ident">opt</span>: <span class="ident">Opt</span>, <span class="ident">config</span>: <span class="ident">Config</span>, <span class="ident">logger</span>: <span class="ident">Logger</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+<span class="kw">async</span> <span class="kw">fn</span> <span class="ident">async_main</span>(
+    <span class="ident">opt</span>: <span class="ident">Opt</span>,
+    <span class="ident">logger</span>: <span class="ident">Logger</span>,
+    <span class="ident">load_lookup_data_config</span>: <span class="ident">LoadLookupDataConfig</span>,
+    <span class="ident">policy</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Policy</span><span class="op">&gt;</span>,
+    <span class="ident">extension_factories</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">ExtensionFactory</span><span class="op">&lt;</span><span class="ident">Logger</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+    <span class="ident">extension_configuration_info</span>: <span class="ident">ExtensionConfigurationInfo</span>,
+) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
     <span class="kw">let</span> (<span class="ident">notify_sender</span>, <span class="ident">notify_receiver</span>) <span class="op">=</span> <span class="ident">tokio::sync::oneshot::channel</span>::<span class="op">&lt;</span>()<span class="op">&gt;</span>();
-
-    <span class="kw">let</span> <span class="ident">lookup_data_manager</span> <span class="op">=</span> <span class="ident">load_lookup_data</span>(<span class="kw-2">&amp;</span><span class="ident">config</span>, <span class="ident">logger</span>.<span class="ident">clone</span>()).<span class="kw">await</span><span class="question-mark">?</span>;
-
-    <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">unused_mut</span>)]</span>
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">extensions</span> <span class="op">=</span> <span class="ident">Vec::new</span>();
-
-    <span class="kw">let</span> <span class="ident">workload_logging_factory</span> <span class="op">=</span>
-        <span class="ident">WorkloadLoggingFactory::new_boxed_extension_factory</span>(<span class="ident">logger</span>.<span class="ident">clone</span>())<span class="question-mark">?</span>;
-    <span class="ident">extensions</span>.<span class="ident">push</span>(<span class="ident">workload_logging_factory</span>);
-
-    <span class="kw">let</span> <span class="ident">lookup_factory</span> <span class="op">=</span> <span class="ident">LookupFactory::new_boxed_extension_factory</span>(<span class="ident">lookup_data_manager</span>)<span class="question-mark">?</span>;
-    <span class="ident">extensions</span>.<span class="ident">push</span>(<span class="ident">lookup_factory</span>);
-
-    <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;oak-tf&quot;</span>)]</span>
-    <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">tf_model_config</span>) <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">config</span>.<span class="ident">tf_model</span> {
-        <span class="comment">// Load the TensorFlow model from the given path in the config</span>
-        <span class="kw">let</span> <span class="ident">model</span> <span class="op">=</span> <span class="ident">read_model_from_path</span>(<span class="kw-2">&amp;</span><span class="ident">tf_model_config</span>.<span class="ident">path</span>)<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">tf_model_factory</span> <span class="op">=</span> <span class="ident">TensorFlowFactory::new_boxed_extension_factory</span>(
-            <span class="ident">model</span>,
-            <span class="ident">tf_model_config</span>.<span class="ident">shape</span>.<span class="ident">clone</span>(),
-            <span class="ident">logger</span>.<span class="ident">clone</span>(),
-        )<span class="question-mark">?</span>;
-        <span class="ident">extensions</span>.<span class="ident">push</span>(<span class="ident">tf_model_factory</span>);
-    }
-
-    <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;oak-metrics&quot;</span>)]</span>
-    <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">metrics_config</span>) <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">config</span>.<span class="ident">metrics</span> {
-        <span class="kw">let</span> <span class="ident">metrics_factory</span> <span class="op">=</span> <span class="ident">PrivateMetricsProxyFactory::new_boxed_extension_factory</span>(
-            <span class="ident">metrics_config</span>,
-            <span class="ident">logger</span>.<span class="ident">clone</span>(),
-        )<span class="question-mark">?</span>;
-        <span class="ident">extensions</span>.<span class="ident">push</span>(<span class="ident">metrics_factory</span>);
-    }
 
     <span class="kw">let</span> <span class="ident">wasm_module_bytes</span> <span class="op">=</span> <span class="ident">fs::read</span>(<span class="kw-2">&amp;</span><span class="ident">opt</span>.<span class="ident">wasm_path</span>)
         .<span class="ident">with_context</span>(<span class="op">|</span><span class="op">|</span> <span class="macro">format!</span>(<span class="string">&quot;Couldn&#39;t read Wasm file {}&quot;</span>, <span class="kw-2">&amp;</span><span class="ident">opt</span>.<span class="ident">wasm_path</span>))<span class="question-mark">?</span>;
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">extensions</span> <span class="op">=</span>
+        <span class="ident">create_base_extension_factories</span>(<span class="ident">load_lookup_data_config</span>, <span class="ident">logger</span>.<span class="ident">clone</span>()).<span class="kw">await</span><span class="question-mark">?</span>;
+
+    <span class="kw">for</span> <span class="ident">extension_factory</span> <span class="kw">in</span> <span class="ident">extension_factories</span> {
+        <span class="ident">extensions</span>.<span class="ident">push</span>(<span class="ident">extension_factory</span>);
+    }
+
+    <span class="kw">let</span> <span class="ident">wasm_handler</span> <span class="op">=</span> <span class="ident">create_wasm_handler</span>(<span class="kw-2">&amp;</span><span class="ident">wasm_module_bytes</span>, <span class="ident">extensions</span>, <span class="ident">logger</span>.<span class="ident">clone</span>())<span class="question-mark">?</span>;
 
     <span class="comment">// Make sure that a policy is specified and is valid.</span>
-    <span class="kw">let</span> <span class="ident">policy</span> <span class="op">=</span> <span class="ident">config</span>
-        .<span class="ident">policy</span>
+    <span class="kw">let</span> <span class="ident">policy</span> <span class="op">=</span> <span class="ident">policy</span>
         .<span class="ident">as_ref</span>()
         .<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;a valid policy must be provided&quot;</span>))
         .<span class="ident">and_then</span>(<span class="op">|</span><span class="ident">policy</span><span class="op">|</span> <span class="ident">policy</span>.<span class="ident">validate</span>())<span class="question-mark">?</span>;
@@ -595,9 +522,12 @@
     <span class="kw">let</span> <span class="ident">address</span> <span class="op">=</span> <span class="ident">SocketAddr::from</span>((<span class="ident">Ipv6Addr::UNSPECIFIED</span>, <span class="ident">opt</span>.<span class="ident">http_listen_port</span>));
     <span class="kw">let</span> <span class="ident">tee_certificate</span> <span class="op">=</span> <span class="macro">vec!</span>[];
 
-    <span class="kw">let</span> <span class="ident">wasm_handler</span> <span class="op">=</span> <span class="ident">create_wasm_handler</span>(<span class="kw-2">&amp;</span><span class="ident">wasm_module_bytes</span>, <span class="ident">extensions</span>, <span class="ident">logger</span>.<span class="ident">clone</span>())<span class="question-mark">?</span>;
-
-    <span class="kw">let</span> <span class="ident">config_info</span> <span class="op">=</span> <span class="ident">get_config_info</span>(<span class="kw-2">&amp;</span><span class="ident">wasm_module_bytes</span>, <span class="ident">policy</span>.<span class="ident">clone</span>(), <span class="kw-2">&amp;</span><span class="ident">config</span>)<span class="question-mark">?</span>;
+    <span class="kw">let</span> <span class="ident">config_info</span> <span class="op">=</span> <span class="ident">ConfigurationInfo</span> {
+        <span class="ident">wasm_hash</span>: <span class="ident">get_sha256</span>(<span class="kw-2">&amp;</span><span class="ident">wasm_module_bytes</span>).<span class="ident">to_vec</span>(),
+        <span class="ident">policy</span>: <span class="prelude-val">Some</span>(<span class="ident">policy</span>.<span class="ident">clone</span>()),
+        <span class="ident">ml_inference</span>: <span class="ident">extension_configuration_info</span>.<span class="ident">ml_inference</span>,
+        <span class="ident">metrics</span>: <span class="ident">extension_configuration_info</span>.<span class="ident">metrics</span>,
+    };
 
     <span class="comment">// Start server.</span>
     <span class="kw">let</span> <span class="ident">server_handle</span> <span class="op">=</span> <span class="ident">tokio::spawn</span>(<span class="kw">async</span> <span class="kw">move</span> {
@@ -638,10 +568,44 @@
         .<span class="ident">context</span>(<span class="string">&quot;error while waiting for the server to terminate&quot;</span>)<span class="question-mark">?</span>
 }
 
-<span class="kw">async</span> <span class="kw">fn</span> <span class="ident">load_lookup_data</span>(
-    <span class="ident">config</span>: <span class="kw-2">&amp;</span><span class="ident">Config</span>,
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Deserialize</span>, <span class="ident">Debug</span>)]</span>
+<span class="attribute">#[<span class="ident">serde</span>(<span class="ident">deny_unknown_fields</span>)]</span>
+<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">Data</span> {
+    <span class="doccomment">/// Download data file via HTTP GET.</span>
+    <span class="doccomment">/// Supported URL schemes: `http`, `https`.</span>
+    <span class="ident">Url</span>(<span class="ident">String</span>),
+    <span class="doccomment">/// Read data file from the local file system.</span>
+    <span class="doccomment">/// File path is relative to the current `$PWD` (*not* relative to the config file).</span>
+    <span class="ident">File</span>(<span class="ident">String</span>),
+}
+
+<span class="doccomment">/// Configuration to load the LookupData.</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">LoadLookupDataConfig</span> {
+    <span class="ident">lookup_data</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Data</span><span class="op">&gt;</span>,
+    <span class="ident">lookup_data_download_period</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Duration</span><span class="op">&gt;</span>,
+    <span class="ident">lookup_data_auth</span>: <span class="ident">LookupDataAuth</span>,
+}
+
+<span class="kw">impl</span> <span class="ident">LoadLookupDataConfig</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(
+        <span class="ident">lookup_data</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Data</span><span class="op">&gt;</span>,
+        <span class="ident">lookup_data_download_period</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Duration</span><span class="op">&gt;</span>,
+        <span class="ident">lookup_data_auth</span>: <span class="ident">LookupDataAuth</span>,
+    ) -&gt; <span class="ident">LoadLookupDataConfig</span> {
+        <span class="ident">LoadLookupDataConfig</span> {
+            <span class="ident">lookup_data</span>,
+            <span class="ident">lookup_data_download_period</span>,
+            <span class="ident">lookup_data_auth</span>,
+        }
+    }
+}
+
+<span class="doccomment">/// Creates LookupDataManager and sets up LookupDataRefresher.</span>
+<span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">load_lookup_data</span>(
+    <span class="ident">config</span>: <span class="ident">LoadLookupDataConfig</span>,
     <span class="ident">logger</span>: <span class="ident">Logger</span>,
 ) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">LookupDataManager</span><span class="op">&lt;</span><span class="ident">Logger</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+    <span class="comment">// Allow lookup data to be loaded by an untrusted launcher.</span>
     <span class="kw">let</span> <span class="ident">lookup_data_source</span> <span class="op">=</span> <span class="kw">match</span> <span class="kw-2">&amp;</span><span class="ident">config</span>.<span class="ident">lookup_data</span> {
         <span class="prelude-val">Some</span>(<span class="ident">lookup_data</span>) =&gt; <span class="kw">match</span> <span class="kw-2">&amp;</span><span class="ident">lookup_data</span> {
             <span class="ident">Data::Url</span>(<span class="ident">url_string</span>) =&gt; {
@@ -689,37 +653,23 @@
     <span class="prelude-val">Ok</span>(<span class="ident">lookup_data_manager</span>)
 }
 
-<span class="attribute">#[<span class="ident">allow</span>(<span class="ident">unused_variables</span>)]</span>
-<span class="kw">fn</span> <span class="ident">get_config_info</span>(
-    <span class="ident">wasm_module_bytes</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>],
-    <span class="ident">policy</span>: <span class="ident">ServerPolicy</span>,
-    <span class="ident">config</span>: <span class="kw-2">&amp;</span><span class="ident">Config</span>,
-) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">ConfigurationInfo</span><span class="op">&gt;</span> {
-    <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;oak-metrics&quot;</span>)]</span>
-    <span class="kw">let</span> <span class="ident">metrics</span> <span class="op">=</span> <span class="kw">match</span> <span class="kw-2">&amp;</span><span class="ident">config</span>.<span class="ident">metrics</span> {
-        <span class="prelude-val">Some</span>(<span class="kw-2">ref</span> <span class="ident">metrics_config</span>) =&gt; <span class="prelude-val">Some</span>(<span class="ident">oak_functions_abi::proto::PrivateMetricsConfig</span> {
-            <span class="ident">epsilon</span>: <span class="ident">metrics_config</span>.<span class="ident">epsilon</span>,
-            <span class="ident">batch_size</span>: <span class="ident">metrics_config</span>
-                .<span class="ident">batch_size</span>
-                .<span class="ident">try_into</span>()
-                .<span class="ident">context</span>(<span class="string">&quot;could not convert usize to u32&quot;</span>)<span class="question-mark">?</span>,
-        }),
-        <span class="prelude-val">None</span> =&gt; <span class="prelude-val">None</span>,
-    };
-    <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">not</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;oak-metrics&quot;</span>))]</span>
-    <span class="kw">let</span> <span class="ident">metrics</span> <span class="op">=</span> <span class="prelude-val">None</span>;
+<span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">create_base_extension_factories</span>(
+    <span class="ident">load_lookup_data_config</span>: <span class="ident">LoadLookupDataConfig</span>,
+    <span class="ident">logger</span>: <span class="ident">Logger</span>,
+) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">ExtensionFactory</span><span class="op">&lt;</span><span class="ident">Logger</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">extensions</span> <span class="op">=</span> <span class="ident">Vec::new</span>();
 
-    <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;oak-tf&quot;</span>)]</span>
-    <span class="kw">let</span> <span class="ident">ml_inference</span> <span class="op">=</span> <span class="ident">config</span>.<span class="ident">tf_model</span>.<span class="ident">is_some</span>();
-    <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">not</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;oak-tf&quot;</span>))]</span>
-    <span class="kw">let</span> <span class="ident">ml_inference</span> <span class="op">=</span> <span class="bool-val">false</span>;
+    <span class="comment">// For Base we add the Logging extension factory</span>
+    <span class="kw">let</span> <span class="ident">workload_logging_factory</span> <span class="op">=</span>
+        <span class="ident">WorkloadLoggingFactory::new_boxed_extension_factory</span>(<span class="ident">logger</span>.<span class="ident">clone</span>())<span class="question-mark">?</span>;
+    <span class="ident">extensions</span>.<span class="ident">push</span>(<span class="ident">workload_logging_factory</span>);
 
-    <span class="prelude-val">Ok</span>(<span class="ident">ConfigurationInfo</span> {
-        <span class="ident">wasm_hash</span>: <span class="ident">get_sha256</span>(<span class="ident">wasm_module_bytes</span>).<span class="ident">to_vec</span>(),
-        <span class="ident">policy</span>: <span class="prelude-val">Some</span>(<span class="ident">policy</span>),
-        <span class="ident">ml_inference</span>,
-        <span class="ident">metrics</span>,
-    })
+    <span class="comment">// For Base we add the Lookup extension factory</span>
+    <span class="kw">let</span> <span class="ident">lookup_data_manager</span> <span class="op">=</span> <span class="ident">load_lookup_data</span>(<span class="ident">load_lookup_data_config</span>, <span class="ident">logger</span>.<span class="ident">clone</span>()).<span class="kw">await</span><span class="question-mark">?</span>;
+    <span class="kw">let</span> <span class="ident">lookup_factory</span> <span class="op">=</span> <span class="ident">LookupFactory::new_boxed_extension_factory</span>(<span class="ident">lookup_data_manager</span>)<span class="question-mark">?</span>;
+    <span class="ident">extensions</span>.<span class="ident">push</span>(<span class="ident">lookup_factory</span>);
+
+    <span class="prelude-val">Ok</span>(<span class="ident">extensions</span>)
 }
 </code></pre></div>
 </section><section id="search" class="content hidden"></section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="oak_functions_loader" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.62.0-nightly (de1bc0008 2022-04-21)" ></div>

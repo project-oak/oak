@@ -1,1 +1,1 @@
-initSidebarItems({"fn":[["main",""]]});
+initSidebarItems({"fn":[["get_extension_config_info",""],["main",""]],"struct":[["Config","Runtime Configuration of Unsafe Runtime."]]});
