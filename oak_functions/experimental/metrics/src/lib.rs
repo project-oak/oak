@@ -67,10 +67,15 @@ where
 
 impl<L: OakLogger> OakApiNativeExtension for PrivateMetricsExtension<L> {
     fn invoke(&mut self, request: Vec<u8>) -> Result<Vec<u8>, OakStatus> {
+        let request: ReportMetricRequest = bincode::deserialize(&request).map_err(|err| {
+            self.log_debug(&format!("Failed to deserialize request: {}", err));
+            OakStatus::ErrSerializing
+        })?;
+
         let result = self.report_metric(request);
         let response = bincode::serialize(&ReportMetricResponse { result }).map_err(|err| {
             self.log_debug(&format!("Failed to serialize response: {}", err));
-            OakStatus::ErrInternal
+            OakStatus::ErrSerializing
         })?;
         Ok(response)
     }
@@ -298,12 +303,10 @@ where
         }
     }
 
-    pub fn report_metric(&mut self, request: Vec<u8>) -> anyhow::Result<(), ReportMetricError> {
-        let request: ReportMetricRequest = bincode::deserialize(&request).map_err(|err| {
-            self.log_debug(&format!("Failed to deserialize request: {}", err));
-            ReportMetricError::DeOrSerializingFailed
-        })?;
-
+    pub fn report_metric(
+        &mut self,
+        request: ReportMetricRequest,
+    ) -> anyhow::Result<(), ReportMetricError> {
         self.log_debug(&format!("report_metric(): {}", &request.label));
 
         if let Some(metrics_proxy) = self.metrics_proxy.as_mut() {

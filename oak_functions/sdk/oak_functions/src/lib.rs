@@ -19,8 +19,8 @@
 
 use oak_functions_abi::{
     proto::{Inference, OakStatus},
-    ReportMetricError, ReportMetricRequest, ReportMetricResponse, StorageGetItemResponse,
-    TfModelInferError, TfModelInferResponse,
+    ReportMetricError, ReportMetricRequest, StorageGetItemResponse, TfModelInferError,
+    TfModelInferResponse,
 };
 use std::convert::AsRef;
 
@@ -90,26 +90,23 @@ pub fn report_metric<T: AsRef<str>>(
     let label = label.as_ref().to_owned();
     let request = ReportMetricRequest { label, value };
 
-    let response = match bincode::serialize(&request) {
-        Ok(serialized_request) => invoke(
-            oak_functions_abi::ExtensionHandle::MetricsHandle,
-            &serialized_request,
-        ),
-        Err(err) => {
-            log!("Failed to serialize request: {}", err);
-            return Ok(Err(ReportMetricError::DeOrSerializingFailed));
-        }
-    }?;
+    let serialized_request = bincode::serialize(&request).map_err(|err| {
+        log!("Failed to serialize request: {}", err);
+        OakStatus::ErrSerializing
+    })?;
 
-    let response: Result<ReportMetricResponse, _> = bincode::deserialize(&response);
-    let result = match response {
-        Ok(response) => response.result,
-        Err(err) => {
+    let serialized_response = invoke(
+        oak_functions_abi::ExtensionHandle::MetricsHandle,
+        &serialized_request,
+    )?;
+
+    let response: Result<(), ReportMetricError> = bincode::deserialize(&serialized_response)
+        .map_err(|err| {
             log!("Failed to deserialize response: {}", err);
-            Err(ReportMetricError::DeOrSerializingFailed)
-        }
-    };
-    Ok(result)
+            OakStatus::ErrSerializing
+        })?;
+
+    Ok(response)
 }
 
 /// Writes a debug log message.
