@@ -1,0 +1,79 @@
+// Generated file, do not edit.
+
+pub struct OakClient<T: oak_idl::Transport> {
+    transport: T
+}
+
+impl <T: oak_idl::Transport>OakClient<T> {
+    pub fn new(transport: T) -> Self {
+        Self {
+            transport
+        }
+    }
+    pub fn lookup_data(&mut self, req: &[u8]) -> Result<oak_idl::Message<LookupDataResponse>, oak_idl::ClientError> {
+        flatbuffers::root::<LookupDataRequest>(req).unwrap();
+        let request_message = oak_idl::TransportMessage {
+            header: oak_idl::Header {
+                transaction_id: 0,
+                method_id: 222,
+            },
+            body: req.to_vec(),
+        };
+        let response_message = self.transport.invoke(request_message)?;
+        oak_idl::Message::from_vec(response_message.body).map_err(|_err| oak_idl::ClientError::InvalidResponse)
+    }
+    pub fn log(&mut self, req: &[u8]) -> Result<oak_idl::Message<LogResponse>, oak_idl::ClientError> {
+        flatbuffers::root::<LogRequest>(req).unwrap();
+        let request_message = oak_idl::TransportMessage {
+            header: oak_idl::Header {
+                transaction_id: 0,
+                method_id: 223,
+            },
+            body: req.to_vec(),
+        };
+        let response_message = self.transport.invoke(request_message)?;
+        oak_idl::Message::from_vec(response_message.body).map_err(|_err| oak_idl::ClientError::InvalidResponse)
+    }
+}
+
+pub struct OakServer<S> {
+    service: S
+}
+
+impl <S: Oak> oak_idl::Transport for OakServer<S> {
+    fn invoke(&mut self, request_message: oak_idl::TransportMessage) -> Result<oak_idl::TransportMessage, oak_idl::TransportError> {
+        let response_header = oak_idl::Header {
+            transaction_id: request_message.header.transaction_id,
+            method_id: request_message.header.method_id,
+        };
+        match request_message.header.method_id {
+            222 => {
+                let request = flatbuffers::root::<LookupDataRequest>(&request_message.body).unwrap();
+                let response = self.service.lookup_data(&request);
+                let response_body = response.buf().to_vec();
+                Ok(oak_idl::TransportMessage {
+                    header: response_header,
+                    body: response_body,
+                })
+            }
+            223 => {
+                let request = flatbuffers::root::<LogRequest>(&request_message.body).unwrap();
+                let response = self.service.log(&request);
+                let response_body = response.buf().to_vec();
+                Ok(oak_idl::TransportMessage {
+                    header: response_header,
+                    body: response_body,
+                })
+            }
+            _ => Err(oak_idl::TransportError::InvalidMethodId)
+        }
+    }
+}
+
+pub trait Oak: Sized {
+    fn lookup_data(&self, request: &LookupDataRequest) -> oak_idl::Message<LookupDataResponse>;
+    fn log(&self, request: &LogRequest) -> oak_idl::Message<LogResponse>;
+    fn serve(self) -> OakServer<Self> {
+        OakServer { service : self }
+    }
+}

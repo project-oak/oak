@@ -1,0 +1,16 @@
+[package]
+name = "oak_idl_tests"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+
+[dependencies]
+
+[dev-dependencies]
+flatbuffers = "*"
+maplit = "*"
+oak_idl = { path = "../oak_idl" }
+
+[build-dependencies]
+oak_idl_gen_services = { path = "../oak_idl_gen_services" }
+oak_idl_gen_structs = { path = "../oak_idl_gen_structs" }

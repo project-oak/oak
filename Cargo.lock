@@ -801,6 +801,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e4c78c047431fee22c1a7bb92e00ad095a02a983affe4d8a72e2a2c62c1b94f3"
 
 [[package]]
+name = "convert_case"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fb4a24b1aaf0fd0ce8b45161144d6f42cd91677fd5940fd431183eb023b3a2b8"
+
+[[package]]
 name = "core-foundation"
 version = "0.9.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1493,6 +1499,17 @@ name = "fixedbitset"
 version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "279fb028e20b3c4c320317955b77c5e0c9701f05a1d309905d6fc702cdc5053e"
+
+[[package]]
+name = "flatbuffers"
+version = "2.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "86b428b715fdbdd1c364b84573b5fdc0f84f8e423661b9f398735278bc7f2b6a"
+dependencies = [
+ "bitflags",
+ "smallvec",
+ "thiserror",
+]
 
 [[package]]
 name = "flate2"
@@ -2790,7 +2807,6 @@ dependencies = [
  "prost 0.10.3",
  "serde",
  "serde_derive",
- "serde_json",
  "test_utils",
  "tokio",
 ]
@@ -3099,9 +3115,33 @@ name = "oak_idl"
 version = "0.1.0"
 dependencies = [
  "bincode",
- "maplit",
- "paste",
+ "flatbuffers",
  "serde",
+]
+
+[[package]]
+name = "oak_idl_gen_services"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "convert_case",
+ "flatbuffers",
+ "oak_idl_gen_structs",
+]
+
+[[package]]
+name = "oak_idl_gen_structs"
+version = "0.1.0"
+
+[[package]]
+name = "oak_idl_tests"
+version = "0.1.0"
+dependencies = [
+ "flatbuffers",
+ "maplit",
+ "oak_idl",
+ "oak_idl_gen_services",
+ "oak_idl_gen_structs",
 ]
 
 [[package]]

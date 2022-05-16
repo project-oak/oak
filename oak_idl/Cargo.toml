@@ -6,8 +6,5 @@ license = "Apache-2.0"
 
 [dependencies]
 bincode = "*"
-paste = "*"
+flatbuffers = "*"
 serde = { version = "*", features = ["derive"] }
-
-[dev-dependencies]
-maplit = "*"
