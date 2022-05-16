@@ -9,4 +9,4 @@ license = "Apache-2.0"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-oak_functions = { path = "../../../oak_functions", features = ["oak-metrics"] }
+oak_functions = { path = "../../../oak_functions" }

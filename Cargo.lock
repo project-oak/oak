@@ -2884,8 +2884,6 @@ dependencies = [
  "oak_functions_abi",
  "oak_functions_extension",
  "oak_functions_lookup",
- "oak_functions_metrics",
- "oak_functions_tf_inference",
  "oak_functions_util",
  "oak_functions_wasm",
  "oak_functions_workload_logging",
@@ -2901,7 +2899,6 @@ dependencies = [
  "tempfile",
  "test_utils",
  "tokio",
- "toml",
  "tonic",
  "tonic-web",
  "url",
@@ -2913,7 +2910,16 @@ name = "oak_functions_loader_base"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "clap 3.1.18",
+ "humantime-serde",
+ "log",
+ "oak_functions_extension",
  "oak_functions_loader",
+ "oak_logger",
+ "serde",
+ "serde_derive",
+ "serde_json",
+ "toml",
 ]
 
 [[package]]
@@ -2921,7 +2927,19 @@ name = "oak_functions_loader_unsafe"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "clap 3.1.18",
+ "humantime-serde",
+ "log",
+ "oak_functions_abi",
+ "oak_functions_extension",
  "oak_functions_loader",
+ "oak_functions_metrics",
+ "oak_functions_tf_inference",
+ "oak_logger",
+ "serde",
+ "serde_derive",
+ "serde_json",
+ "toml",
 ]
 
 [[package]]
@@ -6386,18 +6404,18 @@ dependencies = [
 
 [[package]]
 name = "zstd"
-version = "0.10.0+zstd.1.5.2"
+version = "0.10.2+zstd.1.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3b1365becbe415f3f0fcd024e2f7b45bacfb5bdd055f0dc113571394114e7bdd"
+checksum = "5f4a6bd64f22b5e3e94b4e238669ff9f10815c27a5180108b849d24174a83847"
 dependencies = [
  "zstd-safe",
 ]
 
 [[package]]
 name = "zstd-safe"
-version = "4.1.4+zstd.1.5.2"
+version = "4.1.6+zstd.1.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2f7cd17c9af1a4d6c24beb1cc54b17e2ef7b593dc92f19e9d9acad8b182bbaee"
+checksum = "94b61c51bb270702d6167b8ce67340d2754b088d0c091b06e593aa772c3ee9bb"
 dependencies = [
  "libc",
  "zstd-sys",

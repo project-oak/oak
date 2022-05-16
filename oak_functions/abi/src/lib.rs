@@ -63,26 +63,22 @@ pub struct StorageGetItemResponse {
 
 /// Holds the `label` and the `value` to report a metric.
 #[derive(Serialize, Deserialize)]
-#[cfg(feature = "oak-metrics")]
 pub struct ReportMetricRequest {
     pub label: String,
     pub value: i64,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-#[cfg(feature = "oak-metrics")]
 pub enum ReportMetricError {
     ProxyAlreadyConsumed,
 }
 
 #[derive(Serialize, Deserialize)]
-#[cfg(feature = "oak-metrics")]
 pub struct ReportMetricResponse {
     pub result: Result<(), ReportMetricError>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-#[cfg(feature = "oak-tf")]
 pub enum TfModelInferError {
     // Error when running the TensorFlow model, due to bad input tensor.
     BadTensorFlowModelInput,
@@ -91,7 +87,6 @@ pub enum TfModelInferError {
 }
 
 #[derive(Serialize, Deserialize)]
-#[cfg(feature = "oak-tf")]
 pub struct TfModelInferResponse {
     pub result: Result<Vec<u8>, TfModelInferError>,
 }
