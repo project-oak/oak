@@ -1882,6 +1882,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "hex"
+version = "0.4.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7f24254aa9a54b5c858eaee2f5bccdb46aaf0e486a595ed5fd8f86ba55232a70"
+
+[[package]]
 name = "hkdf"
 version = "0.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2822,6 +2828,7 @@ dependencies = [
  "ecdsa 0.13.4",
  "env_logger 0.9.0",
  "grpc_unary_attestation",
+ "hex",
  "http",
  "log",
  "oak_functions_abi",
@@ -2833,6 +2840,7 @@ dependencies = [
  "serde",
  "serde_jcs",
  "serde_json",
+ "sha2 0.9.9",
  "signature",
  "tokio",
  "tonic",

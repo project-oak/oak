@@ -13,6 +13,7 @@ clap = { version = "*", features = ["derive"] }
 ecdsa = { version = "*", features = ["verify", "pkcs8", "pem"] }
 env_logger = "*"
 grpc_unary_attestation = { path = "../../../grpc_unary_attestation/" }
+hex = "*"
 http = "*"
 log = "*"
 oak_functions_abi = { path = "../../abi" }
@@ -23,6 +24,7 @@ regex = "*"
 serde = "*"
 serde_jcs = "*"
 serde_json = "*"
+sha2 = { version = "*", default-features = false }
 signature = "*"
 tokio = { version = "*", features = [
   "fs",
