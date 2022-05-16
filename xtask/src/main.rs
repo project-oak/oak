@@ -187,13 +187,6 @@ fn run_bazel_tests() -> Step {
 }
 
 pub fn run_cargo_fuzz(opt: &RunCargoFuzz) -> Step {
-    Step::Multiple {
-        name: "cargo fuzz".to_string(),
-        steps: vec![run_fuzz_targets(opt)],
-    }
-}
-
-pub fn run_fuzz_targets(opt: &RunCargoFuzz) -> Step {
     let cargo_manifests: Vec<PathBuf> = crate_manifest_files()
         .filter(|path| is_fuzzing_toml_file(path))
         .filter(|path| match &opt.crate_name {

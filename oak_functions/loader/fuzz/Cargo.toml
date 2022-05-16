@@ -13,12 +13,9 @@ anyhow = "*"
 arbitrary = { version = "1", features = ["derive"] }
 lazy_static = "*"
 libfuzzer-sys = "*"
-maplit = "*"
 oak_functions_abi = { path = "../../abi" }
 oak_functions_loader = { path = ".." }
 oak_functions_lookup = { path = "../../lookup" }
-oak_functions_metrics = { path = "../../experimental/metrics" }
-test_utils = { path = "../../sdk/test_utils" }
 prost = "*"
 tokio = "*"
 tonic = "*"
@@ -28,16 +25,10 @@ prost-build = "*"
 
 # Prevent this from interfering with workspaces
 [workspace]
-members = [".", "fuzzable/module"]
+members = ["."]
 
 [[bin]]
 name = "apply_policy"
 path = "fuzz_targets/apply_policy.rs"
-test = false
-doc = false
-
-[[bin]]
-name = "wasm_invoke"
-path = "fuzz_targets/wasm_invoke.rs"
 test = false
 doc = false
