@@ -28,10 +28,13 @@ use std::{
     ops::DerefMut,
     sync::{Arc, Mutex},
 };
-use tokio::sync::oneshot;
+use tokio::{sync::oneshot, time::Duration};
 
 type Request = Vec<u8>;
 type Response = Vec<u8>;
+
+// TODO(mschett): Define what an empty response looks like.
+const _EMPTY_RESPONSE: Vec<u8> = vec![];
 
 struct Message {
     // Determines the original order in which messages arrived.
@@ -49,9 +52,15 @@ pub trait RequestHandler: Send + Sync {
 }
 
 // Trusted Shuffler implementation.
+#[allow(dead_code)]
 pub struct TrustedShuffler {
     // Value k that represents k-anonymity.
     k: usize,
+
+    // When the k-th request in a batch arrives we start a timeout. For any resquest were the
+    // Trusted Shuffler did no response not receive a a response after the timeout, it sends an
+    // empty response.
+    timeout: Duration,
 
     // Current batch of requests to be shuffled.
     // Mutex is used because messages are collected in different async tasks.
@@ -62,9 +71,10 @@ pub struct TrustedShuffler {
 }
 
 impl TrustedShuffler {
-    pub fn new(k: usize, request_handler: Arc<dyn RequestHandler>) -> Self {
+    pub fn new(k: usize, timeout: Duration, request_handler: Arc<dyn RequestHandler>) -> Self {
         Self {
             k,
+            timeout,
             requests_to_shuffle: Arc::new(Mutex::new(vec![])),
             request_handler,
         }

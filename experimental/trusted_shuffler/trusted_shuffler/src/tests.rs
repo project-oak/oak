@@ -45,13 +45,19 @@ fn generate_request_and_expected_response(data: &str) -> (Vec<u8>, Vec<u8>) {
     (request, expected_response)
 }
 
+// Generates a test Trusted Shuffler with no timeout.
+fn test_trusted_shuffler(k: usize) -> Arc<TrustedShuffler> {
+    Arc::new(TrustedShuffler::new(
+        k,
+        Duration::from_millis(0),
+        Arc::new(TestRequestHandler {}),
+    ))
+}
+
 #[tokio::test]
 async fn anonymity_value_2_test() {
     let anonymity_value = 2;
-    let trusted_shuffler = Arc::new(TrustedShuffler::new(
-        anonymity_value,
-        Arc::new(TestRequestHandler {}),
-    ));
+    let trusted_shuffler = test_trusted_shuffler(anonymity_value);
 
     let (request, expected_response) = generate_request_and_expected_response("Test");
     let (background_request, expected_background_response) =
@@ -75,10 +81,7 @@ async fn anonymity_value_2_test() {
 #[tokio::test]
 async fn anonymity_value_10_test() {
     let anonymity_value = 10;
-    let trusted_shuffler = Arc::new(TrustedShuffler::new(
-        anonymity_value,
-        Arc::new(TestRequestHandler {}),
-    ));
+    let trusted_shuffler = test_trusted_shuffler(anonymity_value);
 
     let (requests, expected_responses): (Vec<Vec<u8>>, Vec<Vec<u8>>) = (0..anonymity_value)
         .collect::<Vec<_>>()
@@ -109,10 +112,7 @@ async fn anonymity_value_10_test() {
 #[tokio::test]
 async fn waiting_for_enough_requests_test() {
     let anonymity_value = 3;
-    let trusted_shuffler = Arc::new(TrustedShuffler::new(
-        anonymity_value,
-        Arc::new(TestRequestHandler {}),
-    ));
+    let trusted_shuffler = test_trusted_shuffler(anonymity_value);
 
     let (request_1, _) = generate_request_and_expected_response("Test 1");
     let (request_2, expected_response) = generate_request_and_expected_response("Test 2");
