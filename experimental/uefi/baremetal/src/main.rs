@@ -24,6 +24,7 @@
 #![test_runner(crate::test_runner)]
 #![reexport_test_harness_main = "test_main"]
 
+mod i8042;
 mod logging;
 mod memory;
 mod serial;
@@ -104,8 +105,7 @@ pub fn exit_qemu(exit_code: QemuExitCode) {
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
     error!("PANIC: {}", info);
-    exit_qemu(QemuExitCode::Failed);
-    loop {}
+    i8042::shutdown();
 }
 
 #[lang = "eh_personality"]
