@@ -133,6 +133,28 @@ fn test_write_read_buffer_in_wasm_memory() {
 }
 
 #[test]
+fn test_read_empty_buffer_in_wasm_memory() {
+    let wasm_state = create_test_wasm_state();
+    // Guess some memory addresses in linear Wasm memory to write to.
+    let dest_len_ptr: AbiPointer = 150;
+    let buffer: vec::Vec<u8> = vec![];
+
+    wasm_state
+        .write_u32_to_wasm_memory(dest_len_ptr, 0)
+        .unwrap();
+
+    // Get dest_len from dest_len_ptr.
+    let dest_len: AbiPointerOffset = wasm_state.read_u32_from_wasm_memory(dest_len_ptr).unwrap();
+
+    // If dest_len is 0, then dest_ptr is irrelevant, so we set it 0, too.
+    let dest_ptr = 0;
+    let read_buffer = wasm_state
+        .read_buffer_from_wasm_memory(dest_ptr, dest_len)
+        .unwrap();
+    assert_eq!(read_buffer, buffer);
+}
+
+#[test]
 fn test_invoke_extension() {
     let mut wasm_state = create_test_wasm_state();
 
