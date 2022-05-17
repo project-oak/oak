@@ -13,6 +13,7 @@
 // limitations under the License.
 
 use atomic_refcell::AtomicRefCell;
+use log::debug;
 use x86_64::instructions::port::{PortReadOnly, PortWriteOnly};
 
 use crate::{
@@ -72,11 +73,9 @@ pub fn print_bus() {
         if vendor_id == INVALID_VENDOR_ID {
             continue;
         }
-        log!(
+        debug!(
             "Found PCI device vendor={:x} device={:x} in slot={}",
-            vendor_id,
-            device_id,
-            device
+            vendor_id, device_id, device
         );
     }
 }
@@ -165,13 +164,9 @@ impl PciDevice {
         self.vendor_id = vendor_id;
         self.device_id = device_id;
 
-        log!(
+        debug!(
             "PCI Device: {}:{}.{} {:x}:{:x}",
-            self.bus,
-            self.device,
-            self.func,
-            self.vendor_id,
-            self.device_id
+            self.bus, self.device, self.func, self.vendor_id, self.device_id
         );
 
         let mut current_bar_offset = 0x10;
@@ -212,7 +207,7 @@ impl PciDevice {
 
         #[allow(clippy::blacklisted_name)]
         for bar in &self.bars {
-            log!("Bar: type={:?} address={:x}", bar.bar_type, bar.address);
+            debug!("Bar: type={:?} address={:x}", bar.bar_type, bar.address);
         }
     }
 }
@@ -273,7 +268,7 @@ impl VirtioTransport for VirtioPciTransport {
 
         // bit 4 of status is capability bit
         if status & 1 << 4 == 0 {
-            log!("No capabilities detected");
+            debug!("No capabilities detected");
             return Err(VirtioError::UnsupportedDevice);
         }
 

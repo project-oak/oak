@@ -1,3 +1,11 @@
+//
+// Copyright © 2019 Intel Corporation
+// SPDX-License-Identifier: Apache-2.0
+//
+// Copyright 2022 The Project Oak Authors
+// SPDX-License-Identifier: Apache-2.0
+//
+
 #![no_std]
 
 use core::ffi::c_void;
@@ -5,9 +13,13 @@ use core::ffi::c_void;
 mod asm;
 pub mod boot;
 mod common;
+pub mod device;
 mod gdt;
+pub mod mem;
 pub mod paging;
+pub mod pci;
 pub mod pvh;
+pub mod virtio;
 
 extern "C" {
     #[link_name = "ram_min"]
