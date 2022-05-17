@@ -15,8 +15,6 @@
 //
 
 fn main() {
-    println!(
-        "cargo:rerun-if-changed=../../../third_party/rust-hypervisor-firmware-subset/target.json"
-    );
+    println!("cargo:rerun-if-changed=target.json");
     println!("cargo:rerun-if-changed=layout.ld");
 }
