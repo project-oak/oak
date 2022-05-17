@@ -5,7 +5,7 @@
 Run:
 
 ```bash
-./scripts/xtask run-cargo-fuzz --build-deps -- -max_total_time=2
+./scripts/xtask run-cargo-fuzz -- -max_total_time=2
 ```
 
 and

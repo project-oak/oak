@@ -257,11 +257,6 @@ pub struct RunCargoFuzz {
         requires("crate-name")
     )]
     pub target_name: Option<String>,
-    #[clap(
-        long,
-        help = "weather to rebuild the dependencies, including any required .wasm files."
-    )]
-    pub build_deps: bool,
     /// Additional `libFuzzer` arguments passed through to the binary
     #[clap(last(true))]
     pub args: Vec<String>,
