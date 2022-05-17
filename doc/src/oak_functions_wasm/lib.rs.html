@@ -533,16 +533,6 @@
 <span id="528">528</span>
 <span id="529">529</span>
 <span id="530">530</span>
-<span id="531">531</span>
-<span id="532">532</span>
-<span id="533">533</span>
-<span id="534">534</span>
-<span id="535">535</span>
-<span id="536">536</span>
-<span id="537">537</span>
-<span id="538">538</span>
-<span id="539">539</span>
-<span id="540">540</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2022 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -712,16 +702,6 @@
             })
     }
 
-    <span class="doccomment">/// Read arguments for extension from memory of Wasm module.</span>
-    <span class="doccomment">/// TODO(#2773): Remove duplicate functionality.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">read_extension_args</span>(
-        <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">buf_ptr</span>: <span class="ident">AbiPointer</span>,
-        <span class="ident">buf_len</span>: <span class="ident">AbiPointerOffset</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>, <span class="ident">wasmi::Error</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">get_memory</span>().<span class="ident">get</span>(<span class="ident">buf_ptr</span>, <span class="ident">buf_len</span> <span class="kw">as</span> <span class="ident">usize</span>)
-    }
-
     <span class="doccomment">/// Writes the buffer `source` at the address `dest` of the Wasm memory, if `source` fits in the</span>
     <span class="doccomment">/// allocated memory.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">write_buffer_to_wasm_memory</span>(
@@ -833,7 +813,7 @@
         })<span class="question-mark">?</span>;
 
         <span class="kw">let</span> <span class="ident">request</span> <span class="op">=</span> <span class="self">self</span>
-            .<span class="ident">read_extension_args</span>(<span class="ident">request_ptr</span>, <span class="ident">request_len</span>)
+            .<span class="ident">read_buffer_from_wasm_memory</span>(<span class="ident">request_ptr</span>, <span class="ident">request_len</span>)
             .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> {
                 <span class="self">self</span>.<span class="ident">log_error</span>(<span class="kw-2">&amp;</span><span class="macro">format!</span>(
                     <span class="string">&quot;Handle {:?}: Unable to read input from guest memory: {:?}&quot;</span>,
