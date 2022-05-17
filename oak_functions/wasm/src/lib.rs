@@ -167,16 +167,6 @@ where
             })
     }
 
-    /// Read arguments for extension from memory of Wasm module.
-    /// TODO(#2773): Remove duplicate functionality.
-    pub fn read_extension_args(
-        &self,
-        buf_ptr: AbiPointer,
-        buf_len: AbiPointerOffset,
-    ) -> Result<Vec<u8>, wasmi::Error> {
-        self.get_memory().get(buf_ptr, buf_len as usize)
-    }
-
     /// Writes the buffer `source` at the address `dest` of the Wasm memory, if `source` fits in the
     /// allocated memory.
     pub fn write_buffer_to_wasm_memory(
@@ -288,7 +278,7 @@ where
         })?;
 
         let request = self
-            .read_extension_args(request_ptr, request_len)
+            .read_buffer_from_wasm_memory(request_ptr, request_len)
             .map_err(|err| {
                 self.log_error(&format!(
                     "Handle {:?}: Unable to read input from guest memory: {:?}",
