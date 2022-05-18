@@ -136,11 +136,6 @@
 <span id="131">131</span>
 <span id="132">132</span>
 <span id="133">133</span>
-<span id="134">134</span>
-<span id="135">135</span>
-<span id="136">136</span>
-<span id="137">137</span>
-<span id="138">138</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2022 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -157,14 +152,16 @@
 <span class="comment">// limitations under the License.</span>
 <span class="comment">//</span>
 
-<span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">ffi::OsStr</span>, <span class="ident">path::Path</span>, <span class="ident">process::Stdio</span>};
-
+<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::vmm</span>::{<span class="ident">Params</span>, <span class="ident">Vmm</span>};
 <span class="kw">use</span> <span class="ident">anyhow::Result</span>;
+<span class="kw">use</span> <span class="ident">async_trait::async_trait</span>;
 <span class="kw">use</span> <span class="ident">command_fds</span>::{<span class="ident">tokio::CommandFdAsyncExt</span>, <span class="ident">FdMapping</span>};
 <span class="kw">use</span> <span class="ident">log::info</span>;
 <span class="kw">use</span> <span class="ident">std</span>::{
+    <span class="ident">ffi::OsStr</span>,
     <span class="ident">net::Shutdown</span>,
     <span class="ident">os::unix</span>::{<span class="ident">io::AsRawFd</span>, <span class="ident">net::UnixStream</span>},
+    <span class="ident">process::Stdio</span>,
 };
 
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Qemu</span> {
@@ -174,18 +171,8 @@
     <span class="ident">instance</span>: <span class="ident">tokio::process::Child</span>,
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">QemuParams</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
-    <span class="kw">pub</span> <span class="ident">binary</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">Path</span>,
-    <span class="kw">pub</span> <span class="ident">firmware</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">Path</span><span class="op">&gt;</span>,
-    <span class="kw">pub</span> <span class="ident">app</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">Path</span>,
-
-    <span class="kw">pub</span> <span class="ident">console</span>: <span class="ident">UnixStream</span>,
-    <span class="kw">pub</span> <span class="ident">comms</span>: <span class="ident">UnixStream</span>,
-}
-
 <span class="kw">impl</span> <span class="ident">Qemu</span> {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">start</span>(<span class="ident">params</span>: <span class="ident">QemuParams</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Qemu</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">start</span>(<span class="ident">params</span>: <span class="ident">Params</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">cmd</span> <span class="op">=</span> <span class="ident">tokio::process::Command::new</span>(<span class="ident">params</span>.<span class="ident">binary</span>);
 
         <span class="comment">// There should not be any communication over stdin/stdout/stderr, but let&#39;s inherit</span>
@@ -265,12 +252,15 @@
             <span class="ident">qmp</span>: <span class="ident">qmp</span>.<span class="number">0</span>,
         })
     }
+}
 
-    <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">wait</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">std::process::ExitStatus</span><span class="op">&gt;</span> {
+<span class="attribute">#[<span class="ident">async_trait</span>]</span>
+<span class="kw">impl</span> <span class="ident">Vmm</span> <span class="kw">for</span> <span class="ident">Qemu</span> {
+    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">wait</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">std::process::ExitStatus</span><span class="op">&gt;</span> {
         <span class="self">self</span>.<span class="ident">instance</span>.<span class="ident">wait</span>().<span class="kw">await</span>.<span class="ident">map_err</span>(<span class="ident">anyhow::Error::from</span>)
     }
 
-    <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">kill</span>(<span class="kw-2">mut</span> <span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">std::process::ExitStatus</span><span class="op">&gt;</span> {
+    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">kill</span>(<span class="kw-2">mut</span> <span class="self">self</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">std::process::ExitStatus</span><span class="op">&gt;</span> {
         <span class="macro">info!</span>(<span class="string">&quot;Cleaning up and shutting down.&quot;</span>);
         <span class="self">self</span>.<span class="ident">console</span>.<span class="ident">shutdown</span>(<span class="ident">Shutdown::Both</span>)<span class="question-mark">?</span>;
         <span class="self">self</span>.<span class="ident">comms</span>.<span class="ident">shutdown</span>(<span class="ident">Shutdown::Both</span>)<span class="question-mark">?</span>;

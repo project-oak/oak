@@ -1,1 +1,1 @@
-initSidebarItems({"struct":[["Qemu",""],["QemuParams",""]]});
+initSidebarItems({"struct":[["Qemu",""]]});

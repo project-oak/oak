@@ -169,6 +169,14 @@
 <span id="164">164</span>
 <span id="165">165</span>
 <span id="166">166</span>
+<span id="167">167</span>
+<span id="168">168</span>
+<span id="169">169</span>
+<span id="170">170</span>
+<span id="171">171</span>
+<span id="172">172</span>
+<span id="173">173</span>
+<span id="174">174</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2022 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -186,7 +194,7 @@
 <span class="comment">//</span>
 
 <span class="kw">use</span> <span class="ident">clap::Parser</span>;
-<span class="kw">use</span> <span class="ident">qemu</span>::{<span class="ident">Qemu</span>, <span class="ident">QemuParams</span>};
+<span class="kw">use</span> <span class="ident">qemu::Qemu</span>;
 <span class="kw">use</span> <span class="ident">runtime</span>::{<span class="ident">Frame</span>, <span class="ident">Framed</span>};
 <span class="kw">use</span> <span class="ident">std</span>::{
     <span class="ident">fs</span>,
@@ -195,9 +203,11 @@
     <span class="ident">path::PathBuf</span>,
 };
 <span class="kw">use</span> <span class="ident">tokio::signal</span>;
+<span class="kw">use</span> <span class="ident">vmm</span>::{<span class="ident">Params</span>, <span class="ident">Vmm</span>};
 
 <span class="kw">mod</span> <span class="ident">qemu</span>;
 <span class="kw">mod</span> <span class="ident">server</span>;
+<span class="kw">mod</span> <span class="ident">vmm</span>;
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">clap::ArgEnum</span>, <span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">PartialEq</span>)]</span>
 <span class="kw">enum</span> <span class="ident">Mode</span> {
@@ -219,7 +229,7 @@
     <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">long</span>, <span class="ident">parse</span>(<span class="ident">from_os_str</span>), <span class="ident">required_if_eq</span>(<span class="string">&quot;mode&quot;</span>, <span class="string">&quot;uefi&quot;</span>), <span class="ident">validator</span> <span class="op">=</span> <span class="ident">path_exists</span>, <span class="ident">default_value_os_t</span> <span class="op">=</span> <span class="ident">PathBuf::from</span>(<span class="string">&quot;/usr/share/OVMF/OVMF_CODE.fd&quot;</span>))]</span>
     <span class="ident">ovmf</span>: <span class="ident">PathBuf</span>,
 
-    <span class="doccomment">/// Path to the UEFI app to execute.</span>
+    <span class="doccomment">/// Path to the UEFI app or kernel to execute.</span>
     <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">parse</span>(<span class="ident">from_os_str</span>), <span class="ident">validator</span> <span class="op">=</span> <span class="ident">path_exists</span>)]</span>
     <span class="ident">app</span>: <span class="ident">PathBuf</span>,
 }
@@ -261,20 +271,25 @@
     <span class="kw">let</span> <span class="ident">cli</span> <span class="op">=</span> <span class="ident">Args::parse</span>();
     <span class="ident">env_logger::init</span>();
 
-    <span class="kw">let</span> (<span class="ident">console_qemu</span>, <span class="ident">console</span>) <span class="op">=</span> <span class="ident">UnixStream::pair</span>()<span class="question-mark">?</span>;
-    <span class="kw">let</span> (<span class="ident">comms_qemu</span>, <span class="kw-2">mut</span> <span class="ident">comms</span>) <span class="op">=</span> <span class="ident">UnixStream::pair</span>()<span class="question-mark">?</span>;
+    <span class="kw">let</span> (<span class="ident">console_vmm</span>, <span class="ident">console</span>) <span class="op">=</span> <span class="ident">UnixStream::pair</span>()<span class="question-mark">?</span>;
+    <span class="kw">let</span> (<span class="ident">comms_vmm</span>, <span class="kw-2">mut</span> <span class="ident">comms</span>) <span class="op">=</span> <span class="ident">UnixStream::pair</span>()<span class="question-mark">?</span>;
 
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">qemu</span> <span class="op">=</span> <span class="ident">Qemu::start</span>(<span class="ident">QemuParams</span> {
-        <span class="ident">binary</span>: <span class="ident">cli</span>.<span class="ident">qemu</span>.<span class="ident">as_path</span>(),
-        <span class="ident">firmware</span>: <span class="kw">if</span> <span class="ident">cli</span>.<span class="ident">mode</span> <span class="op">==</span> <span class="ident">Mode::Uefi</span> {
-            <span class="prelude-val">Some</span>(<span class="ident">cli</span>.<span class="ident">ovmf</span>.<span class="ident">as_path</span>())
-        } <span class="kw">else</span> {
-            <span class="prelude-val">None</span>
-        },
-        <span class="ident">app</span>: <span class="ident">cli</span>.<span class="ident">app</span>.<span class="ident">as_path</span>(),
-        <span class="ident">console</span>: <span class="ident">console_qemu</span>,
-        <span class="ident">comms</span>: <span class="ident">comms_qemu</span>,
-    })<span class="question-mark">?</span>;
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">vmm</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">Vmm</span><span class="op">&gt;</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">cli</span>.<span class="ident">mode</span> {
+        <span class="ident">Mode::Uefi</span> =&gt; <span class="ident">Box::new</span>(<span class="ident">Qemu::start</span>(<span class="ident">Params</span> {
+            <span class="ident">binary</span>: <span class="ident">cli</span>.<span class="ident">qemu</span>,
+            <span class="ident">firmware</span>: <span class="prelude-val">Some</span>(<span class="ident">cli</span>.<span class="ident">ovmf</span>),
+            <span class="ident">app</span>: <span class="ident">cli</span>.<span class="ident">app</span>,
+            <span class="ident">console</span>: <span class="ident">console_vmm</span>,
+            <span class="ident">comms</span>: <span class="ident">comms_vmm</span>,
+        })<span class="question-mark">?</span>),
+        <span class="ident">Mode::Bios</span> =&gt; <span class="ident">Box::new</span>(<span class="ident">Qemu::start</span>(<span class="ident">Params</span> {
+            <span class="ident">binary</span>: <span class="ident">cli</span>.<span class="ident">qemu</span>,
+            <span class="ident">firmware</span>: <span class="prelude-val">None</span>,
+            <span class="ident">app</span>: <span class="ident">cli</span>.<span class="ident">app</span>,
+            <span class="ident">console</span>: <span class="ident">console_vmm</span>,
+            <span class="ident">comms</span>: <span class="ident">comms_vmm</span>,
+        })<span class="question-mark">?</span>),
+    };
 
     <span class="comment">// Log everything coming over the console channel.</span>
     <span class="ident">tokio::spawn</span>(<span class="kw">async</span> {
@@ -324,15 +339,16 @@
     <span class="comment">// Wait until something dies or we get a signal to terminate.</span>
     <span class="macro">tokio::select!</span> {
         <span class="kw">_</span> <span class="op">=</span> <span class="ident">signal::ctrl_c</span>() =&gt; {
-            <span class="ident">qemu</span>.<span class="ident">kill</span>().<span class="kw">await</span><span class="question-mark">?</span>;
+            <span class="ident">vmm</span>.<span class="ident">kill</span>().<span class="kw">await</span><span class="question-mark">?</span>;
         },
         <span class="kw">_</span> <span class="op">=</span> <span class="ident">server_future</span> =&gt; {
-            <span class="ident">qemu</span>.<span class="ident">kill</span>().<span class="kw">await</span><span class="question-mark">?</span>;
+            <span class="ident">vmm</span>.<span class="ident">kill</span>().<span class="kw">await</span><span class="question-mark">?</span>;
         },
-        <span class="ident">val</span> <span class="op">=</span> <span class="ident">qemu</span>.<span class="ident">wait</span>() =&gt; {
-            <span class="macro">log::error!</span>(<span class="string">&quot;Unexpected qemu exit, status: {:?}&quot;</span>, <span class="ident">val</span>);
+        <span class="ident">val</span> <span class="op">=</span> <span class="ident">vmm</span>.<span class="ident">wait</span>() =&gt; {
+            <span class="macro">log::error!</span>(<span class="string">&quot;Unexpected VMM exit, status: {:?}&quot;</span>, <span class="ident">val</span>);
         },
     }
+
     <span class="prelude-val">Ok</span>(())
 }
 </code></pre></div>
