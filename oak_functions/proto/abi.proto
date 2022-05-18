@@ -39,7 +39,7 @@ enum OakStatus {
   UNSPECIFIED = 0;
   // Success.
   OK = 1;
-  // Arguments invalid.
+  // Arguments invalid, e.g., deserializing the request failed.
   ERR_INVALID_ARGS = 2;
   // Internal error, e.g., when serialzing the response failed.
   ERR_INTERNAL = 3;
