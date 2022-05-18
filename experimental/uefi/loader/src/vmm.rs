@@ -20,11 +20,19 @@ use std::{os::unix::net::UnixStream, path::PathBuf};
 
 #[derive(Debug)]
 pub struct Params {
+    /// Path to the VMM binary to execute.
     pub binary: PathBuf,
+
+    /// Optional path to the firmware blob to pass to the VMM.
     pub firmware: Option<PathBuf>,
+
+    /// Path to the binary to load into the VM.
     pub app: PathBuf,
 
+    /// Stream to connect to the console of the VM.
     pub console: UnixStream,
+
+    /// Stream to use for communicating with the app inside the VM.
     pub comms: UnixStream,
 }
 
