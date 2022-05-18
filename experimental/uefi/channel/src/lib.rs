@@ -20,9 +20,8 @@
 extern crate alloc;
 
 use alloc::{vec, vec::Vec};
-use anyhow::{bail, Context};
+use anyhow::Context;
 use ciborium_io::{Read, Write};
-use oak_remote_attestation_sessions::{SessionId, SESSION_ID_LENGTH};
 
 /// Length of the entire frame, including the header.
 pub type FrameLength = u32;

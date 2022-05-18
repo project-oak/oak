@@ -21,7 +21,7 @@
 extern crate alloc;
 
 use alloc::{boxed::Box, sync::Arc, vec::Vec};
-use anyhow::{bail, Context};
+use anyhow::bail;
 use lru::LruCache;
 use oak_remote_attestation::handshaker::{AttestationBehavior, Encryptor, ServerHandshaker};
 
