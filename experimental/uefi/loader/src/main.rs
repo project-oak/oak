@@ -169,5 +169,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             log::error!("Unexpected VMM exit, status: {:?}", val);
         },
     }
+
     Ok(())
 }
