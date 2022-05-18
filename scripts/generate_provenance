@@ -18,23 +18,16 @@ cp build.toml tmp/build.toml
     tar -xvzf transparent-release_0.1_Linux_x86_64.tar.gz -C tmp
     
     # Prepare the input toml file.
-    echo "" >> tmp/build.toml
-    echo commit_hash='"'"$COMMIT_HASH"'"' >> tmp/build.toml
-    echo builder_image='"'"$DOCKER_IMAGE_REPO_DIGEST"'"' >> tmp/build.toml
+    {
+      echo ""
+      echo commit_hash='"'"$COMMIT_HASH"'"'
+      echo builder_image='"'"$DOCKER_IMAGE_REPO_DIGEST"'"'
+    } >> tmp/build.toml
 
     # Build the binary and generate the provenance file.
     # `|| true` is needed so that we can continue to the rest of the script, particularly the cleanup part.
-    ./tmp/transparent-release -build_config_path=build.toml -git_root_dir=.. || true
+    ./tmp/transparent-release -build_config_path=tmp/build.toml -git_root_dir=. || true
 )
-
-# Store the provenance file in the path given in $1, or `provenance.json` if an input argument is not provided.
-# if [ "$#" -lt 1 ]
-#   then
-#     echo "No argument supplied. Will store the provenance file in ./provenance.json"
-#     cp tmp/provenance.json provenance.json
-#   else 
-#     cp tmp/provenance.json "$1"
-# fi
 
 # cleanup
 rm -rf tmp
