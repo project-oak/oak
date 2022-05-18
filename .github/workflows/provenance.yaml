@@ -49,6 +49,13 @@ jobs:
           ./scripts/docker_pull
           df --human-readable
 
+      - name: Generate Functions Server Provenance
+        run: |
+          ./scripts/generate_provenance
+
+      - name: Get Binary Hash
+        run: jq -r '.subject[0].digest.sha256' ./provenance.json
+
       - name: Build Functions Server Provenance
         run: |
           ./scripts/build_provenance \
