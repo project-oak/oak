@@ -7,5 +7,4 @@ license = "Apache-2.0"
 
 [dependencies]
 anyhow = { version = "*", default-features = false }
-oak_remote_attestation_sessions = { path = "../../../remote_attestation_sessions", default-features = false }
 ciborium-io = { version = "*", default-features = false }

@@ -643,7 +643,6 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "ciborium-io",
- "oak_remote_attestation_sessions",
 ]
 
 [[package]]
