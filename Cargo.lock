@@ -5515,6 +5515,7 @@ name = "uefi-loader"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "async-trait",
  "bmrng",
  "ciborium-io",
  "clap 3.1.18",

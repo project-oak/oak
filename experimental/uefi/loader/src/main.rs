@@ -15,7 +15,7 @@
 //
 
 use clap::Parser;
-use qemu::{Qemu, QemuParams};
+use qemu::Qemu;
 use runtime::{Frame, Framed};
 use std::{
     fs,
@@ -24,9 +24,11 @@ use std::{
     path::PathBuf,
 };
 use tokio::signal;
+use vmm::{Params, Vmm};
 
 mod qemu;
 mod server;
+mod vmm;
 
 #[derive(clap::ArgEnum, Clone, Debug, PartialEq)]
 enum Mode {
@@ -48,7 +50,7 @@ struct Args {
     #[clap(long, parse(from_os_str), required_if_eq("mode", "uefi"), validator = path_exists, default_value_os_t = PathBuf::from("/usr/share/OVMF/OVMF_CODE.fd"))]
     ovmf: PathBuf,
 
-    /// Path to the UEFI app to execute.
+    /// Path to the UEFI app or kernel to execute.
     #[clap(parse(from_os_str), validator = path_exists)]
     app: PathBuf,
 }
@@ -90,20 +92,25 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cli = Args::parse();
     env_logger::init();
 
-    let (console_qemu, console) = UnixStream::pair()?;
-    let (comms_qemu, mut comms) = UnixStream::pair()?;
+    let (console_vmm, console) = UnixStream::pair()?;
+    let (comms_vmm, mut comms) = UnixStream::pair()?;
 
-    let mut qemu = Qemu::start(QemuParams {
-        binary: cli.qemu.as_path(),
-        firmware: if cli.mode == Mode::Uefi {
-            Some(cli.ovmf.as_path())
-        } else {
-            None
-        },
-        app: cli.app.as_path(),
-        console: console_qemu,
-        comms: comms_qemu,
-    })?;
+    let mut vmm: Box<dyn Vmm> = match cli.mode {
+        Mode::Uefi => Box::new(Qemu::start(Params {
+            binary: cli.qemu,
+            firmware: Some(cli.ovmf),
+            app: cli.app,
+            console: console_vmm,
+            comms: comms_vmm,
+        })?),
+        Mode::Bios => Box::new(Qemu::start(Params {
+            binary: cli.qemu,
+            firmware: None,
+            app: cli.app,
+            console: console_vmm,
+            comms: comms_vmm,
+        })?),
+    };
 
     // Log everything coming over the console channel.
     tokio::spawn(async {
@@ -153,14 +160,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Wait until something dies or we get a signal to terminate.
     tokio::select! {
         _ = signal::ctrl_c() => {
-            qemu.kill().await?;
+            vmm.kill().await?;
         },
         _ = server_future => {
-            qemu.kill().await?;
+            vmm.kill().await?;
         },
-        val = qemu.wait() => {
-            log::error!("Unexpected qemu exit, status: {:?}", val);
+        val = vmm.wait() => {
+            log::error!("Unexpected VMM exit, status: {:?}", val);
         },
     }
+
     Ok(())
 }

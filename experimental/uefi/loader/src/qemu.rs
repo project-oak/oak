@@ -14,14 +14,16 @@
 // limitations under the License.
 //
 
-use std::{ffi::OsStr, path::Path, process::Stdio};
-
+use crate::vmm::{Params, Vmm};
 use anyhow::Result;
+use async_trait::async_trait;
 use command_fds::{tokio::CommandFdAsyncExt, FdMapping};
 use log::info;
 use std::{
+    ffi::OsStr,
     net::Shutdown,
     os::unix::{io::AsRawFd, net::UnixStream},
+    process::Stdio,
 };
 
 pub struct Qemu {
@@ -31,18 +33,8 @@ pub struct Qemu {
     instance: tokio::process::Child,
 }
 
-#[derive(Debug)]
-pub struct QemuParams<'a> {
-    pub binary: &'a Path,
-    pub firmware: Option<&'a Path>,
-    pub app: &'a Path,
-
-    pub console: UnixStream,
-    pub comms: UnixStream,
-}
-
 impl Qemu {
-    pub fn start(params: QemuParams) -> Result<Qemu> {
+    pub fn start(params: Params) -> Result<Self> {
         let mut cmd = tokio::process::Command::new(params.binary);
 
         // There should not be any communication over stdin/stdout/stderr, but let's inherit
@@ -122,12 +114,15 @@ impl Qemu {
             qmp: qmp.0,
         })
     }
+}
 
-    pub async fn wait(&mut self) -> Result<std::process::ExitStatus> {
+#[async_trait]
+impl Vmm for Qemu {
+    async fn wait(&mut self) -> Result<std::process::ExitStatus> {
         self.instance.wait().await.map_err(anyhow::Error::from)
     }
 
-    pub async fn kill(mut self) -> Result<std::process::ExitStatus> {
+    async fn kill(mut self: Box<Self>) -> Result<std::process::ExitStatus> {
         info!("Cleaning up and shutting down.");
         self.console.shutdown(Shutdown::Both)?;
         self.comms.shutdown(Shutdown::Both)?;
