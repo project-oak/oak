@@ -51,17 +51,7 @@ jobs:
 
       - name: Generate Functions Server Provenance
         run: |
-          ./scripts/generate_provenance
-
-      - name: Get Binary Hash
-        run: jq -r '.subject[0].digest.sha256' ./provenance.json
-
-      - name: Build Functions Server Provenance
-        run: |
-          ./scripts/build_provenance \
-          "oak_functions" \
-          ./target/x86_64-unknown-linux-musl/release/oak_functions_loader_base \
-          ./scripts/xtask build-oak-functions-server-variants
+          ./scripts/generate_provenance github
 
       - name: Move new provenance files to the provenance branch
         if: github.event_name == 'push'
