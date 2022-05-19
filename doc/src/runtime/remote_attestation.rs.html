@@ -99,7 +99,6 @@
 <span id="94">94</span>
 <span id="95">95</span>
 <span id="96">96</span>
-<span id="97">97</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2022 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -123,10 +122,9 @@
 
 <span class="kw">extern</span> <span class="kw">crate</span> <span class="ident">alloc</span>;
 
-<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::SerializeableRequest</span>;
 <span class="kw">use</span> <span class="ident">alloc::vec::Vec</span>;
 <span class="kw">use</span> <span class="ident">anyhow::Context</span>;
-<span class="kw">use</span> <span class="ident">oak_remote_attestation_sessions</span>::{<span class="ident">SessionState</span>, <span class="ident">SessionTracker</span>};
+<span class="kw">use</span> <span class="ident">oak_remote_attestation_sessions</span>::{<span class="ident">SerializeableRequest</span>, <span class="ident">SessionState</span>, <span class="ident">SessionTracker</span>};
 
 <span class="doccomment">/// Number of sessions that will be kept in memory.</span>
 <span class="kw">const</span> <span class="ident">SESSIONS_CACHE_SIZE</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">10000</span>;

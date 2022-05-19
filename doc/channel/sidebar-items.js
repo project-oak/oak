@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["Frame",""],["Framed",""]],"type":[["FrameLength","Length of the entire frame, including the header."]]});

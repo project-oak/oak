@@ -101,7 +101,6 @@
 <span id="96">96</span>
 <span id="97">97</span>
 <span id="98">98</span>
-<span id="99">99</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2022 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -121,8 +120,7 @@
 <span class="kw">use</span> <span class="ident">anyhow::bail</span>;
 <span class="kw">use</span> <span class="ident">bmrng::unbounded::UnboundedRequestSender</span>;
 <span class="kw">use</span> <span class="ident">futures::Future</span>;
-<span class="kw">use</span> <span class="ident">oak_remote_attestation_sessions</span>::{<span class="ident">SessionId</span>, <span class="ident">SESSION_ID_LENGTH</span>};
-<span class="kw">use</span> <span class="ident">runtime::SerializeableRequest</span>;
+<span class="kw">use</span> <span class="ident">oak_remote_attestation_sessions</span>::{<span class="ident">SerializeableRequest</span>, <span class="ident">SessionId</span>, <span class="ident">SESSION_ID_LENGTH</span>};
 <span class="kw">use</span> <span class="ident">std::net::SocketAddr</span>;
 <span class="kw">use</span> <span class="ident">tonic</span>::{<span class="ident">transport::Server</span>, <span class="ident">Request</span>, <span class="ident">Response</span>, <span class="ident">Status</span>};
 

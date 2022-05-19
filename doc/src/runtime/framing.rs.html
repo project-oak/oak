@@ -41,6 +41,7 @@
 <span id="36">36</span>
 <span id="37">37</span>
 <span id="38">38</span>
+<span id="39">39</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2022 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -57,8 +58,9 @@
 <span class="comment">// limitations under the License.</span>
 <span class="comment">//</span>
 
-<span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">remote_attestation::AttestationHandler</span>, <span class="ident">Frame</span>, <span class="ident">Framed</span>};
+<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::remote_attestation::AttestationHandler</span>;
 <span class="kw">use</span> <span class="ident">anyhow::Context</span>;
+<span class="kw">use</span> <span class="ident">channel</span>::{<span class="ident">Frame</span>, <span class="ident">Framed</span>};
 <span class="kw">use</span> <span class="ident">ciborium_io</span>::{<span class="ident">Read</span>, <span class="ident">Write</span>};
 
 <span class="comment">// Processes incoming frames.</span>
