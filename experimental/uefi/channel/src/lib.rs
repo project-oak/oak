@@ -22,16 +22,16 @@ extern crate alloc;
 use alloc::{vec, vec::Vec};
 use anyhow::Context;
 use ciborium_io::{Read, Write};
+use core::mem::size_of;
 
 /// Length of the entire frame, including the header.
 pub type FrameLength = u32;
-const FRAME_BYTES_SIZE: usize = 4;
 
 pub struct Frame {
     pub body: Vec<u8>,
 }
 
-pub struct Framed<T: Read + Write> {
+pub struct Framed<T: Read<Error = anyhow::Error> + Write<Error = anyhow::Error>> {
     inner: T,
 }
 
@@ -45,13 +45,13 @@ where
 
     pub fn read_frame(&mut self) -> anyhow::Result<Frame> {
         let length = {
-            let mut length_bytes = [0; FRAME_BYTES_SIZE];
+            let mut length_bytes = [0; size_of::<FrameLength>()];
             self.inner.read_exact(&mut length_bytes)?;
             FrameLength::from_le_bytes(length_bytes)
         };
 
         let body = {
-            let body_length: u32 = length - FRAME_BYTES_SIZE as u32;
+            let body_length: u32 = length - size_of::<FrameLength>() as u32;
             let mut body: Vec<u8> = vec![
                 0;
                 usize::try_from(body_length).expect(
@@ -66,12 +66,10 @@ where
     }
 
     pub fn write_frame(&mut self, frame: Frame) -> anyhow::Result<()> {
-        let length_bytes = {
-            let length = FrameLength::try_from(FRAME_BYTES_SIZE + frame.body.len())
-                .map_err(anyhow::Error::msg)
-                .context("the frame is too large")?;
-            length.to_le_bytes()
-        };
+        let length_bytes = FrameLength::try_from(size_of::<FrameLength>() + frame.body.len())
+            .map_err(anyhow::Error::msg)
+            .context("the frame is too large")?
+            .to_le_bytes();
         self.inner.write_all(&length_bytes)?;
         self.inner.write_all(&frame.body)?;
         Ok(())
