@@ -1,0 +1,10 @@
+[package]
+name = "channel"
+version = "0.1.0"
+authors = ["Juliette Pretot <julsh@google.com>"]
+edition = "2021"
+license = "Apache-2.0"
+
+[dependencies]
+anyhow = { version = "*", default-features = false }
+ciborium-io = { version = "*", default-features = false }

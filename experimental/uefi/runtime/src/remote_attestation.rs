@@ -21,10 +21,9 @@
 
 extern crate alloc;
 
-use crate::SerializeableRequest;
 use alloc::vec::Vec;
 use anyhow::Context;
-use oak_remote_attestation_sessions::{SessionState, SessionTracker};
+use oak_remote_attestation_sessions::{SerializeableRequest, SessionState, SessionTracker};
 
 /// Number of sessions that will be kept in memory.
 const SESSIONS_CACHE_SIZE: usize = 10000;

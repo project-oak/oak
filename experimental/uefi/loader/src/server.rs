@@ -17,8 +17,7 @@
 use anyhow::bail;
 use bmrng::unbounded::UnboundedRequestSender;
 use futures::Future;
-use oak_remote_attestation_sessions::{SessionId, SESSION_ID_LENGTH};
-use runtime::SerializeableRequest;
+use oak_remote_attestation_sessions::{SerializeableRequest, SessionId, SESSION_ID_LENGTH};
 use std::net::SocketAddr;
 use tonic::{transport::Server, Request, Response, Status};
 
