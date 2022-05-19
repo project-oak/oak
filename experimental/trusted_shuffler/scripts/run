@@ -1,12 +1,10 @@
 #!/usr/bin/env bash
 
-readonly SCRIPTS_DIR="$(dirname "$0")"
-
 # Note: SECONDS_TO_RUN * QPS has to be a multiple of K
 # Otherwise the Trusted Shuffler gets stuck because the last batch does not reach K requests.
 readonly SECONDS_TO_RUN=20 # Don't use $SECONDS.
 readonly LOG_LEVEL=error # error or info, note info makes the experiments significantly slower.
-readonly OUTPUT_FILE="trusted_shuffler_experiment.csv" 
+readonly OUTPUT_FILE="trusted_shuffler_experiment.csv"
 
 KS=(500 1000 2000)
 QPSS=$(seq 100 100 1000)
@@ -41,5 +39,5 @@ do
 
     kill -9 "${SERVER_PID}"
     kill -9 "${BACKEND_PID}"
-  done 
+  done
 done

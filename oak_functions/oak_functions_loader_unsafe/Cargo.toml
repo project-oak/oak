@@ -6,4 +6,17 @@ license = "Apache-2.0"
 
 [dependencies]
 anyhow = "*"
-oak_functions_loader = { path = "../loader", features = ["oak-unsafe"] }
+clap = { version = "*", features = ["derive"] }
+humantime-serde = "*"
+# TODO(#2783): Re-enable logging via the log crate once the logging approach has been redisigned.
+log = { version = "*" }
+oak_functions_abi = { path = "../abi" }
+oak_functions_extension = { path = "../extension" }
+oak_functions_loader = { path = "../loader" }
+oak_logger = { path = "../logger" }
+oak_functions_tf_inference = { path = "../experimental/tf_inference" }
+oak_functions_metrics = { path = "../experimental/metrics" }
+serde = "*"
+serde_derive = "*"
+serde_json = "*"
+toml = "*"

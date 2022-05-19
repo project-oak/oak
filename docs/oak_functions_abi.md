@@ -132,7 +132,7 @@ are currently supported:
   the Oak Functions runtime configuration on the given input vector. The
   extesion returns an error if either the input vector was malformed or the
   decoding of the resulting inference failed. This is experimental, and only
-  available when the `oak-tf` feature is enabled.
+  available with the unsafe version of the Oak Functions runtime.
 - `MetricsHandle`: The Oak Functions WebAssembly module reports the metric value
   `value` for a sum-based metric bucket identified by a `label` from the
   `ReportMetricsRequest`. The Oak Functions runtime attempts to interpret the

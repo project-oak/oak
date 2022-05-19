@@ -14,7 +14,17 @@
 // limitations under the License.
 //
 
-fn main() {
-    println!("cargo:rerun-if-changed=target.json");
-    println!("cargo:rerun-if-changed=layout.ld");
+use x86_64::instructions::{hlt, port::PortWriteOnly};
+
+/// Shuts down the machine via i8042. Assumes the VMM exposes the device.
+pub fn shutdown() -> ! {
+    // This is safe as both qemu and crosvm expose the i8042 device by default.
+    unsafe {
+        let mut port = PortWriteOnly::new(0x64);
+        port.write(0xFE_u8);
+    }
+
+    loop {
+        hlt();
+    }
 }

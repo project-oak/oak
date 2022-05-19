@@ -32,15 +32,9 @@ use crate::{
 use anyhow::Context;
 use clap::Parser;
 use log::Level;
-use oak_functions_abi::proto::{ConfigurationInfo, ServerPolicy};
+use oak_functions_abi::proto::ConfigurationInfo;
 use oak_functions_extension::ExtensionFactory;
 use oak_functions_lookup::{LookupDataManager, LookupFactory};
-#[cfg(feature = "oak-metrics")]
-use oak_functions_metrics::PrivateMetricsConfig;
-#[cfg(feature = "oak-metrics")]
-use oak_functions_metrics::PrivateMetricsProxyFactory;
-#[cfg(feature = "oak-tf")]
-use oak_functions_tf_inference::{read_model_from_path, TensorFlowFactory, TensorFlowModelConfig};
 use oak_functions_workload_logging::WorkloadLoggingFactory;
 use oak_logger::OakLogger;
 use oak_remote_attestation::crypto::get_sha256;
@@ -60,62 +54,6 @@ mod tests;
 
 // Instantiate BoxedExtensionFactory with Logger from the Oak Functions runtime.
 pub type OakFunctionsBoxedExtensionFactory = Box<dyn ExtensionFactory<Logger>>;
-
-/// Runtime Configuration of Runtime.
-///
-/// This struct serves as a schema for a static TOML config file provided by
-/// application developers. In deployment, this static config file is typically
-/// bundled with the Oak Runtime binary. Config values captured in it serve
-/// as a type safe version of regular command line flags.
-#[derive(Deserialize, Debug)]
-#[serde(deny_unknown_fields)]
-struct Config {
-    /// URL of a file containing key / value entries in protobuf binary format for lookup.
-    ///
-    /// If empty or not provided, no data is available for lookup.
-    #[serde(default)]
-    lookup_data: Option<Data>,
-    /// How often to refresh the lookup data.
-    ///
-    /// If empty or not provided, data is only loaded once at startup.
-    #[serde(default, with = "humantime_serde")]
-    lookup_data_download_period: Option<Duration>,
-    /// Whether to use the GCP metadata service to obtain an authentication token for downloading
-    /// the lookup data.
-    #[serde(default = "LookupDataAuth::default")]
-    lookup_data_auth: LookupDataAuth,
-    /// Number of worker threads available to the async runtime.
-    ///
-    /// Defaults to 4 if unset.
-    ///
-    /// Note that the CPU core detection logic does not seem to work reliably on Google Cloud Run,
-    /// so it is advisable to set this value to the number of cores available on the Cloud Run
-    /// instance.
-    ///
-    /// See <https://docs.rs/tokio/1.5.0/tokio/runtime/struct.Builder.html#method.worker_threads>.
-    worker_threads: Option<usize>,
-    /// Security policy guaranteed by the server.
-    policy: Option<Policy>,
-    /// Configuration for TensorFlow model
-    #[cfg(feature = "oak-tf")]
-    #[serde(default)]
-    tf_model: Option<TensorFlowModelConfig>,
-    /// Differentially private metrics configuration.
-    #[cfg(feature = "oak-metrics")]
-    #[serde(default)]
-    metrics: Option<PrivateMetricsConfig>,
-}
-
-#[derive(Deserialize, Debug)]
-#[serde(deny_unknown_fields)]
-enum Data {
-    /// Download data file via HTTP GET.
-    /// Supported URL schemes: `http`, `https`.
-    Url(String),
-    /// Read data file from the local file system.
-    /// File path is relative to the current `$PWD` (*not* relative to the config file).
-    File(String),
-}
 
 /// Command line options for the Oak loader.
 ///
@@ -139,7 +77,7 @@ pub struct Opt {
         long,
         help = "Path to a file containing configuration parameters in TOML format."
     )]
-    config_path: String,
+    pub config_path: String,
 }
 
 async fn background_refresh_lookup_data(
@@ -164,66 +102,80 @@ async fn background_refresh_lookup_data(
 
 /// This crate is just a library so this function does not get executed directly by anything, it
 /// needs to be wrapped in the "actual" `main` from a bin crate.
-pub fn lib_main() -> anyhow::Result<()> {
-    let opt = Opt::parse();
-    let config_file_bytes = fs::read(&opt.config_path)
-        .with_context(|| format!("Couldn't read config file {}", &opt.config_path))?;
-    let config: Config =
-        toml::from_slice(&config_file_bytes).context("Couldn't parse config file")?;
-    // TODO(#1971): Make maximum log level configurable.
-    let logger = Logger::default();
-    logger.log_public(Level::Info, &format!("parsed config file:\n{:#?}", config));
+pub fn lib_main(
+    opt: Opt,
+    logger: Logger,
+    load_lookup_data_config: LoadLookupDataConfig,
+    worker_threads: Option<usize>,
+    policy: Option<Policy>,
+    extension_factories: Vec<Box<dyn ExtensionFactory<Logger>>>,
+    extension_configuration_info: ExtensionConfigurationInfo,
+) -> anyhow::Result<()> {
     tokio::runtime::Builder::new_multi_thread()
-        .worker_threads(config.worker_threads.unwrap_or(4))
+        .worker_threads(worker_threads.unwrap_or(4))
         .enable_all()
         .build()
         .unwrap()
-        .block_on(async_main(opt, config, logger))
+        .block_on(async_main(
+            opt,
+            logger,
+            load_lookup_data_config,
+            policy,
+            extension_factories,
+            extension_configuration_info,
+        ))
+}
+
+/// Workaround to pass values for ConfigurationInfo from Config.
+/// TODO(#2851): Refactor to remove `ExtensionConfigurationInfo`.
+pub struct ExtensionConfigurationInfo {
+    ml_inference: bool,
+    metrics: Option<oak_functions_abi::proto::PrivateMetricsConfig>,
+}
+
+impl ExtensionConfigurationInfo {
+    pub fn new(
+        ml_inference: bool,
+        metrics: Option<oak_functions_abi::proto::PrivateMetricsConfig>,
+    ) -> Self {
+        ExtensionConfigurationInfo {
+            ml_inference,
+            metrics,
+        }
+    }
+
+    pub fn base() -> ExtensionConfigurationInfo {
+        ExtensionConfigurationInfo {
+            ml_inference: false,
+            metrics: None,
+        }
+    }
 }
 
 /// Main execution point for the Oak Functions Loader.
-async fn async_main(opt: Opt, config: Config, logger: Logger) -> anyhow::Result<()> {
+async fn async_main(
+    opt: Opt,
+    logger: Logger,
+    load_lookup_data_config: LoadLookupDataConfig,
+    policy: Option<Policy>,
+    extension_factories: Vec<Box<dyn ExtensionFactory<Logger>>>,
+    extension_configuration_info: ExtensionConfigurationInfo,
+) -> anyhow::Result<()> {
     let (notify_sender, notify_receiver) = tokio::sync::oneshot::channel::<()>();
-
-    let lookup_data_manager = load_lookup_data(&config, logger.clone()).await?;
-
-    #[allow(unused_mut)]
-    let mut extensions = Vec::new();
-
-    let workload_logging_factory =
-        WorkloadLoggingFactory::new_boxed_extension_factory(logger.clone())?;
-    extensions.push(workload_logging_factory);
-
-    let lookup_factory = LookupFactory::new_boxed_extension_factory(lookup_data_manager)?;
-    extensions.push(lookup_factory);
-
-    #[cfg(feature = "oak-tf")]
-    if let Some(tf_model_config) = &config.tf_model {
-        // Load the TensorFlow model from the given path in the config
-        let model = read_model_from_path(&tf_model_config.path)?;
-        let tf_model_factory = TensorFlowFactory::new_boxed_extension_factory(
-            model,
-            tf_model_config.shape.clone(),
-            logger.clone(),
-        )?;
-        extensions.push(tf_model_factory);
-    }
-
-    #[cfg(feature = "oak-metrics")]
-    if let Some(metrics_config) = &config.metrics {
-        let metrics_factory = PrivateMetricsProxyFactory::new_boxed_extension_factory(
-            metrics_config,
-            logger.clone(),
-        )?;
-        extensions.push(metrics_factory);
-    }
 
     let wasm_module_bytes = fs::read(&opt.wasm_path)
         .with_context(|| format!("Couldn't read Wasm file {}", &opt.wasm_path))?;
+    let mut extensions =
+        create_base_extension_factories(load_lookup_data_config, logger.clone()).await?;
+
+    for extension_factory in extension_factories {
+        extensions.push(extension_factory);
+    }
+
+    let wasm_handler = create_wasm_handler(&wasm_module_bytes, extensions, logger.clone())?;
 
     // Make sure that a policy is specified and is valid.
-    let policy = config
-        .policy
+    let policy = policy
         .as_ref()
         .ok_or_else(|| anyhow::anyhow!("a valid policy must be provided"))
         .and_then(|policy| policy.validate())?;
@@ -231,9 +183,12 @@ async fn async_main(opt: Opt, config: Config, logger: Logger) -> anyhow::Result<
     let address = SocketAddr::from((Ipv6Addr::UNSPECIFIED, opt.http_listen_port));
     let tee_certificate = vec![];
 
-    let wasm_handler = create_wasm_handler(&wasm_module_bytes, extensions, logger.clone())?;
-
-    let config_info = get_config_info(&wasm_module_bytes, policy.clone(), &config)?;
+    let config_info = ConfigurationInfo {
+        wasm_hash: get_sha256(&wasm_module_bytes).to_vec(),
+        policy: Some(policy.clone()),
+        ml_inference: extension_configuration_info.ml_inference,
+        metrics: extension_configuration_info.metrics,
+    };
 
     // Start server.
     let server_handle = tokio::spawn(async move {
@@ -274,10 +229,44 @@ async fn async_main(opt: Opt, config: Config, logger: Logger) -> anyhow::Result<
         .context("error while waiting for the server to terminate")?
 }
 
-async fn load_lookup_data(
-    config: &Config,
+#[derive(Deserialize, Debug)]
+#[serde(deny_unknown_fields)]
+pub enum Data {
+    /// Download data file via HTTP GET.
+    /// Supported URL schemes: `http`, `https`.
+    Url(String),
+    /// Read data file from the local file system.
+    /// File path is relative to the current `$PWD` (*not* relative to the config file).
+    File(String),
+}
+
+/// Configuration to load the LookupData.
+pub struct LoadLookupDataConfig {
+    lookup_data: Option<Data>,
+    lookup_data_download_period: Option<Duration>,
+    lookup_data_auth: LookupDataAuth,
+}
+
+impl LoadLookupDataConfig {
+    pub fn new(
+        lookup_data: Option<Data>,
+        lookup_data_download_period: Option<Duration>,
+        lookup_data_auth: LookupDataAuth,
+    ) -> LoadLookupDataConfig {
+        LoadLookupDataConfig {
+            lookup_data,
+            lookup_data_download_period,
+            lookup_data_auth,
+        }
+    }
+}
+
+/// Creates LookupDataManager and sets up LookupDataRefresher.
+pub async fn load_lookup_data(
+    config: LoadLookupDataConfig,
     logger: Logger,
 ) -> anyhow::Result<Arc<LookupDataManager<Logger>>> {
+    // Allow lookup data to be loaded by an untrusted launcher.
     let lookup_data_source = match &config.lookup_data {
         Some(lookup_data) => match &lookup_data {
             Data::Url(url_string) => {
@@ -325,35 +314,21 @@ async fn load_lookup_data(
     Ok(lookup_data_manager)
 }
 
-#[allow(unused_variables)]
-fn get_config_info(
-    wasm_module_bytes: &[u8],
-    policy: ServerPolicy,
-    config: &Config,
-) -> anyhow::Result<ConfigurationInfo> {
-    #[cfg(feature = "oak-metrics")]
-    let metrics = match &config.metrics {
-        Some(ref metrics_config) => Some(oak_functions_abi::proto::PrivateMetricsConfig {
-            epsilon: metrics_config.epsilon,
-            batch_size: metrics_config
-                .batch_size
-                .try_into()
-                .context("could not convert usize to u32")?,
-        }),
-        None => None,
-    };
-    #[cfg(not(feature = "oak-metrics"))]
-    let metrics = None;
+pub async fn create_base_extension_factories(
+    load_lookup_data_config: LoadLookupDataConfig,
+    logger: Logger,
+) -> anyhow::Result<Vec<Box<dyn ExtensionFactory<Logger>>>> {
+    let mut extensions = Vec::new();
 
-    #[cfg(feature = "oak-tf")]
-    let ml_inference = config.tf_model.is_some();
-    #[cfg(not(feature = "oak-tf"))]
-    let ml_inference = false;
+    // For Base we add the Logging extension factory
+    let workload_logging_factory =
+        WorkloadLoggingFactory::new_boxed_extension_factory(logger.clone())?;
+    extensions.push(workload_logging_factory);
 
-    Ok(ConfigurationInfo {
-        wasm_hash: get_sha256(wasm_module_bytes).to_vec(),
-        policy: Some(policy),
-        ml_inference,
-        metrics,
-    })
+    // For Base we add the Lookup extension factory
+    let lookup_data_manager = load_lookup_data(load_lookup_data_config, logger.clone()).await?;
+    let lookup_factory = LookupFactory::new_boxed_extension_factory(lookup_data_manager)?;
+    extensions.push(lookup_factory);
+
+    Ok(extensions)
 }

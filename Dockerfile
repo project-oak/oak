@@ -1,6 +1,6 @@
 # Use fixed snapshot of Debian to create a deterministic environment.
-# Snapshot tags can be found at https://hub.docker.com/r/debian/snapshot/tags
-ARG debian_snapshot=sha256:89f4b36d2e15a87382699808a2ca96c6da5f1db928eb0a5cd8bfa38e4edcc189
+# Snapshot tags can be found at https://hub.docker.com/r/debian/snapshot/tags?name=bullseye
+ARG debian_snapshot=sha256:fb7e04be4c79a9eab9c259fd5049f4a1bec321843040184a706bbecdaaacbd32
 FROM debian/snapshot@${debian_snapshot}
 
 # Set the SHELL option -o pipefail before RUN with a pipe in.
@@ -22,21 +22,25 @@ RUN apt-get --yes update \
   apt-transport-https \
   build-essential \
   ca-certificates \
+  clang-format \
   clang-tidy \
   curl \
   git \
   gnupg2 \
   gnupg-agent \
+  libcap-dev \
   libfl2 \
   libncurses5 \
   libssl-dev \
   musl-tools \
   openjdk-11-jdk \
+  ovmf \
   pkg-config \
   procps \
   python3 \
   python3-six \
   python3-distutils \
+  qemu-system-x86 \
   shellcheck \
   software-properties-common \
   vim \
@@ -56,7 +60,7 @@ RUN apt-get --yes update \
 # includes pre-generated assets.
 # Ring requires nasm, and a specific version of clang & llvm
 ARG llvm_version=14
-RUN echo "deb http://apt.llvm.org/buster/ llvm-toolchain-buster-$llvm_version main" >> /etc/apt/sources.list.d/llvm.list \
+RUN echo "deb http://apt.llvm.org/bullseye/ llvm-toolchain-bullseye-$llvm_version main" >> /etc/apt/sources.list.d/llvm.list \
   && curl https://apt.llvm.org/llvm-snapshot.gpg.key | apt-key add - \
   && apt-get update --yes \
   && apt-get install --no-install-recommends --yes \
@@ -78,15 +82,6 @@ RUN echo "deb [arch=amd64] https://download.docker.com/linux/debian buster stabl
   && apt-get install --no-install-recommends --yes docker-ce-cli \
   && apt-get clean \
   && rm --recursive --force /var/lib/apt/lists/*
-
-# Use a later version of clang-format and OVMF (UEFI firmware) from buster-backports.
-RUN echo 'deb http://deb.debian.org/debian buster-backports main' > /etc/apt/sources.list.d/backports.list \
-  && apt-get --yes update \
-  && apt-get install --no-install-recommends --yes clang-format-8 \
-  && apt-get install --no-install-recommends --yes --target-release buster-backports ovmf qemu-system-x86 \
-  && apt-get clean \
-  && rm --recursive --force /var/lib/apt/lists/* \
-  && ln --symbolic --force clang-format-8 /usr/bin/clang-format
 
 # Install Ent CLI. We mostly then just use it in order to simplify the logic around fetching
 # artifacts by URL and ensuring that their digest is correct, in order to ensure reproducibility.
@@ -261,6 +256,10 @@ RUN cargo install --git https://github.com/rust-fuzz/cargo-fuzz/ --rev 8c964bf18
 # The latest published version on crates.io is not compatible with recent nightly Rust.
 RUN cargo install --git https://github.com/bytecodealliance/wizer --rev 7c33b0bc2bd40ceb98727482be8fd8f115c6ced6 wizer --all-features
 
+# Install crosvm.
+# We're not interested in most of the features in crosvm (e.g. wayland support), but GDB support would be nice.
+RUN cargo install --git https://chromium.googlesource.com/chromiumos/platform/crosvm/ --rev df8201cfc6c9729ebe01f454f07f70e9781433f4 crosvm --no-default-features --features gdb
+
 # Where to install rust tooling
 ARG install_dir=${rustup_dir}/bin
 
@@ -332,6 +331,17 @@ ENV PATH "${sccache_dir}:${PATH}"
 RUN mkdir --parents ${sccache_dir} \
   && curl --location ${sccache_location} | tar --extract --gzip --directory=${sccache_dir} --strip-components=1 \
   && chmod +x ${sccache_dir}/sccache
+
+# Install flatbuffers
+# https://github.com/google/flatbuffers
+ARG flatc_version=v2.0.0
+ARG flatc_digest=sha256:d7a4a866b7380e175f820c5f8d93d1f777c4ab48beccfa8366a45c597af60af7
+ARG flatc_temp=/tmp/flatc.zip
+RUN ent get ${flatc_digest} --url=https://github.com/google/flatbuffers/releases/download/${flatc_version}/Linux.flatc.binary.clang++-9.zip > ${flatc_temp} \
+  && unzip ${flatc_temp} -d /usr/local/bin/ \
+  && chmod +x /usr/local/bin/flatc \
+  && rm ${flatc_temp} \
+  && flatc --version
 
 # By default, sccache uses `~/.cache/sccache` locally: https://github.com/mozilla/sccache#local.
 

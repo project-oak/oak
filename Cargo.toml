@@ -23,7 +23,6 @@ members = [
   "oak_functions/client/rust",
   "oak_functions/examples/benchmark/module",
   "oak_functions/examples/echo/module",
-  "oak_functions/examples/fuzzable/module",
   "oak_functions/examples/key_value_lookup/module",
   "oak_functions/examples/metrics/client/rust",
   "oak_functions/examples/metrics/module",

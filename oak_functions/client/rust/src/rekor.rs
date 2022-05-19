@@ -20,19 +20,21 @@
 use anyhow::Context;
 use ecdsa::Signature;
 use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
 use signature::Verifier;
-use std::str::FromStr;
+use std::{cmp::Ordering, str::FromStr};
 
 /// Struct representing a Rekor LogEntry.
+/// Based on <https://github.com/sigstore/rekor/blob/2978cdc26fdf8f5bfede8459afd9735f0f231a2a/pkg/generated/models/log_entry.go#L89.>
 #[derive(Debug, Deserialize, PartialEq, Serialize)]
 pub struct LogEntry {
+    /// We cannot directly use the type `Body` here, since body is Base64-encoded.
     #[serde(rename = "body")]
     pub body: String,
 
     #[serde(rename = "integratedTime")]
     pub integrated_time: usize,
 
-    // TODO(#2316): should this be verified?
     /// This is the SHA256 hash of the DER-encoded public key for the log at the time the entry was
     /// included in the log
     /// Pattern: ^[0-9a-fA-F]{64}$
@@ -47,6 +49,56 @@ pub struct LogEntry {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "verification")]
     pub verification: Option<LogEntryVerification>,
+}
+
+/// Struct representing the body in a Rekor LogEntry.
+#[derive(Debug, Deserialize, PartialEq, Serialize)]
+pub struct Body {
+    #[serde(rename = "apiVersion")]
+    pub api_version: String,
+    pub kind: String,
+    pub spec: Spec,
+}
+
+/// Struct representing the `specs` in the body of a Rekor LogEntry.
+/// Based on <https://github.com/sigstore/rekor/blob/2978cdc26fdf8f5bfede8459afd9735f0f231a2a/pkg/generated/models/hashedrekord_v001_schema.go#L39.>
+#[derive(Debug, Deserialize, PartialEq, Serialize)]
+pub struct Spec {
+    pub data: Data,
+    pub signature: GenericSignature,
+}
+
+/// Struct representing the hashed data in the body of a Rekor LogEntry.
+/// Based on <https://github.com/sigstore/rekor/blob/2978cdc26fdf8f5bfede8459afd9735f0f231a2a/pkg/generated/models/hashedrekord_v001_schema.go#L179.>
+#[derive(Debug, Deserialize, PartialEq, Serialize)]
+pub struct Data {
+    pub hash: Hash,
+}
+
+/// Struct representing a hash digest.
+/// Based on <https://github.com/sigstore/rekor/blob/2978cdc26fdf8f5bfede8459afd9735f0f231a2a/pkg/generated/models/hashedrekord_v001_schema.go#L269.>
+#[derive(Debug, Deserialize, PartialEq, Serialize)]
+pub struct Hash {
+    pub algorithm: String,
+    pub value: String,
+}
+
+/// Struct representing a signature in the body of a Rekor LogEntry.
+#[derive(Debug, Deserialize, PartialEq, Serialize)]
+pub struct GenericSignature {
+    /// Base64 content that is signed.
+    pub content: String,
+    pub format: String,
+    #[serde(rename = "publicKey")]
+    pub public_key: PublicKey,
+}
+
+/// Struct representing a public key included in the body of a Rekor LogEntry.
+/// Based on <https://github.com/sigstore/rekor/blob/2978cdc26fdf8f5bfede8459afd9735f0f231a2a/pkg/generated/models/hashedrekord_v001_schema.go#L468.>
+#[derive(Debug, Deserialize, PartialEq, Serialize)]
+pub struct PublicKey {
+    /// Base64 content of a public key.
+    pub content: String,
 }
 
 /// Struct representing a verification object in a Rekor LogEntry. The verification object in Rekor
@@ -71,9 +123,8 @@ pub struct RekorSignatureBundle {
     /// LogEntry). These fields include body, integratedTime, logID and logIndex.
     pub canonicalized: Vec<u8>,
 
-    /// Signature over the canonicalized JSON document. This is obtained by decoding the
-    /// Base64-encoded `signedEntryTimestamp` in the Rekor LogEntry.
-    pub signature: p256::ecdsa::Signature,
+    /// Base64-encoded signature over the canonicalized JSON document.
+    pub base64_signature: Vec<u8>,
 }
 
 /// Converter for creating a RekorSignatureBundle from a Rekor LogEntry as described in
@@ -104,14 +155,11 @@ impl TryFrom<&LogEntry> for RekorSignatureBundle {
             .ok_or_else(|| anyhow::anyhow!("no verification field in the log entry"))?
             .signed_entry_timestamp
             .clone();
-        let sig_bytes = sig_base64.as_str().as_bytes();
-        let sig =
-            base64::decode(sig_bytes).context("couldn't decode Base64 signedEntryTimestamp")?;
-        let signature = Signature::from_der(&sig).context("invalid ASN.1 signature")?;
+        let base64_signature = sig_base64.as_str().as_bytes().to_vec();
 
         Ok(Self {
             canonicalized,
-            signature,
+            base64_signature,
         })
     }
 }
@@ -128,21 +176,24 @@ impl TryFrom<&LogEntry> for RekorSignatureBundle {
 pub fn verify_rekor_log_entry(
     log_entry_bytes: &[u8],
     pem_encoded_public_key_bytes: &[u8],
-    _oak_public_key_bytes: &[u8],
-    _endorsement_bytes: &[u8],
+    oak_public_key_bytes: &[u8],
+    endorsement_bytes: &[u8],
 ) -> anyhow::Result<()> {
     verify_rekor_signature(log_entry_bytes, pem_encoded_public_key_bytes)?;
 
     let parsed: std::collections::HashMap<String, LogEntry> =
         serde_json::from_slice(log_entry_bytes)
             .context("couldn't parse bytes into a LogEntry object.")?;
-    let _entry = parsed.values().next().context("no entry in the map")?;
-    // TODO(#2316): entry.body is base64 encoded. It should be decoded to extract content and
-    // signature from it.
+    let entry = parsed.values().next().context("no entry in the map")?;
 
-    // TODO(#2316): verify signature in the body using oak's public key
+    // Parse base64-encoded entry.body into an instance of Body.
+    let body_bytes =
+        base64::decode(entry.body.clone()).context("couldn't decode Base64 signature")?;
+    let body: Body =
+        serde_json::from_slice(&body_bytes).context("couldn't parse bytes into a Body object.")?;
 
-    // TODO(#2316): check that the endorsement has the same hash as the one in the body.
+    // Verify the body in the Rekor LogEntry
+    verify_rekor_body(&body, endorsement_bytes, oak_public_key_bytes)?;
 
     Ok(())
 }
@@ -159,10 +210,85 @@ pub fn verify_rekor_signature(
     pem_encoded_public_key_bytes: &[u8],
 ) -> anyhow::Result<()> {
     let signature_bundle = rekor_signature_bundle(log_entry_bytes)?;
+
+    verify_signature(
+        &signature_bundle.base64_signature,
+        &signature_bundle.canonicalized,
+        pem_encoded_public_key_bytes,
+    )
+    .context("failed to verify signedEntryTimestamp of the Rekor LogEntry")
+}
+
+/// Verifies the signature in the `body` over the `contents_bytes`, using the public key in
+/// `pem_encoded_public_key_bytes`.
+///
+/// Returns `Ok(())` if the verification succeeds, otherwise returns `Err()`.
+pub fn verify_rekor_body(
+    body: &Body,
+    contents_bytes: &[u8],
+    pem_encoded_public_key_bytes: &[u8],
+) -> anyhow::Result<()> {
+    if body.spec.signature.format != "x509" {
+        anyhow::bail!(
+            "unsupported signature format: {}; only x509 is supported",
+            body.spec.signature.format
+        )
+    }
+
+    // For now, we only support `sha256` as the hashing algorithm.
+    if body.spec.data.hash.algorithm != "sha256" {
+        anyhow::bail!(
+            "unsupported hash algorithm: {}; only sha256 is supported",
+            body.spec.data.hash.algorithm
+        )
+    }
+
+    // Check that hash of the endorsement statement matches the hash of the data in the Body.
+    let contents_hash = get_sha256(contents_bytes);
+    let contents_hash_hex = hex::encode(contents_hash);
+    if contents_hash_hex != body.spec.data.hash.value {
+        anyhow::bail!(
+            "the hash of the endorsement file ({:?}) does not match the hash of the data in the body of the rekor entry ({:?})",
+            contents_hash_hex,
+            body.spec.data.hash.value
+        )
+    }
+
+    // Check that the public key in the body matches the given public key. This in fact checks the
+    // consistency of the Rekor LogEntry, and we expect these public keys to always be the same.
+    let public_key_bytes = base64::decode(body.spec.signature.public_key.content.as_bytes())
+        .expect("failed to base64-decode the public key bytes in the Rekor LogEntry body");
+    if compare_keys(&public_key_bytes, pem_encoded_public_key_bytes)? != Ordering::Equal {
+        anyhow::bail!(
+            "the given public key is different from the public key in the rekor entry: {:?} vs. {:?}",
+            public_key_bytes,
+            pem_encoded_public_key_bytes,
+        )
+    }
+
+    verify_signature(
+        body.spec.signature.content.as_str().as_bytes(),
+        contents_bytes,
+        pem_encoded_public_key_bytes,
+    )
+    .context("failed to verify signature over the endorsement file")
+}
+
+/// Verifies the given base64-encoded signature over the given data bytes, using the given
+/// PEM-encoded public key.
+///
+/// Returns `Ok(())` if the verification succeeds, otherwise returns `Err()`.
+pub fn verify_signature(
+    base64_signature_bytes: &[u8],
+    content_bytes: &[u8],
+    pem_encoded_public_key_bytes: &[u8],
+) -> anyhow::Result<()> {
+    let sig = base64::decode(base64_signature_bytes).context("couldn't decode Base64 signature")?;
+    let signature = Signature::from_der(&sig).context("invalid ASN.1 signature")?;
     let key = unmarshal_pem_to_p256_public_key(pem_encoded_public_key_bytes)?;
 
-    key.verify(&signature_bundle.canonicalized, &signature_bundle.signature)
-        .context("failed to verify signedEntryTimestamp of the Rekor LogEntry")
+    key.verify(content_bytes, &signature)
+        .context("failed to verify signature")
 }
 
 /// Parses a PEM-encoded x509/PKIX public key into a `p256::ecdsa::VerifyingKey`.
@@ -183,4 +309,22 @@ fn rekor_signature_bundle(log_entry_bytes: &[u8]) -> anyhow::Result<RekorSignatu
     let entry = parsed.values().next().context("no entry in the map")?;
 
     RekorSignatureBundle::try_from(entry)
+}
+
+/// Compares two pem-encoded ECDSA public keys. Instead of comparing the bytes, we parse the bytes
+/// and compare p256 keys. Keys are considered equal if they are the same on the elliptic curve.
+/// This means that the keys could have different bytes, but still be the same key.
+fn compare_keys(public_key_bytes_a: &[u8], public_key_bytes_b: &[u8]) -> anyhow::Result<Ordering> {
+    let key_a = unmarshal_pem_to_p256_public_key(public_key_bytes_a)?;
+    let key_b = unmarshal_pem_to_p256_public_key(public_key_bytes_b)?;
+
+    Ok(key_a.cmp(&key_b))
+}
+
+/// Computes a SHA-256 digest of `input` and returns it in a form of raw bytes.
+/// Returns the hash as a 32-bytes array.
+pub fn get_sha256(input: &[u8]) -> [u8; 32] {
+    let mut hasher = Sha256::new();
+    hasher.update(input);
+    hasher.finalize().into()
 }

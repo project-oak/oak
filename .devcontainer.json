@@ -4,7 +4,7 @@
 // - https://code.visualstudio.com/docs/remote/devcontainerjson-reference
 {
   // Do not modify manually. This value is automatically updated by ./scripts/docker_build .
-  "image": "sha256:764bcbf5180e9912a5fe6521ec9fb592edc2346b7229a57224b4bea2d727e978",
+  "image": "sha256:6074ea9f7c5fb76ae350d4be3a0f374f20fca4bae1cb5774ea8b215bb1fc4d1e",
   "extensions": [
     "bazelbuild.vscode-bazel",
     "bodil.prettier-toml",
@@ -13,6 +13,23 @@
     "matklad.rust-analyzer",
     "xaver.clang-format",
     "zxh404.vscode-proto3"
+  ],
+  "mounts": [
+    // Crosvm wants access to syslog.
+    "source=/dev/log,target=/dev/log,type=bind"
+  ],
+  "runArgs": [
+    // Required by crosvm.
+    "--device=/dev/kvm",
+    // In order to access /dev/kvm, our user inside the container needs to be a
+    // member of the group that owns /dev/kvm; the device itself is exposed
+    // inside the container with the same group as outside the container.
+    // Unfortunately this GID can differ between systems and there doesn't seem
+    // to be any good way to determine this dynamically from the host machine.
+    // Thus, hard-code 107 which is the group id used with Debian. If you use a
+    // different distribution, it's highly likely you need to adjust this value
+    // to match your environment.
+    "--group-add=107"
   ],
   "settings": {
     // Use the `rust-analyzer` binary installed in the Docker image.
