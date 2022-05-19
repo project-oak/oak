@@ -6,12 +6,14 @@
   // Do not modify manually. This value is automatically updated by ./scripts/docker_build .
   "image": "sha256:6074ea9f7c5fb76ae350d4be3a0f374f20fca4bae1cb5774ea8b215bb1fc4d1e",
   "extensions": [
+    "13xforever.language-x86-64-assembly",
     "bazelbuild.vscode-bazel",
     "bodil.prettier-toml",
     "bungcip.better-toml",
     "esbenp.prettier-vscode",
     "matklad.rust-analyzer",
     "xaver.clang-format",
+    "zixuanwang.linkerscript",
     "zxh404.vscode-proto3"
   ],
   "mounts": [
