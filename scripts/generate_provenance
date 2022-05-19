@@ -1,0 +1,47 @@
+#!/usr/bin/env bash
+
+readonly SCRIPTS_DIR="$(dirname "$0")"
+# shellcheck source=scripts/common
+source "$SCRIPTS_DIR/common"
+
+# Get git commit hash
+readonly COMMIT_HASH=$(git rev-parse --verify HEAD)
+
+mkdir tmp
+
+# Create a copy of the static toml file, since we are going to modify it.
+cp build.toml tmp/build.toml
+
+(
+    cd tmp
+    
+    # Download the Transparent Release build tool.
+    wget https://github.com/project-oak/transparent-release/releases/download/v0.1/transparent-release_0.1_Linux_x86_64.tar.gz 
+    tar -xvzf transparent-release_0.1_Linux_x86_64.tar.gz
+    
+    # Update the toml file with the Git commit hash and Docker image info.
+    {
+      echo ""
+      echo commit_hash='"'"$COMMIT_HASH"'"'
+      echo builder_image='"'"$DOCKER_IMAGE_REPO_DIGEST"'"'
+    } >> build.toml
+)
+
+# Build the binary and generate the provenance file.
+# `|| true` is needed so that we can continue to the rest of the script, particularly the cleanup part.
+./tmp/transparent-release -build_config_path=tmp/build.toml -git_root_dir=. || true
+
+
+# cleanup
+rm -rf tmp
+
+# On GitHub we need to store the generated provenance files in a location that can easily be copied
+# to the provenance branch. We pass an optional argument to the script to trigger this behaviour.
+if [ $# -gt 0 ]; then
+  readonly BINARY_SHA_256_HASH=$(jq -r '.subject[0].digest.sha256' ./provenance.json)
+
+  # Move the generated provenances to the correct folder
+  mkdir -p "./provenance"
+  mkdir -p "./provenance/${BINARY_SHA_256_HASH}"
+  cp ./provenance.json "./provenance/${BINARY_SHA_256_HASH}/${COMMIT_HASH}.json"
+fi

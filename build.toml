@@ -1,0 +1,5 @@
+# This is the static build config that we use with the transparent release tool for building the provenance.
+# To be able to use it with the build tool from Transparent Release, additional information must be added.
+repo = "https://github.com/project-oak/oak"
+command = ["./scripts/xtask", "build-oak-functions-server-variants"]
+output_path = "./target/x86_64-unknown-linux-musl/release/oak_functions_loader_base"

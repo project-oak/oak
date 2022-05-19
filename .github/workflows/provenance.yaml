@@ -49,12 +49,9 @@ jobs:
           ./scripts/docker_pull
           df --human-readable
 
-      - name: Build Functions Server Provenance
+      - name: Generate Functions Server Provenance
         run: |
-          ./scripts/build_provenance \
-          "oak_functions" \
-          ./target/x86_64-unknown-linux-musl/release/oak_functions_loader_base \
-          ./scripts/xtask build-oak-functions-server-variants
+          ./scripts/generate_provenance github
 
       - name: Move new provenance files to the provenance branch
         if: github.event_name == 'push'
