@@ -33,7 +33,10 @@ where
         let response = attestation_handler
             .message(frame.body)
             .context("attestation failed")?;
-        let reponse_frame = Frame { body: response };
+        let reponse_frame = Frame {
+            invocation_id: frame.invocation_id,
+            body: response,
+        };
         framed.write_frame(reponse_frame)?
     }
 }

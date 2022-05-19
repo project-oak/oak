@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-use channel::{Frame, Framed};
+use channel::ClientTransport;
 use clap::Parser;
 use qemu::Qemu;
 use std::{
@@ -142,15 +142,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     tokio::spawn(async move {
         let comms_channel = CommsChannel { inner: comms };
-        let mut framed = Framed::new(comms_channel);
-        fn respond(framed: &mut Framed<CommsChannel>, input: Vec<u8>) -> anyhow::Result<Vec<u8>> {
-            framed.write_frame(Frame { body: input })?;
-            let response_frame = framed.read_frame()?;
-            Ok(response_frame.body)
+        let mut client_transport = ClientTransport::new(comms_channel);
+        fn respond(
+            client_transport: &mut ClientTransport<CommsChannel>,
+            input: Vec<u8>,
+        ) -> anyhow::Result<Vec<u8>> {
+            let response = client_transport.invoke(input)?;
+            Ok(response)
         }
 
         while let Ok((input, responder)) = rx.recv().await {
-            let response = respond(&mut framed, input);
+            let response = respond(&mut client_transport, input);
             responder.respond(response).unwrap();
         }
     });
