@@ -196,6 +196,7 @@ use traits::{MultiscalarMul, VartimeMultiscalarMul, VartimePrecomputedMultiscala
     feature = "simd_backend",
     any(target_feature = "avx2", target_feature = "avx512ifma")
 )))]
+#[allow(unused_imports)]
 use backend::serial::scalar_mul;
 #[cfg(all(
     feature = "simd_backend",
