@@ -17,7 +17,13 @@
 use linked_list_allocator::LockedHeap;
 use rust_hypervisor_firmware_subset::boot;
 
+use log::info;
+
+#[cfg(not(test))]
 #[global_allocator]
+static ALLOCATOR: LockedHeap = LockedHeap::empty();
+
+#[cfg(test)]
 static ALLOCATOR: LockedHeap = LockedHeap::empty();
 
 pub fn init_allocator(info: &dyn boot::Info) {
@@ -71,9 +77,4 @@ pub fn init_allocator(info: &dyn boot::Info) {
             entry.size.try_into().unwrap(),
         );
     }
-}
-
-#[alloc_error_handler]
-fn out_of_memory(layout: ::core::alloc::Layout) -> ! {
-    panic!("Error allocating memory: {:#?}", layout);
 }

@@ -1,0 +1,22 @@
+[package]
+name = "kernel"
+version = "0.1.0"
+authors = ["Andri Saar <andrisaar@google.com>"]
+edition = "2021"
+license = "Apache-2.0"
+
+[dependencies]
+anyhow = { version = "*", default-features = false }
+atomic_refcell = "*"
+ciborium-io = { version = "*", default-features = false }
+getrandom = { version = "0.2", features = ["rdrand"] }
+lazy_static = { version = "*", features = ["spin_no_std"] }
+linked_list_allocator = { version = "*" }
+log = "*"
+libm = "*"
+runtime = { path = "../runtime", default-features = false, features = [
+  "rust-crypto"
+] }
+rust-hypervisor-firmware-subset = { path = "../../../third_party/rust-hypervisor-firmware-subset" }
+uart_16550 = "*"
+x86_64 = "*"

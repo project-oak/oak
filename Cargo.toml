@@ -17,6 +17,7 @@ members = [
   "experimental/trusted_shuffler/trusted_shuffler",
   "experimental/uefi/channel",
   "experimental/uefi/client",
+  "experimental/uefi/kernel",
   "experimental/uefi/loader",
   "experimental/uefi/runtime",
   "oak_functions/abi",

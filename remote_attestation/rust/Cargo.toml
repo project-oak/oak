@@ -50,3 +50,7 @@ prost-build = "*"
 assert_matches = "*"
 quickcheck = "*"
 quickcheck_macros = "*"
+
+# TODO(#2879): figure out why `cargo-udeps` thinks these (used) dependencies are unused
+[package.metadata.cargo-udeps.ignore]
+normal = ["aes-gcm", "hkdf", "p256", "sha2", "signature", "x25519-dalek"]

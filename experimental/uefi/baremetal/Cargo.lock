@@ -70,19 +70,8 @@ checksum = "d468802bab17cbc0cc575e9b053f41e72aa36bfa6b7f55e3529ffa43161b97fa"
 name = "baremetal"
 version = "0.1.0"
 dependencies = [
- "anyhow",
- "atomic_refcell",
- "ciborium-io",
- "getrandom",
- "lazy_static",
- "libm",
- "linked_list_allocator",
- "log",
- "rand_core",
- "runtime",
+ "kernel",
  "rust-hypervisor-firmware-subset",
- "uart_16550",
- "x86_64",
 ]
 
 [[package]]
@@ -460,6 +449,24 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a9a9d19fa1e79b6215ff29b9d6880b706147f16e9b1dbb1e4e5947b5b02bc5e3"
 dependencies = [
  "either",
+]
+
+[[package]]
+name = "kernel"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "atomic_refcell",
+ "ciborium-io",
+ "getrandom",
+ "lazy_static",
+ "libm",
+ "linked_list_allocator",
+ "log",
+ "runtime",
+ "rust-hypervisor-firmware-subset",
+ "uart_16550",
+ "x86_64",
 ]
 
 [[package]]
