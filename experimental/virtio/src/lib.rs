@@ -14,7 +14,10 @@
 // limitations under the License.
 //
 
-//! Virtio library drivers for use in bare-metal environments.
+//! Simple virtio drivers implemented based on polling.
+//!
+//! This crate assumes that an identity mapping is used in page tables, so that guest-virtual and
+//! guest-physical addresses are the same.
 
 #![no_std]
 

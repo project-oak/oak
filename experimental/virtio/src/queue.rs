@@ -19,8 +19,10 @@ use bitflags::bitflags;
 
 bitflags! {
     /// Flags about a descriptor.
+    ///
+    /// See <https://docs.oasis-open.org/virtio/virtio/v1.1/csprd01/virtio-v1.1-csprd01.html#x1-320005>.
     struct DescFlags: u16 {
-        /// This marks a buffer as continuing via the next field to chain descriptors togetehr.
+        /// This marks a buffer as continuing via the next field to chain descriptors together.
         ///
         /// Not supported for now.
         const VIRTQ_DESC_F_NEXT = 1;
@@ -45,7 +47,7 @@ struct Desc {
     addr: u64,
     /// The lengths of the buffer.
     length: u32,
-    /// Flags about the buffer.
+    /// Flags providing more info about this descriptor.
     flags: DescFlags,
     /// The index of the next descriptor in the chain if this is not the end (i.e. flags contain
     /// `DescFlags::VIRTQ_DESC_F_NEXT`), ignored otherwise.
@@ -75,14 +77,14 @@ impl Desc {
 }
 
 bitflags! {
-    /// Flags about a the available or used rings.
+    /// Flags about the available and used rings.
     struct RingFlags: u16 {
         /// This indicates that the owner of the ring does not require queue notifications.
         const NO_NOTIFY = 1;
     }
 }
 
-/// The ring buffer that indicates which descriptors are available.
+/// The ring buffer that indicates which descriptors have been made available by the driver.
 ///
 /// See <https://docs.oasis-open.org/virtio/virtio/v1.1/csprd01/virtio-v1.1-csprd01.html#x1-380006>.
 #[repr(C, align(2))]
@@ -108,7 +110,7 @@ impl<const QUEUE_SIZE: usize> Default for AvailRing<QUEUE_SIZE> {
     }
 }
 
-/// The ring buffer that indicates which descriptors have been used.
+/// The ring buffer that indicates which available descriptors have been consumed by the device.
 ///
 /// See <https://docs.oasis-open.org/virtio/virtio/v1.1/csprd01/virtio-v1.1-csprd01.html#x1-430008>.
 #[repr(C, align(4))]
@@ -133,7 +135,7 @@ impl<const QUEUE_SIZE: usize> Default for UsedRing<QUEUE_SIZE> {
     }
 }
 
-/// An element indicating a used descriptor.
+/// An element indicating a used descriptor chain.
 ///
 /// See <https://docs.oasis-open.org/virtio/virtio/v1.1/csprd01/virtio-v1.1-csprd01.html#x1-430008>.
 #[repr(C)]
@@ -141,8 +143,8 @@ impl<const QUEUE_SIZE: usize> Default for UsedRing<QUEUE_SIZE> {
 struct UsedElem {
     /// The index of the head of the used descriptor chain.
     id: u32,
-    /// Total length of the bytes that was written to the used descriptor chain for
-    /// device-write-only descriptors.
+    /// Total length of the bytes that was written to the used descriptor chain (only used for
+    /// device-write-only descriptors).
     len: u32,
 }
 
@@ -153,12 +155,13 @@ struct UsedElem {
 struct VirtQueue<const QUEUE_SIZE: usize> {
     /// The descriptor table.
     desc: [Desc; QUEUE_SIZE],
-    /// The available ring.
+    /// The available ring, which is controlled by the driver.
     avail: AvailRing<QUEUE_SIZE>,
-    /// The used ring.
+    /// The used ring, which is controlled by the device.
     used: UsedRing<QUEUE_SIZE>,
 }
 
+/// The intended use for the queue.
 #[derive(PartialEq, Eq)]
 enum QueueType {
     DeviceWriteOnly,
@@ -176,17 +179,17 @@ pub struct Queue<const QUEUE_SIZE: usize, const BUFFER_SIZE: usize> {
     /// to ensure it is in memory pages that are shared with the host.
     virt_queue: Box<VirtQueue<QUEUE_SIZE>>,
 
-    /// The buffer used by the virtqueue. Each descriptor uses a slice with an offset into this
-    /// single buffer.
+    /// The global buffer used by the virtqueue. Each descriptor uses a slice with an offset into
+    /// this single buffer for it own buffer.
     ///
     /// We store it as a `Vec` on the global heap for now, but in future we would have a dedicated
-    /// allocator to ensure it is in memory pages that are shared with the host.
+    /// allocator to ensure it is located in memory pages that are shared with the host.
     buffer: Vec<u8>,
 
-    /// The address of the first byte in the buffer.
+    /// The address of the first byte in the global buffer.
     base_offset: u64,
 
-    /// The last index we used while popping used items.
+    /// The last index that was used when popping elements from the used ring.
     last_used_idx: u16,
 
     /// The indices of free descriptors that can be used by the driver for writing.
@@ -222,8 +225,8 @@ impl<const QUEUE_SIZE: usize, const BUFFER_SIZE: usize> Queue<QUEUE_SIZE, BUFFER
         result
     }
 
-    /// Creates a new instance of `Queue` by pre-initialising buffer space for each descriptor in a
-    /// `Vec`.
+    /// Creates a new instance of `Queue` by pre-initialising all the descriptors and creating
+    /// enough buffer space for each descriptor.
     fn new(queue_type: QueueType) -> Self {
         assert!(
             QUEUE_SIZE.is_power_of_two(),
@@ -276,8 +279,10 @@ impl<const QUEUE_SIZE: usize, const BUFFER_SIZE: usize> Queue<QUEUE_SIZE, BUFFER
         (&self.virt_queue.used as *const _) as u64
     }
 
-    /// Whether the device wants to be notified of queue changes.
+    /// Checks whether the device wants to be notified of queue changes.
     pub fn must_notify_device(&self) -> bool {
+        // Memory fence so that we read a fresh value from the device-owned section.
+        core::sync::atomic::fence(core::sync::atomic::Ordering::Acquire);
         !self.virt_queue.used.flags.contains(RingFlags::NO_NOTIFY)
     }
 
@@ -299,7 +304,7 @@ impl<const QUEUE_SIZE: usize, const BUFFER_SIZE: usize> Queue<QUEUE_SIZE, BUFFER
     }
 
     /// Writes the data to a buffer and adds its descriptor to the available ring if possible and
-    /// returns the number of bytes that was copied from the slice.
+    /// returns the number of bytes that was copied from the `data` slice.
     ///
     /// If there are no free buffers (the device has not used any of the available buffers) we
     /// cannot write and have to wait.
