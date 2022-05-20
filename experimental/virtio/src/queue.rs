@@ -410,7 +410,7 @@ mod tests {
     #[test]
     #[should_panic]
     fn test_write_to_device_write_only_queue() {
-        Queue::<QUEUE_SIZE, BUFFER_SIZE>::new_device_write_only().write_buffer(&vec![0, 1]);
+        Queue::<QUEUE_SIZE, BUFFER_SIZE>::new_device_write_only().write_buffer(&[0, 1]);
     }
 
     #[test]
