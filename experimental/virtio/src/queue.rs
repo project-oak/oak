@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-use alloc::{boxed::Box, collections::vec_deque::VecDeque, vec::Vec};
+use alloc::{boxed::Box, collections::vec_deque::VecDeque, vec, vec::Vec};
 use bitflags::bitflags;
 
 bitflags! {
@@ -176,11 +176,15 @@ pub struct Queue<const QUEUE_SIZE: usize, const BUFFER_SIZE: usize> {
     /// to ensure it is in memory pages that are shared with the host.
     virt_queue: Box<VirtQueue<QUEUE_SIZE>>,
 
-    /// The buffers used by the virtqueue.
+    /// The buffer used by the virtqueue. Each descriptor uses a slice with an offset into this
+    /// single buffer.
     ///
     /// We store it as a `Vec` on the global heap for now, but in future we would have a dedicated
     /// allocator to ensure it is in memory pages that are shared with the host.
-    buffers: Vec<[u8; BUFFER_SIZE]>,
+    buffer: Vec<u8>,
+
+    /// The address of the first byte in the buffer.
+    base_offset: u64,
 
     /// The last index we used while popping used items.
     last_used_idx: u16,
@@ -229,10 +233,17 @@ impl<const QUEUE_SIZE: usize, const BUFFER_SIZE: usize> Queue<QUEUE_SIZE, BUFFER
             QueueType::DeviceWriteOnly => DescFlags::VIRTQ_DESC_F_WRITE,
             QueueType::DriverWriteOnly => DescFlags::empty(),
         };
-        let buffers: Vec<[u8; BUFFER_SIZE]> = (0..QUEUE_SIZE).map(|_| [0u8; BUFFER_SIZE]).collect();
-        let desc: Vec<Desc> = buffers
-            .iter()
-            .map(|buffer| Desc::new(flags, buffer.as_ptr() as u64, BUFFER_SIZE as u32))
+
+        let buffer = vec![0u8; BUFFER_SIZE * QUEUE_SIZE];
+        let base_offset = buffer.as_ptr() as u64;
+        let desc: Vec<Desc> = (0..QUEUE_SIZE)
+            .map(|i| {
+                Desc::new(
+                    flags,
+                    base_offset + (i * BUFFER_SIZE) as u64,
+                    BUFFER_SIZE as u32,
+                )
+            })
             .collect();
         let desc: [Desc; QUEUE_SIZE] = desc.try_into().unwrap();
         let virt_queue = Box::new(VirtQueue {
@@ -243,7 +254,8 @@ impl<const QUEUE_SIZE: usize, const BUFFER_SIZE: usize> Queue<QUEUE_SIZE, BUFFER
         Self {
             queue_type,
             virt_queue,
-            buffers,
+            buffer,
+            base_offset,
             last_used_idx: 0,
             free_ids: VecDeque::with_capacity(QUEUE_SIZE),
         }
@@ -264,6 +276,11 @@ impl<const QUEUE_SIZE: usize, const BUFFER_SIZE: usize> Queue<QUEUE_SIZE, BUFFER
         (&self.virt_queue.used as *const _) as u64
     }
 
+    /// Whether the device wants to be notified of queue changes.
+    pub fn must_notify_device(&self) -> bool {
+        !self.virt_queue.used.flags.contains(RingFlags::NO_NOTIFY)
+    }
+
     /// Reads the contents of the next used buffer from the queue, if one is avaialble.
     ///
     /// If a used buffer is found, this also advances the last used index by one.
@@ -274,15 +291,11 @@ impl<const QUEUE_SIZE: usize, const BUFFER_SIZE: usize> Queue<QUEUE_SIZE, BUFFER
             self.queue_type != QueueType::DriverWriteOnly,
             "Cannot read from a driver-write-only queue."
         );
-        if let Some(used_element) = self.get_next_used_element() {
-            let index = used_element.id as usize;
-            let len = used_element.len as usize;
-            // There is a 1:1 mapping between the buffers and their descriptors.
-            // TODO(#2876): Avoid copying the buffer slice if possible.
-            Some(self.buffers[index][..len].to_vec())
-        } else {
-            None
-        }
+        // TODO(#2876): Avoid copying the buffer slice if possible.
+        self.get_next_used_element().map(|used_element| {
+            self.get_mut_slice_from_index(used_element.id as usize, used_element.len as usize)
+                .to_vec()
+        })
     }
 
     /// Writes the data to a buffer and adds its descriptor to the available ring if possible and
@@ -302,25 +315,30 @@ impl<const QUEUE_SIZE: usize, const BUFFER_SIZE: usize> Queue<QUEUE_SIZE, BUFFER
             self.free_ids.push_back(element.id as u16)
         }
 
-        let len = if data.len() > BUFFER_SIZE {
-            BUFFER_SIZE
-        } else {
-            data.len()
-        };
+        let len = core::cmp::min(data.len(), BUFFER_SIZE);
 
         if let Some(id) = self.free_ids.pop_back() {
             // TODO(#2876): Avoid copying the buffer slice if possible.
-            self.buffers[id as usize][..len].copy_from_slice(data);
+            self.get_mut_slice_from_index(id as usize, len)
+                .copy_from_slice(data);
 
             // Update the length of the descriptor.
             let mut desc = &mut self.virt_queue.desc[id as usize];
             desc.length = len as u32;
 
             self.add_available_descriptor(id);
+
             Some(len)
         } else {
             None
         }
+    }
+
+    /// Gets a mutable slice into the buffer based on the index and length.
+    fn get_mut_slice_from_index(&mut self, index: usize, len: usize) -> &mut [u8] {
+        let start = (self.virt_queue.desc[index].addr - self.base_offset) as usize;
+        let end = start + len;
+        &mut self.buffer[start..end]
     }
 
     /// Tries to get the element referencing the next used descriptor that we have not yet seen, if
