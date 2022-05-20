@@ -62,6 +62,7 @@ members = [
 exclude = [
   "experimental/uefi/app",
   "experimental/uefi/baremetal",
+  "experimental/uefi/baremetal-crosvm",
   "oak_functions/loader/fuzz",
   "third_party/ring",
   "third_party/curve25519-dalek",
