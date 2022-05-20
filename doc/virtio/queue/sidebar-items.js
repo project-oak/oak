@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["DeviceWriteOnlyQueue","A queue where the descriptor buffers are only writable by the device."],["DriverWriteOnlyQueue","A queue where the descriptor buffers are only writable by the driver."],["Queue","A container for a boxed virtqueue and its associated buffers."]]});
