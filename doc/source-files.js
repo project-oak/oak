@@ -3,6 +3,7 @@ sourcesIndex["benchmark"] = {"name":"","files":["lib.rs"]};
 sourcesIndex["channel"] = {"name":"","files":["lib.rs"]};
 sourcesIndex["echo"] = {"name":"","files":["lib.rs"]};
 sourcesIndex["grpc_unary_attestation"] = {"name":"","files":["client.rs","lib.rs","server.rs"]};
+sourcesIndex["kernel"] = {"name":"","files":["avx.rs","i8042.rs","lib.rs","libm.rs","logging.rs","memory.rs","serial.rs"]};
 sourcesIndex["key_value_lookup"] = {"name":"","files":["lib.rs"]};
 sourcesIndex["location_utils"] = {"name":"","files":["lib.rs"]};
 sourcesIndex["lookup_data_checker"] = {"name":"","files":["main.rs"]};
