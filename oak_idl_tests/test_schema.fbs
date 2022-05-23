@@ -12,7 +12,7 @@ table LogRequest {
 }
 table LogResponse {}
 
-rpc_service Oak {
+rpc_service TestService {
     LookupData(LookupDataRequest) : LookupDataResponse (method_id: 222);
     Log(LogRequest) : LogResponse (method_id: 223);
 }

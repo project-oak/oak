@@ -16,61 +16,71 @@
 //! This crate contains tests for the `oak_idl_gen_structs` and `oak_idl_gen_services` crates. It
 //! needs to be separate from them in order to be able to invoke them at build time.
 
-mod oak {
+mod test_schema {
     #![allow(clippy::derivable_impls, clippy::needless_borrow)]
     #![allow(dead_code, unused_imports)]
 
-    include!(concat!(env!("OUT_DIR"), "/oak_generated.rs"));
-    include!(concat!(env!("OUT_DIR"), "/oak_services.rs"));
+    include!(concat!(env!("OUT_DIR"), "/test_schema_generated.rs"));
+    include!(concat!(env!("OUT_DIR"), "/test_schema_services.rs"));
 }
 
-struct OakImpl;
+struct TestServiceImpl;
 
-/// An implementation of the [`Oak`] service trait for testing.
-impl oak::Oak for OakImpl {
+/// An implementation of the [`test_schema::TestService`] service trait for testing.
+impl test_schema::TestService for TestServiceImpl {
     fn lookup_data(
         &self,
-        request: &oak::LookupDataRequest,
-    ) -> oak_idl::Message<oak::LookupDataResponse> {
+        request: &test_schema::LookupDataRequest,
+    ) -> oak_idl::utils::Message<test_schema::LookupDataResponse> {
         let h = maplit::hashmap! {
             vec![14, 12] => vec![19, 88]
         };
-        let mut b = oak_idl::MessageBuilder::default();
+        let mut b = oak_idl::utils::MessageBuilder::default();
         let value = h
             .get(request.key().unwrap())
             .map(|v| b.create_vector::<u8>(v));
-        let m = oak::LookupDataResponse::create(&mut b, &oak::LookupDataResponseArgs { value });
+        let m = test_schema::LookupDataResponse::create(
+            &mut b,
+            &test_schema::LookupDataResponseArgs { value },
+        );
         b.finish(m).unwrap()
     }
 
-    fn log(&self, request: &oak::LogRequest) -> oak_idl::Message<oak::LogResponse> {
+    fn log(
+        &self,
+        request: &test_schema::LogRequest,
+    ) -> oak_idl::utils::Message<test_schema::LogResponse> {
         eprintln!("log: {}", request.entry().unwrap());
-        let mut b = oak_idl::MessageBuilder::default();
-        let m = oak::LogResponse::create(&mut b, &oak::LogResponseArgs {});
+        let mut b = oak_idl::utils::MessageBuilder::default();
+        let m = test_schema::LogResponse::create(&mut b, &test_schema::LogResponseArgs {});
         b.finish(m).unwrap()
     }
 }
 
 #[test]
 fn test_lookup_data() {
-    let s = OakImpl;
-    use oak::Oak;
+    let s = TestServiceImpl;
+    use test_schema::TestService;
     let transport = s.serve();
-    let mut c = oak::OakClient::new(transport);
+    let mut c = test_schema::TestServiceClient::new(transport);
     {
-        let mut b = oak_idl::MessageBuilder::default();
+        let mut b = oak_idl::utils::MessageBuilder::default();
         let v = b.create_vector::<u8>(&[14, 12]);
-        let req =
-            oak::LookupDataRequest::create(&mut b, &oak::LookupDataRequestArgs { key: Some(v) });
+        let req = test_schema::LookupDataRequest::create(
+            &mut b,
+            &test_schema::LookupDataRequestArgs { key: Some(v) },
+        );
         let message = b.finish(req).unwrap();
         let res = c.lookup_data(message.buf()).unwrap();
         assert_eq!(Some([19, 88].as_ref()), res.get().value());
     }
     {
-        let mut b = oak_idl::MessageBuilder::default();
+        let mut b = oak_idl::utils::MessageBuilder::default();
         let v = b.create_vector::<u8>(&[10, 00]);
-        let req =
-            oak::LookupDataRequest::create(&mut b, &oak::LookupDataRequestArgs { key: Some(v) });
+        let req = test_schema::LookupDataRequest::create(
+            &mut b,
+            &test_schema::LookupDataRequestArgs { key: Some(v) },
+        );
         let message = b.finish(req).unwrap();
         let res = c.lookup_data(message.buf()).unwrap();
         assert_eq!(None, res.get().value());

@@ -27,8 +27,8 @@ fn generate() {
     // developer (who should notice that the generated file has changed), and also in CI (thanks to
     // the git_check_diff step).
     std::fs::copy(
-        concat!(env!("OUT_DIR"), "/oak_services.rs"),
-        "oak_services.rs.txt",
+        concat!(env!("OUT_DIR"), "/test_schema_services.rs"),
+        "test_schema_services.rs.txt",
     )
     .unwrap();
 }

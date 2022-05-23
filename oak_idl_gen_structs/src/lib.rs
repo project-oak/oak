@@ -23,9 +23,10 @@ use std::process::exit;
 /// Compile structs and tables from the provided flatbuffer file using the `flatc` binary
 /// installed on the system.
 ///
-/// For an input flatbuffer file with name `foo.fbs`, the generated Rust file will be located at
-/// `${OUT_DIR}/foo_generated.rs`.
+/// For an input flatbuffer file with name `test_file.fbs`, the generated Rust file will be located
+/// at `${OUT_DIR}/test_file_generated.rs`.
 pub fn compile_structs(filename: &str) {
+    println!("cargo:rerun-if-changed={}", filename);
     let output = std::process::Command::new("flatc")
         .args(["--rust", "-o", &std::env::var("OUT_DIR").unwrap(), filename])
         .output()

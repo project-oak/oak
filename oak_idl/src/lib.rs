@@ -15,11 +15,9 @@
 //
 
 use serde::{Deserialize, Serialize};
-use std::{
-    fmt::Debug,
-    marker::PhantomData,
-    ops::{Deref, DerefMut},
-};
+use std::fmt::Debug;
+
+pub mod utils;
 
 #[derive(Debug)]
 pub enum ClientError {
@@ -126,115 +124,6 @@ impl Transport for Channel {
         }
 
         Ok(response_message)
-    }
-}
-
-/// A helper struct to facilitate building a [`Message`].
-///
-/// It delegates most methods to the underlying [`flatbuffers::FlatBufferBuilder`] instance, but it
-/// adds a [`MessageBuilder::finish`] method that returns a completed [`Message`] instance.
-///
-/// ```
-/// # struct Foo;
-/// #
-/// # impl flatbuffers::Verifiable for Foo {
-/// #     fn run_verifier(
-/// #         v: &mut flatbuffers::Verifier,
-/// #         pos: usize,
-/// #     ) -> Result<(), flatbuffers::InvalidFlatbuffer> {
-/// #         Ok(())
-/// #     }
-/// # }
-/// #
-/// # impl<'a> flatbuffers::Follow<'a> for Foo {
-/// #     type Inner = Self;
-/// #     fn follow(buf: &'a [u8], log: usize) -> Self::Inner {
-/// #         Self
-/// #     }
-/// # }
-/// #
-/// # impl Foo {
-/// #     pub fn create(b: &mut flatbuffers::FlatBufferBuilder) -> flatbuffers::WIPOffset<Foo> {
-/// #         flatbuffers::WIPOffset::new(0)
-/// #     }
-/// # }
-/// #
-/// let mut b = oak_idl::MessageBuilder::<Foo>::default();
-/// let v = b.create_vector::<u8>(&[14, 12]);
-/// let foo = Foo::create(&mut b);
-/// let m = b.finish(foo);
-/// ```
-pub struct MessageBuilder<'a, T> {
-    buf: flatbuffers::FlatBufferBuilder<'a>,
-    _phantom: PhantomData<T>,
-}
-
-impl<'a, T: flatbuffers::Verifiable + flatbuffers::Follow<'a>> Default for MessageBuilder<'a, T> {
-    fn default() -> Self {
-        Self {
-            buf: flatbuffers::FlatBufferBuilder::default(),
-            _phantom: PhantomData,
-        }
-    }
-}
-
-impl<'a, T: flatbuffers::Verifiable + flatbuffers::Follow<'a>> MessageBuilder<'a, T> {
-    pub fn finish(
-        self,
-        offset: flatbuffers::WIPOffset<T>,
-    ) -> Result<Message<T>, flatbuffers::InvalidFlatbuffer> {
-        let mut s = self;
-        s.buf.finish(offset, None);
-        Message::from_vec(s.buf.finished_data().to_vec())
-    }
-}
-
-/// Delegate most methods to the underlying [`MessageBuilder`].
-impl<'a, T> Deref for MessageBuilder<'a, T> {
-    type Target = flatbuffers::FlatBufferBuilder<'a>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.buf
-    }
-}
-
-/// Delegate most methods to the underlying [`MessageBuilder`].
-impl<'a, T> DerefMut for MessageBuilder<'a, T> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.buf
-    }
-}
-
-/// An owned flatbuffer message, which owns the underlying buffer.
-pub struct Message<T> {
-    buf: Vec<u8>,
-    _phantom: PhantomData<T>,
-}
-
-impl<T: flatbuffers::Verifiable> Message<T> {
-    pub fn from_vec(buf: Vec<u8>) -> Result<Self, flatbuffers::InvalidFlatbuffer> {
-        use flatbuffers::Verifiable;
-        let opts = flatbuffers::VerifierOptions::default();
-        let mut v = flatbuffers::Verifier::new(&opts, &buf);
-        <flatbuffers::ForwardsUOffset<T>>::run_verifier(&mut v, 0)?;
-        Ok(Self {
-            buf,
-            _phantom: PhantomData,
-        })
-    }
-}
-
-impl<T> Message<T> {
-    /// Returns a reference to the underlying owned buffer.
-    pub fn buf(&self) -> &[u8] {
-        &self.buf
-    }
-}
-
-impl<'a, T: flatbuffers::Follow<'a> + flatbuffers::Verifiable> Message<T> {
-    /// Returns a reference to the flatbuffer object, pointing within the underlying owned buffer.
-    pub fn get(&'a self) -> T::Inner {
-        flatbuffers::root::<T>(&self.buf).unwrap()
     }
 }
 
