@@ -39,15 +39,15 @@ mod serial;
 
 use core::panic::PanicInfo;
 use log::{error, info};
-use rust_hypervisor_firmware_subset::{boot, paging, pvh};
+use rust_hypervisor_firmware_subset::{boot, paging};
 
 /// Main entry point for the kernel, to be called from bootloader.
-pub fn start_kernel(rdi: &pvh::StartInfo) -> ! {
+pub fn start_kernel(info: &dyn boot::Info) -> ! {
     avx::enable_avx();
     logging::init_logging();
     paging::setup();
-    memory::init_allocator(rdi);
-    main(rdi);
+    memory::init_allocator(info);
+    main(info);
 }
 
 fn main(info: &dyn boot::Info) -> ! {

@@ -73,7 +73,7 @@ type Desc = unsafe extern "C" fn();
 // We make sure our ELF Note has an alignment of 4 for maximum compatibility.
 // Some software (QEMU) calculates padding incorectly if alignment != 4.
 #[repr(C, packed(4))]
-struct Note {
+pub struct Note {
     name_size: u32,
     desc_size: u32,
     kind: u32,
@@ -84,7 +84,7 @@ struct Note {
 // This is: ELFNOTE(Xen, XEN_ELFNOTE_PHYS32_ENTRY, .quad ram32_start)
 #[link_section = ".note"]
 #[used]
-static PVH_NOTE: Note = Note {
+pub static PVH_NOTE: Note = Note {
     name_size: size_of::<Name>() as u32,
     desc_size: size_of::<Desc>() as u32,
     kind: XEN_ELFNOTE_PHYS32_ENTRY,
