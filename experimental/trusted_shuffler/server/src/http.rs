@@ -110,7 +110,7 @@ pub struct ServiceBuilder {
 }
 
 impl ServiceBuilder {
-    pub fn new(k: usize, timeout: Duration, backend_url: &str) -> Self {
+    pub fn new(k: usize, timeout: Option<Duration>, backend_url: &str) -> Self {
         let trusted_shuffler = Arc::new(TrustedShuffler::new(
             k,
             timeout,

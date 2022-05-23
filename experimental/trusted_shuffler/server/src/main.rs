@@ -45,10 +45,9 @@ pub struct Opt {
     backend_url: String,
     #[structopt(
         long,
-        help = "Timeout in milliseconds for the backend to respond to the k requests from the server. Use 0 for infinite timeout.",
-        default_value = "0"
+        help = "Timeout in milliseconds for the backend to respond to the k requests from the server."
     )]
-    timeout_in_ms: u64,
+    timeout_ms: Option<u64>,
 }
 
 #[tokio::main(flavor = "multi_thread")]
@@ -66,17 +65,11 @@ async fn main() -> anyhow::Result<()> {
         .parse()
         .context("Couldn't parse address")?;
     let backend_url = format!("{}/request", &opt.backend_url);
-    let timeout = Duration::from_millis(opt.timeout_in_ms);
+    let timeout = opt.timeout_ms.map(|t| Duration::from_millis(t));
 
     info!(
-        "Starting the Trusted Shuffler server at {:?} with k = {} and {}",
-        listen_address,
-        opt.k,
-        if timeout.is_zero() {
-            String::from("no timeout")
-        } else {
-            format!("timeout {}", opt.timeout_in_ms)
-        }
+        "Starting the Trusted Shuffler server at {:?} with k = {} and {:?}",
+        listen_address, opt.k, timeout
     );
 
     let server =

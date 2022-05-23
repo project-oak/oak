@@ -57,7 +57,7 @@ pub struct TrustedShuffler {
     // When the k-th request in a batch arrives we start a timeout. For any request were the
     // Trusted Shuffler did not receive a response from the backend after the timeout, the Trusted
     // Shuffler sends an empty response.
-    timeout: Duration,
+    timeout: Option<Duration>,
 
     // Current batch of requests to be shuffled.
     // Mutex is used because messages are collected in different async tasks.
@@ -68,7 +68,11 @@ pub struct TrustedShuffler {
 }
 
 impl TrustedShuffler {
-    pub fn new(k: usize, timeout: Duration, request_handler: Arc<dyn RequestHandler>) -> Self {
+    pub fn new(
+        k: usize,
+        timeout: Option<Duration>,
+        request_handler: Arc<dyn RequestHandler>,
+    ) -> Self {
         Self {
             k,
             timeout,

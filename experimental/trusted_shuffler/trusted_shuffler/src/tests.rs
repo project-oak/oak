@@ -49,7 +49,7 @@ fn generate_request_and_expected_response(data: &str) -> (Vec<u8>, Vec<u8>) {
 fn test_trusted_shuffler(k: usize) -> Arc<TrustedShuffler> {
     Arc::new(TrustedShuffler::new(
         k,
-        Duration::from_millis(0),
+        None,
         Arc::new(TestRequestHandler {}),
     ))
 }
