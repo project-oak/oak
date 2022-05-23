@@ -1,5 +1,3 @@
-worker_threads = 4
-
 [policy]
 constant_response_size_bytes = 90
 constant_processing_time = "20ms"

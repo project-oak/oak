@@ -106,13 +106,11 @@ pub fn lib_main(
     opt: Opt,
     logger: Logger,
     load_lookup_data_config: LoadLookupDataConfig,
-    worker_threads: Option<usize>,
     policy: Option<Policy>,
     extension_factories: Vec<Box<dyn ExtensionFactory<Logger>>>,
     extension_configuration_info: ExtensionConfigurationInfo,
 ) -> anyhow::Result<()> {
     tokio::runtime::Builder::new_multi_thread()
-        .worker_threads(worker_threads.unwrap_or(4))
         .enable_all()
         .build()
         .unwrap()
