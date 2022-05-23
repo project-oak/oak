@@ -2195,7 +2195,7 @@ dependencies = [
  "ciborium-io",
  "getrandom 0.2.6",
  "lazy_static",
- "libm 0.1.4",
+ "libm 0.2.2",
  "linked_list_allocator",
  "log",
  "runtime",
@@ -3303,9 +3303,9 @@ dependencies = [
 
 [[package]]
 name = "once_cell"
-version = "1.11.0"
+version = "1.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7b10983b38c53aebdf33f542c6275b0f58a238129d00c4ae0e6fb59738d783ca"
+checksum = "7709cef83f0c1f58f666e746a08b21e0085f7440fa6a29cc194d68aac97a4225"
 
 [[package]]
 name = "oorandom"
