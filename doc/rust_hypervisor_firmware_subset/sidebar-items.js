@@ -1,1 +1,1 @@
-initSidebarItems({"fn":[["ram_min",""],["stack_start",""],["text_end",""],["text_start",""]],"mod":[["boot",""],["paging",""],["pvh",""]]});
+initSidebarItems({"fn":[["ram_min",""],["stack_start",""],["text_end",""],["text_start",""]],"mod":[["boot",""],["device",""],["mem",""],["paging",""],["pci",""],["pvh",""],["virtio",""]]});
