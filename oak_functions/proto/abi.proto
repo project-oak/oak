@@ -39,13 +39,13 @@ enum OakStatus {
   UNSPECIFIED = 0;
   // Success.
   OK = 1;
-  // Arguments invalid, e.g., deserializing the request failed.
+  // Arguments invalid, e.g. deserializing the request in the Oak Functions runtime failed.
   ERR_INVALID_ARGS = 2;
-  // Internal error, e.g., when serialzing the response failed.
+  // Internal error, e.g. serializing the response in the Oak Functions runtime failed.
   ERR_INTERNAL = 3;
   // Error when the given number is not a valid handle.
   ERR_INVALID_HANDLE = 4;
-  // Error when serialization fails.
+  // Error when serializing the request or deserializing the response fails in the Wasm module.
   ERR_SERIALIZING = 5;
 }
 

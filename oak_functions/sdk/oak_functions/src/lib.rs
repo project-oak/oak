@@ -129,7 +129,7 @@ pub fn tf_model_infer(
     use prost::Message;
     let response = invoke(oak_functions_abi::ExtensionHandle::TfHandle, input_vector)?;
     let response: TfModelInferResponse = bincode::deserialize(&response).map_err(|err| {
-        log!("Failed to serialize response: {}", err);
+        log!("Failed to deserialize response: {}", err);
         OakStatus::ErrSerializing
     })?;
     // We decode the inference bytes.
