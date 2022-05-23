@@ -93,6 +93,8 @@
 <span id="88">88</span>
 <span id="89">89</span>
 <span id="90">90</span>
+<span id="91">91</span>
+<span id="92">92</span>
 </pre><pre class="rust"><code><span class="doccomment">/// The inference from a TensorFlow model, containing an inference vector of floats, and a shape</span>
 <span class="doccomment">/// vector specifying the dimensions of the inference vector.</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">PartialEq</span>, <span class="ident">::prost::Message</span>)]</span>
@@ -176,12 +178,14 @@
     <span class="ident">Unspecified</span> <span class="op">=</span> <span class="number">0</span>,
     <span class="doccomment">/// Success.</span>
     <span class="prelude-val">Ok</span> <span class="op">=</span> <span class="number">1</span>,
-    <span class="doccomment">/// Arguments invalid.</span>
+    <span class="doccomment">/// Arguments invalid, e.g. deserializing the request in the Oak Functions runtime failed.</span>
     <span class="ident">ErrInvalidArgs</span> <span class="op">=</span> <span class="number">2</span>,
-    <span class="doccomment">/// Internal error.</span>
+    <span class="doccomment">/// Internal error, e.g. serializing the response in the Oak Functions runtime failed.</span>
     <span class="ident">ErrInternal</span> <span class="op">=</span> <span class="number">3</span>,
     <span class="doccomment">/// Error when the given number is not a valid handle.</span>
     <span class="ident">ErrInvalidHandle</span> <span class="op">=</span> <span class="number">4</span>,
+    <span class="doccomment">/// Error when serializing the request or deserializing the response fails in the Wasm module.</span>
+    <span class="ident">ErrSerializing</span> <span class="op">=</span> <span class="number">5</span>,
 }
 </code></pre></div>
 </section><section id="search" class="content hidden"></section></div></main><div id="rustdoc-vars" data-root-path="../../../../../../../../" data-current-crate="oak_functions_abi" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.62.0-nightly (de1bc0008 2022-04-21)" ></div>
