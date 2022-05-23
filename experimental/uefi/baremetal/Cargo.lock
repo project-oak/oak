@@ -843,6 +843,7 @@ dependencies = [
 name = "rust-hypervisor-firmware-subset"
 version = "0.1.0"
 dependencies = [
+ "atomic_refcell",
  "bitflags",
  "log",
  "x86_64",
