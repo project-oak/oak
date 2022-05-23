@@ -66,6 +66,7 @@ RUN echo "deb http://apt.llvm.org/bullseye/ llvm-toolchain-bullseye-$llvm_versio
   && apt-get install --no-install-recommends --yes \
   clang-${llvm_version} \
   llvm-${llvm_version} \
+  lldb-${llvm_version} \
   nasm \
   && rm --recursive --force /var/lib/apt/lists/*
 
