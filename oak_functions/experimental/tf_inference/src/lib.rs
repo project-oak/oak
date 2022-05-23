@@ -42,8 +42,10 @@ impl<L: OakLogger> OakApiNativeExtension for TensorFlowModel<L> {
             TfModelInferError::BadTensorFlowModelInput
         });
         let result = inference.map(|inference| inference.encode_to_vec());
-        let response = bincode::serialize(&TfModelInferResponse { result })
-            .expect("Failed to serialize TF response.");
+        let response = bincode::serialize(&TfModelInferResponse { result }).map_err(|err| {
+            self.log_error(&format!("Failed to serialize response: {}", err));
+            OakStatus::ErrInternal
+        })?;
 
         Ok(response)
     }

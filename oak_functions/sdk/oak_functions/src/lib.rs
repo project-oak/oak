@@ -19,8 +19,8 @@
 
 use oak_functions_abi::{
     proto::{Inference, OakStatus},
-    ReportMetricError, ReportMetricRequest, ReportMetricResponse, StorageGetItemResponse,
-    TfModelInferError, TfModelInferResponse,
+    ReportMetricError, ReportMetricRequest, StorageGetItemResponse, TfModelInferError,
+    TfModelInferResponse,
 };
 use std::convert::AsRef;
 
@@ -57,8 +57,10 @@ pub fn write_response(buf: &[u8]) -> Result<(), OakStatus> {
 /// Looks up an item from the in-memory lookup store.
 pub fn storage_get_item(key: &[u8]) -> Result<Option<Vec<u8>>, OakStatus> {
     let response = invoke(oak_functions_abi::ExtensionHandle::LookupHandle, key)?;
-    let result: StorageGetItemResponse =
-        bincode::deserialize(&response).expect("Failed to deserialize storage get item response.");
+    let result: StorageGetItemResponse = bincode::deserialize(&response).map_err(|err| {
+        log!("Failed to deserialize response: {}", err);
+        OakStatus::ErrSerializing
+    })?;
     Ok(result.value)
 }
 
@@ -90,18 +92,23 @@ pub fn report_metric<T: AsRef<str>>(
     let label = label.as_ref().to_owned();
     let request = ReportMetricRequest { label, value };
 
-    let serialized_request =
-        bincode::serialize(&request).expect("Fail to serialize report metric request.");
+    let serialized_request = bincode::serialize(&request).map_err(|err| {
+        log!("Failed to serialize request: {}", err);
+        OakStatus::ErrSerializing
+    })?;
 
-    let response = invoke(
+    let serialized_response = invoke(
         oak_functions_abi::ExtensionHandle::MetricsHandle,
         &serialized_request,
     )?;
 
-    let response: ReportMetricResponse =
-        bincode::deserialize(&response).expect("Failed to deserialize report metric response.");
+    let response: Result<(), ReportMetricError> = bincode::deserialize(&serialized_response)
+        .map_err(|err| {
+            log!("Failed to deserialize response: {}", err);
+            OakStatus::ErrSerializing
+        })?;
 
-    Ok(response.result)
+    Ok(response)
 }
 
 /// Writes a debug log message.
@@ -121,8 +128,10 @@ pub fn tf_model_infer(
 ) -> Result<Result<Inference, TfModelInferError>, OakStatus> {
     use prost::Message;
     let response = invoke(oak_functions_abi::ExtensionHandle::TfHandle, input_vector)?;
-    let response: TfModelInferResponse =
-        bincode::deserialize(&response).expect("Failed to deserialize TF response.");
+    let response: TfModelInferResponse = bincode::deserialize(&response).map_err(|err| {
+        log!("Failed to deserialize response: {}", err);
+        OakStatus::ErrSerializing
+    })?;
     // We decode the inference bytes.
     let tf_result = response.result.and_then(|inference_bytes| {
         Inference::decode(&*inference_bytes).map_err(|err| {

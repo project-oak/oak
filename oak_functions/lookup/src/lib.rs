@@ -85,8 +85,10 @@ impl<L: OakLogger> OakApiNativeExtension for LookupData<L> {
             },
         );
 
-        let response = bincode::serialize(&StorageGetItemResponse { value })
-            .expect("Failed to serialze get storage item response.");
+        let response = bincode::serialize(&StorageGetItemResponse { value }).map_err(|err| {
+            self.log_debug(&format!("Failed to serialize response: {}", err));
+            OakStatus::ErrInternal
+        })?;
         Ok(response)
     }
 

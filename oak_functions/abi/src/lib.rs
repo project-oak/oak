@@ -23,7 +23,7 @@ extern crate alloc;
 
 pub use crate::proto::ExtensionHandle;
 use alloc::{string::String, vec::Vec};
-use serde_derive::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 
 pub mod proto {
     use alloc::vec::Vec;

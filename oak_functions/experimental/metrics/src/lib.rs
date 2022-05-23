@@ -67,15 +67,16 @@ where
 
 impl<L: OakLogger> OakApiNativeExtension for PrivateMetricsExtension<L> {
     fn invoke(&mut self, request: Vec<u8>) -> Result<Vec<u8>, OakStatus> {
-        let request: ReportMetricRequest =
-            bincode::deserialize(&request).expect("Fail to deserialize report metric request.");
+        let request: ReportMetricRequest = bincode::deserialize(&request).map_err(|err| {
+            self.log_debug(&format!("Failed to deserialize request: {}", err));
+            OakStatus::ErrInvalidArgs
+        })?;
 
-        self.log_debug(&format!("report_metric(): {}", request.label));
-        let result = self.report_metric(&request.label, request.value);
-
-        let response = bincode::serialize(&ReportMetricResponse { result })
-            .expect("Failed to serialize report metric response.");
-
+        let result = self.report_metric(request);
+        let response = bincode::serialize(&ReportMetricResponse { result }).map_err(|err| {
+            self.log_debug(&format!("Failed to serialize response: {}", err));
+            OakStatus::ErrInternal
+        })?;
         Ok(response)
     }
 
@@ -304,11 +305,12 @@ where
 
     pub fn report_metric(
         &mut self,
-        label: &str,
-        value: i64,
+        request: ReportMetricRequest,
     ) -> anyhow::Result<(), ReportMetricError> {
+        self.log_debug(&format!("report_metric(): {}", &request.label));
+
         if let Some(metrics_proxy) = self.metrics_proxy.as_mut() {
-            metrics_proxy.report_metric(label, value);
+            metrics_proxy.report_metric(&request.label, request.value);
             Ok(())
         } else {
             Err(ReportMetricError::ProxyAlreadyConsumed)
