@@ -45,11 +45,10 @@ pub struct Opt {
     backend_url: String,
     #[structopt(
         long,
-        help = "Timeout for the backend after the server received k requests in milliseconds.",
+        help = "Timeout in milliseconds for the backend to respond to the k requests from the server. Use 0 for infinite timeout.",
         default_value = "0"
     )]
-    // TODO(mschett): Can we change this to Duration? Problem seems to be FromStr not satisfied.
-    timeout: u64,
+    timeout_in_ms: u64,
 }
 
 #[tokio::main(flavor = "multi_thread")]
@@ -67,7 +66,7 @@ async fn main() -> anyhow::Result<()> {
         .parse()
         .context("Couldn't parse address")?;
     let backend_url = format!("{}/request", &opt.backend_url);
-    let timeout = Duration::from_millis(opt.timeout);
+    let timeout = Duration::from_millis(opt.timeout_in_ms);
 
     info!(
         "Starting the Trusted Shuffler server at {:?} with k = {} and {}",
@@ -76,7 +75,7 @@ async fn main() -> anyhow::Result<()> {
         if timeout.is_zero() {
             String::from("no timeout")
         } else {
-            format!("timeout {}", opt.timeout)
+            format!("timeout {}", opt.timeout_in_ms)
         }
     );
 
