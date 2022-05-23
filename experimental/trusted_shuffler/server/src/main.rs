@@ -65,7 +65,7 @@ async fn main() -> anyhow::Result<()> {
         .parse()
         .context("Couldn't parse address")?;
     let backend_url = format!("{}/request", &opt.backend_url);
-    let timeout = opt.timeout_ms.map(|t| Duration::from_millis(t));
+    let timeout = opt.timeout_ms.map(Duration::from_millis);
 
     info!(
         "Starting the Trusted Shuffler server at {:?} with k = {} and {:?}",
