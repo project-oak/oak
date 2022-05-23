@@ -135,17 +135,6 @@
 <span id="130">130</span>
 <span id="131">131</span>
 <span id="132">132</span>
-<span id="133">133</span>
-<span id="134">134</span>
-<span id="135">135</span>
-<span id="136">136</span>
-<span id="137">137</span>
-<span id="138">138</span>
-<span id="139">139</span>
-<span id="140">140</span>
-<span id="141">141</span>
-<span id="142">142</span>
-<span id="143">143</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2022 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -203,16 +192,6 @@
     <span class="doccomment">/// the lookup data.</span>
     <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span> <span class="op">=</span> <span class="string">&quot;LookupDataAuth::default&quot;</span>)]</span>
     <span class="ident">lookup_data_auth</span>: <span class="ident">LookupDataAuth</span>,
-    <span class="doccomment">/// Number of worker threads available to the async runtime.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// Defaults to 4 if unset.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// Note that the CPU core detection logic does not seem to work reliably on Google Cloud Run,</span>
-    <span class="doccomment">/// so it is advisable to set this value to the number of cores available on the Cloud Run</span>
-    <span class="doccomment">/// instance.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// See &lt;https://docs.rs/tokio/1.5.0/tokio/runtime/struct.Builder.html#method.worker_threads&gt;.</span>
-    <span class="ident">worker_threads</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span>,
     <span class="doccomment">/// Security policy guaranteed by the server.</span>
     <span class="ident">policy</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Policy</span><span class="op">&gt;</span>,
     <span class="doccomment">/// Configuration for TensorFlow model</span>
@@ -266,7 +245,6 @@
             <span class="ident">config</span>.<span class="ident">lookup_data_download_period</span>,
             <span class="ident">config</span>.<span class="ident">lookup_data_auth</span>,
         ),
-        <span class="ident">config</span>.<span class="ident">worker_threads</span>,
         <span class="ident">config</span>.<span class="ident">policy</span>,
         <span class="ident">extension_factories</span>,
         <span class="ident">extension_configuration_info</span>,

@@ -335,8 +335,6 @@
 <span id="330">330</span>
 <span id="331">331</span>
 <span id="332">332</span>
-<span id="333">333</span>
-<span id="334">334</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2021 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -445,13 +443,11 @@
     <span class="ident">opt</span>: <span class="ident">Opt</span>,
     <span class="ident">logger</span>: <span class="ident">Logger</span>,
     <span class="ident">load_lookup_data_config</span>: <span class="ident">LoadLookupDataConfig</span>,
-    <span class="ident">worker_threads</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span>,
     <span class="ident">policy</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Policy</span><span class="op">&gt;</span>,
     <span class="ident">extension_factories</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">ExtensionFactory</span><span class="op">&lt;</span><span class="ident">Logger</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>,
     <span class="ident">extension_configuration_info</span>: <span class="ident">ExtensionConfigurationInfo</span>,
 ) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
     <span class="ident">tokio::runtime::Builder::new_multi_thread</span>()
-        .<span class="ident">worker_threads</span>(<span class="ident">worker_threads</span>.<span class="ident">unwrap_or</span>(<span class="number">4</span>))
         .<span class="ident">enable_all</span>()
         .<span class="ident">build</span>()
         .<span class="ident">unwrap</span>()

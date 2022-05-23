@@ -85,17 +85,6 @@
 <span id="80">80</span>
 <span id="81">81</span>
 <span id="82">82</span>
-<span id="83">83</span>
-<span id="84">84</span>
-<span id="85">85</span>
-<span id="86">86</span>
-<span id="87">87</span>
-<span id="88">88</span>
-<span id="89">89</span>
-<span id="90">90</span>
-<span id="91">91</span>
-<span id="92">92</span>
-<span id="93">93</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2022 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -149,16 +138,6 @@
     <span class="doccomment">/// the lookup data.</span>
     <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span> <span class="op">=</span> <span class="string">&quot;LookupDataAuth::default&quot;</span>)]</span>
     <span class="ident">lookup_data_auth</span>: <span class="ident">LookupDataAuth</span>,
-    <span class="doccomment">/// Number of worker threads available to the async runtime.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// Defaults to 4 if unset.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// Note that the CPU core detection logic does not seem to work reliably on Google Cloud Run,</span>
-    <span class="doccomment">/// so it is advisable to set this value to the number of cores available on the Cloud Run</span>
-    <span class="doccomment">/// instance.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// See &lt;https://docs.rs/tokio/1.5.0/tokio/runtime/struct.Builder.html#method.worker_threads&gt;.</span>
-    <span class="ident">worker_threads</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span>,
     <span class="doccomment">/// Security policy guaranteed by the server.</span>
     <span class="ident">policy</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Policy</span><span class="op">&gt;</span>,
 }
@@ -183,7 +162,6 @@
             <span class="ident">config</span>.<span class="ident">lookup_data_download_period</span>,
             <span class="ident">config</span>.<span class="ident">lookup_data_auth</span>,
         ),
-        <span class="ident">config</span>.<span class="ident">worker_threads</span>,
         <span class="ident">config</span>.<span class="ident">policy</span>,
         <span class="ident">extension_factories</span>,
         <span class="ident">ExtensionConfigurationInfo::base</span>(),
