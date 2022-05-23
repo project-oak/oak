@@ -171,7 +171,7 @@
 <span class="comment">// We make sure our ELF Note has an alignment of 4 for maximum compatibility.</span>
 <span class="comment">// Some software (QEMU) calculates padding incorectly if alignment != 4.</span>
 <span class="attribute">#[<span class="ident">repr</span>(<span class="ident">C</span>, <span class="ident">packed</span>(<span class="number">4</span>))]</span>
-<span class="kw">struct</span> <span class="ident">Note</span> {
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Note</span> {
     <span class="ident">name_size</span>: <span class="ident">u32</span>,
     <span class="ident">desc_size</span>: <span class="ident">u32</span>,
     <span class="ident">kind</span>: <span class="ident">u32</span>,
@@ -182,7 +182,7 @@
 <span class="comment">// This is: ELFNOTE(Xen, XEN_ELFNOTE_PHYS32_ENTRY, .quad ram32_start)</span>
 <span class="attribute">#[<span class="ident">link_section</span> <span class="op">=</span> <span class="string">&quot;.note&quot;</span>]</span>
 <span class="attribute">#[<span class="ident">used</span>]</span>
-<span class="kw">static</span> <span class="ident">PVH_NOTE</span>: <span class="ident">Note</span> <span class="op">=</span> <span class="ident">Note</span> {
+<span class="kw">pub</span> <span class="kw">static</span> <span class="ident">PVH_NOTE</span>: <span class="ident">Note</span> <span class="op">=</span> <span class="ident">Note</span> {
     <span class="ident">name_size</span>: <span class="ident">size_of</span>::<span class="op">&lt;</span><span class="ident">Name</span><span class="op">&gt;</span>() <span class="kw">as</span> <span class="ident">u32</span>,
     <span class="ident">desc_size</span>: <span class="ident">size_of</span>::<span class="op">&lt;</span><span class="ident">Desc</span><span class="op">&gt;</span>() <span class="kw">as</span> <span class="ident">u32</span>,
     <span class="ident">kind</span>: <span class="ident">XEN_ELFNOTE_PHYS32_ENTRY</span>,

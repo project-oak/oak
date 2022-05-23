@@ -1,1 +1,1 @@
-initSidebarItems({"struct":[["StartInfo",""]]});
+initSidebarItems({"static":[["PVH_NOTE",""]],"struct":[["Note",""],["StartInfo",""]]});

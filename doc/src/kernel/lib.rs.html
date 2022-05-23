@@ -108,15 +108,15 @@
 
 <span class="kw">use</span> <span class="ident">core::panic::PanicInfo</span>;
 <span class="kw">use</span> <span class="ident">log</span>::{<span class="ident">error</span>, <span class="ident">info</span>};
-<span class="kw">use</span> <span class="ident">rust_hypervisor_firmware_subset</span>::{<span class="ident">boot</span>, <span class="ident">paging</span>, <span class="ident">pvh</span>};
+<span class="kw">use</span> <span class="ident">rust_hypervisor_firmware_subset</span>::{<span class="ident">boot</span>, <span class="ident">paging</span>};
 
 <span class="doccomment">/// Main entry point for the kernel, to be called from bootloader.</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">start_kernel</span>(<span class="ident">rdi</span>: <span class="kw-2">&amp;</span><span class="ident">pvh::StartInfo</span>) -&gt; <span class="op">!</span> {
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">start_kernel</span>(<span class="ident">info</span>: <span class="kw-2">&amp;</span><span class="kw">dyn</span> <span class="ident">boot::Info</span>) -&gt; <span class="op">!</span> {
     <span class="ident">avx::enable_avx</span>();
     <span class="ident">logging::init_logging</span>();
     <span class="ident">paging::setup</span>();
-    <span class="ident">memory::init_allocator</span>(<span class="ident">rdi</span>);
-    <span class="ident">main</span>(<span class="ident">rdi</span>);
+    <span class="ident">memory::init_allocator</span>(<span class="ident">info</span>);
+    <span class="ident">main</span>(<span class="ident">info</span>);
 }
 
 <span class="kw">fn</span> <span class="ident">main</span>(<span class="ident">info</span>: <span class="kw-2">&amp;</span><span class="kw">dyn</span> <span class="ident">boot::Info</span>) -&gt; <span class="op">!</span> {
