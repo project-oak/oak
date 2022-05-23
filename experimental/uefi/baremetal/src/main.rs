@@ -18,6 +18,7 @@
 #![no_main]
 #![feature(lang_items)]
 #![feature(alloc_error_handler)]
+#![feature(bench_black_box)]
 #![feature(custom_test_frameworks)]
 // As we're in a `no_std` environment, testing requires special handling. This
 // approach was inspired by https://os.phil-opp.com/testing/.
@@ -30,6 +31,9 @@ use rust_hypervisor_firmware_subset::pvh;
 #[no_mangle]
 #[cfg(test)]
 pub extern "C" fn rust64_start(_rdi: &pvh::StartInfo) -> ! {
+    // Ensure that `PVH_NOTE` is not optimized away, otherwise we won't be able to boot our
+    // kernel when testing.
+    core::hint::black_box(&pvh::PVH_NOTE);
     test_main();
     kernel::i8042::shutdown();
 }
