@@ -1,5 +1,3 @@
-worker_threads = 4
-
 [metrics]
 epsilon = 1.0
 batch_size = 20

@@ -55,16 +55,6 @@ pub struct Config {
     /// the lookup data.
     #[serde(default = "LookupDataAuth::default")]
     lookup_data_auth: LookupDataAuth,
-    /// Number of worker threads available to the async runtime.
-    ///
-    /// Defaults to 4 if unset.
-    ///
-    /// Note that the CPU core detection logic does not seem to work reliably on Google Cloud Run,
-    /// so it is advisable to set this value to the number of cores available on the Cloud Run
-    /// instance.
-    ///
-    /// See <https://docs.rs/tokio/1.5.0/tokio/runtime/struct.Builder.html#method.worker_threads>.
-    worker_threads: Option<usize>,
     /// Security policy guaranteed by the server.
     policy: Option<Policy>,
     /// Configuration for TensorFlow model
@@ -118,7 +108,6 @@ pub fn main() -> anyhow::Result<()> {
             config.lookup_data_download_period,
             config.lookup_data_auth,
         ),
-        config.worker_threads,
         config.policy,
         extension_factories,
         extension_configuration_info,
