@@ -177,6 +177,22 @@
 <span id="172">172</span>
 <span id="173">173</span>
 <span id="174">174</span>
+<span id="175">175</span>
+<span id="176">176</span>
+<span id="177">177</span>
+<span id="178">178</span>
+<span id="179">179</span>
+<span id="180">180</span>
+<span id="181">181</span>
+<span id="182">182</span>
+<span id="183">183</span>
+<span id="184">184</span>
+<span id="185">185</span>
+<span id="186">186</span>
+<span id="187">187</span>
+<span id="188">188</span>
+<span id="189">189</span>
+<span id="190">190</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2022 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -193,8 +209,11 @@
 <span class="comment">// limitations under the License.</span>
 <span class="comment">//</span>
 
+<span class="attribute">#![<span class="ident">feature</span>(<span class="ident">io_safety</span>)]</span>
+
 <span class="kw">use</span> <span class="ident">channel</span>::{<span class="ident">Frame</span>, <span class="ident">Framed</span>};
 <span class="kw">use</span> <span class="ident">clap::Parser</span>;
+<span class="kw">use</span> <span class="ident">crosvm::Crosvm</span>;
 <span class="kw">use</span> <span class="ident">qemu::Qemu</span>;
 <span class="kw">use</span> <span class="ident">std</span>::{
     <span class="ident">fs</span>,
@@ -205,6 +224,7 @@
 <span class="kw">use</span> <span class="ident">tokio::signal</span>;
 <span class="kw">use</span> <span class="ident">vmm</span>::{<span class="ident">Params</span>, <span class="ident">Vmm</span>};
 
+<span class="kw">mod</span> <span class="ident">crosvm</span>;
 <span class="kw">mod</span> <span class="ident">qemu</span>;
 <span class="kw">mod</span> <span class="ident">server</span>;
 <span class="kw">mod</span> <span class="ident">vmm</span>;
@@ -213,6 +233,7 @@
 <span class="kw">enum</span> <span class="ident">Mode</span> {
     <span class="ident">Uefi</span>,
     <span class="ident">Bios</span>,
+    <span class="ident">Crosvm</span>,
 }
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Parser</span>, <span class="ident">Debug</span>)]</span>
@@ -221,7 +242,11 @@
     <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">long</span>, <span class="ident">parse</span>(<span class="ident">from_os_str</span>), <span class="ident">validator</span> <span class="op">=</span> <span class="ident">path_exists</span>, <span class="ident">default_value_os_t</span> <span class="op">=</span> <span class="ident">PathBuf::from</span>(<span class="string">&quot;/usr/bin/qemu-system-x86_64&quot;</span>))]</span>
     <span class="ident">qemu</span>: <span class="ident">PathBuf</span>,
 
-    <span class="doccomment">/// Execute either in UEFI mode or BIOS mode.</span>
+    <span class="doccomment">/// Path to the `crosvm` binary.</span>
+    <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">long</span>, <span class="ident">parse</span>(<span class="ident">from_os_str</span>), <span class="ident">validator</span> <span class="op">=</span> <span class="ident">path_exists</span>, <span class="ident">default_value_os_t</span> <span class="op">=</span> <span class="ident">PathBuf::from</span>(<span class="string">&quot;/usr/local/cargo/bin/crosvm&quot;</span>))]</span>
+    <span class="ident">crosvm</span>: <span class="ident">PathBuf</span>,
+
+    <span class="doccomment">/// Execution mode.</span>
     <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">arg_enum</span>, <span class="ident">long</span>, <span class="ident">default_value</span> <span class="op">=</span> <span class="string">&quot;uefi&quot;</span>)]</span>
     <span class="ident">mode</span>: <span class="ident">Mode</span>,
 
@@ -284,6 +309,13 @@
         })<span class="question-mark">?</span>),
         <span class="ident">Mode::Bios</span> =&gt; <span class="ident">Box::new</span>(<span class="ident">Qemu::start</span>(<span class="ident">Params</span> {
             <span class="ident">binary</span>: <span class="ident">cli</span>.<span class="ident">qemu</span>,
+            <span class="ident">firmware</span>: <span class="prelude-val">None</span>,
+            <span class="ident">app</span>: <span class="ident">cli</span>.<span class="ident">app</span>,
+            <span class="ident">console</span>: <span class="ident">console_vmm</span>,
+            <span class="ident">comms</span>: <span class="ident">comms_vmm</span>,
+        })<span class="question-mark">?</span>),
+        <span class="ident">Mode::Crosvm</span> =&gt; <span class="ident">Box::new</span>(<span class="ident">Crosvm::start</span>(<span class="ident">Params</span> {
+            <span class="ident">binary</span>: <span class="ident">cli</span>.<span class="ident">crosvm</span>,
             <span class="ident">firmware</span>: <span class="prelude-val">None</span>,
             <span class="ident">app</span>: <span class="ident">cli</span>.<span class="ident">app</span>,
             <span class="ident">console</span>: <span class="ident">console_vmm</span>,
