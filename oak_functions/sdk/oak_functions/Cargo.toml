@@ -5,23 +5,21 @@ authors = ["Razieh Behjati <razieh@google.com>"]
 edition = "2021"
 license = "Apache-2.0"
 
-[dev-dependencies]
-test_utils = { path = "../test_utils" }
-oak_functions_loader = { path = "../../loader" }
-oak_functions_lookup = { path = "../../lookup" }
-oak_functions_metrics = { path = "../../experimental/metrics" }
-oak_functions_tf_inference = { path = "../../experimental/tf_inference" }
-oak_functions_workload_logging = { path = "../../workload_logging" }
-lazy_static = "*"
-maplit = "*"
-tokio = "*"
-
 [dependencies]
 bincode = "*"
-maplit = "*"
 oak_functions_abi = { path = "../../abi" }
-oak_functions_testing_extension = { path = "../../testing" }
 prost = "*"
 serde = "*"
 serde_derive = "*"
-serde_json = "*"
+
+[dev-dependencies]
+lazy_static = "*"
+maplit = "*"
+oak_functions_loader = { path = "../../loader" }
+oak_functions_lookup = { path = "../../lookup" }
+oak_functions_metrics = { path = "../../experimental/metrics" }
+oak_functions_testing_extension = { path = "../../testing" }
+oak_functions_tf_inference = { path = "../../experimental/tf_inference" }
+oak_functions_workload_logging = { path = "../../workload_logging" }
+test_utils = { path = "../test_utils" }
+tokio = "*"

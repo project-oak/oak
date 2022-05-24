@@ -1,0 +1,18 @@
+attribute "method_id";
+
+table LookupDataRequest {
+    key: [ubyte];
+}
+table LookupDataResponse {
+    value: [ubyte];
+}
+
+table LogRequest {
+    entry: string;
+}
+table LogResponse {}
+
+rpc_service TestService {
+    LookupData(LookupDataRequest) : LookupDataResponse (method_id: 222);
+    Log(LogRequest) : LogResponse (method_id: 223);
+}
