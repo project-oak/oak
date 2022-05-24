@@ -27,10 +27,11 @@
 
 use core::panic::PanicInfo;
 use rust_hypervisor_firmware_subset::pvh;
+mod hvm_start_info;
 
 #[no_mangle]
 #[cfg(test)]
-pub extern "C" fn rust64_start(_rdi: &pvh::StartInfo) -> ! {
+pub extern "C" fn rust64_start(_rdi: &hvm_start_info::hvm_start_info) -> ! {
     // Ensure that `PVH_NOTE` is not optimized away, otherwise we won't be able to boot our
     // kernel when testing.
     core::hint::black_box(&pvh::PVH_NOTE);
@@ -40,7 +41,10 @@ pub extern "C" fn rust64_start(_rdi: &pvh::StartInfo) -> ! {
 
 #[no_mangle]
 #[cfg(not(test))]
-pub extern "C" fn rust64_start(rdi: &pvh::StartInfo) -> ! {
+pub extern "C" fn rust64_start(rdi: &hvm_start_info::hvm_start_info) -> ! {
+    // Ensure that `PVH_NOTE` is not optimized away, otherwise we won't be able to boot our
+    // kernel when testing.
+    core::hint::black_box(&pvh::PVH_NOTE);
     kernel::start_kernel(rdi);
 }
 

@@ -31,6 +31,7 @@
 #![no_std]
 
 mod avx;
+pub mod boot;
 pub mod i8042;
 mod libm;
 mod logging;
@@ -39,19 +40,20 @@ mod serial;
 
 use core::panic::PanicInfo;
 use log::{error, info};
-use rust_hypervisor_firmware_subset::{boot, paging};
+use rust_hypervisor_firmware_subset::paging;
 
 /// Main entry point for the kernel, to be called from bootloader.
-pub fn start_kernel(info: &dyn boot::Info) -> ! {
+pub fn start_kernel<E: boot::E820Entry>(info: &dyn boot::BootInfo<E>) -> ! {
     avx::enable_avx();
     logging::init_logging();
     paging::setup();
-    memory::init_allocator(info);
+    // If we don't find memory for heap, it's ok to panic.
+    memory::init_allocator(info.e820_table()).unwrap();
     main(info);
 }
 
-fn main(info: &dyn boot::Info) -> ! {
-    info!("In main! Boot protocol:  {}", info.name());
+fn main<E: boot::E820Entry>(info: &dyn boot::BootInfo<E>) -> ! {
+    info!("In main! Boot protocol:  {}", info.protocol());
     let serial = serial::Serial::new();
     runtime::framing::handle_frames(serial).unwrap();
 }
