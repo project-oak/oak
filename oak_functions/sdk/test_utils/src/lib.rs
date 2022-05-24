@@ -235,13 +235,11 @@ pub async fn make_request(port: u16, request_body: &[u8]) -> TestResult {
 pub fn get_config_info(
     wasm_module_bytes: &[u8],
     policy: ServerPolicy,
-    ml_inference: bool,
     metrics: Option<PrivateMetricsConfig>,
 ) -> ConfigurationInfo {
     ConfigurationInfo {
         wasm_hash: get_sha256(wasm_module_bytes).to_vec(),
         policy: Some(policy),
-        ml_inference,
         metrics,
     }
 }

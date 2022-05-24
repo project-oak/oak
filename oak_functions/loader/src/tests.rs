@@ -166,7 +166,7 @@ where
             &address,
             wasm_handler,
             policy.clone(),
-            get_config_info(&wasm_module_bytes, policy, false, None),
+            get_config_info(&wasm_module_bytes, policy, None),
             term,
             logger,
         )

@@ -127,26 +127,16 @@ pub fn lib_main(
 /// Workaround to pass values for ConfigurationInfo from Config.
 /// TODO(#2851): Refactor to remove `ExtensionConfigurationInfo`.
 pub struct ExtensionConfigurationInfo {
-    ml_inference: bool,
     metrics: Option<oak_functions_abi::proto::PrivateMetricsConfig>,
 }
 
 impl ExtensionConfigurationInfo {
-    pub fn new(
-        ml_inference: bool,
-        metrics: Option<oak_functions_abi::proto::PrivateMetricsConfig>,
-    ) -> Self {
-        ExtensionConfigurationInfo {
-            ml_inference,
-            metrics,
-        }
+    pub fn new(metrics: Option<oak_functions_abi::proto::PrivateMetricsConfig>) -> Self {
+        ExtensionConfigurationInfo { metrics }
     }
 
     pub fn base() -> ExtensionConfigurationInfo {
-        ExtensionConfigurationInfo {
-            ml_inference: false,
-            metrics: None,
-        }
+        ExtensionConfigurationInfo { metrics: None }
     }
 }
 
@@ -183,7 +173,6 @@ async fn async_main(
     let config_info = ConfigurationInfo {
         wasm_hash: get_sha256(&wasm_module_bytes).to_vec(),
         policy: Some(policy.clone()),
-        ml_inference: extension_configuration_info.ml_inference,
         metrics: extension_configuration_info.metrics,
     };
 

@@ -97,7 +97,6 @@ async fn main() -> anyhow::Result<()> {
     let additional_info = ConfigurationInfo {
         wasm_hash: vec![0, 1, 2, 3],
         policy: None,
-        ml_inference: false,
         metrics: None,
     }
     .encode_to_vec();

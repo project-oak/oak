@@ -126,7 +126,5 @@ fn get_extension_config_info(config: &Config) -> anyhow::Result<ExtensionConfigu
         None => None,
     };
 
-    let ml_inference = config.tf_model.is_some();
-
-    Ok(ExtensionConfigurationInfo::new(ml_inference, metrics))
+    Ok(ExtensionConfigurationInfo::new(metrics))
 }

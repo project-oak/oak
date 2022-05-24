@@ -62,8 +62,6 @@ message ConfigurationInfo {
   bytes wasm_hash = 1;
   // The validated server-side policy.
   ServerPolicy policy = 2;
-  // Whether machine learning inference using a TensorFlow model is enabled.
-  bool ml_inference = 3;
   // Server-side configuration for differentially private metrics. This field is optional. If not
   // provided, differentially private metrics are not enabled on the server.
   PrivateMetricsConfig metrics = 4;
