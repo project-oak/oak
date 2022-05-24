@@ -29,9 +29,11 @@
 //!   * Call `start_kernel` from the entry point of the bootloader.
 
 #![no_std]
+#![feature(abi_x86_interrupt)]
 
 mod avx;
 pub mod i8042;
+mod interrupts;
 mod libm;
 mod logging;
 mod memory;
@@ -45,6 +47,7 @@ use rust_hypervisor_firmware_subset::{boot, paging};
 pub fn start_kernel(info: &dyn boot::Info) -> ! {
     avx::enable_avx();
     logging::init_logging();
+    interrupts::init_idt();
     paging::setup();
     memory::init_allocator(info);
     main(info);
