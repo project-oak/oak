@@ -14,8 +14,11 @@
 // limitations under the License.
 //
 
+#![feature(io_safety)]
+
 use channel::{Frame, Framed};
 use clap::Parser;
+use crosvm::Crosvm;
 use qemu::Qemu;
 use std::{
     fs,
@@ -26,6 +29,7 @@ use std::{
 use tokio::signal;
 use vmm::{Params, Vmm};
 
+mod crosvm;
 mod qemu;
 mod server;
 mod vmm;
@@ -34,6 +38,7 @@ mod vmm;
 enum Mode {
     Uefi,
     Bios,
+    Crosvm,
 }
 
 #[derive(Parser, Debug)]
@@ -42,7 +47,11 @@ struct Args {
     #[clap(long, parse(from_os_str), validator = path_exists, default_value_os_t = PathBuf::from("/usr/bin/qemu-system-x86_64"))]
     qemu: PathBuf,
 
-    /// Execute either in UEFI mode or BIOS mode.
+    /// Path to the `crosvm` binary.
+    #[clap(long, parse(from_os_str), validator = path_exists, default_value_os_t = PathBuf::from("/usr/local/cargo/bin/crosvm"))]
+    crosvm: PathBuf,
+
+    /// Execution mode.
     #[clap(arg_enum, long, default_value = "uefi")]
     mode: Mode,
 
@@ -105,6 +114,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         })?),
         Mode::Bios => Box::new(Qemu::start(Params {
             binary: cli.qemu,
+            firmware: None,
+            app: cli.app,
+            console: console_vmm,
+            comms: comms_vmm,
+        })?),
+        Mode::Crosvm => Box::new(Crosvm::start(Params {
+            binary: cli.crosvm,
             firmware: None,
             app: cli.app,
             console: console_vmm,
