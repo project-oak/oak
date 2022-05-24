@@ -20,7 +20,7 @@
 //!
 //! See <https://docs.oasis-open.org/virtio/virtio/v1.1/csprd01/virtio-v1.1-csprd01.html#x1-3960006>.
 
-use alloc::vec::Vec;
+use alloc::{vec, vec::Vec};
 use anyhow::Context;
 use bitflags::bitflags;
 use core::mem::size_of;
@@ -64,19 +64,22 @@ impl Packet {
 
     /// Creates a new control `Packet` with only a header.
     pub fn new_header_only() -> Self {
-        let buffer = (0..HEADER_SIZE).map(|_| 0u8).collect();
-        let mut result = Self { buffer };
-        result.set_type(VSockType::Stream);
-        result
+        Self::new_with_buffer_size(HEADER_SIZE)
     }
 
     /// Creates a new data `Packet` with the given payload length.
     pub fn new_with_payload(payload_len: usize) -> Self {
-        let buffer = (0..HEADER_SIZE + payload_len).map(|_| 0u8).collect();
-        let mut result = Self { buffer };
-        result.set_type(VSockType::Stream);
+        let mut result = Self::new_with_buffer_size(HEADER_SIZE + payload_len);
         result.set_len(payload_len as u32);
         result.set_op(VSockOp::Rw).unwrap();
+        result
+    }
+
+    /// Creates a new `Packet` with the specified buffer size.
+    fn new_with_buffer_size(buffer_len: usize) -> Self {
+        let buffer = vec![0u8; buffer_len];
+        let mut result = Self { buffer };
+        result.set_type(VSockType::Stream);
         result
     }
 
@@ -294,6 +297,6 @@ bitflags! {
 #[derive(Debug, Eq, PartialEq, TryFromPrimitive, IntoPrimitive)]
 #[repr(u16)]
 pub enum VSockType {
-    /// Only stream sockets are currently supported.
+    /// Only stream sockets are currently supported in the Virtio spec.
     Stream = 1,
 }
