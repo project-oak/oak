@@ -1,0 +1,3 @@
+(function() {var implementors = {};
+implementors["virtio"] = [{"text":"impl TryFromPrimitive for <a class=\"enum\" href=\"virtio/vsock/packet/enum.VSockOp.html\" title=\"enum virtio::vsock::packet::VSockOp\">VSockOp</a>","synthetic":false,"types":["virtio::vsock::packet::VSockOp"]},{"text":"impl TryFromPrimitive for <a class=\"enum\" href=\"virtio/vsock/packet/enum.VSockType.html\" title=\"enum virtio::vsock::packet::VSockType\">VSockType</a>","synthetic":false,"types":["virtio::vsock::packet::VSockType"]}];
+if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

@@ -1,0 +1,1 @@
+initSidebarItems({"enum":[["VSockOp","Vsock Ops."],["VSockType","Socket Type."]],"struct":[["Packet",""],["VSockFlags","Flags about a socket connection."]]});
