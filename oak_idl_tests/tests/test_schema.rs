@@ -59,30 +59,30 @@ impl test_schema::TestService for TestServiceImpl {
 
 #[test]
 fn test_lookup_data() {
-    let s = TestServiceImpl;
+    let service = TestServiceImpl;
     use test_schema::TestService;
-    let transport = s.serve();
-    let mut c = test_schema::TestServiceClient::new(transport);
+    let transport = service.serve();
+    let mut client = test_schema::TestServiceClient::new(transport);
     {
-        let mut b = oak_idl::utils::MessageBuilder::default();
-        let v = b.create_vector::<u8>(&[14, 12]);
-        let req = test_schema::LookupDataRequest::create(
-            &mut b,
-            &test_schema::LookupDataRequestArgs { key: Some(v) },
+        let mut builder = oak_idl::utils::MessageBuilder::default();
+        let key = builder.create_vector::<u8>(&[14, 12]);
+        let request = test_schema::LookupDataRequest::create(
+            &mut builder,
+            &test_schema::LookupDataRequestArgs { key: Some(key) },
         );
-        let message = b.finish(req).unwrap();
-        let res = c.lookup_data(message.buf()).unwrap();
-        assert_eq!(Some([19, 88].as_ref()), res.get().value());
+        let message = builder.finish(request).unwrap();
+        let response = client.lookup_data(message.buf()).unwrap();
+        assert_eq!(Some([19, 88].as_ref()), response.get().value());
     }
     {
-        let mut b = oak_idl::utils::MessageBuilder::default();
-        let v = b.create_vector::<u8>(&[10, 00]);
-        let req = test_schema::LookupDataRequest::create(
-            &mut b,
-            &test_schema::LookupDataRequestArgs { key: Some(v) },
+        let mut builder = oak_idl::utils::MessageBuilder::default();
+        let key = builder.create_vector::<u8>(&[10, 00]);
+        let request = test_schema::LookupDataRequest::create(
+            &mut builder,
+            &test_schema::LookupDataRequestArgs { key: Some(key) },
         );
-        let message = b.finish(req).unwrap();
-        let res = c.lookup_data(message.buf()).unwrap();
-        assert_eq!(None, res.get().value());
+        let message = builder.finish(request).unwrap();
+        let response = client.lookup_data(message.buf()).unwrap();
+        assert_eq!(None, response.get().value());
     }
 }

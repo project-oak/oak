@@ -119,6 +119,13 @@ pub fn compile_services(filename: &str) {
 /// Generate the Rust file from the input flatbuffer file.
 ///
 /// In general, each flatbuffer file may have zero or more `rpc_service` instances defined.
+///
+/// We generate code by concatenating formatted strings because in the future we need to generate
+/// code in other languages too, so we should not rely on anything that is specific to Rust here.
+///
+/// See
+/// <https://github.com/google/flatbuffers/blob/9aa08a429e340bb8adf9b2e978ce2817cc8007c5/src/idl_gen_rust.cpp>
+/// for how `flatc` generates Rust code for structs.
 fn generate_from_bytes(schema_bytes: &[u8]) -> anyhow::Result<String> {
     let schema = reflection_generated::reflection::root_as_schema(schema_bytes)
         .context("could not parse schema")?;

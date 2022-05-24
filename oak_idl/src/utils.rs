@@ -22,8 +22,9 @@ use std::{
 
 /// A helper struct to facilitate building a [`Message`].
 ///
-/// It delegates most methods to the underlying [`flatbuffers::FlatBufferBuilder`] instance, but it
-/// adds a [`MessageBuilder::finish`] method that returns a completed [`Message`] instance.
+/// [`MessageBuidler`] delegates to the underlying [`flatbuffers::FlatBufferBuilder`] instance, and
+/// it adds a [`MessageBuilder::finish`] method that returns a completed [`Message`] instance which
+/// owns the underlying buffer.
 ///
 /// ```
 /// # struct Request<'a> {
