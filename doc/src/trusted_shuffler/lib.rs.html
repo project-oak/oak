@@ -169,6 +169,17 @@
 <span id="164">164</span>
 <span id="165">165</span>
 <span id="166">166</span>
+<span id="167">167</span>
+<span id="168">168</span>
+<span id="169">169</span>
+<span id="170">170</span>
+<span id="171">171</span>
+<span id="172">172</span>
+<span id="173">173</span>
+<span id="174">174</span>
+<span id="175">175</span>
+<span id="176">176</span>
+<span id="177">177</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2022 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -199,7 +210,7 @@
     <span class="ident">ops::DerefMut</span>,
     <span class="ident">sync</span>::{<span class="ident">Arc</span>, <span class="ident">Mutex</span>},
 };
-<span class="kw">use</span> <span class="ident">tokio::sync::oneshot</span>;
+<span class="kw">use</span> <span class="ident">tokio</span>::{<span class="ident">sync::oneshot</span>, <span class="ident">time::Duration</span>};
 
 <span class="kw">type</span> <span class="ident">Request</span> <span class="op">=</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>;
 <span class="kw">type</span> <span class="ident">Response</span> <span class="op">=</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>;
@@ -220,9 +231,15 @@
 }
 
 <span class="comment">// Trusted Shuffler implementation.</span>
+<span class="attribute">#[<span class="ident">allow</span>(<span class="ident">dead_code</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">TrustedShuffler</span> {
     <span class="comment">// Value k that represents k-anonymity.</span>
     <span class="ident">k</span>: <span class="ident">usize</span>,
+
+    <span class="comment">// When the k-th request in a batch arrives we start a timeout. For any request were the</span>
+    <span class="comment">// Trusted Shuffler did not receive a response from the backend after the timeout, the Trusted</span>
+    <span class="comment">// Shuffler sends an empty response.</span>
+    <span class="ident">timeout</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Duration</span><span class="op">&gt;</span>,
 
     <span class="comment">// Current batch of requests to be shuffled.</span>
     <span class="comment">// Mutex is used because messages are collected in different async tasks.</span>
@@ -233,9 +250,14 @@
 }
 
 <span class="kw">impl</span> <span class="ident">TrustedShuffler</span> {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">k</span>: <span class="ident">usize</span>, <span class="ident">request_handler</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">RequestHandler</span><span class="op">&gt;</span>) -&gt; <span class="self">Self</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(
+        <span class="ident">k</span>: <span class="ident">usize</span>,
+        <span class="ident">timeout</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Duration</span><span class="op">&gt;</span>,
+        <span class="ident">request_handler</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">RequestHandler</span><span class="op">&gt;</span>,
+    ) -&gt; <span class="self">Self</span> {
         <span class="self">Self</span> {
             <span class="ident">k</span>,
+            <span class="ident">timeout</span>,
             <span class="ident">requests_to_shuffle</span>: <span class="ident">Arc::new</span>(<span class="ident">Mutex::new</span>(<span class="macro">vec!</span>[])),
             <span class="ident">request_handler</span>,
         }

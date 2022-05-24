@@ -81,6 +81,15 @@
 <span id="76">76</span>
 <span id="77">77</span>
 <span id="78">78</span>
+<span id="79">79</span>
+<span id="80">80</span>
+<span id="81">81</span>
+<span id="82">82</span>
+<span id="83">83</span>
+<span id="84">84</span>
+<span id="85">85</span>
+<span id="86">86</span>
+<span id="87">87</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2022 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -107,6 +116,7 @@
 <span class="kw">use</span> <span class="ident">futures_util::FutureExt</span>;
 <span class="kw">use</span> <span class="ident">hyper::Server</span>;
 <span class="kw">use</span> <span class="ident">log::info</span>;
+<span class="kw">use</span> <span class="ident">tokio::time::Duration</span>;
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Parser</span>, <span class="ident">Clone</span>)]</span>
 <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">about</span> <span class="op">=</span> <span class="string">&quot;Trusted Shuffler Server&quot;</span>)]</span>
@@ -125,6 +135,11 @@
         <span class="ident">default_value</span> <span class="op">=</span> <span class="string">&quot;http://localhost:8080&quot;</span>
     )]</span>
     <span class="ident">backend_url</span>: <span class="ident">String</span>,
+    <span class="attribute">#[<span class="ident">structopt</span>(
+        <span class="ident">long</span>,
+        <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;Timeout in milliseconds for the backend to respond to the k requests from the server.&quot;</span>
+    )]</span>
+    <span class="ident">timeout_ms</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">u64</span><span class="op">&gt;</span>,
 }
 
 <span class="attribute">#[<span class="ident">tokio::main</span>(<span class="ident">flavor</span> <span class="op">=</span> <span class="string">&quot;multi_thread&quot;</span>)]</span>
@@ -142,12 +157,15 @@
         .<span class="ident">parse</span>()
         .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t parse address&quot;</span>)<span class="question-mark">?</span>;
     <span class="kw">let</span> <span class="ident">backend_url</span> <span class="op">=</span> <span class="macro">format!</span>(<span class="string">&quot;{}/request&quot;</span>, <span class="kw-2">&amp;</span><span class="ident">opt</span>.<span class="ident">backend_url</span>);
+    <span class="kw">let</span> <span class="ident">timeout</span> <span class="op">=</span> <span class="ident">opt</span>.<span class="ident">timeout_ms</span>.<span class="ident">map</span>(<span class="ident">Duration::from_millis</span>);
 
     <span class="macro">info!</span>(
-        <span class="string">&quot;Starting the Trusted Shuffler server at {:?}&quot;</span>,
-        <span class="ident">listen_address</span>
+        <span class="string">&quot;Starting the Trusted Shuffler server at {:?} with k = {} and {:?}&quot;</span>,
+        <span class="ident">listen_address</span>, <span class="ident">opt</span>.<span class="ident">k</span>, <span class="ident">timeout</span>
     );
-    <span class="kw">let</span> <span class="ident">server</span> <span class="op">=</span> <span class="ident">Server::bind</span>(<span class="kw-2">&amp;</span><span class="ident">listen_address</span>).<span class="ident">serve</span>(<span class="ident">ServiceBuilder::new</span>(<span class="ident">opt</span>.<span class="ident">k</span>, <span class="kw-2">&amp;</span><span class="ident">backend_url</span>));
+
+    <span class="kw">let</span> <span class="ident">server</span> <span class="op">=</span>
+        <span class="ident">Server::bind</span>(<span class="kw-2">&amp;</span><span class="ident">listen_address</span>).<span class="ident">serve</span>(<span class="ident">ServiceBuilder::new</span>(<span class="ident">opt</span>.<span class="ident">k</span>, <span class="ident">timeout</span>, <span class="kw-2">&amp;</span><span class="ident">backend_url</span>));
     <span class="macro">tokio::select!</span>(
         <span class="ident">result</span> <span class="op">=</span> <span class="ident">server</span> =&gt; {
             <span class="ident">result</span>.<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t run server&quot;</span>)<span class="question-mark">?</span>;
