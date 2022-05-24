@@ -25,6 +25,7 @@ use crate::internal::*;
 enum Variant {
     Uefi,
     Baremetal,
+    Crosvm,
 }
 
 impl Variant {
@@ -32,6 +33,7 @@ impl Variant {
         match self {
             Variant::Uefi => "./experimental/uefi/app",
             Variant::Baremetal => "./experimental/uefi/baremetal",
+            Variant::Crosvm => "./experimental/uefi/baremetal-crosvm",
         }
     }
 
@@ -39,6 +41,7 @@ impl Variant {
         match self {
             Variant::Uefi => "uefi",
             Variant::Baremetal => "bios",
+            Variant::Crosvm => "crosvm",
         }
     }
 
@@ -48,6 +51,9 @@ impl Variant {
                 "./experimental/uefi/app/target/x86_64-unknown-uefi/debug/uefi-simple.efi"
             }
             Variant::Baremetal => "./experimental/uefi/baremetal/target/target/debug/baremetal",
+            Variant::Crosvm => {
+                "./experimental/uefi/baremetal-crosvm/target/target/debug/baremetal-crosvm"
+            }
         }
     }
 }
