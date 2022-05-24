@@ -29,10 +29,12 @@
 //!   * Call `start_kernel` from the entry point of the bootloader.
 
 #![no_std]
+#![feature(abi_x86_interrupt)]
 
 mod avx;
 pub mod boot;
 pub mod i8042;
+mod interrupts;
 mod libm;
 mod logging;
 mod memory;
@@ -46,6 +48,7 @@ use rust_hypervisor_firmware_subset::paging;
 pub fn start_kernel<E: boot::E820Entry, B: boot::BootInfo<E>>(info: &B) -> ! {
     avx::enable_avx();
     logging::init_logging();
+    interrupts::init_idt();
     paging::setup();
     // If we don't find memory for heap, it's ok to panic.
     memory::init_allocator(info.e820_table()).unwrap();
