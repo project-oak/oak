@@ -15,16 +15,20 @@
 
 //! Utilities for improving the ergonomics of FlatBuffers in Rust.
 
-use std::{
+use alloc::vec::Vec;
+use core::{
     marker::PhantomData,
     ops::{Deref, DerefMut},
 };
 
 /// A helper struct to facilitate building a [`Message`].
 ///
-/// [`MessageBuidler`] delegates to the underlying [`flatbuffers::FlatBufferBuilder`] instance, and
+/// [`MessageBuilder`] delegates to the underlying [`flatbuffers::FlatBufferBuilder`] instance, and
 /// it adds a [`MessageBuilder::finish`] method that returns a completed [`Message`] instance which
 /// owns the underlying buffer.
+///
+/// We need to have an instance of [`PhantomData`] in the struct in order to use the type paramter
+/// `T`.
 ///
 /// ```
 /// # struct Request<'a> {

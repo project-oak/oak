@@ -14,8 +14,13 @@
 // limitations under the License.
 //
 
+#![no_std]
+
+extern crate alloc;
+
+use alloc::vec::Vec;
+use core::fmt::Debug;
 use serde::{Deserialize, Serialize};
-use std::fmt::Debug;
 
 pub mod utils;
 
