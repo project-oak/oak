@@ -25,6 +25,7 @@ use std::{
     task::{Context, Poll},
     time::Instant,
 };
+use tokio::time::Duration;
 use trusted_shuffler::{RequestHandler, TrustedShuffler};
 use trusted_shuffler_common::send_request;
 
@@ -109,9 +110,10 @@ pub struct ServiceBuilder {
 }
 
 impl ServiceBuilder {
-    pub fn new(k: usize, backend_url: &str) -> Self {
+    pub fn new(k: usize, timeout: Option<Duration>, backend_url: &str) -> Self {
         let trusted_shuffler = Arc::new(TrustedShuffler::new(
             k,
+            timeout,
             Arc::new(HttpRequestHandler {
                 backend_url: backend_url.to_string(),
             }),

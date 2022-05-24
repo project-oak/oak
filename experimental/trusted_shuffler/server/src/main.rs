@@ -24,6 +24,7 @@ use clap::Parser;
 use futures_util::FutureExt;
 use hyper::Server;
 use log::info;
+use tokio::time::Duration;
 
 #[derive(Parser, Clone)]
 #[clap(about = "Trusted Shuffler Server")]
@@ -42,6 +43,11 @@ pub struct Opt {
         default_value = "http://localhost:8080"
     )]
     backend_url: String,
+    #[structopt(
+        long,
+        help = "Timeout in milliseconds for the backend to respond to the k requests from the server."
+    )]
+    timeout_ms: Option<u64>,
 }
 
 #[tokio::main(flavor = "multi_thread")]
@@ -59,12 +65,15 @@ async fn main() -> anyhow::Result<()> {
         .parse()
         .context("Couldn't parse address")?;
     let backend_url = format!("{}/request", &opt.backend_url);
+    let timeout = opt.timeout_ms.map(Duration::from_millis);
 
     info!(
-        "Starting the Trusted Shuffler server at {:?}",
-        listen_address
+        "Starting the Trusted Shuffler server at {:?} with k = {} and {:?}",
+        listen_address, opt.k, timeout
     );
-    let server = Server::bind(&listen_address).serve(ServiceBuilder::new(opt.k, &backend_url));
+
+    let server =
+        Server::bind(&listen_address).serve(ServiceBuilder::new(opt.k, timeout, &backend_url));
     tokio::select!(
         result = server => {
             result.context("Couldn't run server")?;
