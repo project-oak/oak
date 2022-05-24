@@ -5759,6 +5759,7 @@ dependencies = [
  "anyhow",
  "bitflags",
  "num_enum",
+ "rust-hypervisor-firmware-subset",
 ]
 
 [[package]]

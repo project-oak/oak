@@ -9,3 +9,4 @@ license = "Apache-2.0"
 anyhow = { version = "*", default-features = false }
 bitflags = "*"
 num_enum = { version = "*", default-features = false }
+rust-hypervisor-firmware-subset = { path = "../../third_party/rust-hypervisor-firmware-subset" }

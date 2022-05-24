@@ -222,6 +222,11 @@ impl Packet {
         Ok(())
     }
 
+    /// Returns the entire buffer as a slice.
+    pub fn as_slice(&self) -> &[u8] {
+        self.buffer.as_slice()
+    }
+
     fn read_u16(&self, offset: usize) -> u16 {
         let mut data = [0; size_of::<u16>()];
         data.copy_from_slice(&self.buffer[offset..(offset + size_of::<u16>())]);
