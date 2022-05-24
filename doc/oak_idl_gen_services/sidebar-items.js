@@ -1,0 +1,1 @@
+initSidebarItems({"fn":[["compile_services","Compile services from the provided flatbuffer file using the `flatc` binary installed on the system."]]});
