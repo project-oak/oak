@@ -300,3 +300,65 @@ pub enum VSockType {
     /// Only stream sockets are currently supported in the Virtio spec.
     Stream = 1,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_set_and_get_all_header_fields() {
+        let mut packet = Packet::new_header_only();
+        packet.set_src_cid(1234);
+        packet.set_dst_cid(2);
+        packet.set_src_port(1023);
+        packet.set_dst_port(8888);
+        packet.set_flags(VSockFlags::all());
+        packet.set_op(VSockOp::Shutdown).unwrap();
+        packet.set_buf_alloc(4096);
+        packet.set_fwd_cnt(12);
+
+        assert_eq!(packet.get_src_cid(), 1234);
+        assert_eq!(packet.get_dst_cid(), 2);
+        assert_eq!(packet.get_src_port(), 1023);
+        assert_eq!(packet.get_dst_port(), 8888);
+        assert_eq!(packet.get_flags(), VSockFlags::all());
+        assert_eq!(packet.get_type().unwrap(), VSockType::Stream);
+        assert_eq!(packet.get_op().unwrap(), VSockOp::Shutdown);
+        assert_eq!(packet.get_len(), 0);
+        assert_eq!(packet.get_buf_alloc(), 4096);
+        assert_eq!(packet.get_fwd_cnt(), 12);
+    }
+
+    #[test]
+    fn test_invalid_payload() {
+        let mut packet = Packet::new_with_payload(5);
+        let result = packet.set_payload(&[1, 2, 3, 4]);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_valid_payload() {
+        let mut packet = Packet::new_with_payload(4);
+        let result = packet.set_payload(&[1, 2, 3, 4]);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_new_from_buffer() {
+        let mut packet = Packet::new_with_payload(4);
+        packet.set_payload(&[1, 2, 3, 4]).unwrap();
+
+        let packet = Packet::new(packet.buffer.clone()).unwrap();
+        assert_eq!(packet.get_payload(), &[1, 2, 3, 4]);
+        assert_eq!(packet.get_len(), 4);
+        assert_eq!(packet.get_type().unwrap(), VSockType::Stream);
+        assert_eq!(packet.get_op().unwrap(), VSockOp::Rw);
+        assert_eq!(packet.get_flags(), VSockFlags::empty());
+    }
+
+    #[test]
+    fn test_invalid_op() {
+        let mut packet = Packet::new_with_payload(1);
+        assert!(packet.set_op(VSockOp::Rst).is_err())
+    }
+}
