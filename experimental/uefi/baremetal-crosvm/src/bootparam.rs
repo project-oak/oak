@@ -31,9 +31,14 @@ mod c_types {
 
 impl E820Entry for boot_e820_entry {
     fn entry_type(&self) -> E820EntryType {
+        // Safety: if we encounter a entry type that's not in the enum, it's fine to panic, as
+        // either (a) we need to update the enum or more likely (b) we've corrupted the memory,
+        // somehow.
         E820EntryType::from_repr(self.type_).unwrap()
     }
 
+    // Safety: `usize` is pointer-sized, which means that on 64-bit platforms it is the same size as
+    // `u64`, thus this conversion is safe and will not panic as we do not support 32-bit platforms.
     fn addr(&self) -> usize {
         self.addr.try_into().unwrap()
     }

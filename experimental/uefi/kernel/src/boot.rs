@@ -37,13 +37,22 @@ pub enum E820EntryType {
     PMEM = 7,
 }
 
+/// Address range descriptor (known as an E820 entry). As the actual data structure may differ
+/// between boot protocols, this trait captures the bare minimum of information we need.
 pub trait E820Entry {
+    /// Address type of this memory range.
     fn entry_type(&self) -> E820EntryType;
+    /// Base physical address of the memory range.
     fn addr(&self) -> usize;
+    /// Contiguous length, in bytes, of the memory range.
     fn size(&self) -> usize;
 }
 
+/// Generic trait for the boot information data structure provided to the kernel from the boot
+/// loader.
 pub trait BootInfo<E: E820Entry> {
+    /// Human-readable name of the boot protocol.
     fn protocol(&self) -> &str;
+    /// Slice of address range descriptors representing the memory layout of the machine.
     fn e820_table(&self) -> &[E];
 }
