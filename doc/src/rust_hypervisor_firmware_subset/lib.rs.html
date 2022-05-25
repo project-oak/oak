@@ -51,11 +51,6 @@
 <span id="46">46</span>
 <span id="47">47</span>
 <span id="48">48</span>
-<span id="49">49</span>
-<span id="50">50</span>
-<span id="51">51</span>
-<span id="52">52</span>
-<span id="53">53</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright © 2019 Intel Corporation</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -69,7 +64,6 @@
 <span class="kw">use</span> <span class="ident">core::ffi::c_void</span>;
 
 <span class="kw">mod</span> <span class="ident">asm</span>;
-<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">boot</span>;
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">common</span>;
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">device</span>;
 <span class="kw">mod</span> <span class="ident">gdt</span>;
@@ -90,24 +84,20 @@
     <span class="kw">static</span> <span class="ident">STACK_START</span>: <span class="ident">c_void</span>;
 }
 
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">ram_min</span>() -&gt; <span class="ident">u64</span> {
-    <span class="kw">let</span> <span class="ident">ram_min</span> <span class="op">=</span> <span class="kw">unsafe</span> { <span class="kw-2">&amp;</span><span class="ident">RAM_MIN</span> <span class="kw">as</span> <span class="kw-2">*const</span> <span class="kw">_</span> <span class="kw">as</span> <span class="ident">u64</span> };
-    <span class="ident">ram_min</span>
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">ram_min</span>() -&gt; <span class="ident">usize</span> {
+    (<span class="kw">unsafe</span> { <span class="kw-2">&amp;</span><span class="ident">RAM_MIN</span> <span class="kw">as</span> <span class="kw-2">*const</span> <span class="kw">_</span> }) <span class="kw">as</span> <span class="ident">usize</span>
 }
 
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">text_start</span>() -&gt; <span class="ident">u64</span> {
-    <span class="kw">let</span> <span class="ident">text_start</span> <span class="op">=</span> <span class="kw">unsafe</span> { <span class="kw-2">&amp;</span><span class="ident">TEXT_START</span> <span class="kw">as</span> <span class="kw-2">*const</span> <span class="kw">_</span> <span class="kw">as</span> <span class="ident">u64</span> };
-    <span class="ident">text_start</span>
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">text_start</span>() -&gt; <span class="ident">usize</span> {
+    (<span class="kw">unsafe</span> { <span class="kw-2">&amp;</span><span class="ident">TEXT_START</span> <span class="kw">as</span> <span class="kw-2">*const</span> <span class="kw">_</span> }) <span class="kw">as</span> <span class="ident">usize</span>
 }
 
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">text_end</span>() -&gt; <span class="ident">u64</span> {
-    <span class="kw">let</span> <span class="ident">text_end</span> <span class="op">=</span> <span class="kw">unsafe</span> { <span class="kw-2">&amp;</span><span class="ident">TEXT_END</span> <span class="kw">as</span> <span class="kw-2">*const</span> <span class="kw">_</span> <span class="kw">as</span> <span class="ident">u64</span> };
-    <span class="ident">text_end</span>
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">text_end</span>() -&gt; <span class="ident">usize</span> {
+    (<span class="kw">unsafe</span> { <span class="kw-2">&amp;</span><span class="ident">TEXT_END</span> <span class="kw">as</span> <span class="kw-2">*const</span> <span class="kw">_</span> }) <span class="kw">as</span> <span class="ident">usize</span>
 }
 
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">stack_start</span>() -&gt; <span class="ident">u64</span> {
-    <span class="kw">let</span> <span class="ident">stack_start</span> <span class="op">=</span> <span class="kw">unsafe</span> { <span class="kw-2">&amp;</span><span class="ident">STACK_START</span> <span class="kw">as</span> <span class="kw-2">*const</span> <span class="kw">_</span> <span class="kw">as</span> <span class="ident">u64</span> };
-    <span class="ident">stack_start</span>
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">stack_start</span>() -&gt; <span class="ident">usize</span> {
+    (<span class="kw">unsafe</span> { <span class="kw-2">&amp;</span><span class="ident">STACK_START</span> <span class="kw">as</span> <span class="kw-2">*const</span> <span class="kw">_</span> }) <span class="kw">as</span> <span class="ident">usize</span>
 }
 </code></pre></div>
 </section><section id="search" class="content hidden"></section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="rust_hypervisor_firmware_subset" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.62.0-nightly (de1bc0008 2022-04-21)" ></div>
