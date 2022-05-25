@@ -43,7 +43,7 @@ use log::{error, info};
 use rust_hypervisor_firmware_subset::paging;
 
 /// Main entry point for the kernel, to be called from bootloader.
-pub fn start_kernel<E: boot::E820Entry>(info: &dyn boot::BootInfo<E>) -> ! {
+pub fn start_kernel<E: boot::E820Entry, B: boot::BootInfo<E>>(info: &B) -> ! {
     avx::enable_avx();
     logging::init_logging();
     paging::setup();
@@ -52,7 +52,7 @@ pub fn start_kernel<E: boot::E820Entry>(info: &dyn boot::BootInfo<E>) -> ! {
     main(info);
 }
 
-fn main<E: boot::E820Entry>(info: &dyn boot::BootInfo<E>) -> ! {
+fn main<E: boot::E820Entry, B: boot::BootInfo<E>>(info: &B) -> ! {
     info!("In main! Boot protocol:  {}", info.protocol());
     let serial = serial::Serial::new();
     runtime::framing::handle_frames(serial).unwrap();
