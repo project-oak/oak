@@ -71,7 +71,6 @@ name = "baremetal-crosvm"
 version = "0.1.0"
 dependencies = [
  "kernel",
- "rust-hypervisor-firmware-subset",
 ]
 
 [[package]]
@@ -465,6 +464,7 @@ dependencies = [
  "log",
  "runtime",
  "rust-hypervisor-firmware-subset",
+ "strum",
  "uart_16550",
  "x86_64",
 ]
@@ -940,6 +940,28 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "75adad84ee84b521fb2cca2d4fd0f1dab1d8d026bda3c5bea4ca63b5f9f9293c"
 dependencies = [
  "lock_api",
+]
+
+[[package]]
+name = "strum"
+version = "0.24.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e96acfc1b70604b8b2f1ffa4c57e59176c7dbb05d556c71ecd2f5498a1dee7f8"
+dependencies = [
+ "strum_macros",
+]
+
+[[package]]
+name = "strum_macros"
+version = "0.24.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6878079b17446e4d3eba6192bb0a2950d5b14f0ed8424b852310e5a94345d0ef"
+dependencies = [
+ "heck",
+ "proc-macro2",
+ "quote",
+ "rustversion",
+ "syn",
 ]
 
 [[package]]

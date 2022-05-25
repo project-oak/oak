@@ -14,9 +14,9 @@
 // limitations under the License.
 //
 
+use crate::boot::{self, E820Entry};
+use anyhow::Result;
 use linked_list_allocator::LockedHeap;
-use rust_hypervisor_firmware_subset::boot;
-
 use log::info;
 
 #[cfg(not(test))]
@@ -26,7 +26,7 @@ static ALLOCATOR: LockedHeap = LockedHeap::empty();
 #[cfg(test)]
 static ALLOCATOR: LockedHeap = LockedHeap::empty();
 
-pub fn init_allocator(info: &dyn boot::Info) {
+pub fn init_allocator<E: E820Entry>(e820_table: &[E]) -> Result<()> {
     let ram_min = rust_hypervisor_firmware_subset::ram_min();
     let text_start = rust_hypervisor_firmware_subset::text_start();
     let text_end = rust_hypervisor_firmware_subset::text_end();
@@ -38,43 +38,34 @@ pub fn init_allocator(info: &dyn boot::Info) {
     info!("STACK_START: {}", stack_start);
 
     // Find the largest slice of memory and use that for the heap.
-    let mut largest: Option<boot::E820Entry> = None;
-    for i in 0..info.num_entries() {
-        let entry = info.entry(i);
-        // We have to extract these due to unaligned access
-        let addr = entry.addr;
-        let size = entry.size;
-        let entry_type = entry.entry_type;
-        info!(
-            "E820 entry: [{:#016x} - {:#016x}] ({}), type {}",
-            addr,
-            addr + size,
-            size,
-            entry_type
-        );
-
-        if entry.entry_type == boot::E820Entry::RAM_TYPE
-            && largest.map_or(0, |e| e.size) < entry.size
-        {
-            largest = Some(entry);
-        }
-    }
-
-    // If we really have no memory at all, crash and burn.
-    let mut entry = largest.unwrap();
+    let largest = e820_table
+        .iter()
+        .inspect(|e| {
+            info!(
+                "E820 entry: [{:#016x}..{:#016x}) ({}), type {}",
+                e.addr(),
+                e.addr() + e.size(),
+                e.size(),
+                e.entry_type()
+            );
+        })
+        .filter(|e| e.entry_type() == boot::E820EntryType::RAM)
+        .max_by_key(|e| e.size())
+        .ok_or_else(|| anyhow::anyhow!("No RAM available for heap"))?;
 
     // Ensure we don't clash with existing structures.
-    if entry.addr < stack_start {
-        entry.size -= stack_start - entry.addr;
-        entry.addr = stack_start;
+    let mut addr = largest.addr();
+    let mut size = largest.size();
+
+    if addr < stack_start {
+        size -= stack_start - addr;
+        addr = stack_start;
     }
 
-    info!("Using {:?} for heap.", entry);
+    info!("Using [{:#016x}..{:#016x}) for heap.", addr, addr + size);
     // This is safe as we know the memory is available based on the e820 map.
     unsafe {
-        ALLOCATOR.lock().init(
-            entry.addr.try_into().unwrap(),
-            entry.size.try_into().unwrap(),
-        );
+        ALLOCATOR.lock().init(addr, size);
     }
+    Ok(())
 }

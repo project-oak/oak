@@ -14,7 +14,29 @@
 // limitations under the License.
 //
 
+extern crate bindgen;
+
+use std::{env, path::PathBuf};
+
 fn main() {
     println!("cargo:rerun-if-changed=target.json");
     println!("cargo:rerun-if-changed=layout.ld");
+
+    let out_path = PathBuf::from(env::var("OUT_DIR").unwrap());
+
+    // We need to override the target as our default target is our own custom target, which is not
+    // recognized by clang.
+    let bindings = bindgen::Builder::default()
+        .clang_arg("--target=x86_64-pc-linux-gnu")
+        .header("src/hvm_start_info.h")
+        .allowlist_type("hvm_start_info")
+        .allowlist_type("hvm_memmap_table_entry")
+        .blocklist_type("__uint32_t")
+        .blocklist_type("__uint64_t")
+        .layout_tests(false)
+        .generate()
+        .unwrap();
+    bindings
+        .write_to_file(out_path.join("start_info.rs"))
+        .unwrap();
 }

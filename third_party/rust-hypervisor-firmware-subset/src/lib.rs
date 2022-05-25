@@ -11,7 +11,6 @@
 use core::ffi::c_void;
 
 mod asm;
-pub mod boot;
 pub mod common;
 pub mod device;
 mod gdt;
@@ -32,22 +31,18 @@ extern "C" {
     static STACK_START: c_void;
 }
 
-pub fn ram_min() -> u64 {
-    let ram_min = unsafe { &RAM_MIN as *const _ as u64 };
-    ram_min
+pub fn ram_min() -> usize {
+    (unsafe { &RAM_MIN as *const _ }) as usize
 }
 
-pub fn text_start() -> u64 {
-    let text_start = unsafe { &TEXT_START as *const _ as u64 };
-    text_start
+pub fn text_start() -> usize {
+    (unsafe { &TEXT_START as *const _ }) as usize
 }
 
-pub fn text_end() -> u64 {
-    let text_end = unsafe { &TEXT_END as *const _ as u64 };
-    text_end
+pub fn text_end() -> usize {
+    (unsafe { &TEXT_END as *const _ }) as usize
 }
 
-pub fn stack_start() -> u64 {
-    let stack_start = unsafe { &STACK_START as *const _ as u64 };
-    stack_start
+pub fn stack_start() -> usize {
+    (unsafe { &STACK_START as *const _ }) as usize
 }

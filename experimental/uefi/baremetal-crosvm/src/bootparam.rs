@@ -19,10 +19,7 @@
  *   --ctypes-prefix c_types arch/x86/include/uapi/asm/bootparam.h
  */
 
-use rust_hypervisor_firmware_subset::{
-    boot::{E820Entry, Info},
-    common,
-};
+use kernel::boot::{BootInfo, E820Entry, E820EntryType};
 
 #[allow(non_camel_case_types)]
 mod c_types {
@@ -32,26 +29,32 @@ mod c_types {
     pub type c_ulonglong = u64;
 }
 
-impl Info for boot_params {
-    fn name(&self) -> &str {
+impl E820Entry for boot_e820_entry {
+    fn entry_type(&self) -> E820EntryType {
+        // Safety: if we encounter a entry type that's not in the enum, it's fine to panic, as
+        // either (a) we need to update the enum or more likely (b) we've corrupted the memory,
+        // somehow.
+        E820EntryType::from_repr(self.type_).unwrap()
+    }
+
+    // Safety: `usize` is pointer-sized, which means that on 64-bit platforms it is the same size as
+    // `u64`, thus this conversion is safe and will not panic as we do not support 32-bit platforms.
+    fn addr(&self) -> usize {
+        self.addr.try_into().unwrap()
+    }
+
+    fn size(&self) -> usize {
+        self.size.try_into().unwrap()
+    }
+}
+
+impl BootInfo<boot_e820_entry> for boot_params {
+    fn protocol(&self) -> &str {
         "Linux Boot Protocol"
     }
-    fn rsdp_addr(&self) -> u64 {
-        0
-    }
-    fn cmdline(&self) -> &[u8] {
-        unsafe { common::from_cstring(self.ext_cmd_line_ptr.into()) }
-    }
-    fn num_entries(&self) -> u8 {
-        self.e820_entries
-    }
-    fn entry(&self, idx: u8) -> E820Entry {
-        assert!(idx < self.num_entries());
-        E820Entry {
-            addr: self.e820_table[idx as usize].addr,
-            size: self.e820_table[idx as usize].size,
-            entry_type: self.e820_table[idx as usize].type_,
-        }
+
+    fn e820_table(&self) -> &[boot_e820_entry] {
+        &self.e820_table[..self.e820_entries as usize]
     }
 }
 

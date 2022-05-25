@@ -2217,6 +2217,7 @@ dependencies = [
  "log",
  "runtime",
  "rust-hypervisor-firmware-subset",
+ "strum",
  "uart_16550",
  "x86_64",
 ]
@@ -4703,6 +4704,9 @@ name = "strum"
 version = "0.24.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e96acfc1b70604b8b2f1ffa4c57e59176c7dbb05d556c71ecd2f5498a1dee7f8"
+dependencies = [
+ "strum_macros",
+]
 
 [[package]]
 name = "strum_macros"
