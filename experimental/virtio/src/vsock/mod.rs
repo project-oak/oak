@@ -14,7 +14,10 @@
 // limitations under the License.
 //
 
-use crate::queue::{DeviceWriteOnlyQueue, DriverWriteOnlyQueue};
+use crate::{
+    queue::{DeviceWriteOnlyQueue, DriverWriteOnlyQueue},
+    vsock::packet::VSockOp,
+};
 use anyhow::Context;
 use packet::Packet;
 use rust_hypervisor_firmware_virtio::{
@@ -23,6 +26,7 @@ use rust_hypervisor_firmware_virtio::{
 };
 
 pub mod packet;
+pub mod socket;
 
 /// The number of buffer descriptors in each of the queues.
 const QUEUE_SIZE: usize = 16;
@@ -105,7 +109,7 @@ impl VSock {
                 // Notify the device that a packet has been read and the buffer is available again.
                 self.device.notify_queue(RX_QUEUE_ID);
             }
-            // Filter out invalid packets and packets where the CIDs don't match.
+            // Silently drop packets where the CIDs don't match.
             if let Ok(packet) = Packet::new(buffer) {
                 if packet.get_src_cid() == HOST_CID && packet.get_dst_cid() == self.guest_cid {
                     return Some(packet);
@@ -114,9 +118,35 @@ impl VSock {
         }
     }
 
+    /// Reads the next valid packet that matches the filter, if one is available.
+    ///
+    /// If `reset_unmatched` is true we send RST packets in response to unmatched packets to notify
+    /// the host that the pakcets are not part of a valid connected socket (e.g. unexpected source
+    /// or destintation ports).
+    pub fn read_filtered_packet<F: Fn(&Packet) -> bool>(
+        &mut self,
+        filter: F,
+        reset_unmatched: bool,
+    ) -> Option<Packet> {
+        loop {
+            let packet = self.read_packet()?;
+            if filter(&packet) {
+                return Some(packet);
+            }
+            if reset_unmatched {
+                self.send_rst_packet(packet.get_src_port(), packet.get_dst_port())
+            }
+        }
+    }
+
     /// Writes the packet to the transmit queue.
     pub fn write_packet(&mut self, packet: &mut Packet) {
+        // Ensure that the CIDs are set correctly.
+        packet.set_dst_cid(HOST_CID);
+        packet.set_src_cid(self.guest_cid);
+
         self.tx_queue.write_buffer(packet.as_slice());
+
         if self.tx_queue.inner.must_notify_device() {
             // Notify the device that new packet has been written.
             self.device.notify_queue(TX_QUEUE_ID);
@@ -181,5 +211,14 @@ impl VSock {
         // lower 32 bits.
         self.guest_cid = self.device.get_config(CID_CONFIG_OFFSET) as u64;
         Ok(())
+    }
+
+    /// Sends a packet indicating that a socket is disconnected.
+    ///
+    /// This is typically done in response to a packet with unexpected source or destination ports,
+    /// an invalid op for the connection state, or to confirm that a socket has been diconnected.
+    fn send_rst_packet(&mut self, host_port: u32, local_port: u32) {
+        let mut packet = Packet::new_control(local_port, host_port, VSockOp::Rst).unwrap();
+        self.write_packet(&mut packet);
     }
 }
