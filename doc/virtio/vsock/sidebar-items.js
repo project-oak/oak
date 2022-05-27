@@ -1,1 +1,1 @@
-initSidebarItems({"mod":[["packet","Virtio vsock packet implementation."]]});
+initSidebarItems({"mod":[["packet","Virtio vsock packet implementation."]],"struct":[["VSock","Low-level driver interface to interact with a virtio socket device."]]});
