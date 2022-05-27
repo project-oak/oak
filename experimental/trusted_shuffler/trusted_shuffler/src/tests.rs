@@ -198,7 +198,6 @@ async fn one_empty_response_test() {
 // If all requests receive a response from the backend within the given timeout, then the Trusted
 // Shuffler responds with the all responses.
 #[tokio::test]
-
 async fn no_empty_response_test() {
     let anonymity_value = 2;
     // This should give the non-empty response enough time to arrive.
@@ -221,7 +220,6 @@ async fn no_empty_response_test() {
 // If no request receives a response from the backend within the given timeout, then the Trusted
 // Shuffler responds with the all empty responses.
 #[tokio::test]
-
 async fn all_empty_responses_test() {
     let anonymity_value = 2;
     let timeout = Duration::from_millis(200);
