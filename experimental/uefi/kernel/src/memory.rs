@@ -27,10 +27,10 @@ static ALLOCATOR: LockedHeap = LockedHeap::empty();
 static ALLOCATOR: LockedHeap = LockedHeap::empty();
 
 pub fn init_allocator<E: E820Entry>(e820_table: &[E]) -> Result<()> {
-    let ram_min = rust_hypervisor_firmware_subset::ram_min();
-    let text_start = rust_hypervisor_firmware_subset::text_start();
-    let text_end = rust_hypervisor_firmware_subset::text_end();
-    let stack_start = rust_hypervisor_firmware_subset::stack_start();
+    let ram_min = rust_hypervisor_firmware_boot::ram_min();
+    let text_start = rust_hypervisor_firmware_boot::text_start();
+    let text_end = rust_hypervisor_firmware_boot::text_end();
+    let stack_start = rust_hypervisor_firmware_boot::stack_start();
 
     info!("RAM_MIN: {}", ram_min);
     info!("TEXT_START: {}", text_start);

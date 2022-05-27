@@ -17,7 +17,7 @@ libm = "*"
 runtime = { path = "../runtime", default-features = false, features = [
   "rust-crypto"
 ] }
-rust-hypervisor-firmware-subset = { path = "../../../third_party/rust-hypervisor-firmware-subset" }
+rust-hypervisor-firmware-boot = { path = "../../../third_party/rust-hypervisor-firmware-boot" }
 strum = { version = "*", default-features = false, features = ["derive"] }
 uart_16550 = "*"
 x86_64 = "*"

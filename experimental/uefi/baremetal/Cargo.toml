@@ -7,7 +7,7 @@ license = "Apache-2.0"
 
 [dependencies]
 kernel = { path = "../kernel" }
-rust-hypervisor-firmware-subset = { path = "../../../third_party/rust-hypervisor-firmware-subset" }
+rust-hypervisor-firmware-boot = { path = "../../../third_party/rust-hypervisor-firmware-boot" }
 
 [build-dependencies]
 bindgen = "*"

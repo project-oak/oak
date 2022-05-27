@@ -12,13 +12,9 @@ use core::ffi::c_void;
 
 mod asm;
 pub mod common;
-pub mod device;
 mod gdt;
-pub mod mem;
 pub mod paging;
-pub mod pci;
 pub mod pvh;
-pub mod virtio;
 
 extern "C" {
     #[link_name = "ram_min"]

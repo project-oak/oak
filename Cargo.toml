@@ -59,7 +59,6 @@ members = [
   "oak_idl_tests",
   "remote_attestation/rust",
   "remote_attestation_sessions",
-  "third_party/rust-hypervisor-firmware-subset",
   "xtask",
 ]
 exclude = [
@@ -69,5 +68,7 @@ exclude = [
   "oak_functions/loader/fuzz",
   "third_party/ring",
   "third_party/curve25519-dalek",
+  "third_party/rust-hypervisor-firmware-boot",
+  "third_party/rust-hypervisor-firmware-virtio",
   "third_party/x25519-dalek"
 ]
