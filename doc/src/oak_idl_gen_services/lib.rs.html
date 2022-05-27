@@ -386,16 +386,6 @@
 <span id="381">381</span>
 <span id="382">382</span>
 <span id="383">383</span>
-<span id="384">384</span>
-<span id="385">385</span>
-<span id="386">386</span>
-<span id="387">387</span>
-<span id="388">388</span>
-<span id="389">389</span>
-<span id="390">390</span>
-<span id="391">391</span>
-<span id="392">392</span>
-<span id="393">393</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2022 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -437,7 +427,7 @@
 <span class="doccomment">/// Compile services from the provided flatbuffer file using the `flatc` binary installed on the</span>
 <span class="doccomment">/// system.</span>
 <span class="doccomment">///</span>
-<span class="doccomment">/// Services are generated targeting the invocation-based transport from the `oak_idl` crate (i.e.</span>
+<span class="doccomment">/// Services are generated targeting the invocation-based handler from the `oak_idl` crate (i.e.</span>
 <span class="doccomment">/// not gRPC).</span>
 <span class="doccomment">///</span>
 <span class="doccomment">/// Each service method in the `rpc_service` definition must have a unique `method_id` numeric</span>
@@ -460,10 +450,10 @@
 <span class="doccomment">/// For a service called `TestName`, `compile_services` generates the following objects:</span>
 <span class="doccomment">///</span>
 <span class="doccomment">/// - a struct named `TestNameClient`, exposing a method for each method defined in the service.</span>
-<span class="doccomment">///   This may be used to directly invoke the underlying transport in order to indirectly invoke</span>
-<span class="doccomment">///   methods on the corresponding `Server` object on the other side of the transport.</span>
-<span class="doccomment">/// - a struct named `TestNameServer`, which implements the `oak_idl::Transport` trait, dispatching</span>
-<span class="doccomment">///   each request to the appropriate method on the underlying service implementation.</span>
+<span class="doccomment">///   This may be used to directly invoke the underlying handler in order to indirectly invoke</span>
+<span class="doccomment">///   methods on the corresponding `Server` object on the other side of the handler.</span>
+<span class="doccomment">/// - a struct named `TestNameServer`, which implements the `oak_idl::InvocationHandler` trait,</span>
+<span class="doccomment">///   dispatching each request to the appropriate method on the underlying service implementation.</span>
 <span class="doccomment">/// - a trait named `TestName`, with a method for each method defined in the macro, and an</span>
 <span class="doccomment">///   additional default method named `serve` which returns an instance of `TestNameServer`; the</span>
 <span class="doccomment">///   developer of a service would usually define a concrete struct and manually implement this</span>
@@ -547,16 +537,16 @@
         <span class="macro">format!</span>(<span class="string">&quot;// Original service name: {}&quot;</span>, <span class="ident">service</span>.<span class="ident">name</span>()),
         <span class="macro">format!</span>(<span class="string">&quot;&quot;</span>),
         <span class="macro">format!</span>(
-            <span class="string">&quot;pub struct {}&lt;T: oak_idl::Transport&gt; {{&quot;</span>,
+            <span class="string">&quot;pub struct {}&lt;T: oak_idl::Handler&gt; {{&quot;</span>,
             <span class="ident">client_name</span>(<span class="ident">service</span>)
         ),
-        <span class="macro">format!</span>(<span class="string">&quot;    transport: T&quot;</span>),
+        <span class="macro">format!</span>(<span class="string">&quot;    handler: T&quot;</span>),
         <span class="macro">format!</span>(<span class="string">&quot;}}&quot;</span>),
         <span class="macro">format!</span>(<span class="string">&quot;&quot;</span>),
-        <span class="macro">format!</span>(<span class="string">&quot;impl &lt;T: oak_idl::Transport&gt;{}&lt;T&gt; {{&quot;</span>, <span class="ident">client_name</span>(<span class="ident">service</span>)),
-        <span class="macro">format!</span>(<span class="string">&quot;    pub fn new(transport: T) -&gt; Self {{&quot;</span>),
+        <span class="macro">format!</span>(<span class="string">&quot;impl &lt;T: oak_idl::Handler&gt;{}&lt;T&gt; {{&quot;</span>, <span class="ident">client_name</span>(<span class="ident">service</span>)),
+        <span class="macro">format!</span>(<span class="string">&quot;    pub fn new(handler: T) -&gt; Self {{&quot;</span>),
         <span class="macro">format!</span>(<span class="string">&quot;        Self {{&quot;</span>),
-        <span class="macro">format!</span>(<span class="string">&quot;            transport&quot;</span>),
+        <span class="macro">format!</span>(<span class="string">&quot;            handler&quot;</span>),
         <span class="macro">format!</span>(<span class="string">&quot;        }}&quot;</span>),
         <span class="macro">format!</span>(<span class="string">&quot;    }}&quot;</span>),
     ]);
@@ -578,16 +568,12 @@
         <span class="macro">format!</span>(<span class="string">&quot;}}&quot;</span>),
         <span class="macro">format!</span>(<span class="string">&quot;&quot;</span>),
         <span class="macro">format!</span>(
-            <span class="string">&quot;impl &lt;S: {}&gt; oak_idl::Transport for {}&lt;S&gt; {{&quot;</span>,
+            <span class="string">&quot;impl &lt;S: {}&gt; oak_idl::Handler for {}&lt;S&gt; {{&quot;</span>,
             <span class="ident">service_name</span>(<span class="ident">service</span>),
             <span class="ident">server_name</span>(<span class="ident">service</span>)
         ),
-        <span class="macro">format!</span>(<span class="string">&quot;    fn invoke(&amp;mut self, request_message: oak_idl::TransportMessage) -&gt; Result&lt;oak_idl::TransportMessage, oak_idl::TransportError&gt; {{&quot;</span>),
-        <span class="macro">format!</span>(<span class="string">&quot;        let response_header = oak_idl::Header {{&quot;</span>),
-        <span class="macro">format!</span>(<span class="string">&quot;            transaction_id: request_message.header.transaction_id,&quot;</span>),
-        <span class="macro">format!</span>(<span class="string">&quot;            method_id: request_message.header.method_id,&quot;</span>),
-        <span class="macro">format!</span>(<span class="string">&quot;        }};&quot;</span>),
-        <span class="macro">format!</span>(<span class="string">&quot;        match request_message.header.method_id {{&quot;</span>),
+        <span class="macro">format!</span>(<span class="string">&quot;    fn invoke(&amp;mut self, request: oak_idl::Request) -&gt; Result&lt;Vec&lt;u8&gt;, oak_idl::Error&gt; {{&quot;</span>),
+        <span class="macro">format!</span>(<span class="string">&quot;        match request.method_id {{&quot;</span>),
     ]);
     <span class="ident">lines</span>.<span class="ident">extend</span>(
         <span class="ident">service</span>
@@ -601,7 +587,7 @@
             .<span class="ident">flatten</span>(),
     );
     <span class="ident">lines</span>.<span class="ident">extend</span>(<span class="macro">vec!</span>[
-        <span class="macro">format!</span>(<span class="string">&quot;            _ =&gt; Err(oak_idl::TransportError::InvalidMethodId)&quot;</span>),
+        <span class="macro">format!</span>(<span class="string">&quot;            _ =&gt; Err(oak_idl::Error::InvalidMethodId)&quot;</span>),
         <span class="macro">format!</span>(<span class="string">&quot;        }}&quot;</span>),
         <span class="macro">format!</span>(<span class="string">&quot;    }}&quot;</span>),
         <span class="macro">format!</span>(<span class="string">&quot;}}&quot;</span>),
@@ -639,23 +625,20 @@
     <span class="comment">// much benefit.</span>
     <span class="prelude-val">Ok</span>(<span class="macro">vec!</span>[
         <span class="macro">format!</span>(
-            <span class="string">&quot;    pub fn {}(&amp;mut self, req: &amp;[u8]) -&gt; Result&lt;oak_idl::utils::Message&lt;{}&gt;, oak_idl::ClientError&gt; {{&quot;</span>,
+            <span class="string">&quot;    pub fn {}(&amp;mut self, request_body: &amp;[u8]) -&gt; Result&lt;oak_idl::utils::Message&lt;{}&gt;, oak_idl::Error&gt; {{&quot;</span>,
             <span class="ident">method_name</span>(<span class="ident">rpc_call</span>),
             <span class="ident">response_type</span>(<span class="ident">rpc_call</span>)
         ),
         <span class="macro">format!</span>(
-            <span class="string">&quot;        flatbuffers::root::&lt;{}&gt;(req).unwrap();&quot;</span>,
+            <span class="string">&quot;        flatbuffers::root::&lt;{}&gt;(request_body).map_err(|_err| oak_idl::Error::InvalidRequest)?;&quot;</span>,
             <span class="ident">request_type</span>(<span class="ident">rpc_call</span>)
         ),
-        <span class="macro">format!</span>(<span class="string">&quot;        let request_message = oak_idl::TransportMessage {{&quot;</span>),
-        <span class="macro">format!</span>(<span class="string">&quot;            header: oak_idl::Header {{&quot;</span>),
-        <span class="macro">format!</span>(<span class="string">&quot;                transaction_id: 0,&quot;</span>),
-        <span class="macro">format!</span>(<span class="string">&quot;                method_id: {},&quot;</span>, <span class="ident">method_id</span>(<span class="ident">rpc_call</span>)<span class="question-mark">?</span>),
-        <span class="macro">format!</span>(<span class="string">&quot;            }},&quot;</span>),
-        <span class="macro">format!</span>(<span class="string">&quot;            body: req.to_vec(),&quot;</span>),
+        <span class="macro">format!</span>(<span class="string">&quot;        let request = oak_idl::Request {{&quot;</span>),
+        <span class="macro">format!</span>(<span class="string">&quot;            method_id: {},&quot;</span>, <span class="ident">method_id</span>(<span class="ident">rpc_call</span>)<span class="question-mark">?</span>),
+        <span class="macro">format!</span>(<span class="string">&quot;            body: request_body,&quot;</span>),
         <span class="macro">format!</span>(<span class="string">&quot;        }};&quot;</span>),
-        <span class="macro">format!</span>(<span class="string">&quot;        let response_message = self.transport.invoke(request_message)?;&quot;</span>),
-        <span class="macro">format!</span>(<span class="string">&quot;        oak_idl::utils::Message::from_vec(response_message.body).map_err(|_err| oak_idl::ClientError::InvalidResponse)&quot;</span>),
+        <span class="macro">format!</span>(<span class="string">&quot;        let response_body = self.handler.invoke(request)?;&quot;</span>),
+        <span class="macro">format!</span>(<span class="string">&quot;        oak_idl::utils::Message::from_vec(response_body).map_err(|_err| oak_idl::Error::InvalidResponse)&quot;</span>),
         <span class="macro">format!</span>(<span class="string">&quot;    }}&quot;</span>),
     ])
 }
@@ -668,18 +651,15 @@
     <span class="prelude-val">Ok</span>(<span class="macro">vec!</span>[
         <span class="macro">format!</span>(<span class="string">&quot;            {} =&gt; {{&quot;</span>, <span class="ident">method_id</span>(<span class="ident">rpc_call</span>)<span class="question-mark">?</span>),
         <span class="macro">format!</span>(
-            <span class="string">&quot;                let request = flatbuffers::root::&lt;{}&gt;(&amp;request_message.body).unwrap();&quot;</span>,
+            <span class="string">&quot;                let request = flatbuffers::root::&lt;{}&gt;(request.body).map_err(|_err| oak_idl::Error::InvalidRequest)?;&quot;</span>,
             <span class="ident">request_type</span>(<span class="ident">rpc_call</span>),
         ),
         <span class="macro">format!</span>(
             <span class="string">&quot;                let response = self.service.{}(&amp;request);&quot;</span>,
             <span class="ident">method_name</span>(<span class="ident">rpc_call</span>),
         ),
-        <span class="macro">format!</span>(<span class="string">&quot;                let response_body = response.buf().to_vec();&quot;</span>,),
-        <span class="macro">format!</span>(<span class="string">&quot;                Ok(oak_idl::TransportMessage {{&quot;</span>,),
-        <span class="macro">format!</span>(<span class="string">&quot;                    header: response_header,&quot;</span>,),
-        <span class="macro">format!</span>(<span class="string">&quot;                    body: response_body,&quot;</span>,),
-        <span class="macro">format!</span>(<span class="string">&quot;                }})&quot;</span>,),
+        <span class="macro">format!</span>(<span class="string">&quot;                let response_body = response.buf().to_vec();&quot;</span>),
+        <span class="macro">format!</span>(<span class="string">&quot;                Ok(response_body)&quot;</span>),
         <span class="macro">format!</span>(<span class="string">&quot;            }}&quot;</span>,),
     ])
 }
