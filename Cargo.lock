@@ -3170,9 +3170,7 @@ dependencies = [
 name = "oak_idl"
 version = "0.1.0"
 dependencies = [
- "bincode",
  "flatbuffers",
- "serde",
 ]
 
 [[package]]
