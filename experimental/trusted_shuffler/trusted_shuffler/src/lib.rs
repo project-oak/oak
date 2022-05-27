@@ -33,6 +33,8 @@ use tokio::{sync::oneshot, time::Duration};
 type Request = Vec<u8>;
 type Response = Vec<u8>;
 
+// The Trusted Shuffler responds with the `EMPTY_RESPONSE` if the backend does not respond within a
+// given timeout.
 const EMPTY_RESPONSE: Vec<u8> = vec![];
 
 struct Message {
@@ -45,13 +47,26 @@ struct Message {
     response_sender: oneshot::Sender<Response>,
 }
 
+impl Message {
+    fn new_response(self, data: Vec<u8>) -> Message {
+        Message {
+            index: self.index,
+            data: data,
+            response_sender: self.response_sender,
+        }
+    }
+
+    fn new_empty_response(self) -> Message {
+        self.new_response(EMPTY_RESPONSE)
+    }
+}
+
 #[async_trait]
 pub trait RequestHandler: Send + Sync {
     async fn handle(&self, request: Vec<u8>) -> anyhow::Result<Vec<u8>>;
 }
 
 // Trusted Shuffler implementation.
-#[allow(dead_code)]
 pub struct TrustedShuffler {
     // Value k that represents k-anonymity.
     k: usize,
@@ -108,7 +123,7 @@ impl TrustedShuffler {
 
                 // Shuffle requests and spawn async tasks for sending them to the backend.
                 let request_handler = self.request_handler.clone();
-                let timeout = self.timeout.clone();
+                let timeout = self.timeout;
                 tokio::spawn(async move {
                     if let Err(error) =
                         TrustedShuffler::shuffle_requests(requests, request_handler, timeout).await
@@ -138,29 +153,17 @@ impl TrustedShuffler {
                 async move {
                     match timeout {
                         None => request_handler_clone
-                            .handle(request.data)
+                            .handle(request.data.clone())
                             .await
-                            .map(|response| Message {
-                                index: request.index,
-                                data: response,
-                                response_sender: request.response_sender,
-                            }),
+                            .map(|response| request.new_response(response)),
                         Some(timeout) => match tokio::time::timeout(
                             timeout,
-                            request_handler_clone.handle(request.data),
+                            request_handler_clone.handle(request.data.clone()),
                         )
                         .await
                         {
-                            Err(_) => Ok(Message {
-                                index: request.index,
-                                data: EMPTY_RESPONSE,
-                                response_sender: request.response_sender,
-                            }),
-                            Ok(response) => response.map(|response| Message {
-                                index: request.index,
-                                data: response,
-                                response_sender: request.response_sender,
-                            }),
+                            Err(_) => Ok(request.new_empty_response()),
+                            Ok(response) => response.map(|response| request.new_response(response)),
                         },
                     }
                 }
