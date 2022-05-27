@@ -81,8 +81,6 @@ pub struct VSock {
     event_queue: DeviceWriteOnlyQueue<QUEUE_SIZE, EVENT_BUFFER_SIZE>,
     /// The the CID assigned to this VM.
     guest_cid: u64,
-    /// Whether the device have been initialized and is ready to use.
-    ready: bool,
 }
 
 impl VSock {
@@ -101,7 +99,6 @@ impl VSock {
 
     /// Reads the next valid packet from the receive queue, if one is available.
     pub fn read_packet(&mut self) -> Option<Packet> {
-        assert!(self.ready);
         loop {
             let buffer = self.rx_queue.read_next_used_buffer()?;
             if self.rx_queue.inner.must_notify_device() {
@@ -119,7 +116,6 @@ impl VSock {
 
     /// Writes the packet to the transmit queue.
     pub fn write_packet(&mut self, packet: &mut Packet) {
-        assert!(self.ready);
         self.tx_queue.write_buffer(packet.as_slice());
         if self.tx_queue.inner.must_notify_device() {
             // Notify the device that new packet has been written.
