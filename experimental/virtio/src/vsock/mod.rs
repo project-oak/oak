@@ -133,7 +133,6 @@ impl VSock {
             rx_queue,
             event_queue,
             guest_cid: Default::default(),
-            ready: false,
         }
     }
 
@@ -181,7 +180,6 @@ impl VSock {
         // Read the guest CID from the PCI config. The upper 32 bits must be 0, so we only read the
         // lower 32 bits.
         self.guest_cid = self.device.get_config(CID_CONFIG_OFFSET) as u64;
-        self.ready = true;
         Ok(())
     }
 }
