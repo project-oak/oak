@@ -36,11 +36,13 @@ pub enum Error {
 /// Unique identifier of a method within a service.
 type MethodId = u32;
 
-/// A request message representing an invocation.
+/// A request message representing an invocation of the method identified by `method_id` with the
+/// argument serialized as `body`.
 pub struct Request<'a> {
     /// Identifies the method to be invoked, as defined by the IDL.
     pub method_id: MethodId,
-    /// The serialized payload supplied as the request.
+    /// The serialized request payload, corresponding to the argument of the method identified by
+    /// `method_id`.
     pub body: &'a [u8],
 }
 
