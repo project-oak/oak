@@ -60,6 +60,20 @@ if [[ -e "/dev/kvm" ]]; then
   )
 fi
 
+# If the host supports virtio vhost vsock, allow the image to use it
+if [[ -e "/dev/vhost-vsock" ]]; then
+  docker_run_flags+=(
+    "--device=/dev/vhost-vsock"
+  )
+fi
+
+# If the host supports the vsock device, allow the image to use it.
+if [[ -e "/dev/vsock" ]]; then
+  docker_run_flags+=(
+    "--device=/dev/vsock"
+  )
+fi
+
 # Some CI systems (GitHub actions) do not run with an interactive TTY attached.
 if [[ -z "${CI:-}" ]]; then
   docker_run_flags+=('--interactive')

@@ -136,6 +136,11 @@ where
         self.transport.read_device_config(offset)
     }
 
+    /// Gets the device status.
+    pub fn get_status(&self) -> u32 {
+        self.transport.get_status()
+    }
+
     /// Notifies the device that a queue has been updated.
     pub fn notify_queue(&mut self, queue_id: u16) {
         self.transport.notify_queue(queue_id)

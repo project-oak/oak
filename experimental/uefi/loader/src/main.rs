@@ -72,13 +72,16 @@ fn path_exists(s: &str) -> Result<(), String> {
     }
 }
 
+pub trait ReadWrite: Read + Write + Send + Sync {}
+
+impl<T> ReadWrite for T where T: Read + Write + Send + Sync {}
+
 struct CommsChannel {
-    inner: UnixStream,
+    inner: Box<dyn ReadWrite>,
 }
 
 impl ciborium_io::Write for CommsChannel {
     type Error = anyhow::Error;
-
     fn write_all(&mut self, data: &[u8]) -> Result<(), Self::Error> {
         self.inner.write_all(data).map_err(anyhow::Error::msg)
     }
@@ -102,7 +105,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     env_logger::init();
 
     let (console_vmm, console) = UnixStream::pair()?;
-    let (comms_vmm, mut comms) = UnixStream::pair()?;
 
     let mut vmm: Box<dyn Vmm> = match cli.mode {
         Mode::Uefi => Box::new(Qemu::start(Params {
@@ -110,21 +112,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             firmware: Some(cli.ovmf),
             app: cli.app,
             console: console_vmm,
-            comms: comms_vmm,
         })?),
         Mode::Bios => Box::new(Qemu::start(Params {
             binary: cli.qemu,
             firmware: None,
             app: cli.app,
             console: console_vmm,
-            comms: comms_vmm,
         })?),
         Mode::Crosvm => Box::new(Crosvm::start(Params {
             binary: cli.crosvm,
             firmware: None,
             app: cli.app,
             console: console_vmm,
-            comms: comms_vmm,
         })?),
     };
 
@@ -141,13 +140,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
+    let mut comms_channel = vmm.create_comms_channel()?;
+
     // TODO(#2709): Unfortunately OVMF writes some garbage (clear screen etc?) + our Hello
     // World to the other serial port, so let's skip some bytes before we set up framing.
     // The length of 71 characters has been determined experimentally and will change if we
     // change what we write to stdout in the UEFI app.
     if cli.mode == Mode::Uefi {
         let mut junk = [0; 71];
-        comms.read_exact(&mut junk).unwrap();
+        comms_channel.read_exact(&mut junk).unwrap();
         log::info!("Leading junk on comms: {:?}", std::str::from_utf8(&junk));
     }
 
@@ -156,8 +157,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // as right now we don't have any mechanisms to track multiple requests in flight.
     let (tx, mut rx) = bmrng::unbounded_channel::<Vec<u8>, anyhow::Result<Vec<u8>>>();
 
+    let comms_channel = CommsChannel {
+        inner: comms_channel,
+    };
     tokio::spawn(async move {
-        let comms_channel = CommsChannel { inner: comms };
         let mut framed = Framed::new(comms_channel);
         fn respond(framed: &mut Framed<CommsChannel>, input: Vec<u8>) -> anyhow::Result<Vec<u8>> {
             framed.write_frame(Frame { body: input })?;

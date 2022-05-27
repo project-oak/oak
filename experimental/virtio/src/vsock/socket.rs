@@ -62,6 +62,9 @@ impl SocketConnector {
             self.config.host_port,
             VSockOp::Request,
         )?;
+        // Set credit info.
+        packet.set_buf_alloc(STREAM_BUFFER_LENGTH.0);
+        packet.set_fwd_cnt(0);
         self.config.vsock.write_packet(&mut packet);
         let src_port = self.config.host_port;
         let dst_port = self.config.local_port;
@@ -124,6 +127,9 @@ impl SocketListener {
             self.config.host_port,
             VSockOp::Response,
         )?;
+        // Set credit info.
+        packet.set_buf_alloc(STREAM_BUFFER_LENGTH.0);
+        packet.set_fwd_cnt(0);
         self.config.vsock.write_packet(&mut packet);
 
         Ok(Socket::new(self.config))
@@ -208,7 +214,10 @@ impl Socket {
     /// Sends a data packet to the host.
     fn send_data_packet(&mut self, data: &[u8]) -> anyhow::Result<()> {
         // For now we panic if we are disconnected.
-        assert!(self.connection_state == ConnectionState::Connected);
+        assert!(
+            self.connection_state == ConnectionState::Connected,
+            "Stream disconnected."
+        );
         let data_len = data.len();
         assert!(
             data_len <= MAX_PAYLOAD_SIZE,
@@ -239,7 +248,10 @@ impl Socket {
     /// Reads the payload of the next available data packet, if any are available.
     fn read_data(&mut self) -> Option<VecDeque<u8>> {
         // For now we panic if we are disconnected.
-        assert!(self.connection_state == ConnectionState::Connected);
+        assert!(
+            self.connection_state == ConnectionState::Connected,
+            "Stream disconnected."
+        );
         let src_port = self.config.host_port;
         let dst_port = self.config.local_port;
         loop {
@@ -344,6 +356,7 @@ impl ciborium_io::Write for Socket {
 
     fn flush(&mut self) -> Result<(), Self::Error> {
         // We always flush on write, so do nothing.
+        // TODO(#2876): Don't always flush on write.
         Ok(())
     }
 }

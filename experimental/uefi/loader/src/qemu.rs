@@ -14,27 +14,57 @@
 // limitations under the License.
 //
 
-use crate::vmm::{Params, Vmm};
+use crate::{
+    vmm::{Params, Vmm},
+    ReadWrite,
+};
 use anyhow::Result;
 use async_trait::async_trait;
 use command_fds::{tokio::CommandFdAsyncExt, FdMapping};
 use log::info;
 use std::{
     ffi::OsStr,
+    io::{Read, Write},
     net::Shutdown,
     os::unix::{io::AsRawFd, net::UnixStream},
     process::Stdio,
 };
 
+struct UnixStreamChannel {
+    inner: UnixStream,
+}
+
+impl ciborium_io::Write for UnixStreamChannel {
+    type Error = anyhow::Error;
+
+    fn write_all(&mut self, data: &[u8]) -> Result<(), Self::Error> {
+        self.inner.write_all(data).map_err(anyhow::Error::msg)
+    }
+
+    fn flush(&mut self) -> Result<(), Self::Error> {
+        self.inner.flush().map_err(anyhow::Error::msg)
+    }
+}
+
+impl ciborium_io::Read for UnixStreamChannel {
+    type Error = anyhow::Error;
+
+    fn read_exact(&mut self, data: &mut [u8]) -> Result<(), Self::Error> {
+        self.inner.read_exact(data).map_err(anyhow::Error::msg)
+    }
+}
+
 pub struct Qemu {
     console: UnixStream,
-    comms: UnixStream,
+    comms_guest: UnixStream,
+    comms_host: UnixStream,
     qmp: UnixStream,
     instance: tokio::process::Child,
 }
 
 impl Qemu {
     pub fn start(params: Params) -> Result<Self> {
+        let (comms_guest, comms_host) = UnixStream::pair()?;
         let mut cmd = tokio::process::Command::new(params.binary);
 
         // There should not be any communication over stdin/stdout/stderr, but let's inherit
@@ -53,7 +83,7 @@ impl Qemu {
                 child_fd: 10,
             },
             FdMapping {
-                parent_fd: params.comms.as_raw_fd(),
+                parent_fd: comms_guest.as_raw_fd(),
                 child_fd: 11,
             },
             FdMapping {
@@ -96,6 +126,7 @@ impl Qemu {
         // Expose the QEMU monitor (QMP) over a socket as well.
         cmd.args(&["-chardev", "socket,id=qmpsock,fd=12"]);
         cmd.args(&["-qmp", "chardev:qmpsock"]);
+
         if params.firmware.is_some() {
             // Point to the UEFI firmware.
             cmd.args(&[OsStr::new("-bios"), params.firmware.unwrap().as_os_str()]);
@@ -110,7 +141,8 @@ impl Qemu {
         Ok(Qemu {
             instance: cmd.spawn()?,
             console: params.console,
-            comms: params.comms,
+            comms_guest,
+            comms_host,
             qmp: qmp.0,
         })
     }
@@ -125,9 +157,14 @@ impl Vmm for Qemu {
     async fn kill(mut self: Box<Self>) -> Result<std::process::ExitStatus> {
         info!("Cleaning up and shutting down.");
         self.console.shutdown(Shutdown::Both)?;
-        self.comms.shutdown(Shutdown::Both)?;
+        self.comms_guest.shutdown(Shutdown::Both)?;
         self.qmp.shutdown(Shutdown::Both)?;
         self.instance.start_kill()?;
         self.wait().await
+    }
+
+    fn create_comms_channel(&self) -> Result<Box<dyn ReadWrite>> {
+        let comms_host = self.comms_host.try_clone()?;
+        Ok(Box::new(comms_host))
     }
 }

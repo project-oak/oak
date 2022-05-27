@@ -38,6 +38,7 @@ mod interrupts;
 mod libm;
 mod logging;
 mod memory;
+#[cfg(not(feature = "vsock_channel"))]
 mod serial;
 
 use core::panic::PanicInfo;
@@ -46,6 +47,10 @@ use oak_remote_attestation::handshaker::{
     AttestationBehavior, EmptyAttestationGenerator, EmptyAttestationVerifier,
 };
 use rust_hypervisor_firmware_boot::paging;
+
+#[cfg(feature = "vsock_channel")]
+// The virtio vsock port on which to listen.
+const VSOCK_PORT: u32 = 1024;
 
 /// Main entry point for the kernel, to be called from bootloader.
 pub fn start_kernel<E: boot::E820Entry, B: boot::BootInfo<E>>(info: &B) -> ! {
@@ -58,6 +63,18 @@ pub fn start_kernel<E: boot::E820Entry, B: boot::BootInfo<E>>(info: &B) -> ! {
     main(info);
 }
 
+#[cfg(feature = "vsock_channel")]
+fn main<E: boot::E820Entry, B: boot::BootInfo<E>>(info: &B) -> ! {
+    info!("In main! Boot protocol:  {}", info.protocol());
+    let vsock = virtio::vsock::VSock::find_and_configure_device()
+        .expect("Couldn't configure PCI virtio vsock device.");
+    info!("Socket device status: {}", vsock.get_status());
+    let listener = virtio::vsock::socket::SocketListener::new(vsock, VSOCK_PORT);
+    let socket = listener.accept().unwrap();
+    runtime::framing::handle_frames(socket).unwrap();
+}
+
+#[cfg(not(feature = "vsock_channel"))]
 fn main<E: boot::E820Entry, B: boot::BootInfo<E>>(info: &B) -> ! {
     info!("In main! Boot protocol:  {}", info.protocol());
     let serial = serial::Serial::new();

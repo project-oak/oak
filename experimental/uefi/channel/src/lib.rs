@@ -74,6 +74,7 @@ where
         };
         self.inner.write_all(&length_bytes)?;
         self.inner.write_all(&frame.body)?;
+        self.inner.flush()?;
         Ok(())
     }
 }

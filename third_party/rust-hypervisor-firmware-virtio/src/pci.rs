@@ -391,7 +391,7 @@ impl VirtioTransport for VirtioPciTransport {
     }
 
     fn set_used_ring(&self, addr: u64) {
-        // queue_used: 0x28
+        // queue_used: 0x30
         self.region.io_write_u64(0x30, addr);
     }
 
