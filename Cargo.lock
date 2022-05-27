@@ -4229,6 +4229,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "rust-hypervisor-firmware-virtio"
+version = "0.1.0"
+dependencies = [
+ "atomic_refcell",
+ "bitflags",
+ "log",
+ "x86_64",
+]
+
+[[package]]
 name = "rustc-demangle"
 version = "0.1.21"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5759,6 +5769,7 @@ dependencies = [
  "anyhow",
  "bitflags",
  "num_enum",
+ "rust-hypervisor-firmware-virtio",
 ]
 
 [[package]]
