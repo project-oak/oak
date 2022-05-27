@@ -1,1 +1,0 @@
-initSidebarItems({"struct":[["VirtioBaseDevice","Device driver for virtio block over any transport"]]});

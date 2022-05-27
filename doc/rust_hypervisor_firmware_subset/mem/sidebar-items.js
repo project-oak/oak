@@ -1,1 +1,0 @@
-initSidebarItems({"struct":[["MemoryRegion","Provides a checked way to access memory offsets from a range of raw memory"]]});
