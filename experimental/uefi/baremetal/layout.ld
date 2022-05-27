@@ -14,4 +14,4 @@
  * limitations under the License.
 */
 
-INCLUDE ../../../third_party/rust-hypervisor-firmware-subset/layout.ld
+INCLUDE ../../../third_party/rust-hypervisor-firmware-boot/layout.ld

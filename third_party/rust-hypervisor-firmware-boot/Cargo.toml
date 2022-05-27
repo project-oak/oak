@@ -1,0 +1,9 @@
+[package]
+name = "rust-hypervisor-firmware-boot"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+bitflags = "*"
+log = "*"
+x86_64 = "*"

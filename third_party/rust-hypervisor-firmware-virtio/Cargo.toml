@@ -1,5 +1,5 @@
 [package]
-name = "rust-hypervisor-firmware-subset"
+name = "rust-hypervisor-firmware-virtio"
 version = "0.1.0"
 edition = "2021"
 
@@ -7,4 +7,3 @@ edition = "2021"
 atomic_refcell = "*"
 bitflags = "*"
 log = "*"
-x86_64 = "*"

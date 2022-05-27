@@ -42,7 +42,7 @@ mod serial;
 
 use core::panic::PanicInfo;
 use log::{error, info};
-use rust_hypervisor_firmware_subset::paging;
+use rust_hypervisor_firmware_boot::paging;
 
 /// Main entry point for the kernel, to be called from bootloader.
 pub fn start_kernel<E: boot::E820Entry, B: boot::BootInfo<E>>(info: &B) -> ! {

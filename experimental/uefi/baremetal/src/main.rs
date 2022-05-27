@@ -26,7 +26,7 @@
 #![reexport_test_harness_main = "test_main"]
 
 use core::panic::PanicInfo;
-use rust_hypervisor_firmware_subset::pvh;
+use rust_hypervisor_firmware_boot::pvh;
 mod hvm_start_info;
 
 #[no_mangle]
