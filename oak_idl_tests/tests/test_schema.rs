@@ -31,7 +31,8 @@ impl test_schema::TestService for TestServiceImpl {
     fn lookup_data(
         &self,
         request: &test_schema::LookupDataRequest,
-    ) -> oak_idl::utils::Message<test_schema::LookupDataResponse> {
+    ) -> Result<oak_idl::utils::Message<test_schema::LookupDataResponse>, oak_idl::MethodError>
+    {
         let h = maplit::hashmap! {
             vec![14, 12] => vec![19, 88]
         };
@@ -43,17 +44,23 @@ impl test_schema::TestService for TestServiceImpl {
             &mut b,
             &test_schema::LookupDataResponseArgs { value },
         );
-        b.finish(m).unwrap()
+        let b = b
+            .finish(m)
+            .map_err(|_| oak_idl::MethodError::InternalError)?;
+        Ok(b)
     }
 
     fn log(
         &self,
         request: &test_schema::LogRequest,
-    ) -> oak_idl::utils::Message<test_schema::LogResponse> {
+    ) -> Result<oak_idl::utils::Message<test_schema::LogResponse>, oak_idl::MethodError> {
         eprintln!("log: {}", request.entry().unwrap());
         let mut b = oak_idl::utils::MessageBuilder::default();
         let m = test_schema::LogResponse::create(&mut b, &test_schema::LogResponseArgs {});
-        b.finish(m).unwrap()
+        let b = b
+            .finish(m)
+            .map_err(|_| oak_idl::MethodError::InternalError)?;
+        Ok(b)
     }
 }
 

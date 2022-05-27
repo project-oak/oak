@@ -40,13 +40,13 @@ impl <S: TestService> oak_idl::Handler for TestServiceServer<S> {
         match request.method_id {
             222 => {
                 let request = flatbuffers::root::<LookupDataRequest>(request.body).map_err(|_err| oak_idl::Error::InvalidRequest)?;
-                let response = self.service.lookup_data(&request);
+                let response = self.service.lookup_data(&request)?;
                 let response_body = response.buf().to_vec();
                 Ok(response_body)
             }
             223 => {
                 let request = flatbuffers::root::<LogRequest>(request.body).map_err(|_err| oak_idl::Error::InvalidRequest)?;
-                let response = self.service.log(&request);
+                let response = self.service.log(&request)?;
                 let response_body = response.buf().to_vec();
                 Ok(response_body)
             }
@@ -56,8 +56,8 @@ impl <S: TestService> oak_idl::Handler for TestServiceServer<S> {
 }
 
 pub trait TestService: Sized {
-    fn lookup_data(&self, request: &LookupDataRequest) -> oak_idl::utils::Message<LookupDataResponse>;
-    fn log(&self, request: &LogRequest) -> oak_idl::utils::Message<LogResponse>;
+    fn lookup_data(&self, request: &LookupDataRequest) -> Result<oak_idl::utils::Message<LookupDataResponse>, oak_idl::MethodError>;
+    fn log(&self, request: &LogRequest) -> Result<oak_idl::utils::Message<LogResponse>, oak_idl::MethodError>;
     fn serve(self) -> TestServiceServer<Self> {
         TestServiceServer { service : self }
     }
