@@ -362,7 +362,7 @@ mod tests {
     fn test_new_from_buffer() {
         let packet = Packet::new_data(&[1, 2, 3, 4], 0, 0).unwrap();
 
-        let packet = Packet::new(packet.buffer.clone()).unwrap();
+        let packet = Packet::new(packet.buffer).unwrap();
         assert_eq!(packet.get_payload(), &[1, 2, 3, 4]);
         assert_eq!(packet.get_len(), 4);
         assert_eq!(packet.get_type().unwrap(), VSockType::Stream);
