@@ -17,7 +17,7 @@
 use crate::queue::{DeviceWriteOnlyQueue, DriverWriteOnlyQueue};
 use anyhow::Context;
 use packet::Packet;
-use rust_hypervisor_firmware_subset::{
+use rust_hypervisor_firmware_virtio::{
     device::VirtioBaseDevice,
     pci::{find_device, VirtioPciTransport},
 };
