@@ -61,8 +61,8 @@ impl test_schema::TestService for TestServiceImpl {
 fn test_lookup_data() {
     let service = TestServiceImpl;
     use test_schema::TestService;
-    let transport = service.serve();
-    let mut client = test_schema::TestServiceClient::new(transport);
+    let handler = service.serve();
+    let mut client = test_schema::TestServiceClient::new(handler);
     {
         let mut builder = oak_idl::utils::MessageBuilder::default();
         let key = builder.create_vector::<u8>(&[14, 12]);

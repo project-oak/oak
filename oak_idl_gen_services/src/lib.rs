@@ -39,7 +39,7 @@ mod reflection_generated {
 /// Compile services from the provided flatbuffer file using the `flatc` binary installed on the
 /// system.
 ///
-/// Services are generated targeting the invocation-based transport from the `oak_idl` crate (i.e.
+/// Services are generated targeting the invocation-based handler from the `oak_idl` crate (i.e.
 /// not gRPC).
 ///
 /// Each service method in the `rpc_service` definition must have a unique `method_id` numeric
@@ -62,10 +62,10 @@ mod reflection_generated {
 /// For a service called `TestName`, `compile_services` generates the following objects:
 ///
 /// - a struct named `TestNameClient`, exposing a method for each method defined in the service.
-///   This may be used to directly invoke the underlying transport in order to indirectly invoke
-///   methods on the corresponding `Server` object on the other side of the transport.
-/// - a struct named `TestNameServer`, which implements the `oak_idl::Transport` trait, dispatching
-///   each request to the appropriate method on the underlying service implementation.
+///   This may be used to directly invoke the underlying handler in order to indirectly invoke
+///   methods on the corresponding `Server` object on the other side of the handler.
+/// - a struct named `TestNameServer`, which implements the `oak_idl::InvocationHandler` trait,
+///   dispatching each request to the appropriate method on the underlying service implementation.
 /// - a trait named `TestName`, with a method for each method defined in the macro, and an
 ///   additional default method named `serve` which returns an instance of `TestNameServer`; the
 ///   developer of a service would usually define a concrete struct and manually implement this
@@ -149,16 +149,16 @@ fn generate_service(service: &Service) -> anyhow::Result<String> {
         format!("// Original service name: {}", service.name()),
         format!(""),
         format!(
-            "pub struct {}<T: oak_idl::Transport> {{",
+            "pub struct {}<T: oak_idl::Handler> {{",
             client_name(service)
         ),
-        format!("    transport: T"),
+        format!("    handler: T"),
         format!("}}"),
         format!(""),
-        format!("impl <T: oak_idl::Transport>{}<T> {{", client_name(service)),
-        format!("    pub fn new(transport: T) -> Self {{"),
+        format!("impl <T: oak_idl::Handler>{}<T> {{", client_name(service)),
+        format!("    pub fn new(handler: T) -> Self {{"),
         format!("        Self {{"),
-        format!("            transport"),
+        format!("            handler"),
         format!("        }}"),
         format!("    }}"),
     ]);
@@ -180,16 +180,12 @@ fn generate_service(service: &Service) -> anyhow::Result<String> {
         format!("}}"),
         format!(""),
         format!(
-            "impl <S: {}> oak_idl::Transport for {}<S> {{",
+            "impl <S: {}> oak_idl::Handler for {}<S> {{",
             service_name(service),
             server_name(service)
         ),
-        format!("    fn invoke(&mut self, request_message: oak_idl::TransportMessage) -> Result<oak_idl::TransportMessage, oak_idl::TransportError> {{"),
-        format!("        let response_header = oak_idl::Header {{"),
-        format!("            transaction_id: request_message.header.transaction_id,"),
-        format!("            method_id: request_message.header.method_id,"),
-        format!("        }};"),
-        format!("        match request_message.header.method_id {{"),
+        format!("    fn invoke(&mut self, request: oak_idl::Request) -> Result<Vec<u8>, oak_idl::Error> {{"),
+        format!("        match request.method_id {{"),
     ]);
     lines.extend(
         service
@@ -203,7 +199,7 @@ fn generate_service(service: &Service) -> anyhow::Result<String> {
             .flatten(),
     );
     lines.extend(vec![
-        format!("            _ => Err(oak_idl::TransportError::InvalidMethodId)"),
+        format!("            _ => Err(oak_idl::Error::InvalidMethodId)"),
         format!("        }}"),
         format!("    }}"),
         format!("}}"),
@@ -241,23 +237,20 @@ fn generate_client_method(rpc_call: &RPCCall) -> anyhow::Result<Vec<String>> {
     // much benefit.
     Ok(vec![
         format!(
-            "    pub fn {}(&mut self, req: &[u8]) -> Result<oak_idl::utils::Message<{}>, oak_idl::ClientError> {{",
+            "    pub fn {}(&mut self, request_body: &[u8]) -> Result<oak_idl::utils::Message<{}>, oak_idl::Error> {{",
             method_name(rpc_call),
             response_type(rpc_call)
         ),
         format!(
-            "        flatbuffers::root::<{}>(req).unwrap();",
+            "        flatbuffers::root::<{}>(request_body).map_err(|_err| oak_idl::Error::InvalidRequest)?;",
             request_type(rpc_call)
         ),
-        format!("        let request_message = oak_idl::TransportMessage {{"),
-        format!("            header: oak_idl::Header {{"),
-        format!("                transaction_id: 0,"),
-        format!("                method_id: {},", method_id(rpc_call)?),
-        format!("            }},"),
-        format!("            body: req.to_vec(),"),
+        format!("        let request = oak_idl::Request {{"),
+        format!("            method_id: {},", method_id(rpc_call)?),
+        format!("            body: request_body,"),
         format!("        }};"),
-        format!("        let response_message = self.transport.invoke(request_message)?;"),
-        format!("        oak_idl::utils::Message::from_vec(response_message.body).map_err(|_err| oak_idl::ClientError::InvalidResponse)"),
+        format!("        let response_body = self.handler.invoke(request)?;"),
+        format!("        oak_idl::utils::Message::from_vec(response_body).map_err(|_err| oak_idl::Error::InvalidResponse)"),
         format!("    }}"),
     ])
 }
@@ -270,18 +263,15 @@ fn generate_server_handler(rpc_call: &RPCCall) -> anyhow::Result<Vec<String>> {
     Ok(vec![
         format!("            {} => {{", method_id(rpc_call)?),
         format!(
-            "                let request = flatbuffers::root::<{}>(&request_message.body).unwrap();",
+            "                let request = flatbuffers::root::<{}>(request.body).map_err(|_err| oak_idl::Error::InvalidRequest)?;",
             request_type(rpc_call),
         ),
         format!(
             "                let response = self.service.{}(&request);",
             method_name(rpc_call),
         ),
-        format!("                let response_body = response.buf().to_vec();",),
-        format!("                Ok(oak_idl::TransportMessage {{",),
-        format!("                    header: response_header,",),
-        format!("                    body: response_body,",),
-        format!("                }})",),
+        format!("                let response_body = response.buf().to_vec();"),
+        format!("                Ok(response_body)"),
         format!("            }}",),
     ])
 }
