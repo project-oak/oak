@@ -463,7 +463,7 @@ dependencies = [
  "linked_list_allocator",
  "log",
  "runtime",
- "rust-hypervisor-firmware-subset",
+ "rust-hypervisor-firmware-boot",
  "strum",
  "uart_16550",
  "x86_64",
@@ -840,10 +840,9 @@ dependencies = [
 ]
 
 [[package]]
-name = "rust-hypervisor-firmware-subset"
+name = "rust-hypervisor-firmware-boot"
 version = "0.1.0"
 dependencies = [
- "atomic_refcell",
  "bitflags",
  "log",
  "x86_64",
