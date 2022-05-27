@@ -33,6 +33,8 @@ use tokio::{sync::oneshot, time::Duration};
 type Request = Vec<u8>;
 type Response = Vec<u8>;
 
+const EMPTY_RESPONSE: Vec<u8> = vec![];
+
 struct Message {
     // Determines the original order in which messages arrived.
     // Index is used to send requests back to the client in the order of arrival.
@@ -106,9 +108,10 @@ impl TrustedShuffler {
 
                 // Shuffle requests and spawn async tasks for sending them to the backend.
                 let request_handler = self.request_handler.clone();
+                let timeout = self.timeout.clone();
                 tokio::spawn(async move {
                     if let Err(error) =
-                        TrustedShuffler::shuffle_requests(requests, request_handler).await
+                        TrustedShuffler::shuffle_requests(requests, request_handler, timeout).await
                     {
                         log::error!("Shuffling error: {:?}", error);
                     }
@@ -124,6 +127,7 @@ impl TrustedShuffler {
     async fn shuffle_requests(
         mut requests: Vec<Message>,
         request_handler: Arc<dyn RequestHandler>,
+        timeout: Option<Duration>,
     ) -> anyhow::Result<()> {
         requests.sort_by(|first, second| first.data.cmp(&second.data));
 
@@ -132,14 +136,33 @@ impl TrustedShuffler {
             .map(|request| {
                 let request_handler_clone = request_handler.clone();
                 async move {
-                    request_handler_clone
-                        .handle(request.data)
+                    match timeout {
+                        None => request_handler_clone
+                            .handle(request.data)
+                            .await
+                            .map(|response| Message {
+                                index: request.index,
+                                data: response,
+                                response_sender: request.response_sender,
+                            }),
+                        Some(timeout) => match tokio::time::timeout(
+                            timeout,
+                            request_handler_clone.handle(request.data),
+                        )
                         .await
-                        .map(|response| Message {
-                            index: request.index,
-                            data: response,
-                            response_sender: request.response_sender,
-                        })
+                        {
+                            Err(_) => Ok(Message {
+                                index: request.index,
+                                data: EMPTY_RESPONSE,
+                                response_sender: request.response_sender,
+                            }),
+                            Ok(response) => response.map(|response| Message {
+                                index: request.index,
+                                data: response,
+                                response_sender: request.response_sender,
+                            }),
+                        },
+                    }
                 }
             })
             .collect();
