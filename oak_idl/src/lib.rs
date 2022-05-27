@@ -27,7 +27,7 @@ pub mod utils;
 pub enum Error {
     /// The request message could not be deserialized correctly.
     InvalidRequest,
-    /// The response message could not be serialized correctly.
+    /// The response message could not be deserialized correctly.
     InvalidResponse,
     /// The method id provided for the invocation was not implemented by the server.
     InvalidMethodId,
