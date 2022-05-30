@@ -32,18 +32,6 @@ pub enum Error {
     /// The method id provided for the invocation was not implemented by the server.
     InvalidMethodId,
     /// An error occured while invoking the method on the server.
-    MethodError(MethodError),
-}
-
-impl From<MethodError> for Error {
-    fn from(e: MethodError) -> Self {
-        Error::MethodError(e)
-    }
-}
-
-#[derive(Debug)]
-pub enum MethodError {
-    /// An error occured when invoking the method.
     InternalError,
 }
 

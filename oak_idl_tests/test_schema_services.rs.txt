@@ -56,8 +56,8 @@ impl <S: TestService> oak_idl::Handler for TestServiceServer<S> {
 }
 
 pub trait TestService: Sized {
-    fn lookup_data(&self, request: &LookupDataRequest) -> Result<oak_idl::utils::Message<LookupDataResponse>, oak_idl::MethodError>;
-    fn log(&self, request: &LogRequest) -> Result<oak_idl::utils::Message<LogResponse>, oak_idl::MethodError>;
+    fn lookup_data(&self, request: &LookupDataRequest) -> Result<oak_idl::utils::Message<LookupDataResponse>, oak_idl::Error>;
+    fn log(&self, request: &LogRequest) -> Result<oak_idl::utils::Message<LogResponse>, oak_idl::Error>;
     fn serve(self) -> TestServiceServer<Self> {
         TestServiceServer { service : self }
     }
