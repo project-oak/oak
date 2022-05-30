@@ -184,7 +184,7 @@ fn generate_service(service: &Service) -> anyhow::Result<String> {
             service_name(service),
             server_name(service)
         ),
-        format!("    fn invoke(&mut self, request: oak_idl::Request) -> Result<Vec<u8>, oak_idl::Error> {{"),
+        format!("    fn invoke(&mut self, request: oak_idl::Request) -> Result<alloc::vec::Vec<u8>, oak_idl::Error> {{"),
         format!("        match request.method_id {{"),
     ]);
     lines.extend(
