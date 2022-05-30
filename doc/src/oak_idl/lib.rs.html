@@ -63,6 +63,8 @@
 <span id="58">58</span>
 <span id="59">59</span>
 <span id="60">60</span>
+<span id="61">61</span>
+<span id="62">62</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2022 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -96,6 +98,8 @@
     <span class="ident">InvalidResponse</span>,
     <span class="doccomment">/// The method id provided for the invocation was not implemented by the server.</span>
     <span class="ident">InvalidMethodId</span>,
+    <span class="doccomment">/// An error occured while invoking the method on the server.</span>
+    <span class="ident">InternalError</span>,
 }
 
 <span class="doccomment">/// Unique identifier of a method within a service.</span>
