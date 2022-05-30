@@ -345,7 +345,8 @@ ARG flatbuffer_tmp_dir=/tmp/flatbuffer
 RUN apt-get --yes update \
   && apt-get install --no-install-recommends --yes --option Acquire::http::Dl-Limit=500 \
   cmake \
-  && apt-get clean
+  && apt-get clean \
+  && rm --recursive --force /var/lib/apt/lists/*
 RUN git clone https://github.com/google/flatbuffers.git ${flatbuffer_tmp_dir}
 WORKDIR ${flatbuffer_tmp_dir}
 RUN git checkout ${flatc_commit} \
