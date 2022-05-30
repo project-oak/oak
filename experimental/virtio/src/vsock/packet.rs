@@ -21,13 +21,12 @@
 //! See <https://docs.oasis-open.org/virtio/virtio/v1.1/csprd01/virtio-v1.1-csprd01.html#x1-3960006>.
 
 use alloc::{vec, vec::Vec};
-use anyhow::Context;
 use bitflags::bitflags;
 use core::mem::size_of;
-use num_enum::{IntoPrimitive, TryFromPrimitive};
+use strum::{Display, FromRepr};
 
 /// The size of the packet header in bytes.
-const HEADER_SIZE: usize = 44;
+pub const HEADER_SIZE: usize = 44;
 /// The offset to the src_cid field.
 const SRC_CID_OFFSET: usize = 0;
 /// The offset to the dst_cid field.
@@ -63,24 +62,40 @@ impl Packet {
     }
 
     /// Creates a new control `Packet` with only a header.
-    pub fn new_header_only() -> Self {
-        Self::new_with_buffer_size(HEADER_SIZE)
+    pub fn new_control(src_port: u32, dst_port: u32, op: VSockOp) -> anyhow::Result<Self> {
+        let mut result = Self::new_with_buffer_size(HEADER_SIZE, src_port, dst_port)?;
+        result.set_op(op)?;
+        Ok(result)
     }
 
     /// Creates a new data `Packet` with the given payload length.
-    pub fn new_with_payload(payload_len: usize) -> Self {
-        let mut result = Self::new_with_buffer_size(HEADER_SIZE + payload_len);
+    pub fn new_data(payload: &[u8], src_port: u32, dst_port: u32) -> anyhow::Result<Self> {
+        let payload_len = payload.len();
+        let mut result = Self::new_with_buffer_size(HEADER_SIZE + payload_len, src_port, dst_port)?;
         result.set_len(payload_len as u32);
-        result.set_op(VSockOp::Rw).unwrap();
-        result
+        result.set_op(VSockOp::Rw)?;
+        result.set_payload(payload)?;
+        Ok(result)
     }
 
     /// Creates a new `Packet` with the specified buffer size.
-    fn new_with_buffer_size(buffer_len: usize) -> Self {
+    fn new_with_buffer_size(
+        buffer_len: usize,
+        src_port: u32,
+        dst_port: u32,
+    ) -> anyhow::Result<Self> {
+        if buffer_len > super::DATA_BUFFER_SIZE {
+            anyhow::bail!(
+                "Total buffer length must be less than {}",
+                super::DATA_BUFFER_SIZE
+            );
+        }
         let buffer = vec![0u8; buffer_len];
         let mut result = Self { buffer };
         result.set_type(VSockType::Stream);
-        result
+        result.set_src_port(src_port);
+        result.set_dst_port(dst_port);
+        Ok(result)
     }
 
     /// Gets the source CID.
@@ -135,29 +150,29 @@ impl Packet {
 
     /// Gets the type of socket the packet is intended for.
     pub fn get_type(&self) -> anyhow::Result<VSockType> {
-        VSockType::try_from_primitive(self.read_u16(TYPE_OFFSET))
-            .map_err(anyhow::Error::msg)
-            .context("invalid socket type")
+        VSockType::from_repr(self.read_u16(TYPE_OFFSET))
+            .ok_or_else(|| anyhow::anyhow!("Invalid socket type."))
     }
 
     /// Sets the type of socket the packet is intended for.
     fn set_type(&mut self, socket_type: VSockType) {
-        self.write_u16(TYPE_OFFSET, socket_type.into())
+        self.write_u16(TYPE_OFFSET, socket_type as u16)
     }
 
     /// Gets the op that the packet represents.
     pub fn get_op(&self) -> anyhow::Result<VSockOp> {
-        VSockOp::try_from_primitive(self.read_u16(OP_OFFSET))
-            .map_err(anyhow::Error::msg)
-            .context("invalid op")
+        VSockOp::from_repr(self.read_u16(OP_OFFSET)).ok_or_else(|| anyhow::anyhow!("Invalid op."))
     }
 
     /// Sets the op that the packet represents.
     pub fn set_op(&mut self, op: VSockOp) -> anyhow::Result<()> {
         if self.get_len() > 0 && op != VSockOp::Rw {
-            anyhow::bail!("non-empty payloads are only allowed with RW ops");
+            anyhow::bail!("Non-empty payloads are only allowed with data packets.");
         }
-        self.write_u16(OP_OFFSET, op.into());
+        if self.get_len() == 0 && op == VSockOp::Rw {
+            anyhow::bail!("Empty payloads are not allowed with the RW op.");
+        }
+        self.write_u16(OP_OFFSET, op as u16);
         Ok(())
     }
 
@@ -209,13 +224,13 @@ impl Packet {
     ///
     /// The length of the slice must match the packets configures payload length. Only usable if the
     /// packet's op is `VSockOp::Rw`.
-    pub fn set_payload(&mut self, data: &[u8]) -> anyhow::Result<()> {
+    fn set_payload(&mut self, data: &[u8]) -> anyhow::Result<()> {
         if self.get_op()? != VSockOp::Rw {
-            anyhow::bail!("non-empty payloads are only allowed with RW ops");
+            anyhow::bail!("Non-empty payloads are only allowed with data packets.");
         }
         let len = self.get_len();
         if len as usize != data.len() {
-            anyhow::bail!("data length does not match the paacket's configured payload length");
+            anyhow::bail!("Data length does not match the packet's configured payload length.");
         }
 
         self.buffer[HEADER_SIZE..(HEADER_SIZE + len as usize)].copy_from_slice(data);
@@ -262,10 +277,9 @@ impl Packet {
 }
 
 /// Vsock Ops.
-#[derive(Debug, Eq, PartialEq, TryFromPrimitive, IntoPrimitive)]
+#[derive(Debug, Display, Eq, PartialEq, FromRepr)]
 #[repr(u16)]
 pub enum VSockOp {
-    Invalid = 0,
     /// Connection request.
     Request = 1,
     /// Connections accepted response.
@@ -299,7 +313,7 @@ bitflags! {
 }
 
 /// Socket Type.
-#[derive(Debug, Eq, PartialEq, TryFromPrimitive, IntoPrimitive)]
+#[derive(Debug, Eq, PartialEq, Display, FromRepr)]
 #[repr(u16)]
 pub enum VSockType {
     /// Only stream sockets are currently supported in the Virtio spec.
@@ -312,13 +326,10 @@ mod tests {
 
     #[test]
     fn test_set_and_get_all_header_fields() {
-        let mut packet = Packet::new_header_only();
+        let mut packet = Packet::new_control(1023, 8888, VSockOp::Shutdown).unwrap();
         packet.set_src_cid(1234);
         packet.set_dst_cid(2);
-        packet.set_src_port(1023);
-        packet.set_dst_port(8888);
         packet.set_flags(VSockFlags::all());
-        packet.set_op(VSockOp::Shutdown).unwrap();
         packet.set_buf_alloc(4096);
         packet.set_fwd_cnt(12);
 
@@ -335,25 +346,23 @@ mod tests {
     }
 
     #[test]
-    fn test_invalid_payload() {
-        let mut packet = Packet::new_with_payload(5);
+    fn test_invalid_set_payload() {
+        let mut packet = Packet::new_data(&[1, 2, 3], 0, 0).unwrap();
         let result = packet.set_payload(&[1, 2, 3, 4]);
         assert!(result.is_err());
     }
 
     #[test]
     fn test_valid_payload() {
-        let mut packet = Packet::new_with_payload(4);
-        let result = packet.set_payload(&[1, 2, 3, 4]);
-        assert!(result.is_ok());
+        let packet = Packet::new_data(&[1, 2, 3, 4], 0, 0);
+        assert!(packet.is_ok());
     }
 
     #[test]
     fn test_new_from_buffer() {
-        let mut packet = Packet::new_with_payload(4);
-        packet.set_payload(&[1, 2, 3, 4]).unwrap();
+        let packet = Packet::new_data(&[1, 2, 3, 4], 0, 0).unwrap();
 
-        let packet = Packet::new(packet.buffer.clone()).unwrap();
+        let packet = Packet::new(packet.buffer).unwrap();
         assert_eq!(packet.get_payload(), &[1, 2, 3, 4]);
         assert_eq!(packet.get_len(), 4);
         assert_eq!(packet.get_type().unwrap(), VSockType::Stream);
@@ -363,7 +372,13 @@ mod tests {
 
     #[test]
     fn test_invalid_op() {
-        let mut packet = Packet::new_with_payload(1);
+        let mut packet = Packet::new_data(&[1], 0, 0).unwrap();
         assert!(packet.set_op(VSockOp::Rst).is_err())
+    }
+
+    #[test]
+    fn test_empty_payload() {
+        let packet = Packet::new_data(&[], 0, 0);
+        assert!(packet.is_err())
     }
 }

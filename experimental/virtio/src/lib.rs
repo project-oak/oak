@@ -20,6 +20,7 @@
 //! guest-physical addresses are the same.
 
 #![no_std]
+#![feature(let_chains)]
 
 extern crate alloc;
 
