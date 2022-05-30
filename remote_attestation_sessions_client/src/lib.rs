@@ -93,11 +93,11 @@ impl<T: UnaryClient> GenericAttestationClient<T> {
             .await
             .context("Couldn't message encrypted data request")?;
 
-        let encoded_response = self
+        let response_plaintext_bytes = self
             .encryptor
             .decrypt(&encrypted_response)
             .context("Couldn't decrypt response")?;
 
-        Ok(Some(encoded_response))
+        Ok(Some(response_plaintext_bytes))
     }
 }
