@@ -16,6 +16,8 @@
 
 //! Logic for performing remote attestation in multiple sessions
 
+#![no_std]
+
 extern crate alloc;
 
 use alloc::{boxed::Box, sync::Arc, vec::Vec};
