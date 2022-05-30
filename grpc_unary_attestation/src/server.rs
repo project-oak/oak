@@ -18,10 +18,7 @@
 //! protocol.
 
 use crate::proto::{unary_session_server::UnarySession, UnaryRequest, UnaryResponse};
-use oak_remote_attestation_sessions::{
-    server::{SessionState, SessionTracker},
-    SessionId,
-};
+use oak_remote_attestation_sessions::{SessionId, SessionState, SessionTracker};
 use oak_utils::LogError;
 use std::{convert::TryInto, sync::Mutex};
 use tonic;

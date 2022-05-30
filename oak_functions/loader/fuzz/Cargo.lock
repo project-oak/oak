@@ -358,6 +358,7 @@ dependencies = [
  "async-trait",
  "oak_remote_attestation",
  "oak_remote_attestation_sessions",
+ "oak_remote_attestation_sessions_client",
  "oak_utils",
  "prost",
  "prost-types",
@@ -869,9 +870,18 @@ name = "oak_remote_attestation_sessions"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "async-trait",
  "lru",
  "oak_remote_attestation",
+]
+
+[[package]]
+name = "oak_remote_attestation_sessions_client"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "oak_remote_attestation",
+ "oak_remote_attestation_sessions",
  "rand",
 ]
 

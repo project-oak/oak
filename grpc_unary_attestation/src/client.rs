@@ -18,10 +18,8 @@ use crate::proto::{unary_session_client::UnarySessionClient, UnaryRequest};
 use anyhow::Context;
 use async_trait::async_trait;
 use oak_remote_attestation::handshaker::ServerIdentityVerifier;
-use oak_remote_attestation_sessions::{
-    client::{GenericAttestationClient, UnaryClient},
-    SessionId,
-};
+use oak_remote_attestation_sessions::SessionId;
+use oak_remote_attestation_sessions_client::{GenericAttestationClient, UnaryClient};
 use tonic::transport::Channel;
 
 pub struct GrpcClient {

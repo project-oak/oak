@@ -14,12 +14,12 @@
 // limitations under the License.
 //
 
-use crate::SessionId;
 use anyhow::Context;
 use async_trait::async_trait;
 use oak_remote_attestation::handshaker::{
     AttestationBehavior, ClientHandshaker, Encryptor, ServerIdentityVerifier,
 };
+use oak_remote_attestation_sessions::SessionId;
 
 #[async_trait]
 pub trait UnaryClient {
