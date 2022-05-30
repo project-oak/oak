@@ -335,17 +335,29 @@ RUN mkdir --parents ${sccache_dir} \
 
 # Install flatbuffers
 # https://github.com/google/flatbuffers
-ARG flatc_version=v2.0.0
-ARG flatc_digest=sha256:d7a4a866b7380e175f820c5f8d93d1f777c4ab48beccfa8366a45c597af60af7
-ARG flatc_temp=/tmp/flatc.zip
-RUN ent get ${flatc_digest} --url=https://github.com/google/flatbuffers/releases/download/${flatc_version}/Linux.flatc.binary.clang++-9.zip > ${flatc_temp} \
-  && unzip ${flatc_temp} -d /usr/local/bin/ \
+# We build the recent flatc version that generates no_std compatible rust code.
+# Once a release with that commit has been issued we can revert to using
+# a released binary.
+# Ref:https://chromium.googlesource.com/external/github.com/google/flatbuffers/+/750dde766990d75f849370582a0f90307c410537
+ARG flatc_commit=750dde766990d75f849370582a0f90307c410537
+ARG flatbuffer_tmp_dir=/tmp/flatbuffer
+# cmake is required to build flatbuffer
+RUN apt-get --yes update \
+  && apt-get install --no-install-recommends --yes --option Acquire::http::Dl-Limit=500 \
+  cmake \
+  && apt-get clean \
+  && rm --recursive --force /var/lib/apt/lists/*
+RUN git clone https://github.com/google/flatbuffers.git ${flatbuffer_tmp_dir}
+WORKDIR ${flatbuffer_tmp_dir}
+RUN git checkout ${flatc_commit} \
+  && cmake -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release \
+  && make -j \
+  && cp ./flatc -d /usr/local/bin/ \
   && chmod +x /usr/local/bin/flatc \
-  && rm ${flatc_temp} \
+  && rm -rf ${flatbuffer_tmp_dir} \
   && flatc --version
 
 # By default, sccache uses `~/.cache/sccache` locally: https://github.com/mozilla/sccache#local.
-
 ENV RUSTC_WRAPPER sccache
 
 # Disable cargo incremental compilation, as it conflicts with sccache: https://github.com/mozilla/sccache#rust
