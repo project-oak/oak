@@ -29,7 +29,7 @@ pub type ConfigurationVerifier = fn(ConfigurationInfo) -> anyhow::Result<()>;
 pub fn into_server_identity_verifier(
     config_verifier: ConfigurationVerifier,
 ) -> ServerIdentityVerifier {
-    let server_verifier = move |server_identity: ServerIdentity| -> anyhow::Result<()> {
+    let server_verifier = move |server_identity: &ServerIdentity| -> anyhow::Result<()> {
         let config =
             ConfigurationInfo::decode(server_identity.additional_info.as_ref().as_slice())?;
         // TODO(#2347): Check that ConfigurationInfo does not have additional/unknown fields.

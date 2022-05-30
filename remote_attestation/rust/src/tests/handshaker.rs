@@ -15,9 +15,8 @@
 //
 
 use crate::{
-    crypto::Signer,
     handshaker::{
-        create_attestation_info, verify_attestation_info, AttestationBehavior, ClientHandshaker,
+        AttestationBehavior, AttestationGenerator, AttestationVerifier, ClientHandshaker,
         ServerHandshaker,
     },
     tests::message::INVALID_MESSAGE_HEADER,
@@ -25,13 +24,46 @@ use crate::{
 use alloc::{boxed::Box, sync::Arc, vec};
 use assert_matches::assert_matches;
 
-const TEE_MEASUREMENT: &str = "Test TEE measurement";
 const DATA: [u8; 10] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
 
-fn create_handshakers() -> (ClientHandshaker, ServerHandshaker) {
+/// An attestation generator that simply uses the provided data as the attestation itself (no
+/// signature or any other verification is performed).
+#[derive(Clone)]
+struct TestAttestationGenerator;
+
+impl AttestationGenerator for TestAttestationGenerator {
+    fn generate_attestation(&self, attested_data: &[u8]) -> anyhow::Result<vec::Vec<u8>> {
+        Ok(attested_data.to_vec())
+    }
+}
+
+#[derive(Clone)]
+struct TestAttestationVerifier;
+
+impl AttestationVerifier for TestAttestationVerifier {
+    fn verify_attestation(
+        &self,
+        attestation: &[u8],
+        expected_attested_data: &[u8],
+    ) -> anyhow::Result<()> {
+        if attestation == expected_attested_data {
+            Ok(())
+        } else {
+            Err(anyhow::anyhow!(
+                "invalid attested data; got: {:?}, expected: {:?}",
+                attestation,
+                expected_attested_data
+            ))
+        }
+    }
+}
+
+fn create_handshakers() -> (
+    ClientHandshaker<TestAttestationGenerator, TestAttestationVerifier>,
+    ServerHandshaker<TestAttestationGenerator, TestAttestationVerifier>,
+) {
     let bidirectional_attestation =
-        AttestationBehavior::create_bidirectional_attestation(&[], TEE_MEASUREMENT.as_bytes())
-            .unwrap();
+        AttestationBehavior::create(TestAttestationGenerator, TestAttestationVerifier);
     let client_handshaker = ClientHandshaker::new(
         bidirectional_attestation,
         Box::new(|server_identity| {
@@ -41,26 +73,17 @@ fn create_handshakers() -> (ClientHandshaker, ServerHandshaker) {
                 anyhow::bail!("No additional info provided.")
             }
         }),
-    );
+    )
+    .unwrap();
 
     let bidirectional_attestation =
-        AttestationBehavior::create_bidirectional_attestation(&[], TEE_MEASUREMENT.as_bytes())
-            .unwrap();
+        AttestationBehavior::create(TestAttestationGenerator, TestAttestationVerifier);
 
     let additional_info = br"Additional Info".to_vec();
     let server_handshaker =
-        ServerHandshaker::new(bidirectional_attestation, Arc::new(additional_info));
+        ServerHandshaker::new(bidirectional_attestation, Arc::new(additional_info)).unwrap();
 
     (client_handshaker, server_handshaker)
-}
-
-#[test]
-fn test_create_attestation_behavior() {
-    let self_attestation = AttestationBehavior::create_self_attestation(&[]);
-    assert_matches!(self_attestation, Ok(_));
-
-    let bidirectional_attestation = AttestationBehavior::create_bidirectional_attestation(&[], &[]);
-    assert_matches!(bidirectional_attestation, Ok(_));
 }
 
 #[test]
@@ -210,16 +233,4 @@ fn test_replay_client_identity() {
         .unwrap();
     let result = second_server_handshaker.next_step(&first_client_identity);
     assert_matches!(result, Err(_));
-}
-
-#[test]
-fn test_attestation_info_roundtrip() {
-    let signer = Signer::create().expect("could not create signer");
-    let additional_info = br"Additional info";
-    let tee_certificate = br"TEE certificate";
-    let attestation_info = create_attestation_info(&signer, additional_info, tee_certificate)
-        .expect("could not create attestation info.");
-
-    let result = verify_attestation_info(attestation_info.as_ref(), TEE_MEASUREMENT.as_bytes());
-    assert!(result.is_ok());
 }

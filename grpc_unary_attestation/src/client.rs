@@ -17,7 +17,10 @@
 use crate::proto::{unary_session_client::UnarySessionClient, UnaryRequest};
 use anyhow::Context;
 use async_trait::async_trait;
-use oak_remote_attestation::handshaker::ServerIdentityVerifier;
+use oak_remote_attestation::handshaker::{
+    AttestationBehavior, NoopAttestationGenerator, ServerIdentityVerifier,
+};
+use oak_remote_attestation_amd::PlaceholderAmdAttestationVerifier;
 use oak_remote_attestation_sessions::SessionId;
 use oak_remote_attestation_sessions_client::{GenericAttestationClient, UnaryClient};
 use tonic::transport::Channel;
@@ -65,14 +68,16 @@ pub struct AttestationClient {
 impl AttestationClient {
     pub async fn create(
         uri: &str,
-        expected_tee_measurement: &[u8],
         server_verifier: ServerIdentityVerifier,
     ) -> anyhow::Result<Self> {
         let grpc_client = GrpcClient::create(uri).await?;
         let inner = GenericAttestationClient::create(
             grpc_client,
-            expected_tee_measurement,
             server_verifier,
+            AttestationBehavior::create(
+                NoopAttestationGenerator,
+                PlaceholderAmdAttestationVerifier,
+            ),
         )
         .await?;
 

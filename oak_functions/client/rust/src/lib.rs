@@ -30,22 +30,15 @@ use prost::Message;
 #[cfg(test)]
 mod tests;
 
-// TODO(#1867): Add remote attestation support.
-const TEE_MEASUREMENT: &[u8] = br"Test TEE measurement";
-
 pub struct Client {
     inner: AttestationClient,
 }
 
 impl Client {
     pub async fn new(uri: &str, verifier: ConfigurationVerifier) -> anyhow::Result<Self> {
-        let inner = AttestationClient::create(
-            uri,
-            TEE_MEASUREMENT,
-            into_server_identity_verifier(verifier),
-        )
-        .await
-        .context("Could not create Oak Functions client")?;
+        let inner = AttestationClient::create(uri, into_server_identity_verifier(verifier))
+            .await
+            .context("Could not create Oak Functions client")?;
         Ok(Client { inner })
     }
 

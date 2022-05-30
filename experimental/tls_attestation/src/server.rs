@@ -43,13 +43,9 @@ async fn proxy(
 
 /// Runs HTTPS proxy server that provides self-signed TLS certificates with TEE attestation
 /// credentials inside a custom X.509 extension.
-pub async fn run_server(
-    address: &str,
-    app_uri: Uri,
-    tee_certificate: Vec<u8>,
-) -> anyhow::Result<()> {
+pub async fn run_server(address: &str, app_uri: Uri) -> anyhow::Result<()> {
     // Configure TLS settings.
-    let identity = Identity::create(tee_certificate).context("Couldn't create TLS identity")?;
+    let identity = Identity::create().context("Couldn't create TLS identity")?;
     let tls_config = {
         let mut config = rustls::ServerConfig::builder()
             .with_safe_defaults()
@@ -111,10 +107,9 @@ struct Identity {
 impl Identity {
     /// Generates private key and TLS certificate that contains TEE credentials in a custom X.509
     /// extension.
-    fn create(tee_certificate: Vec<u8>) -> anyhow::Result<Self> {
-        let certificate_authority =
-            CertificateAuthority::create(AddTeeExtension::Yes(tee_certificate))
-                .context("Couldn't create certificate authority")?;
+    fn create() -> anyhow::Result<Self> {
+        let certificate_authority = CertificateAuthority::create(AddTeeExtension::Yes)
+            .context("Couldn't create certificate authority")?;
 
         let private_key = {
             let key_pair_pem = certificate_authority.get_private_key_pem()?;

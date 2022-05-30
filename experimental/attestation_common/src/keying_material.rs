@@ -14,8 +14,11 @@
 // limitations under the License.
 //
 
-use crate::report::{AttestationInfo, Report};
-use anyhow::{anyhow, Context};
+use anyhow::Context;
+use oak_remote_attestation::handshaker::{AttestationGenerator, AttestationVerifier};
+use oak_remote_attestation_amd::{
+    PlaceholderAmdAttestationGenerator, PlaceholderAmdAttestationVerifier,
+};
 use serde::{Deserialize, Serialize};
 
 const KEYING_MATERIAL_PURPOSE: &str = "TLSAttestationV1";
@@ -30,41 +33,31 @@ const ASSERTION_TYPE: &str = "amd_sev_snp_report";
 /// Assertion used for remote attestation.
 #[derive(Serialize, Deserialize)]
 pub struct Assertion {
-    attestation_info: AttestationInfo,
+    attestation_report: Vec<u8>,
 }
 
 impl Assertion {
     /// Generates assertion by putting `keying_material` into a TEE report and attaching
     /// `tee_certificate` used to verify the correctness of the TEE report.
-    pub fn generate(
-        tee_certificate: &[u8],
-        keying_material: KeyingMaterial,
-    ) -> anyhow::Result<Self> {
+    pub fn generate(keying_material: &KeyingMaterial) -> anyhow::Result<Self> {
+        let attestation_generator = PlaceholderAmdAttestationGenerator;
         let serialized_keying_material = serde_json::to_string(&keying_material)
             .context("Couldn't serialize keying material")?;
-        let tee_report = Report::new(serialized_keying_material.as_bytes());
-        let attestation_info = AttestationInfo {
-            report: tee_report,
-            certificate: tee_certificate.to_vec(),
-        };
-
-        Ok(Self { attestation_info })
+        let attestation_report =
+            attestation_generator.generate_attestation(serialized_keying_material.as_bytes())?;
+        Ok(Self { attestation_report })
     }
 
     /// Verify remote attestation assertion by verifying the TEE report and checking that it
     /// contains `expected_keying_material`.
     pub fn verify(&self, expected_keying_material: &KeyingMaterial) -> anyhow::Result<()> {
-        self.attestation_info
-            .verify()
-            .context("Incorrect attestation info")?;
-
+        let attestation_verifier = PlaceholderAmdAttestationVerifier;
         let serialized_expected_keying_material = serde_json::to_string(expected_keying_material)
             .context("Couldn't serialize keying material")?;
-        if serialized_expected_keying_material.as_bytes() == self.attestation_info.report.data {
-            Ok(())
-        } else {
-            Err(anyhow!("Incorrect keying material"))
-        }
+        attestation_verifier.verify_attestation(
+            &self.attestation_report,
+            serialized_expected_keying_material.as_bytes(),
+        )
     }
 
     pub fn from_string(input: &str) -> anyhow::Result<Self> {

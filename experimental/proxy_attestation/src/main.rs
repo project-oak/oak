@@ -76,26 +76,18 @@ pub struct Opt {
         help = "PEM encoded X.509 TLS certificate file used by gRPC server."
     )]
     grpc_tls_certificate: String,
-    #[clap(
-        long,
-        help = "PEM encoded X.509 certificate that signs TEE firmware key.",
-        default_value = "./examples/certs/local/ca.pem"
-    )]
-    tee_certificate: String,
 }
 
 pub struct Proxy {
     certificate_authority: CertificateAuthority,
-    tee_certificate: Vec<u8>,
 }
 
 impl Proxy {
-    fn create(tee_certificate: Vec<u8>) -> anyhow::Result<Self> {
+    fn create() -> anyhow::Result<Self> {
         let certificate_authority = CertificateAuthority::create(AddTeeExtension::No)
             .context("Couldn't create certificate authority")?;
         Ok(Self {
             certificate_authority,
-            tee_certificate,
         })
     }
 }
@@ -114,10 +106,10 @@ impl ProxyAttestation for Proxy {
                 error!("{}: {}", msg, error);
                 Status::invalid_argument(msg)
             })?;
-        match self.certificate_authority.sign_certificate(
-            certificate_request,
-            AddTeeExtension::Yes(self.tee_certificate.to_vec()),
-        ) {
+        match self
+            .certificate_authority
+            .sign_certificate(certificate_request, AddTeeExtension::Yes)
+        {
             Ok(certificate) => match certificate.to_pem() {
                 Ok(serialized_certificate) => {
                     info!("Sending signed certificate");
@@ -173,8 +165,6 @@ async fn main() -> anyhow::Result<()> {
         std::fs::read(&opt.grpc_tls_private_key).context("Couldn't load private key")?;
     let grpc_tls_certificate =
         std::fs::read(&opt.grpc_tls_certificate).context("Couldn't load certificate")?;
-    let tee_certificate =
-        std::fs::read(&opt.tee_certificate).context("Couldn't load certificate")?;
 
     let identity = Identity::from_pem(grpc_tls_certificate, grpc_tls_private_key);
     let address = opt
@@ -188,7 +178,7 @@ async fn main() -> anyhow::Result<()> {
         .tls_config(ServerTlsConfig::new().identity(identity))
         .context("Couldn't create TLS configuration")?
         .add_service(ProxyAttestationServer::new(
-            Proxy::create(tee_certificate).context("Couldn't create proxy")?,
+            Proxy::create().context("Couldn't create proxy")?,
         ))
         .serve_with_shutdown(address, tokio::signal::ctrl_c().map(|r| r.unwrap()))
         .await

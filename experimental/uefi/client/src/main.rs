@@ -15,12 +15,9 @@
 //
 
 use anyhow::Context;
+use clap::Parser;
 use grpc_unary_attestation::client::AttestationClient;
 use std::io::{stdin, BufRead};
-
-use clap::Parser;
-
-const TEE_MEASUREMENT: &[u8] = br"Test TEE measurement";
 
 #[derive(Parser, Debug)]
 struct Args {
@@ -50,10 +47,9 @@ async fn chat(client: &mut AttestationClient, message: String) -> anyhow::Result
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cli = Args::parse();
 
-    let mut client =
-        AttestationClient::create(&cli.server, TEE_MEASUREMENT, Box::new(|_config| Ok(())))
-            .await
-            .context("Could not create client")?;
+    let mut client = AttestationClient::create(&cli.server, Box::new(|_config| Ok(())))
+        .await
+        .context("Could not create client")?;
 
     match (cli.request, cli.expected_response) {
         (Some(request), Some(expected_response)) => {

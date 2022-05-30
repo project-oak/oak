@@ -14,6 +14,8 @@ lazy_static = { version = "*", features = ["spin_no_std"] }
 linked_list_allocator = { version = "*" }
 log = "*"
 libm = "*"
+oak_remote_attestation = { path = "../../../remote_attestation/rust" }
+oak_remote_attestation_amd = { path = "../../../oak_remote_attestation_amd" }
 runtime = { path = "../runtime", default-features = false, features = [
   "rust-crypto"
 ] }

@@ -76,12 +76,6 @@ pub struct Opt {
         default_value = "http://localhost:8081"
     )]
     backend_uri: String,
-    #[clap(
-        long,
-        help = "PEM encoded X.509 certificate that signs TEE firmware key.",
-        default_value = "./examples/certs/local/ca.pem"
-    )]
-    tee_certificate: String,
 }
 
 #[tokio::main]
@@ -93,14 +87,12 @@ async fn main() -> anyhow::Result<()> {
         .backend_uri
         .parse()
         .context("Couldn't parse application URI")?;
-    let tee_certificate =
-        std::fs::read(&opt.tee_certificate).context("Couldn't load certificate")?;
 
     info!(
         "TLS Attestation Service is listening on https://{}",
         &opt.https_listen_address
     );
-    server::run_server(&opt.https_listen_address, backend_uri, tee_certificate)
+    server::run_server(&opt.https_listen_address, backend_uri)
         .await
         .context("Server error")?;
 

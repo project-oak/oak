@@ -1782,6 +1782,7 @@ dependencies = [
  "anyhow",
  "async-trait",
  "oak_remote_attestation",
+ "oak_remote_attestation_amd",
  "oak_remote_attestation_sessions",
  "oak_remote_attestation_sessions_client",
  "oak_utils",
@@ -2216,6 +2217,8 @@ dependencies = [
  "libm 0.2.2",
  "linked_list_allocator",
  "log",
+ "oak_remote_attestation",
+ "oak_remote_attestation_amd",
  "runtime",
  "rust-hypervisor-firmware-boot",
  "strum",
@@ -2817,8 +2820,9 @@ name = "oak_attestation_common"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "assert_matches",
  "log",
+ "oak_remote_attestation",
+ "oak_remote_attestation_amd",
  "openssl",
  "ring 0.16.20",
  "rustls",
@@ -3214,19 +3218,24 @@ dependencies = [
  "anyhow",
  "assert_matches",
  "bytes",
- "getrandom 0.2.6",
  "hkdf 0.12.3",
- "log",
  "p256 0.10.1",
- "prost 0.10.3",
- "prost-build 0.10.3",
  "quickcheck",
  "quickcheck_macros",
- "rand_core 0.6.3",
  "ring 0.17.0-not-released-yet",
  "sha2 0.10.2",
  "signature",
  "x25519-dalek",
+]
+
+[[package]]
+name = "oak_remote_attestation_amd"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "oak_remote_attestation",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
@@ -4208,6 +4217,7 @@ dependencies = [
  "oak_functions_wasm",
  "oak_functions_workload_logging",
  "oak_logger",
+ "oak_remote_attestation",
  "oak_remote_attestation_sessions",
 ]
 

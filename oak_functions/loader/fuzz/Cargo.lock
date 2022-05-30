@@ -357,6 +357,7 @@ dependencies = [
  "anyhow",
  "async-trait",
  "oak_remote_attestation",
+ "oak_remote_attestation_amd",
  "oak_remote_attestation_sessions",
  "oak_remote_attestation_sessions_client",
  "oak_utils",
@@ -863,6 +864,16 @@ dependencies = [
  "prost",
  "prost-build",
  "ring 0.17.0-not-released-yet",
+]
+
+[[package]]
+name = "oak_remote_attestation_amd"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "oak_remote_attestation",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
