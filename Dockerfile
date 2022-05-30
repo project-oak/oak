@@ -346,12 +346,12 @@ RUN apt-get --yes update \
   && apt-get install --no-install-recommends --yes --option Acquire::http::Dl-Limit=500 \
   cmake \
   && apt-get clean
-RUN git clone https://github.com/google/flatbuffers.git ${flatbuffer_tmp_dir} \
-  && (cd ${flatbuffer_tmp_dir} \
-  && git checkout ${flatc_commit} \
+RUN git clone https://github.com/google/flatbuffers.git ${flatbuffer_tmp_dir}
+WORKDIR ${flatbuffer_tmp_dir}
+RUN git checkout ${flatc_commit} \
   && cmake -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release \
   && make -j \
-  && cp ./flatc -d /usr/local/bin/ ) \
+  && cp ./flatc -d /usr/local/bin/ \
   && chmod +x /usr/local/bin/flatc \
   && rm -rf ${flatbuffer_tmp_dir} \
   && flatc --version
