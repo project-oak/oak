@@ -186,7 +186,7 @@ impl Socket {
             < CREDIT_UPDATE_LIMIT
     }
 
-    /// Sends a control pacekt with the specified op to the host.
+    /// Sends a control packet with the specified op to the host.
     fn send_control_packet(&mut self, op: VSockOp) -> anyhow::Result<()> {
         // For now we panic if we are disconnected.
         assert!(self.connection_state == ConnectionState::Connected);
@@ -272,6 +272,8 @@ impl Socket {
         }
     }
 
+    /// Tries once to fill the destination with as much data as is currently available, either in
+    /// the pending buffer or from the next available data packet.
     fn read_partial(&mut self, dest: &mut [u8]) -> Option<usize> {
         let mut source = match self.pending_data.take() {
             Some(data) => data,
