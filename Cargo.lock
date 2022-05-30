@@ -1780,12 +1780,13 @@ name = "grpc_unary_attestation"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "async-trait",
  "oak_remote_attestation",
  "oak_remote_attestation_sessions",
+ "oak_remote_attestation_sessions_client",
  "oak_utils",
  "prost 0.10.3",
  "prost-types 0.10.1",
- "rand 0.8.5",
  "serde",
  "tokio",
  "tonic",
@@ -3235,6 +3236,17 @@ dependencies = [
  "anyhow",
  "lru",
  "oak_remote_attestation",
+]
+
+[[package]]
+name = "oak_remote_attestation_sessions_client"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "oak_remote_attestation",
+ "oak_remote_attestation_sessions",
+ "rand 0.8.5",
 ]
 
 [[package]]

@@ -59,6 +59,7 @@ members = [
   "oak_idl_tests",
   "remote_attestation/rust",
   "remote_attestation_sessions",
+  "remote_attestation_sessions_client",
   "xtask",
 ]
 exclude = [
