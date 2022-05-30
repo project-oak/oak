@@ -80,6 +80,6 @@ impl AttestationClient {
     }
 
     pub async fn send(&mut self, payload: &[u8]) -> anyhow::Result<Vec<u8>> {
-        self.inner.message(&payload).await
+        self.inner.message(payload).await
     }
 }
