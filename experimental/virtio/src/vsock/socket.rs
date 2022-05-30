@@ -57,11 +57,14 @@ impl SocketConnector {
     /// Since we don't yet support timeouts it will wait indefinitely for a respone. If the
     /// connection is refused, or it receives an unexpected packet, it will return an error.
     pub fn connect(mut self) -> anyhow::Result<Socket> {
-        let mut packet =
-            Packet::new_control(self.config.port, self.config.host_port, VSockOp::Request)?;
+        let mut packet = Packet::new_control(
+            self.config.local_port,
+            self.config.host_port,
+            VSockOp::Request,
+        )?;
         self.config.vsock.write_packet(&mut packet);
         let src_port = self.config.host_port;
-        let dst_port = self.config.port;
+        let dst_port = self.config.local_port;
         loop {
             if let Some(packet) = self.config.vsock.read_filtered_packet(
                 |packet| packet.get_dst_port() == dst_port && packet.get_src_port() == src_port,
@@ -100,7 +103,7 @@ impl SocketListener {
     /// it receives an unexpected packet (anything other than a connection request) it will return
     /// an error.
     pub fn accept(mut self) -> anyhow::Result<Socket> {
-        let dst_port = self.config.port;
+        let dst_port = self.config.local_port;
         loop {
             if let Some(packet) = self
                 .config
@@ -116,8 +119,11 @@ impl SocketListener {
             }
         }
 
-        let mut packet =
-            Packet::new_control(self.config.port, self.config.host_port, VSockOp::Response)?;
+        let mut packet = Packet::new_control(
+            self.config.local_port,
+            self.config.host_port,
+            VSockOp::Response,
+        )?;
         self.config.vsock.write_packet(&mut packet);
 
         Ok(Socket::new(self.config))
@@ -171,9 +177,12 @@ impl Socket {
     /// host is expected.
     pub fn shutdown(mut self) {
         if self.connection_state == ConnectionState::Connected {
-            let mut packet =
-                Packet::new_control(self.config.port, self.config.host_port, VSockOp::Shutdown)
-                    .unwrap();
+            let mut packet = Packet::new_control(
+                self.config.local_port,
+                self.config.host_port,
+                VSockOp::Shutdown,
+            )
+            .expect("Could not create control packet.");
             // Notify the host that we will not send or receive any more data packets.
             packet.set_flags(VSockFlags::all());
             self.config.vsock.write_packet(&mut packet);
@@ -190,7 +199,7 @@ impl Socket {
     fn send_control_packet(&mut self, op: VSockOp) -> anyhow::Result<()> {
         // For now we panic if we are disconnected.
         assert!(self.connection_state == ConnectionState::Connected);
-        let mut packet = Packet::new_control(self.config.port, self.config.host_port, op)?;
+        let mut packet = Packet::new_control(self.config.local_port, self.config.host_port, op)?;
         self.set_credit_info(&mut packet);
         self.config.vsock.write_packet(&mut packet);
         Ok(())
@@ -214,7 +223,7 @@ impl Socket {
         }
 
         self.sent_bytes += data_len;
-        let mut packet = Packet::new_data(data, self.config.port, self.config.host_port)?;
+        let mut packet = Packet::new_data(data, self.config.local_port, self.config.host_port)?;
         self.set_credit_info(&mut packet);
         self.config.vsock.write_packet(&mut packet);
         Ok(())
@@ -232,7 +241,7 @@ impl Socket {
         // For now we panic if we are disconnected.
         assert!(self.connection_state == ConnectionState::Connected);
         let src_port = self.config.host_port;
-        let dst_port = self.config.port;
+        let dst_port = self.config.local_port;
         loop {
             let packet = self.config.vsock.read_filtered_packet(
                 |packet| packet.get_dst_port() == dst_port && packet.get_src_port() == src_port,
@@ -243,7 +252,8 @@ impl Socket {
             // For now we panic if we receive an invalid op.
             match packet.get_op().expect("Invalid packet received on stream.") {
                 VSockOp::CreditRequest => {
-                    self.send_control_packet(VSockOp::CreditUpdate).unwrap();
+                    self.send_control_packet(VSockOp::CreditUpdate)
+                        .expect("Could not create control packet.");
                 }
                 VSockOp::CreditUpdate => {
                     // We already updated our flow-control tracking data, so do nothing.
@@ -257,7 +267,8 @@ impl Socket {
                     return None;
                 }
                 VSockOp::Shutdown => {
-                    self.send_control_packet(VSockOp::Rst).unwrap();
+                    self.send_control_packet(VSockOp::Rst)
+                        .expect("Could not create control packet.");
                     self.connection_state = ConnectionState::Disconnected;
                     return None;
                 }
@@ -274,6 +285,8 @@ impl Socket {
 
     /// Tries once to fill the destination with as much data as is currently available, either in
     /// the pending buffer or from the next available data packet.
+    ///
+    /// Returns the number of bytes read if any data was available to read.
     fn read_partial(&mut self, dest: &mut [u8]) -> Option<usize> {
         let mut source = match self.pending_data.take() {
             Some(data) => data,
@@ -307,7 +320,8 @@ impl ciborium_io::Read for Socket {
         self.processed_bytes += Wrapping(count as u32);
 
         if self.must_send_credit_update() {
-            self.send_control_packet(VSockOp::CreditUpdate).unwrap();
+            self.send_control_packet(VSockOp::CreditUpdate)
+                .map_err(|error| anyhow::anyhow!("Could not create control packet: {:?}", error))?;
         }
 
         Ok(())
@@ -348,16 +362,16 @@ struct SocketConfiguration {
     /// For now we only support one connection, so the driver is owned by this configuration.
     vsock: VSock,
     /// The local port for the connection.
-    port: u32,
+    local_port: u32,
     /// The host port for the connection.
     host_port: u32,
 }
 
 impl SocketConfiguration {
-    fn new(vsock: VSock, port: u32, host_port: u32) -> Self {
+    fn new(vsock: VSock, local_port: u32, host_port: u32) -> Self {
         Self {
             vsock,
-            port,
+            local_port,
             host_port,
         }
     }

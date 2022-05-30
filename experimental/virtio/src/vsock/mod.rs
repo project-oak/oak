@@ -120,9 +120,12 @@ impl VSock {
 
     /// Reads the next valid packet that matches the filter, if one is available.
     ///
+    /// If invalid packets are found it will continue reading until a valid one is found, or no more
+    /// packets are available to read.
+    ///
     /// If `reset_unmatched` is true we send RST packets in response to unmatched packets to notify
-    /// the host that the pakcets are not part of a valid connected socket (e.g. unexpected source
-    /// or destintation ports).
+    /// the host that the packets are not part of a valid connected socket (e.g. unexpected source
+    /// or destintation ports) and any related connections on the host should be disconnected.
     pub fn read_filtered_packet<F: Fn(&Packet) -> bool>(
         &mut self,
         filter: F,
@@ -213,7 +216,8 @@ impl VSock {
         Ok(())
     }
 
-    /// Sends a packet indicating that a socket is disconnected.
+    /// Sends a vsock RST packet indicating that a socket is disconnected, or must be forcibly
+    /// disconnected.
     ///
     /// This is typically done in response to a packet with unexpected source or destination ports,
     /// an invalid op for the connection state, or to confirm that a socket has been diconnected.
