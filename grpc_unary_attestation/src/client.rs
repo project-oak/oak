@@ -79,7 +79,7 @@ impl AttestationClient {
         Ok(Self { inner })
     }
 
-    pub async fn send(&mut self, payload: &[u8]) -> anyhow::Result<Option<Vec<u8>>> {
+    pub async fn send(&mut self, payload: &[u8]) -> anyhow::Result<Vec<u8>> {
         self.inner.message(&payload).await
     }
 }

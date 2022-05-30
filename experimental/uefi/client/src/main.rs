@@ -41,8 +41,7 @@ async fn chat(client: &mut AttestationClient, message: String) -> anyhow::Result
     let response = client
         .send(message.as_bytes())
         .await
-        .context("Error invoking Oak Functions instance")?
-        .ok_or_else(|| anyhow::anyhow!("Empty response"))?;
+        .context("Error invoking Oak Functions instance")?;
 
     String::from_utf8(response).map_err(Into::into)
 }

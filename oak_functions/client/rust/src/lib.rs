@@ -50,11 +50,12 @@ impl Client {
     }
 
     pub async fn invoke(&mut self, request: Request) -> anyhow::Result<Response> {
-        self.inner
+        let encoded_response = self
+            .inner
             .send(&request.body)
             .await
-            .context("Error invoking Oak Functions instance")?
-            .ok_or_else(|| anyhow::anyhow!("Empty response"))
-            .and_then(|rsp| Response::decode(rsp.as_ref()).context("Could not decode the response"))
+            .context("Error invoking Oak Functions instance")?;
+
+        Response::decode(encoded_response.as_ref()).context("Could not decode the response")
     }
 }
