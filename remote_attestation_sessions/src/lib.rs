@@ -16,9 +16,13 @@
 
 //! Logic for performing remote attestation in multiple sessions
 
-#![no_std]
+// The client logic requires std.
+#![cfg_attr(not(feature = "client"), no_std)]
 
 pub mod server;
+
+#[cfg(feature = "client")]
+pub mod client;
 
 pub const SESSION_ID_LENGTH: usize = 8;
 pub type SessionId = [u8; SESSION_ID_LENGTH];

@@ -9,8 +9,11 @@ license = "Apache-2.0"
 default = ["ring-crypto"]
 ring-crypto = ["oak_remote_attestation/ring-crypto"]
 rust-crypto = ["oak_remote_attestation/rust-crypto"]
+client = ["async-trait", "rand"]
 
 [dependencies]
 anyhow = { version = "*", default-features = false }
 oak_remote_attestation = { path = "../remote_attestation/rust/", default-features = false }
+async-trait = { version = "*", optional = true }
+rand = { version = "*", optional = true }
 lru = "*"

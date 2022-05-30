@@ -16,11 +16,9 @@
 
 //! Logic for performing remote attestation in multiple sessions
 
-#![no_std]
-
 extern crate alloc;
 
-use crate::SessionId;
+use crate::{SessionId, SESSION_ID_LENGTH};
 use alloc::{boxed::Box, sync::Arc, vec::Vec};
 use anyhow::bail;
 use lru::LruCache;
