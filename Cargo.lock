@@ -3266,7 +3266,7 @@ dependencies = [
  "async-trait",
  "oak_remote_attestation",
  "oak_remote_attestation_sessions",
- "rand 0.4.6",
+ "rand 0.8.5",
 ]
 
 [[package]]

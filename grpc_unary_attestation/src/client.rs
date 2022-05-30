@@ -22,8 +22,8 @@ use oak_remote_attestation_sessions::SessionId;
 use oak_remote_attestation_sessions_client::{GenericAttestationClient, UnaryClient};
 use tonic::transport::Channel;
 
-/// gRPC implementation of of the `UnaryClient`. Serves as an inner of the
-/// public `AttestationClient`.
+/// gRPC implementation of of [`UnaryClient`]. Serves as an inner of the
+/// public [`AttestationClient`].
 struct GrpcClient {
     inner: UnarySessionClient<Channel>,
 }

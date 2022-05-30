@@ -81,10 +81,10 @@ impl<T: UnaryClient> GenericAttestationClient<T> {
     }
 
     /// Sends data encrypted by the [`Encryptor`] to the server and decrypts the server responses.
-    pub async fn message(&mut self, payload: &[u8]) -> anyhow::Result<Vec<u8>> {
+    pub async fn message(&mut self, request_as_plaintext_bytes: &[u8]) -> anyhow::Result<Vec<u8>> {
         let encrypted_request = self
             .encryptor
-            .encrypt(payload)
+            .encrypt(request_as_plaintext_bytes)
             .context("Couldn't encrypt request")?;
 
         let encrypted_response = self
@@ -93,6 +93,9 @@ impl<T: UnaryClient> GenericAttestationClient<T> {
             .await
             .context("Couldn't message encrypted data request")?;
 
+        // The runtime responds with an encrypted response that contains an
+        // encoded proto containing the plaintext response and status code.
+        // After decrypting we're left with the encoded proto.
         let encoded_response = self
             .encryptor
             .decrypt(&encrypted_response)
