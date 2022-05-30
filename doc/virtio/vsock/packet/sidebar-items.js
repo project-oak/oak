@@ -1,1 +1,1 @@
-initSidebarItems({"enum":[["VSockOp","Vsock Ops."],["VSockType","Socket Type."]],"struct":[["Packet",""],["VSockFlags","Flags about a socket connection."]]});
+initSidebarItems({"constant":[["HEADER_SIZE","The size of the packet header in bytes."]],"enum":[["VSockOp","Vsock Ops."],["VSockType","Socket Type."]],"struct":[["Packet",""],["VSockFlags","Flags about a socket connection."]]});

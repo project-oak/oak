@@ -188,6 +188,49 @@
 <span id="183">183</span>
 <span id="184">184</span>
 <span id="185">185</span>
+<span id="186">186</span>
+<span id="187">187</span>
+<span id="188">188</span>
+<span id="189">189</span>
+<span id="190">190</span>
+<span id="191">191</span>
+<span id="192">192</span>
+<span id="193">193</span>
+<span id="194">194</span>
+<span id="195">195</span>
+<span id="196">196</span>
+<span id="197">197</span>
+<span id="198">198</span>
+<span id="199">199</span>
+<span id="200">200</span>
+<span id="201">201</span>
+<span id="202">202</span>
+<span id="203">203</span>
+<span id="204">204</span>
+<span id="205">205</span>
+<span id="206">206</span>
+<span id="207">207</span>
+<span id="208">208</span>
+<span id="209">209</span>
+<span id="210">210</span>
+<span id="211">211</span>
+<span id="212">212</span>
+<span id="213">213</span>
+<span id="214">214</span>
+<span id="215">215</span>
+<span id="216">216</span>
+<span id="217">217</span>
+<span id="218">218</span>
+<span id="219">219</span>
+<span id="220">220</span>
+<span id="221">221</span>
+<span id="222">222</span>
+<span id="223">223</span>
+<span id="224">224</span>
+<span id="225">225</span>
+<span id="226">226</span>
+<span id="227">227</span>
+<span id="228">228</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2022 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -204,7 +247,10 @@
 <span class="comment">// limitations under the License.</span>
 <span class="comment">//</span>
 
-<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::queue</span>::{<span class="ident">DeviceWriteOnlyQueue</span>, <span class="ident">DriverWriteOnlyQueue</span>};
+<span class="kw">use</span> <span class="kw">crate</span>::{
+    <span class="ident">queue</span>::{<span class="ident">DeviceWriteOnlyQueue</span>, <span class="ident">DriverWriteOnlyQueue</span>},
+    <span class="ident">vsock::packet::VSockOp</span>,
+};
 <span class="kw">use</span> <span class="ident">anyhow::Context</span>;
 <span class="kw">use</span> <span class="ident">packet::Packet</span>;
 <span class="kw">use</span> <span class="ident">rust_hypervisor_firmware_virtio</span>::{
@@ -213,6 +259,7 @@
 };
 
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">packet</span>;
+<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">socket</span>;
 
 <span class="doccomment">/// The number of buffer descriptors in each of the queues.</span>
 <span class="kw">const</span> <span class="ident">QUEUE_SIZE</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">16</span>;
@@ -295,7 +342,7 @@
                 <span class="comment">// Notify the device that a packet has been read and the buffer is available again.</span>
                 <span class="self">self</span>.<span class="ident">device</span>.<span class="ident">notify_queue</span>(<span class="ident">RX_QUEUE_ID</span>);
             }
-            <span class="comment">// Filter out invalid packets and packets where the CIDs don&#39;t match.</span>
+            <span class="comment">// Silently drop packets where the CIDs don&#39;t match.</span>
             <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Ok</span>(<span class="ident">packet</span>) <span class="op">=</span> <span class="ident">Packet::new</span>(<span class="ident">buffer</span>) {
                 <span class="kw">if</span> <span class="ident">packet</span>.<span class="ident">get_src_cid</span>() <span class="op">==</span> <span class="ident">HOST_CID</span> <span class="op">&amp;&amp;</span> <span class="ident">packet</span>.<span class="ident">get_dst_cid</span>() <span class="op">==</span> <span class="self">self</span>.<span class="ident">guest_cid</span> {
                     <span class="kw">return</span> <span class="prelude-val">Some</span>(<span class="ident">packet</span>);
@@ -304,9 +351,38 @@
         }
     }
 
+    <span class="doccomment">/// Reads the next valid packet that matches the filter, if one is available.</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// If invalid packets are found it will continue reading until a valid one is found, or no more</span>
+    <span class="doccomment">/// packets are available to read.</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// If `reset_unmatched` is true we send RST packets in response to unmatched packets to notify</span>
+    <span class="doccomment">/// the host that the packets are not part of a valid connected socket (e.g. unexpected source</span>
+    <span class="doccomment">/// or destintation ports) and any related connections on the host should be disconnected.</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">read_filtered_packet</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">Fn</span>(<span class="kw-2">&amp;</span><span class="ident">Packet</span>) -&gt; <span class="ident">bool</span><span class="op">&gt;</span>(
+        <span class="kw-2">&amp;mut</span> <span class="self">self</span>,
+        <span class="ident">filter</span>: <span class="ident">F</span>,
+        <span class="ident">reset_unmatched</span>: <span class="ident">bool</span>,
+    ) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Packet</span><span class="op">&gt;</span> {
+        <span class="kw">loop</span> {
+            <span class="kw">let</span> <span class="ident">packet</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">read_packet</span>()<span class="question-mark">?</span>;
+            <span class="kw">if</span> <span class="ident">filter</span>(<span class="kw-2">&amp;</span><span class="ident">packet</span>) {
+                <span class="kw">return</span> <span class="prelude-val">Some</span>(<span class="ident">packet</span>);
+            }
+            <span class="kw">if</span> <span class="ident">reset_unmatched</span> {
+                <span class="self">self</span>.<span class="ident">send_rst_packet</span>(<span class="ident">packet</span>.<span class="ident">get_src_port</span>(), <span class="ident">packet</span>.<span class="ident">get_dst_port</span>())
+            }
+        }
+    }
+
     <span class="doccomment">/// Writes the packet to the transmit queue.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">write_packet</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">packet</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Packet</span>) {
+        <span class="comment">// Ensure that the CIDs are set correctly.</span>
+        <span class="ident">packet</span>.<span class="ident">set_dst_cid</span>(<span class="ident">HOST_CID</span>);
+        <span class="ident">packet</span>.<span class="ident">set_src_cid</span>(<span class="self">self</span>.<span class="ident">guest_cid</span>);
+
         <span class="self">self</span>.<span class="ident">tx_queue</span>.<span class="ident">write_buffer</span>(<span class="ident">packet</span>.<span class="ident">as_slice</span>());
+
         <span class="kw">if</span> <span class="self">self</span>.<span class="ident">tx_queue</span>.<span class="ident">inner</span>.<span class="ident">must_notify_device</span>() {
             <span class="comment">// Notify the device that new packet has been written.</span>
             <span class="self">self</span>.<span class="ident">device</span>.<span class="ident">notify_queue</span>(<span class="ident">TX_QUEUE_ID</span>);
@@ -371,6 +447,16 @@
         <span class="comment">// lower 32 bits.</span>
         <span class="self">self</span>.<span class="ident">guest_cid</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">device</span>.<span class="ident">get_config</span>(<span class="ident">CID_CONFIG_OFFSET</span>) <span class="kw">as</span> <span class="ident">u64</span>;
         <span class="prelude-val">Ok</span>(())
+    }
+
+    <span class="doccomment">/// Sends a vsock RST packet indicating that a socket is disconnected, or must be forcibly</span>
+    <span class="doccomment">/// disconnected.</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// This is typically done in response to a packet with unexpected source or destination ports,</span>
+    <span class="doccomment">/// an invalid op for the connection state, or to confirm that a socket has been diconnected.</span>
+    <span class="kw">fn</span> <span class="ident">send_rst_packet</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">host_port</span>: <span class="ident">u32</span>, <span class="ident">local_port</span>: <span class="ident">u32</span>) {
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">packet</span> <span class="op">=</span> <span class="ident">Packet::new_control</span>(<span class="ident">local_port</span>, <span class="ident">host_port</span>, <span class="ident">VSockOp::Rst</span>).<span class="ident">unwrap</span>();
+        <span class="self">self</span>.<span class="ident">write_packet</span>(<span class="kw-2">&amp;mut</span> <span class="ident">packet</span>);
     }
 }
 </code></pre></div>
