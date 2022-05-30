@@ -39,7 +39,7 @@ struct Args {
 
 async fn chat(client: &mut AttestationClient, message: String) -> anyhow::Result<String> {
     let response = client
-        .send(message.as_bytes().to_vec())
+        .send(message.as_bytes())
         .await
         .context("Error invoking Oak Functions instance")?
         .ok_or_else(|| anyhow::anyhow!("Empty response"))?;

@@ -51,7 +51,7 @@ impl Client {
 
     pub async fn invoke(&mut self, request: Request) -> anyhow::Result<Response> {
         self.inner
-            .send(request.body)
+            .send(&request.body)
             .await
             .context("Error invoking Oak Functions instance")?
             .ok_or_else(|| anyhow::anyhow!("Empty response"))
