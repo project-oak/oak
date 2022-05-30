@@ -51,7 +51,7 @@ impl Message {
     fn new_response(self, data: Vec<u8>) -> Message {
         Message {
             index: self.index,
-            data: data,
+            data,
             response_sender: self.response_sender,
         }
     }
