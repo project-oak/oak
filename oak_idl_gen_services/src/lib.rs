@@ -267,7 +267,7 @@ fn generate_server_handler(rpc_call: &RPCCall) -> anyhow::Result<Vec<String>> {
             request_type(rpc_call),
         ),
         format!(
-            "                let response = self.service.{}(&request);",
+            "                let response = self.service.{}(&request)?;",
             method_name(rpc_call),
         ),
         format!("                let response_body = response.buf().to_vec();"),
@@ -282,7 +282,7 @@ fn generate_service_method(rpc_call: &RPCCall) -> Vec<String> {
     // implementation of this method, therefore needs to be wrapped in `oak_idl::Message` in order
     // to transfer its ownership to the caller.
     vec![format!(
-        "    fn {}(&self, request: &{}) -> oak_idl::utils::Message<{}>;",
+        "    fn {}(&self, request: &{}) -> Result<oak_idl::utils::Message<{}>, oak_idl::Error>;",
         method_name(rpc_call),
         request_type(rpc_call),
         response_type(rpc_call)
