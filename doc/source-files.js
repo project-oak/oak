@@ -41,6 +41,7 @@ sourcesIndex["oak_proxy_attestation"] = {"name":"","files":["lib.rs"]};
 sourcesIndex["oak_proxy_attestation_bin"] = {"name":"","files":["main.rs"]};
 sourcesIndex["oak_remote_attestation"] = {"name":"","dirs":[{"name":"crypto","files":["mod.rs","ring_crypto.rs"]}],"files":["handshaker.rs","lib.rs","message.rs","report.rs"]};
 sourcesIndex["oak_remote_attestation_sessions"] = {"name":"","files":["lib.rs"]};
+sourcesIndex["oak_remote_attestation_sessions_client"] = {"name":"","files":["lib.rs"]};
 sourcesIndex["oak_tls_attestation"] = {"name":"","files":["main.rs","server.rs"]};
 sourcesIndex["oak_utils"] = {"name":"","files":["lib.rs"]};
 sourcesIndex["offline_attestation_client"] = {"name":"","files":["main.rs"]};

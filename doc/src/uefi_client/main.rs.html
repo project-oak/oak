@@ -75,7 +75,6 @@
 <span id="70">70</span>
 <span id="71">71</span>
 <span id="72">72</span>
-<span id="73">73</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2022 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -117,10 +116,9 @@
 
 <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">chat</span>(<span class="ident">client</span>: <span class="kw-2">&amp;mut</span> <span class="ident">AttestationClient</span>, <span class="ident">message</span>: <span class="ident">String</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span> {
     <span class="kw">let</span> <span class="ident">response</span> <span class="op">=</span> <span class="ident">client</span>
-        .<span class="ident">send</span>(<span class="ident">message</span>.<span class="ident">as_bytes</span>().<span class="ident">to_vec</span>())
+        .<span class="ident">send</span>(<span class="ident">message</span>.<span class="ident">as_bytes</span>())
         .<span class="kw">await</span>
-        .<span class="ident">context</span>(<span class="string">&quot;Error invoking Oak Functions instance&quot;</span>)<span class="question-mark">?</span>
-        .<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;Empty response&quot;</span>))<span class="question-mark">?</span>;
+        .<span class="ident">context</span>(<span class="string">&quot;Error invoking Oak Functions instance&quot;</span>)<span class="question-mark">?</span>;
 
     <span class="ident">String::from_utf8</span>(<span class="ident">response</span>).<span class="ident">map_err</span>(<span class="ident">Into::into</span>)
 }
