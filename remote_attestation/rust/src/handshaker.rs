@@ -35,11 +35,9 @@ use crate::{
         ServerIdentity,
     },
 };
-use alloc::{boxed::Box, sync::Arc, vec, vec::Vec};
+use alloc::{sync::Arc, vec, vec::Vec};
 use anyhow::{anyhow, Context};
 use core::fmt::Debug;
-
-pub type ServerIdentityVerifier = Box<dyn Fn(&ServerIdentity) -> anyhow::Result<()>>;
 
 enum ClientHandshakerState {
     Initializing,
@@ -253,6 +251,7 @@ impl<G: AttestationGenerator, V: AttestationVerifier> ClientHandshaker<G, V> {
         let expected_attested_data = attestation_data(
             &server_identity.ephemeral_public_key,
             server_signing_public_key,
+            &server_identity.additional_attestation_data,
         );
 
         // Verify server attestation info.
@@ -265,8 +264,14 @@ impl<G: AttestationGenerator, V: AttestationVerifier> ClientHandshaker<G, V> {
         let ephemeral_public_key = key_negotiator
             .public_key()
             .context("Couldn't get ephemeral public key")?;
-        let attested_data =
-            attestation_data(&ephemeral_public_key, &self.transcript_signer.public_key()?);
+
+        // TODO(#2914): Support additional attestation info in ClientIdentity.
+        let additional_attestation_data = &[];
+        let attested_data = attestation_data(
+            &ephemeral_public_key,
+            &self.transcript_signer.public_key()?,
+            additional_attestation_data,
+        );
         let attestation_report = self
             .behavior
             .generator
@@ -428,8 +433,11 @@ impl<G: AttestationGenerator, V: AttestationVerifier> ServerHandshaker<G, V> {
             .public_key()
             .context("Couldn't get ephemeral public key")?;
 
-        let attestation_data =
-            attestation_data(&ephemeral_public_key, &self.transcript_signer.public_key()?);
+        let attestation_data = attestation_data(
+            &ephemeral_public_key,
+            &self.transcript_signer.public_key()?,
+            &self.additional_info,
+        );
         let attestation_report = self
             .behavior
             .generator
@@ -492,9 +500,12 @@ impl<G: AttestationGenerator, V: AttestationVerifier> ServerHandshaker<G, V> {
             )
             .context("Couldn't verify client transcript")?;
 
+        // TODO(#2914): Support additional attestation info in ClientIdentity.
+        let additional_attestation_data = &[];
         let expected_attested_data = attestation_data(
             &client_identity.ephemeral_public_key,
             client_signing_public_key,
+            additional_attestation_data,
         );
 
         // Verify client attestation info.
@@ -569,7 +580,12 @@ pub struct AttestationBehavior<G: AttestationGenerator, V: AttestationVerifier> 
     verifier: V,
 }
 
+/// A trait implementing the functionality of generating a remote attestation report.
+///
+/// An implementation of this trait is expected to run in a TEE (i.e. it is usually in the server).
 pub trait AttestationGenerator: Clone + Send + Sync {
+    /// Generate a remote attestation report, ensuring that `attested_data` is cryptographically
+    /// bound to the result (e.g. via a signature).
     fn generate_attestation(&self, attested_data: &[u8]) -> anyhow::Result<Vec<u8>>;
 }
 
@@ -586,7 +602,13 @@ impl AttestationGenerator for EmptyAttestationGenerator {
     }
 }
 
+/// A trait implementing the functionality of verifying a remote attestation report.
+///
+/// An implementation of this trait is not expected to run in a TEE (i.e. it is usually in the
+/// client).
 pub trait AttestationVerifier: Clone + Send + Sync {
+    /// Verify the provided remote attestation report, checking that `expected_attested_data` is
+    /// cryptographically bound to it (e.g. via a signature).
     fn verify_attestation(
         &self,
         attestation: &[u8],
@@ -667,9 +689,26 @@ impl Transcript {
 pub fn attestation_data(
     ephemeral_public_key: &[u8; KEY_AGREEMENT_ALGORITHM_KEY_LENGTH],
     signing_public_key: &[u8; SIGNING_ALGORITHM_KEY_LENGTH],
+    additional_attestation_data: &[u8],
 ) -> Vec<u8> {
-    let mut out = Vec::with_capacity(ephemeral_public_key.len() + signing_public_key.len());
-    out.extend(ephemeral_public_key);
-    out.extend(signing_public_key);
-    out
+    hash_concat_hash(&[
+        ephemeral_public_key,
+        signing_public_key,
+        additional_attestation_data,
+    ])
+    .to_vec()
+}
+
+/// Compute a hash over values of possibly different lenght.
+///
+/// It is necessary to first hash the individual values, then concatenate the hashes, and then hash
+/// the concatenated result, in order to guarantee that it's not possible to create a collision by
+/// moving elements from one value to another (see unit test for an example of this attack).
+pub fn hash_concat_hash(values: &[&[u8]]) -> [u8; SHA256_HASH_LENGTH] {
+    get_sha256(
+        &values
+            .iter()
+            .flat_map(|v| get_sha256(v))
+            .collect::<Vec<_>>(),
+    )
 }

@@ -114,49 +114,35 @@ pub struct ServerIdentity {
     /// <https://datatracker.ietf.org/doc/html/rfc6979>
     pub signing_public_key: [u8; SIGNING_ALGORITHM_KEY_LENGTH],
     /// Information used for remote attestation such as a TEE report and a TEE provider's
-    /// certificate. TEE report contains a hash of the `signing_public_key` and `additional_info`.
+    /// certificate.
     ///
-    /// Attestation info must be a serialized `oak.remote_attestation.AttestationInfo` Protobuf
-    /// message.
+    /// The report would normally include (and sign over) the SHA256 hash of the concatenation of
+    /// the SHA256 hashes of (in order):
+    ///
+    /// - [`ServerIdentity::ephemeral_public_key`]
+    /// - [`ServerIdentity::signing_public_key`]
+    /// - [`ServerIdentity::additional_attestation_data`]
     pub attestation_report: Vec<u8>,
     /// Additional info to be checked when verifying the identity. This may include server
     /// configuration details, and inclusion proofs on a verifiable log (e.g., LogEntry on Rekor).
     ///
-    /// The server and the client must be able to agree on a canonical representation of the
-    /// content to be able to deterministically compute the hash of this field.
-    pub additional_info: Arc<Vec<u8>>,
+    /// The server and the client hash the raw bytes of this field, before parsing it.
+    pub additional_attestation_data: Arc<Vec<u8>>,
 }
 
 /// Client identity message containing remote attestation information and a public key for
 /// Diffie-Hellman key negotiation.
 #[derive(Clone, PartialEq)]
 pub struct ClientIdentity {
-    /// Public key needed to establish a session key.
+    /// See [`ServerIdentity::ephemeral_public_key`].
     pub ephemeral_public_key: [u8; KEY_AGREEMENT_ALGORITHM_KEY_LENGTH],
-    /// Signature of the SHA-256 hash of all previously sent and received messages.
-    /// Transcript signature is sent in messages to prevent replay attacks.
-    ///
-    /// Signature must be an IEEE-P1363 encoded ECDSA-P256 signature.
-    ///
-    /// <https://datatracker.ietf.org/doc/html/rfc6979>
-    ///
-    /// <https://standards.ieee.org/standard/1363-2000.html>
+    /// See [`ServerIdentity::transcript_signature`].
     pub transcript_signature: [u8; SIGNATURE_LENGTH],
-    /// Public key used to sign transcripts.
-    ///
-    /// Public key must be an OpenSSL ECDSA-P256 key, which is represented as
-    /// `0x04 | X: 32-byte | Y: 32-byte`.
-    ///
-    /// Where X and Y are big-endian coordinates of an Elliptic Curve point.
-    ///
-    /// <https://datatracker.ietf.org/doc/html/rfc6979>
+    /// See [`ServerIdentity::signing_public_key`].
     pub signing_public_key: [u8; SIGNING_ALGORITHM_KEY_LENGTH],
-    /// Information used for remote attestation such as a TEE report and a TEE provider's
-    /// certificate. TEE report contains a hash of the `signing_public_key`.
-    ///
-    /// Attestation info must be a serialized `oak.remote_attestation.AttestationInfo` Protobuf
-    /// message.
+    /// See [`ServerIdentity::attestation_report`].
     pub attestation_report: Vec<u8>,
+    // TODO(#2914): Support additional attestation info in ClientIdentity.
 }
 
 /// Message containing data encrypted using a session key.
@@ -222,7 +208,7 @@ impl ServerIdentity {
         random: [u8; REPLAY_PROTECTION_ARRAY_LENGTH],
         signing_public_key: [u8; SIGNING_ALGORITHM_KEY_LENGTH],
         attestation_report: Vec<u8>,
-        additional_info: Arc<Vec<u8>>,
+        additional_attestation_data: Arc<Vec<u8>>,
     ) -> Self {
         Self {
             version: PROTOCOL_VERSION,
@@ -231,7 +217,7 @@ impl ServerIdentity {
             transcript_signature: [Default::default(); SIGNATURE_LENGTH],
             signing_public_key,
             attestation_report,
-            additional_info,
+            additional_attestation_data,
         }
     }
 
@@ -257,7 +243,9 @@ impl ServerIdentity {
 impl Serializable for ServerIdentity {
     fn serialize(&self) -> anyhow::Result<Vec<u8>> {
         let mut result = Vec::with_capacity(
-            ServerIdentity::min_len() + self.attestation_report.len() + self.additional_info.len(),
+            ServerIdentity::min_len()
+                + self.attestation_report.len()
+                + self.additional_attestation_data.len(),
         );
         result.put_u8(SERVER_IDENTITY_HEADER);
         result.put_u8(self.version);
@@ -266,7 +254,7 @@ impl Serializable for ServerIdentity {
         result.put_slice(&self.transcript_signature);
         result.put_slice(&self.signing_public_key);
         put_vec(&mut result, &self.attestation_report);
-        put_vec(&mut result, &self.additional_info);
+        put_vec(&mut result, &self.additional_attestation_data);
         Ok(result)
     }
 }
@@ -302,7 +290,7 @@ impl Deserializable for ServerIdentity {
         let mut signing_public_key = [0u8; SIGNING_ALGORITHM_KEY_LENGTH];
         input.copy_to_slice(&mut signing_public_key);
         let attestation_report = get_vec(&mut input)?;
-        let additional_info = Arc::new(get_vec(&mut input)?);
+        let additional_attestation_data = Arc::new(get_vec(&mut input)?);
 
         if input.has_remaining() {
             bail!(
@@ -318,7 +306,7 @@ impl Deserializable for ServerIdentity {
             transcript_signature,
             signing_public_key,
             attestation_report,
-            additional_info,
+            additional_attestation_data,
         })
     }
 }

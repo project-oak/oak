@@ -15,9 +15,10 @@
 //
 
 use crate::{
+    crypto::{get_sha256, SHA256_HASH_LENGTH},
     handshaker::{
-        AttestationBehavior, AttestationGenerator, AttestationVerifier, ClientHandshaker,
-        ServerHandshaker,
+        hash_concat_hash, AttestationBehavior, AttestationGenerator, AttestationVerifier,
+        ClientHandshaker, ServerHandshaker,
     },
     tests::message::INVALID_MESSAGE_HEADER,
 };
@@ -223,4 +224,31 @@ fn test_replay_client_identity() {
         .unwrap();
     let result = second_server_handshaker.next_step(&first_client_identity);
     assert_matches!(result, Err(_));
+}
+
+#[test]
+fn test_hash_concat_hash() {
+    // A naive (and insecure) version of a combined hash that just concatenates the values directly
+    // and hash the resulting value.
+    fn naive_concat_hash(values: &[&[u8]]) -> [u8; SHA256_HASH_LENGTH] {
+        get_sha256(
+            &values
+                .iter()
+                .flat_map(|v| v.to_vec())
+                .collect::<vec::Vec<_>>(),
+        )
+    }
+
+    let a = &[[1, 1, 1].as_ref(), [2, 2, 2].as_ref()];
+
+    // A single element is moved from the second value to the first, such that the concatenation of
+    // the values remains the same.
+    let b = &[[1, 1, 1, 2].as_ref(), [2, 2].as_ref()];
+
+    // Using the naive function, these two inputs, which are obviously different, hash to the same
+    // value, causing a collision.
+    assert_eq!(naive_concat_hash(a), naive_concat_hash(b));
+
+    // Using the proper function, the attack does not work.
+    assert_ne!(hash_concat_hash(a), hash_concat_hash(b));
 }
