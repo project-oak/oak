@@ -9,6 +9,7 @@ target = { Cargo = { cargo_manifest = "oak_functions/examples/echo/module/Cargo.
 
 [server]
 additional_args = ["--config-path=./oak_functions/examples/echo/config.toml"]
+server_variant = "Unsafe"
 
 [clients]
 # Test request coordinates are defined in `oak_functions/lookup_data_generator/src/data.rs`.

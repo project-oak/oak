@@ -1,0 +1,36 @@
+[package]
+name = "oak_functions_web_client"
+version = "0.1.0"
+authors = ["Juliette Pretot <hi@juliette.sh>"]
+edition = "2021"
+license = "Apache-2.0"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+wasm-bindgen = "*"
+wasm-bindgen-futures = "*"
+console_error_panic_hook = { version = "*" }
+anyhow = { version = "*", default-features = false }
+oak_functions_abi = { path = "../../oak_functions/abi" }
+oak_remote_attestation_sessions = { path = "../../remote_attestation_sessions/", default-features = false }
+oak_remote_attestation_sessions_client = { path = "../../remote_attestation_sessions_client/", default-features = false, features = [
+  "web"
+] }
+prost = { version = "*", default-features = false, features = ["prost-derive"] }
+bytes = "*"
+reqwest = "*"
+web-sys = { version = "*", features = ["console"] }
+js-sys = "*"
+wasm_mutex = "*"
+async-trait = "*"
+
+[dev-dependencies]
+wasm-bindgen-test = "*"
+
+[package.metadata.cargo-udeps.ignore]
+development = ["wasm-bindgen-test"]
+
+[build-dependencies]
+prost-build = "*"

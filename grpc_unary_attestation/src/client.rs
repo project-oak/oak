@@ -39,7 +39,7 @@ impl GrpcClient {
     }
 }
 
-#[async_trait]
+#[async_trait(? Send)]
 impl UnaryClient for GrpcClient {
     async fn message(&mut self, session_id: SessionId, body: Vec<u8>) -> anyhow::Result<Vec<u8>> {
         let response = self
