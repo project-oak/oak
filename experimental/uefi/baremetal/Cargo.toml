@@ -5,9 +5,14 @@ authors = ["Andri Saar <andrisaar@google.com>"]
 edition = "2021"
 license = "Apache-2.0"
 
+[features]
+default = ["pvh"]
+pvh = ["rust-hypervisor-firmware-boot/pvh"]
+multiboot = []
+
 [dependencies]
 kernel = { path = "../kernel" }
-rust-hypervisor-firmware-boot = { path = "../../../third_party/rust-hypervisor-firmware-boot" }
+rust-hypervisor-firmware-boot = { path = "../../../third_party/rust-hypervisor-firmware-boot", default-features = false }
 
 [build-dependencies]
 bindgen = "*"

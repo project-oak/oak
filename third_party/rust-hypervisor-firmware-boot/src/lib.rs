@@ -14,6 +14,8 @@ mod asm;
 pub mod common;
 mod gdt;
 pub mod paging;
+
+#[cfg(feature = "pvh")]
 pub mod pvh;
 
 extern "C" {
