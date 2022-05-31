@@ -19,7 +19,10 @@ SECTIONS
   /* These sections are mapped into RAM from the file. Omitting :ram from
      later sections avoids emitting empty sections in the final binary.       */
   data_start = .;
-  .rodata : { *(.rodata .rodata.*) } :ram
+  .rodata : {
+    KEEP(*(.multiboot_header .multiboot_header.*))
+    *(.rodata .rodata.*)
+  } :ram
   . = ALIGN(4K);
   text_start = .;
   .text   : { *(.text .text.*)     }

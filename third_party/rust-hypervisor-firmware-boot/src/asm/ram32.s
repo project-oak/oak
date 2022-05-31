@@ -3,8 +3,10 @@
 .code32
 
 ram32_start:
-    # Stash the PVH start_info struct in %rdi.
+    # Stash the boot metadata struct in %rdi.
     movl %ebx, %edi
+    # If present, the multiboot magic is in %eax; move it to %esi.
+    movl %eax, %esi
 
 setup_page_tables:
     # First L3 entry identity maps [0, 1 GiB)

@@ -18,7 +18,7 @@
 #![no_main]
 #![feature(lang_items)]
 #![feature(alloc_error_handler)]
-#![feature(bench_black_box)]
+#![feature(core_ffi_c)]
 #![feature(custom_test_frameworks)]
 // As we're in a `no_std` environment, testing requires special handling. This
 // approach was inspired by https://os.phil-opp.com/testing/.
@@ -26,26 +26,39 @@
 #![reexport_test_harness_main = "test_main"]
 
 use core::panic::PanicInfo;
-use rust_hypervisor_firmware_boot::pvh;
+
+#[cfg(all(feature = "multiboot", not(test)))]
+mod asm;
 mod hvm_start_info;
+
+#[cfg(all(feature = "multiboot"))]
+mod multiboot;
 
 #[no_mangle]
 #[cfg(test)]
 pub extern "C" fn rust64_start(_rdi: &hvm_start_info::hvm_start_info) -> ! {
-    // Ensure that `PVH_NOTE` is not optimized away, otherwise we won't be able to boot our
-    // kernel when testing.
-    core::hint::black_box(&pvh::PVH_NOTE);
     test_main();
     kernel::i8042::shutdown();
 }
 
 #[no_mangle]
-#[cfg(not(test))]
-pub extern "C" fn rust64_start(rdi: &hvm_start_info::hvm_start_info) -> ! {
-    // Ensure that `PVH_NOTE` is not optimized away, otherwise we won't be able to boot our
-    // kernel when testing.
-    core::hint::black_box(&pvh::PVH_NOTE);
-    kernel::start_kernel(rdi);
+#[cfg(all(not(test), feature = "multiboot"))]
+pub extern "C" fn rust64_start(start_info: &multiboot::multiboot_info, magic: u64) -> ! {
+    // The magic constant is specified in multiboot.h.
+    // See <https://www.gnu.org/software/grub/manual/multiboot/multiboot.html#Machine-state>
+    // for a full specification of the initial machine state.
+    // As at this stage we don't even have logging set up, so if the magic does not match,
+    // let's just shut down the machine.
+    if magic != 0x2BADB002 {
+        kernel::i8042::shutdown();
+    }
+    kernel::start_kernel(start_info);
+}
+
+#[no_mangle]
+#[cfg(all(not(test), not(feature = "multiboot")))]
+pub extern "C" fn rust64_start(start_info: &hvm_start_info::hvm_start_info) -> ! {
+    kernel::start_kernel(start_info);
 }
 
 #[alloc_error_handler]
