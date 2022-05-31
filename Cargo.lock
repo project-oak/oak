@@ -2218,7 +2218,6 @@ dependencies = [
  "linked_list_allocator",
  "log",
  "oak_remote_attestation",
- "oak_remote_attestation_amd",
  "runtime",
  "rust-hypervisor-firmware-boot",
  "strum",

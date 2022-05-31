@@ -462,6 +462,7 @@ dependencies = [
  "libm",
  "linked_list_allocator",
  "log",
+ "oak_remote_attestation",
  "runtime",
  "rust-hypervisor-firmware-boot",
  "strum",
@@ -475,7 +476,7 @@ version = "1.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e2abad23fbc42b3700f2f279844dc832adb2b2eb069b2df918f455c4e18cc646"
 dependencies = [
- "spin",
+ "spin 0.5.2",
 ]
 
 [[package]]
@@ -626,13 +627,9 @@ dependencies = [
  "aes-gcm",
  "anyhow",
  "bytes",
- "getrandom",
  "hkdf",
- "log",
  "p256",
- "prost",
- "prost-build",
- "rand_core",
+ "ring",
  "sha2 0.10.2",
  "signature",
  "x25519-dalek",
@@ -777,9 +774,6 @@ name = "rand_core"
 version = "0.6.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d34f1408f55294453790c48b2f1ebbb1c5b4b7563eb1f418bcfcfdbb06ebb4e7"
-dependencies = [
- "getrandom",
-]
 
 [[package]]
 name = "redox_syscall"
@@ -826,6 +820,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "ring"
+version = "0.17.0-not-released-yet"
+dependencies = [
+ "cc",
+ "libc",
+ "once_cell",
+ "spin 0.9.3",
+ "untrusted",
+ "winapi",
+]
+
+[[package]]
 name = "runtime"
 version = "0.1.0"
 dependencies = [
@@ -836,6 +842,7 @@ dependencies = [
  "oak_functions_wasm",
  "oak_functions_workload_logging",
  "oak_logger",
+ "oak_remote_attestation",
  "oak_remote_attestation_sessions",
 ]
 
@@ -931,6 +938,12 @@ name = "spin"
 version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6e63cff320ae2c57904679ba7cb63280a3dc4613885beafb148ee7bf9aa9042d"
+
+[[package]]
+name = "spin"
+version = "0.9.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c530c2b0d0bf8b69304b39fe2001993e267461948b890cd037d8ad4293fa1a0d"
 
 [[package]]
 name = "spinning_top"
@@ -1044,6 +1057,12 @@ dependencies = [
  "generic-array",
  "subtle",
 ]
+
+[[package]]
+name = "untrusted"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8ecb6da28b8a351d773b68d5825ac39017e680750f980f3a1a85cd8dd28a47c1"
 
 [[package]]
 name = "version_check"

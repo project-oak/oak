@@ -42,8 +42,9 @@ mod serial;
 
 use core::panic::PanicInfo;
 use log::{error, info};
-use oak_remote_attestation::handshaker::{AttestationBehavior, EmptyAttestationVerifier};
-use oak_remote_attestation_amd::PlaceholderAmdAttestationGenerator;
+use oak_remote_attestation::handshaker::{
+    AttestationBehavior, EmptyAttestationGenerator, EmptyAttestationVerifier,
+};
 use rust_hypervisor_firmware_boot::paging;
 
 /// Main entry point for the kernel, to be called from bootloader.
@@ -61,7 +62,7 @@ fn main<E: boot::E820Entry, B: boot::BootInfo<E>>(info: &B) -> ! {
     info!("In main! Boot protocol:  {}", info.protocol());
     let serial = serial::Serial::new();
     let attestation_behavior =
-        AttestationBehavior::create(PlaceholderAmdAttestationGenerator, EmptyAttestationVerifier);
+        AttestationBehavior::create(EmptyAttestationGenerator, EmptyAttestationVerifier);
     runtime::framing::handle_frames(serial, attestation_behavior).unwrap();
 }
 
