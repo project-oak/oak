@@ -33,7 +33,6 @@ async fn pass() {
     let js_result = wasm_bindgen_futures::JsFuture::from(js_promise)
         .await
         .unwrap();
-    println!("{:?}", js_result);
     let result_as_vec = js_sys::Reflect::get(&js_result, &"body".into())
         .unwrap()
         .dyn_into::<js_sys::Uint8Array>()
