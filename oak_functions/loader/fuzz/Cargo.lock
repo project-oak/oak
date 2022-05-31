@@ -860,9 +860,6 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "bytes",
- "log",
- "prost",
- "prost-build",
  "ring 0.17.0-not-released-yet",
 ]
 

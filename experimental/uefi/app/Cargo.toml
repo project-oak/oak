@@ -11,6 +11,7 @@ support_emulated_runner = []
 
 [dependencies]
 anyhow = { version = "*", default-features = false }
+oak_remote_attestation = { path = "../../../remote_attestation/rust" }
 runtime = { path = "../runtime" }
 uefi = { version = "*", features = ["exts"] }
 uefi-services = "*"
