@@ -18,7 +18,7 @@
 //! protocol.
 
 use crate::proto::{unary_session_server::UnarySession, UnaryRequest, UnaryResponse};
-use oak_remote_attestation::handshaker::{AttestationBehavior, NoopAttestationVerifier};
+use oak_remote_attestation::handshaker::{AttestationBehavior, EmptyAttestationVerifier};
 use oak_remote_attestation_amd::PlaceholderAmdAttestationGenerator;
 use oak_remote_attestation_sessions::{SessionId, SessionState, SessionTracker};
 use oak_utils::LogError;
@@ -36,7 +36,7 @@ pub struct AttestationServer<F, L: LogError> {
     /// Errors are only logged on server side and are not sent to clients.
     error_logger: L,
     session_tracker:
-        Mutex<SessionTracker<PlaceholderAmdAttestationGenerator, NoopAttestationVerifier>>,
+        Mutex<SessionTracker<PlaceholderAmdAttestationGenerator, EmptyAttestationVerifier>>,
 }
 
 impl<F, S, L> AttestationServer<F, L>
@@ -54,7 +54,7 @@ where
             SESSIONS_CACHE_SIZE,
             AttestationBehavior::create(
                 PlaceholderAmdAttestationGenerator,
-                NoopAttestationVerifier,
+                EmptyAttestationVerifier,
             ),
             additional_info,
         ));

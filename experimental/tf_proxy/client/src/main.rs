@@ -22,7 +22,7 @@ use anyhow::Context;
 use clap::Parser;
 use log::{debug, info, trace};
 use maplit::hashmap;
-use oak_functions_abi::proto::{ConfigurationInfo, Request};
+use oak_functions_abi::proto::Request;
 use oak_functions_client::Client;
 use prost::Message;
 use proto::{
@@ -73,10 +73,7 @@ async fn main() -> anyhow::Result<()> {
     env_logger::init();
     let opt = Opt::parse();
 
-    // Config is not relevant for the proxy for now.
-    let config_verifier = |_: ConfigurationInfo| Ok(());
-
-    let mut client = Client::new(&opt.uri, config_verifier)
+    let mut client = Client::new(&opt.uri)
         .await
         .context("couldn't create client")?;
 

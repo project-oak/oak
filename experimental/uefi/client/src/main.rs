@@ -47,7 +47,7 @@ async fn chat(client: &mut AttestationClient, message: String) -> anyhow::Result
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cli = Args::parse();
 
-    let mut client = AttestationClient::create(&cli.server, Box::new(|_config| Ok(())))
+    let mut client = AttestationClient::create(&cli.server)
         .await
         .context("Could not create client")?;
 

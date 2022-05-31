@@ -21,7 +21,7 @@ use crate::{
     },
     tests::message::INVALID_MESSAGE_HEADER,
 };
-use alloc::{boxed::Box, sync::Arc, vec};
+use alloc::{sync::Arc, vec};
 use assert_matches::assert_matches;
 
 const DATA: [u8; 10] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
@@ -64,17 +64,7 @@ fn create_handshakers() -> (
 ) {
     let bidirectional_attestation =
         AttestationBehavior::create(TestAttestationGenerator, TestAttestationVerifier);
-    let client_handshaker = ClientHandshaker::new(
-        bidirectional_attestation,
-        Box::new(|server_identity| {
-            if !server_identity.additional_info.is_empty() {
-                Ok(())
-            } else {
-                anyhow::bail!("No additional info provided.")
-            }
-        }),
-    )
-    .unwrap();
+    let client_handshaker = ClientHandshaker::new(bidirectional_attestation).unwrap();
 
     let bidirectional_attestation =
         AttestationBehavior::create(TestAttestationGenerator, TestAttestationVerifier);

@@ -28,9 +28,7 @@ const TOTAL_REQUESTS: usize = 50;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    let mut client = Client::new(URL, |_config| Ok(()))
-        .await
-        .context("Could not create client")?;
+    let mut client = Client::new(URL).await.context("Could not create client")?;
 
     let mut latencies_millis = Vec::<f64>::with_capacity(TOTAL_REQUESTS);
 

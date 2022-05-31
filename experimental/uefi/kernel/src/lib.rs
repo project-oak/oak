@@ -42,7 +42,7 @@ mod serial;
 
 use core::panic::PanicInfo;
 use log::{error, info};
-use oak_remote_attestation::handshaker::{AttestationBehavior, NoopAttestationVerifier};
+use oak_remote_attestation::handshaker::{AttestationBehavior, EmptyAttestationVerifier};
 use oak_remote_attestation_amd::PlaceholderAmdAttestationGenerator;
 use rust_hypervisor_firmware_boot::paging;
 
@@ -61,7 +61,7 @@ fn main<E: boot::E820Entry, B: boot::BootInfo<E>>(info: &B) -> ! {
     info!("In main! Boot protocol:  {}", info.protocol());
     let serial = serial::Serial::new();
     let attestation_behavior =
-        AttestationBehavior::create(PlaceholderAmdAttestationGenerator, NoopAttestationVerifier);
+        AttestationBehavior::create(PlaceholderAmdAttestationGenerator, EmptyAttestationVerifier);
     runtime::framing::handle_frames(serial, attestation_behavior).unwrap();
 }
 

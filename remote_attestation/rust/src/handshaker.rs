@@ -107,22 +107,16 @@ pub struct ClientHandshaker<G: AttestationGenerator, V: AttestationVerifier> {
     /// Signer containing a key which public part is signed by the TEE firmware key.
     /// Used for signing protocol transcripts and preventing replay attacks.
     transcript_signer: Signer,
-    /// Function for verifying the identity of the server.
-    server_identity_verifier: ServerIdentityVerifier,
 }
 
 impl<G: AttestationGenerator, V: AttestationVerifier> ClientHandshaker<G, V> {
     /// Creates [`ClientHandshaker`] with `Initializing` state.
-    pub fn new(
-        behavior: AttestationBehavior<G, V>,
-        server_identity_verifier: ServerIdentityVerifier,
-    ) -> anyhow::Result<Self> {
+    pub fn new(behavior: AttestationBehavior<G, V>) -> anyhow::Result<Self> {
         Ok(Self {
             behavior,
             state: ClientHandshakerState::Initializing,
             transcript: Transcript::new(),
             transcript_signer: Signer::create().context("Couldn't create signer")?,
-            server_identity_verifier,
         })
     }
 
@@ -299,8 +293,6 @@ impl<G: AttestationGenerator, V: AttestationVerifier> ClientHandshaker<G, V> {
             .sign(&self.transcript.get_sha256())
             .context("Couldn't create transcript signature")?;
         client_identity.set_transcript_signature(&transcript_signature);
-
-        (self.server_identity_verifier)(&server_identity)?;
 
         // Agree on session keys and create an encryptor.
         let encryptor = key_negotiator
@@ -558,7 +550,10 @@ impl Encryptor {
 }
 
 /// Defines the behavior of the remote attestation protocol.
-/// It can be one of:
+///
+/// It is composed of an [`AttestationGenerator`] and an [`AttestationVerifier`], which may be
+/// combined to achieve any of the following high level configurations:
+///
 /// - Peer Attestation:
 ///   - Represents an attestation process, where current machine remotely attests a remote peer and
 ///     verifies its attestation info.
@@ -583,9 +578,9 @@ pub trait AttestationGenerator: Clone + Send + Sync {
 /// Useful when no attestation is expected to be genereated by the current side of a remotely
 /// attested connection.
 #[derive(Clone)]
-pub struct NoopAttestationGenerator;
+pub struct EmptyAttestationGenerator;
 
-impl AttestationGenerator for NoopAttestationGenerator {
+impl AttestationGenerator for EmptyAttestationGenerator {
     fn generate_attestation(&self, _attested_data: &[u8]) -> anyhow::Result<Vec<u8>> {
         Ok(Vec::new())
     }
@@ -604,9 +599,9 @@ pub trait AttestationVerifier: Clone + Send + Sync {
 /// Useful when no attestation is expected to be genereated by the other side of a remotely
 /// attested connection.
 #[derive(Clone)]
-pub struct NoopAttestationVerifier;
+pub struct EmptyAttestationVerifier;
 
-impl AttestationVerifier for NoopAttestationVerifier {
+impl AttestationVerifier for EmptyAttestationVerifier {
     fn verify_attestation(
         &self,
         attestation: &[u8],
@@ -636,6 +631,7 @@ impl<G: AttestationGenerator, V: AttestationVerifier> AttestationBehavior<G, V> 
 }
 
 /// Convenience struct for managing protocol transcripts.
+///
 /// Transcript is a concatenation of all sent and received messages, which is used for preventing
 /// replay attacks.
 struct Transcript {
@@ -663,6 +659,11 @@ impl Transcript {
 /// Compute data to be attested based on the actual or expected parameters.
 ///
 /// In particular, the concatenation of the ephemeral public key, and the signing public key.
+///
+/// For instance, a remotely attestable server would use this function to condense all data that
+/// needs to be remotely attested into a single sequence of bytes; on the other side, the client
+/// would reconstruct the same expected data (e.g. during a key exchange protocol), and confirm that
+/// it was indeed correctly attested by the server.
 pub fn attestation_data(
     ephemeral_public_key: &[u8; KEY_AGREEMENT_ALGORITHM_KEY_LENGTH],
     signing_public_key: &[u8; SIGNING_ALGORITHM_KEY_LENGTH],

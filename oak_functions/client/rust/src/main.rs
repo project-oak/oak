@@ -19,7 +19,7 @@
 
 use anyhow::Context;
 use clap::Parser;
-use oak_functions_abi::proto::{ConfigurationInfo, Request};
+use oak_functions_abi::proto::Request;
 use oak_functions_client::Client;
 use regex::Regex;
 
@@ -46,24 +46,11 @@ async fn main() -> anyhow::Result<()> {
     env_logger::init();
     let opt = Opt::parse();
 
-    // TODO(#2348): Replace with a more flexible specification of the verification logic.
-    // For the common client used in examples, we expect ML-inference and private metrics to be
-    // disabled.
-    let config_verifier = |config: ConfigurationInfo| {
-        if config.ml_inference {
-            anyhow::bail!("ML-inference support is enabled")
-        }
-        if config.metrics.is_some() {
-            anyhow::bail!("private metrics support is enabled")
-        }
-        Ok(())
-    };
-
     let request = Request {
         body: opt.request.as_bytes().to_vec(),
     };
 
-    let mut client = Client::new(&opt.uri, config_verifier)
+    let mut client = Client::new(&opt.uri)
         .await
         .context("Could not create Oak Functions client")?;
 
