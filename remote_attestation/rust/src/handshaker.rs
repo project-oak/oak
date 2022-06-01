@@ -27,7 +27,7 @@
 use crate::{
     crypto::{
         get_random, get_sha256, AeadEncryptor, KeyNegotiator, KeyNegotiatorType, SignatureVerifier,
-        Signer, KEY_AGREEMENT_ALGORITHM_KEY_LENGTH, SHA256_HASH_LENGTH,
+        Signer, KEY_AGREEMENT_ALGORITHM_KEY_LENGTH, SHA256_HASH_LENGTH, SIGNATURE_LENGTH,
         SIGNING_ALGORITHM_KEY_LENGTH,
     },
     message::{
@@ -493,12 +493,21 @@ impl<G: AttestationGenerator, V: AttestationVerifier> ServerHandshaker<G, V> {
             .context("Couldn't append client identity to the transcript")?;
         let client_signing_public_key = &client_identity.signing_public_key;
         let transcript_signature_verifier = SignatureVerifier::new(client_signing_public_key)?;
-        transcript_signature_verifier
-            .verify(
-                &self.transcript.get_sha256(),
-                &client_identity.transcript_signature,
-            )
-            .context("Couldn't verify client transcript")?;
+
+        // TODO(#2918): Remove this check when the Java client generates a non-empty signature, and
+        // always verify the signature.
+        if client_identity.transcript_signature == [0; SIGNATURE_LENGTH] {
+            // We skip verifying the signature because of #2918, until it is implemented in the Java
+            // client.
+            // Until this is fixed, this version of the server must not be used in production.
+        } else {
+            transcript_signature_verifier
+                .verify(
+                    &self.transcript.get_sha256(),
+                    &client_identity.transcript_signature,
+                )
+                .context("Couldn't verify client transcript")?;
+        }
 
         // TODO(#2914): Support additional attestation info in ClientIdentity.
         let additional_attestation_data = &[];

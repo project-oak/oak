@@ -141,9 +141,10 @@ public class ClientHandshaker {
       // Create client attestation identity.
       Message.ClientIdentity clientIdentity =
           new Message.ClientIdentity(keyNegotiator.getPublicKey(),
+              // TODO(#2918): Actually instantiate a public key and sign transcript with it.
               // Signing public key.
               new byte[0],
-              // Attestation info.
+              // Attestation report.
               new byte[0]);
 
       // Update current transcript.
