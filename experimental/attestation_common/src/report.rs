@@ -25,7 +25,7 @@ use x509_parser::der_parser::{self, oid::Oid};
 // <https://www.alvestrand.no/objectid/2.16.840.1.113730.1.13.html>
 pub const TEE_EXTENSION_OID: Oid<'static> = der_parser::oid!(2.16.840 .1 .113730 .1 .13);
 
-/// Serializes [`AttestationInfo`] into a custom [`X509Extension`].
+/// Serializes the provided remote attestation report (as a string) into a custom [`X509Extension`].
 pub fn to_x509_extension(attestation_report_string: &str) -> anyhow::Result<X509Extension> {
     // [`Nid::NETSCAPE_COMMENT`] is a numerical identifier for an OpenSSL object that
     // corresponds to an X.509 extension implementation.
