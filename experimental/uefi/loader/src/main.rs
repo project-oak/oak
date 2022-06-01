@@ -140,7 +140,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
-    let mut comms_channel = vmm.create_comms_channel()?;
+    let mut comms = vmm.create_comms_channel()?;
 
     // TODO(#2709): Unfortunately OVMF writes some garbage (clear screen etc?) + our Hello
     // World to the other serial port, so let's skip some bytes before we set up framing.
@@ -148,7 +148,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // change what we write to stdout in the UEFI app.
     if cli.mode == Mode::Uefi {
         let mut junk = [0; 71];
-        comms_channel.read_exact(&mut junk).unwrap();
+        comms.read_exact(&mut junk).unwrap();
         log::info!("Leading junk on comms: {:?}", std::str::from_utf8(&junk));
     }
 
@@ -157,10 +157,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // as right now we don't have any mechanisms to track multiple requests in flight.
     let (tx, mut rx) = bmrng::unbounded_channel::<Vec<u8>, anyhow::Result<Vec<u8>>>();
 
-    let comms_channel = CommsChannel {
-        inner: comms_channel,
-    };
     tokio::spawn(async move {
+        let comms_channel = CommsChannel { inner: comms };
         let mut framed = Framed::new(comms_channel);
         fn respond(framed: &mut Framed<CommsChannel>, input: Vec<u8>) -> anyhow::Result<Vec<u8>> {
             framed.write_frame(Frame { body: input })?;

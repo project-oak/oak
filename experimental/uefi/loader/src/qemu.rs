@@ -24,35 +24,10 @@ use command_fds::{tokio::CommandFdAsyncExt, FdMapping};
 use log::info;
 use std::{
     ffi::OsStr,
-    io::{Read, Write},
     net::Shutdown,
     os::unix::{io::AsRawFd, net::UnixStream},
     process::Stdio,
 };
-
-struct UnixStreamChannel {
-    inner: UnixStream,
-}
-
-impl ciborium_io::Write for UnixStreamChannel {
-    type Error = anyhow::Error;
-
-    fn write_all(&mut self, data: &[u8]) -> Result<(), Self::Error> {
-        self.inner.write_all(data).map_err(anyhow::Error::msg)
-    }
-
-    fn flush(&mut self) -> Result<(), Self::Error> {
-        self.inner.flush().map_err(anyhow::Error::msg)
-    }
-}
-
-impl ciborium_io::Read for UnixStreamChannel {
-    type Error = anyhow::Error;
-
-    fn read_exact(&mut self, data: &mut [u8]) -> Result<(), Self::Error> {
-        self.inner.read_exact(data).map_err(anyhow::Error::msg)
-    }
-}
 
 pub struct Qemu {
     console: UnixStream,
