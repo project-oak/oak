@@ -15,12 +15,10 @@
 //
 
 use anyhow::Context;
-use grpc_unary_attestation::client::AttestationClient;
-use std::io::{stdin, BufRead};
-
 use clap::Parser;
-
-const TEE_MEASUREMENT: &[u8] = br"Test TEE measurement";
+use grpc_unary_attestation::client::AttestationClient;
+use oak_remote_attestation::handshaker::EmptyAttestationVerifier;
+use std::io::{stdin, BufRead};
 
 #[derive(Parser, Debug)]
 struct Args {
@@ -51,7 +49,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cli = Args::parse();
 
     let mut client =
-        AttestationClient::create(&cli.server, TEE_MEASUREMENT, Box::new(|_config| Ok(())))
+        AttestationClient::create_with_attestation_verifier(&cli.server, EmptyAttestationVerifier)
             .await
             .context("Could not create client")?;
 

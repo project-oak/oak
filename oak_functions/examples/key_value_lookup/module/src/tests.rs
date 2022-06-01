@@ -65,8 +65,6 @@ async fn test_server() {
         constant_response_size_bytes: 100,
         constant_processing_time_ms: 200,
     };
-    let tee_certificate = vec![];
-
     let logger = Logger::for_test();
     let lookup_data_manager = Arc::new(LookupDataManager::new_empty(logger.clone()));
     let lookup_data_refresher = LookupDataRefresher::new(
@@ -90,7 +88,6 @@ async fn test_server() {
         create_and_start_grpc_server(
             &address,
             wasm_handler,
-            tee_certificate,
             policy.clone(),
             get_config_info(&wasm_module_bytes, policy, false, None),
             term,

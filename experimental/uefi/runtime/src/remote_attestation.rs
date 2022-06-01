@@ -23,27 +23,29 @@ extern crate alloc;
 
 use alloc::vec::Vec;
 use anyhow::Context;
+use oak_remote_attestation::handshaker::{
+    AttestationBehavior, AttestationGenerator, AttestationVerifier,
+};
 use oak_remote_attestation_sessions::{SerializeableRequest, SessionState, SessionTracker};
 
 /// Number of sessions that will be kept in memory.
 const SESSIONS_CACHE_SIZE: usize = 10000;
 
-pub struct AttestationHandler<F> {
-    session_tracker: SessionTracker,
+pub struct AttestationHandler<F, G: AttestationGenerator, V: AttestationVerifier> {
+    session_tracker: SessionTracker<G, V>,
     request_handler: F,
 }
 
-const MOCK_TEE_CERTIFICATE: [u8; 0] = [];
 const MOCK_ADDITIONAL_INFO: [u8; 0] = [];
 
-impl<F> AttestationHandler<F>
+impl<F, G: AttestationGenerator, V: AttestationVerifier> AttestationHandler<F, G, V>
 where
     F: Send + Sync + Clone + FnOnce(Vec<u8>) -> anyhow::Result<Vec<u8>>,
 {
-    pub fn create(request_handler: F) -> Self {
+    pub fn create(request_handler: F, attestation_behavior: AttestationBehavior<G, V>) -> Self {
         let session_tracker = SessionTracker::create(
             SESSIONS_CACHE_SIZE,
-            MOCK_TEE_CERTIFICATE.to_vec(),
+            attestation_behavior,
             MOCK_ADDITIONAL_INFO.to_vec(),
         );
 

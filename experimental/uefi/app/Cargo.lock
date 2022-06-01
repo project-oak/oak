@@ -308,9 +308,6 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "bytes",
- "log",
- "prost",
- "prost-build",
  "ring",
 ]
 
@@ -480,6 +477,7 @@ dependencies = [
  "oak_functions_wasm",
  "oak_functions_workload_logging",
  "oak_logger",
+ "oak_remote_attestation",
  "oak_remote_attestation_sessions",
 ]
 
@@ -584,6 +582,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "ciborium-io",
+ "oak_remote_attestation",
  "runtime",
  "uefi",
  "uefi-services",

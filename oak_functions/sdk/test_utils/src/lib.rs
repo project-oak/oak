@@ -215,9 +215,7 @@ pub async fn make_request(port: u16, request_body: &[u8]) -> TestResult {
     let uri = format!("http://localhost:{}/", port);
 
     // Create client
-    let mut client = Client::new(&uri, |_config| Ok(()))
-        .await
-        .expect("Could not create client");
+    let mut client = Client::new(&uri).await.expect("Could not create client");
 
     let request = Request {
         body: request_body.to_vec(),

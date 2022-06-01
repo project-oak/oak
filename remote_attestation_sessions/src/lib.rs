@@ -23,31 +23,36 @@ extern crate alloc;
 use alloc::{boxed::Box, sync::Arc, vec::Vec};
 use anyhow::bail;
 use lru::LruCache;
-use oak_remote_attestation::handshaker::{AttestationBehavior, Encryptor, ServerHandshaker};
+use oak_remote_attestation::handshaker::{
+    AttestationBehavior, AttestationGenerator, AttestationVerifier, Encryptor, ServerHandshaker,
+};
 
 pub const SESSION_ID_LENGTH: usize = 8;
 pub type SessionId = [u8; SESSION_ID_LENGTH];
 
-pub enum SessionState {
+pub enum SessionState<G: AttestationGenerator, V: AttestationVerifier> {
     // Boxed due to large size difference, ref: https://rust-lang.github.io/rust-clippy/master/index.html#large_enum_variant
-    HandshakeInProgress(Box<ServerHandshaker>),
+    HandshakeInProgress(Box<ServerHandshaker<G, V>>),
     EncryptedMessageExchange(Encryptor),
 }
 
 /// Maintains remote attestation state for a number of sessions
-pub struct SessionTracker {
-    /// PEM encoded X.509 certificate that signs TEE firmware key.
-    tee_certificate: Vec<u8>,
+pub struct SessionTracker<G: AttestationGenerator, V: AttestationVerifier> {
+    attestation_behavior: AttestationBehavior<G, V>,
     /// Configuration information to provide to the client for the attestation step.
     additional_info: Arc<Vec<u8>>,
-    known_sessions: LruCache<SessionId, SessionState>,
+    known_sessions: LruCache<SessionId, SessionState<G, V>>,
 }
 
-impl SessionTracker {
-    pub fn create(cache_size: usize, tee_certificate: Vec<u8>, additional_info: Vec<u8>) -> Self {
+impl<G: AttestationGenerator, V: AttestationVerifier> SessionTracker<G, V> {
+    pub fn create(
+        cache_size: usize,
+        attestation_behavior: AttestationBehavior<G, V>,
+        additional_info: Vec<u8>,
+    ) -> Self {
         let known_sessions = LruCache::new(cache_size);
         Self {
-            tee_certificate,
+            attestation_behavior,
             additional_info: Arc::new(additional_info),
             known_sessions,
         }
@@ -65,14 +70,14 @@ impl SessionTracker {
     pub fn pop_or_create_session_state(
         &mut self,
         session_id: SessionId,
-    ) -> anyhow::Result<SessionState> {
+    ) -> anyhow::Result<SessionState<G, V>> {
         match self.known_sessions.pop(&session_id) {
-            None => match AttestationBehavior::create_self_attestation(&self.tee_certificate) {
-                Ok(behavior) => Ok(SessionState::HandshakeInProgress(Box::new(
-                    ServerHandshaker::new(behavior, self.additional_info.clone()),
-                ))),
-                Err(error) => Err(error.context("Couldn't create self attestation behavior")),
-            },
+            None => Ok(SessionState::HandshakeInProgress(Box::new(
+                ServerHandshaker::new(
+                    self.attestation_behavior.clone(),
+                    self.additional_info.clone(),
+                )?,
+            ))),
             Some(SessionState::HandshakeInProgress(handshaker)) => {
                 // Completed handshakers are functionally just wrap an
                 // encryptor. In that case the underlying handshaker is
@@ -94,7 +99,7 @@ impl SessionTracker {
     /// Record a session in the tracker. Unlike `pop_or_create_session_state` it does not
     /// normalize session state, instead relying on normalization occuring
     /// at retrieval time.
-    pub fn put_session_state(&mut self, session_id: SessionId, session_state: SessionState) {
+    pub fn put_session_state(&mut self, session_id: SessionId, session_state: SessionState<G, V>) {
         self.known_sessions.put(session_id, session_state);
     }
 }

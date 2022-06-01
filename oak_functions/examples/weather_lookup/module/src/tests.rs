@@ -88,8 +88,6 @@ async fn test_server() {
         // tables for the weather example is computationally expensive.
         constant_processing_time_ms: 200 * 10,
     };
-    let tee_certificate = vec![];
-
     let logger = Logger::for_test();
     let workload_logging_factory =
         WorkloadLoggingFactory::new_boxed_extension_factory(logger.clone())
@@ -119,7 +117,6 @@ async fn test_server() {
         create_and_start_grpc_server(
             &address,
             wasm_handler,
-            tee_certificate,
             policy.clone(),
             get_config_info(&wasm_module_bytes, policy, false, None),
             term,

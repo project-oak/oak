@@ -27,10 +27,7 @@ package(
 proto_library(
     name = "server_proto",
     srcs = ["unary_server.proto"],
-    deps = [
-        "//remote_attestation/proto:remote_attestation_proto",
-        "@com_google_protobuf//:empty_proto",
-    ],
+    deps = [],
 )
 
 java_proto_library(

@@ -17,7 +17,7 @@
 use anyhow::Context;
 use async_trait::async_trait;
 use oak_remote_attestation::handshaker::{
-    AttestationBehavior, ClientHandshaker, Encryptor, ServerIdentityVerifier,
+    AttestationBehavior, AttestationGenerator, AttestationVerifier, ClientHandshaker, Encryptor,
 };
 use oak_remote_attestation_sessions::SessionId;
 
@@ -36,17 +36,13 @@ pub struct GenericAttestationClient<T: UnaryClient> {
 }
 
 impl<T: UnaryClient> GenericAttestationClient<T> {
-    pub async fn create(
+    pub async fn create<G: AttestationGenerator, V: AttestationVerifier>(
         mut client: T,
-        expected_tee_measurement: &[u8],
-        server_verifier: ServerIdentityVerifier,
+        attestation_behavior: AttestationBehavior<G, V>,
     ) -> anyhow::Result<Self> {
         let session_id: SessionId = rand::random();
 
-        let mut handshaker = ClientHandshaker::new(
-            AttestationBehavior::create_peer_attestation(expected_tee_measurement),
-            server_verifier,
-        );
+        let mut handshaker = ClientHandshaker::new(attestation_behavior)?;
         let client_hello = handshaker
             .create_client_hello()
             .context("Couldn't create client hello message")?;

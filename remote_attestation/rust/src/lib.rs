@@ -18,14 +18,8 @@
 
 extern crate alloc;
 
-pub mod proto {
-    #![allow(clippy::return_self_not_must_use)]
-    include!(concat!(env!("OUT_DIR"), "/oak.remote_attestation.rs"));
-}
-
 pub mod crypto;
 pub mod handshaker;
 pub mod message;
-pub mod report;
 #[cfg(test)]
 mod tests;

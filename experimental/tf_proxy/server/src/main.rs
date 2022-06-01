@@ -106,10 +106,9 @@ async fn main() -> anyhow::Result<()> {
 
     Server::builder()
         .add_service(UnarySessionServer::new(AttestationServer::create(
-            Vec::new(),
             request_handler,
             additional_info,
-            ErrorLogger {},
+            ErrorLogger,
         )?))
         .serve(address)
         .await
@@ -159,7 +158,7 @@ async fn wait_for_socket(socket: &str) -> anyhow::Result<()> {
 }
 
 #[derive(Clone)]
-struct ErrorLogger {}
+struct ErrorLogger;
 
 impl LogError for ErrorLogger {
     fn log_error(&self, error: &str) {

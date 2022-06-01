@@ -179,7 +179,6 @@ async fn async_main(
         .and_then(|policy| policy.validate())?;
 
     let address = SocketAddr::from((Ipv6Addr::UNSPECIFIED, opt.http_listen_port));
-    let tee_certificate = vec![];
 
     let config_info = ConfigurationInfo {
         wasm_hash: get_sha256(&wasm_module_bytes).to_vec(),
@@ -193,7 +192,6 @@ async fn async_main(
         create_and_start_grpc_server(
             &address,
             wasm_handler,
-            tee_certificate,
             policy.clone(),
             config_info,
             async { notify_receiver.await.unwrap() },

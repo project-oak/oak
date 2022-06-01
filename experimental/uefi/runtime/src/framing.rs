@@ -18,15 +18,23 @@ use crate::remote_attestation::AttestationHandler;
 use anyhow::Context;
 use channel::{Frame, Framed};
 use ciborium_io::{Read, Write};
+use oak_remote_attestation::handshaker::{
+    AttestationBehavior, AttestationGenerator, AttestationVerifier,
+};
 
 // Processes incoming frames.
-pub fn handle_frames<T>(channel: T) -> anyhow::Result<!>
+pub fn handle_frames<T, G: AttestationGenerator, V: AttestationVerifier>(
+    channel: T,
+    attestation_behavior: AttestationBehavior<G, V>,
+) -> anyhow::Result<!>
 where
     T: Read<Error = anyhow::Error> + Write<Error = anyhow::Error>,
 {
     let wasm_handler = crate::wasm::new_wasm_handler()?;
-    let attestation_handler =
-        &mut AttestationHandler::create(move |v| wasm_handler.handle_raw_invoke(v));
+    let attestation_handler = &mut AttestationHandler::create(
+        move |v| wasm_handler.handle_raw_invoke(v),
+        attestation_behavior,
+    );
     let framed = &mut Framed::new(channel);
     loop {
         let frame = framed.read_frame().context("couldn't receive message")?;

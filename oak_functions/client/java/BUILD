@@ -54,7 +54,6 @@ android_library(
         "//oak_functions/proto:abi_java_proto_lite",
         "//oak_functions/proto:invocation_java_proto_lite",
         "//remote_attestation/java:remote_attestation_android",
-        "//remote_attestation/proto:remote_attestation_java_proto_lite",
         "@com_google_protobuf//:protobuf_javalite",
         "@io_grpc_grpc_java//api",
         "@io_grpc_grpc_java//okhttp",

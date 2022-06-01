@@ -18,6 +18,8 @@
 //! protocol.
 
 use crate::proto::{unary_session_server::UnarySession, UnaryRequest, UnaryResponse};
+use oak_remote_attestation::handshaker::{AttestationBehavior, EmptyAttestationVerifier};
+use oak_remote_attestation_amd::PlaceholderAmdAttestationGenerator;
 use oak_remote_attestation_sessions::{SessionId, SessionState, SessionTracker};
 use oak_utils::LogError;
 use std::{convert::TryInto, sync::Mutex};
@@ -33,7 +35,8 @@ pub struct AttestationServer<F, L: LogError> {
     /// Error logging function that is required for logging attestation protocol errors.
     /// Errors are only logged on server side and are not sent to clients.
     error_logger: L,
-    session_tracker: Mutex<SessionTracker>,
+    session_tracker:
+        Mutex<SessionTracker<PlaceholderAmdAttestationGenerator, EmptyAttestationVerifier>>,
 }
 
 impl<F, S, L> AttestationServer<F, L>
@@ -43,14 +46,16 @@ where
     L: Send + Sync + Clone + LogError,
 {
     pub fn create(
-        tee_certificate: Vec<u8>,
         request_handler: F,
         additional_info: Vec<u8>,
         error_logger: L,
     ) -> anyhow::Result<Self> {
         let session_tracker = Mutex::new(SessionTracker::create(
             SESSIONS_CACHE_SIZE,
-            tee_certificate,
+            AttestationBehavior::create(
+                PlaceholderAmdAttestationGenerator,
+                EmptyAttestationVerifier,
+            ),
             additional_info,
         ));
         Ok(Self {
