@@ -44,8 +44,6 @@ struct Proxy {
     pub backend_uri: http::Uri,
     /// `hyper::Client` used to connect to the backend application.
     pub client: Client<hyper::client::HttpConnector>,
-    /// PEM encoded X.509 certificate that signs TEE firmware key.
-    pub tee_certificate: Vec<u8>,
     /// Client and server keying material exported from current TLS session.
     pub keying_material_bundle: KeyingMaterialBundle,
     /// Status of the current TLS session.
@@ -58,13 +56,11 @@ impl Proxy {
     fn new(
         backend_uri: http::Uri,
         client: Client<hyper::client::HttpConnector>,
-        tee_certificate: Vec<u8>,
         keying_material_bundle: KeyingMaterialBundle,
     ) -> Self {
         Self {
             backend_uri,
             client,
-            tee_certificate,
             keying_material_bundle,
             connection_status: Arc::new(Mutex::new(ConnectionStatus::NotAttested)),
         }
@@ -91,11 +87,8 @@ impl Proxy {
     }
 
     fn generate_server_assertion(&self) -> anyhow::Result<String> {
-        let assertion = Assertion::generate(
-            &self.tee_certificate,
-            self.keying_material_bundle.server_keying_material.clone(),
-        )
-        .context("Couldn't generate server assertion")?;
+        let assertion = Assertion::generate(&self.keying_material_bundle.server_keying_material)
+            .context("Couldn't generate server assertion")?;
         assertion
             .to_string()
             .context("Couldn't serialize server assertion")
@@ -173,7 +166,6 @@ pub async fn run_server(
     address: &str,
     private_key: rustls::PrivateKey,
     certificate: rustls::Certificate,
-    tee_certificate: Vec<u8>,
     backend_uri: Uri,
 ) -> anyhow::Result<()> {
     // Configure TLS settings.
@@ -223,7 +215,6 @@ pub async fn run_server(
         let proxy = Arc::new(Proxy::new(
             backend_uri.clone(),
             client.clone(),
-            tee_certificate.to_vec(),
             keying_material_bundle,
         ));
 

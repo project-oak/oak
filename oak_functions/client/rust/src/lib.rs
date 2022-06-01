@@ -18,10 +18,8 @@ pub mod proto {
     tonic::include_proto!("oak.session.unary.v1");
 }
 
-pub mod attestation;
 pub mod rekor;
 
-use crate::attestation::{into_server_identity_verifier, ConfigurationVerifier};
 use anyhow::Context;
 use grpc_unary_attestation::client::AttestationClient;
 use oak_functions_abi::proto::{Request, Response};
@@ -30,22 +28,15 @@ use prost::Message;
 #[cfg(test)]
 mod tests;
 
-// TODO(#1867): Add remote attestation support.
-const TEE_MEASUREMENT: &[u8] = br"Test TEE measurement";
-
 pub struct Client {
     inner: AttestationClient,
 }
 
 impl Client {
-    pub async fn new(uri: &str, verifier: ConfigurationVerifier) -> anyhow::Result<Self> {
-        let inner = AttestationClient::create(
-            uri,
-            TEE_MEASUREMENT,
-            into_server_identity_verifier(verifier),
-        )
-        .await
-        .context("Could not create Oak Functions client")?;
+    pub async fn new(uri: &str) -> anyhow::Result<Self> {
+        let inner = AttestationClient::create(uri)
+            .await
+            .context("Could not create Oak Functions client")?;
         Ok(Client { inner })
     }
 

@@ -63,7 +63,6 @@ pub fn create_wasm_handler(
 pub async fn create_and_start_grpc_server<F: Future<Output = ()>>(
     address: &SocketAddr,
     wasm_handler: WasmHandler,
-    tee_certificate: Vec<u8>,
     policy: ServerPolicy,
     config_info: ConfigurationInfo,
     terminate: F,
@@ -86,7 +85,6 @@ pub async fn create_and_start_grpc_server<F: Future<Output = ()>>(
     let grpc_unary_attestation_service =
         grpc_unary_attestation::proto::unary_session_server::UnarySessionServer::new(
             grpc_unary_attestation::server::AttestationServer::create(
-                tee_certificate,
                 request_handler,
                 additional_info,
                 ErrorLogger { logger },

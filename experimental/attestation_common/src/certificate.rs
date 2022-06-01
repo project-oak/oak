@@ -14,12 +14,10 @@
 // limitations under the License.
 //
 
-use crate::{
-    get_sha256,
-    report::{AttestationInfo, Report},
-};
+use crate::{get_sha256, report::to_x509_extension};
 use anyhow::Context;
 use log::info;
+use oak_remote_attestation_amd::PlaceholderAmdReport;
 use openssl::{
     asn1::Asn1Time,
     bn::{BigNum, MsbOption},
@@ -53,9 +51,7 @@ const DEFAULT_DNS_NAME: &str = "localhost";
 /// Indicates whether to add a custom TEE extension to a certificate.
 #[derive(PartialEq)]
 pub enum AddTeeExtension {
-    /// Enum value contains a PEM encoded TEE Provider's X.509 certificate that signs TEE firmware
-    /// key.
-    Yes(Vec<u8>),
+    Yes,
     No,
 }
 
@@ -108,8 +104,8 @@ impl CertificateAuthority {
         builder.add_subject_alt_name_extension()?;
 
         // Bind the certificate to the TEE firmware using an X.509 TEE extension.
-        if let AddTeeExtension::Yes(tee_certificate) = add_tee_extension {
-            builder.add_tee_extension(key_pair, tee_certificate)?;
+        if add_tee_extension == AddTeeExtension::Yes {
+            builder.add_tee_extension(key_pair)?;
         }
 
         let certificate = builder.build(key_pair)?;
@@ -142,8 +138,8 @@ impl CertificateAuthority {
         builder.add_extensions(request.extensions()?)?;
 
         // Bind the certificate to the TEE firmware using an X.509 TEE extension.
-        if let AddTeeExtension::Yes(tee_certificate) = add_tee_extension {
-            builder.add_tee_extension(request.public_key()?.as_ref(), tee_certificate)?;
+        if add_tee_extension == AddTeeExtension::Yes {
+            builder.add_tee_extension(request.public_key()?.as_ref())?;
         }
 
         let certificate = builder.build(&self.key_pair)?;
@@ -289,22 +285,15 @@ impl CertificateBuilder {
 
     // Generates a TEE report with the public key hash as data and add it to the certificate as a
     // custom extension. This is required to bind the certificate to the TEE firmware.
-    fn add_tee_extension<T>(
-        &mut self,
-        public_key: &PKeyRef<T>,
-        tee_certificate: Vec<u8>,
-    ) -> anyhow::Result<&mut Self>
+    fn add_tee_extension<T>(&mut self, public_key: &PKeyRef<T>) -> anyhow::Result<&mut Self>
     where
         T: HasPublic,
     {
         let public_key_hash = get_sha256(&public_key.public_key_to_der()?);
-        let tee_report = Report::new(&public_key_hash);
-        let attestation_info = AttestationInfo {
-            report: tee_report,
-            certificate: tee_certificate,
-        };
-        let tee_extension = attestation_info.to_extension()?;
-        self.builder.append_extension(tee_extension)?;
+        let attestation_report = PlaceholderAmdReport::new(&public_key_hash);
+        let attestation_report_extension = to_x509_extension(&attestation_report.to_string()?)?;
+        self.builder
+            .append_extension(attestation_report_extension)?;
         Ok(self)
     }
 

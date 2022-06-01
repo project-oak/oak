@@ -1,0 +1,14 @@
+[package]
+name = "oak_remote_attestation_amd"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+
+[dependencies]
+anyhow = { version = "*", default-features = false }
+oak_remote_attestation = { path = "../remote_attestation/rust", default-features = false }
+serde = { version = "*", default-features = false, features = [
+  "alloc",
+  "derive"
+] }
+serde_json = "*"

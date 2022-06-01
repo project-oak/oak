@@ -462,6 +462,7 @@ dependencies = [
  "libm",
  "linked_list_allocator",
  "log",
+ "oak_remote_attestation",
  "runtime",
  "rust-hypervisor-firmware-boot",
  "strum",
@@ -628,10 +629,7 @@ dependencies = [
  "bytes",
  "getrandom",
  "hkdf",
- "log",
  "p256",
- "prost",
- "prost-build",
  "rand_core",
  "sha2 0.10.2",
  "signature",
@@ -836,6 +834,7 @@ dependencies = [
  "oak_functions_wasm",
  "oak_functions_workload_logging",
  "oak_logger",
+ "oak_remote_attestation",
  "oak_remote_attestation_sessions",
 ]
 

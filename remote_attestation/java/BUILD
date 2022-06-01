@@ -32,9 +32,7 @@ java_library(
         "src/com/google/oak/remote_attestation/SignatureVerifier.java",
     ],
     deps = [
-        "//remote_attestation/proto:remote_attestation_java_proto",
         "@com_google_guava_guava",
-        "@com_google_protobuf//:protobuf_javalite",
         "@tink_java//src/main/java/com/google/crypto/tink/subtle:aes_gcm_jce",
         "@tink_java//src/main/java/com/google/crypto/tink/subtle:ecdsa_verify_jce",
         "@tink_java//src/main/java/com/google/crypto/tink/subtle:elliptic_curves",
@@ -55,9 +53,7 @@ android_library(
         "src/com/google/oak/remote_attestation/SignatureVerifier.java",
     ],
     deps = [
-        "//remote_attestation/proto:remote_attestation_java_proto_lite",
         "@com_google_guava_guava",
-        "@com_google_protobuf//:protobuf_javalite",
         "@tink_java//src/main/java/com/google/crypto/tink/subtle:aes_gcm_jce",
         "@tink_java//src/main/java/com/google/crypto/tink/subtle:ecdsa_verify_jce",
         "@tink_java//src/main/java/com/google/crypto/tink/subtle:elliptic_curves",

@@ -24,6 +24,9 @@
 #![test_runner(crate::test_runner)]
 #![reexport_test_harness_main = "test_main"]
 
+use oak_remote_attestation::handshaker::{
+    AttestationBehavior, EmptyAttestationGenerator, EmptyAttestationVerifier,
+};
 use runtime::framing;
 use uefi::{prelude::*, table::runtime::ResetType};
 
@@ -66,7 +69,11 @@ fn main(handle: Handle, system_table: &mut SystemTable<Boot>) -> Status {
 
     let serial =
         serial::Serial::get(handle, system_table.boot_services(), ECHO_SERIAL_PORT_INDEX).unwrap();
-    framing::handle_frames(serial).unwrap();
+    framing::handle_frames(
+        serial,
+        AttestationBehavior::create(EmptyAttestationGenerator, EmptyAttestationVerifier),
+    )
+    .unwrap();
 }
 
 #[cfg(test)]

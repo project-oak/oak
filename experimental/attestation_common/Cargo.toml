@@ -12,6 +12,8 @@ path = "src/lib.rs"
 [dependencies]
 anyhow = "*"
 log = "*"
+oak_remote_attestation = { path = "../../remote_attestation/rust" }
+oak_remote_attestation_amd = { path = "../../oak_remote_attestation_amd" }
 openssl = "*"
 ring = "*"
 rustls = "*"
@@ -19,6 +21,3 @@ serde = { version = "*", features = ["derive"] }
 serde_json = "*"
 sha2 = "*"
 x509-parser = "*"
-
-[dev-dependencies]
-assert_matches = "*"

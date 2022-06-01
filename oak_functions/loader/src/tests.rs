@@ -149,8 +149,6 @@ where
         logger.clone(),
     );
     lookup_data_refresher.refresh().await.unwrap();
-    let tee_certificate = vec![];
-
     let workload_logging_factory =
         WorkloadLoggingFactory::new_boxed_extension_factory(logger.clone())
             .expect("could not create WorkloadLoggingFactory");
@@ -167,7 +165,6 @@ where
         create_and_start_grpc_server(
             &address,
             wasm_handler,
-            tee_certificate,
             policy.clone(),
             get_config_info(&wasm_module_bytes, policy, false, None),
             term,

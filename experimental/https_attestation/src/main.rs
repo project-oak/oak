@@ -117,8 +117,6 @@ async fn main() -> anyhow::Result<()> {
         load_private_key(&opt.https_private_key).context("Couldn't load private key")?;
     let certificate =
         load_certificate(&opt.https_certificate).context("Couldn't load HTTPS certificate")?;
-    let tee_certificate =
-        std::fs::read(&opt.tee_certificate).context("Couldn't load TEE certificate")?;
     let backend_uri = opt
         .backend_uri
         .parse()
@@ -132,7 +130,6 @@ async fn main() -> anyhow::Result<()> {
         &opt.https_listen_address,
         private_key,
         certificate,
-        tee_certificate,
         backend_uri,
     );
     tokio::select!(

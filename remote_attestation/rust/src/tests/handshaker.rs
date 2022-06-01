@@ -15,52 +15,66 @@
 //
 
 use crate::{
-    crypto::Signer,
+    crypto::{get_sha256, SHA256_HASH_LENGTH},
     handshaker::{
-        create_attestation_info, verify_attestation_info, AttestationBehavior, ClientHandshaker,
-        ServerHandshaker,
+        hash_concat_hash, AttestationBehavior, AttestationGenerator, AttestationVerifier,
+        ClientHandshaker, ServerHandshaker,
     },
     tests::message::INVALID_MESSAGE_HEADER,
 };
-use alloc::{boxed::Box, sync::Arc, vec};
+use alloc::{sync::Arc, vec};
 use assert_matches::assert_matches;
 
-const TEE_MEASUREMENT: &str = "Test TEE measurement";
 const DATA: [u8; 10] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
 
-fn create_handshakers() -> (ClientHandshaker, ServerHandshaker) {
+/// An attestation generator that simply uses the provided data as the attestation itself (no
+/// signature or any other verification is performed).
+#[derive(Clone)]
+struct TestAttestationGenerator;
+
+impl AttestationGenerator for TestAttestationGenerator {
+    fn generate_attestation(&self, attested_data: &[u8]) -> anyhow::Result<vec::Vec<u8>> {
+        Ok(attested_data.to_vec())
+    }
+}
+
+#[derive(Clone)]
+struct TestAttestationVerifier;
+
+impl AttestationVerifier for TestAttestationVerifier {
+    fn verify_attestation(
+        &self,
+        attestation: &[u8],
+        expected_attested_data: &[u8],
+    ) -> anyhow::Result<()> {
+        if attestation == expected_attested_data {
+            Ok(())
+        } else {
+            Err(anyhow::anyhow!(
+                "invalid attested data; got: {:?}, expected: {:?}",
+                attestation,
+                expected_attested_data
+            ))
+        }
+    }
+}
+
+fn create_handshakers() -> (
+    ClientHandshaker<TestAttestationGenerator, TestAttestationVerifier>,
+    ServerHandshaker<TestAttestationGenerator, TestAttestationVerifier>,
+) {
     let bidirectional_attestation =
-        AttestationBehavior::create_bidirectional_attestation(&[], TEE_MEASUREMENT.as_bytes())
-            .unwrap();
-    let client_handshaker = ClientHandshaker::new(
-        bidirectional_attestation,
-        Box::new(|server_identity| {
-            if !server_identity.additional_info.is_empty() {
-                Ok(())
-            } else {
-                anyhow::bail!("No additional info provided.")
-            }
-        }),
-    );
+        AttestationBehavior::create(TestAttestationGenerator, TestAttestationVerifier);
+    let client_handshaker = ClientHandshaker::new(bidirectional_attestation).unwrap();
 
     let bidirectional_attestation =
-        AttestationBehavior::create_bidirectional_attestation(&[], TEE_MEASUREMENT.as_bytes())
-            .unwrap();
+        AttestationBehavior::create(TestAttestationGenerator, TestAttestationVerifier);
 
     let additional_info = br"Additional Info".to_vec();
     let server_handshaker =
-        ServerHandshaker::new(bidirectional_attestation, Arc::new(additional_info));
+        ServerHandshaker::new(bidirectional_attestation, Arc::new(additional_info)).unwrap();
 
     (client_handshaker, server_handshaker)
-}
-
-#[test]
-fn test_create_attestation_behavior() {
-    let self_attestation = AttestationBehavior::create_self_attestation(&[]);
-    assert_matches!(self_attestation, Ok(_));
-
-    let bidirectional_attestation = AttestationBehavior::create_bidirectional_attestation(&[], &[]);
-    assert_matches!(bidirectional_attestation, Ok(_));
 }
 
 #[test]
@@ -213,13 +227,28 @@ fn test_replay_client_identity() {
 }
 
 #[test]
-fn test_attestation_info_roundtrip() {
-    let signer = Signer::create().expect("could not create signer");
-    let additional_info = br"Additional info";
-    let tee_certificate = br"TEE certificate";
-    let attestation_info = create_attestation_info(&signer, additional_info, tee_certificate)
-        .expect("could not create attestation info.");
+fn test_hash_concat_hash() {
+    // A naive (and insecure) version of a combined hash that just concatenates the values directly
+    // and hash the resulting value.
+    fn naive_concat_hash(values: &[&[u8]]) -> [u8; SHA256_HASH_LENGTH] {
+        get_sha256(
+            &values
+                .iter()
+                .flat_map(|v| v.to_vec())
+                .collect::<vec::Vec<_>>(),
+        )
+    }
 
-    let result = verify_attestation_info(attestation_info.as_ref(), TEE_MEASUREMENT.as_bytes());
-    assert!(result.is_ok());
+    let a = &[[1, 1, 1].as_ref(), [2, 2, 2].as_ref()];
+
+    // A single element is moved from the second value to the first, such that the concatenation of
+    // the values remains the same.
+    let b = &[[1, 1, 1, 2].as_ref(), [2, 2].as_ref()];
+
+    // Using the naive function, these two inputs, which are obviously different, hash to the same
+    // value, causing a collision.
+    assert_eq!(naive_concat_hash(a), naive_concat_hash(b));
+
+    // Using the proper function, the attack does not work.
+    assert_ne!(hash_concat_hash(a), hash_concat_hash(b));
 }

@@ -22,6 +22,8 @@ use crate::proto::{UnaryRequest, UnaryResponse};
 use anyhow::Context;
 use async_trait::async_trait;
 use oak_functions_abi::proto::Response;
+use oak_remote_attestation::handshaker::{AttestationBehavior, EmptyAttestationGenerator};
+use oak_remote_attestation_amd::PlaceholderAmdAttestationVerifier;
 use oak_remote_attestation_sessions::SessionId;
 use oak_remote_attestation_sessions_client::{GenericAttestationClient, UnaryClient};
 use prost::Message;
@@ -37,9 +39,6 @@ mod proto {
     #![allow(clippy::return_self_not_must_use)]
     include!(concat!(env!("OUT_DIR"), "/oak.session.unary.v1.rs"));
 }
-
-// TODO(#1867): Add remote attestation support.
-const TEE_MEASUREMENT: &[u8] = br"Test TEE measurement";
 
 /// gRPC-web implementation of a [`UnaryClient`].
 struct GrpcWebClient {
@@ -88,14 +87,10 @@ impl WebClient {
         let grpc_web_client = GrpcWebClient::create(&uri);
         let inner = GenericAttestationClient::create(
             grpc_web_client,
-            TEE_MEASUREMENT,
-            Box::new(|server_identity| {
-                if !server_identity.additional_info.is_empty() {
-                    Ok(())
-                } else {
-                    anyhow::bail!("No additional info provided.")
-                }
-            }),
+            AttestationBehavior::create(
+                EmptyAttestationGenerator,
+                PlaceholderAmdAttestationVerifier,
+            ),
         )
         .await
         .context("Could not create Oak Functions client")
