@@ -31,6 +31,7 @@ sourcesIndex["oak_functions_testing_extension"] = {"name":"","files":["lib.rs"]}
 sourcesIndex["oak_functions_tf_inference"] = {"name":"","files":["lib.rs"]};
 sourcesIndex["oak_functions_util"] = {"name":"","files":["lib.rs","sync.rs"]};
 sourcesIndex["oak_functions_wasm"] = {"name":"","files":["lib.rs"]};
+sourcesIndex["oak_functions_web_client"] = {"name":"","files":["grpc_web.rs","lib.rs"]};
 sourcesIndex["oak_functions_workload_logging"] = {"name":"","files":["lib.rs"]};
 sourcesIndex["oak_https_attestation"] = {"name":"","files":["main.rs","server.rs"]};
 sourcesIndex["oak_idl"] = {"name":"","files":["lib.rs","utils.rs"]};

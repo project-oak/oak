@@ -105,6 +105,8 @@
 <span id="100">100</span>
 <span id="101">101</span>
 <span id="102">102</span>
+<span id="103">103</span>
+<span id="104">104</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2022 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -128,8 +130,10 @@
 };
 <span class="kw">use</span> <span class="ident">oak_remote_attestation_sessions::SessionId</span>;
 
-<span class="attribute">#[<span class="ident">async_trait</span>]</span>
 <span class="doccomment">/// Abstract version of networking stub.</span>
+<span class="comment">// Async trait requires the definition and all implementations to be marked as</span>
+<span class="comment">// optionally [`Send`] if one implementation is not.</span>
+<span class="attribute">#[<span class="ident">async_trait</span>(<span class="question-mark">?</span><span class="ident">Send</span>)]</span>
 <span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">UnaryClient</span> {
     <span class="doccomment">/// Constructs a requests, sends it over the network, and returns the result.</span>
     <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">message</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">session_id</span>: <span class="ident">SessionId</span>, <span class="ident">body</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span>;

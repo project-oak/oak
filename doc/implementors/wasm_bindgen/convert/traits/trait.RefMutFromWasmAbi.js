@@ -1,0 +1,3 @@
+(function() {var implementors = {};
+implementors["oak_functions_web_client"] = [{"text":"impl <a class=\"trait\" href=\"https://docs.rs/wasm-bindgen/0.2/wasm_bindgen/convert/traits/trait.RefMutFromWasmAbi.html\" title=\"trait wasm_bindgen::convert::traits::RefMutFromWasmAbi\">RefMutFromWasmAbi</a> for <a class=\"struct\" href=\"oak_functions_web_client/struct.WebClient.html\" title=\"struct oak_functions_web_client::WebClient\">WebClient</a>","synthetic":false,"types":["oak_functions_web_client::WebClient"]}];
+if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()
