@@ -20,7 +20,10 @@
 // protocol.
 
 #[cfg(not(any(feature = "ring-crypto", feature = "rust-crypto")))]
-compile_error!("A cryptographic implementation must be specified.");
+compile_error!("At least one cryptographic implementation must be specified.");
+
+#[cfg(all(feature = "ring-crypto", feature = "rust-crypto"))]
+compile_error!("At most one cryptographic implementation must be specified.");
 
 // When both implementations are selected (e.g. when testing with all features) we use the `ring`
 // implementation.

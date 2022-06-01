@@ -9,15 +9,30 @@ license = "Apache-2.0"
 default = ["ring-crypto"]
 std = ["anyhow/std"]
 ring-crypto = ["ring"]
-rust-crypto = ["aes-gcm", "hkdf", "p256", "sha2", "signature", "x25519-dalek"]
+rust-crypto = [
+  "aes-gcm",
+  "hkdf",
+  "p256",
+  "getrandom/rdrand",
+  "rand_core",
+  "sha2",
+  "signature",
+  "x25519-dalek"
+]
 
 [dependencies]
 aes-gcm = { version = "*", optional = true }
 anyhow = { version = "*", default-features = false }
 bytes = { version = "*", default-features = false }
+getrandom = { version = "*", optional = true }
 hkdf = { version = "*", optional = true }
 p256 = { version = "*", default-features = false, optional = true, features = [
   "ecdsa"
+] }
+# Restrict the rand_core to a version that is compatible with x25519-dalek.
+rand_core = { version = "*", optional = true, default-features = false, features = [
+  "alloc",
+  "getrandom"
 ] }
 ring = { path = "../../third_party/ring", default-features = false, optional = true }
 sha2 = { version = "*", optional = true, default-features = false }

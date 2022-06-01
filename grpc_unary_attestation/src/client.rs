@@ -17,7 +17,9 @@
 use crate::proto::{unary_session_client::UnarySessionClient, UnaryRequest};
 use anyhow::Context;
 use async_trait::async_trait;
-use oak_remote_attestation::handshaker::{AttestationBehavior, EmptyAttestationGenerator};
+use oak_remote_attestation::handshaker::{
+    AttestationBehavior, AttestationVerifier, EmptyAttestationGenerator,
+};
 use oak_remote_attestation_amd::PlaceholderAmdAttestationVerifier;
 use oak_remote_attestation_sessions::SessionId;
 use oak_remote_attestation_sessions_client::{GenericAttestationClient, UnaryClient};
@@ -64,14 +66,23 @@ pub struct AttestationClient {
 }
 
 impl AttestationClient {
+    /// Create an [`AttestationClient`] with a [`PlaceholderAmdAttestationVerifier`].
     pub async fn create(uri: &str) -> anyhow::Result<Self> {
+        Self::create_with_attestation_verifier(uri, PlaceholderAmdAttestationVerifier).await
+    }
+
+    /// Create an [`AttestationClient`] with the provided [`AttestationVerifier`].
+    ///
+    /// Clients don't usually generate attestations, so this method implies an
+    /// [`EmptyAttestationGenerator`].
+    pub async fn create_with_attestation_verifier<V: AttestationVerifier>(
+        uri: &str,
+        attestation_verifier: V,
+    ) -> anyhow::Result<Self> {
         let grpc_client = GrpcClient::create(uri).await?;
         let inner = GenericAttestationClient::create(
             grpc_client,
-            AttestationBehavior::create(
-                EmptyAttestationGenerator,
-                PlaceholderAmdAttestationVerifier,
-            ),
+            AttestationBehavior::create(EmptyAttestationGenerator, attestation_verifier),
         )
         .await?;
 
