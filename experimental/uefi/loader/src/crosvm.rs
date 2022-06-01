@@ -41,11 +41,17 @@ pub struct Crosvm {
     instance: tokio::process::Child,
 }
 
+/// A wrapper for a vsock stream that can be used as a communication channel between the loader and
+/// the guest VM.
+///
+/// The vsock channel can only be created after the VM is booted, so we start without a stream and
+/// only connect later when we try to use it for the first time.
 pub struct VsockStreamChannel {
     stream: Option<VsockStream>,
 }
 
 impl VsockStreamChannel {
+    /// Ensures that the inner stream is connected to the VM.
     fn ensure_stream(&mut self) -> std::io::Result<()> {
         if self.stream.is_none() {
             let stream = VsockStream::connect_with_cid_port(VSOCK_GUEST_CID, VSOCK_GUEST_PORT)?;

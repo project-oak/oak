@@ -38,8 +38,13 @@ pub struct Params {
 pub trait Vmm {
     /// Waits for the guest VM to finish.
     async fn wait(&mut self) -> Result<std::process::ExitStatus>;
+
     /// Kills the guest VM.
     async fn kill(self: Box<Self>) -> Result<std::process::ExitStatus>;
+
     /// Creates a channel to communicate with the VM.
+    ///
+    /// Since different VMMs might use different comms channels, we leave it up to the VMM to create
+    /// the channel rather than passing it in as part of the parameters.
     fn create_comms_channel(&self) -> Result<Box<dyn ReadWrite>>;
 }
