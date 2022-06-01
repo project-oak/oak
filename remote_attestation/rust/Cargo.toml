@@ -19,6 +19,7 @@ rust-crypto = [
   "signature",
   "x25519-dalek"
 ]
+web = ["rust-crypto", "getrandom/js"]
 
 [dependencies]
 aes-gcm = { version = "*", optional = true }

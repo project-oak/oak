@@ -21,6 +21,7 @@ members = [
   "experimental/uefi/loader",
   "experimental/uefi/runtime",
   "experimental/virtio",
+  "experimental/web_client",
   "oak_functions/abi",
   "oak_functions/client/rust",
   "oak_functions/examples/benchmark/module",

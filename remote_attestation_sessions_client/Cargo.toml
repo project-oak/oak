@@ -9,6 +9,7 @@ license = "Apache-2.0"
 default = ["ring-crypto"]
 ring-crypto = ["oak_remote_attestation/ring-crypto"]
 rust-crypto = ["oak_remote_attestation/rust-crypto"]
+web = ["oak_remote_attestation/web"]
 
 [dependencies]
 anyhow = { version = "*", default-features = false }

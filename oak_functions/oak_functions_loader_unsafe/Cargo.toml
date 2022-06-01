@@ -12,7 +12,7 @@ humantime-serde = "*"
 log = { version = "*" }
 oak_functions_abi = { path = "../abi" }
 oak_functions_extension = { path = "../extension" }
-oak_functions_loader = { path = "../loader" }
+oak_functions_loader = { path = "../loader", features = ["oak-web"] }
 oak_logger = { path = "../logger" }
 oak_functions_tf_inference = { path = "../experimental/tf_inference" }
 oak_functions_metrics = { path = "../experimental/metrics" }
