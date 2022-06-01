@@ -65,13 +65,9 @@ where
 {
     let mut buf = BytesMut::with_capacity(1024);
 
-    // first skip past the header
-    // cannot write it yet since we don't know the size of the
-    // encoded message
+    // first skip past the header by writing placeholder bytes
     buf.reserve(GRPC_HEADER_SIZE);
-    unsafe {
-        buf.advance_mut(GRPC_HEADER_SIZE);
-    }
+    buf.put_bytes(0, GRPC_HEADER_SIZE);
 
     // write the message
     msg.encode(&mut buf)
