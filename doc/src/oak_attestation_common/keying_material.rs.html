@@ -140,13 +140,6 @@
 <span id="135">135</span>
 <span id="136">136</span>
 <span id="137">137</span>
-<span id="138">138</span>
-<span id="139">139</span>
-<span id="140">140</span>
-<span id="141">141</span>
-<span id="142">142</span>
-<span id="143">143</span>
-<span id="144">144</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2021 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -163,8 +156,11 @@
 <span class="comment">// limitations under the License.</span>
 <span class="comment">//</span>
 
-<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::report</span>::{<span class="ident">AttestationInfo</span>, <span class="ident">Report</span>};
-<span class="kw">use</span> <span class="ident">anyhow</span>::{<span class="ident">anyhow</span>, <span class="ident">Context</span>};
+<span class="kw">use</span> <span class="ident">anyhow::Context</span>;
+<span class="kw">use</span> <span class="ident">oak_remote_attestation::handshaker</span>::{<span class="ident">AttestationGenerator</span>, <span class="ident">AttestationVerifier</span>};
+<span class="kw">use</span> <span class="ident">oak_remote_attestation_amd</span>::{
+    <span class="ident">PlaceholderAmdAttestationGenerator</span>, <span class="ident">PlaceholderAmdAttestationVerifier</span>,
+};
 <span class="kw">use</span> <span class="ident">serde</span>::{<span class="ident">Deserialize</span>, <span class="ident">Serialize</span>};
 
 <span class="kw">const</span> <span class="ident">KEYING_MATERIAL_PURPOSE</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;TLSAttestationV1&quot;</span>;
@@ -179,41 +175,31 @@
 <span class="doccomment">/// Assertion used for remote attestation.</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Serialize</span>, <span class="ident">Deserialize</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Assertion</span> {
-    <span class="ident">attestation_info</span>: <span class="ident">AttestationInfo</span>,
+    <span class="ident">attestation_report</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">Assertion</span> {
     <span class="doccomment">/// Generates assertion by putting `keying_material` into a TEE report and attaching</span>
     <span class="doccomment">/// `tee_certificate` used to verify the correctness of the TEE report.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">generate</span>(
-        <span class="ident">tee_certificate</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>],
-        <span class="ident">keying_material</span>: <span class="ident">KeyingMaterial</span>,
-    ) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">generate</span>(<span class="ident">keying_material</span>: <span class="kw-2">&amp;</span><span class="ident">KeyingMaterial</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">attestation_generator</span> <span class="op">=</span> <span class="ident">PlaceholderAmdAttestationGenerator</span>;
         <span class="kw">let</span> <span class="ident">serialized_keying_material</span> <span class="op">=</span> <span class="ident">serde_json::to_string</span>(<span class="kw-2">&amp;</span><span class="ident">keying_material</span>)
             .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t serialize keying material&quot;</span>)<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">tee_report</span> <span class="op">=</span> <span class="ident">Report::new</span>(<span class="ident">serialized_keying_material</span>.<span class="ident">as_bytes</span>());
-        <span class="kw">let</span> <span class="ident">attestation_info</span> <span class="op">=</span> <span class="ident">AttestationInfo</span> {
-            <span class="ident">report</span>: <span class="ident">tee_report</span>,
-            <span class="ident">certificate</span>: <span class="ident">tee_certificate</span>.<span class="ident">to_vec</span>(),
-        };
-
-        <span class="prelude-val">Ok</span>(<span class="self">Self</span> { <span class="ident">attestation_info</span> })
+        <span class="kw">let</span> <span class="ident">attestation_report</span> <span class="op">=</span>
+            <span class="ident">attestation_generator</span>.<span class="ident">generate_attestation</span>(<span class="ident">serialized_keying_material</span>.<span class="ident">as_bytes</span>())<span class="question-mark">?</span>;
+        <span class="prelude-val">Ok</span>(<span class="self">Self</span> { <span class="ident">attestation_report</span> })
     }
 
     <span class="doccomment">/// Verify remote attestation assertion by verifying the TEE report and checking that it</span>
     <span class="doccomment">/// contains `expected_keying_material`.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">verify</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">expected_keying_material</span>: <span class="kw-2">&amp;</span><span class="ident">KeyingMaterial</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">attestation_info</span>
-            .<span class="ident">verify</span>()
-            .<span class="ident">context</span>(<span class="string">&quot;Incorrect attestation info&quot;</span>)<span class="question-mark">?</span>;
-
+        <span class="kw">let</span> <span class="ident">attestation_verifier</span> <span class="op">=</span> <span class="ident">PlaceholderAmdAttestationVerifier</span>;
         <span class="kw">let</span> <span class="ident">serialized_expected_keying_material</span> <span class="op">=</span> <span class="ident">serde_json::to_string</span>(<span class="ident">expected_keying_material</span>)
             .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t serialize keying material&quot;</span>)<span class="question-mark">?</span>;
-        <span class="kw">if</span> <span class="ident">serialized_expected_keying_material</span>.<span class="ident">as_bytes</span>() <span class="op">==</span> <span class="self">self</span>.<span class="ident">attestation_info</span>.<span class="ident">report</span>.<span class="ident">data</span> {
-            <span class="prelude-val">Ok</span>(())
-        } <span class="kw">else</span> {
-            <span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">&quot;Incorrect keying material&quot;</span>))
-        }
+        <span class="ident">attestation_verifier</span>.<span class="ident">verify_attestation</span>(
+            <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">attestation_report</span>,
+            <span class="ident">serialized_expected_keying_material</span>.<span class="ident">as_bytes</span>(),
+        )
     }
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">from_string</span>(<span class="ident">input</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {

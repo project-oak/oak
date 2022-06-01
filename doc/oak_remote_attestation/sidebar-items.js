@@ -1,1 +1,1 @@
-initSidebarItems({"mod":[["crypto",""],["handshaker",""],["message",""],["proto",""],["report",""]]});
+initSidebarItems({"mod":[["crypto",""],["handshaker",""],["message",""]]});

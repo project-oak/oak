@@ -237,15 +237,6 @@
 <span id="232">232</span>
 <span id="233">233</span>
 <span id="234">234</span>
-<span id="235">235</span>
-<span id="236">236</span>
-<span id="237">237</span>
-<span id="238">238</span>
-<span id="239">239</span>
-<span id="240">240</span>
-<span id="241">241</span>
-<span id="242">242</span>
-<span id="243">243</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2021 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -292,8 +283,6 @@
     <span class="kw">pub</span> <span class="ident">backend_uri</span>: <span class="ident">http::Uri</span>,
     <span class="doccomment">/// `hyper::Client` used to connect to the backend application.</span>
     <span class="kw">pub</span> <span class="ident">client</span>: <span class="ident">Client</span><span class="op">&lt;</span><span class="ident">hyper::client::HttpConnector</span><span class="op">&gt;</span>,
-    <span class="doccomment">/// PEM encoded X.509 certificate that signs TEE firmware key.</span>
-    <span class="kw">pub</span> <span class="ident">tee_certificate</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
     <span class="doccomment">/// Client and server keying material exported from current TLS session.</span>
     <span class="kw">pub</span> <span class="ident">keying_material_bundle</span>: <span class="ident">KeyingMaterialBundle</span>,
     <span class="doccomment">/// Status of the current TLS session.</span>
@@ -306,13 +295,11 @@
     <span class="kw">fn</span> <span class="ident">new</span>(
         <span class="ident">backend_uri</span>: <span class="ident">http::Uri</span>,
         <span class="ident">client</span>: <span class="ident">Client</span><span class="op">&lt;</span><span class="ident">hyper::client::HttpConnector</span><span class="op">&gt;</span>,
-        <span class="ident">tee_certificate</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
         <span class="ident">keying_material_bundle</span>: <span class="ident">KeyingMaterialBundle</span>,
     ) -&gt; <span class="self">Self</span> {
         <span class="self">Self</span> {
             <span class="ident">backend_uri</span>,
             <span class="ident">client</span>,
-            <span class="ident">tee_certificate</span>,
             <span class="ident">keying_material_bundle</span>,
             <span class="ident">connection_status</span>: <span class="ident">Arc::new</span>(<span class="ident">Mutex::new</span>(<span class="ident">ConnectionStatus::NotAttested</span>)),
         }
@@ -339,11 +326,8 @@
     }
 
     <span class="kw">fn</span> <span class="ident">generate_server_assertion</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">assertion</span> <span class="op">=</span> <span class="ident">Assertion::generate</span>(
-            <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">tee_certificate</span>,
-            <span class="self">self</span>.<span class="ident">keying_material_bundle</span>.<span class="ident">server_keying_material</span>.<span class="ident">clone</span>(),
-        )
-        .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t generate server assertion&quot;</span>)<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">assertion</span> <span class="op">=</span> <span class="ident">Assertion::generate</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">keying_material_bundle</span>.<span class="ident">server_keying_material</span>)
+            .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t generate server assertion&quot;</span>)<span class="question-mark">?</span>;
         <span class="ident">assertion</span>
             .<span class="ident">to_string</span>()
             .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t serialize server assertion&quot;</span>)
@@ -421,7 +405,6 @@
     <span class="ident">address</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
     <span class="ident">private_key</span>: <span class="ident">rustls::PrivateKey</span>,
     <span class="ident">certificate</span>: <span class="ident">rustls::Certificate</span>,
-    <span class="ident">tee_certificate</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
     <span class="ident">backend_uri</span>: <span class="ident">Uri</span>,
 ) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
     <span class="comment">// Configure TLS settings.</span>
@@ -471,7 +454,6 @@
         <span class="kw">let</span> <span class="ident">proxy</span> <span class="op">=</span> <span class="ident">Arc::new</span>(<span class="ident">Proxy::new</span>(
             <span class="ident">backend_uri</span>.<span class="ident">clone</span>(),
             <span class="ident">client</span>.<span class="ident">clone</span>(),
-            <span class="ident">tee_certificate</span>.<span class="ident">to_vec</span>(),
             <span class="ident">keying_material_bundle</span>,
         ));
 

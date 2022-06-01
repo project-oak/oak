@@ -191,16 +191,6 @@
 <span id="186">186</span>
 <span id="187">187</span>
 <span id="188">188</span>
-<span id="189">189</span>
-<span id="190">190</span>
-<span id="191">191</span>
-<span id="192">192</span>
-<span id="193">193</span>
-<span id="194">194</span>
-<span id="195">195</span>
-<span id="196">196</span>
-<span id="197">197</span>
-<span id="198">198</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2021 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -279,26 +269,18 @@
         <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;PEM encoded X.509 TLS certificate file used by gRPC server.&quot;</span>
     )]</span>
     <span class="ident">grpc_tls_certificate</span>: <span class="ident">String</span>,
-    <span class="attribute">#[<span class="ident">clap</span>(
-        <span class="ident">long</span>,
-        <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;PEM encoded X.509 certificate that signs TEE firmware key.&quot;</span>,
-        <span class="ident">default_value</span> <span class="op">=</span> <span class="string">&quot;./examples/certs/local/ca.pem&quot;</span>
-    )]</span>
-    <span class="ident">tee_certificate</span>: <span class="ident">String</span>,
 }
 
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Proxy</span> {
     <span class="ident">certificate_authority</span>: <span class="ident">CertificateAuthority</span>,
-    <span class="ident">tee_certificate</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">Proxy</span> {
-    <span class="kw">fn</span> <span class="ident">create</span>(<span class="ident">tee_certificate</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">create</span>() -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">certificate_authority</span> <span class="op">=</span> <span class="ident">CertificateAuthority::create</span>(<span class="ident">AddTeeExtension::No</span>)
             .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t create certificate authority&quot;</span>)<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(<span class="self">Self</span> {
             <span class="ident">certificate_authority</span>,
-            <span class="ident">tee_certificate</span>,
         })
     }
 }
@@ -317,10 +299,10 @@
                 <span class="macro">error!</span>(<span class="string">&quot;{}: {}&quot;</span>, <span class="ident">msg</span>, <span class="ident">error</span>);
                 <span class="ident">Status::invalid_argument</span>(<span class="ident">msg</span>)
             })<span class="question-mark">?</span>;
-        <span class="kw">match</span> <span class="self">self</span>.<span class="ident">certificate_authority</span>.<span class="ident">sign_certificate</span>(
-            <span class="ident">certificate_request</span>,
-            <span class="ident">AddTeeExtension::Yes</span>(<span class="self">self</span>.<span class="ident">tee_certificate</span>.<span class="ident">to_vec</span>()),
-        ) {
+        <span class="kw">match</span> <span class="self">self</span>
+            .<span class="ident">certificate_authority</span>
+            .<span class="ident">sign_certificate</span>(<span class="ident">certificate_request</span>, <span class="ident">AddTeeExtension::Yes</span>)
+        {
             <span class="prelude-val">Ok</span>(<span class="ident">certificate</span>) =&gt; <span class="kw">match</span> <span class="ident">certificate</span>.<span class="ident">to_pem</span>() {
                 <span class="prelude-val">Ok</span>(<span class="ident">serialized_certificate</span>) =&gt; {
                     <span class="macro">info!</span>(<span class="string">&quot;Sending signed certificate&quot;</span>);
@@ -376,8 +358,6 @@
         <span class="ident">std::fs::read</span>(<span class="kw-2">&amp;</span><span class="ident">opt</span>.<span class="ident">grpc_tls_private_key</span>).<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t load private key&quot;</span>)<span class="question-mark">?</span>;
     <span class="kw">let</span> <span class="ident">grpc_tls_certificate</span> <span class="op">=</span>
         <span class="ident">std::fs::read</span>(<span class="kw-2">&amp;</span><span class="ident">opt</span>.<span class="ident">grpc_tls_certificate</span>).<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t load certificate&quot;</span>)<span class="question-mark">?</span>;
-    <span class="kw">let</span> <span class="ident">tee_certificate</span> <span class="op">=</span>
-        <span class="ident">std::fs::read</span>(<span class="kw-2">&amp;</span><span class="ident">opt</span>.<span class="ident">tee_certificate</span>).<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t load certificate&quot;</span>)<span class="question-mark">?</span>;
 
     <span class="kw">let</span> <span class="ident">identity</span> <span class="op">=</span> <span class="ident">Identity::from_pem</span>(<span class="ident">grpc_tls_certificate</span>, <span class="ident">grpc_tls_private_key</span>);
     <span class="kw">let</span> <span class="ident">address</span> <span class="op">=</span> <span class="ident">opt</span>
@@ -391,7 +371,7 @@
         .<span class="ident">tls_config</span>(<span class="ident">ServerTlsConfig::new</span>().<span class="ident">identity</span>(<span class="ident">identity</span>))
         .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t create TLS configuration&quot;</span>)<span class="question-mark">?</span>
         .<span class="ident">add_service</span>(<span class="ident">ProxyAttestationServer::new</span>(
-            <span class="ident">Proxy::create</span>(<span class="ident">tee_certificate</span>).<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t create proxy&quot;</span>)<span class="question-mark">?</span>,
+            <span class="ident">Proxy::create</span>().<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t create proxy&quot;</span>)<span class="question-mark">?</span>,
         ))
         .<span class="ident">serve_with_shutdown</span>(<span class="ident">address</span>, <span class="ident">tokio::signal::ctrl_c</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">r</span><span class="op">|</span> <span class="ident">r</span>.<span class="ident">unwrap</span>()))
         .<span class="kw">await</span>

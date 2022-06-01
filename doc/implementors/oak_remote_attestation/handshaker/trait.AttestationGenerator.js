@@ -1,0 +1,4 @@
+(function() {var implementors = {};
+implementors["oak_remote_attestation"] = [];
+implementors["oak_remote_attestation_amd"] = [{"text":"impl <a class=\"trait\" href=\"oak_remote_attestation/handshaker/trait.AttestationGenerator.html\" title=\"trait oak_remote_attestation::handshaker::AttestationGenerator\">AttestationGenerator</a> for <a class=\"struct\" href=\"oak_remote_attestation_amd/struct.PlaceholderAmdAttestationGenerator.html\" title=\"struct oak_remote_attestation_amd::PlaceholderAmdAttestationGenerator\">PlaceholderAmdAttestationGenerator</a>","synthetic":false,"types":["oak_remote_attestation_amd::PlaceholderAmdAttestationGenerator"]}];
+if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

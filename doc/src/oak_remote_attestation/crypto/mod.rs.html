@@ -88,6 +88,8 @@
 <span id="83">83</span>
 <span id="84">84</span>
 <span id="85">85</span>
+<span id="86">86</span>
+<span id="87">87</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2022 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -109,8 +111,10 @@
 <span class="comment">// Should be kept in sync with the Java implementation of the remote attestation</span>
 <span class="comment">// protocol.</span>
 
+<span class="comment">// Ideally we would also have a check that enforces that at most one feature is enabled, but that</span>
+<span class="comment">// currently does not work because we run tests with the --all-features flag, which breaks this.</span>
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">not</span>(<span class="ident">any</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;ring-crypto&quot;</span>, <span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;rust-crypto&quot;</span>)))]</span>
-<span class="macro">compile_error!</span>(<span class="string">&quot;A cryptographic implementation must be specified.&quot;</span>);
+<span class="macro">compile_error!</span>(<span class="string">&quot;Exactly one cryptographic implementation must be specified.&quot;</span>);
 
 <span class="comment">// When both implementations are selected (e.g. when testing with all features) we use the `ring`</span>
 <span class="comment">// implementation.</span>

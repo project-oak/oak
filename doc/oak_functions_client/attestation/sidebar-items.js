@@ -1,1 +1,0 @@
-initSidebarItems({"fn":[["into_server_identity_verifier","Creates a [`ServerIdentityVerifier`] from the given `ConfigurationVerifier`."]],"type":[["ConfigurationVerifier",""]]});

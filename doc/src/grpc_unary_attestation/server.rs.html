@@ -146,6 +146,11 @@
 <span id="141">141</span>
 <span id="142">142</span>
 <span id="143">143</span>
+<span id="144">144</span>
+<span id="145">145</span>
+<span id="146">146</span>
+<span id="147">147</span>
+<span id="148">148</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2022 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -166,6 +171,8 @@
 <span class="doccomment">//! protocol.</span>
 
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::proto</span>::{<span class="ident">unary_session_server::UnarySession</span>, <span class="ident">UnaryRequest</span>, <span class="ident">UnaryResponse</span>};
+<span class="kw">use</span> <span class="ident">oak_remote_attestation::handshaker</span>::{<span class="ident">AttestationBehavior</span>, <span class="ident">EmptyAttestationVerifier</span>};
+<span class="kw">use</span> <span class="ident">oak_remote_attestation_amd::PlaceholderAmdAttestationGenerator</span>;
 <span class="kw">use</span> <span class="ident">oak_remote_attestation_sessions</span>::{<span class="ident">SessionId</span>, <span class="ident">SessionState</span>, <span class="ident">SessionTracker</span>};
 <span class="kw">use</span> <span class="ident">oak_utils::LogError</span>;
 <span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">convert::TryInto</span>, <span class="ident">sync::Mutex</span>};
@@ -181,7 +188,8 @@
     <span class="doccomment">/// Error logging function that is required for logging attestation protocol errors.</span>
     <span class="doccomment">/// Errors are only logged on server side and are not sent to clients.</span>
     <span class="ident">error_logger</span>: <span class="ident">L</span>,
-    <span class="ident">session_tracker</span>: <span class="ident">Mutex</span><span class="op">&lt;</span><span class="ident">SessionTracker</span><span class="op">&gt;</span>,
+    <span class="ident">session_tracker</span>:
+        <span class="ident">Mutex</span><span class="op">&lt;</span><span class="ident">SessionTracker</span><span class="op">&lt;</span><span class="ident">PlaceholderAmdAttestationGenerator</span>, <span class="ident">EmptyAttestationVerifier</span><span class="op">&gt;</span><span class="op">&gt;</span>,
 }
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">S</span>, <span class="ident">L</span><span class="op">&gt;</span> <span class="ident">AttestationServer</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">L</span><span class="op">&gt;</span>
@@ -191,14 +199,16 @@
     <span class="ident">L</span>: <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span> <span class="op">+</span> <span class="ident">Clone</span> <span class="op">+</span> <span class="ident">LogError</span>,
 {
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">create</span>(
-        <span class="ident">tee_certificate</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
         <span class="ident">request_handler</span>: <span class="ident">F</span>,
         <span class="ident">additional_info</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
         <span class="ident">error_logger</span>: <span class="ident">L</span>,
     ) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">session_tracker</span> <span class="op">=</span> <span class="ident">Mutex::new</span>(<span class="ident">SessionTracker::create</span>(
             <span class="ident">SESSIONS_CACHE_SIZE</span>,
-            <span class="ident">tee_certificate</span>,
+            <span class="ident">AttestationBehavior::create</span>(
+                <span class="ident">PlaceholderAmdAttestationGenerator</span>,
+                <span class="ident">EmptyAttestationVerifier</span>,
+            ),
             <span class="ident">additional_info</span>,
         ));
         <span class="prelude-val">Ok</span>(<span class="self">Self</span> {

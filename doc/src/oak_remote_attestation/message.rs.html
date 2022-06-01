@@ -501,18 +501,6 @@
 <span id="496">496</span>
 <span id="497">497</span>
 <span id="498">498</span>
-<span id="499">499</span>
-<span id="500">500</span>
-<span id="501">501</span>
-<span id="502">502</span>
-<span id="503">503</span>
-<span id="504">504</span>
-<span id="505">505</span>
-<span id="506">506</span>
-<span id="507">507</span>
-<span id="508">508</span>
-<span id="509">509</span>
-<span id="510">510</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2021 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -629,49 +617,35 @@
     <span class="doccomment">/// &lt;https://datatracker.ietf.org/doc/html/rfc6979&gt;</span>
     <span class="kw">pub</span> <span class="ident">signing_public_key</span>: [<span class="ident">u8</span>; <span class="ident">SIGNING_ALGORITHM_KEY_LENGTH</span>],
     <span class="doccomment">/// Information used for remote attestation such as a TEE report and a TEE provider&#39;s</span>
-    <span class="doccomment">/// certificate. TEE report contains a hash of the `signing_public_key` and `additional_info`.</span>
+    <span class="doccomment">/// certificate.</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// Attestation info must be a serialized `oak.remote_attestation.AttestationInfo` Protobuf</span>
-    <span class="doccomment">/// message.</span>
-    <span class="kw">pub</span> <span class="ident">attestation_info</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
+    <span class="doccomment">/// The report would normally include (and sign over) the SHA256 hash of the concatenation of</span>
+    <span class="doccomment">/// the SHA256 hashes of (in order):</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// - [`ServerIdentity::ephemeral_public_key`]</span>
+    <span class="doccomment">/// - [`ServerIdentity::signing_public_key`]</span>
+    <span class="doccomment">/// - [`ServerIdentity::additional_attestation_data`]</span>
+    <span class="kw">pub</span> <span class="ident">attestation_report</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
     <span class="doccomment">/// Additional info to be checked when verifying the identity. This may include server</span>
     <span class="doccomment">/// configuration details, and inclusion proofs on a verifiable log (e.g., LogEntry on Rekor).</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// The server and the client must be able to agree on a canonical representation of the</span>
-    <span class="doccomment">/// content to be able to deterministically compute the hash of this field.</span>
-    <span class="kw">pub</span> <span class="ident">additional_info</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+    <span class="doccomment">/// The server and the client hash the raw bytes of this field, before parsing it.</span>
+    <span class="kw">pub</span> <span class="ident">additional_attestation_data</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span>,
 }
 
 <span class="doccomment">/// Client identity message containing remote attestation information and a public key for</span>
 <span class="doccomment">/// Diffie-Hellman key negotiation.</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">PartialEq</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">ClientIdentity</span> {
-    <span class="doccomment">/// Public key needed to establish a session key.</span>
+    <span class="doccomment">/// See [`ServerIdentity::ephemeral_public_key`].</span>
     <span class="kw">pub</span> <span class="ident">ephemeral_public_key</span>: [<span class="ident">u8</span>; <span class="ident">KEY_AGREEMENT_ALGORITHM_KEY_LENGTH</span>],
-    <span class="doccomment">/// Signature of the SHA-256 hash of all previously sent and received messages.</span>
-    <span class="doccomment">/// Transcript signature is sent in messages to prevent replay attacks.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// Signature must be an IEEE-P1363 encoded ECDSA-P256 signature.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// &lt;https://datatracker.ietf.org/doc/html/rfc6979&gt;</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// &lt;https://standards.ieee.org/standard/1363-2000.html&gt;</span>
+    <span class="doccomment">/// See [`ServerIdentity::transcript_signature`].</span>
     <span class="kw">pub</span> <span class="ident">transcript_signature</span>: [<span class="ident">u8</span>; <span class="ident">SIGNATURE_LENGTH</span>],
-    <span class="doccomment">/// Public key used to sign transcripts.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// Public key must be an OpenSSL ECDSA-P256 key, which is represented as</span>
-    <span class="doccomment">/// `0x04 | X: 32-byte | Y: 32-byte`.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// Where X and Y are big-endian coordinates of an Elliptic Curve point.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// &lt;https://datatracker.ietf.org/doc/html/rfc6979&gt;</span>
+    <span class="doccomment">/// See [`ServerIdentity::signing_public_key`].</span>
     <span class="kw">pub</span> <span class="ident">signing_public_key</span>: [<span class="ident">u8</span>; <span class="ident">SIGNING_ALGORITHM_KEY_LENGTH</span>],
-    <span class="doccomment">/// Information used for remote attestation such as a TEE report and a TEE provider&#39;s</span>
-    <span class="doccomment">/// certificate. TEE report contains a hash of the `signing_public_key`.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// Attestation info must be a serialized `oak.remote_attestation.AttestationInfo` Protobuf</span>
-    <span class="doccomment">/// message.</span>
-    <span class="kw">pub</span> <span class="ident">attestation_info</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
+    <span class="doccomment">/// See [`ServerIdentity::attestation_report`].</span>
+    <span class="kw">pub</span> <span class="ident">attestation_report</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
+    <span class="comment">// TODO(#2914): Support additional attestation info in ClientIdentity.</span>
 }
 
 <span class="doccomment">/// Message containing data encrypted using a session key.</span>
@@ -736,8 +710,8 @@
         <span class="ident">ephemeral_public_key</span>: [<span class="ident">u8</span>; <span class="ident">KEY_AGREEMENT_ALGORITHM_KEY_LENGTH</span>],
         <span class="ident">random</span>: [<span class="ident">u8</span>; <span class="ident">REPLAY_PROTECTION_ARRAY_LENGTH</span>],
         <span class="ident">signing_public_key</span>: [<span class="ident">u8</span>; <span class="ident">SIGNING_ALGORITHM_KEY_LENGTH</span>],
-        <span class="ident">attestation_info</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
-        <span class="ident">additional_info</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+        <span class="ident">attestation_report</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
+        <span class="ident">additional_attestation_data</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span>,
     ) -&gt; <span class="self">Self</span> {
         <span class="self">Self</span> {
             <span class="ident">version</span>: <span class="ident">PROTOCOL_VERSION</span>,
@@ -745,8 +719,8 @@
             <span class="ident">random</span>,
             <span class="ident">transcript_signature</span>: [<span class="ident">Default::default</span>(); <span class="ident">SIGNATURE_LENGTH</span>],
             <span class="ident">signing_public_key</span>,
-            <span class="ident">attestation_info</span>,
-            <span class="ident">additional_info</span>,
+            <span class="ident">attestation_report</span>,
+            <span class="ident">additional_attestation_data</span>,
         }
     }
 
@@ -772,7 +746,9 @@
 <span class="kw">impl</span> <span class="ident">Serializable</span> <span class="kw">for</span> <span class="ident">ServerIdentity</span> {
     <span class="kw">fn</span> <span class="ident">serialize</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">result</span> <span class="op">=</span> <span class="ident">Vec::with_capacity</span>(
-            <span class="ident">ServerIdentity::min_len</span>() <span class="op">+</span> <span class="self">self</span>.<span class="ident">attestation_info</span>.<span class="ident">len</span>() <span class="op">+</span> <span class="self">self</span>.<span class="ident">additional_info</span>.<span class="ident">len</span>(),
+            <span class="ident">ServerIdentity::min_len</span>()
+                <span class="op">+</span> <span class="self">self</span>.<span class="ident">attestation_report</span>.<span class="ident">len</span>()
+                <span class="op">+</span> <span class="self">self</span>.<span class="ident">additional_attestation_data</span>.<span class="ident">len</span>(),
         );
         <span class="ident">result</span>.<span class="ident">put_u8</span>(<span class="ident">SERVER_IDENTITY_HEADER</span>);
         <span class="ident">result</span>.<span class="ident">put_u8</span>(<span class="self">self</span>.<span class="ident">version</span>);
@@ -780,8 +756,8 @@
         <span class="ident">result</span>.<span class="ident">put_slice</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">random</span>);
         <span class="ident">result</span>.<span class="ident">put_slice</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">transcript_signature</span>);
         <span class="ident">result</span>.<span class="ident">put_slice</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">signing_public_key</span>);
-        <span class="ident">put_vec</span>(<span class="kw-2">&amp;mut</span> <span class="ident">result</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">attestation_info</span>);
-        <span class="ident">put_vec</span>(<span class="kw-2">&amp;mut</span> <span class="ident">result</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">additional_info</span>);
+        <span class="ident">put_vec</span>(<span class="kw-2">&amp;mut</span> <span class="ident">result</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">attestation_report</span>);
+        <span class="ident">put_vec</span>(<span class="kw-2">&amp;mut</span> <span class="ident">result</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">additional_attestation_data</span>);
         <span class="prelude-val">Ok</span>(<span class="ident">result</span>)
     }
 }
@@ -816,8 +792,8 @@
         <span class="ident">input</span>.<span class="ident">copy_to_slice</span>(<span class="kw-2">&amp;mut</span> <span class="ident">transcript_signature</span>);
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">signing_public_key</span> <span class="op">=</span> [<span class="number">0u8</span>; <span class="ident">SIGNING_ALGORITHM_KEY_LENGTH</span>];
         <span class="ident">input</span>.<span class="ident">copy_to_slice</span>(<span class="kw-2">&amp;mut</span> <span class="ident">signing_public_key</span>);
-        <span class="kw">let</span> <span class="ident">attestation_info</span> <span class="op">=</span> <span class="ident">get_vec</span>(<span class="kw-2">&amp;mut</span> <span class="ident">input</span>)<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">additional_info</span> <span class="op">=</span> <span class="ident">Arc::new</span>(<span class="ident">get_vec</span>(<span class="kw-2">&amp;mut</span> <span class="ident">input</span>)<span class="question-mark">?</span>);
+        <span class="kw">let</span> <span class="ident">attestation_report</span> <span class="op">=</span> <span class="ident">get_vec</span>(<span class="kw-2">&amp;mut</span> <span class="ident">input</span>)<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">additional_attestation_data</span> <span class="op">=</span> <span class="ident">Arc::new</span>(<span class="ident">get_vec</span>(<span class="kw-2">&amp;mut</span> <span class="ident">input</span>)<span class="question-mark">?</span>);
 
         <span class="kw">if</span> <span class="ident">input</span>.<span class="ident">has_remaining</span>() {
             <span class="macro">bail!</span>(
@@ -832,8 +808,8 @@
             <span class="ident">random</span>,
             <span class="ident">transcript_signature</span>,
             <span class="ident">signing_public_key</span>,
-            <span class="ident">attestation_info</span>,
-            <span class="ident">additional_info</span>,
+            <span class="ident">attestation_report</span>,
+            <span class="ident">additional_attestation_data</span>,
         })
     }
 }
@@ -842,13 +818,13 @@
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(
         <span class="ident">ephemeral_public_key</span>: [<span class="ident">u8</span>; <span class="ident">KEY_AGREEMENT_ALGORITHM_KEY_LENGTH</span>],
         <span class="ident">signing_public_key</span>: [<span class="ident">u8</span>; <span class="ident">SIGNING_ALGORITHM_KEY_LENGTH</span>],
-        <span class="ident">attestation_info</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
+        <span class="ident">attestation_report</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
     ) -&gt; <span class="self">Self</span> {
         <span class="self">Self</span> {
             <span class="ident">ephemeral_public_key</span>,
             <span class="ident">transcript_signature</span>: [<span class="ident">Default::default</span>(); <span class="ident">SIGNATURE_LENGTH</span>],
             <span class="ident">signing_public_key</span>,
-            <span class="ident">attestation_info</span>,
+            <span class="ident">attestation_report</span>,
         }
     }
 
@@ -872,12 +848,12 @@
 <span class="kw">impl</span> <span class="ident">Serializable</span> <span class="kw">for</span> <span class="ident">ClientIdentity</span> {
     <span class="kw">fn</span> <span class="ident">serialize</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">result</span> <span class="op">=</span>
-            <span class="ident">Vec::with_capacity</span>(<span class="ident">ClientIdentity::min_len</span>() <span class="op">+</span> <span class="self">self</span>.<span class="ident">attestation_info</span>.<span class="ident">len</span>());
+            <span class="ident">Vec::with_capacity</span>(<span class="ident">ClientIdentity::min_len</span>() <span class="op">+</span> <span class="self">self</span>.<span class="ident">attestation_report</span>.<span class="ident">len</span>());
         <span class="ident">result</span>.<span class="ident">put_u8</span>(<span class="ident">CLIENT_IDENTITY_HEADER</span>);
         <span class="ident">result</span>.<span class="ident">put_slice</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">ephemeral_public_key</span>);
         <span class="ident">result</span>.<span class="ident">put_slice</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">transcript_signature</span>);
         <span class="ident">result</span>.<span class="ident">put_slice</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">signing_public_key</span>);
-        <span class="ident">put_vec</span>(<span class="kw-2">&amp;mut</span> <span class="ident">result</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">attestation_info</span>);
+        <span class="ident">put_vec</span>(<span class="kw-2">&amp;mut</span> <span class="ident">result</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">attestation_report</span>);
         <span class="prelude-val">Ok</span>(<span class="ident">result</span>)
     }
 }
@@ -909,7 +885,7 @@
         <span class="ident">input</span>.<span class="ident">copy_to_slice</span>(<span class="kw-2">&amp;mut</span> <span class="ident">transcript_signature</span>);
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">signing_public_key</span> <span class="op">=</span> [<span class="number">0u8</span>; <span class="ident">SIGNING_ALGORITHM_KEY_LENGTH</span>];
         <span class="ident">input</span>.<span class="ident">copy_to_slice</span>(<span class="kw-2">&amp;mut</span> <span class="ident">signing_public_key</span>);
-        <span class="kw">let</span> <span class="ident">attestation_info</span> <span class="op">=</span> <span class="ident">get_vec</span>(<span class="kw-2">&amp;mut</span> <span class="ident">input</span>)<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">attestation_report</span> <span class="op">=</span> <span class="ident">get_vec</span>(<span class="kw-2">&amp;mut</span> <span class="ident">input</span>)<span class="question-mark">?</span>;
 
         <span class="kw">if</span> <span class="ident">input</span>.<span class="ident">has_remaining</span>() {
             <span class="macro">bail!</span>(
@@ -922,7 +898,7 @@
             <span class="ident">ephemeral_public_key</span>,
             <span class="ident">transcript_signature</span>,
             <span class="ident">signing_public_key</span>,
-            <span class="ident">attestation_info</span>,
+            <span class="ident">attestation_report</span>,
         })
     }
 }

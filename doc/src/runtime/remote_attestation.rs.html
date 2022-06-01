@@ -99,6 +99,8 @@
 <span id="94">94</span>
 <span id="95">95</span>
 <span id="96">96</span>
+<span id="97">97</span>
+<span id="98">98</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2022 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -124,27 +126,29 @@
 
 <span class="kw">use</span> <span class="ident">alloc::vec::Vec</span>;
 <span class="kw">use</span> <span class="ident">anyhow::Context</span>;
+<span class="kw">use</span> <span class="ident">oak_remote_attestation::handshaker</span>::{
+    <span class="ident">AttestationBehavior</span>, <span class="ident">AttestationGenerator</span>, <span class="ident">AttestationVerifier</span>,
+};
 <span class="kw">use</span> <span class="ident">oak_remote_attestation_sessions</span>::{<span class="ident">SerializeableRequest</span>, <span class="ident">SessionState</span>, <span class="ident">SessionTracker</span>};
 
 <span class="doccomment">/// Number of sessions that will be kept in memory.</span>
 <span class="kw">const</span> <span class="ident">SESSIONS_CACHE_SIZE</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">10000</span>;
 
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">AttestationHandler</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
-    <span class="ident">session_tracker</span>: <span class="ident">SessionTracker</span>,
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">AttestationHandler</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">G</span>: <span class="ident">AttestationGenerator</span>, <span class="ident">V</span>: <span class="ident">AttestationVerifier</span><span class="op">&gt;</span> {
+    <span class="ident">session_tracker</span>: <span class="ident">SessionTracker</span><span class="op">&lt;</span><span class="ident">G</span>, <span class="ident">V</span><span class="op">&gt;</span>,
     <span class="ident">request_handler</span>: <span class="ident">F</span>,
 }
 
-<span class="kw">const</span> <span class="ident">MOCK_TEE_CERTIFICATE</span>: [<span class="ident">u8</span>; <span class="number">0</span>] <span class="op">=</span> [];
 <span class="kw">const</span> <span class="ident">MOCK_ADDITIONAL_INFO</span>: [<span class="ident">u8</span>; <span class="number">0</span>] <span class="op">=</span> [];
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> <span class="ident">AttestationHandler</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>
+<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">G</span>: <span class="ident">AttestationGenerator</span>, <span class="ident">V</span>: <span class="ident">AttestationVerifier</span><span class="op">&gt;</span> <span class="ident">AttestationHandler</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">G</span>, <span class="ident">V</span><span class="op">&gt;</span>
 <span class="kw">where</span>
     <span class="ident">F</span>: <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span> <span class="op">+</span> <span class="ident">Clone</span> <span class="op">+</span> <span class="ident">FnOnce</span>(<span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span>,
 {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">create</span>(<span class="ident">request_handler</span>: <span class="ident">F</span>) -&gt; <span class="self">Self</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">create</span>(<span class="ident">request_handler</span>: <span class="ident">F</span>, <span class="ident">attestation_behavior</span>: <span class="ident">AttestationBehavior</span><span class="op">&lt;</span><span class="ident">G</span>, <span class="ident">V</span><span class="op">&gt;</span>) -&gt; <span class="self">Self</span> {
         <span class="kw">let</span> <span class="ident">session_tracker</span> <span class="op">=</span> <span class="ident">SessionTracker::create</span>(
             <span class="ident">SESSIONS_CACHE_SIZE</span>,
-            <span class="ident">MOCK_TEE_CERTIFICATE</span>.<span class="ident">to_vec</span>(),
+            <span class="ident">attestation_behavior</span>,
             <span class="ident">MOCK_ADDITIONAL_INFO</span>.<span class="ident">to_vec</span>(),
         );
 

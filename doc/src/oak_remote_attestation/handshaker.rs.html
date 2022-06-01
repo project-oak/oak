@@ -730,46 +730,6 @@
 <span id="725">725</span>
 <span id="726">726</span>
 <span id="727">727</span>
-<span id="728">728</span>
-<span id="729">729</span>
-<span id="730">730</span>
-<span id="731">731</span>
-<span id="732">732</span>
-<span id="733">733</span>
-<span id="734">734</span>
-<span id="735">735</span>
-<span id="736">736</span>
-<span id="737">737</span>
-<span id="738">738</span>
-<span id="739">739</span>
-<span id="740">740</span>
-<span id="741">741</span>
-<span id="742">742</span>
-<span id="743">743</span>
-<span id="744">744</span>
-<span id="745">745</span>
-<span id="746">746</span>
-<span id="747">747</span>
-<span id="748">748</span>
-<span id="749">749</span>
-<span id="750">750</span>
-<span id="751">751</span>
-<span id="752">752</span>
-<span id="753">753</span>
-<span id="754">754</span>
-<span id="755">755</span>
-<span id="756">756</span>
-<span id="757">757</span>
-<span id="758">758</span>
-<span id="759">759</span>
-<span id="760">760</span>
-<span id="761">761</span>
-<span id="762">762</span>
-<span id="763">763</span>
-<span id="764">764</span>
-<span id="765">765</span>
-<span id="766">766</span>
-<span id="767">767</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2021 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -786,31 +746,30 @@
 <span class="comment">// limitations under the License.</span>
 <span class="comment">//</span>
 
-<span class="comment">// Remote attestation protocol handshake implementation.</span>
-<span class="comment">//</span>
-<span class="comment">// During the attestation protocol handshake participants send the following messages:</span>
-<span class="comment">// - [`Client`] -&gt; [`Server`]: [`ClientHello`]</span>
-<span class="comment">// - [`Server`] -&gt; [`Client`]: [`ServerIdentity`]</span>
-<span class="comment">// - [`Client`] -&gt; [`Server`]: [`ClientIdentity`]</span>
-<span class="comment">//</span>
-<span class="comment">// After the protocol handshake both sides create [`Encryptor`] for exchanging encrypted messages.</span>
-
+<span class="doccomment">///! Remote attestation protocol handshake implementation.</span>
+<span class="doccomment">///!</span>
+<span class="doccomment">///! During the attestation protocol handshake participants send the following messages:</span>
+<span class="doccomment">///!</span>
+<span class="doccomment">///! - [`Client`] -&gt; [`Server`]: [`ClientHello`]</span>
+<span class="doccomment">///! - [`Server`] -&gt; [`Client`]: [`ServerIdentity`]</span>
+<span class="doccomment">///! - [`Client`] -&gt; [`Server`]: [`ClientIdentity`]</span>
+<span class="doccomment">///!</span>
+<span class="doccomment">///! After the protocol handshake both sides create [`Encryptor`] for exchanging encrypted</span>
+<span class="doccomment">///! messages.</span>
 <span class="kw">use</span> <span class="kw">crate</span>::{
     <span class="ident">crypto</span>::{
         <span class="ident">get_random</span>, <span class="ident">get_sha256</span>, <span class="ident">AeadEncryptor</span>, <span class="ident">KeyNegotiator</span>, <span class="ident">KeyNegotiatorType</span>, <span class="ident">SignatureVerifier</span>,
-        <span class="ident">Signer</span>, <span class="ident">SHA256_HASH_LENGTH</span>, <span class="ident">SIGNING_ALGORITHM_KEY_LENGTH</span>,
+        <span class="ident">Signer</span>, <span class="ident">KEY_AGREEMENT_ALGORITHM_KEY_LENGTH</span>, <span class="ident">SHA256_HASH_LENGTH</span>, <span class="ident">SIGNATURE_LENGTH</span>,
+        <span class="ident">SIGNING_ALGORITHM_KEY_LENGTH</span>,
     },
     <span class="ident">message</span>::{
         <span class="ident">deserialize_message</span>, <span class="ident">ClientHello</span>, <span class="ident">ClientIdentity</span>, <span class="ident">MessageWrapper</span>, <span class="ident">Serializable</span>,
         <span class="ident">ServerIdentity</span>,
     },
-    <span class="ident">proto</span>::{<span class="ident">AttestationInfo</span>, <span class="ident">AttestationReport</span>},
 };
-<span class="kw">use</span> <span class="ident">alloc</span>::{<span class="ident">boxed::Box</span>, <span class="ident">sync::Arc</span>, <span class="ident">vec</span>, <span class="ident">vec::Vec</span>};
+<span class="kw">use</span> <span class="ident">alloc</span>::{<span class="ident">sync::Arc</span>, <span class="ident">vec</span>, <span class="ident">vec::Vec</span>};
 <span class="kw">use</span> <span class="ident">anyhow</span>::{<span class="ident">anyhow</span>, <span class="ident">Context</span>};
-<span class="kw">use</span> <span class="ident">prost::Message</span>;
-
-<span class="kw">pub</span> <span class="kw">type</span> <span class="ident">ServerIdentityVerifier</span> <span class="op">=</span> <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">Fn</span>(<span class="ident">ServerIdentity</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span><span class="op">&gt;</span>;
+<span class="kw">use</span> <span class="ident">core::fmt::Debug</span>;
 
 <span class="kw">enum</span> <span class="ident">ClientHandshakerState</span> {
     <span class="ident">Initializing</span>,
@@ -867,27 +826,28 @@
 }
 
 <span class="doccomment">/// Client of the remote attestation protocol handshake.</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">ClientHandshaker</span> {
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">ClientHandshaker</span><span class="op">&lt;</span><span class="ident">G</span>: <span class="ident">AttestationGenerator</span>, <span class="ident">V</span>: <span class="ident">AttestationVerifier</span><span class="op">&gt;</span> {
     <span class="doccomment">/// Behavior of the remote attestation protocol.</span>
-    <span class="ident">behavior</span>: <span class="ident">AttestationBehavior</span>,
+    <span class="ident">behavior</span>: <span class="ident">AttestationBehavior</span><span class="op">&lt;</span><span class="ident">G</span>, <span class="ident">V</span><span class="op">&gt;</span>,
     <span class="doccomment">/// Current state of the remote attestation protocol handshake.</span>
     <span class="ident">state</span>: <span class="ident">ClientHandshakerState</span>,
     <span class="doccomment">/// Collection of previously sent and received messages.</span>
     <span class="doccomment">/// Signed transcript is sent in messages to prevent replay attacks.</span>
     <span class="ident">transcript</span>: <span class="ident">Transcript</span>,
-    <span class="doccomment">/// Function for verifying the identity of the server.</span>
-    <span class="ident">server_verifier</span>: <span class="ident">ServerIdentityVerifier</span>,
+    <span class="doccomment">/// Signer containing a key which public part is signed by the TEE firmware key.</span>
+    <span class="doccomment">/// Used for signing protocol transcripts and preventing replay attacks.</span>
+    <span class="ident">transcript_signer</span>: <span class="ident">Signer</span>,
 }
 
-<span class="kw">impl</span> <span class="ident">ClientHandshaker</span> {
+<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">G</span>: <span class="ident">AttestationGenerator</span>, <span class="ident">V</span>: <span class="ident">AttestationVerifier</span><span class="op">&gt;</span> <span class="ident">ClientHandshaker</span><span class="op">&lt;</span><span class="ident">G</span>, <span class="ident">V</span><span class="op">&gt;</span> {
     <span class="doccomment">/// Creates [`ClientHandshaker`] with `Initializing` state.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">behavior</span>: <span class="ident">AttestationBehavior</span>, <span class="ident">server_verifier</span>: <span class="ident">ServerIdentityVerifier</span>) -&gt; <span class="self">Self</span> {
-        <span class="self">Self</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">behavior</span>: <span class="ident">AttestationBehavior</span><span class="op">&lt;</span><span class="ident">G</span>, <span class="ident">V</span><span class="op">&gt;</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
+        <span class="prelude-val">Ok</span>(<span class="self">Self</span> {
             <span class="ident">behavior</span>,
             <span class="ident">state</span>: <span class="ident">ClientHandshakerState::Initializing</span>,
             <span class="ident">transcript</span>: <span class="ident">Transcript::new</span>(),
-            <span class="ident">server_verifier</span>,
-        }
+            <span class="ident">transcript_signer</span>: <span class="ident">Signer::create</span>().<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t create signer&quot;</span>)<span class="question-mark">?</span>,
+        })
     }
 
     <span class="doccomment">/// Processes incoming `message` and returns a serialized remote attestation message.</span>
@@ -1004,83 +964,72 @@
         <span class="ident">server_identity</span>: <span class="ident">ServerIdentity</span>,
         <span class="ident">key_negotiator</span>: <span class="ident">KeyNegotiator</span>,
     ) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">ClientIdentity</span><span class="op">&gt;</span> {
-        <span class="kw">if</span> <span class="self">self</span>.<span class="ident">behavior</span>.<span class="ident">contains_peer_attestation</span>() {
-            <span class="comment">// Verify server transcript signature.</span>
-            <span class="comment">// Transcript doesn&#39;t include transcript signature from the server identity message.</span>
-            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">server_identity_no_signature</span> <span class="op">=</span> <span class="ident">server_identity</span>.<span class="ident">clone</span>();
-            <span class="ident">server_identity_no_signature</span>.<span class="ident">clear_transcript_signature</span>();
-            <span class="self">self</span>.<span class="ident">transcript</span>
-                .<span class="ident">append</span>(<span class="kw-2">&amp;</span><span class="ident">server_identity_no_signature</span>)
-                .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t append server identity to the transcript&quot;</span>)<span class="question-mark">?</span>;
-            <span class="kw">let</span> <span class="ident">verifier</span> <span class="op">=</span> <span class="ident">SignatureVerifier::new</span>(<span class="kw-2">&amp;</span><span class="ident">server_identity</span>.<span class="ident">signing_public_key</span>)<span class="question-mark">?</span>;
-            <span class="ident">verifier</span>
-                .<span class="ident">verify</span>(
-                    <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">transcript</span>.<span class="ident">get_sha256</span>(),
-                    <span class="kw-2">&amp;</span><span class="ident">server_identity</span>.<span class="ident">transcript_signature</span>,
-                )
-                .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t verify server transcript&quot;</span>)<span class="question-mark">?</span>;
+        <span class="comment">// Verify server transcript signature.</span>
+        <span class="comment">// Transcript doesn&#39;t include transcript signature from the server identity message.</span>
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">server_identity_no_signature</span> <span class="op">=</span> <span class="ident">server_identity</span>.<span class="ident">clone</span>();
+        <span class="ident">server_identity_no_signature</span>.<span class="ident">clear_transcript_signature</span>();
+        <span class="self">self</span>.<span class="ident">transcript</span>
+            .<span class="ident">append</span>(<span class="kw-2">&amp;</span><span class="ident">server_identity_no_signature</span>)
+            .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t append server identity to the transcript&quot;</span>)<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">server_signing_public_key</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">server_identity</span>.<span class="ident">signing_public_key</span>;
+        <span class="kw">let</span> <span class="ident">transcript_signature_verifier</span> <span class="op">=</span> <span class="ident">SignatureVerifier::new</span>(<span class="ident">server_signing_public_key</span>)<span class="question-mark">?</span>;
+        <span class="ident">transcript_signature_verifier</span>
+            .<span class="ident">verify</span>(
+                <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">transcript</span>.<span class="ident">get_sha256</span>(),
+                <span class="kw-2">&amp;</span><span class="ident">server_identity</span>.<span class="ident">transcript_signature</span>,
+            )
+            .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t verify server transcript&quot;</span>)<span class="question-mark">?</span>;
 
-            <span class="comment">// Verify server attestation info.</span>
-            <span class="kw">let</span> <span class="ident">server_attestation_info</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">server_identity</span>.<span class="ident">attestation_info</span>;
-            <span class="kw">let</span> <span class="ident">expected_tee_measurement</span> <span class="op">=</span> <span class="self">self</span>
-                .<span class="ident">behavior</span>
-                .<span class="ident">get_expected_tee_measurement</span>()
-                .<span class="ident">as_ref</span>()
-                .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t get expected TEE measurement&quot;</span>)<span class="question-mark">?</span>;
-            <span class="ident">verify_attestation_info</span>(<span class="ident">server_attestation_info</span>, <span class="ident">expected_tee_measurement</span>)
-                .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t verify server attestation info&quot;</span>)<span class="question-mark">?</span>;
-        }
+        <span class="kw">let</span> <span class="ident">expected_attested_data</span> <span class="op">=</span> <span class="ident">attestation_data</span>(
+            <span class="kw-2">&amp;</span><span class="ident">server_identity</span>.<span class="ident">ephemeral_public_key</span>,
+            <span class="ident">server_signing_public_key</span>,
+            <span class="kw-2">&amp;</span><span class="ident">server_identity</span>.<span class="ident">additional_attestation_data</span>,
+        );
+
+        <span class="comment">// Verify server attestation info.</span>
+        <span class="kw">let</span> <span class="ident">server_attestation_report</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">server_identity</span>.<span class="ident">attestation_report</span>;
+        <span class="self">self</span>.<span class="ident">behavior</span>
+            .<span class="ident">verifier</span>
+            .<span class="ident">verify_attestation</span>(<span class="ident">server_attestation_report</span>, <span class="kw-2">&amp;</span><span class="ident">expected_attested_data</span>)<span class="question-mark">?</span>;
 
         <span class="comment">// Create client identity message.</span>
         <span class="kw">let</span> <span class="ident">ephemeral_public_key</span> <span class="op">=</span> <span class="ident">key_negotiator</span>
             .<span class="ident">public_key</span>()
             .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t get ephemeral public key&quot;</span>)<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">client_identity</span> <span class="op">=</span> <span class="kw">if</span> <span class="self">self</span>.<span class="ident">behavior</span>.<span class="ident">contains_self_attestation</span>() {
-            <span class="kw">let</span> <span class="ident">signer</span> <span class="op">=</span> <span class="self">self</span>
-                .<span class="ident">behavior</span>
-                .<span class="ident">get_signer</span>()
-                .<span class="ident">as_ref</span>()
-                .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t access attestation signer&quot;</span>)<span class="question-mark">?</span>;
-            <span class="kw">let</span> <span class="ident">tee_certificate</span> <span class="op">=</span> <span class="self">self</span>
-                .<span class="ident">behavior</span>
-                .<span class="ident">get_tee_certificate</span>()
-                .<span class="ident">as_ref</span>()
-                .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t access TEE certificate&quot;</span>)<span class="question-mark">?</span>;
 
-            <span class="kw">let</span> <span class="ident">attestation_info</span> <span class="op">=</span> <span class="ident">create_attestation_info</span>(<span class="ident">signer</span>, <span class="kw-2">&amp;</span>[], <span class="ident">tee_certificate</span>)
-                .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t create attestation info&quot;</span>)<span class="question-mark">?</span>;
+        <span class="comment">// TODO(#2914): Support additional attestation info in ClientIdentity.</span>
+        <span class="kw">let</span> <span class="ident">additional_attestation_data</span> <span class="op">=</span> <span class="kw-2">&amp;</span>[];
+        <span class="kw">let</span> <span class="ident">attested_data</span> <span class="op">=</span> <span class="ident">attestation_data</span>(
+            <span class="kw-2">&amp;</span><span class="ident">ephemeral_public_key</span>,
+            <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">transcript_signer</span>.<span class="ident">public_key</span>()<span class="question-mark">?</span>,
+            <span class="ident">additional_attestation_data</span>,
+        );
+        <span class="kw">let</span> <span class="ident">attestation_report</span> <span class="op">=</span> <span class="self">self</span>
+            .<span class="ident">behavior</span>
+            .<span class="ident">generator</span>
+            .<span class="ident">generate_attestation</span>(<span class="kw-2">&amp;</span><span class="ident">attested_data</span>)
+            .<span class="ident">context</span>(<span class="string">&quot;Couldnt&#39; create attestation report&quot;</span>)<span class="question-mark">?</span>;
 
-            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">client_identity</span> <span class="op">=</span> <span class="ident">ClientIdentity::new</span>(
-                <span class="ident">ephemeral_public_key</span>,
-                <span class="ident">signer</span>
-                    .<span class="ident">public_key</span>()
-                    .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t get singing public key&quot;</span>)<span class="question-mark">?</span>,
-                <span class="ident">attestation_info</span>,
-            );
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">client_identity</span> <span class="op">=</span> <span class="ident">ClientIdentity::new</span>(
+            <span class="ident">ephemeral_public_key</span>,
+            <span class="self">self</span>.<span class="ident">transcript_signer</span>
+                .<span class="ident">public_key</span>()
+                .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t get signing public key&quot;</span>)<span class="question-mark">?</span>,
+            <span class="ident">attestation_report</span>,
+        );
 
-            <span class="comment">// Update current transcript.</span>
-            <span class="comment">// Transcript doesn&#39;t include transcript signature from the client identity message.</span>
-            <span class="self">self</span>.<span class="ident">transcript</span>
-                .<span class="ident">append</span>(<span class="kw-2">&amp;</span><span class="ident">client_identity</span>)
-                .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t append client identity to transcript&quot;</span>)<span class="question-mark">?</span>;
+        <span class="comment">// Update current transcript.</span>
+        <span class="comment">// Transcript doesn&#39;t include transcript signature from the client identity message.</span>
+        <span class="self">self</span>.<span class="ident">transcript</span>
+            .<span class="ident">append</span>(<span class="kw-2">&amp;</span><span class="ident">client_identity</span>)
+            .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t append client identity to transcript&quot;</span>)<span class="question-mark">?</span>;
 
-            <span class="comment">// Add transcript signature to the client identity message.</span>
-            <span class="kw">let</span> <span class="ident">transcript_signature</span> <span class="op">=</span> <span class="ident">signer</span>
-                .<span class="ident">sign</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">transcript</span>.<span class="ident">get_sha256</span>())
-                .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t create transcript signature&quot;</span>)<span class="question-mark">?</span>;
-            <span class="ident">client_identity</span>.<span class="ident">set_transcript_signature</span>(<span class="kw-2">&amp;</span><span class="ident">transcript_signature</span>);
-            <span class="ident">client_identity</span>
-        } <span class="kw">else</span> {
-            <span class="ident">ClientIdentity::new</span>(
-                <span class="ident">ephemeral_public_key</span>,
-                <span class="comment">// Signing public key.</span>
-                [<span class="ident">Default::default</span>(); <span class="ident">SIGNING_ALGORITHM_KEY_LENGTH</span>],
-                <span class="comment">// Attestation info.</span>
-                <span class="macro">vec!</span>[],
-            )
-        };
-
-        (<span class="self">self</span>.<span class="ident">server_verifier</span>)(<span class="ident">server_identity</span>.<span class="ident">clone</span>())<span class="question-mark">?</span>;
+        <span class="comment">// Add transcript signature to the client identity message.</span>
+        <span class="kw">let</span> <span class="ident">transcript_signature</span> <span class="op">=</span> <span class="self">self</span>
+            .<span class="ident">transcript_signer</span>
+            .<span class="ident">sign</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">transcript</span>.<span class="ident">get_sha256</span>())
+            .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t create transcript signature&quot;</span>)<span class="question-mark">?</span>;
+        <span class="ident">client_identity</span>.<span class="ident">set_transcript_signature</span>(<span class="kw-2">&amp;</span><span class="ident">transcript_signature</span>);
 
         <span class="comment">// Agree on session keys and create an encryptor.</span>
         <span class="kw">let</span> <span class="ident">encryptor</span> <span class="op">=</span> <span class="ident">key_negotiator</span>
@@ -1093,29 +1042,36 @@
 }
 
 <span class="doccomment">/// Server of the remote attestation protocol handshake.</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">ServerHandshaker</span> {
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">ServerHandshaker</span><span class="op">&lt;</span><span class="ident">G</span>: <span class="ident">AttestationGenerator</span>, <span class="ident">V</span>: <span class="ident">AttestationVerifier</span><span class="op">&gt;</span> {
     <span class="doccomment">/// Behavior of the remote attestation protocol.</span>
-    <span class="ident">behavior</span>: <span class="ident">AttestationBehavior</span>,
+    <span class="ident">behavior</span>: <span class="ident">AttestationBehavior</span><span class="op">&lt;</span><span class="ident">G</span>, <span class="ident">V</span><span class="op">&gt;</span>,
     <span class="doccomment">/// Current state of the remote attestation protocol handshake.</span>
     <span class="ident">state</span>: <span class="ident">ServerHandshakerState</span>,
     <span class="doccomment">/// Collection of previously sent and received messages.</span>
     <span class="doccomment">/// Signed transcript is sent in messages to prevent replay attacks.</span>
     <span class="ident">transcript</span>: <span class="ident">Transcript</span>,
+    <span class="doccomment">/// Signer containing a key which public part is signed by the TEE firmware key.</span>
+    <span class="doccomment">/// Used for signing protocol transcripts and preventing replay attacks.</span>
+    <span class="ident">transcript_signer</span>: <span class="ident">Signer</span>,
     <span class="doccomment">/// Additional info about the server, including configuration information and proof of</span>
     <span class="doccomment">/// inclusion in a verifiable log.</span>
     <span class="ident">additional_info</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span>,
 }
 
-<span class="kw">impl</span> <span class="ident">ServerHandshaker</span> {
+<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">G</span>: <span class="ident">AttestationGenerator</span>, <span class="ident">V</span>: <span class="ident">AttestationVerifier</span><span class="op">&gt;</span> <span class="ident">ServerHandshaker</span><span class="op">&lt;</span><span class="ident">G</span>, <span class="ident">V</span><span class="op">&gt;</span> {
     <span class="doccomment">/// Creates [`ServerHandshaker`] with `ServerHandshakerState::ExpectingClientIdentity`</span>
     <span class="doccomment">/// state.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">behavior</span>: <span class="ident">AttestationBehavior</span>, <span class="ident">additional_info</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span>) -&gt; <span class="self">Self</span> {
-        <span class="self">Self</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(
+        <span class="ident">behavior</span>: <span class="ident">AttestationBehavior</span><span class="op">&lt;</span><span class="ident">G</span>, <span class="ident">V</span><span class="op">&gt;</span>,
+        <span class="ident">additional_info</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+    ) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
+        <span class="prelude-val">Ok</span>(<span class="self">Self</span> {
             <span class="ident">behavior</span>,
             <span class="ident">state</span>: <span class="ident">ServerHandshakerState::ExpectingClientHello</span>,
             <span class="ident">transcript</span>: <span class="ident">Transcript::new</span>(),
+            <span class="ident">transcript_signer</span>: <span class="ident">Signer::create</span>().<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t create signer&quot;</span>)<span class="question-mark">?</span>,
             <span class="ident">additional_info</span>,
-        }
+        })
     }
 
     <span class="doccomment">/// Processes incoming `message` and returns a serialized remote attestation message.</span>
@@ -1208,59 +1164,42 @@
         <span class="kw">let</span> <span class="ident">ephemeral_public_key</span> <span class="op">=</span> <span class="ident">key_negotiator</span>
             .<span class="ident">public_key</span>()
             .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t get ephemeral public key&quot;</span>)<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">server_identity</span> <span class="op">=</span> <span class="kw">if</span> <span class="self">self</span>.<span class="ident">behavior</span>.<span class="ident">contains_self_attestation</span>() {
-            <span class="kw">let</span> <span class="ident">signer</span> <span class="op">=</span> <span class="self">self</span>
-                .<span class="ident">behavior</span>
-                .<span class="ident">get_signer</span>()
-                .<span class="ident">as_ref</span>()
-                .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t get attestation signer&quot;</span>)<span class="question-mark">?</span>;
-            <span class="kw">let</span> <span class="ident">tee_certificate</span> <span class="op">=</span> <span class="self">self</span>
-                .<span class="ident">behavior</span>
-                .<span class="ident">get_tee_certificate</span>()
-                .<span class="ident">as_ref</span>()
-                .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t get TEE certificate&quot;</span>)<span class="question-mark">?</span>;
 
-            <span class="kw">let</span> <span class="ident">attestation_info</span> <span class="op">=</span>
-                <span class="ident">create_attestation_info</span>(<span class="ident">signer</span>, <span class="self">self</span>.<span class="ident">additional_info</span>.<span class="ident">as_ref</span>(), <span class="ident">tee_certificate</span>)
-                    .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t get attestation info&quot;</span>)<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">attestation_data</span> <span class="op">=</span> <span class="ident">attestation_data</span>(
+            <span class="kw-2">&amp;</span><span class="ident">ephemeral_public_key</span>,
+            <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">transcript_signer</span>.<span class="ident">public_key</span>()<span class="question-mark">?</span>,
+            <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">additional_info</span>,
+        );
+        <span class="kw">let</span> <span class="ident">attestation_report</span> <span class="op">=</span> <span class="self">self</span>
+            .<span class="ident">behavior</span>
+            .<span class="ident">generator</span>
+            .<span class="ident">generate_attestation</span>(<span class="kw-2">&amp;</span><span class="ident">attestation_data</span>)<span class="question-mark">?</span>;
 
-            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">server_identity</span> <span class="op">=</span> <span class="ident">ServerIdentity::new</span>(
-                <span class="ident">ephemeral_public_key</span>,
-                <span class="ident">get_random</span>().<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t generate random array&quot;</span>)<span class="question-mark">?</span>,
-                <span class="ident">signer</span>
-                    .<span class="ident">public_key</span>()
-                    .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t get singing public key&quot;</span>)<span class="question-mark">?</span>,
-                <span class="ident">attestation_info</span>,
-                <span class="self">self</span>.<span class="ident">additional_info</span>.<span class="ident">clone</span>(),
-            );
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">server_identity</span> <span class="op">=</span> <span class="ident">ServerIdentity::new</span>(
+            <span class="ident">ephemeral_public_key</span>,
+            <span class="ident">get_random</span>().<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t generate random array&quot;</span>)<span class="question-mark">?</span>,
+            <span class="self">self</span>.<span class="ident">transcript_signer</span>
+                .<span class="ident">public_key</span>()
+                .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t get singing public key&quot;</span>)<span class="question-mark">?</span>,
+            <span class="ident">attestation_report</span>,
+            <span class="self">self</span>.<span class="ident">additional_info</span>.<span class="ident">clone</span>(),
+        );
 
-            <span class="comment">// Update current transcript.</span>
-            <span class="comment">// Transcript doesn&#39;t include transcript signature from the server identity message.</span>
-            <span class="self">self</span>.<span class="ident">transcript</span>
-                .<span class="ident">append</span>(<span class="kw-2">&amp;</span><span class="ident">client_hello</span>)
-                .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t append client hello to the transcript&quot;</span>)<span class="question-mark">?</span>;
-            <span class="self">self</span>.<span class="ident">transcript</span>
-                .<span class="ident">append</span>(<span class="kw-2">&amp;</span><span class="ident">server_identity</span>)
-                .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t append server identity to the transcript&quot;</span>)<span class="question-mark">?</span>;
+        <span class="comment">// Update current transcript.</span>
+        <span class="comment">// Transcript doesn&#39;t include transcript signature from the server identity message.</span>
+        <span class="self">self</span>.<span class="ident">transcript</span>
+            .<span class="ident">append</span>(<span class="kw-2">&amp;</span><span class="ident">client_hello</span>)
+            .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t append client hello to the transcript&quot;</span>)<span class="question-mark">?</span>;
+        <span class="self">self</span>.<span class="ident">transcript</span>
+            .<span class="ident">append</span>(<span class="kw-2">&amp;</span><span class="ident">server_identity</span>)
+            .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t append server identity to the transcript&quot;</span>)<span class="question-mark">?</span>;
 
-            <span class="comment">// Add transcript signature to the server identity message.</span>
-            <span class="kw">let</span> <span class="ident">transcript_signature</span> <span class="op">=</span> <span class="ident">signer</span>
-                .<span class="ident">sign</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">transcript</span>.<span class="ident">get_sha256</span>())
-                .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t create transcript signature&quot;</span>)<span class="question-mark">?</span>;
-            <span class="ident">server_identity</span>.<span class="ident">set_transcript_signature</span>(<span class="kw-2">&amp;</span><span class="ident">transcript_signature</span>);
-            <span class="ident">server_identity</span>
-        } <span class="kw">else</span> {
-            <span class="ident">ServerIdentity::new</span>(
-                <span class="ident">ephemeral_public_key</span>,
-                <span class="ident">get_random</span>().<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t generate random array&quot;</span>)<span class="question-mark">?</span>,
-                <span class="comment">// Signing public key.</span>
-                [<span class="ident">Default::default</span>(); <span class="ident">SIGNING_ALGORITHM_KEY_LENGTH</span>],
-                <span class="comment">// Attestation info.</span>
-                <span class="macro">vec!</span>[],
-                <span class="comment">// Additional info.</span>
-                <span class="ident">Arc::new</span>(<span class="macro">vec!</span>[]),
-            )
-        };
+        <span class="comment">// Add transcript signature to the server identity message.</span>
+        <span class="kw">let</span> <span class="ident">transcript_signature</span> <span class="op">=</span> <span class="self">self</span>
+            .<span class="ident">transcript_signer</span>
+            .<span class="ident">sign</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">transcript</span>.<span class="ident">get_sha256</span>())
+            .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t create transcript signature&quot;</span>)<span class="question-mark">?</span>;
+        <span class="ident">server_identity</span>.<span class="ident">set_transcript_signature</span>(<span class="kw-2">&amp;</span><span class="ident">transcript_signature</span>);
 
         <span class="self">self</span>.<span class="ident">state</span> <span class="op">=</span> <span class="ident">ServerHandshakerState::ExpectingClientIdentity</span>(<span class="ident">key_negotiator</span>);
         <span class="prelude-val">Ok</span>(<span class="ident">server_identity</span>)
@@ -1277,32 +1216,44 @@
         <span class="ident">client_identity</span>: <span class="ident">ClientIdentity</span>,
         <span class="ident">key_negotiator</span>: <span class="ident">KeyNegotiator</span>,
     ) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-        <span class="kw">if</span> <span class="self">self</span>.<span class="ident">behavior</span>.<span class="ident">contains_peer_attestation</span>() {
-            <span class="comment">// Verify client transcript signature.</span>
-            <span class="comment">// Transcript doesn&#39;t include transcript signature from the client identity message.</span>
-            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">client_identity_no_signature</span> <span class="op">=</span> <span class="ident">client_identity</span>.<span class="ident">clone</span>();
-            <span class="ident">client_identity_no_signature</span>.<span class="ident">clear_transcript_signature</span>();
-            <span class="self">self</span>.<span class="ident">transcript</span>
-                .<span class="ident">append</span>(<span class="kw-2">&amp;</span><span class="ident">client_identity_no_signature</span>)
-                .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t append client identity to the transcript&quot;</span>)<span class="question-mark">?</span>;
-            <span class="kw">let</span> <span class="ident">verifier</span> <span class="op">=</span> <span class="ident">SignatureVerifier::new</span>(<span class="kw-2">&amp;</span><span class="ident">client_identity</span>.<span class="ident">signing_public_key</span>)<span class="question-mark">?</span>;
-            <span class="ident">verifier</span>
+        <span class="comment">// Verify client transcript signature.</span>
+        <span class="comment">// Transcript doesn&#39;t include transcript signature from the client identity message.</span>
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">client_identity_no_signature</span> <span class="op">=</span> <span class="ident">client_identity</span>.<span class="ident">clone</span>();
+        <span class="ident">client_identity_no_signature</span>.<span class="ident">clear_transcript_signature</span>();
+        <span class="self">self</span>.<span class="ident">transcript</span>
+            .<span class="ident">append</span>(<span class="kw-2">&amp;</span><span class="ident">client_identity_no_signature</span>)
+            .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t append client identity to the transcript&quot;</span>)<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">client_signing_public_key</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">client_identity</span>.<span class="ident">signing_public_key</span>;
+        <span class="kw">let</span> <span class="ident">transcript_signature_verifier</span> <span class="op">=</span> <span class="ident">SignatureVerifier::new</span>(<span class="ident">client_signing_public_key</span>)<span class="question-mark">?</span>;
+
+        <span class="comment">// TODO(#2918): Remove this check when the Java client generates a non-empty signature, and</span>
+        <span class="comment">// always verify the signature.</span>
+        <span class="kw">if</span> <span class="ident">client_identity</span>.<span class="ident">transcript_signature</span> <span class="op">==</span> [<span class="number">0</span>; <span class="ident">SIGNATURE_LENGTH</span>] {
+            <span class="comment">// We skip verifying the signature because of #2918, until it is implemented in the Java</span>
+            <span class="comment">// client.</span>
+            <span class="comment">// Until this is fixed, this version of the server must not be used in production.</span>
+        } <span class="kw">else</span> {
+            <span class="ident">transcript_signature_verifier</span>
                 .<span class="ident">verify</span>(
                     <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">transcript</span>.<span class="ident">get_sha256</span>(),
                     <span class="kw-2">&amp;</span><span class="ident">client_identity</span>.<span class="ident">transcript_signature</span>,
                 )
                 .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t verify client transcript&quot;</span>)<span class="question-mark">?</span>;
-
-            <span class="comment">// Verify client attestation info.</span>
-            <span class="kw">let</span> <span class="ident">client_attestation_info</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">client_identity</span>.<span class="ident">attestation_info</span>;
-            <span class="kw">let</span> <span class="ident">expected_tee_measurement</span> <span class="op">=</span> <span class="self">self</span>
-                .<span class="ident">behavior</span>
-                .<span class="ident">get_expected_tee_measurement</span>()
-                .<span class="ident">as_ref</span>()
-                .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t get expected TEE measurement&quot;</span>)<span class="question-mark">?</span>;
-            <span class="ident">verify_attestation_info</span>(<span class="ident">client_attestation_info</span>, <span class="ident">expected_tee_measurement</span>)
-                .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t verify client attestation info&quot;</span>)<span class="question-mark">?</span>;
         }
+
+        <span class="comment">// TODO(#2914): Support additional attestation info in ClientIdentity.</span>
+        <span class="kw">let</span> <span class="ident">additional_attestation_data</span> <span class="op">=</span> <span class="kw-2">&amp;</span>[];
+        <span class="kw">let</span> <span class="ident">expected_attested_data</span> <span class="op">=</span> <span class="ident">attestation_data</span>(
+            <span class="kw-2">&amp;</span><span class="ident">client_identity</span>.<span class="ident">ephemeral_public_key</span>,
+            <span class="ident">client_signing_public_key</span>,
+            <span class="ident">additional_attestation_data</span>,
+        );
+
+        <span class="comment">// Verify client attestation info.</span>
+        <span class="kw">let</span> <span class="ident">client_attestation_report</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">client_identity</span>.<span class="ident">attestation_report</span>;
+        <span class="self">self</span>.<span class="ident">behavior</span>
+            .<span class="ident">verifier</span>
+            .<span class="ident">verify_attestation</span>(<span class="ident">client_attestation_report</span>, <span class="kw-2">&amp;</span><span class="ident">expected_attested_data</span>)<span class="question-mark">?</span>;
 
         <span class="comment">// Agree on session keys and create an encryptor.</span>
         <span class="kw">let</span> <span class="ident">encryptor</span> <span class="op">=</span> <span class="ident">key_negotiator</span>
@@ -1351,7 +1302,10 @@
 }
 
 <span class="doccomment">/// Defines the behavior of the remote attestation protocol.</span>
-<span class="doccomment">/// It can be one of:</span>
+<span class="doccomment">///</span>
+<span class="doccomment">/// It is composed of an [`AttestationGenerator`] and an [`AttestationVerifier`], which may be</span>
+<span class="doccomment">/// combined to achieve any of the following high level configurations:</span>
+<span class="doccomment">///</span>
 <span class="doccomment">/// - Peer Attestation:</span>
 <span class="doccomment">///   - Represents an attestation process, where current machine remotely attests a remote peer and</span>
 <span class="doccomment">///     verifies its attestation info.</span>
@@ -1361,89 +1315,90 @@
 <span class="doccomment">/// - Bidirectional Attestation:</span>
 <span class="doccomment">///   - Represents an attestation process, where current machine and a remote peer remotely attest</span>
 <span class="doccomment">///     each other.</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">AttestationBehavior</span> {
-    <span class="doccomment">/// Expected value of the peer&#39;s TEE measurement.</span>
-    <span class="ident">expected_tee_measurement</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-    <span class="comment">// /// Convenience struct for creating attestation info and signing data with TEE</span>
-    <span class="comment">// /// firmware key.</span>
-    <span class="comment">// tee_provider: Option&lt;TeeProvider&gt;,</span>
-    <span class="doccomment">/// PEM encoded X.509 certificate that signs TEE firmware key.</span>
-    <span class="ident">tee_certificate</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-    <span class="doccomment">/// Signer containing a key which public part is signed by the TEE firmware key.</span>
-    <span class="doccomment">/// Used for signing protocol transcripts and preventing replay attacks.</span>
-    <span class="ident">signer</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Signer</span><span class="op">&gt;</span>,
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>)]</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">AttestationBehavior</span><span class="op">&lt;</span><span class="ident">G</span>: <span class="ident">AttestationGenerator</span>, <span class="ident">V</span>: <span class="ident">AttestationVerifier</span><span class="op">&gt;</span> {
+    <span class="ident">generator</span>: <span class="ident">G</span>,
+    <span class="ident">verifier</span>: <span class="ident">V</span>,
 }
 
-<span class="kw">impl</span> <span class="ident">core::fmt::Debug</span> <span class="kw">for</span> <span class="ident">AttestationBehavior</span> {
-    <span class="kw">fn</span> <span class="ident">fmt</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">f</span>: <span class="kw-2">&amp;mut</span> <span class="ident">core::fmt::Formatter</span>) -&gt; <span class="ident">core::fmt::Result</span> {
-        <span class="kw">match</span> (
-            <span class="self">self</span>.<span class="ident">contains_peer_attestation</span>(),
-            <span class="self">self</span>.<span class="ident">contains_self_attestation</span>(),
-        ) {
-            (<span class="bool-val">true</span>, <span class="bool-val">false</span>) =&gt; <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;PeerAttestation&quot;</span>),
-            (<span class="bool-val">false</span>, <span class="bool-val">true</span>) =&gt; <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;SelfAttestation&quot;</span>),
-            (<span class="bool-val">true</span>, <span class="bool-val">true</span>) =&gt; <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;BidirectionalAttestation&quot;</span>),
-            (<span class="bool-val">false</span>, <span class="bool-val">false</span>) =&gt; <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;InvalidAttestation&quot;</span>),
+<span class="doccomment">/// A trait implementing the functionality of generating a remote attestation report.</span>
+<span class="doccomment">///</span>
+<span class="doccomment">/// An implementation of this trait is expected to run in a TEE (i.e. it is usually in the server).</span>
+<span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">AttestationGenerator</span>: <span class="ident">Clone</span> <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span> {
+    <span class="doccomment">/// Generate a remote attestation report, ensuring that `attested_data` is cryptographically</span>
+    <span class="doccomment">/// bound to the result (e.g. via a signature).</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// That is usually verified by [`AttestationVerifier::verify_attestation`].</span>
+    <span class="kw">fn</span> <span class="ident">generate_attestation</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">attested_data</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span>;
+}
+
+<span class="doccomment">/// An instance of [`AttestationGenerator`] that always returns an empty attestation.</span>
+<span class="doccomment">///</span>
+<span class="doccomment">/// Useful when no attestation is expected to be genereated by the current side of a remotely</span>
+<span class="doccomment">/// attested connection.</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>)]</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">EmptyAttestationGenerator</span>;
+
+<span class="kw">impl</span> <span class="ident">AttestationGenerator</span> <span class="kw">for</span> <span class="ident">EmptyAttestationGenerator</span> {
+    <span class="kw">fn</span> <span class="ident">generate_attestation</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">_attested_data</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+        <span class="prelude-val">Ok</span>(<span class="ident">Vec::new</span>())
+    }
+}
+
+<span class="doccomment">/// A trait implementing the functionality of verifying a remote attestation report.</span>
+<span class="doccomment">///</span>
+<span class="doccomment">/// An implementation of this trait is not expected to run in a TEE (i.e. it is usually in the</span>
+<span class="doccomment">/// client).</span>
+<span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">AttestationVerifier</span>: <span class="ident">Clone</span> <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span> {
+    <span class="doccomment">/// Verify the provided remote attestation report, checking that `expected_attested_data` is</span>
+    <span class="doccomment">/// cryptographically bound to it (e.g. via a signature).</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// That is usually generated by [`AttestationGenerator::generate_attestation`].</span>
+    <span class="kw">fn</span> <span class="ident">verify_attestation</span>(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        <span class="ident">attestation</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>],
+        <span class="ident">expected_attested_data</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>],
+    ) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span>;
+}
+
+<span class="doccomment">/// An instance of [`AttestationVerifier`] that succeeds iff the provided attestation is empty.</span>
+<span class="doccomment">///</span>
+<span class="doccomment">/// Useful when no attestation is expected to be genereated by the other side of a remotely</span>
+<span class="doccomment">/// attested connection.</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>)]</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">EmptyAttestationVerifier</span>;
+
+<span class="kw">impl</span> <span class="ident">AttestationVerifier</span> <span class="kw">for</span> <span class="ident">EmptyAttestationVerifier</span> {
+    <span class="kw">fn</span> <span class="ident">verify_attestation</span>(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        <span class="ident">attestation</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>],
+        <span class="ident">_expected_attested_data</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>],
+    ) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+        <span class="comment">// We check that the attestation is empty in order to avoid accidentally ignoring a real</span>
+        <span class="comment">// attestation from the other side, although in principle a more lenient implementation of</span>
+        <span class="comment">// this struct could be used that always ignores also non-empty attestations.</span>
+        <span class="kw">if</span> <span class="ident">attestation</span>.<span class="ident">is_empty</span>() {
+            <span class="prelude-val">Ok</span>(())
+        } <span class="kw">else</span> {
+            <span class="prelude-val">Err</span>(<span class="macro">anyhow::anyhow!</span>(
+                <span class="string">&quot;expected empty attestation, got {:?}&quot;</span>,
+                <span class="ident">attestation</span>
+            ))
         }
     }
 }
 
-<span class="kw">impl</span> <span class="ident">AttestationBehavior</span> {
-    <span class="doccomment">/// Represents an attestation process, where current machine remotely attests a remote peer and</span>
-    <span class="doccomment">/// verifies its attestation info.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">create_peer_attestation</span>(<span class="ident">expected_tee_measurement</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) -&gt; <span class="self">Self</span> {
+<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">G</span>: <span class="ident">AttestationGenerator</span>, <span class="ident">V</span>: <span class="ident">AttestationVerifier</span><span class="op">&gt;</span> <span class="ident">AttestationBehavior</span><span class="op">&lt;</span><span class="ident">G</span>, <span class="ident">V</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">create</span>(<span class="ident">generator</span>: <span class="ident">G</span>, <span class="ident">verifier</span>: <span class="ident">V</span>) -&gt; <span class="self">Self</span> {
         <span class="self">Self</span> {
-            <span class="ident">expected_tee_measurement</span>: <span class="prelude-val">Some</span>(<span class="ident">expected_tee_measurement</span>.<span class="ident">to_vec</span>()),
-            <span class="ident">tee_certificate</span>: <span class="prelude-val">None</span>,
-            <span class="ident">signer</span>: <span class="prelude-val">None</span>,
+            <span class="ident">generator</span>,
+            <span class="ident">verifier</span>,
         }
-    }
-
-    <span class="doccomment">/// Represents an attestation process, where current machine remotely attests to a remote peer</span>
-    <span class="doccomment">/// and sends attestation info to it.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">create_self_attestation</span>(<span class="ident">tee_certificate</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
-        <span class="prelude-val">Ok</span>(<span class="self">Self</span> {
-            <span class="ident">expected_tee_measurement</span>: <span class="prelude-val">None</span>,
-            <span class="ident">tee_certificate</span>: <span class="prelude-val">Some</span>(<span class="ident">tee_certificate</span>.<span class="ident">to_vec</span>()),
-            <span class="ident">signer</span>: <span class="prelude-val">Some</span>(<span class="ident">Signer::create</span>().<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t create signer&quot;</span>)<span class="question-mark">?</span>),
-        })
-    }
-
-    <span class="doccomment">/// Represents an attestation process, where current machine and a remote peer remotely attest</span>
-    <span class="doccomment">/// each other.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">create_bidirectional_attestation</span>(
-        <span class="ident">tee_certificate</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>],
-        <span class="ident">expected_tee_measurement</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>],
-    ) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
-        <span class="prelude-val">Ok</span>(<span class="self">Self</span> {
-            <span class="ident">expected_tee_measurement</span>: <span class="prelude-val">Some</span>(<span class="ident">expected_tee_measurement</span>.<span class="ident">to_vec</span>()),
-            <span class="ident">tee_certificate</span>: <span class="prelude-val">Some</span>(<span class="ident">tee_certificate</span>.<span class="ident">to_vec</span>()),
-            <span class="ident">signer</span>: <span class="prelude-val">Some</span>(<span class="ident">Signer::create</span>().<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t create signer&quot;</span>)<span class="question-mark">?</span>),
-        })
-    }
-
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">contains_peer_attestation</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">bool</span> {
-        <span class="self">self</span>.<span class="ident">expected_tee_measurement</span>.<span class="ident">is_some</span>()
-    }
-
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">contains_self_attestation</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">bool</span> {
-        <span class="self">self</span>.<span class="ident">tee_certificate</span>.<span class="ident">is_some</span>() <span class="op">&amp;&amp;</span> <span class="self">self</span>.<span class="ident">signer</span>.<span class="ident">is_some</span>()
-    }
-
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_expected_tee_measurement</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-        <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">expected_tee_measurement</span>
-    }
-
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_tee_certificate</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-        <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">tee_certificate</span>
-    }
-
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_signer</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Signer</span><span class="op">&gt;</span> {
-        <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">signer</span>
     }
 }
 
 <span class="doccomment">/// Convenience struct for managing protocol transcripts.</span>
+<span class="doccomment">///</span>
 <span class="doccomment">/// Transcript is a concatenation of all sent and received messages, which is used for preventing</span>
 <span class="doccomment">/// replay attacks.</span>
 <span class="kw">struct</span> <span class="ident">Transcript</span> {
@@ -1468,74 +1423,39 @@
     }
 }
 
-<span class="doccomment">/// Generates attestation info with a TEE report.</span>
-<span class="doccomment">/// TEE report contains a hash of the signer&#39;s public key, and additional info if provided as a</span>
-<span class="doccomment">/// non-empty string by the caller.</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">create_attestation_info</span>(
-    <span class="ident">signer</span>: <span class="kw-2">&amp;</span><span class="ident">Signer</span>,
-    <span class="ident">additional_info</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>],
-    <span class="ident">tee_certificate</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>],
-) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-    <span class="kw">let</span> <span class="ident">signing_public_key</span> <span class="op">=</span> <span class="ident">signer</span>
-        .<span class="ident">public_key</span>()
-        .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t get singing public key&quot;</span>)<span class="question-mark">?</span>;
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">data</span> <span class="op">=</span> <span class="ident">get_sha256</span>(<span class="ident">signing_public_key</span>.<span class="ident">as_ref</span>()).<span class="ident">to_vec</span>();
-    <span class="kw">if</span> <span class="op">!</span><span class="ident">additional_info</span>.<span class="ident">is_empty</span>() {
-        <span class="ident">data</span>.<span class="ident">extend</span>(<span class="ident">get_sha256</span>(<span class="ident">additional_info</span>));
-        <span class="ident">data</span> <span class="op">=</span> <span class="ident">get_sha256</span>(<span class="kw-2">&amp;</span><span class="ident">data</span>).<span class="ident">to_vec</span>();
-    }
-    <span class="kw">let</span> <span class="ident">report</span> <span class="op">=</span> <span class="ident">AttestationReport::new</span>(<span class="kw-2">&amp;</span><span class="ident">data</span>);
-    <span class="kw">let</span> <span class="ident">attestation_info</span> <span class="op">=</span> <span class="ident">AttestationInfo</span> {
-        <span class="ident">report</span>: <span class="prelude-val">Some</span>(<span class="ident">report</span>),
-        <span class="ident">certificate</span>: <span class="ident">tee_certificate</span>.<span class="ident">to_vec</span>(),
-    };
-    <span class="ident">serialize_protobuf</span>(<span class="kw-2">&amp;</span><span class="ident">attestation_info</span>)
-        .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t encode attestation info Protobuf message&quot;</span>)
+<span class="doccomment">/// Compute data to be attested based on the actual or expected parameters.</span>
+<span class="doccomment">///</span>
+<span class="doccomment">/// In particular, the concatenation of the ephemeral public key, and the signing public key.</span>
+<span class="doccomment">///</span>
+<span class="doccomment">/// For instance, a remotely attestable server would use this function to condense all data that</span>
+<span class="doccomment">/// needs to be remotely attested into a single sequence of bytes; on the other side, the client</span>
+<span class="doccomment">/// would reconstruct the same expected data (e.g. during a key exchange protocol), and confirm that</span>
+<span class="doccomment">/// it was indeed correctly attested by the server.</span>
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">attestation_data</span>(
+    <span class="ident">ephemeral_public_key</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>; <span class="ident">KEY_AGREEMENT_ALGORITHM_KEY_LENGTH</span>],
+    <span class="ident">signing_public_key</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>; <span class="ident">SIGNING_ALGORITHM_KEY_LENGTH</span>],
+    <span class="ident">additional_attestation_data</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>],
+) -&gt; <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span> {
+    <span class="ident">hash_concat_hash</span>(<span class="kw-2">&amp;</span>[
+        <span class="ident">ephemeral_public_key</span>,
+        <span class="ident">signing_public_key</span>,
+        <span class="ident">additional_attestation_data</span>,
+    ])
+    .<span class="ident">to_vec</span>()
 }
 
-<span class="doccomment">/// Verifies the validity of the attestation info:</span>
-<span class="doccomment">/// - Checks that the TEE report is signed by TEE Provider’s root key.</span>
-<span class="doccomment">/// - Checks that the public key hash from the TEE report is equal to the hash of the public key</span>
-<span class="doccomment">///   presented in the server response.</span>
-<span class="doccomment">/// - Extracts the TEE measurement from the TEE report and compares it to the</span>
-<span class="doccomment">///   `expected_tee_measurement`.</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">verify_attestation_info</span>(
-    <span class="ident">attestation_info_bytes</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>],
-    <span class="ident">expected_tee_measurement</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>],
-) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-    <span class="kw">let</span> <span class="ident">attestation_info</span> <span class="op">=</span> <span class="ident">AttestationInfo::decode</span>(<span class="ident">attestation_info_bytes</span>)
-        .<span class="ident">map_err</span>(<span class="ident">anyhow::Error::msg</span>)
-        .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t decode attestation info Protobuf message&quot;</span>)<span class="question-mark">?</span>;
-
-    <span class="comment">// TODO(#1867): Add remote attestation support, use real TEE reports and check that</span>
-    <span class="comment">// `AttestationInfo::certificate` is signed by one of the root certificates.</span>
-
-    <span class="kw">let</span> <span class="ident">report</span> <span class="op">=</span> <span class="ident">attestation_info</span>
-        .<span class="ident">report</span>
-        .<span class="ident">as_ref</span>()
-        .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t find report in peer attestation info&quot;</span>)<span class="question-mark">?</span>;
-
-    <span class="comment">// Check that the report contains non-empty data. This should be a hash of the public key</span>
-    <span class="comment">// and the additional info field.</span>
-    <span class="kw">if</span> <span class="ident">report</span>.<span class="ident">data</span>.<span class="ident">is_empty</span>() {
-        <span class="macro">anyhow::bail!</span>(<span class="string">&quot;Hash of the public key and additional info is not provided.&quot;</span>)
-    }
-
-    <span class="comment">// Verify TEE measurement.</span>
-    <span class="kw">if</span> <span class="ident">expected_tee_measurement</span> <span class="op">==</span> <span class="ident">report</span>.<span class="ident">measurement</span> {
-        <span class="prelude-val">Ok</span>(())
-    } <span class="kw">else</span> {
-        <span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">&quot;Incorrect TEE measurement&quot;</span>))
-    }
-}
-
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">serialize_protobuf</span><span class="op">&lt;</span><span class="ident">M</span>: <span class="ident">prost::Message</span><span class="op">&gt;</span>(<span class="ident">message</span>: <span class="kw-2">&amp;</span><span class="ident">M</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">message_bytes</span> <span class="op">=</span> <span class="ident">Vec::new</span>();
-    <span class="ident">message</span>
-        .<span class="ident">encode</span>(<span class="kw-2">&amp;mut</span> <span class="ident">message_bytes</span>)
-        .<span class="ident">map_err</span>(<span class="ident">anyhow::Error::msg</span>)
-        .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t serialize Protobuf message to bytes&quot;</span>)<span class="question-mark">?</span>;
-    <span class="prelude-val">Ok</span>(<span class="ident">message_bytes</span>)
+<span class="doccomment">/// Compute a hash over values of possibly different length.</span>
+<span class="doccomment">///</span>
+<span class="doccomment">/// It is necessary to first hash the individual values, then concatenate the hashes, and then hash</span>
+<span class="doccomment">/// the concatenated result, in order to guarantee that it&#39;s not possible to create a collision by</span>
+<span class="doccomment">/// moving elements from one value to another (see unit test for an example of this attack).</span>
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">hash_concat_hash</span>(<span class="ident">values</span>: <span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span>[<span class="ident">u8</span>]]) -&gt; [<span class="ident">u8</span>; <span class="ident">SHA256_HASH_LENGTH</span>] {
+    <span class="ident">get_sha256</span>(
+        <span class="kw-2">&amp;</span><span class="ident">values</span>
+            .<span class="ident">iter</span>()
+            .<span class="ident">flat_map</span>(<span class="op">|</span><span class="ident">v</span><span class="op">|</span> <span class="ident">get_sha256</span>(<span class="ident">v</span>))
+            .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>(),
+    )
 }
 </code></pre></div>
 </section><section id="search" class="content hidden"></section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="oak_remote_attestation" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.62.0-nightly (de1bc0008 2022-04-21)" ></div>

@@ -67,8 +67,6 @@
 <span id="62">62</span>
 <span id="63">63</span>
 <span id="64">64</span>
-<span id="65">65</span>
-<span id="66">66</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2021 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -99,9 +97,7 @@
 
 <span class="attribute">#[<span class="ident">tokio::main</span>]</span>
 <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">main</span>() -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">client</span> <span class="op">=</span> <span class="ident">Client::new</span>(<span class="ident">URL</span>, <span class="op">|</span><span class="ident">_config</span><span class="op">|</span> <span class="prelude-val">Ok</span>(()))
-        .<span class="kw">await</span>
-        .<span class="ident">context</span>(<span class="string">&quot;Could not create client&quot;</span>)<span class="question-mark">?</span>;
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">client</span> <span class="op">=</span> <span class="ident">Client::new</span>(<span class="ident">URL</span>).<span class="kw">await</span>.<span class="ident">context</span>(<span class="string">&quot;Could not create client&quot;</span>)<span class="question-mark">?</span>;
 
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">latencies_millis</span> <span class="op">=</span> <span class="ident">Vec</span>::<span class="op">&lt;</span><span class="ident">f64</span><span class="op">&gt;</span><span class="ident">::with_capacity</span>(<span class="ident">TOTAL_REQUESTS</span>);
 
