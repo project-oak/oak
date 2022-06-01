@@ -94,6 +94,8 @@ impl Crosvm {
         let mut cmd = tokio::process::Command::new(params.binary);
 
         cmd.stderr(Stdio::inherit());
+        cmd.stdin(Stdio::null());
+        cmd.stdout(Stdio::inherit());
         cmd.preserved_fds(vec![params.console.as_raw_fd()]);
 
         // Construct the command-line arguments for `crosvm`.
