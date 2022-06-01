@@ -117,10 +117,11 @@ impl WebClient {
                 .map_err(|error| error.to_string())?;
 
             // Get the response body, while removing trailing empty space.
-            let body = &response.body[0..response
+            let length = response
                 .length
                 .try_into()
-                .map_err(|_| "Could not get response length")?];
+                .map_err(|_| "Could not fit the response length into usize")?;
+            let body = &response.body[0..length];
 
             // Construct a JavaScript object that contains the response status
             // and body.
