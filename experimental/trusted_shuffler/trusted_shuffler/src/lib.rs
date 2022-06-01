@@ -33,6 +33,10 @@ use tokio::{sync::oneshot, time::Duration};
 type Request = Vec<u8>;
 type Response = Vec<u8>;
 
+// The Trusted Shuffler responds with the `EMPTY_RESPONSE` if the backend does not respond within a
+// given timeout.
+const EMPTY_RESPONSE: Vec<u8> = vec![];
+
 struct Message {
     // Determines the original order in which messages arrived.
     // Index is used to send requests back to the client in the order of arrival.
@@ -43,13 +47,26 @@ struct Message {
     response_sender: oneshot::Sender<Response>,
 }
 
+impl Message {
+    fn new_response(self, data: Vec<u8>) -> Message {
+        Message {
+            index: self.index,
+            data,
+            response_sender: self.response_sender,
+        }
+    }
+
+    fn new_empty_response(self) -> Message {
+        self.new_response(EMPTY_RESPONSE)
+    }
+}
+
 #[async_trait]
 pub trait RequestHandler: Send + Sync {
     async fn handle(&self, request: Vec<u8>) -> anyhow::Result<Vec<u8>>;
 }
 
 // Trusted Shuffler implementation.
-#[allow(dead_code)]
 pub struct TrustedShuffler {
     // Value k that represents k-anonymity.
     k: usize,
@@ -106,9 +123,10 @@ impl TrustedShuffler {
 
                 // Shuffle requests and spawn async tasks for sending them to the backend.
                 let request_handler = self.request_handler.clone();
+                let timeout = self.timeout;
                 tokio::spawn(async move {
                     if let Err(error) =
-                        TrustedShuffler::shuffle_requests(requests, request_handler).await
+                        TrustedShuffler::shuffle_requests(requests, request_handler, timeout).await
                     {
                         log::error!("Shuffling error: {:?}", error);
                     }
@@ -124,6 +142,7 @@ impl TrustedShuffler {
     async fn shuffle_requests(
         mut requests: Vec<Message>,
         request_handler: Arc<dyn RequestHandler>,
+        timeout: Option<Duration>,
     ) -> anyhow::Result<()> {
         requests.sort_by(|first, second| first.data.cmp(&second.data));
 
@@ -132,14 +151,21 @@ impl TrustedShuffler {
             .map(|request| {
                 let request_handler_clone = request_handler.clone();
                 async move {
-                    request_handler_clone
-                        .handle(request.data)
+                    match timeout {
+                        None => request_handler_clone
+                            .handle(request.data.clone())
+                            .await
+                            .map(|response| request.new_response(response)),
+                        Some(timeout) => match tokio::time::timeout(
+                            timeout,
+                            request_handler_clone.handle(request.data.clone()),
+                        )
                         .await
-                        .map(|response| Message {
-                            index: request.index,
-                            data: response,
-                            response_sender: request.response_sender,
-                        })
+                        {
+                            Err(_) => Ok(request.new_empty_response()),
+                            Ok(response) => response.map(|response| request.new_response(response)),
+                        },
+                    }
                 }
             })
             .collect();

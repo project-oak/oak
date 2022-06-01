@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-use crate::{RequestHandler, TrustedShuffler};
+use crate::{RequestHandler, TrustedShuffler, EMPTY_RESPONSE};
 use async_trait::async_trait;
 use futures::future::join_all;
 use std::{sync::Arc, time::Duration};
@@ -28,6 +28,12 @@ impl RequestHandler for TestRequestHandler {
     // In the real use-case, this function should send requests to the backend and
     // return responses.
     async fn handle(&self, request: Vec<u8>) -> anyhow::Result<Vec<u8>> {
+        if drop_request(request.clone()) {
+            // In that case we don't send an answer ever.
+            loop {
+                tokio::task::yield_now().await;
+            }
+        }
         Ok(generate_response(request))
     }
 }
@@ -36,6 +42,19 @@ impl RequestHandler for TestRequestHandler {
 fn generate_response(request: Vec<u8>) -> Vec<u8> {
     let parsed_request = String::from_utf8(request).expect("Couldn't parse request");
     format!("Response for: {}", parsed_request).into_bytes()
+}
+
+// Generates request which will be dropped by the test backend, because we indicate it has to be
+// dropped in the request itself.
+fn generate_dropped_request() -> Vec<u8> {
+    // "Drop" has to be consistent with [`drop_request`].
+    let (dropped_request, _) = generate_request_and_expected_response("Drop");
+    dropped_request
+}
+
+// If true, then the test backend does not answer the request.
+fn drop_request(request: Vec<u8>) -> bool {
+    String::from_utf8(request).unwrap().contains("Drop")
 }
 
 // Generates a request and a corresponding response from a string.
@@ -50,6 +69,15 @@ fn test_trusted_shuffler(k: usize) -> Arc<TrustedShuffler> {
     Arc::new(TrustedShuffler::new(
         k,
         None,
+        Arc::new(TestRequestHandler {}),
+    ))
+}
+
+// Generates a test Trusted Shuffler with given timeout.
+fn test_trusted_shuffler_with_timeout(k: usize, timeout: Duration) -> Arc<TrustedShuffler> {
+    Arc::new(TrustedShuffler::new(
+        k,
+        Some(timeout),
         Arc::new(TestRequestHandler {}),
     ))
 }
@@ -139,4 +167,74 @@ async fn waiting_for_enough_requests_test() {
     assert!(result.is_ok());
     let response = result.unwrap();
     assert_eq!(expected_response, response);
+}
+
+// If one request receives no response from the backend after the given timeout, then the Trusted
+// Shuffler responds with the empty response.
+#[tokio::test]
+async fn one_empty_response_test() {
+    let anonymity_value = 2;
+    // This should give the non-empty response enough time to arrive.
+    let timeout = Duration::from_millis(200);
+    let trusted_shuffler = test_trusted_shuffler_with_timeout(anonymity_value, timeout);
+
+    let (request, expected_response) =
+        generate_request_and_expected_response("Request (not-dropped)");
+    let dropped_request = generate_dropped_request();
+
+    let trusted_shuffler_clone = trusted_shuffler.clone();
+    let response = tokio::spawn(async move { trusted_shuffler_clone.invoke(request).await });
+
+    // Send the dropped_request. The backend will not answer it, but the Trusted Shuffler will send
+    // an empty response.
+    let response_from_dropped = trusted_shuffler.invoke(dropped_request).await;
+    assert_eq!(EMPTY_RESPONSE, response_from_dropped.unwrap());
+
+    // The backend did answer the request and the Trusted Shuffler forwarded it.
+    let response = response.await.unwrap();
+    assert_eq!(expected_response, response.unwrap());
+}
+
+// If all requests receive a response from the backend within the given timeout, then the Trusted
+// Shuffler responds with the all responses.
+#[tokio::test]
+async fn no_empty_response_test() {
+    let anonymity_value = 2;
+    // This should give the non-empty response enough time to arrive.
+    let timeout = Duration::from_millis(200);
+    let trusted_shuffler = test_trusted_shuffler_with_timeout(anonymity_value, timeout);
+
+    let (request_1, expected_response_1) = generate_request_and_expected_response("Request 1");
+    let (request_2, expected_response_2) = generate_request_and_expected_response("Request 2");
+
+    let trusted_shuffler_clone = trusted_shuffler.clone();
+    let response = tokio::spawn(async move { trusted_shuffler_clone.invoke(request_1).await });
+
+    let response_2 = trusted_shuffler.invoke(request_2).await;
+    assert_eq!(expected_response_2, response_2.unwrap());
+
+    let response_1 = response.await.unwrap();
+    assert_eq!(expected_response_1, response_1.unwrap());
+}
+
+// If no request receives a response from the backend within the given timeout, then the Trusted
+// Shuffler responds with the all empty responses.
+#[tokio::test]
+async fn all_empty_responses_test() {
+    let anonymity_value = 2;
+    let timeout = Duration::from_millis(200);
+    let trusted_shuffler = test_trusted_shuffler_with_timeout(anonymity_value, timeout);
+
+    let dropped_request_1 = generate_dropped_request();
+    let dropped_request_2 = generate_dropped_request();
+
+    let trusted_shuffler_clone = trusted_shuffler.clone();
+    let response =
+        tokio::spawn(async move { trusted_shuffler_clone.invoke(dropped_request_1).await });
+
+    let response_2 = trusted_shuffler.invoke(dropped_request_2).await;
+    assert_eq!(EMPTY_RESPONSE, response_2.unwrap());
+
+    let response_1 = response.await.unwrap();
+    assert_eq!(EMPTY_RESPONSE, response_1.unwrap());
 }
