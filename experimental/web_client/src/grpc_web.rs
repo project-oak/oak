@@ -14,7 +14,10 @@
 // limitations under the License.
 //
 
-//! A browser compatible gRPC web client for unary requests.
+//! A browser compatible gRPC web client for unary requests. Manually written,
+//! as while a web-compatible port of the tonic gRPC client for exists, it
+//! (at the time of writing) is not well maintained and has version conflicts
+//! with the newest tonic.
 
 use anyhow::{anyhow, Context};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
