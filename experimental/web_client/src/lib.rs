@@ -83,6 +83,7 @@ pub struct WebClient {
 
 #[wasm_bindgen]
 impl WebClient {
+    #[wasm_bindgen(constructor)]
     pub async fn new(uri: String) -> Result<WebClient, String> {
         let grpc_web_client = GrpcWebClient::create(&uri);
         let inner = GenericAttestationClient::create(
