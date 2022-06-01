@@ -22,7 +22,9 @@ use oak_remote_attestation::handshaker::{
 use oak_remote_attestation_sessions::SessionId;
 
 /// Abstract version of networking stub.
-#[async_trait(? Send)]
+// Async trait requires the definition and all implementations to be marked as
+// optionally [`Send`] if one implementation is not.
+#[async_trait(?Send)]
 pub trait UnaryClient {
     /// Constructs a requests, sends it over the network, and returns the result.
     async fn message(&mut self, session_id: SessionId, body: Vec<u8>) -> anyhow::Result<Vec<u8>>;

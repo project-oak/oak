@@ -39,6 +39,10 @@ async fn send(uri: &str, request_bytes: bytes::Bytes) -> anyhow::Result<bytes::B
     let response = client
         .post(uri)
         .header(reqwest::header::CONTENT_TYPE, "application/grpc-web")
+        // Setting this custom header includes it's key in preflight request's
+        // `access-control-request-headers` header, marking the preflight
+        // request as related to grpc-web.
+        // Ref: https://github.com/hyperium/tonic/blob/8084f4ea26cccf9bd2d96d2a81eaea490aaf603b/tonic-web/src/service.rs#L43
         .header("x-grpc-web", "1")
         .body(request_bytes)
         .send()

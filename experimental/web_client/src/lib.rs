@@ -54,9 +54,9 @@ impl GrpcWebClient {
     }
 }
 
-// Not marked as send, as the underlying client uses JavaScript APIs for
-// networking, which are not send.
-#[async_trait(? Send)]
+// Not marked as [`Send`], as the underlying client uses JavaScript APIs for
+// networking, which are not [`Send`].
+#[async_trait(?Send)]
 impl UnaryClient for GrpcWebClient {
     async fn message(&mut self, session_id: SessionId, body: Vec<u8>) -> anyhow::Result<Vec<u8>> {
         let reply = grpc_web::grpc_web_unary::<UnaryRequest, UnaryResponse>(
@@ -71,8 +71,8 @@ impl UnaryClient for GrpcWebClient {
     }
 }
 
-// The underlying [`GenericAttestationClient`] is held in a `wasm_mutex`, which
-// provides a queue of invocations. Ref: https://lib.rs/crates/wasm_mutex
+// The underlying [`GenericAttestationClient`] is held in a [`wasm_mutex::Mutex`],
+// which provides a queue of invocations. Ref: https://lib.rs/crates/wasm_mutex
 // TODO(#2908): Support concurrent invocations.
 type WebClientInner = Rc<wasm_mutex::Mutex<GenericAttestationClient<GrpcWebClient>>>;
 
@@ -103,8 +103,8 @@ impl WebClient {
         Ok(WebClient { inner })
     }
 
-    // Typically this would an async function. Instead it's a sync function
-    // that returns a JS Promise (the JS equivalent of a rust future).
+    // Typically this would be an async function. Instead it's a sync function
+    // that returns a JS Promise (the JS equivalent of a Rust future).
     // The reason for this is that we cannot access the stack allocated self
     // inside a Rust future.
     // Ref: https://github.com/rustwasm/wasm-bindgen/issues/1858

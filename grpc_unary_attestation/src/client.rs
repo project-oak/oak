@@ -39,7 +39,9 @@ impl GrpcClient {
     }
 }
 
-#[async_trait(? Send)]
+// Async trait requires the definition and all implementations to be marked as
+// optionally [`Send`] if one implementation is not.
+#[async_trait(?Send)]
 impl UnaryClient for GrpcClient {
     async fn message(&mut self, session_id: SessionId, body: Vec<u8>) -> anyhow::Result<Vec<u8>> {
         let response = self
