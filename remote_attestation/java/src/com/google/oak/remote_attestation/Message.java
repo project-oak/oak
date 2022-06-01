@@ -126,28 +126,25 @@ public class Message {
     /**
      * Information used for remote attestation such as a TEE report and a TEE provider's
      * certificate. TEE report contains a hash of the `signingPublicKey`.
-     *
-     * Attestation info must be a serialized `oak.remote_attestation.AttestationInfo` Protobuf
-     * message.
      */
-    private final byte[] attestationInfo;
+    private final byte[] attestationReport;
     /* Additional info to be checked when verifying the identity. This may include server
      * configuration details, and inclusion proofs on a verifiable log (e.g., LogEntry on Rekor).
      * The server and the client must be able to agree on a canonical representation of the
      * content to be able to deterministically compute the hash of this field.
      */
-    private final byte[] additionalInfo;
+    private final byte[] additionalAttestationData;
 
     public ServerIdentity(byte[] ephemeralPublicKey, byte[] random, byte[] signingPublicKey,
-        byte[] attestationInfo, byte[] additionalInfo) {
+        byte[] attestationReport, byte[] additionalAttestationData) {
       header = SERVER_IDENTITY_HEADER;
       version = PROTOCOL_VERSION;
       this.ephemeralPublicKey = ephemeralPublicKey;
       this.random = random;
       this.transcriptSignature = new byte[0];
       this.signingPublicKey = signingPublicKey;
-      this.attestationInfo = attestationInfo;
-      this.additionalInfo = additionalInfo;
+      this.attestationReport = attestationReport;
+      this.additionalAttestationData = additionalAttestationData;
     }
 
     public byte getVersion() {
@@ -174,12 +171,12 @@ public class Message {
       return signingPublicKey;
     }
 
-    public byte[] getAttestationInfo() {
-      return attestationInfo;
+    public byte[] getAttestationReport() {
+      return attestationReport;
     }
 
-    public byte[] getAdditionalInfo() {
-      return additionalInfo;
+    public byte[] getAdditionalAttestationData() {
+      return additionalAttestationData;
     }
 
     public byte[] serialize() throws IOException {
@@ -195,8 +192,8 @@ public class Message {
           outputStream, transcriptSignature, TRANSCRIPT_SIGNATURE_LENGTH, "transcript signature");
       writeFixedSizeArray(
           outputStream, signingPublicKey, SIGNING_PUBLIC_KEY_LENGTH, "signing public key");
-      writeVariableSizeArray(outputStream, attestationInfo, "attestation info");
-      writeVariableSizeArray(outputStream, additionalInfo, "additional info");
+      writeVariableSizeArray(outputStream, attestationReport, "attestation report");
+      writeVariableSizeArray(outputStream, additionalAttestationData, "additional attestation data");
       outputStream.flush();
 
       return output.toByteArray();
@@ -224,11 +221,11 @@ public class Message {
           readFixedSizeArray(inputStream, TRANSCRIPT_SIGNATURE_LENGTH, "transcript signature");
       byte[] signingPublicKey =
           readFixedSizeArray(inputStream, SIGNING_PUBLIC_KEY_LENGTH, "signing key");
-      byte[] attestationInfo = readVariableSizeArray(inputStream, "attestation info");
-      byte[] additionalInfo = readVariableSizeArray(inputStream, "additional info");
+      byte[] attestationReport = readVariableSizeArray(inputStream, "attestation report");
+      byte[] additionalAttestationData = readVariableSizeArray(inputStream, "additional attestation data");
 
       ServerIdentity serverIdentity = new ServerIdentity(
-          ephemeralPublicKey, random, signingPublicKey, attestationInfo, additionalInfo);
+          ephemeralPublicKey, random, signingPublicKey, attestationReport, additionalAttestationData);
       serverIdentity.setTranscriptSignature(transcriptSignature);
       return serverIdentity;
     }
@@ -264,19 +261,16 @@ public class Message {
     /**
      * Information used for remote attestation such as a TEE report and a TEE provider's
      * certificate. TEE report contains a hash of the `signingPublicKey`.
-     *
-     * Attestation info must be a serialized `oak.remote_attestation.AttestationInfo` Protobuf
-     * message.
      */
-    private final byte[] attestationInfo;
+    private final byte[] attestationReport;
 
     public ClientIdentity(
-        byte[] ephemeralPublicKey, byte[] signingPublicKey, byte[] attestationInfo) {
+        byte[] ephemeralPublicKey, byte[] signingPublicKey, byte[] attestationReport) {
       header = CLIENT_IDENTITY_HEADER;
       this.ephemeralPublicKey = ephemeralPublicKey;
       this.transcriptSignature = new byte[0];
       this.signingPublicKey = signingPublicKey;
-      this.attestationInfo = attestationInfo;
+      this.attestationReport = attestationReport;
     }
 
     public byte[] getEphemeralPublicKey() {
@@ -295,8 +289,8 @@ public class Message {
       return signingPublicKey;
     }
 
-    public byte[] getAttestationInfo() {
-      return attestationInfo;
+    public byte[] getAttestationReport() {
+      return attestationReport;
     }
 
     public byte[] serialize() throws IOException {
@@ -310,7 +304,7 @@ public class Message {
           outputStream, transcriptSignature, TRANSCRIPT_SIGNATURE_LENGTH, "transcript signature");
       writeFixedSizeArray(
           outputStream, signingPublicKey, SIGNING_PUBLIC_KEY_LENGTH, "signing public key");
-      writeVariableSizeArray(outputStream, attestationInfo, "attestation info");
+      writeVariableSizeArray(outputStream, attestationReport, "attestation report");
       outputStream.flush();
 
       return output.toByteArray();
@@ -331,10 +325,10 @@ public class Message {
           readFixedSizeArray(inputStream, TRANSCRIPT_SIGNATURE_LENGTH, "transcript signature");
       byte[] signingPublicKey =
           readFixedSizeArray(inputStream, SIGNING_PUBLIC_KEY_LENGTH, "signing key");
-      byte[] attestationInfo = readVariableSizeArray(inputStream, "attestation info");
+      byte[] attestationReport = readVariableSizeArray(inputStream, "attestation report");
 
       ClientIdentity clientIdentity =
-          new ClientIdentity(ephemeralPublicKey, signingPublicKey, attestationInfo);
+          new ClientIdentity(ephemeralPublicKey, signingPublicKey, attestationReport);
       clientIdentity.setTranscriptSignature(transcriptSignature);
       return clientIdentity;
     }

@@ -23,7 +23,6 @@ import com.google.oak.remote_attestation.AeadEncryptor;
 import com.google.oak.remote_attestation.KeyNegotiator;
 import com.google.oak.remote_attestation.Message;
 import com.google.oak.remote_attestation.SignatureVerifier;
-import com.google.protobuf.ExtensionRegistryLite;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.security.GeneralSecurityException;
@@ -31,7 +30,6 @@ import java.util.Arrays;
 import java.util.Random;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import oak.remote_attestation.AttestationInfo;
 
 /** Remote attestation protocol handshake implementation. */
 public class ClientHandshaker {
@@ -124,7 +122,7 @@ public class ClientHandshaker {
       Message.ServerIdentity serverIdentityNoSignature =
           new Message.ServerIdentity(serverIdentity.getEphemeralPublicKey(),
               serverIdentity.getRandom(), serverIdentity.getSigningPublicKey(),
-              serverIdentity.getAttestationInfo(), serverIdentity.getAdditionalInfo());
+              serverIdentity.getAttestationReport(), serverIdentity.getAdditionalAttestationData());
       byte[] serializedServerIdentityNoSignature = serverIdentityNoSignature.serialize();
       appendTranscript(serializedServerIdentityNoSignature);
 
@@ -188,36 +186,49 @@ public class ClientHandshaker {
    *   {@code expectedTeeMeasurement}.
    */
   private Boolean verifyAttestationInfo(Message.ServerIdentity serverIdentity) throws IOException {
-    byte[] additionalInfo = serverIdentity.getAdditionalInfo();
-    // Ensure additional info was supplied.
-    if (additionalInfo == null || additionalInfo.length == 0) {
-      logger.log(Level.WARNING, "Configuration data cannot be empty");
+    byte[] additionalAttestationData = serverIdentity.getAdditionalAttestationData();
+
+    // Ensure additional attestation data was supplied.
+    if (!verifyAdditionalAttestationData(additionalAttestationData)) {
+      logger.log(Level.WARNING, "Additional attestation data was invalid");
       return false;
     }
 
     // Check the hash of the public key and additional info
-    AttestationInfo attestationInfo = AttestationInfo.parseFrom(
-        serverIdentity.getAttestationInfo(), ExtensionRegistryLite.getEmptyRegistry());
-    byte[] attestationReportData = attestationInfo.getReport().getData().toByteArray();
-
-    byte[] publicKeyHash =
-        Hashing.sha256().hashBytes(serverIdentity.getSigningPublicKey()).asBytes();
-    byte[] configHash = Hashing.sha256().hashBytes(additionalInfo).asBytes();
-    byte[] buffer = ByteBuffer.allocate(publicKeyHash.length + configHash.length)
-                        .put(publicKeyHash)
-                        .put(configHash)
+    byte[] ephemeralPublicKeyHash =
+        sha256(serverIdentity.getEphemeralPublicKey());
+    byte[] signingPublicKeyHash =
+        sha256(serverIdentity.getSigningPublicKey());
+    byte[] additionalAttestationDataHash = sha256(additionalAttestationData);
+    byte[] buffer = ByteBuffer.allocate(ephemeralPublicKeyHash.length + signingPublicKeyHash.length + additionalAttestationDataHash.length)
+                        .put(ephemeralPublicKeyHash)
+                        .put(signingPublicKeyHash)
+                        .put(additionalAttestationDataHash)
                         .array();
-    byte[] hashBytes = Hashing.sha256().hashBytes(buffer).asBytes();
+    byte[] hashBytes = sha256(buffer);
 
-    // Verify attestationReport
-    if (!Arrays.equals(hashBytes, attestationReportData)) {
+    // Verify attestationReport.
+    if (!verifyRemoteAttestationReport(serverIdentity.getAttestationReport(), hashBytes)) {
       logger.log(Level.WARNING, "Invalid hash of the configuration data");
       return false;
     }
 
     // TODO(#1867): Add remote attestation support.
-    return Arrays.equals(
-        expectedTeeMeasurement, attestationInfo.getReport().getMeasurement().toByteArray());
+    return true;
+  }
+
+  private boolean verifyAdditionalAttestationData(byte[] additionalAttestationData) {
+    // TODO(#2917): Implement this method.
+    return true;
+  }
+
+  private boolean verifyRemoteAttestationReport(byte[] attestationReport, byte[] expectedAdditionalAttestationData) {
+    // TODO(#2917): Implement this method.
+    return true;
+  }
+
+  private byte[] sha256(byte[] value) {
+    return Hashing.sha256().hashBytes(value).asBytes();
   }
 
   /**

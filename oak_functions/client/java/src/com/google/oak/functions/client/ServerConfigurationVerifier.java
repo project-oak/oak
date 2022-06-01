@@ -52,11 +52,11 @@ public class ServerConfigurationVerifier {
    * @return the result of calling test {@code configurationVerifier} as described above.
    */
   public boolean verify() {
-    byte[] configBytes = serverIdentity.getAdditionalInfo();
+    byte[] additionalAttestationData = serverIdentity.getAdditionalAttestationData();
 
     try {
       ConfigurationInfo configInfo =
-          ConfigurationInfo.parseFrom(configBytes, ExtensionRegistryLite.getEmptyRegistry());
+          ConfigurationInfo.parseFrom(additionalAttestationData, ExtensionRegistryLite.getEmptyRegistry());
       // TODO(#2347): Check that ConfigurationInfo does not have additional/unknown fields.
       if (!configurationVerifier.test(configInfo)) {
         logger.log(Level.WARNING, "Verification of ConfigurationInfo failed.");
