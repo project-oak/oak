@@ -195,12 +195,12 @@ public class ClientHandshaker {
     }
 
     // Check the hash of the public key and additional info
-    byte[] ephemeralPublicKeyHash =
-        sha256(serverIdentity.getEphemeralPublicKey());
-    byte[] signingPublicKeyHash =
-        sha256(serverIdentity.getSigningPublicKey());
+    byte[] ephemeralPublicKeyHash = sha256(serverIdentity.getEphemeralPublicKey());
+    byte[] signingPublicKeyHash = sha256(serverIdentity.getSigningPublicKey());
     byte[] additionalAttestationDataHash = sha256(additionalAttestationData);
-    byte[] buffer = ByteBuffer.allocate(ephemeralPublicKeyHash.length + signingPublicKeyHash.length + additionalAttestationDataHash.length)
+    byte[] buffer = ByteBuffer
+                        .allocate(ephemeralPublicKeyHash.length + signingPublicKeyHash.length
+                            + additionalAttestationDataHash.length)
                         .put(ephemeralPublicKeyHash)
                         .put(signingPublicKeyHash)
                         .put(additionalAttestationDataHash)
@@ -209,7 +209,7 @@ public class ClientHandshaker {
 
     // Verify attestationReport.
     if (!verifyRemoteAttestationReport(serverIdentity.getAttestationReport(), hashBytes)) {
-      logger.log(Level.WARNING, "Invalid hash of the configuration data");
+      logger.log(Level.WARNING, "Invalid remote attestation report");
       return false;
     }
 
@@ -222,7 +222,8 @@ public class ClientHandshaker {
     return true;
   }
 
-  private boolean verifyRemoteAttestationReport(byte[] attestationReport, byte[] expectedAdditionalAttestationData) {
+  private boolean verifyRemoteAttestationReport(
+      byte[] attestationReport, byte[] expectedAdditionalAttestationData) {
     // TODO(#2917): Implement this method.
     return true;
   }

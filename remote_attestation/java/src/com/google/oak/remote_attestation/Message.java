@@ -193,7 +193,8 @@ public class Message {
       writeFixedSizeArray(
           outputStream, signingPublicKey, SIGNING_PUBLIC_KEY_LENGTH, "signing public key");
       writeVariableSizeArray(outputStream, attestationReport, "attestation report");
-      writeVariableSizeArray(outputStream, additionalAttestationData, "additional attestation data");
+      writeVariableSizeArray(
+          outputStream, additionalAttestationData, "additional attestation data");
       outputStream.flush();
 
       return output.toByteArray();
@@ -222,10 +223,11 @@ public class Message {
       byte[] signingPublicKey =
           readFixedSizeArray(inputStream, SIGNING_PUBLIC_KEY_LENGTH, "signing key");
       byte[] attestationReport = readVariableSizeArray(inputStream, "attestation report");
-      byte[] additionalAttestationData = readVariableSizeArray(inputStream, "additional attestation data");
+      byte[] additionalAttestationData =
+          readVariableSizeArray(inputStream, "additional attestation data");
 
-      ServerIdentity serverIdentity = new ServerIdentity(
-          ephemeralPublicKey, random, signingPublicKey, attestationReport, additionalAttestationData);
+      ServerIdentity serverIdentity = new ServerIdentity(ephemeralPublicKey, random,
+          signingPublicKey, attestationReport, additionalAttestationData);
       serverIdentity.setTranscriptSignature(transcriptSignature);
       return serverIdentity;
     }

@@ -55,8 +55,8 @@ public class ServerConfigurationVerifier {
     byte[] additionalAttestationData = serverIdentity.getAdditionalAttestationData();
 
     try {
-      ConfigurationInfo configInfo =
-          ConfigurationInfo.parseFrom(additionalAttestationData, ExtensionRegistryLite.getEmptyRegistry());
+      ConfigurationInfo configInfo = ConfigurationInfo.parseFrom(
+          additionalAttestationData, ExtensionRegistryLite.getEmptyRegistry());
       // TODO(#2347): Check that ConfigurationInfo does not have additional/unknown fields.
       if (!configurationVerifier.test(configInfo)) {
         logger.log(Level.WARNING, "Verification of ConfigurationInfo failed.");
