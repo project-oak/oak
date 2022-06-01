@@ -333,7 +333,7 @@ name = "benchmark"
 version = "0.1.0"
 dependencies = [
  "oak_functions",
- "prost 0.10.3",
+ "prost 0.10.4",
  "prost-build 0.10.3",
 ]
 
@@ -1784,7 +1784,7 @@ dependencies = [
  "oak_remote_attestation_sessions",
  "oak_remote_attestation_sessions_client",
  "oak_utils",
- "prost 0.10.3",
+ "prost 0.9.0",
  "prost-types 0.10.1",
  "serde",
  "tokio",
@@ -2234,7 +2234,7 @@ dependencies = [
  "oak_functions_abi",
  "oak_functions_loader",
  "oak_functions_lookup",
- "prost 0.10.3",
+ "prost 0.10.4",
  "test_utils",
  "tokio",
 ]
@@ -2404,7 +2404,7 @@ dependencies = [
  "location_utils",
  "log",
  "oak_functions_abi",
- "prost 0.10.3",
+ "prost 0.10.4",
  "serde",
 ]
 
@@ -2418,7 +2418,7 @@ dependencies = [
  "location_utils",
  "multimap",
  "oak_functions_abi",
- "prost 0.10.3",
+ "prost 0.10.4",
  "rand 0.8.5",
  "serde",
  "serde_json",
@@ -2575,7 +2575,7 @@ dependencies = [
  "anyhow",
  "oak_functions",
  "oak_functions_abi",
- "prost 0.10.3",
+ "prost 0.10.4",
 ]
 
 [[package]]
@@ -2587,7 +2587,7 @@ dependencies = [
  "image",
  "oak_functions_abi",
  "oak_functions_client",
- "prost 0.10.3",
+ "prost 0.10.4",
  "regex",
  "tokio",
  "tract-tensorflow",
@@ -2843,7 +2843,7 @@ dependencies = [
  "oak_functions_testing_extension",
  "oak_functions_tf_inference",
  "oak_functions_workload_logging",
- "prost 0.10.3",
+ "prost 0.10.4",
  "serde",
  "serde_derive",
  "test_utils",
@@ -2854,7 +2854,7 @@ dependencies = [
 name = "oak_functions_abi"
 version = "0.1.0"
 dependencies = [
- "prost 0.10.3",
+ "prost 0.10.4",
  "prost-build 0.10.3",
  "serde",
 ]
@@ -2878,7 +2878,7 @@ dependencies = [
  "oak_remote_attestation",
  "oak_utils",
  "p256 0.10.1",
- "prost 0.10.3",
+ "prost 0.10.4",
  "regex",
  "serde",
  "serde_jcs",
@@ -2941,7 +2941,7 @@ dependencies = [
  "oak_logger",
  "oak_remote_attestation",
  "oak_utils",
- "prost 0.10.3",
+ "prost 0.10.4",
  "rand 0.8.5",
  "serde",
  "serde_derive",
@@ -3083,7 +3083,7 @@ dependencies = [
  "oak_functions_abi",
  "oak_functions_extension",
  "oak_logger",
- "prost 0.10.3",
+ "prost 0.10.4",
  "serde",
  "serde_derive",
  "tract-tensorflow",
@@ -3202,7 +3202,7 @@ dependencies = [
  "oak_attestation_common",
  "oak_utils",
  "openssl",
- "prost 0.10.3",
+ "prost 0.10.4",
  "tokio",
  "tonic",
 ]
@@ -3284,7 +3284,7 @@ name = "oak_utils"
 version = "0.1.0"
 dependencies = [
  "proc-macro2",
- "prost 0.10.3",
+ "prost 0.9.0",
  "prost-build 0.10.3",
  "quote",
  "tempfile",
@@ -3763,9 +3763,9 @@ dependencies = [
 
 [[package]]
 name = "prost"
-version = "0.10.3"
+version = "0.10.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bc03e116981ff7d8da8e5c220e374587b98d294af7ba7dd7fda761158f00086f"
+checksum = "71adf41db68aa0daaefc69bb30bcd68ded9b9abaad5d1fbb6304c4fb390e083e"
 dependencies = [
  "bytes",
  "prost-derive 0.10.1",
@@ -3806,7 +3806,7 @@ dependencies = [
  "log",
  "multimap",
  "petgraph",
- "prost 0.10.3",
+ "prost 0.10.4",
  "prost-types 0.10.1",
  "regex",
  "tempfile",
@@ -3856,7 +3856,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2d0a014229361011dc8e69c8a1ec6c2e8d0f2af7c91e3ea3f5b2170298461e68"
 dependencies = [
  "bytes",
- "prost 0.10.3",
+ "prost 0.10.4",
 ]
 
 [[package]]
@@ -4826,7 +4826,7 @@ dependencies = [
  "oak_functions_abi",
  "oak_functions_client",
  "oak_utils",
- "prost 0.10.3",
+ "prost 0.10.4",
  "prost-types 0.10.1",
  "tokio",
  "tonic",
@@ -4849,7 +4849,7 @@ dependencies = [
  "oak_remote_attestation",
  "oak_utils",
  "pin-project-lite",
- "prost 0.10.3",
+ "prost 0.10.4",
  "prost-types 0.10.1",
  "sync_wrapper",
  "tokio",
@@ -4879,7 +4879,7 @@ dependencies = [
  "oak_functions_client",
  "oak_remote_attestation",
  "port_check",
- "prost 0.10.3",
+ "prost 0.10.4",
  "tokio",
 ]
 
@@ -5231,7 +5231,7 @@ dependencies = [
  "hyper-timeout",
  "percent-encoding",
  "pin-project",
- "prost 0.10.3",
+ "prost 0.10.4",
  "prost-derive 0.10.1",
  "rustls-native-certs",
  "rustls-pemfile",
@@ -5642,7 +5642,7 @@ dependencies = [
  "grpc_unary_attestation",
  "oak_remote_attestation",
  "oak_utils",
- "prost 0.10.3",
+ "prost 0.10.4",
  "tokio",
  "tonic",
 ]
@@ -5663,7 +5663,7 @@ dependencies = [
  "log",
  "oak_remote_attestation_sessions",
  "oak_utils",
- "prost 0.10.3",
+ "prost 0.10.4",
  "serde",
  "tokio",
  "tonic",
@@ -6226,7 +6226,7 @@ dependencies = [
  "oak_functions_loader",
  "oak_functions_lookup",
  "oak_functions_workload_logging",
- "prost 0.10.3",
+ "prost 0.10.4",
  "rand 0.8.5",
  "serde",
  "serde_json",
