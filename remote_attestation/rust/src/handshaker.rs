@@ -708,7 +708,7 @@ pub fn attestation_data(
     .to_vec()
 }
 
-/// Compute a hash over values of possibly different lenght.
+/// Compute a hash over values of possibly different length.
 ///
 /// It is necessary to first hash the individual values, then concatenate the hashes, and then hash
 /// the concatenated result, in order to guarantee that it's not possible to create a collision by

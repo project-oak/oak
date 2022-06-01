@@ -18,7 +18,7 @@
 //! AMD-SEV-SNP.
 //!
 //! Currently only contains some placeholder structs, which will be replaced with actual
-//! functionality as part of #1867.
+//! functionality as part of #2842.
 
 #![no_std]
 
@@ -31,7 +31,7 @@ use alloc::{
 use oak_remote_attestation::handshaker::{AttestationGenerator, AttestationVerifier};
 use serde::{Deserialize, Serialize};
 
-// TODO(#1867): Add remote attestation support and use real TEE reports.
+// TODO(#2842): Add remote attestation support.
 #[derive(Clone)]
 pub struct PlaceholderAmdAttestationGenerator;
 
@@ -43,7 +43,7 @@ impl AttestationGenerator for PlaceholderAmdAttestationGenerator {
     }
 }
 
-// TODO(#1867): Add remote attestation support and use real TEE reports.
+// TODO(#2842): Add remote attestation support.
 #[derive(Clone)]
 pub struct PlaceholderAmdAttestationVerifier;
 
@@ -73,8 +73,7 @@ impl AttestationVerifier for PlaceholderAmdAttestationVerifier {
 /// Placeholder implementation of TEE report for remote attestation.
 ///
 /// <https://www.amd.com/system/files/TechDocs/56860.pdf#page=39>
-///
-/// TODO(#1867): Add remote attestation support and use real TEE reports.
+// TODO(#2842): Add remote attestation support.
 #[derive(Deserialize, Serialize, Debug, Default, PartialEq)]
 pub struct PlaceholderAmdReport {
     /// Version number of this attestation report.
@@ -91,7 +90,7 @@ pub struct PlaceholderAmdReport {
     pub signature: Vec<u8>,
 }
 
-// TODO(#1867): Add remote attestation support.
+// TODO(#2842): Add remote attestation support.
 const TEST_TEE_MEASUREMENT: &str = "Test TEE measurement";
 
 impl PlaceholderAmdReport {
@@ -106,11 +105,13 @@ impl PlaceholderAmdReport {
 }
 
 impl PlaceholderAmdReport {
+    // TODO(#2842): Use raw report instead of JSON.
     pub fn from_string(input: &str) -> anyhow::Result<Self> {
         serde_json::from_str(input)
             .map_err(|_err| anyhow::anyhow!("Couldn't deserialize attestation report"))
     }
 
+    // TODO(#2842): Use raw report instead of JSON.
     pub fn to_string(&self) -> anyhow::Result<String> {
         serde_json::to_string(&self)
             .map_err(|_err| anyhow::anyhow!("Couldn't serialize attestation report"))
