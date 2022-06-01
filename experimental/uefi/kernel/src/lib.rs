@@ -81,8 +81,7 @@ fn get_channel() -> virtio::vsock::socket::Socket {
         .expect("Couldn't configure PCI virtio vsock device.");
     info!("Socket device status: {}", vsock.get_status());
     let listener = virtio::vsock::socket::SocketListener::new(vsock, VSOCK_PORT);
-    let socket = listener.accept().unwrap();
-    socket
+    listener.accept().expect("Couldn't accept connection.")
 }
 
 /// Common panic routine for the kernel. This needs to be wrrapped in a
