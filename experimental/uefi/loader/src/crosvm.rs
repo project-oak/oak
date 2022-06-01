@@ -105,7 +105,7 @@ impl Crosvm {
             "--serial=num=1,hardware=serial,type=file,path=/proc/self/fd/{},console,earlycon",
             params.console.as_raw_fd()
         ));
-        cmd.arg("--cid=3");
+        cmd.arg(format!("--cid={}", VSOCK_GUEST_CID));
         cmd.arg(params.app);
 
         info!("Executing: {:?}", cmd);
