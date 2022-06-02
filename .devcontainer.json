@@ -17,7 +17,8 @@
     "zixuanwang.linkerscript",
     "zxh404.vscode-proto3",
     "rust-lang.rust-analyzer",
-    "fabiospampinato.vscode-open-in-github"
+    "fabiospampinato.vscode-open-in-github",
+    "waderyan.gitblame"
   ],
   "mounts": [
     // Crosvm wants access to syslog.
