@@ -15,7 +15,8 @@
     "vadimcn.vscode-lldb",
     "xaver.clang-format",
     "zixuanwang.linkerscript",
-    "zxh404.vscode-proto3"
+    "zxh404.vscode-proto3",
+    "rust-lang.rust-analyzer"
   ],
   "mounts": [
     // Crosvm wants access to syslog.
