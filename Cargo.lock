@@ -6031,9 +6031,9 @@ dependencies = [
 
 [[package]]
 name = "wasm_mutex"
-version = "0.1.1"
+version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "63ed8b4fb7a05502382cb27f7a0c349832df6b460bf9c9ff7cf8b4f820c09040"
+checksum = "1e1bd49fd4f530038faaedb992b741ebe0dd86561201380212a0bda43911b3b6"
 
 [[package]]
 name = "wasmi"
