@@ -9,7 +9,10 @@ license = "Apache-2.0"
 async-recursion = "*"
 async-trait = "*"
 cargo_metadata = "*"
-chrono = "*"
+chrono = { version = "*", default-features = false, features = [
+  "std",
+  "clock"
+] }
 clap = { version = "*", features = ["derive"] }
 clap_complete = "*"
 colored = "*"

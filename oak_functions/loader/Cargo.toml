@@ -15,7 +15,10 @@ async-stream = "*"
 bincode = "*"
 bytes = "*"
 byteorder = { version = "*", default-features = false }
-chrono = "*"
+chrono = { version = "*", default-features = false, features = [
+  "std",
+  "clock"
+] }
 clap = { version = "*", features = ["derive"] }
 futures = "*"
 grpc_unary_attestation = { path = "../../grpc_unary_attestation/" }
