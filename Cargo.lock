@@ -458,9 +458,9 @@ dependencies = [
 
 [[package]]
 name = "bumpalo"
-version = "3.9.1"
+version = "3.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a4a45a46ab1f2412e53d3a0ade76ffad2025804294569aae387231a0cd6e0899"
+checksum = "37ccbd214614c6783386c1af30caf03192f17891059cecc394b4fb119e363de3"
 
 [[package]]
 name = "byte-tools"
@@ -836,6 +836,15 @@ name = "core-foundation-sys"
 version = "0.8.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5827cebf4670468b8772dd191856768aedcb1b0278a04f989f7766351917b9dc"
+
+[[package]]
+name = "core2"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b49ba7ef1ad6107f8824dbe97de947cbaac53c44e7f9756a1fba0d37c1eec505"
+dependencies = [
+ "memchr",
+]
 
 [[package]]
 name = "cpp_demangle"
@@ -1518,12 +1527,13 @@ checksum = "279fb028e20b3c4c320317955b77c5e0c9701f05a1d309905d6fc702cdc5053e"
 [[package]]
 name = "flatbuffers"
 version = "2.1.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "86b428b715fdbdd1c364b84573b5fdc0f84f8e423661b9f398735278bc7f2b6a"
+source = "git+https://github.com/jul-sh/flatbuffers.git?rev=a07ddee936737da89aeb5a496f9742a805537188#a07ddee936737da89aeb5a496f9742a805537188"
 dependencies = [
  "bitflags",
+ "core2",
  "smallvec",
  "thiserror",
+ "thiserror_core2",
 ]
 
 [[package]]
@@ -1816,7 +1826,11 @@ dependencies = [
  "indexmap",
  "slab",
  "tokio",
+<<<<<<< HEAD
  "tokio-util 0.7.2",
+=======
+ "tokio-util 0.7.3",
+>>>>>>> de5570bdf (Use no_std compatible version of flatbuffers)
  "tracing",
 ]
 
@@ -3465,9 +3479,9 @@ checksum = "ff011a302c396a5197692431fc1948019154afc178baf7d8e37367442a4601cf"
 
 [[package]]
 name = "openssl-sys"
-version = "0.9.73"
+version = "0.9.74"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9d5fd19fb3e0a8191c1e34935718976a3e70c112ab9a24af6d7cadccd9d90bc0"
+checksum = "835363342df5fba8354c5b453325b110ffd54044e588c539cf2f20a8014e4cb1"
 dependencies = [
  "autocfg",
  "cc",
@@ -4966,6 +4980,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "thiserror_core2"
+version = "2.0.0"
+source = "git+https://github.com/jul-sh/thiserror-core2.git?rev=b99e1a0106623cbbd12cbb5562d01df7a3fdc22e#b99e1a0106623cbbd12cbb5562d01df7a3fdc22e"
+dependencies = [
+ "core2",
+ "thiserror_core2-impl",
+]
+
+[[package]]
+name = "thiserror_core2-impl"
+version = "2.0.0"
+source = "git+https://github.com/jul-sh/thiserror-core2.git?rev=b99e1a0106623cbbd12cbb5562d01df7a3fdc22e#b99e1a0106623cbbd12cbb5562d01df7a3fdc22e"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "threadpool"
 version = "1.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5157,9 +5190,9 @@ dependencies = [
 
 [[package]]
 name = "tokio-macros"
-version = "1.7.0"
+version = "1.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b557f72f448c511a979e2564e55d74e6c4432fc96ff4f6241bc6bded342643b7"
+checksum = "9724f9a975fb987ef7a3cd9be0350edcbe130698af5b8f7a631e23d42d052484"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -5189,9 +5222,9 @@ dependencies = [
 
 [[package]]
 name = "tokio-stream"
-version = "0.1.8"
+version = "0.1.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "50145484efff8818b5ccd256697f36863f587da82cf8b409c53adf1e840798e3"
+checksum = "df54d54117d6fdc4e4fea40fe1e4e566b3505700e148a6827e59b34b0d2600d9"
 dependencies = [
  "futures-core",
  "pin-project-lite",
@@ -5227,9 +5260,15 @@ dependencies = [
 
 [[package]]
 name = "tokio-util"
+<<<<<<< HEAD
 version = "0.7.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f988a1a1adc2fb21f9c12aa96441da33a1728193ae0b95d2be22dbd17fcb4e5c"
+=======
+version = "0.7.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cc463cd8deddc3770d20f9852143d50bf6094e640b485cb2e189a2099085ff45"
+>>>>>>> de5570bdf (Use no_std compatible version of flatbuffers)
 dependencies = [
  "bytes",
  "futures-core",
@@ -5275,7 +5314,11 @@ dependencies = [
  "tokio",
  "tokio-rustls",
  "tokio-stream",
+<<<<<<< HEAD
  "tokio-util 0.7.2",
+=======
+ "tokio-util 0.7.3",
+>>>>>>> de5570bdf (Use no_std compatible version of flatbuffers)
  "tower",
  "tower-layer",
  "tower-service",
@@ -5328,7 +5371,11 @@ dependencies = [
  "rand 0.8.5",
  "slab",
  "tokio",
+<<<<<<< HEAD
  "tokio-util 0.7.2",
+=======
+ "tokio-util 0.7.3",
+>>>>>>> de5570bdf (Use no_std compatible version of flatbuffers)
  "tower-layer",
  "tower-service",
  "tracing",
