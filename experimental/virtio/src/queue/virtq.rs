@@ -15,6 +15,7 @@
 //
 
 use bitflags::bitflags;
+use core::num::Wrapping;
 
 bitflags! {
     /// Flags about a descriptor.
@@ -92,8 +93,9 @@ pub struct AvailRing<const QUEUE_SIZE: usize> {
     pub flags: RingFlags,
     /// The next index that will be used in the ring (modulo `QUEUE_SIZE`).
     ///
-    /// Starts at 0 and always increments. Must never be decremented.
-    pub idx: u16,
+    /// Starts at 0 and always increments. Must never be decremented. Wraps naturally when at the
+    /// maximum `u16` value.
+    pub idx: Wrapping<u16>,
     /// The ring-buffer containing indices of the heads of available descriptor chains.
     pub ring: [u16; QUEUE_SIZE],
 }
@@ -103,7 +105,7 @@ impl<const QUEUE_SIZE: usize> Default for AvailRing<QUEUE_SIZE> {
         Self {
             // We implement all drivers via polling, so don't want notifications.
             flags: RingFlags::NO_NOTIFY,
-            idx: 0,
+            idx: Wrapping(0),
             ring: [0; QUEUE_SIZE],
         }
     }
@@ -118,8 +120,9 @@ pub struct UsedRing<const QUEUE_SIZE: usize> {
     pub flags: RingFlags,
     /// The next index that will be used in the ring (modulo `QUEUE_SIZE`).
     ///
-    /// Starts at 0 and always increments. Must never be decremented.
-    pub idx: u16,
+    /// Starts at 0 and always increments. Must never be decremented. Wraps naturally when at the
+    /// maximum `u16` value.
+    pub idx: Wrapping<u16>,
     /// The ring-buffer containing the used elements.
     pub ring: [UsedElem; QUEUE_SIZE],
 }
@@ -128,7 +131,7 @@ impl<const QUEUE_SIZE: usize> Default for UsedRing<QUEUE_SIZE> {
     fn default() -> Self {
         Self {
             flags: RingFlags::empty(),
-            idx: 0,
+            idx: Wrapping(0),
             ring: [(); QUEUE_SIZE].map(|_| UsedElem::default()),
         }
     }

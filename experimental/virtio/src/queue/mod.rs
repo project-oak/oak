@@ -15,6 +15,7 @@
 //
 
 use alloc::{boxed::Box, collections::vec_deque::VecDeque, vec, vec::Vec};
+use core::num::Wrapping;
 use virtq::{AvailRing, Desc, DescFlags, RingFlags, UsedElem, UsedRing, VirtQueue};
 
 mod virtq;
@@ -153,7 +154,7 @@ pub struct Queue<const QUEUE_SIZE: usize, const BUFFER_SIZE: usize> {
     base_offset: u64,
 
     /// The last index that was used when popping elements from the used ring.
-    last_used_idx: u16,
+    last_used_idx: Wrapping<u16>,
 }
 
 impl<const QUEUE_SIZE: usize, const BUFFER_SIZE: usize> Queue<QUEUE_SIZE, BUFFER_SIZE> {
@@ -186,7 +187,7 @@ impl<const QUEUE_SIZE: usize, const BUFFER_SIZE: usize> Queue<QUEUE_SIZE, BUFFER
             virt_queue,
             buffer,
             base_offset,
-            last_used_idx: 0,
+            last_used_idx: Wrapping(0),
         }
     }
 
@@ -231,16 +232,16 @@ impl<const QUEUE_SIZE: usize, const BUFFER_SIZE: usize> Queue<QUEUE_SIZE, BUFFER
             None
         } else {
             self.last_used_idx += 1;
-            Some(self.virt_queue.used.ring[next_used as usize % QUEUE_SIZE])
+            Some(self.virt_queue.used.ring[next_used.0 as usize % QUEUE_SIZE])
         }
     }
 
     /// Adds a descriptor to the available ring.
     fn add_available_descriptor(&mut self, index: u16) {
         // Add the descriptor index to the available ring at the next location.
-        self.virt_queue.avail.ring[self.virt_queue.avail.idx as usize % QUEUE_SIZE] = index;
+        self.virt_queue.avail.ring[self.virt_queue.avail.idx.0 as usize % QUEUE_SIZE] = index;
         // Increment the available ring index to use next time.
-        let next = self.virt_queue.avail.idx + 1;
+        let next = self.virt_queue.avail.idx + Wrapping(1);
         let idx = &mut self.virt_queue.avail.idx;
         // Memory fence to ensure the device will not see the index update before the available ring
         // entry update.
