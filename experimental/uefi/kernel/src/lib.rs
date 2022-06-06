@@ -38,8 +38,6 @@ mod interrupts;
 mod libm;
 mod logging;
 mod memory;
-#[cfg(not(feature = "vsock_channel"))]
-mod serial;
 
 use core::panic::PanicInfo;
 use log::{error, info};
@@ -72,8 +70,11 @@ fn main<E: boot::E820Entry, B: boot::BootInfo<E>>(info: &B) -> ! {
 
 // Use a serial port for the communications channel if we don't support virtio vsock.
 #[cfg(not(feature = "vsock_channel"))]
-fn get_channel() -> serial::Serial {
-    serial::Serial::new()
+fn get_channel() -> virtio::console::Console {
+    let console = virtio::console::Console::find_and_configure_device()
+        .expect("Couldn't configure PCI virtio console device.");
+    info!("Console device status: {}", console.get_status());
+    console
 }
 
 // Use virtio vsock for the communications channel.

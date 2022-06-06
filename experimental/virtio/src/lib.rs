@@ -24,5 +24,9 @@
 
 extern crate alloc;
 
+pub mod console;
 pub mod queue;
 pub mod vsock;
+
+/// The vendor ID for virtio PCI devices.
+const PCI_VENDOR_ID: u16 = 0x1AF4;
