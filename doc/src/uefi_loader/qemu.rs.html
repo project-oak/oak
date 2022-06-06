@@ -136,6 +136,18 @@
 <span id="131">131</span>
 <span id="132">132</span>
 <span id="133">133</span>
+<span id="134">134</span>
+<span id="135">135</span>
+<span id="136">136</span>
+<span id="137">137</span>
+<span id="138">138</span>
+<span id="139">139</span>
+<span id="140">140</span>
+<span id="141">141</span>
+<span id="142">142</span>
+<span id="143">143</span>
+<span id="144">144</span>
+<span id="145">145</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2022 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -152,7 +164,10 @@
 <span class="comment">// limitations under the License.</span>
 <span class="comment">//</span>
 
-<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::vmm</span>::{<span class="ident">Params</span>, <span class="ident">Vmm</span>};
+<span class="kw">use</span> <span class="kw">crate</span>::{
+    <span class="ident">vmm</span>::{<span class="ident">Params</span>, <span class="ident">Vmm</span>},
+    <span class="ident">ReadWrite</span>,
+};
 <span class="kw">use</span> <span class="ident">anyhow::Result</span>;
 <span class="kw">use</span> <span class="ident">async_trait::async_trait</span>;
 <span class="kw">use</span> <span class="ident">command_fds</span>::{<span class="ident">tokio::CommandFdAsyncExt</span>, <span class="ident">FdMapping</span>};
@@ -166,13 +181,15 @@
 
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Qemu</span> {
     <span class="ident">console</span>: <span class="ident">UnixStream</span>,
-    <span class="ident">comms</span>: <span class="ident">UnixStream</span>,
+    <span class="ident">comms_guest</span>: <span class="ident">UnixStream</span>,
+    <span class="ident">comms_host</span>: <span class="ident">UnixStream</span>,
     <span class="ident">qmp</span>: <span class="ident">UnixStream</span>,
     <span class="ident">instance</span>: <span class="ident">tokio::process::Child</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">Qemu</span> {
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">start</span>(<span class="ident">params</span>: <span class="ident">Params</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
+        <span class="kw">let</span> (<span class="ident">comms_guest</span>, <span class="ident">comms_host</span>) <span class="op">=</span> <span class="ident">UnixStream::pair</span>()<span class="question-mark">?</span>;
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">cmd</span> <span class="op">=</span> <span class="ident">tokio::process::Command::new</span>(<span class="ident">params</span>.<span class="ident">binary</span>);
 
         <span class="comment">// There should not be any communication over stdin/stdout/stderr, but let&#39;s inherit</span>
@@ -191,7 +208,7 @@
                 <span class="ident">child_fd</span>: <span class="number">10</span>,
             },
             <span class="ident">FdMapping</span> {
-                <span class="ident">parent_fd</span>: <span class="ident">params</span>.<span class="ident">comms</span>.<span class="ident">as_raw_fd</span>(),
+                <span class="ident">parent_fd</span>: <span class="ident">comms_guest</span>.<span class="ident">as_raw_fd</span>(),
                 <span class="ident">child_fd</span>: <span class="number">11</span>,
             },
             <span class="ident">FdMapping</span> {
@@ -234,6 +251,7 @@
         <span class="comment">// Expose the QEMU monitor (QMP) over a socket as well.</span>
         <span class="ident">cmd</span>.<span class="ident">args</span>(<span class="kw-2">&amp;</span>[<span class="string">&quot;-chardev&quot;</span>, <span class="string">&quot;socket,id=qmpsock,fd=12&quot;</span>]);
         <span class="ident">cmd</span>.<span class="ident">args</span>(<span class="kw-2">&amp;</span>[<span class="string">&quot;-qmp&quot;</span>, <span class="string">&quot;chardev:qmpsock&quot;</span>]);
+
         <span class="kw">if</span> <span class="ident">params</span>.<span class="ident">firmware</span>.<span class="ident">is_some</span>() {
             <span class="comment">// Point to the UEFI firmware.</span>
             <span class="ident">cmd</span>.<span class="ident">args</span>(<span class="kw-2">&amp;</span>[<span class="ident">OsStr::new</span>(<span class="string">&quot;-bios&quot;</span>), <span class="ident">params</span>.<span class="ident">firmware</span>.<span class="ident">unwrap</span>().<span class="ident">as_os_str</span>()]);
@@ -248,7 +266,8 @@
         <span class="prelude-val">Ok</span>(<span class="ident">Qemu</span> {
             <span class="ident">instance</span>: <span class="ident">cmd</span>.<span class="ident">spawn</span>()<span class="question-mark">?</span>,
             <span class="ident">console</span>: <span class="ident">params</span>.<span class="ident">console</span>,
-            <span class="ident">comms</span>: <span class="ident">params</span>.<span class="ident">comms</span>,
+            <span class="ident">comms_guest</span>,
+            <span class="ident">comms_host</span>,
             <span class="ident">qmp</span>: <span class="ident">qmp</span>.<span class="number">0</span>,
         })
     }
@@ -263,10 +282,15 @@
     <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">kill</span>(<span class="kw-2">mut</span> <span class="self">self</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">std::process::ExitStatus</span><span class="op">&gt;</span> {
         <span class="macro">info!</span>(<span class="string">&quot;Cleaning up and shutting down.&quot;</span>);
         <span class="self">self</span>.<span class="ident">console</span>.<span class="ident">shutdown</span>(<span class="ident">Shutdown::Both</span>)<span class="question-mark">?</span>;
-        <span class="self">self</span>.<span class="ident">comms</span>.<span class="ident">shutdown</span>(<span class="ident">Shutdown::Both</span>)<span class="question-mark">?</span>;
+        <span class="self">self</span>.<span class="ident">comms_guest</span>.<span class="ident">shutdown</span>(<span class="ident">Shutdown::Both</span>)<span class="question-mark">?</span>;
         <span class="self">self</span>.<span class="ident">qmp</span>.<span class="ident">shutdown</span>(<span class="ident">Shutdown::Both</span>)<span class="question-mark">?</span>;
         <span class="self">self</span>.<span class="ident">instance</span>.<span class="ident">start_kill</span>()<span class="question-mark">?</span>;
         <span class="self">self</span>.<span class="ident">wait</span>().<span class="kw">await</span>
+    }
+
+    <span class="kw">fn</span> <span class="ident">create_comms_channel</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">ReadWrite</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">comms_host</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">comms_host</span>.<span class="ident">try_clone</span>()<span class="question-mark">?</span>;
+        <span class="prelude-val">Ok</span>(<span class="ident">Box::new</span>(<span class="ident">comms_host</span>))
     }
 }
 </code></pre></div>

@@ -167,6 +167,14 @@
 <span id="162">162</span>
 <span id="163">163</span>
 <span id="164">164</span>
+<span id="165">165</span>
+<span id="166">166</span>
+<span id="167">167</span>
+<span id="168">168</span>
+<span id="169">169</span>
+<span id="170">170</span>
+<span id="171">171</span>
+<span id="172">172</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2022 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -267,6 +275,9 @@
     <span class="kw">pub</span> <span class="ident">idx</span>: <span class="ident">Wrapping</span><span class="op">&lt;</span><span class="ident">u16</span><span class="op">&gt;</span>,
     <span class="doccomment">/// The ring-buffer containing indices of the heads of available descriptor chains.</span>
     <span class="kw">pub</span> <span class="ident">ring</span>: [<span class="ident">u16</span>; <span class="ident">QUEUE_SIZE</span>],
+    <span class="doccomment">/// Event details. Only used if VIRTIO_F_EVENT_IDX has been negotiated, which we don&#39;t</span>
+    <span class="doccomment">/// currently support. The field is only added to act as padding for now.</span>
+    <span class="kw">pub</span> <span class="ident">used_event</span>: <span class="ident">u16</span>,
 }
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="kw">const</span> <span class="ident">QUEUE_SIZE</span>: <span class="ident">usize</span><span class="op">&gt;</span> <span class="ident">Default</span> <span class="kw">for</span> <span class="ident">AvailRing</span><span class="op">&lt;</span><span class="ident">QUEUE_SIZE</span><span class="op">&gt;</span> {
@@ -276,6 +287,7 @@
             <span class="ident">flags</span>: <span class="ident">RingFlags::NO_NOTIFY</span>,
             <span class="ident">idx</span>: <span class="ident">Wrapping</span>(<span class="number">0</span>),
             <span class="ident">ring</span>: [<span class="number">0</span>; <span class="ident">QUEUE_SIZE</span>],
+            <span class="ident">used_event</span>: <span class="number">0</span>,
         }
     }
 }
@@ -294,6 +306,9 @@
     <span class="kw">pub</span> <span class="ident">idx</span>: <span class="ident">Wrapping</span><span class="op">&lt;</span><span class="ident">u16</span><span class="op">&gt;</span>,
     <span class="doccomment">/// The ring-buffer containing the used elements.</span>
     <span class="kw">pub</span> <span class="ident">ring</span>: [<span class="ident">UsedElem</span>; <span class="ident">QUEUE_SIZE</span>],
+    <span class="doccomment">/// Event details. Only used if VIRTIO_F_EVENT_IDX has been negotiated, which we don&#39;t</span>
+    <span class="doccomment">/// currently support. The field is only added to act as padding for now.</span>
+    <span class="kw">pub</span> <span class="ident">avail_event</span>: <span class="ident">u16</span>,
 }
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="kw">const</span> <span class="ident">QUEUE_SIZE</span>: <span class="ident">usize</span><span class="op">&gt;</span> <span class="ident">Default</span> <span class="kw">for</span> <span class="ident">UsedRing</span><span class="op">&lt;</span><span class="ident">QUEUE_SIZE</span><span class="op">&gt;</span> {
@@ -302,6 +317,7 @@
             <span class="ident">flags</span>: <span class="ident">RingFlags::empty</span>(),
             <span class="ident">idx</span>: <span class="ident">Wrapping</span>(<span class="number">0</span>),
             <span class="ident">ring</span>: [(); <span class="ident">QUEUE_SIZE</span>].<span class="ident">map</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">UsedElem::default</span>()),
+            <span class="ident">avail_event</span>: <span class="number">0</span>,
         }
     }
 }

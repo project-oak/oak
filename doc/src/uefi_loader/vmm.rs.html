@@ -46,6 +46,13 @@
 <span id="41">41</span>
 <span id="42">42</span>
 <span id="43">43</span>
+<span id="44">44</span>
+<span id="45">45</span>
+<span id="46">46</span>
+<span id="47">47</span>
+<span id="48">48</span>
+<span id="49">49</span>
+<span id="50">50</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2022 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -62,6 +69,7 @@
 <span class="comment">// limitations under the License.</span>
 <span class="comment">//</span>
 
+<span class="kw">use</span> <span class="ident"><span class="kw">super</span>::ReadWrite</span>;
 <span class="kw">use</span> <span class="ident">anyhow::Result</span>;
 <span class="kw">use</span> <span class="ident">async_trait::async_trait</span>;
 <span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">os::unix::net::UnixStream</span>, <span class="ident">path::PathBuf</span>};
@@ -79,15 +87,21 @@
 
     <span class="doccomment">/// Stream to connect to the console of the VM.</span>
     <span class="kw">pub</span> <span class="ident">console</span>: <span class="ident">UnixStream</span>,
-
-    <span class="doccomment">/// Stream to use for communicating with the app inside the VM.</span>
-    <span class="kw">pub</span> <span class="ident">comms</span>: <span class="ident">UnixStream</span>,
 }
 
 <span class="attribute">#[<span class="ident">async_trait</span>]</span>
 <span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">Vmm</span> {
+    <span class="doccomment">/// Waits for the guest VM to finish.</span>
     <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">wait</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">std::process::ExitStatus</span><span class="op">&gt;</span>;
+
+    <span class="doccomment">/// Kills the guest VM.</span>
     <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">kill</span>(<span class="self">self</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">std::process::ExitStatus</span><span class="op">&gt;</span>;
+
+    <span class="doccomment">/// Creates a channel to communicate with the VM.</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// Since different VMMs might use different comms channels, we leave it up to the VMM to create</span>
+    <span class="doccomment">/// the channel rather than passing it in as part of the parameters.</span>
+    <span class="kw">fn</span> <span class="ident">create_comms_channel</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">ReadWrite</span><span class="op">&gt;</span><span class="op">&gt;</span>;
 }
 </code></pre></div>
 </section><section id="search" class="content hidden"></section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="uefi_loader" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.62.0-nightly (de1bc0008 2022-04-21)" ></div>

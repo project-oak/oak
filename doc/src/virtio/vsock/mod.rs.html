@@ -231,6 +231,19 @@
 <span id="226">226</span>
 <span id="227">227</span>
 <span id="228">228</span>
+<span id="229">229</span>
+<span id="230">230</span>
+<span id="231">231</span>
+<span id="232">232</span>
+<span id="233">233</span>
+<span id="234">234</span>
+<span id="235">235</span>
+<span id="236">236</span>
+<span id="237">237</span>
+<span id="238">238</span>
+<span id="239">239</span>
+<span id="240">240</span>
+<span id="241">241</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2022 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -308,10 +321,10 @@
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">VSock</span> {
     <span class="doccomment">/// The base virtio-over-PCI device used for configuration and notification.</span>
     <span class="ident">device</span>: <span class="ident">VirtioBaseDevice</span><span class="op">&lt;</span><span class="ident">VirtioPciTransport</span><span class="op">&gt;</span>,
-    <span class="doccomment">/// The transmit queue.</span>
-    <span class="ident">tx_queue</span>: <span class="ident">DriverWriteOnlyQueue</span><span class="op">&lt;</span><span class="ident">QUEUE_SIZE</span>, <span class="ident">DATA_BUFFER_SIZE</span><span class="op">&gt;</span>,
     <span class="doccomment">/// The receive queue.</span>
     <span class="ident">rx_queue</span>: <span class="ident">DeviceWriteOnlyQueue</span><span class="op">&lt;</span><span class="ident">QUEUE_SIZE</span>, <span class="ident">DATA_BUFFER_SIZE</span><span class="op">&gt;</span>,
+    <span class="doccomment">/// The transmit queue.</span>
+    <span class="ident">tx_queue</span>: <span class="ident">DriverWriteOnlyQueue</span><span class="op">&lt;</span><span class="ident">QUEUE_SIZE</span>, <span class="ident">DATA_BUFFER_SIZE</span><span class="op">&gt;</span>,
     <span class="doccomment">/// The event queue used by the device to notify the driver that the guest CID has changed. We</span>
     <span class="doccomment">/// ignore it for now as we don&#39;t support live migration, but it still must exist and be</span>
     <span class="doccomment">/// configured.</span>
@@ -331,6 +344,9 @@
         <span class="kw">let</span> <span class="ident">device</span> <span class="op">=</span> <span class="ident">VirtioBaseDevice::new</span>(<span class="ident">transport</span>);
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">result</span> <span class="op">=</span> <span class="ident"><span class="self">Self</span>::new</span>(<span class="ident">device</span>);
         <span class="ident">result</span>.<span class="ident">init</span>()<span class="question-mark">?</span>;
+        <span class="comment">// Let the device know there are available buffers in the receiver and event queues.</span>
+        <span class="ident">result</span>.<span class="ident">device</span>.<span class="ident">notify_queue</span>(<span class="ident">RX_QUEUE_ID</span>);
+        <span class="ident">result</span>.<span class="ident">device</span>.<span class="ident">notify_queue</span>(<span class="ident">EVENT_QUEUE_ID</span>);
         <span class="prelude-val">Ok</span>(<span class="ident">result</span>)
     }
 
@@ -389,6 +405,13 @@
         }
     }
 
+    <span class="doccomment">/// Gets the device status.</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// See &lt;https://docs.oasis-open.org/virtio/virtio/v1.1/csprd01/virtio-v1.1-csprd01.html#x1-100001&gt;.</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_status</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">u32</span> {
+        <span class="self">self</span>.<span class="ident">device</span>.<span class="ident">get_status</span>()
+    }
+
     <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">device</span>: <span class="ident">VirtioBaseDevice</span><span class="op">&lt;</span><span class="ident">VirtioPciTransport</span><span class="op">&gt;</span>) -&gt; <span class="self">Self</span> {
         <span class="kw">let</span> <span class="ident">tx_queue</span> <span class="op">=</span> <span class="ident">DriverWriteOnlyQueue::new</span>();
         <span class="kw">let</span> <span class="ident">rx_queue</span> <span class="op">=</span> <span class="ident">DeviceWriteOnlyQueue::new</span>();
@@ -408,6 +431,19 @@
             .<span class="ident">start_init</span>(<span class="ident">DEVICE_ID</span> <span class="kw">as</span> <span class="ident">u32</span>)
             .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">error</span><span class="op">|</span> <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;Virtio error: {:?}&quot;</span>, <span class="ident">error</span>))
             .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t initialize the PCI device&quot;</span>)<span class="question-mark">?</span>;
+        <span class="comment">// We have to configure the event queue before the receive queue, otherwise the event</span>
+        <span class="comment">// queue&#39;s configuration interferes with the receiver queue. This seems to be related to</span>
+        <span class="comment">// something specific in the Linux kernel vhost vsock implementation.</span>
+        <span class="self">self</span>.<span class="ident">device</span>
+            .<span class="ident">configure_queue</span>(
+                <span class="ident">EVENT_QUEUE_ID</span>,
+                <span class="ident">QUEUE_SIZE</span> <span class="kw">as</span> <span class="ident">u16</span>,
+                <span class="self">self</span>.<span class="ident">event_queue</span>.<span class="ident">inner</span>.<span class="ident">get_desc_addr</span>(),
+                <span class="self">self</span>.<span class="ident">event_queue</span>.<span class="ident">inner</span>.<span class="ident">get_avail_addr</span>(),
+                <span class="self">self</span>.<span class="ident">event_queue</span>.<span class="ident">inner</span>.<span class="ident">get_used_addr</span>(),
+            )
+            .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">error</span><span class="op">|</span> <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;Queue configuration error: {:?}&quot;</span>, <span class="ident">error</span>))
+            .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t configure the event queue&quot;</span>)<span class="question-mark">?</span>;
         <span class="self">self</span>.<span class="ident">device</span>
             .<span class="ident">configure_queue</span>(
                 <span class="ident">RX_QUEUE_ID</span>,
@@ -428,16 +464,6 @@
             )
             .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">error</span><span class="op">|</span> <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;Queue configuration error: {:?}&quot;</span>, <span class="ident">error</span>))
             .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t configure the transmit queue&quot;</span>)<span class="question-mark">?</span>;
-        <span class="self">self</span>.<span class="ident">device</span>
-            .<span class="ident">configure_queue</span>(
-                <span class="ident">EVENT_QUEUE_ID</span>,
-                <span class="ident">QUEUE_SIZE</span> <span class="kw">as</span> <span class="ident">u16</span>,
-                <span class="self">self</span>.<span class="ident">event_queue</span>.<span class="ident">inner</span>.<span class="ident">get_desc_addr</span>(),
-                <span class="self">self</span>.<span class="ident">event_queue</span>.<span class="ident">inner</span>.<span class="ident">get_avail_addr</span>(),
-                <span class="self">self</span>.<span class="ident">event_queue</span>.<span class="ident">inner</span>.<span class="ident">get_used_addr</span>(),
-            )
-            .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">error</span><span class="op">|</span> <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;Queue configuration error: {:?}&quot;</span>, <span class="ident">error</span>))
-            .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t configure the event queue&quot;</span>)<span class="question-mark">?</span>;
         <span class="self">self</span>.<span class="ident">device</span>
             .<span class="ident">complete_init</span>()
             .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">error</span><span class="op">|</span> <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;Device activation error: {:?}&quot;</span>, <span class="ident">error</span>))
