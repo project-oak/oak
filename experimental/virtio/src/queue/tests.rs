@@ -24,9 +24,9 @@ fn test_read_empty_queue() {
     let mut queue = DeviceWriteOnlyQueue::<QUEUE_SIZE, BUFFER_SIZE>::new();
     let data = queue.read_next_used_buffer();
     assert!(data.is_none());
-    assert_eq!(queue.inner.last_used_idx, 0);
-    assert_eq!(queue.inner.virt_queue.used.idx, 0);
-    assert_eq!(queue.inner.virt_queue.avail.idx as usize, QUEUE_SIZE);
+    assert_eq!(queue.inner.last_used_idx.0, 0);
+    assert_eq!(queue.inner.virt_queue.used.idx.0, 0);
+    assert_eq!(queue.inner.virt_queue.avail.idx.0 as usize, QUEUE_SIZE);
 }
 
 #[test]
@@ -43,15 +43,15 @@ fn test_read_once() {
 
     let result = device_write(queue.inner.virt_queue.as_mut(), &data);
     assert_eq!(Some(3), result);
-    assert_eq!(queue.inner.last_used_idx, 0);
-    assert_eq!(queue.inner.virt_queue.used.idx, 1);
+    assert_eq!(queue.inner.last_used_idx.0, 0);
+    assert_eq!(queue.inner.virt_queue.used.idx.0, 1);
     assert_eq!(queue.inner.virt_queue.used.ring[0].len, 3);
-    assert_eq!(queue.inner.virt_queue.avail.idx as usize, QUEUE_SIZE);
+    assert_eq!(queue.inner.virt_queue.avail.idx.0 as usize, QUEUE_SIZE);
 
     let read = queue.read_next_used_buffer();
-    assert_eq!(queue.inner.last_used_idx, 1);
+    assert_eq!(queue.inner.last_used_idx.0, 1);
     assert_eq!(Some(data), read);
-    assert_eq!(queue.inner.virt_queue.avail.idx as usize, QUEUE_SIZE + 1);
+    assert_eq!(queue.inner.virt_queue.avail.idx.0 as usize, QUEUE_SIZE + 1);
 }
 
 #[test]
@@ -61,10 +61,29 @@ fn test_write_once() {
 
     let result = queue.write_buffer(&data);
     assert_eq!(Some(3), result);
-    assert_eq!(queue.inner.virt_queue.avail.idx as usize, 1);
+    assert_eq!(queue.inner.virt_queue.avail.idx.0 as usize, 1);
 
     let read = device_read_once(queue.inner.virt_queue.as_mut());
-    assert_eq!(queue.inner.virt_queue.used.idx, 1);
+    assert_eq!(queue.inner.virt_queue.used.idx.0, 1);
+    assert_eq!(Some(data), read);
+}
+
+#[test]
+fn test_wrapping_idx() {
+    let data = vec![0, 1, 2];
+    let mut queue = DriverWriteOnlyQueue::<QUEUE_SIZE, BUFFER_SIZE>::new();
+
+    // Move the indices along to the max value.
+    queue.inner.virt_queue.avail.idx = Wrapping(u16::MAX);
+    queue.inner.virt_queue.used.idx = Wrapping(u16::MAX);
+    queue.inner.last_used_idx = Wrapping(u16::MAX);
+
+    let result = queue.write_buffer(&data);
+    assert_eq!(Some(3), result);
+    assert_eq!(queue.inner.virt_queue.avail.idx.0 as usize, 0);
+
+    let read = device_read_once(queue.inner.virt_queue.as_mut());
+    assert_eq!(queue.inner.virt_queue.used.idx.0, 0);
     assert_eq!(Some(data), read);
 }
 
@@ -173,7 +192,7 @@ fn device_read_once<const QUEUE_SIZE: usize>(
         return None;
     }
 
-    let ring_index = virt_queue.used.idx as usize % QUEUE_SIZE;
+    let ring_index = virt_queue.used.idx.0 as usize % QUEUE_SIZE;
     let index = virt_queue.avail.ring[ring_index];
     let desc = &virt_queue.desc[index as usize];
     assert!(!desc.flags.contains(DescFlags::VIRTQ_DESC_F_WRITE));
@@ -201,7 +220,7 @@ fn device_write<const QUEUE_SIZE: usize>(
     }
 
     let len = core::cmp::min(data.len(), BUFFER_SIZE);
-    let ring_index = virt_queue.used.idx as usize % QUEUE_SIZE;
+    let ring_index = virt_queue.used.idx.0 as usize % QUEUE_SIZE;
     let index = virt_queue.avail.ring[ring_index];
     let desc = &virt_queue.desc[index as usize];
     assert!(desc.flags.contains(DescFlags::VIRTQ_DESC_F_WRITE));
