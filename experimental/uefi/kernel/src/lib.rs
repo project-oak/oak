@@ -38,6 +38,7 @@ mod interrupts;
 mod libm;
 mod logging;
 mod memory;
+#[cfg(not(feature = "vsock_channel"))]
 mod serial;
 
 use core::panic::PanicInfo;
@@ -46,6 +47,10 @@ use oak_remote_attestation::handshaker::{
     AttestationBehavior, EmptyAttestationGenerator, EmptyAttestationVerifier,
 };
 use rust_hypervisor_firmware_boot::paging;
+
+#[cfg(feature = "vsock_channel")]
+// The virtio vsock port on which to listen.
+const VSOCK_PORT: u32 = 1024;
 
 /// Main entry point for the kernel, to be called from bootloader.
 pub fn start_kernel<E: boot::E820Entry, B: boot::BootInfo<E>>(info: &B) -> ! {
@@ -60,10 +65,25 @@ pub fn start_kernel<E: boot::E820Entry, B: boot::BootInfo<E>>(info: &B) -> ! {
 
 fn main<E: boot::E820Entry, B: boot::BootInfo<E>>(info: &B) -> ! {
     info!("In main! Boot protocol:  {}", info.protocol());
-    let serial = serial::Serial::new();
     let attestation_behavior =
         AttestationBehavior::create(EmptyAttestationGenerator, EmptyAttestationVerifier);
-    runtime::framing::handle_frames(serial, attestation_behavior).unwrap();
+    runtime::framing::handle_frames(get_channel(), attestation_behavior).unwrap();
+}
+
+// Use a serial port for the communications channel if we don't support virtio vsock.
+#[cfg(not(feature = "vsock_channel"))]
+fn get_channel() -> serial::Serial {
+    serial::Serial::new()
+}
+
+// Use virtio vsock for the communications channel.
+#[cfg(feature = "vsock_channel")]
+fn get_channel() -> virtio::vsock::socket::Socket {
+    let vsock = virtio::vsock::VSock::find_and_configure_device()
+        .expect("Couldn't configure PCI virtio vsock device.");
+    info!("Socket device status: {}", vsock.get_status());
+    let listener = virtio::vsock::socket::SocketListener::new(vsock, VSOCK_PORT);
+    listener.accept().expect("Couldn't accept connection.")
 }
 
 /// Common panic routine for the kernel. This needs to be wrrapped in a

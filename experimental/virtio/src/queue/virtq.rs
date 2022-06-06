@@ -98,6 +98,9 @@ pub struct AvailRing<const QUEUE_SIZE: usize> {
     pub idx: Wrapping<u16>,
     /// The ring-buffer containing indices of the heads of available descriptor chains.
     pub ring: [u16; QUEUE_SIZE],
+    /// Event details. Only used if VIRTIO_F_EVENT_IDX has been negotiated, which we don't
+    /// currently support. The field is only added to act as padding for now.
+    pub used_event: u16,
 }
 
 impl<const QUEUE_SIZE: usize> Default for AvailRing<QUEUE_SIZE> {
@@ -107,6 +110,7 @@ impl<const QUEUE_SIZE: usize> Default for AvailRing<QUEUE_SIZE> {
             flags: RingFlags::NO_NOTIFY,
             idx: Wrapping(0),
             ring: [0; QUEUE_SIZE],
+            used_event: 0,
         }
     }
 }
@@ -125,6 +129,9 @@ pub struct UsedRing<const QUEUE_SIZE: usize> {
     pub idx: Wrapping<u16>,
     /// The ring-buffer containing the used elements.
     pub ring: [UsedElem; QUEUE_SIZE],
+    /// Event details. Only used if VIRTIO_F_EVENT_IDX has been negotiated, which we don't
+    /// currently support. The field is only added to act as padding for now.
+    pub avail_event: u16,
 }
 
 impl<const QUEUE_SIZE: usize> Default for UsedRing<QUEUE_SIZE> {
@@ -133,6 +140,7 @@ impl<const QUEUE_SIZE: usize> Default for UsedRing<QUEUE_SIZE> {
             flags: RingFlags::empty(),
             idx: Wrapping(0),
             ring: [(); QUEUE_SIZE].map(|_| UsedElem::default()),
+            avail_event: 0,
         }
     }
 }

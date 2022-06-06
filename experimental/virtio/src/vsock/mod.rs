@@ -75,10 +75,10 @@ const HOST_CID: u64 = 2;
 pub struct VSock {
     /// The base virtio-over-PCI device used for configuration and notification.
     device: VirtioBaseDevice<VirtioPciTransport>,
-    /// The transmit queue.
-    tx_queue: DriverWriteOnlyQueue<QUEUE_SIZE, DATA_BUFFER_SIZE>,
     /// The receive queue.
     rx_queue: DeviceWriteOnlyQueue<QUEUE_SIZE, DATA_BUFFER_SIZE>,
+    /// The transmit queue.
+    tx_queue: DriverWriteOnlyQueue<QUEUE_SIZE, DATA_BUFFER_SIZE>,
     /// The event queue used by the device to notify the driver that the guest CID has changed. We
     /// ignore it for now as we don't support live migration, but it still must exist and be
     /// configured.
@@ -98,6 +98,9 @@ impl VSock {
         let device = VirtioBaseDevice::new(transport);
         let mut result = Self::new(device);
         result.init()?;
+        // Let the device know there are available buffers in the receiver and event queues.
+        result.device.notify_queue(RX_QUEUE_ID);
+        result.device.notify_queue(EVENT_QUEUE_ID);
         Ok(result)
     }
 
@@ -156,6 +159,13 @@ impl VSock {
         }
     }
 
+    /// Gets the device status.
+    ///
+    /// See <https://docs.oasis-open.org/virtio/virtio/v1.1/csprd01/virtio-v1.1-csprd01.html#x1-100001>.
+    pub fn get_status(&self) -> u32 {
+        self.device.get_status()
+    }
+
     fn new(device: VirtioBaseDevice<VirtioPciTransport>) -> Self {
         let tx_queue = DriverWriteOnlyQueue::new();
         let rx_queue = DeviceWriteOnlyQueue::new();
@@ -175,6 +185,19 @@ impl VSock {
             .start_init(DEVICE_ID as u32)
             .map_err(|error| anyhow::anyhow!("Virtio error: {:?}", error))
             .context("Couldn't initialize the PCI device")?;
+        // We have to configure the event queue before the receive queue, otherwise the event
+        // queue's configuration interferes with the receiver queue. This seems to be related to
+        // something specific in the Linux kernel vhost vsock implementation.
+        self.device
+            .configure_queue(
+                EVENT_QUEUE_ID,
+                QUEUE_SIZE as u16,
+                self.event_queue.inner.get_desc_addr(),
+                self.event_queue.inner.get_avail_addr(),
+                self.event_queue.inner.get_used_addr(),
+            )
+            .map_err(|error| anyhow::anyhow!("Queue configuration error: {:?}", error))
+            .context("Couldn't configure the event queue")?;
         self.device
             .configure_queue(
                 RX_QUEUE_ID,
@@ -195,16 +218,6 @@ impl VSock {
             )
             .map_err(|error| anyhow::anyhow!("Queue configuration error: {:?}", error))
             .context("Couldn't configure the transmit queue")?;
-        self.device
-            .configure_queue(
-                EVENT_QUEUE_ID,
-                QUEUE_SIZE as u16,
-                self.event_queue.inner.get_desc_addr(),
-                self.event_queue.inner.get_avail_addr(),
-                self.event_queue.inner.get_used_addr(),
-            )
-            .map_err(|error| anyhow::anyhow!("Queue configuration error: {:?}", error))
-            .context("Couldn't configure the event queue")?;
         self.device
             .complete_init()
             .map_err(|error| anyhow::anyhow!("Device activation error: {:?}", error))

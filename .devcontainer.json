@@ -24,6 +24,8 @@
   "runArgs": [
     // Required by crosvm.
     "--device=/dev/kvm",
+    "--device=/dev/vhost-vsock",
+    "--device=/dev/vsock",
     // In order to access /dev/kvm, our user inside the container needs to be a
     // member of the group that owns /dev/kvm; the device itself is exposed
     // inside the container with the same group as outside the container.

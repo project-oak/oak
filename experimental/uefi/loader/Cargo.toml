@@ -25,6 +25,7 @@ tokio = { version = "*", features = [
   "sync",
 ] }
 tonic = "*"
+vsock = "*"
 oak_remote_attestation_sessions = { path = "../../../remote_attestation_sessions" }
 channel = { path = "../../../experimental/uefi/channel" }
 ciborium-io = "*"

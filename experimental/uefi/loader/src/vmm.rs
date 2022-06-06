@@ -14,6 +14,7 @@
 // limitations under the License.
 //
 
+use super::ReadWrite;
 use anyhow::Result;
 use async_trait::async_trait;
 use std::{os::unix::net::UnixStream, path::PathBuf};
@@ -31,13 +32,19 @@ pub struct Params {
 
     /// Stream to connect to the console of the VM.
     pub console: UnixStream,
-
-    /// Stream to use for communicating with the app inside the VM.
-    pub comms: UnixStream,
 }
 
 #[async_trait]
 pub trait Vmm {
+    /// Waits for the guest VM to finish.
     async fn wait(&mut self) -> Result<std::process::ExitStatus>;
+
+    /// Kills the guest VM.
     async fn kill(self: Box<Self>) -> Result<std::process::ExitStatus>;
+
+    /// Creates a channel to communicate with the VM.
+    ///
+    /// Since different VMMs might use different comms channels, we leave it up to the VMM to create
+    /// the channel rather than passing it in as part of the parameters.
+    fn create_comms_channel(&self) -> Result<Box<dyn ReadWrite>>;
 }

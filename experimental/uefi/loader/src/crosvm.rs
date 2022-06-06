@@ -14,32 +14,89 @@
 // limitations under the License.
 //
 
-use crate::vmm::{Params, Vmm};
+use crate::{
+    vmm::{Params, Vmm},
+    ReadWrite,
+};
 use anyhow::Result;
 use async_trait::async_trait;
 use command_fds::tokio::CommandFdAsyncExt;
 use log::info;
 use std::{
+    io::{Error, ErrorKind, Read, Write},
     net::Shutdown,
-    os::unix::{
-        io::{AsRawFd, OwnedFd},
-        net::UnixStream,
-    },
+    os::unix::{io::AsRawFd, net::UnixStream},
     process::Stdio,
 };
+use vsock::VsockStream;
+
+// The guest VM context ID for virtio vsock connections.
+const VSOCK_GUEST_CID: u32 = 3;
+
+// The guest VM virtio vsock port.
+const VSOCK_GUEST_PORT: u32 = 1024;
 
 pub struct Crosvm {
     console: UnixStream,
     instance: tokio::process::Child,
 }
 
+/// A wrapper for a vsock stream that can be used as a communication channel between the loader and
+/// the guest VM.
+///
+/// The vsock channel can only be created after the VM is booted, so we start without a stream and
+/// only connect later when we try to use it for the first time.
+pub struct VsockStreamChannel {
+    stream: Option<VsockStream>,
+}
+
+impl VsockStreamChannel {
+    /// Ensures that the inner stream is connected to the VM. If the stream is not connected it will
+    /// try to conect to the VM.
+    fn ensure_stream(&mut self) -> std::io::Result<()> {
+        if self.stream.is_none() {
+            let stream = VsockStream::connect_with_cid_port(VSOCK_GUEST_CID, VSOCK_GUEST_PORT)?;
+            self.stream.replace(stream);
+        }
+        Ok(())
+    }
+}
+
+impl Write for VsockStreamChannel {
+    fn write(&mut self, data: &[u8]) -> std::io::Result<usize> {
+        self.ensure_stream()?;
+        self.stream
+            .as_mut()
+            .ok_or_else(|| Error::from(ErrorKind::NotConnected))?
+            .write(data)
+    }
+
+    fn flush(&mut self) -> std::io::Result<()> {
+        self.ensure_stream()?;
+        self.stream
+            .as_mut()
+            .ok_or_else(|| Error::from(ErrorKind::NotConnected))?
+            .flush()
+    }
+}
+
+impl Read for VsockStreamChannel {
+    fn read(&mut self, data: &mut [u8]) -> std::io::Result<usize> {
+        self.ensure_stream()?;
+        self.stream
+            .as_mut()
+            .ok_or_else(|| Error::from(ErrorKind::NotConnected))?
+            .read(data)
+    }
+}
+
 impl Crosvm {
     pub fn start(params: Params) -> Result<Self> {
         let mut cmd = tokio::process::Command::new(params.binary);
 
-        cmd.stdin(OwnedFd::from(params.comms.try_clone()?));
-        cmd.stdout(OwnedFd::from(params.comms));
         cmd.stderr(Stdio::inherit());
+        cmd.stdin(Stdio::null());
+        cmd.stdout(Stdio::inherit());
         cmd.preserved_fds(vec![params.console.as_raw_fd()]);
 
         // Construct the command-line arguments for `crosvm`.
@@ -51,7 +108,7 @@ impl Crosvm {
             "--serial=num=1,hardware=serial,type=file,path=/proc/self/fd/{},console,earlycon",
             params.console.as_raw_fd()
         ));
-        cmd.arg("--serial=num=2,hardware=serial,type=stdout,stdin");
+        cmd.arg(format!("--cid={}", VSOCK_GUEST_CID));
         cmd.arg(params.app);
 
         info!("Executing: {:?}", cmd);
@@ -74,5 +131,11 @@ impl Vmm for Crosvm {
         self.console.shutdown(Shutdown::Both)?;
         self.instance.start_kill()?;
         self.wait().await
+    }
+
+    fn create_comms_channel(&self) -> Result<Box<dyn ReadWrite>> {
+        // Create the channel in a disconnected state as it can only be connected later, after the
+        // VM has booted up.
+        Ok(Box::new(VsockStreamChannel { stream: None }))
     }
 }

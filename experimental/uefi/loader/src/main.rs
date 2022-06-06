@@ -72,13 +72,16 @@ fn path_exists(s: &str) -> Result<(), String> {
     }
 }
 
+pub trait ReadWrite: Read + Write + Send + Sync {}
+
+impl<T> ReadWrite for T where T: Read + Write + Send + Sync {}
+
 struct CommsChannel {
-    inner: UnixStream,
+    inner: Box<dyn ReadWrite>,
 }
 
 impl ciborium_io::Write for CommsChannel {
     type Error = anyhow::Error;
-
     fn write_all(&mut self, data: &[u8]) -> Result<(), Self::Error> {
         self.inner.write_all(data).map_err(anyhow::Error::msg)
     }
@@ -102,7 +105,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     env_logger::init();
 
     let (console_vmm, console) = UnixStream::pair()?;
-    let (comms_vmm, mut comms) = UnixStream::pair()?;
 
     let mut vmm: Box<dyn Vmm> = match cli.mode {
         Mode::Uefi => Box::new(Qemu::start(Params {
@@ -110,21 +112,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             firmware: Some(cli.ovmf),
             app: cli.app,
             console: console_vmm,
-            comms: comms_vmm,
         })?),
         Mode::Bios => Box::new(Qemu::start(Params {
             binary: cli.qemu,
             firmware: None,
             app: cli.app,
             console: console_vmm,
-            comms: comms_vmm,
         })?),
         Mode::Crosvm => Box::new(Crosvm::start(Params {
             binary: cli.crosvm,
             firmware: None,
             app: cli.app,
             console: console_vmm,
-            comms: comms_vmm,
         })?),
     };
 
@@ -140,6 +139,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             line.clear();
         }
     });
+
+    let mut comms = vmm.create_comms_channel()?;
 
     // TODO(#2709): Unfortunately OVMF writes some garbage (clear screen etc?) + our Hello
     // World to the other serial port, so let's skip some bytes before we set up framing.

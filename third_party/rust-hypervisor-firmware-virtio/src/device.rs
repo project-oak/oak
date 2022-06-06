@@ -136,6 +136,13 @@ where
         self.transport.read_device_config(offset)
     }
 
+    /// Gets the device status.
+    ///
+    /// See <https://docs.oasis-open.org/virtio/virtio/v1.1/csprd01/virtio-v1.1-csprd01.html#x1-100001>.
+    pub fn get_status(&self) -> u32 {
+        self.transport.get_status()
+    }
+
     /// Notifies the device that a queue has been updated.
     pub fn notify_queue(&mut self, queue_id: u16) {
         self.transport.notify_queue(queue_id)
