@@ -256,6 +256,7 @@
 <span id="251">251</span>
 <span id="252">252</span>
 <span id="253">253</span>
+<span id="254">254</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2022 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -273,6 +274,7 @@
 <span class="comment">//</span>
 
 <span class="kw">use</span> <span class="ident">alloc</span>::{<span class="ident">boxed::Box</span>, <span class="ident">collections::vec_deque::VecDeque</span>, <span class="ident">vec</span>, <span class="ident">vec::Vec</span>};
+<span class="kw">use</span> <span class="ident">core::num::Wrapping</span>;
 <span class="kw">use</span> <span class="ident">virtq</span>::{<span class="ident">AvailRing</span>, <span class="ident">Desc</span>, <span class="ident">DescFlags</span>, <span class="ident">RingFlags</span>, <span class="ident">UsedElem</span>, <span class="ident">UsedRing</span>, <span class="ident">VirtQueue</span>};
 
 <span class="kw">mod</span> <span class="ident">virtq</span>;
@@ -411,7 +413,7 @@
     <span class="ident">base_offset</span>: <span class="ident">u64</span>,
 
     <span class="doccomment">/// The last index that was used when popping elements from the used ring.</span>
-    <span class="ident">last_used_idx</span>: <span class="ident">u16</span>,
+    <span class="ident">last_used_idx</span>: <span class="ident">Wrapping</span><span class="op">&lt;</span><span class="ident">u16</span><span class="op">&gt;</span>,
 }
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="kw">const</span> <span class="ident">QUEUE_SIZE</span>: <span class="ident">usize</span>, <span class="kw">const</span> <span class="ident">BUFFER_SIZE</span>: <span class="ident">usize</span><span class="op">&gt;</span> <span class="ident">Queue</span><span class="op">&lt;</span><span class="ident">QUEUE_SIZE</span>, <span class="ident">BUFFER_SIZE</span><span class="op">&gt;</span> {
@@ -444,7 +446,7 @@
             <span class="ident">virt_queue</span>,
             <span class="ident">buffer</span>,
             <span class="ident">base_offset</span>,
-            <span class="ident">last_used_idx</span>: <span class="number">0</span>,
+            <span class="ident">last_used_idx</span>: <span class="ident">Wrapping</span>(<span class="number">0</span>),
         }
     }
 
@@ -489,16 +491,16 @@
             <span class="prelude-val">None</span>
         } <span class="kw">else</span> {
             <span class="self">self</span>.<span class="ident">last_used_idx</span> <span class="op">+</span><span class="op">=</span> <span class="number">1</span>;
-            <span class="prelude-val">Some</span>(<span class="self">self</span>.<span class="ident">virt_queue</span>.<span class="ident">used</span>.<span class="ident">ring</span>[<span class="ident">next_used</span> <span class="kw">as</span> <span class="ident">usize</span> <span class="op">%</span> <span class="ident">QUEUE_SIZE</span>])
+            <span class="prelude-val">Some</span>(<span class="self">self</span>.<span class="ident">virt_queue</span>.<span class="ident">used</span>.<span class="ident">ring</span>[<span class="ident">next_used</span>.<span class="number">0</span> <span class="kw">as</span> <span class="ident">usize</span> <span class="op">%</span> <span class="ident">QUEUE_SIZE</span>])
         }
     }
 
     <span class="doccomment">/// Adds a descriptor to the available ring.</span>
     <span class="kw">fn</span> <span class="ident">add_available_descriptor</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">index</span>: <span class="ident">u16</span>) {
         <span class="comment">// Add the descriptor index to the available ring at the next location.</span>
-        <span class="self">self</span>.<span class="ident">virt_queue</span>.<span class="ident">avail</span>.<span class="ident">ring</span>[<span class="self">self</span>.<span class="ident">virt_queue</span>.<span class="ident">avail</span>.<span class="ident">idx</span> <span class="kw">as</span> <span class="ident">usize</span> <span class="op">%</span> <span class="ident">QUEUE_SIZE</span>] <span class="op">=</span> <span class="ident">index</span>;
+        <span class="self">self</span>.<span class="ident">virt_queue</span>.<span class="ident">avail</span>.<span class="ident">ring</span>[<span class="self">self</span>.<span class="ident">virt_queue</span>.<span class="ident">avail</span>.<span class="ident">idx</span>.<span class="number">0</span> <span class="kw">as</span> <span class="ident">usize</span> <span class="op">%</span> <span class="ident">QUEUE_SIZE</span>] <span class="op">=</span> <span class="ident">index</span>;
         <span class="comment">// Increment the available ring index to use next time.</span>
-        <span class="kw">let</span> <span class="ident">next</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">virt_queue</span>.<span class="ident">avail</span>.<span class="ident">idx</span> <span class="op">+</span> <span class="number">1</span>;
+        <span class="kw">let</span> <span class="ident">next</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">virt_queue</span>.<span class="ident">avail</span>.<span class="ident">idx</span> <span class="op">+</span> <span class="ident">Wrapping</span>(<span class="number">1</span>);
         <span class="kw">let</span> <span class="ident">idx</span> <span class="op">=</span> <span class="kw-2">&amp;mut</span> <span class="self">self</span>.<span class="ident">virt_queue</span>.<span class="ident">avail</span>.<span class="ident">idx</span>;
         <span class="comment">// Memory fence to ensure the device will not see the index update before the available ring</span>
         <span class="comment">// entry update.</span>
