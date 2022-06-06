@@ -27,11 +27,8 @@
 
 use core::panic::PanicInfo;
 
-#[cfg(all(feature = "multiboot", not(test)))]
-mod asm;
 mod hvm_start_info;
-
-#[cfg(all(feature = "multiboot"))]
+#[cfg(all(feature = "multiboot", not(test)))]
 mod multiboot;
 
 #[no_mangle]
