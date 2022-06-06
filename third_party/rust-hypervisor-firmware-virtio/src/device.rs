@@ -137,6 +137,8 @@ where
     }
 
     /// Gets the device status.
+    ///
+    /// See <https://docs.oasis-open.org/virtio/virtio/v1.1/csprd01/virtio-v1.1-csprd01.html#x1-100001>.
     pub fn get_status(&self) -> u32 {
         self.transport.get_status()
     }

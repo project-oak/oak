@@ -46,12 +46,12 @@ docker_run_flags=(
   '--workdir=/workspace'
   '--network=host'
   # We need to use Docker from inside the container, but only for build.
-  # To do that, we map the socket from the host and add the right group
+  # To do that, we map the socket from the host and add the right group.
   '--volume=/var/run/docker.sock:/var/run/docker.sock'
   "--group-add=$HOST_DOCKER_GID"
 )
 
-# If the host supports KVM, allow the image to use it
+# If the host supports KVM, allow the docker image to use it.
 if [[ -e "/dev/kvm" ]]; then
   readonly HOST_KVM_GID="$(getent group kvm | cut -d: -f3)"
   docker_run_flags+=(
@@ -60,14 +60,14 @@ if [[ -e "/dev/kvm" ]]; then
   )
 fi
 
-# If the host supports virtio vhost vsock, allow the image to use it
+# If the host supports virtio vhost vsock, allow the docker image to use it.
 if [[ -e "/dev/vhost-vsock" ]]; then
   docker_run_flags+=(
     "--device=/dev/vhost-vsock"
   )
 fi
 
-# If the host supports the vsock device, allow the image to use it.
+# If the host supports the vsock device, allow the docker image to use it.
 if [[ -e "/dev/vsock" ]]; then
   docker_run_flags+=(
     "--device=/dev/vsock"

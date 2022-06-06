@@ -356,7 +356,8 @@ impl ciborium_io::Write for Socket {
 
     fn flush(&mut self) -> Result<(), Self::Error> {
         // We always flush on write, so do nothing.
-        // TODO(#2876): Don't always flush on write.
+        // TODO(#2876): We should use a bufferd writer so that we don't always flush on write, and
+        // provide and actual flush implementation here.
         Ok(())
     }
 }

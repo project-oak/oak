@@ -30,10 +30,10 @@ use std::{
 };
 use vsock::VsockStream;
 
-/// The guest VM context ID for virtio vsock connecitons.
+// The guest VM context ID for virtio vsock connections.
 const VSOCK_GUEST_CID: u32 = 3;
 
-/// The guest VM virtio vsock port.
+// The guest VM virtio vsock port.
 const VSOCK_GUEST_PORT: u32 = 1024;
 
 pub struct Crosvm {
@@ -51,7 +51,8 @@ pub struct VsockStreamChannel {
 }
 
 impl VsockStreamChannel {
-    /// Ensures that the inner stream is connected to the VM.
+    /// Ensures that the inner stream is connected to the VM. If the stream is not connected it will
+    /// try to conect to the VM.
     fn ensure_stream(&mut self) -> std::io::Result<()> {
         if self.stream.is_none() {
             let stream = VsockStream::connect_with_cid_port(VSOCK_GUEST_CID, VSOCK_GUEST_PORT)?;
@@ -133,6 +134,8 @@ impl Vmm for Crosvm {
     }
 
     fn create_comms_channel(&self) -> Result<Box<dyn ReadWrite>> {
+        // Create the channel in a disconnected state as it can only be connected later, after the
+        // VM has booted up.
         Ok(Box::new(VsockStreamChannel { stream: None }))
     }
 }

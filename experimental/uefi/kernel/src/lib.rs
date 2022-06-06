@@ -70,11 +70,13 @@ fn main<E: boot::E820Entry, B: boot::BootInfo<E>>(info: &B) -> ! {
     runtime::framing::handle_frames(get_channel(), attestation_behavior).unwrap();
 }
 
+// Use a serial port for the communications channel if we don't support virtio vsock.
 #[cfg(not(feature = "vsock_channel"))]
 fn get_channel() -> serial::Serial {
     serial::Serial::new()
 }
 
+// Use virtio vsock for the communications channel.
 #[cfg(feature = "vsock_channel")]
 fn get_channel() -> virtio::vsock::socket::Socket {
     let vsock = virtio::vsock::VSock::find_and_configure_device()
