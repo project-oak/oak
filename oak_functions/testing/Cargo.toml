@@ -8,7 +8,10 @@ license = "Apache-2.0"
 [dependencies]
 anyhow = "*"
 bincode = "*"
-chrono = "*"
+chrono = { version = "*", default-features = false, features = [
+  "std",
+  "clock"
+] }
 oak_logger = { path = "../logger" }
 oak_functions_abi = { path = "../abi" }
 oak_functions_extension = { path = "../extension" }
