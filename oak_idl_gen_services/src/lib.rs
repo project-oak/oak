@@ -128,6 +128,7 @@ pub fn compile_services(filename: &str) {
 /// for how `flatc` generates Rust code for structs.
 fn generate_from_bytes(schema_bytes: &[u8]) -> anyhow::Result<String> {
     let schema = reflection_generated::reflection::root_as_schema(schema_bytes)
+        .map_err(anyhow::Error::msg)
         .context("could not parse schema")?;
     Ok(schema
         .services()
