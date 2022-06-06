@@ -1826,11 +1826,7 @@ dependencies = [
  "indexmap",
  "slab",
  "tokio",
-<<<<<<< HEAD
- "tokio-util 0.7.2",
-=======
  "tokio-util 0.7.3",
->>>>>>> de5570bdf (Use no_std compatible version of flatbuffers)
  "tracing",
 ]
 
@@ -5260,15 +5256,9 @@ dependencies = [
 
 [[package]]
 name = "tokio-util"
-<<<<<<< HEAD
-version = "0.7.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f988a1a1adc2fb21f9c12aa96441da33a1728193ae0b95d2be22dbd17fcb4e5c"
-=======
 version = "0.7.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cc463cd8deddc3770d20f9852143d50bf6094e640b485cb2e189a2099085ff45"
->>>>>>> de5570bdf (Use no_std compatible version of flatbuffers)
 dependencies = [
  "bytes",
  "futures-core",
@@ -5314,11 +5304,7 @@ dependencies = [
  "tokio",
  "tokio-rustls",
  "tokio-stream",
-<<<<<<< HEAD
- "tokio-util 0.7.2",
-=======
  "tokio-util 0.7.3",
->>>>>>> de5570bdf (Use no_std compatible version of flatbuffers)
  "tower",
  "tower-layer",
  "tower-service",
@@ -5371,11 +5357,7 @@ dependencies = [
  "rand 0.8.5",
  "slab",
  "tokio",
-<<<<<<< HEAD
- "tokio-util 0.7.2",
-=======
  "tokio-util 0.7.3",
->>>>>>> de5570bdf (Use no_std compatible version of flatbuffers)
  "tower-layer",
  "tower-service",
  "tracing",
