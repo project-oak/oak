@@ -11,6 +11,7 @@ pvh = ["rust-hypervisor-firmware-boot/pvh"]
 multiboot = []
 
 [dependencies]
+bitflags = "*"
 kernel = { path = "../kernel" }
 rust-hypervisor-firmware-boot = { path = "../../../third_party/rust-hypervisor-firmware-boot", default-features = false }
 

@@ -100,6 +100,7 @@ name = "baremetal"
 version = "0.1.0"
 dependencies = [
  "bindgen",
+ "bitflags",
  "kernel",
  "rust-hypervisor-firmware-boot",
 ]
