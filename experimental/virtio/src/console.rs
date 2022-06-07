@@ -44,19 +44,20 @@ const DEVICE_ID: u16 = 3;
 /// See <https://docs.oasis-open.org/virtio/virtio/v1.1/csprd01/virtio-v1.1-csprd01.html#x1-1020002>.
 const PCI_DEVICE_ID: u16 = 0x1040 + DEVICE_ID;
 
-/// Simple driver implementation a virtio serial/console device that only supports a single port and
-/// no configutration.
+/// Simple driver implementation for a virtio serial/console device that only supports a single port
+/// and no configuration.
 ///
 /// See <https://docs.oasis-open.org/virtio/virtio/v1.1/csprd01/virtio-v1.1-csprd01.html#x1-39000010>.
 pub struct Console {
     /// The base virtio-over-PCI device used for configuration and notification.
     device: VirtioBaseDevice<VirtioPciTransport>,
-    /// The receive queue.
+    /// The receive queue, used for receiving bytes.
     rx_queue: DeviceWriteOnlyQueue<QUEUE_SIZE, DATA_BUFFER_SIZE>,
-    /// The transmit queue.
+    /// The transmit queue, used for sending bytes.
     tx_queue: DriverWriteOnlyQueue<QUEUE_SIZE, DATA_BUFFER_SIZE>,
-    /// A temporary buffer to store extra data from a buffer that was not fully read when using
-    /// `read_all`.
+    /// A temporary buffer to store extra data from the device that was not fully read when using
+    /// `read_all`. This could happen if the device sent more bytes in a single buffer than was
+    /// expected by `read_all`.
     pending_data: Option<VecDeque<u8>>,
 }
 
@@ -71,8 +72,6 @@ impl Console {
         let device = VirtioBaseDevice::new(transport);
         let mut result = Self::new(device);
         result.init()?;
-        // Let the device know there are available buffers in the receiver queue.
-        result.device.notify_queue(RX_QUEUE_ID);
         Ok(result)
     }
 
@@ -94,6 +93,10 @@ impl Console {
     ///
     /// Returns the number of bytes written, if any.
     pub fn write_bytes(&mut self, data: &[u8]) -> Option<usize> {
+        if data.is_empty() {
+            return None;
+        }
+
         let result = self.tx_queue.write_buffer(data);
 
         if self.tx_queue.inner.must_notify_device() {
@@ -152,11 +155,16 @@ impl Console {
             .complete_init()
             .map_err(|error| anyhow::anyhow!("Device activation error: {:?}", error))
             .context("Couldn't activate the PCI device.")?;
+
+        // Let the device know there are available buffers in the receiver queue.
+        self.device.notify_queue(RX_QUEUE_ID);
+
         Ok(())
     }
 
     /// Tries once to fill the destination with as much data as is currently available, either in
-    /// the pending buffer or from the next available buffer in the queue.
+    /// the pending buffer (if data was left over from the previous read) or from the next
+    /// available buffer in the queue.
     ///
     /// Returns the number of bytes read if any data was available to read.
     fn read_partial(&mut self, dest: &mut [u8]) -> Option<usize> {
