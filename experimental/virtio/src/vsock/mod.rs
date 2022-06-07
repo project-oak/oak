@@ -46,9 +46,6 @@ const TX_QUEUE_ID: u16 = 1;
 /// The id of the event queue.
 const EVENT_QUEUE_ID: u16 = 2;
 
-/// The vendor ID for virtio PCI devices.
-const PCI_VENDOR_ID: u16 = 0x1AF4;
-
 /// The virtio device id for a socket device.
 ///
 /// See <https://docs.oasis-open.org/virtio/virtio/v1.1/csprd01/virtio-v1.1-csprd01.html#x1-1930005>.
@@ -92,7 +89,7 @@ impl VSock {
     pub fn find_and_configure_device() -> anyhow::Result<Self> {
         // For now we just scan the first 32 devices on PCI bus 0 to find the first one that matches
         // the vendor ID and device ID.
-        let pci_device = find_device(PCI_VENDOR_ID, PCI_DEVICE_ID)
+        let pci_device = find_device(super::PCI_VENDOR_ID, PCI_DEVICE_ID)
             .ok_or_else(|| anyhow::anyhow!("Couldn't find a virtio vsock device."))?;
         let transport = VirtioPciTransport::new(pci_device);
         let device = VirtioBaseDevice::new(transport);
@@ -154,7 +151,7 @@ impl VSock {
         self.tx_queue.write_buffer(packet.as_slice());
 
         if self.tx_queue.inner.must_notify_device() {
-            // Notify the device that new packet has been written.
+            // Notify the device that a new packet has been written.
             self.device.notify_queue(TX_QUEUE_ID);
         }
     }

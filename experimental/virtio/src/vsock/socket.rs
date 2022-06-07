@@ -14,12 +14,11 @@
 // limitations under the License.
 //
 
-use alloc::collections::VecDeque;
-
 use super::{
     packet::{Packet, VSockFlags, VSockOp, HEADER_SIZE},
     VSock, DATA_BUFFER_SIZE, QUEUE_SIZE,
 };
+use alloc::collections::VecDeque;
 use core::num::Wrapping;
 
 /// The maximum buffer size used by the socket.
@@ -356,8 +355,8 @@ impl ciborium_io::Write for Socket {
 
     fn flush(&mut self) -> Result<(), Self::Error> {
         // We always flush on write, so do nothing.
-        // TODO(#2876): We should use a bufferd writer so that we don't always flush on write, and
-        // provide and actual flush implementation here.
+        // TODO(#2876): We should use a buffered writer so that we don't always flush on write, and
+        // provide an actual flush implementation here.
         Ok(())
     }
 }

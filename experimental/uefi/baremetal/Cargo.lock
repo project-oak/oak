@@ -591,6 +591,7 @@ dependencies = [
  "rust-hypervisor-firmware-boot",
  "strum",
  "uart_16550",
+ "virtio",
  "x86_64",
 ]
 
@@ -1018,6 +1019,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "rust-hypervisor-firmware-virtio"
+version = "0.1.0"
+dependencies = [
+ "atomic_refcell",
+ "bitflags",
+ "log",
+ "x86_64",
+]
+
+[[package]]
 name = "rustc-hash"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1261,6 +1272,18 @@ name = "version_check"
 version = "0.9.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "49874b5167b65d7193b8aba1567f5c7d93d001cafc34600cee003eda787e483f"
+
+[[package]]
+name = "virtio"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "bitflags",
+ "ciborium-io",
+ "log",
+ "rust-hypervisor-firmware-virtio",
+ "strum",
+]
 
 [[package]]
 name = "volatile"
