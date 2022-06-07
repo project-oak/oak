@@ -118,7 +118,7 @@ async fn test_server() {
             &address,
             wasm_handler,
             policy.clone(),
-            get_config_info(&wasm_module_bytes, policy, None),
+            get_config_info(&wasm_module_bytes, policy),
             term,
             logger,
         )

@@ -20,8 +20,7 @@ use anyhow::Context;
 use clap::Parser;
 use log::Level;
 use oak_functions_loader::{
-    logger::Logger, lookup_data::LookupDataAuth, server::Policy, Data, ExtensionConfigurationInfo,
-    LoadLookupDataConfig, Opt,
+    logger::Logger, lookup_data::LookupDataAuth, server::Policy, Data, LoadLookupDataConfig, Opt,
 };
 use oak_logger::OakLogger;
 use serde_derive::Deserialize;
@@ -77,6 +76,5 @@ pub fn main() -> anyhow::Result<()> {
         ),
         config.policy,
         extension_factories,
-        ExtensionConfigurationInfo::base(),
     )
 }

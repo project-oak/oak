@@ -62,9 +62,6 @@ message ConfigurationInfo {
   bytes wasm_hash = 1;
   // The validated server-side policy.
   ServerPolicy policy = 2;
-  // Server-side configuration for differentially private metrics. This field is optional. If not
-  // provided, differentially private metrics are not enabled on the server.
-  PrivateMetricsConfig metrics = 4;
 }
 
 /// Server-side policy describing limits on the size of the response and response processing time to

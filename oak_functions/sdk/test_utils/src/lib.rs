@@ -22,9 +22,7 @@ use hyper::{
     Body,
 };
 use log::info;
-use oak_functions_abi::proto::{
-    ConfigurationInfo, PrivateMetricsConfig, Request, Response, ServerPolicy,
-};
+use oak_functions_abi::proto::{ConfigurationInfo, Request, Response, ServerPolicy};
 
 use oak_functions_client::Client;
 use oak_remote_attestation::crypto::get_sha256;
@@ -232,15 +230,10 @@ pub async fn make_request(port: u16, request_body: &[u8]) -> TestResult {
     TestResult { elapsed, response }
 }
 
-pub fn get_config_info(
-    wasm_module_bytes: &[u8],
-    policy: ServerPolicy,
-    metrics: Option<PrivateMetricsConfig>,
-) -> ConfigurationInfo {
+pub fn get_config_info(wasm_module_bytes: &[u8], policy: ServerPolicy) -> ConfigurationInfo {
     ConfigurationInfo {
         wasm_hash: get_sha256(wasm_module_bytes).to_vec(),
         policy: Some(policy),
-        metrics,
     }
 }
 

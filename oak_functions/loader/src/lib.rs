@@ -108,7 +108,6 @@ pub fn lib_main(
     load_lookup_data_config: LoadLookupDataConfig,
     policy: Option<Policy>,
     extension_factories: Vec<Box<dyn ExtensionFactory<Logger>>>,
-    extension_configuration_info: ExtensionConfigurationInfo,
 ) -> anyhow::Result<()> {
     tokio::runtime::Builder::new_multi_thread()
         .enable_all()
@@ -120,24 +119,7 @@ pub fn lib_main(
             load_lookup_data_config,
             policy,
             extension_factories,
-            extension_configuration_info,
         ))
-}
-
-/// Workaround to pass values for ConfigurationInfo from Config.
-/// TODO(#2851): Refactor to remove `ExtensionConfigurationInfo`.
-pub struct ExtensionConfigurationInfo {
-    metrics: Option<oak_functions_abi::proto::PrivateMetricsConfig>,
-}
-
-impl ExtensionConfigurationInfo {
-    pub fn new(metrics: Option<oak_functions_abi::proto::PrivateMetricsConfig>) -> Self {
-        ExtensionConfigurationInfo { metrics }
-    }
-
-    pub fn base() -> ExtensionConfigurationInfo {
-        ExtensionConfigurationInfo { metrics: None }
-    }
 }
 
 /// Main execution point for the Oak Functions Loader.
@@ -147,7 +129,6 @@ async fn async_main(
     load_lookup_data_config: LoadLookupDataConfig,
     policy: Option<Policy>,
     extension_factories: Vec<Box<dyn ExtensionFactory<Logger>>>,
-    extension_configuration_info: ExtensionConfigurationInfo,
 ) -> anyhow::Result<()> {
     let (notify_sender, notify_receiver) = tokio::sync::oneshot::channel::<()>();
 
@@ -173,7 +154,6 @@ async fn async_main(
     let config_info = ConfigurationInfo {
         wasm_hash: get_sha256(&wasm_module_bytes).to_vec(),
         policy: Some(policy.clone()),
-        metrics: extension_configuration_info.metrics,
     };
 
     // Start server.
