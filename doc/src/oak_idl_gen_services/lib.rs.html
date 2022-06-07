@@ -388,6 +388,7 @@
 <span id="383">383</span>
 <span id="384">384</span>
 <span id="385">385</span>
+<span id="386">386</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2022 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -518,6 +519,7 @@
 <span class="doccomment">/// for how `flatc` generates Rust code for structs.</span>
 <span class="kw">fn</span> <span class="ident">generate_from_bytes</span>(<span class="ident">schema_bytes</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span> {
     <span class="kw">let</span> <span class="ident">schema</span> <span class="op">=</span> <span class="ident">reflection_generated::reflection::root_as_schema</span>(<span class="ident">schema_bytes</span>)
+        .<span class="ident">map_err</span>(<span class="ident">anyhow::Error::msg</span>)
         .<span class="ident">context</span>(<span class="string">&quot;could not parse schema&quot;</span>)<span class="question-mark">?</span>;
     <span class="prelude-val">Ok</span>(<span class="ident">schema</span>
         .<span class="ident">services</span>()

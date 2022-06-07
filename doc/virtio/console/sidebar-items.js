@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["Console","Simple driver implementation for a virtio serial/console device that only supports a single port and no configuration."]]});

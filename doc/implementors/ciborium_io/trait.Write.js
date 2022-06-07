@@ -1,4 +1,4 @@
 (function() {var implementors = {};
 implementors["uefi_loader"] = [{"text":"impl Write for <a class=\"struct\" href=\"uefi_loader/struct.CommsChannel.html\" title=\"struct uefi_loader::CommsChannel\">CommsChannel</a>","synthetic":false,"types":["uefi_loader::CommsChannel"]}];
-implementors["virtio"] = [{"text":"impl Write for <a class=\"struct\" href=\"virtio/vsock/socket/struct.Socket.html\" title=\"struct virtio::vsock::socket::Socket\">Socket</a>","synthetic":false,"types":["virtio::vsock::socket::Socket"]}];
+implementors["virtio"] = [{"text":"impl Write for <a class=\"struct\" href=\"virtio/console/struct.Console.html\" title=\"struct virtio::console::Console\">Console</a>","synthetic":false,"types":["virtio::console::Console"]},{"text":"impl Write for <a class=\"struct\" href=\"virtio/vsock/socket/struct.Socket.html\" title=\"struct virtio::vsock::socket::Socket\">Socket</a>","synthetic":false,"types":["virtio::vsock::socket::Socket"]}];
 if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

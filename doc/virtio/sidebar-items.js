@@ -1,1 +1,1 @@
-initSidebarItems({"mod":[["queue",""],["vsock",""]]});
+initSidebarItems({"mod":[["console",""],["queue",""],["vsock",""]]});

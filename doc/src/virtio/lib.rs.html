@@ -31,6 +31,10 @@
 <span id="26">26</span>
 <span id="27">27</span>
 <span id="28">28</span>
+<span id="29">29</span>
+<span id="30">30</span>
+<span id="31">31</span>
+<span id="32">32</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2022 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -57,8 +61,12 @@
 
 <span class="kw">extern</span> <span class="kw">crate</span> <span class="ident">alloc</span>;
 
+<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">console</span>;
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">queue</span>;
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">vsock</span>;
+
+<span class="doccomment">/// The vendor ID for virtio PCI devices.</span>
+<span class="kw">const</span> <span class="ident">PCI_VENDOR_ID</span>: <span class="ident">u16</span> <span class="op">=</span> <span class="number">0x1AF4</span>;
 </code></pre></div>
 </section><section id="search" class="content hidden"></section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="virtio" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.62.0-nightly (de1bc0008 2022-04-21)" ></div>
 </body></html>
