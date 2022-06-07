@@ -55,7 +55,7 @@ pub struct Console {
     rx_queue: DeviceWriteOnlyQueue<QUEUE_SIZE, DATA_BUFFER_SIZE>,
     /// The transmit queue, used for sending bytes.
     tx_queue: DriverWriteOnlyQueue<QUEUE_SIZE, DATA_BUFFER_SIZE>,
-    /// A temporary buffer to store extra data from the device that was not fully read when using
+    /// A buffer to temporarily store extra data from the device that was not fully read when using
     /// `read_all`. This could happen if the device sent more bytes in a single buffer than was
     /// expected by `read_all`.
     pending_data: Option<VecDeque<u8>>,
@@ -163,8 +163,11 @@ impl Console {
     }
 
     /// Tries once to fill the destination with as much data as is currently available, either in
-    /// the pending buffer (if data was left over from the previous read) or from the next
-    /// available buffer in the queue.
+    /// the pending buffer (if data was left over from the previous read), or from the next
+    /// available buffer in the queue if there was no data in the pending buffer.
+    ///
+    /// If data is read from the queue and not fully used the remainder is stored back into the
+    /// pending buffer.
     ///
     /// Returns the number of bytes read if any data was available to read.
     fn read_partial(&mut self, dest: &mut [u8]) -> Option<usize> {
