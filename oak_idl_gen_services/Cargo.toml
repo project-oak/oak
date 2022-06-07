@@ -7,7 +7,7 @@ license = "Apache-2.0"
 [dependencies]
 anyhow = "*"
 convert_case = "*"
-flatbuffers = "*"
+flatbuffers = { version = "*", features = ["no_std"], default-features = false }
 
 [build-dependencies]
 oak_idl_gen_structs = { path = "../oak_idl_gen_structs" }
