@@ -15,6 +15,7 @@
 //
 
 use crate::{
+    create_configuration_report,
     grpc::{create_and_start_grpc_server, create_wasm_handler},
     logger::Logger,
     lookup_data::{parse_lookup_entries, LookupDataAuth, LookupDataRefresher, LookupDataSource},
@@ -31,7 +32,7 @@ use std::{
     sync::Arc,
     time::Duration,
 };
-use test_utils::{get_config_info, make_request};
+use test_utils::make_request;
 
 const MANIFEST_PATH: &str = "examples/key_value_lookup/module/Cargo.toml";
 
@@ -166,7 +167,7 @@ where
             &address,
             wasm_handler,
             policy.clone(),
-            get_config_info(&wasm_module_bytes, policy),
+            create_configuration_report(&wasm_module_bytes, policy),
             term,
             logger,
         )

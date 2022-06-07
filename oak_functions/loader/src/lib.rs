@@ -32,7 +32,7 @@ use crate::{
 use anyhow::Context;
 use clap::Parser;
 use log::Level;
-use oak_functions_abi::proto::ConfigurationInfo;
+use oak_functions_abi::proto::{ConfigurationReport, ServerPolicy};
 use oak_functions_extension::ExtensionFactory;
 use oak_functions_lookup::{LookupDataManager, LookupFactory};
 use oak_functions_workload_logging::WorkloadLoggingFactory;
@@ -151,10 +151,7 @@ async fn async_main(
 
     let address = SocketAddr::from((Ipv6Addr::UNSPECIFIED, opt.http_listen_port));
 
-    let config_info = ConfigurationInfo {
-        wasm_hash: get_sha256(&wasm_module_bytes).to_vec(),
-        policy: Some(policy.clone()),
-    };
+    let config_report = create_configuration_report(&wasm_module_bytes, policy.clone());
 
     // Start server.
     let server_handle = tokio::spawn(async move {
@@ -162,7 +159,7 @@ async fn async_main(
             &address,
             wasm_handler,
             policy.clone(),
-            config_info,
+            config_report,
             async { notify_receiver.await.unwrap() },
             logger,
         )
@@ -192,6 +189,17 @@ async fn async_main(
     server_handle
         .await
         .context("error while waiting for the server to terminate")?
+}
+
+/// Create a configuration report for the client.
+pub fn create_configuration_report(
+    wasm_module_bytes: &[u8],
+    policy: ServerPolicy,
+) -> ConfigurationReport {
+    ConfigurationReport {
+        wasm_hash: get_sha256(wasm_module_bytes).to_vec(),
+        policy: Some(policy),
+    }
 }
 
 #[derive(Deserialize, Debug)]

@@ -56,8 +56,8 @@ message Inference {
   repeated float inference_vec = 2;
 }
 
-// Configuration information that should be provided to the client.
-message ConfigurationInfo {
+// The client can check the configuration report for the configuration of the Oak Functions runtime.
+message ConfigurationReport {
   // Hash of the loaded Wasm module.
   bytes wasm_hash = 1;
   // The validated server-side policy.

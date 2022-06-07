@@ -23,7 +23,7 @@ use crate::{
 };
 use anyhow::Context;
 use log::Level;
-use oak_functions_abi::proto::{ConfigurationInfo, Request, ServerPolicy};
+use oak_functions_abi::proto::{ConfigurationReport, Request, ServerPolicy};
 use oak_logger::OakLogger;
 use oak_utils::LogError;
 use prost::Message;
@@ -64,7 +64,7 @@ pub async fn create_and_start_grpc_server<F: Future<Output = ()>>(
     address: &SocketAddr,
     wasm_handler: WasmHandler,
     policy: ServerPolicy,
-    config_info: ConfigurationInfo,
+    config_report: ConfigurationReport,
     terminate: F,
     logger: Logger,
 ) -> anyhow::Result<()> {
@@ -80,7 +80,7 @@ pub async fn create_and_start_grpc_server<F: Future<Output = ()>>(
     let request_handler =
         async move |request| handle_request(wasm_handler, policy.clone(), request).await;
 
-    let additional_info = config_info.encode_to_vec();
+    let additional_info = config_report.encode_to_vec();
 
     let grpc_unary_attestation_service =
         grpc_unary_attestation::proto::unary_session_server::UnarySessionServer::new(
