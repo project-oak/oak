@@ -17,7 +17,7 @@
 package com.google.oak.functions.client;
 
 import com.google.oak.remote_attestation.Message.ServerIdentity;
-import oak.functions.abi.ConfigurationInfo;
+import oak.functions.abi.ConfigurationReport;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -26,8 +26,8 @@ import org.junit.runners.JUnit4;
 @RunWith(JUnit4.class)
 public class ServerConfigurationVerifierTest {
   @Test
-  public void testVerifyConfigurationInfo() {
-    ConfigurationInfo configInfo = ConfigurationInfo.newBuilder().setMlInference(true).build();
+  public void testVerifyConfigurationReport() {
+    ConfigurationReport configInfo = ConfigurationReport.newBuilder().setMlInference(true).build();
     byte[] configBytes = configInfo.toByteArray();
     ServerIdentity serverIdentity =
         new ServerIdentity(new byte[] {}, new byte[] {}, new byte[] {}, new byte[] {}, configBytes);
