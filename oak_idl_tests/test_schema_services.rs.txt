@@ -14,22 +14,22 @@ impl <T: oak_idl::Handler>TestServiceClient<T> {
         }
     }
     pub fn lookup_data(&mut self, request_body: &[u8]) -> Result<oak_idl::utils::Message<LookupDataResponse>, oak_idl::Error> {
-        flatbuffers::root::<LookupDataRequest>(request_body).map_err(|_err| oak_idl::Error::InvalidRequest)?;
+        flatbuffers::root::<LookupDataRequest>(request_body).map_err(|err| oak_idl::Error::new_with_message(oak_idl::ErrorCode::InvalidRequest, err.to_string()))?;
         let request = oak_idl::Request {
             method_id: 222,
             body: request_body,
         };
         let response_body = self.handler.invoke(request)?;
-        oak_idl::utils::Message::from_vec(response_body).map_err(|_err| oak_idl::Error::InvalidResponse)
+        oak_idl::utils::Message::from_vec(response_body).map_err(|err| oak_idl::Error::new_with_message(oak_idl::ErrorCode::InvalidResponse, err.to_string()))
     }
     pub fn log(&mut self, request_body: &[u8]) -> Result<oak_idl::utils::Message<LogResponse>, oak_idl::Error> {
-        flatbuffers::root::<LogRequest>(request_body).map_err(|_err| oak_idl::Error::InvalidRequest)?;
+        flatbuffers::root::<LogRequest>(request_body).map_err(|err| oak_idl::Error::new_with_message(oak_idl::ErrorCode::InvalidRequest, err.to_string()))?;
         let request = oak_idl::Request {
             method_id: 223,
             body: request_body,
         };
         let response_body = self.handler.invoke(request)?;
-        oak_idl::utils::Message::from_vec(response_body).map_err(|_err| oak_idl::Error::InvalidResponse)
+        oak_idl::utils::Message::from_vec(response_body).map_err(|err| oak_idl::Error::new_with_message(oak_idl::ErrorCode::InvalidResponse, err.to_string()))
     }
 }
 
@@ -41,18 +41,18 @@ impl <S: TestService> oak_idl::Handler for TestServiceServer<S> {
     fn invoke(&mut self, request: oak_idl::Request) -> Result<alloc::vec::Vec<u8>, oak_idl::Error> {
         match request.method_id {
             222 => {
-                let request = flatbuffers::root::<LookupDataRequest>(request.body).map_err(|_err| oak_idl::Error::InvalidRequest)?;
+                let request = flatbuffers::root::<LookupDataRequest>(request.body).map_err(|err| oak_idl::Error::new_with_message(oak_idl::ErrorCode::InvalidRequest, err.to_string()))?;
                 let response = self.service.lookup_data(&request)?;
                 let response_body = response.buf().to_vec();
                 Ok(response_body)
             }
             223 => {
-                let request = flatbuffers::root::<LogRequest>(request.body).map_err(|_err| oak_idl::Error::InvalidRequest)?;
+                let request = flatbuffers::root::<LogRequest>(request.body).map_err(|err| oak_idl::Error::new_with_message(oak_idl::ErrorCode::InvalidRequest, err.to_string()))?;
                 let response = self.service.log(&request)?;
                 let response_body = response.buf().to_vec();
                 Ok(response_body)
             }
-            _ => Err(oak_idl::Error::InvalidMethodId)
+            _ => Err(oak_idl::Error::new(oak_idl::ErrorCode::InvalidMethodId))
         }
     }
 }

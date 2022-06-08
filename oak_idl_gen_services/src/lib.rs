@@ -202,7 +202,7 @@ fn generate_service(service: &Service) -> anyhow::Result<String> {
             .flatten(),
     );
     lines.extend(vec![
-        format!("            _ => Err(oak_idl::Error::InvalidMethodId)"),
+        format!("            _ => Err(oak_idl::Error::new(oak_idl::ErrorCode::InvalidMethodId))"),
         format!("        }}"),
         format!("    }}"),
         format!("}}"),
@@ -245,7 +245,7 @@ fn generate_client_method(rpc_call: &RPCCall) -> anyhow::Result<Vec<String>> {
             response_type(rpc_call)
         ),
         format!(
-            "        flatbuffers::root::<{}>(request_body).map_err(|_err| oak_idl::Error::InvalidRequest)?;",
+            "        flatbuffers::root::<{}>(request_body).map_err(|err| oak_idl::Error::new_with_message(oak_idl::ErrorCode::InvalidRequest, err.to_string()))?;",
             request_type(rpc_call)
         ),
         format!("        let request = oak_idl::Request {{"),
@@ -253,7 +253,7 @@ fn generate_client_method(rpc_call: &RPCCall) -> anyhow::Result<Vec<String>> {
         format!("            body: request_body,"),
         format!("        }};"),
         format!("        let response_body = self.handler.invoke(request)?;"),
-        format!("        oak_idl::utils::Message::from_vec(response_body).map_err(|_err| oak_idl::Error::InvalidResponse)"),
+        format!("        oak_idl::utils::Message::from_vec(response_body).map_err(|err| oak_idl::Error::new_with_message(oak_idl::ErrorCode::InvalidResponse, err.to_string()))"),
         format!("    }}"),
     ])
 }
@@ -266,7 +266,7 @@ fn generate_server_handler(rpc_call: &RPCCall) -> anyhow::Result<Vec<String>> {
     Ok(vec![
         format!("            {} => {{", method_id(rpc_call)?),
         format!(
-            "                let request = flatbuffers::root::<{}>(request.body).map_err(|_err| oak_idl::Error::InvalidRequest)?;",
+            "                let request = flatbuffers::root::<{}>(request.body).map_err(|err| oak_idl::Error::new_with_message(oak_idl::ErrorCode::InvalidRequest, err.to_string()))?;",
             request_type(rpc_call),
         ),
         format!(

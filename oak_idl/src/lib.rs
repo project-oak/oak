@@ -18,21 +18,78 @@
 
 extern crate alloc;
 
-use alloc::vec::Vec;
+use crate::alloc::string::ToString;
+use alloc::{string::String, vec::Vec};
 use core::fmt::Debug;
 
 pub mod utils;
 
+// TODO(#2500): Align with gRPC Status.
+// Ref: https://github.com/grpc/grpc/blob/master/src/proto/grpc/status/status.proto
+/// Logical error model.
 #[derive(Debug)]
-pub enum Error {
+pub struct Error {
+    pub code: ErrorCode,
+    /// English message that helps developers understand and resolve the error.
+    pub message: String,
+}
+
+impl Error {
+    pub fn new(code: ErrorCode) -> Self {
+        Self {
+            code,
+            message: "".to_string(),
+        }
+    }
+
+    pub fn new_with_message(code: ErrorCode, message: impl Into<String>) -> Self {
+        Self {
+            code,
+            message: message.into(),
+        }
+    }
+}
+
+// TODO(#2500): Align these with gRPC status codes.
+/// Basic error code to categorize the error. Error codes are represented as an
+/// u32 id. The id `0` is reserved, as it may be used to indicate an "Ok" status
+/// in transport implementations.
+#[repr(u32)]
+#[derive(Debug)]
+pub enum ErrorCode {
     /// The request message could not be deserialized correctly.
-    InvalidRequest,
+    InvalidRequest = 1,
     /// The response message could not be deserialized correctly.
-    InvalidResponse,
+    InvalidResponse = 2,
     /// The method id provided for the invocation was not implemented by the server.
-    InvalidMethodId,
+    InvalidMethodId = 3,
+    /// The request was deserialized correctly but contained invalid values.
+    BadRequest = 4,
     /// An error occured while invoking the method on the server.
-    InternalError,
+    InternalError = 5,
+    /// Unknown error.
+    Unknown = 6,
+}
+
+impl From<u32> for ErrorCode {
+    fn from(i: u32) -> Self {
+        match i {
+            1 => ErrorCode::InvalidRequest,
+            2 => ErrorCode::InvalidResponse,
+            3 => ErrorCode::InvalidMethodId,
+            4 => ErrorCode::BadRequest,
+            5 => ErrorCode::InternalError,
+            6 => ErrorCode::Unknown,
+
+            _ => ErrorCode::Unknown,
+        }
+    }
+}
+
+impl From<ErrorCode> for u32 {
+    fn from(code: ErrorCode) -> u32 {
+        code as u32
+    }
 }
 
 /// Unique identifier of a method within a service.
