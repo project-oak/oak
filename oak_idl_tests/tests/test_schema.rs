@@ -43,7 +43,10 @@ impl test_schema::TestService for TestServiceImpl {
             &mut b,
             &test_schema::LookupDataResponseArgs { value },
         );
-        let b = b.finish(m).map_err(|_| oak_idl::Error::InternalError)?;
+        let b = b.finish(m).map_err(|_| oak_idl::Error {
+            code: oak_idl::ErrorCode::InternalError,
+            message: None,
+        })?;
         Ok(b)
     }
 
@@ -54,7 +57,10 @@ impl test_schema::TestService for TestServiceImpl {
         eprintln!("log: {}", request.entry().unwrap());
         let mut b = oak_idl::utils::MessageBuilder::default();
         let m = test_schema::LogResponse::create(&mut b, &test_schema::LogResponseArgs {});
-        let b = b.finish(m).map_err(|_| oak_idl::Error::InternalError)?;
+        let b = b.finish(m).map_err(|_| oak_idl::Error {
+            code: oak_idl::ErrorCode::InternalError,
+            message: None,
+        })?;
         Ok(b)
     }
 }
