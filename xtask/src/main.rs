@@ -182,7 +182,7 @@ fn run_cargo_tests(opt: &RunTestsOpt, scope: &Scope) -> Step {
 fn run_bazel_tests() -> Step {
     Step::Multiple {
         name: "bazel tests".to_string(),
-        steps: vec![run_bazel_build(), run_bazel_test(), run_clang_tidy()],
+        steps: vec![run_bazel_build(), run_bazel_test()],
     }
 }
 
@@ -656,13 +656,6 @@ fn run_cargo_doc(all_affected_crates: &ModifiedContent) -> Step {
                 }
             })
             .collect(),
-    }
-}
-
-fn run_clang_tidy() -> Step {
-    Step::Single {
-        name: "clang tidy".to_string(),
-        command: Cmd::new("bash", &["./scripts/run_clang_tidy"]),
     }
 }
 
