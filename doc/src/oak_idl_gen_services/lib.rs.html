@@ -676,7 +676,7 @@
     <span class="comment">// implementation of this method, therefore needs to be wrapped in `oak_idl::Message` in order</span>
     <span class="comment">// to transfer its ownership to the caller.</span>
     <span class="macro">vec!</span>[<span class="macro">format!</span>(
-        <span class="string">&quot;    fn {}(&amp;self, request: &amp;{}) -&gt; Result&lt;oak_idl::utils::Message&lt;{}&gt;, oak_idl::Error&gt;;&quot;</span>,
+        <span class="string">&quot;    fn {}(&amp;mut self, request: &amp;{}) -&gt; Result&lt;oak_idl::utils::Message&lt;{}&gt;, oak_idl::Error&gt;;&quot;</span>,
         <span class="ident">method_name</span>(<span class="ident">rpc_call</span>),
         <span class="ident">request_type</span>(<span class="ident">rpc_call</span>),
         <span class="ident">response_type</span>(<span class="ident">rpc_call</span>)
