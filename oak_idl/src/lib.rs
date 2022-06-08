@@ -18,6 +18,7 @@
 
 extern crate alloc;
 
+use crate::alloc::string::ToString;
 use alloc::{string::String, vec::Vec};
 use core::fmt::Debug;
 
@@ -30,7 +31,23 @@ pub mod utils;
 pub struct Error {
     pub code: ErrorCode,
     /// English message that helps developers understand and resolve the error.
-    pub message: Option<String>,
+    pub message: String,
+}
+
+impl Error {
+    pub fn new(code: ErrorCode) -> Self {
+        Self {
+            code,
+            message: "".to_string(),
+        }
+    }
+
+    pub fn new_with_message(code: ErrorCode, message: impl Into<String>) -> Self {
+        Self {
+            code,
+            message: message.into(),
+        }
+    }
 }
 
 // TODO(#2500): Align these with gRPC status codes.
