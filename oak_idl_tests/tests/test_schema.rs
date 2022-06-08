@@ -29,7 +29,7 @@ struct TestServiceImpl;
 /// An implementation of the [`test_schema::TestService`] service trait for testing.
 impl test_schema::TestService for TestServiceImpl {
     fn lookup_data(
-        &self,
+        &mut self,
         request: &test_schema::LookupDataRequest,
     ) -> Result<oak_idl::utils::Message<test_schema::LookupDataResponse>, oak_idl::Error> {
         let h = maplit::hashmap! {
@@ -48,7 +48,7 @@ impl test_schema::TestService for TestServiceImpl {
     }
 
     fn log(
-        &self,
+        &mut self,
         request: &test_schema::LogRequest,
     ) -> Result<oak_idl::utils::Message<test_schema::LogResponse>, oak_idl::Error> {
         eprintln!("log: {}", request.entry().unwrap());
