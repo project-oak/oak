@@ -112,7 +112,7 @@ The complete workflow of the Remote Attestation protocol looks as follows:
    - New random string
    - _Transcript_: [SHA-256](https://datatracker.ietf.org/doc/html/rfc6234) hash
      of the concatenated `ClientHello` and current `ServerIdentity` (excluding
-     the _Transcript_) signed by the **Server**'s _Signing_ public key
+     the _Transcript_) signed with the **Server**'s _Signing_ private key
    - **Server**’s _Signing_ public key
    - `AttestationReport` signed by the **TEE Platform**'s hardware key, which
      includes a hash of the **Server**’s _Signing_ public key
@@ -126,8 +126,8 @@ The complete workflow of the Remote Attestation protocol looks as follows:
    - New random string
    - _Transcript_: [SHA-256](https://datatracker.ietf.org/doc/html/rfc6234) hash
      of the concatenated `ClientHello`, `ServerIdentity` and current
-     `ClientIdentity` (excluding the _Transcript_) signed by the **Client**'s
-     _Signing_ public key
+     `ClientIdentity` (excluding the _Transcript_) signed with the **Client**'s
+     _Signing_ private key
    - **Client**’s _Signing_ public key
 1. **Client** and **Server** use both _Ephemeral_ public keys to create an
    [X25519](https://datatracker.ietf.org/doc/html/rfc7748) _Shared Secret_
