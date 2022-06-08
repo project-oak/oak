@@ -477,7 +477,7 @@ version = "1.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e2abad23fbc42b3700f2f279844dc832adb2b2eb069b2df918f455c4e18cc646"
 dependencies = [
- "spin",
+ "spin 0.5.2",
 ]
 
 [[package]]
@@ -600,6 +600,7 @@ dependencies = [
  "oak_functions_abi",
  "oak_functions_extension",
  "oak_logger",
+ "oak_remote_attestation",
  "wasmi",
 ]
 
@@ -632,6 +633,7 @@ dependencies = [
  "hkdf",
  "p256",
  "rand_core",
+ "ring",
  "sha2 0.10.2",
  "signature",
  "x25519-dalek",
@@ -825,6 +827,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "ring"
+version = "0.17.0-not-released-yet"
+dependencies = [
+ "cc",
+ "libc",
+ "once_cell",
+ "spin 0.9.3",
+ "untrusted",
+ "winapi",
+]
+
+[[package]]
 name = "runtime"
 version = "0.1.0"
 dependencies = [
@@ -943,6 +957,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6e63cff320ae2c57904679ba7cb63280a3dc4613885beafb148ee7bf9aa9042d"
 
 [[package]]
+name = "spin"
+version = "0.9.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c530c2b0d0bf8b69304b39fe2001993e267461948b890cd037d8ad4293fa1a0d"
+
+[[package]]
 name = "spinning_top"
 version = "0.2.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1054,6 +1074,12 @@ dependencies = [
  "generic-array",
  "subtle",
 ]
+
+[[package]]
+name = "untrusted"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8ecb6da28b8a351d773b68d5825ac39017e680750f980f3a1a85cd8dd28a47c1"
 
 [[package]]
 name = "version_check"
