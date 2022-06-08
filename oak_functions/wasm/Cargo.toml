@@ -13,6 +13,7 @@ log = "*"
 oak_logger = { path = "../logger" }
 oak_functions_abi = { path = "../abi" }
 oak_functions_extension = { path = "../extension" }
+oak_remote_attestation = { path = "../../remote_attestation/rust/" }
 # Use wasmi in `no_std` mode.
 wasmi = { version = "*", default-features = false, features = ["core"] }
 

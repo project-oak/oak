@@ -30,6 +30,7 @@ use hashbrown::HashMap;
 use oak_functions_abi::proto::{ExtensionHandle, OakStatus, Request, Response, StatusCode};
 use oak_functions_extension::{ExtensionFactory, OakApiNativeExtension};
 use oak_logger::{Level, OakLogger};
+use oak_remote_attestation::crypto::get_sha256;
 use wasmi::ValueType;
 
 const MAIN_FUNCTION_NAME: &str = "main";
@@ -415,6 +416,8 @@ pub struct WasmHandler<L: OakLogger> {
     // cloneable.
     module: Arc<wasmi::Module>,
     extension_factories: Arc<Vec<Box<dyn ExtensionFactory<L>>>>,
+    // The hash of the bytes loaded in the Wasm module.
+    wasm_hash: Vec<u8>,
     logger: L,
 }
 
@@ -427,12 +430,15 @@ where
         extension_factories: Vec<Box<dyn ExtensionFactory<L>>>,
         logger: L,
     ) -> anyhow::Result<Self> {
+        let wasm_hash = get_sha256(wasm_module_bytes).to_vec();
+
         let module = wasmi::Module::from_buffer(&wasm_module_bytes)
             .map_err(|err| anyhow::anyhow!("could not load module from buffer: {:?}", err))?;
 
         Ok(WasmHandler {
             module: Arc::new(module),
             extension_factories: Arc::new(extension_factories),
+            wasm_hash,
             logger,
         })
     }
@@ -469,6 +475,11 @@ where
             .try_for_each(|e| e.terminate())?;
 
         Ok(wasm_state.get_response_bytes())
+    }
+
+    /// Get the hash of the bytes of the Wasm Module the WasmHandler runs.
+    pub fn get_wasm_hash(&self) -> Vec<u8> {
+        self.wasm_hash.clone()
     }
 }
 

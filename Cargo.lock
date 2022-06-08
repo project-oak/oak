@@ -3142,6 +3142,7 @@ dependencies = [
  "oak_functions_extension",
  "oak_functions_testing_extension",
  "oak_logger",
+ "oak_remote_attestation",
  "test_utils",
  "wasmi",
 ]

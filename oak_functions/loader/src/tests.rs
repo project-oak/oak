@@ -15,7 +15,6 @@
 //
 
 use crate::{
-    create_configuration_report,
     grpc::{create_and_start_grpc_server, create_wasm_handler},
     logger::Logger,
     lookup_data::{parse_lookup_entries, LookupDataAuth, LookupDataRefresher, LookupDataSource},
@@ -163,15 +162,7 @@ where
     .expect("could not create wasm_handler");
 
     let server_background = test_utils::background(|term| async move {
-        create_and_start_grpc_server(
-            &address,
-            wasm_handler,
-            policy.clone(),
-            create_configuration_report(&wasm_module_bytes, policy),
-            term,
-            logger,
-        )
-        .await
+        create_and_start_grpc_server(&address, wasm_handler, policy.clone(), term, logger).await
     });
 
     // Wait for the server thread to make progress before starting the client. This is needed for a

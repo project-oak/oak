@@ -64,7 +64,6 @@ pub async fn create_and_start_grpc_server<F: Future<Output = ()>>(
     address: &SocketAddr,
     wasm_handler: WasmHandler,
     policy: ServerPolicy,
-    config_report: ConfigurationReport,
     terminate: F,
     logger: Logger,
 ) -> anyhow::Result<()> {
@@ -77,10 +76,15 @@ pub async fn create_and_start_grpc_server<F: Future<Output = ()>>(
         ),
     );
 
+    // Prepare the ConfigurationReport of the server.
+    let additional_info = ConfigurationReport {
+        wasm_hash: wasm_handler.get_wasm_hash(),
+        policy: Some(policy.clone()),
+    }
+    .encode_to_vec();
+
     let request_handler =
         async move |request| handle_request(wasm_handler, policy.clone(), request).await;
-
-    let additional_info = config_report.encode_to_vec();
 
     let grpc_unary_attestation_service =
         grpc_unary_attestation::proto::unary_session_server::UnarySessionServer::new(
