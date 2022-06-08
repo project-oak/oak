@@ -17,10 +17,7 @@
 use crate::queue::virtq::{AvailRing, Desc, DescFlags, UsedRing};
 use alloc::{collections::BTreeMap, sync::Arc, vec::Vec};
 use bitflags::bitflags;
-use core::{
-    cell::{Cell, RefCell},
-    mem::size_of,
-};
+use core::mem::size_of;
 use rust_hypervisor_firmware_virtio::virtio::{Error, VirtioTransport};
 use std::sync::Mutex;
 

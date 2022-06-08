@@ -15,11 +15,8 @@
 //
 
 use super::*;
-use crate::{
-    test::{DeviceStatus, TestingTransport, VIRTIO_F_VERSION_1},
-    vsock,
-};
-use alloc::{vec, vec::Vec};
+use crate::test::{DeviceStatus, TestingTransport, VIRTIO_F_VERSION_1};
+use alloc::vec;
 
 const GUEST_CID: u64 = 3;
 
