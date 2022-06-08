@@ -20,6 +20,7 @@ use super::{
 };
 use alloc::collections::VecDeque;
 use core::num::Wrapping;
+use rust_hypervisor_firmware_virtio::virtio::VirtioTransport;
 
 /// The maximum buffer size used by the socket.
 ///
@@ -39,13 +40,16 @@ const CREDIT_UPDATE_LIMIT: Wrapping<u32> = Wrapping((DATA_BUFFER_SIZE * QUEUE_SI
 const MAX_PAYLOAD_SIZE: usize = DATA_BUFFER_SIZE - HEADER_SIZE;
 
 /// Connector to initiate a connection to a listener on the host.
-pub struct SocketConnector {
+pub struct SocketConnector<T: VirtioTransport> {
     /// The socket configuration.
-    config: SocketConfiguration,
+    config: SocketConfiguration<T>,
 }
 
-impl SocketConnector {
-    pub fn new(vsock: VSock, host_port: u32, local_port: u32) -> Self {
+impl<T> SocketConnector<T>
+where
+    T: VirtioTransport,
+{
+    pub fn new(vsock: VSock<T>, host_port: u32, local_port: u32) -> Self {
         Self {
             config: SocketConfiguration::new(vsock, local_port, host_port),
         }
@@ -55,7 +59,7 @@ impl SocketConnector {
     ///
     /// Since we don't yet support timeouts it will wait indefinitely for a respone. If the
     /// connection is refused, or it receives an unexpected packet, it will return an error.
-    pub fn connect(mut self) -> anyhow::Result<Socket> {
+    pub fn connect(mut self) -> anyhow::Result<Socket<T>> {
         let mut packet = Packet::new_control(
             self.config.local_port,
             self.config.host_port,
@@ -87,13 +91,16 @@ impl SocketConnector {
 }
 
 /// Listener that waits for a connection initiated from the host.
-pub struct SocketListener {
+pub struct SocketListener<T: VirtioTransport> {
     /// The socket configuration.
-    config: SocketConfiguration,
+    config: SocketConfiguration<T>,
 }
 
-impl SocketListener {
-    pub fn new(vsock: VSock, port: u32) -> Self {
+impl<T> SocketListener<T>
+where
+    T: VirtioTransport,
+{
+    pub fn new(vsock: VSock<T>, port: u32) -> Self {
         Self {
             config: SocketConfiguration::new(vsock, port, 0),
         }
@@ -104,7 +111,7 @@ impl SocketListener {
     /// Since we don't yet support timeouts it will wait indefinitely for a connection request. If
     /// it receives an unexpected packet (anything other than a connection request) it will return
     /// an error.
-    pub fn accept(mut self) -> anyhow::Result<Socket> {
+    pub fn accept(mut self) -> anyhow::Result<Socket<T>> {
         let dst_port = self.config.local_port;
         loop {
             if let Some(packet) = self
@@ -136,9 +143,9 @@ impl SocketListener {
 }
 
 /// A connection-oriented socket.
-pub struct Socket {
+pub struct Socket<T: VirtioTransport> {
     /// The socket configuration.
-    config: SocketConfiguration,
+    config: SocketConfiguration<T>,
     /// The current state of the connection.
     connection_state: ConnectionState,
     /// The number of payload bytes we have processed.
@@ -161,8 +168,11 @@ pub struct Socket {
     pending_data: Option<VecDeque<u8>>,
 }
 
-impl Socket {
-    fn new(config: SocketConfiguration) -> Self {
+impl<T> Socket<T>
+where
+    T: VirtioTransport,
+{
+    fn new(config: SocketConfiguration<T>) -> Self {
         Self {
             config,
             connection_state: ConnectionState::Connected,
@@ -318,7 +328,10 @@ impl Socket {
     }
 }
 
-impl ciborium_io::Read for Socket {
+impl<T> ciborium_io::Read for Socket<T>
+where
+    T: VirtioTransport,
+{
     type Error = anyhow::Error;
 
     fn read_exact(&mut self, data: &mut [u8]) -> Result<(), Self::Error> {
@@ -339,7 +352,10 @@ impl ciborium_io::Read for Socket {
     }
 }
 
-impl ciborium_io::Write for Socket {
+impl<T> ciborium_io::Write for Socket<T>
+where
+    T: VirtioTransport,
+{
     type Error = anyhow::Error;
 
     fn write_all(&mut self, data: &[u8]) -> Result<(), Self::Error> {
@@ -369,19 +385,22 @@ enum ConnectionState {
 }
 
 /// The configuration information for the socket.
-struct SocketConfiguration {
+struct SocketConfiguration<T: VirtioTransport> {
     /// The vsock device driver.
     ///
     /// For now we only support one connection, so the driver is owned by this configuration.
-    vsock: VSock,
+    vsock: VSock<T>,
     /// The local port for the connection.
     local_port: u32,
     /// The host port for the connection.
     host_port: u32,
 }
 
-impl SocketConfiguration {
-    fn new(vsock: VSock, local_port: u32, host_port: u32) -> Self {
+impl<T> SocketConfiguration<T>
+where
+    T: VirtioTransport,
+{
+    fn new(vsock: VSock<T>, local_port: u32, host_port: u32) -> Self {
         Self {
             vsock,
             local_port,
@@ -389,3 +408,6 @@ impl SocketConfiguration {
         }
     }
 }
+
+#[cfg(test)]
+mod tests;

@@ -23,6 +23,7 @@ use packet::Packet;
 use rust_hypervisor_firmware_virtio::{
     device::VirtioBaseDevice,
     pci::{find_device, VirtioPciTransport},
+    virtio::VirtioTransport,
 };
 
 pub mod packet;
@@ -69,9 +70,9 @@ const HOST_CID: u64 = 2;
 /// Low-level driver interface to interact with a virtio socket device.
 ///
 /// See <https://docs.oasis-open.org/virtio/virtio/v1.1/csprd01/virtio-v1.1-csprd01.html#x1-39000010>.
-pub struct VSock {
+pub struct VSock<T: VirtioTransport> {
     /// The base virtio-over-PCI device used for configuration and notification.
-    device: VirtioBaseDevice<VirtioPciTransport>,
+    device: VirtioBaseDevice<T>,
     /// The receive queue.
     rx_queue: DeviceWriteOnlyQueue<QUEUE_SIZE, DATA_BUFFER_SIZE>,
     /// The transmit queue.
@@ -84,7 +85,7 @@ pub struct VSock {
     guest_cid: u64,
 }
 
-impl VSock {
+impl VSock<VirtioPciTransport> {
     /// Finds the virtio vsock PCI device, initialises the device, and configures the queues.
     pub fn find_and_configure_device() -> anyhow::Result<Self> {
         // For now we just scan the first 32 devices on PCI bus 0 to find the first one that matches
@@ -100,7 +101,12 @@ impl VSock {
         result.device.notify_queue(EVENT_QUEUE_ID);
         Ok(result)
     }
+}
 
+impl<T> VSock<T>
+where
+    T: VirtioTransport,
+{
     /// Reads the next valid packet from the receive queue, if one is available.
     pub fn read_packet(&mut self) -> Option<Packet> {
         loop {
@@ -163,7 +169,7 @@ impl VSock {
         self.device.get_status()
     }
 
-    fn new(device: VirtioBaseDevice<VirtioPciTransport>) -> Self {
+    fn new(device: VirtioBaseDevice<T>) -> Self {
         let tx_queue = DriverWriteOnlyQueue::new();
         let rx_queue = DeviceWriteOnlyQueue::new();
         let event_queue = DeviceWriteOnlyQueue::new();
@@ -236,3 +242,6 @@ impl VSock {
         self.write_packet(&mut packet);
     }
 }
+
+#[cfg(test)]
+mod tests;

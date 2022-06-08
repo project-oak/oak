@@ -18,7 +18,7 @@ use alloc::{boxed::Box, collections::vec_deque::VecDeque, vec, vec::Vec};
 use core::num::Wrapping;
 use virtq::{AvailRing, Desc, DescFlags, RingFlags, UsedElem, UsedRing, VirtQueue};
 
-mod virtq;
+pub mod virtq;
 
 /// A queue where the descriptor buffers are only writable by the driver.
 ///
