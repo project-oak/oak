@@ -81,7 +81,7 @@ public class MainActivity extends Activity {
 
       // Attest a gRPC channel.
       AttestationClient client = new AttestationClient();
-      client.attest(channel, (config) -> !config.getMlInference());
+      client.attest(channel, (config) -> true); // Currently we are not verifying the config.
 
       // Send a request.
       Response response = client.send(request);

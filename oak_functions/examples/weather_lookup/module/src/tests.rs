@@ -23,6 +23,7 @@ use lookup_data_generator::data::generate_and_serialize_sparse_weather_entries;
 use maplit::hashmap;
 use oak_functions_abi::proto::{Request, ServerPolicy, StatusCode};
 use oak_functions_loader::{
+    create_configuration_report,
     grpc::{create_and_start_grpc_server, create_wasm_handler},
     logger::Logger,
     lookup_data::{parse_lookup_entries, LookupDataAuth, LookupDataRefresher, LookupDataSource},
@@ -37,7 +38,7 @@ use std::{
     time::Duration,
 };
 use test::Bencher;
-use test_utils::{get_config_info, make_request};
+use test_utils::make_request;
 
 #[tokio::test]
 async fn test_server() {
@@ -118,7 +119,7 @@ async fn test_server() {
             &address,
             wasm_handler,
             policy.clone(),
-            get_config_info(&wasm_module_bytes, policy, false, None),
+            create_configuration_report(&wasm_module_bytes, policy),
             term,
             logger,
         )

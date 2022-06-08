@@ -45,7 +45,7 @@ import java.util.concurrent.BlockingQueue;
 import java.util.function.Predicate;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import oak.functions.abi.ConfigurationInfo;
+import oak.functions.abi.ConfigurationReport;
 import oak.functions.invocation.Request;
 import oak.functions.invocation.Response;
 import oak.session.unary.v1.UnaryRequest;
@@ -118,7 +118,7 @@ public class AttestationClient {
    * @param verifier checks that the ServerIdentity contains the expected attestation info as
    * described in {@code ServerIdentityVerifier::verifyAttestationInfo}.
    */
-  public void attest(ManagedChannel channel, Predicate<ConfigurationInfo> verifier)
+  public void attest(ManagedChannel channel, Predicate<ConfigurationReport> verifier)
       throws GeneralSecurityException, IOException, InterruptedException, VerificationException {
     if (channel == null) {
       throw new NullPointerException("Channel must not be null.");
@@ -170,7 +170,7 @@ public class AttestationClient {
    *
    * - Deserializes `serializedServerIdentity` into an instance of {@code
    * Message.ServerIdentity}. Throws IOException if the deserialization fails.
-   * - Checks that the resulting ServerIdentity contains an instance of {@code ConfigurationInfo},
+   * - Checks that the resulting ServerIdentity contains an instance of {@code ConfigurationReport},
    * and checks that the {@code configurationVerifier} predicate is valid for it. Returns false if
    * the check fails.
    * - Checks that the ServerIdentity contains the expected attestation info as described in {@code
@@ -183,7 +183,7 @@ public class AttestationClient {
    *     of {@code Message.ServerIdentity}.
    */
   boolean verifyServerIdentity(byte[] serializedServerIdentity,
-      Predicate<ConfigurationInfo> configurationVerifier) throws IOException {
+      Predicate<ConfigurationReport> configurationVerifier) throws IOException {
     Message.ServerIdentity serverIdentity =
         Message.ServerIdentity.deserialize(serializedServerIdentity);
 

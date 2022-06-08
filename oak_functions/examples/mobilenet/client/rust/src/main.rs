@@ -31,7 +31,6 @@ const CHANNELS: usize = 3;
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     env_logger::init();
-
     let mut client = Client::new("http://localhost:8080")
         .await
         .context("Could not create Oak Functions client")?;

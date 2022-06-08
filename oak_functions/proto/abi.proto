@@ -56,17 +56,12 @@ message Inference {
   repeated float inference_vec = 2;
 }
 
-// Configuration information that should be provided to the client.
-message ConfigurationInfo {
+// The client can check the configuration report for the configuration of the Oak Functions runtime.
+message ConfigurationReport {
   // Hash of the loaded Wasm module.
   bytes wasm_hash = 1;
   // The validated server-side policy.
   ServerPolicy policy = 2;
-  // Whether machine learning inference using a TensorFlow model is enabled.
-  bool ml_inference = 3;
-  // Server-side configuration for differentially private metrics. This field is optional. If not
-  // provided, differentially private metrics are not enabled on the server.
-  PrivateMetricsConfig metrics = 4;
 }
 
 /// Server-side policy describing limits on the size of the response and response processing time to

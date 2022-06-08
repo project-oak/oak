@@ -22,8 +22,7 @@ use anyhow::Context;
 use clap::Parser;
 use log::Level;
 use oak_functions_loader::{
-    logger::Logger, lookup_data::LookupDataAuth, server::Policy, Data, ExtensionConfigurationInfo,
-    LoadLookupDataConfig, Opt,
+    logger::Logger, lookup_data::LookupDataAuth, server::Policy, Data, LoadLookupDataConfig, Opt,
 };
 use oak_functions_metrics::{PrivateMetricsConfig, PrivateMetricsProxyFactory};
 use oak_functions_tf_inference::{read_model_from_path, TensorFlowFactory, TensorFlowModelConfig};
@@ -57,7 +56,7 @@ pub struct Config {
     lookup_data_auth: LookupDataAuth,
     /// Security policy guaranteed by the server.
     policy: Option<Policy>,
-    /// Configuration for TensorFlow model
+    /// Configuration for TensorFlow model.
     #[serde(default)]
     tf_model: Option<TensorFlowModelConfig>,
     /// Differentially private metrics configuration.
@@ -98,8 +97,6 @@ pub fn main() -> anyhow::Result<()> {
         logger.log_public(Level::Info, "Added Metrics extension.");
     }
 
-    let extension_configuration_info = get_extension_config_info(&config)?;
-
     oak_functions_loader::lib_main(
         opt,
         logger,
@@ -110,23 +107,5 @@ pub fn main() -> anyhow::Result<()> {
         ),
         config.policy,
         extension_factories,
-        extension_configuration_info,
     )
-}
-
-fn get_extension_config_info(config: &Config) -> anyhow::Result<ExtensionConfigurationInfo> {
-    let metrics = match &config.metrics {
-        Some(ref metrics_config) => Some(oak_functions_abi::proto::PrivateMetricsConfig {
-            epsilon: metrics_config.epsilon,
-            batch_size: metrics_config
-                .batch_size
-                .try_into()
-                .context("could not convert usize to u32")?,
-        }),
-        None => None,
-    };
-
-    let ml_inference = config.tf_model.is_some();
-
-    Ok(ExtensionConfigurationInfo::new(ml_inference, metrics))
 }

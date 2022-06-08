@@ -32,7 +32,7 @@ use crate::{
 use anyhow::Context;
 use clap::Parser;
 use log::Level;
-use oak_functions_abi::proto::ConfigurationInfo;
+use oak_functions_abi::proto::{ConfigurationReport, ServerPolicy};
 use oak_functions_extension::ExtensionFactory;
 use oak_functions_lookup::{LookupDataManager, LookupFactory};
 use oak_functions_workload_logging::WorkloadLoggingFactory;
@@ -108,7 +108,6 @@ pub fn lib_main(
     load_lookup_data_config: LoadLookupDataConfig,
     policy: Option<Policy>,
     extension_factories: Vec<Box<dyn ExtensionFactory<Logger>>>,
-    extension_configuration_info: ExtensionConfigurationInfo,
 ) -> anyhow::Result<()> {
     tokio::runtime::Builder::new_multi_thread()
         .enable_all()
@@ -120,34 +119,7 @@ pub fn lib_main(
             load_lookup_data_config,
             policy,
             extension_factories,
-            extension_configuration_info,
         ))
-}
-
-/// Workaround to pass values for ConfigurationInfo from Config.
-/// TODO(#2851): Refactor to remove `ExtensionConfigurationInfo`.
-pub struct ExtensionConfigurationInfo {
-    ml_inference: bool,
-    metrics: Option<oak_functions_abi::proto::PrivateMetricsConfig>,
-}
-
-impl ExtensionConfigurationInfo {
-    pub fn new(
-        ml_inference: bool,
-        metrics: Option<oak_functions_abi::proto::PrivateMetricsConfig>,
-    ) -> Self {
-        ExtensionConfigurationInfo {
-            ml_inference,
-            metrics,
-        }
-    }
-
-    pub fn base() -> ExtensionConfigurationInfo {
-        ExtensionConfigurationInfo {
-            ml_inference: false,
-            metrics: None,
-        }
-    }
 }
 
 /// Main execution point for the Oak Functions Loader.
@@ -157,7 +129,6 @@ async fn async_main(
     load_lookup_data_config: LoadLookupDataConfig,
     policy: Option<Policy>,
     extension_factories: Vec<Box<dyn ExtensionFactory<Logger>>>,
-    extension_configuration_info: ExtensionConfigurationInfo,
 ) -> anyhow::Result<()> {
     let (notify_sender, notify_receiver) = tokio::sync::oneshot::channel::<()>();
 
@@ -180,12 +151,7 @@ async fn async_main(
 
     let address = SocketAddr::from((Ipv6Addr::UNSPECIFIED, opt.http_listen_port));
 
-    let config_info = ConfigurationInfo {
-        wasm_hash: get_sha256(&wasm_module_bytes).to_vec(),
-        policy: Some(policy.clone()),
-        ml_inference: extension_configuration_info.ml_inference,
-        metrics: extension_configuration_info.metrics,
-    };
+    let config_report = create_configuration_report(&wasm_module_bytes, policy.clone());
 
     // Start server.
     let server_handle = tokio::spawn(async move {
@@ -193,7 +159,7 @@ async fn async_main(
             &address,
             wasm_handler,
             policy.clone(),
-            config_info,
+            config_report,
             async { notify_receiver.await.unwrap() },
             logger,
         )
@@ -223,6 +189,17 @@ async fn async_main(
     server_handle
         .await
         .context("error while waiting for the server to terminate")?
+}
+
+/// Create a configuration report for the client.
+pub fn create_configuration_report(
+    wasm_module_bytes: &[u8],
+    policy: ServerPolicy,
+) -> ConfigurationReport {
+    ConfigurationReport {
+        wasm_hash: get_sha256(wasm_module_bytes).to_vec(),
+        policy: Some(policy),
+    }
 }
 
 #[derive(Deserialize, Debug)]
