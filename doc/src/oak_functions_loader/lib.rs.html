@@ -310,29 +310,6 @@
 <span id="305">305</span>
 <span id="306">306</span>
 <span id="307">307</span>
-<span id="308">308</span>
-<span id="309">309</span>
-<span id="310">310</span>
-<span id="311">311</span>
-<span id="312">312</span>
-<span id="313">313</span>
-<span id="314">314</span>
-<span id="315">315</span>
-<span id="316">316</span>
-<span id="317">317</span>
-<span id="318">318</span>
-<span id="319">319</span>
-<span id="320">320</span>
-<span id="321">321</span>
-<span id="322">322</span>
-<span id="323">323</span>
-<span id="324">324</span>
-<span id="325">325</span>
-<span id="326">326</span>
-<span id="327">327</span>
-<span id="328">328</span>
-<span id="329">329</span>
-<span id="330">330</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2021 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -367,7 +344,7 @@
 <span class="kw">use</span> <span class="ident">anyhow::Context</span>;
 <span class="kw">use</span> <span class="ident">clap::Parser</span>;
 <span class="kw">use</span> <span class="ident">log::Level</span>;
-<span class="kw">use</span> <span class="ident">oak_functions_abi::proto::ConfigurationInfo</span>;
+<span class="kw">use</span> <span class="ident">oak_functions_abi::proto</span>::{<span class="ident">ConfigurationReport</span>, <span class="ident">ServerPolicy</span>};
 <span class="kw">use</span> <span class="ident">oak_functions_extension::ExtensionFactory</span>;
 <span class="kw">use</span> <span class="ident">oak_functions_lookup</span>::{<span class="ident">LookupDataManager</span>, <span class="ident">LookupFactory</span>};
 <span class="kw">use</span> <span class="ident">oak_functions_workload_logging::WorkloadLoggingFactory</span>;
@@ -443,7 +420,6 @@
     <span class="ident">load_lookup_data_config</span>: <span class="ident">LoadLookupDataConfig</span>,
     <span class="ident">policy</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Policy</span><span class="op">&gt;</span>,
     <span class="ident">extension_factories</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">ExtensionFactory</span><span class="op">&lt;</span><span class="ident">Logger</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-    <span class="ident">extension_configuration_info</span>: <span class="ident">ExtensionConfigurationInfo</span>,
 ) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
     <span class="ident">tokio::runtime::Builder::new_multi_thread</span>()
         .<span class="ident">enable_all</span>()
@@ -455,34 +431,7 @@
             <span class="ident">load_lookup_data_config</span>,
             <span class="ident">policy</span>,
             <span class="ident">extension_factories</span>,
-            <span class="ident">extension_configuration_info</span>,
         ))
-}
-
-<span class="doccomment">/// Workaround to pass values for ConfigurationInfo from Config.</span>
-<span class="doccomment">/// TODO(#2851): Refactor to remove `ExtensionConfigurationInfo`.</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">ExtensionConfigurationInfo</span> {
-    <span class="ident">ml_inference</span>: <span class="ident">bool</span>,
-    <span class="ident">metrics</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">oak_functions_abi::proto::PrivateMetricsConfig</span><span class="op">&gt;</span>,
-}
-
-<span class="kw">impl</span> <span class="ident">ExtensionConfigurationInfo</span> {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(
-        <span class="ident">ml_inference</span>: <span class="ident">bool</span>,
-        <span class="ident">metrics</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">oak_functions_abi::proto::PrivateMetricsConfig</span><span class="op">&gt;</span>,
-    ) -&gt; <span class="self">Self</span> {
-        <span class="ident">ExtensionConfigurationInfo</span> {
-            <span class="ident">ml_inference</span>,
-            <span class="ident">metrics</span>,
-        }
-    }
-
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">base</span>() -&gt; <span class="ident">ExtensionConfigurationInfo</span> {
-        <span class="ident">ExtensionConfigurationInfo</span> {
-            <span class="ident">ml_inference</span>: <span class="bool-val">false</span>,
-            <span class="ident">metrics</span>: <span class="prelude-val">None</span>,
-        }
-    }
 }
 
 <span class="doccomment">/// Main execution point for the Oak Functions Loader.</span>
@@ -492,7 +441,6 @@
     <span class="ident">load_lookup_data_config</span>: <span class="ident">LoadLookupDataConfig</span>,
     <span class="ident">policy</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Policy</span><span class="op">&gt;</span>,
     <span class="ident">extension_factories</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">ExtensionFactory</span><span class="op">&lt;</span><span class="ident">Logger</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-    <span class="ident">extension_configuration_info</span>: <span class="ident">ExtensionConfigurationInfo</span>,
 ) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
     <span class="kw">let</span> (<span class="ident">notify_sender</span>, <span class="ident">notify_receiver</span>) <span class="op">=</span> <span class="ident">tokio::sync::oneshot::channel</span>::<span class="op">&lt;</span>()<span class="op">&gt;</span>();
 
@@ -515,12 +463,7 @@
 
     <span class="kw">let</span> <span class="ident">address</span> <span class="op">=</span> <span class="ident">SocketAddr::from</span>((<span class="ident">Ipv6Addr::UNSPECIFIED</span>, <span class="ident">opt</span>.<span class="ident">http_listen_port</span>));
 
-    <span class="kw">let</span> <span class="ident">config_info</span> <span class="op">=</span> <span class="ident">ConfigurationInfo</span> {
-        <span class="ident">wasm_hash</span>: <span class="ident">get_sha256</span>(<span class="kw-2">&amp;</span><span class="ident">wasm_module_bytes</span>).<span class="ident">to_vec</span>(),
-        <span class="ident">policy</span>: <span class="prelude-val">Some</span>(<span class="ident">policy</span>.<span class="ident">clone</span>()),
-        <span class="ident">ml_inference</span>: <span class="ident">extension_configuration_info</span>.<span class="ident">ml_inference</span>,
-        <span class="ident">metrics</span>: <span class="ident">extension_configuration_info</span>.<span class="ident">metrics</span>,
-    };
+    <span class="kw">let</span> <span class="ident">config_report</span> <span class="op">=</span> <span class="ident">create_configuration_report</span>(<span class="kw-2">&amp;</span><span class="ident">wasm_module_bytes</span>, <span class="ident">policy</span>.<span class="ident">clone</span>());
 
     <span class="comment">// Start server.</span>
     <span class="kw">let</span> <span class="ident">server_handle</span> <span class="op">=</span> <span class="ident">tokio::spawn</span>(<span class="kw">async</span> <span class="kw">move</span> {
@@ -528,7 +471,7 @@
             <span class="kw-2">&amp;</span><span class="ident">address</span>,
             <span class="ident">wasm_handler</span>,
             <span class="ident">policy</span>.<span class="ident">clone</span>(),
-            <span class="ident">config_info</span>,
+            <span class="ident">config_report</span>,
             <span class="kw">async</span> { <span class="ident">notify_receiver</span>.<span class="kw">await</span>.<span class="ident">unwrap</span>() },
             <span class="ident">logger</span>,
         )
@@ -558,6 +501,17 @@
     <span class="ident">server_handle</span>
         .<span class="kw">await</span>
         .<span class="ident">context</span>(<span class="string">&quot;error while waiting for the server to terminate&quot;</span>)<span class="question-mark">?</span>
+}
+
+<span class="doccomment">/// Create a configuration report for the client.</span>
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">create_configuration_report</span>(
+    <span class="ident">wasm_module_bytes</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>],
+    <span class="ident">policy</span>: <span class="ident">ServerPolicy</span>,
+) -&gt; <span class="ident">ConfigurationReport</span> {
+    <span class="ident">ConfigurationReport</span> {
+        <span class="ident">wasm_hash</span>: <span class="ident">get_sha256</span>(<span class="ident">wasm_module_bytes</span>).<span class="ident">to_vec</span>(),
+        <span class="ident">policy</span>: <span class="prelude-val">Some</span>(<span class="ident">policy</span>),
+    }
 }
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Deserialize</span>, <span class="ident">Debug</span>)]</span>

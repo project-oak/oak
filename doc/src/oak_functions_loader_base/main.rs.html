@@ -83,8 +83,6 @@
 <span id="78">78</span>
 <span id="79">79</span>
 <span id="80">80</span>
-<span id="81">81</span>
-<span id="82">82</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2022 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -107,8 +105,7 @@
 <span class="kw">use</span> <span class="ident">clap::Parser</span>;
 <span class="kw">use</span> <span class="ident">log::Level</span>;
 <span class="kw">use</span> <span class="ident">oak_functions_loader</span>::{
-    <span class="ident">logger::Logger</span>, <span class="ident">lookup_data::LookupDataAuth</span>, <span class="ident">server::Policy</span>, <span class="ident">Data</span>, <span class="ident">ExtensionConfigurationInfo</span>,
-    <span class="ident">LoadLookupDataConfig</span>, <span class="ident">Opt</span>,
+    <span class="ident">logger::Logger</span>, <span class="ident">lookup_data::LookupDataAuth</span>, <span class="ident">server::Policy</span>, <span class="ident">Data</span>, <span class="ident">LoadLookupDataConfig</span>, <span class="ident">Opt</span>,
 };
 <span class="kw">use</span> <span class="ident">oak_logger::OakLogger</span>;
 <span class="kw">use</span> <span class="ident">serde_derive::Deserialize</span>;
@@ -164,7 +161,6 @@
         ),
         <span class="ident">config</span>.<span class="ident">policy</span>,
         <span class="ident">extension_factories</span>,
-        <span class="ident">ExtensionConfigurationInfo::base</span>(),
     )
 }
 </code></pre></div>

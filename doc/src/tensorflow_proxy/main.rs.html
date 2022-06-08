@@ -168,8 +168,6 @@
 <span id="163">163</span>
 <span id="164">164</span>
 <span id="165">165</span>
-<span id="166">166</span>
-<span id="167">167</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2021 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -208,7 +206,7 @@
     <span class="ident">proto::unary_session_server::UnarySessionServer</span>, <span class="ident">server::AttestationServer</span>,
 };
 <span class="kw">use</span> <span class="ident">log::warn</span>;
-<span class="kw">use</span> <span class="ident">oak_functions_abi::proto::ConfigurationInfo</span>;
+<span class="kw">use</span> <span class="ident">oak_functions_abi::proto::ConfigurationReport</span>;
 <span class="kw">use</span> <span class="ident">oak_utils::LogError</span>;
 <span class="kw">use</span> <span class="ident">prost::Message</span>;
 <span class="kw">use</span> <span class="ident">std</span>::{
@@ -263,14 +261,12 @@
     <span class="kw">let</span> <span class="ident">backend</span> <span class="op">=</span> <span class="ident">grpc::BackendConnection::connect</span>(<span class="ident">SOCKET</span>).<span class="kw">await</span>;
     <span class="kw">let</span> <span class="ident">client</span> <span class="op">=</span> <span class="ident">backend</span>.<span class="ident">create_client</span>();
 
-    <span class="comment">// Create fake configuration info for now, as it cannot be empty for the attestation</span>
+    <span class="comment">// Create fake configuration report for now, as it cannot be empty for the attestation</span>
     <span class="comment">// handshake.</span>
-    <span class="comment">// TODO(#2420): Remove once Java client can work without the configuration info.</span>
-    <span class="kw">let</span> <span class="ident">additional_info</span> <span class="op">=</span> <span class="ident">ConfigurationInfo</span> {
+    <span class="comment">// TODO(#2420): Remove once Java client can work without the configuration report.</span>
+    <span class="kw">let</span> <span class="ident">additional_info</span> <span class="op">=</span> <span class="ident">ConfigurationReport</span> {
         <span class="ident">wasm_hash</span>: <span class="macro">vec!</span>[<span class="number">0</span>, <span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>],
         <span class="ident">policy</span>: <span class="prelude-val">None</span>,
-        <span class="ident">ml_inference</span>: <span class="bool-val">false</span>,
-        <span class="ident">metrics</span>: <span class="prelude-val">None</span>,
     }
     .<span class="ident">encode_to_vec</span>();
 

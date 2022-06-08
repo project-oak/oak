@@ -263,23 +263,6 @@
 <span id="258">258</span>
 <span id="259">259</span>
 <span id="260">260</span>
-<span id="261">261</span>
-<span id="262">262</span>
-<span id="263">263</span>
-<span id="264">264</span>
-<span id="265">265</span>
-<span id="266">266</span>
-<span id="267">267</span>
-<span id="268">268</span>
-<span id="269">269</span>
-<span id="270">270</span>
-<span id="271">271</span>
-<span id="272">272</span>
-<span id="273">273</span>
-<span id="274">274</span>
-<span id="275">275</span>
-<span id="276">276</span>
-<span id="277">277</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2021 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -304,12 +287,9 @@
     <span class="ident">Body</span>,
 };
 <span class="kw">use</span> <span class="ident">log::info</span>;
-<span class="kw">use</span> <span class="ident">oak_functions_abi::proto</span>::{
-    <span class="ident">ConfigurationInfo</span>, <span class="ident">PrivateMetricsConfig</span>, <span class="ident">Request</span>, <span class="ident">Response</span>, <span class="ident">ServerPolicy</span>,
-};
+<span class="kw">use</span> <span class="ident">oak_functions_abi::proto</span>::{<span class="ident">Request</span>, <span class="ident">Response</span>};
 
 <span class="kw">use</span> <span class="ident">oak_functions_client::Client</span>;
-<span class="kw">use</span> <span class="ident">oak_remote_attestation::crypto::get_sha256</span>;
 <span class="kw">use</span> <span class="ident">prost::Message</span>;
 <span class="kw">use</span> <span class="ident">std</span>::{
     <span class="ident">collections::HashMap</span>,
@@ -512,20 +492,6 @@
     <span class="kw">let</span> <span class="ident">elapsed</span> <span class="op">=</span> <span class="ident">start</span>.<span class="ident">elapsed</span>();
 
     <span class="ident">TestResult</span> { <span class="ident">elapsed</span>, <span class="ident">response</span> }
-}
-
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_config_info</span>(
-    <span class="ident">wasm_module_bytes</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>],
-    <span class="ident">policy</span>: <span class="ident">ServerPolicy</span>,
-    <span class="ident">ml_inference</span>: <span class="ident">bool</span>,
-    <span class="ident">metrics</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">PrivateMetricsConfig</span><span class="op">&gt;</span>,
-) -&gt; <span class="ident">ConfigurationInfo</span> {
-    <span class="ident">ConfigurationInfo</span> {
-        <span class="ident">wasm_hash</span>: <span class="ident">get_sha256</span>(<span class="ident">wasm_module_bytes</span>).<span class="ident">to_vec</span>(),
-        <span class="ident">policy</span>: <span class="prelude-val">Some</span>(<span class="ident">policy</span>),
-        <span class="ident">ml_inference</span>,
-        <span class="ident">metrics</span>,
-    }
 }
 
 <span class="comment">// Assert that string value of the body of the given response matches the expected string.</span>
