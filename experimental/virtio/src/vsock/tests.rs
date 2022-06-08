@@ -15,3 +15,115 @@
 //
 
 use super::*;
+use crate::{
+    test::{DeviceStatus, TestingTransport, VIRTIO_F_VERSION_1},
+    vsock,
+};
+use alloc::{vec, vec::Vec};
+
+const GUEST_CID: u64 = 3;
+
+#[test]
+fn test_legacy_device_not_supported() {
+    let device = VirtioBaseDevice::new(new_legacy_transport());
+    let mut vsock = VSock::new(device);
+    assert!(vsock.init().is_err());
+}
+
+#[test]
+fn test_max_queue_size_too_small() {
+    let device = VirtioBaseDevice::new(new_transport_small_queue());
+    let mut vsock = VSock::new(device);
+    assert!(vsock.init().is_err());
+}
+
+#[test]
+fn test_device_init() {
+    let transport = new_valid_transport();
+    let config = transport.config.clone();
+    let device = VirtioBaseDevice::new(transport);
+    let mut vsock = VSock::new(device);
+    let result = vsock.init();
+    assert!(result.is_ok());
+
+    let config = config.lock().unwrap();
+    assert!(config.features == VIRTIO_F_VERSION_1);
+    let status = DeviceStatus::from_bits(config.status).unwrap();
+    assert!(status.contains(DeviceStatus::VIRTIO_STATUS_ACKNOWLEDGE));
+    assert!(status.contains(DeviceStatus::VIRTIO_STATUS_DRIVER));
+    assert!(status.contains(DeviceStatus::VIRTIO_STATUS_DRIVER_OK));
+    assert!(status.contains(DeviceStatus::VIRTIO_STATUS_FEATURES_OK));
+    assert!(!status.contains(DeviceStatus::VIRTIO_STATUS_FAILED));
+    assert_eq!(vsock.guest_cid, GUEST_CID);
+
+    let queues = &config.queues;
+    assert_eq!(queues.len(), 3);
+    for i in 0..3 {
+        let queue = queues.get(&i).unwrap();
+        assert!(queue.enabled);
+        assert_eq!(queue.queue_size as usize, QUEUE_SIZE);
+        assert!(queue.descriptor_address > 0);
+        assert!(queue.avail_ring > 0);
+        assert!(queue.used_ring > 0);
+    }
+}
+
+#[test]
+fn test_read_packet() {
+    let data = vec![2, 4, 6];
+    let mut packet = Packet::new_data(&data[..], 1, 2).unwrap();
+    packet.set_dst_cid(GUEST_CID);
+    packet.set_src_cid(HOST_CID);
+    let transport = new_valid_transport();
+    let device = VirtioBaseDevice::new(transport.clone());
+    let mut vsock = VSock::new(device);
+    vsock.init().unwrap();
+    transport.device_write_to_queue::<QUEUE_SIZE>(0, packet.as_slice());
+    let result = vsock.read_packet().unwrap();
+    assert_eq!(packet.as_slice(), result.as_slice());
+}
+
+#[test]
+fn test_write_packet() {
+    let data = vec![7; 5];
+    let mut packet = Packet::new_data(&data[..], 1, 2).unwrap();
+    let transport = new_valid_transport();
+    let device = VirtioBaseDevice::new(transport.clone());
+    let mut vsock = VSock::new(device);
+    vsock.init().unwrap();
+    vsock.write_packet(&mut packet);
+    let bytes = transport
+        .device_read_once_from_queue::<QUEUE_SIZE>(1)
+        .unwrap();
+    assert_eq!(packet.as_slice(), &bytes[..]);
+}
+
+fn new_valid_transport() -> TestingTransport {
+    let transport = TestingTransport::default();
+    {
+        let mut config = transport.config.lock().unwrap();
+        config.features = VIRTIO_F_VERSION_1;
+        config.max_queue_size = 256;
+    }
+    transport.write_device_config(0, 3);
+
+    transport
+}
+
+fn new_legacy_transport() -> TestingTransport {
+    let transport = TestingTransport::default();
+    transport.config.lock().unwrap().max_queue_size = 256;
+    transport.write_device_config(0, 3);
+    transport
+}
+
+fn new_transport_small_queue() -> TestingTransport {
+    let transport = TestingTransport::default();
+    {
+        let mut config = transport.config.lock().unwrap();
+        config.features = VIRTIO_F_VERSION_1;
+        config.max_queue_size = 8;
+    }
+    transport.write_device_config(0, GUEST_CID as u32);
+    transport
+}

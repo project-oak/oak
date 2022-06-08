@@ -14,29 +14,50 @@
 // limitations under the License.
 //
 
-use crate::queue::virtq::{AvailRing, Desc, DescFlags, UsedElem, UsedRing};
-use alloc::{collections::BTreeMap, vec::Vec};
+use crate::queue::virtq::{AvailRing, Desc, DescFlags, UsedRing};
+use alloc::{collections::BTreeMap, sync::Arc, vec::Vec};
+use bitflags::bitflags;
 use core::{
     cell::{Cell, RefCell},
     mem::size_of,
 };
 use rust_hypervisor_firmware_virtio::virtio::{Error, VirtioTransport};
+use std::sync::Mutex;
 
-/// A transport implementation that can be used for testing virtio device implementations.
-///
-/// Warning: we purposely use unsafe code to simulate the way the the device/VMM will interact with
-/// the memory. Tests must ensure that valid memory and offset values are provided to avoid memory
-/// safety issues.
-#[derive(Default, Debug)]
-pub struct TestingTransport {
-    pub status: Cell<u32>,
-    pub features: Cell<u64>,
-    pub queue_num: Cell<u16>,
-    pub max_queue_size: u16,
-    pub queues: RefCell<BTreeMap<u16, QueueInfo>>,
-    pub config: RefCell<BTreeMap<u64, u32>>,
+/// Virtio Version 1 feature bit.
+/// See <https://docs.oasis-open.org/virtio/virtio/v1.1/csprd01/virtio-v1.1-csprd01.html#x1-4100006>.
+pub const VIRTIO_F_VERSION_1: u64 = 1 << 32;
+
+bitflags! {
+    /// Virtio device status flags.
+    /// See <https://docs.oasis-open.org/virtio/virtio/v1.1/csprd01/virtio-v1.1-csprd01.html#x1-100001>.
+    pub struct DeviceStatus: u32 {
+        const VIRTIO_STATUS_ACKNOWLEDGE = 1;
+        const VIRTIO_STATUS_DRIVER = 2;
+        const VIRTIO_STATUS_FEATURES_OK = 8;
+        const VIRTIO_STATUS_DRIVER_OK = 4;
+        const VIRTIO_STATUS_FAILED = 128;
+    }
 }
 
+/// A transport implementation that can be used for testing virtio device implementations.
+#[derive(Default, Debug, Clone)]
+pub struct TestingTransport {
+    pub config: Arc<Mutex<TestingConfig>>,
+}
+
+/// Configuration information required by `TestingTransport`.
+#[derive(Default, Debug)]
+pub struct TestingConfig {
+    pub status: u32,
+    pub features: u64,
+    pub queue_num: u16,
+    pub max_queue_size: u16,
+    pub queues: BTreeMap<u16, QueueInfo>,
+    pub config: BTreeMap<u64, u32>,
+}
+
+/// Information about a virtqueue.
 #[derive(Default, Debug)]
 pub struct QueueInfo {
     pub queue_size: u16,
@@ -48,31 +69,17 @@ pub struct QueueInfo {
 }
 
 impl TestingTransport {
-    fn get_desc<const QUEUE_SIZE: usize>(&self, queue_num: u16, index: u16) -> &mut Desc {
-        assert!((index as usize) < QUEUE_SIZE);
-        let queue_info = self.queues.borrow().get(&queue_num).unwrap();
-        let address = queue_info.descriptor_address as usize + index as usize * size_of::<Desc>();
-        unsafe { &mut *(address as *mut Desc) }
-    }
-
-    fn get_avail_ring<const QUEUE_SIZE: usize>(&self, queue_num: u16) -> &AvailRing<QUEUE_SIZE> {
-        let queue_info = self.queues.borrow().get(&queue_num).unwrap();
-        let address = queue_info.avail_ring as usize;
-        unsafe { &*(address as *mut AvailRing<QUEUE_SIZE>) }
-    }
-
-    fn get_used_ring<const QUEUE_SIZE: usize>(&self, queue_num: u16) -> &mut UsedRing<QUEUE_SIZE> {
-        let queue_info = self.queues.borrow().get(&queue_num).unwrap();
-        let address = queue_info.used_ring as usize;
-        unsafe { &mut *(address as *mut UsedRing<QUEUE_SIZE>) }
-    }
-
+    /// Tries to read once from the specified queue as if it was a device.
+    ///
+    /// Warning: we purposely use unsafe code to simulate the way the the device/VMM will interact
+    /// with the memory. Tests must ensure that valid memory and offset values are provided to
+    /// avoid memory safety issues.
     pub fn device_read_once_from_queue<const QUEUE_SIZE: usize>(
         &self,
         queue_num: u16,
     ) -> Option<Vec<u8>> {
         let avail = self.get_avail_ring::<QUEUE_SIZE>(queue_num);
-        let mut used = self.get_used_ring::<QUEUE_SIZE>(queue_num);
+        let used = self.get_used_ring::<QUEUE_SIZE>(queue_num);
         if avail.idx == used.idx {
             return None;
         }
@@ -94,6 +101,11 @@ impl TestingTransport {
         Some(buffer.to_vec())
     }
 
+    /// Tries to write to the specified queue as if it was a device.
+    ///
+    /// Warning: we purposely use unsafe code to simulate the way the the device/VMM will interact
+    /// with the memory. Tests must ensure that valid memory and offset values are provided to
+    /// avoid memory safety issues.
     pub fn device_write_to_queue<const QUEUE_SIZE: usize>(
         &self,
         queue_num: u16,
@@ -112,7 +124,7 @@ impl TestingTransport {
         assert!(desc.flags.contains(DescFlags::VIRTQ_DESC_F_WRITE));
         let used_elem = &mut used.ring[ring_index];
         used_elem.id = index as u32;
-        used_elem.len = 0;
+        used_elem.len = len as u32;
         used.idx += 1;
         let buffer = unsafe {
             let ptr = desc.addr as usize as *mut u8;
@@ -120,6 +132,33 @@ impl TestingTransport {
         };
         buffer.copy_from_slice(data);
         Some(len)
+    }
+
+    /// Writes a value to the device configuration at the specified offset.
+    pub fn write_device_config(&self, offset: u64, value: u32) {
+        self.config.lock().unwrap().config.insert(offset, value);
+    }
+
+    fn get_desc<const QUEUE_SIZE: usize>(&self, queue_num: u16, index: u16) -> &mut Desc {
+        assert!((index as usize) < QUEUE_SIZE);
+        let config = self.config.lock().unwrap();
+        let queue_info = config.queues.get(&queue_num).unwrap();
+        let address = queue_info.descriptor_address as usize + index as usize * size_of::<Desc>();
+        unsafe { &mut *(address as *mut Desc) }
+    }
+
+    fn get_avail_ring<const QUEUE_SIZE: usize>(&self, queue_num: u16) -> &AvailRing<QUEUE_SIZE> {
+        let config = self.config.lock().unwrap();
+        let queue_info = config.queues.get(&queue_num).unwrap();
+        let address = queue_info.avail_ring as usize;
+        unsafe { &*(address as *mut AvailRing<QUEUE_SIZE>) }
+    }
+
+    fn get_used_ring<const QUEUE_SIZE: usize>(&self, queue_num: u16) -> &mut UsedRing<QUEUE_SIZE> {
+        let config = self.config.lock().unwrap();
+        let queue_info = config.queues.get(&queue_num).unwrap();
+        let address = queue_info.used_ring as usize;
+        unsafe { &mut *(address as *mut UsedRing<QUEUE_SIZE>) }
     }
 }
 
@@ -129,86 +168,87 @@ impl VirtioTransport for TestingTransport {
     }
 
     fn get_status(&self) -> u32 {
-        self.status.get()
+        self.config.lock().unwrap().status
     }
 
     fn set_status(&self, status: u32) {
-        self.status.set(status);
+        self.config.lock().unwrap().status = status;
     }
 
     fn add_status(&self, status: u32) {
-        self.status.set(self.status.get() | status);
+        self.set_status(self.get_status() | status);
     }
 
     fn reset(&self) {
-        self.status.set(0);
+        self.config.lock().unwrap().status = 0;
     }
 
     fn get_features(&self) -> u64 {
-        self.features.get()
+        self.config.lock().unwrap().features
     }
 
     fn set_features(&self, features: u64) {
-        self.features.set(features);
+        self.config.lock().unwrap().features = features;
     }
 
     fn set_queue(&self, queue: u16) {
-        if !self.queues.borrow().contains_key(&queue) {
-            self.queues.borrow_mut().insert(queue, QueueInfo::default());
+        let mut config = self.config.lock().unwrap();
+        if !config.queues.contains_key(&queue) {
+            config.queues.insert(queue, QueueInfo::default());
         }
-        self.queue_num.set(queue);
+        config.queue_num = queue;
     }
 
     fn get_queue_max_size(&self) -> u16 {
-        self.max_queue_size
+        self.config.lock().unwrap().max_queue_size
     }
 
     fn set_queue_size(&self, queue_size: u16) {
-        assert!(queue_size <= self.max_queue_size);
-        self.queues
-            .borrow_mut()
-            .get_mut(&self.queue_num.get())
-            .unwrap()
-            .queue_size = queue_size;
+        let mut config = self.config.lock().unwrap();
+        let queue_num = config.queue_num;
+        assert!(queue_size <= config.max_queue_size);
+        config.queues.get_mut(&queue_num).unwrap().queue_size = queue_size;
     }
 
     fn set_descriptors_address(&self, address: u64) {
-        self.queues
-            .borrow_mut()
-            .get_mut(&self.queue_num.get())
+        let mut config = self.config.lock().unwrap();
+        let queue_num = config.queue_num;
+        config
+            .queues
+            .get_mut(&queue_num)
             .unwrap()
             .descriptor_address = address;
     }
 
     fn set_avail_ring(&self, address: u64) {
-        self.queues
-            .borrow_mut()
-            .get_mut(&self.queue_num.get())
-            .unwrap()
-            .avail_ring = address;
+        let mut config = self.config.lock().unwrap();
+        let queue_num = config.queue_num;
+        config.queues.get_mut(&queue_num).unwrap().avail_ring = address;
     }
 
     fn set_used_ring(&self, address: u64) {
-        self.queues
-            .borrow_mut()
-            .get_mut(&self.queue_num.get())
-            .unwrap()
-            .used_ring = address;
+        let mut config = self.config.lock().unwrap();
+        let queue_num = config.queue_num;
+        config.queues.get_mut(&queue_num).unwrap().used_ring = address;
     }
 
     fn set_queue_enable(&self) {
-        self.queues
-            .borrow_mut()
-            .get_mut(&self.queue_num.get())
-            .unwrap()
-            .enabled = true;
+        let mut config = self.config.lock().unwrap();
+        let queue_num = config.queue_num;
+        config.queues.get_mut(&queue_num).unwrap().enabled = true;
     }
 
     fn notify_queue(&self, queue: u16) {
-        self.queues.borrow_mut().get_mut(&queue).unwrap().notified = true;
+        self.config
+            .lock()
+            .unwrap()
+            .queues
+            .get_mut(&queue)
+            .unwrap()
+            .notified = true;
     }
 
     fn read_device_config(&self, offset: u64) -> u32 {
-        *self.config.borrow_mut().get(&offset).unwrap()
+        *self.config.lock().unwrap().config.get(&offset).unwrap()
     }
 }
