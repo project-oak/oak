@@ -593,7 +593,7 @@
             .<span class="ident">flatten</span>(),
     );
     <span class="ident">lines</span>.<span class="ident">extend</span>(<span class="macro">vec!</span>[
-        <span class="macro">format!</span>(<span class="string">&quot;            _ =&gt; Err(oak_idl::Error::InvalidMethodId)&quot;</span>),
+        <span class="macro">format!</span>(<span class="string">&quot;            _ =&gt; Err(oak_idl::Error::new(oak_idl::ErrorCode::InvalidMethodId))&quot;</span>),
         <span class="macro">format!</span>(<span class="string">&quot;        }}&quot;</span>),
         <span class="macro">format!</span>(<span class="string">&quot;    }}&quot;</span>),
         <span class="macro">format!</span>(<span class="string">&quot;}}&quot;</span>),
@@ -636,7 +636,7 @@
             <span class="ident">response_type</span>(<span class="ident">rpc_call</span>)
         ),
         <span class="macro">format!</span>(
-            <span class="string">&quot;        flatbuffers::root::&lt;{}&gt;(request_body).map_err(|_err| oak_idl::Error::InvalidRequest)?;&quot;</span>,
+            <span class="string">&quot;        flatbuffers::root::&lt;{}&gt;(request_body).map_err(|err| oak_idl::Error::new_with_message(oak_idl::ErrorCode::InvalidRequest, err.to_string()))?;&quot;</span>,
             <span class="ident">request_type</span>(<span class="ident">rpc_call</span>)
         ),
         <span class="macro">format!</span>(<span class="string">&quot;        let request = oak_idl::Request {{&quot;</span>),
@@ -644,7 +644,7 @@
         <span class="macro">format!</span>(<span class="string">&quot;            body: request_body,&quot;</span>),
         <span class="macro">format!</span>(<span class="string">&quot;        }};&quot;</span>),
         <span class="macro">format!</span>(<span class="string">&quot;        let response_body = self.handler.invoke(request)?;&quot;</span>),
-        <span class="macro">format!</span>(<span class="string">&quot;        oak_idl::utils::Message::from_vec(response_body).map_err(|_err| oak_idl::Error::InvalidResponse)&quot;</span>),
+        <span class="macro">format!</span>(<span class="string">&quot;        oak_idl::utils::Message::from_vec(response_body).map_err(|err| oak_idl::Error::new_with_message(oak_idl::ErrorCode::InvalidResponse, err.to_string()))&quot;</span>),
         <span class="macro">format!</span>(<span class="string">&quot;    }}&quot;</span>),
     ])
 }
@@ -657,7 +657,7 @@
     <span class="prelude-val">Ok</span>(<span class="macro">vec!</span>[
         <span class="macro">format!</span>(<span class="string">&quot;            {} =&gt; {{&quot;</span>, <span class="ident">method_id</span>(<span class="ident">rpc_call</span>)<span class="question-mark">?</span>),
         <span class="macro">format!</span>(
-            <span class="string">&quot;                let request = flatbuffers::root::&lt;{}&gt;(request.body).map_err(|_err| oak_idl::Error::InvalidRequest)?;&quot;</span>,
+            <span class="string">&quot;                let request = flatbuffers::root::&lt;{}&gt;(request.body).map_err(|err| oak_idl::Error::new_with_message(oak_idl::ErrorCode::InvalidRequest, err.to_string()))?;&quot;</span>,
             <span class="ident">request_type</span>(<span class="ident">rpc_call</span>),
         ),
         <span class="macro">format!</span>(
