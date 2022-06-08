@@ -17,7 +17,7 @@
 use anyhow::bail;
 use bmrng::unbounded::UnboundedRequestSender;
 use futures::Future;
-use oak_remote_attestation_sessions::{SerializeableRequest, SessionId, SESSION_ID_LENGTH};
+use oak_remote_attestation_sessions::{SessionId, SessionRequest, SESSION_ID_LENGTH};
 use std::net::SocketAddr;
 use tonic::{transport::Server, Request, Response, Status};
 
@@ -34,7 +34,7 @@ use proto::{
 // proto message conversion between them is simple. We do not use
 // proto serialization directly to avoid creating a dependecy on protobuf in
 // the trusted runtime.
-impl TryFrom<UnaryRequest> for SerializeableRequest {
+impl TryFrom<UnaryRequest> for SessionRequest {
     type Error = anyhow::Error;
 
     fn try_from(unary_request: UnaryRequest) -> Result<Self, Self::Error> {
@@ -58,7 +58,7 @@ impl TryFrom<UnaryRequest> for SerializeableRequest {
 }
 
 pub struct EchoImpl {
-    channel: UnboundedRequestSender<Vec<u8>, anyhow::Result<Vec<u8>>>,
+    channel: UnboundedRequestSender<SessionRequest, Result<Vec<u8>, oak_idl::Error>>,
 }
 
 #[tonic::async_trait]
@@ -68,9 +68,8 @@ impl UnarySession for EchoImpl {
         request: Request<UnaryRequest>,
     ) -> Result<Response<UnaryResponse>, Status> {
         let request = request.into_inner();
-        let serialized_request: Vec<u8> = SerializeableRequest::try_from(request)
-            .map_err(|err| Status::invalid_argument(format!("{:?}", err)))?
-            .into();
+        let session_request = SessionRequest::try_from(request)
+            .map_err(|err| Status::invalid_argument(format!("{:?}", err)))?;
 
         // There's two nested errors: one for communicating over the channel, and one for
         // communicating over the serial port with the UEFI app.
@@ -78,7 +77,7 @@ impl UnarySession for EchoImpl {
         // ambiguous to the end user, but for now that'll do.
         let body = self
             .channel
-            .send_receive(serialized_request)
+            .send_receive(session_request)
             .await
             .map_err(|err| Status::internal(format!("{:?}", err)))?
             .map_err(|err| Status::internal(format!("{:?}", err)))?;
@@ -89,7 +88,7 @@ impl UnarySession for EchoImpl {
 
 pub fn server(
     addr: SocketAddr,
-    channel: UnboundedRequestSender<Vec<u8>, anyhow::Result<Vec<u8>>>,
+    channel: UnboundedRequestSender<SessionRequest, Result<Vec<u8>, oak_idl::Error>>,
 ) -> impl Future<Output = Result<(), tonic::transport::Error>> {
     let server_impl = EchoImpl { channel };
     Server::builder()
