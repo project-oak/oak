@@ -755,7 +755,13 @@ fn run_bazel_build() -> Step {
         name: "bazel build".to_string(),
         command: Cmd::new(
             "bazel",
-            &["build", "--", "//remote_attestation/java/...:all"],
+            // Exclude Android specific targets because the will not run in the main Docker Image.
+            &[
+                "build",
+                "--",
+                "//oak_functions/client/java/...:all",
+                "//remote_attestation/java/...:all",
+            ],
         ),
     }
 }
