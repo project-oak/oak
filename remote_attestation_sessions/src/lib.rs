@@ -102,9 +102,3 @@ impl<G: AttestationGenerator, V: AttestationVerifier> SessionTracker<G, V> {
         self.known_sessions.put(session_id, session_state);
     }
 }
-
-#[derive(Debug)]
-pub struct SessionRequest {
-    pub session_id: SessionId,
-    pub body: Vec<u8>,
-}

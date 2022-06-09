@@ -19,7 +19,6 @@ use alloc::vec::Vec;
 use anyhow::Context;
 use channel::{schema, schema::TrustedRuntime, Framed};
 use ciborium_io::{Read, Write};
-use flatbuffers::Follow;
 use oak_idl::Handler;
 use oak_remote_attestation::handshaker::{
     AttestationBehavior, AttestationGenerator, AttestationVerifier,

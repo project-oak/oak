@@ -19,7 +19,6 @@
 use channel::{schema, Framed};
 use clap::Parser;
 use crosvm::Crosvm;
-use oak_remote_attestation_sessions::SessionRequest;
 use qemu::Qemu;
 use std::{
     fs,
@@ -187,8 +186,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Use a bmrng channel for serial communication. The good thing about spawning a separate
     // task for the serial communication is that it serializes (no pun intended) the communication,
     // as right now we don't have any mechanisms to track multiple requests in flight.
-    let (tx, mut rx) =
-        bmrng::unbounded_channel::<SessionRequest, Result<Vec<u8>, oak_idl::Error>>();
+    let (tx, mut rx) = bmrng::unbounded_channel::<Vec<u8>, Result<Vec<u8>, oak_idl::Error>>();
 
     tokio::spawn(async move {
         let mut client = {
@@ -196,25 +194,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let client_handler = ClientHandler::new(comms_channel);
             schema::TrustedRuntimeClient::new(client_handler)
         };
-        let mut respond = |request: SessionRequest| -> Result<Vec<u8>, oak_idl::Error> {
-            let request_message = {
-                let mut builder = oak_idl::utils::MessageBuilder::default();
-                let session_id = &schema::SessionId::new(&request.session_id);
-                let body = builder.create_vector::<u8>(&request.body);
-                let message = schema::UserRequest::create(
-                    &mut builder,
-                    &schema::UserRequestArgs {
-                        session_id: Some(session_id),
-                        body: Some(body),
-                    },
-                );
-                builder.finish(message).map_err(|err| {
-                    oak_idl::Error::new_with_message(
-                        oak_idl::ErrorCode::InvalidRequest,
-                        err.to_string(),
-                    )
-                })?
-            };
+        let mut respond = |input: Vec<u8>| -> Result<Vec<u8>, oak_idl::Error> {
+            let request_message = oak_idl::utils::Message::<schema::UserRequest>::from_vec(input)
+                .map_err(|err| {
+                oak_idl::Error::new_with_message(
+                    oak_idl::ErrorCode::InvalidRequest,
+                    err.to_string(),
+                )
+            })?;
 
             let response_message = client.handle_user_request(request_message.buf())?;
 

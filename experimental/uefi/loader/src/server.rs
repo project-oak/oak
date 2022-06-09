@@ -14,10 +14,10 @@
 // limitations under the License.
 //
 
-use anyhow::bail;
 use bmrng::unbounded::UnboundedRequestSender;
+use channel::schema;
 use futures::Future;
-use oak_remote_attestation_sessions::{SessionId, SessionRequest, SESSION_ID_LENGTH};
+use oak_remote_attestation_sessions::{SessionId, SESSION_ID_LENGTH};
 use std::net::SocketAddr;
 use tonic::{transport::Server, Request, Response, Status};
 
@@ -30,35 +30,43 @@ use proto::{
     UnaryRequest, UnaryResponse,
 };
 
-// Since the SerializeableRequest struct essentially mirrors the UnaryRequest
-// proto message conversion between them is simple. We do not use
-// proto serialization directly to avoid creating a dependecy on protobuf in
-// the trusted runtime.
-impl TryFrom<UnaryRequest> for SessionRequest {
-    type Error = anyhow::Error;
-
-    fn try_from(unary_request: UnaryRequest) -> Result<Self, Self::Error> {
-        let mut session_id: SessionId = [0; SESSION_ID_LENGTH];
-
-        if unary_request.session_id.len() != SESSION_ID_LENGTH {
-            bail!(
+fn encode_request(unary_request: UnaryRequest) -> Result<Vec<u8>, oak_idl::Error> {
+    let mut session_id: SessionId = [0; SESSION_ID_LENGTH];
+    if unary_request.session_id.len() != SESSION_ID_LENGTH {
+        return Err(oak_idl::Error::new_with_message(
+            oak_idl::ErrorCode::InvalidRequest,
+            format!(
                 "session_id must be {} bytes in length, found a length of {} bytes instead",
                 SESSION_ID_LENGTH,
                 unary_request.session_id.len()
-            );
-        }
-
-        session_id.copy_from_slice(&unary_request.session_id);
-
-        Ok(Self {
-            session_id,
-            body: unary_request.body,
-        })
+            ),
+        ));
     }
+    session_id.copy_from_slice(&unary_request.session_id);
+
+    // Create the flatbuffer message (containing an implicit lifetime)
+    let request_message = {
+        let mut builder = oak_idl::utils::MessageBuilder::default();
+        let session_id = &schema::SessionId::new(&session_id);
+        let body = builder.create_vector::<u8>(&unary_request.body);
+        let message = schema::UserRequest::create(
+            &mut builder,
+            &schema::UserRequestArgs {
+                session_id: Some(session_id),
+                body: Some(body),
+            },
+        );
+        builder.finish(message).map_err(|err| {
+            oak_idl::Error::new_with_message(oak_idl::ErrorCode::InvalidRequest, err.to_string())
+        })?
+    };
+
+    // Return the underlying owned buffer
+    Ok(request_message.into_vec())
 }
 
 pub struct EchoImpl {
-    channel: UnboundedRequestSender<SessionRequest, Result<Vec<u8>, oak_idl::Error>>,
+    channel: UnboundedRequestSender<Vec<u8>, Result<Vec<u8>, oak_idl::Error>>,
 }
 
 #[tonic::async_trait]
@@ -68,7 +76,7 @@ impl UnarySession for EchoImpl {
         request: Request<UnaryRequest>,
     ) -> Result<Response<UnaryResponse>, Status> {
         let request = request.into_inner();
-        let session_request = SessionRequest::try_from(request)
+        let session_request = encode_request(request)
             .map_err(|err| Status::invalid_argument(format!("{:?}", err)))?;
 
         // There's two nested errors: one for communicating over the channel, and one for
@@ -88,7 +96,7 @@ impl UnarySession for EchoImpl {
 
 pub fn server(
     addr: SocketAddr,
-    channel: UnboundedRequestSender<SessionRequest, Result<Vec<u8>, oak_idl::Error>>,
+    channel: UnboundedRequestSender<Vec<u8>, Result<Vec<u8>, oak_idl::Error>>,
 ) -> impl Future<Output = Result<(), tonic::transport::Error>> {
     let server_impl = EchoImpl { channel };
     Server::builder()

@@ -136,6 +136,10 @@ impl<T> Message<T> {
     pub fn buf(&self) -> &[u8] {
         &self.buf
     }
+    /// Returns the underlying owned buffer.
+    pub fn into_vec(self) -> Vec<u8> {
+        self.buf
+    }
 }
 
 impl<'a, T: flatbuffers::Follow<'a> + flatbuffers::Verifiable> Message<T> {
