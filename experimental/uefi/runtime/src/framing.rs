@@ -19,6 +19,7 @@ use alloc::vec::Vec;
 use anyhow::Context;
 use channel::{schema, schema::TrustedRuntime, Framed};
 use ciborium_io::{Read, Write};
+use flatbuffers::Follow;
 use oak_idl::Handler;
 use oak_remote_attestation::handshaker::{
     AttestationBehavior, AttestationGenerator, AttestationVerifier,
@@ -45,7 +46,7 @@ where
         request_message: &schema::UserRequest,
     ) -> Result<oak_idl::utils::Message<schema::UserRequestResponse>, oak_idl::Error> {
         let session_id: SessionId = {
-            let session_id_flatbuffers_array = request_message
+            let session_id_flatbuffers_array: flatbuffers::Array<u8, 8> = request_message
                 .session_id()
                 .ok_or_else(|| oak_idl::Error::new(oak_idl::ErrorCode::BadRequest))?
                 .value();
