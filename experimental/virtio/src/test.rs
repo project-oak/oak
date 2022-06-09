@@ -254,6 +254,7 @@ impl VirtioTransport for TestingTransport {
     }
 }
 
+/// Creates a new valid transport that is suitable for a basic device without configuration values.
 pub fn new_valid_transport() -> TestingTransport {
     let transport = TestingTransport::default();
     {
@@ -264,12 +265,14 @@ pub fn new_valid_transport() -> TestingTransport {
     transport
 }
 
+/// Creates a transport that only supports a legacy version of the virtio spec.
 pub fn new_legacy_transport() -> TestingTransport {
     let transport = new_valid_transport();
     transport.set_features(0);
     transport
 }
 
+/// Creates a transport where the queue is too small.
 pub fn new_transport_small_queue() -> TestingTransport {
     let transport = new_valid_transport();
     transport.config.lock().unwrap().max_queue_size = 8;
