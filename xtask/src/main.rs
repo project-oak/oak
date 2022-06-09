@@ -748,7 +748,6 @@ fn run_bazel_build() -> Step {
         name: "bazel build".to_string(),
         command: Cmd::new(
             "bazel",
-            // Exclude Android specific targets because the will not run in the main Docker Image.
             &[
                 "build",
                 "--",
