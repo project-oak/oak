@@ -1,0 +1,18 @@
+attribute "method_id";
+
+rpc_service TrustedRuntime {
+    HandleUserRequest(UserRequest) : UserRequestResponse (method_id: 0);
+}
+
+struct SessionId {
+    value:[ubyte:8];
+}
+
+table UserRequest {
+    session_id: SessionId;
+    body: [ubyte];
+}
+
+table UserRequestResponse {
+    body: [ubyte];
+}

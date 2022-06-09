@@ -16,7 +16,7 @@
 
 #![feature(io_safety)]
 
-use channel::{Frame, Framed};
+use channel::{schema, Framed};
 use clap::Parser;
 use crosvm::Crosvm;
 use qemu::Qemu;
@@ -99,6 +99,37 @@ impl ciborium_io::Read for CommsChannel {
     }
 }
 
+pub struct ClientHandler<T: ciborium_io::Read + ciborium_io::Write> {
+    inner: Framed<T>,
+}
+
+impl<T> ClientHandler<T>
+where
+    T: ciborium_io::Read<Error = anyhow::Error> + ciborium_io::Write<Error = anyhow::Error>,
+{
+    pub fn new(inner: T) -> Self {
+        Self {
+            inner: Framed::new(inner),
+        }
+    }
+}
+
+impl<T> oak_idl::Handler for ClientHandler<T>
+where
+    T: ciborium_io::Read<Error = anyhow::Error> + ciborium_io::Write<Error = anyhow::Error>,
+{
+    fn invoke(&mut self, request: oak_idl::Request) -> Result<Vec<u8>, oak_idl::Error> {
+        self.inner
+            .write_frame(request.into())
+            .map_err(|_| oak_idl::Error::new(oak_idl::ErrorCode::InternalError))?;
+
+        self.inner
+            .read_frame()
+            .map_err(|_| oak_idl::Error::new(oak_idl::ErrorCode::InternalError))?
+            .into()
+    }
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cli = Args::parse();
@@ -155,19 +186,35 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Use a bmrng channel for serial communication. The good thing about spawning a separate
     // task for the serial communication is that it serializes (no pun intended) the communication,
     // as right now we don't have any mechanisms to track multiple requests in flight.
-    let (tx, mut rx) = bmrng::unbounded_channel::<Vec<u8>, anyhow::Result<Vec<u8>>>();
+    let (tx, mut rx) = bmrng::unbounded_channel::<Vec<u8>, Result<Vec<u8>, oak_idl::Error>>();
 
     tokio::spawn(async move {
-        let comms_channel = CommsChannel { inner: comms };
-        let mut framed = Framed::new(comms_channel);
-        fn respond(framed: &mut Framed<CommsChannel>, input: Vec<u8>) -> anyhow::Result<Vec<u8>> {
-            framed.write_frame(Frame { body: input })?;
-            let response_frame = framed.read_frame()?;
-            Ok(response_frame.body)
-        }
+        let mut client = {
+            let comms_channel = CommsChannel { inner: comms };
+            let client_handler = ClientHandler::new(comms_channel);
+            schema::TrustedRuntimeClient::new(client_handler)
+        };
+        let mut respond = |input: Vec<u8>| -> Result<Vec<u8>, oak_idl::Error> {
+            let request_message = oak_idl::utils::Message::<schema::UserRequest>::from_vec(input)
+                .map_err(|err| {
+                oak_idl::Error::new_with_message(
+                    oak_idl::ErrorCode::InvalidRequest,
+                    err.to_string(),
+                )
+            })?;
+
+            let response_message = client.handle_user_request(request_message.buf())?;
+
+            let response_body = response_message
+                .get()
+                .body()
+                .ok_or_else(|| oak_idl::Error::new(oak_idl::ErrorCode::InternalError))?;
+
+            Ok(response_body.to_vec())
+        };
 
         while let Ok((input, responder)) = rx.recv().await {
-            let response = respond(&mut framed, input);
+            let response = respond(input);
             responder.respond(response).unwrap();
         }
     });

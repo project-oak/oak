@@ -27,6 +27,7 @@ tokio = { version = "*", features = [
 tonic = "*"
 vsock = "*"
 oak_remote_attestation_sessions = { path = "../../../remote_attestation_sessions" }
+oak_idl = { path = "../../../oak_idl" }
 channel = { path = "../../../experimental/uefi/channel" }
 ciborium-io = "*"
 
