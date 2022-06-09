@@ -1,1 +1,1 @@
-initSidebarItems({"fn":[["server",""]],"mod":[["proto",""]],"struct":[["EchoImpl",""]]});
+initSidebarItems({"fn":[["encode_request",""],["server",""]],"mod":[["proto",""]],"struct":[["EchoImpl",""]]});

@@ -1,0 +1,3 @@
+(function() {var implementors = {};
+implementors["channel"] = [{"text":"impl&lt;'b&gt; Push for <a class=\"struct\" href=\"channel/schema/struct.SessionId.html\" title=\"struct channel::schema::SessionId\">SessionId</a>","synthetic":false,"types":["channel::schema::SessionId"]},{"text":"impl&lt;'b&gt; Push for &amp;'b <a class=\"struct\" href=\"channel/schema/struct.SessionId.html\" title=\"struct channel::schema::SessionId\">SessionId</a>","synthetic":false,"types":["channel::schema::SessionId"]}];
+if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

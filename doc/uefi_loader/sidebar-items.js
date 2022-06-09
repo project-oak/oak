@@ -1,1 +1,1 @@
-initSidebarItems({"enum":[["Mode",""]],"fn":[["main",""],["path_exists",""]],"mod":[["crosvm",""],["qemu",""],["server",""],["vmm",""]],"struct":[["Args",""],["CommsChannel",""]],"trait":[["ReadWrite",""]]});
+initSidebarItems({"enum":[["Mode",""]],"fn":[["main",""],["path_exists",""]],"mod":[["crosvm",""],["qemu",""],["server",""],["vmm",""]],"struct":[["Args",""],["ClientHandler",""],["CommsChannel",""]],"trait":[["ReadWrite",""]]});

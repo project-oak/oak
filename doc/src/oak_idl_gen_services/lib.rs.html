@@ -389,6 +389,8 @@
 <span id="384">384</span>
 <span id="385">385</span>
 <span id="386">386</span>
+<span id="387">387</span>
+<span id="388">388</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2022 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -541,6 +543,8 @@
         <span class="macro">format!</span>(<span class="string">&quot;// Original service name: {}&quot;</span>, <span class="ident">service</span>.<span class="ident">name</span>()),
         <span class="macro">format!</span>(<span class="string">&quot;&quot;</span>),
         <span class="macro">format!</span>(<span class="string">&quot;extern crate alloc;&quot;</span>),
+        <span class="macro">format!</span>(<span class="string">&quot;&quot;</span>),
+        <span class="macro">format!</span>(<span class="string">&quot;use alloc::string::ToString;&quot;</span>),
         <span class="macro">format!</span>(<span class="string">&quot;&quot;</span>),
         <span class="macro">format!</span>(
             <span class="string">&quot;pub struct {}&lt;T: oak_idl::Handler&gt; {{&quot;</span>,

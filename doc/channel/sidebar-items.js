@@ -1,1 +1,1 @@
-initSidebarItems({"struct":[["Frame",""],["Framed",""]],"type":[["FrameLength","Length of the entire frame, including the header."]]});
+initSidebarItems({"constant":[["FRAME_HEADER_SIZE",""]],"mod":[["schema",""]],"struct":[["Frame",""],["Framed",""]],"type":[["FrameLength","Length of the entire frame, including the header."],["Method","In request frames this field contains the id of the method_or_status that is invoked. In response frames this field contains the status code of the method_or_status invocation."]]});
