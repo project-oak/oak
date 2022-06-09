@@ -187,7 +187,7 @@ fn generate_service(service: &Service) -> anyhow::Result<String> {
             service_name(service),
             server_name(service)
         ),
-        format!("    fn invoke(&mut self, request: oak_idl::Request) -> Result<alloc::vec::Vec<u8>, oak_idl::Error> {{"),
+        format!("    fn invoke(&mut self, request: oak_idl::Request) -> Result<alloc::vec::Vec<u8>, oak_idl::Status> {{"),
         format!("        match request.method_id {{"),
     ]);
     lines.extend(
@@ -202,7 +202,7 @@ fn generate_service(service: &Service) -> anyhow::Result<String> {
             .flatten(),
     );
     lines.extend(vec![
-        format!("            _ => Err(oak_idl::Error::new(oak_idl::ErrorCode::InvalidMethodId))"),
+        format!("            _ => Err(oak_idl::Status::new(oak_idl::StatusCode::Unimplemented))"),
         format!("        }}"),
         format!("    }}"),
         format!("}}"),
@@ -240,12 +240,12 @@ fn generate_client_method(rpc_call: &RPCCall) -> anyhow::Result<Vec<String>> {
     // much benefit.
     Ok(vec![
         format!(
-            "    pub fn {}(&mut self, request_body: &[u8]) -> Result<oak_idl::utils::Message<{}>, oak_idl::Error> {{",
+            "    pub fn {}(&mut self, request_body: &[u8]) -> Result<oak_idl::utils::Message<{}>, oak_idl::Status> {{",
             method_name(rpc_call),
             response_type(rpc_call)
         ),
         format!(
-            "        flatbuffers::root::<{}>(request_body).map_err(|err| oak_idl::Error::new_with_message(oak_idl::ErrorCode::InvalidRequest, err.to_string()))?;",
+            "        flatbuffers::root::<{}>(request_body).map_err(|err| oak_idl::Status::new_with_message(oak_idl::StatusCode::Internal, format!(\"Client failed to deserialize the request: {{:?}}\", err)))?;",
             request_type(rpc_call)
         ),
         format!("        let request = oak_idl::Request {{"),
@@ -253,7 +253,7 @@ fn generate_client_method(rpc_call: &RPCCall) -> anyhow::Result<Vec<String>> {
         format!("            body: request_body,"),
         format!("        }};"),
         format!("        let response_body = self.handler.invoke(request)?;"),
-        format!("        oak_idl::utils::Message::from_vec(response_body).map_err(|err| oak_idl::Error::new_with_message(oak_idl::ErrorCode::InvalidResponse, err.to_string()))"),
+        format!("        oak_idl::utils::Message::from_vec(response_body).map_err(|err| oak_idl::Status::new_with_message(oak_idl::StatusCode::Internal, format!(\"Client failed to deserialize the response: {{:?}}\", err)))?;"),
         format!("    }}"),
     ])
 }
@@ -266,7 +266,7 @@ fn generate_server_handler(rpc_call: &RPCCall) -> anyhow::Result<Vec<String>> {
     Ok(vec![
         format!("            {} => {{", method_id(rpc_call)?),
         format!(
-            "                let request = flatbuffers::root::<{}>(request.body).map_err(|err| oak_idl::Error::new_with_message(oak_idl::ErrorCode::InvalidRequest, err.to_string()))?;",
+            "                let request = flatbuffers::root::<{}>(request.body).map_err(|err| oak_idl::Status::new_with_message(oak_idl::StatusCode::Internal, format!(\"Service failed to deserialize the request: {{:?}}\", err)))?;",
             request_type(rpc_call),
         ),
         format!(
@@ -285,7 +285,7 @@ fn generate_service_method(rpc_call: &RPCCall) -> Vec<String> {
     // implementation of this method, therefore needs to be wrapped in `oak_idl::Message` in order
     // to transfer its ownership to the caller.
     vec![format!(
-        "    fn {}(&mut self, request: &{}) -> Result<oak_idl::utils::Message<{}>, oak_idl::Error>;",
+        "    fn {}(&mut self, request: &{}) -> Result<oak_idl::utils::Message<{}>, oak_idl::Status>;",
         method_name(rpc_call),
         request_type(rpc_call),
         response_type(rpc_call)
