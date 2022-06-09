@@ -132,8 +132,9 @@ fn bench_wasm_handler(bencher: &mut Bencher) {
     let lookup_factory = LookupFactory::new_boxed_extension_factory(lookup_data_manager)
         .expect("could not create LookupFactory");
 
-    let wasm_handler = WasmHandler::create(&wasm_module_bytes, vec![lookup_factory], logger)
-        .expect("Couldn't create the server");
+    let wasm_handler =
+        WasmHandler::create(&wasm_module_bytes, vec![], vec![lookup_factory], logger)
+            .expect("Couldn't create the server");
 
     let summary = bencher.bench(|bencher| {
         bencher.iter(|| {

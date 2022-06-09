@@ -30,7 +30,6 @@ use hashbrown::HashMap;
 use oak_functions_abi::proto::{ExtensionHandle, OakStatus, Request, Response, StatusCode};
 use oak_functions_extension::{ExtensionFactory, OakApiNativeExtension};
 use oak_logger::{Level, OakLogger};
-use oak_remote_attestation::crypto::get_sha256;
 use wasmi::ValueType;
 
 const MAIN_FUNCTION_NAME: &str = "main";
@@ -415,9 +414,10 @@ pub struct WasmHandler<L: OakLogger> {
     // Wasm module to be served on each invocation. `Arc` is needed to make `WasmHandler`
     // cloneable.
     module: Arc<wasmi::Module>,
+    // The hash of the Wasm module to be served.
+    wasm_hash: Vec<u8>,
     extension_factories: Arc<Vec<Box<dyn ExtensionFactory<L>>>>,
     // The hash of the bytes loaded in the Wasm module.
-    wasm_hash: Vec<u8>,
     logger: L,
 }
 
@@ -427,18 +427,17 @@ where
 {
     pub fn create(
         wasm_module_bytes: &[u8],
+        wasm_hash: Vec<u8>,
         extension_factories: Vec<Box<dyn ExtensionFactory<L>>>,
         logger: L,
     ) -> anyhow::Result<Self> {
-        let wasm_hash = get_sha256(wasm_module_bytes).to_vec();
-
         let module = wasmi::Module::from_buffer(&wasm_module_bytes)
             .map_err(|err| anyhow::anyhow!("could not load module from buffer: {:?}", err))?;
 
         Ok(WasmHandler {
             module: Arc::new(module),
-            extension_factories: Arc::new(extension_factories),
             wasm_hash,
+            extension_factories: Arc::new(extension_factories),
             logger,
         })
     }

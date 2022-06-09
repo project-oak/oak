@@ -18,6 +18,7 @@ use crate::logger::StandaloneLogger;
 use alloc::vec;
 use oak_functions_wasm::WasmHandler;
 use oak_functions_workload_logging::WorkloadLoggingFactory;
+use oak_remote_attestation::crypto::get_sha256;
 
 /// Creates a new `WasmHandler` instance.
 pub fn new_wasm_handler() -> anyhow::Result<WasmHandler<StandaloneLogger>> {
@@ -25,5 +26,6 @@ pub fn new_wasm_handler() -> anyhow::Result<WasmHandler<StandaloneLogger>> {
     let wasm_module_bytes = include_bytes!("echo.wasm");
     let logger = StandaloneLogger::default();
     let logging_factory = WorkloadLoggingFactory::new_boxed_extension_factory(logger.clone())?;
-    WasmHandler::create(wasm_module_bytes, vec![logging_factory], logger)
+    let wasm_hash = get_sha256(wasm_module_bytes).to_vec();
+    WasmHandler::create(wasm_module_bytes, wasm_hash, vec![logging_factory], logger)
 }

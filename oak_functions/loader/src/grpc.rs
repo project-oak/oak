@@ -25,7 +25,9 @@ use anyhow::Context;
 use log::Level;
 use oak_functions_abi::proto::{ConfigurationReport, Request, ServerPolicy};
 use oak_logger::OakLogger;
+use oak_remote_attestation::crypto::get_sha256;
 use oak_utils::LogError;
+
 use prost::Message;
 use std::{future::Future, net::SocketAddr};
 
@@ -52,7 +54,9 @@ pub fn create_wasm_handler(
     extensions: Vec<OakFunctionsBoxedExtensionFactory>,
     logger: Logger,
 ) -> anyhow::Result<WasmHandler> {
-    let wasm_handler = WasmHandler::create(wasm_module_bytes, extensions, logger)?;
+    let wasm_hash = get_sha256(wasm_module_bytes).to_vec();
+
+    let wasm_handler = WasmHandler::create(wasm_module_bytes, wasm_hash, extensions, logger)?;
 
     Ok(wasm_handler)
 }

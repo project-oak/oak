@@ -71,8 +71,13 @@ async fn test_read_write() {
     let lookup_factory = LookupFactory::new_boxed_extension_factory(lookup_data_manager)
         .expect("could not create LookupFactory");
 
-    let wasm_handler = WasmHandler::create(&LOOKUP_WASM_MODULE_BYTES, vec![lookup_factory], logger)
-        .expect("Could not instantiate WasmHandler.");
+    let wasm_handler = WasmHandler::create(
+        &LOOKUP_WASM_MODULE_BYTES,
+        vec![],
+        vec![lookup_factory],
+        logger,
+    )
+    .expect("Could not instantiate WasmHandler.");
 
     let request = Request {
         body: b"ReadWrite".to_vec(),
@@ -88,8 +93,13 @@ async fn test_double_read() {
     let lookup_factory = LookupFactory::new_boxed_extension_factory(lookup_data_manager)
         .expect("could not create LookupFactory");
 
-    let wasm_handler = WasmHandler::create(&LOOKUP_WASM_MODULE_BYTES, vec![lookup_factory], logger)
-        .expect("Could not instantiate WasmHandler.");
+    let wasm_handler = WasmHandler::create(
+        &LOOKUP_WASM_MODULE_BYTES,
+        vec![],
+        vec![lookup_factory],
+        logger,
+    )
+    .expect("Could not instantiate WasmHandler.");
 
     let request = Request {
         body: b"DoubleRead".to_vec(),
@@ -105,8 +115,13 @@ async fn test_double_write() {
     let lookup_factory = LookupFactory::new_boxed_extension_factory(lookup_data_manager)
         .expect("could not create LookupFactory");
 
-    let wasm_handler = WasmHandler::create(&LOOKUP_WASM_MODULE_BYTES, vec![lookup_factory], logger)
-        .expect("Could not instantiate WasmHandler.");
+    let wasm_handler = WasmHandler::create(
+        &LOOKUP_WASM_MODULE_BYTES,
+        vec![],
+        vec![lookup_factory],
+        logger,
+    )
+    .expect("Could not instantiate WasmHandler.");
 
     let request = Request {
         body: b"DoubleWrite".to_vec(),
@@ -127,6 +142,7 @@ async fn test_write_log() {
 
     let wasm_handler = WasmHandler::create(
         &LOOKUP_WASM_MODULE_BYTES,
+        vec![],
         vec![lookup_factory, workload_logging_factory],
         logger,
     )
@@ -150,8 +166,13 @@ async fn test_storage_get_item() {
     let lookup_factory = LookupFactory::new_boxed_extension_factory(lookup_data_manager)
         .expect("could not create LookupFactory");
 
-    let wasm_handler = WasmHandler::create(&LOOKUP_WASM_MODULE_BYTES, vec![lookup_factory], logger)
-        .expect("Could not instantiate WasmHandler.");
+    let wasm_handler = WasmHandler::create(
+        &LOOKUP_WASM_MODULE_BYTES,
+        vec![],
+        vec![lookup_factory],
+        logger,
+    )
+    .expect("Could not instantiate WasmHandler.");
 
     let request = Request {
         body: b"StorageGet".to_vec(),
@@ -170,8 +191,13 @@ async fn test_storage_get_item_not_found() {
     let lookup_factory = LookupFactory::new_boxed_extension_factory(lookup_data_manager)
         .expect("could not create LookupFactory");
 
-    let wasm_handler = WasmHandler::create(&LOOKUP_WASM_MODULE_BYTES, vec![lookup_factory], logger)
-        .expect("Could not instantiate WasmHandler.");
+    let wasm_handler = WasmHandler::create(
+        &LOOKUP_WASM_MODULE_BYTES,
+        vec![],
+        vec![lookup_factory],
+        logger,
+    )
+    .expect("Could not instantiate WasmHandler.");
 
     let request = Request {
         body: b"StorageGetItemNotFound".to_vec(),
@@ -191,9 +217,13 @@ async fn test_echo() {
         )
         .expect("Fail to create testing extension factory.");
 
-    let wasm_handler =
-        WasmHandler::create(&TESTING_WASM_MODULE_BYTES, vec![testing_factory], logger)
-            .expect("Could not instantiate WasmHandler.");
+    let wasm_handler = WasmHandler::create(
+        &TESTING_WASM_MODULE_BYTES,
+        vec![],
+        vec![testing_factory],
+        logger,
+    )
+    .expect("Could not instantiate WasmHandler.");
 
     let request = Request {
         body: message_to_echo.as_bytes().to_vec(),
@@ -217,9 +247,13 @@ async fn test_blackhole() {
         )
         .expect("Fail to create testing extension factory.");
 
-    let wasm_handler =
-        WasmHandler::create(&TESTING_WASM_MODULE_BYTES, vec![testing_factory], logger)
-            .expect("Could not instantiate WasmHandler.");
+    let wasm_handler = WasmHandler::create(
+        &TESTING_WASM_MODULE_BYTES,
+        vec![],
+        vec![testing_factory],
+        logger,
+    )
+    .expect("Could not instantiate WasmHandler.");
 
     let request = Request {
         body: message_to_blackhole.as_bytes().to_vec(),
@@ -248,9 +282,13 @@ async fn test_report_metric() {
         PrivateMetricsProxyFactory::new_boxed_extension_factory(&metrics_config, logger.clone())
             .expect("Fail to create metrics factory.");
 
-    let wasm_handler =
-        WasmHandler::create(&METRICS_WASM_MODULE_BYTES, vec![metrics_factory], logger)
-            .expect("Could not instantiate WasmHandler.");
+    let wasm_handler = WasmHandler::create(
+        &METRICS_WASM_MODULE_BYTES,
+        vec![],
+        vec![metrics_factory],
+        logger,
+    )
+    .expect("Could not instantiate WasmHandler.");
 
     // The request is ignored in the Wasm module.
     let request = Request {
@@ -296,7 +334,7 @@ async fn test_tf_model_infer_bad_input() {
     )
     .expect("Fail to create tf factory.");
 
-    let wasm_handler = WasmHandler::create(&TF_WASM_MODULE_BYTES, vec![tf_factory], logger)
+    let wasm_handler = WasmHandler::create(&TF_WASM_MODULE_BYTES, vec![], vec![tf_factory], logger)
         .expect("Could not instantiate WasmHandler.");
 
     let request = Request {
