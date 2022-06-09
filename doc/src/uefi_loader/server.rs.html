@@ -140,11 +140,11 @@
     <span class="ident">UnaryRequest</span>, <span class="ident">UnaryResponse</span>,
 };
 
-<span class="kw">fn</span> <span class="ident">encode_request</span>(<span class="ident">unary_request</span>: <span class="ident">UnaryRequest</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>, <span class="ident">oak_idl::Error</span><span class="op">&gt;</span> {
+<span class="kw">fn</span> <span class="ident">encode_request</span>(<span class="ident">unary_request</span>: <span class="ident">UnaryRequest</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>, <span class="ident">oak_idl::Status</span><span class="op">&gt;</span> {
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">session_id</span>: <span class="ident">SessionId</span> <span class="op">=</span> [<span class="number">0</span>; <span class="ident">SESSION_ID_LENGTH</span>];
     <span class="kw">if</span> <span class="ident">unary_request</span>.<span class="ident">session_id</span>.<span class="ident">len</span>() <span class="op">!</span><span class="op">=</span> <span class="ident">SESSION_ID_LENGTH</span> {
-        <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">oak_idl::Error::new_with_message</span>(
-            <span class="ident">oak_idl::ErrorCode::InvalidRequest</span>,
+        <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">oak_idl::Status::new_with_message</span>(
+            <span class="ident">oak_idl::StatusCode::Internal</span>,
             <span class="macro">format!</span>(
                 <span class="string">&quot;session_id must be {} bytes in length, found a length of {} bytes instead&quot;</span>,
                 <span class="ident">SESSION_ID_LENGTH</span>,
@@ -167,7 +167,7 @@
             },
         );
         <span class="ident">builder</span>.<span class="ident">finish</span>(<span class="ident">message</span>).<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> {
-            <span class="ident">oak_idl::Error::new_with_message</span>(<span class="ident">oak_idl::ErrorCode::InvalidRequest</span>, <span class="ident">err</span>.<span class="ident">to_string</span>())
+            <span class="ident">oak_idl::Status::new_with_message</span>(<span class="ident">oak_idl::StatusCode::Internal</span>, <span class="ident">err</span>.<span class="ident">to_string</span>())
         })<span class="question-mark">?</span>
     };
 
@@ -176,7 +176,7 @@
 }
 
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">EchoImpl</span> {
-    <span class="ident">channel</span>: <span class="ident">UnboundedRequestSender</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>, <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>, <span class="ident">oak_idl::Error</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+    <span class="ident">channel</span>: <span class="ident">UnboundedRequestSender</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>, <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>, <span class="ident">oak_idl::Status</span><span class="op">&gt;</span><span class="op">&gt;</span>,
 }
 
 <span class="attribute">#[<span class="ident">tonic::async_trait</span>]</span>
@@ -206,7 +206,7 @@
 
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">server</span>(
     <span class="ident">addr</span>: <span class="ident">SocketAddr</span>,
-    <span class="ident">channel</span>: <span class="ident">UnboundedRequestSender</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>, <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>, <span class="ident">oak_idl::Error</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+    <span class="ident">channel</span>: <span class="ident">UnboundedRequestSender</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>, <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>, <span class="ident">oak_idl::Status</span><span class="op">&gt;</span><span class="op">&gt;</span>,
 ) -&gt; <span class="kw">impl</span> <span class="ident">Future</span><span class="op">&lt;</span><span class="ident">Output</span> <span class="op">=</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">tonic::transport::Error</span><span class="op">&gt;</span><span class="op">&gt;</span> {
     <span class="kw">let</span> <span class="ident">server_impl</span> <span class="op">=</span> <span class="ident">EchoImpl</span> { <span class="ident">channel</span> };
     <span class="ident">Server::builder</span>()

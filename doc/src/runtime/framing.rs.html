@@ -147,20 +147,20 @@
     <span class="kw">fn</span> <span class="ident">handle_user_request</span>(
         <span class="kw-2">&amp;mut</span> <span class="self">self</span>,
         <span class="ident">request_message</span>: <span class="kw-2">&amp;</span><span class="ident">schema::UserRequest</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">oak_idl::utils::Message</span><span class="op">&lt;</span><span class="ident">schema::UserRequestResponse</span><span class="op">&gt;</span>, <span class="ident">oak_idl::Error</span><span class="op">&gt;</span> {
+    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">oak_idl::utils::Message</span><span class="op">&lt;</span><span class="ident">schema::UserRequestResponse</span><span class="op">&gt;</span>, <span class="ident">oak_idl::Status</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">session_id</span>: <span class="ident">SessionId</span> <span class="op">=</span> <span class="ident">request_message</span>
             .<span class="ident">session_id</span>()
-            .<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">oak_idl::Error::new</span>(<span class="ident">oak_idl::ErrorCode::BadRequest</span>))<span class="question-mark">?</span>
+            .<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">oak_idl::Status::new</span>(<span class="ident">oak_idl::StatusCode::InvalidArgument</span>))<span class="question-mark">?</span>
             .<span class="ident">value</span>()
             .<span class="ident">into</span>();
         <span class="kw">let</span> <span class="ident">request_body</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>] <span class="op">=</span> <span class="ident">request_message</span>
             .<span class="ident">body</span>()
-            .<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">oak_idl::Error::new</span>(<span class="ident">oak_idl::ErrorCode::BadRequest</span>))<span class="question-mark">?</span>;
+            .<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">oak_idl::Status::new</span>(<span class="ident">oak_idl::StatusCode::InvalidArgument</span>))<span class="question-mark">?</span>;
 
         <span class="kw">let</span> <span class="ident">response</span> <span class="op">=</span> <span class="self">self</span>
             .<span class="ident">attestation_handler</span>
             .<span class="ident">message</span>(<span class="ident">session_id</span>, <span class="ident">request_body</span>)
-            .<span class="ident">map_err</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">oak_idl::Error::new</span>(<span class="ident">oak_idl::ErrorCode::InternalError</span>))<span class="question-mark">?</span>;
+            .<span class="ident">map_err</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">oak_idl::Status::new</span>(<span class="ident">oak_idl::StatusCode::Internal</span>))<span class="question-mark">?</span>;
 
         <span class="kw">let</span> <span class="ident">response_message</span> <span class="op">=</span> {
             <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">builder</span> <span class="op">=</span> <span class="ident">oak_idl::utils::MessageBuilder::default</span>();
@@ -171,7 +171,7 @@
             );
             <span class="ident">builder</span>
                 .<span class="ident">finish</span>(<span class="ident">user_request_response</span>)
-                .<span class="ident">map_err</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">oak_idl::Error::new</span>(<span class="ident">oak_idl::ErrorCode::InternalError</span>))<span class="question-mark">?</span>
+                .<span class="ident">map_err</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">oak_idl::Status::new</span>(<span class="ident">oak_idl::StatusCode::Internal</span>))<span class="question-mark">?</span>
         };
         <span class="prelude-val">Ok</span>(<span class="ident">response_message</span>)
     }

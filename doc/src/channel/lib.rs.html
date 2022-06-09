@@ -174,11 +174,6 @@
 <span id="169">169</span>
 <span id="170">170</span>
 <span id="171">171</span>
-<span id="172">172</span>
-<span id="173">173</span>
-<span id="174">174</span>
-<span id="175">175</span>
-<span id="176">176</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2022 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -318,14 +313,11 @@
     }
 }
 
-<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>, <span class="ident">oak_idl::Error</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Frame</span> {
-    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">result</span>: <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>, <span class="ident">oak_idl::Error</span><span class="op">&gt;</span>) -&gt; <span class="ident">Frame</span> {
-        <span class="comment">// In response frames, the status code `0` indicates a succesful</span>
-        <span class="comment">// response. Values above `0` represent an error code as defined</span>
-        <span class="comment">// in the oak_idl.</span>
+<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>, <span class="ident">oak_idl::Status</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Frame</span> {
+    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">result</span>: <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>, <span class="ident">oak_idl::Status</span><span class="op">&gt;</span>) -&gt; <span class="ident">Frame</span> {
         <span class="kw">match</span> <span class="ident">result</span> {
             <span class="prelude-val">Ok</span>(<span class="ident">response</span>) =&gt; <span class="ident">Frame</span> {
-                <span class="ident">method_or_status</span>: <span class="number">0</span>,
+                <span class="ident">method_or_status</span>: <span class="ident">oak_idl::StatusCode::Ok</span>.<span class="ident">into</span>(),
                 <span class="ident">body</span>: <span class="ident">response</span>,
             },
             <span class="prelude-val">Err</span>(<span class="ident">error</span>) =&gt; <span class="ident">Frame</span> {
@@ -336,14 +328,12 @@
     }
 }
 
-<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">Frame</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>, <span class="ident">oak_idl::Error</span><span class="op">&gt;</span> {
+<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">Frame</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>, <span class="ident">oak_idl::Status</span><span class="op">&gt;</span> {
     <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">frame</span>: <span class="ident">Frame</span>) -&gt; <span class="self">Self</span> {
-        <span class="comment">// In response frames, the status code `0` indicates a succesful</span>
-        <span class="comment">// response. Values above `0` represent an error code as defined</span>
-        <span class="comment">// in the oak_idl.</span>
-        <span class="kw">match</span> <span class="ident">frame</span>.<span class="ident">method_or_status</span> {
-            <span class="number">0</span> =&gt; <span class="prelude-val">Ok</span>(<span class="ident">frame</span>.<span class="ident">body</span>),
-            <span class="kw">_</span> =&gt; <span class="prelude-val">Err</span>(<span class="ident">oak_idl::Error</span> {
+        <span class="kw">if</span> <span class="ident">frame</span>.<span class="ident">method_or_status</span> <span class="op">==</span> <span class="ident">oak_idl::StatusCode::Ok</span>.<span class="ident">into</span>() {
+            <span class="prelude-val">Ok</span>(<span class="ident">frame</span>.<span class="ident">body</span>)
+        } <span class="kw">else</span> {
+            <span class="prelude-val">Err</span>(<span class="ident">oak_idl::Status</span> {
                 <span class="ident">code</span>: <span class="ident">frame</span>.<span class="ident">method_or_status</span>.<span class="ident">into</span>(),
                 <span class="ident">message</span>: <span class="ident">String::from_utf8</span>(<span class="ident">frame</span>.<span class="ident">body</span>).<span class="ident">unwrap_or_else</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> {
                     <span class="macro">alloc::format!</span>(
@@ -351,7 +341,7 @@
                         <span class="ident">err</span>
                     )
                 }),
-            }),
+            })
         }
     }
 }

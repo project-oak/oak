@@ -238,9 +238,6 @@
 <span id="233">233</span>
 <span id="234">234</span>
 <span id="235">235</span>
-<span id="236">236</span>
-<span id="237">237</span>
-<span id="238">238</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2022 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -361,14 +358,14 @@
 <span class="kw">where</span>
     <span class="ident">T</span>: <span class="ident">ciborium_io::Read</span><span class="op">&lt;</span><span class="ident">Error</span> <span class="op">=</span> <span class="ident">anyhow::Error</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">ciborium_io::Write</span><span class="op">&lt;</span><span class="ident">Error</span> <span class="op">=</span> <span class="ident">anyhow::Error</span><span class="op">&gt;</span>,
 {
-    <span class="kw">fn</span> <span class="ident">invoke</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">request</span>: <span class="ident">oak_idl::Request</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>, <span class="ident">oak_idl::Error</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">invoke</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">request</span>: <span class="ident">oak_idl::Request</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>, <span class="ident">oak_idl::Status</span><span class="op">&gt;</span> {
         <span class="self">self</span>.<span class="ident">inner</span>
             .<span class="ident">write_frame</span>(<span class="ident">request</span>.<span class="ident">into</span>())
-            .<span class="ident">map_err</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">oak_idl::Error::new</span>(<span class="ident">oak_idl::ErrorCode::InternalError</span>))<span class="question-mark">?</span>;
+            .<span class="ident">map_err</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">oak_idl::Status::new</span>(<span class="ident">oak_idl::StatusCode::Internal</span>))<span class="question-mark">?</span>;
 
         <span class="self">self</span>.<span class="ident">inner</span>
             .<span class="ident">read_frame</span>()
-            .<span class="ident">map_err</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">oak_idl::Error::new</span>(<span class="ident">oak_idl::ErrorCode::InternalError</span>))<span class="question-mark">?</span>
+            .<span class="ident">map_err</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">oak_idl::Status::new</span>(<span class="ident">oak_idl::StatusCode::Internal</span>))<span class="question-mark">?</span>
             .<span class="ident">into</span>()
     }
 }
@@ -429,7 +426,7 @@
     <span class="comment">// Use a bmrng channel for serial communication. The good thing about spawning a separate</span>
     <span class="comment">// task for the serial communication is that it serializes (no pun intended) the communication,</span>
     <span class="comment">// as right now we don&#39;t have any mechanisms to track multiple requests in flight.</span>
-    <span class="kw">let</span> (<span class="ident">tx</span>, <span class="kw-2">mut</span> <span class="ident">rx</span>) <span class="op">=</span> <span class="ident">bmrng::unbounded_channel</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>, <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>, <span class="ident">oak_idl::Error</span><span class="op">&gt;</span><span class="op">&gt;</span>();
+    <span class="kw">let</span> (<span class="ident">tx</span>, <span class="kw-2">mut</span> <span class="ident">rx</span>) <span class="op">=</span> <span class="ident">bmrng::unbounded_channel</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>, <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>, <span class="ident">oak_idl::Status</span><span class="op">&gt;</span><span class="op">&gt;</span>();
 
     <span class="ident">tokio::spawn</span>(<span class="kw">async</span> <span class="kw">move</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">client</span> <span class="op">=</span> {
@@ -437,13 +434,10 @@
             <span class="kw">let</span> <span class="ident">client_handler</span> <span class="op">=</span> <span class="ident">ClientHandler::new</span>(<span class="ident">comms_channel</span>);
             <span class="ident">schema::TrustedRuntimeClient::new</span>(<span class="ident">client_handler</span>)
         };
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">respond</span> <span class="op">=</span> <span class="op">|</span><span class="ident">input</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">|</span> -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>, <span class="ident">oak_idl::Error</span><span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">respond</span> <span class="op">=</span> <span class="op">|</span><span class="ident">input</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">|</span> -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>, <span class="ident">oak_idl::Status</span><span class="op">&gt;</span> {
             <span class="kw">let</span> <span class="ident">request_message</span> <span class="op">=</span> <span class="ident">oak_idl::utils::Message</span>::<span class="op">&lt;</span><span class="ident">schema::UserRequest</span><span class="op">&gt;</span><span class="ident">::from_vec</span>(<span class="ident">input</span>)
                 .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> {
-                <span class="ident">oak_idl::Error::new_with_message</span>(
-                    <span class="ident">oak_idl::ErrorCode::InvalidRequest</span>,
-                    <span class="ident">err</span>.<span class="ident">to_string</span>(),
-                )
+                <span class="ident">oak_idl::Status::new_with_message</span>(<span class="ident">oak_idl::StatusCode::Internal</span>, <span class="ident">err</span>.<span class="ident">to_string</span>())
             })<span class="question-mark">?</span>;
 
             <span class="kw">let</span> <span class="ident">response_message</span> <span class="op">=</span> <span class="ident">client</span>.<span class="ident">handle_user_request</span>(<span class="ident">request_message</span>.<span class="ident">buf</span>())<span class="question-mark">?</span>;
@@ -451,7 +445,7 @@
             <span class="kw">let</span> <span class="ident">response_body</span> <span class="op">=</span> <span class="ident">response_message</span>
                 .<span class="ident">get</span>()
                 .<span class="ident">body</span>()
-                .<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">oak_idl::Error::new</span>(<span class="ident">oak_idl::ErrorCode::InternalError</span>))<span class="question-mark">?</span>;
+                .<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">oak_idl::Status::new</span>(<span class="ident">oak_idl::StatusCode::Internal</span>))<span class="question-mark">?</span>;
 
             <span class="prelude-val">Ok</span>(<span class="ident">response_body</span>.<span class="ident">to_vec</span>())
         };

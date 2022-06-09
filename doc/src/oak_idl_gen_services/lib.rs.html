@@ -544,7 +544,7 @@
         <span class="macro">format!</span>(<span class="string">&quot;&quot;</span>),
         <span class="macro">format!</span>(<span class="string">&quot;extern crate alloc;&quot;</span>),
         <span class="macro">format!</span>(<span class="string">&quot;&quot;</span>),
-        <span class="macro">format!</span>(<span class="string">&quot;use alloc::string::ToString;&quot;</span>),
+        <span class="macro">format!</span>(<span class="string">&quot;use alloc::{{format, string::ToString}};&quot;</span>),
         <span class="macro">format!</span>(<span class="string">&quot;&quot;</span>),
         <span class="macro">format!</span>(
             <span class="string">&quot;pub struct {}&lt;T: oak_idl::Handler&gt; {{&quot;</span>,
@@ -582,7 +582,7 @@
             <span class="ident">service_name</span>(<span class="ident">service</span>),
             <span class="ident">server_name</span>(<span class="ident">service</span>)
         ),
-        <span class="macro">format!</span>(<span class="string">&quot;    fn invoke(&amp;mut self, request: oak_idl::Request) -&gt; Result&lt;alloc::vec::Vec&lt;u8&gt;, oak_idl::Error&gt; {{&quot;</span>),
+        <span class="macro">format!</span>(<span class="string">&quot;    fn invoke(&amp;mut self, request: oak_idl::Request) -&gt; Result&lt;alloc::vec::Vec&lt;u8&gt;, oak_idl::Status&gt; {{&quot;</span>),
         <span class="macro">format!</span>(<span class="string">&quot;        match request.method_id {{&quot;</span>),
     ]);
     <span class="ident">lines</span>.<span class="ident">extend</span>(
@@ -597,7 +597,7 @@
             .<span class="ident">flatten</span>(),
     );
     <span class="ident">lines</span>.<span class="ident">extend</span>(<span class="macro">vec!</span>[
-        <span class="macro">format!</span>(<span class="string">&quot;            _ =&gt; Err(oak_idl::Error::new(oak_idl::ErrorCode::InvalidMethodId))&quot;</span>),
+        <span class="macro">format!</span>(<span class="string">&quot;            _ =&gt; Err(oak_idl::Status::new(oak_idl::StatusCode::Unimplemented))&quot;</span>),
         <span class="macro">format!</span>(<span class="string">&quot;        }}&quot;</span>),
         <span class="macro">format!</span>(<span class="string">&quot;    }}&quot;</span>),
         <span class="macro">format!</span>(<span class="string">&quot;}}&quot;</span>),
@@ -635,12 +635,12 @@
     <span class="comment">// much benefit.</span>
     <span class="prelude-val">Ok</span>(<span class="macro">vec!</span>[
         <span class="macro">format!</span>(
-            <span class="string">&quot;    pub fn {}(&amp;mut self, request_body: &amp;[u8]) -&gt; Result&lt;oak_idl::utils::Message&lt;{}&gt;, oak_idl::Error&gt; {{&quot;</span>,
+            <span class="string">&quot;    pub fn {}(&amp;mut self, request_body: &amp;[u8]) -&gt; Result&lt;oak_idl::utils::Message&lt;{}&gt;, oak_idl::Status&gt; {{&quot;</span>,
             <span class="ident">method_name</span>(<span class="ident">rpc_call</span>),
             <span class="ident">response_type</span>(<span class="ident">rpc_call</span>)
         ),
         <span class="macro">format!</span>(
-            <span class="string">&quot;        flatbuffers::root::&lt;{}&gt;(request_body).map_err(|err| oak_idl::Error::new_with_message(oak_idl::ErrorCode::InvalidRequest, err.to_string()))?;&quot;</span>,
+            <span class="string">&quot;        flatbuffers::root::&lt;{}&gt;(request_body).map_err(|err| oak_idl::Status::new_with_message(oak_idl::StatusCode::Internal, format!(\&quot;Client failed to deserialize the request: {{:?}}\&quot;, err)))?;&quot;</span>,
             <span class="ident">request_type</span>(<span class="ident">rpc_call</span>)
         ),
         <span class="macro">format!</span>(<span class="string">&quot;        let request = oak_idl::Request {{&quot;</span>),
@@ -648,7 +648,7 @@
         <span class="macro">format!</span>(<span class="string">&quot;            body: request_body,&quot;</span>),
         <span class="macro">format!</span>(<span class="string">&quot;        }};&quot;</span>),
         <span class="macro">format!</span>(<span class="string">&quot;        let response_body = self.handler.invoke(request)?;&quot;</span>),
-        <span class="macro">format!</span>(<span class="string">&quot;        oak_idl::utils::Message::from_vec(response_body).map_err(|err| oak_idl::Error::new_with_message(oak_idl::ErrorCode::InvalidResponse, err.to_string()))&quot;</span>),
+        <span class="macro">format!</span>(<span class="string">&quot;        oak_idl::utils::Message::from_vec(response_body).map_err(|err| oak_idl::Status::new_with_message(oak_idl::StatusCode::Internal, format!(\&quot;Client failed to deserialize the response: {{:?}}\&quot;, err)))&quot;</span>),
         <span class="macro">format!</span>(<span class="string">&quot;    }}&quot;</span>),
     ])
 }
@@ -661,7 +661,7 @@
     <span class="prelude-val">Ok</span>(<span class="macro">vec!</span>[
         <span class="macro">format!</span>(<span class="string">&quot;            {} =&gt; {{&quot;</span>, <span class="ident">method_id</span>(<span class="ident">rpc_call</span>)<span class="question-mark">?</span>),
         <span class="macro">format!</span>(
-            <span class="string">&quot;                let request = flatbuffers::root::&lt;{}&gt;(request.body).map_err(|err| oak_idl::Error::new_with_message(oak_idl::ErrorCode::InvalidRequest, err.to_string()))?;&quot;</span>,
+            <span class="string">&quot;                let request = flatbuffers::root::&lt;{}&gt;(request.body).map_err(|err| oak_idl::Status::new_with_message(oak_idl::StatusCode::Internal, format!(\&quot;Service failed to deserialize the request: {{:?}}\&quot;, err)))?;&quot;</span>,
             <span class="ident">request_type</span>(<span class="ident">rpc_call</span>),
         ),
         <span class="macro">format!</span>(
@@ -680,7 +680,7 @@
     <span class="comment">// implementation of this method, therefore needs to be wrapped in `oak_idl::Message` in order</span>
     <span class="comment">// to transfer its ownership to the caller.</span>
     <span class="macro">vec!</span>[<span class="macro">format!</span>(
-        <span class="string">&quot;    fn {}(&amp;mut self, request: &amp;{}) -&gt; Result&lt;oak_idl::utils::Message&lt;{}&gt;, oak_idl::Error&gt;;&quot;</span>,
+        <span class="string">&quot;    fn {}(&amp;mut self, request: &amp;{}) -&gt; Result&lt;oak_idl::utils::Message&lt;{}&gt;, oak_idl::Status&gt;;&quot;</span>,
         <span class="ident">method_name</span>(<span class="ident">rpc_call</span>),
         <span class="ident">request_type</span>(<span class="ident">rpc_call</span>),
         <span class="ident">response_type</span>(<span class="ident">rpc_call</span>)
