@@ -241,6 +241,15 @@
 <span id="236">236</span>
 <span id="237">237</span>
 <span id="238">238</span>
+<span id="239">239</span>
+<span id="240">240</span>
+<span id="241">241</span>
+<span id="242">242</span>
+<span id="243">243</span>
+<span id="244">244</span>
+<span id="245">245</span>
+<span id="246">246</span>
+<span id="247">247</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2022 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -266,6 +275,7 @@
 <span class="kw">use</span> <span class="ident">rust_hypervisor_firmware_virtio</span>::{
     <span class="ident">device::VirtioBaseDevice</span>,
     <span class="ident">pci</span>::{<span class="ident">find_device</span>, <span class="ident">VirtioPciTransport</span>},
+    <span class="ident">virtio::VirtioTransport</span>,
 };
 
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">packet</span>;
@@ -312,9 +322,9 @@
 <span class="doccomment">/// Low-level driver interface to interact with a virtio socket device.</span>
 <span class="doccomment">///</span>
 <span class="doccomment">/// See &lt;https://docs.oasis-open.org/virtio/virtio/v1.1/csprd01/virtio-v1.1-csprd01.html#x1-39000010&gt;.</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">VSock</span> {
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">VSock</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">VirtioTransport</span><span class="op">&gt;</span> {
     <span class="doccomment">/// The base virtio-over-PCI device used for configuration and notification.</span>
-    <span class="ident">device</span>: <span class="ident">VirtioBaseDevice</span><span class="op">&lt;</span><span class="ident">VirtioPciTransport</span><span class="op">&gt;</span>,
+    <span class="ident">device</span>: <span class="ident">VirtioBaseDevice</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>,
     <span class="doccomment">/// The receive queue.</span>
     <span class="ident">rx_queue</span>: <span class="ident">DeviceWriteOnlyQueue</span><span class="op">&lt;</span><span class="ident">QUEUE_SIZE</span>, <span class="ident">DATA_BUFFER_SIZE</span><span class="op">&gt;</span>,
     <span class="doccomment">/// The transmit queue.</span>
@@ -327,7 +337,7 @@
     <span class="ident">guest_cid</span>: <span class="ident">u64</span>,
 }
 
-<span class="kw">impl</span> <span class="ident">VSock</span> {
+<span class="kw">impl</span> <span class="ident">VSock</span><span class="op">&lt;</span><span class="ident">VirtioPciTransport</span><span class="op">&gt;</span> {
     <span class="doccomment">/// Finds the virtio vsock PCI device, initialises the device, and configures the queues.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">find_and_configure_device</span>() -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
         <span class="comment">// For now we just scan the first 32 devices on PCI bus 0 to find the first one that matches</span>
@@ -343,7 +353,12 @@
         <span class="ident">result</span>.<span class="ident">device</span>.<span class="ident">notify_queue</span>(<span class="ident">EVENT_QUEUE_ID</span>);
         <span class="prelude-val">Ok</span>(<span class="ident">result</span>)
     }
+}
 
+<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="ident">VSock</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>
+<span class="kw">where</span>
+    <span class="ident">T</span>: <span class="ident">VirtioTransport</span>,
+{
     <span class="doccomment">/// Reads the next valid packet from the receive queue, if one is available.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">read_packet</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Packet</span><span class="op">&gt;</span> {
         <span class="kw">loop</span> {
@@ -406,7 +421,7 @@
         <span class="self">self</span>.<span class="ident">device</span>.<span class="ident">get_status</span>()
     }
 
-    <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">device</span>: <span class="ident">VirtioBaseDevice</span><span class="op">&lt;</span><span class="ident">VirtioPciTransport</span><span class="op">&gt;</span>) -&gt; <span class="self">Self</span> {
+    <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">device</span>: <span class="ident">VirtioBaseDevice</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>) -&gt; <span class="self">Self</span> {
         <span class="kw">let</span> <span class="ident">tx_queue</span> <span class="op">=</span> <span class="ident">DriverWriteOnlyQueue::new</span>();
         <span class="kw">let</span> <span class="ident">rx_queue</span> <span class="op">=</span> <span class="ident">DeviceWriteOnlyQueue::new</span>();
         <span class="kw">let</span> <span class="ident">event_queue</span> <span class="op">=</span> <span class="ident">DeviceWriteOnlyQueue::new</span>();
@@ -479,6 +494,9 @@
         <span class="self">self</span>.<span class="ident">write_packet</span>(<span class="kw-2">&amp;mut</span> <span class="ident">packet</span>);
     }
 }
+
+<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
+<span class="kw">mod</span> <span class="ident">tests</span>;
 </code></pre></div>
 </section><section id="search" class="content hidden"></section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="virtio" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.62.0-nightly (de1bc0008 2022-04-21)" ></div>
 </body></html>

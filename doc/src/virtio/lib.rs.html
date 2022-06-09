@@ -35,6 +35,10 @@
 <span id="30">30</span>
 <span id="31">31</span>
 <span id="32">32</span>
+<span id="33">33</span>
+<span id="34">34</span>
+<span id="35">35</span>
+<span id="36">36</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2022 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -60,9 +64,13 @@
 <span class="attribute">#![<span class="ident">feature</span>(<span class="ident">let_chains</span>)]</span>
 
 <span class="kw">extern</span> <span class="kw">crate</span> <span class="ident">alloc</span>;
+<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
+<span class="kw">extern</span> <span class="kw">crate</span> <span class="ident">std</span>;
 
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">console</span>;
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">queue</span>;
+<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
+<span class="kw">mod</span> <span class="ident">test</span>;
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">vsock</span>;
 
 <span class="doccomment">/// The vendor ID for virtio PCI devices.</span>

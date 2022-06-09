@@ -98,6 +98,7 @@
 <span id="93">93</span>
 <span id="94">94</span>
 <span id="95">95</span>
+<span id="96">96</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2022 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -145,6 +146,7 @@
     <span class="ident">AttestationBehavior</span>, <span class="ident">EmptyAttestationGenerator</span>, <span class="ident">EmptyAttestationVerifier</span>,
 };
 <span class="kw">use</span> <span class="ident">rust_hypervisor_firmware_boot::paging</span>;
+<span class="kw">use</span> <span class="ident">rust_hypervisor_firmware_virtio::pci::VirtioPciTransport</span>;
 
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;vsock_channel&quot;</span>)]</span>
 <span class="comment">// The virtio vsock port on which to listen.</span>
@@ -170,7 +172,7 @@
 
 <span class="comment">// Use a virtio console device for the communications channel if we don&#39;t support virtio vsock.</span>
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">not</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;vsock_channel&quot;</span>))]</span>
-<span class="kw">fn</span> <span class="ident">get_channel</span>() -&gt; <span class="ident">virtio::console::Console</span> {
+<span class="kw">fn</span> <span class="ident">get_channel</span>() -&gt; <span class="ident">virtio::console::Console</span><span class="op">&lt;</span><span class="ident">VirtioPciTransport</span><span class="op">&gt;</span> {
     <span class="kw">let</span> <span class="ident">console</span> <span class="op">=</span> <span class="ident">virtio::console::Console::find_and_configure_device</span>()
         .<span class="ident">expect</span>(<span class="string">&quot;Couldn&#39;t configure PCI virtio console device.&quot;</span>);
     <span class="macro">info!</span>(<span class="string">&quot;Console device status: {}&quot;</span>, <span class="ident">console</span>.<span class="ident">get_status</span>());
@@ -179,7 +181,7 @@
 
 <span class="comment">// Use virtio vsock for the communications channel.</span>
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;vsock_channel&quot;</span>)]</span>
-<span class="kw">fn</span> <span class="ident">get_channel</span>() -&gt; <span class="ident">virtio::vsock::socket::Socket</span> {
+<span class="kw">fn</span> <span class="ident">get_channel</span>() -&gt; <span class="ident">virtio::vsock::socket::Socket</span><span class="op">&lt;</span><span class="ident">VirtioPciTransport</span><span class="op">&gt;</span> {
     <span class="kw">let</span> <span class="ident">vsock</span> <span class="op">=</span> <span class="ident">virtio::vsock::VSock::find_and_configure_device</span>()
         .<span class="ident">expect</span>(<span class="string">&quot;Couldn&#39;t configure PCI virtio vsock device.&quot;</span>);
     <span class="macro">info!</span>(<span class="string">&quot;Socket device status: {}&quot;</span>, <span class="ident">vsock</span>.<span class="ident">get_status</span>());
