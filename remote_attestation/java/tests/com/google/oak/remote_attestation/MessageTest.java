@@ -64,7 +64,9 @@ public class MessageTest {
     Assert.assertArrayEquals(
         serverIdentity.getSigningPublicKey(), deserializedServerIdentity.getSigningPublicKey());
     Assert.assertArrayEquals(
-        serverIdentity.getAttestationInfo(), deserializedServerIdentity.getAttestationInfo());
+        serverIdentity.getAttestationReport(), deserializedServerIdentity.getAttestationReport());
+    Assert.assertArrayEquals(serverIdentity.getAdditionalAttestationData(),
+        deserializedServerIdentity.getAdditionalAttestationData());
   }
 
   @Test
@@ -88,7 +90,7 @@ public class MessageTest {
     Assert.assertArrayEquals(
         clientIdentity.getSigningPublicKey(), deserializedClientIdentity.getSigningPublicKey());
     Assert.assertArrayEquals(
-        clientIdentity.getAttestationInfo(), deserializedClientIdentity.getAttestationInfo());
+        clientIdentity.getAttestationReport(), deserializedClientIdentity.getAttestationReport());
   }
 
   @Test

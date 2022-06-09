@@ -48,6 +48,8 @@ android_library(
         "src/com/google/oak/functions/client/AttestationClient.java",
         "src/com/google/oak/functions/client/ServerConfigurationVerifier.java",
     ],
+    # Exclude Android specific targets because they will not run in the main Docker Image.
+    tags = ["manual"],
     deps = [
         "//grpc_unary_attestation/proto:server_java_grpc_lite",
         "//grpc_unary_attestation/proto:server_java_proto_lite",

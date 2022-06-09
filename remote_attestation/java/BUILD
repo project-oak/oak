@@ -52,6 +52,8 @@ android_library(
         "src/com/google/oak/remote_attestation/Message.java",
         "src/com/google/oak/remote_attestation/SignatureVerifier.java",
     ],
+    # Exclude Android specific targets because they will not run in the main Docker Image.
+    tags = ["manual"],
     deps = [
         "@com_google_guava_guava",
         "@tink_java//src/main/java/com/google/crypto/tink/subtle:aes_gcm_jce",
