@@ -102,25 +102,19 @@ fn new_valid_transport() -> TestingTransport {
         config.features = VIRTIO_F_VERSION_1;
         config.max_queue_size = 256;
     }
-    transport.write_device_config(0, 3);
+    transport.write_device_config(0, GUEST_CID as u32);
 
     transport
 }
 
 fn new_legacy_transport() -> TestingTransport {
-    let transport = TestingTransport::default();
-    transport.config.lock().unwrap().max_queue_size = 256;
-    transport.write_device_config(0, 3);
+    let transport = new_valid_transport();
+    transport.set_features(0);
     transport
 }
 
 fn new_transport_small_queue() -> TestingTransport {
-    let transport = TestingTransport::default();
-    {
-        let mut config = transport.config.lock().unwrap();
-        config.features = VIRTIO_F_VERSION_1;
-        config.max_queue_size = 8;
-    }
-    transport.write_device_config(0, GUEST_CID as u32);
+    let transport = new_valid_transport();
+    transport.config.lock().unwrap().max_queue_size = 8;
     transport
 }

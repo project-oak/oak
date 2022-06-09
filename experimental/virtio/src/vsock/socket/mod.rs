@@ -71,12 +71,14 @@ where
         self.config.vsock.write_packet(&mut packet);
         let src_port = self.config.host_port;
         let dst_port = self.config.local_port;
+        let peer_buffer_size;
         loop {
             if let Some(packet) = self.config.vsock.read_filtered_packet(
                 |packet| packet.get_dst_port() == dst_port && packet.get_src_port() == src_port,
                 true,
             ) {
                 if packet.get_op()? == VSockOp::Response {
+                    peer_buffer_size = packet.get_buf_alloc();
                     break;
                 } else {
                     anyhow::bail!(
@@ -86,7 +88,7 @@ where
                 }
             }
         }
-        Ok(Socket::new(self.config))
+        Ok(Socket::new(self.config, peer_buffer_size))
     }
 }
 
@@ -113,6 +115,7 @@ where
     /// an error.
     pub fn accept(mut self) -> anyhow::Result<Socket<T>> {
         let dst_port = self.config.local_port;
+        let peer_buffer_size;
         loop {
             if let Some(packet) = self
                 .config
@@ -121,6 +124,7 @@ where
             {
                 if packet.get_op()? == VSockOp::Request {
                     self.config.host_port = packet.get_src_port();
+                    peer_buffer_size = packet.get_buf_alloc();
                     break;
                 } else {
                     anyhow::bail!("Invalid connection request: {}", packet.get_op()?);
@@ -138,7 +142,7 @@ where
         packet.set_fwd_cnt(0);
         self.config.vsock.write_packet(&mut packet);
 
-        Ok(Socket::new(self.config))
+        Ok(Socket::new(self.config, peer_buffer_size))
     }
 }
 
@@ -172,7 +176,7 @@ impl<T> Socket<T>
 where
     T: VirtioTransport,
 {
-    fn new(config: SocketConfiguration<T>) -> Self {
+    fn new(config: SocketConfiguration<T>, peer_buffer_size: u32) -> Self {
         Self {
             config,
             connection_state: ConnectionState::Connected,
@@ -180,7 +184,7 @@ where
             previous_processed_bytes: Wrapping(0),
             sent_bytes: Wrapping(0),
             peer_processed_bytes: Wrapping(0),
-            peer_buffer_size: Wrapping(0),
+            peer_buffer_size: Wrapping(peer_buffer_size),
             pending_data: None,
         }
     }
@@ -378,7 +382,7 @@ where
 }
 
 /// The state of the connection.
-#[derive(PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq)]
 enum ConnectionState {
     Connected,
     Disconnected,
