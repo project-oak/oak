@@ -763,12 +763,7 @@ fn run_bazel_test() -> Step {
         name: "bazel test".to_string(),
         command: Cmd::new(
             "bazel",
-            &[
-                "test",
-                "--",
-                "//oak_functions/client/java/tests/...:all",
-                "//remote_attestation/java/tests/...:all",
-            ],
+            &["test", "--", "//remote_attestation/java/tests/...:all"],
         ),
     }
 }
