@@ -23,7 +23,7 @@ use oak_idl::Handler;
 use oak_remote_attestation::handshaker::{
     AttestationBehavior, AttestationGenerator, AttestationVerifier,
 };
-use oak_remote_attestation_sessions::{SessionId, SESSION_ID_LENGTH};
+use oak_remote_attestation_sessions::SessionId;
 
 struct InvocationHandler<F, G, V>
 where
