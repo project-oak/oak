@@ -531,6 +531,7 @@ dependencies = [
  "anyhow",
  "channel",
  "ciborium-io",
+ "flatbuffers",
  "log",
  "oak_functions_wasm",
  "oak_functions_workload_logging",
