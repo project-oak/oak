@@ -17,6 +17,7 @@
 use super::*;
 use crate::test::{DeviceStatus, TestingTransport, VIRTIO_F_VERSION_1};
 use alloc::{vec, vec::Vec};
+use ciborium_io::{Read, Write};
 
 #[test]
 fn test_legacy_device_not_supported() {
@@ -88,6 +89,42 @@ fn test_write_bytes() {
         .device_read_once_from_queue::<QUEUE_SIZE>(1)
         .unwrap();
     assert_eq!(data, bytes);
+}
+
+#[test]
+fn test_read_exact() {
+    let data = vec![4; 10];
+    let mut first = vec![0; 5];
+    let mut second = vec![0; 3];
+    let transport = new_valid_transport();
+    let device = VirtioBaseDevice::new(transport.clone());
+    let mut console = Console::new(device);
+    console.init().unwrap();
+    transport.device_write_to_queue::<QUEUE_SIZE>(0, &data[..]);
+    assert!(console.read_exact(&mut first).is_ok());
+    assert!(console.read_exact(&mut second).is_ok());
+    assert_eq!(&data[..5], &first[..]);
+    assert_eq!(&data[5..8], &second[..]);
+    assert!(console.pending_data.is_some());
+    assert_eq!(console.pending_data.unwrap().len(), 2);
+}
+
+#[test]
+fn test_write_all() {
+    let data = vec![13; 5000];
+    let transport = new_valid_transport();
+    let device = VirtioBaseDevice::new(transport.clone());
+    let mut console = Console::new(device);
+    console.init().unwrap();
+    assert!(console.write_all(&data[..]).is_ok());
+    let first = transport
+        .device_read_once_from_queue::<QUEUE_SIZE>(1)
+        .unwrap();
+    let second = transport
+        .device_read_once_from_queue::<QUEUE_SIZE>(1)
+        .unwrap();
+    assert_eq!(&data[..DATA_BUFFER_SIZE], &first[..]);
+    assert_eq!(&data[DATA_BUFFER_SIZE..], &second[..]);
 }
 
 fn new_valid_transport() -> TestingTransport {
