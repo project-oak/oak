@@ -3,7 +3,7 @@
 
 extern crate alloc;
 
-use alloc::string::ToString;
+use alloc::{format, string::ToString};
 
 pub struct TestServiceClient<T: oak_idl::Handler> {
     handler: T
