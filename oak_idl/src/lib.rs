@@ -162,5 +162,5 @@ pub struct Request<'a> {
 /// This is conceptually similar to a method that takes `&[u8]` as input but returns `Vec<u8>` as
 /// output.
 pub trait Handler {
-    fn invoke(&mut self, request: Request) -> Result<Vec<u8>, StatusCode>;
+    fn invoke(&mut self, request: Request) -> Result<Vec<u8>, Status>;
 }

@@ -13,23 +13,23 @@ impl <T: oak_idl::Handler>TestServiceClient<T> {
             handler
         }
     }
-    pub fn lookup_data(&mut self, request_body: &[u8]) -> Result<oak_idl::utils::Message<LookupDataResponse>, oak_idl::Error> {
-        flatbuffers::root::<LookupDataRequest>(request_body).map_err(|err| oak_idl::Error::new_with_message(oak_idl::ErrorCode::InvalidRequest, err.to_string()))?;
+    pub fn lookup_data(&mut self, request_body: &[u8]) -> Result<oak_idl::utils::Message<LookupDataResponse>, oak_idl::Status> {
+        flatbuffers::root::<LookupDataRequest>(request_body).map_err(|err| oak_idl::Status::new_with_message(oak_idl::StatusCode::Internal, format!("Client failed to deserialize the request: {:?}", err)))?;
         let request = oak_idl::Request {
             method_id: 222,
             body: request_body,
         };
         let response_body = self.handler.invoke(request)?;
-        oak_idl::utils::Message::from_vec(response_body).map_err(|err| oak_idl::Error::new_with_message(oak_idl::ErrorCode::InvalidResponse, err.to_string()))
+        oak_idl::utils::Message::from_vec(response_body).map_err(|err| oak_idl::Status::new_with_message(oak_idl::StatusCode::Internal, format!("Client failed to deserialize the response: {:?}", err)))
     }
-    pub fn log(&mut self, request_body: &[u8]) -> Result<oak_idl::utils::Message<LogResponse>, oak_idl::Error> {
-        flatbuffers::root::<LogRequest>(request_body).map_err(|err| oak_idl::Error::new_with_message(oak_idl::ErrorCode::InvalidRequest, err.to_string()))?;
+    pub fn log(&mut self, request_body: &[u8]) -> Result<oak_idl::utils::Message<LogResponse>, oak_idl::Status> {
+        flatbuffers::root::<LogRequest>(request_body).map_err(|err| oak_idl::Status::new_with_message(oak_idl::StatusCode::Internal, format!("Client failed to deserialize the request: {:?}", err)))?;
         let request = oak_idl::Request {
             method_id: 223,
             body: request_body,
         };
         let response_body = self.handler.invoke(request)?;
-        oak_idl::utils::Message::from_vec(response_body).map_err(|err| oak_idl::Error::new_with_message(oak_idl::ErrorCode::InvalidResponse, err.to_string()))
+        oak_idl::utils::Message::from_vec(response_body).map_err(|err| oak_idl::Status::new_with_message(oak_idl::StatusCode::Internal, format!("Client failed to deserialize the response: {:?}", err)))
     }
 }
 
@@ -38,28 +38,28 @@ pub struct TestServiceServer<S> {
 }
 
 impl <S: TestService> oak_idl::Handler for TestServiceServer<S> {
-    fn invoke(&mut self, request: oak_idl::Request) -> Result<alloc::vec::Vec<u8>, oak_idl::Error> {
+    fn invoke(&mut self, request: oak_idl::Request) -> Result<alloc::vec::Vec<u8>, oak_idl::Status> {
         match request.method_id {
             222 => {
-                let request = flatbuffers::root::<LookupDataRequest>(request.body).map_err(|err| oak_idl::Error::new_with_message(oak_idl::ErrorCode::InvalidRequest, err.to_string()))?;
+                let request = flatbuffers::root::<LookupDataRequest>(request.body).map_err(|err| oak_idl::Status::new_with_message(oak_idl::StatusCode::Internal, format!("Service failed to deserialize the request: {:?}", err)))?;
                 let response = self.service.lookup_data(&request)?;
                 let response_body = response.buf().to_vec();
                 Ok(response_body)
             }
             223 => {
-                let request = flatbuffers::root::<LogRequest>(request.body).map_err(|err| oak_idl::Error::new_with_message(oak_idl::ErrorCode::InvalidRequest, err.to_string()))?;
+                let request = flatbuffers::root::<LogRequest>(request.body).map_err(|err| oak_idl::Status::new_with_message(oak_idl::StatusCode::Internal, format!("Service failed to deserialize the request: {:?}", err)))?;
                 let response = self.service.log(&request)?;
                 let response_body = response.buf().to_vec();
                 Ok(response_body)
             }
-            _ => Err(oak_idl::Error::new(oak_idl::ErrorCode::InvalidMethodId))
+            _ => Err(oak_idl::Status::new(oak_idl::StatusCode::Unimplemented))
         }
     }
 }
 
 pub trait TestService: Sized {
-    fn lookup_data(&mut self, request: &LookupDataRequest) -> Result<oak_idl::utils::Message<LookupDataResponse>, oak_idl::Error>;
-    fn log(&mut self, request: &LogRequest) -> Result<oak_idl::utils::Message<LogResponse>, oak_idl::Error>;
+    fn lookup_data(&mut self, request: &LookupDataRequest) -> Result<oak_idl::utils::Message<LookupDataResponse>, oak_idl::Status>;
+    fn log(&mut self, request: &LogRequest) -> Result<oak_idl::utils::Message<LogResponse>, oak_idl::Status>;
     fn serve(self) -> TestServiceServer<Self> {
         TestServiceServer { service : self }
     }
