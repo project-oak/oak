@@ -44,20 +44,11 @@ where
         &mut self,
         request_message: &schema::UserRequest,
     ) -> Result<oak_idl::utils::Message<schema::UserRequestResponse>, oak_idl::Error> {
-        let session_id: SessionId = {
-            let session_id_flatbuffers_array: flatbuffers::Array<u8, 8> = request_message
-                .session_id()
-                .ok_or_else(|| oak_idl::Error::new(oak_idl::ErrorCode::BadRequest))?
-                .value();
-            if session_id_flatbuffers_array.len() != SESSION_ID_LENGTH {
-                return Err(oak_idl::Error::new(oak_idl::ErrorCode::BadRequest));
-            };
-            let mut session_id: SessionId = [0; SESSION_ID_LENGTH];
-            for (index, byte) in session_id.iter_mut().enumerate() {
-                *byte = session_id_flatbuffers_array.get(index);
-            }
-            session_id
-        };
+        let session_id: SessionId = request_message
+            .session_id()
+            .ok_or_else(|| oak_idl::Error::new(oak_idl::ErrorCode::BadRequest))?
+            .value()
+            .into();
         let request_body: &[u8] = request_message
             .body()
             .ok_or_else(|| oak_idl::Error::new(oak_idl::ErrorCode::BadRequest))?;
