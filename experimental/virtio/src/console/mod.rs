@@ -20,6 +20,7 @@ use anyhow::Context;
 use rust_hypervisor_firmware_virtio::{
     device::VirtioBaseDevice,
     pci::{find_device, VirtioPciTransport},
+    virtio::VirtioTransport,
 };
 
 /// The number of buffer descriptors in each of the queues.
@@ -48,9 +49,9 @@ const PCI_DEVICE_ID: u16 = 0x1040 + DEVICE_ID;
 /// and no configuration.
 ///
 /// See <https://docs.oasis-open.org/virtio/virtio/v1.1/csprd01/virtio-v1.1-csprd01.html#x1-39000010>.
-pub struct Console {
+pub struct Console<T: VirtioTransport> {
     /// The base virtio-over-PCI device used for configuration and notification.
-    device: VirtioBaseDevice<VirtioPciTransport>,
+    device: VirtioBaseDevice<T>,
     /// The receive queue, used for receiving bytes.
     rx_queue: DeviceWriteOnlyQueue<QUEUE_SIZE, DATA_BUFFER_SIZE>,
     /// The transmit queue, used for sending bytes.
@@ -61,7 +62,7 @@ pub struct Console {
     pending_data: Option<VecDeque<u8>>,
 }
 
-impl Console {
+impl Console<VirtioPciTransport> {
     /// Finds the virtio console PCI device, initialises the device, and configures the queues.
     pub fn find_and_configure_device() -> anyhow::Result<Self> {
         // For now we just scan the first 32 devices on PCI bus 0 to find the first one that matches
@@ -74,7 +75,12 @@ impl Console {
         result.init()?;
         Ok(result)
     }
+}
 
+impl<T> Console<T>
+where
+    T: VirtioTransport,
+{
     /// Reads the next available bytes from the receive queue, if any are available.
     pub fn read_bytes(&mut self) -> Option<VecDeque<u8>> {
         let buffer = self.rx_queue.read_next_used_buffer()?;
@@ -114,7 +120,7 @@ impl Console {
         self.device.get_status()
     }
 
-    fn new(device: VirtioBaseDevice<VirtioPciTransport>) -> Self {
+    fn new(device: VirtioBaseDevice<T>) -> Self {
         let tx_queue = DriverWriteOnlyQueue::new();
         let rx_queue = DeviceWriteOnlyQueue::new();
         Console {
@@ -190,7 +196,10 @@ impl Console {
     }
 }
 
-impl ciborium_io::Read for Console {
+impl<T> ciborium_io::Read for Console<T>
+where
+    T: VirtioTransport,
+{
     type Error = anyhow::Error;
 
     fn read_exact(&mut self, data: &mut [u8]) -> Result<(), Self::Error> {
@@ -204,7 +213,10 @@ impl ciborium_io::Read for Console {
     }
 }
 
-impl ciborium_io::Write for Console {
+impl<T> ciborium_io::Write for Console<T>
+where
+    T: VirtioTransport,
+{
     type Error = anyhow::Error;
 
     fn write_all(&mut self, data: &[u8]) -> Result<(), Self::Error> {
@@ -224,3 +236,6 @@ impl ciborium_io::Write for Console {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests;

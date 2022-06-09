@@ -23,9 +23,13 @@
 #![feature(let_chains)]
 
 extern crate alloc;
+#[cfg(test)]
+extern crate std;
 
 pub mod console;
 pub mod queue;
+#[cfg(test)]
+mod test;
 pub mod vsock;
 
 /// The vendor ID for virtio PCI devices.
