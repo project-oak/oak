@@ -465,6 +465,7 @@ dependencies = [
  "oak_remote_attestation",
  "runtime",
  "rust-hypervisor-firmware-boot",
+ "rust-hypervisor-firmware-virtio",
  "strum",
  "uart_16550",
  "virtio",

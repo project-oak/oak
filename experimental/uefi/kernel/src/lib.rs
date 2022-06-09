@@ -45,6 +45,7 @@ use oak_remote_attestation::handshaker::{
     AttestationBehavior, EmptyAttestationGenerator, EmptyAttestationVerifier,
 };
 use rust_hypervisor_firmware_boot::paging;
+use rust_hypervisor_firmware_virtio::pci::VirtioPciTransport;
 
 #[cfg(feature = "vsock_channel")]
 // The virtio vsock port on which to listen.
@@ -70,7 +71,7 @@ fn main<E: boot::E820Entry, B: boot::BootInfo<E>>(info: &B) -> ! {
 
 // Use a virtio console device for the communications channel if we don't support virtio vsock.
 #[cfg(not(feature = "vsock_channel"))]
-fn get_channel() -> virtio::console::Console {
+fn get_channel() -> virtio::console::Console<VirtioPciTransport> {
     let console = virtio::console::Console::find_and_configure_device()
         .expect("Couldn't configure PCI virtio console device.");
     info!("Console device status: {}", console.get_status());
@@ -79,7 +80,7 @@ fn get_channel() -> virtio::console::Console {
 
 // Use virtio vsock for the communications channel.
 #[cfg(feature = "vsock_channel")]
-fn get_channel() -> virtio::vsock::socket::Socket {
+fn get_channel() -> virtio::vsock::socket::Socket<VirtioPciTransport> {
     let vsock = virtio::vsock::VSock::find_and_configure_device()
         .expect("Couldn't configure PCI virtio vsock device.");
     info!("Socket device status: {}", vsock.get_status());

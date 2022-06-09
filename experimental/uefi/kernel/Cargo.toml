@@ -25,6 +25,7 @@ runtime = { path = "../runtime", default-features = false, features = [
   "rust-crypto"
 ] }
 rust-hypervisor-firmware-boot = { path = "../../../third_party/rust-hypervisor-firmware-boot" }
+rust-hypervisor-firmware-virtio = { path = "../../../third_party/rust-hypervisor-firmware-virtio" }
 strum = { version = "*", default-features = false, features = ["derive"] }
 uart_16550 = "*"
 virtio = { path = "../../virtio" }
