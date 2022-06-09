@@ -137,8 +137,8 @@ impl<'a> From<&'a Frame> for oak_idl::Request<'a> {
     }
 }
 
-impl From<Result<Vec<u8>, oak_idl::Error>> for Frame {
-    fn from(result: Result<Vec<u8>, oak_idl::Error>) -> Frame {
+impl From<Result<Vec<u8>, oak_idl::Status>> for Frame {
+    fn from(result: Result<Vec<u8>, oak_idl::Status>) -> Frame {
         // In response frames, the status code `0` indicates a succesful
         // response. Values above `0` represent an error code as defined
         // in the oak_idl.
@@ -155,14 +155,14 @@ impl From<Result<Vec<u8>, oak_idl::Error>> for Frame {
     }
 }
 
-impl From<Frame> for Result<Vec<u8>, oak_idl::Error> {
+impl From<Frame> for Result<Vec<u8>, oak_idl::Status> {
     fn from(frame: Frame) -> Self {
         // In response frames, the status code `0` indicates a succesful
         // response. Values above `0` represent an error code as defined
         // in the oak_idl.
         match frame.method_or_status {
             0 => Ok(frame.body),
-            _ => Err(oak_idl::Error {
+            _ => Err(oak_idl::Status {
                 code: frame.method_or_status.into(),
                 message: String::from_utf8(frame.body).unwrap_or_else(|err| {
                     alloc::format!(

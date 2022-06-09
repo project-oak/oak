@@ -118,14 +118,14 @@ impl<T> oak_idl::Handler for ClientHandler<T>
 where
     T: ciborium_io::Read<Error = anyhow::Error> + ciborium_io::Write<Error = anyhow::Error>,
 {
-    fn invoke(&mut self, request: oak_idl::Request) -> Result<Vec<u8>, oak_idl::Error> {
+    fn invoke(&mut self, request: oak_idl::Request) -> Result<Vec<u8>, oak_idl::Status> {
         self.inner
             .write_frame(request.into())
-            .map_err(|_| oak_idl::Error::new(oak_idl::ErrorCode::InternalError))?;
+            .map_err(|_| oak_idl::Status::new(oak_idl::StatusCode::Internal))?;
 
         self.inner
             .read_frame()
-            .map_err(|_| oak_idl::Error::new(oak_idl::ErrorCode::InternalError))?
+            .map_err(|_| oak_idl::Status::new(oak_idl::StatusCode::Internal))?
             .into()
     }
 }
@@ -186,7 +186,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Use a bmrng channel for serial communication. The good thing about spawning a separate
     // task for the serial communication is that it serializes (no pun intended) the communication,
     // as right now we don't have any mechanisms to track multiple requests in flight.
-    let (tx, mut rx) = bmrng::unbounded_channel::<Vec<u8>, Result<Vec<u8>, oak_idl::Error>>();
+    let (tx, mut rx) = bmrng::unbounded_channel::<Vec<u8>, Result<Vec<u8>, oak_idl::Status>>();
 
     tokio::spawn(async move {
         let mut client = {
@@ -194,13 +194,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let client_handler = ClientHandler::new(comms_channel);
             schema::TrustedRuntimeClient::new(client_handler)
         };
-        let mut respond = |input: Vec<u8>| -> Result<Vec<u8>, oak_idl::Error> {
+        let mut respond = |input: Vec<u8>| -> Result<Vec<u8>, oak_idl::Status> {
             let request_message = oak_idl::utils::Message::<schema::UserRequest>::from_vec(input)
                 .map_err(|err| {
-                oak_idl::Error::new_with_message(
-                    oak_idl::ErrorCode::InvalidRequest,
-                    err.to_string(),
-                )
+                oak_idl::Status::new_with_message(oak_idl::StatusCode::Internal, err.to_string())
             })?;
 
             let response_message = client.handle_user_request(request_message.buf())?;
@@ -208,7 +205,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let response_body = response_message
                 .get()
                 .body()
-                .ok_or_else(|| oak_idl::Error::new(oak_idl::ErrorCode::InternalError))?;
+                .ok_or_else(|| oak_idl::Status::new(oak_idl::StatusCode::Internal))?;
 
             Ok(response_body.to_vec())
         };
