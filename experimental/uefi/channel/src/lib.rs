@@ -36,8 +36,8 @@ pub type FrameLength = u32;
 const FRAME_LENGTH_SIZE: usize = 4;
 static_assertions::assert_eq_size!([u8; FRAME_LENGTH_SIZE], FrameLength);
 
-/// In request frames this field contains the id of the method that is invoked.
-/// In response frames this field contains the status code of the method invocation.
+/// In request frames this field contains the id of the method_or_status that is invoked.
+/// In response frames this field contains the status code of the method_or_status invocation.
 pub type Method = u32;
 const METHOD_SIZE: usize = 4;
 static_assertions::assert_eq_size!([u8; METHOD_SIZE], Method);
@@ -49,7 +49,7 @@ static_assertions::assert_eq_size!(
 );
 
 pub struct Frame {
-    pub method: Method,
+    pub method_or_status: Method,
     pub body: Vec<u8>,
 }
 
@@ -84,10 +84,10 @@ where
             self.inner.read_exact(&mut length_bytes)?;
             FrameLength::from_le_bytes(length_bytes)
         };
-        let method = {
-            let mut method_bytes = [0; METHOD_SIZE];
-            self.inner.read_exact(&mut method_bytes)?;
-            Method::from_le_bytes(method_bytes)
+        let method_or_status = {
+            let mut method_or_status_bytes = [0; METHOD_SIZE];
+            self.inner.read_exact(&mut method_or_status_bytes)?;
+            Method::from_le_bytes(method_or_status_bytes)
         };
 
         let body = {
@@ -102,14 +102,17 @@ where
             body
         };
 
-        Ok(Frame { method, body })
+        Ok(Frame {
+            method_or_status,
+            body,
+        })
     }
 
     pub fn write_frame(&mut self, frame: Frame) -> anyhow::Result<()> {
         let length_bytes = frame.len()?.to_le_bytes();
         self.inner.write_all(&length_bytes)?;
-        let method_bytes = frame.method.to_le_bytes();
-        self.inner.write_all(&method_bytes)?;
+        let method_or_status_bytes = frame.method_or_status.to_le_bytes();
+        self.inner.write_all(&method_or_status_bytes)?;
         self.inner.write_all(&frame.body)?;
         self.inner.flush()?;
         Ok(())
@@ -119,7 +122,7 @@ where
 impl<'a> From<oak_idl::Request<'a>> for Frame {
     fn from(request: oak_idl::Request) -> Frame {
         Frame {
-            method: request.method_id,
+            method_or_status: request.method_id,
             body: request.body.to_vec(),
         }
     }
@@ -128,7 +131,7 @@ impl<'a> From<oak_idl::Request<'a>> for Frame {
 impl<'a> From<&'a Frame> for oak_idl::Request<'a> {
     fn from(frame: &'a Frame) -> Self {
         oak_idl::Request {
-            method_id: frame.method,
+            method_id: frame.method_or_status,
             body: &frame.body,
         }
     }
@@ -138,11 +141,11 @@ impl From<Result<Vec<u8>, oak_idl::Error>> for Frame {
     fn from(result: Result<Vec<u8>, oak_idl::Error>) -> Frame {
         match result {
             Ok(response) => Frame {
-                method: 0,
+                method_or_status: 0,
                 body: response,
             },
             Err(error) => Frame {
-                method: error.code.into(),
+                method_or_status: error.code.into(),
                 body: error.message.as_bytes().to_vec(),
             },
         }
@@ -151,10 +154,10 @@ impl From<Result<Vec<u8>, oak_idl::Error>> for Frame {
 
 impl From<Frame> for Result<Vec<u8>, oak_idl::Error> {
     fn from(frame: Frame) -> Self {
-        match frame.method {
+        match frame.method_or_status {
             0 => Ok(frame.body),
             _ => Err(oak_idl::Error {
-                code: frame.method.into(),
+                code: frame.method_or_status.into(),
                 message: String::from_utf8(frame.body).unwrap_or_else(|err| {
                     alloc::format!(
                         "Could not parse response error message bytes as utf8: {:?}",
