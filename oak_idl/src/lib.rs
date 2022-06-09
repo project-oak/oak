@@ -24,25 +24,22 @@ use core::fmt::Debug;
 
 pub mod utils;
 
-// TODO(#2500): Align with gRPC Status.
-// Ref: https://github.com/grpc/grpc/blob/master/src/proto/grpc/status/status.proto
-/// Logical error model.
 #[derive(Debug)]
-pub struct Error {
-    pub code: ErrorCode,
+pub struct Status {
+    pub code: StatusCode,
     /// English message that helps developers understand and resolve the error.
     pub message: String,
 }
 
-impl Error {
-    pub fn new(code: ErrorCode) -> Self {
+impl Status {
+    pub fn new(code: StatusCode) -> Self {
         Self {
             code,
             message: "".to_string(),
         }
     }
 
-    pub fn new_with_message(code: ErrorCode, message: impl Into<String>) -> Self {
+    pub fn new_with_message(code: StatusCode, message: impl Into<String>) -> Self {
         Self {
             code,
             message: message.into(),
@@ -50,44 +47,94 @@ impl Error {
     }
 }
 
-// TODO(#2500): Align these with gRPC status codes.
-/// Basic error code to categorize the error. Error codes are represented as an
-/// u32 id. The id `0` is reserved, as it may be used to indicate an "Ok" status
-/// in transport implementations.
-#[repr(u32)]
+/// gRPC status codes used by [`Status`].
+///
+/// These variants match the [gRPC status codes].
+///
+/// [gRPC status codes]: https://github.com/grpc/grpc/blob/master/doc/statuscodes.md#status-codes-and-their-use-in-grpc
+// Based on tonic's status code struct: https://github.com/hyperium/tonic/blob/91b73f9fc3c1bc281e85177808721b3efe37ece0/tonic/src/status.rs
 #[derive(Debug)]
-pub enum ErrorCode {
-    /// The request message could not be deserialized correctly.
-    InvalidRequest = 1,
-    /// The response message could not be deserialized correctly.
-    InvalidResponse = 2,
-    /// The method id provided for the invocation was not implemented by the server.
-    InvalidMethodId = 3,
-    /// The request was deserialized correctly but contained invalid values.
-    BadRequest = 4,
-    /// An error occured while invoking the method on the server.
-    InternalError = 5,
+pub enum StatusCode {
+    /// The operation completed successfully.
+    Ok = 0,
+
+    /// The operation was cancelled.
+    Cancelled = 1,
+
     /// Unknown error.
-    Unknown = 6,
+    Unknown = 2,
+
+    /// Client specified an invalid argument.
+    InvalidArgument = 3,
+
+    /// Deadline expired before operation could complete.
+    DeadlineExceeded = 4,
+
+    /// Some requested entity was not found.
+    NotFound = 5,
+
+    /// Some entity that we attempted to create already exists.
+    AlreadyExists = 6,
+
+    /// The caller does not have permission to execute the specified operation.
+    PermissionDenied = 7,
+
+    /// Some resource has been exhausted.
+    ResourceExhausted = 8,
+
+    /// The system is not in a state required for the operation's execution.
+    FailedPrecondition = 9,
+
+    /// The operation was aborted.
+    Aborted = 10,
+
+    /// Operation was attempted past the valid range.
+    OutOfRange = 11,
+
+    /// Operation is not implemented or not supported.
+    Unimplemented = 12,
+
+    /// Internal error.
+    Internal = 13,
+
+    /// The service is currently unavailable.
+    Unavailable = 14,
+
+    /// Unrecoverable data loss or corruption.
+    DataLoss = 15,
+
+    /// The request does not have valid authentication credentials
+    Unauthenticated = 16,
 }
 
-impl From<u32> for ErrorCode {
+impl From<u32> for StatusCode {
     fn from(i: u32) -> Self {
         match i {
-            1 => ErrorCode::InvalidRequest,
-            2 => ErrorCode::InvalidResponse,
-            3 => ErrorCode::InvalidMethodId,
-            4 => ErrorCode::BadRequest,
-            5 => ErrorCode::InternalError,
-            6 => ErrorCode::Unknown,
+            0 => StatusCode::Ok,
+            1 => StatusCode::Cancelled,
+            2 => StatusCode::Unknown,
+            3 => StatusCode::InvalidArgument,
+            4 => StatusCode::DeadlineExceeded,
+            5 => StatusCode::NotFound,
+            6 => StatusCode::AlreadyExists,
+            7 => StatusCode::PermissionDenied,
+            8 => StatusCode::ResourceExhausted,
+            9 => StatusCode::FailedPrecondition,
+            10 => StatusCode::Aborted,
+            11 => StatusCode::OutOfRange,
+            12 => StatusCode::Unimplemented,
+            13 => StatusCode::Internal,
+            14 => StatusCode::Unavailable,
+            15 => StatusCode::DataLoss,
+            16 => StatusCode::Unauthenticated,
 
-            _ => ErrorCode::Unknown,
+            _ => StatusCode::Unknown,
         }
     }
 }
 
-impl From<ErrorCode> for u32 {
-    fn from(code: ErrorCode) -> u32 {
+impl From<StatusCode> for u32 {
+    fn from(code: StatusCode) -> u32 {
         code as u32
     }
 }
@@ -115,5 +162,5 @@ pub struct Request<'a> {
 /// This is conceptually similar to a method that takes `&[u8]` as input but returns `Vec<u8>` as
 /// output.
 pub trait Handler {
-    fn invoke(&mut self, request: Request) -> Result<Vec<u8>, Error>;
+    fn invoke(&mut self, request: Request) -> Result<Vec<u8>, Status>;
 }

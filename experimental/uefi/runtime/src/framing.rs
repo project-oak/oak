@@ -43,20 +43,20 @@ where
     fn handle_user_request(
         &mut self,
         request_message: &schema::UserRequest,
-    ) -> Result<oak_idl::utils::Message<schema::UserRequestResponse>, oak_idl::Error> {
+    ) -> Result<oak_idl::utils::Message<schema::UserRequestResponse>, oak_idl::Status> {
         let session_id: SessionId = request_message
             .session_id()
-            .ok_or_else(|| oak_idl::Error::new(oak_idl::ErrorCode::BadRequest))?
+            .ok_or_else(|| oak_idl::Status::new(oak_idl::StatusCode::InvalidArgument))?
             .value()
             .into();
         let request_body: &[u8] = request_message
             .body()
-            .ok_or_else(|| oak_idl::Error::new(oak_idl::ErrorCode::BadRequest))?;
+            .ok_or_else(|| oak_idl::Status::new(oak_idl::StatusCode::InvalidArgument))?;
 
         let response = self
             .attestation_handler
             .message(session_id, request_body)
-            .map_err(|_| oak_idl::Error::new(oak_idl::ErrorCode::InternalError))?;
+            .map_err(|_| oak_idl::Status::new(oak_idl::StatusCode::Internal))?;
 
         let response_message = {
             let mut builder = oak_idl::utils::MessageBuilder::default();
@@ -67,7 +67,7 @@ where
             );
             builder
                 .finish(user_request_response)
-                .map_err(|_| oak_idl::Error::new(oak_idl::ErrorCode::InternalError))?
+                .map_err(|_| oak_idl::Status::new(oak_idl::StatusCode::Internal))?
         };
         Ok(response_message)
     }

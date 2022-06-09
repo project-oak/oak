@@ -31,7 +31,7 @@ impl test_schema::TestService for TestServiceImpl {
     fn lookup_data(
         &mut self,
         request: &test_schema::LookupDataRequest,
-    ) -> Result<oak_idl::utils::Message<test_schema::LookupDataResponse>, oak_idl::Error> {
+    ) -> Result<oak_idl::utils::Message<test_schema::LookupDataResponse>, oak_idl::Status> {
         let h = maplit::hashmap! {
             vec![14, 12] => vec![19, 88]
         };
@@ -44,8 +44,8 @@ impl test_schema::TestService for TestServiceImpl {
             &test_schema::LookupDataResponseArgs { value },
         );
         let b = b.finish(m).map_err(|err| {
-            oak_idl::Error::new_with_message(
-                oak_idl::ErrorCode::InternalError,
+            oak_idl::Status::new_with_message(
+                oak_idl::StatusCode::Internal,
                 format!("failed to build response: {:?}", err),
             )
         })?;
@@ -55,13 +55,13 @@ impl test_schema::TestService for TestServiceImpl {
     fn log(
         &mut self,
         request: &test_schema::LogRequest,
-    ) -> Result<oak_idl::utils::Message<test_schema::LogResponse>, oak_idl::Error> {
+    ) -> Result<oak_idl::utils::Message<test_schema::LogResponse>, oak_idl::Status> {
         eprintln!("log: {}", request.entry().unwrap());
         let mut b = oak_idl::utils::MessageBuilder::default();
         let m = test_schema::LogResponse::create(&mut b, &test_schema::LogResponseArgs {});
         let b = b.finish(m).map_err(|err| {
-            oak_idl::Error::new_with_message(
-                oak_idl::ErrorCode::InternalError,
+            oak_idl::Status::new_with_message(
+                oak_idl::StatusCode::Internal,
                 format!("failed to build response: {:?}", err),
             )
         })?;

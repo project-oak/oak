@@ -30,11 +30,11 @@ use proto::{
     UnaryRequest, UnaryResponse,
 };
 
-fn encode_request(unary_request: UnaryRequest) -> Result<Vec<u8>, oak_idl::Error> {
+fn encode_request(unary_request: UnaryRequest) -> Result<Vec<u8>, oak_idl::Status> {
     let mut session_id: SessionId = [0; SESSION_ID_LENGTH];
     if unary_request.session_id.len() != SESSION_ID_LENGTH {
-        return Err(oak_idl::Error::new_with_message(
-            oak_idl::ErrorCode::InvalidRequest,
+        return Err(oak_idl::Status::new_with_message(
+            oak_idl::StatusCode::Internal,
             format!(
                 "session_id must be {} bytes in length, found a length of {} bytes instead",
                 SESSION_ID_LENGTH,
@@ -57,7 +57,7 @@ fn encode_request(unary_request: UnaryRequest) -> Result<Vec<u8>, oak_idl::Error
             },
         );
         builder.finish(message).map_err(|err| {
-            oak_idl::Error::new_with_message(oak_idl::ErrorCode::InvalidRequest, err.to_string())
+            oak_idl::Status::new_with_message(oak_idl::StatusCode::Internal, err.to_string())
         })?
     };
 
@@ -66,7 +66,7 @@ fn encode_request(unary_request: UnaryRequest) -> Result<Vec<u8>, oak_idl::Error
 }
 
 pub struct EchoImpl {
-    channel: UnboundedRequestSender<Vec<u8>, Result<Vec<u8>, oak_idl::Error>>,
+    channel: UnboundedRequestSender<Vec<u8>, Result<Vec<u8>, oak_idl::Status>>,
 }
 
 #[tonic::async_trait]
@@ -96,7 +96,7 @@ impl UnarySession for EchoImpl {
 
 pub fn server(
     addr: SocketAddr,
-    channel: UnboundedRequestSender<Vec<u8>, Result<Vec<u8>, oak_idl::Error>>,
+    channel: UnboundedRequestSender<Vec<u8>, Result<Vec<u8>, oak_idl::Status>>,
 ) -> impl Future<Output = Result<(), tonic::transport::Error>> {
     let server_impl = EchoImpl { channel };
     Server::builder()
