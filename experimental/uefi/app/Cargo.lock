@@ -67,6 +67,11 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "ciborium-io",
+ "flatbuffers",
+ "oak_idl",
+ "oak_idl_gen_services",
+ "oak_idl_gen_structs",
+ "static_assertions",
 ]
 
 [[package]]
@@ -82,6 +87,21 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e8ad8cef104ac57b68b89df3208164d228503abbdce70f6880ffa3d970e7443a"
 dependencies = [
  "cc",
+]
+
+[[package]]
+name = "convert_case"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fb4a24b1aaf0fd0ce8b45161144d6f42cd91677fd5940fd431183eb023b3a2b8"
+
+[[package]]
+name = "core2"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b49ba7ef1ad6107f8824dbe97de947cbaac53c44e7f9756a1fba0d37c1eec505"
+dependencies = [
+ "memchr",
 ]
 
 [[package]]
@@ -110,6 +130,17 @@ name = "fixedbitset"
 version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "279fb028e20b3c4c320317955b77c5e0c9701f05a1d309905d6fc702cdc5053e"
+
+[[package]]
+name = "flatbuffers"
+version = "2.1.2"
+source = "git+https://github.com/jul-sh/flatbuffers.git?rev=a07ddee936737da89aeb5a496f9742a805537188#a07ddee936737da89aeb5a496f9742a805537188"
+dependencies = [
+ "bitflags",
+ "core2",
+ "smallvec",
+ "thiserror_core2",
+]
 
 [[package]]
 name = "getrandom"
@@ -211,6 +242,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "memchr"
+version = "2.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2dffe52ecf27772e601905b7522cb4ef790d2cc203488bbd0e2fe85fcb74566d"
+
+[[package]]
 name = "memory_units"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -294,6 +331,27 @@ dependencies = [
  "oak_functions_extension",
  "oak_logger",
 ]
+
+[[package]]
+name = "oak_idl"
+version = "0.1.0"
+dependencies = [
+ "flatbuffers",
+]
+
+[[package]]
+name = "oak_idl_gen_services"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "convert_case",
+ "flatbuffers",
+ "oak_idl_gen_structs",
+]
+
+[[package]]
+name = "oak_idl_gen_structs"
+version = "0.1.0"
 
 [[package]]
 name = "oak_logger"
@@ -473,9 +531,11 @@ dependencies = [
  "anyhow",
  "channel",
  "ciborium-io",
+ "flatbuffers",
  "log",
  "oak_functions_wasm",
  "oak_functions_workload_logging",
+ "oak_idl",
  "oak_logger",
  "oak_remote_attestation",
  "oak_remote_attestation_sessions",
@@ -502,10 +562,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "smallvec"
+version = "1.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f2dd574626839106c320a323308629dcb1acfc96e32a8cba364ddc61ac23ee83"
+
+[[package]]
 name = "spin"
 version = "0.9.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c530c2b0d0bf8b69304b39fe2001993e267461948b890cd037d8ad4293fa1a0d"
+
+[[package]]
+name = "static_assertions"
+version = "1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
 
 [[package]]
 name = "syn"
@@ -530,6 +602,25 @@ dependencies = [
  "redox_syscall",
  "remove_dir_all",
  "winapi",
+]
+
+[[package]]
+name = "thiserror_core2"
+version = "2.0.0"
+source = "git+https://github.com/jul-sh/thiserror-core2.git?rev=b99e1a0106623cbbd12cbb5562d01df7a3fdc22e#b99e1a0106623cbbd12cbb5562d01df7a3fdc22e"
+dependencies = [
+ "core2",
+ "thiserror_core2-impl",
+]
+
+[[package]]
+name = "thiserror_core2-impl"
+version = "2.0.0"
+source = "git+https://github.com/jul-sh/thiserror-core2.git?rev=b99e1a0106623cbbd12cbb5562d01df7a3fdc22e#b99e1a0106623cbbd12cbb5562d01df7a3fdc22e"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]
@@ -668,13 +759,3 @@ name = "winapi-x86_64-pc-windows-gnu"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "712e227841d057c1ee1cd2fb22fa7e5a5461ae8e48fa2ca79ec42cfc1931183f"
-
-[[patch.unused]]
-name = "flatbuffers"
-version = "2.1.2"
-source = "git+https://github.com/jul-sh/flatbuffers.git?rev=a07ddee936737da89aeb5a496f9742a805537188#a07ddee936737da89aeb5a496f9742a805537188"
-
-[[patch.unused]]
-name = "thiserror_core2"
-version = "2.0.0"
-source = "git+https://github.com/jul-sh/thiserror-core2.git?rev=b99e1a0106623cbbd12cbb5562d01df7a3fdc22e#b99e1a0106623cbbd12cbb5562d01df7a3fdc22e"

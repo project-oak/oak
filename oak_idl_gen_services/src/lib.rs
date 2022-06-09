@@ -151,6 +151,8 @@ fn generate_service(service: &Service) -> anyhow::Result<String> {
         format!(""),
         format!("extern crate alloc;"),
         format!(""),
+        format!("use alloc::string::ToString;"),
+        format!(""),
         format!(
             "pub struct {}<T: oak_idl::Handler> {{",
             client_name(service)

@@ -15,12 +15,63 @@
 //
 
 use crate::remote_attestation::AttestationHandler;
+use alloc::vec::Vec;
 use anyhow::Context;
-use channel::{Frame, Framed};
+use channel::{schema, schema::TrustedRuntime, Framed};
 use ciborium_io::{Read, Write};
+use oak_idl::Handler;
 use oak_remote_attestation::handshaker::{
     AttestationBehavior, AttestationGenerator, AttestationVerifier,
 };
+use oak_remote_attestation_sessions::SessionId;
+
+struct InvocationHandler<F, G, V>
+where
+    F: Send + Sync + Clone + FnOnce(Vec<u8>) -> anyhow::Result<Vec<u8>>,
+    G: AttestationGenerator,
+    V: AttestationVerifier,
+{
+    attestation_handler: AttestationHandler<F, G, V>,
+}
+
+impl<F, G, V> schema::TrustedRuntime for InvocationHandler<F, G, V>
+where
+    F: Send + Sync + Clone + FnOnce(Vec<u8>) -> anyhow::Result<Vec<u8>>,
+    G: AttestationGenerator,
+    V: AttestationVerifier,
+{
+    fn handle_user_request(
+        &mut self,
+        request_message: &schema::UserRequest,
+    ) -> Result<oak_idl::utils::Message<schema::UserRequestResponse>, oak_idl::Error> {
+        let session_id: SessionId = request_message
+            .session_id()
+            .ok_or_else(|| oak_idl::Error::new(oak_idl::ErrorCode::BadRequest))?
+            .value()
+            .into();
+        let request_body: &[u8] = request_message
+            .body()
+            .ok_or_else(|| oak_idl::Error::new(oak_idl::ErrorCode::BadRequest))?;
+
+        let response = self
+            .attestation_handler
+            .message(session_id, request_body)
+            .map_err(|_| oak_idl::Error::new(oak_idl::ErrorCode::InternalError))?;
+
+        let response_message = {
+            let mut builder = oak_idl::utils::MessageBuilder::default();
+            let body = builder.create_vector::<u8>(&response);
+            let user_request_response = schema::UserRequestResponse::create(
+                &mut builder,
+                &schema::UserRequestResponseArgs { body: Some(body) },
+            );
+            builder
+                .finish(user_request_response)
+                .map_err(|_| oak_idl::Error::new(oak_idl::ErrorCode::InternalError))?
+        };
+        Ok(response_message)
+    }
+}
 
 // Processes incoming frames.
 pub fn handle_frames<T, G: AttestationGenerator, V: AttestationVerifier>(
@@ -31,17 +82,18 @@ where
     T: Read<Error = anyhow::Error> + Write<Error = anyhow::Error>,
 {
     let wasm_handler = crate::wasm::new_wasm_handler()?;
-    let attestation_handler = &mut AttestationHandler::create(
+    let attestation_handler = AttestationHandler::create(
         move |v| wasm_handler.handle_raw_invoke(v),
         attestation_behavior,
     );
+    let mut invocation_handler = InvocationHandler {
+        attestation_handler,
+    }
+    .serve();
     let framed = &mut Framed::new(channel);
     loop {
         let frame = framed.read_frame().context("couldn't receive message")?;
-        let response = attestation_handler
-            .message(frame.body)
-            .context("attestation failed")?;
-        let reponse_frame = Frame { body: response };
-        framed.write_frame(reponse_frame)?
+        let response = invocation_handler.invoke((&frame).into());
+        framed.write_frame(response.into())?
     }
 }
