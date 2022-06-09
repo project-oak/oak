@@ -136,6 +136,7 @@ impl TestingTransport {
         self.config.lock().unwrap().config.insert(offset, value);
     }
 
+    #[allow(clippy::mut_from_ref)]
     fn get_desc<const QUEUE_SIZE: usize>(&self, queue_num: u16, index: u16) -> &mut Desc {
         assert!((index as usize) < QUEUE_SIZE);
         let config = self.config.lock().unwrap();
@@ -144,6 +145,7 @@ impl TestingTransport {
         unsafe { &mut *(address as *mut Desc) }
     }
 
+    #[allow(clippy::mut_from_ref)]
     fn get_avail_ring<const QUEUE_SIZE: usize>(&self, queue_num: u16) -> &AvailRing<QUEUE_SIZE> {
         let config = self.config.lock().unwrap();
         let queue_info = config.queues.get(&queue_num).unwrap();
@@ -151,6 +153,7 @@ impl TestingTransport {
         unsafe { &*(address as *mut AvailRing<QUEUE_SIZE>) }
     }
 
+    #[allow(clippy::mut_from_ref)]
     fn get_used_ring<const QUEUE_SIZE: usize>(&self, queue_num: u16) -> &mut UsedRing<QUEUE_SIZE> {
         let config = self.config.lock().unwrap();
         let queue_info = config.queues.get(&queue_num).unwrap();
@@ -190,9 +193,10 @@ impl VirtioTransport for TestingTransport {
 
     fn set_queue(&self, queue: u16) {
         let mut config = self.config.lock().unwrap();
-        if !config.queues.contains_key(&queue) {
-            config.queues.insert(queue, QueueInfo::default());
-        }
+        config
+            .queues
+            .entry(queue)
+            .or_insert_with(QueueInfo::default);
         config.queue_num = queue;
     }
 
@@ -248,4 +252,26 @@ impl VirtioTransport for TestingTransport {
     fn read_device_config(&self, offset: u64) -> u32 {
         *self.config.lock().unwrap().config.get(&offset).unwrap()
     }
+}
+
+pub fn new_valid_transport() -> TestingTransport {
+    let transport = TestingTransport::default();
+    {
+        let mut config = transport.config.lock().unwrap();
+        config.features = VIRTIO_F_VERSION_1;
+        config.max_queue_size = 256;
+    }
+    transport
+}
+
+pub fn new_legacy_transport() -> TestingTransport {
+    let transport = new_valid_transport();
+    transport.set_features(0);
+    transport
+}
+
+pub fn new_transport_small_queue() -> TestingTransport {
+    let transport = new_valid_transport();
+    transport.config.lock().unwrap().max_queue_size = 8;
+    transport
 }

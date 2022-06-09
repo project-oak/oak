@@ -16,7 +16,7 @@
 
 use super::*;
 use crate::{
-    test::{TestingTransport, VIRTIO_F_VERSION_1},
+    test::{new_valid_transport, TestingTransport},
     vsock::HOST_CID,
 };
 use alloc::vec;
@@ -141,12 +141,7 @@ fn set_packet_cids_host_to_guest(packet: &mut Packet) {
 }
 
 fn new_vsock_and_transport() -> (VSock<TestingTransport>, TestingTransport) {
-    let transport = TestingTransport::default();
-    {
-        let mut config = transport.config.lock().unwrap();
-        config.features = VIRTIO_F_VERSION_1;
-        config.max_queue_size = 256;
-    }
+    let transport = new_valid_transport();
     transport.write_device_config(0, GUEST_CID as u32);
 
     let device = VirtioBaseDevice::new(transport.clone());

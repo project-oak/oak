@@ -15,7 +15,10 @@
 //
 
 use super::*;
-use crate::test::{DeviceStatus, TestingTransport, VIRTIO_F_VERSION_1};
+use crate::test::{
+    new_legacy_transport, new_transport_small_queue, new_valid_transport, DeviceStatus,
+    VIRTIO_F_VERSION_1,
+};
 use alloc::{vec, vec::Vec};
 use ciborium_io::{Read, Write};
 
@@ -125,31 +128,4 @@ fn test_write_all() {
         .unwrap();
     assert_eq!(&data[..DATA_BUFFER_SIZE], &first[..]);
     assert_eq!(&data[DATA_BUFFER_SIZE..], &second[..]);
-}
-
-fn new_valid_transport() -> TestingTransport {
-    let transport = TestingTransport::default();
-    {
-        let mut config = transport.config.lock().unwrap();
-        config.features = VIRTIO_F_VERSION_1;
-        config.max_queue_size = 256;
-    }
-
-    transport
-}
-
-fn new_legacy_transport() -> TestingTransport {
-    let transport = TestingTransport::default();
-    transport.config.lock().unwrap().max_queue_size = 256;
-    transport
-}
-
-fn new_transport_small_queue() -> TestingTransport {
-    let transport = TestingTransport::default();
-    {
-        let mut config = transport.config.lock().unwrap();
-        config.features = VIRTIO_F_VERSION_1;
-        config.max_queue_size = 8;
-    }
-    transport
 }

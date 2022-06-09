@@ -15,7 +15,10 @@
 //
 
 use super::*;
-use crate::test::{DeviceStatus, TestingTransport, VIRTIO_F_VERSION_1};
+use crate::test::{
+    new_legacy_transport, new_transport_small_queue, new_valid_transport, DeviceStatus,
+    TestingTransport, VIRTIO_F_VERSION_1,
+};
 use alloc::vec;
 
 const GUEST_CID: u64 = 3;
@@ -36,7 +39,7 @@ fn test_max_queue_size_too_small() {
 
 #[test]
 fn test_device_init() {
-    let transport = new_valid_transport();
+    let transport = new_configured_transport();
     let config = transport.config.clone();
     let device = VirtioBaseDevice::new(transport);
     let mut vsock = VSock::new(device);
@@ -71,7 +74,7 @@ fn test_read_packet() {
     let mut packet = Packet::new_data(&data[..], 1, 2).unwrap();
     packet.set_dst_cid(GUEST_CID);
     packet.set_src_cid(HOST_CID);
-    let transport = new_valid_transport();
+    let transport = new_configured_transport();
     let device = VirtioBaseDevice::new(transport.clone());
     let mut vsock = VSock::new(device);
     vsock.init().unwrap();
@@ -84,7 +87,7 @@ fn test_read_packet() {
 fn test_write_packet() {
     let data = vec![7; 5];
     let mut packet = Packet::new_data(&data[..], 1, 2).unwrap();
-    let transport = new_valid_transport();
+    let transport = new_configured_transport();
     let device = VirtioBaseDevice::new(transport.clone());
     let mut vsock = VSock::new(device);
     vsock.init().unwrap();
@@ -95,26 +98,8 @@ fn test_write_packet() {
     assert_eq!(packet.as_slice(), &bytes[..]);
 }
 
-fn new_valid_transport() -> TestingTransport {
-    let transport = TestingTransport::default();
-    {
-        let mut config = transport.config.lock().unwrap();
-        config.features = VIRTIO_F_VERSION_1;
-        config.max_queue_size = 256;
-    }
+fn new_configured_transport() -> TestingTransport {
+    let transport = new_valid_transport();
     transport.write_device_config(0, GUEST_CID as u32);
-
-    transport
-}
-
-fn new_legacy_transport() -> TestingTransport {
-    let transport = new_valid_transport();
-    transport.set_features(0);
-    transport
-}
-
-fn new_transport_small_queue() -> TestingTransport {
-    let transport = new_valid_transport();
-    transport.config.lock().unwrap().max_queue_size = 8;
     transport
 }
