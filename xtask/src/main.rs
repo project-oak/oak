@@ -182,7 +182,7 @@ fn run_cargo_tests(opt: &RunTestsOpt, scope: &Scope) -> Step {
 fn run_bazel_tests() -> Step {
     Step::Multiple {
         name: "bazel tests".to_string(),
-        steps: vec![run_bazel_build(), run_bazel_test(), run_clang_tidy()],
+        steps: vec![run_bazel_build(), run_bazel_test()],
     }
 }
 
@@ -659,13 +659,6 @@ fn run_cargo_doc(all_affected_crates: &ModifiedContent) -> Step {
     }
 }
 
-fn run_clang_tidy() -> Step {
-    Step::Single {
-        name: "clang tidy".to_string(),
-        command: Cmd::new("bash", &["./scripts/run_clang_tidy"]),
-    }
-}
-
 fn run_cargo_clippy(scope: &Scope) -> Step {
     let all_affected_crates = all_affected_crates(scope);
     Step::Multiple {
@@ -755,7 +748,12 @@ fn run_bazel_build() -> Step {
         name: "bazel build".to_string(),
         command: Cmd::new(
             "bazel",
-            &["build", "--", "//remote_attestation/java/...:all"],
+            &[
+                "build",
+                "--",
+                "//oak_functions/client/java/...:all",
+                "//remote_attestation/java/...:all",
+            ],
         ),
     }
 }
@@ -765,12 +763,7 @@ fn run_bazel_test() -> Step {
         name: "bazel test".to_string(),
         command: Cmd::new(
             "bazel",
-            &[
-                "test",
-                "--",
-                "//oak_functions/client/java/tests/...:all",
-                "//remote_attestation/java/tests/...:all",
-            ],
+            &["test", "--", "//remote_attestation/java/tests/...:all"],
         ),
     }
 }
