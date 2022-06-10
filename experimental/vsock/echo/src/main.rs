@@ -30,7 +30,10 @@ fn main() {
     unsafe {
         stream = VsockStream::from_raw_fd(FILE_DESCRIPTOR);
     }
-    println!("Connected to the {}", stream.peer_addr().expect("Couldn't get peer address"));
+    println!(
+        "Connected to the {}",
+        stream.peer_addr().expect("Couldn't get peer address")
+    );
 
     let mut buffer = vec![];
     buffer.resize(BUFFER_SIZE, 0);
@@ -53,5 +56,7 @@ fn main() {
         }
     }
 
-    stream.shutdown(Shutdown::Both).expect("Couldn't shutdown stream");
+    stream
+        .shutdown(Shutdown::Both)
+        .expect("Couldn't shutdown stream");
 }
