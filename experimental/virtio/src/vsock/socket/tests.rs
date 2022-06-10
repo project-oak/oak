@@ -21,6 +21,7 @@ use crate::{
 };
 use alloc::vec;
 use ciborium_io::{Read, Write};
+use rand::Rng;
 use rust_hypervisor_firmware_virtio::device::VirtioBaseDevice;
 
 const GUEST_CID: u64 = 3;
@@ -139,8 +140,10 @@ fn test_write_all() {
 fn test_many_echos() {
     const DATA_LEN: usize = 47;
     let (mut socket, transport) = new_socket_and_transport();
+    let mut rng = rand::thread_rng();
     for i in 0..1000 {
-        let data = vec![17; DATA_LEN];
+        let mut data = vec![0; DATA_LEN];
+        rng.fill_bytes(&mut data);
         // Write packet from device to host.
         let mut packet = Packet::new_data(&data[..], HOST_PORT, GUEST_PORT).unwrap();
         set_packet_cids_host_to_guest(&mut packet);
