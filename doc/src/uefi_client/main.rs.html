@@ -73,6 +73,12 @@
 <span id="68">68</span>
 <span id="69">69</span>
 <span id="70">70</span>
+<span id="71">71</span>
+<span id="72">72</span>
+<span id="73">73</span>
+<span id="74">74</span>
+<span id="75">75</span>
+<span id="76">76</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2022 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -97,17 +103,21 @@
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Parser</span>, <span class="ident">Debug</span>)]</span>
 <span class="kw">struct</span> <span class="ident">Args</span> {
-    <span class="doccomment">/// address of the server</span>
+    <span class="doccomment">/// Address of the server.</span>
     <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">long</span>, <span class="ident">default_value</span> <span class="op">=</span> <span class="string">&quot;http://127.0.0.1:8000&quot;</span>)]</span>
     <span class="ident">server</span>: <span class="ident">String</span>,
 
-    <span class="doccomment">/// message to be sent to the server. If not specified (with a response), uses stdio.</span>
-    <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">long</span>, <span class="ident">requires</span> <span class="op">=</span> <span class="string">&quot;expected-response&quot;</span>)]</span>
+    <span class="doccomment">/// Message to be sent to the server. If not specified (with a response), uses stdio.</span>
+    <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">long</span>, <span class="ident">requires_all</span> <span class="op">=</span> <span class="kw-2">&amp;</span>[<span class="string">&quot;expected-response&quot;</span>, <span class="string">&quot;iterations&quot;</span>]</span>)]
     <span class="ident">request</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
 
-    <span class="doccomment">/// expected response from the server. If not specified (with a request), uses stdio.</span>
-    <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">long</span>, <span class="ident">requires</span> <span class="op">=</span> <span class="string">&quot;request&quot;</span>)]</span>
+    <span class="doccomment">/// Expected response from the server. If not specified (with a request), uses stdio.</span>
+    <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">long</span>, <span class="ident">requires_all</span> <span class="op">=</span> <span class="kw-2">&amp;</span>[<span class="string">&quot;request&quot;</span>, <span class="string">&quot;iterations&quot;</span>]</span>)]
     <span class="ident">expected_response</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
+
+    <span class="doccomment">/// Number of times the request should be sent, and the expected response validated.</span>
+    <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">long</span>, <span class="ident">requires_all</span> <span class="op">=</span> <span class="kw-2">&amp;</span>[<span class="string">&quot;request&quot;</span>, <span class="string">&quot;expected-response&quot;</span>]</span>)]
+    <span class="ident">iterations</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span>,
 }
 
 <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">chat</span>(<span class="ident">client</span>: <span class="kw-2">&amp;mut</span> <span class="ident">AttestationClient</span>, <span class="ident">message</span>: <span class="ident">String</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span> {
@@ -128,10 +138,12 @@
             .<span class="kw">await</span>
             .<span class="ident">context</span>(<span class="string">&quot;Could not create client&quot;</span>)<span class="question-mark">?</span>;
 
-    <span class="kw">match</span> (<span class="ident">cli</span>.<span class="ident">request</span>, <span class="ident">cli</span>.<span class="ident">expected_response</span>) {
-        (<span class="prelude-val">Some</span>(<span class="ident">request</span>), <span class="prelude-val">Some</span>(<span class="ident">expected_response</span>)) =&gt; {
-            <span class="kw">let</span> <span class="ident">response</span> <span class="op">=</span> <span class="ident">chat</span>(<span class="kw-2">&amp;mut</span> <span class="ident">client</span>, <span class="ident">request</span>).<span class="kw">await</span><span class="question-mark">?</span>;
-            <span class="macro">assert_eq!</span>(<span class="ident">response</span>, <span class="ident">expected_response</span>);
+    <span class="kw">match</span> (<span class="ident">cli</span>.<span class="ident">request</span>, <span class="ident">cli</span>.<span class="ident">expected_response</span>, <span class="ident">cli</span>.<span class="ident">iterations</span>) {
+        (<span class="prelude-val">Some</span>(<span class="ident">request</span>), <span class="prelude-val">Some</span>(<span class="ident">expected_response</span>), <span class="prelude-val">Some</span>(<span class="ident">iterations</span>)) =&gt; {
+            <span class="kw">for</span> <span class="kw">_</span> <span class="kw">in</span> <span class="number">0</span>..<span class="ident">iterations</span> {
+                <span class="kw">let</span> <span class="ident">response</span> <span class="op">=</span> <span class="ident">chat</span>(<span class="kw-2">&amp;mut</span> <span class="ident">client</span>, <span class="ident">request</span>.<span class="ident">clone</span>()).<span class="kw">await</span><span class="question-mark">?</span>;
+                <span class="macro">assert_eq!</span>(<span class="ident">response</span>, <span class="ident">expected_response</span>);
+            }
         }
         <span class="kw">_</span> =&gt; {
             <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">lines</span> <span class="op">=</span> <span class="ident">stdin</span>().<span class="ident">lock</span>().<span class="ident">lines</span>();

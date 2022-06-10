@@ -175,6 +175,7 @@
 <span id="170">170</span>
 <span id="171">171</span>
 <span id="172">172</span>
+<span id="173">173</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2022 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -296,6 +297,7 @@
 <span class="doccomment">///</span>
 <span class="doccomment">/// See &lt;https://docs.oasis-open.org/virtio/virtio/v1.1/csprd01/virtio-v1.1-csprd01.html#x1-430008&gt;.</span>
 <span class="attribute">#[<span class="ident">repr</span>(<span class="ident">C</span>, <span class="ident">align</span>(<span class="number">4</span>))]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">UsedRing</span><span class="op">&lt;</span><span class="kw">const</span> <span class="ident">QUEUE_SIZE</span>: <span class="ident">usize</span><span class="op">&gt;</span> {
     <span class="doccomment">/// Device-specific flags for the queue.</span>
     <span class="kw">pub</span> <span class="ident">flags</span>: <span class="ident">RingFlags</span>,
@@ -326,7 +328,7 @@
 <span class="doccomment">///</span>
 <span class="doccomment">/// See &lt;https://docs.oasis-open.org/virtio/virtio/v1.1/csprd01/virtio-v1.1-csprd01.html#x1-430008&gt;.</span>
 <span class="attribute">#[<span class="ident">repr</span>(<span class="ident">C</span>)]</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Copy</span>, <span class="ident">Default</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Copy</span>, <span class="ident">Default</span>, <span class="ident">Debug</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">UsedElem</span> {
     <span class="doccomment">/// The index of the head of the used descriptor chain.</span>
     <span class="kw">pub</span> <span class="ident">id</span>: <span class="ident">u32</span>,

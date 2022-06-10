@@ -250,6 +250,10 @@
 <span id="245">245</span>
 <span id="246">246</span>
 <span id="247">247</span>
+<span id="248">248</span>
+<span id="249">249</span>
+<span id="250">250</span>
+<span id="251">251</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2022 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -282,7 +286,11 @@
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">socket</span>;
 
 <span class="doccomment">/// The number of buffer descriptors in each of the queues.</span>
-<span class="kw">const</span> <span class="ident">QUEUE_SIZE</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">16</span>;
+<span class="doccomment">///</span>
+<span class="doccomment">/// Note: We match the CrosVM max size for vhost vsock, as it seems CrosVM sets the number of</span>
+<span class="doccomment">/// descriptors to the maximum queue size rather than the negotiated size.</span>
+<span class="doccomment">/// See &lt;https://chromium.googlesource.com/chromiumos/platform/crosvm/+/d4505a7f1c9e4aa502ff49367863aedeadbafb9d/devices/src/virtio/vhost/worker.rs#74&gt;.</span>
+<span class="kw">const</span> <span class="ident">QUEUE_SIZE</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">256</span>;
 
 <span class="doccomment">/// The size of each of the buffers used by the transmit and receive queues.</span>
 <span class="kw">const</span> <span class="ident">DATA_BUFFER_SIZE</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">4096</span>;
