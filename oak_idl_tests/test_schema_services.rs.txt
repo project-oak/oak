@@ -45,13 +45,13 @@ impl <S: TestService> oak_idl::Handler for TestServiceServer<S> {
             222 => {
                 let request = flatbuffers::root::<LookupDataRequest>(request.body).map_err(|err| oak_idl::Status::new_with_message(oak_idl::StatusCode::Internal, format!("Service failed to deserialize the request: {:?}", err)))?;
                 let response = self.service.lookup_data(&request)?;
-                let response_body = response.buf().to_vec();
+                let response_body = response.into_vec();
                 Ok(response_body)
             }
             223 => {
                 let request = flatbuffers::root::<LogRequest>(request.body).map_err(|err| oak_idl::Status::new_with_message(oak_idl::StatusCode::Internal, format!("Service failed to deserialize the request: {:?}", err)))?;
                 let response = self.service.log(&request)?;
-                let response_body = response.buf().to_vec();
+                let response_body = response.into_vec();
                 Ok(response_body)
             }
             _ => Err(oak_idl::Status::new(oak_idl::StatusCode::Unimplemented))
