@@ -74,7 +74,7 @@ fn run_variant(variant: Variant) -> Step {
             Step::WithBackground {
                 name: "background loader".to_string(),
                 background: run_loader(variant),
-                foreground: Box::new(run_client("test")),
+                foreground: Box::new(run_client("test", 300)),
             },
         ],
     }
@@ -97,7 +97,7 @@ fn run_loader(variant: Variant) -> Box<dyn Runnable> {
     )
 }
 
-fn run_client(message: &str) -> Step {
+fn run_client(message: &str, iterations: usize) -> Step {
     Step::Multiple {
         name: "build and run client".to_string(),
         steps: vec![
@@ -106,7 +106,11 @@ fn run_client(message: &str) -> Step {
                 name: "run client".to_string(),
                 command: Cmd::new(
                     "./target/debug/uefi-client",
-                    vec!["--request", message, "--expected-response", message],
+                    vec![
+                        format!("--request={}", message),
+                        format!("--expected-response={}", message),
+                        format!("--iterations={}", iterations),
+                    ],
                 ),
             },
         ],

@@ -135,6 +135,34 @@ fn test_write_all() {
     assert_eq!(&data[MAX_PAYLOAD_SIZE..], second.get_payload());
 }
 
+#[test]
+fn test_many_echos() {
+    const DATA_LEN: usize = 47;
+    let (mut socket, transport) = new_socket_and_transport();
+    for i in 0..1000 {
+        let data = vec![17; DATA_LEN];
+        // Write packet from device to host.
+        let mut packet = Packet::new_data(&data[..], HOST_PORT, GUEST_PORT).unwrap();
+        set_packet_cids_host_to_guest(&mut packet);
+        // Ensure credit info is valid.
+        packet.set_buf_alloc(50);
+        packet.set_fwd_cnt(i * DATA_LEN as u32);
+        let mut buffer = vec![0; DATA_LEN];
+        transport.device_write_to_queue::<QUEUE_SIZE>(0, packet.as_slice());
+        assert!(socket.read_exact(&mut buffer).is_ok());
+
+        // Echo back.
+        assert!(socket.write_all(&buffer[..]).is_ok());
+        let output = Packet::new(
+            transport
+                .device_read_once_from_queue::<QUEUE_SIZE>(1)
+                .unwrap(),
+        )
+        .unwrap();
+        assert_eq!(output.get_payload(), &data[..]);
+    }
+}
+
 fn set_packet_cids_host_to_guest(packet: &mut Packet) {
     packet.set_dst_cid(GUEST_CID);
     packet.set_src_cid(HOST_CID);
