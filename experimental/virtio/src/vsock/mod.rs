@@ -30,7 +30,11 @@ pub mod packet;
 pub mod socket;
 
 /// The number of buffer descriptors in each of the queues.
-const QUEUE_SIZE: usize = 16;
+///
+/// Note: We match the CrosVM max size for vhost vsock, as it seems CrosVM sets the number of
+/// descriptors to the maximum queue size rather than the negotiated size.
+/// See <https://chromium.googlesource.com/chromiumos/platform/crosvm/+/d4505a7f1c9e4aa502ff49367863aedeadbafb9d/devices/src/virtio/vhost/worker.rs#74>.
+const QUEUE_SIZE: usize = 256;
 
 /// The size of each of the buffers used by the transmit and receive queues.
 const DATA_BUFFER_SIZE: usize = 4096;

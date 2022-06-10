@@ -22,17 +22,21 @@ use std::io::{stdin, BufRead};
 
 #[derive(Parser, Debug)]
 struct Args {
-    /// address of the server
+    /// Address of the server.
     #[clap(long, default_value = "http://127.0.0.1:8000")]
     server: String,
 
-    /// message to be sent to the server. If not specified (with a response), uses stdio.
-    #[clap(long, requires = "expected-response")]
+    /// Message to be sent to the server. If not specified (with a response), uses stdio.
+    #[clap(long, requires_all = &["expected-response", "iterations"])]
     request: Option<String>,
 
-    /// expected response from the server. If not specified (with a request), uses stdio.
-    #[clap(long, requires = "request")]
+    /// Expected response from the server. If not specified (with a request), uses stdio.
+    #[clap(long, requires_all = &["request", "iterations"])]
     expected_response: Option<String>,
+
+    /// Number of times the request should be sent, and the expected response validated.
+    #[clap(long, requires_all = &["request", "expected-response"])]
+    iterations: Option<usize>,
 }
 
 async fn chat(client: &mut AttestationClient, message: String) -> anyhow::Result<String> {
@@ -53,10 +57,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .await
             .context("Could not create client")?;
 
-    match (cli.request, cli.expected_response) {
-        (Some(request), Some(expected_response)) => {
-            let response = chat(&mut client, request).await?;
-            assert_eq!(response, expected_response);
+    match (cli.request, cli.expected_response, cli.iterations) {
+        (Some(request), Some(expected_response), Some(iterations)) => {
+            for _ in 0..iterations {
+                let response = chat(&mut client, request.clone()).await?;
+                assert_eq!(response, expected_response);
+            }
         }
         _ => {
             let mut lines = stdin().lock().lines();

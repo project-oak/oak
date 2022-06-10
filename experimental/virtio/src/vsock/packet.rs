@@ -22,7 +22,7 @@
 
 use alloc::{vec, vec::Vec};
 use bitflags::bitflags;
-use core::mem::size_of;
+use core::{fmt::Debug, mem::size_of};
 use strum::{Display, FromRepr};
 
 /// The size of the packet header in bytes.
@@ -217,7 +217,18 @@ impl Packet {
 
     /// Gets the payload.
     pub fn get_payload(&self) -> &[u8] {
-        &self.buffer[HEADER_SIZE..(HEADER_SIZE + self.get_len() as usize)]
+        let len = self.get_len() as usize;
+        assert_eq!(
+            len,
+            self.get_payload_len(),
+            "Actual payload length does not match the packet's configured payload length."
+        );
+        &self.buffer[HEADER_SIZE..(HEADER_SIZE + len)]
+    }
+
+    /// Gets the actual length of the payload in the current packet.
+    pub fn get_payload_len(&self) -> usize {
+        self.buffer.len() - HEADER_SIZE
     }
 
     /// Sets the payload of a data packet from a slice.
@@ -273,6 +284,38 @@ impl Packet {
     fn write_u64(&mut self, offset: usize, value: u64) {
         let dest = &mut self.buffer[offset..(offset + size_of::<u64>())];
         dest.copy_from_slice(&value.to_le_bytes()[..]);
+    }
+}
+
+impl Debug for Packet {
+    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
+        write!(
+            f,
+            "Packet{{\n\
+                    \tsrc_cid: {},\n\
+                    \tdst_cid: {},\n\
+                    \tsrc_port: {},\n\
+                    \tdst_port: {},\n\
+                    \tlen: {},\n\
+                    \ttype: {:?},\n\
+                    \top: {:?},\n\
+                    \tflags: {:?},\n\
+                    \tbuf_alloc: {},\n\
+                    \tfwd_cnt: {},\n\
+                    \tpkt_len: {},\n\
+                }}",
+            &self.get_src_cid(),
+            &self.get_dst_cid(),
+            &self.get_src_port(),
+            &self.get_dst_port(),
+            &self.get_len(),
+            &self.get_type(),
+            &self.get_op(),
+            &self.get_flags(),
+            &self.get_buf_alloc(),
+            &self.get_fwd_cnt(),
+            &self.buffer.len(),
+        )
     }
 }
 

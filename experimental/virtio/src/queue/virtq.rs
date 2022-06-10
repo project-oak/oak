@@ -119,6 +119,7 @@ impl<const QUEUE_SIZE: usize> Default for AvailRing<QUEUE_SIZE> {
 ///
 /// See <https://docs.oasis-open.org/virtio/virtio/v1.1/csprd01/virtio-v1.1-csprd01.html#x1-430008>.
 #[repr(C, align(4))]
+#[derive(Debug)]
 pub struct UsedRing<const QUEUE_SIZE: usize> {
     /// Device-specific flags for the queue.
     pub flags: RingFlags,
@@ -149,7 +150,7 @@ impl<const QUEUE_SIZE: usize> Default for UsedRing<QUEUE_SIZE> {
 ///
 /// See <https://docs.oasis-open.org/virtio/virtio/v1.1/csprd01/virtio-v1.1-csprd01.html#x1-430008>.
 #[repr(C)]
-#[derive(Clone, Copy, Default)]
+#[derive(Clone, Copy, Default, Debug)]
 pub struct UsedElem {
     /// The index of the head of the used descriptor chain.
     pub id: u32,
