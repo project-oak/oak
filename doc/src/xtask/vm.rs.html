@@ -115,12 +115,6 @@
 <span id="110">110</span>
 <span id="111">111</span>
 <span id="112">112</span>
-<span id="113">113</span>
-<span id="114">114</span>
-<span id="115">115</span>
-<span id="116">116</span>
-<span id="117">117</span>
-<span id="118">118</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -146,7 +140,6 @@
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Display</span>, <span class="ident">Clone</span>, <span class="ident">PartialEq</span>, <span class="ident">EnumIter</span>)]</span>
 <span class="kw">enum</span> <span class="ident">Variant</span> {
-    <span class="ident">Uefi</span>,
     <span class="ident">Baremetal</span>,
     <span class="ident">Crosvm</span>,
 }
@@ -154,7 +147,6 @@
 <span class="kw">impl</span> <span class="ident">Variant</span> {
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">payload_crate_path</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span> {
         <span class="kw">match</span> <span class="self">self</span> {
-            <span class="ident">Variant::Uefi</span> =&gt; <span class="string">&quot;./experimental/uefi/app&quot;</span>,
             <span class="ident">Variant::Baremetal</span> =&gt; <span class="string">&quot;./experimental/uefi/baremetal&quot;</span>,
             <span class="ident">Variant::Crosvm</span> =&gt; <span class="string">&quot;./experimental/uefi/baremetal-crosvm&quot;</span>,
         }
@@ -162,7 +154,6 @@
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">loader_mode</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span> {
         <span class="kw">match</span> <span class="self">self</span> {
-            <span class="ident">Variant::Uefi</span> =&gt; <span class="string">&quot;uefi&quot;</span>,
             <span class="ident">Variant::Baremetal</span> =&gt; <span class="string">&quot;bios&quot;</span>,
             <span class="ident">Variant::Crosvm</span> =&gt; <span class="string">&quot;crosvm&quot;</span>,
         }
@@ -170,9 +161,6 @@
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">binary_path</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span> {
         <span class="kw">match</span> <span class="self">self</span> {
-            <span class="ident">Variant::Uefi</span> =&gt; {
-                <span class="string">&quot;./experimental/uefi/app/target/x86_64-unknown-uefi/debug/uefi-simple.efi&quot;</span>
-            }
             <span class="ident">Variant::Baremetal</span> =&gt; <span class="string">&quot;./experimental/uefi/baremetal/target/target/debug/baremetal&quot;</span>,
             <span class="ident">Variant::Crosvm</span> =&gt; {
                 <span class="string">&quot;./experimental/uefi/baremetal-crosvm/target/target/debug/baremetal-crosvm&quot;</span>
