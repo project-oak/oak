@@ -79,6 +79,8 @@
 <span id="74">74</span>
 <span id="75">75</span>
 <span id="76">76</span>
+<span id="77">77</span>
+<span id="78">78</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2022 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -107,11 +109,13 @@
     <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">long</span>, <span class="ident">default_value</span> <span class="op">=</span> <span class="string">&quot;http://127.0.0.1:8000&quot;</span>)]</span>
     <span class="ident">server</span>: <span class="ident">String</span>,
 
-    <span class="doccomment">/// Message to be sent to the server. If not specified (with a response), uses stdio.</span>
+    <span class="doccomment">/// Message to be sent to the server. If not specified (with a response and number of</span>
+    <span class="doccomment">/// iterations), uses stdio.</span>
     <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">long</span>, <span class="ident">requires_all</span> <span class="op">=</span> <span class="kw-2">&amp;</span>[<span class="string">&quot;expected-response&quot;</span>, <span class="string">&quot;iterations&quot;</span>]</span>)]
     <span class="ident">request</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
 
-    <span class="doccomment">/// Expected response from the server. If not specified (with a request), uses stdio.</span>
+    <span class="doccomment">/// Expected response from the server. If not specified (with a request and number of</span>
+    <span class="doccomment">/// iterations), uses stdio.</span>
     <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">long</span>, <span class="ident">requires_all</span> <span class="op">=</span> <span class="kw-2">&amp;</span>[<span class="string">&quot;request&quot;</span>, <span class="string">&quot;iterations&quot;</span>]</span>)]
     <span class="ident">expected_response</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
 
