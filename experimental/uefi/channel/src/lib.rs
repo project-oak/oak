@@ -16,6 +16,7 @@
 
 #![no_std]
 #![feature(never_type)]
+#![allow(rustdoc::private_intra_doc_links)]
 
 extern crate alloc;
 
