@@ -35,25 +35,15 @@ fn main() {
         stream.peer_addr().expect("Couldn't get peer address")
     );
 
-    let mut buffer = vec![];
-    buffer.resize(BUFFER_SIZE, 0);
+    let mut buffer = vec![0; BUFFER_SIZE];
     loop {
-        let read_bytes = match stream.read(&mut buffer) {
-            Ok(0) => break,
-            Ok(read_bytes) => read_bytes,
-            Err(error) => panic!("Couldn't read bytes: {}", error),
-        };
+        let read_bytes = stream.read(&mut buffer).expect("Couldn't read bytes");
+        if read_bytes == 0 {
+            break // Stream has finished.
+        }
         println!("Received {:?} bytes", read_bytes);
 
-        let mut write_bytes_sum = 0;
-        while write_bytes_sum < read_bytes {
-            let write_bytes = match stream.write(&buffer[write_bytes_sum..read_bytes]) {
-                Ok(0) => break,
-                Ok(write_bytes) => write_bytes,
-                Err(error) => panic!("Couldn't write bytes: {}", error),
-            };
-            write_bytes_sum += write_bytes;
-        }
+        stream.write_all(&buffer[..read_bytes]).expect("Couldn't write bytes");
     }
 
     stream
