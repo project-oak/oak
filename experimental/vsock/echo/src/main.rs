@@ -36,11 +36,13 @@ fn main() {
     loop {
         let read_bytes = stream.read(&mut buffer).expect("Couldn't read bytes");
         if read_bytes == 0 {
-            break // Stream has finished.
+            break; // Stream has finished.
         }
         println!("Received {:?} bytes", read_bytes);
 
-        stream.write_all(&buffer[..read_bytes]).expect("Couldn't write bytes");
+        stream
+            .write_all(&buffer[..read_bytes])
+            .expect("Couldn't write bytes");
     }
 
     stream
