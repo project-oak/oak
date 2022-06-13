@@ -275,7 +275,7 @@ fn generate_server_handler(rpc_call: &RPCCall) -> anyhow::Result<Vec<String>> {
             "                let response = self.service.{}(&request)?;",
             method_name(rpc_call),
         ),
-        format!("                let response_body = response.buf().to_vec();"),
+        format!("                let response_body = response.into_vec();"),
         format!("                Ok(response_body)"),
         format!("            }}",),
     ])
