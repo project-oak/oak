@@ -64,7 +64,6 @@ members = [
   "xtask",
 ]
 exclude = [
-  "experimental/uefi/app",
   "experimental/uefi/baremetal",
   "experimental/uefi/baremetal-crosvm",
   "oak_functions/loader/fuzz",
