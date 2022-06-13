@@ -26,10 +26,7 @@ const FILE_DESCRIPTOR: c_int = 1023;
 const BUFFER_SIZE: usize = 1024;
 
 fn main() {
-    let mut stream;
-    unsafe {
-        stream = VsockStream::from_raw_fd(FILE_DESCRIPTOR);
-    }
+    let mut stream = unsafe { VsockStream::from_raw_fd(FILE_DESCRIPTOR) };
     println!(
         "Connected to the {}",
         stream.peer_addr().expect("Couldn't get peer address")
