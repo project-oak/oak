@@ -55,14 +55,14 @@ const PADDING_SIZE: usize = 4;
 #[derive(Copy, Clone, Display, FromRepr)]
 enum Flag {
     /// Atomic frame, a message sent as a single frame
-    AtomicFrame = 0,
+    AtomicMessage = 0,
     /// Starts a stream of frames that constitute a message
-    StreamStart = 1,
+    MessageStart = 1,
     /// Continues a stream of frames that constitute a message
-    StreamContinuation = 2,
+    MessageContinuation = 2,
     /// Ends a stream of frames that constitute a message, indicating that the recipient may
     /// process the message.
-    StreamEnd = 3,
+    MessageMessage = 3,
 }
 const FLAG_SIZE: usize = 4;
 static_assertions::assert_eq_size!([u8; FLAG_SIZE], Flag);
@@ -143,13 +143,13 @@ impl From<Message> for Vec<Frame> {
                 let flag = {
                     if index == 0 {
                         match number_of_frames {
-                            1 => Flag::AtomicFrame,
-                            _ => Flag::StreamStart,
+                            1 => Flag::AtomicMessage,
+                            _ => Flag::MessageStart,
                         }
                     } else if index == number_of_frames - 1 {
-                        Flag::StreamEnd
+                        Flag::MessageMessage
                     } else {
-                        Flag::StreamContinuation
+                        Flag::MessageContinuation
                     }
                 };
                 Frame {
@@ -203,11 +203,11 @@ impl PartialMessage {
     ) -> Result<Result<Message, Self>, MessageReconstructionErrors> {
         match self.inner {
             None => match frame.flag {
-                Flag::AtomicFrame => Ok(Ok(Message {
+                Flag::AtomicMessage => Ok(Ok(Message {
                     method_or_status: frame.method_or_status,
                     body: frame.body,
                 })),
-                Flag::StreamStart => Ok(Err(Self {
+                Flag::MessageStart => Ok(Err(Self {
                     inner: Some(Message {
                         method_or_status: frame.method_or_status,
                         body: frame.body,
@@ -216,12 +216,12 @@ impl PartialMessage {
                 _ => Err(MessageReconstructionErrors::ExpectedStartFrame),
             },
             Some(partial_message) => match frame.flag {
-                Flag::StreamEnd => {
+                Flag::MessageMessage => {
                     let new_partial_message =
                         PartialMessage::append_partial_message(partial_message, frame)?;
                     Ok(Ok(new_partial_message))
                 }
-                Flag::StreamContinuation => {
+                Flag::MessageContinuation => {
                     let new_partial_message =
                         PartialMessage::append_partial_message(partial_message, frame)?;
 
