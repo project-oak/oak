@@ -3,7 +3,6 @@
 This directory contains the following:
 
 - `runtime`: common business logic that should run in a VM
-- `app`: UEFI application that wraps `runtime` for execution under UEFI
 - `baremetal`: a minimal kernel that wraps `runtime` for execution on bare metal
 - `loader`: wrapper around `qemu` that loads one of the two above and exposes a
   gRPC server for communicating with the runtime

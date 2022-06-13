@@ -23,7 +23,6 @@ use crate::internal::*;
 
 #[derive(Debug, Display, Clone, PartialEq, EnumIter)]
 enum Variant {
-    Uefi,
     Baremetal,
     Crosvm,
 }
@@ -31,7 +30,6 @@ enum Variant {
 impl Variant {
     pub fn payload_crate_path(&self) -> &'static str {
         match self {
-            Variant::Uefi => "./experimental/uefi/app",
             Variant::Baremetal => "./experimental/uefi/baremetal",
             Variant::Crosvm => "./experimental/uefi/baremetal-crosvm",
         }
@@ -39,7 +37,6 @@ impl Variant {
 
     pub fn loader_mode(&self) -> &'static str {
         match self {
-            Variant::Uefi => "uefi",
             Variant::Baremetal => "bios",
             Variant::Crosvm => "crosvm",
         }
@@ -47,9 +44,6 @@ impl Variant {
 
     pub fn binary_path(&self) -> &'static str {
         match self {
-            Variant::Uefi => {
-                "./experimental/uefi/app/target/x86_64-unknown-uefi/debug/uefi-simple.efi"
-            }
             Variant::Baremetal => "./experimental/uefi/baremetal/target/target/debug/baremetal",
             Variant::Crosvm => {
                 "./experimental/uefi/baremetal-crosvm/target/target/debug/baremetal-crosvm"
