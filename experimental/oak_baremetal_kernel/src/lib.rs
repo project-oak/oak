@@ -50,7 +50,7 @@ use rust_hypervisor_firmware_boot::paging;
 #[cfg(not(feature = "serial_channel"))]
 use rust_hypervisor_firmware_virtio::pci::VirtioPciTransport;
 
-#[cfg(feature = "vsock_channel")]
+#[cfg(all(feature = "vsock_channel", not(feature = "serial_channel")))]
 // The virtio vsock port on which to listen.
 const VSOCK_PORT: u32 = 1024;
 
@@ -87,7 +87,7 @@ fn get_channel() -> virtio::console::Console<VirtioPciTransport> {
 }
 
 // Use virtio vsock for the communications channel.
-#[cfg(feature = "vsock_channel")]
+#[cfg(all(feature = "vsock_channel", not(feature = "serial_channel")))]
 fn get_channel() -> virtio::vsock::socket::Socket<VirtioPciTransport> {
     let vsock = virtio::vsock::VSock::find_and_configure_device()
         .expect("Couldn't configure PCI virtio vsock device.");
