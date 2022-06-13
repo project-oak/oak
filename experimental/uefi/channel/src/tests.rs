@@ -129,7 +129,7 @@ fn test_message_reconstruction_expected_start_frame() {
         Err(MessageReconstructionErrors::ExpectedStartFrame),
         PartialMessage::default().try_complete(Frame {
             method_or_status: 0,
-            flag: Flag::StreamContinuance,
+            flag: Flag::StreamContinuation,
             body: Vec::new(),
         })
     );
@@ -152,7 +152,7 @@ fn test_message_reconstruction_frame_header_mismatch() {
     };
     let continuance_frame_of_a_different_method = Frame {
         method_or_status: 1,
-        flag: Flag::StreamContinuance,
+        flag: Flag::StreamContinuation,
         body: Vec::new(),
     };
 

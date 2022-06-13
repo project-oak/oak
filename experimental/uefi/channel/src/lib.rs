@@ -48,7 +48,7 @@ static_assertions::assert_eq_size!([u8; METHOD_SIZE], MethodOrStatus);
 // must be sent as an uninterrupted seqeuence. A stream identifier would allow us
 // to interleave messages.
 /// Reserved space to maintain 8 byte alignement.
-const SPACER_SIZE: usize = 4;
+const PADDING_SIZE: usize = 4;
 
 #[repr(u32)]
 #[derive(Copy, Clone)]
@@ -58,7 +58,7 @@ enum Flag {
     /// Starts a stream of frames that constitute a message
     StreamStart = 1,
     /// Continues a stream of frames that constitute a message
-    StreamContinuance = 2,
+    StreamContinuation = 2,
     /// Ends a stream of frames that constitute a message, indicating that the recipient may
     /// process the message.
     StreamEnd = 3,
@@ -72,14 +72,14 @@ impl TryFrom<[u8; FLAG_SIZE]> for Flag {
         let flag = match u32::from_le_bytes(value) {
             0 => Flag::AtomicFrame,
             1 => Flag::StreamStart,
-            2 => Flag::StreamContinuance,
+            2 => Flag::StreamContinuation,
             3 => Flag::StreamEnd,
             _ => anyhow::bail!("invalid flag"),
         };
         Ok(flag)
     }
 }
-impl From<Flag> for [u8; 4] {
+impl From<Flag> for [u8; FLAG_SIZE] {
     fn from(flag: Flag) -> Self {
         (flag as u32).to_le_bytes()
     }
@@ -88,7 +88,7 @@ impl From<Flag> for [u8; 4] {
 const FRAME_HEADER_SIZE: usize = 16;
 static_assertions::assert_eq_size!(
     [u8; FRAME_HEADER_SIZE],
-    [u8; FRAME_LENGTH_SIZE + METHOD_SIZE + SPACER_SIZE + FLAG_SIZE]
+    [u8; FRAME_LENGTH_SIZE + METHOD_SIZE + PADDING_SIZE + FLAG_SIZE]
 );
 // Ensure that the frame header is 8 Byte aligned.
 static_assertions::const_assert!(FRAME_HEADER_SIZE % 8 == 0);
@@ -97,7 +97,7 @@ const MAX_FRAME_SIZE: usize = 64000;
 const MAX_FRAME_BODY_SIZE: usize = MAX_FRAME_SIZE - FRAME_HEADER_SIZE;
 
 /// A [`Frame`] is a small unit data that is sent over the communication
-/// channel. Usually several [`Frame`]'s are used to send a [`Message`].
+/// channel. Usually several [`Frame`]s are used to send a [`Message`].
 #[derive(Clone)]
 struct Frame {
     method_or_status: MethodOrStatus,
@@ -122,7 +122,7 @@ impl Frame {
 /// channel. It can represent either a full request, or full response of an oak_idl
 /// invocation. Requests and responses can be converted to a [`Message`], and
 /// vice versa. Usually a single [`Message`] is sent over the communication
-/// channel over several [`Frame`]'s.
+/// channel over several [`Frame`]s.
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Message {
     pub method_or_status: MethodOrStatus,
@@ -130,13 +130,14 @@ pub struct Message {
 }
 
 /// Deconstruct a [`Message`] into a set of [`Frame`]s.
-impl<'a> From<Message> for Vec<Frame> {
+impl From<Message> for Vec<Frame> {
     fn from(message: Message) -> Self {
-        let frame_bodies: Vec<Vec<u8>> = match message.body.len() {
+        let frame_bodies: Vec<Vec<u8>> = if message.body.is_empty() {
             // Messages with an empty body are handled differently, since
             // chunking an empty [`Vec`] would result in 0 chunks.
-            0 => vec![vec![]],
-            _ => message
+            vec![vec![]]
+        } else {
+            message
                 .body
                 .chunks(MAX_FRAME_BODY_SIZE)
                 // TODO(#2848): It'd be nice if we didn't have to reallocate here.
@@ -144,23 +145,24 @@ impl<'a> From<Message> for Vec<Frame> {
                 // slices and lifetimes. Or alternatively use the Bytes crate for
                 // reference counting.
                 .map(|frame_body| frame_body.to_vec())
-                .collect(),
+                .collect()
         };
-        let length = frame_bodies.len();
+
+        let number_of_frames = frame_bodies.len();
         frame_bodies
             .into_iter()
             .enumerate()
             .map(|(index, body)| {
                 let flag = {
                     if index == 0 {
-                        match length {
+                        match number_of_frames {
                             1 => Flag::AtomicFrame,
                             _ => Flag::StreamStart,
                         }
-                    } else if index == length - 1 {
+                    } else if index == number_of_frames - 1 {
                         Flag::StreamEnd
                     } else {
-                        Flag::StreamContinuance
+                        Flag::StreamContinuation
                     }
                 };
                 Frame {
@@ -178,26 +180,30 @@ impl<'a> From<Message> for Vec<Frame> {
 struct PartialMessage {
     inner: Option<Message>,
 }
+
 #[derive(Debug, PartialEq, Eq)]
 enum MessageReconstructionErrors {
     ExpectedStartFrame,
     DoubleStartFrame,
     MismatchingFrameHeader,
 }
+
 impl MessageReconstructionErrors {
-    fn as_str(&self) -> &'static str {
+    fn description(&self) -> &'static str {
         match self {
             MessageReconstructionErrors::ExpectedStartFrame => "Invalid frame order. The first frame must be a start frame.",
-            MessageReconstructionErrors::DoubleStartFrame => "Invalid frame order. The frame method/status header does must be the same for all frames belonging to the same message.",
-            MessageReconstructionErrors::MismatchingFrameHeader => "Invalid frame order. Already received a start frame for this message."
+            MessageReconstructionErrors::DoubleStartFrame => "Invalid frame order. Already received a start frame for this message.",
+            MessageReconstructionErrors::MismatchingFrameHeader => "Invalid frame order. The frame header must be the same for all frames belonging to the same message.",
         }
     }
 }
+
 impl From<MessageReconstructionErrors> for anyhow::Error {
     fn from(error: MessageReconstructionErrors) -> Self {
-        anyhow::Error::msg(error.as_str())
+        anyhow::Error::msg(error.description())
     }
 }
+
 impl PartialMessage {
     /// Attempt to complete the [`PartialMessage`] with a frame. Returns
     /// an outer [`Result`] to handle errors resulting from invalid arguments.
@@ -231,7 +237,7 @@ impl PartialMessage {
                         Ok(Ok(partial_message))
                     }
                 }
-                Flag::StreamContinuance => {
+                Flag::StreamContinuation => {
                     if frame.method_or_status != partial_message.method_or_status {
                         Err(MessageReconstructionErrors::MismatchingFrameHeader)
                     } else {
@@ -330,10 +336,10 @@ where
             self.inner.read_exact(&mut method_or_status_bytes)?;
             MethodOrStatus::from_le_bytes(method_or_status_bytes)
         };
-        let _spacer_bytes = {
-            let mut spacer_bytes = [0; SPACER_SIZE];
-            self.inner.read_exact(&mut spacer_bytes)?;
-            spacer_bytes
+        let _padding_bytes = {
+            let mut padding_bytes = [0; PADDING_SIZE];
+            self.inner.read_exact(&mut padding_bytes)?;
+            padding_bytes
         };
         let flag = {
             let mut method_or_status_bytes = [0; FLAG_SIZE];
@@ -367,8 +373,8 @@ where
         self.inner.write_all(&length_bytes)?;
         let method_or_status_bytes = frame.method_or_status.to_le_bytes();
         self.inner.write_all(&method_or_status_bytes)?;
-        let spacer_bytes = [0; SPACER_SIZE];
-        self.inner.write_all(&spacer_bytes)?;
+        let padding_bytes = [0; PADDING_SIZE];
+        self.inner.write_all(&padding_bytes)?;
         let flag_bytes: [u8; FLAG_SIZE] = frame.flag.into();
         self.inner.write_all(&flag_bytes)?;
         self.inner.write_all(&frame.body)?;
@@ -381,6 +387,7 @@ where
 pub struct InvocationChannel<T: Read + Write> {
     inner: Framed<T>,
 }
+
 impl<T> InvocationChannel<T>
 where
     T: Read<Error = anyhow::Error> + Write<Error = anyhow::Error>,
