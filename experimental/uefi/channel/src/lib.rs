@@ -272,7 +272,7 @@ impl<'a> From<&'a Message> for oak_idl::Request<'a> {
 }
 
 /// Construct a [`Message`] from an response to an [`oak_idl::Request`].
-impl<'a> From<Result<Vec<u8>, oak_idl::Status>> for Message {
+impl From<Result<Vec<u8>, oak_idl::Status>> for Message {
     fn from(result: Result<Vec<u8>, oak_idl::Status>) -> Message {
         match result {
             Ok(response) => Message {
@@ -288,7 +288,7 @@ impl<'a> From<Result<Vec<u8>, oak_idl::Status>> for Message {
 }
 
 /// Construct a the response to a [`oak_idl::Request`] from a [`Message`].
-impl<'a> From<Message> for Result<Vec<u8>, oak_idl::Status> {
+impl From<Message> for Result<Vec<u8>, oak_idl::Status> {
     fn from(frame: Message) -> Self {
         if frame.method_or_status == oak_idl::StatusCode::Ok.into() {
             Ok(frame.body)
