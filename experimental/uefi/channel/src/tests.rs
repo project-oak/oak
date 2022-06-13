@@ -22,14 +22,19 @@ const MOCK_LARGE_MESSAGE_LEN: usize = MAX_FRAME_BODY_SIZE * BODY_LEN_MULTIPLICAT
 #[test]
 fn test_message_fragmentation() {
     let mock_body = {
-        let mut x: u8 = 0;
-        let filler = || {
-            x = x.overflowing_add(1).0;
-            x
-        };
-
         let mut mock_body: Vec<u8> = vec![0; MOCK_LARGE_MESSAGE_LEN];
-        mock_body.fill_with(filler);
+
+        // Fill the body with increasing numbers. This ensures that this test
+        // catches failures in which the message would be reconstructed in the
+        // wrong order.
+        {
+            let mut x: u8 = 0;
+            let filler = || {
+                x = x.overflowing_add(1).0;
+                x
+            };
+            mock_body.fill_with(filler);
+        }
         mock_body
     };
 
