@@ -199,7 +199,7 @@ impl PartialMessage {
     /// a new [`PartialMessage`] that includes the previously passed frames.
     pub fn try_complete(
         self,
-        mut frame: Frame,
+        frame: Frame,
     ) -> Result<Result<Message, Self>, MessageReconstructionErrors> {
         match self.inner {
             None => match frame.flag {
@@ -215,28 +215,33 @@ impl PartialMessage {
                 })),
                 _ => Err(MessageReconstructionErrors::ExpectedStartFrame),
             },
-            Some(mut partial_message) => match frame.flag {
+            Some(partial_message) => match frame.flag {
                 Flag::StreamEnd => {
-                    if frame.method_or_status != partial_message.method_or_status {
-                        Err(MessageReconstructionErrors::MismatchingFrameHeader)
-                    } else {
-                        partial_message.body.append(&mut frame.body);
-                        Ok(Ok(partial_message))
-                    }
+                    let new_partial_message =
+                        PartialMessage::append_partial_message(partial_message, frame)?;
+                    Ok(Ok(new_partial_message))
                 }
                 Flag::StreamContinuation => {
-                    if frame.method_or_status != partial_message.method_or_status {
-                        Err(MessageReconstructionErrors::MismatchingFrameHeader)
-                    } else {
-                        partial_message.body.append(&mut frame.body);
-                        Ok(Err(Self {
-                            inner: Some(partial_message),
-                        }))
-                    }
+                    let new_partial_message =
+                        PartialMessage::append_partial_message(partial_message, frame)?;
+
+                    Ok(Err(Self {
+                        inner: Some(new_partial_message),
+                    }))
                 }
                 _ => Err(MessageReconstructionErrors::DoubleStartFrame),
             },
         }
+    }
+    pub fn append_partial_message(
+        mut partial_message: Message,
+        mut frame: Frame,
+    ) -> Result<Message, MessageReconstructionErrors> {
+        if frame.method_or_status != partial_message.method_or_status {
+            return Err(MessageReconstructionErrors::MismatchingFrameHeader);
+        }
+        partial_message.body.append(&mut frame.body);
+        Ok(partial_message)
     }
 }
 
