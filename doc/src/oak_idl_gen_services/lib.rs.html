@@ -668,7 +668,7 @@
             <span class="string">&quot;                let response = self.service.{}(&amp;request)?;&quot;</span>,
             <span class="ident">method_name</span>(<span class="ident">rpc_call</span>),
         ),
-        <span class="macro">format!</span>(<span class="string">&quot;                let response_body = response.buf().to_vec();&quot;</span>),
+        <span class="macro">format!</span>(<span class="string">&quot;                let response_body = response.into_vec();&quot;</span>),
         <span class="macro">format!</span>(<span class="string">&quot;                Ok(response_body)&quot;</span>),
         <span class="macro">format!</span>(<span class="string">&quot;            }}&quot;</span>,),
     ])
