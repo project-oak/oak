@@ -16,7 +16,7 @@
 
 #![feature(io_safety)]
 
-use channel::{schema, Framed};
+use channel::{schema, InvocationChannel};
 use clap::Parser;
 use crosvm::Crosvm;
 use qemu::Qemu;
@@ -100,7 +100,7 @@ impl ciborium_io::Read for CommsChannel {
 }
 
 pub struct ClientHandler<T: ciborium_io::Read + ciborium_io::Write> {
-    inner: Framed<T>,
+    inner: InvocationChannel<T>,
 }
 
 impl<T> ClientHandler<T>
@@ -109,7 +109,7 @@ where
 {
     pub fn new(inner: T) -> Self {
         Self {
-            inner: Framed::new(inner),
+            inner: InvocationChannel::new(inner),
         }
     }
 }
@@ -120,11 +120,11 @@ where
 {
     fn invoke(&mut self, request: oak_idl::Request) -> Result<Vec<u8>, oak_idl::Status> {
         self.inner
-            .write_frame(request.into())
+            .write_message(request.into())
             .map_err(|_| oak_idl::Status::new(oak_idl::StatusCode::Internal))?;
 
         self.inner
-            .read_frame()
+            .read_message()
             .map_err(|_| oak_idl::Status::new(oak_idl::StatusCode::Internal))?
             .into()
     }
