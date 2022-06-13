@@ -5859,6 +5859,7 @@ dependencies = [
  "bitflags",
  "ciborium-io",
  "log",
+ "rand 0.4.6",
  "rust-hypervisor-firmware-virtio",
  "strum",
 ]

@@ -26,11 +26,13 @@ struct Args {
     #[clap(long, default_value = "http://127.0.0.1:8000")]
     server: String,
 
-    /// Message to be sent to the server. If not specified (with a response), uses stdio.
+    /// Message to be sent to the server. If not specified (with a response and number of
+    /// iterations), uses stdio.
     #[clap(long, requires_all = &["expected-response", "iterations"])]
     request: Option<String>,
 
-    /// Expected response from the server. If not specified (with a request), uses stdio.
+    /// Expected response from the server. If not specified (with a request and number of
+    /// iterations), uses stdio.
     #[clap(long, requires_all = &["request", "iterations"])]
     expected_response: Option<String>,
 
