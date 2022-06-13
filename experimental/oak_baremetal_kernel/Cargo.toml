@@ -8,6 +8,7 @@ license = "Apache-2.0"
 [features]
 default = []
 vsock_channel = []
+serial_channel = []
 
 [dependencies]
 anyhow = { version = "*", default-features = false }
