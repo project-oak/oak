@@ -23,6 +23,7 @@ extern crate alloc;
 use alloc::{string::String, vec, vec::Vec};
 use anyhow::Context;
 use ciborium_io::{Read, Write};
+use strum::{Display, FromRepr};
 
 pub mod schema {
     #![allow(clippy::derivable_impls, clippy::needless_borrow)]
@@ -51,7 +52,7 @@ static_assertions::assert_eq_size!([u8; METHOD_SIZE], MethodOrStatus);
 const PADDING_SIZE: usize = 4;
 
 #[repr(u32)]
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Display, FromRepr)]
 enum Flag {
     /// Atomic frame, a message sent as a single frame
     AtomicFrame = 0,
@@ -65,20 +66,6 @@ enum Flag {
 }
 const FLAG_SIZE: usize = 4;
 static_assertions::assert_eq_size!([u8; FLAG_SIZE], Flag);
-impl TryFrom<[u8; FLAG_SIZE]> for Flag {
-    type Error = anyhow::Error;
-
-    fn try_from(value: [u8; FLAG_SIZE]) -> Result<Self, Self::Error> {
-        let flag = match u32::from_le_bytes(value) {
-            0 => Flag::AtomicFrame,
-            1 => Flag::StreamStart,
-            2 => Flag::StreamContinuation,
-            3 => Flag::StreamEnd,
-            _ => anyhow::bail!("invalid flag"),
-        };
-        Ok(flag)
-    }
-}
 impl From<Flag> for [u8; FLAG_SIZE] {
     fn from(flag: Flag) -> Self {
         (flag as u32).to_le_bytes()
@@ -344,8 +331,7 @@ where
         let flag = {
             let mut method_or_status_bytes = [0; FLAG_SIZE];
             self.inner.read_exact(&mut method_or_status_bytes)?;
-            method_or_status_bytes
-                .try_into()
+            Flag::from_repr(u32::from_le_bytes(method_or_status_bytes))
                 .context("could not parse the frame header's flag field")?
         };
 
