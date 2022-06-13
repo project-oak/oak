@@ -271,7 +271,7 @@ impl<'a> From<&'a Message> for oak_idl::Request<'a> {
     }
 }
 
-/// Construct a [`Message`] from an the response to an [`oak_idl::Request`].
+/// Construct a [`Message`] from an response to an [`oak_idl::Request`].
 impl<'a> From<Result<Vec<u8>, oak_idl::Status>> for Message {
     fn from(result: Result<Vec<u8>, oak_idl::Status>) -> Message {
         match result {
@@ -348,7 +348,7 @@ where
             let mut body: Vec<u8> = vec![
                 0;
                 usize::try_from(body_length).expect(
-                    "the supported pointer size is smaller than the frame length"
+                    "the supported pointer size is smaller than frame length"
                 )
             ];
             self.inner.read_exact(&mut body)?;
