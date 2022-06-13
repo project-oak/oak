@@ -1,0 +1,35 @@
+[package]
+name = "oak_baremetal_loader"
+version = "0.1.0"
+authors = ["Andri Saar <andrisaar@google.com>"]
+edition = "2021"
+license = "Apache-2.0"
+
+[dependencies]
+anyhow = "*"
+async-trait = "*"
+bmrng = "*"
+clap = { version = "*", features = ["derive"] }
+command-fds = { version = "*", features = ["tokio"] }
+futures = "*"
+log = "*"
+env_logger = "*"
+prost = "*"
+serde = "*"
+tokio = { version = "*", features = [
+  "rt-multi-thread",
+  "macros",
+  "net",
+  "process",
+  "signal",
+  "sync",
+] }
+tonic = "*"
+vsock = "*"
+oak_remote_attestation_sessions = { path = "../../remote_attestation_sessions" }
+oak_idl = { path = "../../oak_idl" }
+oak_baremetal_communication_channel = { path = "../../experimental/oak_baremetal_channel" }
+ciborium-io = "*"
+
+[build-dependencies]
+oak_utils = { path = "../../oak_utils" }
