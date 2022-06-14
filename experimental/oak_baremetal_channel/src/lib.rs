@@ -259,7 +259,7 @@ impl PartialMessage {
             },
         }
     }
-    pub fn append_partial_message(
+    fn append_partial_message(
         mut partial_message: Message,
         mut frame: Frame,
     ) -> Result<Message, MessageReconstructionErrors> {
