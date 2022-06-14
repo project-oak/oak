@@ -24,7 +24,6 @@ use crate::alloc::string::ToString;
 use alloc::{string::String, vec, vec::Vec};
 use anyhow::Context;
 use ciborium_io::{Read, Write};
-use strum::{Display, FromRepr};
 
 pub mod schema {
     #![allow(clippy::derivable_impls, clippy::needless_borrow)]
@@ -53,7 +52,7 @@ static_assertions::assert_eq_size!([u8; METHOD_SIZE], MethodOrStatus);
 const PADDING_SIZE: usize = 4;
 
 #[repr(u32)]
-#[derive(Copy, Clone, Display, FromRepr)]
+#[derive(Copy, Clone, strum::Display, strum::FromRepr)]
 enum Flag {
     /// Atomic frame, a message sent as a single frame
     AtomicMessage = 0,
@@ -192,7 +191,7 @@ struct PartialMessage {
     inner: Option<Message>,
 }
 
-#[derive(Debug, PartialEq, Eq, Display)]
+#[derive(Debug, PartialEq, Eq, strum::Display)]
 enum MessageReconstructionErrors {
     ExpectedStartFrame,
     DoubleStartFrame,
