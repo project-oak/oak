@@ -18,7 +18,7 @@ use crate::remote_attestation::AttestationHandler;
 use alloc::vec::Vec;
 use anyhow::Context;
 use ciborium_io::{Read, Write};
-use oak_baremetal_communication_channel::{schema, schema::TrustedRuntime, Framed};
+use oak_baremetal_communication_channel::{schema, schema::TrustedRuntime, InvocationChannel};
 use oak_idl::Handler;
 use oak_remote_attestation::handshaker::{
     AttestationBehavior, AttestationGenerator, AttestationVerifier,
@@ -90,10 +90,12 @@ where
         attestation_handler,
     }
     .serve();
-    let framed = &mut Framed::new(channel);
+    let invocation_channel = &mut InvocationChannel::new(channel);
     loop {
-        let frame = framed.read_frame().context("couldn't receive message")?;
-        let response = invocation_handler.invoke((&frame).into());
-        framed.write_frame(response.into())?
+        let message = invocation_channel
+            .read_message()
+            .context("couldn't receive message")?;
+        let response = invocation_handler.invoke((&message).into());
+        invocation_channel.write_message(response.into())?
     }
 }
