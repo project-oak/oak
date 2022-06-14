@@ -30,8 +30,8 @@ enum Variant {
 impl Variant {
     pub fn payload_crate_path(&self) -> &'static str {
         match self {
-            Variant::Baremetal => "./experimental/uefi/baremetal",
-            Variant::Crosvm => "./experimental/uefi/baremetal-crosvm",
+            Variant::Baremetal => "./experimental/oak_baremetal_app_qemu",
+            Variant::Crosvm => "./experimental/oak_baremetal_app_crosvm",
         }
     }
 
@@ -44,9 +44,11 @@ impl Variant {
 
     pub fn binary_path(&self) -> &'static str {
         match self {
-            Variant::Baremetal => "./experimental/uefi/baremetal/target/target/debug/baremetal",
+            Variant::Baremetal => {
+                "./experimental/oak_baremetal_app_qemu/target/target/debug/oak_baremetal_app_qemu"
+            }
             Variant::Crosvm => {
-                "./experimental/uefi/baremetal-crosvm/target/target/debug/baremetal-crosvm"
+                "./experimental/oak_baremetal_app_crosvm/target/target/debug/oak_baremetal_app_crosvm"
             }
         }
     }
@@ -63,7 +65,7 @@ fn run_variant(variant: Variant) -> Step {
     Step::Multiple {
         name: format!("run {} variant", variant),
         steps: vec![
-            build_binary("build loader binary", "./experimental/uefi/loader"),
+            build_binary("build loader binary", "./experimental/oak_baremetal_loader"),
             build_binary("build payload", variant.payload_crate_path()),
             Step::WithBackground {
                 name: "background loader".to_string(),
@@ -83,7 +85,7 @@ fn build_binary(name: &str, directory: &str) -> Step {
 
 fn run_loader(variant: Variant) -> Box<dyn Runnable> {
     Cmd::new(
-        "./target/debug/uefi-loader",
+        "./target/debug/oak_baremetal_loader",
         vec![
             format!("--mode={}", variant.loader_mode()),
             variant.binary_path().to_string(),
@@ -95,11 +97,11 @@ fn run_client(message: &str, iterations: usize) -> Step {
     Step::Multiple {
         name: "build and run client".to_string(),
         steps: vec![
-            build_binary("build client binary", "./experimental/uefi/client"),
+            build_binary("build client binary", "./experimental/oak_baremetal_client"),
             Step::Single {
                 name: "run client".to_string(),
                 command: Cmd::new(
-                    "./target/debug/uefi-client",
+                    "./target/debug/oak_baremetal_client",
                     vec![
                         format!("--request={}", message),
                         format!("--expected-response={}", message),
