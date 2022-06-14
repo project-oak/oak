@@ -644,20 +644,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "channel"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "ciborium-io",
- "flatbuffers",
- "oak_idl",
- "oak_idl_gen_services",
- "oak_idl_gen_structs",
- "static_assertions",
- "strum",
-]
-
-[[package]]
 name = "chrono"
 version = "0.4.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2229,28 +2215,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "kernel"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "atomic_refcell",
- "ciborium-io",
- "getrandom 0.2.6",
- "lazy_static",
- "libm 0.2.2",
- "linked_list_allocator",
- "log",
- "oak_remote_attestation",
- "runtime",
- "rust-hypervisor-firmware-boot",
- "rust-hypervisor-firmware-virtio",
- "strum",
- "uart_16550",
- "virtio",
- "x86_64",
-]
-
-[[package]]
 name = "key_value_lookup"
 version = "0.1.0"
 dependencies = [
@@ -2867,6 +2831,97 @@ dependencies = [
  "serde_json",
  "sha2 0.10.2",
  "x509-parser",
+]
+
+[[package]]
+name = "oak_baremetal_client"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "clap 3.1.18",
+ "grpc_unary_attestation",
+ "oak_remote_attestation",
+ "oak_utils",
+ "prost 0.10.4",
+ "tokio",
+ "tonic",
+]
+
+[[package]]
+name = "oak_baremetal_communication_channel"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "ciborium-io",
+ "flatbuffers",
+ "oak_idl",
+ "oak_idl_gen_services",
+ "oak_idl_gen_structs",
+ "static_assertions",
+ "strum",
+]
+
+[[package]]
+name = "oak_baremetal_kernel"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "atomic_refcell",
+ "ciborium-io",
+ "getrandom 0.2.6",
+ "lazy_static",
+ "libm 0.1.4",
+ "linked_list_allocator",
+ "log",
+ "oak_baremetal_runtime",
+ "oak_remote_attestation",
+ "rust-hypervisor-firmware-boot",
+ "rust-hypervisor-firmware-virtio",
+ "strum",
+ "uart_16550",
+ "virtio",
+ "x86_64",
+]
+
+[[package]]
+name = "oak_baremetal_loader"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "bmrng",
+ "ciborium-io",
+ "clap 3.1.18",
+ "command-fds",
+ "env_logger 0.9.0",
+ "futures",
+ "log",
+ "oak_baremetal_communication_channel",
+ "oak_idl",
+ "oak_remote_attestation_sessions",
+ "oak_utils",
+ "prost 0.10.4",
+ "serde",
+ "tokio",
+ "tonic",
+ "vsock",
+]
+
+[[package]]
+name = "oak_baremetal_runtime"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "ciborium-io",
+ "flatbuffers",
+ "log",
+ "oak_baremetal_communication_channel",
+ "oak_functions_wasm",
+ "oak_functions_workload_logging",
+ "oak_idl",
+ "oak_logger",
+ "oak_remote_attestation",
+ "oak_remote_attestation_sessions",
 ]
 
 [[package]]
@@ -4267,23 +4322,6 @@ dependencies = [
  "spin 0.9.3",
  "untrusted 0.9.0",
  "winapi",
-]
-
-[[package]]
-name = "runtime"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "channel",
- "ciborium-io",
- "flatbuffers",
- "log",
- "oak_functions_wasm",
- "oak_functions_workload_logging",
- "oak_idl",
- "oak_logger",
- "oak_remote_attestation",
- "oak_remote_attestation_sessions",
 ]
 
 [[package]]
@@ -5715,44 +5753,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "56dee185309b50d1f11bfedef0fe6d036842e3fb77413abef29f8f8d1c5d4c1c"
 
 [[package]]
-name = "uefi-client"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "clap 3.1.18",
- "grpc_unary_attestation",
- "oak_remote_attestation",
- "oak_utils",
- "prost 0.10.4",
- "tokio",
- "tonic",
-]
-
-[[package]]
-name = "uefi-loader"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "async-trait",
- "bmrng",
- "channel",
- "ciborium-io",
- "clap 3.1.18",
- "command-fds",
- "env_logger 0.9.0",
- "futures",
- "log",
- "oak_idl",
- "oak_remote_attestation_sessions",
- "oak_utils",
- "prost 0.10.4",
- "serde",
- "tokio",
- "tonic",
- "vsock",
-]
-
-[[package]]
 name = "unicase"
 version = "2.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5879,6 +5879,14 @@ checksum = "e32675ee2b3ce5df274c0ab52d19b28789632406277ca26bffee79a8e27dc133"
 dependencies = [
  "libc",
  "nix 0.23.1",
+]
+
+[[package]]
+name = "vsock_echo"
+version = "0.1.0"
+dependencies = [
+ "libc",
+ "vsock",
 ]
 
 [[package]]
