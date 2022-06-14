@@ -112,7 +112,7 @@ impl TryFrom<Frame> for Vec<u8> {
         let mut frame_bytes: Vec<u8> = Vec::with_capacity(
             frame_length
                 .try_into()
-                .context("Failed to convert usize into u32")?,
+                .map_err(|_| anyhow::Error::msg("Failed to convert usize into u32"))?,
         );
 
         let length_bytes = frame_length.to_le_bytes();
