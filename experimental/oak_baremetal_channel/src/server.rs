@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-use crate::{InvocationChannel, Message, Vec};
+use crate::{InvocationChannel, Message, MessageId, Vec};
 use ciborium_io::{Read, Write};
 
 pub struct ServerChannelHandle<T: Read + Write> {
@@ -35,7 +35,7 @@ where
         Ok(message)
     }
     pub fn write_response(&mut self, response: Message) -> anyhow::Result<()> {
-        self.inner.write_message(response.into())
+        self.inner.write_message(response)
     }
 }
 
@@ -49,18 +49,20 @@ impl<'a> From<&'a Message> for oak_idl::Request<'a> {
     }
 }
 
-/// Construct a [`Message`] from an response to an [`oak_idl::Request`].
-impl From<Result<Vec<u8>, oak_idl::Status>> for Message {
-    fn from(result: Result<Vec<u8>, oak_idl::Status>) -> Message {
-        match result {
-            Ok(response) => Message {
-                method_or_status: oak_idl::StatusCode::Ok.into(),
-                body: response,
-            },
-            Err(error) => Message {
-                method_or_status: error.code.into(),
-                body: error.message.as_bytes().to_vec(),
-            },
-        }
+pub fn message_from_response_and_id(
+    response: Result<Vec<u8>, oak_idl::Status>,
+    message_id: MessageId,
+) -> Message {
+    match response {
+        Ok(response) => Message {
+            message_id,
+            method_or_status: oak_idl::StatusCode::Ok.into(),
+            body: response,
+        },
+        Err(error) => Message {
+            message_id,
+            method_or_status: error.code.into(),
+            body: error.message.as_bytes().to_vec(),
+        },
     }
 }

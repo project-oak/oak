@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-use crate::{InvocationChannel, Message, String, Vec};
+use crate::{InvocationChannel, Message, MessageId, String, Vec};
 use ciborium_io::{Read, Write};
 
 pub struct ClientChannelHandle<T: Read + Write> {
@@ -31,25 +31,40 @@ where
         }
     }
     pub fn write_request(&mut self, request: Message) -> anyhow::Result<()> {
-        self.inner.write_message(request.into())
+        self.inner.write_message(request)
     }
     pub fn read_response(&mut self) -> anyhow::Result<Message> {
         let message = self.inner.read_message()?;
-        Ok(message.into())
+        Ok(message)
     }
 }
 
-/// Construct a [`Message`] from an [`oak_idl::Request`].
-impl<'a> From<oak_idl::Request<'a>> for Message {
-    fn from(request: oak_idl::Request) -> Message {
+#[derive(Default)]
+pub struct RequestEncoder {
+    message_id_counter: MessageIdCounter,
+}
+
+impl RequestEncoder {
+    pub fn encode_request(&mut self, request: oak_idl::Request) -> Message {
+        let message_id = self.message_id_counter.next_message_id();
         Message {
+            message_id,
             method_or_status: request.method_id,
-            // TODO(#2848): It'd be nice if we didn't have to reallocate here.
-            // We may be able to avoid doing so by making [`Message`] use
-            // slices and lifetimes. Or alternatively use the Bytes crate for
-            // reference counting.
             body: request.body.to_vec(),
         }
+    }
+}
+
+#[derive(Default)]
+struct MessageIdCounter {
+    next_message_id: MessageId,
+}
+
+impl MessageIdCounter {
+    fn next_message_id(&mut self) -> MessageId {
+        let next_message_id = self.next_message_id;
+        let _ = self.next_message_id.overflowing_add(1);
+        next_message_id
     }
 }
 

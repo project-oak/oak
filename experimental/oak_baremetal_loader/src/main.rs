@@ -18,7 +18,10 @@
 
 use clap::Parser;
 use crosvm::Crosvm;
-use oak_baremetal_communication_channel::{client::ClientChannelHandle, schema};
+use oak_baremetal_communication_channel::{
+    client::{ClientChannelHandle, RequestEncoder},
+    schema,
+};
 use qemu::Qemu;
 use std::{
     fs,
@@ -101,6 +104,7 @@ impl ciborium_io::Read for CommsChannel {
 
 pub struct ClientHandler<T: ciborium_io::Read + ciborium_io::Write> {
     inner: ClientChannelHandle<T>,
+    request_encoder: RequestEncoder,
 }
 
 impl<T> ClientHandler<T>
@@ -110,6 +114,7 @@ where
     pub fn new(inner: T) -> Self {
         Self {
             inner: ClientChannelHandle::new(inner),
+            request_encoder: RequestEncoder::default(),
         }
     }
 }
@@ -119,14 +124,23 @@ where
     T: ciborium_io::Read<Error = anyhow::Error> + ciborium_io::Write<Error = anyhow::Error>,
 {
     fn invoke(&mut self, request: oak_idl::Request) -> Result<Vec<u8>, oak_idl::Status> {
+        let request_message = self.request_encoder.encode_request(request);
+        let request_message_message_id = request_message.message_id;
         self.inner
-            .write_request(request.into())
+            .write_request(request_message)
             .map_err(|_| oak_idl::Status::new(oak_idl::StatusCode::Internal))?;
 
-        self.inner
+        let response_message = self
+            .inner
             .read_response()
-            .map_err(|_| oak_idl::Status::new(oak_idl::StatusCode::Internal))?
-            .into()
+            .map_err(|_| oak_idl::Status::new(oak_idl::StatusCode::Internal))?;
+
+        // For now all messages are sent in sequence, hence we expect that the
+        // id of the next response matches the preceeding request.
+        // TODO(#2848): Allow messages to be sent and received out of order.
+        assert_eq!(request_message_message_id, response_message.message_id);
+
+        response_message.into()
     }
 }
 

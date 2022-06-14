@@ -44,18 +44,20 @@ type FrameLength = u32;
 const FRAME_LENGTH_SIZE: usize = 4;
 static_assertions::assert_eq_size!([u8; FRAME_LENGTH_SIZE], FrameLength);
 
+// TODO(#2848): Move this onto the message layer, thereby conceptually
+// seperating the framing and messages layers.
 /// In request frames this field contains the id of the method that is invoked.
 /// In response frames this field contains the status code of the method invocation.
 type MethodOrStatus = u32;
 const METHOD_SIZE: usize = 4;
 static_assertions::assert_eq_size!([u8; METHOD_SIZE], MethodOrStatus);
 
-// TODO(#2848): Use this space to send a stream identifier that identifies
-// frames as belonging to the same message. Currently the frames of every message
-// must be sent as an uninterrupted seqeuence. A stream identifier would allow us
-// to interleave messages.
-/// Reserved space to maintain 8 byte alignement.
-const PADDING_SIZE: usize = 4;
+// TODO(#2848): Create a seperate invocation ID on the message layer to link
+// request and response messages, seperating the layers.
+/// Links the frames that constitute a message. Links request messages and
+/// response messages.
+type MessageId = u32;
+const MESSAGE_ID_SIZE: usize = 4;
 
 #[repr(u32)]
 #[derive(Copy, Clone, strum::Display, strum::FromRepr)]
@@ -81,7 +83,7 @@ impl From<Flag> for [u8; FLAG_SIZE] {
 const FRAME_HEADER_SIZE: usize = 16;
 static_assertions::assert_eq_size!(
     [u8; FRAME_HEADER_SIZE],
-    [u8; FRAME_LENGTH_SIZE + METHOD_SIZE + PADDING_SIZE + FLAG_SIZE]
+    [u8; FRAME_LENGTH_SIZE + METHOD_SIZE + MESSAGE_ID_SIZE + FLAG_SIZE]
 );
 // Ensure that the frame header is 8 Byte aligned.
 static_assertions::const_assert!(FRAME_HEADER_SIZE % 8 == 0);
@@ -94,6 +96,7 @@ const MAX_FRAME_BODY_SIZE: usize = MAX_FRAME_SIZE - FRAME_HEADER_SIZE;
 #[derive(Clone)]
 struct Frame {
     method_or_status: MethodOrStatus,
+    message_id: MessageId,
     flag: Flag,
     body: Vec<u8>,
 }
@@ -125,8 +128,8 @@ impl TryFrom<Frame> for Vec<u8> {
         frame_bytes.extend_from_slice(&length_bytes);
         let method_or_status_bytes = frame.method_or_status.to_le_bytes();
         frame_bytes.extend_from_slice(&method_or_status_bytes);
-        let padding_bytes = [0; PADDING_SIZE];
-        frame_bytes.extend_from_slice(&padding_bytes);
+        let message_id_bytes = frame.message_id.to_le_bytes();
+        frame_bytes.extend_from_slice(&message_id_bytes);
         let flag_bytes: [u8; FLAG_SIZE] = frame.flag.into();
         frame_bytes.extend_from_slice(&flag_bytes);
         frame_bytes.extend_from_slice(&frame.body);
@@ -142,6 +145,7 @@ impl TryFrom<Frame> for Vec<u8> {
 /// channel over several [`Frame`]s.
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Message {
+    pub message_id: MessageId,
     pub method_or_status: MethodOrStatus,
     pub body: Vec<u8>,
 }
@@ -184,6 +188,7 @@ impl From<Message> for Vec<Frame> {
                 };
                 Frame {
                     method_or_status: message.method_or_status,
+                    message_id: message.message_id,
                     flag,
                     body,
                 }
@@ -227,11 +232,13 @@ impl PartialMessage {
         match self.inner {
             None => match frame.flag {
                 Flag::AtomicMessage => Ok(CompletionResult::Complete(Message {
+                    message_id: frame.message_id,
                     method_or_status: frame.method_or_status,
                     body: frame.body,
                 })),
                 Flag::MessageStart => Ok(CompletionResult::Incomplete(Self {
                     inner: Some(Message {
+                        message_id: frame.message_id,
                         method_or_status: frame.method_or_status,
                         body: frame.body,
                     }),
@@ -260,7 +267,9 @@ impl PartialMessage {
         mut partial_message: Message,
         mut frame: Frame,
     ) -> Result<Message, MessageReconstructionErrors> {
-        if frame.method_or_status != partial_message.method_or_status {
+        if frame.method_or_status != partial_message.method_or_status
+            || frame.message_id != partial_message.message_id
+        {
             return Err(MessageReconstructionErrors::MismatchingFrameHeader);
         }
         partial_message.body.append(&mut frame.body);
@@ -292,10 +301,10 @@ where
             self.inner.read_exact(&mut method_or_status_bytes)?;
             MethodOrStatus::from_le_bytes(method_or_status_bytes)
         };
-        let _padding_bytes = {
-            let mut padding_bytes = [0; PADDING_SIZE];
-            self.inner.read_exact(&mut padding_bytes)?;
-            padding_bytes
+        let message_id = {
+            let mut message_id_bytes = [0; MESSAGE_ID_SIZE];
+            self.inner.read_exact(&mut message_id_bytes)?;
+            MessageId::from_le_bytes(message_id_bytes)
         };
         let flag = {
             let mut method_or_status_bytes = [0; FLAG_SIZE];
@@ -318,6 +327,7 @@ where
 
         Ok(Frame {
             method_or_status,
+            message_id,
             flag,
             body,
         })

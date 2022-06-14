@@ -39,6 +39,7 @@ fn test_message_fragmentation() {
     };
 
     let message = Message {
+        message_id: 0,
         method_or_status: 0,
         body: mock_body,
     };
@@ -72,6 +73,7 @@ fn test_message_fragmentation() {
 fn test_message_reconstruction_for_messages_small_messages() {
     let mock_body: Vec<u8> = vec![0; MAX_FRAME_BODY_SIZE - 1];
     let small_message = Message {
+        message_id: 0,
         method_or_status: 0,
         body: mock_body,
     };
@@ -92,6 +94,7 @@ fn test_message_reconstruction_for_messages_small_messages() {
 #[test]
 fn test_message_reconstruction_for_messages_with_an_empty_body() {
     let empty_body_message = Message {
+        message_id: 0,
         method_or_status: 0,
         body: Vec::new(),
     };
@@ -113,6 +116,7 @@ fn test_message_reconstruction_for_messages_with_an_empty_body() {
 fn test_message_reconstruction_double_start_frame() {
     let start_frame = Frame {
         method_or_status: 0,
+        message_id: 0,
         flag: Flag::MessageStart,
         body: Vec::new(),
     };
@@ -140,6 +144,7 @@ fn test_message_reconstruction_expected_start_frame() {
         Err(MessageReconstructionErrors::ExpectedStartFrame),
         PartialMessage::default().add_frame(Frame {
             method_or_status: 0,
+            message_id: 0,
             flag: Flag::MessageContinuation,
             body: Vec::new(),
         })
@@ -148,6 +153,7 @@ fn test_message_reconstruction_expected_start_frame() {
         Err(MessageReconstructionErrors::ExpectedStartFrame),
         PartialMessage::default().add_frame(Frame {
             method_or_status: 0,
+            message_id: 0,
             flag: Flag::MessageMessage,
             body: Vec::new(),
         })
@@ -158,11 +164,13 @@ fn test_message_reconstruction_expected_start_frame() {
 fn test_message_reconstruction_frame_header_mismatch() {
     let start_frame = Frame {
         method_or_status: 0,
+        message_id: 0,
         flag: Flag::MessageStart,
         body: Vec::new(),
     };
     let continuance_frame_of_a_different_method = Frame {
         method_or_status: 1,
+        message_id: 0,
         flag: Flag::MessageContinuation,
         body: Vec::new(),
     };
