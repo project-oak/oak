@@ -18,7 +18,7 @@
 
 use clap::Parser;
 use crosvm::Crosvm;
-use oak_baremetal_communication_channel::{schema, InvocationChannel};
+use oak_baremetal_communication_channel::{client::ClientChannelHandle, schema};
 use qemu::Qemu;
 use std::{
     fs,
@@ -100,7 +100,7 @@ impl ciborium_io::Read for CommsChannel {
 }
 
 pub struct ClientHandler<T: ciborium_io::Read + ciborium_io::Write> {
-    inner: InvocationChannel<T>,
+    inner: ClientChannelHandle<T>,
 }
 
 impl<T> ClientHandler<T>
@@ -109,7 +109,7 @@ where
 {
     pub fn new(inner: T) -> Self {
         Self {
-            inner: InvocationChannel::new(inner),
+            inner: ClientChannelHandle::new(inner),
         }
     }
 }
@@ -120,11 +120,11 @@ where
 {
     fn invoke(&mut self, request: oak_idl::Request) -> Result<Vec<u8>, oak_idl::Status> {
         self.inner
-            .write_message(request.into())
+            .write_request(request.into())
             .map_err(|_| oak_idl::Status::new(oak_idl::StatusCode::Internal))?;
 
         self.inner
-            .read_message()
+            .read_response()
             .map_err(|_| oak_idl::Status::new(oak_idl::StatusCode::Internal))?
             .into()
     }

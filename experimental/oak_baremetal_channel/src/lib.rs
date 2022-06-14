@@ -18,6 +18,12 @@
 #![feature(never_type)]
 #![allow(rustdoc::private_intra_doc_links)]
 
+pub mod client;
+pub mod server;
+
+#[cfg(test)]
+mod tests;
+
 extern crate alloc;
 
 use crate::alloc::string::ToString;
@@ -262,65 +268,6 @@ impl PartialMessage {
     }
 }
 
-/// Construct a [`Message`] from an [`oak_idl::Request`].
-impl<'a> From<oak_idl::Request<'a>> for Message {
-    fn from(request: oak_idl::Request) -> Message {
-        Message {
-            method_or_status: request.method_id,
-            // TODO(#2848): It'd be nice if we didn't have to reallocate here.
-            // We may be able to avoid doing so by making [`Message`] use
-            // slices and lifetimes. Or alternatively use the Bytes crate for
-            // reference counting.
-            body: request.body.to_vec(),
-        }
-    }
-}
-
-/// Construct a [`oak_idl::Request`] from a [`Message`].
-impl<'a> From<&'a Message> for oak_idl::Request<'a> {
-    fn from(frame: &'a Message) -> Self {
-        oak_idl::Request {
-            method_id: frame.method_or_status,
-            body: &frame.body,
-        }
-    }
-}
-
-/// Construct a [`Message`] from an response to an [`oak_idl::Request`].
-impl From<Result<Vec<u8>, oak_idl::Status>> for Message {
-    fn from(result: Result<Vec<u8>, oak_idl::Status>) -> Message {
-        match result {
-            Ok(response) => Message {
-                method_or_status: oak_idl::StatusCode::Ok.into(),
-                body: response,
-            },
-            Err(error) => Message {
-                method_or_status: error.code.into(),
-                body: error.message.as_bytes().to_vec(),
-            },
-        }
-    }
-}
-
-/// Construct a the response to a [`oak_idl::Request`] from a [`Message`].
-impl From<Message> for Result<Vec<u8>, oak_idl::Status> {
-    fn from(frame: Message) -> Self {
-        if frame.method_or_status == oak_idl::StatusCode::Ok.into() {
-            Ok(frame.body)
-        } else {
-            Err(oak_idl::Status {
-                code: frame.method_or_status.into(),
-                message: String::from_utf8(frame.body.to_vec()).unwrap_or_else(|err| {
-                    alloc::format!(
-                        "Could not parse response error message bytes as utf8: {:?}",
-                        err
-                    )
-                }),
-            })
-        }
-    }
-}
-
 /// Private struct used to send frames over an underlying channel.
 struct Framed<T: Read + Write> {
     inner: T,
@@ -385,7 +332,7 @@ where
 }
 
 /// Public struct used to send and receive messages over an underlying channel.
-pub struct InvocationChannel<T: Read + Write> {
+struct InvocationChannel<T: Read + Write> {
     inner: Framed<T>,
 }
 
@@ -421,6 +368,3 @@ where
         Ok(())
     }
 }
-
-#[cfg(test)]
-mod tests;
