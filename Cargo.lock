@@ -2858,6 +2858,7 @@ dependencies = [
  "oak_idl_gen_services",
  "oak_idl_gen_structs",
  "static_assertions",
+ "strum",
 ]
 
 [[package]]

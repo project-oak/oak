@@ -38,6 +38,8 @@ mod interrupts;
 mod libm;
 mod logging;
 mod memory;
+#[cfg(feature = "serial_channel")]
+mod serial;
 
 use core::panic::PanicInfo;
 use log::{error, info};
@@ -45,9 +47,10 @@ use oak_remote_attestation::handshaker::{
     AttestationBehavior, EmptyAttestationGenerator, EmptyAttestationVerifier,
 };
 use rust_hypervisor_firmware_boot::paging;
+#[cfg(not(feature = "serial_channel"))]
 use rust_hypervisor_firmware_virtio::pci::VirtioPciTransport;
 
-#[cfg(feature = "vsock_channel")]
+#[cfg(all(feature = "vsock_channel", not(feature = "serial_channel")))]
 // The virtio vsock port on which to listen.
 const VSOCK_PORT: u32 = 1024;
 
@@ -69,8 +72,13 @@ fn main<E: boot::E820Entry, B: boot::BootInfo<E>>(info: &B) -> ! {
     oak_baremetal_runtime::framing::handle_frames(get_channel(), attestation_behavior).unwrap();
 }
 
+#[cfg(feature = "serial_channel")]
+fn get_channel() -> serial::Serial {
+    serial::Serial::new()
+}
+
 // Use a virtio console device for the communications channel if we don't support virtio vsock.
-#[cfg(not(feature = "vsock_channel"))]
+#[cfg(all(not(feature = "vsock_channel"), not(feature = "serial_channel")))]
 fn get_channel() -> virtio::console::Console<VirtioPciTransport> {
     let console = virtio::console::Console::find_and_configure_device()
         .expect("Couldn't configure PCI virtio console device.");
@@ -79,7 +87,7 @@ fn get_channel() -> virtio::console::Console<VirtioPciTransport> {
 }
 
 // Use virtio vsock for the communications channel.
-#[cfg(feature = "vsock_channel")]
+#[cfg(all(feature = "vsock_channel", not(feature = "serial_channel")))]
 fn get_channel() -> virtio::vsock::socket::Socket<VirtioPciTransport> {
     let vsock = virtio::vsock::VSock::find_and_configure_device()
         .expect("Couldn't configure PCI virtio vsock device.");
