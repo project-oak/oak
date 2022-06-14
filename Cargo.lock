@@ -2869,7 +2869,7 @@ dependencies = [
  "ciborium-io",
  "getrandom 0.2.6",
  "lazy_static",
- "libm 0.1.4",
+ "libm 0.2.2",
  "linked_list_allocator",
  "log",
  "oak_baremetal_runtime",
@@ -4827,9 +4827,9 @@ dependencies = [
 
 [[package]]
 name = "strum_macros"
-version = "0.24.0"
+version = "0.24.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6878079b17446e4d3eba6192bb0a2950d5b14f0ed8424b852310e5a94345d0ef"
+checksum = "9550962e7cf70d9980392878dfaf1dcc3ece024f4cf3bf3c46b978d0bad61d6c"
 dependencies = [
  "heck 0.4.0",
  "proc-macro2",
@@ -5859,7 +5859,7 @@ dependencies = [
  "bitflags",
  "ciborium-io",
  "log",
- "rand 0.4.6",
+ "rand 0.8.5",
  "rust-hypervisor-firmware-virtio",
  "strum",
 ]
