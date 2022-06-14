@@ -105,6 +105,29 @@ impl Frame {
     }
 }
 
+impl TryFrom<Frame> for Vec<u8> {
+    type Error = anyhow::Error;
+    fn try_from(frame: Frame) -> Result<Self, Self::Error> {
+        let frame_length = frame.len()?;
+        let mut frame_bytes: Vec<u8> = Vec::with_capacity(
+            frame_length
+                .try_into()
+                .context("Failed to convert usize into u32")?,
+        );
+
+        let length_bytes = frame_length.to_le_bytes();
+        frame_bytes.extend_from_slice(&length_bytes);
+        let method_or_status_bytes = frame.method_or_status.to_le_bytes();
+        frame_bytes.extend_from_slice(&method_or_status_bytes);
+        let padding_bytes = [0; PADDING_SIZE];
+        frame_bytes.extend_from_slice(&padding_bytes);
+        let flag_bytes: [u8; FLAG_SIZE] = frame.flag.into();
+        frame_bytes.extend_from_slice(&flag_bytes);
+
+        Ok(frame_bytes)
+    }
+}
+
 /// A [`Message`] is conceptual unit of data that is sent over the communication
 /// channel. It can represent either a full request, or full response of an oak_idl
 /// invocation. Requests and responses can be converted to a [`Message`], and
@@ -363,15 +386,8 @@ where
     }
 
     pub fn write_frame(&mut self, frame: Frame) -> anyhow::Result<()> {
-        let length_bytes = frame.len()?.to_le_bytes();
-        self.inner.write_all(&length_bytes)?;
-        let method_or_status_bytes = frame.method_or_status.to_le_bytes();
-        self.inner.write_all(&method_or_status_bytes)?;
-        let padding_bytes = [0; PADDING_SIZE];
-        self.inner.write_all(&padding_bytes)?;
-        let flag_bytes: [u8; FLAG_SIZE] = frame.flag.into();
-        self.inner.write_all(&flag_bytes)?;
-        self.inner.write_all(&frame.body)?;
+        let frame_bytes: Vec<u8> = frame.try_into()?;
+        self.inner.write_all(&frame_bytes)?;
         self.inner.flush()?;
         Ok(())
     }
