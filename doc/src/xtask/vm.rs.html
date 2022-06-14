@@ -115,6 +115,8 @@
 <span id="110">110</span>
 <span id="111">111</span>
 <span id="112">112</span>
+<span id="113">113</span>
+<span id="114">114</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -147,8 +149,8 @@
 <span class="kw">impl</span> <span class="ident">Variant</span> {
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">payload_crate_path</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span> {
         <span class="kw">match</span> <span class="self">self</span> {
-            <span class="ident">Variant::Baremetal</span> =&gt; <span class="string">&quot;./experimental/uefi/baremetal&quot;</span>,
-            <span class="ident">Variant::Crosvm</span> =&gt; <span class="string">&quot;./experimental/uefi/baremetal-crosvm&quot;</span>,
+            <span class="ident">Variant::Baremetal</span> =&gt; <span class="string">&quot;./experimental/oak_baremetal_app_qemu&quot;</span>,
+            <span class="ident">Variant::Crosvm</span> =&gt; <span class="string">&quot;./experimental/oak_baremetal_app_crosvm&quot;</span>,
         }
     }
 
@@ -161,9 +163,11 @@
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">binary_path</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span> {
         <span class="kw">match</span> <span class="self">self</span> {
-            <span class="ident">Variant::Baremetal</span> =&gt; <span class="string">&quot;./experimental/uefi/baremetal/target/target/debug/baremetal&quot;</span>,
+            <span class="ident">Variant::Baremetal</span> =&gt; {
+                <span class="string">&quot;./experimental/oak_baremetal_app_qemu/target/target/debug/oak_baremetal_app_qemu&quot;</span>
+            }
             <span class="ident">Variant::Crosvm</span> =&gt; {
-                <span class="string">&quot;./experimental/uefi/baremetal-crosvm/target/target/debug/baremetal-crosvm&quot;</span>
+                <span class="string">&quot;./experimental/oak_baremetal_app_crosvm/target/target/debug/oak_baremetal_app_crosvm&quot;</span>
             }
         }
     }
@@ -180,7 +184,7 @@
     <span class="ident">Step::Multiple</span> {
         <span class="ident">name</span>: <span class="macro">format!</span>(<span class="string">&quot;run {} variant&quot;</span>, <span class="ident">variant</span>),
         <span class="ident">steps</span>: <span class="macro">vec!</span>[
-            <span class="ident">build_binary</span>(<span class="string">&quot;build loader binary&quot;</span>, <span class="string">&quot;./experimental/uefi/loader&quot;</span>),
+            <span class="ident">build_binary</span>(<span class="string">&quot;build loader binary&quot;</span>, <span class="string">&quot;./experimental/oak_baremetal_loader&quot;</span>),
             <span class="ident">build_binary</span>(<span class="string">&quot;build payload&quot;</span>, <span class="ident">variant</span>.<span class="ident">payload_crate_path</span>()),
             <span class="ident">Step::WithBackground</span> {
                 <span class="ident">name</span>: <span class="string">&quot;background loader&quot;</span>.<span class="ident">to_string</span>(),
@@ -200,7 +204,7 @@
 
 <span class="kw">fn</span> <span class="ident">run_loader</span>(<span class="ident">variant</span>: <span class="ident">Variant</span>) -&gt; <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">Runnable</span><span class="op">&gt;</span> {
     <span class="ident">Cmd::new</span>(
-        <span class="string">&quot;./target/debug/uefi-loader&quot;</span>,
+        <span class="string">&quot;./target/debug/oak_baremetal_loader&quot;</span>,
         <span class="macro">vec!</span>[
             <span class="macro">format!</span>(<span class="string">&quot;--mode={}&quot;</span>, <span class="ident">variant</span>.<span class="ident">loader_mode</span>()),
             <span class="ident">variant</span>.<span class="ident">binary_path</span>().<span class="ident">to_string</span>(),
@@ -212,11 +216,11 @@
     <span class="ident">Step::Multiple</span> {
         <span class="ident">name</span>: <span class="string">&quot;build and run client&quot;</span>.<span class="ident">to_string</span>(),
         <span class="ident">steps</span>: <span class="macro">vec!</span>[
-            <span class="ident">build_binary</span>(<span class="string">&quot;build client binary&quot;</span>, <span class="string">&quot;./experimental/uefi/client&quot;</span>),
+            <span class="ident">build_binary</span>(<span class="string">&quot;build client binary&quot;</span>, <span class="string">&quot;./experimental/oak_baremetal_client&quot;</span>),
             <span class="ident">Step::Single</span> {
                 <span class="ident">name</span>: <span class="string">&quot;run client&quot;</span>.<span class="ident">to_string</span>(),
                 <span class="ident">command</span>: <span class="ident">Cmd::new</span>(
-                    <span class="string">&quot;./target/debug/uefi-client&quot;</span>,
+                    <span class="string">&quot;./target/debug/oak_baremetal_client&quot;</span>,
                     <span class="macro">vec!</span>[
                         <span class="macro">format!</span>(<span class="string">&quot;--request={}&quot;</span>, <span class="ident">message</span>),
                         <span class="macro">format!</span>(<span class="string">&quot;--expected-response={}&quot;</span>, <span class="ident">message</span>),
