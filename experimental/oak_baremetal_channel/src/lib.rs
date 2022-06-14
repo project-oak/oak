@@ -123,6 +123,7 @@ impl TryFrom<Frame> for Vec<u8> {
         frame_bytes.extend_from_slice(&padding_bytes);
         let flag_bytes: [u8; FLAG_SIZE] = frame.flag.into();
         frame_bytes.extend_from_slice(&flag_bytes);
+        frame_bytes.extend_from_slice(&frame.body);
 
         Ok(frame_bytes)
     }
