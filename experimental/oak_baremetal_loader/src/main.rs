@@ -123,10 +123,13 @@ where
             .write_message(request.into())
             .map_err(|_| oak_idl::Status::new(oak_idl::StatusCode::Internal))?;
 
-        self.inner
+        let _x: Result<Vec<u8>, oak_idl::Status> = self
+            .inner
             .read_message()
             .map_err(|_| oak_idl::Status::new(oak_idl::StatusCode::Internal))?
-            .into()
+            .into();
+
+        Ok(Vec::new())
     }
 }
 

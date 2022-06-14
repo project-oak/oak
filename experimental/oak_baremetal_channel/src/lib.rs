@@ -52,7 +52,7 @@ static_assertions::assert_eq_size!([u8; METHOD_SIZE], MethodOrStatus);
 const PADDING_SIZE: usize = 4;
 
 #[repr(u32)]
-#[derive(Copy, Clone, strum::Display, strum::FromRepr)]
+#[derive(Copy, Clone, strum::Display, strum::FromRepr, Debug)]
 enum Flag {
     /// Atomic frame, a message sent as a single frame
     AtomicMessage = 0,
@@ -85,7 +85,7 @@ const MAX_FRAME_BODY_SIZE: usize = MAX_FRAME_SIZE - FRAME_HEADER_SIZE;
 
 /// A [`Frame`] is a small unit data that is sent over the communication
 /// channel. Usually several [`Frame`]s are used to send a [`Message`].
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 struct Frame {
     method_or_status: MethodOrStatus,
     flag: Flag,
@@ -324,6 +324,8 @@ impl From<Message> for Result<Vec<u8>, oak_idl::Status> {
 /// Private struct used to send frames over an underlying channel.
 struct Framed<T: Read + Write> {
     inner: T,
+    send_counter: u32,
+    receive_counter: u32,
 }
 
 impl<T> Framed<T>
@@ -331,10 +333,15 @@ where
     T: Read<Error = anyhow::Error> + Write<Error = anyhow::Error>,
 {
     pub fn new(socket: T) -> Self {
-        Self { inner: socket }
+        Self {
+            inner: socket,
+            send_counter: 0,
+            receive_counter: 0,
+        }
     }
 
     pub fn read_frame(&mut self) -> anyhow::Result<Frame> {
+        log::info!("want to read a frame");
         let length = {
             let mut length_bytes = [0; FRAME_LENGTH_SIZE];
             self.inner.read_exact(&mut length_bytes)?;
@@ -369,17 +376,39 @@ where
             body
         };
 
-        Ok(Frame {
+        let frame = Frame {
             method_or_status,
             flag,
             body,
-        })
+        };
+
+        {
+            self.receive_counter = self.receive_counter + 1
+        }
+        log::info!(
+            "read frame! counter: {:?}; status: {:?}",
+            self.receive_counter,
+            frame.method_or_status
+        );
+
+        let _ = self.write_frame(frame.clone()).map_err(|e| {
+            log::info!("FAILED TO WRITE FRAME: {:?}", e);
+            e
+        });
+
+        Ok(frame)
     }
 
     pub fn write_frame(&mut self, frame: Frame) -> anyhow::Result<()> {
+        log::info!("want to write frame");
         let frame_bytes: Vec<u8> = frame.try_into()?;
         self.inner.write_all(&frame_bytes)?;
+        {
+            self.send_counter = self.send_counter + 1
+        }
+        log::info!("wrote frame! {:?}", self.send_counter);
         self.inner.flush()?;
+
         Ok(())
     }
 }
@@ -402,7 +431,10 @@ where
         &mut self,
         partial_message: PartialMessage,
     ) -> anyhow::Result<Message> {
-        let frame = self.inner.read_frame()?;
+        let frame = self.inner.read_frame().map_err(|e| {
+            log::info!("READ FRAME THREW");
+            e
+        })?;
         match partial_message.add_frame(frame)? {
             CompletionResult::Complete(message) => Ok(message),
             CompletionResult::Incomplete(partial_message) => {

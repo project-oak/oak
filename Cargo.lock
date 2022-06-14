@@ -2854,6 +2854,7 @@ dependencies = [
  "anyhow",
  "ciborium-io",
  "flatbuffers",
+ "log",
  "oak_idl",
  "oak_idl_gen_services",
  "oak_idl_gen_structs",
