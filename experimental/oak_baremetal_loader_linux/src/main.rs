@@ -14,11 +14,6 @@
 // limitations under the License.
 //
 
-// pub mod proto {
-//     #![allow(clippy::return_self_not_must_use)]
-//     tonic::include_proto!("oak.sandbox.runtime");
-// }
-
 pub mod proto {
     pub mod oak {
         pub mod sandbox {
@@ -38,7 +33,9 @@ use log::info;
 use oak_remote_attestation::handshaker::{
     AttestationBehavior, EmptyAttestationGenerator, EmptyAttestationVerifier,
 };
+use prost::Message;
 use proto::oak::sandbox::runtime::{Request, Response};
+use ringbuf::{Consumer, Producer, RingBuffer};
 use std::{
     io::{Read, Write},
     os::unix::io::FromRawFd,
@@ -46,6 +43,7 @@ use std::{
 use vsock::VsockStream;
 
 const FILE_DESCRIPTOR: c_int = 1023;
+const BUFFER_SIZE: usize = 1024;
 
 fn main() {
     let attestation_behavior =
@@ -58,6 +56,10 @@ fn main() {
 
 struct Channel {
     stream: VsockStream,
+    read_buffer_producer: Producer<u8>,
+    read_buffer_consumer: Consumer<u8>,
+    // write_buffer_producer: Producer<u8>,
+    // write_buffer_consumer: Consumer<u8>,
 }
 
 impl Channel {
@@ -67,7 +69,20 @@ impl Channel {
             "Connected to the {}",
             stream.peer_addr().map_err(|error| anyhow!("Couldn't get peer address: {:?}", error))?
         );
-        Ok(Self { stream })
+
+        let read_buffer = RingBuffer::<u8>::new(BUFFER_SIZE);
+        let (read_buffer_producer, read_buffer_consumer) = read_buffer.split();
+
+        // let write_buffer = RingBuffer::<u8>::new(BUFFER_SIZE);
+        // let (write_buffer_producer, write_buffer_consumer) = write_buffer.split();
+
+        Ok(Self {
+            stream,
+            read_buffer_producer,
+            read_buffer_consumer,
+            // write_buffer_producer,
+            // write_buffer_consumer,
+        })
     }
 }
 
@@ -75,7 +90,16 @@ impl ciborium_io::Read for Channel {
     type Error = anyhow::Error;
 
     fn read_exact(&mut self, data: &mut [u8]) -> Result<(), Self::Error> {
-        self.stream.read_exact(data).map_err(|error| anyhow!("Couldn't read from stream: {:?}", error))
+        let mut buffer = vec![0; BUFFER_SIZE];
+        let read_bytes = self.stream.read(&mut buffer).map_err(|error| anyhow!("Couldn't read from stream: {:?}", error))?;
+        if read_bytes > 0 {
+            let message = Request::decode(&buffer[..read_bytes])
+                .map_err(|error| anyhow!("Couldn't decode proto message: {:?}", error))?;
+            self.read_buffer_producer.push_slice(message.data.as_bytes());
+        }
+
+        self.read_buffer_consumer.read_exact(data).map_err(|error| anyhow!("Couldn't read from buffer: {:?}", error))
+        // self.stream.read_exact(data).map_err(|error| anyhow!("Couldn't read from stream: {:?}", error))
     }
 }
 
@@ -83,6 +107,13 @@ impl ciborium_io::Write for Channel {
     type Error = anyhow::Error;
 
     fn write_all(&mut self, data: &[u8]) -> Result<(), Self::Error> {
+        let message = Response {
+            data: String::from_utf8(data.to_vec()).unwrap(),
+        };
+        let mut encoded_message = vec![];
+        message.encode(&mut encoded_message)
+            .map_err(|error| anyhow!("Couldn't encode proto message: {:?}", error))?;
+
         self.stream.write_all(data).map_err(|error| anyhow!("Couldn't write into stream: {:?}", error))
     }
 

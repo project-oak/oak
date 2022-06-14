@@ -15,10 +15,6 @@
 //
 
 fn main() {
-    // oak_utils::compile_protos(
-    //     &["runtime.proto"],
-    //     "proto",
-    // );
     prost_build::compile_protos(
         &["experimental/oak_baremetal_loader_linux/proto/runtime.proto"],
         &["../.."],

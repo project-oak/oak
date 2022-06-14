@@ -17,6 +17,7 @@ oak_baremetal_runtime = { path = "../../experimental/oak_baremetal_runtime", def
   "rust-crypto"
 ] }
 prost = "*"
+ringbuf = "*"
 vsock = "*"
 # atomic_refcell = "*"
 # getrandom = { version = "0.2", features = ["rdrand"] }
