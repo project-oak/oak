@@ -2915,6 +2915,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "oak_baremetal_loader_linux"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "ciborium-io",
+ "libc",
+ "log",
+ "oak_baremetal_runtime",
+ "oak_remote_attestation",
+ "prost 0.9.0",
+ "prost-build 0.9.0",
+ "vsock",
+]
+
+[[package]]
 name = "oak_baremetal_runtime"
 version = "0.1.0"
 dependencies = [
