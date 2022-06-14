@@ -191,23 +191,26 @@ impl From<MessageReconstructionErrors> for anyhow::Error {
     }
 }
 
+#[derive(PartialEq, Eq, Debug)]
+enum CompletionResult {
+    Complete(Message),
+    Incomplete(PartialMessage),
+}
+
 impl PartialMessage {
     /// Attempt to complete the [`PartialMessage`] with a frame. Returns
     /// an outer [`Result`] to handle errors resulting from invalid arguments.
-    /// Returns an inner [`Result`] that contains either the succesfully
+    /// Returns an inner [`CompletionResult`] that contains either the succesfully
     /// completed message, or if more frames are needed to complete the message,
     /// a new [`PartialMessage`] that includes the previously passed frames.
-    pub fn try_complete(
-        self,
-        frame: Frame,
-    ) -> Result<Result<Message, Self>, MessageReconstructionErrors> {
+    pub fn add_frame(self, frame: Frame) -> Result<CompletionResult, MessageReconstructionErrors> {
         match self.inner {
             None => match frame.flag {
-                Flag::AtomicMessage => Ok(Ok(Message {
+                Flag::AtomicMessage => Ok(CompletionResult::Complete(Message {
                     method_or_status: frame.method_or_status,
                     body: frame.body,
                 })),
-                Flag::MessageStart => Ok(Err(Self {
+                Flag::MessageStart => Ok(CompletionResult::Incomplete(Self {
                     inner: Some(Message {
                         method_or_status: frame.method_or_status,
                         body: frame.body,
@@ -219,13 +222,13 @@ impl PartialMessage {
                 Flag::MessageMessage => {
                     let new_partial_message =
                         PartialMessage::append_partial_message(partial_message, frame)?;
-                    Ok(Ok(new_partial_message))
+                    Ok(CompletionResult::Complete(new_partial_message))
                 }
                 Flag::MessageContinuation => {
                     let new_partial_message =
                         PartialMessage::append_partial_message(partial_message, frame)?;
 
-                    Ok(Err(Self {
+                    Ok(CompletionResult::Incomplete(Self {
                         inner: Some(new_partial_message),
                     }))
                 }
@@ -393,10 +396,11 @@ where
         partial_message: PartialMessage,
     ) -> anyhow::Result<Message> {
         let frame = self.inner.read_frame()?;
-        let result = partial_message.try_complete(frame)?;
-        match result {
-            Ok(message) => Ok(message),
-            Err(partial_message) => self.recursively_complete_partial_message(partial_message),
+        match partial_message.add_frame(frame)? {
+            CompletionResult::Complete(message) => Ok(message),
+            CompletionResult::Incomplete(partial_message) => {
+                self.recursively_complete_partial_message(partial_message)
+            }
         }
     }
     pub fn read_message(&mut self) -> anyhow::Result<Message> {

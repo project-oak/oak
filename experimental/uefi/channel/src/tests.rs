@@ -53,17 +53,19 @@ fn test_message_fragmentation() {
     // Add all frames, except for the last. This should result in a new
     // [`PartialMessage`] each time.
     for frame in frames.drain(0..frames.len() - 1) {
-        let result = partial_message.try_complete(frame).unwrap();
-        partial_message = result.unwrap_err()
+        let result = partial_message.add_frame(frame).unwrap();
+        partial_message = match result {
+            CompletionResult::Complete(_) => {
+                panic!("should not be complete")
+            }
+            CompletionResult::Incomplete(partial_message) => partial_message,
+        }
     }
 
     // Adding the last frame should return the reconstructed [`Message`].
-    let reconstructed_message = partial_message
-        .try_complete(frames.pop().unwrap())
-        .unwrap()
-        .unwrap();
+    let reconstructed_message = partial_message.add_frame(frames.pop().unwrap()).unwrap();
 
-    assert_eq!(message, reconstructed_message);
+    assert_eq!(CompletionResult::Complete(message), reconstructed_message);
 }
 
 #[test]
@@ -78,11 +80,13 @@ fn test_message_reconstruction_for_messages_small_messages() {
     assert_eq!(frames.len(), 1);
 
     let reconstructed_message = PartialMessage::default()
-        .try_complete(frames[0].clone())
-        .unwrap()
+        .add_frame(frames[0].clone())
         .unwrap();
 
-    assert_eq!(small_message, reconstructed_message);
+    assert_eq!(
+        CompletionResult::Complete(small_message),
+        reconstructed_message
+    );
 }
 
 #[test]
@@ -96,11 +100,13 @@ fn test_message_reconstruction_for_messages_with_an_empty_body() {
     assert_eq!(frames.len(), 1);
 
     let reconstructed_message = PartialMessage::default()
-        .try_complete(frames[0].clone())
-        .unwrap()
+        .add_frame(frames[0].clone())
         .unwrap();
 
-    assert_eq!(empty_body_message, reconstructed_message);
+    assert_eq!(
+        CompletionResult::Complete(empty_body_message),
+        reconstructed_message
+    );
 }
 
 #[test]
@@ -112,14 +118,19 @@ fn test_message_reconstruction_double_start_frame() {
     };
 
     let empty_partial_message = PartialMessage::default();
-    let resulting_partial_message = empty_partial_message
-        .try_complete(start_frame.clone())
+    let resulting_partial_message = match empty_partial_message
+        .add_frame(start_frame.clone())
         .unwrap()
-        .unwrap_err();
+    {
+        CompletionResult::Complete(_) => {
+            panic!("should not be complete")
+        }
+        CompletionResult::Incomplete(resulting_partial_message) => resulting_partial_message,
+    };
 
     assert_eq!(
         Err(MessageReconstructionErrors::DoubleStartFrame),
-        resulting_partial_message.try_complete(start_frame),
+        resulting_partial_message.add_frame(start_frame),
     );
 }
 
@@ -127,7 +138,7 @@ fn test_message_reconstruction_double_start_frame() {
 fn test_message_reconstruction_expected_start_frame() {
     assert_eq!(
         Err(MessageReconstructionErrors::ExpectedStartFrame),
-        PartialMessage::default().try_complete(Frame {
+        PartialMessage::default().add_frame(Frame {
             method_or_status: 0,
             flag: Flag::MessageContinuation,
             body: Vec::new(),
@@ -135,7 +146,7 @@ fn test_message_reconstruction_expected_start_frame() {
     );
     assert_eq!(
         Err(MessageReconstructionErrors::ExpectedStartFrame),
-        PartialMessage::default().try_complete(Frame {
+        PartialMessage::default().add_frame(Frame {
             method_or_status: 0,
             flag: Flag::MessageMessage,
             body: Vec::new(),
@@ -157,13 +168,15 @@ fn test_message_reconstruction_frame_header_mismatch() {
     };
 
     let empty_partial_message = PartialMessage::default();
-    let resulting_partial_message = empty_partial_message
-        .try_complete(start_frame)
-        .unwrap()
-        .unwrap_err();
+    let resulting_partial_message = match empty_partial_message.add_frame(start_frame).unwrap() {
+        CompletionResult::Complete(_) => {
+            panic!("should not be complete")
+        }
+        CompletionResult::Incomplete(resulting_partial_message) => resulting_partial_message,
+    };
 
     assert_eq!(
         Err(MessageReconstructionErrors::MismatchingFrameHeader),
-        resulting_partial_message.try_complete(continuance_frame_of_a_different_method),
+        resulting_partial_message.add_frame(continuance_frame_of_a_different_method),
     );
 }
