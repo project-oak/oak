@@ -20,6 +20,7 @@
 
 extern crate alloc;
 
+use crate::alloc::string::ToString;
 use alloc::{string::String, vec, vec::Vec};
 use anyhow::Context;
 use ciborium_io::{Read, Write};
@@ -191,26 +192,16 @@ struct PartialMessage {
     inner: Option<Message>,
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Display)]
 enum MessageReconstructionErrors {
     ExpectedStartFrame,
     DoubleStartFrame,
     MismatchingFrameHeader,
 }
 
-impl MessageReconstructionErrors {
-    fn description(&self) -> &'static str {
-        match self {
-            MessageReconstructionErrors::ExpectedStartFrame => "Invalid frame order. The first frame must be a start frame.",
-            MessageReconstructionErrors::DoubleStartFrame => "Invalid frame order. Already received a start frame for this message.",
-            MessageReconstructionErrors::MismatchingFrameHeader => "Invalid frame order. The frame header must be the same for all frames belonging to the same message.",
-        }
-    }
-}
-
 impl From<MessageReconstructionErrors> for anyhow::Error {
     fn from(error: MessageReconstructionErrors) -> Self {
-        anyhow::Error::msg(error.description())
+        anyhow::Error::msg(error.to_string())
     }
 }
 
