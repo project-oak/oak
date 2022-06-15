@@ -17,7 +17,7 @@
 use super::*;
 use crate::{
     test::{new_valid_transport, TestingTransport},
-    vsock::HOST_CID,
+    vsock::{HOST_CID, QUEUE_SIZE},
 };
 use alloc::vec;
 use ciborium_io::{Read, Write};

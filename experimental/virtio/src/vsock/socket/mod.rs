@@ -16,7 +16,7 @@
 
 use super::{
     packet::{Packet, VSockFlags, VSockOp, HEADER_SIZE},
-    VSock, DATA_BUFFER_SIZE, QUEUE_SIZE,
+    VSock, DATA_BUFFER_SIZE,
 };
 use alloc::collections::VecDeque;
 use core::num::Wrapping;
@@ -24,16 +24,16 @@ use rust_hypervisor_firmware_virtio::virtio::VirtioTransport;
 
 /// The maximum buffer size used by the socket.
 ///
-/// This is used for flow-control calculations. For now we use the maximum size seeing that we don't
-/// have a fixed limit and don't want to send too many credit update packets.
-const STREAM_BUFFER_LENGTH: Wrapping<u32> = Wrapping(u32::MAX);
+/// This is used for flow-control calculations. Seeing that we don't use an actual streambuffer,
+/// this is currently an arbitrary value that seems to avoid stalling.
+const STREAM_BUFFER_LENGTH: Wrapping<u32> = Wrapping(1024 * 1024);
 
 /// The limit that triggers a voluntary credit update message to avoid stalling.
 ///
 /// If the peer's calculation of our free buffer space falls below this point (e.g when we receive a
 /// lot of data without sending any packets back) we send a credit update packet to make sure the
 /// peer knows we have more space available.
-const CREDIT_UPDATE_LIMIT: Wrapping<u32> = Wrapping((DATA_BUFFER_SIZE * QUEUE_SIZE) as u32);
+const CREDIT_UPDATE_LIMIT: Wrapping<u32> = Wrapping(512 * 1024);
 
 /// The maximum size of the payload of a single packet to ensure it fits into a single buffer in the
 /// queue.
