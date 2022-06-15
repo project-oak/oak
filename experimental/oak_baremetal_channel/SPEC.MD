@@ -87,7 +87,7 @@ its frames have been received.
 ### Encoding Messages into Frames
 
 The byte representation of a message MUST be chunked. The last chunk MAY be
-shorter than 63,936 bytes (the maximum size of a frame body). Any preceeding
+shorter than 63,936 bytes (the maximum size of a frame body). Any preceding
 chunks MUST be exactly 63,936 bytes in length.
 
 A frame MUST then be formed for each resulting message chunk, with the message
@@ -102,8 +102,8 @@ are received.
 
 ## Frames
 
-Messages are sent and received as frames. Each message can be fragmented into
-one or more frames.
+Messages are sent and received as frames. Each message can be fragmented into a
+set of one or more frames.
 
 ### Frame Definition
 
@@ -112,7 +112,8 @@ A byte encoded frame MUST consist of the following seqeuential fields:
 - padding, 4 bytes: for future use
 - length, u16, little endian: Length of the entire frame, including this field.
   The length of a frame MUST NOT exceed 64000 bytes
-- flags, 2 bytes: Bitflags, see [Frame Flags](#3-frame-flags-definition)
+- flags, 2 bytes, little endian: Bitflags, see
+  [Frame Flags](#3-frame-flags-definition)
 - body, variable length byte array: Byte chunk of an encoded message. In order
   to not exceed the maximum frame length, this byte array MUST NOT exceed 63,936
   bytes
@@ -120,7 +121,7 @@ A byte encoded frame MUST consist of the following seqeuential fields:
 ### Frame Flags Definition
 
 - 0x0 (LSB): MUST be set for frames that are the first of the set that
-  constiutes a message
-- 0x1: MUST be set for frames that are the last of the set that constiutes a
+  constitutes a message
+- 0x1: MUST be set for frames that are the last of the set that constitutes a
   message
 - 0x2-0x15: Reserved for future use. MUST be unset and ignored
