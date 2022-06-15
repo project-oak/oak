@@ -82,13 +82,13 @@ its frames have been received.
 ### Encoding Messages into Frames
 
 The byte representation of a message MUST be chunked. The last chunk MAY be
-smaller than 63,984 bytes (the maximum size of a frame body). Any preceeding
-chunks MUST be exactly 63,984 bytes in size.
+shorter than 63,984 bytes (the maximum size of a frame body). Any preceeding
+chunks MUST be exactly 63,984 bytes in length.
 
 A frame MUST then be formed for each resulting message chunk, with the message
 chunk forming the frame body.
 
-Messages smaller 63,984 bytes MUST be encoded as a single frame.
+Messages shorter than 63,984 bytes MUST be encoded as a single frame.
 
 ## Frames
 
@@ -99,12 +99,12 @@ one or more frames.
 
 A byte encoded frame MUST consist of the following seqeuential fields:
 
-- length, u32, little endian: Length of the entire frame, including this field
-  The size of a frame MUST NOT exceed 64000 bytes
+- length, u32, little endian: Length of the entire frame, including this field.
+  The length of a frame MUST NOT exceed 64000 bytes
 - flags, two bytes: Bitflags, see [Frame Flags](#3-frame-flags-definition)
 - padding, two bytes: reserved to maintain 8 byte alignment
 - body, variable length byte array: Byte chunk of an encoded message. In order
-  to not exceed the maximum frame size, this byte array MUST NOT exceed 63,984
+  to not exceed the maximum frame length, this byte array MUST NOT exceed 63,984
   bytes
 
 ### Frame Flags Definition
