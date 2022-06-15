@@ -97,30 +97,20 @@ impl Qemu {
         cmd.args(&["-serial", "chardev:consock"]);
         // Second serial port: for communicating with the UEFI app
         cmd.args(&["-chardev", "socket,id=commsock,fd=11"]);
-        if params.firmware.is_none() {
-            // For the baremetal app (no firmware) we use a simple virtio PCI serial port for
-            // host-guest communications.
-            cmd.args(&[
-                "-device",
-                "virtio-serial-pci-non-transitional,id=virtio_serial_pci0,max_ports=1",
-            ]);
-            cmd.args(&[
-                "-device",
-                "virtconsole,chardev=commsock,bus=virtio_serial_pci0.0",
-            ]);
-        } else {
-            // For the UEFI app (where firmware is specified) we use an emulated serial port for
-            // host-guest communications.
-            cmd.args(&["-serial", "chardev:commsock"]);
-        }
+        // For the baremetal app (no firmware) we use a simple virtio PCI serial port for
+        // host-guest communications.
+        cmd.args(&[
+            "-device",
+            "virtio-serial-pci-non-transitional,id=virtio_serial_pci0,max_ports=1",
+        ]);
+        cmd.args(&[
+            "-device",
+            "virtconsole,chardev=commsock,bus=virtio_serial_pci0.0",
+        ]);
         // Expose the QEMU monitor (QMP) over a socket as well.
         cmd.args(&["-chardev", "socket,id=qmpsock,fd=12"]);
         cmd.args(&["-qmp", "chardev:qmpsock"]);
 
-        if params.firmware.is_some() {
-            // Point to the UEFI firmware.
-            cmd.args(&[OsStr::new("-bios"), params.firmware.unwrap().as_os_str()]);
-        }
         // And finally -- say that the "kernel" is our UEFI app. Although according to docs
         // this is Linux-specific, OVMF seems to be fine with the "kernel" pointing to an UEFI
         // app.
