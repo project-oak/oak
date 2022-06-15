@@ -192,7 +192,7 @@ for future use
 Length of the entire frame, including this field. The length of a frame MUST NOT
 exceed 64000 bytes
 
-#### flags, uint8[2], little endian
+#### flags, two bytes, little endian
 
 ##### flags[0]
 
