@@ -13,7 +13,9 @@ interpreted as described in [RFC 2119](https://www.rfc-editor.org/rfc/rfc2119).
 
 Methods are exposed by the Trusted Runtime. They MAY be remotely invoked by the
 Unrusted Loader. Each method has clearly defined parameters and return types.
-The Oak IDL is used to define the methods exposed by the Trusted Runtime.
+The Oak IDL is used to define which methods are available, their parameter and
+return types, as well the protcol used to encode parameters and return values to
+bytes.
 
 ## Invocation
 
@@ -50,8 +52,7 @@ A byte encoded request message MUST consist of the following seqeuential fields:
 - method_id, u32, little endian: identifies the method that is being invoked
 - padding, 4 bytes: reserved to maintain 8 byte alignment. MUST be unset and
   ignored
-- body, variable length byte array: the method’s arguments, encoded with
-  flatbuffer
+- body, variable length byte array: byte encoded method parameters
 
 ### Response Message Definition
 
@@ -65,13 +66,12 @@ fields:
   [gRPC status code](https://grpc.github.io/grpc/core/md_doc_statuscodes.html)
 - status_message_length, u32, little endian: length of the status message
 - status_message, utf-8 encoded string: developer-facing error message
-- body, variable length byte array: the method’s return value, encoded with
-  flatbuffer
+- body, variable length byte array: byte encoded method return value
 
 ### Sending Messages
 
 To send a message, it MUST first be encoded into frames. The resulting frame set
-MUST then be send as an uninterrupted sequence.
+MUST be sent as an uninterrupted sequence.
 
 ### Receiving Messages
 
