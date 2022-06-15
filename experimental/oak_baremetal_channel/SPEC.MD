@@ -126,3 +126,13 @@ A byte encoded frame MUST consist of the following seqeuential fields:
 - 0x1: MUST be set for frames that are the last of the set that constitutes a
   message
 - 0x2-0x15: Reserved for future use. MUST be unset and ignored
+
+#### Frame Flag Examples
+
+For message sent over more than two frames the first frame would have 0x0 set,
+with all other flags of that frame being unset. The last frame would have 0x1
+set, with all other flags being unset. Any frames in between would have no flags
+set.
+
+For small messages sent as a single frame, 0x0 and 0x1 would set, all other
+flags would be unset.
