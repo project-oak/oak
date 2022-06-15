@@ -80,7 +80,7 @@ MUST be sent as an uninterrupted sequence.
 
 ### Receiving Messages
 
-To receive a message the recipent incrementaly reads frames from the
+To receive a message the recipent incrementally reads frames from the
 communication channel. The recipent MAY start parsing a message before all of
 its frames have been received.
 
@@ -109,10 +109,10 @@ one or more frames.
 
 A byte encoded frame MUST consist of the following seqeuential fields:
 
-- padding, four bytes: for future use
+- padding, 4 bytes: for future use
 - length, u16, little endian: Length of the entire frame, including this field.
   The length of a frame MUST NOT exceed 64000 bytes
-- flags, two bytes: Bitflags, see [Frame Flags](#3-frame-flags-definition)
+- flags, 2 bytes: Bitflags, see [Frame Flags](#3-frame-flags-definition)
 - body, variable length byte array: Byte chunk of an encoded message. In order
   to not exceed the maximum frame length, this byte array MUST NOT exceed 63,936
   bytes
