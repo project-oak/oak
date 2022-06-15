@@ -277,7 +277,6 @@ impl PartialMessage {
     }
 }
 
-/// Private struct used to send frames over an underlying channel.
 struct Framed<T: Read + Write> {
     inner: T,
 }
@@ -341,7 +340,6 @@ where
     }
 }
 
-/// Public struct used to send and receive messages over an underlying channel.
 struct InvocationChannel<T: Read + Write> {
     inner: Framed<T>,
 }
