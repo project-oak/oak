@@ -63,7 +63,7 @@ struct MessageIdCounter {
 impl MessageIdCounter {
     fn next_message_id(&mut self) -> MessageId {
         let next_message_id = self.next_message_id;
-        let _ = self.next_message_id.overflowing_add(1);
+        self.next_message_id = next_message_id.wrapping_add(1);
         next_message_id
     }
 }
