@@ -67,9 +67,11 @@ fields:
   relevant Request Message
 - status_code, u32, little endian: response status as a
   [gRPC status code](https://grpc.github.io/grpc/core/md_doc_statuscodes.html)
-- status_message_length, u32, little endian: length of the status message
-- status_message, utf-8 encoded string: developer-facing error message
-- body, variable length byte array: byte encoded method return value
+- padding, 4 bytes: reserved to maintain 8 byte alignment. MUST be unset and
+  ignored
+- body, variable length byte array: For responses with an "Ok" status code the
+  body MUST be the byte encoded method return value. Else the body MUST be a
+  utf-8 encoded developer-facing error message.
 
 ### Sending Messages
 
