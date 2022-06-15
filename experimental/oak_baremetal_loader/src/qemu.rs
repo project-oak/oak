@@ -96,6 +96,7 @@ impl Qemu {
         cmd.args(&["-chardev", "socket,id=consock,fd=10"]);
         cmd.args(&["-serial", "chardev:consock"]);
         // We use a simple virtio PCI serial port for host-guest communications.
+        cmd.args(&["-chardev", "socket,id=commsock,fd=11"]);
         cmd.args(&[
             "-device",
             "virtio-serial-pci-non-transitional,id=virtio_serial_pci0,max_ports=1",
