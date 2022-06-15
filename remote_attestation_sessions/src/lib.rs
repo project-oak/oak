@@ -20,7 +20,7 @@
 
 extern crate alloc;
 
-use alloc::{boxed::Box, sync::Arc, vec::Vec};
+use alloc::boxed::Box;
 use lru::LruCache;
 use oak_remote_attestation::handshaker::{
     AttestationBehavior, AttestationGenerator, AttestationVerifier, Encryptor, ServerHandshaker,
@@ -38,21 +38,14 @@ pub enum SessionState<G: AttestationGenerator, V: AttestationVerifier> {
 /// Maintains remote attestation state for a number of sessions
 pub struct SessionTracker<G: AttestationGenerator, V: AttestationVerifier> {
     attestation_behavior: AttestationBehavior<G, V>,
-    /// Configuration information to provide to the client for the attestation step.
-    additional_info: Arc<Vec<u8>>,
     known_sessions: LruCache<SessionId, SessionState<G, V>>,
 }
 
 impl<G: AttestationGenerator, V: AttestationVerifier> SessionTracker<G, V> {
-    pub fn create(
-        cache_size: usize,
-        attestation_behavior: AttestationBehavior<G, V>,
-        additional_info: Vec<u8>,
-    ) -> Self {
+    pub fn create(cache_size: usize, attestation_behavior: AttestationBehavior<G, V>) -> Self {
         let known_sessions = LruCache::new(cache_size);
         Self {
             attestation_behavior,
-            additional_info: Arc::new(additional_info),
             known_sessions,
         }
     }
@@ -72,10 +65,7 @@ impl<G: AttestationGenerator, V: AttestationVerifier> SessionTracker<G, V> {
     ) -> anyhow::Result<SessionState<G, V>> {
         match self.known_sessions.pop(&session_id) {
             None => Ok(SessionState::HandshakeInProgress(Box::new(
-                ServerHandshaker::new(
-                    self.attestation_behavior.clone(),
-                    self.additional_info.clone(),
-                )?,
+                ServerHandshaker::new(self.attestation_behavior.clone())?,
             ))),
             Some(SessionState::HandshakeInProgress(handshaker)) => {
                 // Completed handshakers are functionally just wrap an

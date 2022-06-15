@@ -25,7 +25,7 @@ use crate::{
         MAXIMUM_MESSAGE_SIZE, REPLAY_PROTECTION_ARRAY_LENGTH, SERVER_IDENTITY_HEADER,
     },
 };
-use alloc::{sync::Arc, vec, vec::Vec};
+use alloc::{vec, vec::Vec};
 use anyhow::{anyhow, Context};
 use assert_matches::assert_matches;
 use quickcheck::{quickcheck, TestResult};
@@ -96,7 +96,6 @@ fn test_serialize_server_identity() {
         transcript_signature: Vec<u8>,
         signing_public_key: Vec<u8>,
         attestation_info: Vec<u8>,
-        additional_info: Arc<Vec<u8>>,
     ) -> TestResult {
         if ephemeral_public_key.len() > KEY_AGREEMENT_ALGORITHM_KEY_LENGTH
             || random.len() > REPLAY_PROTECTION_ARRAY_LENGTH
@@ -110,7 +109,6 @@ fn test_serialize_server_identity() {
             to_array(&random).unwrap(),
             to_array(&signing_public_key).unwrap(),
             attestation_info,
-            additional_info,
         );
         assert_eq!(server_identity.transcript_signature, default_array());
 
@@ -122,18 +120,16 @@ fn test_serialize_server_identity() {
         );
 
         let result = test_serialize_template(&server_identity);
-        assert!(result.is_ok());
+        assert!(result.is_ok(), "{:?}", result);
 
         server_identity.clear_transcript_signature();
         assert_eq!(server_identity.transcript_signature, default_array());
 
         let result = test_serialize_template(&server_identity);
-        assert!(result.is_ok());
+        assert!(result.is_ok(), "{:?}", result);
         TestResult::from_bool(result.unwrap())
     }
-    quickcheck(
-        property as fn(Vec<u8>, Vec<u8>, Vec<u8>, Vec<u8>, Vec<u8>, Arc<Vec<u8>>) -> TestResult,
-    );
+    quickcheck(property as fn(Vec<u8>, Vec<u8>, Vec<u8>, Vec<u8>, Vec<u8>) -> TestResult);
 }
 
 #[test]
@@ -199,13 +195,8 @@ fn test_deserialize_message() {
         MessageWrapper::ClientHello(client_hello)
     );
 
-    let server_identity = ServerIdentity::new(
-        default_array(),
-        default_array(),
-        default_array(),
-        vec![],
-        Arc::new(vec![]),
-    );
+    let server_identity =
+        ServerIdentity::new(default_array(), default_array(), default_array(), vec![]);
     let deserialized_server_identity = deserialize_message(&server_identity.serialize().unwrap());
     assert_matches!(deserialized_server_identity, Ok(_));
     assert_eq!(

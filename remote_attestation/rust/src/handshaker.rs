@@ -35,7 +35,7 @@ use crate::{
         ServerIdentity,
     },
 };
-use alloc::{sync::Arc, vec, vec::Vec};
+use alloc::{vec, vec::Vec};
 use anyhow::{anyhow, Context};
 use core::fmt::Debug;
 
@@ -251,7 +251,6 @@ impl<G: AttestationGenerator, V: AttestationVerifier> ClientHandshaker<G, V> {
         let expected_attested_data = attestation_data(
             &server_identity.ephemeral_public_key,
             server_signing_public_key,
-            &server_identity.additional_attestation_data,
         );
 
         // Verify server attestation info.
@@ -266,12 +265,8 @@ impl<G: AttestationGenerator, V: AttestationVerifier> ClientHandshaker<G, V> {
             .context("Couldn't get ephemeral public key")?;
 
         // TODO(#2914): Support additional attestation info in ClientIdentity.
-        let additional_attestation_data = &[];
-        let attested_data = attestation_data(
-            &ephemeral_public_key,
-            &self.transcript_signer.public_key()?,
-            additional_attestation_data,
-        );
+        let attested_data =
+            attestation_data(&ephemeral_public_key, &self.transcript_signer.public_key()?);
         let attestation_report = self
             .behavior
             .generator
@@ -321,24 +316,17 @@ pub struct ServerHandshaker<G: AttestationGenerator, V: AttestationVerifier> {
     /// Signer containing a key which public part is signed by the TEE firmware key.
     /// Used for signing protocol transcripts and preventing replay attacks.
     transcript_signer: Signer,
-    /// Additional info about the server, including configuration information and proof of
-    /// inclusion in a verifiable log.
-    additional_info: Arc<Vec<u8>>,
 }
 
 impl<G: AttestationGenerator, V: AttestationVerifier> ServerHandshaker<G, V> {
     /// Creates [`ServerHandshaker`] with `ServerHandshakerState::ExpectingClientIdentity`
     /// state.
-    pub fn new(
-        behavior: AttestationBehavior<G, V>,
-        additional_info: Arc<Vec<u8>>,
-    ) -> anyhow::Result<Self> {
+    pub fn new(behavior: AttestationBehavior<G, V>) -> anyhow::Result<Self> {
         Ok(Self {
             behavior,
             state: ServerHandshakerState::ExpectingClientHello,
             transcript: Transcript::new(),
             transcript_signer: Signer::create().context("Couldn't create signer")?,
-            additional_info,
         })
     }
 
@@ -433,11 +421,8 @@ impl<G: AttestationGenerator, V: AttestationVerifier> ServerHandshaker<G, V> {
             .public_key()
             .context("Couldn't get ephemeral public key")?;
 
-        let attestation_data = attestation_data(
-            &ephemeral_public_key,
-            &self.transcript_signer.public_key()?,
-            &self.additional_info,
-        );
+        let attestation_data =
+            attestation_data(&ephemeral_public_key, &self.transcript_signer.public_key()?);
         let attestation_report = self
             .behavior
             .generator
@@ -450,7 +435,6 @@ impl<G: AttestationGenerator, V: AttestationVerifier> ServerHandshaker<G, V> {
                 .public_key()
                 .context("Couldn't get singing public key")?,
             attestation_report,
-            self.additional_info.clone(),
         );
 
         // Update current transcript.
@@ -509,12 +493,9 @@ impl<G: AttestationGenerator, V: AttestationVerifier> ServerHandshaker<G, V> {
                 .context("Couldn't verify client transcript")?;
         }
 
-        // TODO(#2914): Support additional attestation info in ClientIdentity.
-        let additional_attestation_data = &[];
         let expected_attested_data = attestation_data(
             &client_identity.ephemeral_public_key,
             client_signing_public_key,
-            additional_attestation_data,
         );
 
         // Verify client attestation info.
@@ -702,14 +683,8 @@ impl Transcript {
 pub fn attestation_data(
     ephemeral_public_key: &[u8; KEY_AGREEMENT_ALGORITHM_KEY_LENGTH],
     signing_public_key: &[u8; SIGNING_ALGORITHM_KEY_LENGTH],
-    additional_attestation_data: &[u8],
 ) -> Vec<u8> {
-    hash_concat_hash(&[
-        ephemeral_public_key,
-        signing_public_key,
-        additional_attestation_data,
-    ])
-    .to_vec()
+    hash_concat_hash(&[ephemeral_public_key, signing_public_key]).to_vec()
 }
 
 /// Compute a hash over values of possibly different length.

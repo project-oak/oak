@@ -40,18 +40,12 @@ pub struct AttestationSessionHandler<F, G: AttestationGenerator, V: AttestationV
     request_handler: F,
 }
 
-const MOCK_ADDITIONAL_INFO: [u8; 0] = [];
-
 impl<F, G: AttestationGenerator, V: AttestationVerifier> AttestationSessionHandler<F, G, V>
 where
     F: Send + Sync + Clone + FnOnce(Vec<u8>) -> anyhow::Result<Vec<u8>>,
 {
     pub fn create(request_handler: F, attestation_behavior: AttestationBehavior<G, V>) -> Self {
-        let session_tracker = SessionTracker::create(
-            SESSIONS_CACHE_SIZE,
-            attestation_behavior,
-            MOCK_ADDITIONAL_INFO.to_vec(),
-        );
+        let session_tracker = SessionTracker::create(SESSIONS_CACHE_SIZE, attestation_behavior);
 
         Self {
             session_tracker,

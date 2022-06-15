@@ -22,7 +22,7 @@ use crate::{
     },
     tests::message::INVALID_MESSAGE_HEADER,
 };
-use alloc::{sync::Arc, vec};
+use alloc::vec;
 use assert_matches::assert_matches;
 
 const DATA: [u8; 10] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
@@ -70,9 +70,7 @@ fn create_handshakers() -> (
     let bidirectional_attestation =
         AttestationBehavior::create(TestAttestationGenerator, TestAttestationVerifier);
 
-    let additional_info = br"Additional Info".to_vec();
-    let server_handshaker =
-        ServerHandshaker::new(bidirectional_attestation, Arc::new(additional_info)).unwrap();
+    let server_handshaker = ServerHandshaker::new(bidirectional_attestation).unwrap();
 
     (client_handshaker, server_handshaker)
 }

@@ -19,7 +19,6 @@ use hashbrown::HashMap;
 use maplit::hashmap;
 use oak_functions_abi::proto::{Request, ServerPolicy, StatusCode};
 use oak_functions_loader::{
-    create_configuration_report,
     grpc::{create_and_start_grpc_server, create_wasm_handler},
     logger::Logger,
     lookup_data::{LookupDataAuth, LookupDataRefresher, LookupDataSource},
@@ -87,15 +86,7 @@ async fn test_server() {
             .expect("could not create wasm_handler");
 
     let server_background = test_utils::background(|term| async move {
-        create_and_start_grpc_server(
-            &address,
-            wasm_handler,
-            policy.clone(),
-            create_configuration_report(&wasm_module_bytes, policy),
-            term,
-            logger,
-        )
-        .await
+        create_and_start_grpc_server(&address, wasm_handler, policy.clone(), term, logger).await
     });
 
     {
