@@ -38,7 +38,7 @@ The Untrusted Loader MUST NOT send Response Messages.
 
 ## Messages
 
-A message forms half of an Invocation.
+A message forms one half of an Invocation.
 
 ### Request Message Definition
 
