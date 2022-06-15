@@ -133,5 +133,5 @@ For messages sent as more than two frames, the first frame would have 0x0 set,
 all other flags would be unset. The last frame would have 0x1 set, all other
 flags would be unset. Any frames in between would have no flags set.
 
-For small messages sent as a single frame, 0x0 and 0x1 would set, all other
+For small messages sent as a single frame, 0x0 and 0x1 would be set, all other
 flags would be unset.
