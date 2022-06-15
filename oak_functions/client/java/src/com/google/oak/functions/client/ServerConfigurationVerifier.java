@@ -16,7 +16,6 @@
 
 package com.google.oak.functions.client;
 
-import com.google.oak.remote_attestation.Message.ServerIdentity;
 import com.google.protobuf.ExtensionRegistryLite;
 import com.google.protobuf.InvalidProtocolBufferException;
 import java.util.function.Predicate;
@@ -25,44 +24,41 @@ import java.util.logging.Logger;
 import oak.functions.abi.ConfigurationReport;
 
 /**
- * A verifier that verifies the {@code ConfigurationReport} in an instance of {@code ServerIdentity}
- * based on a given predicate.
+ * A verifier that parses an input byte array into an instance of {@code ConfigurationReport} and
+ * verifies it using a given predicate.
  */
 public class ServerConfigurationVerifier {
   private static final Logger logger =
       Logger.getLogger(ServerConfigurationVerifier.class.getName());
-  private final ServerIdentity serverIdentity;
+  // Should be a binary-encoded protobuf message of type ConfigurationReport.
+  private final byte[] configurationReportBytes;
+  // Captures the client-side policy for accepting the server configuration.
   private final Predicate<ConfigurationReport> configurationVerifier;
 
   public ServerConfigurationVerifier(
-      ServerIdentity serverIdentity, Predicate<ConfigurationReport> configurationVerifier) {
-    this.serverIdentity = serverIdentity;
+      byte[] configurationReportBytes, Predicate<ConfigurationReport> configurationVerifier) {
+    this.configurationReportBytes = configurationReportBytes;
     this.configurationVerifier = configurationVerifier;
   }
 
   /**
-   * Verifies the {@code ConfigurationReport} in the {@code serverIdentity}.
+   * Verifies the given {@code configurationReportBytes}.
    *
-   * The `additionalInfo` field of {@code serverIdentity} is expected to contain an instance of
-   * {@code ConfigurationReport} as a binary-encoded protobuf message. This byte array is parsed
-   * into an instance of {@code ConfigurationReport}. Returns false if parsing fails. Otherwise
-   * tests the {@code configurationVerifier} predicate for the resulting {@code
-   * ConfigurationReport}, and returns the result.
+   * Parses {@code configurationReportBytes} into an instance of {@code ConfigurationReport}.
+   * Returns false if parsing fails. Otherwise tests the {@code configurationVerifier} predicate for
+   * the resulting {@code ConfigurationReport}, and returns the result.
    *
    * @return the result of calling test {@code configurationVerifier} as described above.
    */
   public boolean verify() {
-    byte[] additionalAttestationData = serverIdentity.getAdditionalAttestationData();
-
     try {
       ConfigurationReport configInfo = ConfigurationReport.parseFrom(
-          additionalAttestationData, ExtensionRegistryLite.getEmptyRegistry());
+          configurationReportBytes, ExtensionRegistryLite.getEmptyRegistry());
       // TODO(#2347): Check that ConfigurationReport does not have additional/unknown fields.
       if (!configurationVerifier.test(configInfo)) {
         logger.log(Level.WARNING, "Verification of ConfigurationReport failed.");
         return false;
       }
-      // TODO(#2316): Verify proof of inclusion in Rekor
     } catch (InvalidProtocolBufferException e) {
       logger.log(Level.WARNING, "Could not create ConfigurationReport from byte array:", e);
       return false;

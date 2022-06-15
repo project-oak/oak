@@ -128,15 +128,9 @@ public class Message {
      * certificate. TEE report contains a hash of the `signingPublicKey`.
      */
     private final byte[] attestationReport;
-    /* Additional info to be checked when verifying the identity. This may include server
-     * configuration details, and inclusion proofs on a verifiable log (e.g., LogEntry on Rekor).
-     * The server and the client must be able to agree on a canonical representation of the
-     * content to be able to deterministically compute the hash of this field.
-     */
-    private final byte[] additionalAttestationData;
 
     public ServerIdentity(byte[] ephemeralPublicKey, byte[] random, byte[] signingPublicKey,
-        byte[] attestationReport, byte[] additionalAttestationData) {
+        byte[] attestationReport) {
       header = SERVER_IDENTITY_HEADER;
       version = PROTOCOL_VERSION;
       this.ephemeralPublicKey = ephemeralPublicKey;
@@ -144,7 +138,6 @@ public class Message {
       this.transcriptSignature = new byte[0];
       this.signingPublicKey = signingPublicKey;
       this.attestationReport = attestationReport;
-      this.additionalAttestationData = additionalAttestationData;
     }
 
     public byte getVersion() {
@@ -175,10 +168,6 @@ public class Message {
       return attestationReport;
     }
 
-    public byte[] getAdditionalAttestationData() {
-      return additionalAttestationData;
-    }
-
     public byte[] serialize() throws IOException {
       ByteArrayOutputStream output = new ByteArrayOutputStream();
       DataOutputStream outputStream = new DataOutputStream(output);
@@ -193,8 +182,6 @@ public class Message {
       writeFixedSizeArray(
           outputStream, signingPublicKey, SIGNING_PUBLIC_KEY_LENGTH, "signing public key");
       writeVariableSizeArray(outputStream, attestationReport, "attestation report");
-      writeVariableSizeArray(
-          outputStream, additionalAttestationData, "additional attestation data");
       outputStream.flush();
 
       return output.toByteArray();
@@ -223,11 +210,9 @@ public class Message {
       byte[] signingPublicKey =
           readFixedSizeArray(inputStream, SIGNING_PUBLIC_KEY_LENGTH, "signing key");
       byte[] attestationReport = readVariableSizeArray(inputStream, "attestation report");
-      byte[] additionalAttestationData =
-          readVariableSizeArray(inputStream, "additional attestation data");
 
-      ServerIdentity serverIdentity = new ServerIdentity(ephemeralPublicKey, random,
-          signingPublicKey, attestationReport, additionalAttestationData);
+      ServerIdentity serverIdentity =
+          new ServerIdentity(ephemeralPublicKey, random, signingPublicKey, attestationReport);
       serverIdentity.setTranscriptSignature(transcriptSignature);
       return serverIdentity;
     }

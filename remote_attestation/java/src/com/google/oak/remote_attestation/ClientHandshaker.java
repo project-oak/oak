@@ -119,10 +119,9 @@ public class ClientHandshaker {
 
       // Update current transcript.
       // Transcript doesn't include transcript signature from the server identity message.
-      Message.ServerIdentity serverIdentityNoSignature =
-          new Message.ServerIdentity(serverIdentity.getEphemeralPublicKey(),
-              serverIdentity.getRandom(), serverIdentity.getSigningPublicKey(),
-              serverIdentity.getAttestationReport(), serverIdentity.getAdditionalAttestationData());
+      Message.ServerIdentity serverIdentityNoSignature = new Message.ServerIdentity(
+          serverIdentity.getEphemeralPublicKey(), serverIdentity.getRandom(),
+          serverIdentity.getSigningPublicKey(), serverIdentity.getAttestationReport());
       byte[] serializedServerIdentityNoSignature = serverIdentityNoSignature.serialize();
       appendTranscript(serializedServerIdentityNoSignature);
 
@@ -187,24 +186,12 @@ public class ClientHandshaker {
    *   {@code expectedTeeMeasurement}.
    */
   private Boolean verifyAttestationInfo(Message.ServerIdentity serverIdentity) throws IOException {
-    byte[] additionalAttestationData = serverIdentity.getAdditionalAttestationData();
-
-    // Ensure additional attestation data was supplied.
-    if (!verifyAdditionalAttestationData(additionalAttestationData)) {
-      logger.log(Level.WARNING, "Additional attestation data was invalid");
-      return false;
-    }
-
     // Check the hash of the public key and additional info
     byte[] ephemeralPublicKeyHash = sha256(serverIdentity.getEphemeralPublicKey());
     byte[] signingPublicKeyHash = sha256(serverIdentity.getSigningPublicKey());
-    byte[] additionalAttestationDataHash = sha256(additionalAttestationData);
-    byte[] buffer = ByteBuffer
-                        .allocate(ephemeralPublicKeyHash.length + signingPublicKeyHash.length
-                            + additionalAttestationDataHash.length)
+    byte[] buffer = ByteBuffer.allocate(ephemeralPublicKeyHash.length + signingPublicKeyHash.length)
                         .put(ephemeralPublicKeyHash)
                         .put(signingPublicKeyHash)
-                        .put(additionalAttestationDataHash)
                         .array();
     byte[] hashBytes = sha256(buffer);
 
@@ -215,11 +202,6 @@ public class ClientHandshaker {
     }
 
     // TODO(#1867): Add remote attestation support.
-    return true;
-  }
-
-  private boolean verifyAdditionalAttestationData(byte[] additionalAttestationData) {
-    // TODO(#2917): Implement this method.
     return true;
   }
 
