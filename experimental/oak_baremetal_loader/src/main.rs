@@ -209,10 +209,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 },
             );
 
-            match builder.finish(message) {
-                Ok(initialization_message) => initialization_message,
-                Err(err) => panic!("errored when creating initialization message: {:?}", err),
-            }
+            builder
+                .finish(message)
+                .expect("errored when creating initialization message")
         };
         if let Err(err) = client.initialize(initialization_message.buf()) {
             panic!("failed to initialize the runtime: {:?}", err)

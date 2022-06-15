@@ -31,18 +31,18 @@ use oak_remote_attestation_sessions::{SessionId, SessionState, SessionTracker};
 /// Number of sessions that will be kept in memory.
 const SESSIONS_CACHE_SIZE: usize = 10000;
 
-pub trait AttestationTrait {
+pub trait AttestationHandler {
     fn message(&mut self, session_id: SessionId, body: &[u8]) -> anyhow::Result<Vec<u8>>;
 }
 
-pub struct AttestationHandler<F, G: AttestationGenerator, V: AttestationVerifier> {
+pub struct AttestationSessionHandler<F, G: AttestationGenerator, V: AttestationVerifier> {
     session_tracker: SessionTracker<G, V>,
     request_handler: F,
 }
 
 const MOCK_ADDITIONAL_INFO: [u8; 0] = [];
 
-impl<F, G: AttestationGenerator, V: AttestationVerifier> AttestationHandler<F, G, V>
+impl<F, G: AttestationGenerator, V: AttestationVerifier> AttestationSessionHandler<F, G, V>
 where
     F: Send + Sync + Clone + FnOnce(Vec<u8>) -> anyhow::Result<Vec<u8>>,
 {
@@ -60,8 +60,8 @@ where
     }
 }
 
-impl<F, G: AttestationGenerator, V: AttestationVerifier> AttestationTrait
-    for AttestationHandler<F, G, V>
+impl<F, G: AttestationGenerator, V: AttestationVerifier> AttestationHandler
+    for AttestationSessionHandler<F, G, V>
 where
     F: Send + Sync + Clone + FnOnce(Vec<u8>) -> anyhow::Result<Vec<u8>>,
     G: AttestationGenerator,

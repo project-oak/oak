@@ -15,7 +15,7 @@
 //
 
 use crate::{
-    remote_attestation::{AttestationHandler, AttestationTrait},
+    remote_attestation::{AttestationHandler, AttestationSessionHandler},
     wasm,
 };
 use alloc::boxed::Box;
@@ -28,13 +28,13 @@ use oak_remote_attestation::handshaker::{
 };
 use oak_remote_attestation_sessions::SessionId;
 
-enum AttestationState<G, V>
+enum InitializationState<G, V>
 where
     G: AttestationGenerator,
     V: AttestationVerifier,
 {
     Uninitialized(AttestationBehavior<G, V>),
-    Initialized(Box<dyn AttestationTrait>),
+    Initialized(Box<dyn AttestationHandler>),
 }
 
 struct InvocationHandler<G, V>
@@ -42,7 +42,7 @@ where
     G: AttestationGenerator,
     V: AttestationVerifier,
 {
-    attestation_state: AttestationState<G, V>,
+    initialization_state: InitializationState<G, V>,
 }
 
 impl<G: 'static, V: 'static> schema::TrustedRuntime for InvocationHandler<G, V>
@@ -57,28 +57,28 @@ where
         oak_idl::utils::Message<oak_baremetal_communication_channel::schema::Empty>,
         oak_idl::Status,
     > {
-        match &mut self.attestation_state {
-            AttestationState::Initialized(_attestation_handler) => Err(oak_idl::Status::new(
+        match &mut self.initialization_state {
+            InitializationState::Initialized(_attestation_handler) => Err(oak_idl::Status::new(
                 oak_idl::StatusCode::FailedPrecondition,
             )),
-            AttestationState::Uninitialized(attestation_behavior) => {
+            InitializationState::Uninitialized(attestation_behavior) => {
                 let wasm_module_bytes: &[u8] = initialization
                     .wasm_module()
                     .ok_or_else(|| oak_idl::Status::new(oak_idl::StatusCode::InvalidArgument))?;
                 let wasm_handler = wasm::new_wasm_handler(wasm_module_bytes)
-                    .map_err(|_| oak_idl::Status::new(oak_idl::StatusCode::Internal))?;
-                let attestation_handler = Box::new(AttestationHandler::create(
+                    .map_err(|_err| oak_idl::Status::new(oak_idl::StatusCode::Internal))?;
+                let attestation_handler = Box::new(AttestationSessionHandler::create(
                     move |v| wasm_handler.handle_raw_invoke(v),
                     attestation_behavior.clone(),
                 ));
-                self.attestation_state = AttestationState::Initialized(attestation_handler);
+                self.initialization_state = InitializationState::Initialized(attestation_handler);
                 let response_message = {
                     let mut builder = oak_idl::utils::MessageBuilder::default();
                     let user_request_response =
                         schema::Empty::create(&mut builder, &schema::EmptyArgs {});
                     builder
                         .finish(user_request_response)
-                        .map_err(|_| oak_idl::Status::new(oak_idl::StatusCode::Internal))?
+                        .map_err(|_err| oak_idl::Status::new(oak_idl::StatusCode::Internal))?
                 };
                 Ok(response_message)
             }
@@ -89,11 +89,11 @@ where
         &mut self,
         request_message: &schema::UserRequest,
     ) -> Result<oak_idl::utils::Message<schema::UserRequestResponse>, oak_idl::Status> {
-        match &mut self.attestation_state {
-            AttestationState::Uninitialized(_attestation_behavior) => Err(oak_idl::Status::new(
+        match &mut self.initialization_state {
+            InitializationState::Uninitialized(_attestation_behavior) => Err(oak_idl::Status::new(
                 oak_idl::StatusCode::FailedPrecondition,
             )),
-            AttestationState::Initialized(attestation_handler) => {
+            InitializationState::Initialized(attestation_handler) => {
                 let session_id: SessionId = request_message
                     .session_id()
                     .ok_or_else(|| oak_idl::Status::new(oak_idl::StatusCode::InvalidArgument))?
@@ -105,7 +105,7 @@ where
 
                 let response = attestation_handler
                     .message(session_id, request_body)
-                    .map_err(|_| oak_idl::Status::new(oak_idl::StatusCode::Internal))?;
+                    .map_err(|_err| oak_idl::Status::new(oak_idl::StatusCode::Internal))?;
 
                 let response_message = {
                     let mut builder = oak_idl::utils::MessageBuilder::default();
@@ -116,7 +116,7 @@ where
                     );
                     builder
                         .finish(user_request_response)
-                        .map_err(|_| oak_idl::Status::new(oak_idl::StatusCode::Internal))?
+                        .map_err(|_err| oak_idl::Status::new(oak_idl::StatusCode::Internal))?
                 };
                 Ok(response_message)
             }
@@ -133,7 +133,7 @@ where
     T: Read<Error = anyhow::Error> + Write<Error = anyhow::Error>,
 {
     let mut invocation_handler = InvocationHandler {
-        attestation_state: AttestationState::Uninitialized(attestation_behavior),
+        initialization_state: InitializationState::Uninitialized(attestation_behavior),
     }
     .serve();
     let invocation_channel = &mut InvocationChannel::new(channel);
