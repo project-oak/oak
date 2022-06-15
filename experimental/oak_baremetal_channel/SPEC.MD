@@ -70,16 +70,27 @@ fields:
 - body, variable length byte array: the method’s return value, encoded with
   flatbuffer
 
-## Sending Messages
+### Sending Messages
 
 To send a message, it MUST first be encoded into frames. The resulting frame set
 MUST then be send as an uninterrupted sequence.
 
-## Receiving Messages
+### Receiving Messages
 
 To receive a message the recipent incrementaly reads frames from the
 communication channel. The recipent MAY start parsing a message before all of
 its frames have been received.
+
+### Encoding Messages into Frames
+
+The byte representation of a message MUST be chunked. The last chunk MAY be
+smaller than 63,984 (the maximum size of a frame body). Any preceeding chunks
+MUST be exactly 63,984 bytes in size.
+
+A frame MUST then be formed for each resulting message chunk, with the message
+chunk forming the frame body.
+
+Messages smaller 63,984 MUST be encoded as a single frame.
 
 ## Frames
 
@@ -105,14 +116,3 @@ A byte encoded frame MUST consist of the following seqeuential fields:
 - 0x2: MUST be set for frames that are the last of the set that constiutes a
   message
 - 0x3-0x16: Reserved for future use. MUST be unset and ignored
-
-### Encoding Messages into Frames
-
-The byte representation of a message is be divided into chunks. The last chunk
-MAY be smaller than 63,984 (the maximum size of a frame body). Any preceeding
-chunks MUST be exactly 63,984 bytes in size.
-
-A frame MUST then be formed for each resulting message chunk, with the message
-chunk forming the frame body.
-
-Messages smaller 63,984 MUST be encoded as a single frame.
