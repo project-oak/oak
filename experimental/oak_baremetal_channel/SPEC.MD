@@ -102,8 +102,8 @@ are received.
 
 ## Frames
 
-Messages are sent and received as frames. Each message can be fragmented into a
-set of one or more frames.
+Messages are sent and received as frames. Each message is fragmented into a set
+of one or more frames.
 
 ### Frame Definition
 
