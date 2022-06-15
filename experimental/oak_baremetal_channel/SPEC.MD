@@ -121,7 +121,7 @@ A byte encoded frame MUST consist of the following seqeuential fields:
 
 ### Frame Flags Definition
 
-- 0x2-0x15 (MSB): Reserved for future use. MUST be unset and ignored
+- 0x15-0x2 (MSB): Reserved for future use. MUST be unset and ignored
 - 0x1: MUST be set for frames that are the last of the set that constitutes a
   message
 - 0x0 (LSB): MUST be set for frames that are the first of the set that
