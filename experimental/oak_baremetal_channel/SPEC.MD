@@ -24,7 +24,7 @@ followed by a Response Message.
 
 The Untrusted Loader MAY issue an invocation by sending a Request Message.
 
-The Trusted Runtime MUST NOT issue invocations.
+The Trusted Runtime MUST NOT send Request Message.
 
 ### Handling an invocation
 
