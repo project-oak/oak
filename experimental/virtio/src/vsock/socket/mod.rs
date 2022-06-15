@@ -16,7 +16,7 @@
 
 use super::{
     packet::{Packet, VSockFlags, VSockOp, HEADER_SIZE},
-    VSock, DATA_BUFFER_SIZE, QUEUE_SIZE,
+    VSock, DATA_BUFFER_SIZE,
 };
 use alloc::collections::VecDeque;
 use core::num::Wrapping;
