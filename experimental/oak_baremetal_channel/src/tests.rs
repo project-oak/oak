@@ -30,7 +30,7 @@ fn test_message_fragmentation() {
         {
             let mut x: u8 = 0;
             let filler = || {
-                x = x.overflowing_add(1).0;
+                x = x.wrapping_add(1);
                 x
             };
             mock_body.fill_with(filler);
