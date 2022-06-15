@@ -84,13 +84,13 @@ its frames have been received.
 ### Encoding Messages into Frames
 
 The byte representation of a message MUST be chunked. The last chunk MAY be
-smaller than 63,984 (the maximum size of a frame body). Any preceeding chunks
-MUST be exactly 63,984 bytes in size.
+smaller than 63,984 bytes (the maximum size of a frame body). Any preceeding
+chunks MUST be exactly 63,984 bytes in size.
 
 A frame MUST then be formed for each resulting message chunk, with the message
 chunk forming the frame body.
 
-Messages smaller 63,984 MUST be encoded as a single frame.
+Messages smaller 63,984 bytes MUST be encoded as a single frame.
 
 ## Frames
 
