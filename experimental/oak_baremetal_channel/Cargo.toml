@@ -12,7 +12,6 @@ oak_idl = { path = "../../oak_idl" }
 flatbuffers = { version = "*", features = ["no_std"], default-features = false }
 static_assertions = "*"
 strum = { version = "*", default-features = false, features = ["derive"] }
-log = "*"
 
 [build-dependencies]
 oak_idl_gen_services = { path = "../../oak_idl_gen_services" }
