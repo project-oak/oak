@@ -156,7 +156,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
-    let mut comms = vmm.create_comms_channel()?;
+    let comms = vmm.create_comms_channel()?;
 
     // Use a bmrng channel for serial communication. The good thing about spawning a separate
     // task for the serial communication is that it serializes (no pun intended) the communication,
