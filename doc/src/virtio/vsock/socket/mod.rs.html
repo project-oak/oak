@@ -438,7 +438,7 @@
 
 <span class="kw">use</span> <span class="kw">super</span>::{
     <span class="ident">packet</span>::{<span class="ident">Packet</span>, <span class="ident">VSockFlags</span>, <span class="ident">VSockOp</span>, <span class="ident">HEADER_SIZE</span>},
-    <span class="ident">VSock</span>, <span class="ident">DATA_BUFFER_SIZE</span>, <span class="ident">QUEUE_SIZE</span>,
+    <span class="ident">VSock</span>, <span class="ident">DATA_BUFFER_SIZE</span>,
 };
 <span class="kw">use</span> <span class="ident">alloc::collections::VecDeque</span>;
 <span class="kw">use</span> <span class="ident">core::num::Wrapping</span>;
@@ -446,16 +446,16 @@
 
 <span class="doccomment">/// The maximum buffer size used by the socket.</span>
 <span class="doccomment">///</span>
-<span class="doccomment">/// This is used for flow-control calculations. For now we use the maximum size seeing that we don&#39;t</span>
-<span class="doccomment">/// have a fixed limit and don&#39;t want to send too many credit update packets.</span>
-<span class="kw">const</span> <span class="ident">STREAM_BUFFER_LENGTH</span>: <span class="ident">Wrapping</span><span class="op">&lt;</span><span class="ident">u32</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Wrapping</span>(<span class="ident">u32::MAX</span>);
+<span class="doccomment">/// This is used for flow-control calculations. Seeing that we don&#39;t use an actual streambuffer,</span>
+<span class="doccomment">/// this is currently an arbitrary value that seems to avoid stalling.</span>
+<span class="kw">const</span> <span class="ident">STREAM_BUFFER_LENGTH</span>: <span class="ident">Wrapping</span><span class="op">&lt;</span><span class="ident">u32</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Wrapping</span>(<span class="number">1024</span> <span class="op">*</span> <span class="number">1024</span>);
 
 <span class="doccomment">/// The limit that triggers a voluntary credit update message to avoid stalling.</span>
 <span class="doccomment">///</span>
 <span class="doccomment">/// If the peer&#39;s calculation of our free buffer space falls below this point (e.g when we receive a</span>
 <span class="doccomment">/// lot of data without sending any packets back) we send a credit update packet to make sure the</span>
 <span class="doccomment">/// peer knows we have more space available.</span>
-<span class="kw">const</span> <span class="ident">CREDIT_UPDATE_LIMIT</span>: <span class="ident">Wrapping</span><span class="op">&lt;</span><span class="ident">u32</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Wrapping</span>((<span class="ident">DATA_BUFFER_SIZE</span> <span class="op">*</span> <span class="ident">QUEUE_SIZE</span>) <span class="kw">as</span> <span class="ident">u32</span>);
+<span class="kw">const</span> <span class="ident">CREDIT_UPDATE_LIMIT</span>: <span class="ident">Wrapping</span><span class="op">&lt;</span><span class="ident">u32</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Wrapping</span>(<span class="number">512</span> <span class="op">*</span> <span class="number">1024</span>);
 
 <span class="doccomment">/// The maximum size of the payload of a single packet to ensure it fits into a single buffer in the</span>
 <span class="doccomment">/// queue.</span>
