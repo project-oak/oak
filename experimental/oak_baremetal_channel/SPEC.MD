@@ -90,6 +90,11 @@ chunk forming the frame body.
 
 Messages shorter than 63,984 bytes MUST be encoded as a single frame.
 
+### Decoding Frames into Messages
+
+Messages are parsed from Frames by appending the frame bodies in the order they
+are received.
+
 ## Frames
 
 Messages are sent and received as frames. Each message can be fragmented into
