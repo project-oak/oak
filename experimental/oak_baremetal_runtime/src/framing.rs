@@ -33,7 +33,7 @@ where
     G: AttestationGenerator,
     V: AttestationVerifier,
 {
-    Uninitialized(AttestationBehavior<G, V>),
+    Uninitialized(Option<AttestationBehavior<G, V>>),
     Initialized(Box<dyn AttestationHandler>),
 }
 
@@ -62,6 +62,9 @@ where
                 oak_idl::StatusCode::FailedPrecondition,
             )),
             InitializationState::Uninitialized(attestation_behavior) => {
+                let attestation_behavior = attestation_behavior
+                    .take()
+                    .expect("The attestation_behavior should always be present. It is wrapped in an option purely so it can be taken without cloning.");
                 let wasm_module_bytes: &[u8] = initialization
                     .wasm_module()
                     .ok_or_else(|| oak_idl::Status::new(oak_idl::StatusCode::InvalidArgument))?;
@@ -69,7 +72,7 @@ where
                     .map_err(|_err| oak_idl::Status::new(oak_idl::StatusCode::Internal))?;
                 let attestation_handler = Box::new(AttestationSessionHandler::create(
                     move |v| wasm_handler.handle_raw_invoke(v),
-                    attestation_behavior.clone(),
+                    attestation_behavior,
                 ));
                 self.initialization_state = InitializationState::Initialized(attestation_handler);
                 let response_message = {
@@ -133,7 +136,7 @@ where
     T: Read<Error = anyhow::Error> + Write<Error = anyhow::Error>,
 {
     let mut invocation_handler = InvocationHandler {
-        initialization_state: InitializationState::Uninitialized(attestation_behavior),
+        initialization_state: InitializationState::Uninitialized(Some(attestation_behavior)),
     }
     .serve();
     let invocation_channel = &mut InvocationChannel::new(channel);
