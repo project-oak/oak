@@ -21,7 +21,7 @@ use crate::{
 };
 use alloc::vec;
 use ciborium_io::{Read, Write};
-use rand::Rng;
+use rand::RngCore;
 use rust_hypervisor_firmware_virtio::device::VirtioBaseDevice;
 
 const GUEST_CID: u64 = 3;
