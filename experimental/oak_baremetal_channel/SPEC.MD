@@ -5,17 +5,20 @@ between the Untrusted Loader and Trusted Runtime. The Trusted Runtime should be
 able to communicate with any implementation of the Untrusted Loader that
 implements this specification.
 
+In the specification below the Trusted Runtime will henceforth be referred to
+the as the "service". The Untrusted Loader will be referred to the as the
+"client".
+
 The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD",
 "SHOULD NOT", "RECOMMENDED", "MAY", and "OPTIONAL" in this document are to be
 interpreted as described in [RFC 2119](https://www.rfc-editor.org/rfc/rfc2119).
 
 ## Method
 
-Methods are exposed by the Trusted Runtime. They MAY be remotely invoked by the
-Unrusted Loader. Each method has clearly defined parameters and return types.
-The Oak IDL is used to define which methods are available, their parameter and
-return types, as well the protcol used to encode parameters and return values to
-bytes.
+Methods are exposed by the server. They MAY be remotely invoked by the Unrusted
+Loader. Each method has clearly defined parameters and return types. The Oak IDL
+is used to define which methods are available, their parameter and return types,
+as well the protcol used to encode parameters and return values to bytes.
 
 ## Invocation
 
@@ -24,19 +27,19 @@ followed by a Response Message.
 
 ### Issuing an invocation
 
-The Untrusted Loader MAY issue an invocation by sending a Request Message.
+The client MAY issue an invocation by sending a Request Message.
 
-The Trusted Runtime MUST NOT send Request Message.
+The server MUST NOT send Request Message.
 
 ### Handling an invocation
 
-The Trusted Runtime MUST respond to each Request Message with a single Response
-Message. It SHOULD respond to Request Messages in first-in-first-out order, but
-MAY prioritize some requests. The Trusted Runtime MAY issue Response Messages
-before the Request Message has been received in its entirety. Sending a Response
-Messages concludes the invocation.
+The server MUST respond to each Request Message with a single Response Message.
+It SHOULD respond to Request Messages in first-in-first-out order, but MAY
+prioritize some requests. The server MAY issue Response Messages before the
+Request Message has been received in its entirety. Sending a Response Messages
+concludes the invocation.
 
-The Untrusted Loader MUST NOT send Response Messages.
+The client MUST NOT send Response Messages.
 
 ## Messages
 
