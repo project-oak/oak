@@ -93,7 +93,8 @@ chunks MUST be exactly 63,936 bytes in length.
 A frame MUST then be formed for each resulting message chunk, with the message
 chunk forming the frame body.
 
-Messages shorter than 63,936 bytes MUST be encoded as a single frame.
+Messages with a length of 63,936 bytes or less MUST be encoded as a single
+frame.
 
 ### Decoding Frames into Messages
 
