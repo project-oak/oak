@@ -47,31 +47,90 @@ A message forms one half of an Invocation.
 
 ### Request Message Definition
 
-A byte encoded request message MUST consist of the following seqeuential fields:
+A byte encoded request message MUST consist of the following fields:
 
-- length, u32, little endian: length of the entire message, including this field
-- invocation_id, u32, little endian: Identifies the invocation the request
-  initiates
-- method_id, u32, little endian: identifies the method that is being invoked
-- padding, 4 bytes: reserved to maintain 8 byte alignment. MUST be unset and
-  ignored
-- body, variable length byte array: byte encoded method parameters
+```
+ 0                   1                   2                   3
+ 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|                             length                            |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|                         invocation_id                         |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|                          status_code                          |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|                            padding                            |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|                                                               |
++                         body bytes...                         +
+|                                                               |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ ...
+```
+
+#### length, u32, little endian
+
+length of the entire message, including this field
+
+#### invocation_id, u32, little endian
+
+Identifies the invocation the request initiates
+
+#### method_id, u32, little endian
+
+identifies the method that is being invoked
+
+#### padding, 4 bytes
+
+reserved to maintain 8 byte alignment. MUST be unset and ignored
+
+#### body, variable length byte array
+
+byte encoded method parameters
 
 ### Response Message Definition
 
-A byte encoded response message MUST consist of the following seqeuential
-fields:
+A byte encoded response message MUST consist of the following fields:
 
-- length, u32, little endian: length of the entire message, including this field
-- invocation_id, u32, little endian: MUST match the invocation_id of the
-  relevant Request Message
-- status_code, u32, little endian: response status as a
-  [gRPC status code](https://grpc.github.io/grpc/core/md_doc_statuscodes.html)
-- padding, 4 bytes: reserved to maintain 8 byte alignment. MUST be unset and
-  ignored
-- body, variable length byte array: For responses with an "Ok" status code the
-  body MUST be the byte encoded method return value. Else the body MUST be a
-  utf-8 encoded developer-facing error message.
+```
+ 0                   1                   2                   3
+ 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|                             length                            |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|                         invocation_id                         |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|                          status_code                          |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|                            padding                            |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|                                                               |
++                         body bytes...                         +
+|                                                               |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ ...
+```
+
+#### length u32, little endian
+
+length of the entire message, including this field
+
+#### invocation_id, u32, little endian
+
+MUST match the invocation_id of the relevant Request Message
+
+#### status_code, u32, little endian
+
+response status as a
+[gRPC status code](https://grpc.github.io/grpc/core/md_doc_statuscodes.html)
+
+#### padding, 4 bytes
+
+reserved to maintain 8 byte alignment. MUST be unset and ignored
+
+#### body, variable length byte array
+
+For responses with an "Ok" status code the body MUST be the byte encoded method
+return value. Else the body MUST be a utf-8 encoded developer-facing error
+message.
 
 ### Sending Messages
 
@@ -108,24 +167,55 @@ of one or more frames.
 
 ### Frame Definition
 
-A byte encoded frame MUST consist of the following seqeuential fields:
+A byte encoded frame MUST consist of the following fields:
 
-- padding, 4 bytes: for future use
-- length, u16, little endian: Length of the entire frame, including this field.
-  The length of a frame MUST NOT exceed 64000 bytes
-- flags, 2 bytes, little endian: Bitflags, see
-  [Frame Flags](#3-frame-flags-definition)
-- body, variable length byte array: Byte chunk of an encoded message. In order
-  to not exceed the maximum frame length, this byte array MUST NOT exceed 63,936
-  bytes
+```
+ 0                   1                   2                   3
+ 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|                            padding                            |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|             length            |             flags             |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|                                                               |
++                         body bytes...                         +
+|                                                               |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ ...
+```
+
+#### padding, 4 bytes
+
+for future use
+
+#### length, u16, little endian
+
+Length of the entire frame, including this field. The length of a frame MUST NOT
+exceed 64000 bytes
+
+#### flags, 2 bytes, little endian
+
+Bitflags, see [Frame Flags](#3-frame-flags-definition)
+
+#### body, variable length byte array
+
+Byte chunk of an encoded message. In order to not exceed the maximum frame
+length, this byte array MUST NOT exceed 63,936 bytes
 
 ### Frame Flags Definition
 
-- 0x15-0x2 (MSB): Reserved for future use. MUST be unset and ignored
-- 0x1: end flag. MUST be set for frames that are the last of the set that
-  constitutes a message
-- 0x0 (LSB): start flag. MUST be set for frames that are the first of the set
-  that constitutes a message
+#### 0x15-0x2 (MSB)
+
+Reserved for future use. MUST be unset and ignored
+
+#### 0x1
+
+end flag. MUST be set for frames that are the last of the set that constitutes a
+message
+
+#### 0x0 (LSB)
+
+start flag. MUST be set for frames that are the first of the set that
+constitutes a message
 
 #### Frame Flag Examples
 
