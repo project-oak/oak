@@ -36,7 +36,6 @@ mod vmm;
 
 #[derive(clap::ArgEnum, Clone, Debug, PartialEq)]
 enum Mode {
-    Uefi,
     Bios,
     Crosvm,
 }
@@ -52,14 +51,10 @@ struct Args {
     crosvm: PathBuf,
 
     /// Execution mode.
-    #[clap(arg_enum, long, default_value = "uefi")]
+    #[clap(arg_enum, long, default_value = "bios")]
     mode: Mode,
 
-    /// Path to the OVMF firmware file.
-    #[clap(long, parse(from_os_str), required_if_eq("mode", "uefi"), validator = path_exists, default_value_os_t = PathBuf::from("/usr/share/OVMF/OVMF_CODE.fd"))]
-    ovmf: PathBuf,
-
-    /// Path to the UEFI app or kernel to execute.
+    /// Path to the kernel to execute.
     #[clap(parse(from_os_str), validator = path_exists)]
     app: PathBuf,
 }
@@ -138,21 +133,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let (console_vmm, console) = UnixStream::pair()?;
 
     let mut vmm: Box<dyn Vmm> = match cli.mode {
-        Mode::Uefi => Box::new(Qemu::start(Params {
-            binary: cli.qemu,
-            firmware: Some(cli.ovmf),
-            app: cli.app,
-            console: console_vmm,
-        })?),
         Mode::Bios => Box::new(Qemu::start(Params {
             binary: cli.qemu,
-            firmware: None,
             app: cli.app,
             console: console_vmm,
         })?),
         Mode::Crosvm => Box::new(Crosvm::start(Params {
             binary: cli.crosvm,
-            firmware: None,
             app: cli.app,
             console: console_vmm,
         })?),
@@ -164,24 +151,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         let mut line = String::new();
         while reader.read_line(&mut line).expect("failed to read line") > 0 {
-            // The UEFI console uses ANSI escape codes to clear screen and set colours, so
-            // let's not just print the string out but rather the debug version of that.
             log::info!("console: {:?}", line);
             line.clear();
         }
     });
 
     let mut comms = vmm.create_comms_channel()?;
-
-    // TODO(#2709): Unfortunately OVMF writes some garbage (clear screen etc?) + our Hello
-    // World to the other serial port, so let's skip some bytes before we set up framing.
-    // The length of 71 characters has been determined experimentally and will change if we
-    // change what we write to stdout in the UEFI app.
-    if cli.mode == Mode::Uefi {
-        let mut junk = [0; 71];
-        comms.read_exact(&mut junk).unwrap();
-        log::info!("Leading junk on comms: {:?}", std::str::from_utf8(&junk));
-    }
 
     // Use a bmrng channel for serial communication. The good thing about spawning a separate
     // task for the serial communication is that it serializes (no pun intended) the communication,

@@ -70,12 +70,6 @@ RUN echo "deb http://apt.llvm.org/bullseye/ llvm-toolchain-bullseye-$llvm_versio
   nasm \
   && rm --recursive --force /var/lib/apt/lists/*
 
-# Ring epects these ENV variables in its build tooling
-ENV llvm_version=$llvm_version
-ENV CC_x86_64_unknown_uefi=clang-$llvm_version
-ENV AR_x86_64_unknown_uefi=llvm-ar-$llvm_version
-ENV NASM_EXECUTABLE=nasm
-
 # Install a version of docker CLI.
 RUN curl --fail --silent --show-error --location https://download.docker.com/linux/debian/gpg | apt-key add -
 RUN echo "deb [arch=amd64] https://download.docker.com/linux/debian buster stable"  > /etc/apt/sources.list.d/backports.list \

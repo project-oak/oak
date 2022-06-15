@@ -212,6 +212,7 @@ impl KeyNegotiator {
         agreement::agree_ephemeral(
             self.private_key,
             &agreement::UnparsedPublicKey::new(KEY_AGREEMENT_ALGORITHM, peer_public_key),
+            anyhow!("Couldn't derive session keys"),
             |key_material| -> anyhow::Result<(EncryptionKey, DecryptionKey)> {
                 let key_material = key_material
                     .try_into()
@@ -271,8 +272,7 @@ impl KeyNegotiator {
             },
         )
         .map_err(anyhow::Error::msg)
-        .context("Couldn't derive session keys")?
-        .context("Couldn't agree on session keys")
+        .context("Couldn't derive session keys")
     }
 
     /// Derives a session key from `key_material` using HKDF.
@@ -320,13 +320,11 @@ pub struct Signer {
 
 impl Signer {
     pub fn create() -> anyhow::Result<Self> {
-        // TODO(#2557): Ensure SystemRandom work when building for x86_64 UEFI targets.
         let rng = ring::rand::SystemRandom::new();
         let key_pair_pkcs8 = EcdsaKeyPair::generate_pkcs8(SIGNING_ALGORITHM, &rng)
             .map_err(|error| anyhow!("Couldn't generate PKCS#8 key pair: {:?}", error))?;
-        let key_pair =
-            EcdsaKeyPair::from_pkcs8(SIGNING_ALGORITHM, key_pair_pkcs8.as_ref(), &rng)
-                .map_err(|error| anyhow!("Couldn't parse generated key pair: {:?}", error))?;
+        let key_pair = EcdsaKeyPair::from_pkcs8(SIGNING_ALGORITHM, key_pair_pkcs8.as_ref())
+            .map_err(|error| anyhow!("Couldn't parse generated key pair: {:?}", error))?;
 
         Ok(Self { key_pair })
     }
