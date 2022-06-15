@@ -192,36 +192,45 @@ for future use
 Length of the entire frame, including this field. The length of a frame MUST NOT
 exceed 64000 bytes
 
-#### flags, 2 bytes, little endian
+#### flags, uint8[2], little endian
 
-Bitflags, see [Frame Flags](#3-frame-flags-definition)
+##### flags[0]
+
+```
+- 7 (MSG): unused
+- 6: unused
+- 5: unused
+- 4: unused
+- 3: unused
+- 2: unused
+- 1: end flag. MUST be set in the last frame of a message
+- 0 (LSB): start flag. MUST be set in the first frame of a message
+```
+
+##### flags[1]
+
+```
+- 7 (MSG): unused
+- 6: unused
+- 5: unused
+- 4: unused
+- 3: unused
+- 2: unused
+- 1: unused
+- 0 (LSB): unused
+```
 
 #### body, variable length byte array
 
 Byte chunk of an encoded message. In order to not exceed the maximum frame
 length, this byte array MUST NOT exceed 63,936 bytes
 
-### Frame Flags Definition
+### Flags examples for illustration
 
-#### 0x15-0x2 (MSB)
+For messages sent as more than two frames, the first frame would have the start
+flag set, all other flags would be unset. The last frame would have the end flag
+set, all other flags would be unset. Any frames in between would have no flags
+set.
 
-Reserved for future use. MUST be unset and ignored
-
-#### 0x1
-
-end flag. MUST be set for frames that are the last of the set that constitutes a
-message
-
-#### 0x0 (LSB)
-
-start flag. MUST be set for frames that are the first of the set that
-constitutes a message
-
-#### Frame Flag Examples
-
-For messages sent as more than two frames, the first frame would have 0x0 set,
-all other flags would be unset. The last frame would have 0x1 set, all other
-flags would be unset. Any frames in between would have no flags set.
-
-For small messages sent as a single frame, 0x0 and 0x1 would be set, all other
-flags would be unset.
+For small messages sent as a single frame, the start flag and the end flag would
+be set, all other flags would be unset.
