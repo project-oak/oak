@@ -251,7 +251,7 @@ The definition section defines three layers:
 The diagram below shows a practial example of how a method invocation would look
 like after being encoded as two frames.
 
-#### Frame 1
+#### Frame 0
 
 ```
  0                   1                   2                   3
