@@ -137,7 +137,7 @@ MUST match the invocation_id of the relevant request message.
 
 ##### status_code, u32, little endian
 
-response status as a
+Response status as a
 [gRPC status code](https://grpc.github.io/grpc/core/md_doc_statuscodes.html).
 
 ##### padding, 4 bytes
