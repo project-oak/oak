@@ -309,7 +309,7 @@ invocation would look like after being encoded as two frames.
 |                                                               |
 +   frame body [ request_message body [ method parameters ] ]   +
 |                                                               |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ ...
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 ```
 
 <!-- Diagram generated with https://www.luismg.com/protocol/, using the schema
