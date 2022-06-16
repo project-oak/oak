@@ -19,32 +19,35 @@ interpreted as described in [RFC 2119](https://www.rfc-editor.org/rfc/rfc2119).
 
 Methods are exposed by the service. Each method has clearly defined parameters
 and return types. The Oak IDL is used to define which methods are available,
-their id, parameter and return types, as well the protcol used to encode
+their id, parameter and return types, as well the protocol used to encode
 parameters and return values to bytes.
 
 #### Invocation
 
-An invocation of a Method. Each invocation consists out of a request followed by
-a response.
+An invocation of a method. Each invocation consists of two parts: a request
+message sent by the client, followed by a response message sent by the service.
 
 ##### Initiating an invocation
 
-The client MAY initiate an invocation by sending a request.
+The client MAY initiate an invocation by sending a request message.
 
-The service MUST NOT send requests.
+The service MUST NOT send request messages.
 
 ##### Handling an invocation
 
-The service MUST respond to each request with a single response message. It
-SHOULD respond to requests in first-in-first-out order, but MAY prioritize some
-requests. The service MAY send a response before the request has been received
-in its entirety. Sending a response concludes the invocation.
+The service MUST respond to each request message with a single response message.
+It SHOULD respond to request messages in first-in-first-out order, but MAY
+prioritize some request messages. The service MAY send a response message before
+the request message has been received in its entirety. Sending a response
+message concludes the invocation.
 
-The client MUST NOT send response.
+The client MUST NOT send response messages.
 
 ### Message Layer
 
 Messages are conceptual units to transport requests and responses.
+
+There's exactly two messages types: request messages and response messages.
 
 #### Request Message
 
