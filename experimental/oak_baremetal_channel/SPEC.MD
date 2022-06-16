@@ -79,7 +79,7 @@ A byte encoded request message MUST consist of the following fields:
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ ...
 ```
 
-<!-- Diagram generated https://www.luismg.com/protocol/, using the schema of
+<!-- Diagram generated with https://www.luismg.com/protocol/, using the schema
 "length:32,invocation_id:32,method_id:32,padding:32,body bytes...:64"  -->
 
 ##### length, u32, little endian
@@ -124,7 +124,7 @@ A byte encoded response message MUST consist of the following fields:
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ ...
 ```
 
-<!-- Diagram generated https://www.luismg.com/protocol/, using the schema of
+<!-- Diagram generated with https://www.luismg.com/protocol/, using the schema
 "length:32,invocation_id:32,status_code:32,padding:32,body bytes...:64" -->
 
 ##### length u32, little endian
@@ -173,7 +173,7 @@ A byte encoded frame MUST consist of the following fields:
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ ...
 ```
 
-<!-- Diagram generated https://www.luismg.com/protocol/, using the schema of
+<!-- Diagram generated with https://www.luismg.com/protocol/, using the schema
 "padding:32,length:16,flags:16,body bytes...:64" -->
 
 ##### padding, 4 bytes
@@ -293,7 +293,7 @@ invocation would look like after being encoded as two frames.
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ ...
 ```
 
-<!-- Diagram generated https://www.luismg.com/protocol/, using the schema of
+<!-- Diagram generated with https://www.luismg.com/protocol/, using the schema
 "frame padding:32,frame length:16,frame flags:16,frame body [ request_message length ]:32,frame body [ request_message invocation_id ]:32,frame body [ request_message method_id ]:32,frame body [ request_message padding ]:32,frame body [ request_message body [ method parameters ] ]:128" -->
 
 #### Frame 1
@@ -312,5 +312,5 @@ invocation would look like after being encoded as two frames.
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ ...
 ```
 
-<!-- Diagram generated https://www.luismg.com/protocol/, using the schema of
+<!-- Diagram generated with https://www.luismg.com/protocol/, using the schema
 "frame padding:32,frame length:16,frame flags:16,frame body [ request_message body [ method parameters ] ]:64" -->
