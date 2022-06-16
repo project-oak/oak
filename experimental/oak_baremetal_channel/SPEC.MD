@@ -147,8 +147,8 @@ Reserved to maintain 8 byte alignment. MUST be unset and ignored.
 ##### body, variable length byte array
 
 For responses with an "Ok" status code the body MUST be the byte encoded method
-return value. Else the body MUST be a utf-8 encoded developer-facing error
-message.
+return value. Else the body MUST be a (possibly empty) UTF-8 encoded
+developer-facing error message.
 
 ### Frame Layer
 
@@ -185,7 +185,7 @@ For future use.
 Length of the entire frame, including this field. The length of a frame MUST NOT
 exceed 64000 bytes.
 
-##### flags, two bytes
+##### flags, 2 bytes
 
 ###### flags[0]
 
