@@ -80,7 +80,7 @@ impl UnarySession for EchoImpl {
             .map_err(|err| Status::invalid_argument(format!("{:?}", err)))?;
 
         // There's two nested errors: one for communicating over the channel, and one for
-        // communicating over the serial port with the UEFI app.
+        // communicating over the underlying device.
         // We probably want to log the error in the future and serve something more
         // ambiguous to the end user, but for now that'll do.
         let body = self

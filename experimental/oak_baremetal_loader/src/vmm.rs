@@ -24,9 +24,6 @@ pub struct Params {
     /// Path to the VMM binary to execute.
     pub binary: PathBuf,
 
-    /// Optional path to the firmware blob to pass to the VMM.
-    pub firmware: Option<PathBuf>,
-
     /// Path to the binary to load into the VM.
     pub app: PathBuf,
 
