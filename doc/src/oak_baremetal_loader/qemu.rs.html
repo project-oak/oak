@@ -148,21 +148,6 @@
 <span id="143">143</span>
 <span id="144">144</span>
 <span id="145">145</span>
-<span id="146">146</span>
-<span id="147">147</span>
-<span id="148">148</span>
-<span id="149">149</span>
-<span id="150">150</span>
-<span id="151">151</span>
-<span id="152">152</span>
-<span id="153">153</span>
-<span id="154">154</span>
-<span id="155">155</span>
-<span id="156">156</span>
-<span id="157">157</span>
-<span id="158">158</span>
-<span id="159">159</span>
-<span id="160">160</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2022 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -235,7 +220,7 @@
         <span class="comment">// Construct the command-line arguments for `qemu`. See</span>
         <span class="comment">// https://www.qemu.org/docs/master/system/invocation.html for all available options.</span>
 
-        <span class="comment">// Needed to expose advanced CPU features to the UEFI app. Specifically</span>
+        <span class="comment">// Needed to expose advanced CPU features to the bare-metal app. Specifically</span>
         <span class="comment">// RDRAND which is required for remote attestation.</span>
         <span class="ident">cmd</span>.<span class="ident">arg</span>(<span class="string">&quot;-enable-kvm&quot;</span>);
         <span class="ident">cmd</span>.<span class="ident">args</span>(<span class="kw-2">&amp;</span>[<span class="string">&quot;-cpu&quot;</span>, <span class="string">&quot;IvyBridge-IBRS,enforce&quot;</span>]);
@@ -257,38 +242,23 @@
         <span class="comment">// Add the qemu isa-debug-exit device. This can be used to exit qemu with a status</span>
         <span class="comment">// code within the VM.</span>
         <span class="ident">cmd</span>.<span class="ident">args</span>(<span class="kw-2">&amp;</span>[<span class="string">&quot;-device&quot;</span>, <span class="string">&quot;isa-debug-exit,iobase=0xf4,iosize=0x04&quot;</span>]);
-        <span class="comment">// First serial port: this will be used by the console (UEFI firmware itself)</span>
+        <span class="comment">// First serial port: this will be used by the console.</span>
         <span class="ident">cmd</span>.<span class="ident">args</span>(<span class="kw-2">&amp;</span>[<span class="string">&quot;-chardev&quot;</span>, <span class="string">&quot;socket,id=consock,fd=10&quot;</span>]);
         <span class="ident">cmd</span>.<span class="ident">args</span>(<span class="kw-2">&amp;</span>[<span class="string">&quot;-serial&quot;</span>, <span class="string">&quot;chardev:consock&quot;</span>]);
-        <span class="comment">// Second serial port: for communicating with the UEFI app</span>
+        <span class="comment">// We use a simple virtio PCI serial port for host-guest communications.</span>
         <span class="ident">cmd</span>.<span class="ident">args</span>(<span class="kw-2">&amp;</span>[<span class="string">&quot;-chardev&quot;</span>, <span class="string">&quot;socket,id=commsock,fd=11&quot;</span>]);
-        <span class="kw">if</span> <span class="ident">params</span>.<span class="ident">firmware</span>.<span class="ident">is_none</span>() {
-            <span class="comment">// For the baremetal app (no firmware) we use a simple virtio PCI serial port for</span>
-            <span class="comment">// host-guest communications.</span>
-            <span class="ident">cmd</span>.<span class="ident">args</span>(<span class="kw-2">&amp;</span>[
-                <span class="string">&quot;-device&quot;</span>,
-                <span class="string">&quot;virtio-serial-pci-non-transitional,id=virtio_serial_pci0,max_ports=1&quot;</span>,
-            ]);
-            <span class="ident">cmd</span>.<span class="ident">args</span>(<span class="kw-2">&amp;</span>[
-                <span class="string">&quot;-device&quot;</span>,
-                <span class="string">&quot;virtconsole,chardev=commsock,bus=virtio_serial_pci0.0&quot;</span>,
-            ]);
-        } <span class="kw">else</span> {
-            <span class="comment">// For the UEFI app (where firmware is specified) we use an emulated serial port for</span>
-            <span class="comment">// host-guest communications.</span>
-            <span class="ident">cmd</span>.<span class="ident">args</span>(<span class="kw-2">&amp;</span>[<span class="string">&quot;-serial&quot;</span>, <span class="string">&quot;chardev:commsock&quot;</span>]);
-        }
+        <span class="ident">cmd</span>.<span class="ident">args</span>(<span class="kw-2">&amp;</span>[
+            <span class="string">&quot;-device&quot;</span>,
+            <span class="string">&quot;virtio-serial-pci-non-transitional,id=virtio_serial_pci0,max_ports=1&quot;</span>,
+        ]);
+        <span class="ident">cmd</span>.<span class="ident">args</span>(<span class="kw-2">&amp;</span>[
+            <span class="string">&quot;-device&quot;</span>,
+            <span class="string">&quot;virtconsole,chardev=commsock,bus=virtio_serial_pci0.0&quot;</span>,
+        ]);
         <span class="comment">// Expose the QEMU monitor (QMP) over a socket as well.</span>
         <span class="ident">cmd</span>.<span class="ident">args</span>(<span class="kw-2">&amp;</span>[<span class="string">&quot;-chardev&quot;</span>, <span class="string">&quot;socket,id=qmpsock,fd=12&quot;</span>]);
         <span class="ident">cmd</span>.<span class="ident">args</span>(<span class="kw-2">&amp;</span>[<span class="string">&quot;-qmp&quot;</span>, <span class="string">&quot;chardev:qmpsock&quot;</span>]);
 
-        <span class="kw">if</span> <span class="ident">params</span>.<span class="ident">firmware</span>.<span class="ident">is_some</span>() {
-            <span class="comment">// Point to the UEFI firmware.</span>
-            <span class="ident">cmd</span>.<span class="ident">args</span>(<span class="kw-2">&amp;</span>[<span class="ident">OsStr::new</span>(<span class="string">&quot;-bios&quot;</span>), <span class="ident">params</span>.<span class="ident">firmware</span>.<span class="ident">unwrap</span>().<span class="ident">as_os_str</span>()]);
-        }
-        <span class="comment">// And finally -- say that the &quot;kernel&quot; is our UEFI app. Although according to docs</span>
-        <span class="comment">// this is Linux-specific, OVMF seems to be fine with the &quot;kernel&quot; pointing to an UEFI</span>
-        <span class="comment">// app.</span>
         <span class="ident">cmd</span>.<span class="ident">args</span>(<span class="kw-2">&amp;</span>[<span class="ident">OsStr::new</span>(<span class="string">&quot;-kernel&quot;</span>), <span class="ident">params</span>.<span class="ident">app</span>.<span class="ident">as_os_str</span>()]);
 
         <span class="macro">info!</span>(<span class="string">&quot;Executing: {:?}&quot;</span>, <span class="ident">cmd</span>);

@@ -50,9 +50,6 @@
 <span id="45">45</span>
 <span id="46">46</span>
 <span id="47">47</span>
-<span id="48">48</span>
-<span id="49">49</span>
-<span id="50">50</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2022 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -78,9 +75,6 @@
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Params</span> {
     <span class="doccomment">/// Path to the VMM binary to execute.</span>
     <span class="kw">pub</span> <span class="ident">binary</span>: <span class="ident">PathBuf</span>,
-
-    <span class="doccomment">/// Optional path to the firmware blob to pass to the VMM.</span>
-    <span class="kw">pub</span> <span class="ident">firmware</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">PathBuf</span><span class="op">&gt;</span>,
 
     <span class="doccomment">/// Path to the binary to load into the VM.</span>
     <span class="kw">pub</span> <span class="ident">app</span>: <span class="ident">PathBuf</span>,

@@ -213,31 +213,6 @@
 <span id="208">208</span>
 <span id="209">209</span>
 <span id="210">210</span>
-<span id="211">211</span>
-<span id="212">212</span>
-<span id="213">213</span>
-<span id="214">214</span>
-<span id="215">215</span>
-<span id="216">216</span>
-<span id="217">217</span>
-<span id="218">218</span>
-<span id="219">219</span>
-<span id="220">220</span>
-<span id="221">221</span>
-<span id="222">222</span>
-<span id="223">223</span>
-<span id="224">224</span>
-<span id="225">225</span>
-<span id="226">226</span>
-<span id="227">227</span>
-<span id="228">228</span>
-<span id="229">229</span>
-<span id="230">230</span>
-<span id="231">231</span>
-<span id="232">232</span>
-<span id="233">233</span>
-<span id="234">234</span>
-<span id="235">235</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2022 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -276,7 +251,6 @@
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">clap::ArgEnum</span>, <span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">PartialEq</span>)]</span>
 <span class="kw">enum</span> <span class="ident">Mode</span> {
-    <span class="ident">Uefi</span>,
     <span class="ident">Bios</span>,
     <span class="ident">Crosvm</span>,
 }
@@ -292,14 +266,10 @@
     <span class="ident">crosvm</span>: <span class="ident">PathBuf</span>,
 
     <span class="doccomment">/// Execution mode.</span>
-    <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">arg_enum</span>, <span class="ident">long</span>, <span class="ident">default_value</span> <span class="op">=</span> <span class="string">&quot;uefi&quot;</span>)]</span>
+    <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">arg_enum</span>, <span class="ident">long</span>, <span class="ident">default_value</span> <span class="op">=</span> <span class="string">&quot;bios&quot;</span>)]</span>
     <span class="ident">mode</span>: <span class="ident">Mode</span>,
 
-    <span class="doccomment">/// Path to the OVMF firmware file.</span>
-    <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">long</span>, <span class="ident">parse</span>(<span class="ident">from_os_str</span>), <span class="ident">required_if_eq</span>(<span class="string">&quot;mode&quot;</span>, <span class="string">&quot;uefi&quot;</span>), <span class="ident">validator</span> <span class="op">=</span> <span class="ident">path_exists</span>, <span class="ident">default_value_os_t</span> <span class="op">=</span> <span class="ident">PathBuf::from</span>(<span class="string">&quot;/usr/share/OVMF/OVMF_CODE.fd&quot;</span>))]</span>
-    <span class="ident">ovmf</span>: <span class="ident">PathBuf</span>,
-
-    <span class="doccomment">/// Path to the UEFI app or kernel to execute.</span>
+    <span class="doccomment">/// Path to the kernel to execute.</span>
     <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">parse</span>(<span class="ident">from_os_str</span>), <span class="ident">validator</span> <span class="op">=</span> <span class="ident">path_exists</span>)]</span>
     <span class="ident">app</span>: <span class="ident">PathBuf</span>,
 }
@@ -378,21 +348,13 @@
     <span class="kw">let</span> (<span class="ident">console_vmm</span>, <span class="ident">console</span>) <span class="op">=</span> <span class="ident">UnixStream::pair</span>()<span class="question-mark">?</span>;
 
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">vmm</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">Vmm</span><span class="op">&gt;</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">cli</span>.<span class="ident">mode</span> {
-        <span class="ident">Mode::Uefi</span> =&gt; <span class="ident">Box::new</span>(<span class="ident">Qemu::start</span>(<span class="ident">Params</span> {
-            <span class="ident">binary</span>: <span class="ident">cli</span>.<span class="ident">qemu</span>,
-            <span class="ident">firmware</span>: <span class="prelude-val">Some</span>(<span class="ident">cli</span>.<span class="ident">ovmf</span>),
-            <span class="ident">app</span>: <span class="ident">cli</span>.<span class="ident">app</span>,
-            <span class="ident">console</span>: <span class="ident">console_vmm</span>,
-        })<span class="question-mark">?</span>),
         <span class="ident">Mode::Bios</span> =&gt; <span class="ident">Box::new</span>(<span class="ident">Qemu::start</span>(<span class="ident">Params</span> {
             <span class="ident">binary</span>: <span class="ident">cli</span>.<span class="ident">qemu</span>,
-            <span class="ident">firmware</span>: <span class="prelude-val">None</span>,
             <span class="ident">app</span>: <span class="ident">cli</span>.<span class="ident">app</span>,
             <span class="ident">console</span>: <span class="ident">console_vmm</span>,
         })<span class="question-mark">?</span>),
         <span class="ident">Mode::Crosvm</span> =&gt; <span class="ident">Box::new</span>(<span class="ident">Crosvm::start</span>(<span class="ident">Params</span> {
             <span class="ident">binary</span>: <span class="ident">cli</span>.<span class="ident">crosvm</span>,
-            <span class="ident">firmware</span>: <span class="prelude-val">None</span>,
             <span class="ident">app</span>: <span class="ident">cli</span>.<span class="ident">app</span>,
             <span class="ident">console</span>: <span class="ident">console_vmm</span>,
         })<span class="question-mark">?</span>),
@@ -404,24 +366,12 @@
 
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">line</span> <span class="op">=</span> <span class="ident">String::new</span>();
         <span class="kw">while</span> <span class="ident">reader</span>.<span class="ident">read_line</span>(<span class="kw-2">&amp;mut</span> <span class="ident">line</span>).<span class="ident">expect</span>(<span class="string">&quot;failed to read line&quot;</span>) <span class="op">&gt;</span> <span class="number">0</span> {
-            <span class="comment">// The UEFI console uses ANSI escape codes to clear screen and set colours, so</span>
-            <span class="comment">// let&#39;s not just print the string out but rather the debug version of that.</span>
             <span class="macro">log::info!</span>(<span class="string">&quot;console: {:?}&quot;</span>, <span class="ident">line</span>);
             <span class="ident">line</span>.<span class="ident">clear</span>();
         }
     });
 
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">comms</span> <span class="op">=</span> <span class="ident">vmm</span>.<span class="ident">create_comms_channel</span>()<span class="question-mark">?</span>;
-
-    <span class="comment">// TODO(#2709): Unfortunately OVMF writes some garbage (clear screen etc?) + our Hello</span>
-    <span class="comment">// World to the other serial port, so let&#39;s skip some bytes before we set up framing.</span>
-    <span class="comment">// The length of 71 characters has been determined experimentally and will change if we</span>
-    <span class="comment">// change what we write to stdout in the UEFI app.</span>
-    <span class="kw">if</span> <span class="ident">cli</span>.<span class="ident">mode</span> <span class="op">==</span> <span class="ident">Mode::Uefi</span> {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">junk</span> <span class="op">=</span> [<span class="number">0</span>; <span class="number">71</span>];
-        <span class="ident">comms</span>.<span class="ident">read_exact</span>(<span class="kw-2">&amp;mut</span> <span class="ident">junk</span>).<span class="ident">unwrap</span>();
-        <span class="macro">log::info!</span>(<span class="string">&quot;Leading junk on comms: {:?}&quot;</span>, <span class="ident">std::str::from_utf8</span>(<span class="kw-2">&amp;</span><span class="ident">junk</span>));
-    }
+    <span class="kw">let</span> <span class="ident">comms</span> <span class="op">=</span> <span class="ident">vmm</span>.<span class="ident">create_comms_channel</span>()<span class="question-mark">?</span>;
 
     <span class="comment">// Use a bmrng channel for serial communication. The good thing about spawning a separate</span>
     <span class="comment">// task for the serial communication is that it serializes (no pun intended) the communication,</span>

@@ -190,7 +190,7 @@
             .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> <span class="ident">Status::invalid_argument</span>(<span class="macro">format!</span>(<span class="string">&quot;{:?}&quot;</span>, <span class="ident">err</span>)))<span class="question-mark">?</span>;
 
         <span class="comment">// There&#39;s two nested errors: one for communicating over the channel, and one for</span>
-        <span class="comment">// communicating over the serial port with the UEFI app.</span>
+        <span class="comment">// communicating over the underlying device.</span>
         <span class="comment">// We probably want to log the error in the future and serve something more</span>
         <span class="comment">// ambiguous to the end user, but for now that&#39;ll do.</span>
         <span class="kw">let</span> <span class="ident">body</span> <span class="op">=</span> <span class="self">self</span>
