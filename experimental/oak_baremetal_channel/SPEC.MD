@@ -13,39 +13,40 @@ The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD",
 "SHOULD NOT", "RECOMMENDED", "MAY", and "OPTIONAL" in this document are to be
 interpreted as described in [RFC 2119](https://www.rfc-editor.org/rfc/rfc2119).
 
-### Method
+## Layer Defintions
 
-Methods are exposed by the server. They MAY be remotely invoked by the Unrusted
-Loader. Each method has clearly defined parameters and return types. The Oak IDL
-is used to define which methods are available, their parameter and return types,
-as well the protcol used to encode parameters and return values to bytes.
+### Method Layer
 
-### Invocation
+Methods are exposed by the service. Each method has clearly defined parameters
+and return types. The Oak IDL is used to define which methods are available,
+their id, parameter and return types, as well the protcol used to encode
+parameters and return values to bytes.
 
-An invocations of a Method. Each invocation consists out of a Request Message
-followed by a Response Message.
+#### Invocation
 
-#### Issuing an invocation
+An invocation of a Method. Each invocation consists out of a request followed by
+a response.
 
-The client MAY issue an invocation by sending a Request Message.
+##### Initiating an invocation
 
-The server MUST NOT send Request Message.
+The client MAY initiate an invocation by sending a request.
 
-#### Handling an invocation
+The service MUST NOT send requests.
 
-The server MUST respond to each Request Message with a single Response Message.
-It SHOULD respond to Request Messages in first-in-first-out order, but MAY
-prioritize some requests. The server MAY issue Response Messages before the
-Request Message has been received in its entirety. Sending a Response Messages
-concludes the invocation.
+##### Handling an invocation
 
-The client MUST NOT send Response Messages.
+The service MUST respond to each request with a single response message. It
+SHOULD respond to requests in first-in-first-out order, but MAY prioritize some
+requests. The service MAY send a response before the request has been received
+in its entirety. Sending a response concludes the invocation.
 
-### Messages
+The client MUST NOT send response.
 
-A message forms one half of an Invocation.
+### Message Layer
 
-#### Request Message Fields
+Messages are conceptual units to transport requests and responses.
+
+#### Request Message
 
 A byte encoded request message MUST consist of the following fields:
 
@@ -69,25 +70,25 @@ A byte encoded request message MUST consist of the following fields:
 
 ##### length, u32, little endian
 
-length of the entire message, including this field
+Length of the entire message, including this field.
 
 ##### invocation_id, u32, little endian
 
-Identifies the invocation the request initiates
+Identifies the invocation the request initiates.
 
 ##### method_id, u32, little endian
 
-identifies the method that is being invoked
+Identifies the method that is being invoked.
 
 ##### padding, 4 bytes
 
-reserved to maintain 8 byte alignment. MUST be unset and ignored
+Reserved to maintain 8 byte alignment. MUST be unset and ignored.
 
 ##### body, variable length byte array
 
-byte encoded method parameters
+Byte encoded method parameters.
 
-#### Response Message Fields
+#### Response Message
 
 A byte encoded response message MUST consist of the following fields:
 
@@ -111,20 +112,20 @@ A byte encoded response message MUST consist of the following fields:
 
 ##### length u32, little endian
 
-length of the entire message, including this field
+Length of the entire message, including this field.
 
 ##### invocation_id, u32, little endian
 
-MUST match the invocation_id of the relevant Request Message
+MUST match the invocation_id of the relevant request message.
 
 ##### status_code, u32, little endian
 
 response status as a
-[gRPC status code](https://grpc.github.io/grpc/core/md_doc_statuscodes.html)
+[gRPC status code](https://grpc.github.io/grpc/core/md_doc_statuscodes.html).
 
 ##### padding, 4 bytes
 
-reserved to maintain 8 byte alignment. MUST be unset and ignored
+Reserved to maintain 8 byte alignment. MUST be unset and ignored.
 
 ##### body, variable length byte array
 
@@ -132,42 +133,12 @@ For responses with an "Ok" status code the body MUST be the byte encoded method
 return value. Else the body MUST be a utf-8 encoded developer-facing error
 message.
 
-#### Sending Messages
-
-To send a message, it MUST first be encoded into frames. The resulting frame set
-MUST be sent as an uninterrupted sequence.
-
-#### Receiving Messages
-
-To receive a message the recipent incrementally reads frames from the
-communication channel. The recipent MAY start parsing a message before all of
-its frames have been received.
-
-#### Encoding Messages into Frames
-
-The byte representation of a message MUST be chunked into a set of frame bodies.
-The last frame body of the resulting set MAY be shorter than 63,936 bytes (the
-maximum size of a frame body). Any preceding frame bodies MUST be exactly 63,936
-bytes in length.
-
-A frame MUST then be formed from each frame body.
-
-Messages with a length of 63,936 bytes or less MUST be encoded as a single
-frame. In this case the body of the resulting frame contains the entire message.
-
-##### Examples for Illustration
-
-#### Decoding Frames into Messages
-
-Messages are parsed from Frames by appending the frame bodies in the order they
-are received.
-
-### Frames
+### Frame Layer
 
 Messages are sent and received as frames. Each message is fragmented into a set
 of one or more frames.
 
-#### Frame Fields
+#### Frame
 
 A byte encoded frame MUST consist of the following fields:
 
@@ -187,19 +158,19 @@ A byte encoded frame MUST consist of the following fields:
 
 ##### padding, 4 bytes
 
-for future use
+For future use.
 
 ##### length, u16, little endian
 
 Length of the entire frame, including this field. The length of a frame MUST NOT
-exceed 64000 bytes
+exceed 64000 bytes.
 
-##### flags, two bytes, little endian
+##### flags, two bytes
 
 ###### flags[0]
 
 ```
-- 7 (MSG): unused
+- 7 (MSB): unused
 - 6: unused
 - 5: unused
 - 4: unused
@@ -212,7 +183,7 @@ exceed 64000 bytes
 ###### flags[1]
 
 ```
-- 7 (MSG): unused
+- 7 (MSB): unused
 - 6: unused
 - 5: unused
 - 4: unused
@@ -224,8 +195,38 @@ exceed 64000 bytes
 
 ##### body, variable length byte array
 
-Byte chunk of an encoded message. In order to not exceed the maximum frame
-length, this byte array MUST NOT exceed 63,936 bytes
+Byte fragment of an encoded message. In order to not exceed the maximum frame
+length, this byte array MUST NOT exceed 63,936 bytes.
+
+## Interaction between the Layers
+
+### Sending Messages
+
+To send a message, it MUST first be encoded into frames. The resulting frame set
+MUST be sent as an uninterrupted sequence.
+
+### Receiving Messages
+
+To receive a message the recipent incrementally reads frames from the
+communication channel. The recipent MAY start parsing a message before all of
+its frames have been received.
+
+### Encoding Messages into Frames
+
+The byte representation of a message MUST be chunked into a set of frame bodies.
+The last frame body of the resulting set MAY be shorter than 63,936 bytes (the
+maximum size of a frame body). Any preceding frame bodies MUST be exactly 63,936
+bytes in length.
+
+A frame MUST then be formed from each frame body.
+
+Messages with a length of 63,936 bytes or less MUST be encoded as a single
+frame.
+
+### Parsing Messages from Frames
+
+Messages are parsed from frames by appending the frame bodies in the order they
+are received.
 
 ## Examples for Illustration
 
@@ -241,15 +242,8 @@ be set, all other flags would be unset.
 
 ### Layers Diagram
 
-The definition section defines three layers:
-
-- Method Layers: Defines the available methods, parameter and return value
-  encoding
-- Message Layer: Defines Request Messages and Response Messages
-- Frame Layer: Defines how Messages are split into frames
-
-The diagram below shows a practial example of how a method invocation would look
-like after being encoded as two frames.
+The diagram below shows a practial example of how the request half of an
+invocation would look like after being encoded as two frames.
 
 #### Frame 0
 
@@ -261,22 +255,22 @@ like after being encoded as two frames.
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 |          frame length         |          frame flags          |
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|                 frame body [ message length ]                 |
+|             frame body [ request_message length ]             |
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|              frame body [ message invocation_id ]             |
+|          frame body [ request_message invocation_id ]         |
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|                frame body [ message method_id ]               |
+|            frame body [ request_message method_id ]           |
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|                 frame body [ message padding ]                |
+|             frame body [ request_message padding ]            |
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 |                                                               |
 +                                                               +
 |                                                               |
-+   frame body [ message body [ method encoded_parameters ] ]   +
++   frame body [ request_message body [ method parameters ] ]   +
 |                                                               |
 +                                                               +
 |                                                               |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ ....
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ ...
 ```
 
 #### Frame 1
@@ -290,7 +284,7 @@ like after being encoded as two frames.
 |          frame length         |          frame flags          |
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 |                                                               |
-+       frame body [ message body [ method parameters ] ]       +
++   frame body [ request_message body [ method parameters ] ]   +
 |                                                               |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ ...
 ```
