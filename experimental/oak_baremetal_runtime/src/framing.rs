@@ -21,7 +21,11 @@ use crate::{
 use alloc::boxed::Box;
 use anyhow::Context;
 use ciborium_io::{Read, Write};
-use oak_baremetal_communication_channel::{schema, schema::TrustedRuntime, InvocationChannel};
+use oak_baremetal_communication_channel::{
+    schema,
+    schema::TrustedRuntime,
+    server::{message_from_response_and_id, ServerChannelHandle},
+};
 use oak_idl::Handler;
 use oak_remote_attestation::handshaker::{
     AttestationBehavior, AttestationGenerator, AttestationVerifier,
@@ -139,12 +143,17 @@ where
         initialization_state: InitializationState::Uninitialized(Some(attestation_behavior)),
     }
     .serve();
-    let invocation_channel = &mut InvocationChannel::new(channel);
+    let channel_handle = &mut ServerChannelHandle::new(channel);
     loop {
-        let message = invocation_channel
-            .read_message()
+        let request_message = channel_handle
+            .read_request()
             .context("couldn't receive message")?;
-        let response = invocation_handler.invoke((&message).into());
-        invocation_channel.write_message(response.into())?
+        let request_message_message_id = request_message.message_id;
+        let response = invocation_handler.invoke((&request_message).into());
+        // For now all messages are sent in sequence, hence the id of the next
+        // response always matches that of the preceeding request.
+        // TODO(#2848): Allow messages to be sent and received out of order.
+        let response_message = message_from_response_and_id(response, request_message_message_id);
+        channel_handle.write_response(response_message)?
     }
 }
