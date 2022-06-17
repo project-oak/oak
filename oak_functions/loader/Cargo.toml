@@ -12,7 +12,6 @@ oak-web = ["tonic-web"]
 anyhow = "*"
 async-trait = "*"
 async-stream = "*"
-bincode = "*"
 bytes = "*"
 byteorder = { version = "*", default-features = false }
 chrono = { version = "*", default-features = false, features = [
@@ -22,6 +21,7 @@ chrono = { version = "*", default-features = false, features = [
 clap = { version = "*", features = ["derive"] }
 futures = "*"
 grpc_unary_attestation = { path = "../../grpc_unary_attestation/" }
+hashbrown = "*"
 http = "*"
 hyper = { version = "*", features = [
   "client",

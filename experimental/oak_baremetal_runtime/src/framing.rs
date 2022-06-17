@@ -15,17 +15,20 @@
 //
 
 use crate::{
+    logger::StandaloneLogger,
     remote_attestation::{AttestationHandler, AttestationSessionHandler},
     wasm,
 };
-use alloc::boxed::Box;
+use alloc::{boxed::Box, sync::Arc};
 use anyhow::Context;
 use ciborium_io::{Read, Write};
+use hashbrown::HashMap;
 use oak_baremetal_communication_channel::{
     schema,
     schema::TrustedRuntime,
     server::{message_from_response_and_id, ServerChannelHandle},
 };
+use oak_functions_lookup::LookupDataManager;
 use oak_idl::Handler;
 use oak_remote_attestation::handshaker::{
     AttestationBehavior, AttestationGenerator, AttestationVerifier,
@@ -50,6 +53,7 @@ where
     V: AttestationVerifier,
 {
     initialization_state: InitializationState<G, V>,
+    lookup_data_manager: Arc<LookupDataManager<StandaloneLogger>>,
 }
 
 impl<G: 'static, V: 'static> schema::TrustedRuntime for InvocationHandler<G, V>
@@ -75,8 +79,10 @@ where
                 let wasm_module_bytes: &[u8] = initialization
                     .wasm_module()
                     .ok_or_else(|| oak_idl::Status::new(oak_idl::StatusCode::InvalidArgument))?;
-                let wasm_handler = wasm::new_wasm_handler(wasm_module_bytes)
-                    .map_err(|_err| oak_idl::Status::new(oak_idl::StatusCode::Internal))?;
+
+                let wasm_handler =
+                    wasm::new_wasm_handler(wasm_module_bytes, self.lookup_data_manager.clone())
+                        .map_err(|_err| oak_idl::Status::new(oak_idl::StatusCode::Internal))?;
                 let attestation_handler = Box::new(AttestationSessionHandler::create(
                     move |v| wasm_handler.handle_raw_invoke(v),
                     attestation_behavior,
@@ -132,6 +138,40 @@ where
             }
         }
     }
+
+    fn update_lookup_data(
+        &mut self,
+        lookup_data: &schema::LookupData,
+    ) -> Result<
+        oak_idl::utils::Message<oak_baremetal_communication_channel::schema::Empty>,
+        oak_idl::Status,
+    > {
+        let mut data = HashMap::new();
+        for entry in lookup_data
+            .items()
+            .ok_or_else(|| oak_idl::Status::new(oak_idl::StatusCode::InvalidArgument))?
+        {
+            data.insert(
+                entry
+                    .key()
+                    .ok_or_else(|| oak_idl::Status::new(oak_idl::StatusCode::InvalidArgument))?
+                    .to_vec(),
+                entry
+                    .value()
+                    .ok_or_else(|| oak_idl::Status::new(oak_idl::StatusCode::InvalidArgument))?
+                    .to_vec(),
+            );
+        }
+        self.lookup_data_manager.update_data(data);
+        let response_message = {
+            let mut builder = oak_idl::utils::MessageBuilder::default();
+            let user_request_response = schema::Empty::create(&mut builder, &schema::EmptyArgs {});
+            builder
+                .finish(user_request_response)
+                .map_err(|_err| oak_idl::Status::new(oak_idl::StatusCode::Internal))?
+        };
+        Ok(response_message)
+    }
 }
 
 // Processes incoming frames.
@@ -144,6 +184,7 @@ where
 {
     let mut invocation_handler = InvocationHandler {
         initialization_state: InitializationState::Uninitialized(Some(attestation_behavior)),
+        lookup_data_manager: Arc::new(LookupDataManager::new_empty(StandaloneLogger::default())),
     }
     .serve();
     let channel_handle = &mut ServerChannelHandle::new(channel);

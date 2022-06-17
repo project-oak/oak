@@ -2224,6 +2224,7 @@ dependencies = [
 name = "key_value_lookup"
 version = "0.1.0"
 dependencies = [
+ "hashbrown 0.11.2",
  "http",
  "hyper",
  "maplit",
@@ -2921,8 +2922,10 @@ dependencies = [
  "anyhow",
  "ciborium-io",
  "flatbuffers",
+ "hashbrown 0.11.2",
  "log",
  "oak_baremetal_communication_channel",
+ "oak_functions_lookup",
  "oak_functions_wasm",
  "oak_functions_workload_logging",
  "oak_idl",
@@ -2936,6 +2939,7 @@ name = "oak_functions"
 version = "0.1.0"
 dependencies = [
  "bincode",
+ "hashbrown 0.11.2",
  "lazy_static",
  "maplit",
  "oak_functions_abi",
@@ -2956,6 +2960,7 @@ dependencies = [
 name = "oak_functions_abi"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "prost 0.10.4",
  "prost-build 0.10.4",
  "serde",
@@ -3019,7 +3024,6 @@ dependencies = [
  "anyhow",
  "async-stream",
  "async-trait",
- "bincode",
  "byteorder",
  "bytes",
  "chrono",
@@ -3027,6 +3031,7 @@ dependencies = [
  "criterion",
  "futures",
  "grpc_unary_attestation",
+ "hashbrown 0.11.2",
  "http",
  "humantime-serde",
  "hyper",
@@ -3100,9 +3105,8 @@ name = "oak_functions_lookup"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "bincode",
+ "hashbrown 0.11.2",
  "log",
- "maplit",
  "oak_functions_abi",
  "oak_functions_extension",
  "oak_functions_util",

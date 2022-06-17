@@ -15,6 +15,7 @@
 
 extern crate test;
 
+use hashbrown::HashMap;
 use maplit::hashmap;
 use oak_functions_abi::proto::{Request, ServerPolicy, StatusCode};
 use oak_functions_loader::{
@@ -131,11 +132,14 @@ fn bench_wasm_handler(bencher: &mut Bencher) {
             .expect("Couldn't read Wasm module");
 
     let logger = Logger::for_test();
-    let entries = hashmap! {
-        b"key_0".to_vec() => br#"value_0"#.to_vec(),
-        b"key_1".to_vec() => br#"value_1"#.to_vec(),
-        b"key_2".to_vec() => br#"value_2"#.to_vec(),
-    };
+    let entries = HashMap::from_iter(
+        [
+            (b"key_0".to_vec(), br#"value_0"#.to_vec()),
+            (b"key_1".to_vec(), br#"value_1"#.to_vec()),
+            (b"key_2".to_vec(), br#"value_2"#.to_vec()),
+        ]
+        .into_iter(),
+    );
 
     let lookup_data_manager = Arc::new(LookupDataManager::for_test(entries, logger.clone()));
     let lookup_factory = LookupFactory::new_boxed_extension_factory(lookup_data_manager)

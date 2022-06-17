@@ -23,6 +23,7 @@ extern crate alloc;
 
 pub use crate::proto::ExtensionHandle;
 use alloc::{string::String, vec::Vec};
+use core::mem::size_of;
 use serde::{Deserialize, Serialize};
 
 pub mod proto {
@@ -56,9 +57,55 @@ pub mod proto {
 }
 
 /// Holds the optional value from the storage.
-#[derive(Serialize, Deserialize)]
 pub struct StorageGetItemResponse {
     pub value: Option<Vec<u8>>,
+}
+
+impl From<StorageGetItemResponse> for Vec<u8> {
+    fn from(response: StorageGetItemResponse) -> Self {
+        // Temporary manual serialisation to avoid `bincode` when using `no_std`.
+        // TODO(#2975): Replace this with an IDL-based implemenation when the ABI is converted.
+        match response.value {
+            None => Vec::new(),
+            Some(value) => {
+                let mut result = Vec::with_capacity(value.len() + size_of::<u64>());
+                result.extend_from_slice(&(value.len() as u64).to_le_bytes());
+                result.extend_from_slice(&value);
+                result
+            }
+        }
+    }
+}
+
+impl TryFrom<&[u8]> for StorageGetItemResponse {
+    type Error = anyhow::Error;
+    fn try_from(buffer: &[u8]) -> Result<Self, Self::Error> {
+        // Temporary manual deserialisation to avoid `bincode` when using `no_std`.
+        // TODO(#2975): Replace this with an IDL-based implemenation when the ABI is converted.
+        const LENGTH_SIZE: usize = size_of::<u64>();
+        if buffer.is_empty() {
+            return Ok(StorageGetItemResponse { value: None });
+        }
+        if buffer.len() < LENGTH_SIZE {
+            anyhow::bail!("Invalid buffer: buffer too small.")
+        }
+
+        let mut len_buffer = [0; LENGTH_SIZE];
+        len_buffer.copy_from_slice(&buffer[..LENGTH_SIZE]);
+        let len = u64::from_le_bytes(len_buffer);
+
+        if buffer.len() != len as usize + LENGTH_SIZE {
+            anyhow::bail!(
+                "Invalid buffer: expected buffer size of {}, but found {}",
+                len as usize + LENGTH_SIZE,
+                buffer.len()
+            )
+        }
+
+        Ok(StorageGetItemResponse {
+            value: Some(buffer[LENGTH_SIZE..].to_vec()),
+        })
+    }
 }
 
 /// Holds the `label` and the `value` to report a metric.
