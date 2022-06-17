@@ -88,7 +88,7 @@ static_assertions::assert_eq_size!(
 // Ensure that the frame header is 8 Byte aligned.
 static_assertions::const_assert!(FRAME_HEADER_SIZE % 8 == 0);
 
-const MAX_FRAME_SIZE: usize = 64000;
+const MAX_FRAME_SIZE: usize = 4000;
 const MAX_FRAME_BODY_SIZE: usize = MAX_FRAME_SIZE - FRAME_HEADER_SIZE;
 
 /// A [`Frame`] is a small unit data that is sent over the communication
