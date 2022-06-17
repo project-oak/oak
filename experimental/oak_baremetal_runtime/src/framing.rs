@@ -40,7 +40,7 @@ where
     Uninitialized(Option<AttestationBehavior<G, V>>),
     // dyn is used as our attestation implementation uses a closure, which is
     // created only at initialization time. We cannot know the closure
-    // type in advance, since Rust closure's have unique, anonymous types.
+    // type in advance, since Rust closures have unique, anonymous types.
     Initialized(Box<dyn AttestationHandler>),
 }
 
