@@ -55,4 +55,6 @@ pub trait BootInfo<E: E820Entry> {
     fn protocol(&self) -> &str;
     /// Slice of address range descriptors representing the memory layout of the machine.
     fn e820_table(&self) -> &[E];
+    /// Arguments passed to the kernel.
+    fn args(&self) -> &core::ffi::CStr;
 }

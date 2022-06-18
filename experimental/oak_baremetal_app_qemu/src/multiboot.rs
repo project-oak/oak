@@ -18,6 +18,7 @@
 #![allow(non_camel_case_types)]
 
 use bitflags::bitflags;
+use core::ffi::{c_char, CStr};
 use oak_baremetal_kernel::boot::{BootInfo, E820Entry, E820EntryType};
 
 include!(concat!(env!("OUT_DIR"), "/multiboot.rs"));
@@ -54,6 +55,16 @@ impl BootInfo<multiboot_mmap_entry> for multiboot_info {
                 (self.mmap_length / 24).try_into().unwrap(),
             )
         }
+    }
+
+    fn args(&self) -> &CStr {
+        if self.flags & (1 << 2) == 0 {
+            // We know the constant ends with a \0, so the unwrap will always succeed.
+            return CStr::from_bytes_with_nul(b"\0").unwrap();
+        }
+
+        // Safety: the pointer is valid per Multiboot specs if the flag above is set.
+        unsafe { CStr::from_ptr(self.cmdline as *const c_char) }
     }
 }
 

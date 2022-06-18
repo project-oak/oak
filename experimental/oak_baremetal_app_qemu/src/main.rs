@@ -18,6 +18,7 @@
 #![no_main]
 #![feature(lang_items)]
 #![feature(alloc_error_handler)]
+#![feature(core_c_str)]
 #![feature(core_ffi_c)]
 #![feature(custom_test_frameworks)]
 // As we're in a `no_std` environment, testing requires special handling. This
