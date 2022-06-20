@@ -119,11 +119,10 @@ fn test_invocation_channel() {
 #[test]
 fn test_invocation_channel_double_start_frame() {
     let mut invocation_channel = {
-        let start_frame = {
-            let mut frame = frame::Frame::default();
-            frame.flags.set(frame::Flags::START, true);
-            frame
-        };
+        let start_frame = frame::bytes_into_frames(RequestMessage::default().encode())
+            .first()
+            .unwrap()
+            .clone();
         let mut frame_store = frame::Framed::new(MessageStore::default());
         frame_store.write_frame(start_frame.clone()).unwrap();
         frame_store.write_frame(start_frame).unwrap();
@@ -138,11 +137,10 @@ fn test_invocation_channel_double_start_frame() {
 #[test]
 fn test_invocation_channel_expected_start_frame() {
     let mut invocation_channel = {
-        let end_frame = {
-            let mut frame = frame::Frame::default();
-            frame.flags.set(frame::Flags::END, true);
-            frame
-        };
+        let end_frame = frame::bytes_into_frames(RequestMessage::default().encode())
+            .last()
+            .unwrap()
+            .clone();
         let mut frame_store = frame::Framed::new(MessageStore::default());
         frame_store.write_frame(end_frame).unwrap();
         InvocationChannel { inner: frame_store }
