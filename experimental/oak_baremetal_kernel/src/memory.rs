@@ -26,6 +26,18 @@ static ALLOCATOR: LockedHeap = LockedHeap::empty();
 #[cfg(test)]
 static ALLOCATOR: LockedHeap = LockedHeap::empty();
 
+/// Initializes the global allocator from the largest contiguous slice of available memory.
+///
+/// Pointers to addresses in the memory area (or references to data contained within the slice) must
+/// be considered invalid after calling this function, as the allocator may overwrite the data at
+/// any point.
+///
+/// We ensure that data up address specified by `.stack_start` in the linker script is untouched,
+/// even if it falls within the largest slice of memory.
+///
+/// Case in point, boot metadata is often stored somewhere in the memory area, so calling this takes
+/// ownership of the `boot:BootInfo`, as the data provided to us by the bootloader will get
+/// clobbered after initializing the heap.
 pub fn init_allocator<E: boot::E820Entry, B: boot::BootInfo<E>>(
     info: B,
 ) -> Result<(), &'static str> {
