@@ -76,7 +76,7 @@ pub fn start_kernel<E: boot::E820Entry, B: boot::BootInfo<E>>(info: &B) -> ! {
 
 fn main(protocol: &str) -> ! {
     info!("In main! Boot protocol:  {}", protocol);
-    info!("Kernel boot args: {:?}", args::args());
+    info!("Kernel boot args: {}", args::args());
     let attestation_behavior =
         AttestationBehavior::create(EmptyAttestationGenerator, EmptyAttestationVerifier);
     oak_baremetal_runtime::framing::handle_frames(get_channel(), attestation_behavior).unwrap();
