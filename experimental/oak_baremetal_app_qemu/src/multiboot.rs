@@ -58,13 +58,13 @@ impl BootInfo<multiboot_mmap_entry> for multiboot_info {
     }
 
     fn args(&self) -> &CStr {
+        // Bit 2 indicates cmdline is valid.
         if self.flags & (1 << 2) == 0 {
-            // We know the constant ends with a \0, so the unwrap will always succeed.
-            return CStr::from_bytes_with_nul(b"\0").unwrap();
+            Default::default()
+        } else {
+            // Safety: the pointer is valid per Multiboot specs if the flag above is set.
+            unsafe { CStr::from_ptr(self.cmdline as *const c_char) }
         }
-
-        // Safety: the pointer is valid per Multiboot specs if the flag above is set.
-        unsafe { CStr::from_ptr(self.cmdline as *const c_char) }
     }
 }
 

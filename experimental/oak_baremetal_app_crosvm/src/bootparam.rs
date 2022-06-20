@@ -60,11 +60,13 @@ impl BootInfo<boot_e820_entry> for boot_params {
 
     fn args(&self) -> &CStr {
         if self.hdr.cmdline_size == 0 {
-            // We know the constant ends with a \0, so the unwrap will always succeed.
-            return CStr::from_bytes_with_nul(b"\0").unwrap();
+            Default::default()
         }
-        // Safety: Linux boot protocol expects the pointer to be valid, even if there are no args.
-        unsafe { CStr::from_ptr(self.hdr.cmd_line_ptr as *const c_char) }
+        else {
+            // Safety: Linux boot protocol expects the pointer to be valid, even if there are no
+            // args.
+            unsafe { CStr::from_ptr(self.hdr.cmd_line_ptr as *const c_char) }
+        }
     }
 }
 

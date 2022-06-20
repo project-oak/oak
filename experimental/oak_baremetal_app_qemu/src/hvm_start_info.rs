@@ -52,10 +52,11 @@ impl BootInfo<hvm_memmap_table_entry> for hvm_start_info {
 
     fn args(&self) -> &CStr {
         if self.cmdline_paddr == 0 {
-            return CStr::from_bytes_with_nul(b"\0").unwrap();
+            Default::default()
+        } else {
+            // Safety: we check for a null pointer above; the PVH documentation doesn't say
+            // anything about the pointer being potentially invalid.
+            unsafe { CStr::from_ptr(self.cmdline_paddr as *const c_char) }
         }
-        // Safety: we check for a null pointer above; the PVH documentation doesn't say anything
-        // about the pointer being potentially invalid.
-        unsafe { CStr::from_ptr(self.cmdline_paddr as *const c_char) }
     }
 }
