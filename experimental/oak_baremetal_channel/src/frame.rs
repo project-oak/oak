@@ -58,16 +58,15 @@ pub struct Frame {
 impl TryFrom<Frame> for Vec<u8> {
     type Error = anyhow::Error;
     fn try_from(frame: Frame) -> Result<Self, Self::Error> {
-        let frame_length = {
-            let length = BODY_OFFSET + frame.body.len();
+        let length = BODY_OFFSET + frame.body.len();
+        let mut frame_bytes: Vec<u8> = Vec::with_capacity(length);
 
-            if length > MAX_SIZE {
-                return Err(anyhow::Error::msg("frame exceeds the maximum frame size"));
-            };
-
-            length
-        };
-        let mut frame_bytes: Vec<u8> = Vec::with_capacity(frame_length);
+        let frame_length = Length::try_from(length).map_err(|_error| {
+            anyhow::Error::msg(format!(
+                "could convert the frame length usize to {:?}",
+                core::any::type_name::<Length>()
+            ))
+        })?;
 
         frame_bytes.extend_from_slice(&[0; PADDING_SIZE]);
         frame_bytes.extend_from_slice(&frame_length.to_le_bytes());
