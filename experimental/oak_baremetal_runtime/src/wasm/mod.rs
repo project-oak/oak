@@ -20,9 +20,7 @@ use oak_functions_wasm::WasmHandler;
 use oak_functions_workload_logging::WorkloadLoggingFactory;
 
 /// Creates a new `WasmHandler` instance.
-pub fn new_wasm_handler() -> anyhow::Result<WasmHandler<StandaloneLogger>> {
-    // We can't yet send the Wasm module bytes from the loader, so we use an embedded Wasm module.
-    let wasm_module_bytes = include_bytes!("echo.wasm");
+pub fn new_wasm_handler(wasm_module_bytes: &[u8]) -> anyhow::Result<WasmHandler<StandaloneLogger>> {
     let logger = StandaloneLogger::default();
     let logging_factory = WorkloadLoggingFactory::new_boxed_extension_factory(logger.clone())?;
     WasmHandler::create(wasm_module_bytes, vec![logging_factory], logger)

@@ -44,7 +44,7 @@ static_assertions::assert_eq_size!(
     [u8; PADDING_SIZE + LENGTH_SIZE + FLAGS_SIZE]
 );
 
-pub const MAX_SIZE: usize = 64000;
+pub const MAX_SIZE: usize = 4000;
 pub const MAX_BODY_SIZE: usize = MAX_SIZE - BODY_OFFSET;
 
 /// Rust implementation of the Frame structure defined in

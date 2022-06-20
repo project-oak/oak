@@ -14,6 +14,7 @@
 // limitations under the License.
 //
 
+use core::ffi::{c_char, CStr};
 use oak_baremetal_kernel::boot::{BootInfo, E820Entry, E820EntryType};
 
 include!(concat!(env!("OUT_DIR"), "/start_info.rs"));
@@ -32,8 +33,8 @@ impl E820Entry for hvm_memmap_table_entry {
     }
 }
 
-impl BootInfo<hvm_memmap_table_entry> for hvm_start_info {
-    fn protocol(&self) -> &str {
+impl BootInfo<hvm_memmap_table_entry> for &hvm_start_info {
+    fn protocol(&self) -> &'static str {
         "PVH Boot Protocol"
     }
 
@@ -46,6 +47,16 @@ impl BootInfo<hvm_memmap_table_entry> for hvm_start_info {
                 self.memmap_paddr as *const hvm_memmap_table_entry,
                 self.memmap_entries.try_into().unwrap(),
             )
+        }
+    }
+
+    fn args(&self) -> &CStr {
+        if self.cmdline_paddr == 0 {
+            Default::default()
+        } else {
+            // Safety: we check for a null pointer above; the PVH documentation doesn't say
+            // anything about the pointer being potentially invalid.
+            unsafe { CStr::from_ptr(self.cmdline_paddr as *const c_char) }
         }
     }
 }
