@@ -134,7 +134,11 @@ where
     }
 }
 
-pub fn bytes_into_frames(data: Vec<u8>) -> Vec<Frame> {
+pub fn bytes_into_frames(data: Vec<u8>) -> anyhow::Result<Vec<Frame>> {
+    if data.is_empty() {
+        anyhow::bail!("cannot convert empty payloads into frames")
+    }
+
     let mut frames: Vec<Frame> = data
         .chunks(MAX_BODY_SIZE)
         // TODO(#2848): It'd be nice if we didn't have to reallocate here.
@@ -147,15 +151,17 @@ pub fn bytes_into_frames(data: Vec<u8>) -> Vec<Frame> {
         })
         .collect();
 
-    frames.first_mut().map(|frame| {
-        frame.flags.set(Flags::START, true);
-        Some(())
-    });
-
-    frames.last_mut().map(|frame| {
-        frame.flags.set(Flags::END, true);
-        Some(())
-    });
+    frames
+        .first_mut()
+        .expect("there should always be at least one frame")
+        .flags
+        .set(Flags::START, true);
 
     frames
+        .last_mut()
+        .expect("there should always be at least one frame")
+        .flags
+        .set(Flags::END, true);
+
+    Ok(frames)
 }

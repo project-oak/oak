@@ -41,7 +41,7 @@ fn mock_payload() -> Vec<u8> {
 fn test_fragmenting_bytes_into_frames() {
     let payload = mock_payload();
 
-    let mut frames = frame::bytes_into_frames(payload.clone());
+    let mut frames = frame::bytes_into_frames(payload.clone()).unwrap();
     assert_eq!(frames.len(), BODY_LEN_MULTIPLICATOR);
 
     let mut reconstructed_payload: Vec<u8> = Vec::new();
@@ -125,6 +125,7 @@ fn test_invocation_channel_double_start_frame() {
             body: mock_payload(),
         };
         let start_frame = frame::bytes_into_frames(message.encode())
+            .unwrap()
             .first()
             .unwrap()
             .clone();
@@ -148,6 +149,7 @@ fn test_invocation_channel_expected_start_frame() {
             body: mock_payload(),
         };
         let end_frame = frame::bytes_into_frames(message.encode())
+            .unwrap()
             .last()
             .unwrap()
             .clone();

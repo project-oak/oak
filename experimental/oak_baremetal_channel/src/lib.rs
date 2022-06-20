@@ -109,7 +109,7 @@ where
         Ok(M::decode(encoded_message))
     }
     pub fn write_message<M: message::Message>(&mut self, message: M) -> anyhow::Result<()> {
-        let frames: Vec<frame::Frame> = frame::bytes_into_frames(message.encode());
+        let frames: Vec<frame::Frame> = frame::bytes_into_frames(message.encode())?;
         for frame in frames.into_iter() {
             self.inner
                 .write_frame(frame)
