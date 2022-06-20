@@ -14,39 +14,10 @@
 // limitations under the License.
 //
 
-use atomic_refcell::AtomicRefCell;
+use arrayvec::ArrayString;
 use core::ffi::CStr;
-use lazy_static::lazy_static;
 
-// This is a really crude analogue of CString, which we can't use, as CString requires allocation.
-// Instead of allocation, we rely on a static buffer.
-struct StaticCString {
-    buf: [u8; 512],
-
-    // Index of \0 in the buffer, above, so that we don't have to keep searching for it.
-    len: usize,
-}
-
-impl Default for StaticCString {
-    fn default() -> Self {
-        StaticCString {
-            buf: [0; 512],
-            len: 0,
-        }
-    }
-}
-
-impl StaticCString {
-    fn as_c_str(&self) -> &CStr {
-        // Safety: this is safe as initally len will be zero, resulting in an empty CStr;
-        // otherwise, the fields are initialized from init_args() from a pre-existing valid CStr.
-        unsafe { CStr::from_bytes_with_nul_unchecked(&self.buf[..self.len]) }
-    }
-}
-
-lazy_static! {
-    static ref ARGS: AtomicRefCell<StaticCString> = Default::default();
-}
+static mut ARGS: ArrayString<512> = ArrayString::new_const();
 
 /// Buffers kernel arguments in a static variable.
 ///
@@ -54,21 +25,16 @@ lazy_static! {
 /// have memory allocation available. This also means that we can't use anyhow::Result as the
 /// return value, as anyhow relies on allocation.
 pub fn init_args(args: &CStr) -> core::result::Result<(), &str> {
-    let src = args.to_bytes_with_nul();
-    let mut dst = ARGS.borrow_mut();
-
-    if src.len() > dst.buf.len() {
-        return Err("Kernel command line too long");
-    }
-    dst.len = src.len();
-    dst.buf[..src.len()].copy_from_slice(src);
-
-    Ok(())
+    let args = args
+        .to_str()
+        .map_err(|_| "Kernel arguments are not valid UTF-8")?;
+    // Safety: this is called once early in the initialization process from a single thread, so
+    // there will not be any concurrent writes.
+    unsafe { ARGS.try_push_str(args) }.map_err(|_| "Kernel arguments too long")
 }
 
-pub fn args() -> &'static CStr {
-    // Hack as the fact that ARGS is static is not immediately evident.
-    // Safety: we initialize ARGS once, with a static buffer, so the pointer will be valid and
-    // always pointing to the same memory location.
-    unsafe { ARGS.as_ptr().as_ref() }.unwrap().as_c_str()
+pub fn args() -> &'static str {
+    // Safety: once init_args() has been called, the static will not be modified, so it's fine to
+    // have multiple non-mut references to the memory.
+    unsafe { ARGS.as_str() }
 }

@@ -12,6 +12,7 @@ serial_channel = []
 
 [dependencies]
 anyhow = { version = "*", default-features = false }
+arrayvec = { version = "*", default-features = false }
 atomic_refcell = "*"
 ciborium-io = { version = "*", default-features = false }
 getrandom = { version = "0.2", features = ["rdrand"] }
