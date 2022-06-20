@@ -15,7 +15,7 @@
 //
 
 use crate::boot::{self, E820Entry};
-use anyhow::Result;
+use core::result::Result;
 use linked_list_allocator::LockedHeap;
 use log::info;
 
@@ -26,7 +26,7 @@ static ALLOCATOR: LockedHeap = LockedHeap::empty();
 #[cfg(test)]
 static ALLOCATOR: LockedHeap = LockedHeap::empty();
 
-pub fn init_allocator<E: E820Entry>(e820_table: &[E]) -> Result<()> {
+pub fn init_allocator<E: E820Entry>(e820_table: &[E]) -> Result<(), &str> {
     let ram_min = rust_hypervisor_firmware_boot::ram_min();
     let text_start = rust_hypervisor_firmware_boot::text_start();
     let text_end = rust_hypervisor_firmware_boot::text_end();
@@ -51,7 +51,7 @@ pub fn init_allocator<E: E820Entry>(e820_table: &[E]) -> Result<()> {
         })
         .filter(|e| e.entry_type() == boot::E820EntryType::RAM)
         .max_by_key(|e| e.size())
-        .ok_or_else(|| anyhow::anyhow!("No RAM available for heap"))?;
+        .ok_or("No RAM available for heap")?;
 
     // Ensure we don't clash with existing structures.
     let mut addr = largest.addr();
