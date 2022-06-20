@@ -183,6 +183,26 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let client_handler = ClientHandler::new(comms_channel);
             schema::TrustedRuntimeClient::new(client_handler)
         };
+
+        let wasm_bytes = include_bytes!("echo.wasm");
+        let initialization_message = {
+            let mut builder = oak_idl::utils::MessageBuilder::default();
+            let wasm_module = builder.create_vector::<u8>(wasm_bytes);
+            let message = schema::Initialization::create(
+                &mut builder,
+                &schema::InitializationArgs {
+                    wasm_module: Some(wasm_module),
+                },
+            );
+
+            builder
+                .finish(message)
+                .expect("errored when creating initialization message")
+        };
+        if let Err(err) = client.initialize(initialization_message.buf()) {
+            panic!("failed to initialize the runtime: {:?}", err)
+        }
+
         let mut respond = |input: Vec<u8>| -> Result<Vec<u8>, oak_idl::Status> {
             let request_message = oak_idl::utils::Message::<schema::UserRequest>::from_vec(input)
                 .map_err(|err| {

@@ -183,7 +183,7 @@ For future use.
 ##### length, u16, little endian
 
 Length of the entire frame, including this field. The length of a frame MUST NOT
-exceed 64000 bytes.
+exceed 4,000 bytes.
 
 ##### flags, 2 bytes
 
@@ -216,7 +216,7 @@ exceed 64000 bytes.
 ##### body, variable length byte array
 
 Byte fragment of an encoded message. In order to not exceed the maximum frame
-length, this byte array MUST NOT exceed 63,936 bytes.
+length, this byte array MUST NOT exceed 3,936 bytes.
 
 ## Interaction between the Layers
 
@@ -234,14 +234,13 @@ its frames have been received.
 ### Encoding Messages into Frames
 
 The byte representation of a message MUST be chunked into a set of frame bodies.
-The last frame body of the resulting set MAY be shorter than 63,936 bytes (the
-maximum size of a frame body). Any preceding frame bodies MUST be exactly 63,936
+The last frame body of the resulting set MAY be shorter than 3,936 bytes (the
+maximum size of a frame body). Any preceding frame bodies MUST be exactly 3,936
 bytes in length.
 
 A frame MUST then be formed from each frame body.
 
-Messages with a length of 63,936 bytes or less MUST be encoded as a single
-frame.
+Messages with a length of 3,936 bytes or less MUST be encoded as a single frame.
 
 ### Parsing Messages from Frames
 
