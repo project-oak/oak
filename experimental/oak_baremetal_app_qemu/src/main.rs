@@ -34,7 +34,7 @@ mod multiboot;
 
 #[no_mangle]
 #[cfg(test)]
-pub extern "C" fn rust64_start(_rdi: &hvm_start_info::hvm_start_info) -> ! {
+pub extern "C" fn rust64_start(_rdi: &hvm_start_info::StartInfo) -> ! {
     test_main();
     oak_baremetal_kernel::i8042::shutdown();
 }
@@ -55,7 +55,11 @@ pub extern "C" fn rust64_start(start_info: &multiboot::MultibootInfo, magic: u64
 
 #[no_mangle]
 #[cfg(all(not(test), not(feature = "multiboot")))]
-pub extern "C" fn rust64_start(start_info: &hvm_start_info::hvm_start_info) -> ! {
+pub extern "C" fn rust64_start(start_info: &hvm_start_info::StartInfo) -> ! {
+    // If the magic field doesn't match, we can't be sure we're booting via PVH, so bail out early.
+    if start_info.magic != hvm_start_info::BOOT_MAGIC {
+        oak_baremetal_kernel::i8042::shutdown();
+    }
     oak_baremetal_kernel::start_kernel(start_info);
 }
 

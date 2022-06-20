@@ -17,46 +17,65 @@
 use core::ffi::{c_char, CStr};
 use oak_baremetal_kernel::boot::{BootInfo, E820Entry, E820EntryType};
 
-include!(concat!(env!("OUT_DIR"), "/start_info.rs"));
+/// Magic value that needs to be present in the <StartInfo::magic> field.
+/// ("xEn3" with the 0x80 bit of the "E" set).
+#[cfg(not(feature = "multiboot"))]
+pub const BOOT_MAGIC: u32 = 0x336ec578;
 
-impl E820Entry for hvm_memmap_table_entry {
+#[repr(C)]
+pub struct StartInfo {
+    pub magic: u32,
+    pub version: u32,
+    pub flags: u32,
+    pub nr_modules: u32,
+    pub modlist_paddr: u64,
+    pub cmdline_paddr: *const c_char,
+    pub rsdp_paddr: u64,
+    pub memmap_paddr: *const MemmapTableEntry,
+    pub memmap_entries: u32,
+    pub reserved: u32,
+}
+#[repr(C)]
+pub struct MemmapTableEntry {
+    pub addr: usize,
+    pub size: usize,
+    pub type_: E820EntryType,
+    pub reserved: u32,
+}
+
+impl E820Entry for MemmapTableEntry {
     fn entry_type(&self) -> E820EntryType {
-        E820EntryType::from_repr(self.type_).unwrap()
+        self.type_
     }
 
     fn addr(&self) -> usize {
-        self.addr.try_into().unwrap()
+        self.addr
     }
 
     fn size(&self) -> usize {
-        self.size.try_into().unwrap()
+        self.size
     }
 }
 
-impl BootInfo<hvm_memmap_table_entry> for &hvm_start_info {
+impl BootInfo<MemmapTableEntry> for &StartInfo {
     fn protocol(&self) -> &'static str {
         "PVH Boot Protocol"
     }
 
-    fn e820_table(&self) -> &[hvm_memmap_table_entry] {
-        assert!(self.version >= 1 && self.memmap_paddr != 0);
+    fn e820_table(&self) -> &[MemmapTableEntry] {
+        assert!(self.version >= 1 && !self.memmap_paddr.is_null());
         // This is safe as it follows the PVH protocol, and we panic above if the pointer is clearly
         // invalid or we're using an incompatible PVH protocol version.
-        unsafe {
-            core::slice::from_raw_parts(
-                self.memmap_paddr as *const hvm_memmap_table_entry,
-                self.memmap_entries.try_into().unwrap(),
-            )
-        }
+        unsafe { core::slice::from_raw_parts(self.memmap_paddr, self.memmap_entries as usize) }
     }
 
     fn args(&self) -> &CStr {
-        if self.cmdline_paddr == 0 {
+        if self.cmdline_paddr.is_null() {
             Default::default()
         } else {
             // Safety: we check for a null pointer above; the PVH documentation doesn't say
             // anything about the pointer being potentially invalid.
-            unsafe { CStr::from_ptr(self.cmdline_paddr as *const c_char) }
+            unsafe { CStr::from_ptr(self.cmdline_paddr) }
         }
     }
 }
