@@ -81,7 +81,7 @@
 
 <span class="kw">use</span> <span class="ident">strum</span>::{<span class="ident">Display</span>, <span class="ident">FromRepr</span>};
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">PartialEq</span>, <span class="ident">Eq</span>, <span class="ident">Display</span>, <span class="ident">FromRepr</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Copy</span>, <span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">PartialEq</span>, <span class="ident">Eq</span>, <span class="ident">Display</span>, <span class="ident">FromRepr</span>)]</span>
 <span class="attribute">#[<span class="ident">repr</span>(<span class="ident">u32</span>)]</span>
 <span class="doccomment">/// E820 address range types according to Chapter 15 of the ACPI Specification, Version 6.4.</span>
 <span class="doccomment">/// See &lt;https://uefi.org/specs/ACPI/6.4/15_System_Address_Map_Interfaces/Sys_Address_Map_Interfaces.html&gt; for more details.</span>
