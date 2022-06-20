@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-use crate::{InvocationChannel, Message, MessageId, Vec};
+use crate::{message, InvocationChannel, Vec};
 use ciborium_io::{Read, Write};
 
 pub struct ServerChannelHandle<T: Read + Write> {
@@ -30,38 +30,38 @@ where
             inner: InvocationChannel::new(socket),
         }
     }
-    pub fn read_request(&mut self) -> anyhow::Result<Message> {
+    pub fn read_request(&mut self) -> anyhow::Result<message::RequestMessage> {
         let message = self.inner.read_message()?;
         Ok(message)
     }
-    pub fn write_response(&mut self, response: Message) -> anyhow::Result<()> {
+    pub fn write_response(&mut self, response: message::ResponseMessage) -> anyhow::Result<()> {
         self.inner.write_message(response)
     }
 }
 
-/// Construct a [`oak_idl::Request`] from a [`Message`].
-impl<'a> From<&'a Message> for oak_idl::Request<'a> {
-    fn from(frame: &'a Message) -> Self {
+/// Construct a [`oak_idl::Request`] from a [`message::RequestMessage`].
+impl<'a> From<&'a message::RequestMessage> for oak_idl::Request<'a> {
+    fn from(message: &'a message::RequestMessage) -> Self {
         oak_idl::Request {
-            method_id: frame.method_or_status,
-            body: &frame.body,
+            method_id: message.method_id,
+            body: &message.body,
         }
     }
 }
 
 pub fn message_from_response_and_id(
     response: Result<Vec<u8>, oak_idl::Status>,
-    message_id: MessageId,
-) -> Message {
+    invocation_id: message::InvocationId,
+) -> message::ResponseMessage {
     match response {
-        Ok(response) => Message {
-            message_id,
-            method_or_status: oak_idl::StatusCode::Ok.into(),
+        Ok(response) => message::ResponseMessage {
+            invocation_id,
+            status_code: oak_idl::StatusCode::Ok.into(),
             body: response,
         },
-        Err(error) => Message {
-            message_id,
-            method_or_status: error.code.into(),
+        Err(error) => message::ResponseMessage {
+            invocation_id,
+            status_code: error.code.into(),
             body: error.message.as_bytes().to_vec(),
         },
     }

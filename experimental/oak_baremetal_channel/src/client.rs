@@ -14,7 +14,13 @@
 // limitations under the License.
 //
 
-use crate::{InvocationChannel, Message, MessageId, String, Vec};
+extern crate alloc;
+
+use crate::{
+    message::{InvocationId, RequestMessage, ResponseMessage},
+    InvocationChannel,
+};
+use alloc::{string::String, vec::Vec};
 use ciborium_io::{Read, Write};
 
 pub struct ClientChannelHandle<T: Read + Write> {
@@ -30,10 +36,10 @@ where
             inner: InvocationChannel::new(socket),
         }
     }
-    pub fn write_request(&mut self, request: Message) -> anyhow::Result<()> {
+    pub fn write_request(&mut self, request: RequestMessage) -> anyhow::Result<()> {
         self.inner.write_message(request)
     }
-    pub fn read_response(&mut self) -> anyhow::Result<Message> {
+    pub fn read_response(&mut self) -> anyhow::Result<ResponseMessage> {
         let message = self.inner.read_message()?;
         Ok(message)
     }
@@ -41,42 +47,42 @@ where
 
 #[derive(Default)]
 pub struct RequestEncoder {
-    message_id_counter: MessageIdCounter,
+    invocation_id_counter: InvocationIdCounter,
 }
 
 impl RequestEncoder {
-    pub fn encode_request(&mut self, request: oak_idl::Request) -> Message {
-        let message_id = self.message_id_counter.next_message_id();
-        Message {
-            message_id,
-            method_or_status: request.method_id,
+    pub fn encode_request(&mut self, request: oak_idl::Request) -> RequestMessage {
+        let invocation_id = self.invocation_id_counter.next_invocation_id();
+        RequestMessage {
+            invocation_id,
+            method_id: request.method_id,
             body: request.body.to_vec(),
         }
     }
 }
 
 #[derive(Default)]
-struct MessageIdCounter {
-    next_message_id: MessageId,
+struct InvocationIdCounter {
+    next_invocation_id: InvocationId,
 }
 
-impl MessageIdCounter {
-    fn next_message_id(&mut self) -> MessageId {
-        let next_message_id = self.next_message_id;
-        self.next_message_id = next_message_id.wrapping_add(1);
-        next_message_id
+impl InvocationIdCounter {
+    fn next_invocation_id(&mut self) -> InvocationId {
+        let next_invocation_id = self.next_invocation_id;
+        self.next_invocation_id = next_invocation_id.wrapping_add(1);
+        next_invocation_id
     }
 }
 
-/// Construct the response to a [`oak_idl::Request`] from a [`Message`].
-impl From<Message> for Result<Vec<u8>, oak_idl::Status> {
-    fn from(frame: Message) -> Self {
-        if frame.method_or_status == oak_idl::StatusCode::Ok.into() {
-            Ok(frame.body)
+/// Construct the response to a [`oak_idl::Request`] from a [`ResponseMessage`].
+impl From<ResponseMessage> for Result<Vec<u8>, oak_idl::Status> {
+    fn from(message: ResponseMessage) -> Self {
+        if message.status_code == oak_idl::StatusCode::Ok.into() {
+            Ok(message.body)
         } else {
             Err(oak_idl::Status {
-                code: frame.method_or_status.into(),
-                message: String::from_utf8(frame.body.to_vec()).unwrap_or_else(|err| {
+                code: message.status_code.into(),
+                message: String::from_utf8(message.body.to_vec()).unwrap_or_else(|err| {
                     alloc::format!(
                         "Could not parse response error message bytes as utf8: {:?}",
                         err

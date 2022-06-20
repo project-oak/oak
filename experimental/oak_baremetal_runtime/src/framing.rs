@@ -151,12 +151,13 @@ where
         let request_message = channel_handle
             .read_request()
             .context("couldn't receive message")?;
-        let request_message_message_id = request_message.message_id;
+        let request_message_invocation_id = request_message.invocation_id;
         let response = invocation_handler.invoke((&request_message).into());
         // For now all messages are sent in sequence, hence the id of the next
         // response always matches that of the preceeding request.
         // TODO(#2848): Allow messages to be sent and received out of order.
-        let response_message = message_from_response_and_id(response, request_message_message_id);
+        let response_message =
+            message_from_response_and_id(response, request_message_invocation_id);
         channel_handle.write_response(response_message)?
     }
 }
