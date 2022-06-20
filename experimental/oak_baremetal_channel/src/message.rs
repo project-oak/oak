@@ -88,6 +88,8 @@ impl Message for RequestMessage {
             );
             MethodId::from_le_bytes(invocation_id_bytes)
         };
+        // TODO(#2848): Avoid reallocating here by using slices + lifetimes, or
+        // reference counting.
         let body: Vec<u8> = encoded_message.drain(BODY_OFFSET..).collect();
 
         Self {
@@ -140,6 +142,8 @@ impl Message for ResponseMessage {
             );
             StatusCode::from_le_bytes(invocation_id_bytes)
         };
+        // TODO(#2848): Avoid reallocating here by using slices + lifetimes, or
+        // reference counting.
         let body: Vec<u8> = encoded_message.drain(BODY_OFFSET..).collect();
 
         Self {
