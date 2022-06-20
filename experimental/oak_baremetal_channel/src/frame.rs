@@ -16,7 +16,7 @@
 
 extern crate alloc;
 
-use alloc::{format, vec, vec::Vec};
+use alloc::{vec, vec::Vec};
 use bitflags::bitflags;
 use ciborium_io::{Read, Write};
 
