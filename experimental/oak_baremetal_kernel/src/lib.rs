@@ -57,7 +57,7 @@ use rust_hypervisor_firmware_virtio::pci::VirtioPciTransport;
 const VSOCK_PORT: u32 = 1024;
 
 /// Main entry point for the kernel, to be called from bootloader.
-pub fn start_kernel<E: boot::E820Entry, B: boot::BootInfo<E>>(info: &B) -> ! {
+pub fn start_kernel<E: boot::E820Entry, B: boot::BootInfo<E>>(info: B) -> ! {
     avx::enable_avx();
     logging::init_logging();
     interrupts::init_idt();
@@ -69,9 +69,10 @@ pub fn start_kernel<E: boot::E820Entry, B: boot::BootInfo<E>>(info: &B) -> ! {
     // us to refer to the args in the future.
     args::init_args(info.args()).unwrap();
 
+    let protocol = info.protocol();
     // If we don't find memory for heap, it's ok to panic.
-    memory::init_allocator(info.e820_table()).unwrap();
-    main(info.protocol());
+    memory::init_allocator(info).unwrap();
+    main(protocol);
 }
 
 fn main(protocol: &str) -> ! {

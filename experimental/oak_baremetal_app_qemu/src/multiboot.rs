@@ -37,8 +37,8 @@ impl E820Entry for multiboot_mmap_entry {
     }
 }
 
-impl BootInfo<multiboot_mmap_entry> for multiboot_info {
-    fn protocol(&self) -> &str {
+impl BootInfo<multiboot_mmap_entry> for &multiboot_info {
+    fn protocol(&self) -> &'static str {
         "Multiboot1 Protocol"
     }
 

@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-use crate::boot::{self, E820Entry};
+use crate::boot;
 use core::result::Result;
 use linked_list_allocator::LockedHeap;
 use log::info;
@@ -26,7 +26,21 @@ static ALLOCATOR: LockedHeap = LockedHeap::empty();
 #[cfg(test)]
 static ALLOCATOR: LockedHeap = LockedHeap::empty();
 
-pub fn init_allocator<E: E820Entry>(e820_table: &[E]) -> Result<(), &str> {
+/// Initializes the global allocator from the largest contiguous slice of available memory.
+///
+/// Pointers to addresses in the memory area (or references to data contained within the slice) must
+/// be considered invalid after calling this function, as the allocator may overwrite the data at
+/// any point.
+///
+/// We ensure that data up address specified by `.stack_start` in the linker script is untouched,
+/// even if it falls within the largest slice of memory.
+///
+/// Case in point, boot metadata is often stored somewhere in the memory area, so calling this takes
+/// ownership of the `boot:BootInfo`, as the data provided to us by the bootloader will get
+/// clobbered after initializing the heap.
+pub fn init_allocator<E: boot::E820Entry, B: boot::BootInfo<E>>(
+    info: B,
+) -> Result<(), &'static str> {
     let ram_min = rust_hypervisor_firmware_boot::ram_min();
     let text_start = rust_hypervisor_firmware_boot::text_start();
     let text_end = rust_hypervisor_firmware_boot::text_end();
@@ -38,7 +52,8 @@ pub fn init_allocator<E: E820Entry>(e820_table: &[E]) -> Result<(), &str> {
     info!("STACK_START: {}", stack_start);
 
     // Find the largest slice of memory and use that for the heap.
-    let largest = e820_table
+    let largest = info
+        .e820_table()
         .iter()
         .inspect(|e| {
             info!(
