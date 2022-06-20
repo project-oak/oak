@@ -33,8 +33,8 @@ impl E820Entry for hvm_memmap_table_entry {
     }
 }
 
-impl BootInfo<hvm_memmap_table_entry> for hvm_start_info {
-    fn protocol(&self) -> &str {
+impl BootInfo<hvm_memmap_table_entry> for &hvm_start_info {
+    fn protocol(&self) -> &'static str {
         "PVH Boot Protocol"
     }
 

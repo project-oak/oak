@@ -49,8 +49,8 @@ impl E820Entry for boot_e820_entry {
     }
 }
 
-impl BootInfo<boot_e820_entry> for boot_params {
-    fn protocol(&self) -> &str {
+impl BootInfo<boot_e820_entry> for &boot_params {
+    fn protocol(&self) -> &'static str {
         "Linux Boot Protocol"
     }
 
