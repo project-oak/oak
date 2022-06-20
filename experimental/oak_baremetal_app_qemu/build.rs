@@ -40,18 +40,4 @@ fn main() {
     bindings
         .write_to_file(out_path.join("start_info.rs"))
         .unwrap();
-
-    let bindings = bindgen::Builder::default()
-        .clang_arg("--target=x86_64-pc-linux-gnu")
-        .header("src/multiboot.h")
-        .allowlist_type("multiboot_info")
-        .allowlist_type("multiboot_mmap_entry")
-        .use_core()
-        .ctypes_prefix("::core::ffi")
-        .layout_tests(false)
-        .generate()
-        .unwrap();
-    bindings
-        .write_to_file(out_path.join("multiboot.rs"))
-        .unwrap();
 }

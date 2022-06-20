@@ -41,13 +41,13 @@ pub extern "C" fn rust64_start(_rdi: &hvm_start_info::hvm_start_info) -> ! {
 
 #[no_mangle]
 #[cfg(all(not(test), feature = "multiboot"))]
-pub extern "C" fn rust64_start(start_info: &multiboot::multiboot_info, magic: u64) -> ! {
+pub extern "C" fn rust64_start(start_info: &multiboot::MultibootInfo, magic: u64) -> ! {
     // The magic constant is specified in multiboot.h.
     // See <https://www.gnu.org/software/grub/manual/multiboot/multiboot.html#Machine-state>
     // for a full specification of the initial machine state.
     // As at this stage we don't even have logging set up, so if the magic does not match,
     // let's just shut down the machine.
-    if magic != 0x2BADB002 {
+    if magic != multiboot::BOOT_MAGIC {
         oak_baremetal_kernel::i8042::shutdown();
     }
     oak_baremetal_kernel::start_kernel(start_info);
