@@ -26,14 +26,14 @@ use rust_hypervisor_firmware_virtio::virtio::VirtioTransport;
 ///
 /// This is used for flow-control calculations. Seeing that we don't use an actual streambuffer,
 /// this is currently an arbitrary value that seems to avoid stalling.
-const STREAM_BUFFER_LENGTH: Wrapping<u32> = Wrapping(64 * 1024);
+const STREAM_BUFFER_LENGTH: Wrapping<u32> = Wrapping(1024 * 1024);
 
 /// The limit that triggers a voluntary credit update message to avoid stalling.
 ///
 /// If the peer's calculation of our free buffer space falls below this point (e.g when we receive a
 /// lot of data without sending any packets back) we send a credit update packet to make sure the
 /// peer knows we have more space available.
-const CREDIT_UPDATE_LIMIT: Wrapping<u32> = Wrapping(32 * 1024);
+const CREDIT_UPDATE_LIMIT: Wrapping<u32> = Wrapping(512 * 1024);
 
 /// The maximum size of the payload of a single packet to ensure it fits into a single buffer in the
 /// queue.
