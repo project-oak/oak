@@ -107,6 +107,16 @@
 <span id="102">102</span>
 <span id="103">103</span>
 <span id="104">104</span>
+<span id="105">105</span>
+<span id="106">106</span>
+<span id="107">107</span>
+<span id="108">108</span>
+<span id="109">109</span>
+<span id="110">110</span>
+<span id="111">111</span>
+<span id="112">112</span>
+<span id="113">113</span>
+<span id="114">114</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2022 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -139,7 +149,9 @@
 
 <span class="attribute">#![<span class="ident">no_std</span>]</span>
 <span class="attribute">#![<span class="ident">feature</span>(<span class="ident">abi_x86_interrupt</span>)]</span>
+<span class="attribute">#![<span class="ident">feature</span>(<span class="ident">core_c_str</span>)]</span>
 
+<span class="kw">mod</span> <span class="ident">args</span>;
 <span class="kw">mod</span> <span class="ident">avx</span>;
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">boot</span>;
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">i8042</span>;
@@ -169,13 +181,21 @@
     <span class="ident">logging::init_logging</span>();
     <span class="ident">interrupts::init_idt</span>();
     <span class="ident">paging::setup</span>();
+    <span class="comment">// We need to be done with the boot info struct before intializing memory. For example, the</span>
+    <span class="comment">// multiboot protocol explicitly states data can be placed anywhere in memory; therefore, it&#39;s</span>
+    <span class="comment">// highly likely we will overwrite some data after we initialize the heap. args::init_args()</span>
+    <span class="comment">// caches the arguments (as long they are of reasonable length) in a static variable, allowing</span>
+    <span class="comment">// us to refer to the args in the future.</span>
+    <span class="ident">args::init_args</span>(<span class="ident">info</span>.<span class="ident">args</span>()).<span class="ident">unwrap</span>();
+
     <span class="comment">// If we don&#39;t find memory for heap, it&#39;s ok to panic.</span>
     <span class="ident">memory::init_allocator</span>(<span class="ident">info</span>.<span class="ident">e820_table</span>()).<span class="ident">unwrap</span>();
-    <span class="ident">main</span>(<span class="ident">info</span>);
+    <span class="ident">main</span>(<span class="ident">info</span>.<span class="ident">protocol</span>());
 }
 
-<span class="kw">fn</span> <span class="ident">main</span><span class="op">&lt;</span><span class="ident">E</span>: <span class="ident">boot::E820Entry</span>, <span class="ident">B</span>: <span class="ident">boot::BootInfo</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span><span class="op">&gt;</span>(<span class="ident">info</span>: <span class="kw-2">&amp;</span><span class="ident">B</span>) -&gt; <span class="op">!</span> {
-    <span class="macro">info!</span>(<span class="string">&quot;In main! Boot protocol:  {}&quot;</span>, <span class="ident">info</span>.<span class="ident">protocol</span>());
+<span class="kw">fn</span> <span class="ident">main</span>(<span class="ident">protocol</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) -&gt; <span class="op">!</span> {
+    <span class="macro">info!</span>(<span class="string">&quot;In main! Boot protocol:  {}&quot;</span>, <span class="ident">protocol</span>);
+    <span class="macro">info!</span>(<span class="string">&quot;Kernel boot args: {}&quot;</span>, <span class="ident">args::args</span>());
     <span class="kw">let</span> <span class="ident">attestation_behavior</span> <span class="op">=</span>
         <span class="ident">AttestationBehavior::create</span>(<span class="ident">EmptyAttestationGenerator</span>, <span class="ident">EmptyAttestationVerifier</span>);
     <span class="ident">oak_baremetal_runtime::framing::handle_frames</span>(<span class="ident">get_channel</span>(), <span class="ident">attestation_behavior</span>).<span class="ident">unwrap</span>();
