@@ -46,7 +46,7 @@ pub trait Message {
     fn decode(frames: Vec<u8>) -> Self;
 }
 
-#[derive(Debug, PartialEq, Eq, Clone, Default)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct RequestMessage {
     pub invocation_id: InvocationId,
     pub method_id: MethodId,

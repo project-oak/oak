@@ -45,7 +45,7 @@ static_assertions::assert_eq_size!(
 pub const MAX_SIZE: usize = 64000;
 pub const MAX_BODY_SIZE: usize = MAX_SIZE - BODY_OFFSET;
 
-#[derive(Clone, Default)]
+#[derive(Clone, Default, Debug)]
 pub struct Frame {
     pub flags: Flags,
     pub body: Vec<u8>,
