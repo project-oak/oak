@@ -227,6 +227,26 @@
 <span id="222">222</span>
 <span id="223">223</span>
 <span id="224">224</span>
+<span id="225">225</span>
+<span id="226">226</span>
+<span id="227">227</span>
+<span id="228">228</span>
+<span id="229">229</span>
+<span id="230">230</span>
+<span id="231">231</span>
+<span id="232">232</span>
+<span id="233">233</span>
+<span id="234">234</span>
+<span id="235">235</span>
+<span id="236">236</span>
+<span id="237">237</span>
+<span id="238">238</span>
+<span id="239">239</span>
+<span id="240">240</span>
+<span id="241">241</span>
+<span id="242">242</span>
+<span id="243">243</span>
+<span id="244">244</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2022 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -412,6 +432,26 @@
             <span class="kw">let</span> <span class="ident">client_handler</span> <span class="op">=</span> <span class="ident">ClientHandler::new</span>(<span class="ident">comms_channel</span>);
             <span class="ident">schema::TrustedRuntimeClient::new</span>(<span class="ident">client_handler</span>)
         };
+
+        <span class="kw">let</span> <span class="ident">wasm_bytes</span> <span class="op">=</span> <span class="macro">include_bytes!</span>(<span class="string">&quot;echo.wasm&quot;</span>);
+        <span class="kw">let</span> <span class="ident">initialization_message</span> <span class="op">=</span> {
+            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">builder</span> <span class="op">=</span> <span class="ident">oak_idl::utils::MessageBuilder::default</span>();
+            <span class="kw">let</span> <span class="ident">wasm_module</span> <span class="op">=</span> <span class="ident">builder</span>.<span class="ident">create_vector</span>::<span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>(<span class="ident">wasm_bytes</span>);
+            <span class="kw">let</span> <span class="ident">message</span> <span class="op">=</span> <span class="ident">schema::Initialization::create</span>(
+                <span class="kw-2">&amp;mut</span> <span class="ident">builder</span>,
+                <span class="kw-2">&amp;</span><span class="ident">schema::InitializationArgs</span> {
+                    <span class="ident">wasm_module</span>: <span class="prelude-val">Some</span>(<span class="ident">wasm_module</span>),
+                },
+            );
+
+            <span class="ident">builder</span>
+                .<span class="ident">finish</span>(<span class="ident">message</span>)
+                .<span class="ident">expect</span>(<span class="string">&quot;errored when creating initialization message&quot;</span>)
+        };
+        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">err</span>) <span class="op">=</span> <span class="ident">client</span>.<span class="ident">initialize</span>(<span class="ident">initialization_message</span>.<span class="ident">buf</span>()) {
+            <span class="macro">panic!</span>(<span class="string">&quot;failed to initialize the runtime: {:?}&quot;</span>, <span class="ident">err</span>)
+        }
+
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">respond</span> <span class="op">=</span> <span class="op">|</span><span class="ident">input</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">|</span> -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>, <span class="ident">oak_idl::Status</span><span class="op">&gt;</span> {
             <span class="kw">let</span> <span class="ident">request_message</span> <span class="op">=</span> <span class="ident">oak_idl::utils::Message</span>::<span class="op">&lt;</span><span class="ident">schema::UserRequest</span><span class="op">&gt;</span><span class="ident">::from_vec</span>(<span class="ident">input</span>)
                 .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> {

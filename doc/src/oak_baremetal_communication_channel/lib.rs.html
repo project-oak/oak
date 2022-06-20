@@ -471,7 +471,7 @@
 <span class="comment">// Ensure that the frame header is 8 Byte aligned.</span>
 <span class="macro">static_assertions::const_assert!</span>(<span class="ident">FRAME_HEADER_SIZE</span> <span class="op">%</span> <span class="number">8</span> <span class="op">==</span> <span class="number">0</span>);
 
-<span class="kw">const</span> <span class="ident">MAX_FRAME_SIZE</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">64000</span>;
+<span class="kw">const</span> <span class="ident">MAX_FRAME_SIZE</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">4000</span>;
 <span class="kw">const</span> <span class="ident">MAX_FRAME_BODY_SIZE</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="ident">MAX_FRAME_SIZE</span> <span class="op">-</span> <span class="ident">FRAME_HEADER_SIZE</span>;
 
 <span class="doccomment">/// A [`Frame`] is a small unit data that is sent over the communication</span>

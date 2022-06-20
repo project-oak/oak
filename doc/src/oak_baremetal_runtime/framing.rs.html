@@ -113,6 +113,58 @@
 <span id="108">108</span>
 <span id="109">109</span>
 <span id="110">110</span>
+<span id="111">111</span>
+<span id="112">112</span>
+<span id="113">113</span>
+<span id="114">114</span>
+<span id="115">115</span>
+<span id="116">116</span>
+<span id="117">117</span>
+<span id="118">118</span>
+<span id="119">119</span>
+<span id="120">120</span>
+<span id="121">121</span>
+<span id="122">122</span>
+<span id="123">123</span>
+<span id="124">124</span>
+<span id="125">125</span>
+<span id="126">126</span>
+<span id="127">127</span>
+<span id="128">128</span>
+<span id="129">129</span>
+<span id="130">130</span>
+<span id="131">131</span>
+<span id="132">132</span>
+<span id="133">133</span>
+<span id="134">134</span>
+<span id="135">135</span>
+<span id="136">136</span>
+<span id="137">137</span>
+<span id="138">138</span>
+<span id="139">139</span>
+<span id="140">140</span>
+<span id="141">141</span>
+<span id="142">142</span>
+<span id="143">143</span>
+<span id="144">144</span>
+<span id="145">145</span>
+<span id="146">146</span>
+<span id="147">147</span>
+<span id="148">148</span>
+<span id="149">149</span>
+<span id="150">150</span>
+<span id="151">151</span>
+<span id="152">152</span>
+<span id="153">153</span>
+<span id="154">154</span>
+<span id="155">155</span>
+<span id="156">156</span>
+<span id="157">157</span>
+<span id="158">158</span>
+<span id="159">159</span>
+<span id="160">160</span>
+<span id="161">161</span>
+<span id="162">162</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2022 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -129,8 +181,11 @@
 <span class="comment">// limitations under the License.</span>
 <span class="comment">//</span>
 
-<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::remote_attestation::AttestationHandler</span>;
-<span class="kw">use</span> <span class="ident">alloc::vec::Vec</span>;
+<span class="kw">use</span> <span class="kw">crate</span>::{
+    <span class="ident">remote_attestation</span>::{<span class="ident">AttestationHandler</span>, <span class="ident">AttestationSessionHandler</span>},
+    <span class="ident">wasm</span>,
+};
+<span class="kw">use</span> <span class="ident">alloc::boxed::Box</span>;
 <span class="kw">use</span> <span class="ident">anyhow::Context</span>;
 <span class="kw">use</span> <span class="ident">ciborium_io</span>::{<span class="ident">Read</span>, <span class="ident">Write</span>};
 <span class="kw">use</span> <span class="ident">oak_baremetal_communication_channel</span>::{
@@ -144,69 +199,118 @@
 };
 <span class="kw">use</span> <span class="ident">oak_remote_attestation_sessions::SessionId</span>;
 
-<span class="kw">struct</span> <span class="ident">InvocationHandler</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">G</span>, <span class="ident">V</span><span class="op">&gt;</span>
+<span class="kw">enum</span> <span class="ident">InitializationState</span><span class="op">&lt;</span><span class="ident">G</span>, <span class="ident">V</span><span class="op">&gt;</span>
 <span class="kw">where</span>
-    <span class="ident">F</span>: <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span> <span class="op">+</span> <span class="ident">Clone</span> <span class="op">+</span> <span class="ident">FnOnce</span>(<span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span>,
     <span class="ident">G</span>: <span class="ident">AttestationGenerator</span>,
     <span class="ident">V</span>: <span class="ident">AttestationVerifier</span>,
 {
-    <span class="ident">attestation_handler</span>: <span class="ident">AttestationHandler</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">G</span>, <span class="ident">V</span><span class="op">&gt;</span>,
+    <span class="ident">Uninitialized</span>(<span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">AttestationBehavior</span><span class="op">&lt;</span><span class="ident">G</span>, <span class="ident">V</span><span class="op">&gt;</span><span class="op">&gt;</span>),
+    <span class="comment">// dyn is used as our attestation implementation uses a closure, which is</span>
+    <span class="comment">// created only at initialization time. We cannot know the closure</span>
+    <span class="comment">// type in advance, since Rust closures have unique, anonymous types.</span>
+    <span class="ident">Initialized</span>(<span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">AttestationHandler</span><span class="op">&gt;</span>),
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">G</span>, <span class="ident">V</span><span class="op">&gt;</span> <span class="ident">schema::TrustedRuntime</span> <span class="kw">for</span> <span class="ident">InvocationHandler</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">G</span>, <span class="ident">V</span><span class="op">&gt;</span>
+<span class="kw">struct</span> <span class="ident">InvocationHandler</span><span class="op">&lt;</span><span class="ident">G</span>, <span class="ident">V</span><span class="op">&gt;</span>
 <span class="kw">where</span>
-    <span class="ident">F</span>: <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span> <span class="op">+</span> <span class="ident">Clone</span> <span class="op">+</span> <span class="ident">FnOnce</span>(<span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span>,
     <span class="ident">G</span>: <span class="ident">AttestationGenerator</span>,
     <span class="ident">V</span>: <span class="ident">AttestationVerifier</span>,
 {
+    <span class="ident">initialization_state</span>: <span class="ident">InitializationState</span><span class="op">&lt;</span><span class="ident">G</span>, <span class="ident">V</span><span class="op">&gt;</span>,
+}
+
+<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">G</span>: <span class="lifetime">&#39;static</span>, <span class="ident">V</span>: <span class="lifetime">&#39;static</span><span class="op">&gt;</span> <span class="ident">schema::TrustedRuntime</span> <span class="kw">for</span> <span class="ident">InvocationHandler</span><span class="op">&lt;</span><span class="ident">G</span>, <span class="ident">V</span><span class="op">&gt;</span>
+<span class="kw">where</span>
+    <span class="ident">G</span>: <span class="ident">AttestationGenerator</span>,
+    <span class="ident">V</span>: <span class="ident">AttestationVerifier</span>,
+{
+    <span class="kw">fn</span> <span class="ident">initialize</span>(
+        <span class="kw-2">&amp;mut</span> <span class="self">self</span>,
+        <span class="ident">initialization</span>: <span class="kw-2">&amp;</span><span class="ident">schema::Initialization</span>,
+    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>
+        <span class="ident">oak_idl::utils::Message</span><span class="op">&lt;</span><span class="ident">oak_baremetal_communication_channel::schema::Empty</span><span class="op">&gt;</span>,
+        <span class="ident">oak_idl::Status</span>,
+    <span class="op">&gt;</span> {
+        <span class="kw">match</span> <span class="kw-2">&amp;mut</span> <span class="self">self</span>.<span class="ident">initialization_state</span> {
+            <span class="ident">InitializationState::Initialized</span>(<span class="ident">_attestation_handler</span>) =&gt; <span class="prelude-val">Err</span>(<span class="ident">oak_idl::Status::new</span>(
+                <span class="ident">oak_idl::StatusCode::FailedPrecondition</span>,
+            )),
+            <span class="ident">InitializationState::Uninitialized</span>(<span class="ident">attestation_behavior</span>) =&gt; {
+                <span class="kw">let</span> <span class="ident">attestation_behavior</span> <span class="op">=</span> <span class="ident">attestation_behavior</span>
+                    .<span class="ident">take</span>()
+                    .<span class="ident">expect</span>(<span class="string">&quot;The attestation_behavior should always be present. It is wrapped in an option purely so it can be taken without cloning.&quot;</span>);
+                <span class="kw">let</span> <span class="ident">wasm_module_bytes</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>] <span class="op">=</span> <span class="ident">initialization</span>
+                    .<span class="ident">wasm_module</span>()
+                    .<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">oak_idl::Status::new</span>(<span class="ident">oak_idl::StatusCode::InvalidArgument</span>))<span class="question-mark">?</span>;
+                <span class="kw">let</span> <span class="ident">wasm_handler</span> <span class="op">=</span> <span class="ident">wasm::new_wasm_handler</span>(<span class="ident">wasm_module_bytes</span>)
+                    .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">_err</span><span class="op">|</span> <span class="ident">oak_idl::Status::new</span>(<span class="ident">oak_idl::StatusCode::Internal</span>))<span class="question-mark">?</span>;
+                <span class="kw">let</span> <span class="ident">attestation_handler</span> <span class="op">=</span> <span class="ident">Box::new</span>(<span class="ident">AttestationSessionHandler::create</span>(
+                    <span class="kw">move</span> <span class="op">|</span><span class="ident">v</span><span class="op">|</span> <span class="ident">wasm_handler</span>.<span class="ident">handle_raw_invoke</span>(<span class="ident">v</span>),
+                    <span class="ident">attestation_behavior</span>,
+                ));
+                <span class="self">self</span>.<span class="ident">initialization_state</span> <span class="op">=</span> <span class="ident">InitializationState::Initialized</span>(<span class="ident">attestation_handler</span>);
+                <span class="kw">let</span> <span class="ident">response_message</span> <span class="op">=</span> {
+                    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">builder</span> <span class="op">=</span> <span class="ident">oak_idl::utils::MessageBuilder::default</span>();
+                    <span class="kw">let</span> <span class="ident">user_request_response</span> <span class="op">=</span>
+                        <span class="ident">schema::Empty::create</span>(<span class="kw-2">&amp;mut</span> <span class="ident">builder</span>, <span class="kw-2">&amp;</span><span class="ident">schema::EmptyArgs</span> {});
+                    <span class="ident">builder</span>
+                        .<span class="ident">finish</span>(<span class="ident">user_request_response</span>)
+                        .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">_err</span><span class="op">|</span> <span class="ident">oak_idl::Status::new</span>(<span class="ident">oak_idl::StatusCode::Internal</span>))<span class="question-mark">?</span>
+                };
+                <span class="prelude-val">Ok</span>(<span class="ident">response_message</span>)
+            }
+        }
+    }
+
     <span class="kw">fn</span> <span class="ident">handle_user_request</span>(
         <span class="kw-2">&amp;mut</span> <span class="self">self</span>,
         <span class="ident">request_message</span>: <span class="kw-2">&amp;</span><span class="ident">schema::UserRequest</span>,
     ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">oak_idl::utils::Message</span><span class="op">&lt;</span><span class="ident">schema::UserRequestResponse</span><span class="op">&gt;</span>, <span class="ident">oak_idl::Status</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">session_id</span>: <span class="ident">SessionId</span> <span class="op">=</span> <span class="ident">request_message</span>
-            .<span class="ident">session_id</span>()
-            .<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">oak_idl::Status::new</span>(<span class="ident">oak_idl::StatusCode::InvalidArgument</span>))<span class="question-mark">?</span>
-            .<span class="ident">value</span>()
-            .<span class="ident">into</span>();
-        <span class="kw">let</span> <span class="ident">request_body</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>] <span class="op">=</span> <span class="ident">request_message</span>
-            .<span class="ident">body</span>()
-            .<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">oak_idl::Status::new</span>(<span class="ident">oak_idl::StatusCode::InvalidArgument</span>))<span class="question-mark">?</span>;
+        <span class="kw">match</span> <span class="kw-2">&amp;mut</span> <span class="self">self</span>.<span class="ident">initialization_state</span> {
+            <span class="ident">InitializationState::Uninitialized</span>(<span class="ident">_attestation_behavior</span>) =&gt; <span class="prelude-val">Err</span>(<span class="ident">oak_idl::Status::new</span>(
+                <span class="ident">oak_idl::StatusCode::FailedPrecondition</span>,
+            )),
+            <span class="ident">InitializationState::Initialized</span>(<span class="ident">attestation_handler</span>) =&gt; {
+                <span class="kw">let</span> <span class="ident">session_id</span>: <span class="ident">SessionId</span> <span class="op">=</span> <span class="ident">request_message</span>
+                    .<span class="ident">session_id</span>()
+                    .<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">oak_idl::Status::new</span>(<span class="ident">oak_idl::StatusCode::InvalidArgument</span>))<span class="question-mark">?</span>
+                    .<span class="ident">value</span>()
+                    .<span class="ident">into</span>();
+                <span class="kw">let</span> <span class="ident">request_body</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>] <span class="op">=</span> <span class="ident">request_message</span>
+                    .<span class="ident">body</span>()
+                    .<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">oak_idl::Status::new</span>(<span class="ident">oak_idl::StatusCode::InvalidArgument</span>))<span class="question-mark">?</span>;
 
-        <span class="kw">let</span> <span class="ident">response</span> <span class="op">=</span> <span class="self">self</span>
-            .<span class="ident">attestation_handler</span>
-            .<span class="ident">message</span>(<span class="ident">session_id</span>, <span class="ident">request_body</span>)
-            .<span class="ident">map_err</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">oak_idl::Status::new</span>(<span class="ident">oak_idl::StatusCode::Internal</span>))<span class="question-mark">?</span>;
+                <span class="kw">let</span> <span class="ident">response</span> <span class="op">=</span> <span class="ident">attestation_handler</span>
+                    .<span class="ident">message</span>(<span class="ident">session_id</span>, <span class="ident">request_body</span>)
+                    .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">_err</span><span class="op">|</span> <span class="ident">oak_idl::Status::new</span>(<span class="ident">oak_idl::StatusCode::Internal</span>))<span class="question-mark">?</span>;
 
-        <span class="kw">let</span> <span class="ident">response_message</span> <span class="op">=</span> {
-            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">builder</span> <span class="op">=</span> <span class="ident">oak_idl::utils::MessageBuilder::default</span>();
-            <span class="kw">let</span> <span class="ident">body</span> <span class="op">=</span> <span class="ident">builder</span>.<span class="ident">create_vector</span>::<span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="ident">response</span>);
-            <span class="kw">let</span> <span class="ident">user_request_response</span> <span class="op">=</span> <span class="ident">schema::UserRequestResponse::create</span>(
-                <span class="kw-2">&amp;mut</span> <span class="ident">builder</span>,
-                <span class="kw-2">&amp;</span><span class="ident">schema::UserRequestResponseArgs</span> { <span class="ident">body</span>: <span class="prelude-val">Some</span>(<span class="ident">body</span>) },
-            );
-            <span class="ident">builder</span>
-                .<span class="ident">finish</span>(<span class="ident">user_request_response</span>)
-                .<span class="ident">map_err</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">oak_idl::Status::new</span>(<span class="ident">oak_idl::StatusCode::Internal</span>))<span class="question-mark">?</span>
-        };
-        <span class="prelude-val">Ok</span>(<span class="ident">response_message</span>)
+                <span class="kw">let</span> <span class="ident">response_message</span> <span class="op">=</span> {
+                    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">builder</span> <span class="op">=</span> <span class="ident">oak_idl::utils::MessageBuilder::default</span>();
+                    <span class="kw">let</span> <span class="ident">body</span> <span class="op">=</span> <span class="ident">builder</span>.<span class="ident">create_vector</span>::<span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="ident">response</span>);
+                    <span class="kw">let</span> <span class="ident">user_request_response</span> <span class="op">=</span> <span class="ident">schema::UserRequestResponse::create</span>(
+                        <span class="kw-2">&amp;mut</span> <span class="ident">builder</span>,
+                        <span class="kw-2">&amp;</span><span class="ident">schema::UserRequestResponseArgs</span> { <span class="ident">body</span>: <span class="prelude-val">Some</span>(<span class="ident">body</span>) },
+                    );
+                    <span class="ident">builder</span>
+                        .<span class="ident">finish</span>(<span class="ident">user_request_response</span>)
+                        .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">_err</span><span class="op">|</span> <span class="ident">oak_idl::Status::new</span>(<span class="ident">oak_idl::StatusCode::Internal</span>))<span class="question-mark">?</span>
+                };
+                <span class="prelude-val">Ok</span>(<span class="ident">response_message</span>)
+            }
+        }
     }
 }
 
 <span class="comment">// Processes incoming frames.</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">handle_frames</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">G</span>: <span class="ident">AttestationGenerator</span>, <span class="ident">V</span>: <span class="ident">AttestationVerifier</span><span class="op">&gt;</span>(
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">handle_frames</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">G</span>: <span class="lifetime">&#39;static</span> <span class="op">+</span> <span class="ident">AttestationGenerator</span>, <span class="ident">V</span>: <span class="lifetime">&#39;static</span> <span class="op">+</span> <span class="ident">AttestationVerifier</span><span class="op">&gt;</span>(
     <span class="ident">channel</span>: <span class="ident">T</span>,
     <span class="ident">attestation_behavior</span>: <span class="ident">AttestationBehavior</span><span class="op">&lt;</span><span class="ident">G</span>, <span class="ident">V</span><span class="op">&gt;</span>,
 ) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="op">!</span><span class="op">&gt;</span>
 <span class="kw">where</span>
     <span class="ident">T</span>: <span class="ident">Read</span><span class="op">&lt;</span><span class="ident">Error</span> <span class="op">=</span> <span class="ident">anyhow::Error</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Write</span><span class="op">&lt;</span><span class="ident">Error</span> <span class="op">=</span> <span class="ident">anyhow::Error</span><span class="op">&gt;</span>,
 {
-    <span class="kw">let</span> <span class="ident">wasm_handler</span> <span class="op">=</span> <span class="ident"><span class="kw">crate</span>::wasm::new_wasm_handler</span>()<span class="question-mark">?</span>;
-    <span class="kw">let</span> <span class="ident">attestation_handler</span> <span class="op">=</span> <span class="ident">AttestationHandler::create</span>(
-        <span class="kw">move</span> <span class="op">|</span><span class="ident">v</span><span class="op">|</span> <span class="ident">wasm_handler</span>.<span class="ident">handle_raw_invoke</span>(<span class="ident">v</span>),
-        <span class="ident">attestation_behavior</span>,
-    );
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">invocation_handler</span> <span class="op">=</span> <span class="ident">InvocationHandler</span> {
-        <span class="ident">attestation_handler</span>,
+        <span class="ident">initialization_state</span>: <span class="ident">InitializationState::Uninitialized</span>(<span class="prelude-val">Some</span>(<span class="ident">attestation_behavior</span>)),
     }
     .<span class="ident">serve</span>();
     <span class="kw">let</span> <span class="ident">channel_handle</span> <span class="op">=</span> <span class="kw-2">&amp;mut</span> <span class="ident">ServerChannelHandle::new</span>(<span class="ident">channel</span>);

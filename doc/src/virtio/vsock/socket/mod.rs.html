@@ -448,14 +448,14 @@
 <span class="doccomment">///</span>
 <span class="doccomment">/// This is used for flow-control calculations. Seeing that we don&#39;t use an actual streambuffer,</span>
 <span class="doccomment">/// this is currently an arbitrary value that seems to avoid stalling.</span>
-<span class="kw">const</span> <span class="ident">STREAM_BUFFER_LENGTH</span>: <span class="ident">Wrapping</span><span class="op">&lt;</span><span class="ident">u32</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Wrapping</span>(<span class="number">1024</span> <span class="op">*</span> <span class="number">1024</span>);
+<span class="kw">const</span> <span class="ident">STREAM_BUFFER_LENGTH</span>: <span class="ident">Wrapping</span><span class="op">&lt;</span><span class="ident">u32</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Wrapping</span>(<span class="number">64</span> <span class="op">*</span> <span class="number">1024</span>);
 
 <span class="doccomment">/// The limit that triggers a voluntary credit update message to avoid stalling.</span>
 <span class="doccomment">///</span>
 <span class="doccomment">/// If the peer&#39;s calculation of our free buffer space falls below this point (e.g when we receive a</span>
 <span class="doccomment">/// lot of data without sending any packets back) we send a credit update packet to make sure the</span>
 <span class="doccomment">/// peer knows we have more space available.</span>
-<span class="kw">const</span> <span class="ident">CREDIT_UPDATE_LIMIT</span>: <span class="ident">Wrapping</span><span class="op">&lt;</span><span class="ident">u32</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Wrapping</span>(<span class="number">512</span> <span class="op">*</span> <span class="number">1024</span>);
+<span class="kw">const</span> <span class="ident">CREDIT_UPDATE_LIMIT</span>: <span class="ident">Wrapping</span><span class="op">&lt;</span><span class="ident">u32</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Wrapping</span>(<span class="number">32</span> <span class="op">*</span> <span class="number">1024</span>);
 
 <span class="doccomment">/// The maximum size of the payload of a single packet to ensure it fits into a single buffer in the</span>
 <span class="doccomment">/// queue.</span>
