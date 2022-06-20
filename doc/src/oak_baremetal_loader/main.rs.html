@@ -247,6 +247,9 @@
 <span id="242">242</span>
 <span id="243">243</span>
 <span id="244">244</span>
+<span id="245">245</span>
+<span id="246">246</span>
+<span id="247">247</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2022 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -369,7 +372,7 @@
 {
     <span class="kw">fn</span> <span class="ident">invoke</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">request</span>: <span class="ident">oak_idl::Request</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>, <span class="ident">oak_idl::Status</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">request_message</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">request_encoder</span>.<span class="ident">encode_request</span>(<span class="ident">request</span>);
-        <span class="kw">let</span> <span class="ident">request_message_message_id</span> <span class="op">=</span> <span class="ident">request_message</span>.<span class="ident">message_id</span>;
+        <span class="kw">let</span> <span class="ident">request_message_invocation_id</span> <span class="op">=</span> <span class="ident">request_message</span>.<span class="ident">invocation_id</span>;
         <span class="self">self</span>.<span class="ident">inner</span>
             .<span class="ident">write_request</span>(<span class="ident">request_message</span>)
             .<span class="ident">map_err</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">oak_idl::Status::new</span>(<span class="ident">oak_idl::StatusCode::Internal</span>))<span class="question-mark">?</span>;
@@ -382,7 +385,10 @@
         <span class="comment">// For now all messages are sent in sequence, hence we expect that the</span>
         <span class="comment">// id of the next response matches the preceeding request.</span>
         <span class="comment">// TODO(#2848): Allow messages to be sent and received out of order.</span>
-        <span class="macro">assert_eq!</span>(<span class="ident">request_message_message_id</span>, <span class="ident">response_message</span>.<span class="ident">message_id</span>);
+        <span class="macro">assert_eq!</span>(
+            <span class="ident">request_message_invocation_id</span>,
+            <span class="ident">response_message</span>.<span class="ident">invocation_id</span>
+        );
 
         <span class="ident">response_message</span>.<span class="ident">into</span>()
     }

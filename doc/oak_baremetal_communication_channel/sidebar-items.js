@@ -1,1 +1,1 @@
-initSidebarItems({"mod":[["client",""],["schema",""],["server",""]],"struct":[["Message","A [`Message`] is conceptual unit of data that is sent over the communication channel. It can represent either a full request, or full response of an oak_idl invocation. Requests and responses can be converted to a [`Message`], and vice versa. Usually a single [`Message`] is sent over the communication channel over several [`Frame`]s."]]});
+initSidebarItems({"mod":[["client",""],["schema",""],["server",""]]});

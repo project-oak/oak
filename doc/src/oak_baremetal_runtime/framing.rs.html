@@ -165,6 +165,7 @@
 <span id="160">160</span>
 <span id="161">161</span>
 <span id="162">162</span>
+<span id="163">163</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2022 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -318,12 +319,13 @@
         <span class="kw">let</span> <span class="ident">request_message</span> <span class="op">=</span> <span class="ident">channel_handle</span>
             .<span class="ident">read_request</span>()
             .<span class="ident">context</span>(<span class="string">&quot;couldn&#39;t receive message&quot;</span>)<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">request_message_message_id</span> <span class="op">=</span> <span class="ident">request_message</span>.<span class="ident">message_id</span>;
+        <span class="kw">let</span> <span class="ident">request_message_invocation_id</span> <span class="op">=</span> <span class="ident">request_message</span>.<span class="ident">invocation_id</span>;
         <span class="kw">let</span> <span class="ident">response</span> <span class="op">=</span> <span class="ident">invocation_handler</span>.<span class="ident">invoke</span>((<span class="kw-2">&amp;</span><span class="ident">request_message</span>).<span class="ident">into</span>());
         <span class="comment">// For now all messages are sent in sequence, hence the id of the next</span>
         <span class="comment">// response always matches that of the preceeding request.</span>
         <span class="comment">// TODO(#2848): Allow messages to be sent and received out of order.</span>
-        <span class="kw">let</span> <span class="ident">response_message</span> <span class="op">=</span> <span class="ident">message_from_response_and_id</span>(<span class="ident">response</span>, <span class="ident">request_message_message_id</span>);
+        <span class="kw">let</span> <span class="ident">response_message</span> <span class="op">=</span>
+            <span class="ident">message_from_response_and_id</span>(<span class="ident">response</span>, <span class="ident">request_message_invocation_id</span>);
         <span class="ident">channel_handle</span>.<span class="ident">write_response</span>(<span class="ident">response_message</span>)<span class="question-mark">?</span>
     }
 }
