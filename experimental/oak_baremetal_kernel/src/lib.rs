@@ -30,7 +30,9 @@
 
 #![no_std]
 #![feature(abi_x86_interrupt)]
+#![feature(core_c_str)]
 
+mod args;
 mod avx;
 pub mod boot;
 pub mod i8042;
@@ -60,13 +62,21 @@ pub fn start_kernel<E: boot::E820Entry, B: boot::BootInfo<E>>(info: &B) -> ! {
     logging::init_logging();
     interrupts::init_idt();
     paging::setup();
+    // We need to be done with the boot info struct before intializing memory. For example, the
+    // multiboot protocol explicitly states data can be placed anywhere in memory; therefore, it's
+    // highly likely we will overwrite some data after we initialize the heap. args::init_args()
+    // caches the arguments (as long they are of reasonable length) in a static variable, allowing
+    // us to refer to the args in the future.
+    args::init_args(info.args()).unwrap();
+
     // If we don't find memory for heap, it's ok to panic.
     memory::init_allocator(info.e820_table()).unwrap();
-    main(info);
+    main(info.protocol());
 }
 
-fn main<E: boot::E820Entry, B: boot::BootInfo<E>>(info: &B) -> ! {
-    info!("In main! Boot protocol:  {}", info.protocol());
+fn main(protocol: &str) -> ! {
+    info!("In main! Boot protocol:  {}", protocol);
+    info!("Kernel boot args: {}", args::args());
     let attestation_behavior =
         AttestationBehavior::create(EmptyAttestationGenerator, EmptyAttestationVerifier);
     oak_baremetal_runtime::framing::handle_frames(get_channel(), attestation_behavior).unwrap();

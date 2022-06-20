@@ -18,6 +18,7 @@
 #![allow(non_camel_case_types)]
 
 use bitflags::bitflags;
+use core::ffi::{c_char, CStr};
 use oak_baremetal_kernel::boot::{BootInfo, E820Entry, E820EntryType};
 
 include!(concat!(env!("OUT_DIR"), "/multiboot.rs"));
@@ -53,6 +54,16 @@ impl BootInfo<multiboot_mmap_entry> for multiboot_info {
                 self.mmap_addr as *const multiboot_mmap_entry,
                 (self.mmap_length / 24).try_into().unwrap(),
             )
+        }
+    }
+
+    fn args(&self) -> &CStr {
+        // Bit 2 indicates cmdline is valid.
+        if self.flags & (1 << 2) == 0 {
+            Default::default()
+        } else {
+            // Safety: the pointer is valid per Multiboot specs if the flag above is set.
+            unsafe { CStr::from_ptr(self.cmdline as *const c_char) }
         }
     }
 }

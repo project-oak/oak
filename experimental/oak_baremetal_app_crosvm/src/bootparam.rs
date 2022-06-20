@@ -19,6 +19,7 @@
  *   --ctypes-prefix c_types arch/x86/include/uapi/asm/bootparam.h
  */
 
+use core::ffi::{c_char, CStr};
 use oak_baremetal_kernel::boot::{BootInfo, E820Entry, E820EntryType};
 
 #[allow(non_camel_case_types)]
@@ -55,6 +56,16 @@ impl BootInfo<boot_e820_entry> for boot_params {
 
     fn e820_table(&self) -> &[boot_e820_entry] {
         &self.e820_table[..self.e820_entries as usize]
+    }
+
+    fn args(&self) -> &CStr {
+        if self.hdr.cmdline_size == 0 {
+            Default::default()
+        } else {
+            // Safety: Linux boot protocol expects the pointer to be valid, even if there are no
+            // args.
+            unsafe { CStr::from_ptr(self.hdr.cmd_line_ptr as *const c_char) }
+        }
     }
 }
 
