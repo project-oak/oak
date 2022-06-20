@@ -36,7 +36,7 @@ jobs:
           ENT_URL: https://ent-server-62sa4xcfia-ew.a.run.app
           ENT_DIGEST: sha256:944a34854a2bf9c5d32f3bffa93885ee1c7ef8ab0f4fcc30898a981050ae4233
         run: |
-          curl ${ENT_URL}/raw/${ENT_DIGEST} > /usr/local/bin/ent
+          curl --fail ${ENT_URL}/raw/${ENT_DIGEST} > /usr/local/bin/ent
           chmod +x /usr/local/bin/ent
           ent
           cat <<EOF > ~/.config/ent.toml
