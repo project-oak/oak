@@ -26,7 +26,9 @@ static ALLOCATOR: LockedHeap = LockedHeap::empty();
 #[cfg(test)]
 static ALLOCATOR: LockedHeap = LockedHeap::empty();
 
-pub fn init_allocator<E: boot::E820Entry, B: boot::BootInfo<E>>(info: B) -> Result<(), &'static str> {
+pub fn init_allocator<E: boot::E820Entry, B: boot::BootInfo<E>>(
+    info: B,
+) -> Result<(), &'static str> {
     let ram_min = rust_hypervisor_firmware_boot::ram_min();
     let text_start = rust_hypervisor_firmware_boot::text_start();
     let text_end = rust_hypervisor_firmware_boot::text_end();
@@ -38,7 +40,8 @@ pub fn init_allocator<E: boot::E820Entry, B: boot::BootInfo<E>>(info: B) -> Resu
     info!("STACK_START: {}", stack_start);
 
     // Find the largest slice of memory and use that for the heap.
-    let largest = info.e820_table()
+    let largest = info
+        .e820_table()
         .iter()
         .inspect(|e| {
             info!(
