@@ -27,46 +27,48 @@ bitflags! {
     /// for more details.
     pub struct MultibootInfoFlags: u32 {
         /// is there basic lower/upper memory information?
-        const MEMORY = 0x00000001;
+        const MEMORY = (1 << 0);
 
         /// is there a boot device set?
-        const BOOTDEV = 0x00000002;
+        const BOOTDEV = (1 << 1);
 
         /// is the command-line defined?
-        const CMDLINE = 0x00000004;
+        const CMDLINE = (1 << 2);
 
         /// are there modules to do something with?
-        const MODS = 0x00000008;
+        const MODS = (1 << 3);
 
         /// is there a symbol table loaded?
-        /// Mutually exclusive witht ELF_SHDR>.
-        const AOUT_SYMS = 0x00000010;
+        /// Mutually exclusive with <ELF_SHDR>.
+        const AOUT_SYMS = (1 << 4);
 
         /// is there an ELF section header table?
-        /// Mutually exclusive witht AOUT_SYMS>.
-        const ELF_SHDR = 0x00000020;
+        /// Mutually exclusive with <AOUT_SYMS>.
+        const ELF_SHDR = (1 << 5);
 
         /// is there a full memory map?
-        const MEM_MAP = 0x00000040;
+        const MEM_MAP = (1 << 6);
 
         /// Is there drive info?
-        const DRIVE_INFO = 0x00000080;
+        const DRIVE_INFO = (1 << 7);
 
         /// Is there a config table?
-        const CONFIG_TABLE = 0x00000100;
+        const CONFIG_TABLE = (1 << 8);
 
         /// Is there a boot loader name?
-        const BOOT_LOADER_NAME = 0x00000200;
+        const BOOT_LOADER_NAME = (1 << 9);
 
         /// Is there a APM table?
-        const APM_TABLE = 0x00000400;
+        const APM_TABLE = (1 << 10);
 
         /// Is there video information?
-        const VBE_INFO = 0x00000800;
-        const FRAMEBUFFER_INFO = 0x00001000;
+        const VBE_INFO = (1 << 11);
+        const FRAMEBUFFER_INFO = (1 << 12);
     }
 }
 
+// StartInfo and MemmapTableEntry are based on data structures generated with bindgen from GRUB
+// include/multiboot.h.
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct MultibootInfo {
@@ -165,16 +167,16 @@ bitflags! {
     /// for more details.
     struct HeaderFlags: u32 {
         /// Align all boot modules on i386 page (4KB) boundaries.
-        const PAGE_ALIGN = 0x00000001;
+        const PAGE_ALIGN = (1 << 0);
 
         /// Must pass memory information to OS.
-        const MEMORY_INFO = 0x00000002;
+        const MEMORY_INFO = (1 << 1);
 
         /// Must pass video information to OS.
-        const VIDEO_MODE = 0x00000004;
+        const VIDEO_MODE = (1 << 2);
 
         /// This flag indicates the use of the address fields in the header.
-        const AOUT_KLUDGE = 0x00010000;
+        const AOUT_KLUDGE = (1 << 16);
     }
 }
 

@@ -22,24 +22,57 @@ use oak_baremetal_kernel::boot::{BootInfo, E820Entry, E820EntryType};
 #[cfg(not(feature = "multiboot"))]
 pub const BOOT_MAGIC: u32 = 0x336ec578;
 
+// StartInfo and MemmapTableEntry are based on data structures generated with bindgen from Xen
+// public/arch-x86/hvm/start_info.h.
 #[repr(C)]
 pub struct StartInfo {
+    /// Contains the magic value 0x336ec578 "xEn3" with the 0x80 bit of the "E" set).
     pub magic: u32,
+
+    /// Version of this structure.
     pub version: u32,
+
+    /// SIF_xxx flags.
     pub flags: u32,
+
+    /// Number of modules passed to the kernel.
     pub nr_modules: u32,
+
+    /// Physical address of an array of vm_modlist_entry.
     pub modlist_paddr: u64,
+
+    /// Physical address of the command line.
     pub cmdline_paddr: *const c_char,
+
+    /// hysical address of the RSDP ACPI data structure.
     pub rsdp_paddr: u64,
+
+    /// Physical address of an array of hvm_memmap_table_entry.
+    /// Present only for version 1 and newer.
     pub memmap_paddr: *const MemmapTableEntry,
+
+    /// Number of entries in the memmap table.
+    /// Present only for version 1 and newer.
+    /// Value will be zero if there is no memory map being provided.
     pub memmap_entries: u32,
+
+    /// Must be zero.
+    /// Present only for version 1 and newer.
     pub reserved: u32,
 }
+
 #[repr(C)]
 pub struct MemmapTableEntry {
+    /// Base address of the memory region
     pub addr: usize,
+
+    /// Size of the memory region in bytes
     pub size: usize,
+
+    /// Mapping type
     pub type_: E820EntryType,
+
+    /// Must be zero for Version 1.
     pub reserved: u32,
 }
 
