@@ -120,7 +120,7 @@ where
 {
     fn invoke(&mut self, request: oak_idl::Request) -> Result<Vec<u8>, oak_idl::Status> {
         let request_message = self.request_encoder.encode_request(request);
-        let request_message_message_id = request_message.message_id;
+        let request_message_invocation_id = request_message.invocation_id;
         self.inner
             .write_request(request_message)
             .map_err(|_| oak_idl::Status::new(oak_idl::StatusCode::Internal))?;
@@ -133,7 +133,10 @@ where
         // For now all messages are sent in sequence, hence we expect that the
         // id of the next response matches the preceeding request.
         // TODO(#2848): Allow messages to be sent and received out of order.
-        assert_eq!(request_message_message_id, response_message.message_id);
+        assert_eq!(
+            request_message_invocation_id,
+            response_message.invocation_id
+        );
 
         response_message.into()
     }

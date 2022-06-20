@@ -14,177 +14,141 @@
 // limitations under the License.
 //
 
+extern crate std;
+
+use crate::message::{Message, RequestMessage};
+use alloc::{collections::VecDeque, vec};
+
 use super::*;
 
 const BODY_LEN_MULTIPLICATOR: usize = 5;
-const MOCK_LARGE_MESSAGE_LEN: usize = MAX_FRAME_BODY_SIZE * BODY_LEN_MULTIPLICATOR;
+const MOCK_LARGE_PAYLOAD_LEN: usize = frame::MAX_BODY_SIZE * BODY_LEN_MULTIPLICATOR;
+
+fn mock_payload() -> Vec<u8> {
+    let mut mock_payload: Vec<u8> = vec![0; MOCK_LARGE_PAYLOAD_LEN];
+
+    // Fill the payload with increasing numbers, to ensure order is preserved.
+    let mut x: u8 = 0;
+    let filler = || {
+        x = x.wrapping_add(1);
+        x
+    };
+    mock_payload.fill_with(filler);
+    mock_payload
+}
 
 #[test]
-fn test_message_fragmentation() {
-    let mock_body = {
-        let mut mock_body: Vec<u8> = vec![0; MOCK_LARGE_MESSAGE_LEN];
+fn test_fragmenting_bytes_into_frames() {
+    let payload = mock_payload();
 
-        // Fill the body with increasing numbers. This ensures that this test
-        // catches failures in which the message would be reconstructed in the
-        // wrong order.
-        {
-            let mut x: u8 = 0;
-            let filler = || {
-                x = x.wrapping_add(1);
-                x
-            };
-            mock_body.fill_with(filler);
-        }
-        mock_body
-    };
-
-    let message = Message {
-        message_id: 0,
-        method_or_status: 0,
-        body: mock_body,
-    };
-
-    let mut frames: Vec<Frame> = message.clone().into();
-
-    // Large messages should be divided into multiple frames.
+    let mut frames = frame::bytes_into_frames(payload.clone());
     assert_eq!(frames.len(), BODY_LEN_MULTIPLICATOR);
 
-    let mut partial_message = PartialMessage::default();
+    let mut reconstructed_payload: Vec<u8> = Vec::new();
+    frames.iter_mut().for_each(|frame: &mut frame::Frame| {
+        let _ = &mut reconstructed_payload.append(&mut frame.body);
+    });
+    assert_eq!(payload, reconstructed_payload);
+}
 
-    // Add all frames, except for the last. This should result in a new
-    // [`PartialMessage`] each time.
-    for frame in frames.drain(0..frames.len() - 1) {
-        let result = partial_message.add_frame(frame).unwrap();
-        partial_message = match result {
-            CompletionResult::Complete(_) => {
-                panic!("should not be complete")
-            }
-            CompletionResult::Incomplete(partial_message) => partial_message,
-        }
+#[test]
+fn test_request_message_encoding() {
+    let message = message::RequestMessage {
+        method_id: 0,
+        invocation_id: 0,
+        body: mock_payload(),
+    };
+    let reconstructed_message = message::RequestMessage::decode(message.clone().encode());
+    assert_eq!(message, reconstructed_message);
+}
+
+#[test]
+fn test_response_message_encoding() {
+    let message = message::ResponseMessage {
+        status_code: 0,
+        invocation_id: 0,
+        body: mock_payload(),
+    };
+    let reconstructed_message = message::ResponseMessage::decode(message.clone().encode());
+    assert_eq!(message, reconstructed_message);
+}
+
+#[derive(Default)]
+struct MessageStore {
+    inner: VecDeque<u8>,
+}
+
+impl ciborium_io::Read for MessageStore {
+    type Error = anyhow::Error;
+
+    fn read_exact(&mut self, buf: &mut [u8]) -> Result<(), Self::Error> {
+        buf.fill_with(|| self.inner.pop_front().unwrap());
+        Ok(())
+    }
+}
+
+impl ciborium_io::Write for MessageStore {
+    type Error = anyhow::Error;
+    fn write_all(&mut self, buf: &[u8]) -> Result<(), Self::Error> {
+        self.inner.reserve(buf.len());
+        self.inner.extend(buf);
+        Ok(())
     }
 
-    // Adding the last frame should return the reconstructed [`Message`].
-    let reconstructed_message = partial_message.add_frame(frames.pop().unwrap()).unwrap();
-
-    assert_eq!(CompletionResult::Complete(message), reconstructed_message);
+    fn flush(&mut self) -> Result<(), Self::Error> {
+        Ok(())
+    }
 }
 
 #[test]
-fn test_message_reconstruction_for_messages_small_messages() {
-    let mock_body: Vec<u8> = vec![0; MAX_FRAME_BODY_SIZE - 1];
-    let small_message = Message {
-        message_id: 0,
-        method_or_status: 0,
-        body: mock_body,
+fn test_invocation_channel() {
+    let mut invocation_channel = InvocationChannel::new(MessageStore::default());
+
+    let message = message::RequestMessage {
+        method_id: 0,
+        invocation_id: 4,
+        body: mock_payload(),
     };
 
-    let frames: Vec<Frame> = small_message.clone().into();
-    assert_eq!(frames.len(), 1);
+    invocation_channel.write_message(message.clone()).unwrap();
 
-    let reconstructed_message = PartialMessage::default()
-        .add_frame(frames[0].clone())
-        .unwrap();
-
-    assert_eq!(
-        CompletionResult::Complete(small_message),
-        reconstructed_message
-    );
+    let reconstructed_message: RequestMessage = invocation_channel.read_message().unwrap();
+    assert_eq!(message, reconstructed_message);
 }
 
 #[test]
-fn test_message_reconstruction_for_messages_with_an_empty_body() {
-    let empty_body_message = Message {
-        message_id: 0,
-        method_or_status: 0,
-        body: Vec::new(),
+fn test_invocation_channel_double_start_frame() {
+    let mut invocation_channel = {
+        let start_frame = {
+            let mut frame = frame::Frame::default();
+            frame.flags.set(frame::Flags::START, true);
+            frame
+        };
+        let mut frame_store = frame::Framed::new(MessageStore::default());
+        frame_store.write_frame(start_frame.clone()).unwrap();
+        frame_store.write_frame(start_frame).unwrap();
+        InvocationChannel { inner: frame_store }
     };
 
-    let frames: Vec<Frame> = empty_body_message.clone().into();
-    assert_eq!(frames.len(), 1);
-
-    let reconstructed_message = PartialMessage::default()
-        .add_frame(frames[0].clone())
-        .unwrap();
-
-    assert_eq!(
-        CompletionResult::Complete(empty_body_message),
-        reconstructed_message
-    );
+    invocation_channel
+        .read_message::<message::RequestMessage>()
+        .unwrap_err();
 }
 
 #[test]
-fn test_message_reconstruction_double_start_frame() {
-    let start_frame = Frame {
-        method_or_status: 0,
-        message_id: 0,
-        flag: Flag::MessageStart,
-        body: Vec::new(),
+fn test_invocation_channel_expected_start_frame() {
+    let mut invocation_channel = {
+        let end_frame = {
+            let mut frame = frame::Frame::default();
+            frame.flags.set(frame::Flags::END, true);
+            frame
+        };
+        let mut frame_store = frame::Framed::new(MessageStore::default());
+        frame_store.write_frame(end_frame).unwrap();
+        InvocationChannel { inner: frame_store }
     };
 
-    let empty_partial_message = PartialMessage::default();
-    let resulting_partial_message = match empty_partial_message
-        .add_frame(start_frame.clone())
-        .unwrap()
-    {
-        CompletionResult::Complete(_) => {
-            panic!("should not be complete")
-        }
-        CompletionResult::Incomplete(resulting_partial_message) => resulting_partial_message,
-    };
-
-    assert_eq!(
-        Err(MessageReconstructionErrors::DoubleStartFrame),
-        resulting_partial_message.add_frame(start_frame),
-    );
-}
-
-#[test]
-fn test_message_reconstruction_expected_start_frame() {
-    assert_eq!(
-        Err(MessageReconstructionErrors::ExpectedStartFrame),
-        PartialMessage::default().add_frame(Frame {
-            method_or_status: 0,
-            message_id: 0,
-            flag: Flag::MessageContinuation,
-            body: Vec::new(),
-        })
-    );
-    assert_eq!(
-        Err(MessageReconstructionErrors::ExpectedStartFrame),
-        PartialMessage::default().add_frame(Frame {
-            method_or_status: 0,
-            message_id: 0,
-            flag: Flag::MessageMessage,
-            body: Vec::new(),
-        })
-    );
-}
-
-#[test]
-fn test_message_reconstruction_frame_header_mismatch() {
-    let start_frame = Frame {
-        method_or_status: 0,
-        message_id: 0,
-        flag: Flag::MessageStart,
-        body: Vec::new(),
-    };
-    let continuance_frame_of_a_different_method = Frame {
-        method_or_status: 1,
-        message_id: 0,
-        flag: Flag::MessageContinuation,
-        body: Vec::new(),
-    };
-
-    let empty_partial_message = PartialMessage::default();
-    let resulting_partial_message = match empty_partial_message.add_frame(start_frame).unwrap() {
-        CompletionResult::Complete(_) => {
-            panic!("should not be complete")
-        }
-        CompletionResult::Incomplete(resulting_partial_message) => resulting_partial_message,
-    };
-
-    assert_eq!(
-        Err(MessageReconstructionErrors::MismatchingFrameHeader),
-        resulting_partial_message.add_frame(continuance_frame_of_a_different_method),
-    );
+    invocation_channel
+        .read_message::<message::RequestMessage>()
+        .unwrap_err();
 }

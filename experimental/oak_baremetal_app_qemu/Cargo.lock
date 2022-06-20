@@ -735,13 +735,13 @@ name = "oak_baremetal_communication_channel"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "bitflags",
  "ciborium-io",
  "flatbuffers",
  "oak_idl",
  "oak_idl_gen_services",
  "oak_idl_gen_structs",
  "static_assertions",
- "strum",
 ]
 
 [[package]]
