@@ -53,18 +53,15 @@ where
             inner: frame::Framed::new(socket),
         }
     }
+
     pub fn read_message<M: message::Message>(&mut self) -> anyhow::Result<M> {
         let mut encoded_message: Vec<u8> = Vec::new();
         let mut first_frame = self.inner.read_frame().context("failed to read frame.")?;
 
-        match (
-            first_frame.flags.contains(frame::Flags::START),
-            first_frame.flags.contains(frame::Flags::END),
-        ) {
-            (true, true) => {
+        if first_frame.flags.contains(frame::Flags::START) {
+            if first_frame.flags.contains(frame::Flags::END) {
                 return Ok(M::decode(first_frame.body));
-            }
-            (true, false) => {
+            } else {
                 let required_additional_capacity_to_hold_message = {
                     let message_length: usize = {
                         let mut message_length_bytes: [u8; message::LENGTH_SIZE] =
@@ -85,29 +82,26 @@ where
 
                 encoded_message.append(&mut first_frame.body);
             }
-            _ => {
-                anyhow::bail!("expected a frame with the START flag set.")
-            }
-        };
+        } else {
+            anyhow::bail!("expected a frame with the START flag set.");
+        }
 
         loop {
             let mut frame = self.inner.read_frame().context("failed to read frame.")?;
 
-            match frame.flags.contains(frame::Flags::START) {
-                true => {
-                    anyhow::bail!("received two frames with the START flag set.");
-                }
-                false => {
-                    encoded_message.append(&mut frame.body);
-                    if frame.flags.contains(frame::Flags::END) {
-                        break;
-                    }
+            if frame.flags.contains(frame::Flags::START) {
+                anyhow::bail!("received two frames with the START flag set.");
+            } else {
+                encoded_message.append(&mut frame.body);
+                if frame.flags.contains(frame::Flags::END) {
+                    break;
                 }
             };
         }
 
         Ok(M::decode(encoded_message))
     }
+
     pub fn write_message<M: message::Message>(&mut self, message: M) -> anyhow::Result<()> {
         let frames: Vec<frame::Frame> = frame::bytes_into_frames(message.encode())?;
         for frame in frames.into_iter() {

@@ -57,6 +57,7 @@ impl Message for RequestMessage {
     fn len(&self) -> usize {
         LENGTH_SIZE + INVOCATION_ID_SIZE + METHOD_ID_SIZE + PADDING_SIZE + self.body.len()
     }
+
     fn encode(self) -> Vec<u8> {
         let len = self.len();
         let mut message_bytes: Vec<u8> = Vec::with_capacity(len);
@@ -73,6 +74,7 @@ impl Message for RequestMessage {
 
         message_bytes
     }
+
     fn decode(mut encoded_message: Vec<u8>) -> Self {
         let invocation_id = {
             let mut invocation_id_bytes: [u8; INVOCATION_ID_SIZE] = [0; INVOCATION_ID_SIZE];
@@ -82,11 +84,11 @@ impl Message for RequestMessage {
             InvocationId::from_le_bytes(invocation_id_bytes)
         };
         let method_id = {
-            let mut invocation_id_bytes: [u8; METHOD_ID_SIZE] = [0; METHOD_ID_SIZE];
-            invocation_id_bytes.copy_from_slice(
+            let mut method_id_bytes: [u8; METHOD_ID_SIZE] = [0; METHOD_ID_SIZE];
+            method_id_bytes.copy_from_slice(
                 &encoded_message[METHOD_ID_OFFSET..(METHOD_ID_OFFSET + METHOD_ID_SIZE)],
             );
-            MethodId::from_le_bytes(invocation_id_bytes)
+            MethodId::from_le_bytes(method_id_bytes)
         };
         // TODO(#2848): Avoid reallocating here by using slices + lifetimes, or
         // reference counting.
@@ -111,6 +113,7 @@ impl Message for ResponseMessage {
     fn len(&self) -> usize {
         LENGTH_SIZE + INVOCATION_ID_SIZE + STATUS_CODE_SIZE + PADDING_SIZE + self.body.len()
     }
+
     fn encode(self) -> Vec<u8> {
         let len = self.len();
         let mut message_bytes: Vec<u8> = Vec::with_capacity(len);
@@ -127,6 +130,7 @@ impl Message for ResponseMessage {
 
         message_bytes
     }
+
     fn decode(mut encoded_message: Vec<u8>) -> Self {
         let invocation_id = {
             let mut invocation_id_bytes: [u8; INVOCATION_ID_SIZE] = [0; INVOCATION_ID_SIZE];
@@ -136,11 +140,11 @@ impl Message for ResponseMessage {
             InvocationId::from_le_bytes(invocation_id_bytes)
         };
         let status_code = {
-            let mut invocation_id_bytes: [u8; STATUS_CODE_SIZE] = [0; STATUS_CODE_SIZE];
-            invocation_id_bytes.copy_from_slice(
+            let mut status_code_bytes: [u8; STATUS_CODE_SIZE] = [0; STATUS_CODE_SIZE];
+            status_code_bytes.copy_from_slice(
                 &encoded_message[STATUS_CODE_OFFSET..(STATUS_CODE_OFFSET + STATUS_CODE_SIZE)],
             );
-            StatusCode::from_le_bytes(invocation_id_bytes)
+            StatusCode::from_le_bytes(status_code_bytes)
         };
         // TODO(#2848): Avoid reallocating here by using slices + lifetimes, or
         // reference counting.

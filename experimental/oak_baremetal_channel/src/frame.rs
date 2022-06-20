@@ -96,10 +96,9 @@ where
     }
 
     pub fn read_frame(&mut self) -> anyhow::Result<Frame> {
-        let _padding = {
+        {
             let mut padding_bytes = [0; PADDING_SIZE];
             self.inner.read_exact(&mut padding_bytes)?;
-            padding_bytes
         };
         let length: usize = {
             let mut length_bytes = [0; LENGTH_SIZE];

@@ -21,8 +21,8 @@ use alloc::{collections::VecDeque, vec};
 
 use super::*;
 
-const BODY_LEN_MULTIPLICATOR: usize = 5;
-const MOCK_LARGE_PAYLOAD_LEN: usize = frame::MAX_BODY_SIZE * BODY_LEN_MULTIPLICATOR;
+const BODY_LEN_MULTIPLIER: usize = 5;
+const MOCK_LARGE_PAYLOAD_LEN: usize = frame::MAX_BODY_SIZE * BODY_LEN_MULTIPLIER;
 
 fn mock_payload() -> Vec<u8> {
     let mut mock_payload: Vec<u8> = vec![0; MOCK_LARGE_PAYLOAD_LEN];
@@ -42,7 +42,7 @@ fn test_fragmenting_bytes_into_frames() {
     let payload = mock_payload();
 
     let mut frames = frame::bytes_into_frames(payload.clone()).unwrap();
-    assert_eq!(frames.len(), BODY_LEN_MULTIPLICATOR);
+    assert_eq!(frames.len(), BODY_LEN_MULTIPLIER);
 
     let mut reconstructed_payload: Vec<u8> = Vec::new();
     frames.iter_mut().for_each(|frame: &mut frame::Frame| {
