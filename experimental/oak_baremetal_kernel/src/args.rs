@@ -27,10 +27,11 @@ static mut ARGS: ArrayString<512> = ArrayString::new_const();
 pub fn init_args(args: &CStr) -> core::result::Result<(), &str> {
     let args = args
         .to_str()
-        .map_err(|_| "Kernel arguments are not valid UTF-8")?;
+        .map_err(|core::str::Utf8Error { .. }| "Kernel arguments are not valid UTF-8")?;
     // Safety: this is called once early in the initialization process from a single thread, so
     // there will not be any concurrent writes.
-    unsafe { ARGS.try_push_str(args) }.map_err(|_| "Kernel arguments too long")
+    unsafe { ARGS.try_push_str(args) }
+        .map_err(|arrayvec::CapacityError { .. }| "Kernel arguments too long")
 }
 
 pub fn args() -> &'static str {
