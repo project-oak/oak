@@ -63,7 +63,7 @@ SECTIONS {
 
     /* Stack grows down, so stack_start is the upper address in memory. */
     .stack (NOLOAD) : ALIGN(4K) {
-        . += 128K;
+        . += 512K;
     }
     stack_start = .;
 }
