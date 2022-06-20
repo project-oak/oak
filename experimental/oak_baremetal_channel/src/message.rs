@@ -14,6 +14,8 @@
 // limitations under the License.
 //
 
+//! Implements the message layer as defined in /experimental/oak_baremetal_channel/SPEC.MD
+
 use alloc::vec::Vec;
 
 pub type Length = u32;
@@ -46,6 +48,8 @@ pub trait Message {
     fn decode(frames: Vec<u8>) -> Self;
 }
 
+/// Rust implementation of the Request Message structure defined in
+/// /experimental/oak_baremetal_channel/SPEC.MD
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct RequestMessage {
     pub invocation_id: InvocationId,
@@ -102,6 +106,8 @@ impl Message for RequestMessage {
     }
 }
 
+/// Rust implementation of the Response Message structure defined in
+/// /experimental/oak_baremetal_channel/SPEC.MD
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct ResponseMessage {
     pub invocation_id: InvocationId,
