@@ -104,6 +104,6 @@ impl Vmm for Crosvm {
             stream
         })
         .map_err(anyhow::Error::msg);
-        timeout(Duration::from_millis(10 * 1000), task).await?
+        timeout(Duration::from_millis(1000), task).await?
     }
 }
