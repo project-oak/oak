@@ -8,7 +8,7 @@ endpoint exposed by the untrusted companion app.
 Running the client may be started vua
 
 ```shell
-cargo run experimental/oak_baremetal_client
+cargo run --package oak_baremetal_client
 ```
 
 The client will read lines from stdin and sends a gRPC request to the loader for
