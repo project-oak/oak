@@ -29,7 +29,8 @@ fn test_verify_rekor_log_entry() {
     // and publishing that to Rekor (https://rekor.sigstore.dev), as described
     // in https://github.com/sigstore/rekor/blob/main/types.md#pkixx509.
     // The resulting entry in Rekor has UUID
-    // `bb05be1bd813f8afb7b77b2d9f7be5ae25b396d111c7a26a04b785c48c277372`.
+    // `bb05be1bd813f8afb7b77b2d9f7be5ae25b396d111c7a26a04b785c48c277372` and logIndex 1323526.
+    // The body of LogEntry can be fetched using `rekor-cli get --log-index 1323526`.
     let log_entry_path = "testdata/logentry.json";
 
     // Test public key, representing the product team that signed the endorsement file.
