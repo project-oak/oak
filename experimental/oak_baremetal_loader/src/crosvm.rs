@@ -87,8 +87,8 @@ impl Vmm for Crosvm {
 
     async fn create_comms_channel(&self) -> Result<Box<dyn ReadWrite>> {
         // The vsock channel can only be created after the VM is booted. Hence
-        // we try a few times to connect, waiting for the VM to be ready.
-        // If no connetion is established after a while, we timeout.
+        // we try a few times to connect, in case the VM is currently starting
+        // up. If no connetion is established after a while, we timeout.
         let task = tokio::spawn(async {
             let stream: Box<dyn ReadWrite> = loop {
                 match VsockStream::connect_with_cid_port(VSOCK_GUEST_CID, VSOCK_GUEST_PORT) {
