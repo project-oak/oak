@@ -112,38 +112,6 @@
 <span id="107">107</span>
 <span id="108">108</span>
 <span id="109">109</span>
-<span id="110">110</span>
-<span id="111">111</span>
-<span id="112">112</span>
-<span id="113">113</span>
-<span id="114">114</span>
-<span id="115">115</span>
-<span id="116">116</span>
-<span id="117">117</span>
-<span id="118">118</span>
-<span id="119">119</span>
-<span id="120">120</span>
-<span id="121">121</span>
-<span id="122">122</span>
-<span id="123">123</span>
-<span id="124">124</span>
-<span id="125">125</span>
-<span id="126">126</span>
-<span id="127">127</span>
-<span id="128">128</span>
-<span id="129">129</span>
-<span id="130">130</span>
-<span id="131">131</span>
-<span id="132">132</span>
-<span id="133">133</span>
-<span id="134">134</span>
-<span id="135">135</span>
-<span id="136">136</span>
-<span id="137">137</span>
-<span id="138">138</span>
-<span id="139">139</span>
-<span id="140">140</span>
-<span id="141">141</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2022 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -167,13 +135,14 @@
 <span class="kw">use</span> <span class="ident">anyhow::Result</span>;
 <span class="kw">use</span> <span class="ident">async_trait::async_trait</span>;
 <span class="kw">use</span> <span class="ident">command_fds::tokio::CommandFdAsyncExt</span>;
+<span class="kw">use</span> <span class="ident">futures::TryFutureExt</span>;
 <span class="kw">use</span> <span class="ident">log::info</span>;
 <span class="kw">use</span> <span class="ident">std</span>::{
-    <span class="ident">io</span>::{<span class="ident">Error</span>, <span class="ident">ErrorKind</span>, <span class="ident">Read</span>, <span class="ident">Write</span>},
     <span class="ident">net::Shutdown</span>,
     <span class="ident">os::unix</span>::{<span class="ident">io::AsRawFd</span>, <span class="ident">net::UnixStream</span>},
     <span class="ident">process::Stdio</span>,
 };
+<span class="kw">use</span> <span class="ident">tokio::time</span>::{<span class="ident">sleep</span>, <span class="ident">timeout</span>, <span class="ident">Duration</span>};
 <span class="kw">use</span> <span class="ident">vsock::VsockStream</span>;
 
 <span class="comment">// The guest VM context ID for virtio vsock connections.</span>
@@ -185,55 +154,6 @@
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Crosvm</span> {
     <span class="ident">console</span>: <span class="ident">UnixStream</span>,
     <span class="ident">instance</span>: <span class="ident">tokio::process::Child</span>,
-}
-
-<span class="doccomment">/// A wrapper for a vsock stream that can be used as a communication channel between the loader and</span>
-<span class="doccomment">/// the guest VM.</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// The vsock channel can only be created after the VM is booted, so we start without a stream and</span>
-<span class="doccomment">/// only connect later when we try to use it for the first time.</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">VsockStreamChannel</span> {
-    <span class="ident">stream</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">VsockStream</span><span class="op">&gt;</span>,
-}
-
-<span class="kw">impl</span> <span class="ident">VsockStreamChannel</span> {
-    <span class="doccomment">/// Ensures that the inner stream is connected to the VM. If the stream is not connected it will</span>
-    <span class="doccomment">/// try to conect to the VM.</span>
-    <span class="kw">fn</span> <span class="ident">ensure_stream</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) -&gt; <span class="ident">std::io::Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-        <span class="kw">if</span> <span class="self">self</span>.<span class="ident">stream</span>.<span class="ident">is_none</span>() {
-            <span class="kw">let</span> <span class="ident">stream</span> <span class="op">=</span> <span class="ident">VsockStream::connect_with_cid_port</span>(<span class="ident">VSOCK_GUEST_CID</span>, <span class="ident">VSOCK_GUEST_PORT</span>)<span class="question-mark">?</span>;
-            <span class="self">self</span>.<span class="ident">stream</span>.<span class="ident">replace</span>(<span class="ident">stream</span>);
-        }
-        <span class="prelude-val">Ok</span>(())
-    }
-}
-
-<span class="kw">impl</span> <span class="ident">Write</span> <span class="kw">for</span> <span class="ident">VsockStreamChannel</span> {
-    <span class="kw">fn</span> <span class="ident">write</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">data</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) -&gt; <span class="ident">std::io::Result</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">ensure_stream</span>()<span class="question-mark">?</span>;
-        <span class="self">self</span>.<span class="ident">stream</span>
-            .<span class="ident">as_mut</span>()
-            .<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">Error::from</span>(<span class="ident">ErrorKind::NotConnected</span>))<span class="question-mark">?</span>
-            .<span class="ident">write</span>(<span class="ident">data</span>)
-    }
-
-    <span class="kw">fn</span> <span class="ident">flush</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) -&gt; <span class="ident">std::io::Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">ensure_stream</span>()<span class="question-mark">?</span>;
-        <span class="self">self</span>.<span class="ident">stream</span>
-            .<span class="ident">as_mut</span>()
-            .<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">Error::from</span>(<span class="ident">ErrorKind::NotConnected</span>))<span class="question-mark">?</span>
-            .<span class="ident">flush</span>()
-    }
-}
-
-<span class="kw">impl</span> <span class="ident">Read</span> <span class="kw">for</span> <span class="ident">VsockStreamChannel</span> {
-    <span class="kw">fn</span> <span class="ident">read</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">data</span>: <span class="kw-2">&amp;mut</span> [<span class="ident">u8</span>]) -&gt; <span class="ident">std::io::Result</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">ensure_stream</span>()<span class="question-mark">?</span>;
-        <span class="self">self</span>.<span class="ident">stream</span>
-            .<span class="ident">as_mut</span>()
-            .<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">Error::from</span>(<span class="ident">ErrorKind::NotConnected</span>))<span class="question-mark">?</span>
-            .<span class="ident">read</span>(<span class="ident">data</span>)
-    }
 }
 
 <span class="kw">impl</span> <span class="ident">Crosvm</span> {
@@ -279,10 +199,26 @@
         <span class="self">self</span>.<span class="ident">wait</span>().<span class="kw">await</span>
     }
 
-    <span class="kw">fn</span> <span class="ident">create_comms_channel</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">ReadWrite</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-        <span class="comment">// Create the channel in a disconnected state as it can only be connected later, after the</span>
-        <span class="comment">// VM has booted up.</span>
-        <span class="prelude-val">Ok</span>(<span class="ident">Box::new</span>(<span class="ident">VsockStreamChannel</span> { <span class="ident">stream</span>: <span class="prelude-val">None</span> }))
+    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">create_comms_channel</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">ReadWrite</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+        <span class="comment">// The vsock channel can only be created after the VM is booted. Hence</span>
+        <span class="comment">// we try a few times to connect, in case the VM is currently starting</span>
+        <span class="comment">// up. If no connetion is established after a while, we timeout.</span>
+        <span class="kw">let</span> <span class="ident">task</span> <span class="op">=</span> <span class="ident">tokio::spawn</span>(<span class="kw">async</span> {
+            <span class="kw">let</span> <span class="ident">stream</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">ReadWrite</span><span class="op">&gt;</span> <span class="op">=</span> <span class="kw">loop</span> {
+                <span class="kw">match</span> <span class="ident">VsockStream::connect_with_cid_port</span>(<span class="ident">VSOCK_GUEST_CID</span>, <span class="ident">VSOCK_GUEST_PORT</span>) {
+                    <span class="prelude-val">Ok</span>(<span class="ident">stream</span>) =&gt; {
+                        <span class="kw">break</span> <span class="ident">Box::new</span>(<span class="ident">stream</span>);
+                    }
+                    <span class="prelude-val">Err</span>(<span class="ident">_error</span>) =&gt; {
+                        <span class="ident">sleep</span>(<span class="ident">Duration::from_millis</span>(<span class="number">100</span>)).<span class="kw">await</span>;
+                        <span class="kw">continue</span>;
+                    }
+                }
+            };
+            <span class="ident">stream</span>
+        })
+        .<span class="ident">map_err</span>(<span class="ident">anyhow::Error::msg</span>);
+        <span class="ident">timeout</span>(<span class="ident">Duration::from_millis</span>(<span class="number">1000</span>), <span class="ident">task</span>).<span class="kw">await</span><span class="question-mark">?</span>
     }
 }
 </code></pre></div>

@@ -425,7 +425,7 @@
         }
     });
 
-    <span class="kw">let</span> <span class="ident">comms</span> <span class="op">=</span> <span class="ident">vmm</span>.<span class="ident">create_comms_channel</span>()<span class="question-mark">?</span>;
+    <span class="kw">let</span> <span class="ident">comms</span> <span class="op">=</span> <span class="ident">vmm</span>.<span class="ident">create_comms_channel</span>().<span class="kw">await</span><span class="question-mark">?</span>;
 
     <span class="comment">// Use a bmrng channel for serial communication. The good thing about spawning a separate</span>
     <span class="comment">// task for the serial communication is that it serializes (no pun intended) the communication,</span>

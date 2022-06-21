@@ -1,1 +1,1 @@
-initSidebarItems({"constant":[["VSOCK_GUEST_CID",""],["VSOCK_GUEST_PORT",""]],"struct":[["Crosvm",""],["VsockStreamChannel","A wrapper for a vsock stream that can be used as a communication channel between the loader and the guest VM."]]});
+initSidebarItems({"constant":[["VSOCK_GUEST_CID",""],["VSOCK_GUEST_PORT",""]],"struct":[["Crosvm",""]]});
