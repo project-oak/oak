@@ -35,7 +35,7 @@ rand_core = { version = "*", optional = true, default-features = false, features
   "alloc",
   "getrandom"
 ] }
-ring = { path = "../../third_party/ring", default-features = false, optional = true }
+ring = { version = "*", default-features = false, optional = true }
 sha2 = { version = "*", optional = true, default-features = false }
 signature = { version = "*", optional = true, default-features = false }
 x25519-dalek = { path = "../../third_party/x25519-dalek", optional = true, default-features = false, features = [

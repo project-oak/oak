@@ -19,6 +19,8 @@
 #![feature(lang_items)]
 #![feature(alloc_error_handler)]
 #![feature(custom_test_frameworks)]
+#![feature(core_c_str)]
+#![feature(core_ffi_c)]
 // As we're in a `no_std` environment, testing requires special handling. This
 // approach was inspired by https://os.phil-opp.com/testing/.
 #![test_runner(crate::test_runner)]

@@ -16,7 +16,7 @@
 
 use strum::{Display, FromRepr};
 
-#[derive(Debug, PartialEq, Eq, Display, FromRepr)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Display, FromRepr)]
 #[repr(u32)]
 /// E820 address range types according to Chapter 15 of the ACPI Specification, Version 6.4.
 /// See <https://uefi.org/specs/ACPI/6.4/15_System_Address_Map_Interfaces/Sys_Address_Map_Interfaces.html> for more details.
@@ -52,7 +52,9 @@ pub trait E820Entry {
 /// loader.
 pub trait BootInfo<E: E820Entry> {
     /// Human-readable name of the boot protocol.
-    fn protocol(&self) -> &str;
+    fn protocol(&self) -> &'static str;
     /// Slice of address range descriptors representing the memory layout of the machine.
     fn e820_table(&self) -> &[E];
+    /// Arguments passed to the kernel.
+    fn args(&self) -> &core::ffi::CStr;
 }

@@ -14,4 +14,4 @@ rust-hypervisor-firmware-virtio = { path = "../../third_party/rust-hypervisor-fi
 strum = { version = "*", default-features = false, features = ["derive"] }
 
 [dev-dependencies]
-rand = "*"
+rand = { version = "*", features = ["std_rng"] }

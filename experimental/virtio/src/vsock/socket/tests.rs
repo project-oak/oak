@@ -17,11 +17,11 @@
 use super::*;
 use crate::{
     test::{new_valid_transport, TestingTransport},
-    vsock::HOST_CID,
+    vsock::{HOST_CID, QUEUE_SIZE},
 };
 use alloc::vec;
 use ciborium_io::{Read, Write};
-use rand::Rng;
+use rand::RngCore;
 use rust_hypervisor_firmware_virtio::device::VirtioBaseDevice;
 
 const GUEST_CID: u64 = 3;

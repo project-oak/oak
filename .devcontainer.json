@@ -4,7 +4,7 @@
 // - https://code.visualstudio.com/docs/remote/devcontainerjson-reference
 {
   // Do not modify manually. This value is automatically updated by ./scripts/docker_build .
-  "image": "sha256:f6c55da8b80ae2bc85f0f377dba1632a8ed90c8e125cd3d8f0d4bdfb51e1f499",
+  "image": "sha256:18396c3d582128452dd6f3a7c5211d9e9bd4a24f2e31cb263589293b15954ab5",
   "extensions": [
     "13xforever.language-x86-64-assembly",
     "bazelbuild.vscode-bazel",
@@ -26,8 +26,6 @@
   "runArgs": [
     // Required by crosvm.
     "--device=/dev/kvm",
-    "--device=/dev/vhost-vsock",
-    "--device=/dev/vsock",
     // In order to access /dev/kvm, our user inside the container needs to be a
     // member of the group that owns /dev/kvm; the device itself is exposed
     // inside the container with the same group as outside the container.

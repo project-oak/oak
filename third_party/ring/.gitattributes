@@ -1,7 +1,0 @@
-* text=auto !eol
-crypto/**/*.pl linguist-language=Assembly
-crypto/perlasm/*.pl linguist-language=Perl
-*.bin binary
-*.der binary
-**/*.h linguist-language=C
-**/*.inl linguist-language=C
