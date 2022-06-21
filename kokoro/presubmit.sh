@@ -7,6 +7,16 @@ sudo chown "$USER:$KVM_GID" /dev/kvm
 sudo chown "$USER:$KVM_GID" /dev/vhost-vsock
 sudo chown "$USER:$KVM_GID" /dev/vsock
 
+# Kokoro requires us to manually load the kernel modules required for vsock
+# Ref: https://g3doc.corp.google.com/security/bedebox/g3doc/requirements.md?cl=head#vhostvhost-vsock-kernel-module-vs-vmware
+sudo rmmod vmw_vsock_virtio_transport_common
+sudo rmmod vmw_vsock_vmci_transport
+sudo rmmod vsock
+sudo modprobe vhost_vsock
+# Grant the current user access permission to the newly available device nodes
+sudo setfacl -m u:${USER}:rw /dev/vhost-vsock
+sudo setfacl -m u:${USER}:rw /dev/vsock
+
 ./scripts/docker_pull
 
 ./scripts/docker_run ./scripts/xtask build-oak-functions-server-variants
