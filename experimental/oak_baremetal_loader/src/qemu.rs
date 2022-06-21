@@ -138,7 +138,7 @@ impl Vmm for Qemu {
         self.wait().await
     }
 
-    fn create_comms_channel(&self) -> Result<Box<dyn ReadWrite>> {
+    async fn create_comms_channel(&self) -> Result<Box<dyn ReadWrite>> {
         let comms_host = self.comms_host.try_clone()?;
         Ok(Box::new(comms_host))
     }
