@@ -117,7 +117,6 @@
 <span id="112">112</span>
 <span id="113">113</span>
 <span id="114">114</span>
-<span id="115">115</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2022 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -165,9 +164,8 @@
 
 <span class="kw">use</span> <span class="ident">core::panic::PanicInfo</span>;
 <span class="kw">use</span> <span class="ident">log</span>::{<span class="ident">error</span>, <span class="ident">info</span>};
-<span class="kw">use</span> <span class="ident">oak_remote_attestation::handshaker</span>::{
-    <span class="ident">AttestationBehavior</span>, <span class="ident">EmptyAttestationGenerator</span>, <span class="ident">EmptyAttestationVerifier</span>,
-};
+<span class="kw">use</span> <span class="ident">oak_remote_attestation::handshaker</span>::{<span class="ident">AttestationBehavior</span>, <span class="ident">EmptyAttestationVerifier</span>};
+<span class="kw">use</span> <span class="ident">oak_remote_attestation_amd::PlaceholderAmdAttestationGenerator</span>;
 <span class="kw">use</span> <span class="ident">rust_hypervisor_firmware_boot::paging</span>;
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">not</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;serial_channel&quot;</span>))]</span>
 <span class="kw">use</span> <span class="ident">rust_hypervisor_firmware_virtio::pci::VirtioPciTransport</span>;
@@ -199,7 +197,7 @@
     <span class="macro">info!</span>(<span class="string">&quot;In main! Boot protocol:  {}&quot;</span>, <span class="ident">protocol</span>);
     <span class="macro">info!</span>(<span class="string">&quot;Kernel boot args: {}&quot;</span>, <span class="ident">args::args</span>());
     <span class="kw">let</span> <span class="ident">attestation_behavior</span> <span class="op">=</span>
-        <span class="ident">AttestationBehavior::create</span>(<span class="ident">EmptyAttestationGenerator</span>, <span class="ident">EmptyAttestationVerifier</span>);
+        <span class="ident">AttestationBehavior::create</span>(<span class="ident">PlaceholderAmdAttestationGenerator</span>, <span class="ident">EmptyAttestationVerifier</span>);
     <span class="ident">oak_baremetal_runtime::framing::handle_frames</span>(<span class="ident">get_channel</span>(), <span class="ident">attestation_behavior</span>).<span class="ident">unwrap</span>();
 }
 
