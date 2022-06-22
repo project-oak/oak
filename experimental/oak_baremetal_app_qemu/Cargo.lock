@@ -780,8 +780,10 @@ dependencies = [
  "anyhow",
  "ciborium-io",
  "flatbuffers",
+ "hashbrown 0.12.1",
  "log",
  "oak_baremetal_communication_channel",
+ "oak_functions_lookup",
  "oak_functions_wasm",
  "oak_functions_workload_logging",
  "oak_idl",
@@ -794,6 +796,7 @@ dependencies = [
 name = "oak_functions_abi"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "prost",
  "prost-build",
  "serde",
@@ -806,6 +809,26 @@ dependencies = [
  "anyhow",
  "oak_functions_abi",
  "oak_logger",
+]
+
+[[package]]
+name = "oak_functions_lookup"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "hashbrown 0.12.1",
+ "log",
+ "oak_functions_abi",
+ "oak_functions_extension",
+ "oak_functions_util",
+ "oak_logger",
+]
+
+[[package]]
+name = "oak_functions_util"
+version = "0.1.0"
+dependencies = [
+ "lock_api",
 ]
 
 [[package]]

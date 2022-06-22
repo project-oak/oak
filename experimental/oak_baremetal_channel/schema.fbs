@@ -3,6 +3,8 @@ attribute "method_id";
 rpc_service TrustedRuntime {
     HandleUserRequest(UserRequest) : UserRequestResponse (method_id: 0);
     Initialize(Initialization) : Empty (method_id: 1);
+    // Replaces the the existing lookup data with the new value.
+    UpdateLookupData(LookupData) : Empty (method_id: 2);
 }
 
 struct SessionId {
@@ -20,6 +22,15 @@ table UserRequestResponse {
 
 table Initialization {
     wasm_module: [ubyte];
+}
+
+table LookupDataEntry {
+    key: [ubyte];
+    value: [ubyte];
+}
+
+table LookupData {
+    items: [LookupDataEntry];
 }
 
 table Empty {}

@@ -187,7 +187,33 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             schema::TrustedRuntimeClient::new(client_handler)
         };
 
-        let wasm_bytes = include_bytes!("echo.wasm");
+        let lookup_data = {
+            let mut builder = oak_idl::utils::MessageBuilder::default();
+            let key = builder.create_vector::<u8>(b"test_key");
+            let value = builder.create_vector::<u8>(b"test_value");
+            let entry = schema::LookupDataEntry::create(
+                &mut builder,
+                &schema::LookupDataEntryArgs {
+                    key: Some(key),
+                    value: Some(value),
+                },
+            );
+
+            let items = builder.create_vector(&[entry]);
+            let message = schema::LookupData::create(
+                &mut builder,
+                &schema::LookupDataArgs { items: Some(items) },
+            );
+            builder
+                .finish(message)
+                .expect("errored when creating lookup data update message")
+        };
+
+        if let Err(err) = client.update_lookup_data(lookup_data.buf()) {
+            panic!("failed to send lookup data: {:?}", err)
+        }
+
+        let wasm_bytes = include_bytes!("key_value_lookup.wasm");
         let initialization_message = {
             let mut builder = oak_idl::utils::MessageBuilder::default();
             let wasm_module = builder.create_vector::<u8>(wasm_bytes);
