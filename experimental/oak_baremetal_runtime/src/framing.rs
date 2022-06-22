@@ -22,7 +22,6 @@ use crate::{
 use alloc::{boxed::Box, sync::Arc};
 use anyhow::Context;
 use ciborium_io::{Read, Write};
-use hashbrown::HashMap;
 use oak_baremetal_communication_channel::{
     schema,
     schema::TrustedRuntime,
@@ -146,22 +145,24 @@ where
         oak_idl::utils::Message<oak_baremetal_communication_channel::schema::Empty>,
         oak_idl::Status,
     > {
-        let mut data = HashMap::new();
-        for entry in lookup_data
+        let data = lookup_data
             .items()
             .ok_or_else(|| oak_idl::Status::new(oak_idl::StatusCode::InvalidArgument))?
-        {
-            data.insert(
-                entry
-                    .key()
-                    .ok_or_else(|| oak_idl::Status::new(oak_idl::StatusCode::InvalidArgument))?
-                    .to_vec(),
-                entry
-                    .value()
-                    .ok_or_else(|| oak_idl::Status::new(oak_idl::StatusCode::InvalidArgument))?
-                    .to_vec(),
-            );
-        }
+            .iter()
+            .map(|entry| {
+                Ok((
+                    entry
+                        .key()
+                        .ok_or_else(|| oak_idl::Status::new(oak_idl::StatusCode::InvalidArgument))?
+                        .to_vec(),
+                    entry
+                        .value()
+                        .ok_or_else(|| oak_idl::Status::new(oak_idl::StatusCode::InvalidArgument))?
+                        .to_vec(),
+                ))
+            })
+            .collect::<Result<_, oak_idl::Status>>()?;
+
         self.lookup_data_manager.update_data(data);
         let response_message = {
             let mut builder = oak_idl::utils::MessageBuilder::default();

@@ -83,6 +83,8 @@ impl TryFrom<&[u8]> for StorageGetItemResponse {
         // Temporary manual deserialisation to avoid `bincode` when using `no_std`.
         // TODO(#2975): Replace this with an IDL-based implemenation when the ABI is converted.
         const LENGTH_SIZE: usize = size_of::<u64>();
+        // The encoding represents the `None` value as an empty buffer. For a value of
+        // `Some(Vec<u8>)` it adds a length-prefix that is also used for additional validation,
         if buffer.is_empty() {
             return Ok(StorageGetItemResponse { value: None });
         }
