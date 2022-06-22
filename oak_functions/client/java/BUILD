@@ -15,7 +15,7 @@
 #
 
 load("@rules_android//android:rules.bzl", "android_library")
-load("@rules_java//java:defs.bzl", "java_library")
+load("@rules_java//java:defs.bzl", "java_library", "java_test")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -37,6 +37,24 @@ java_library(
         "@io_grpc_grpc_java//api",
         "@io_grpc_grpc_java//netty",
         "@io_grpc_grpc_java//stub",
+    ],
+)
+
+java_library(
+    name = "client_rekor",
+    srcs = glob(["src/com/google/oak/functions/client/rekor/*.java"]),
+    deps = [
+        "@com_google_code_gson_gson",
+    ],
+)
+
+java_test(
+    name = "RekorModelTest",
+    srcs = ["tests/com/google/oak/functions/client/rekor/ModelTest.java"],
+    data = ["//oak_functions/client/testdata:logentry.json"],
+    test_class = "com.google.oak.functions.client.rekor.ModelTest",
+    deps = [
+        ":client_rekor",
     ],
 )
 

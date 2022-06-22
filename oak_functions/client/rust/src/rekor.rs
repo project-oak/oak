@@ -60,7 +60,7 @@ pub struct Body {
     pub spec: Spec,
 }
 
-/// Struct representing the `specs` in the body of a Rekor LogEntry.
+/// Struct representing the `spec` in the body of a Rekor LogEntry.
 /// Based on <https://github.com/sigstore/rekor/blob/2978cdc26fdf8f5bfede8459afd9735f0f231a2a/pkg/generated/models/rekord_v001_schema.go#L39.>
 #[derive(Debug, Deserialize, PartialEq, Serialize)]
 pub struct Spec {
