@@ -23,6 +23,9 @@ libm = "*"
 oak_remote_attestation = { path = "../../remote_attestation/rust", default-features = false, features = [
   "rust-crypto"
 ] }
+oak_remote_attestation_amd = { path = "../../oak_remote_attestation_amd", default-features = false, features = [
+  "rust-crypto"
+] }
 oak_baremetal_runtime = { path = "../../experimental/oak_baremetal_runtime", default-features = false, features = [
   "rust-crypto"
 ] }

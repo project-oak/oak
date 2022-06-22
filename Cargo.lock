@@ -2883,6 +2883,7 @@ dependencies = [
  "log",
  "oak_baremetal_runtime",
  "oak_remote_attestation",
+ "oak_remote_attestation_amd",
  "rust-hypervisor-firmware-boot",
  "rust-hypervisor-firmware-virtio",
  "strum",

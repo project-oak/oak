@@ -589,6 +589,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "itoa"
+version = "1.0.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "112c678d4050afce233f4f2852bb2eb519230b3cf12f33585275537d7e41578d"
+
+[[package]]
 name = "lazy_static"
 version = "1.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -765,6 +771,7 @@ dependencies = [
  "log",
  "oak_baremetal_runtime",
  "oak_remote_attestation",
+ "oak_remote_attestation_amd",
  "rust-hypervisor-firmware-boot",
  "rust-hypervisor-firmware-virtio",
  "strum",
@@ -898,6 +905,16 @@ dependencies = [
  "sha2 0.10.2",
  "signature",
  "x25519-dalek",
+]
+
+[[package]]
+name = "oak_remote_attestation_amd"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "oak_remote_attestation",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
@@ -1133,6 +1150,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f2cc38e8fa666e2de3c4aba7edeb5ffc5246c1c2ed0e3d17e560aeeba736b23f"
 
 [[package]]
+name = "ryu"
+version = "1.0.10"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f3f6f92acf49d1b98f7a81226834412ada05458b7364277387724a237f062695"
+
+[[package]]
 name = "scopeguard"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1168,6 +1191,17 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
+]
+
+[[package]]
+name = "serde_json"
+version = "1.0.81"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9b7ce2b32a1aed03c558dc61a5cd328f15aff2dbc17daad8fb8af04d2100e15c"
+dependencies = [
+ "itoa",
+ "ryu",
+ "serde",
 ]
 
 [[package]]
