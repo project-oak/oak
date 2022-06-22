@@ -30,6 +30,15 @@
 <span id="25">25</span>
 <span id="26">26</span>
 <span id="27">27</span>
+<span id="28">28</span>
+<span id="29">29</span>
+<span id="30">30</span>
+<span id="31">31</span>
+<span id="32">32</span>
+<span id="33">33</span>
+<span id="34">34</span>
+<span id="35">35</span>
+<span id="36">36</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2022 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -47,15 +56,24 @@
 <span class="comment">//</span>
 
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::logger::StandaloneLogger</span>;
-<span class="kw">use</span> <span class="ident">alloc::vec</span>;
+<span class="kw">use</span> <span class="ident">alloc</span>::{<span class="ident">sync::Arc</span>, <span class="ident">vec</span>};
+<span class="kw">use</span> <span class="ident">oak_functions_lookup</span>::{<span class="ident">LookupDataManager</span>, <span class="ident">LookupFactory</span>};
 <span class="kw">use</span> <span class="ident">oak_functions_wasm::WasmHandler</span>;
 <span class="kw">use</span> <span class="ident">oak_functions_workload_logging::WorkloadLoggingFactory</span>;
 
 <span class="doccomment">/// Creates a new `WasmHandler` instance.</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new_wasm_handler</span>(<span class="ident">wasm_module_bytes</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">WasmHandler</span><span class="op">&lt;</span><span class="ident">StandaloneLogger</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new_wasm_handler</span>(
+    <span class="ident">wasm_module_bytes</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>],
+    <span class="ident">lookup_data_manager</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">LookupDataManager</span><span class="op">&lt;</span><span class="ident">StandaloneLogger</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">WasmHandler</span><span class="op">&lt;</span><span class="ident">StandaloneLogger</span><span class="op">&gt;</span><span class="op">&gt;</span> {
     <span class="kw">let</span> <span class="ident">logger</span> <span class="op">=</span> <span class="ident">StandaloneLogger::default</span>();
     <span class="kw">let</span> <span class="ident">logging_factory</span> <span class="op">=</span> <span class="ident">WorkloadLoggingFactory::new_boxed_extension_factory</span>(<span class="ident">logger</span>.<span class="ident">clone</span>())<span class="question-mark">?</span>;
-    <span class="ident">WasmHandler::create</span>(<span class="ident">wasm_module_bytes</span>, <span class="macro">vec!</span>[<span class="ident">logging_factory</span>], <span class="ident">logger</span>)
+    <span class="kw">let</span> <span class="ident">lookup_factory</span> <span class="op">=</span> <span class="ident">LookupFactory::new_boxed_extension_factory</span>(<span class="ident">lookup_data_manager</span>)<span class="question-mark">?</span>;
+    <span class="ident">WasmHandler::create</span>(
+        <span class="ident">wasm_module_bytes</span>,
+        <span class="macro">vec!</span>[<span class="ident">logging_factory</span>, <span class="ident">lookup_factory</span>],
+        <span class="ident">logger</span>,
+    )
 }
 </code></pre></div>
 </section><section id="search" class="content hidden"></section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="oak_baremetal_runtime" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.62.0-nightly (de1bc0008 2022-04-21)" ></div>

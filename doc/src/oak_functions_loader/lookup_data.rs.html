@@ -227,6 +227,7 @@
 <span id="222">222</span>
 <span id="223">223</span>
 <span id="224">224</span>
+<span id="225">225</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2021 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -245,6 +246,7 @@
 
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::logger::Logger</span>;
 <span class="kw">use</span> <span class="ident">anyhow</span>::{<span class="ident">anyhow</span>, <span class="ident">Context</span>};
+<span class="kw">use</span> <span class="ident">hashbrown::HashMap</span>;
 <span class="kw">use</span> <span class="ident">hyper</span>::{<span class="ident">body::Bytes</span>, <span class="ident">client::connect::Connect</span>, <span class="ident">Body</span>, <span class="ident">Client</span>, <span class="ident">Request</span>};
 <span class="kw">use</span> <span class="ident">hyper_rustls::HttpsConnectorBuilder</span>;
 <span class="kw">use</span> <span class="ident">log::Level</span>;
@@ -252,7 +254,7 @@
 <span class="kw">use</span> <span class="ident">oak_logger::OakLogger</span>;
 <span class="kw">use</span> <span class="ident">prost::Message</span>;
 <span class="kw">use</span> <span class="ident">serde_derive::Deserialize</span>;
-<span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">collections::HashMap</span>, <span class="ident">sync::Arc</span>, <span class="ident">time::Instant</span>};
+<span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">sync::Arc</span>, <span class="ident">time::Instant</span>};
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Copy</span>, <span class="ident">Clone</span>, <span class="ident">Deserialize</span>, <span class="ident">Debug</span>)]</span>
 <span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">LookupDataAuth</span> {
