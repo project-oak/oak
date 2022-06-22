@@ -17,7 +17,6 @@
 use anyhow::Context;
 use clap::Parser;
 use grpc_unary_attestation::client::AttestationClient;
-use oak_remote_attestation::handshaker::EmptyAttestationVerifier;
 use std::io::{stdin, BufRead};
 
 #[derive(Parser, Debug)]
@@ -54,10 +53,9 @@ async fn chat(client: &mut AttestationClient, message: String) -> anyhow::Result
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cli = Args::parse();
 
-    let mut client =
-        AttestationClient::create_with_attestation_verifier(&cli.server, EmptyAttestationVerifier)
-            .await
-            .context("Could not create client")?;
+    let mut client = AttestationClient::create(&cli.server)
+        .await
+        .context("Could not create client")?;
 
     match (cli.request, cli.expected_response, cli.iterations) {
         (Some(request), Some(expected_response), Some(iterations)) => {
