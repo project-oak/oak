@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+
+# This script creates a .env file for enviroment variables we would like to
+# set in the docker image.
+# Ref: https://docs.docker.com/compose/env-file/
+
+env_variables=(
+  "TERM=xterm-256color"
+  # The default user for a Docker container has uid 0 (root). To avoid creating
+  # root-owned files in the build directory we tell Docker to use the current user
+  # ID, if known.
+  # Ref: https://github.com/googleapis/google-cloud-cpp/blob/a186208b79d900b4ec71c6f9df3acf7638f01dc6/ci/kokoro/docker/build.sh#L147-L152
+  "HOST_UID=${UID:-0}"
+  "HOST_GID=$(id -g)"
+)
+
+# Expose relevant bazel enviroment variables if they are set
+if [[ -n "${BAZEL_REMOTE_CACHE_ENABLED-}" ]]; then
+  env_variables+=(
+    "BAZEL_REMOTE_CACHE_ENABLED=${BAZEL_REMOTE_CACHE_ENABLED}"
+  )
+fi
+if [[ -n "${BAZEL_GOOGLE_CREDENTIALS-}" ]]; then
+  env_variables+=(
+    "BAZEL_GOOGLE_CREDENTIALS=${BAZEL_GOOGLE_CREDENTIALS}"
+  )
+fi
+
+# To use KVM, if exposed by the host, the docker user needs to match the host's
+# KVM group.
+if [[ -e "/dev/kvm" ]]; then
+  env_variables+=(
+    "HOST_KVM_GID=$(getent group kvm | cut -d: -f3)"
+  )
+fi
+
+printf "%s\n" "${env_variables[@]}" > .docker.env

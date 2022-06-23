@@ -19,25 +19,14 @@ mkdir -p './bazel-cache'
 mkdir -p './cargo-cache'
 mkdir -p './sccache-cache'
 
-# The default user for a Docker container has uid 0 (root). To avoid creating
-# root-owned files in the build directory we tell Docker to use the current user
-# ID, if known.
-# See
-# https://github.com/googleapis/google-cloud-cpp/blob/a186208b79d900b4ec71c6f9df3acf7638f01dc6/ci/kokoro/docker/build.sh#L147-L152
-readonly HOST_UID="${UID:-0}"
-readonly HOST_GID="$(id -g)"
-
-export HOST_UID
-export HOST_GID
+# Generate .env file to use with the docker image
+source "$SCRIPTS_DIR/docker_create_env_file"
 
 docker_run_flags=(
   '--rm'
   '--tty'
-  '--env=TERM=xterm-256color'
-  '--env=BAZEL_REMOTE_CACHE_ENABLED'
-  '--env=BAZEL_GOOGLE_CREDENTIALS'
-  '--env=HOST_UID'
-  '--env=HOST_GID'
+  # Use the generated .env file
+  '--env-file=.docker.env'
   "--volume=$PWD/bazel-cache:/home/docker/.cache/bazel"
   "--volume=$PWD/cargo-cache:/home/docker/.cargo"
   "--volume=$PWD/sccache-cache:/home/docker/.cache/sccache"
@@ -56,7 +45,6 @@ if [[ -e "/dev/kvm" ]]; then
   readonly HOST_KVM_GID="$(getent group kvm | cut -d: -f3)"
   docker_run_flags+=(
     "--device=/dev/kvm"
-    "--env=HOST_KVM_GID=${HOST_KVM_GID}"
   )
 fi
 

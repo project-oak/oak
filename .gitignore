@@ -94,3 +94,6 @@ Makefile.conf
 
 # TensorFlow model server binary
 tensorflow_model_server
+
+# Generated .env file for docker
+.docker.env
