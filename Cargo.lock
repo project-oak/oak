@@ -578,9 +578,9 @@ dependencies = [
 
 [[package]]
 name = "cargo_metadata"
-version = "0.14.2"
+version = "0.15.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4acbb09d9ee8e23699b9634375c72795d095bf268439da88562cf9b501f181fa"
+checksum = "3abb7553d5b9b8421c6de7cb02606ff15e0c6eea7d8eadd75ef013fd636bec36"
 dependencies = [
  "camino",
  "cargo-platform",
@@ -2224,7 +2224,7 @@ dependencies = [
 name = "key_value_lookup"
 version = "0.1.0"
 dependencies = [
- "hashbrown 0.11.2",
+ "hashbrown 0.12.1",
  "http",
  "hyper",
  "maplit",
@@ -2923,7 +2923,7 @@ dependencies = [
  "anyhow",
  "ciborium-io",
  "flatbuffers",
- "hashbrown 0.11.2",
+ "hashbrown 0.12.1",
  "log",
  "oak_baremetal_communication_channel",
  "oak_functions_lookup",
@@ -2940,7 +2940,7 @@ name = "oak_functions"
 version = "0.1.0"
 dependencies = [
  "bincode",
- "hashbrown 0.11.2",
+ "hashbrown 0.12.1",
  "lazy_static",
  "maplit",
  "oak_functions_abi",
@@ -3032,7 +3032,7 @@ dependencies = [
  "criterion",
  "futures",
  "grpc_unary_attestation",
- "hashbrown 0.11.2",
+ "hashbrown 0.12.1",
  "http",
  "humantime-serde",
  "hyper",
@@ -3106,7 +3106,7 @@ name = "oak_functions_lookup"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "hashbrown 0.11.2",
+ "hashbrown 0.12.1",
  "log",
  "oak_functions_abi",
  "oak_functions_extension",
