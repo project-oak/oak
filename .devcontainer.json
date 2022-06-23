@@ -23,18 +23,14 @@
     // Crosvm wants access to syslog.
     "source=/dev/log,target=/dev/log,type=bind"
   ],
+  // Before creating the container, generate a .env file for the variables that
+  // should be set within the container.
+  "initializeCommand": "source ./scripts/docker_create_env_file",
   "runArgs": [
+    // Use the .env file generated prior to container creation.
+    "--env-file=.docker.env",
     // Required by crosvm.
-    "--device=/dev/kvm",
-    // In order to access /dev/kvm, our user inside the container needs to be a
-    // member of the group that owns /dev/kvm; the device itself is exposed
-    // inside the container with the same group as outside the container.
-    // Unfortunately this GID can differ between systems and there doesn't seem
-    // to be any good way to determine this dynamically from the host machine.
-    // Thus, hard-code 107 which is the group id used with Debian. If you use a
-    // different distribution, it's highly likely you need to adjust this value
-    // to match your environment.
-    "--group-add=107"
+    "--device=/dev/kvm"
   ],
   "settings": {
     // Use the `rust-analyzer` binary installed in the Docker image.
