@@ -13,6 +13,7 @@ serde = "*"
 serde_derive = "*"
 
 [dev-dependencies]
+hashbrown = "*"
 lazy_static = "*"
 maplit = "*"
 oak_functions_loader = { path = "../../loader" }

@@ -45,9 +45,8 @@ mod serial;
 
 use core::panic::PanicInfo;
 use log::{error, info};
-use oak_remote_attestation::handshaker::{
-    AttestationBehavior, EmptyAttestationGenerator, EmptyAttestationVerifier,
-};
+use oak_remote_attestation::handshaker::{AttestationBehavior, EmptyAttestationVerifier};
+use oak_remote_attestation_amd::PlaceholderAmdAttestationGenerator;
 use rust_hypervisor_firmware_boot::paging;
 #[cfg(not(feature = "serial_channel"))]
 use rust_hypervisor_firmware_virtio::pci::VirtioPciTransport;
@@ -79,7 +78,7 @@ fn main(protocol: &str) -> ! {
     info!("In main! Boot protocol:  {}", protocol);
     info!("Kernel boot args: {}", args::args());
     let attestation_behavior =
-        AttestationBehavior::create(EmptyAttestationGenerator, EmptyAttestationVerifier);
+        AttestationBehavior::create(PlaceholderAmdAttestationGenerator, EmptyAttestationVerifier);
     oak_baremetal_runtime::framing::handle_frames(get_channel(), attestation_behavior).unwrap();
 }
 

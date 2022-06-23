@@ -16,4 +16,4 @@ serde = { version = "*", default-features = false, features = [
   "alloc",
   "derive"
 ] }
-serde_json = "*"
+serde_json = { version = "*", default-features = false, features = ["alloc"] }

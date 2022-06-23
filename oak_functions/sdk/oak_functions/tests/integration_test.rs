@@ -14,8 +14,9 @@
 // limitations under the License.
 //
 
+use hashbrown::HashMap;
 use lazy_static::lazy_static;
-use maplit::{btreemap, hashmap};
+use maplit::btreemap;
 use oak_functions_abi::proto::{Request, Response};
 use oak_functions_loader::{logger::Logger, server::WasmHandler};
 use oak_functions_lookup::{LookupDataManager, LookupFactory};
@@ -67,7 +68,7 @@ lazy_static! {
 #[tokio::test]
 async fn test_read_write() {
     let logger = Logger::for_test();
-    let lookup_data_manager = Arc::new(LookupDataManager::for_test(hashmap! {}, logger.clone()));
+    let lookup_data_manager = Arc::new(LookupDataManager::for_test(HashMap::new(), logger.clone()));
     let lookup_factory = LookupFactory::new_boxed_extension_factory(lookup_data_manager)
         .expect("could not create LookupFactory");
 
@@ -84,7 +85,7 @@ async fn test_read_write() {
 #[tokio::test]
 async fn test_double_read() {
     let logger = Logger::for_test();
-    let lookup_data_manager = Arc::new(LookupDataManager::for_test(hashmap! {}, logger.clone()));
+    let lookup_data_manager = Arc::new(LookupDataManager::for_test(HashMap::new(), logger.clone()));
     let lookup_factory = LookupFactory::new_boxed_extension_factory(lookup_data_manager)
         .expect("could not create LookupFactory");
 
@@ -101,7 +102,7 @@ async fn test_double_read() {
 #[tokio::test]
 async fn test_double_write() {
     let logger = Logger::for_test();
-    let lookup_data_manager = Arc::new(LookupDataManager::for_test(hashmap! {}, logger.clone()));
+    let lookup_data_manager = Arc::new(LookupDataManager::for_test(HashMap::new(), logger.clone()));
     let lookup_factory = LookupFactory::new_boxed_extension_factory(lookup_data_manager)
         .expect("could not create LookupFactory");
 
@@ -118,7 +119,7 @@ async fn test_double_write() {
 #[tokio::test]
 async fn test_write_log() {
     let logger = Logger::for_test();
-    let lookup_data_manager = Arc::new(LookupDataManager::for_test(hashmap! {}, logger.clone()));
+    let lookup_data_manager = Arc::new(LookupDataManager::for_test(HashMap::new(), logger.clone()));
     let lookup_factory = LookupFactory::new_boxed_extension_factory(lookup_data_manager)
         .expect("could not create LookupFactory");
     let workload_logging_factory =
@@ -141,9 +142,8 @@ async fn test_write_log() {
 
 #[tokio::test]
 async fn test_storage_get_item() {
-    let entries = hashmap! {
-       b"StorageGet".to_vec() => b"StorageGetResponse".to_vec(),
-    };
+    let entries =
+        HashMap::from_iter([(b"StorageGet".to_vec(), b"StorageGetResponse".to_vec())].into_iter());
 
     let logger = Logger::for_test();
     let lookup_data_manager = Arc::new(LookupDataManager::for_test(entries, logger.clone()));
@@ -163,7 +163,7 @@ async fn test_storage_get_item() {
 #[tokio::test]
 async fn test_storage_get_item_not_found() {
     // empty lookup data, no key will be found
-    let entries = hashmap! {};
+    let entries = HashMap::new();
 
     let logger = Logger::for_test();
     let lookup_data_manager = Arc::new(LookupDataManager::for_test(entries, logger.clone()));

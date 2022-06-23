@@ -57,7 +57,7 @@ pub fn write_response(buf: &[u8]) -> Result<(), OakStatus> {
 /// Looks up an item from the in-memory lookup store.
 pub fn storage_get_item(key: &[u8]) -> Result<Option<Vec<u8>>, OakStatus> {
     let response = invoke(oak_functions_abi::ExtensionHandle::LookupHandle, key)?;
-    let result: StorageGetItemResponse = bincode::deserialize(&response).map_err(|err| {
+    let result: StorageGetItemResponse = (&response[..]).try_into().map_err(|err| {
         log!("Failed to deserialize response: {}", err);
         OakStatus::ErrSerializing
     })?;

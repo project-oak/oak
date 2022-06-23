@@ -23,17 +23,17 @@ use criterion::{
     criterion_group, criterion_main, measurement::Measurement, AxisScale, BenchmarkGroup,
     BenchmarkId, Criterion, PlotConfiguration,
 };
+use hashbrown::HashMap;
 use lookup_data_generator::data::generate_and_serialize_random_entries;
 use oak_functions_abi::proto::{Request, StatusCode};
 use oak_functions_loader::{
     logger::Logger, lookup_data::parse_lookup_entries, server::WasmHandler,
 };
-
 use oak_functions_lookup::{LookupDataManager, LookupFactory};
 use prost::Message;
 use proto::{benchmark_request::Action, BenchmarkRequest, LookupTest};
 use rand::SeedableRng;
-use std::{collections::HashMap, sync::Arc};
+use std::sync::Arc;
 
 const MANIFEST_PATH: &str = "examples/benchmark/module/Cargo.toml";
 const SINGLE_REQUEST_ITERATIONS: u32 = 1;
@@ -190,7 +190,7 @@ fn generate_random_test_data_for_bench(
         entry_count,
     )
     .unwrap();
-    let entries = parse_lookup_entries(buf).unwrap();
+    let entries = HashMap::from_iter(parse_lookup_entries(buf).unwrap().into_iter());
     let (key, value) = entries.iter().next().unwrap();
     TestData {
         test_key: key.to_vec(),

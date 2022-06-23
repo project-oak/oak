@@ -119,9 +119,9 @@ checksum = "ec8ad6edb4840b78c5c3d88de606b22252d552b55f3a4699fbb10fc070ec3049"
 
 [[package]]
 name = "anyhow"
-version = "1.0.57"
+version = "1.0.58"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "08f9b8508dccb7687a1d6c4ce66b2b0ecef467c94667de27d8d7fe1f8d2a9cdc"
+checksum = "bb07d2053ccdbe10e2af2995a2f116c1330396493dc1269f6a91d0ae82e19704"
 
 [[package]]
 name = "anymap2"
@@ -2224,6 +2224,7 @@ dependencies = [
 name = "key_value_lookup"
 version = "0.1.0"
 dependencies = [
+ "hashbrown 0.11.2",
  "http",
  "hyper",
  "maplit",
@@ -2882,6 +2883,7 @@ dependencies = [
  "log",
  "oak_baremetal_runtime",
  "oak_remote_attestation",
+ "oak_remote_attestation_amd",
  "rust-hypervisor-firmware-boot",
  "rust-hypervisor-firmware-virtio",
  "strum",
@@ -2921,8 +2923,10 @@ dependencies = [
  "anyhow",
  "ciborium-io",
  "flatbuffers",
+ "hashbrown 0.11.2",
  "log",
  "oak_baremetal_communication_channel",
+ "oak_functions_lookup",
  "oak_functions_wasm",
  "oak_functions_workload_logging",
  "oak_idl",
@@ -2936,6 +2940,7 @@ name = "oak_functions"
 version = "0.1.0"
 dependencies = [
  "bincode",
+ "hashbrown 0.11.2",
  "lazy_static",
  "maplit",
  "oak_functions_abi",
@@ -2956,6 +2961,7 @@ dependencies = [
 name = "oak_functions_abi"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "prost 0.10.4",
  "prost-build 0.10.4",
  "serde",
@@ -3019,7 +3025,6 @@ dependencies = [
  "anyhow",
  "async-stream",
  "async-trait",
- "bincode",
  "byteorder",
  "bytes",
  "chrono",
@@ -3027,6 +3032,7 @@ dependencies = [
  "criterion",
  "futures",
  "grpc_unary_attestation",
+ "hashbrown 0.11.2",
  "http",
  "humantime-serde",
  "hyper",
@@ -3100,9 +3106,8 @@ name = "oak_functions_lookup"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "bincode",
+ "hashbrown 0.11.2",
  "log",
- "maplit",
  "oak_functions_abi",
  "oak_functions_extension",
  "oak_functions_util",
@@ -4814,9 +4819,9 @@ checksum = "73473c0e59e6d5812c5dfe2a064a6444949f089e20eec9a2e5506596494e4623"
 
 [[package]]
 name = "strum"
-version = "0.24.0"
+version = "0.24.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e96acfc1b70604b8b2f1ffa4c57e59176c7dbb05d556c71ecd2f5498a1dee7f8"
+checksum = "063e6045c0e62079840579a7e47a355ae92f60eb74daaf156fb1e84ba164e63f"
 dependencies = [
  "strum_macros",
 ]

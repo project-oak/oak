@@ -16,6 +16,7 @@
 
 use crate::logger::Logger;
 use anyhow::{anyhow, Context};
+use hashbrown::HashMap;
 use hyper::{body::Bytes, client::connect::Connect, Body, Client, Request};
 use hyper_rustls::HttpsConnectorBuilder;
 use log::Level;
@@ -23,7 +24,7 @@ use oak_functions_lookup::LookupDataManager;
 use oak_logger::OakLogger;
 use prost::Message;
 use serde_derive::Deserialize;
-use std::{collections::HashMap, sync::Arc, time::Instant};
+use std::{sync::Arc, time::Instant};
 
 #[derive(Copy, Clone, Deserialize, Debug)]
 pub enum LookupDataAuth {

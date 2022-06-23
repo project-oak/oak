@@ -93,15 +93,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "904dfeac50f3cdaba28fc6f57fdcddb75f49ed61346676a78c4ffe55877802fd"
 
 [[package]]
-name = "bincode"
-version = "1.3.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b1f45e9417d87227c7a56d22e471c6206462cba514c7590c09aff4cf6d1ddcad"
-dependencies = [
- "serde",
-]
-
-[[package]]
 name = "bitflags"
 version = "1.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -730,6 +721,7 @@ dependencies = [
 name = "oak_functions_abi"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "prost",
  "prost-build",
  "serde",
@@ -751,13 +743,13 @@ dependencies = [
  "anyhow",
  "async-stream",
  "async-trait",
- "bincode",
  "byteorder",
  "bytes",
  "chrono",
  "clap",
  "futures",
  "grpc_unary_attestation",
+ "hashbrown",
  "http",
  "humantime-serde",
  "hyper",
@@ -806,7 +798,7 @@ name = "oak_functions_lookup"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "bincode",
+ "hashbrown",
  "log",
  "oak_functions_abi",
  "oak_functions_extension",

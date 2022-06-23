@@ -16,9 +16,6 @@
 #![no_std]
 
 extern crate alloc;
-// We use the std crate for now until we have no_std-compatible replacements for the map and
-// read-write lock.
-extern crate std;
 
 use alloc::{
     boxed::Box,
@@ -27,15 +24,12 @@ use alloc::{
     sync::Arc,
     vec::Vec,
 };
+use hashbrown::HashMap;
 use log::Level;
 use oak_functions_abi::{proto::OakStatus, ExtensionHandle, StorageGetItemResponse};
 use oak_functions_extension::{ExtensionFactory, OakApiNativeExtension};
-use oak_logger::OakLogger;
-
-// TODO(#2593): Use no_std-compatible map.
-use std::collections::HashMap;
-
 use oak_functions_util::sync::Mutex;
+use oak_logger::OakLogger;
 
 pub struct LookupFactory<L: OakLogger> {
     manager: Arc<LookupDataManager<L>>,
@@ -85,11 +79,7 @@ impl<L: OakLogger> OakApiNativeExtension for LookupData<L> {
             },
         );
 
-        let response = bincode::serialize(&StorageGetItemResponse { value }).map_err(|err| {
-            self.log_debug(&format!("Failed to serialize response: {}", err));
-            OakStatus::ErrInternal
-        })?;
-        Ok(response)
+        Ok(StorageGetItemResponse { value }.into())
     }
 
     fn terminate(&mut self) -> anyhow::Result<()> {
@@ -195,7 +185,7 @@ where
 /// Converts a binary sequence to a string if it is a valid UTF-8 string, or formats it as a numeric
 /// vector of bytes otherwise.
 pub fn format_bytes(v: &[u8]) -> String {
-    std::str::from_utf8(v)
+    alloc::str::from_utf8(v)
         .map(|s| s.to_string())
         .unwrap_or_else(|_| format!("{:?}", v))
 }
@@ -203,7 +193,6 @@ pub fn format_bytes(v: &[u8]) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use maplit::hashmap;
 
     #[derive(Clone)]
     struct TestLogger {}
@@ -220,15 +209,20 @@ mod tests {
         let lookup_data_0 = manager.create_lookup_data();
         assert_eq!(lookup_data_0.len(), 0);
 
-        manager.update_data(hashmap! { b"key1".to_vec() => b"value1".to_vec() });
+        manager.update_data(HashMap::from_iter(
+            [(b"key1".to_vec(), b"value1".to_vec())].into_iter(),
+        ));
         let lookup_data_1 = manager.create_lookup_data();
         assert_eq!(lookup_data_0.len(), 0);
         assert_eq!(lookup_data_1.len(), 1);
 
-        manager.update_data(hashmap! {
-           b"key1".to_vec() => b"value1".to_vec(),
-           b"key2".to_vec() => b"value2".to_vec(),
-        });
+        manager.update_data(HashMap::from_iter(
+            [
+                (b"key1".to_vec(), b"value1".to_vec()),
+                (b"key2".to_vec(), b"value2".to_vec()),
+            ]
+            .into_iter(),
+        ));
         let lookup_data_2 = manager.create_lookup_data();
         assert_eq!(lookup_data_0.len(), 0);
         assert_eq!(lookup_data_1.len(), 1);
