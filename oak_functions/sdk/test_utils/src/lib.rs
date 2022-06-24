@@ -22,7 +22,7 @@ use hyper::{
     Body,
 };
 use log::info;
-use oak_functions_abi::proto::{Request, Response};
+use oak_functions_abi::{Request, Response};
 
 use oak_functions_client::Client;
 use prost::Message;

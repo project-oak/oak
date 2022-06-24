@@ -80,10 +80,8 @@ pub async fn handle_request(
         .context("couldn't execute prediction")?
         .into_inner();
 
-    let wrapped_response = oak_functions_abi::proto::Response::create(
-        oak_functions_abi::proto::StatusCode::Success,
-        response,
-    );
+    let wrapped_response =
+        oak_functions_abi::Response::create(oak_functions_abi::StatusCode::Success, response);
     Ok(wrapped_response.encode_to_vec())
 }
 

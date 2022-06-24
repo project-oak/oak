@@ -22,7 +22,7 @@ use anyhow::Context;
 use clap::Parser;
 use log::{debug, info, trace};
 use maplit::hashmap;
-use oak_functions_abi::proto::Request;
+use oak_functions_abi::Request;
 use oak_functions_client::Client;
 use prost::Message;
 use proto::{

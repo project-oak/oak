@@ -21,7 +21,7 @@ use crate::{
     server::apply_policy,
 };
 use maplit::hashmap;
-use oak_functions_abi::proto::{Response, ServerPolicy, StatusCode};
+use oak_functions_abi::{proto::ServerPolicy, Response, StatusCode};
 use oak_functions_lookup::{LookupDataManager, LookupFactory};
 use oak_functions_workload_logging::WorkloadLoggingFactory;
 use prost::Message;
@@ -42,7 +42,7 @@ async fn test_valid_policy() {
     let constant_processing_time = Duration::from_millis(500);
     let policy = ServerPolicy {
         constant_response_size_bytes: 100,
-        constant_processing_time_ms: constant_processing_time.as_millis() as u32,
+        constant_processing_time_ms: constant_processing_time.as_millis(),
     };
 
     let scenario = |server_port: u16| async move {
@@ -58,7 +58,7 @@ async fn test_valid_policy() {
         );
 
         let response = result.response;
-        assert_eq!(StatusCode::Success as i32, response.status);
+        assert_eq!(StatusCode::Success, response.status);
         assert_eq!(
             std::str::from_utf8(response.body().unwrap()).unwrap(),
             r#"value_1"#
@@ -74,7 +74,7 @@ async fn test_long_response_time() {
     let constant_processing_time = Duration::from_millis(10);
     let policy = ServerPolicy {
         constant_response_size_bytes: 100,
-        constant_processing_time_ms: constant_processing_time.as_millis() as u32,
+        constant_processing_time_ms: constant_processing_time.as_millis(),
     };
 
     // So we expect the request to fail, with `response not available error`.
@@ -91,7 +91,7 @@ async fn test_long_response_time() {
         );
 
         let response = result.response;
-        assert_eq!(StatusCode::PolicyTimeViolation as i32, response.status);
+        assert_eq!(StatusCode::PolicyTimeViolation, response.status);
         assert_eq!(
             std::str::from_utf8(response.body().unwrap()).unwrap(),
             "Reason: response not available."
@@ -415,7 +415,7 @@ async fn test_apply_policy() {
 
     // A valid policy
     let policy = ServerPolicy {
-        constant_response_size_bytes: size as u32,
+        constant_response_size_bytes: size,
         constant_processing_time_ms: 10,
     };
 
@@ -426,7 +426,7 @@ async fn test_apply_policy() {
         let res = apply_policy(policy.clone(), function).await;
         assert!(res.is_ok());
         let response = res.unwrap();
-        assert_eq!(response.status, StatusCode::Success as i32);
+        assert_eq!(response.status, StatusCode::Success);
         assert_eq!(
             response.body.len(),
             policy.constant_response_size_bytes as usize
@@ -440,7 +440,7 @@ async fn test_apply_policy() {
         let res = apply_policy(policy.clone(), function).await;
         assert!(res.is_ok());
         let response = res.unwrap();
-        assert_eq!(response.status, StatusCode::PolicySizeViolation as i32);
+        assert_eq!(response.status, StatusCode::PolicySizeViolation);
         assert_eq!(
             response.body.len(),
             policy.constant_response_size_bytes as usize

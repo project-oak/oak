@@ -17,7 +17,7 @@
 //! Sends an image to the mobilenet application and checks that the response is correct.
 
 use anyhow::Context;
-use oak_functions_abi::proto::Request;
+use oak_functions_abi::Request;
 use oak_functions_client::Client;
 use regex::Regex;
 use tract_tensorflow::prelude::*;

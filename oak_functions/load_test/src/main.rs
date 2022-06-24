@@ -16,7 +16,7 @@
 
 use anyhow::Context;
 use bencher::stats::Stats;
-use oak_functions_abi::proto::Request;
+use oak_functions_abi::Request;
 use oak_functions_client::Client;
 use std::time::Instant;
 

@@ -21,7 +21,7 @@ use location_utils::{
 };
 use lookup_data_generator::data::generate_and_serialize_sparse_weather_entries;
 use maplit::hashmap;
-use oak_functions_abi::proto::{Request, ServerPolicy, StatusCode};
+use oak_functions_abi::{proto::ServerPolicy, Request, StatusCode};
 use oak_functions_loader::{
     grpc::{create_and_start_grpc_server, create_wasm_handler},
     logger::Logger,
@@ -123,7 +123,7 @@ async fn test_server() {
         let response = make_request(server_port, br#"{"lat":52.0,"lng":-0.01}"#)
             .await
             .response;
-        assert_eq!(StatusCode::Success as i32, response.status);
+        assert_eq!(StatusCode::Success, response.status);
         assert_eq!(
             r#"{"temperature_degrees_celsius":10}"#,
             std::str::from_utf8(response.body().unwrap()).unwrap()
@@ -134,7 +134,7 @@ async fn test_server() {
         let response = make_request(server_port, br#"{"lat":51.9,"lng":-0.1}"#)
             .await
             .response;
-        assert_eq!(StatusCode::Success as i32, response.status);
+        assert_eq!(StatusCode::Success, response.status);
         assert_eq!(
             r#"{"temperature_degrees_celsius":10}"#,
             std::str::from_utf8(response.body().unwrap()).unwrap()
@@ -145,7 +145,7 @@ async fn test_server() {
         let response = make_request(server_port, br#"{"lat":51.4,"lng":-0.6}"#)
             .await
             .response;
-        assert_eq!(StatusCode::Success as i32, response.status);
+        assert_eq!(StatusCode::Success, response.status);
         assert_eq!(
             r#"could not find location within cutoff"#,
             std::str::from_utf8(response.body().unwrap()).unwrap()
@@ -156,7 +156,7 @@ async fn test_server() {
         let response = make_request(server_port, br#"{"lat":14.1,"lng":-11.9}"#)
             .await
             .response;
-        assert_eq!(StatusCode::Success as i32, response.status);
+        assert_eq!(StatusCode::Success, response.status);
         assert_eq!(
             r#"{"temperature_degrees_celsius":42}"#,
             std::str::from_utf8(response.body().unwrap()).unwrap()
@@ -167,7 +167,7 @@ async fn test_server() {
         let response = make_request(server_port, br#"{"lat":-10.0,"lng":10.0}"#)
             .await
             .response;
-        assert_eq!(StatusCode::Success as i32, response.status);
+        assert_eq!(StatusCode::Success, response.status);
         assert_eq!(
             r#"could not find index item for cell"#,
             std::str::from_utf8(response.body().unwrap()).unwrap()
@@ -176,7 +176,7 @@ async fn test_server() {
     {
         // Malformed request.
         let response = make_request(server_port, b"invalid - JSON").await.response;
-        assert_eq!(StatusCode::Success as i32, response.status);
+        assert_eq!(StatusCode::Success, response.status);
         assert_eq!(
             "could not deserialize request as JSON: Error(\"expected value\", line: 1, column: 1)",
             std::str::from_utf8(response.body().unwrap()).unwrap()
@@ -233,7 +233,7 @@ fn bench_wasm_handler(bencher: &mut Bencher, warmup: bool) {
                 body: br#"{"lat":-60.1,"lng":120.1}"#.to_vec(),
             };
             let resp = wasm_handler.clone().handle_invoke(request).unwrap();
-            assert_eq!(resp.status, StatusCode::Success as i32);
+            assert_eq!(resp.status, StatusCode::Success);
         });
     });
 

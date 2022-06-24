@@ -20,7 +20,7 @@ use libfuzzer_sys::{
     arbitrary::{Arbitrary, Result, Unstructured},
     fuzz_target,
 };
-use oak_functions_abi::proto::{Response, ServerPolicy, StatusCode};
+use oak_functions_abi::{proto::ServerPolicy, Response, StatusCode};
 use oak_functions_loader::server::apply_policy;
 
 #[derive(Debug)]
@@ -32,7 +32,7 @@ struct ResponseAndValidPolicy {
 impl Arbitrary<'_> for ResponseAndValidPolicy {
     fn arbitrary(raw: &mut Unstructured<'_>) -> Result<Self> {
         let body = <Vec<u8>>::arbitrary(raw)?;
-        let status: i32 = raw.int_in_range(0..=StatusCode::InternalServerError as i32)?;
+        let status: i32 = raw.int_in_range(0..=StatusCode::InternalServerError as u32)?;
         let length = body.len() as u64;
 
         let response = Response {

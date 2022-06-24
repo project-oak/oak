@@ -16,7 +16,7 @@
 use crate::logger::Logger;
 use anyhow::Context;
 use futures::future::FutureExt;
-use oak_functions_abi::proto::{Response, ServerPolicy, StatusCode};
+use oak_functions_abi::{proto::ServerPolicy, Response, StatusCode};
 use serde::Deserialize;
 use std::{convert::TryInto, str, time::Duration};
 

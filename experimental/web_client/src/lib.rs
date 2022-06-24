@@ -21,12 +21,11 @@ extern crate web_sys;
 use crate::proto::{UnaryRequest, UnaryResponse};
 use anyhow::Context;
 use async_trait::async_trait;
-use oak_functions_abi::proto::Response;
+use oak_functions_abi::Response;
 use oak_remote_attestation::handshaker::{AttestationBehavior, EmptyAttestationGenerator};
 use oak_remote_attestation_amd::PlaceholderAmdAttestationVerifier;
 use oak_remote_attestation_sessions::SessionId;
 use oak_remote_attestation_sessions_client::{GenericAttestationClient, UnaryClient};
-use prost::Message;
 use std::rc::Rc;
 use wasm_bindgen::prelude::*;
 
@@ -125,7 +124,7 @@ impl WebClient {
             js_sys::Reflect::set(
                 &js_response_object,
                 &"status".into(),
-                &response.status.into(),
+                &(response.status as u32).into(),
             )?;
             js_sys::Reflect::set(
                 &js_response_object,

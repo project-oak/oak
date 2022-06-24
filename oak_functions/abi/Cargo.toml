@@ -12,6 +12,8 @@ serde = { version = "*", default-features = false, features = [
   "alloc",
   "derive"
 ] }
+strum = { version = "*", default-features = false, features = ["derive"] }
+static_assertions = "*"
 
 [build-dependencies]
 prost-build = "*"

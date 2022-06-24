@@ -17,7 +17,7 @@ extern crate test;
 
 use hashbrown::HashMap;
 use maplit::hashmap;
-use oak_functions_abi::proto::{Request, ServerPolicy, StatusCode};
+use oak_functions_abi::{proto::ServerPolicy, Request, StatusCode};
 use oak_functions_loader::{
     grpc::{create_and_start_grpc_server, create_wasm_handler},
     logger::Logger,
@@ -92,19 +92,19 @@ async fn test_server() {
     {
         // Lookup match.
         let response = make_request(server_port, b"key_1").await.response;
-        assert_eq!(StatusCode::Success as i32, response.status);
+        assert_eq!(StatusCode::Success, response.status);
         assert_eq!(b"value_1", response.body().unwrap(),);
     }
     {
         // Lookup fail.
         let response = make_request(server_port, b"key_42").await.response;
-        assert_eq!(StatusCode::Success as i32, response.status);
+        assert_eq!(StatusCode::Success, response.status);
         assert_eq!(Vec::<u8>::new(), response.body().unwrap());
     }
     {
         // Lookup match but empty value.
         let response = make_request(server_port, b"empty").await.response;
-        assert_eq!(StatusCode::Success as i32, response.status);
+        assert_eq!(StatusCode::Success, response.status);
         assert_eq!(Vec::<u8>::new(), response.body().unwrap());
     }
 
@@ -145,7 +145,7 @@ fn bench_wasm_handler(bencher: &mut Bencher) {
                 body: br#"key_1"#.to_vec(),
             };
             let resp = wasm_handler.clone().handle_invoke(request).unwrap();
-            assert_eq!(resp.status, StatusCode::Success as i32);
+            assert_eq!(resp.status, StatusCode::Success);
             assert_eq!(std::str::from_utf8(&resp.body).unwrap(), r#"value_1"#);
         });
     });
