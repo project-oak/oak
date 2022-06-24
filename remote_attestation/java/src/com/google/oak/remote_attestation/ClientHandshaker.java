@@ -220,8 +220,8 @@ public class ClientHandshaker {
   }
 
   /**
-   * Appends {@code serializedMessage} to the protocol transcript. Transcript is a concatenation of
-   * all sent and received messages, which is used for preventing replay attacks.
+   * Appends {@code serializedMessage} to the protocol transcript. The protocol transcript is a
+   * concatenation of all sent and received messages, which is used for preventing replay attacks.
    */
   private void appendTranscript(byte[] serializedMessage) {
     transcript = Bytes.concat(transcript, serializedMessage);

@@ -227,7 +227,7 @@ impl ServerIdentity {
             + REPLAY_PROTECTION_ARRAY_LENGTH
             + SIGNATURE_LENGTH
             + SIGNING_ALGORITHM_KEY_LENGTH
-            + VEC_SIZE_PREFIX_LENGTH
+            + VEC_SIZE_PREFIX_LENGTH // for attestation_report
     }
 }
 
@@ -323,7 +323,7 @@ impl ClientIdentity {
             + KEY_AGREEMENT_ALGORITHM_KEY_LENGTH
             + SIGNATURE_LENGTH
             + SIGNING_ALGORITHM_KEY_LENGTH
-            + VEC_SIZE_PREFIX_LENGTH
+            + VEC_SIZE_PREFIX_LENGTH // for attestation_report
     }
 }
 
