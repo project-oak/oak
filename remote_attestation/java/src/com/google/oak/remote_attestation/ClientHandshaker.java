@@ -172,6 +172,7 @@ public class ClientHandshaker {
   }
 
   // TODO(#2356): Change the return type to `VerificationResult`.
+  // TODO(#2420): Make sure the implementation is consistent with that in the Rust client.
   /**
    * Verifies the validity of the attestation info:
    *
