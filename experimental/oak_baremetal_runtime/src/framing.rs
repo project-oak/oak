@@ -27,12 +27,14 @@ use oak_baremetal_communication_channel::{
     server::{message_from_response_and_id, ServerChannelHandle},
     Read, Write,
 };
+use oak_functions_abi::proto::Request;
 use oak_functions_lookup::LookupDataManager;
 use oak_idl::Handler;
 use oak_remote_attestation::handshaker::{
     AttestationBehavior, AttestationGenerator, AttestationVerifier,
 };
 use oak_remote_attestation_sessions::SessionId;
+use prost::Message;
 
 enum InitializationState<G, V>
 where
@@ -83,7 +85,13 @@ where
                     wasm::new_wasm_handler(wasm_module_bytes, self.lookup_data_manager.clone())
                         .map_err(|_err| oak_idl::Status::new(oak_idl::StatusCode::Internal))?;
                 let attestation_handler = Box::new(AttestationSessionHandler::create(
-                    move |v| wasm_handler.handle_raw_invoke(v),
+                    move |decrypted_request| {
+                        wasm_handler
+                            .handle_invoke(Request {
+                                body: decrypted_request,
+                            })
+                            .map(|decrypted_response| decrypted_response.encode_to_vec())
+                    },
                     attestation_behavior,
                 ));
                 self.initialization_state = InitializationState::Initialized(attestation_handler);

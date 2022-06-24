@@ -254,7 +254,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
-    let server_future = server::server("127.0.0.1:8000".parse()?, tx);
+    let server_future = server::server("127.0.0.1:8080".parse()?, tx);
 
     // Wait until something dies or we get a signal to terminate.
     tokio::select! {

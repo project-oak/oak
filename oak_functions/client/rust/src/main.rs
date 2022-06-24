@@ -32,13 +32,25 @@ pub struct Opt {
         default_value = "http://localhost:8080"
     )]
     uri: String,
-    #[clap(long, help = "request payload")]
-    request: String,
+
+    #[clap(
+        long,
+        help = "request payload",
+        required_unless_present = "test-large-message"
+    )]
+    request: Option<String>,
+
     /// Optional, only for testing.
     #[clap(long, help = "expected response body, for testing")]
     expected_response_pattern: Option<String>,
-    #[clap(long, help = "communicate using unary requests")]
-    unary_request_model: bool,
+
+    /// Number of times the request should be sent, and the expected response validated.
+    #[clap(long, requires_all = &["request", "expected-response-pattern"])]
+    iterations: Option<usize>,
+
+    /// Test sending a large message
+    #[clap(long, conflicts_with_all = &["request", "expected-response-pattern", "iterations"])]
+    test_large_message: bool,
 }
 
 #[tokio::main]
@@ -46,24 +58,47 @@ async fn main() -> anyhow::Result<()> {
     env_logger::init();
     let opt = Opt::parse();
 
-    let request = Request {
-        body: opt.request.as_bytes().to_vec(),
-    };
-
     let mut client = Client::new(&opt.uri)
         .await
         .context("Could not create Oak Functions client")?;
 
-    let response = client
-        .invoke(request)
-        .await
-        .context("Could not invoke Oak Functions")?;
+    if (opt.test_large_message) {
+        // The client should be a able to send a large message without
+        // crashing or hanging.
+        let response = client
+            .send(&LARGE_MESSAGE)
+            .await
+            .context("Error invoking Oak Functions instance");
+        assert!(response.is_ok());
+        return Ok(());
+    }
 
-    let response_body = std::str::from_utf8(response.body().unwrap()).unwrap();
-    println!("{}", response_body);
-    if let Some(expected) = opt.expected_response_pattern {
-        let re = Regex::new(&expected).unwrap();
-        assert!(re.is_match(response_body));
+    let iterations = opt.iterations.unwrap_or(1);
+
+    let request = opt.request.unwrap();
+
+    println!(
+        "req: {:?}",
+        Request {
+            body: request.as_bytes().to_vec(),
+        }
+    );
+
+    for _ in 0..iterations {
+        let response = client
+            .invoke(Request {
+                body: request.as_bytes().to_vec(),
+            })
+            .await
+            .context("Could not invoke Oak Functions")?;
+
+        println!("Response: {:?}", response);
+        let response_body = std::str::from_utf8(response.body().unwrap()).unwrap();
+        println!("Response: {:?}", response_body);
+        if let Some(ref expected) = opt.expected_response_pattern {
+            let re = Regex::new(expected).unwrap();
+            assert!(re.is_match(response_body));
+        }
     }
 
     Ok(())
