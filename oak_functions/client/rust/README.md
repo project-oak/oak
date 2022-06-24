@@ -23,13 +23,22 @@ Example invocation:
 
 ## Verification logic
 
-As part of the Remote Attestation handshake the server sends to the client some
-additional info along with the attestation quote. The client verifies this
-additional information according to its policy, before sending any requests to
-the server. If the additional information contains a LogEntry from Rekor and an
-accompanying endorsement file, then the client verifies the LogEntry and the
-content of the endorsement file. In particular, the SHA256 hash of the binary in
-the subject of the endorsement file must be the same as the hash of the binary
-received in the attestation quote. Checking the LogEntry involves verifying the
+The client may have a privacy policy that the server must conform to. If the
+client has such a policy, before sending requests to the server, the client has
+to verify the policy. To do this the client first requests the relevant
+information (e.g., server configuration information, and endorsement evidence)
+from the server. The exact details of the exchange of this information between
+the server and the client is still unclear. However, the endorsement evidence is
+an important part of it and must contain an endorsement statement about the
+server binary, signed by the product team, and a LogEntry from Rekor (a
+transparency log) to prove the inclusion of the endorsement statement in the
+log.
+
+Verifying the endorsement evidence, if required by the client policy, includes
+verifying the Rekor LogEntry and the content of the endorsement file. In
+particular, the SHA256 hash of the binary in the subject of the endorsement file
+must be the same as the hash of the server binary (also provided to the client
+in an attestation report). Checking the LogEntry involves verifying the
 `signedEntryTimestamp` using Rekor's public key, and the signature in the body
-of the LogEntry using Oak's public key.
+of the LogEntry using Oak's public key (or more generally the product team's
+public key).
