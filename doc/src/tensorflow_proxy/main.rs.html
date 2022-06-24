@@ -156,18 +156,6 @@
 <span id="151">151</span>
 <span id="152">152</span>
 <span id="153">153</span>
-<span id="154">154</span>
-<span id="155">155</span>
-<span id="156">156</span>
-<span id="157">157</span>
-<span id="158">158</span>
-<span id="159">159</span>
-<span id="160">160</span>
-<span id="161">161</span>
-<span id="162">162</span>
-<span id="163">163</span>
-<span id="164">164</span>
-<span id="165">165</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2021 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -206,9 +194,7 @@
     <span class="ident">proto::unary_session_server::UnarySessionServer</span>, <span class="ident">server::AttestationServer</span>,
 };
 <span class="kw">use</span> <span class="ident">log::warn</span>;
-<span class="kw">use</span> <span class="ident">oak_functions_abi::proto::ConfigurationReport</span>;
 <span class="kw">use</span> <span class="ident">oak_utils::LogError</span>;
-<span class="kw">use</span> <span class="ident">prost::Message</span>;
 <span class="kw">use</span> <span class="ident">std</span>::{
     <span class="ident">fs::canonicalize</span>,
     <span class="ident">net</span>::{<span class="ident">Ipv6Addr</span>, <span class="ident">SocketAddr</span>},
@@ -261,21 +247,11 @@
     <span class="kw">let</span> <span class="ident">backend</span> <span class="op">=</span> <span class="ident">grpc::BackendConnection::connect</span>(<span class="ident">SOCKET</span>).<span class="kw">await</span>;
     <span class="kw">let</span> <span class="ident">client</span> <span class="op">=</span> <span class="ident">backend</span>.<span class="ident">create_client</span>();
 
-    <span class="comment">// Create fake configuration report for now, as it cannot be empty for the attestation</span>
-    <span class="comment">// handshake.</span>
-    <span class="comment">// TODO(#2420): Remove once Java client can work without the configuration report.</span>
-    <span class="kw">let</span> <span class="ident">additional_info</span> <span class="op">=</span> <span class="ident">ConfigurationReport</span> {
-        <span class="ident">wasm_hash</span>: <span class="macro">vec!</span>[<span class="number">0</span>, <span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>],
-        <span class="ident">policy</span>: <span class="prelude-val">None</span>,
-    }
-    .<span class="ident">encode_to_vec</span>();
-
     <span class="kw">let</span> <span class="ident">request_handler</span> <span class="op">=</span> <span class="kw">async</span> <span class="kw">move</span> <span class="op">|</span><span class="ident">request</span><span class="op">|</span> <span class="ident">handle_request</span>(<span class="ident">client</span>.<span class="ident">clone</span>(), <span class="ident">request</span>).<span class="kw">await</span>;
 
     <span class="ident">Server::builder</span>()
         .<span class="ident">add_service</span>(<span class="ident">UnarySessionServer::new</span>(<span class="ident">AttestationServer::create</span>(
             <span class="ident">request_handler</span>,
-            <span class="ident">additional_info</span>,
             <span class="ident">ErrorLogger</span>,
         )<span class="question-mark">?</span>))
         .<span class="ident">serve</span>(<span class="ident">address</span>)

@@ -97,16 +97,6 @@
 <span id="92">92</span>
 <span id="93">93</span>
 <span id="94">94</span>
-<span id="95">95</span>
-<span id="96">96</span>
-<span id="97">97</span>
-<span id="98">98</span>
-<span id="99">99</span>
-<span id="100">100</span>
-<span id="101">101</span>
-<span id="102">102</span>
-<span id="103">103</span>
-<span id="104">104</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2022 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -129,7 +119,7 @@
 
 <span class="kw">extern</span> <span class="kw">crate</span> <span class="ident">alloc</span>;
 
-<span class="kw">use</span> <span class="ident">alloc</span>::{<span class="ident">boxed::Box</span>, <span class="ident">sync::Arc</span>, <span class="ident">vec::Vec</span>};
+<span class="kw">use</span> <span class="ident">alloc::boxed::Box</span>;
 <span class="kw">use</span> <span class="ident">lru::LruCache</span>;
 <span class="kw">use</span> <span class="ident">oak_remote_attestation::handshaker</span>::{
     <span class="ident">AttestationBehavior</span>, <span class="ident">AttestationGenerator</span>, <span class="ident">AttestationVerifier</span>, <span class="ident">Encryptor</span>, <span class="ident">ServerHandshaker</span>,
@@ -147,21 +137,14 @@
 <span class="doccomment">/// Maintains remote attestation state for a number of sessions</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">SessionTracker</span><span class="op">&lt;</span><span class="ident">G</span>: <span class="ident">AttestationGenerator</span>, <span class="ident">V</span>: <span class="ident">AttestationVerifier</span><span class="op">&gt;</span> {
     <span class="ident">attestation_behavior</span>: <span class="ident">AttestationBehavior</span><span class="op">&lt;</span><span class="ident">G</span>, <span class="ident">V</span><span class="op">&gt;</span>,
-    <span class="doccomment">/// Configuration information to provide to the client for the attestation step.</span>
-    <span class="ident">additional_info</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span>,
     <span class="ident">known_sessions</span>: <span class="ident">LruCache</span><span class="op">&lt;</span><span class="ident">SessionId</span>, <span class="ident">SessionState</span><span class="op">&lt;</span><span class="ident">G</span>, <span class="ident">V</span><span class="op">&gt;</span><span class="op">&gt;</span>,
 }
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">G</span>: <span class="ident">AttestationGenerator</span>, <span class="ident">V</span>: <span class="ident">AttestationVerifier</span><span class="op">&gt;</span> <span class="ident">SessionTracker</span><span class="op">&lt;</span><span class="ident">G</span>, <span class="ident">V</span><span class="op">&gt;</span> {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">create</span>(
-        <span class="ident">cache_size</span>: <span class="ident">usize</span>,
-        <span class="ident">attestation_behavior</span>: <span class="ident">AttestationBehavior</span><span class="op">&lt;</span><span class="ident">G</span>, <span class="ident">V</span><span class="op">&gt;</span>,
-        <span class="ident">additional_info</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
-    ) -&gt; <span class="self">Self</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">create</span>(<span class="ident">cache_size</span>: <span class="ident">usize</span>, <span class="ident">attestation_behavior</span>: <span class="ident">AttestationBehavior</span><span class="op">&lt;</span><span class="ident">G</span>, <span class="ident">V</span><span class="op">&gt;</span>) -&gt; <span class="self">Self</span> {
         <span class="kw">let</span> <span class="ident">known_sessions</span> <span class="op">=</span> <span class="ident">LruCache::new</span>(<span class="ident">cache_size</span>);
         <span class="self">Self</span> {
             <span class="ident">attestation_behavior</span>,
-            <span class="ident">additional_info</span>: <span class="ident">Arc::new</span>(<span class="ident">additional_info</span>),
             <span class="ident">known_sessions</span>,
         }
     }
@@ -181,10 +164,7 @@
     ) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">SessionState</span><span class="op">&lt;</span><span class="ident">G</span>, <span class="ident">V</span><span class="op">&gt;</span><span class="op">&gt;</span> {
         <span class="kw">match</span> <span class="self">self</span>.<span class="ident">known_sessions</span>.<span class="ident">pop</span>(<span class="kw-2">&amp;</span><span class="ident">session_id</span>) {
             <span class="prelude-val">None</span> =&gt; <span class="prelude-val">Ok</span>(<span class="ident">SessionState::HandshakeInProgress</span>(<span class="ident">Box::new</span>(
-                <span class="ident">ServerHandshaker::new</span>(
-                    <span class="self">self</span>.<span class="ident">attestation_behavior</span>.<span class="ident">clone</span>(),
-                    <span class="self">self</span>.<span class="ident">additional_info</span>.<span class="ident">clone</span>(),
-                )<span class="question-mark">?</span>,
+                <span class="ident">ServerHandshaker::new</span>(<span class="self">self</span>.<span class="ident">attestation_behavior</span>.<span class="ident">clone</span>())<span class="question-mark">?</span>,
             ))),
             <span class="prelude-val">Some</span>(<span class="ident">SessionState::HandshakeInProgress</span>(<span class="ident">handshaker</span>)) =&gt; {
                 <span class="comment">// Completed handshakers are functionally just wrap an</span>

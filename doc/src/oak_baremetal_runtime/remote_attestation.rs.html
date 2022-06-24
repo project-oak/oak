@@ -104,12 +104,6 @@
 <span id="99">99</span>
 <span id="100">100</span>
 <span id="101">101</span>
-<span id="102">102</span>
-<span id="103">103</span>
-<span id="104">104</span>
-<span id="105">105</span>
-<span id="106">106</span>
-<span id="107">107</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2022 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -152,18 +146,12 @@
     <span class="ident">request_handler</span>: <span class="ident">F</span>,
 }
 
-<span class="kw">const</span> <span class="ident">MOCK_ADDITIONAL_INFO</span>: [<span class="ident">u8</span>; <span class="number">0</span>] <span class="op">=</span> [];
-
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">G</span>: <span class="ident">AttestationGenerator</span>, <span class="ident">V</span>: <span class="ident">AttestationVerifier</span><span class="op">&gt;</span> <span class="ident">AttestationSessionHandler</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">G</span>, <span class="ident">V</span><span class="op">&gt;</span>
 <span class="kw">where</span>
     <span class="ident">F</span>: <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span> <span class="op">+</span> <span class="ident">Clone</span> <span class="op">+</span> <span class="ident">FnOnce</span>(<span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span>,
 {
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">create</span>(<span class="ident">request_handler</span>: <span class="ident">F</span>, <span class="ident">attestation_behavior</span>: <span class="ident">AttestationBehavior</span><span class="op">&lt;</span><span class="ident">G</span>, <span class="ident">V</span><span class="op">&gt;</span>) -&gt; <span class="self">Self</span> {
-        <span class="kw">let</span> <span class="ident">session_tracker</span> <span class="op">=</span> <span class="ident">SessionTracker::create</span>(
-            <span class="ident">SESSIONS_CACHE_SIZE</span>,
-            <span class="ident">attestation_behavior</span>,
-            <span class="ident">MOCK_ADDITIONAL_INFO</span>.<span class="ident">to_vec</span>(),
-        );
+        <span class="kw">let</span> <span class="ident">session_tracker</span> <span class="op">=</span> <span class="ident">SessionTracker::create</span>(<span class="ident">SESSIONS_CACHE_SIZE</span>, <span class="ident">attestation_behavior</span>);
 
         <span class="self">Self</span> {
             <span class="ident">session_tracker</span>,
