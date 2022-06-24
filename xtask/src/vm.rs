@@ -70,7 +70,7 @@ fn run_variant(variant: Variant) -> Step {
             Step::WithBackground {
                 name: "background loader".to_string(),
                 background: run_loader(variant),
-                foreground: Box::new(run_client("test_key", "test_value", 300)),
+                foreground: Box::new(run_client("test_key", "^test_value$", 300)),
             },
         ],
     }
@@ -97,14 +97,14 @@ fn run_client(request: &str, expected_response: &str, iterations: usize) -> Step
     Step::Multiple {
         name: "build and run client".to_string(),
         steps: vec![
-            build_binary("build client binary", "./experimental/oak_baremetal_client"),
+            build_binary("build client binary", "./oak_functions/client/rust"),
             Step::Single {
                 name: "run client".to_string(),
                 command: Cmd::new(
-                    "./target/debug/oak_baremetal_client",
+                    "./target/debug/oak_functions_client",
                     vec![
                         format!("--request={}", request),
-                        format!("--expected-response={}", expected_response),
+                        format!("--expected-response-pattern={}", expected_response),
                         format!("--iterations={}", iterations),
                     ],
                 ),
