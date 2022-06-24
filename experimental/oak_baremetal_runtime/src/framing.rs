@@ -89,7 +89,7 @@ where
                             .handle_invoke(Request {
                                 body: decrypted_request,
                             })
-                            .and_then(|response| Ok(response.encode_to_vec()))
+                            .map(|response| response.encode_to_vec())
                     },
                     attestation_behavior,
                 ));
