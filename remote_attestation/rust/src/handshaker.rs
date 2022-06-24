@@ -264,7 +264,6 @@ impl<G: AttestationGenerator, V: AttestationVerifier> ClientHandshaker<G, V> {
             .public_key()
             .context("Couldn't get ephemeral public key")?;
 
-        // TODO(#2914): Support additional attestation info in ClientIdentity.
         let attested_data =
             attestation_data(&ephemeral_public_key, &self.transcript_signer.public_key()?);
         let attestation_report = self

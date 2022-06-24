@@ -188,7 +188,8 @@ public class ClientHandshaker {
    * <p>
    */
   private Boolean verifyAttestationInfo(Message.ServerIdentity serverIdentity) throws IOException {
-    // Generate expected attested data as the hash of the public key and the signing key.
+    // Generate expected attested data by calculating the SHA256 hash of the public key and the
+    // signing key.
     byte[] ephemeralPublicKeyHash = sha256(serverIdentity.getEphemeralPublicKey());
     byte[] signingPublicKeyHash = sha256(serverIdentity.getSigningPublicKey());
     byte[] buffer = ByteBuffer.allocate(ephemeralPublicKeyHash.length + signingPublicKeyHash.length)

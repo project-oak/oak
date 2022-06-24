@@ -88,8 +88,8 @@ pub async fn create_and_start_grpc_server<F: Future<Output = ()>>(
             .context("Couldn't create remote attestation server")?,
         );
 
-    // Create a server and add the relevant service defintions. Server creation
-    // and start is handled entirely witin each respective conditional arm, as
+    // Create a server and add the relevant service definitions. Server creation
+    // and start is handled entirely within each respective conditional arm, as
     // the added service alters the type signature of the created server.
     if cfg!(feature = "oak-web") {
         #[cfg(feature = "oak-web")]
