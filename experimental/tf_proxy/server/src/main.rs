@@ -36,9 +36,7 @@ use grpc_unary_attestation::{
     proto::unary_session_server::UnarySessionServer, server::AttestationServer,
 };
 use log::warn;
-use oak_functions_abi::proto::ConfigurationReport;
 use oak_utils::LogError;
-use prost::Message;
 use std::{
     fs::canonicalize,
     net::{Ipv6Addr, SocketAddr},
@@ -91,21 +89,11 @@ async fn main() -> anyhow::Result<()> {
     let backend = grpc::BackendConnection::connect(SOCKET).await;
     let client = backend.create_client();
 
-    // Create fake configuration report for now, as it cannot be empty for the attestation
-    // handshake.
-    // TODO(#2420): Remove once Java client can work without the configuration report.
-    let additional_info = ConfigurationReport {
-        wasm_hash: vec![0, 1, 2, 3],
-        policy: None,
-    }
-    .encode_to_vec();
-
     let request_handler = async move |request| handle_request(client.clone(), request).await;
 
     Server::builder()
         .add_service(UnarySessionServer::new(AttestationServer::create(
             request_handler,
-            additional_info,
             ErrorLogger,
         )?))
         .serve(address)

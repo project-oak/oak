@@ -45,18 +45,13 @@ where
     S: std::future::Future<Output = anyhow::Result<Vec<u8>>> + Send + Sync,
     L: Send + Sync + Clone + LogError,
 {
-    pub fn create(
-        request_handler: F,
-        additional_info: Vec<u8>,
-        error_logger: L,
-    ) -> anyhow::Result<Self> {
+    pub fn create(request_handler: F, error_logger: L) -> anyhow::Result<Self> {
         let session_tracker = Mutex::new(SessionTracker::create(
             SESSIONS_CACHE_SIZE,
             AttestationBehavior::create(
                 PlaceholderAmdAttestationGenerator,
                 EmptyAttestationVerifier,
             ),
-            additional_info,
         ));
         Ok(Self {
             request_handler,

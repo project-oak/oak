@@ -19,14 +19,9 @@ package com.google.oak.remote_attestation;
 import com.google.common.base.VerifyException;
 import com.google.common.hash.Hashing;
 import com.google.common.primitives.Bytes;
-import com.google.oak.remote_attestation.AeadEncryptor;
-import com.google.oak.remote_attestation.KeyNegotiator;
-import com.google.oak.remote_attestation.Message;
-import com.google.oak.remote_attestation.SignatureVerifier;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.security.GeneralSecurityException;
-import java.util.Arrays;
 import java.util.Random;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -49,8 +44,8 @@ public class ClientHandshaker {
   /** Current state of the remote attestation protocol. */
   private State state;
   /**
-   * Collection of previously sent and received messages.
-   * Signed transcript is sent in messages to prevent replay attacks.
+   * Collection of previously sent and received messages. Signed transcript is sent in messages to
+   * prevent replay attacks.
    */
   private byte[] transcript;
   /** Implementation of the X25519 Elliptic Curve Diffie-Hellman (ECDH) key negotiation. */
@@ -70,8 +65,8 @@ public class ClientHandshaker {
   /**
    * Initializes the remote attestation handshake by creating an {@code ClientHello} message.
    *
-   * Transitions {@code ClientHandshaker} state from {@code State.INITIALIZING} to
-   * {@code State.EXPECTING_SERVER_IDENTITY} state.
+   * <p>Transitions {@code ClientHandshaker} state from {@code State.INITIALIZING} to {@code
+   * State.EXPECTING_SERVER_IDENTITY} state.
    */
   public byte[] createClientHello() throws IOException {
     try {
@@ -100,10 +95,10 @@ public class ClientHandshaker {
 
   /**
    * Responds to {@code ServerIdentity} message by creating a {@code ClientIdentity} message and
-   * derives session keys for encrypting/decrypting messages from the server.
-   * {@code ClientIdentity} message contains an ephemeral public key for negotiating session keys.
+   * derives session keys for encrypting/decrypting messages from the server. {@code ClientIdentity}
+   * message contains an ephemeral public key for negotiating session keys.
    *
-   * Transitions {@code ClientHandshaker} state from {@code State.EXPECTING_SERVER_IDENTITY} to
+   * <p>Transitions {@code ClientHandshaker} state from {@code State.EXPECTING_SERVER_IDENTITY} to
    * {@code State.Attested} state.
    */
   public byte[] processServerIdentity(byte[] serializedServerIdentity)
@@ -119,10 +114,9 @@ public class ClientHandshaker {
 
       // Update current transcript.
       // Transcript doesn't include transcript signature from the server identity message.
-      Message.ServerIdentity serverIdentityNoSignature =
-          new Message.ServerIdentity(serverIdentity.getEphemeralPublicKey(),
-              serverIdentity.getRandom(), serverIdentity.getSigningPublicKey(),
-              serverIdentity.getAttestationReport(), serverIdentity.getAdditionalAttestationData());
+      Message.ServerIdentity serverIdentityNoSignature = new Message.ServerIdentity(
+          serverIdentity.getEphemeralPublicKey(), serverIdentity.getRandom(),
+          serverIdentity.getSigningPublicKey(), serverIdentity.getAttestationReport());
       byte[] serializedServerIdentityNoSignature = serverIdentityNoSignature.serialize();
       appendTranscript(serializedServerIdentityNoSignature);
 
@@ -178,38 +172,36 @@ public class ClientHandshaker {
   }
 
   // TODO(#2356): Change the return type to `VerificationResult`.
+  // TODO(#2420): Make sure the implementation is consistent with that in the Rust client.
   /**
    * Verifies the validity of the attestation info:
-   * - Checks that the TEE report is signed by TEE Provider’s root key.
-   * - Checks that the public key hash from the TEE report is equal to the hash of the public key
-   *   presented in the server response.
-   * - Extracts the TEE measurement from the TEE report and compares it to the
-   *   {@code expectedTeeMeasurement}.
+   *
+   * <p>
+   *
+   * <ul>
+   *   <li>Checks that the TEE report is signed by TEE Provider’s root key.
+   *   <li>Checks that the public key hash from the TEE report is equal to the hash of the public
+   *       key presented in the server response.
+   *   <li>Extracts the TEE measurement from the TEE report and compares it to the field {@code
+   *       expectedTeeMeasurement}.
+   * </ul>
+   *
+   * <p>
    */
   private Boolean verifyAttestationInfo(Message.ServerIdentity serverIdentity) throws IOException {
-    byte[] additionalAttestationData = serverIdentity.getAdditionalAttestationData();
-
-    // Ensure additional attestation data was supplied.
-    if (!verifyAdditionalAttestationData(additionalAttestationData)) {
-      logger.log(Level.WARNING, "Additional attestation data was invalid");
-      return false;
-    }
-
-    // Check the hash of the public key and additional info
+    // Generate expected attested data by calculating the SHA256 hash of the public key and the
+    // signing key.
     byte[] ephemeralPublicKeyHash = sha256(serverIdentity.getEphemeralPublicKey());
     byte[] signingPublicKeyHash = sha256(serverIdentity.getSigningPublicKey());
-    byte[] additionalAttestationDataHash = sha256(additionalAttestationData);
-    byte[] buffer = ByteBuffer
-                        .allocate(ephemeralPublicKeyHash.length + signingPublicKeyHash.length
-                            + additionalAttestationDataHash.length)
+    byte[] buffer = ByteBuffer.allocate(ephemeralPublicKeyHash.length + signingPublicKeyHash.length)
                         .put(ephemeralPublicKeyHash)
                         .put(signingPublicKeyHash)
-                        .put(additionalAttestationDataHash)
                         .array();
-    byte[] hashBytes = sha256(buffer);
+    byte[] expectedAttestedData = sha256(buffer);
 
     // Verify attestationReport.
-    if (!verifyRemoteAttestationReport(serverIdentity.getAttestationReport(), hashBytes)) {
+    if (!verifyRemoteAttestationReport(
+            serverIdentity.getAttestationReport(), expectedAttestedData)) {
       logger.log(Level.WARNING, "Invalid remote attestation report");
       return false;
     }
@@ -218,13 +210,8 @@ public class ClientHandshaker {
     return true;
   }
 
-  private boolean verifyAdditionalAttestationData(byte[] additionalAttestationData) {
-    // TODO(#2917): Implement this method.
-    return true;
-  }
-
   private boolean verifyRemoteAttestationReport(
-      byte[] attestationReport, byte[] expectedAdditionalAttestationData) {
+      byte[] attestationReport, byte[] expectedAttestedData) {
     // TODO(#2917): Implement this method.
     return true;
   }
@@ -234,9 +221,8 @@ public class ClientHandshaker {
   }
 
   /**
-   * Appends {@code serializedMessage} to the protocol transcript.
-   * Transcript is a concatenation of all sent and received messages, which is used for preventing
-   * replay attacks.
+   * Appends {@code serializedMessage} to the protocol transcript. The protocol transcript is a
+   * concatenation of all sent and received messages, which is used for preventing replay attacks.
    */
   private void appendTranscript(byte[] serializedMessage) {
     transcript = Bytes.concat(transcript, serializedMessage);

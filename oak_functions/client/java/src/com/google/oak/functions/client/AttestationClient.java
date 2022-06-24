@@ -145,11 +145,6 @@ public class AttestationClient {
     UnaryResponse serverIdentityResponse = stub.message(clientHelloRequest);
     byte[] serverIdentity = serverIdentityResponse.getBody().toByteArray();
 
-    // Verify ServerIdentity, including its configuration and proof of its inclusion in Rekor.
-    if (!verifyServerIdentity(serverIdentity, verifier)) {
-      throw new VerificationException("Verification of ServerIdentity failed.");
-    }
-
     // Remotely attest the server and create:
     // - Client attestation identity containing client's ephemeral public key
     // - Encryptor used for decrypting/encrypting messages between client and server
@@ -160,42 +155,6 @@ public class AttestationClient {
                                              .build();
     stub.message(clientIdentityRequest);
     encryptor = handshaker.getEncryptor();
-  }
-
-  // TODO(#2356): Change the return type to `VerificationResult` instead of throwing an exception.
-  /**
-   * Verifies server identity including its configuration.
-   *
-   * This function performs the following steps:
-   *
-   * - Deserializes `serializedServerIdentity` into an instance of {@code
-   * Message.ServerIdentity}. Throws IOException if the deserialization fails.
-   * - Checks that the resulting ServerIdentity contains an instance of {@code ConfigurationReport},
-   * and checks that the {@code configurationVerifier} predicate is valid for it. Returns false if
-   * the check fails.
-   * - Checks that the ServerIdentity contains the expected attestation info as described in {@code
-   * ServerIdentityVerifier::verifyAttestationInfo}.
-   *
-   * @param serializedServerIdentity The server's identity.
-   * @param configurationVerifier Predicate that verifies the configuration info part of the server
-   *     identity.
-   * @throws IOException If {@code serializedServerIdentity} cannot be deserialized into an instance
-   *     of {@code Message.ServerIdentity}.
-   */
-  boolean verifyServerIdentity(byte[] serializedServerIdentity,
-      Predicate<ConfigurationReport> configurationVerifier) throws IOException {
-    Message.ServerIdentity serverIdentity =
-        Message.ServerIdentity.deserialize(serializedServerIdentity);
-
-    ServerConfigurationVerifier verifier =
-        new ServerConfigurationVerifier(serverIdentity, configurationVerifier);
-
-    if (!verifier.verify()) {
-      logger.log(Level.WARNING, "Verification of the ServerIdentity failed.");
-      return false;
-    }
-
-    return true;
   }
 
   /**

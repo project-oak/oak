@@ -34,14 +34,15 @@ public class Message {
   /** Remote attestation protocol version. */
   public static final int PROTOCOL_VERSION = 1;
   /**
-   * Size (in bytes) of the prefix that describes the size of a serialized array.
-   * Prefix is encoded with Little-Endian.
+   * Size (in bytes) of the prefix that describes the size of a serialized array. Prefix is encoded
+   * with Little-Endian.
    */
   public static final int ARRAY_SERIALIZATION_PREFIX_LENGTH = 8;
 
   public static final int NONCE_LENGTH = 12;
   /** Size (in bytes) of a random array sent in messages to prevent replay attacks. */
   public static final int REPLAY_PROTECTION_ARRAY_LENGTH = 32;
+
   public static final int EPHEMERAL_PUBLIC_KEY_LENGTH = 32;
   // TODO(#2277): Use OpenSSL signature format (which is 72 bytes).
   public static final int TRANSCRIPT_SIGNATURE_LENGTH = 64;
@@ -106,10 +107,10 @@ public class Message {
     /** Random vector sent in messages for preventing replay attacks. */
     private final byte[] random;
     /**
-     * Signature of the SHA-256 hash of all previously sent and received messages.
-     * Transcript signature is sent in messages to prevent replay attacks.
+     * Signature of the SHA-256 hash of all previously sent and received messages. Transcript
+     * signature is sent in messages to prevent replay attacks.
      *
-     * Signature must be an IEEE-P1363 encoded ECDSA-P256 signature.
+     * <p>Signature must be an IEEE-P1363 encoded ECDSA-P256 signature.
      * https://datatracker.ietf.org/doc/html/rfc6979
      * https://standards.ieee.org/standard/1363-2000.html
      */
@@ -117,9 +118,8 @@ public class Message {
     /**
      * Public key used to sign transcripts.
      *
-     * Public key must be an OpenSSL ECDSA-P256 key, which is represented as
-     * `0x04 | X: 32-byte | Y: 32-byte`.
-     * Where X and Y are big-endian coordinates of an Elliptic Curve point.
+     * <p>Public key must be an OpenSSL ECDSA-P256 key, which is represented as `0x04 | X: 32-byte |
+     * Y: 32-byte`. Where X and Y are big-endian coordinates of an Elliptic Curve point.
      * https://datatracker.ietf.org/doc/html/rfc6979
      */
     private final byte[] signingPublicKey;
@@ -128,15 +128,9 @@ public class Message {
      * certificate. TEE report contains a hash of the `signingPublicKey`.
      */
     private final byte[] attestationReport;
-    /* Additional info to be checked when verifying the identity. This may include server
-     * configuration details, and inclusion proofs on a verifiable log (e.g., LogEntry on Rekor).
-     * The server and the client must be able to agree on a canonical representation of the
-     * content to be able to deterministically compute the hash of this field.
-     */
-    private final byte[] additionalAttestationData;
 
     public ServerIdentity(byte[] ephemeralPublicKey, byte[] random, byte[] signingPublicKey,
-        byte[] attestationReport, byte[] additionalAttestationData) {
+        byte[] attestationReport) {
       header = SERVER_IDENTITY_HEADER;
       version = PROTOCOL_VERSION;
       this.ephemeralPublicKey = ephemeralPublicKey;
@@ -144,7 +138,6 @@ public class Message {
       this.transcriptSignature = new byte[0];
       this.signingPublicKey = signingPublicKey;
       this.attestationReport = attestationReport;
-      this.additionalAttestationData = additionalAttestationData;
     }
 
     public byte getVersion() {
@@ -175,10 +168,6 @@ public class Message {
       return attestationReport;
     }
 
-    public byte[] getAdditionalAttestationData() {
-      return additionalAttestationData;
-    }
-
     public byte[] serialize() throws IOException {
       ByteArrayOutputStream output = new ByteArrayOutputStream();
       DataOutputStream outputStream = new DataOutputStream(output);
@@ -193,8 +182,6 @@ public class Message {
       writeFixedSizeArray(
           outputStream, signingPublicKey, SIGNING_PUBLIC_KEY_LENGTH, "signing public key");
       writeVariableSizeArray(outputStream, attestationReport, "attestation report");
-      writeVariableSizeArray(
-          outputStream, additionalAttestationData, "additional attestation data");
       outputStream.flush();
 
       return output.toByteArray();
@@ -223,11 +210,9 @@ public class Message {
       byte[] signingPublicKey =
           readFixedSizeArray(inputStream, SIGNING_PUBLIC_KEY_LENGTH, "signing key");
       byte[] attestationReport = readVariableSizeArray(inputStream, "attestation report");
-      byte[] additionalAttestationData =
-          readVariableSizeArray(inputStream, "additional attestation data");
 
-      ServerIdentity serverIdentity = new ServerIdentity(ephemeralPublicKey, random,
-          signingPublicKey, attestationReport, additionalAttestationData);
+      ServerIdentity serverIdentity =
+          new ServerIdentity(ephemeralPublicKey, random, signingPublicKey, attestationReport);
       serverIdentity.setTranscriptSignature(transcriptSignature);
       return serverIdentity;
     }
@@ -243,10 +228,10 @@ public class Message {
     /** Public key needed to establish a session key. */
     private final byte[] ephemeralPublicKey;
     /**
-     * Signature of the SHA-256 hash of all previously sent and received messages.
-     * Transcript signature is sent in messages to prevent replay attacks.
+     * Signature of the SHA-256 hash of all previously sent and received messages. Transcript
+     * signature is sent in messages to prevent replay attacks.
      *
-     * Signature must be an IEEE-P1363 encoded ECDSA-P256 signature.
+     * <p>Signature must be an IEEE-P1363 encoded ECDSA-P256 signature.
      * https://datatracker.ietf.org/doc/html/rfc6979
      * https://standards.ieee.org/standard/1363-2000.html
      */
@@ -254,9 +239,8 @@ public class Message {
     /**
      * Public key used to sign transcripts.
      *
-     * Public key must be an OpenSSL ECDSA-P256 key, which is represented as
-     * `0x04 | X: 32-byte | Y: 32-byte`.
-     * Where X and Y are big-endian coordinates of an Elliptic Curve point.
+     * <p>Public key must be an OpenSSL ECDSA-P256 key, which is represented as `0x04 | X: 32-byte |
+     * Y: 32-byte`. Where X and Y are big-endian coordinates of an Elliptic Curve point.
      * https://datatracker.ietf.org/doc/html/rfc6979
      */
     private final byte[] signingPublicKey;
