@@ -1,5 +1,12 @@
 #!/usr/bin/env bash
 
+# Takes as input a TOML file, and builds a binary and its provenance from the
+# Git HEAD, using the build config in the TOML file. To run locally, pass the
+# name of the TOML file as input. The generated provenance file will be named
+# `provenance.json` stored in the root of the repo. If an additional argument
+# is passed in, the `provenance.json`` file will be copied to
+# `./provenance/<BINARY_HASH>/GIT_COMMIT_HASH.json`.
+
 readonly SCRIPTS_DIR="$(dirname "$0")"
 # shellcheck source=scripts/common
 source "$SCRIPTS_DIR/common"
@@ -10,7 +17,7 @@ readonly COMMIT_HASH=$(git rev-parse --verify HEAD)
 mkdir tmp
 
 # Create a copy of the static toml file, since we are going to modify it.
-cp build.toml tmp/build.toml
+cp "$1" tmp/build.toml
 
 (
     cd tmp
@@ -28,19 +35,22 @@ cp build.toml tmp/build.toml
 )
 
 # Build the binary and generate the provenance file.
-# `|| true` is needed so that we can continue to the rest of the script, particularly the cleanup part.
+# `|| true` is needed so that we can continue to the rest of the script,
+# particularly the cleanup part.
 ./tmp/transparent-release -build_config_path=tmp/build.toml -git_root_dir=. || true
 
 
 # cleanup
 rm -rf tmp
 
-# On GitHub we need to store the generated provenance files in a location that can easily be copied
-# to the provenance branch. We pass an optional argument to the script to trigger this behaviour.
-if [ $# -gt 0 ]; then
+# On GitHub we need to store the generated provenance files in a location that
+# can easily be copied to the provenance branch. We pass an optional argument
+# to the script to trigger this behaviour.
+if [ $# -gt  1 ]; then
   readonly BINARY_SHA_256_HASH=$(jq -r '.subject[0].digest.sha256' ./provenance.json)
 
-  # Move the generated provenances to the correct folder
+  # Move the generated provenances to the correct directory, first creating any
+  # required directories.
   mkdir -p "./provenance"
   mkdir -p "./provenance/${BINARY_SHA_256_HASH}"
   cp ./provenance.json "./provenance/${BINARY_SHA_256_HASH}/${COMMIT_HASH}.json"

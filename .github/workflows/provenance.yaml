@@ -51,7 +51,11 @@ jobs:
 
       - name: Generate Functions Server Provenance
         run: |
-          ./scripts/generate_provenance github
+          ./scripts/generate_provenance build.toml github
+
+      - name: Generate Baremetal Loader Provenance
+        run: |
+          ./scripts/generate_provenance baremetal_build.toml github
 
       - name: Move new provenance files to the provenance branch
         if: github.event_name == 'push'

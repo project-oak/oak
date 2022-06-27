@@ -54,6 +54,17 @@ impl Variant {
     }
 }
 
+pub fn build_vm_loader() -> Step {
+    Step::Single {
+        name: "build vm loader for release".to_string(),
+        command: Cmd::new_in_dir(
+            "cargo",
+            vec!["build"],
+            Path::new("./experimental/oak_baremetal_loader"),
+        ),
+    }
+}
+
 pub fn run_vm_test() -> Step {
     Step::Multiple {
         name: "VM end-to-end test".to_string(),
