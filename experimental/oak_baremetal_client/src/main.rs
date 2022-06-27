@@ -71,11 +71,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         cli.iterations,
     ) {
         (true, None, None, None) => {
+            // The client should be a able to send a large message without
+            // crashing or hanging.
             let response = client
                 .send(&LARGE_MESSAGE)
                 .await
                 .context("Error invoking Oak Functions instance")?;
-            assert_eq!(response, LARGE_MESSAGE);
         }
         (false, Some(request), Some(expected_response), Some(iterations)) => {
             for _ in 0..iterations {
