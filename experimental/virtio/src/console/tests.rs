@@ -20,7 +20,6 @@ use crate::test::{
     VIRTIO_F_VERSION_1,
 };
 use alloc::{vec, vec::Vec};
-use ciborium_io::{Read, Write};
 
 #[test]
 fn test_legacy_device_not_supported() {
@@ -104,8 +103,8 @@ fn test_read_exact() {
     let mut console = Console::new(device);
     console.init().unwrap();
     transport.device_write_to_queue::<QUEUE_SIZE>(0, &data[..]);
-    assert!(console.read_exact(&mut first).is_ok());
-    assert!(console.read_exact(&mut second).is_ok());
+    assert!(console.read(&mut first).is_ok());
+    assert!(console.read(&mut second).is_ok());
     assert_eq!(&data[..5], &first[..]);
     assert_eq!(&data[5..8], &second[..]);
     assert!(console.pending_data.is_some());
@@ -119,7 +118,7 @@ fn test_write_all() {
     let device = VirtioBaseDevice::new(transport.clone());
     let mut console = Console::new(device);
     console.init().unwrap();
-    assert!(console.write_all(&data[..]).is_ok());
+    assert!(console.write(&data[..]).is_ok());
     let first = transport
         .device_read_once_from_queue::<QUEUE_SIZE>(1)
         .unwrap();

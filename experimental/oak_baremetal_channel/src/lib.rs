@@ -38,15 +38,20 @@ mod tests;
 extern crate alloc;
 use alloc::vec::Vec;
 use anyhow::Context;
-use ciborium_io::{Read, Write};
 
-struct InvocationChannel<T: Read + Write> {
+pub trait Channel {
+    fn read(&mut self, data: &mut [u8]) -> anyhow::Result<()>;
+    fn write(&mut self, data: &[u8]) -> anyhow::Result<()>;
+    fn flush(&mut self) -> anyhow::Result<()>;
+}
+
+struct InvocationChannel<T: Channel> {
     inner: frame::Framed<T>,
 }
 
 impl<T> InvocationChannel<T>
 where
-    T: Read<Error = anyhow::Error> + Write<Error = anyhow::Error>,
+    T: Channel,
 {
     pub fn new(socket: T) -> Self {
         Self {

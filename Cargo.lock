@@ -662,12 +662,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "ciborium-io"
-version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "346de753af073cc87b52b2083a506b38ac176a44cfb05497b622e27be899b369"
-
-[[package]]
 name = "cipher"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2860,7 +2854,6 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "bitflags",
- "ciborium-io",
  "flatbuffers",
  "oak_idl",
  "oak_idl_gen_services",
@@ -2875,12 +2868,12 @@ dependencies = [
  "anyhow",
  "arrayvec",
  "atomic_refcell",
- "ciborium-io",
  "getrandom 0.2.7",
  "lazy_static",
  "libm 0.2.2",
  "linked_list_allocator",
  "log",
+ "oak_baremetal_communication_channel",
  "oak_baremetal_runtime",
  "oak_remote_attestation",
  "oak_remote_attestation_amd",
@@ -2899,7 +2892,6 @@ dependencies = [
  "anyhow",
  "async-trait",
  "bmrng",
- "ciborium-io",
  "clap 3.1.18",
  "command-fds",
  "env_logger 0.9.0",
@@ -2921,7 +2913,6 @@ name = "oak_baremetal_runtime"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "ciborium-io",
  "flatbuffers",
  "hashbrown 0.12.1",
  "log",
@@ -5852,7 +5843,6 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "bitflags",
- "ciborium-io",
  "log",
  "rand 0.8.5",
  "rust-hypervisor-firmware-virtio",

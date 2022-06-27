@@ -8,7 +8,6 @@ license = "Apache-2.0"
 [dependencies]
 anyhow = { version = "*", default-features = false }
 bitflags = "*"
-ciborium-io = { version = "*", default-features = false }
 log = "*"
 rust-hypervisor-firmware-virtio = { path = "../../third_party/rust-hypervisor-firmware-virtio" }
 strum = { version = "*", default-features = false, features = ["derive"] }

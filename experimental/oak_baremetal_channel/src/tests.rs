@@ -78,24 +78,19 @@ struct MessageStore {
     inner: VecDeque<u8>,
 }
 
-impl ciborium_io::Read for MessageStore {
-    type Error = anyhow::Error;
-
-    fn read_exact(&mut self, buf: &mut [u8]) -> Result<(), Self::Error> {
+impl Channel for MessageStore {
+    fn read(&mut self, buf: &mut [u8]) -> anyhow::Result<()> {
         buf.fill_with(|| self.inner.pop_front().unwrap());
         Ok(())
     }
-}
 
-impl ciborium_io::Write for MessageStore {
-    type Error = anyhow::Error;
-    fn write_all(&mut self, buf: &[u8]) -> Result<(), Self::Error> {
+    fn write(&mut self, buf: &[u8]) -> anyhow::Result<()> {
         self.inner.reserve(buf.len());
         self.inner.extend(buf);
         Ok(())
     }
 
-    fn flush(&mut self) -> Result<(), Self::Error> {
+    fn flush(&mut self) -> anyhow::Result<()> {
         Ok(())
     }
 }

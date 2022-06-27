@@ -78,33 +78,31 @@ struct CommsChannel {
     inner: Box<dyn ReadWrite>,
 }
 
-impl ciborium_io::Write for CommsChannel {
-    type Error = anyhow::Error;
-    fn write_all(&mut self, data: &[u8]) -> Result<(), Self::Error> {
+impl oak_baremetal_communication_channel::Channel for CommsChannel {
+    fn write(&mut self, data: &[u8]) -> anyhow::Result<()> {
         self.inner.write_all(data).map_err(anyhow::Error::msg)
     }
 
-    fn flush(&mut self) -> Result<(), Self::Error> {
+    fn flush(&mut self) -> anyhow::Result<()> {
         self.inner.flush().map_err(anyhow::Error::msg)
     }
-}
 
-impl ciborium_io::Read for CommsChannel {
-    type Error = anyhow::Error;
-
-    fn read_exact(&mut self, data: &mut [u8]) -> Result<(), Self::Error> {
+    fn read(&mut self, data: &mut [u8]) -> anyhow::Result<()> {
         self.inner.read_exact(data).map_err(anyhow::Error::msg)
     }
 }
 
-pub struct ClientHandler<T: ciborium_io::Read + ciborium_io::Write> {
+pub struct ClientHandler<T>
+where
+    T: oak_baremetal_communication_channel::Channel,
+{
     inner: ClientChannelHandle<T>,
     request_encoder: RequestEncoder,
 }
 
 impl<T> ClientHandler<T>
 where
-    T: ciborium_io::Read<Error = anyhow::Error> + ciborium_io::Write<Error = anyhow::Error>,
+    T: oak_baremetal_communication_channel::Channel,
 {
     pub fn new(inner: T) -> Self {
         Self {
@@ -116,7 +114,7 @@ where
 
 impl<T> oak_idl::Handler for ClientHandler<T>
 where
-    T: ciborium_io::Read<Error = anyhow::Error> + ciborium_io::Write<Error = anyhow::Error>,
+    T: oak_baremetal_communication_channel::Channel,
 {
     fn invoke(&mut self, request: oak_idl::Request) -> Result<Vec<u8>, oak_idl::Status> {
         let request_message = self.request_encoder.encode_request(request);

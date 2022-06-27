@@ -32,5 +32,11 @@ pub mod queue;
 mod test;
 pub mod vsock;
 
+pub trait Channel {
+    fn read(&mut self, data: &mut [u8]) -> anyhow::Result<()>;
+    fn write(&mut self, data: &[u8]) -> anyhow::Result<()>;
+    fn flush(&mut self) -> anyhow::Result<()>;
+}
+
 /// The vendor ID for virtio PCI devices.
 const PCI_VENDOR_ID: u16 = 0x1AF4;
