@@ -76,7 +76,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let response = client
                 .send(&LARGE_MESSAGE)
                 .await
-                .context("Error invoking Oak Functions instance")?;
+                .context("Error invoking Oak Functions instance");
+            assert_eq!(response.is_ok(), true);
         }
         (false, Some(request), Some(expected_response), Some(iterations)) => {
             for _ in 0..iterations {
