@@ -38,6 +38,10 @@ struct Args {
     /// Number of times the request should be sent, and the expected response validated.
     #[clap(long, requires_all = &["request", "expected-response"])]
     iterations: Option<usize>,
+
+    /// Test sending a large message
+    #[clap(long, conflicts_with_all = &["request", "expected-response", "iterations"])]
+    test_large_message: bool,
 }
 
 async fn chat(client: &mut AttestationClient, message: String) -> anyhow::Result<String> {
@@ -49,6 +53,9 @@ async fn chat(client: &mut AttestationClient, message: String) -> anyhow::Result
     String::from_utf8(response).map_err(Into::into)
 }
 
+const TWO_MIB: usize = 2097000;
+const LARGE_MESSAGE: [u8; TWO_MIB] = [0; TWO_MIB];
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cli = Args::parse();
@@ -57,8 +64,22 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .await
         .context("Could not create client")?;
 
-    match (cli.request, cli.expected_response, cli.iterations) {
-        (Some(request), Some(expected_response), Some(iterations)) => {
+    match (
+        cli.test_large_message,
+        cli.request,
+        cli.expected_response,
+        cli.iterations,
+    ) {
+        (true, None, None, None) => {
+            // The client should be a able to send a large message without
+            // crashing or hanging.
+            let response = client
+                .send(&LARGE_MESSAGE)
+                .await
+                .context("Error invoking Oak Functions instance");
+            assert!(response.is_ok());
+        }
+        (false, Some(request), Some(expected_response), Some(iterations)) => {
             for _ in 0..iterations {
                 let response = chat(&mut client, request.clone()).await?;
                 assert_eq!(response, expected_response);

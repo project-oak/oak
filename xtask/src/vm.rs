@@ -109,6 +109,13 @@ fn run_client(request: &str, expected_response: &str, iterations: usize) -> Step
                     ],
                 ),
             },
+            Step::Single {
+                name: "run client with a large message".to_string(),
+                command: Cmd::new(
+                    "./target/debug/oak_baremetal_client",
+                    vec!["--test-large-message"],
+                ),
+            },
         ],
     }
 }
