@@ -60,8 +60,8 @@ pub struct Body {
     pub spec: Spec,
 }
 
-/// Struct representing the `specs` in the body of a Rekor LogEntry.
-/// Based on <https://github.com/sigstore/rekor/blob/2978cdc26fdf8f5bfede8459afd9735f0f231a2a/pkg/generated/models/hashedrekord_v001_schema.go#L39.>
+/// Struct representing the `spec` in the body of a Rekor LogEntry.
+/// Based on <https://github.com/sigstore/rekor/blob/2978cdc26fdf8f5bfede8459afd9735f0f231a2a/pkg/generated/models/rekord_v001_schema.go#L39.>
 #[derive(Debug, Deserialize, PartialEq, Serialize)]
 pub struct Spec {
     pub data: Data,
@@ -69,14 +69,14 @@ pub struct Spec {
 }
 
 /// Struct representing the hashed data in the body of a Rekor LogEntry.
-/// Based on <https://github.com/sigstore/rekor/blob/2978cdc26fdf8f5bfede8459afd9735f0f231a2a/pkg/generated/models/hashedrekord_v001_schema.go#L179.>
+/// Based on <https://github.com/sigstore/rekor/blob/2978cdc26fdf8f5bfede8459afd9735f0f231a2a/pkg/generated/models/rekord_v001_schema.go#L179.>
 #[derive(Debug, Deserialize, PartialEq, Serialize)]
 pub struct Data {
     pub hash: Hash,
 }
 
 /// Struct representing a hash digest.
-/// Based on <https://github.com/sigstore/rekor/blob/2978cdc26fdf8f5bfede8459afd9735f0f231a2a/pkg/generated/models/hashedrekord_v001_schema.go#L269.>
+/// Based on <https://github.com/sigstore/rekor/blob/2978cdc26fdf8f5bfede8459afd9735f0f231a2a/pkg/generated/models/rekord_v001_schema.go#L273.>
 #[derive(Debug, Deserialize, PartialEq, Serialize)]
 pub struct Hash {
     pub algorithm: String,
@@ -84,6 +84,7 @@ pub struct Hash {
 }
 
 /// Struct representing a signature in the body of a Rekor LogEntry.
+/// Based on <https://github.com/sigstore/rekor/blob/2978cdc26fdf8f5bfede8459afd9735f0f231a2a/pkg/generated/models/rekord_v001_schema.go#L383>
 #[derive(Debug, Deserialize, PartialEq, Serialize)]
 pub struct GenericSignature {
     /// Base64 content that is signed.
@@ -94,7 +95,7 @@ pub struct GenericSignature {
 }
 
 /// Struct representing a public key included in the body of a Rekor LogEntry.
-/// Based on <https://github.com/sigstore/rekor/blob/2978cdc26fdf8f5bfede8459afd9735f0f231a2a/pkg/generated/models/hashedrekord_v001_schema.go#L468.>
+/// Based on <https://github.com/sigstore/rekor/blob/2978cdc26fdf8f5bfede8459afd9735f0f231a2a/pkg/generated/models/rekord_v001_schema.go#L551.>
 #[derive(Debug, Deserialize, PartialEq, Serialize)]
 pub struct PublicKey {
     /// Base64 content of a public key.
