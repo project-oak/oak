@@ -42,18 +42,15 @@ mod logging;
 mod memory;
 #[cfg(feature = "serial_channel")]
 mod serial;
+#[cfg(not(feature = "serial_channel"))]
+mod virtio;
 
 use core::panic::PanicInfo;
 use log::{error, info};
+use oak_baremetal_communication_channel::{Read, Write};
 use oak_remote_attestation::handshaker::{AttestationBehavior, EmptyAttestationVerifier};
 use oak_remote_attestation_amd::PlaceholderAmdAttestationGenerator;
 use rust_hypervisor_firmware_boot::paging;
-#[cfg(not(feature = "serial_channel"))]
-use rust_hypervisor_firmware_virtio::pci::VirtioPciTransport;
-
-#[cfg(all(feature = "vsock_channel", not(feature = "serial_channel")))]
-// The virtio vsock port on which to listen.
-const VSOCK_PORT: u32 = 1024;
 
 /// Main entry point for the kernel, to be called from bootloader.
 pub fn start_kernel<E: boot::E820Entry, B: boot::BootInfo<E>>(info: B) -> ! {
@@ -87,47 +84,16 @@ fn get_channel() -> serial::Serial {
     serial::Serial::new()
 }
 
-struct Framed<T>
-where
-    T: virtio::Channel,
-{
-    inner: T,
-}
-
-impl<T> oak_baremetal_communication_channel::Channel for Framed<T>
-where
-    T: virtio::Channel,
-{
-    fn read(&mut self, data: &mut [u8]) -> anyhow::Result<()> {
-        self.inner.read(data)
-    }
-    fn write(&mut self, data: &[u8]) -> anyhow::Result<()> {
-        self.inner.write(data)
-    }
-    fn flush(&mut self) -> anyhow::Result<()> {
-        self.inner.flush()
-    }
-}
-
 // Use a virtio console device for the communications channel if we don't support virtio vsock.
 #[cfg(all(not(feature = "vsock_channel"), not(feature = "serial_channel")))]
-fn get_channel() -> Framed<virtio::console::Console<VirtioPciTransport>> {
-    let console = virtio::console::Console::find_and_configure_device()
-        .expect("Couldn't configure PCI virtio console device.");
-    info!("Console device status: {}", console.get_status());
-    Framed { inner: console }
+fn get_channel() -> impl Read + Write {
+    virtio::get_console_channel()
 }
 
 // Use virtio vsock for the communications channel.
 #[cfg(all(feature = "vsock_channel", not(feature = "serial_channel")))]
-fn get_channel() -> Framed<virtio::vsock::socket::Socket<VirtioPciTransport>> {
-    let vsock = virtio::vsock::VSock::find_and_configure_device()
-        .expect("Couldn't configure PCI virtio vsock device.");
-    info!("Socket device status: {}", vsock.get_status());
-    let listener = virtio::vsock::socket::SocketListener::new(vsock, VSOCK_PORT);
-    Framed {
-        inner: listener.accept().expect("Couldn't accept connection."),
-    }
+fn get_channel() -> impl Read + Write {
+    virtio::get_vsock_channel()
 }
 
 /// Common panic routine for the kernel. This needs to be wrrapped in a

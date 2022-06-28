@@ -18,7 +18,7 @@
 
 extern crate alloc;
 
-use crate::Channel;
+use crate::{Read, Write};
 use alloc::{format, vec, vec::Vec};
 use bitflags::bitflags;
 
@@ -78,13 +78,13 @@ impl TryFrom<Frame> for Vec<u8> {
     }
 }
 
-pub struct Framed<T: Channel> {
+pub struct Framed<T: Read + Write> {
     inner: T,
 }
 
 impl<T> Framed<T>
 where
-    T: Channel,
+    T: Read + Write,
 {
     pub fn new(socket: T) -> Self {
         Self { inner: socket }

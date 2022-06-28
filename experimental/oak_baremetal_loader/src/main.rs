@@ -78,7 +78,7 @@ struct CommsChannel {
     inner: Box<dyn ReadWrite>,
 }
 
-impl oak_baremetal_communication_channel::Channel for CommsChannel {
+impl oak_baremetal_communication_channel::Write for CommsChannel {
     fn write(&mut self, data: &[u8]) -> anyhow::Result<()> {
         self.inner.write_all(data).map_err(anyhow::Error::msg)
     }
@@ -86,7 +86,9 @@ impl oak_baremetal_communication_channel::Channel for CommsChannel {
     fn flush(&mut self) -> anyhow::Result<()> {
         self.inner.flush().map_err(anyhow::Error::msg)
     }
+}
 
+impl oak_baremetal_communication_channel::Read for CommsChannel {
     fn read(&mut self, data: &mut [u8]) -> anyhow::Result<()> {
         self.inner.read_exact(data).map_err(anyhow::Error::msg)
     }
@@ -94,7 +96,7 @@ impl oak_baremetal_communication_channel::Channel for CommsChannel {
 
 pub struct ClientHandler<T>
 where
-    T: oak_baremetal_communication_channel::Channel,
+    T: oak_baremetal_communication_channel::Read + oak_baremetal_communication_channel::Write,
 {
     inner: ClientChannelHandle<T>,
     request_encoder: RequestEncoder,
@@ -102,7 +104,7 @@ where
 
 impl<T> ClientHandler<T>
 where
-    T: oak_baremetal_communication_channel::Channel,
+    T: oak_baremetal_communication_channel::Read + oak_baremetal_communication_channel::Write,
 {
     pub fn new(inner: T) -> Self {
         Self {
@@ -114,7 +116,7 @@ where
 
 impl<T> oak_idl::Handler for ClientHandler<T>
 where
-    T: oak_baremetal_communication_channel::Channel,
+    T: oak_baremetal_communication_channel::Read + oak_baremetal_communication_channel::Write,
 {
     fn invoke(&mut self, request: oak_idl::Request) -> Result<Vec<u8>, oak_idl::Status> {
         let request_message = self.request_encoder.encode_request(request);

@@ -14,15 +14,15 @@
 // limitations under the License.
 //
 
-use crate::{message, Channel, InvocationChannel, Vec};
+use crate::{message, InvocationChannel, Read, Vec, Write};
 
-pub struct ServerChannelHandle<T: Channel> {
+pub struct ServerChannelHandle<T: Read + Write> {
     inner: InvocationChannel<T>,
 }
 
 impl<T> ServerChannelHandle<T>
 where
-    T: Channel,
+    T: Read + Write,
 {
     pub fn new(socket: T) -> Self {
         Self {

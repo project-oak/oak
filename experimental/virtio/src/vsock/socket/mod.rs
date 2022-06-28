@@ -18,7 +18,7 @@ use super::{
     packet::{Packet, VSockFlags, VSockOp, HEADER_SIZE},
     VSock, DATA_BUFFER_SIZE,
 };
-use crate::Channel;
+use crate::{Read, Write};
 use alloc::collections::VecDeque;
 use core::num::Wrapping;
 use rust_hypervisor_firmware_virtio::virtio::VirtioTransport;
@@ -333,7 +333,7 @@ where
     }
 }
 
-impl<T> Channel for Socket<T>
+impl<T> Read for Socket<T>
 where
     T: VirtioTransport,
 {
@@ -353,7 +353,12 @@ where
 
         Ok(())
     }
+}
 
+impl<T> Write for Socket<T>
+where
+    T: VirtioTransport,
+{
     fn write(&mut self, data: &[u8]) -> anyhow::Result<()> {
         let mut start = 0;
         let data_len = data.len();

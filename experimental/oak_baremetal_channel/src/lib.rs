@@ -39,19 +39,22 @@ extern crate alloc;
 use alloc::vec::Vec;
 use anyhow::Context;
 
-pub trait Channel {
+pub trait Read {
     fn read(&mut self, data: &mut [u8]) -> anyhow::Result<()>;
+}
+
+pub trait Write {
     fn write(&mut self, data: &[u8]) -> anyhow::Result<()>;
     fn flush(&mut self) -> anyhow::Result<()>;
 }
 
-struct InvocationChannel<T: Channel> {
+struct InvocationChannel<T: Read + Write> {
     inner: frame::Framed<T>,
 }
 
 impl<T> InvocationChannel<T>
 where
-    T: Channel,
+    T: Read + Write,
 {
     pub fn new(socket: T) -> Self {
         Self {

@@ -17,7 +17,8 @@
 use super::*;
 use crate::{
     test::{new_valid_transport, TestingTransport},
-    vsock::{Channel, HOST_CID, QUEUE_SIZE},
+    vsock::{HOST_CID, QUEUE_SIZE},
+    Read, Write,
 };
 use alloc::vec;
 use rand::RngCore;

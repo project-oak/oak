@@ -16,7 +16,7 @@
 
 use crate::{
     queue::{DeviceWriteOnlyQueue, DriverWriteOnlyQueue},
-    Channel,
+    Read, Write,
 };
 use alloc::collections::VecDeque;
 use anyhow::Context;
@@ -199,7 +199,7 @@ where
     }
 }
 
-impl<T> Channel for Console<T>
+impl<T> Read for Console<T>
 where
     T: VirtioTransport,
 {
@@ -212,7 +212,12 @@ where
 
         Ok(())
     }
+}
 
+impl<T> Write for Console<T>
+where
+    T: VirtioTransport,
+{
     fn write(&mut self, data: &[u8]) -> anyhow::Result<()> {
         let mut start = 0;
         let data_len = data.len();
