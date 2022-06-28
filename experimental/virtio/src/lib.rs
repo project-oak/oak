@@ -32,5 +32,26 @@ pub mod queue;
 mod test;
 pub mod vsock;
 
+/// Read bytes from a source.
+///
+/// This trait is similar to the <std::io::Read> trait, except that this trait is pared down to a
+/// minimum and works in a `no_std` environment.
+pub trait Read {
+    /// Read bytes until `data` has been filled.
+    fn read(&mut self, data: &mut [u8]) -> anyhow::Result<()>;
+}
+
+/// Write bytes to a source.
+///
+/// This trait is similar to the <std::io::Write> trait, except that this trait is pared down to a
+/// minimum and works in a `no_std` environment.
+pub trait Write {
+    /// Write all bytes in `data`.
+    fn write(&mut self, data: &[u8]) -> anyhow::Result<()>;
+
+    /// Flush any output buffers, if they exist.
+    fn flush(&mut self) -> anyhow::Result<()>;
+}
+
 /// The vendor ID for virtio PCI devices.
 const PCI_VENDOR_ID: u16 = 0x1AF4;

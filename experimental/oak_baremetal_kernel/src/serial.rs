@@ -36,25 +36,21 @@ impl Serial {
     }
 }
 
-impl ciborium_io::Write for Serial {
-    type Error = anyhow::Error;
-
-    fn write_all(&mut self, data: &[u8]) -> Result<(), Self::Error> {
+impl oak_baremetal_communication_channel::Write for Serial {
+    fn write(&mut self, data: &[u8]) -> anyhow::Result<()> {
         for byte in data {
             self.port.borrow_mut().send_raw(*byte);
         }
         Ok(())
     }
 
-    fn flush(&mut self) -> Result<(), Self::Error> {
+    fn flush(&mut self) -> anyhow::Result<()> {
         Ok(())
     }
 }
 
-impl ciborium_io::Read for Serial {
-    type Error = anyhow::Error;
-
-    fn read_exact(&mut self, data: &mut [u8]) -> Result<(), Self::Error> {
+impl oak_baremetal_communication_channel::Read for Serial {
+    fn read(&mut self, data: &mut [u8]) -> anyhow::Result<()> {
         #[allow(clippy::needless_range_loop)]
         for i in 0..data.len() {
             data[i] = self.port.borrow_mut().receive();

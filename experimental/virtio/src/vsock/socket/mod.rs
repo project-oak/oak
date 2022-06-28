@@ -18,6 +18,7 @@ use super::{
     packet::{Packet, VSockFlags, VSockOp, HEADER_SIZE},
     VSock, DATA_BUFFER_SIZE,
 };
+use crate::{Read, Write};
 use alloc::collections::VecDeque;
 use core::num::Wrapping;
 use rust_hypervisor_firmware_virtio::virtio::VirtioTransport;
@@ -332,13 +333,11 @@ where
     }
 }
 
-impl<T> ciborium_io::Read for Socket<T>
+impl<T> Read for Socket<T>
 where
     T: VirtioTransport,
 {
-    type Error = anyhow::Error;
-
-    fn read_exact(&mut self, data: &mut [u8]) -> Result<(), Self::Error> {
+    fn read(&mut self, data: &mut [u8]) -> anyhow::Result<()> {
         let len = data.len();
         let mut count = 0;
         while count < len {
@@ -356,13 +355,11 @@ where
     }
 }
 
-impl<T> ciborium_io::Write for Socket<T>
+impl<T> Write for Socket<T>
 where
     T: VirtioTransport,
 {
-    type Error = anyhow::Error;
-
-    fn write_all(&mut self, data: &[u8]) -> Result<(), Self::Error> {
+    fn write(&mut self, data: &[u8]) -> anyhow::Result<()> {
         let mut start = 0;
         let data_len = data.len();
         while start < data_len {
@@ -373,7 +370,7 @@ where
         Ok(())
     }
 
-    fn flush(&mut self) -> Result<(), Self::Error> {
+    fn flush(&mut self) -> anyhow::Result<()> {
         // We always flush on write, so do nothing.
         // TODO(#2876): We should use a buffered writer so that we don't always flush on write, and
         // provide an actual flush implementation here.

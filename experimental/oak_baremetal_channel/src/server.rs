@@ -14,8 +14,7 @@
 // limitations under the License.
 //
 
-use crate::{message, InvocationChannel, Vec};
-use ciborium_io::{Read, Write};
+use crate::{message, InvocationChannel, Read, Vec, Write};
 
 pub struct ServerChannelHandle<T: Read + Write> {
     inner: InvocationChannel<T>,
@@ -23,7 +22,7 @@ pub struct ServerChannelHandle<T: Read + Write> {
 
 impl<T> ServerChannelHandle<T>
 where
-    T: Read<Error = anyhow::Error> + Write<Error = anyhow::Error>,
+    T: Read + Write,
 {
     pub fn new(socket: T) -> Self {
         Self {

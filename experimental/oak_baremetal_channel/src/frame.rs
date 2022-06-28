@@ -18,9 +18,9 @@
 
 extern crate alloc;
 
+use crate::{Read, Write};
 use alloc::{format, vec, vec::Vec};
 use bitflags::bitflags;
-use ciborium_io::{Read, Write};
 
 pub const PADDING_SIZE: usize = 4;
 
@@ -84,7 +84,7 @@ pub struct Framed<T: Read + Write> {
 
 impl<T> Framed<T>
 where
-    T: Read<Error = anyhow::Error> + Write<Error = anyhow::Error>,
+    T: Read + Write,
 {
     pub fn new(socket: T) -> Self {
         Self { inner: socket }
@@ -93,11 +93,11 @@ where
     pub fn read_frame(&mut self) -> anyhow::Result<Frame> {
         {
             let mut padding_bytes = [0; PADDING_SIZE];
-            self.inner.read_exact(&mut padding_bytes)?;
+            self.inner.read(&mut padding_bytes)?;
         };
         let length: usize = {
             let mut length_bytes = [0; LENGTH_SIZE];
-            self.inner.read_exact(&mut length_bytes)?;
+            self.inner.read(&mut length_bytes)?;
             let length = Length::from_le_bytes(length_bytes).into();
             if length > MAX_SIZE {
                 return Err(anyhow::Error::msg("frame exceeds the maximum frame size"));
@@ -106,14 +106,14 @@ where
         };
         let flags = {
             let mut flags_bytes = [0; FLAGS_SIZE];
-            self.inner.read_exact(&mut flags_bytes)?;
+            self.inner.read(&mut flags_bytes)?;
             Flags::from_bits_truncate(u16::from_le_bytes(flags_bytes))
         };
 
         let body = {
             let body_length: usize = length - BODY_OFFSET;
             let mut body: Vec<u8> = vec![0; body_length];
-            self.inner.read_exact(&mut body)?;
+            self.inner.read(&mut body)?;
             body
         };
 
@@ -122,7 +122,7 @@ where
 
     pub fn write_frame(&mut self, frame: Frame) -> anyhow::Result<()> {
         let frame_bytes: Vec<u8> = frame.try_into()?;
-        self.inner.write_all(&frame_bytes)?;
+        self.inner.write(&frame_bytes)?;
         self.inner.flush()?;
         Ok(())
     }

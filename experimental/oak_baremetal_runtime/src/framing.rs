@@ -21,11 +21,11 @@ use crate::{
 };
 use alloc::{boxed::Box, sync::Arc};
 use anyhow::Context;
-use ciborium_io::{Read, Write};
 use oak_baremetal_communication_channel::{
     schema,
     schema::TrustedRuntime,
     server::{message_from_response_and_id, ServerChannelHandle},
+    Read, Write,
 };
 use oak_functions_lookup::LookupDataManager;
 use oak_idl::Handler;
@@ -181,7 +181,7 @@ pub fn handle_frames<T, G: 'static + AttestationGenerator, V: 'static + Attestat
     attestation_behavior: AttestationBehavior<G, V>,
 ) -> anyhow::Result<!>
 where
-    T: Read<Error = anyhow::Error> + Write<Error = anyhow::Error>,
+    T: Read + Write,
 {
     let mut invocation_handler = InvocationHandler {
         initialization_state: InitializationState::Uninitialized(Some(attestation_behavior)),

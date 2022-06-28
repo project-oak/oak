@@ -42,18 +42,15 @@ mod logging;
 mod memory;
 #[cfg(feature = "serial_channel")]
 mod serial;
+#[cfg(not(feature = "serial_channel"))]
+mod virtio;
 
 use core::panic::PanicInfo;
 use log::{error, info};
+use oak_baremetal_communication_channel::{Read, Write};
 use oak_remote_attestation::handshaker::{AttestationBehavior, EmptyAttestationVerifier};
 use oak_remote_attestation_amd::PlaceholderAmdAttestationGenerator;
 use rust_hypervisor_firmware_boot::paging;
-#[cfg(not(feature = "serial_channel"))]
-use rust_hypervisor_firmware_virtio::pci::VirtioPciTransport;
-
-#[cfg(all(feature = "vsock_channel", not(feature = "serial_channel")))]
-// The virtio vsock port on which to listen.
-const VSOCK_PORT: u32 = 1024;
 
 /// Main entry point for the kernel, to be called from bootloader.
 pub fn start_kernel<E: boot::E820Entry, B: boot::BootInfo<E>>(info: B) -> ! {
@@ -83,27 +80,20 @@ fn main(protocol: &str) -> ! {
 }
 
 #[cfg(feature = "serial_channel")]
-fn get_channel() -> serial::Serial {
+fn get_channel() -> impl Read + Write {
     serial::Serial::new()
 }
 
 // Use a virtio console device for the communications channel if we don't support virtio vsock.
 #[cfg(all(not(feature = "vsock_channel"), not(feature = "serial_channel")))]
-fn get_channel() -> virtio::console::Console<VirtioPciTransport> {
-    let console = virtio::console::Console::find_and_configure_device()
-        .expect("Couldn't configure PCI virtio console device.");
-    info!("Console device status: {}", console.get_status());
-    console
+fn get_channel() -> impl Read + Write {
+    virtio::get_console_channel()
 }
 
 // Use virtio vsock for the communications channel.
 #[cfg(all(feature = "vsock_channel", not(feature = "serial_channel")))]
-fn get_channel() -> virtio::vsock::socket::Socket<VirtioPciTransport> {
-    let vsock = virtio::vsock::VSock::find_and_configure_device()
-        .expect("Couldn't configure PCI virtio vsock device.");
-    info!("Socket device status: {}", vsock.get_status());
-    let listener = virtio::vsock::socket::SocketListener::new(vsock, VSOCK_PORT);
-    listener.accept().expect("Couldn't accept connection.")
+fn get_channel() -> impl Read + Write {
+    virtio::get_vsock_channel()
 }
 
 /// Common panic routine for the kernel. This needs to be wrrapped in a

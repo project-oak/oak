@@ -18,10 +18,9 @@ extern crate alloc;
 
 use crate::{
     message::{InvocationId, RequestMessage, ResponseMessage},
-    InvocationChannel,
+    InvocationChannel, Read, Write,
 };
 use alloc::{string::String, vec::Vec};
-use ciborium_io::{Read, Write};
 
 pub struct ClientChannelHandle<T: Read + Write> {
     inner: InvocationChannel<T>,
@@ -29,7 +28,7 @@ pub struct ClientChannelHandle<T: Read + Write> {
 
 impl<T> ClientChannelHandle<T>
 where
-    T: Read<Error = anyhow::Error> + Write<Error = anyhow::Error>,
+    T: Read + Write,
 {
     pub fn new(socket: T) -> Self {
         Self {
