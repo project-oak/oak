@@ -19,12 +19,10 @@
 use anyhow::Context;
 use clap::Parser;
 use log::Level;
-use oak_functions_loader::{
-    logger::Logger, lookup_data::LookupDataAuth, server::Policy, Data, LoadLookupDataConfig, Opt,
-};
+use oak_functions_loader::{logger::Logger, server::Policy, LoadLookupDataConfig, Opt};
 use oak_logger::OakLogger;
 use serde_derive::Deserialize;
-use std::{fs, time::Duration};
+use std::fs;
 
 /// Runtime Configuration of Base Runtime.
 ///
@@ -35,21 +33,9 @@ use std::{fs, time::Duration};
 #[derive(Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
 pub struct Config {
-    /// TODO(#2852): Combine the lookup data specific fields in one struct.
-    /// URL of a file containing key / value entries in protobuf binary format for lookup.
-    ///
-    /// If empty or not provided, no data is available for lookup.
+    /// Configuration to load the LookupData.
     #[serde(default)]
-    lookup_data: Option<Data>,
-    /// How often to refresh the lookup data.
-    ///
-    /// If empty or not provided, data is only loaded once at startup.
-    #[serde(default, with = "humantime_serde")]
-    lookup_data_download_period: Option<Duration>,
-    /// Whether to use the GCP metadata service to obtain an authentication token for downloading
-    /// the lookup data.
-    #[serde(default = "LookupDataAuth::default")]
-    lookup_data_auth: LookupDataAuth,
+    load_lookup_data: LoadLookupDataConfig,
     /// Security policy guaranteed by the server.
     policy: Option<Policy>,
 }
@@ -69,11 +55,7 @@ pub fn main() -> anyhow::Result<()> {
     oak_functions_loader::lib_main(
         opt,
         logger,
-        LoadLookupDataConfig::new(
-            config.lookup_data,
-            config.lookup_data_download_period,
-            config.lookup_data_auth,
-        ),
+        config.load_lookup_data,
         config.policy,
         extension_factories,
     )
