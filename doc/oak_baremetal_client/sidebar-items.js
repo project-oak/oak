@@ -1,1 +1,1 @@
-initSidebarItems({"fn":[["chat",""],["main",""]],"struct":[["Args",""]]});
+initSidebarItems({"constant":[["LARGE_MESSAGE",""],["TWO_MIB",""]],"fn":[["chat",""],["main",""]],"struct":[["Args",""]]});
