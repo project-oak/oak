@@ -333,6 +333,7 @@
 <span id="328">328</span>
 <span id="329">329</span>
 <span id="330">330</span>
+<span id="331">331</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2022 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -395,8 +396,8 @@
     <span class="kw">pub</span> <span class="ident">spec</span>: <span class="ident">Spec</span>,
 }
 
-<span class="doccomment">/// Struct representing the `specs` in the body of a Rekor LogEntry.</span>
-<span class="doccomment">/// Based on &lt;https://github.com/sigstore/rekor/blob/2978cdc26fdf8f5bfede8459afd9735f0f231a2a/pkg/generated/models/hashedrekord_v001_schema.go#L39.&gt;</span>
+<span class="doccomment">/// Struct representing the `spec` in the body of a Rekor LogEntry.</span>
+<span class="doccomment">/// Based on &lt;https://github.com/sigstore/rekor/blob/2978cdc26fdf8f5bfede8459afd9735f0f231a2a/pkg/generated/models/rekord_v001_schema.go#L39.&gt;</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Deserialize</span>, <span class="ident">PartialEq</span>, <span class="ident">Serialize</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Spec</span> {
     <span class="kw">pub</span> <span class="ident">data</span>: <span class="ident">Data</span>,
@@ -404,14 +405,14 @@
 }
 
 <span class="doccomment">/// Struct representing the hashed data in the body of a Rekor LogEntry.</span>
-<span class="doccomment">/// Based on &lt;https://github.com/sigstore/rekor/blob/2978cdc26fdf8f5bfede8459afd9735f0f231a2a/pkg/generated/models/hashedrekord_v001_schema.go#L179.&gt;</span>
+<span class="doccomment">/// Based on &lt;https://github.com/sigstore/rekor/blob/2978cdc26fdf8f5bfede8459afd9735f0f231a2a/pkg/generated/models/rekord_v001_schema.go#L179.&gt;</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Deserialize</span>, <span class="ident">PartialEq</span>, <span class="ident">Serialize</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Data</span> {
     <span class="kw">pub</span> <span class="ident">hash</span>: <span class="ident">Hash</span>,
 }
 
 <span class="doccomment">/// Struct representing a hash digest.</span>
-<span class="doccomment">/// Based on &lt;https://github.com/sigstore/rekor/blob/2978cdc26fdf8f5bfede8459afd9735f0f231a2a/pkg/generated/models/hashedrekord_v001_schema.go#L269.&gt;</span>
+<span class="doccomment">/// Based on &lt;https://github.com/sigstore/rekor/blob/2978cdc26fdf8f5bfede8459afd9735f0f231a2a/pkg/generated/models/rekord_v001_schema.go#L273.&gt;</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Deserialize</span>, <span class="ident">PartialEq</span>, <span class="ident">Serialize</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Hash</span> {
     <span class="kw">pub</span> <span class="ident">algorithm</span>: <span class="ident">String</span>,
@@ -419,6 +420,7 @@
 }
 
 <span class="doccomment">/// Struct representing a signature in the body of a Rekor LogEntry.</span>
+<span class="doccomment">/// Based on &lt;https://github.com/sigstore/rekor/blob/2978cdc26fdf8f5bfede8459afd9735f0f231a2a/pkg/generated/models/rekord_v001_schema.go#L383&gt;</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Deserialize</span>, <span class="ident">PartialEq</span>, <span class="ident">Serialize</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">GenericSignature</span> {
     <span class="doccomment">/// Base64 content that is signed.</span>
@@ -429,7 +431,7 @@
 }
 
 <span class="doccomment">/// Struct representing a public key included in the body of a Rekor LogEntry.</span>
-<span class="doccomment">/// Based on &lt;https://github.com/sigstore/rekor/blob/2978cdc26fdf8f5bfede8459afd9735f0f231a2a/pkg/generated/models/hashedrekord_v001_schema.go#L468.&gt;</span>
+<span class="doccomment">/// Based on &lt;https://github.com/sigstore/rekor/blob/2978cdc26fdf8f5bfede8459afd9735f0f231a2a/pkg/generated/models/rekord_v001_schema.go#L551.&gt;</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Deserialize</span>, <span class="ident">PartialEq</span>, <span class="ident">Serialize</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">PublicKey</span> {
     <span class="doccomment">/// Base64 content of a public key.</span>
