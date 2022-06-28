@@ -80,7 +80,7 @@ fn main(protocol: &str) -> ! {
 }
 
 #[cfg(feature = "serial_channel")]
-fn get_channel() -> serial::Serial {
+fn get_channel() -> impl Read + Write {
     serial::Serial::new()
 }
 
