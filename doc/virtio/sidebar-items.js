@@ -1,1 +1,1 @@
-initSidebarItems({"mod":[["console",""],["queue",""],["vsock",""]]});
+initSidebarItems({"mod":[["console",""],["queue",""],["vsock",""]],"trait":[["Read","Read bytes from a source."],["Write","Write bytes to a source."]]});

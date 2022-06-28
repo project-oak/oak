@@ -117,6 +117,14 @@
 <span id="112">112</span>
 <span id="113">113</span>
 <span id="114">114</span>
+<span id="115">115</span>
+<span id="116">116</span>
+<span id="117">117</span>
+<span id="118">118</span>
+<span id="119">119</span>
+<span id="120">120</span>
+<span id="121">121</span>
+<span id="122">122</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2022 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -157,7 +165,15 @@
 <span class="kw">extern</span> <span class="kw">crate</span> <span class="ident">alloc</span>;
 <span class="kw">use</span> <span class="ident">alloc::vec::Vec</span>;
 <span class="kw">use</span> <span class="ident">anyhow::Context</span>;
-<span class="kw">use</span> <span class="ident">ciborium_io</span>::{<span class="ident">Read</span>, <span class="ident">Write</span>};
+
+<span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">Read</span> {
+    <span class="kw">fn</span> <span class="ident">read</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">data</span>: <span class="kw-2">&amp;mut</span> [<span class="ident">u8</span>]) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span>;
+}
+
+<span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">Write</span> {
+    <span class="kw">fn</span> <span class="ident">write</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">data</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span>;
+    <span class="kw">fn</span> <span class="ident">flush</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span>;
+}
 
 <span class="kw">struct</span> <span class="ident">InvocationChannel</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Read</span> <span class="op">+</span> <span class="ident">Write</span><span class="op">&gt;</span> {
     <span class="ident">inner</span>: <span class="ident">frame::Framed</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>,
@@ -165,7 +181,7 @@
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="ident">InvocationChannel</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>
 <span class="kw">where</span>
-    <span class="ident">T</span>: <span class="ident">Read</span><span class="op">&lt;</span><span class="ident">Error</span> <span class="op">=</span> <span class="ident">anyhow::Error</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Write</span><span class="op">&lt;</span><span class="ident">Error</span> <span class="op">=</span> <span class="ident">anyhow::Error</span><span class="op">&gt;</span>,
+    <span class="ident">T</span>: <span class="ident">Read</span> <span class="op">+</span> <span class="ident">Write</span>,
 {
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">socket</span>: <span class="ident">T</span>) -&gt; <span class="self">Self</span> {
         <span class="self">Self</span> {

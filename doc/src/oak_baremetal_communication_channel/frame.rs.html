@@ -184,9 +184,9 @@
 
 <span class="kw">extern</span> <span class="kw">crate</span> <span class="ident">alloc</span>;
 
+<span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">Read</span>, <span class="ident">Write</span>};
 <span class="kw">use</span> <span class="ident">alloc</span>::{<span class="ident">format</span>, <span class="ident">vec</span>, <span class="ident">vec::Vec</span>};
 <span class="kw">use</span> <span class="ident">bitflags::bitflags</span>;
-<span class="kw">use</span> <span class="ident">ciborium_io</span>::{<span class="ident">Read</span>, <span class="ident">Write</span>};
 
 <span class="kw">pub</span> <span class="kw">const</span> <span class="ident">PADDING_SIZE</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">4</span>;
 
@@ -250,7 +250,7 @@
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="ident">Framed</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>
 <span class="kw">where</span>
-    <span class="ident">T</span>: <span class="ident">Read</span><span class="op">&lt;</span><span class="ident">Error</span> <span class="op">=</span> <span class="ident">anyhow::Error</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Write</span><span class="op">&lt;</span><span class="ident">Error</span> <span class="op">=</span> <span class="ident">anyhow::Error</span><span class="op">&gt;</span>,
+    <span class="ident">T</span>: <span class="ident">Read</span> <span class="op">+</span> <span class="ident">Write</span>,
 {
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">socket</span>: <span class="ident">T</span>) -&gt; <span class="self">Self</span> {
         <span class="self">Self</span> { <span class="ident">inner</span>: <span class="ident">socket</span> }
@@ -259,11 +259,11 @@
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">read_frame</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">Frame</span><span class="op">&gt;</span> {
         {
             <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">padding_bytes</span> <span class="op">=</span> [<span class="number">0</span>; <span class="ident">PADDING_SIZE</span>];
-            <span class="self">self</span>.<span class="ident">inner</span>.<span class="ident">read_exact</span>(<span class="kw-2">&amp;mut</span> <span class="ident">padding_bytes</span>)<span class="question-mark">?</span>;
+            <span class="self">self</span>.<span class="ident">inner</span>.<span class="ident">read</span>(<span class="kw-2">&amp;mut</span> <span class="ident">padding_bytes</span>)<span class="question-mark">?</span>;
         };
         <span class="kw">let</span> <span class="ident">length</span>: <span class="ident">usize</span> <span class="op">=</span> {
             <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">length_bytes</span> <span class="op">=</span> [<span class="number">0</span>; <span class="ident">LENGTH_SIZE</span>];
-            <span class="self">self</span>.<span class="ident">inner</span>.<span class="ident">read_exact</span>(<span class="kw-2">&amp;mut</span> <span class="ident">length_bytes</span>)<span class="question-mark">?</span>;
+            <span class="self">self</span>.<span class="ident">inner</span>.<span class="ident">read</span>(<span class="kw-2">&amp;mut</span> <span class="ident">length_bytes</span>)<span class="question-mark">?</span>;
             <span class="kw">let</span> <span class="ident">length</span> <span class="op">=</span> <span class="ident">Length::from_le_bytes</span>(<span class="ident">length_bytes</span>).<span class="ident">into</span>();
             <span class="kw">if</span> <span class="ident">length</span> <span class="op">&gt;</span> <span class="ident">MAX_SIZE</span> {
                 <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">anyhow::Error::msg</span>(<span class="string">&quot;frame exceeds the maximum frame size&quot;</span>));
@@ -272,14 +272,14 @@
         };
         <span class="kw">let</span> <span class="ident">flags</span> <span class="op">=</span> {
             <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">flags_bytes</span> <span class="op">=</span> [<span class="number">0</span>; <span class="ident">FLAGS_SIZE</span>];
-            <span class="self">self</span>.<span class="ident">inner</span>.<span class="ident">read_exact</span>(<span class="kw-2">&amp;mut</span> <span class="ident">flags_bytes</span>)<span class="question-mark">?</span>;
+            <span class="self">self</span>.<span class="ident">inner</span>.<span class="ident">read</span>(<span class="kw-2">&amp;mut</span> <span class="ident">flags_bytes</span>)<span class="question-mark">?</span>;
             <span class="ident">Flags::from_bits_truncate</span>(<span class="ident">u16::from_le_bytes</span>(<span class="ident">flags_bytes</span>))
         };
 
         <span class="kw">let</span> <span class="ident">body</span> <span class="op">=</span> {
             <span class="kw">let</span> <span class="ident">body_length</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="ident">length</span> <span class="op">-</span> <span class="ident">BODY_OFFSET</span>;
             <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">body</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span> <span class="op">=</span> <span class="macro">vec!</span>[<span class="number">0</span>; <span class="ident">body_length</span>];
-            <span class="self">self</span>.<span class="ident">inner</span>.<span class="ident">read_exact</span>(<span class="kw-2">&amp;mut</span> <span class="ident">body</span>)<span class="question-mark">?</span>;
+            <span class="self">self</span>.<span class="ident">inner</span>.<span class="ident">read</span>(<span class="kw-2">&amp;mut</span> <span class="ident">body</span>)<span class="question-mark">?</span>;
             <span class="ident">body</span>
         };
 
@@ -288,7 +288,7 @@
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">write_frame</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">frame</span>: <span class="ident">Frame</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">frame_bytes</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">frame</span>.<span class="ident">try_into</span>()<span class="question-mark">?</span>;
-        <span class="self">self</span>.<span class="ident">inner</span>.<span class="ident">write_all</span>(<span class="kw-2">&amp;</span><span class="ident">frame_bytes</span>)<span class="question-mark">?</span>;
+        <span class="self">self</span>.<span class="ident">inner</span>.<span class="ident">write</span>(<span class="kw-2">&amp;</span><span class="ident">frame_bytes</span>)<span class="question-mark">?</span>;
         <span class="self">self</span>.<span class="ident">inner</span>.<span class="ident">flush</span>()<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(())
     }

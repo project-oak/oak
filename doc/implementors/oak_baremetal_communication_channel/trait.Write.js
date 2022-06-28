@@ -1,0 +1,3 @@
+(function() {var implementors = {};
+implementors["oak_baremetal_loader"] = [{"text":"impl <a class=\"trait\" href=\"oak_baremetal_communication_channel/trait.Write.html\" title=\"trait oak_baremetal_communication_channel::Write\">Write</a> for <a class=\"struct\" href=\"oak_baremetal_loader/struct.CommsChannel.html\" title=\"struct oak_baremetal_loader::CommsChannel\">CommsChannel</a>","synthetic":false,"types":["oak_baremetal_loader::CommsChannel"]}];
+if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()
