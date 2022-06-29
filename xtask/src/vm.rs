@@ -54,6 +54,23 @@ impl Variant {
     }
 }
 
+/// Builds the binaries for crosvm and qemu for release.
+pub fn build_baremetal_variants() -> Step {
+    Step::Multiple {
+        name: "Build baremetal variants".to_string(),
+        steps: Variant::iter()
+            .map(|v| build_released_binary(&v.to_string(), v.payload_crate_path()))
+            .collect(),
+    }
+}
+
+fn build_released_binary(name: &str, directory: &str) -> Step {
+    Step::Single {
+        name: name.to_string(),
+        command: Cmd::new_in_dir("cargo", vec!["build", "--release"], Path::new(directory)),
+    }
+}
+
 pub fn run_vm_test() -> Step {
     Step::Multiple {
         name: "VM end-to-end test".to_string(),

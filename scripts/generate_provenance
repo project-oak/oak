@@ -1,5 +1,12 @@
 #!/usr/bin/env bash
 
+# Takes as input a TOML file, and builds a binary and its provenance from the
+# current checked-out branch, using the build config in the TOML file. To run
+# locally, pass the name of the TOML file as input. The generated provenance
+# file will be named `provenance-<COMMIT_HASH>.json` stored in the root of the
+# repo. If an optional `-s` argument is passed in, the provenance file will be
+# copied to `./provenance/<BINARY_HASH>/<COMMIT_HASH>.json`.
+
 readonly SCRIPTS_DIR="$(dirname "$0")"
 # shellcheck source=scripts/common
 source "$SCRIPTS_DIR/common"
@@ -7,10 +14,43 @@ source "$SCRIPTS_DIR/common"
 # Get git commit hash
 readonly COMMIT_HASH=$(git rev-parse --verify HEAD)
 
+# Store the provenance file in `./provenance/<BINARY_HASH>/<COMMIT_HASH>.json`
+STORE=false
+
+while getopts "c:sh" opt; do
+  case "${opt}" in
+    h)
+      echo -e "Usage: ${0} [-h] [-s] -c CONFIG_PATH
+
+Save example modules in Google Cloud Storage.
+
+Options:
+  -c    Path to the build-config file (required)
+  -s    Store the generated provenance in ./provenance/<BINARY_HASH>/COMMIT_HASH.json (optional)
+  -h    Print Help (this message) and exit"
+      exit 0;;
+    c)
+      readonly CONFIG_PATH="${OPTARG}";;
+    s)
+      STORE=true
+      ;;
+    *)
+      echo "Invalid argument: ${OPTARG}"
+      exit 1;;
+  esac
+done
+
+if [[ -z "${CONFIG_PATH+z}" ]]; then
+  echo "Missing required option: -c CONFIG_PATH"
+  exit 1
+fi
+
+readonly PROV_FILE_NAME="provenance-$COMMIT_HASH.json"
+
 mkdir tmp
 
 # Create a copy of the static toml file, since we are going to modify it.
-cp build.toml tmp/build.toml
+cp "${CONFIG_PATH}" tmp/build.toml
 
 (
     cd tmp
@@ -28,20 +68,22 @@ cp build.toml tmp/build.toml
 )
 
 # Build the binary and generate the provenance file.
-# `|| true` is needed so that we can continue to the rest of the script, particularly the cleanup part.
-./tmp/transparent-release -build_config_path=tmp/build.toml -git_root_dir=. || true
+# `|| true` is needed so that we can continue to the rest of the script,
+# particularly the cleanup part.
+./tmp/transparent-release -build_config_path=tmp/build.toml -git_root_dir=. -provenance_path="${PROV_FILE_NAME}" || true
 
 
 # cleanup
 rm -rf tmp
 
-# On GitHub we need to store the generated provenance files in a location that can easily be copied
-# to the provenance branch. We pass an optional argument to the script to trigger this behaviour.
-if [ $# -gt 0 ]; then
-  readonly BINARY_SHA_256_HASH=$(jq -r '.subject[0].digest.sha256' ./provenance.json)
+# Copy the provenance file in `./provenance/<BINARY_HASH>/COMMIT_HASH.json`
+# if the `-s` argument is passed in.
+if $STORE ; then
+  readonly BINARY_SHA_256_HASH=$(jq -r '.subject[0].digest.sha256' './${PROV_FILE_NAME}')
 
-  # Move the generated provenances to the correct folder
+  # Move the generated provenances to the correct directory, first creating
+  # any required directories.
   mkdir -p "./provenance"
   mkdir -p "./provenance/${BINARY_SHA_256_HASH}"
-  cp ./provenance.json "./provenance/${BINARY_SHA_256_HASH}/${COMMIT_HASH}.json"
+  cp "./${PROV_FILE_NAME}" "./provenance/${BINARY_SHA_256_HASH}/${COMMIT_HASH}.json"
 fi
