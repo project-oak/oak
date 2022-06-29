@@ -22,7 +22,7 @@ use strum_macros::{Display, EnumIter};
 use crate::internal::*;
 
 #[derive(Debug, Display, Clone, PartialEq, EnumIter)]
-enum Variant {
+pub enum Variant {
     Baremetal,
     Crosvm,
 }
@@ -55,12 +55,23 @@ impl Variant {
 }
 
 /// Builds the binaries for crosvm and qemu for release.
-pub fn build_baremetal_variants() -> Step {
+pub fn build_baremetal_variants(opt: &BuildBaremetalVariantsOpt) -> Step {
     Step::Multiple {
         name: "Build baremetal variants".to_string(),
         steps: Variant::iter()
+            .filter(|v| option_covers_variant(opt, v))
             .map(|v| build_released_binary(&v.to_string(), v.payload_crate_path()))
             .collect(),
+    }
+}
+
+fn option_covers_variant(opt: &BuildBaremetalVariantsOpt, variant: &Variant) -> bool {
+    match &opt.variant {
+        None => true,
+        Some(var) => match *variant {
+            Variant::Baremetal => var == "qemu",
+            Variant::Crosvm => var == "crosvm",
+        },
     }
 }
 

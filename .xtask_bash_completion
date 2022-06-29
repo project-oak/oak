@@ -91,12 +91,16 @@ _xtask() {
             return 0
             ;;
         xtask__build__baremetal__variants)
-            opts="-h --help"
+            opts="-h --variant --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
             fi
             case "${prev}" in
+                --variant)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
                 *)
                     COMPREPLY=()
                     ;;

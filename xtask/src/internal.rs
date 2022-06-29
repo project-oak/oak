@@ -55,7 +55,7 @@ pub struct Opt {
 #[derive(Subcommand, Clone, Debug)]
 pub enum Command {
     RunVmTest,
-    BuildBaremetalVariants,
+    BuildBaremetalVariants(BuildBaremetalVariantsOpt),
     RunOakFunctionsExamples(RunOakExamplesOpt),
     BuildOakFunctionsExample(RunOakExamplesOpt),
     BuildOakFunctionsServerVariants(BuildServerOpt),
@@ -261,6 +261,15 @@ pub struct RunCargoFuzz {
     /// Additional `libFuzzer` arguments passed through to the binary
     #[clap(last(true))]
     pub args: Vec<String>,
+}
+
+#[derive(Parser, Clone, Debug)]
+pub struct BuildBaremetalVariantsOpt {
+    #[clap(
+        long,
+        help = "name of a specific baremetal variant (bios, or crosvm). If not specified, builds all variants."
+    )]
+    pub variant: Option<String>,
 }
 
 /// Partial representation of Cargo manifest files.
