@@ -54,14 +54,20 @@ impl Variant {
     }
 }
 
-pub fn build_vm_loader() -> Step {
+/// Builds the binaries for crosvm and qemu for release.
+pub fn build_baremetal_variants() -> Step {
+    Step::Multiple {
+        name: "Build baremetal variants".to_string(),
+        steps: Variant::iter()
+            .map(|v| build_released_binary(&v.to_string(), v.payload_crate_path()))
+            .collect(),
+    }
+}
+
+fn build_released_binary(name: &str, directory: &str) -> Step {
     Step::Single {
-        name: "build vm loader for release".to_string(),
-        command: Cmd::new_in_dir(
-            "cargo",
-            vec!["build"],
-            Path::new("./experimental/oak_baremetal_loader"),
-        ),
+        name: name.to_string(),
+        command: Cmd::new_in_dir("cargo", vec!["build", "--release"], Path::new(directory)),
     }
 }
 

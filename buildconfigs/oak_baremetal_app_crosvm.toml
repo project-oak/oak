@@ -1,5 +1,5 @@
 # This is the static build config that we use with the transparent release tool for building the provenance.
 # To be able to use it with the build tool from Transparent Release, additional information must be added.
 repo = "https://github.com/project-oak/oak"
-command = ["./scripts/xtask", "build-vm-loader"]
-output_path = "./target/debug/oak_baremetal_loader"
+command = ["./scripts/xtask", "build-baremetal-variants"]
+output_path = "./experimental/oak_baremetal_app_crosvm/target/target/release/oak_baremetal_app_crosvm"
