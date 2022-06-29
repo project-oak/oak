@@ -26,7 +26,7 @@ Save example modules in Google Cloud Storage.
 
 Options:
   -c    Path to the build-config file (required)
-  -s    Store the generated provenance in `./provenance/<BINARY_HASH>/COMMIT_HASH.json` (optional)
+  -s    Store the generated provenance in ./provenance/<BINARY_HASH>/COMMIT_HASH.json (optional)
   -h    Print Help (this message) and exit"
       exit 0;;
     c)
@@ -79,7 +79,7 @@ rm -rf tmp
 # Copy the provenance file in `./provenance/<BINARY_HASH>/COMMIT_HASH.json`
 # if the `-s` argument is passed in.
 if $STORE ; then
-  readonly BINARY_SHA_256_HASH=$(jq -r '.subject[0].digest.sha256' ./${PROV_FILE_NAME})
+  readonly BINARY_SHA_256_HASH=$(jq -r '.subject[0].digest.sha256' './${PROV_FILE_NAME}')
 
   # Move the generated provenances to the correct directory, first creating
   # any required directories.
