@@ -777,6 +777,7 @@
 <span id="772">772</span>
 <span id="773">773</span>
 <span id="774">774</span>
+<span id="775">775</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -894,6 +895,7 @@
 <span class="kw">fn</span> <span class="ident">match_cmd</span>(<span class="ident">opt</span>: <span class="kw-2">&amp;</span><span class="ident">Opt</span>) -&gt; <span class="ident">Step</span> {
     <span class="kw">match</span> <span class="ident">opt</span>.<span class="ident">cmd</span> {
         <span class="ident">Command::RunVmTest</span> =&gt; <span class="ident">vm::run_vm_test</span>(),
+        <span class="ident">Command::BuildBaremetalVariants</span> =&gt; <span class="ident">vm::build_baremetal_variants</span>(),
         <span class="ident">Command::RunOakFunctionsExamples</span>(<span class="kw-2">ref</span> <span class="ident">run_opt</span>) =&gt; {
             <span class="ident">run_oak_functions_examples</span>(<span class="ident">run_opt</span>, <span class="kw-2">&amp;</span><span class="ident">opt</span>.<span class="ident">scope</span>)
         }

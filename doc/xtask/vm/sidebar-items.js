@@ -1,1 +1,1 @@
-initSidebarItems({"enum":[["Variant",""]],"fn":[["build_binary",""],["run_client",""],["run_loader",""],["run_variant",""],["run_vm_test",""]],"struct":[["VariantIter","An iterator over the variants of [Self]"]]});
+initSidebarItems({"enum":[["Variant",""]],"fn":[["build_baremetal_variants","Builds the binaries for crosvm and qemu for release."],["build_binary",""],["build_released_binary",""],["run_client",""],["run_loader",""],["run_variant",""],["run_vm_test",""]],"struct":[["VariantIter","An iterator over the variants of [Self]"]]});
