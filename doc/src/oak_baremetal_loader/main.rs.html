@@ -317,7 +317,7 @@
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">clap::ArgEnum</span>, <span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">PartialEq</span>)]</span>
 <span class="kw">enum</span> <span class="ident">Mode</span> {
-    <span class="ident">Bios</span>,
+    <span class="ident">Qemu</span>,
     <span class="ident">Crosvm</span>,
 }
 
@@ -332,7 +332,7 @@
     <span class="ident">crosvm</span>: <span class="ident">PathBuf</span>,
 
     <span class="doccomment">/// Execution mode.</span>
-    <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">arg_enum</span>, <span class="ident">long</span>, <span class="ident">default_value</span> <span class="op">=</span> <span class="string">&quot;bios&quot;</span>)]</span>
+    <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">arg_enum</span>, <span class="ident">long</span>, <span class="ident">default_value</span> <span class="op">=</span> <span class="string">&quot;qemu&quot;</span>)]</span>
     <span class="ident">mode</span>: <span class="ident">Mode</span>,
 
     <span class="doccomment">/// Path to the kernel to execute.</span>
@@ -428,7 +428,7 @@
     <span class="kw">let</span> (<span class="ident">console_vmm</span>, <span class="ident">console</span>) <span class="op">=</span> <span class="ident">UnixStream::pair</span>()<span class="question-mark">?</span>;
 
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">vmm</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">Vmm</span><span class="op">&gt;</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">cli</span>.<span class="ident">mode</span> {
-        <span class="ident">Mode::Bios</span> =&gt; <span class="ident">Box::new</span>(<span class="ident">Qemu::start</span>(<span class="ident">Params</span> {
+        <span class="ident">Mode::Qemu</span> =&gt; <span class="ident">Box::new</span>(<span class="ident">Qemu::start</span>(<span class="ident">Params</span> {
             <span class="ident">binary</span>: <span class="ident">cli</span>.<span class="ident">qemu</span>,
             <span class="ident">app</span>: <span class="ident">cli</span>.<span class="ident">app</span>,
             <span class="ident">console</span>: <span class="ident">console_vmm</span>,

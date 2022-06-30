@@ -141,6 +141,17 @@
 <span id="136">136</span>
 <span id="137">137</span>
 <span id="138">138</span>
+<span id="139">139</span>
+<span id="140">140</span>
+<span id="141">141</span>
+<span id="142">142</span>
+<span id="143">143</span>
+<span id="144">144</span>
+<span id="145">145</span>
+<span id="146">146</span>
+<span id="147">147</span>
+<span id="148">148</span>
+<span id="149">149</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -165,29 +176,29 @@
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::internal</span>::<span class="kw-2">*</span>;
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Display</span>, <span class="ident">Clone</span>, <span class="ident">PartialEq</span>, <span class="ident">EnumIter</span>)]</span>
-<span class="kw">enum</span> <span class="ident">Variant</span> {
-    <span class="ident">Baremetal</span>,
+<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">Variant</span> {
+    <span class="ident">Qemu</span>,
     <span class="ident">Crosvm</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">Variant</span> {
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">payload_crate_path</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span> {
         <span class="kw">match</span> <span class="self">self</span> {
-            <span class="ident">Variant::Baremetal</span> =&gt; <span class="string">&quot;./experimental/oak_baremetal_app_qemu&quot;</span>,
+            <span class="ident">Variant::Qemu</span> =&gt; <span class="string">&quot;./experimental/oak_baremetal_app_qemu&quot;</span>,
             <span class="ident">Variant::Crosvm</span> =&gt; <span class="string">&quot;./experimental/oak_baremetal_app_crosvm&quot;</span>,
         }
     }
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">loader_mode</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span> {
         <span class="kw">match</span> <span class="self">self</span> {
-            <span class="ident">Variant::Baremetal</span> =&gt; <span class="string">&quot;bios&quot;</span>,
+            <span class="ident">Variant::Qemu</span> =&gt; <span class="string">&quot;qemu&quot;</span>,
             <span class="ident">Variant::Crosvm</span> =&gt; <span class="string">&quot;crosvm&quot;</span>,
         }
     }
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">binary_path</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span> {
         <span class="kw">match</span> <span class="self">self</span> {
-            <span class="ident">Variant::Baremetal</span> =&gt; {
+            <span class="ident">Variant::Qemu</span> =&gt; {
                 <span class="string">&quot;./experimental/oak_baremetal_app_qemu/target/target/debug/oak_baremetal_app_qemu&quot;</span>
             }
             <span class="ident">Variant::Crosvm</span> =&gt; {
@@ -198,12 +209,23 @@
 }
 
 <span class="doccomment">/// Builds the binaries for crosvm and qemu for release.</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">build_baremetal_variants</span>() -&gt; <span class="ident">Step</span> {
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">build_baremetal_variants</span>(<span class="ident">opt</span>: <span class="kw-2">&amp;</span><span class="ident">BuildBaremetalVariantsOpt</span>) -&gt; <span class="ident">Step</span> {
     <span class="ident">Step::Multiple</span> {
         <span class="ident">name</span>: <span class="string">&quot;Build baremetal variants&quot;</span>.<span class="ident">to_string</span>(),
         <span class="ident">steps</span>: <span class="ident">Variant::iter</span>()
+            .<span class="ident">filter</span>(<span class="op">|</span><span class="ident">v</span><span class="op">|</span> <span class="ident">option_covers_variant</span>(<span class="ident">opt</span>, <span class="ident">v</span>))
             .<span class="ident">map</span>(<span class="op">|</span><span class="ident">v</span><span class="op">|</span> <span class="ident">build_released_binary</span>(<span class="kw-2">&amp;</span><span class="ident">v</span>.<span class="ident">to_string</span>(), <span class="ident">v</span>.<span class="ident">payload_crate_path</span>()))
             .<span class="ident">collect</span>(),
+    }
+}
+
+<span class="kw">fn</span> <span class="ident">option_covers_variant</span>(<span class="ident">opt</span>: <span class="kw-2">&amp;</span><span class="ident">BuildBaremetalVariantsOpt</span>, <span class="ident">variant</span>: <span class="kw-2">&amp;</span><span class="ident">Variant</span>) -&gt; <span class="ident">bool</span> {
+    <span class="kw">match</span> <span class="kw-2">&amp;</span><span class="ident">opt</span>.<span class="ident">variant</span> {
+        <span class="prelude-val">None</span> =&gt; <span class="bool-val">true</span>,
+        <span class="prelude-val">Some</span>(<span class="ident">var</span>) =&gt; <span class="kw">match</span> <span class="kw-2">*</span><span class="ident">variant</span> {
+            <span class="ident">Variant::Qemu</span> =&gt; <span class="ident">var</span> <span class="op">==</span> <span class="string">&quot;qemu&quot;</span>,
+            <span class="ident">Variant::Crosvm</span> =&gt; <span class="ident">var</span> <span class="op">==</span> <span class="string">&quot;crosvm&quot;</span>,
+        },
     }
 }
 

@@ -1018,6 +1018,15 @@
 <span id="1013">1013</span>
 <span id="1014">1014</span>
 <span id="1015">1015</span>
+<span id="1016">1016</span>
+<span id="1017">1017</span>
+<span id="1018">1018</span>
+<span id="1019">1019</span>
+<span id="1020">1020</span>
+<span id="1021">1021</span>
+<span id="1022">1022</span>
+<span id="1023">1023</span>
+<span id="1024">1024</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -1075,7 +1084,7 @@
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Subcommand</span>, <span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
 <span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">Command</span> {
     <span class="ident">RunVmTest</span>,
-    <span class="ident">BuildBaremetalVariants</span>,
+    <span class="ident">BuildBaremetalVariants</span>(<span class="ident">BuildBaremetalVariantsOpt</span>),
     <span class="ident">RunOakFunctionsExamples</span>(<span class="ident">RunOakExamplesOpt</span>),
     <span class="ident">BuildOakFunctionsExample</span>(<span class="ident">RunOakExamplesOpt</span>),
     <span class="ident">BuildOakFunctionsServerVariants</span>(<span class="ident">BuildServerOpt</span>),
@@ -1281,6 +1290,15 @@
     <span class="doccomment">/// Additional `libFuzzer` arguments passed through to the binary</span>
     <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">last</span>(<span class="bool-val">true</span>))]</span>
     <span class="kw">pub</span> <span class="ident">args</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
+}
+
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Parser</span>, <span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">BuildBaremetalVariantsOpt</span> {
+    <span class="attribute">#[<span class="ident">clap</span>(
+        <span class="ident">long</span>,
+        <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;name of a specific baremetal variant (qemu, or crosvm). If not specified, builds all variants.&quot;</span>
+    )]</span>
+    <span class="kw">pub</span> <span class="ident">variant</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
 }
 
 <span class="doccomment">/// Partial representation of Cargo manifest files.</span>
