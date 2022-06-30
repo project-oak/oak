@@ -96,24 +96,6 @@
 <span id="91">91</span>
 <span id="92">92</span>
 <span id="93">93</span>
-<span id="94">94</span>
-<span id="95">95</span>
-<span id="96">96</span>
-<span id="97">97</span>
-<span id="98">98</span>
-<span id="99">99</span>
-<span id="100">100</span>
-<span id="101">101</span>
-<span id="102">102</span>
-<span id="103">103</span>
-<span id="104">104</span>
-<span id="105">105</span>
-<span id="106">106</span>
-<span id="107">107</span>
-<span id="108">108</span>
-<span id="109">109</span>
-<span id="110">110</span>
-<span id="111">111</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2022 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -137,14 +119,12 @@
 <span class="kw">use</span> <span class="ident">anyhow::Context</span>;
 <span class="kw">use</span> <span class="ident">clap::Parser</span>;
 <span class="kw">use</span> <span class="ident">log::Level</span>;
-<span class="kw">use</span> <span class="ident">oak_functions_loader</span>::{
-    <span class="ident">logger::Logger</span>, <span class="ident">lookup_data::LookupDataAuth</span>, <span class="ident">server::Policy</span>, <span class="ident">Data</span>, <span class="ident">LoadLookupDataConfig</span>, <span class="ident">Opt</span>,
-};
+<span class="kw">use</span> <span class="ident">oak_functions_loader</span>::{<span class="ident">logger::Logger</span>, <span class="ident">server::Policy</span>, <span class="ident">LoadLookupDataConfig</span>, <span class="ident">Opt</span>};
 <span class="kw">use</span> <span class="ident">oak_functions_metrics</span>::{<span class="ident">PrivateMetricsConfig</span>, <span class="ident">PrivateMetricsProxyFactory</span>};
 <span class="kw">use</span> <span class="ident">oak_functions_tf_inference</span>::{<span class="ident">read_model_from_path</span>, <span class="ident">TensorFlowFactory</span>, <span class="ident">TensorFlowModelConfig</span>};
 <span class="kw">use</span> <span class="ident">oak_logger::OakLogger</span>;
 <span class="kw">use</span> <span class="ident">serde_derive::Deserialize</span>;
-<span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">fs</span>, <span class="ident">time::Duration</span>};
+<span class="kw">use</span> <span class="ident">std::fs</span>;
 
 <span class="doccomment">/// Runtime Configuration of Unsafe Runtime.</span>
 <span class="doccomment">///</span>
@@ -155,21 +135,9 @@
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Deserialize</span>, <span class="ident">Debug</span>)]</span>
 <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">deny_unknown_fields</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Config</span> {
-    <span class="doccomment">/// TODO(#2852): Combine the lookup data specific fields in one struct.</span>
-    <span class="doccomment">/// URL of a file containing key / value entries in protobuf binary format for lookup.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// If empty or not provided, no data is available for lookup.</span>
+    <span class="doccomment">/// Configuration to load the LookupData.</span>
     <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span>)]</span>
-    <span class="ident">lookup_data</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Data</span><span class="op">&gt;</span>,
-    <span class="doccomment">/// How often to refresh the lookup data.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// If empty or not provided, data is only loaded once at startup.</span>
-    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span>, <span class="ident">with</span> <span class="op">=</span> <span class="string">&quot;humantime_serde&quot;</span>)]</span>
-    <span class="ident">lookup_data_download_period</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Duration</span><span class="op">&gt;</span>,
-    <span class="doccomment">/// Whether to use the GCP metadata service to obtain an authentication token for downloading</span>
-    <span class="doccomment">/// the lookup data.</span>
-    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span> <span class="op">=</span> <span class="string">&quot;LookupDataAuth::default&quot;</span>)]</span>
-    <span class="ident">lookup_data_auth</span>: <span class="ident">LookupDataAuth</span>,
+    <span class="ident">load_lookup_data</span>: <span class="ident">LoadLookupDataConfig</span>,
     <span class="doccomment">/// Security policy guaranteed by the server.</span>
     <span class="ident">policy</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Policy</span><span class="op">&gt;</span>,
     <span class="doccomment">/// Configuration for TensorFlow model.</span>
@@ -216,11 +184,7 @@
     <span class="ident">oak_functions_loader::lib_main</span>(
         <span class="ident">opt</span>,
         <span class="ident">logger</span>,
-        <span class="ident">LoadLookupDataConfig::new</span>(
-            <span class="ident">config</span>.<span class="ident">lookup_data</span>,
-            <span class="ident">config</span>.<span class="ident">lookup_data_download_period</span>,
-            <span class="ident">config</span>.<span class="ident">lookup_data_auth</span>,
-        ),
+        <span class="ident">config</span>.<span class="ident">load_lookup_data</span>,
         <span class="ident">config</span>.<span class="ident">policy</span>,
         <span class="ident">extension_factories</span>,
     )
