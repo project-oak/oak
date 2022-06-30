@@ -32,8 +32,8 @@ pub enum LookupDataAuth {
     GcpMetadataToken,
 }
 
-impl LookupDataAuth {
-    pub fn default() -> Self {
+impl Default for LookupDataAuth {
+    fn default() -> Self {
         LookupDataAuth::None
     }
 }

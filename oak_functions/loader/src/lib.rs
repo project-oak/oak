@@ -198,24 +198,23 @@ pub enum Data {
 }
 
 /// Configuration to load the LookupData.
+#[derive(Deserialize, Debug, Default)]
+#[serde(deny_unknown_fields)]
 pub struct LoadLookupDataConfig {
+    /// URL of a file containing key / value entries in protobuf binary format for lookup.
+    ///
+    /// If empty or not provided, no data is available for lookup.
+    #[serde(default)]
     lookup_data: Option<Data>,
+    /// How often to refresh the lookup data.
+    ///
+    /// If empty or not provided, data is only loaded once at startup.
+    #[serde(default, with = "humantime_serde")]
     lookup_data_download_period: Option<Duration>,
+    /// Whether to use the GCP metadata service to obtain an authentication token for downloading
+    /// the lookup data.
+    #[serde(default = "LookupDataAuth::default")]
     lookup_data_auth: LookupDataAuth,
-}
-
-impl LoadLookupDataConfig {
-    pub fn new(
-        lookup_data: Option<Data>,
-        lookup_data_download_period: Option<Duration>,
-        lookup_data_auth: LookupDataAuth,
-    ) -> LoadLookupDataConfig {
-        LoadLookupDataConfig {
-            lookup_data,
-            lookup_data_download_period,
-            lookup_data_auth,
-        }
-    }
 }
 
 /// Creates LookupDataManager and sets up LookupDataRefresher.
