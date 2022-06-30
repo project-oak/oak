@@ -23,28 +23,28 @@ use crate::internal::*;
 
 #[derive(Debug, Display, Clone, PartialEq, EnumIter)]
 pub enum Variant {
-    Baremetal,
+    Qemu,
     Crosvm,
 }
 
 impl Variant {
     pub fn payload_crate_path(&self) -> &'static str {
         match self {
-            Variant::Baremetal => "./experimental/oak_baremetal_app_qemu",
+            Variant::Qemu => "./experimental/oak_baremetal_app_qemu",
             Variant::Crosvm => "./experimental/oak_baremetal_app_crosvm",
         }
     }
 
     pub fn loader_mode(&self) -> &'static str {
         match self {
-            Variant::Baremetal => "bios",
+            Variant::Qemu => "qemu",
             Variant::Crosvm => "crosvm",
         }
     }
 
     pub fn binary_path(&self) -> &'static str {
         match self {
-            Variant::Baremetal => {
+            Variant::Qemu => {
                 "./experimental/oak_baremetal_app_qemu/target/target/debug/oak_baremetal_app_qemu"
             }
             Variant::Crosvm => {
@@ -69,7 +69,7 @@ fn option_covers_variant(opt: &BuildBaremetalVariantsOpt, variant: &Variant) -> 
     match &opt.variant {
         None => true,
         Some(var) => match *variant {
-            Variant::Baremetal => var == "qemu",
+            Variant::Qemu => var == "qemu",
             Variant::Crosvm => var == "crosvm",
         },
     }

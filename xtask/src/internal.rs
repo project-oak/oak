@@ -267,7 +267,7 @@ pub struct RunCargoFuzz {
 pub struct BuildBaremetalVariantsOpt {
     #[clap(
         long,
-        help = "name of a specific baremetal variant (bios, or crosvm). If not specified, builds all variants."
+        help = "name of a specific baremetal variant (qemu, or crosvm). If not specified, builds all variants."
     )]
     pub variant: Option<String>,
 }
