@@ -10,7 +10,7 @@ The baremetal app may be loaded in qemu via
 
 ```shell
 (cd experimental/oak_baremetal_app_qemu && cargo build) \
-&& RUST_LOG=debug cargo run --package oak_baremetal_loader -- --mode bios experimental/oak_baremetal_app_qemu/target/target/debug/oak_baremetal_app_qemu
+&& RUST_LOG=debug cargo run --package oak_baremetal_loader -- --mode qemu experimental/oak_baremetal_app_qemu/target/target/debug/oak_baremetal_app_qemu
 ```
 
 The baremetal app may be loaded in crosvm via

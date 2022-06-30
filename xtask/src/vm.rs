@@ -22,29 +22,29 @@ use strum_macros::{Display, EnumIter};
 use crate::internal::*;
 
 #[derive(Debug, Display, Clone, PartialEq, EnumIter)]
-enum Variant {
-    Baremetal,
+pub enum Variant {
+    Qemu,
     Crosvm,
 }
 
 impl Variant {
     pub fn payload_crate_path(&self) -> &'static str {
         match self {
-            Variant::Baremetal => "./experimental/oak_baremetal_app_qemu",
+            Variant::Qemu => "./experimental/oak_baremetal_app_qemu",
             Variant::Crosvm => "./experimental/oak_baremetal_app_crosvm",
         }
     }
 
     pub fn loader_mode(&self) -> &'static str {
         match self {
-            Variant::Baremetal => "bios",
+            Variant::Qemu => "qemu",
             Variant::Crosvm => "crosvm",
         }
     }
 
     pub fn binary_path(&self) -> &'static str {
         match self {
-            Variant::Baremetal => {
+            Variant::Qemu => {
                 "./experimental/oak_baremetal_app_qemu/target/target/debug/oak_baremetal_app_qemu"
             }
             Variant::Crosvm => {
@@ -55,12 +55,23 @@ impl Variant {
 }
 
 /// Builds the binaries for crosvm and qemu for release.
-pub fn build_baremetal_variants() -> Step {
+pub fn build_baremetal_variants(opt: &BuildBaremetalVariantsOpt) -> Step {
     Step::Multiple {
         name: "Build baremetal variants".to_string(),
         steps: Variant::iter()
+            .filter(|v| option_covers_variant(opt, v))
             .map(|v| build_released_binary(&v.to_string(), v.payload_crate_path()))
             .collect(),
+    }
+}
+
+fn option_covers_variant(opt: &BuildBaremetalVariantsOpt, variant: &Variant) -> bool {
+    match &opt.variant {
+        None => true,
+        Some(var) => match *variant {
+            Variant::Qemu => var == "qemu",
+            Variant::Crosvm => var == "crosvm",
+        },
     }
 }
 

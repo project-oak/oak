@@ -39,7 +39,7 @@ mod vmm;
 
 #[derive(clap::ArgEnum, Clone, Debug, PartialEq)]
 enum Mode {
-    Bios,
+    Qemu,
     Crosvm,
 }
 
@@ -54,7 +54,7 @@ struct Args {
     crosvm: PathBuf,
 
     /// Execution mode.
-    #[clap(arg_enum, long, default_value = "bios")]
+    #[clap(arg_enum, long, default_value = "qemu")]
     mode: Mode,
 
     /// Path to the kernel to execute.
@@ -150,7 +150,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let (console_vmm, console) = UnixStream::pair()?;
 
     let mut vmm: Box<dyn Vmm> = match cli.mode {
-        Mode::Bios => Box::new(Qemu::start(Params {
+        Mode::Qemu => Box::new(Qemu::start(Params {
             binary: cli.qemu,
             app: cli.app,
             console: console_vmm,
