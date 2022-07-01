@@ -246,7 +246,7 @@ RUN cargo install --git https://github.com/bytecodealliance/wizer --rev 7c33b0bc
 
 # Install crosvm.
 # We're not interested in most of the features in crosvm (e.g. wayland support), but GDB support would be nice.
-RUN cargo install --git https://chromium.googlesource.com/chromiumos/platform/crosvm/ --rev df8201cfc6c9729ebe01f454f07f70e9781433f4 crosvm --no-default-features --features gdb
+RUN cargo install --git https://chromium.googlesource.com/chromiumos/platform/crosvm/ --rev 31f04e92709980a4ffc56b1631f8b4be437cc2fe crosvm --no-default-features --features gdb
 
 # Where to install rust tooling
 ARG install_dir=${rustup_dir}/bin

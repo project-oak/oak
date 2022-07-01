@@ -22,11 +22,7 @@ PHDRS
 }
 
 SECTIONS {
-    /* Crosvm loads data to 0x200000 + p_addr, so we need to make the virtual
-     * address match what will be loaded into memory while keeping the physical
-     * address at 0x0.
-     */
-    .boot 0x200000 : AT(0x0) {
+    .boot 0x200000 : {
         ram_min = .;
         *(.boot)
     } : ram
