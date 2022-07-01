@@ -30,12 +30,7 @@ SECTIONS {
     data_start = .;
     text_start = .;
 
-    /*
-     * The start point of execution is 0x200200, so ensure rust64_start is the
-     * first symbol in the .text section.
-     */
     .text : {
-        KEEP(*(.text.rust64_start))
         *(.text .text.*)
     } : ram
 
