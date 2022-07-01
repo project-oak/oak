@@ -27,14 +27,13 @@ use oak_baremetal_communication_channel::{
     server::{message_from_response_and_id, ServerChannelHandle},
     Read, Write,
 };
-use oak_functions_abi::proto::Request;
+use oak_functions_abi::Request;
 use oak_functions_lookup::LookupDataManager;
 use oak_idl::Handler;
 use oak_remote_attestation::handshaker::{
     AttestationBehavior, AttestationGenerator, AttestationVerifier,
 };
 use oak_remote_attestation_sessions::SessionId;
-use prost::Message;
 
 enum InitializationState<G, V>
 where

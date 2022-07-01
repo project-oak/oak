@@ -27,14 +27,11 @@ import android.widget.EditText;
 import android.widget.TextView;
 import com.google.common.base.VerifyException;
 import com.google.oak.functions.client.AttestationClient;
-import com.google.protobuf.ByteString;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import java.net.URL;
-import java.time.Duration;
-import oak.functions.invocation.Request;
-import oak.functions.invocation.Response;
-import oak.functions.invocation.StatusCode;
+import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 
 /** Main class for the Oak Functions Client application. */
 public class MainActivity extends Activity {
@@ -67,8 +64,7 @@ public class MainActivity extends Activity {
     String uri = uriInput.getText().toString();
 
     EditText requestInput = findViewById(R.id.requestInput);
-    byte[] requestBody = requestInput.getText().toString().getBytes(UTF_8);
-    Request request = Request.newBuilder().setBody(ByteString.copyFrom(requestBody)).build();
+    byte[] request = requestInput.getText().toString().getBytes(UTF_8);
 
     TextView resultTextView = findViewById(R.id.resultTextView);
     try {
@@ -84,17 +80,17 @@ public class MainActivity extends Activity {
       client.attest(channel, (config) -> true); // Currently we are not verifying the config.
 
       // Send a request.
-      Response response = client.send(request);
+      AttestationClient.Response response = client.send(request);
 
       // Receive a response.
-      StatusCode responseStatus = response.getStatus();
-      if (responseStatus != StatusCode.SUCCESS) {
+      AttestationClient.StatusCode responseStatus = response.getStatus();
+      if (responseStatus != AttestationClient.StatusCode.SUCCESS) {
         throw new VerifyException(
             String.format("Couldn't receive response: %s", responseStatus.name()));
       }
 
-      ByteString responseBody = response.getBody().substring(0, (int) response.getLength());
-      String decodedResponse = responseBody.toStringUtf8();
+      byte[] responseBody = Arrays.copyOfRange(response.getBody(), 0, (int) response.getLength());
+      String decodedResponse = new String(responseBody, StandardCharsets.UTF_8);
 
       Log.v("Oak", "Received response: " + decodedResponse);
       resultTextView.setTextColor(Color.GREEN);

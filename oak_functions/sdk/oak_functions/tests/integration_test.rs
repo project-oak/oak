@@ -17,7 +17,7 @@
 use hashbrown::HashMap;
 use lazy_static::lazy_static;
 use maplit::btreemap;
-use oak_functions_abi::proto::{Request, Response};
+use oak_functions_abi::{Request, Response};
 use oak_functions_loader::{logger::Logger, server::WasmHandler};
 use oak_functions_lookup::{LookupDataManager, LookupFactory};
 use oak_functions_metrics::{BucketConfig, PrivateMetricsConfig, PrivateMetricsProxyFactory};

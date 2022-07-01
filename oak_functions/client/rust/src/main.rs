@@ -19,9 +19,12 @@
 
 use anyhow::Context;
 use clap::Parser;
-use oak_functions_abi::proto::Request;
+use oak_functions_abi::Request;
 use oak_functions_client::Client;
 use regex::Regex;
+
+const TWO_MIB: usize = 2097000;
+const LARGE_MESSAGE: [u8; TWO_MIB] = [0; TWO_MIB];
 
 #[derive(Parser, Clone)]
 #[clap(about = "Oak Functions Client")]
@@ -62,11 +65,13 @@ async fn main() -> anyhow::Result<()> {
         .await
         .context("Could not create Oak Functions client")?;
 
-    if (opt.test_large_message) {
+    if opt.test_large_message {
         // The client should be a able to send a large message without
         // crashing or hanging.
         let response = client
-            .send(&LARGE_MESSAGE)
+            .invoke(Request {
+                body: LARGE_MESSAGE.to_vec(),
+            })
             .await
             .context("Error invoking Oak Functions instance");
         assert!(response.is_ok());

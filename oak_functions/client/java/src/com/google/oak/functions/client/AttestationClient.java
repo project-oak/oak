@@ -17,11 +17,9 @@
 package com.google.oak.functions.client;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
-import static java.util.concurrent.TimeUnit.SECONDS;
 
 import com.google.oak.remote_attestation.AeadEncryptor;
 import com.google.oak.remote_attestation.ClientHandshaker;
-import com.google.oak.remote_attestation.Message;
 import com.google.protobuf.ByteString;
 import io.grpc.CallOptions;
 import io.grpc.Channel;
@@ -32,29 +30,24 @@ import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.Metadata;
 import io.grpc.MethodDescriptor;
-import io.grpc.Status;
-import io.grpc.stub.StreamObserver;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.security.GeneralSecurityException;
 import java.security.SecureRandom;
 import java.time.Duration;
 import java.util.ArrayList;
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.BlockingQueue;
+import java.util.Arrays;
+import java.util.Map;
 import java.util.function.Predicate;
-import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 import oak.functions.abi.ConfigurationReport;
-import oak.functions.invocation.Request;
-import oak.functions.invocation.Response;
 import oak.session.unary.v1.UnaryRequest;
 import oak.session.unary.v1.UnaryResponse;
 import oak.session.unary.v1.UnarySessionGrpc;
 
-/**
- * Client with remote attestation support for sending requests to an Oak Functions application.
- */
+/** Client with remote attestation support for sending requests to an Oak Functions application. */
 public class AttestationClient {
   public static final Duration DEFAULT_CONNECTION_TIMEOUT = Duration.ofSeconds(5);
   private static final Logger logger = Logger.getLogger(AttestationClient.class.getName());
@@ -70,6 +63,84 @@ public class AttestationClient {
   private ManagedChannel channel;
   private UnarySessionGrpc.UnarySessionBlockingStub stub;
   private AeadEncryptor encryptor;
+
+  /** A response received from the trusted runtime */
+  public static class Response {
+    StatusCode statusCode;
+    long length;
+    byte[] body;
+
+    public StatusCode getStatus() {
+      return statusCode;
+    }
+
+    public long getLength() {
+      return length;
+    }
+
+    public byte[] getBody() {
+      return body;
+    }
+
+    public static long decodeLength(byte[] lengthBytes) {
+      ByteBuffer buffer = ByteBuffer.wrap(lengthBytes);
+      buffer.order(ByteOrder.LITTLE_ENDIAN);
+      return buffer.getLong();
+    }
+
+    public static Response parseFrom(byte[] bytes) throws IllegalArgumentException {
+      byte[] statusBytes = Arrays.copyOfRange(bytes, 0, 4);
+      byte[] lengthBytes = Arrays.copyOfRange(bytes, 4, 12);
+      long length = decodeLength(lengthBytes);
+      byte[] body = Arrays.copyOfRange(bytes, 12, bytes.length);
+      Response response = new Response();
+      response.statusCode = StatusCode.fromBytes(statusBytes);
+      response.length = length;
+      response.body = body;
+      return response;
+    }
+  }
+
+  /** Status code supplied by the trusted runtime with every response */
+  public static enum StatusCode {
+    UNSPECIFIED(0),
+    // Indicates success of the operation. Similar to HTTP 200 status code.
+    SUCCESS(1),
+    // Indicates a problem with the request. Similar to HTTP 400 status code.
+    BAD_REQUEST(2),
+    // Indicates violation of the response size limit specified in the security policy.
+    POLICY_SIZE_VIOLATION(3),
+    // Indicates violation of the response processing-time limit specified in the security policy.
+    POLICY_TIME_VIOLATION(4),
+    // Indicates other internal errors at the server. Similar to HTTP 500 status code.
+    INTERNAL_SERVER_ERROR(5);
+
+    private final int value;
+
+    private StatusCode(int value) {
+      this.value = value;
+    }
+
+    private static final Map<Integer, StatusCode> map;
+
+    static {
+      map = Arrays.stream(values()).collect(Collectors.toMap(e -> e.value, e -> e));
+    }
+
+    public static StatusCode fromInt(int value) throws IllegalArgumentException {
+      StatusCode statusCode = map.get(value);
+      if (statusCode == null) {
+        throw new IllegalArgumentException("Received an invalid status code");
+      }
+      return statusCode;
+    }
+
+    public static StatusCode fromBytes(byte[] statusBytes) throws IllegalArgumentException {
+      ByteBuffer buffer = ByteBuffer.wrap(statusBytes);
+      buffer.order(ByteOrder.LITTLE_ENDIAN);
+      return fromInt(buffer.getInt());
+    }
+  }
 
   /** Remote Attestation identity verification failure. */
   public static class VerificationException extends Exception {
@@ -97,9 +168,8 @@ public class AttestationClient {
    *
    * @param builder an instance of a {@code ManagedChannelBuilder} for a gRPC channel.
    * @param apiKey value of the API key used in gRPC requests. If the value is `null` or empty, then
-   * the API key header is not included in requests.
-   * https://cloud.google.com/docs/authentication/api-keys
-   *
+   *     the API key header is not included in requests.
+   *     https://cloud.google.com/docs/authentication/api-keys
    * @return an updated instance of a {@code ManagedChannelBuilder}.
    */
   public static ManagedChannelBuilder addApiKey(ManagedChannelBuilder builder, String apiKey) {
@@ -116,7 +186,7 @@ public class AttestationClient {
    *
    * @param channel an instance of a gRPC {@code ManagedChannel}.
    * @param verifier checks that the ServerIdentity contains the expected attestation info as
-   * described in {@code ServerIdentityVerifier::verifyAttestationInfo}.
+   *     described in {@code ServerIdentityVerifier::verifyAttestationInfo}.
    */
   public void attest(ManagedChannel channel, Predicate<ConfigurationReport> verifier)
       throws GeneralSecurityException, IOException, InterruptedException, VerificationException {
@@ -136,10 +206,11 @@ public class AttestationClient {
 
     // Send client hello message.
     byte[] clientHello = handshaker.createClientHello();
-    UnaryRequest clientHelloRequest = UnaryRequest.newBuilder()
-                                          .setBody(ByteString.copyFrom(clientHello))
-                                          .setSessionId(sessionId)
-                                          .build();
+    UnaryRequest clientHelloRequest =
+        UnaryRequest.newBuilder()
+            .setBody(ByteString.copyFrom(clientHello))
+            .setSessionId(sessionId)
+            .build();
 
     // Receive server attestation identity containing server's ephemeral public key.
     UnaryResponse serverIdentityResponse = stub.message(clientHelloRequest);
@@ -149,10 +220,11 @@ public class AttestationClient {
     // - Client attestation identity containing client's ephemeral public key
     // - Encryptor used for decrypting/encrypting messages between client and server
     byte[] clientIdentity = handshaker.processServerIdentity(serverIdentity);
-    UnaryRequest clientIdentityRequest = UnaryRequest.newBuilder()
-                                             .setBody(ByteString.copyFrom(clientIdentity))
-                                             .setSessionId(sessionId)
-                                             .build();
+    UnaryRequest clientIdentityRequest =
+        UnaryRequest.newBuilder()
+            .setBody(ByteString.copyFrom(clientIdentity))
+            .setSessionId(sessionId)
+            .build();
     stub.message(clientIdentityRequest);
     encryptor = handshaker.getEncryptor();
   }
@@ -161,22 +233,23 @@ public class AttestationClient {
    * Encrypts and sends a Request via an attested gRPC channel to the server and receives and
    * decrypts the response.
    *
-   * This method can only be used after the {@code attest} method has been called successfully.
+   * <p>This method can only be used after the {@code attest} method has been called successfully.
    *
    * @param request contains a request to be sent via the attested gRPC channel.
    */
   @SuppressWarnings("ProtoParseWithRegistry")
-  public Response send(Request request)
-      throws GeneralSecurityException, IOException, InterruptedException {
+  public Response send(byte[] body)
+      throws GeneralSecurityException, IOException, InterruptedException, IllegalArgumentException {
     if (channel == null || encryptor == null || sessionId == null || stub == null) {
       throw new IllegalStateException("Session is not available");
     }
 
-    byte[] encryptedData = encryptor.encrypt(request.getBody().toByteArray());
-    UnaryRequest unaryRequest = UnaryRequest.newBuilder()
-                                    .setBody(ByteString.copyFrom(encryptedData))
-                                    .setSessionId(sessionId)
-                                    .build();
+    byte[] encryptedData = encryptor.encrypt(body);
+    UnaryRequest unaryRequest =
+        UnaryRequest.newBuilder()
+            .setBody(ByteString.copyFrom(encryptedData))
+            .setSessionId(sessionId)
+            .build();
 
     UnaryResponse streamingResponse = stub.message(unaryRequest);
 
@@ -204,15 +277,16 @@ public class AttestationClient {
         MethodDescriptor<ReqT, RespT> method, CallOptions callOptions, Channel next) {
       ClientCall<ReqT, RespT> call = next.newCall(method, callOptions);
 
-      call = new ForwardingClientCall.SimpleForwardingClientCall<ReqT, RespT>(call) {
-        @Override
-        public void start(Listener<RespT> responseListener, Metadata headers) {
-          if (apiKey != null && !apiKey.isEmpty()) {
-            headers.put(API_KEY_METADATA_HEADER, apiKey);
-          }
-          super.start(responseListener, headers);
-        }
-      };
+      call =
+          new ForwardingClientCall.SimpleForwardingClientCall<ReqT, RespT>(call) {
+            @Override
+            public void start(Listener<RespT> responseListener, Metadata headers) {
+              if (apiKey != null && !apiKey.isEmpty()) {
+                headers.put(API_KEY_METADATA_HEADER, apiKey);
+              }
+              super.start(responseListener, headers);
+            }
+          };
       return call;
     }
   }

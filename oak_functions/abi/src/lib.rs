@@ -27,32 +27,109 @@ use core::mem::size_of;
 use serde::{Deserialize, Serialize};
 
 pub mod proto {
-    use alloc::vec::Vec;
     include!(concat!(env!("OUT_DIR"), "/oak.functions.abi.rs"));
     include!(concat!(env!("OUT_DIR"), "/oak.functions.lookup_data.rs"));
     include!(concat!(env!("OUT_DIR"), "/oak.functions.invocation.rs"));
+}
 
-    impl Response {
-        /// Creates a new instance of Response.
-        ///
-        /// Sets the `status` and `body` to the given status and body, and sets the
-        /// `length` to the length of the body.
-        pub fn create(status: StatusCode, body: Vec<u8>) -> Self {
-            Response {
-                status: status as i32,
-                body: body.clone(),
-                length: body.len() as u64,
-            }
-        }
+/// See REQUEST_RESPONSE_ENCODING.MD in the crate root.
+#[derive(Clone, PartialEq, Debug)]
+pub struct Request {
+    pub body: alloc::vec::Vec<u8>,
+}
 
-        /// Returns the body of the response, excluding any trailing 0s.
-        ///
-        /// Uses the effective length of the body, in `self.length`, to remove the trailing 0s.
-        /// Returns as error if `self.length` cannot be converted to `usize` due to an overflow.
-        pub fn body(&self) -> Result<&[u8], core::num::TryFromIntError> {
-            let length = usize::try_from(self.length)?;
-            Ok(&self.body.as_slice()[..length])
+/// See REQUEST_RESPONSE_ENCODING.MD in the crate root.
+#[derive(Clone, PartialEq, Debug)]
+pub struct Response {
+    pub status: StatusCode,
+    pub body: alloc::vec::Vec<u8>,
+    pub length: u64,
+}
+
+/// See REQUEST_RESPONSE_ENCODING.MD in the crate root.
+#[derive(Clone, Copy, Debug, strum::Display, strum::FromRepr, PartialEq)]
+#[repr(u32)]
+pub enum StatusCode {
+    Unspecified = 0,
+    Success = 1,
+    BadRequest = 2,
+    PolicySizeViolation = 3,
+    PolicyTimeViolation = 4,
+    InternalServerError = 5,
+}
+
+// As defined in REQUEST_RESPONSE_ENCODING.MD in the crate root.
+const RESPONSE_STATUS_CODE_SIZE: usize = 4;
+const RESPONSE_STATUS_CODE_OFFSET: usize = 0;
+static_assertions::assert_eq_size!([u8; RESPONSE_STATUS_CODE_SIZE], StatusCode);
+
+// As defined in REQUEST_RESPONSE_ENCODING.MD in the crate root.
+type ResponseLength = u64;
+const RESPONSE_LENGTH_SIZE: usize = 8;
+const RESPONSE_LENGTH_OFFSET: usize = RESPONSE_STATUS_CODE_SIZE;
+static_assertions::assert_eq_size!([u8; RESPONSE_LENGTH_SIZE], ResponseLength);
+
+// As defined in REQUEST_RESPONSE_ENCODING.MD in the crate root.
+const RESPONSE_BODY_OFFSET: usize = RESPONSE_STATUS_CODE_SIZE + RESPONSE_LENGTH_SIZE;
+
+impl Response {
+    /// Creates a new instance of Response.
+    ///
+    /// Sets the `status` and `body` to the given status and body, and sets the
+    /// `length` to the length of the body.
+    pub fn create(status: StatusCode, body: Vec<u8>) -> Self {
+        Response {
+            status,
+            body: body.clone(),
+            length: body.len() as u64,
         }
+    }
+
+    /// Returns the body of the response, excluding any trailing 0s.
+    ///
+    /// Uses the effective length of the body, in `self.length`, to remove the trailing 0s.
+    /// Returns as error if `self.length` cannot be converted to `usize` due to an overflow.
+    pub fn body(&self) -> Result<&[u8], core::num::TryFromIntError> {
+        let length = usize::try_from(self.length)?;
+        Ok(&self.body.as_slice()[..length])
+    }
+
+    pub fn encode_to_vec(&self) -> Vec<u8> {
+        let mut vec: Vec<u8> =
+            Vec::with_capacity(RESPONSE_LENGTH_SIZE + RESPONSE_STATUS_CODE_SIZE + self.body.len());
+        vec.extend_from_slice(&(self.status as u32).to_le_bytes());
+        vec.extend_from_slice(&self.length.to_le_bytes());
+        vec.extend_from_slice(&self.body);
+        vec
+    }
+
+    pub fn decode(bytes: &[u8]) -> anyhow::Result<Self> {
+        let status: StatusCode = {
+            let mut status_bytes: [u8; RESPONSE_STATUS_CODE_SIZE] = [0; RESPONSE_STATUS_CODE_SIZE];
+            status_bytes.copy_from_slice(
+                &bytes[RESPONSE_STATUS_CODE_OFFSET
+                    ..(RESPONSE_STATUS_CODE_OFFSET + RESPONSE_STATUS_CODE_SIZE)],
+            );
+            StatusCode::from_repr(u32::from_le_bytes(status_bytes))
+                .ok_or_else(|| anyhow::Error::msg("Invalid status code"))?
+        };
+        let length = {
+            let mut length_bytes: [u8; RESPONSE_LENGTH_SIZE] = [0; RESPONSE_LENGTH_SIZE];
+            length_bytes.copy_from_slice(
+                &bytes[RESPONSE_LENGTH_OFFSET..(RESPONSE_LENGTH_OFFSET + RESPONSE_LENGTH_SIZE)],
+            );
+            ResponseLength::from_le_bytes(length_bytes)
+        };
+        let mut body: Vec<u8> =
+            Vec::with_capacity(bytes.len() - RESPONSE_LENGTH_SIZE - RESPONSE_STATUS_CODE_SIZE);
+
+        body.extend_from_slice(&bytes[RESPONSE_BODY_OFFSET..bytes.len()]);
+
+        Ok(Self {
+            status,
+            body,
+            length,
+        })
     }
 }
 

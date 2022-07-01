@@ -790,7 +790,6 @@ dependencies = [
  "oak_logger",
  "oak_remote_attestation",
  "oak_remote_attestation_sessions",
- "prost",
 ]
 
 [[package]]
@@ -801,6 +800,8 @@ dependencies = [
  "prost",
  "prost-build",
  "serde",
+ "static_assertions",
+ "strum",
 ]
 
 [[package]]

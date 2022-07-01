@@ -23,10 +23,9 @@ use crate::{
 };
 use anyhow::Context;
 use log::Level;
-use oak_functions_abi::proto::{Request, ServerPolicy};
+use oak_functions_abi::{proto::ServerPolicy, Request};
 use oak_logger::OakLogger;
 use oak_utils::LogError;
-use prost::Message;
 use std::{future::Future, net::SocketAddr};
 
 async fn handle_request(
