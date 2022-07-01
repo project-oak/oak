@@ -17,7 +17,6 @@
 .section .boot, "ax"
 .global _start
 .code64
-.fill 0x200
 
 _start:
     mov $stack_start, %rsp

@@ -22,11 +22,7 @@ PHDRS
 }
 
 SECTIONS {
-    /* Crosvm loads data to 0x200000 + p_addr, so we need to make the virtual
-     * address match what will be loaded into memory while keeping the physical
-     * address at 0x0.
-     */
-    .boot 0x200000 : AT(0x0) {
+    .boot 0x200000 : {
         ram_min = .;
         *(.boot)
     } : ram
@@ -34,12 +30,7 @@ SECTIONS {
     data_start = .;
     text_start = .;
 
-    /*
-     * The start point of execution is 0x200200, so ensure rust64_start is the
-     * first symbol in the .text section.
-     */
     .text : {
-        KEEP(*(.text.rust64_start))
         *(.text .text.*)
     } : ram
 
