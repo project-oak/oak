@@ -151,8 +151,13 @@ The complete workflow of the Remote Attestation protocol looks as follows:
    - **Client** and **Trusted Runtime** use Authenticated Encryption/Decryption
      ([AEAD](https://en.wikipedia.org/wiki/Authenticated_encryption)) for
      communication
-9. **Client** and **Trusted Runtime** use generated _Session_ keys to exchange
-   data.
+
+### Post-handshake
+
+**Client** and **Trusted Runtime** use generated _Session_ keys to exchange
+data.
+
+## Workflow Diagram
 
 ```mermaid
 sequenceDiagram
