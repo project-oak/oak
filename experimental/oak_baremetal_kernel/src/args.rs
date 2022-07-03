@@ -24,16 +24,7 @@ use lazy_static::lazy_static;
 static mut ARGS_BUF: ArrayString<512> = ArrayString::new_const();
 
 lazy_static! {
-    static ref ARGS: BTreeMap<&'static str, &'static str> = {
-        let mut m = BTreeMap::new();
-        args()
-            .split_whitespace()
-            .map(|x| x.split_once('=').unwrap_or((x, "")))
-            .for_each(|(k, v)| {
-                m.insert(k, v);
-            });
-        m
-    };
+    static ref ARGS: BTreeMap<&'static str, &'static str> = split_args(args());
 }
 
 /// Buffers kernel arguments in a static variable.
@@ -70,4 +61,43 @@ pub fn args() -> &'static str {
 /// initialized, as it allocates memory on first invocation.
 pub fn arg(k: &str) -> Option<&'static str> {
     ARGS.get(k).copied()
+}
+
+fn split_args(args: &'static str) -> BTreeMap<&'static str, &'static str> {
+    let mut m = BTreeMap::new();
+    args.split_whitespace()
+        .map(|x| x.split_once('=').unwrap_or((x, "")))
+        .for_each(|(k, v)| {
+            m.insert(k, v);
+        });
+    m
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn no_args() {
+        let res = split_args("");
+        assert_eq!(res.len(), 0);
+    }
+
+    #[test]
+    fn args() {
+        let res = split_args("one two=two three=three2=three3");
+        assert_eq!(res.len(), 3);
+        assert_eq!(res.get("one").copied().unwrap(), "");
+        assert_eq!(res.get("two").copied().unwrap(), "two");
+        assert_eq!(res.get("three").copied().unwrap(), "three2=three3");
+    }
+
+    #[test]
+    fn broken_whitespace() {
+        let res = split_args("one = two");
+        assert_eq!(res.len(), 3);
+        assert_eq!(res.get("one").copied().unwrap(), "");
+        assert_eq!(res.get("two").copied().unwrap(), "");
+        assert_eq!(res.get("").copied().unwrap(), "");
+    }
 }
