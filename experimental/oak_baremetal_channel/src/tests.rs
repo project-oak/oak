@@ -99,7 +99,8 @@ impl Write for MessageStore {
 
 #[test]
 fn test_invocation_channel() {
-    let mut invocation_channel = InvocationChannel::new(MessageStore::default());
+    let mut message_store = MessageStore::default();
+    let mut invocation_channel = InvocationChannel::new(&mut message_store);
 
     let message = message::RequestMessage {
         method_id: 0,
@@ -115,6 +116,7 @@ fn test_invocation_channel() {
 
 #[test]
 fn test_invocation_channel_double_start_frame() {
+    let mut message_store = MessageStore::default();
     let mut invocation_channel = {
         let message = message::RequestMessage {
             method_id: 0,
@@ -126,7 +128,7 @@ fn test_invocation_channel_double_start_frame() {
             .first()
             .unwrap()
             .clone();
-        let mut frame_store = frame::Framed::new(MessageStore::default());
+        let mut frame_store = frame::Framed::new(&mut message_store);
         frame_store.write_frame(start_frame.clone()).unwrap();
         frame_store.write_frame(start_frame).unwrap();
         InvocationChannel { inner: frame_store }
@@ -139,6 +141,7 @@ fn test_invocation_channel_double_start_frame() {
 
 #[test]
 fn test_invocation_channel_expected_start_frame() {
+    let mut message_store = MessageStore::default();
     let mut invocation_channel = {
         let message = message::RequestMessage {
             method_id: 0,
@@ -150,7 +153,7 @@ fn test_invocation_channel_expected_start_frame() {
             .last()
             .unwrap()
             .clone();
-        let mut frame_store = frame::Framed::new(MessageStore::default());
+        let mut frame_store = frame::Framed::new(&mut message_store);
         frame_store.write_frame(end_frame).unwrap();
         InvocationChannel { inner: frame_store }
     };

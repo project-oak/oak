@@ -19,7 +19,6 @@ use oak_baremetal_communication_channel::{Read, Write};
 use rust_hypervisor_firmware_virtio::pci::VirtioPciTransport;
 
 // The virtio vsock port on which to listen.
-#[cfg(all(feature = "vsock_channel", not(feature = "serial_channel")))]
 const VSOCK_PORT: u32 = 1024;
 
 pub struct Channel<T> {
@@ -47,15 +46,16 @@ where
     }
 }
 
-#[cfg(all(not(feature = "vsock_channel"), not(feature = "serial_channel")))]
+impl<T: virtio::Read + virtio::Write> crate::Channel for Channel<T> {}
+
 pub fn get_console_channel() -> Channel<virtio::console::Console<VirtioPciTransport>> {
+    //Channel<virtio::console::Console<VirtioPciTransport>> {
     let console = virtio::console::Console::find_and_configure_device()
         .expect("Couldn't configure PCI virtio console device.");
     info!("Console device status: {}", console.get_status());
     Channel { inner: console }
 }
 
-#[cfg(all(feature = "vsock_channel", not(feature = "serial_channel")))]
 pub fn get_vsock_channel() -> Channel<virtio::vsock::socket::Socket<VirtioPciTransport>> {
     let vsock = virtio::vsock::VSock::find_and_configure_device()
         .expect("Couldn't configure PCI virtio vsock device.");

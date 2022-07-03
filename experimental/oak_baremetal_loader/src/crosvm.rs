@@ -61,6 +61,7 @@ impl Crosvm {
             params.console.as_raw_fd()
         ));
         cmd.arg(format!("--cid={}", VSOCK_GUEST_CID));
+        cmd.arg("--params=channel=virtio_vsock");
         cmd.arg(params.app);
 
         info!("Executing: {:?}", cmd);

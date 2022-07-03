@@ -16,15 +16,15 @@
 
 use crate::{message, InvocationChannel, Read, Vec, Write};
 
-pub struct ServerChannelHandle<T: Read + Write> {
-    inner: InvocationChannel<T>,
+pub struct ServerChannelHandle<'a, T: Read + Write + ?Sized> {
+    inner: InvocationChannel<'a, T>,
 }
 
-impl<T> ServerChannelHandle<T>
+impl<'a, T> ServerChannelHandle<'a, T>
 where
-    T: Read + Write,
+    T: Read + Write + ?Sized,
 {
-    pub fn new(socket: T) -> Self {
+    pub fn new(socket: &'a mut T) -> Self {
         Self {
             inner: InvocationChannel::new(socket),
         }

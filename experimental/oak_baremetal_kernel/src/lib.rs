@@ -40,11 +40,12 @@ mod interrupts;
 mod libm;
 mod logging;
 mod memory;
-#[cfg(feature = "serial_channel")]
 mod serial;
-#[cfg(not(feature = "serial_channel"))]
 mod virtio;
 
+extern crate alloc;
+
+use alloc::boxed::Box;
 use core::panic::PanicInfo;
 use log::{error, info};
 use oak_baremetal_communication_channel::{Read, Write};
@@ -71,29 +72,24 @@ pub fn start_kernel<E: boot::E820Entry, B: boot::BootInfo<E>>(info: B) -> ! {
     main(protocol);
 }
 
+pub trait Channel: Read + Write {}
+
 fn main(protocol: &str) -> ! {
     info!("In main! Boot protocol:  {}", protocol);
     info!("Kernel boot args: {}", args::args());
     let attestation_behavior =
         AttestationBehavior::create(PlaceholderAmdAttestationGenerator, EmptyAttestationVerifier);
-    oak_baremetal_runtime::framing::handle_frames(get_channel(), attestation_behavior).unwrap();
+    let mut channel = get_channel();
+    oak_baremetal_runtime::framing::handle_frames(&mut *channel, attestation_behavior).unwrap();
 }
 
-#[cfg(feature = "serial_channel")]
-fn get_channel() -> impl Read + Write {
-    serial::Serial::new()
-}
-
-// Use a virtio console device for the communications channel if we don't support virtio vsock.
-#[cfg(all(not(feature = "vsock_channel"), not(feature = "serial_channel")))]
-fn get_channel() -> impl Read + Write {
-    virtio::get_console_channel()
-}
-
-// Use virtio vsock for the communications channel.
-#[cfg(all(feature = "vsock_channel", not(feature = "serial_channel")))]
-fn get_channel() -> impl Read + Write {
-    virtio::get_vsock_channel()
+fn get_channel() -> Box<dyn Channel> {
+    match args::arg("channel").unwrap_or("virtio_console") {
+        "virtio_console" => Box::new(virtio::get_console_channel()),
+        "virtio_vsock" => Box::new(virtio::get_vsock_channel()),
+        "serial" => Box::new(serial::Serial::new()),
+        other => panic!("Unknown communication channel type: {}", other),
+    }
 }
 
 /// Common panic routine for the kernel. This needs to be wrrapped in a

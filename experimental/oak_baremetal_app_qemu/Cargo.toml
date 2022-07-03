@@ -9,7 +9,6 @@ license = "Apache-2.0"
 default = ["pvh"]
 pvh = ["rust-hypervisor-firmware-boot/pvh"]
 multiboot = []
-serial_channel = ["oak_baremetal_kernel/serial_channel"]
 
 [dependencies]
 bitflags = "*"

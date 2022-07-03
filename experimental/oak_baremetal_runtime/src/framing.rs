@@ -177,11 +177,11 @@ where
 
 // Processes incoming frames.
 pub fn handle_frames<T, G: 'static + AttestationGenerator, V: 'static + AttestationVerifier>(
-    channel: T,
+    channel: &mut T,
     attestation_behavior: AttestationBehavior<G, V>,
 ) -> anyhow::Result<!>
 where
-    T: Read + Write,
+    T: Read + Write + ?Sized,
 {
     let mut invocation_handler = InvocationHandler {
         initialization_state: InitializationState::Uninitialized(Some(attestation_behavior)),

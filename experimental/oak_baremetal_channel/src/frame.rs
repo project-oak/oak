@@ -78,15 +78,15 @@ impl TryFrom<Frame> for Vec<u8> {
     }
 }
 
-pub struct Framed<T: Read + Write> {
-    inner: T,
+pub struct Framed<'a, T: Read + Write + ?Sized> {
+    inner: &'a mut T,
 }
 
-impl<T> Framed<T>
+impl<'a, T> Framed<'a, T>
 where
-    T: Read + Write,
+    T: Read + Write + ?Sized,
 {
-    pub fn new(socket: T) -> Self {
+    pub fn new(socket: &'a mut T) -> Self {
         Self { inner: socket }
     }
 

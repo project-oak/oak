@@ -48,15 +48,15 @@ pub trait Write {
     fn flush(&mut self) -> anyhow::Result<()>;
 }
 
-struct InvocationChannel<T: Read + Write> {
-    inner: frame::Framed<T>,
+struct InvocationChannel<'a, T: Read + Write + ?Sized> {
+    inner: frame::Framed<'a, T>,
 }
 
-impl<T> InvocationChannel<T>
+impl<'a, T> InvocationChannel<'a, T>
 where
-    T: Read + Write,
+    T: Read + Write + ?Sized,
 {
-    pub fn new(socket: T) -> Self {
+    pub fn new(socket: &'a mut T) -> Self {
         Self {
             inner: frame::Framed::new(socket),
         }

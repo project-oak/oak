@@ -22,15 +22,15 @@ use crate::{
 };
 use alloc::{string::String, vec::Vec};
 
-pub struct ClientChannelHandle<T: Read + Write> {
-    inner: InvocationChannel<T>,
+pub struct ClientChannelHandle<'a, T: Read + Write> {
+    inner: InvocationChannel<'a, T>,
 }
 
-impl<T> ClientChannelHandle<T>
+impl<'a, T> ClientChannelHandle<'a, T>
 where
     T: Read + Write,
 {
-    pub fn new(socket: T) -> Self {
+    pub fn new(socket: &'a mut T) -> Self {
         Self {
             inner: InvocationChannel::new(socket),
         }
