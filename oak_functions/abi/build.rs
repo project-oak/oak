@@ -20,7 +20,6 @@ fn main() {
     let file_paths = [
         "oak_functions/proto/abi.proto",
         "oak_functions/proto/lookup_data.proto",
-        "oak_functions/proto/invocation.proto",
     ];
     prost_build::compile_protos(&file_paths, &["../.."]).expect("Proto compilation failed");
 
