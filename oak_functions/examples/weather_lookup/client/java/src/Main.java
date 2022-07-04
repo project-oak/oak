@@ -19,14 +19,13 @@ package com.google.oak.functions.examples.weather_lookup.client;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 import com.google.oak.functions.client.AttestationClient;
-import com.google.protobuf.ByteString;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import oak.functions.invocation.Request;
-import oak.functions.invocation.Response;
 
 public class Main {
   private static Logger logger = Logger.getLogger(Main.class.getName());
@@ -49,10 +48,9 @@ public class Main {
 
     // Test request coordinates are defined in `oak_functions/lookup_data_generator/src/data.rs`.
     byte[] requestBody = "{\"lat\":0,\"lng\":0}".getBytes(UTF_8);
-    Request request = Request.newBuilder().setBody(ByteString.copyFrom(requestBody)).build();
-    Response response = client.send(request);
-    ByteString responseBody = response.getBody().substring(0, (int) response.getLength());
-    String decodedResponse = responseBody.toStringUtf8();
+    AttestationClient.Response response = client.send(requestBody);
+    byte[] responseBody = Arrays.copyOfRange(response.getBody(), 0, (int) response.getLength());
+    String decodedResponse = new String(responseBody, StandardCharsets.UTF_8);
 
     if (decodedResponse.matches(EXPECTED_RESPONSE_PATTERN)) {
       logger.log(Level.INFO, "Client received the expected response: " + decodedResponse);

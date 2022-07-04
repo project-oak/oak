@@ -16,7 +16,6 @@ members = [
   "experimental/trusted_shuffler/server",
   "experimental/trusted_shuffler/trusted_shuffler",
   "experimental/oak_baremetal_channel",
-  "experimental/oak_baremetal_client",
   "experimental/oak_baremetal_kernel",
   "experimental/oak_baremetal_loader",
   "experimental/oak_baremetal_runtime",

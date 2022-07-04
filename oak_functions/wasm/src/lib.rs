@@ -27,7 +27,10 @@ use alloc::{boxed::Box, format, sync::Arc, vec::Vec};
 use anyhow::Context;
 use byteorder::{ByteOrder, LittleEndian};
 use hashbrown::HashMap;
-use oak_functions_abi::proto::{ExtensionHandle, OakStatus, Request, Response, StatusCode};
+use oak_functions_abi::{
+    proto::{ExtensionHandle, OakStatus},
+    Request, Response, StatusCode,
+};
 use oak_functions_extension::{ExtensionFactory, OakApiNativeExtension};
 use oak_logger::{Level, OakLogger};
 use wasmi::ValueType;

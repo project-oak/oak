@@ -18,7 +18,7 @@
 
 use anyhow::Context;
 use clap::Parser;
-use oak_functions_abi::proto::Request;
+use oak_functions_abi::Request;
 use oak_functions_client::Client;
 
 #[derive(Parser, Clone)]

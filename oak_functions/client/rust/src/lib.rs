@@ -22,8 +22,7 @@ pub mod rekor;
 
 use anyhow::Context;
 use grpc_unary_attestation::client::AttestationClient;
-use oak_functions_abi::proto::{Request, Response};
-use prost::Message;
+use oak_functions_abi::{Request, Response};
 
 #[cfg(test)]
 mod tests;
