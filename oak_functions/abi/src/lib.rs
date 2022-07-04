@@ -41,7 +41,9 @@ pub struct Request {
 #[derive(Clone, PartialEq, Debug)]
 pub struct Response {
     pub status: StatusCode,
+    /// body (including padding 0s)
     pub body: alloc::vec::Vec<u8>,
+    /// The effective length of the body, excluding any padding contained
     pub length: u64,
 }
 
