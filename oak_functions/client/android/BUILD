@@ -29,7 +29,6 @@ android_library(
     deps = [
         "//oak_functions/client/java:client_android",
         "//oak_functions/proto:abi_java_proto_lite",
-        "//oak_functions/proto:invocation_java_proto_lite",
         "@com_google_guava_guava",
         "@com_google_protobuf//:protobuf_javalite",
         "@io_grpc_grpc_java//api",
