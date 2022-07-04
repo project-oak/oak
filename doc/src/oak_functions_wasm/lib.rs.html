@@ -533,6 +533,9 @@
 <span id="528">528</span>
 <span id="529">529</span>
 <span id="530">530</span>
+<span id="531">531</span>
+<span id="532">532</span>
+<span id="533">533</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2022 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -562,7 +565,10 @@
 <span class="kw">use</span> <span class="ident">anyhow::Context</span>;
 <span class="kw">use</span> <span class="ident">byteorder</span>::{<span class="ident">ByteOrder</span>, <span class="ident">LittleEndian</span>};
 <span class="kw">use</span> <span class="ident">hashbrown::HashMap</span>;
-<span class="kw">use</span> <span class="ident">oak_functions_abi::proto</span>::{<span class="ident">ExtensionHandle</span>, <span class="ident">OakStatus</span>, <span class="ident">Request</span>, <span class="ident">Response</span>, <span class="ident">StatusCode</span>};
+<span class="kw">use</span> <span class="ident">oak_functions_abi</span>::{
+    <span class="ident">proto</span>::{<span class="ident">ExtensionHandle</span>, <span class="ident">OakStatus</span>},
+    <span class="ident">Request</span>, <span class="ident">Response</span>, <span class="ident">StatusCode</span>,
+};
 <span class="kw">use</span> <span class="ident">oak_functions_extension</span>::{<span class="ident">ExtensionFactory</span>, <span class="ident">OakApiNativeExtension</span>};
 <span class="kw">use</span> <span class="ident">oak_logger</span>::{<span class="ident">Level</span>, <span class="ident">OakLogger</span>};
 <span class="kw">use</span> <span class="ident">wasmi::ValueType</span>;

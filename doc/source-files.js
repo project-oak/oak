@@ -11,7 +11,6 @@ sourcesIndex["metrics_client"] = {"name":"","files":["main.rs"]};
 sourcesIndex["mobilenet"] = {"name":"","files":["lib.rs"]};
 sourcesIndex["mobilenet_client"] = {"name":"","files":["main.rs"]};
 sourcesIndex["oak_attestation_common"] = {"name":"","files":["certificate.rs","keying_material.rs","lib.rs","report.rs"]};
-sourcesIndex["oak_baremetal_client"] = {"name":"","files":["main.rs"]};
 sourcesIndex["oak_baremetal_communication_channel"] = {"name":"","files":["client.rs","frame.rs","lib.rs","message.rs","server.rs"]};
 sourcesIndex["oak_baremetal_kernel"] = {"name":"","files":["args.rs","avx.rs","boot.rs","i8042.rs","interrupts.rs","lib.rs","libm.rs","logging.rs","memory.rs","virtio.rs"]};
 sourcesIndex["oak_baremetal_loader"] = {"name":"","files":["crosvm.rs","main.rs","qemu.rs","server.rs","vmm.rs"]};

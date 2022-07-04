@@ -1,7 +1,6 @@
 (function() {var implementors = {};
 implementors["lookup_data_checker"] = [{"text":"impl Args for <a class=\"struct\" href=\"lookup_data_checker/struct.Opt.html\" title=\"struct lookup_data_checker::Opt\">Opt</a>","synthetic":false,"types":["lookup_data_checker::Opt"]}];
 implementors["metrics_client"] = [{"text":"impl Args for <a class=\"struct\" href=\"metrics_client/struct.Opt.html\" title=\"struct metrics_client::Opt\">Opt</a>","synthetic":false,"types":["metrics_client::Opt"]}];
-implementors["oak_baremetal_client"] = [{"text":"impl Args for <a class=\"struct\" href=\"oak_baremetal_client/struct.Args.html\" title=\"struct oak_baremetal_client::Args\">Args</a>","synthetic":false,"types":["oak_baremetal_client::Args"]}];
 implementors["oak_baremetal_loader"] = [{"text":"impl Args for <a class=\"struct\" href=\"oak_baremetal_loader/struct.Args.html\" title=\"struct oak_baremetal_loader::Args\">Args</a>","synthetic":false,"types":["oak_baremetal_loader::Args"]}];
 implementors["oak_functions_loader"] = [{"text":"impl Args for <a class=\"struct\" href=\"oak_functions_loader/struct.Opt.html\" title=\"struct oak_functions_loader::Opt\">Opt</a>","synthetic":false,"types":["oak_functions_loader::Opt"]}];
 implementors["oak_https_attestation"] = [{"text":"impl Args for <a class=\"struct\" href=\"oak_https_attestation/struct.Opt.html\" title=\"struct oak_https_attestation::Opt\">Opt</a>","synthetic":false,"types":["oak_https_attestation::Opt"]}];

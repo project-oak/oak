@@ -532,7 +532,7 @@
         }
     });
 
-    <span class="kw">let</span> <span class="ident">server_future</span> <span class="op">=</span> <span class="ident">server::server</span>(<span class="string">&quot;127.0.0.1:8000&quot;</span>.<span class="ident">parse</span>()<span class="question-mark">?</span>, <span class="ident">tx</span>);
+    <span class="kw">let</span> <span class="ident">server_future</span> <span class="op">=</span> <span class="ident">server::server</span>(<span class="string">&quot;127.0.0.1:8080&quot;</span>.<span class="ident">parse</span>()<span class="question-mark">?</span>, <span class="ident">tx</span>);
 
     <span class="comment">// Wait until something dies or we get a signal to terminate.</span>
     <span class="macro">tokio::select!</span> {

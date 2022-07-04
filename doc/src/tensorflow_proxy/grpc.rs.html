@@ -161,8 +161,6 @@
 <span id="156">156</span>
 <span id="157">157</span>
 <span id="158">158</span>
-<span id="159">159</span>
-<span id="160">160</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2021 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -245,10 +243,8 @@
         .<span class="ident">context</span>(<span class="string">&quot;couldn&#39;t execute prediction&quot;</span>)<span class="question-mark">?</span>
         .<span class="ident">into_inner</span>();
 
-    <span class="kw">let</span> <span class="ident">wrapped_response</span> <span class="op">=</span> <span class="ident">oak_functions_abi::proto::Response::create</span>(
-        <span class="ident">oak_functions_abi::proto::StatusCode::Success</span>,
-        <span class="ident">response</span>,
-    );
+    <span class="kw">let</span> <span class="ident">wrapped_response</span> <span class="op">=</span>
+        <span class="ident">oak_functions_abi::Response::create</span>(<span class="ident">oak_functions_abi::StatusCode::Success</span>, <span class="ident">response</span>);
     <span class="prelude-val">Ok</span>(<span class="ident">wrapped_response</span>.<span class="ident">encode_to_vec</span>())
 }
 

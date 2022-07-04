@@ -54,7 +54,6 @@
 <span id="49">49</span>
 <span id="50">50</span>
 <span id="51">51</span>
-<span id="52">52</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2021 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -79,8 +78,7 @@
 
 <span class="kw">use</span> <span class="ident">anyhow::Context</span>;
 <span class="kw">use</span> <span class="ident">grpc_unary_attestation::client::AttestationClient</span>;
-<span class="kw">use</span> <span class="ident">oak_functions_abi::proto</span>::{<span class="ident">Request</span>, <span class="ident">Response</span>};
-<span class="kw">use</span> <span class="ident">prost::Message</span>;
+<span class="kw">use</span> <span class="ident">oak_functions_abi</span>::{<span class="ident">Request</span>, <span class="ident">Response</span>};
 
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
 <span class="kw">mod</span> <span class="ident">tests</span>;

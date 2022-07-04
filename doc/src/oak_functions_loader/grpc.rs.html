@@ -131,7 +131,6 @@
 <span id="126">126</span>
 <span id="127">127</span>
 <span id="128">128</span>
-<span id="129">129</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2021 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -157,10 +156,9 @@
 };
 <span class="kw">use</span> <span class="ident">anyhow::Context</span>;
 <span class="kw">use</span> <span class="ident">log::Level</span>;
-<span class="kw">use</span> <span class="ident">oak_functions_abi::proto</span>::{<span class="ident">Request</span>, <span class="ident">ServerPolicy</span>};
+<span class="kw">use</span> <span class="ident">oak_functions_abi</span>::{<span class="ident">proto::ServerPolicy</span>, <span class="ident">Request</span>};
 <span class="kw">use</span> <span class="ident">oak_logger::OakLogger</span>;
 <span class="kw">use</span> <span class="ident">oak_utils::LogError</span>;
-<span class="kw">use</span> <span class="ident">prost::Message</span>;
 <span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">future::Future</span>, <span class="ident">net::SocketAddr</span>};
 
 <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">handle_request</span>(
