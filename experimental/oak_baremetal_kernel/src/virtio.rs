@@ -49,7 +49,6 @@ where
 impl<T: virtio::Read + virtio::Write> crate::Channel for Channel<T> {}
 
 pub fn get_console_channel() -> Channel<virtio::console::Console<VirtioPciTransport>> {
-    //Channel<virtio::console::Console<VirtioPciTransport>> {
     let console = virtio::console::Console::find_and_configure_device()
         .expect("Couldn't configure PCI virtio console device.");
     info!("Console device status: {}", console.get_status());

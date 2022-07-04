@@ -72,7 +72,7 @@ pub fn start_kernel<E: boot::E820Entry, B: boot::BootInfo<E>>(info: B) -> ! {
     main(protocol);
 }
 
-pub trait Channel: Read + Write {}
+trait Channel: Read + Write {}
 
 fn main(protocol: &str) -> ! {
     info!("In main! Boot protocol:  {}", protocol);
