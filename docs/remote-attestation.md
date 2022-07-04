@@ -62,17 +62,20 @@ Attestation from the start in order to create a new pair of Session keys.
 
 The workflow of the Remote Attestation protocol involves 4 interacting entities:
 
-1. Server
-   - Server application that processes requests from Clients
-   - Runs on a TEE Platform
 1. Client
    - Client application that connects to the Server
    - Client is provided with a TEE Provider's Root key
-1. TEE Platform
+2. Untrusted Loader
+   - Companion of the Trusted Runtime
+   - Runs directly on the server host
+3. Trusted Runtime
+   - Runs inside a secure VM on the server
+   - Communicates with the outside world via the Untrusted Loader
+4. TEE Platform
    - Firmware that provides a TEE support (i.e. Intel SGX or AMD-SEV-SNP capable
      CPU)
    - Possesses a firmware key
-1. TEE Provider
+5. TEE Provider
    - TEE platform provider that can confirm authenticity of the TEE Platform
      firmware keys using its root key
    - Client must have the TEE Provider's root public key
@@ -81,47 +84,53 @@ The workflow of the Remote Attestation protocol involves 4 interacting entities:
 
 The complete workflow of the Remote Attestation protocol looks as follows:
 
-1. Pre-handshake steps that are performed at startup:
-   - Both **Client** and **Server** generate an individual
-     [ECDSA-P256](https://datatracker.ietf.org/doc/html/rfc6979) _Signing_ key
-     pair
-   - **TEE Provider** creates a signature of the **TEE Platform**'s firmware
-     public key
+### Pre-handshake
+
+1. **TEE Provider** creates a signature of the **TEE Platform**'s firmware
+   public key
+2. **Untrusted Loader** instructs the **TEE Platform** to start the **Trusted
+   Runtime** in a secure VM
+3. **TEE Platform** stores a cryptographic measurement of the **Trusted
+   Runtime** at launch
+4. Both **Client** and **Trusted Runtime** generate an individual
+   [ECDSA-P256](https://datatracker.ietf.org/doc/html/rfc6979) _Signing_ key
+   pair
+5. **Trusted Runtime** requests a `AttestationReport` from the **TEE Platform**
+   and includes the hash of its Signing public key in the request
+   - **TEE Platform** includes the cryptographic measurement of the **Trusted
+     Runtime** at launch in the `AttestationReport`
+   - **TEE Platform** includes the supplied hash of the **Trusted Runtime**’s
+     _Signing_ public key in the `AttestationReport`
+   - **TEE Platform** signs the `AttestationReport` with its firmware private
+     key
+6. **Trusted Runtime** receives the `AttestationReport` and stores it
+7. **Untrusted Loader** sends an initial configuration message to the **Trusted
+   Runtime**, which then initializes
+
+### Handshake
+
 1. **Client** generates an
    [X25519](https://datatracker.ietf.org/doc/html/rfc7748) _Ephemeral_ key pair
-1. **Client** sends a `ClientHello` message to the **Server**
+2. **Client** sends a `ClientHello` message to the **Trusted Runtime**
    - Which includes a random string
-1. **Server** generates an
+3. **Trusted Runtime** generates an
    [X25519](https://datatracker.ietf.org/doc/html/rfc7748) _Ephemeral_ key pair
-1. **Server** sends a request for the `AttestationReport` to the **TEE
-   Platform**
-   - This request contains
-     [SHA-256](https://datatracker.ietf.org/doc/html/rfc6234) hash of the
-     **Server**’s _Signing_ public key
-1. **TEE Platform** generates an `AttestationReport`
-   - **TEE Platform** signs the report using its firmware private key, the
-     public key equivalent of which was signed by the **TEE Provider** and could
-     be verified by the **Client**
-   - The signed `AttestationReport` also gives the **Client** information about
-     the TEE itself (its version and etc.) and about the code that is running
-     inside the **TEE Platform**
-   - Since the hash of the **Server**’s _Signing_ public key was provided in the
-     request, it is also signed by the **TEE Platform**
-1. **Server** sends `ServerIdentity` to the **Client** which contains:
-   - **Server**’s _Ephemeral_ public key
+4. **Trusted Runtime** sends `ServerIdentity` to the **Client** which contains:
+   - **Trusted Runtime**’s _Ephemeral_ public key
    - New random string
    - _Transcript_: [SHA-256](https://datatracker.ietf.org/doc/html/rfc6234) hash
      of the concatenated `ClientHello` and current `ServerIdentity` (excluding
-     the _Transcript_) signed with the **Server**'s _Signing_ private key
-   - **Server**’s _Signing_ public key
+     the _Transcript_) signed with the **Trusted Runtime**'s _Signing_ private
+     key
+   - **Trusted Runtime**’s _Signing_ public key
    - `AttestationReport` signed by the **TEE Platform**'s hardware key, which
-     includes a hash of the **Server**’s _Signing_ public key
+     includes a hash of the **Trusted Runtime**’s _Signing_ public key
    - Corresponding **TEE Provider**’s certificate that is signed by the **TEE
      Provider**’s _Root_ key
-1. **Client** validates `ServerIdentity`
+5. **Client** validates `ServerIdentity`
    - If the corresponding `AttestationReport` is not valid, then the **Client**
      closes the connection and aborts the protocol
-1. **Client** sends `ClientIdentity` to the **Server** which contains:
+6. **Client** sends `ClientIdentity` to the **Trusted Runtime** which contains:
    - **Client**’s _Ephemeral_ public key
    - New random string
    - _Transcript_: [SHA-256](https://datatracker.ietf.org/doc/html/rfc6234) hash
@@ -129,22 +138,76 @@ The complete workflow of the Remote Attestation protocol looks as follows:
      `ClientIdentity` (excluding the _Transcript_) signed with the **Client**'s
      _Signing_ private key
    - **Client**’s _Signing_ public key
-1. **Client** and **Server** use both _Ephemeral_ public keys to create an
-   [X25519](https://datatracker.ietf.org/doc/html/rfc7748) _Shared Secret_
-1. **Client** and **Server** derive _Session_ keys from the _Shared Secret_ and
-   both _Ephemeral_ public keys using a _Key Derivation Function_
+7. **Client** and **Trusted Runtime** use both _Ephemeral_ public keys to create
+   an [X25519](https://datatracker.ietf.org/doc/html/rfc7748) _Shared Secret_
+8. **Client** and **Trusted Runtime** derive _Session_ keys from the _Shared
+   Secret_ and both _Ephemeral_ public keys using a _Key Derivation Function_
    ([HKDF](https://datatracker.ietf.org/doc/html/rfc5869))
    - Each side generates 2
      [AES-256-GCM](https://datatracker.ietf.org/doc/html/rfc5288) _Session_
      keys:
      - Server Session Key
      - Client Session Key
-   - **Client** and **Server** use Authenticated Encryption/Decryption
+   - **Client** and **Trusted Runtime** use Authenticated Encryption/Decryption
      ([AEAD](https://en.wikipedia.org/wiki/Authenticated_encryption)) for
      communication
-1. **Client** and **Server** use generated _Session_ keys for communication
-   between them
 
-<!-- From: -->
-<!-- https://sequencediagram.googleplex.com/view/6235412701904896 -->
-<img src="images/remote_attestation_workflow.png" width="850">
+### Post-handshake
+
+**Client** and **Trusted Runtime** use generated _Session_ keys to exchange
+data.
+
+## Workflow Diagram
+
+```mermaid
+sequenceDiagram
+  participant Client
+  participant Untrusted Loader
+  participant Trusted Runtime
+  participant TEE Platform
+
+  Note over Untrusted Loader,TEE Platform: Load the Trusted Runtime
+
+  Untrusted Loader->>TEE Platform: Trusted Runtime Memory Contents
+  TEE Platform -->> TEE Platform: Store a measurement of the Trusted Runtime
+  TEE Platform ->> Trusted Runtime: Start the Trusted Runtime in a secure VM
+
+  Trusted Runtime-->>Trusted Runtime: Generate a Signing key pair
+  Trusted Runtime-->>Trusted Runtime: Put Signing public key hash in the AttestationReport request
+  Trusted Runtime->>TEE Platform: AttestationReport request
+  TEE Platform-->>TEE Platform: Generate AttestationReport
+  TEE Platform->>Trusted Runtime: Signed AttestationReport
+
+  Note over Untrusted Loader,Trusted Runtime: Initialization
+
+  Untrusted Loader->>Trusted Runtime: Configuration and business logic
+
+  Client-->>Client: Generate a Signing key pair
+
+  Note over Client,Trusted Runtime: Handshake Start
+
+  Client-->>Client: Generate an Ephemeral key pair
+  Client->>Untrusted Loader: ClientHello
+  Untrusted Loader->>Trusted Runtime: ClientHello
+  Trusted Runtime-->>Trusted Runtime: Generate an Ephemeral key pair
+
+  Trusted Runtime->>Untrusted Loader: ServerIdentity
+  Untrusted Loader->>Client: ServerIdentity
+  Client-->>Client: Validate ServerIdentity
+
+  Client->>Untrusted Loader: ClientIdentity
+  Untrusted Loader->>Trusted Runtime: ClientIdentity
+
+  Client-->>Client: Derive Session Keys
+  Trusted Runtime-->>Trusted Runtime: Derive Session Keys
+  Note over Client,Trusted Runtime: Handshake Completed
+
+
+loop Data Exchange
+  Client->>Untrusted Loader: Encrypted request
+  Untrusted Loader->>Trusted Runtime: Encrypted request
+  Trusted Runtime-->>Trusted Runtime: Invoke business logic
+  Trusted Runtime->>Untrusted Loader: Encrypted response
+  Untrusted Loader->>Client: Encrypted response
+end
+```
