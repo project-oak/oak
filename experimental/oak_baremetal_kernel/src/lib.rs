@@ -31,6 +31,7 @@
 #![no_std]
 #![feature(abi_x86_interrupt)]
 #![feature(core_c_str)]
+#![feature(once_cell)]
 
 mod args;
 mod avx;
@@ -64,27 +65,27 @@ pub fn start_kernel<E: boot::E820Entry, B: boot::BootInfo<E>>(info: B) -> ! {
     // highly likely we will overwrite some data after we initialize the heap. args::init_args()
     // caches the arguments (as long they are of reasonable length) in a static variable, allowing
     // us to refer to the args in the future.
-    args::init_args(info.args()).unwrap();
+    let kernel_args = args::init_args(info.args()).unwrap();
 
     let protocol = info.protocol();
     // If we don't find memory for heap, it's ok to panic.
     memory::init_allocator(info).unwrap();
-    main(protocol);
+    main(protocol, kernel_args);
 }
 
 trait Channel: Read + Write {}
 
-fn main(protocol: &str) -> ! {
+fn main(protocol: &str, kernel_args: args::Args) -> ! {
     info!("In main! Boot protocol:  {}", protocol);
-    info!("Kernel boot args: {}", args::args());
+    info!("Kernel boot args: {}", kernel_args.args());
     let attestation_behavior =
         AttestationBehavior::create(PlaceholderAmdAttestationGenerator, EmptyAttestationVerifier);
-    let mut channel = get_channel();
+    let mut channel = get_channel(&kernel_args);
     oak_baremetal_runtime::framing::handle_frames(&mut *channel, attestation_behavior).unwrap();
 }
 
-fn get_channel() -> Box<dyn Channel> {
-    match args::arg("channel").unwrap_or("virtio_console") {
+fn get_channel(kernel_args: &args::Args) -> Box<dyn Channel> {
+    match kernel_args.get("channel").unwrap_or("virtio_console") {
         "virtio_console" => Box::new(virtio::get_console_channel()),
         "virtio_vsock" => Box::new(virtio::get_vsock_channel()),
         "serial" => Box::new(serial::Serial::new()),
