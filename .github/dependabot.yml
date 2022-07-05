@@ -9,7 +9,7 @@ updates:
       interval: 'daily'
     # We do not set an explicit reviewer, as that is already automatically assigned via CODEOWNERS.
     # reviewers
-    # Explicitly trigger kokoro checks. They do not automatically run for
-    # external users.
+    # Explicitly trigger kokoro checks. They do not automatically run for PRs
+    # by external users.
     labels:
       - "kokoro:run"
