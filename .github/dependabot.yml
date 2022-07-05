@@ -9,7 +9,11 @@ updates:
       interval: 'daily'
     # We do not set an explicit reviewer, as that is already automatically assigned via CODEOWNERS.
     # reviewers
-    # Explicitly trigger kokoro checks. They do not automatically run for PRs
-    # by external users.
+    ignore:
+      - dependency-name: 'linked_list_allocator'
+        # Ignore buggy version of this dep. Ref: https://github.com/project-oak/oak/pull/3019
+        versions: ['0.10.0']
+    # Explicitly trigger kokoro checks. They do not automatically run for
+    # external users.
     labels:
       - 'kokoro:run'
