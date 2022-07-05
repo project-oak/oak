@@ -5,6 +5,12 @@ authors = ["Andri Saar <andrisaar@google.com>"]
 edition = "2021"
 license = "Apache-2.0"
 
+[features]
+default = ["virtio_console_channel"]
+virtio_console_channel = []
+vsock_channel = []
+serial_channel = []
+
 [dependencies]
 anyhow = { version = "*", default-features = false }
 arrayvec = { version = "*", default-features = false }

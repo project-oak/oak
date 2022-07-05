@@ -41,18 +41,21 @@ mod interrupts;
 mod libm;
 mod logging;
 mod memory;
+#[cfg(feature = "serial_channel")]
 mod serial;
+#[cfg(any(feature = "virtio_console_channel", feature = "vsock_channel"))]
 mod virtio;
 
 extern crate alloc;
 
 use alloc::boxed::Box;
-use core::panic::PanicInfo;
+use core::{panic::PanicInfo, str::FromStr};
 use log::{error, info};
 use oak_baremetal_communication_channel::{Read, Write};
 use oak_remote_attestation::handshaker::{AttestationBehavior, EmptyAttestationVerifier};
 use oak_remote_attestation_amd::PlaceholderAmdAttestationGenerator;
 use rust_hypervisor_firmware_boot::paging;
+use strum::{EnumIter, EnumString, IntoEnumIterator};
 
 /// Main entry point for the kernel, to be called from bootloader.
 pub fn start_kernel<E: boot::E820Entry, B: boot::BootInfo<E>>(info: B) -> ! {
@@ -75,6 +78,17 @@ pub fn start_kernel<E: boot::E820Entry, B: boot::BootInfo<E>>(info: B) -> ! {
 
 trait Channel: Read + Write {}
 
+#[derive(EnumIter, EnumString)]
+#[strum(ascii_case_insensitive, serialize_all = "snake_case")]
+enum ChannelType {
+    #[cfg(feature = "virtio_console_channel")]
+    VirtioConsole,
+    #[cfg(feature = "vsock_channel")]
+    VirtioVsock,
+    #[cfg(feature = "serial_channel")]
+    Serial,
+}
+
 fn main(protocol: &str, kernel_args: args::Args) -> ! {
     info!("In main! Boot protocol:  {}", protocol);
     info!("Kernel boot args: {}", kernel_args.args());
@@ -85,11 +99,21 @@ fn main(protocol: &str, kernel_args: args::Args) -> ! {
 }
 
 fn get_channel(kernel_args: &args::Args) -> Box<dyn Channel> {
-    match kernel_args.get("channel").unwrap_or("virtio_console") {
-        "virtio_console" => Box::new(virtio::get_console_channel()),
-        "virtio_vsock" => Box::new(virtio::get_vsock_channel()),
-        "serial" => Box::new(serial::Serial::new()),
-        other => panic!("Unknown communication channel type: {}", other),
+    // If we weren't told which channel to use, arbitrarily pick the first one in the `ChannelType`
+    // enum. Depending on features that are enabled, this means that the enum acts as kind of a
+    // reverse priority list for defaults.
+    let chan_type = kernel_args
+        .get("channel")
+        .map(|chan_type| ChannelType::from_str(chan_type).unwrap())
+        .unwrap_or(ChannelType::iter().next().unwrap());
+
+    match chan_type {
+        #[cfg(feature = "virtio_console_channel")]
+        ChannelType::VirtioConsole => Box::new(virtio::get_console_channel()),
+        #[cfg(feature = "vsock_channel")]
+        ChannelType::VirtioVsock => Box::new(virtio::get_vsock_channel()),
+        #[cfg(feature = "serial_channel")]
+        ChannelType::Serial => Box::new(serial::Serial::new()),
     }
 }
 
