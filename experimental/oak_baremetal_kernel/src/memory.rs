@@ -80,7 +80,7 @@ pub fn init_allocator<E: boot::E820Entry, B: boot::BootInfo<E>>(
     info!("Using [{:#016x}..{:#016x}) for heap.", addr, addr + size);
     // This is safe as we know the memory is available based on the e820 map.
     unsafe {
-        ALLOCATOR.lock().init(addr as *mut u8, size);
+        ALLOCATOR.lock().init(addr, size);
     }
     Ok(())
 }
