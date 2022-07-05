@@ -12,4 +12,4 @@ updates:
     # Explicitly trigger kokoro checks. They do not automatically run for PRs
     # by external users.
     labels:
-      - "kokoro:run"
+      - 'kokoro:run'
