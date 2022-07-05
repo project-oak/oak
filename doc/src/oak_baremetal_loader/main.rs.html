@@ -267,15 +267,6 @@
 <span id="262">262</span>
 <span id="263">263</span>
 <span id="264">264</span>
-<span id="265">265</span>
-<span id="266">266</span>
-<span id="267">267</span>
-<span id="268">268</span>
-<span id="269">269</span>
-<span id="270">270</span>
-<span id="271">271</span>
-<span id="272">272</span>
-<span id="273">273</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2022 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -372,19 +363,13 @@
     }
 }
 
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">ClientHandler</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="ident">T</span>: <span class="ident">oak_baremetal_communication_channel::Read</span> <span class="op">+</span> <span class="ident">oak_baremetal_communication_channel::Write</span>,
-{
-    <span class="ident">inner</span>: <span class="ident">ClientChannelHandle</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>,
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">ClientHandler</span> {
+    <span class="ident">inner</span>: <span class="ident">ClientChannelHandle</span>,
     <span class="ident">request_encoder</span>: <span class="ident">RequestEncoder</span>,
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="ident">ClientHandler</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="ident">T</span>: <span class="ident">oak_baremetal_communication_channel::Read</span> <span class="op">+</span> <span class="ident">oak_baremetal_communication_channel::Write</span>,
-{
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">inner</span>: <span class="ident">T</span>) -&gt; <span class="self">Self</span> {
+<span class="kw">impl</span> <span class="ident">ClientHandler</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">inner</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">oak_baremetal_communication_channel::Channel</span><span class="op">&gt;</span>) -&gt; <span class="self">Self</span> {
         <span class="self">Self</span> {
             <span class="ident">inner</span>: <span class="ident">ClientChannelHandle::new</span>(<span class="ident">inner</span>),
             <span class="ident">request_encoder</span>: <span class="ident">RequestEncoder::default</span>(),
@@ -392,10 +377,7 @@
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="ident">oak_idl::Handler</span> <span class="kw">for</span> <span class="ident">ClientHandler</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="ident">T</span>: <span class="ident">oak_baremetal_communication_channel::Read</span> <span class="op">+</span> <span class="ident">oak_baremetal_communication_channel::Write</span>,
-{
+<span class="kw">impl</span> <span class="ident">oak_idl::Handler</span> <span class="kw">for</span> <span class="ident">ClientHandler</span> {
     <span class="kw">fn</span> <span class="ident">invoke</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">request</span>: <span class="ident">oak_idl::Request</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>, <span class="ident">oak_idl::Status</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">request_message</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">request_encoder</span>.<span class="ident">encode_request</span>(<span class="ident">request</span>);
         <span class="kw">let</span> <span class="ident">request_message_invocation_id</span> <span class="op">=</span> <span class="ident">request_message</span>.<span class="ident">invocation_id</span>;
@@ -460,7 +442,7 @@
 
     <span class="ident">tokio::spawn</span>(<span class="kw">async</span> <span class="kw">move</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">client</span> <span class="op">=</span> {
-            <span class="kw">let</span> <span class="ident">comms_channel</span> <span class="op">=</span> <span class="ident">CommsChannel</span> { <span class="ident">inner</span>: <span class="ident">comms</span> };
+            <span class="kw">let</span> <span class="ident">comms_channel</span> <span class="op">=</span> <span class="ident">Box::new</span>(<span class="ident">CommsChannel</span> { <span class="ident">inner</span>: <span class="ident">comms</span> });
             <span class="kw">let</span> <span class="ident">client_handler</span> <span class="op">=</span> <span class="ident">ClientHandler::new</span>(<span class="ident">comms_channel</span>);
             <span class="ident">schema::TrustedRuntimeClient::new</span>(<span class="ident">client_handler</span>)
         };

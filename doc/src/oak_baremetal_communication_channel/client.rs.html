@@ -93,9 +93,6 @@
 <span id="88">88</span>
 <span id="89">89</span>
 <span id="90">90</span>
-<span id="91">91</span>
-<span id="92">92</span>
-<span id="93">93</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2022 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -116,19 +113,16 @@
 
 <span class="kw">use</span> <span class="kw">crate</span>::{
     <span class="ident">message</span>::{<span class="ident">InvocationId</span>, <span class="ident">RequestMessage</span>, <span class="ident">ResponseMessage</span>},
-    <span class="ident">InvocationChannel</span>, <span class="ident">Read</span>, <span class="ident">Write</span>,
+    <span class="ident">Channel</span>, <span class="ident">InvocationChannel</span>,
 };
-<span class="kw">use</span> <span class="ident">alloc</span>::{<span class="ident">string::String</span>, <span class="ident">vec::Vec</span>};
+<span class="kw">use</span> <span class="ident">alloc</span>::{<span class="ident">boxed::Box</span>, <span class="ident">string::String</span>, <span class="ident">vec::Vec</span>};
 
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">ClientChannelHandle</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Read</span> <span class="op">+</span> <span class="ident">Write</span><span class="op">&gt;</span> {
-    <span class="ident">inner</span>: <span class="ident">InvocationChannel</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>,
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">ClientChannelHandle</span> {
+    <span class="ident">inner</span>: <span class="ident">InvocationChannel</span>,
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="ident">ClientChannelHandle</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="ident">T</span>: <span class="ident">Read</span> <span class="op">+</span> <span class="ident">Write</span>,
-{
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">socket</span>: <span class="ident">T</span>) -&gt; <span class="self">Self</span> {
+<span class="kw">impl</span> <span class="ident">ClientChannelHandle</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">socket</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">Channel</span><span class="op">&gt;</span>) -&gt; <span class="self">Self</span> {
         <span class="self">Self</span> {
             <span class="ident">inner</span>: <span class="ident">InvocationChannel::new</span>(<span class="ident">socket</span>),
         }

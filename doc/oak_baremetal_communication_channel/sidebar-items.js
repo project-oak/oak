@@ -1,1 +1,1 @@
-initSidebarItems({"mod":[["client",""],["schema",""],["server",""]],"trait":[["Read",""],["Write",""]]});
+initSidebarItems({"mod":[["client",""],["schema",""],["server",""]],"trait":[["Channel",""],["Read",""],["Write",""]]});
