@@ -47,8 +47,6 @@ where
     }
 }
 
-impl<T: virtio::Read + virtio::Write> crate::Channel for Channel<T> {}
-
 #[cfg(feature = "virtio_console_channel")]
 pub fn get_console_channel() -> Channel<virtio::console::Console<VirtioPciTransport>> {
     let console = virtio::console::Console::find_and_configure_device()

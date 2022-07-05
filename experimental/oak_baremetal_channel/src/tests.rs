@@ -16,10 +16,9 @@
 
 extern crate std;
 
-use crate::message::{Message, RequestMessage};
-use alloc::{collections::VecDeque, vec};
-
 use super::*;
+use crate::message::{Message, RequestMessage};
+use alloc::{boxed::Box, collections::VecDeque, vec};
 
 const BODY_LEN_MULTIPLIER: usize = 5;
 const MOCK_LARGE_PAYLOAD_LEN: usize = frame::MAX_BODY_SIZE * BODY_LEN_MULTIPLIER;
@@ -99,8 +98,7 @@ impl Write for MessageStore {
 
 #[test]
 fn test_invocation_channel() {
-    let mut message_store = MessageStore::default();
-    let mut invocation_channel = InvocationChannel::new(&mut message_store);
+    let mut invocation_channel = InvocationChannel::new(Box::new(MessageStore::default()));
 
     let message = message::RequestMessage {
         method_id: 0,
@@ -116,7 +114,6 @@ fn test_invocation_channel() {
 
 #[test]
 fn test_invocation_channel_double_start_frame() {
-    let mut message_store = MessageStore::default();
     let mut invocation_channel = {
         let message = message::RequestMessage {
             method_id: 0,
@@ -128,7 +125,7 @@ fn test_invocation_channel_double_start_frame() {
             .first()
             .unwrap()
             .clone();
-        let mut frame_store = frame::Framed::new(&mut message_store);
+        let mut frame_store = frame::Framed::new(Box::new(MessageStore::default()));
         frame_store.write_frame(start_frame.clone()).unwrap();
         frame_store.write_frame(start_frame).unwrap();
         InvocationChannel { inner: frame_store }
@@ -141,7 +138,6 @@ fn test_invocation_channel_double_start_frame() {
 
 #[test]
 fn test_invocation_channel_expected_start_frame() {
-    let mut message_store = MessageStore::default();
     let mut invocation_channel = {
         let message = message::RequestMessage {
             method_id: 0,
@@ -153,7 +149,7 @@ fn test_invocation_channel_expected_start_frame() {
             .last()
             .unwrap()
             .clone();
-        let mut frame_store = frame::Framed::new(&mut message_store);
+        let mut frame_store = frame::Framed::new(Box::new(MessageStore::default()));
         frame_store.write_frame(end_frame).unwrap();
         InvocationChannel { inner: frame_store }
     };

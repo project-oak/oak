@@ -94,19 +94,13 @@ impl oak_baremetal_communication_channel::Read for CommsChannel {
     }
 }
 
-pub struct ClientHandler<'a, T>
-where
-    T: oak_baremetal_communication_channel::Read + oak_baremetal_communication_channel::Write,
-{
-    inner: ClientChannelHandle<'a, T>,
+pub struct ClientHandler {
+    inner: ClientChannelHandle,
     request_encoder: RequestEncoder,
 }
 
-impl<'a, T> ClientHandler<'a, T>
-where
-    T: oak_baremetal_communication_channel::Read + oak_baremetal_communication_channel::Write,
-{
-    pub fn new(inner: &'a mut T) -> Self {
+impl ClientHandler {
+    pub fn new(inner: Box<dyn oak_baremetal_communication_channel::Channel>) -> Self {
         Self {
             inner: ClientChannelHandle::new(inner),
             request_encoder: RequestEncoder::default(),
@@ -114,10 +108,7 @@ where
     }
 }
 
-impl<'a, T> oak_idl::Handler for ClientHandler<'a, T>
-where
-    T: oak_baremetal_communication_channel::Read + oak_baremetal_communication_channel::Write,
-{
+impl oak_idl::Handler for ClientHandler {
     fn invoke(&mut self, request: oak_idl::Request) -> Result<Vec<u8>, oak_idl::Status> {
         let request_message = self.request_encoder.encode_request(request);
         let request_message_invocation_id = request_message.invocation_id;
@@ -181,9 +172,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let (tx, mut rx) = bmrng::unbounded_channel::<Vec<u8>, Result<Vec<u8>, oak_idl::Status>>();
 
     tokio::spawn(async move {
-        let mut comms_channel = CommsChannel { inner: comms };
         let mut client = {
-            let client_handler = ClientHandler::new(&mut comms_channel);
+            let comms_channel = Box::new(CommsChannel { inner: comms });
+            let client_handler = ClientHandler::new(comms_channel);
             schema::TrustedRuntimeClient::new(client_handler)
         };
 

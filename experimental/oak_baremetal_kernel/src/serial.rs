@@ -58,5 +58,3 @@ impl oak_baremetal_communication_channel::Read for Serial {
         Ok(())
     }
 }
-
-impl crate::Channel for Serial {}

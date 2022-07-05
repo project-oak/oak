@@ -51,7 +51,7 @@ extern crate alloc;
 use alloc::boxed::Box;
 use core::{panic::PanicInfo, str::FromStr};
 use log::{error, info};
-use oak_baremetal_communication_channel::{Read, Write};
+use oak_baremetal_communication_channel::Channel;
 use oak_remote_attestation::handshaker::{AttestationBehavior, EmptyAttestationVerifier};
 use oak_remote_attestation_amd::PlaceholderAmdAttestationGenerator;
 use rust_hypervisor_firmware_boot::paging;
@@ -76,8 +76,6 @@ pub fn start_kernel<E: boot::E820Entry, B: boot::BootInfo<E>>(info: B) -> ! {
     main(protocol, kernel_args);
 }
 
-trait Channel: Read + Write {}
-
 #[derive(EnumIter, EnumString)]
 #[strum(ascii_case_insensitive, serialize_all = "snake_case")]
 enum ChannelType {
@@ -94,8 +92,8 @@ fn main(protocol: &str, kernel_args: args::Args) -> ! {
     info!("Kernel boot args: {}", kernel_args.args());
     let attestation_behavior =
         AttestationBehavior::create(PlaceholderAmdAttestationGenerator, EmptyAttestationVerifier);
-    let mut channel = get_channel(&kernel_args);
-    oak_baremetal_runtime::framing::handle_frames(&mut *channel, attestation_behavior).unwrap();
+    let channel = get_channel(&kernel_args);
+    oak_baremetal_runtime::framing::handle_frames(channel, attestation_behavior).unwrap();
 }
 
 fn get_channel(kernel_args: &args::Args) -> Box<dyn Channel> {
@@ -105,7 +103,7 @@ fn get_channel(kernel_args: &args::Args) -> Box<dyn Channel> {
     let chan_type = kernel_args
         .get("channel")
         .map(|chan_type| ChannelType::from_str(chan_type).unwrap())
-        .unwrap_or(ChannelType::iter().next().unwrap());
+        .unwrap_or_else(|| ChannelType::iter().next().unwrap());
 
     match chan_type {
         #[cfg(feature = "virtio_console_channel")]

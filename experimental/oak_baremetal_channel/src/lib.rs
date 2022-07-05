@@ -36,7 +36,7 @@ mod message;
 mod tests;
 
 extern crate alloc;
-use alloc::vec::Vec;
+use alloc::{boxed::Box, vec::Vec};
 use anyhow::Context;
 
 pub trait Read {
@@ -48,15 +48,16 @@ pub trait Write {
     fn flush(&mut self) -> anyhow::Result<()>;
 }
 
-struct InvocationChannel<'a, T: Read + Write + ?Sized> {
-    inner: frame::Framed<'a, T>,
+pub trait Channel: Read + Write + Send + Sync {}
+
+impl<T: Read + Write + Send + Sync> Channel for T {}
+
+struct InvocationChannel {
+    inner: frame::Framed,
 }
 
-impl<'a, T> InvocationChannel<'a, T>
-where
-    T: Read + Write + ?Sized,
-{
-    pub fn new(socket: &'a mut T) -> Self {
+impl InvocationChannel {
+    pub fn new(socket: Box<dyn Channel>) -> Self {
         Self {
             inner: frame::Framed::new(socket),
         }
