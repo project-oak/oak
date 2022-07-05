@@ -171,7 +171,7 @@
     <span class="macro">info!</span>(<span class="string">&quot;Using [{:#016x}..{:#016x}) for heap.&quot;</span>, <span class="ident">addr</span>, <span class="ident">addr</span> <span class="op">+</span> <span class="ident">size</span>);
     <span class="comment">// This is safe as we know the memory is available based on the e820 map.</span>
     <span class="kw">unsafe</span> {
-        <span class="ident">ALLOCATOR</span>.<span class="ident">lock</span>().<span class="ident">init</span>(<span class="ident">addr</span> <span class="kw">as</span> <span class="kw-2">*mut</span> <span class="ident">u8</span>, <span class="ident">size</span>);
+        <span class="ident">ALLOCATOR</span>.<span class="ident">lock</span>().<span class="ident">init</span>(<span class="ident">addr</span>, <span class="ident">size</span>);
     }
     <span class="prelude-val">Ok</span>(())
 }
