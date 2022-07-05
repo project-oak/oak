@@ -18,19 +18,16 @@ extern crate alloc;
 
 use crate::{
     message::{InvocationId, RequestMessage, ResponseMessage},
-    InvocationChannel, Read, Write,
+    Channel, InvocationChannel,
 };
-use alloc::{string::String, vec::Vec};
+use alloc::{boxed::Box, string::String, vec::Vec};
 
-pub struct ClientChannelHandle<T: Read + Write> {
-    inner: InvocationChannel<T>,
+pub struct ClientChannelHandle {
+    inner: InvocationChannel,
 }
 
-impl<T> ClientChannelHandle<T>
-where
-    T: Read + Write,
-{
-    pub fn new(socket: T) -> Self {
+impl ClientChannelHandle {
+    pub fn new(socket: Box<dyn Channel>) -> Self {
         Self {
             inner: InvocationChannel::new(socket),
         }

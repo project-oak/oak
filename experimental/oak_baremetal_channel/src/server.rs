@@ -14,17 +14,15 @@
 // limitations under the License.
 //
 
-use crate::{message, InvocationChannel, Read, Vec, Write};
+use crate::{message, Channel, InvocationChannel, Vec};
+use alloc::boxed::Box;
 
-pub struct ServerChannelHandle<T: Read + Write> {
-    inner: InvocationChannel<T>,
+pub struct ServerChannelHandle {
+    inner: InvocationChannel,
 }
 
-impl<T> ServerChannelHandle<T>
-where
-    T: Read + Write,
-{
-    pub fn new(socket: T) -> Self {
+impl ServerChannelHandle {
+    pub fn new(socket: Box<dyn Channel>) -> Self {
         Self {
             inner: InvocationChannel::new(socket),
         }

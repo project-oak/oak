@@ -25,7 +25,7 @@ use oak_baremetal_communication_channel::{
     schema,
     schema::TrustedRuntime,
     server::{message_from_response_and_id, ServerChannelHandle},
-    Read, Write,
+    Channel,
 };
 use oak_functions_abi::Request;
 use oak_functions_lookup::LookupDataManager;
@@ -183,13 +183,10 @@ where
 }
 
 // Processes incoming frames.
-pub fn handle_frames<T, G: 'static + AttestationGenerator, V: 'static + AttestationVerifier>(
-    channel: T,
+pub fn handle_frames<G: 'static + AttestationGenerator, V: 'static + AttestationVerifier>(
+    channel: Box<dyn Channel>,
     attestation_behavior: AttestationBehavior<G, V>,
-) -> anyhow::Result<!>
-where
-    T: Read + Write,
-{
+) -> anyhow::Result<!> {
     let mut invocation_handler = InvocationHandler {
         initialization_state: InitializationState::Uninitialized(Some(attestation_behavior)),
         lookup_data_manager: Arc::new(LookupDataManager::new_empty(StandaloneLogger::default())),

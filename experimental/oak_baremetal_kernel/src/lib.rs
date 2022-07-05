@@ -31,6 +31,7 @@
 #![no_std]
 #![feature(abi_x86_interrupt)]
 #![feature(core_c_str)]
+#![feature(once_cell)]
 
 mod args;
 mod avx;
@@ -42,15 +43,19 @@ mod logging;
 mod memory;
 #[cfg(feature = "serial_channel")]
 mod serial;
-#[cfg(not(feature = "serial_channel"))]
+#[cfg(any(feature = "virtio_console_channel", feature = "vsock_channel"))]
 mod virtio;
 
-use core::panic::PanicInfo;
+extern crate alloc;
+
+use alloc::boxed::Box;
+use core::{panic::PanicInfo, str::FromStr};
 use log::{error, info};
-use oak_baremetal_communication_channel::{Read, Write};
+use oak_baremetal_communication_channel::Channel;
 use oak_remote_attestation::handshaker::{AttestationBehavior, EmptyAttestationVerifier};
 use oak_remote_attestation_amd::PlaceholderAmdAttestationGenerator;
 use rust_hypervisor_firmware_boot::paging;
+use strum::{EnumIter, EnumString, IntoEnumIterator};
 
 /// Main entry point for the kernel, to be called from bootloader.
 pub fn start_kernel<E: boot::E820Entry, B: boot::BootInfo<E>>(info: B) -> ! {
@@ -63,37 +68,51 @@ pub fn start_kernel<E: boot::E820Entry, B: boot::BootInfo<E>>(info: B) -> ! {
     // highly likely we will overwrite some data after we initialize the heap. args::init_args()
     // caches the arguments (as long they are of reasonable length) in a static variable, allowing
     // us to refer to the args in the future.
-    args::init_args(info.args()).unwrap();
+    let kernel_args = args::init_args(info.args()).unwrap();
 
     let protocol = info.protocol();
     // If we don't find memory for heap, it's ok to panic.
     memory::init_allocator(info).unwrap();
-    main(protocol);
+    main(protocol, kernel_args);
 }
 
-fn main(protocol: &str) -> ! {
+#[derive(EnumIter, EnumString)]
+#[strum(ascii_case_insensitive, serialize_all = "snake_case")]
+enum ChannelType {
+    #[cfg(feature = "virtio_console_channel")]
+    VirtioConsole,
+    #[cfg(feature = "vsock_channel")]
+    VirtioVsock,
+    #[cfg(feature = "serial_channel")]
+    Serial,
+}
+
+fn main(protocol: &str, kernel_args: args::Args) -> ! {
     info!("In main! Boot protocol:  {}", protocol);
-    info!("Kernel boot args: {}", args::args());
+    info!("Kernel boot args: {}", kernel_args.args());
     let attestation_behavior =
         AttestationBehavior::create(PlaceholderAmdAttestationGenerator, EmptyAttestationVerifier);
-    oak_baremetal_runtime::framing::handle_frames(get_channel(), attestation_behavior).unwrap();
+    let channel = get_channel(&kernel_args);
+    oak_baremetal_runtime::framing::handle_frames(channel, attestation_behavior).unwrap();
 }
 
-#[cfg(feature = "serial_channel")]
-fn get_channel() -> impl Read + Write {
-    serial::Serial::new()
-}
+fn get_channel(kernel_args: &args::Args) -> Box<dyn Channel> {
+    // If we weren't told which channel to use, arbitrarily pick the first one in the `ChannelType`
+    // enum. Depending on features that are enabled, this means that the enum acts as kind of a
+    // reverse priority list for defaults.
+    let chan_type = kernel_args
+        .get("channel")
+        .map(|chan_type| ChannelType::from_str(chan_type).unwrap())
+        .unwrap_or_else(|| ChannelType::iter().next().unwrap());
 
-// Use a virtio console device for the communications channel if we don't support virtio vsock.
-#[cfg(all(not(feature = "vsock_channel"), not(feature = "serial_channel")))]
-fn get_channel() -> impl Read + Write {
-    virtio::get_console_channel()
-}
-
-// Use virtio vsock for the communications channel.
-#[cfg(all(feature = "vsock_channel", not(feature = "serial_channel")))]
-fn get_channel() -> impl Read + Write {
-    virtio::get_vsock_channel()
+    match chan_type {
+        #[cfg(feature = "virtio_console_channel")]
+        ChannelType::VirtioConsole => Box::new(virtio::get_console_channel()),
+        #[cfg(feature = "vsock_channel")]
+        ChannelType::VirtioVsock => Box::new(virtio::get_vsock_channel()),
+        #[cfg(feature = "serial_channel")]
+        ChannelType::Serial => Box::new(serial::Serial::new()),
+    }
 }
 
 /// Common panic routine for the kernel. This needs to be wrrapped in a

@@ -18,8 +18,8 @@
 
 extern crate alloc;
 
-use crate::{Read, Write};
-use alloc::{format, vec, vec::Vec};
+use crate::Channel;
+use alloc::{boxed::Box, format, vec, vec::Vec};
 use bitflags::bitflags;
 
 pub const PADDING_SIZE: usize = 4;
@@ -78,15 +78,12 @@ impl TryFrom<Frame> for Vec<u8> {
     }
 }
 
-pub struct Framed<T: Read + Write> {
-    inner: T,
+pub struct Framed {
+    inner: Box<dyn Channel>,
 }
 
-impl<T> Framed<T>
-where
-    T: Read + Write,
-{
-    pub fn new(socket: T) -> Self {
+impl Framed {
+    pub fn new(socket: Box<dyn Channel>) -> Self {
         Self { inner: socket }
     }
 
