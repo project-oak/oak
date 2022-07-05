@@ -241,8 +241,8 @@ RUN cargo install --git https://github.com/rust-fuzz/cargo-fuzz/ --rev 8c964bf18
 # Install Wizer.
 # To allow running warmup initialisation on example Wasm modules.
 # https://github.com/bytecodealliance/wizer
-# The latest published version on crates.io is not compatible with recent nightly Rust.
-RUN cargo install --git https://github.com/bytecodealliance/wizer --rev 7c33b0bc2bd40ceb98727482be8fd8f115c6ced6 wizer --all-features
+ARG wizer_version=1.4.0
+RUN cargo install --version=${wizer_version} wizer --all-features
 
 # Install crosvm.
 # We're not interested in most of the features in crosvm (e.g. wayland support), but GDB support would be nice.
