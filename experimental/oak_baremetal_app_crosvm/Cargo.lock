@@ -578,6 +578,7 @@ name = "oak_baremetal_app_crosvm"
 version = "0.1.0"
 dependencies = [
  "oak_baremetal_kernel",
+ "static_assertions",
 ]
 
 [[package]]
