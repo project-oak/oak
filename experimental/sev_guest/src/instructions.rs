@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-//! Rust instruction wrappers managing page state and interacting with the hypervisor.
+//! Rust instruction wrappers for managing page state and interacting with the hypervisor.
 
 use bitflags::bitflags;
 use core::arch::asm;
@@ -86,9 +86,9 @@ bitflags! {
         const READ = 1;
         /// The target VMPL can write to the page.
         const WRITE = 2;
-        /// Code in the page can be executed at CPL3.
+        /// Code in the page can be executed in ring 3.
         const EXECUTE_USER = 4;
-        /// Code in the page can be executed at CPL0..2
+        /// Code in the page can be executed in rings 0..2.
         const EXECUTE_SUPERVISOR = 8;
     }
 }
@@ -158,7 +158,7 @@ pub fn vmgexit() {
     // safety.
     unsafe {
         // The REP instruction modifier changes the VMMCALL instruction to be equivalent to the
-        // VMGEXIT call. this is used as the assembler does not recognise the VMGEXIT mnemonic.
+        // VMGEXIT call. This is used as the assembler does not recognise the VMGEXIT mnemonic.
         asm!("rep vmmcall", options(nomem, nostack, preserves_flags));
     }
 }
