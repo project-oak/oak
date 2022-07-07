@@ -4728,10 +4728,7 @@ dependencies = [
 name = "simple_io"
 version = "0.1.0"
 dependencies = [
- "anyhow",
  "bitflags",
- "log",
- "strum",
  "x86_64",
 ]
 
