@@ -15,6 +15,7 @@
 //
 
 const CLIENT_PATH: &str = "./target/debug/oak_functions_client";
+const WASM_PATH: &str = "./experimental/oak_baremetal_loader/key_value_lookup.wasm";
 
 use std::path::Path;
 
@@ -118,7 +119,8 @@ fn run_loader(variant: Variant) -> Box<dyn Runnable> {
         "./target/debug/oak_baremetal_loader",
         vec![
             format!("--mode={}", variant.loader_mode()),
-            variant.binary_path().to_string(),
+            format!("--app={}", variant.binary_path()),
+            format!("--wasm={}", WASM_PATH),
         ],
     )
 }

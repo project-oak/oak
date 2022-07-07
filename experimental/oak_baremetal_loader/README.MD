@@ -10,12 +10,18 @@ The baremetal app may be loaded in qemu via
 
 ```shell
 (cd experimental/oak_baremetal_app_qemu && cargo build) \
-&& RUST_LOG=debug cargo run --package oak_baremetal_loader -- --mode qemu experimental/oak_baremetal_app_qemu/target/target/debug/oak_baremetal_app_qemu
+&& RUST_LOG=debug cargo run --package oak_baremetal_loader -- \
+--mode qemu \
+--app experimental/oak_baremetal_app_qemu/target/target/debug/oak_baremetal_app_qemu \
+--wasm experimental/oak_baremetal_loader/key_value_lookup.wasm
 ```
 
 The baremetal app may be loaded in crosvm via
 
 ```shell
 (cd experimental/oak_baremetal_app_crosvm && cargo build) \
-&& RUST_LOG=debug cargo run --package oak_baremetal_loader -- --mode crosvm experimental/oak_baremetal_app_crosvm/target/target/debug/oak_baremetal_app_crosvm
+&& RUST_LOG=debug cargo run --package oak_baremetal_loader -- \
+--mode crosvm \
+--app experimental/oak_baremetal_app_crosvm/target/target/debug/oak_baremetal_app_crosvm \
+--wasm experimental/oak_baremetal_loader/key_value_lookup.wasm
 ```
