@@ -106,11 +106,11 @@ pub enum Vmsa {
 /// Representation of the RMP permission used by the RMPADJST instruction.
 pub struct RmpPermission {
     /// The target VMPL to which the permission applies.
-    target_vmpl: u8,
+    pub target_vmpl: u8,
     /// The bit mask specifying the permission.
-    perm_mask: PermissionMask,
+    pub perm_mask: PermissionMask,
     /// Whether this page can be used as a VM save area.
-    vmsa: Vmsa,
+    pub vmsa: Vmsa,
 }
 
 impl From<RmpPermission> for u64 {
