@@ -51,6 +51,7 @@ sourcesIndex["oak_utils"] = {"name":"","files":["lib.rs"]};
 sourcesIndex["offline_attestation_client"] = {"name":"","files":["main.rs"]};
 sourcesIndex["offline_attestation_server"] = {"name":"","files":["main.rs"]};
 sourcesIndex["offline_attestation_shared"] = {"name":"","files":["lib.rs"]};
+sourcesIndex["sev_guest"] = {"name":"","files":["instructions.rs","lib.rs"]};
 sourcesIndex["tensorflow_client"] = {"name":"","files":["data.rs","main.rs"]};
 sourcesIndex["tensorflow_proxy"] = {"name":"","files":["grpc.rs","main.rs"]};
 sourcesIndex["test_utils"] = {"name":"","files":["lib.rs"]};
