@@ -121,7 +121,7 @@ pub enum Vmsa {
     Yes = 1,
 }
 
-/// Representation of the RMP permission used by the RMPADJST instruction.
+/// Representation of the RMP permission used by the RMPADJUST instruction.
 #[repr(C, align(8))]
 pub struct RmpPermission {
     /// The target VMPL to which the permission applies.
