@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-//! Simple io driver for communications between the guest and the host via shared memory.
+//! Simple I/O driver for communications between the guest and the host via shared memory.
 
 #![no_std]
 extern crate alloc;
@@ -41,9 +41,9 @@ pub const DEFAULT_INPUT_BUFFER_LSB_PORT: u16 = 0x6425;
 pub const DEFAULT_INPUT_LENGTH_PORT: u16 = 0x6426;
 
 /// The length of the buffer that will be used for output messages.
-pub const OUTPUT_BUFFFER_LEGNTH: usize = 4096;
+pub const OUTPUT_BUFFER_LEGNTH: usize = 4096;
 /// The length of the buffer that will be used for input messages.
-pub const INPUT_BUFFFER_LEGNTH: usize = 4096;
+pub const INPUT_BUFFER_LEGNTH: usize = 4096;
 
 /// The simple I/O channel driver implementation.
 pub struct SimpleIo {
@@ -62,8 +62,8 @@ impl SimpleIo {
         input_buffer_lsb_port: u16,
         input_length_port: u16,
     ) -> Self {
-        let output_buffer = vec![0; OUTPUT_BUFFFER_LEGNTH];
-        let input_buffer = vec![0; INPUT_BUFFFER_LEGNTH];
+        let output_buffer = vec![0; OUTPUT_BUFFER_LEGNTH];
+        let input_buffer = vec![0; INPUT_BUFFER_LEGNTH];
         let output_length_port = PortWriteOnly::new(output_length_port);
         let input_length_port = PortReadOnly::new(input_length_port);
 
@@ -102,7 +102,7 @@ impl SimpleIo {
         // A length larger than the buffer size indicates a corrupt or malicious VMM device
         // implementation. This is probably not recoverable, so panic.
         assert!(
-            length <= INPUT_BUFFFER_LEGNTH,
+            length <= INPUT_BUFFER_LEGNTH,
             "Invalid simple IO input message length."
         );
         let mut result = VecDeque::with_capacity(length);
@@ -119,7 +119,7 @@ impl SimpleIo {
             return None;
         }
 
-        let length = core::cmp::min(OUTPUT_BUFFFER_LEGNTH, data.len());
+        let length = core::cmp::min(OUTPUT_BUFFER_LEGNTH, data.len());
         self.output_buffer.copy_from_slice(&data[..length]);
 
         // Use a memory fence to ensure that the data is written to the buffer before we notify the
