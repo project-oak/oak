@@ -15,11 +15,12 @@
 //
 
 //! Rust instruction wrappers managing page state and interacting with the hypervisor.
+
 use bitflags::bitflags;
 use core::arch::asm;
 use strum::FromRepr;
 
-/// Whether a pages is in validated state or not.
+/// Whether a page is in the validated state or not.
 #[derive(Debug, FromRepr)]
 #[repr(u32)]
 pub enum Validation {
@@ -29,7 +30,7 @@ pub enum Validation {
     Validated = 1,
 }
 
-/// The size of the memory page.
+/// The size of a memory page.
 #[derive(Debug, FromRepr)]
 #[repr(u32)]
 pub enum PageSize {
@@ -39,7 +40,7 @@ pub enum PageSize {
     Page2MiB = 1,
 }
 
-/// The result from calling the PVALIDATE instructions.
+/// The result from calling the PVALIDATE or RMPADJUST instructions.
 #[derive(Debug, FromRepr)]
 #[repr(u32)]
 pub enum InstructionResult {
@@ -61,7 +62,7 @@ pub fn pvalidate(page_addr: u64, page_size: PageSize, validated: Validation) -> 
     let page_size = page_size as u32;
     let validated = validated as u32;
     let result: u32;
-    // Safety: this call does not modify the guest memory contents, so can not violate memory
+    // Safety: this call does not modify the guest memory contents, so does not violate memory
     // safety.
     unsafe {
         asm!(
@@ -134,7 +135,7 @@ pub fn rmpadjust(
     let page_size = page_size as u64;
     let permission: u64 = permission.into();
     let result: u64;
-    // Safety: this call does not modify the guest memory contents, so can not violate memory
+    // Safety: this call does not modify the guest memory contents, so does not violate memory
     // safety.
     unsafe {
         asm!(
@@ -153,11 +154,11 @@ pub fn rmpadjust(
 ///
 /// See the VMGEXIT instruction in <https://www.amd.com/system/files/TechDocs/24594.pdf> for more details.
 pub fn vmgexit() {
-    // Safety: this call does not modify the guest memory contents, so can not violate memory
+    // Safety: this call does not modify the guest memory contents, so does not violate memory
     // safety.
     unsafe {
         // The REP instruction modifier changes the VMMCALL instruction to be equivalent to the
-        // VMGEXIT call. this is used as the assembler does not understand the VMGEXIT mnemonic.
+        // VMGEXIT call. this is used as the assembler does not recognise the VMGEXIT mnemonic.
         asm!("rep vmmcall", options(nomem, nostack, preserves_flags));
     }
 }
