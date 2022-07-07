@@ -62,8 +62,8 @@ struct Args {
     #[clap(long, parse(from_os_str), validator = path_exists)]
     app: PathBuf,
 
-    /// Path to a Wasm file to be loaded into he trusted runtime and executed by it per invocation.
-    /// The Wasm module must export a function named `main`.
+    /// Path to a Wasm file to be loaded into the trusted runtime and executed by it per
+    /// invocation. See the documentation for details on its ABI. Ref: https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md
     #[clap(
         long,
         parse(from_os_str),
