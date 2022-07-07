@@ -40,41 +40,59 @@ pub enum PageSize {
     Page2MiB = 1,
 }
 
-/// The result from calling the PVALIDATE or RMPADJUST instructions.
+/// The potential errors when calling the PVALIDATE or RMPADJUST instructions.
 #[derive(Debug, FromRepr)]
 #[repr(u32)]
-pub enum InstructionResult {
-    /// The operation was successful.
-    Success = 0,
+pub enum InstructionError {
     /// The input parameters were invalid.
     FailInput = 1,
     /// Insufficient permissions.
     FailPermission = 2,
     /// The page size does not match the page size entry in the RMP.
     FailSizeMismatch = 6,
+    /// The page validation status was not updated. This value is software defined and will not be
+    /// returned by the hardware instruction.
+    ValdationStatusNotUpdated = 255,
 }
 
 /// Marks a page as validated or unvalidated in the RMP.
 ///
 /// See the PVALIDATE instruction in <https://www.amd.com/system/files/TechDocs/24594.pdf> for more details.
 #[inline]
-pub fn pvalidate(page_addr: u64, page_size: PageSize, validated: Validation) -> InstructionResult {
+pub fn pvalidate(
+    page_addr: u64,
+    page_size: PageSize,
+    validated: Validation,
+) -> Result<(), InstructionError> {
     let page_size = page_size as u32;
     let validated = validated as u32;
     let result: u32;
+    let carry: u8;
     // Safety: this call does not modify the guest memory contents, so does not violate memory
     // safety.
     unsafe {
         asm!(
             "pvalidate",
+            "setc dl",
             in("rax") page_addr,
             in("ecx") page_size,
             in("edx") validated,
             lateout("eax") result,
+            lateout("dl") carry,
             options(nomem, nostack)
         );
     }
-    InstructionResult::from_repr(result).expect("Invalid result from PVALIDATE instruction")
+    if result == 0 {
+        if carry == 0 {
+            Ok(())
+        } else {
+            // If the carry flag is not 0, it indicates that the validated state was not changed.
+            Err(InstructionError::ValdationStatusNotUpdated)
+        }
+    } else {
+        Err(InstructionError::from_repr(result)
+            .expect("Invalid return value from PVALIDATE instruction."))
+    }
 }
 
 bitflags! {
@@ -137,7 +155,7 @@ pub fn rmpadjust(
     page_addr: u64,
     page_size: PageSize,
     permission: RmpPermission,
-) -> InstructionResult {
+) -> Result<(), InstructionError> {
     let page_size = page_size as u64;
     let permission: u64 = permission.into();
     let result: u64;
@@ -153,7 +171,12 @@ pub fn rmpadjust(
             options(nomem, nostack)
         );
     }
-    InstructionResult::from_repr(result as u32).expect("Invalid result from RMPADJUST instruction")
+    if result == 0 {
+        Ok(())
+    } else {
+        Err(InstructionError::from_repr(result as u32)
+            .expect("Invalid return value from RMPADJUST instruction."))
+    }
 }
 
 /// Unconditionally exits from the guest to the hypervisor.
