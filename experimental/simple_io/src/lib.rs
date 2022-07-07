@@ -100,7 +100,7 @@ impl SimpleIo {
         }
 
         // A length larger than the buffer size indicates a corrupt or malicious VMM device
-        // implementation. This is not probably recoverable, so panic.
+        // implementation. This is probably not recoverable, so panic.
         assert!(
             length <= INPUT_BUFFFER_LEGNTH,
             "Invalid simple IO input message length."
