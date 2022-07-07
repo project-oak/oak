@@ -91,7 +91,7 @@ impl SimpleIo {
         // Safety: we read the value as a u32 and validate it before using it.
         let length = unsafe { self.input_length_port.read() } as usize;
 
-        // Use a memory fence to ensure the read from the device happens before the read frmo the
+        // Use a memory fence to ensure the read from the device happens before the read from the
         // buffer.
         core::sync::atomic::fence(core::sync::atomic::Ordering::Acquire);
 
