@@ -104,6 +104,7 @@ pub enum Vmsa {
 }
 
 /// Representation of the RMP permission used by the RMPADJST instruction.
+#[repr(C, align(8))]
 pub struct RmpPermission {
     /// The target VMPL to which the permission applies.
     pub target_vmpl: u8,
@@ -111,15 +112,20 @@ pub struct RmpPermission {
     pub perm_mask: PermissionMask,
     /// Whether this page can be used as a VM save area.
     pub vmsa: Vmsa,
+    /// Padding to extend struct to 4 bytes in size.
+    _reserved_0: u8,
+    /// Padding to extend struct to 8 bytes in size to enable reinterpreting as a u64.
+    _reserved_1: u32,
 }
+
+static_assertions::assert_eq_size!(RmpPermission, u64);
 
 impl From<RmpPermission> for u64 {
     fn from(permission: RmpPermission) -> u64 {
-        let mut buffer = [0u8; 8];
-        buffer[0] = permission.target_vmpl;
-        buffer[1] = permission.perm_mask.bits;
-        buffer[2] = permission.vmsa as u8;
-        u64::from_be_bytes(buffer)
+        // Safety: reinterpreting the struct as a u64 is safe because the types are guaranteed to
+        // have the same size and the struct is 8-byte aligned. We are not making any assumptions
+        // about the individual bits.
+        unsafe { core::mem::transmute(permission) }
     }
 }
 
