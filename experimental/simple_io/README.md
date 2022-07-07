@@ -17,7 +17,7 @@ guest-phsyical and guest-virtual addresses are the same.
 An additional port is used for each channel to specify the length of each
 message.
 
-For the output channel, writing to the lengh I/O port will act as a doorbell to
+For the output channel, writing to the length I/O port will act as a doorbell to
 notify the host that a new message is available. It is assumed that the VMM
 implementation will ensure that this operation will block until the new message
 has been copied out of the buffer.

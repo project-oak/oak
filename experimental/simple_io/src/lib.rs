@@ -28,7 +28,7 @@ pub const DEFAULT_OUTPUT_BUFFER_MSB_PORT: u16 = 0x6421;
 /// The default I/O port to use for the least significant bytes of the output buffer guest-physical
 /// address.
 pub const DEFAULT_OUTPUT_BUFFER_LSB_PORT: u16 = 0x6422;
-/// The default I/O port to use for the lenght of input messages.
+/// The default I/O port to use for the length of output messages.
 pub const DEFAULT_OUTPUT_LENGTH_PORT: u16 = 0x6423;
 
 /// The default I/O port to use for the most significant bytes of the input buffer guest-physical
@@ -91,16 +91,16 @@ impl SimpleIo {
         // Safety: we read the value as a u32 and validate it before using it.
         let length = unsafe { self.input_length_port.read() } as usize;
 
-        // Use a memory fence to ensure the data written by the VMM is globally visible before we
-        // try to read from the buffer.
-        core::sync::atomic::fence(core::sync::atomic::Ordering::SeqCst);
+        // Use a memory fence to ensure the read from the device happens before the read frmo the
+        // buffer.
+        core::sync::atomic::fence(core::sync::atomic::Ordering::Acquire);
 
         if length == 0 {
             return None;
         }
 
         // A length larger than the buffer size indicates a corrupt or malicious VMM device
-        // implementation. This is not recoverable, so panic.
+        // implementation. This is not probably recoverable, so panic.
         assert!(
             length <= INPUT_BUFFFER_LEGNTH,
             "Invalid simple IO input message length."
@@ -122,9 +122,9 @@ impl SimpleIo {
         let length = core::cmp::min(OUTPUT_BUFFFER_LEGNTH, data.len());
         self.output_buffer.copy_from_slice(&data[..length]);
 
-        // Use a memory fence to ensure that the data is written to the buffer and globally visible
-        // before we notify the VMM.
-        core::sync::atomic::fence(core::sync::atomic::Ordering::SeqCst);
+        // Use a memory fence to ensure that the data is written to the buffer before we notify the
+        // VMM.
+        core::sync::atomic::fence(core::sync::atomic::Ordering::Release);
 
         // Safety: this usage is safe, as we as only write an uninterpreted u32 value to the port.
         unsafe {
