@@ -16,7 +16,6 @@
 
 #![no_std]
 #![no_main]
-#![feature(lang_items)]
 #![feature(alloc_error_handler)]
 #![feature(custom_test_frameworks)]
 #![feature(core_c_str)]
@@ -53,9 +52,6 @@ fn out_of_memory(layout: ::core::alloc::Layout) -> ! {
 fn panic(info: &PanicInfo) -> ! {
     oak_baremetal_kernel::panic(info);
 }
-
-#[lang = "eh_personality"]
-extern "C" fn eh_personality() {}
 
 #[cfg(test)]
 fn test_runner(tests: &[&dyn Fn()]) {
