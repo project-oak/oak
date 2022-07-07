@@ -41,6 +41,8 @@ pub struct Config {
     /// Path to a Wasm module to be loaded and executed per invocation. The Wasm module must export
     /// a function named `main` and `alloc`.
     wasm_path: String,
+    /// Port number that the server listens (defaults to 8080).
+    http_listen_port: Option<u16>,
 }
 
 pub fn main() -> anyhow::Result<()> {
@@ -56,11 +58,11 @@ pub fn main() -> anyhow::Result<()> {
     let extension_factories = vec![];
 
     oak_functions_loader::lib_main(
-        opt,
         logger,
         config.load_lookup_data,
         config.policy,
         config.wasm_path,
+        config.http_listen_port,
         extension_factories,
     )
 }

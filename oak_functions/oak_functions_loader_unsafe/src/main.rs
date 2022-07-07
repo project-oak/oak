@@ -45,6 +45,8 @@ pub struct Config {
     /// Path to a Wasm module to be loaded and executed per invocation. The Wasm module must export
     /// a function named `main` and `alloc`.
     wasm_path: String,
+    /// Port number that the server listens (defaults to 8080).
+    http_listen_port: Option<u16>,
     /// Configuration for TensorFlow model.
     #[serde(default)]
     tf_model: Option<TensorFlowModelConfig>,
@@ -56,12 +58,12 @@ pub struct Config {
 pub fn main() -> anyhow::Result<()> {
     let opt = Opt::parse();
     let config_file_bytes = fs::read(&opt.config_path)
-        .with_context(|| format!("Couldn't read config file {}", &opt.config_path))?;
+        .with_context(|| format!("Couldn't read config file {}.", &opt.config_path))?;
     let config: Config =
-        toml::from_slice(&config_file_bytes).context("Couldn't parse config file")?;
+        toml::from_slice(&config_file_bytes).context("Couldn't parse config file.")?;
     // TODO(#1971): Make maximum log level configurable.
     let logger = Logger::default();
-    logger.log_public(Level::Info, &format!("parsed config file:\n{:#?}", config));
+    logger.log_public(Level::Info, &format!("Parsed config file:\n{:#?}.", config));
 
     let mut extension_factories = vec![];
 
@@ -87,11 +89,11 @@ pub fn main() -> anyhow::Result<()> {
     }
 
     oak_functions_loader::lib_main(
-        opt,
         logger,
         config.load_lookup_data,
         config.policy,
         config.wasm_path,
+        config.http_listen_port,
         extension_factories,
     )
 }
