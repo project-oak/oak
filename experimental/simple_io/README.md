@@ -7,9 +7,12 @@ The communication is based on shared memory. There are two separate channels,
 one for input and one for output. Each channel has one buffer in shared memory.
 The guest-physical addresses of the shared pages used for input and output
 buffers are communicated via pre-agreed 32-bit I/O ports in the EISA range. This
-only has to be done once at startup. Since each address is 64 bits its value
-will be split across 2 ports, the first containing the most significant 4 bytes,
-and the next containing the least significant 4 bytes.
+only has to be done once at startup. Since each address is 64 bits long each
+address will be split across 2 ports, the first containing the most significant
+4 bytes, and the next containing the least significant 4 bytes.
+
+The current implementation assumes an identity mapping for the memory so that
+guest-phsyical and guest-virtual addresses are the same.
 
 An additional port is used for each channel to specify the length of each
 message.

@@ -67,13 +67,13 @@ impl SimpleIo {
         let output_length_port = PortWriteOnly::new(output_length_port);
         let input_length_port = PortReadOnly::new(input_length_port);
 
-        Self::write_address(
-            output_buffer.as_ptr() as u64,
+        write_address(
+            output_buffer.as_ptr(),
             output_buffer_msb_port,
             output_buffer_lsb_port,
         );
-        Self::write_address(
-            input_buffer.as_ptr() as u64,
+        write_address(
+            input_buffer.as_ptr(),
             input_buffer_msb_port,
             input_buffer_lsb_port,
         );
@@ -86,12 +86,12 @@ impl SimpleIo {
         }
     }
 
-    /// Reads the next available bytes from the receive queue, if any are available.
+    /// Reads the next available bytes from the input buffer, if any are available.
     pub fn read_bytes(&mut self) -> Option<VecDeque<u8>> {
         // Safety: we read the value as a u32 and validate it before using it.
         let length = unsafe { self.input_length_port.read() } as usize;
 
-        // Use a memory fence to the data written by the VMM is globally visible before we
+        // Use a memory fence to ensure the data written by the VMM is globally visible before we
         // try to read from the buffer.
         core::sync::atomic::fence(core::sync::atomic::Ordering::SeqCst);
 
@@ -122,8 +122,8 @@ impl SimpleIo {
         let length = core::cmp::min(OUTPUT_BUFFFER_LEGNTH, data.len());
         self.output_buffer.copy_from_slice(&data[..length]);
 
-        // Use a memory fence to the data is written to the buffer and globally visible before we
-        // notify the VMM.
+        // Use a memory fence to ensure that the data is written to the buffer and globally visible
+        // before we notify the VMM.
         core::sync::atomic::fence(core::sync::atomic::Ordering::SeqCst);
 
         // Safety: this usage is safe, as we as only write an uninterpreted u32 value to the port.
@@ -132,16 +132,6 @@ impl SimpleIo {
         }
 
         Some(length)
-    }
-
-    fn write_address(address: u64, msb_port: u16, lsb_port: u16) {
-        let address_msb = (address >> 32) as u32;
-        let address_lsb = address as u32;
-        // Safety: this usage is safe, as we as only write uninterpreted u32 values to the ports.
-        unsafe {
-            PortWriteOnly::new(msb_port).write(address_msb);
-            PortWriteOnly::new(lsb_port).write(address_lsb);
-        }
     }
 }
 
@@ -156,4 +146,21 @@ impl Default for SimpleIo {
             DEFAULT_INPUT_LENGTH_PORT,
         )
     }
+}
+
+fn write_address(buffer_pointer: *const u8, msb_port: u16, lsb_port: u16) {
+    // Split the 64-bit address into its least- and most significant bytes.
+    let address = get_guest_physiscal_address(buffer_pointer) as u64;
+    let address_msb = (address >> 32) as u32;
+    let address_lsb = address as u32;
+    // Safety: this usage is safe, as we as only write uninterpreted u32 values to the ports.
+    unsafe {
+        PortWriteOnly::new(msb_port).write(address_msb);
+        PortWriteOnly::new(lsb_port).write(address_lsb);
+    }
+}
+
+fn get_guest_physiscal_address(pointer: *const u8) -> usize {
+    // Assume identity mapping for now.
+    pointer as usize
 }
