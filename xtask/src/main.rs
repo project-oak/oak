@@ -665,21 +665,24 @@ fn run_cargo_clippy(scope: &Scope) -> Step {
     Step::Multiple {
         name: "cargo clippy".to_string(),
         steps: crate_manifest_files()
-            .map(to_string)
-            .filter(|path| all_affected_crates.contains(path))
+            .filter(|path| all_affected_crates.contains_path(path))
             .map(|entry| Step::Single {
-                name: entry.clone(),
-                command: Cmd::new(
+                name: entry.to_str().unwrap().to_string(),
+                command: Cmd::new_in_dir(
                     "cargo",
                     &[
                         "clippy",
                         "--all-targets",
                         "--all-features",
-                        &format!("--manifest-path={}", &entry),
+                        &format!(
+                            "--manifest-path={}",
+                            entry.file_name().unwrap().to_str().unwrap()
+                        ),
                         "--no-deps",
                         "--",
                         "--deny=warnings",
                     ],
+                    entry.parent().unwrap(),
                 ),
             })
             .collect(),
