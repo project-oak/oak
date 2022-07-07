@@ -99,7 +99,7 @@ impl SimpleIo {
             return None;
         }
 
-        // A length larger than the buffer size indicates a broken or malicious VMM device
+        // A length larger than the buffer size indicates a corrupt or malicious VMM device
         // implementation. This is not recoverable, so panic.
         assert!(
             length <= INPUT_BUFFFER_LEGNTH,
@@ -126,7 +126,7 @@ impl SimpleIo {
         // notify the VMM.
         core::sync::atomic::fence(core::sync::atomic::Ordering::SeqCst);
 
-        // Safety: this usage is safe, as we as only writing an uninterpreted u32 value to the port.
+        // Safety: this usage is safe, as we as only write an uninterpreted u32 value to the port.
         unsafe {
             self.output_length_port.write(length as u32);
         }
@@ -137,7 +137,7 @@ impl SimpleIo {
     fn write_address(address: u64, msb_port: u16, lsb_port: u16) {
         let address_msb = (address >> 32) as u32;
         let address_lsb = address as u32;
-        // Safety: this usage is safe, as we as only writing uninterpreted u32 values to the port.
+        // Safety: this usage is safe, as we as only write uninterpreted u32 values to the ports.
         unsafe {
             PortWriteOnly::new(msb_port).write(address_msb);
             PortWriteOnly::new(lsb_port).write(address_lsb);
