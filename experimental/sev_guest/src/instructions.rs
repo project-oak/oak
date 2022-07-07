@@ -98,7 +98,7 @@ pub fn pvalidate(
 bitflags! {
     /// Permission mask used by the RMP.
     ///
-    /// See the RMPADJUST instruction in <https://www.amd.com/system/files/TechDocs/24594.pdf> for more details.
+    /// See Table 15-38 in <https://www.amd.com/system/files/TechDocs/24593.pdf> for more details.
     pub struct PermissionMask: u8 {
         /// The target VMPL can read the page.
         const READ = 1;
