@@ -60,7 +60,7 @@ pub enum InstructionError {
 /// See the PVALIDATE instruction in <https://www.amd.com/system/files/TechDocs/24594.pdf> for more details.
 #[inline]
 pub fn pvalidate(
-    page_addr: u64,
+    page_guest_physical_address: usize,
     page_size: PageSize,
     validated: Validation,
 ) -> Result<(), InstructionError> {
@@ -74,7 +74,7 @@ pub fn pvalidate(
         asm!(
             "pvalidate",
             "setc dl",
-            in("rax") page_addr,
+            in("rax") page_guest_physical_address,
             in("ecx") page_size,
             in("edx") validated,
             lateout("eax") result,
@@ -152,7 +152,7 @@ impl From<RmpPermission> for u64 {
 /// See the RMPADJUST instruction in <https://www.amd.com/system/files/TechDocs/24594.pdf> for more details.
 #[inline]
 pub fn rmpadjust(
-    page_addr: u64,
+    page_guest_physical_address: usize,
     page_size: PageSize,
     permission: RmpPermission,
 ) -> Result<(), InstructionError> {
@@ -164,7 +164,7 @@ pub fn rmpadjust(
     unsafe {
         asm!(
             "rmpadjust",
-            in("rax") page_addr,
+            in("rax") page_guest_physical_address,
             in("rcx") page_size,
             in("rdx") permission,
             lateout("rax") result,
