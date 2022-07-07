@@ -56,26 +56,23 @@ pub enum InstructionResult {
 /// Marks a page as validated or unvalidated in the RMP.
 ///
 /// See the PVALIDATE instruction in <https://www.amd.com/system/files/TechDocs/24594.pdf> for more details.
-///
-/// Safety: The caller must ensure that the page address is a valid guest-physical address that is
-/// page-aligned for the specified page size.
 #[inline]
-pub unsafe fn pvalidate(
-    page_addr: u64,
-    page_size: PageSize,
-    validated: Validation,
-) -> InstructionResult {
+pub fn pvalidate(page_addr: u64, page_size: PageSize, validated: Validation) -> InstructionResult {
     let page_size = page_size as u32;
     let validated = validated as u32;
     let result: u32;
-    asm!(
-        "pvalidate",
-        in("rax") page_addr,
-        in("ecx") page_size,
-        in("edx") validated,
-        lateout("eax") result,
-        options(nomem, nostack)
-    );
+    // Safety: this call does not modify the guest memory contents, so can not violate memory
+    // safety.
+    unsafe {
+        asm!(
+            "pvalidate",
+            in("rax") page_addr,
+            in("ecx") page_size,
+            in("edx") validated,
+            lateout("eax") result,
+            options(nomem, nostack)
+        );
+    }
     InstructionResult::from_repr(result).expect("Invalid result from PVALIDATE instruction")
 }
 
@@ -128,11 +125,8 @@ impl From<RmpPermission> for u64 {
 /// Adjusts the permissions of a page in the RMP.
 ///
 /// See the RMPADJUST instruction in <https://www.amd.com/system/files/TechDocs/24594.pdf> for more details.
-///
-/// Safety: The caller must ensure that the page address is a valid guest-physical address that is
-/// page-aligned for the specified page size.
 #[inline]
-pub unsafe fn rmpadjust(
+pub fn rmpadjust(
     page_addr: u64,
     page_size: PageSize,
     permission: RmpPermission,
@@ -140,20 +134,30 @@ pub unsafe fn rmpadjust(
     let page_size = page_size as u64;
     let permission: u64 = permission.into();
     let result: u64;
-    asm!(
-        "rmpadjust",
-        in("rax") page_addr,
-        in("rcx") page_size,
-        in("rdx") permission,
-        lateout("rax") result,
-        options(nomem, nostack)
-    );
+    // Safety: this call does not modify the guest memory contents, so can not violate memory
+    // safety.
+    unsafe {
+        asm!(
+            "rmpadjust",
+            in("rax") page_addr,
+            in("rcx") page_size,
+            in("rdx") permission,
+            lateout("rax") result,
+            options(nomem, nostack)
+        );
+    }
     InstructionResult::from_repr(result as u32).expect("Invalid result from RMPADJUST instruction")
 }
 
 /// Unconditionally exits from the guest to the hypervisor.
-pub unsafe fn vmgexit() {
-    // The REP instruction is repurposed to modify the VMMCALL instruction to change it into a
-    // VMGEXIT call, seeing that the assembler does not understand the VMGEXIT mnemonic.
-    asm!("rep vmmcall", options(nomem, nostack, preserves_flags));
+///
+/// See the VMGEXIT instruction in <https://www.amd.com/system/files/TechDocs/24594.pdf> for more details.
+pub fn vmgexit() {
+    // Safety: this call does not modify the guest memory contents, so can not violate memory
+    // safety.
+    unsafe {
+        // The REP instruction modifier changes the VMMCALL instruction to be equivalent to the
+        // VMGEXIT call. this is used as the assembler does not understand the VMGEXIT mnemonic.
+        asm!("rep vmmcall", options(nomem, nostack, preserves_flags));
+    }
 }
