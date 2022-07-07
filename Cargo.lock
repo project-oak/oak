@@ -4725,6 +4725,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "simple_io"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "bitflags",
+ "log",
+ "strum",
+ "x86_64",
+]
+
+[[package]]
 name = "slab"
 version = "0.4.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"

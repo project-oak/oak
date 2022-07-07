@@ -7,6 +7,7 @@ members = [
   "experimental/offline_attestation/server",
   "experimental/offline_attestation/shared",
   "experimental/proxy_attestation",
+  "experimental/simple_io",
   "experimental/tf_proxy/client",
   "experimental/tf_proxy/server",
   "experimental/tls_attestation",
