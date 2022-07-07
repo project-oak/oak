@@ -4,7 +4,6 @@ name = "weather_lookup"
 
 [applications.rust]
 type = "OakFunctions"
-wasm_path = "bin/weather_lookup_init.wasm"
 target = { Cargo = { cargo_manifest = "oak_functions/examples/weather_lookup/module/Cargo.toml" } }
 wizer = { input = "bin/weather_lookup.wasm", output = "bin/weather_lookup_init.wasm" }
 

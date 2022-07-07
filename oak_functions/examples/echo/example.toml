@@ -4,7 +4,6 @@ name = "echo"
 
 [applications.rust]
 type = "OakFunctions"
-wasm_path = "bin/echo.wasm"
 target = { Cargo = { cargo_manifest = "oak_functions/examples/echo/module/Cargo.toml" } }
 
 [server]

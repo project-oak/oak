@@ -68,11 +68,6 @@ pub struct Opt {
     http_listen_port: u16,
     #[clap(
         long,
-        help = "Path to a Wasm file to be loaded and executed per invocation. The Wasm module must export a function named `main`."
-    )]
-    wasm_path: String,
-    #[clap(
-        long,
         help = "Path to a file containing configuration parameters in TOML format."
     )]
     pub config_path: String,
@@ -105,6 +100,8 @@ pub fn lib_main(
     logger: Logger,
     load_lookup_data_config: LoadLookupDataConfig,
     policy: Option<Policy>,
+    wasm_path: String,
+
     extension_factories: Vec<Box<dyn ExtensionFactory<Logger>>>,
 ) -> anyhow::Result<()> {
     tokio::runtime::Builder::new_multi_thread()
@@ -116,6 +113,7 @@ pub fn lib_main(
             logger,
             load_lookup_data_config,
             policy,
+            wasm_path,
             extension_factories,
         ))
 }
@@ -126,12 +124,13 @@ async fn async_main(
     logger: Logger,
     load_lookup_data_config: LoadLookupDataConfig,
     policy: Option<Policy>,
+    wasm_path: String,
     extension_factories: Vec<Box<dyn ExtensionFactory<Logger>>>,
 ) -> anyhow::Result<()> {
     let (notify_sender, notify_receiver) = tokio::sync::oneshot::channel::<()>();
 
-    let wasm_module_bytes = fs::read(&opt.wasm_path)
-        .with_context(|| format!("Couldn't read Wasm file {}", &opt.wasm_path))?;
+    let wasm_module_bytes =
+        fs::read(&wasm_path).with_context(|| format!("Couldn't read Wasm file {}", wasm_path))?;
     let mut extensions =
         create_base_extension_factories(load_lookup_data_config, logger.clone()).await?;
 

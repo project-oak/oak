@@ -38,6 +38,9 @@ pub struct Config {
     load_lookup_data: LoadLookupDataConfig,
     /// Security policy guaranteed by the server.
     policy: Option<Policy>,
+    /// Path to a Wasm module to be loaded and executed per invocation. The Wasm module must export
+    /// a function named `main` and `alloc`.
+    wasm_path: String,
 }
 
 pub fn main() -> anyhow::Result<()> {
@@ -57,6 +60,7 @@ pub fn main() -> anyhow::Result<()> {
         logger,
         config.load_lookup_data,
         config.policy,
+        config.wasm_path,
         extension_factories,
     )
 }

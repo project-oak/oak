@@ -1,3 +1,5 @@
+wasm_path = "bin/mobilenet.wasm"
+
 [tf_model]
 path = "./oak_functions/examples/mobilenet/files/mobilenet_v2_1.4_224_frozen.pb"
 shape = [1, 224, 224, 3]
