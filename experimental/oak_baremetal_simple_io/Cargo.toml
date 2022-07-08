@@ -1,5 +1,5 @@
 [package]
-name = "simple_io"
+name = "oak_baremetal_simple_io"
 version = "0.1.0"
 authors = ["Conrad Grobler <grobler@google.com>"]
 edition = "2021"

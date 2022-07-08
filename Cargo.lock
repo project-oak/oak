@@ -2914,6 +2914,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "oak_baremetal_simple_io"
+version = "0.1.0"
+dependencies = [
+ "bitflags",
+ "x86_64",
+]
+
+[[package]]
 name = "oak_functions"
 version = "0.1.0"
 dependencies = [
@@ -4722,14 +4730,6 @@ checksum = "f2807892cfa58e081aa1f1111391c7a0649d4fa127a4ffbe34bcbfb35a1171a4"
 dependencies = [
  "digest 0.9.0",
  "rand_core 0.6.3",
-]
-
-[[package]]
-name = "simple_io"
-version = "0.1.0"
-dependencies = [
- "bitflags",
- "x86_64",
 ]
 
 [[package]]
