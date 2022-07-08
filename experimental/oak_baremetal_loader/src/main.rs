@@ -16,6 +16,7 @@
 
 #![feature(io_safety)]
 
+use anyhow::Context;
 use clap::Parser;
 use crosvm::Crosvm;
 use oak_baremetal_communication_channel::{
@@ -58,8 +59,17 @@ struct Args {
     mode: Mode,
 
     /// Path to the kernel to execute.
-    #[clap(parse(from_os_str), validator = path_exists)]
+    #[clap(long, parse(from_os_str), validator = path_exists)]
     app: PathBuf,
+
+    /// Path to a Wasm file to be loaded into the trusted runtime and executed by it per
+    /// invocation. See the documentation for details on its ABI. Ref: <https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md>
+    #[clap(
+        long,
+        parse(from_os_str),
+        validator = path_exists,
+    )]
+    wasm: PathBuf,
 }
 
 fn path_exists(s: &str) -> Result<(), String> {
@@ -204,10 +214,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             panic!("failed to send lookup data: {:?}", err)
         }
 
-        let wasm_bytes = include_bytes!("key_value_lookup.wasm");
+        let wasm_bytes = fs::read(&cli.wasm)
+            .with_context(|| format!("Couldn't read Wasm file {}", &cli.wasm.display()))
+            .unwrap();
         let initialization_message = {
             let mut builder = oak_idl::utils::MessageBuilder::default();
-            let wasm_module = builder.create_vector::<u8>(wasm_bytes);
+            let wasm_module = builder.create_vector::<u8>(&wasm_bytes);
             let message = schema::Initialization::create(
                 &mut builder,
                 &schema::InitializationArgs {
