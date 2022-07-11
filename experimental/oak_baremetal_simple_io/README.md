@@ -26,4 +26,4 @@ The guest reads from the length I/O port for the input channel. The hypervisor
 I/O handler implementation for this port writes a message to the input buffer
 (if one is availble) and returns the actual message length via the port. The
 returned length must not exceed the length of the input buffer. If there aren't
-any messages, a length of 0 must be returned.
+any messages, the hypervisor must return a length of 0.
