@@ -1,0 +1,1 @@
+initSidebarItems({"constant":[["CPUID_COUNT_MAX","The maximum number of CPUID functions that can be included in the page."],["CPUID_PAGE_SIZE","The size of the CPUID page."]],"struct":[["CpuidFunction","The CPUID function result of an invocation for a specific leaf and subleaf."],["CpuidPage","Representation of the CPUID page."]]});
