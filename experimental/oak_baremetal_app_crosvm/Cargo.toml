@@ -9,6 +9,7 @@ license = "Apache-2.0"
 oak_baremetal_kernel = { path = "../../experimental/oak_baremetal_kernel", features = [
   "vsock_channel"
 ] }
+static_assertions = "*"
 
 [patch.crates-io]
 # Ensure no_std compatibility. TODO(#2920): remove once https://github.com/google/flatbuffers/pull/7338 is merged.

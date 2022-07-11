@@ -32,14 +32,14 @@ mod bootparam;
 
 #[no_mangle]
 #[cfg(test)]
-pub extern "C" fn rust64_start(_rdi: u64, _rsi: &bootparam::boot_params) -> ! {
+pub extern "C" fn rust64_start(_rdi: u64, _rsi: &bootparam::BootParams) -> ! {
     test_main();
     oak_baremetal_kernel::i8042::shutdown();
 }
 
 #[no_mangle]
 #[cfg(not(test))]
-pub extern "C" fn rust64_start(_rdi: u64, rsi: &bootparam::boot_params) -> ! {
+pub extern "C" fn rust64_start(_rdi: u64, rsi: &bootparam::BootParams) -> ! {
     oak_baremetal_kernel::start_kernel(rsi);
 }
 
