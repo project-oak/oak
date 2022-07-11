@@ -17,6 +17,7 @@
 //! This module contains an implementation of the guest-host communications block (GHCB) page that
 //! can be used for communicating with the hypervisor.
 
+use bitflags::bitflags;
 use zerocopy::FromBytes;
 
 /// The size of the GHCB page.
@@ -64,7 +65,10 @@ pub struct Ghcb {
     pub xcr0: u64,
     /// Bitmap indicating which quadwords of the save state area are valid in the range from offset
     /// 0x000 through to offset 0x3ef.
-    pub valid_bitmap: [u8; 16],
+    ///
+    /// A flag must be set for each field that is set as part of handling a non-automatic exit
+    /// event. The value must also be checked on the return from the hypervisor.
+    pub valid_bitmap: ValidBitmap,
     /// The guest-physical address of the page that contains the x87-related saved state.
     pub x87_state_gpa: u64,
     _reserved_7: [u8; 1016],
@@ -79,3 +83,22 @@ pub struct Ghcb {
 }
 
 static_assertions::assert_eq_size!(Ghcb, [u8; GHCB_PAGE_SIZE]);
+
+bitflags! {
+    /// Flags indicating which fields in a specific GHCB instance are valid.
+    #[derive(Default, FromBytes)]
+    pub struct ValidBitmap: u128 {
+        const CPL = (1 << 25);
+        const XSS = (1 << 40);
+        const DR7 = (1 << 44);
+        const RAX = (1 << 63);
+        const RBX = (1 << 97);
+        const RCX = (1 << 98);
+        const RDX = (1 << 99);
+        const SW_EXIT_CODE = (1 << 114);
+        const SW_EXIT_INFO_1 = (1 << 115);
+        const SW_EXIT_INFO_2 = (1 << 116);
+        const SW_SCRATCH = (1 << 117);
+        const XCR0 = (1 << 125);
+    }
+}
