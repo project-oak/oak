@@ -6611,9 +6611,9 @@ dependencies = [
 
 [[package]]
 name = "x86_64"
-version = "0.14.9"
+version = "0.14.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "958cd5cb28e720db2f59ee9dc4235b5f82a183d079fb0e6caf43ad074cfdc66a"
+checksum = "100555a863c0092238c2e0e814c1096c1e5cf066a309c696a87e907b5f8c5d69"
 dependencies = [
  "bit_field",
  "bitflags",
