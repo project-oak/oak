@@ -1,0 +1,10 @@
+[package]
+name = "oak_baremetal_simple_io"
+version = "0.1.0"
+authors = ["Conrad Grobler <grobler@google.com>"]
+edition = "2021"
+license = "Apache-2.0"
+
+[dependencies]
+bitflags = "*"
+x86_64 = "*"
