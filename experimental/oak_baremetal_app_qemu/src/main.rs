@@ -19,11 +19,6 @@
 #![feature(alloc_error_handler)]
 #![feature(core_c_str)]
 #![feature(core_ffi_c)]
-#![feature(custom_test_frameworks)]
-// As we're in a `no_std` environment, testing requires special handling. This
-// approach was inspired by https://os.phil-opp.com/testing/.
-#![test_runner(crate::test_runner)]
-#![reexport_test_harness_main = "test_main"]
 
 use core::panic::PanicInfo;
 
@@ -32,14 +27,7 @@ mod hvm_start_info;
 mod multiboot;
 
 #[no_mangle]
-#[cfg(test)]
-pub extern "C" fn rust64_start(_rdi: &hvm_start_info::StartInfo) -> ! {
-    test_main();
-    oak_baremetal_kernel::i8042::shutdown();
-}
-
-#[no_mangle]
-#[cfg(all(not(test), feature = "multiboot"))]
+#[cfg(feature = "multiboot")]
 pub extern "C" fn rust64_start(start_info: &multiboot::MultibootInfo, magic: u64) -> ! {
     // The magic constant is specified in multiboot.h.
     // See <https://www.gnu.org/software/grub/manual/multiboot/multiboot.html#Machine-state>
@@ -53,7 +41,7 @@ pub extern "C" fn rust64_start(start_info: &multiboot::MultibootInfo, magic: u64
 }
 
 #[no_mangle]
-#[cfg(all(not(test), not(feature = "multiboot")))]
+#[cfg(not(feature = "multiboot"))]
 pub extern "C" fn rust64_start(start_info: &hvm_start_info::StartInfo) -> ! {
     // If the magic field doesn't match, we can't be sure we're booting via PVH, so bail out early.
     if start_info.magic != hvm_start_info::BOOT_MAGIC {
@@ -70,11 +58,4 @@ fn out_of_memory(layout: ::core::alloc::Layout) -> ! {
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
     oak_baremetal_kernel::panic(info);
-}
-
-#[cfg(test)]
-fn test_runner(tests: &[&dyn Fn()]) {
-    for test in tests {
-        test();
-    }
 }
