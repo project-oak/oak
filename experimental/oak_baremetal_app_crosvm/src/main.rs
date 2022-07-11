@@ -17,25 +17,13 @@
 #![no_std]
 #![no_main]
 #![feature(alloc_error_handler)]
-#![feature(custom_test_frameworks)]
 #![feature(core_c_str)]
 #![feature(core_ffi_c)]
-// As we're in a `no_std` environment, testing requires special handling. This
-// approach was inspired by https://os.phil-opp.com/testing/.
-#![test_runner(crate::test_runner)]
-#![reexport_test_harness_main = "test_main"]
 
 use core::panic::PanicInfo;
 
 mod asm;
 mod bootparam;
-
-#[no_mangle]
-#[cfg(test)]
-pub extern "C" fn rust64_start(_rdi: u64, _rsi: &bootparam::BootParams) -> ! {
-    test_main();
-    oak_baremetal_kernel::i8042::shutdown();
-}
 
 #[no_mangle]
 #[cfg(not(test))]
@@ -51,11 +39,4 @@ fn out_of_memory(layout: ::core::alloc::Layout) -> ! {
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
     oak_baremetal_kernel::panic(info);
-}
-
-#[cfg(test)]
-fn test_runner(tests: &[&dyn Fn()]) {
-    for test in tests {
-        test();
-    }
 }
