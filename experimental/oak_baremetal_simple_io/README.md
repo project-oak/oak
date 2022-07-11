@@ -5,24 +5,25 @@ channel between a bare-metal guest VM and the host.
 
 The communication is based on shared memory. There are two separate channels,
 one for input and one for output. Each channel has one buffer in shared memory.
-The guest-physical addresses of the shared pages used for input and output
-buffers are communicated via pre-agreed 32-bit I/O ports. This only has to be
-done once at startup. Since each address is 64 bits long each address will be
-split across 2 ports, the first containing the most significant 4 bytes, and the
-next containing the least significant 4 bytes.
+The guest notifies the hypervisor of the guest-physical addresses of these
+buffers via pre-agreed 32-bit I/O ports. The guest only does this once at
+startup. Since each address is 64 bits long the guest uses 2 ports for each
+address. The first port contains the most significant 4 bytes, and the second
+contains the least significant 4 bytes.
 
 The current implementation assumes an identity mapping for the memory so that
 guest-phsyical and guest-virtual addresses are the same.
 
-An additional pre-agreed 32-bit I/O port is used for each channel to specify the
-length of each message.
+The guest uses an additional pre-agreed 32-bit I/O port for each channel to
+represent the length of each message.
 
-For the output channel, writing to the length I/O port will act as a doorbell to
-notify the host that a new message is available. It is assumed that the VMM
-implementation will ensure that this operation will block until the new message
-has been copied out of the buffer.
+For the output channel, the guest writes to the length I/O port. This acts as a
+doorbell to notify the hypervisor that a new message is available. The code
+assumes that the hypervisor implementation will ensure that this guest operation
+blocks until the hypervisor has copied the message out of the buffer.
 
-Reading from the length I/O port for the input channel will cause the VMM to
-write a message to the input buffer (if one is availble) and return the actual
-message length. The returned length must not exceed the length of the input
-buffer. If there aren't any messages, a length of 0 must be returned.
+The guest reads from the length I/O port for the input channel. The hypervisor
+I/O handler implementation for this port writes a message to the input buffer
+(if one is availble) and returns the actual message length via the port. The
+returned length must not exceed the length of the input buffer. If there aren't
+any messages, a length of 0 must be returned.
