@@ -22,7 +22,7 @@ use zerocopy::FromBytes;
 /// The size of the secrets page.
 pub const SECRETS_PAGE_SIZE: usize = 4096;
 
-/// The version of the secrets pages the we expect to receive.
+/// The version of the secrets pages that we expect to receive.
 pub const SECRETS_PAGE_VERSION: u32 = 3;
 
 /// Representation of the secrets page.
@@ -37,8 +37,10 @@ pub struct SecretsPage {
     /// guest context. All other bits are reserved and must be zero.
     pub imi_en: u32,
     /// The family, model and stepping of the CPU as reported in CPUID Fn0000_0001_EAX.
+    /// See <https://en.wikipedia.org/wiki/CPUID#EAX=1:_Processor_Info_and_Feature_Bits>.
     pub fms: u32,
-    _reserved_0: u32,
+    /// Reserved. Must be 0.
+    _reserved: u32,
     /// Guest-OS-visible workarounds provided by the hypervisor during SNP_LAUNCH_START. The format
     /// is hypervisor-defined.
     pub gosv: [u8; 16],

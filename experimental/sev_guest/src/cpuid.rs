@@ -56,9 +56,10 @@ pub struct CpuidFunction {
 #[repr(C, align(4096))]
 #[derive(Debug, FromBytes)]
 pub struct CpuidPage {
-    /// The number of CPUID function results included in the page. Must not be greated than
+    /// The number of CPUID function results included in the page. Must not be greater than
     /// `CPUID_COUNT_MAX`.
     pub count: u32,
+    /// Reserved. Must be 0.
     _reserved: [u8; 12],
     /// The CPUID function results.
     pub cpuid_data: [CpuidFunction; CPUID_COUNT_MAX],
