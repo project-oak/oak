@@ -15,7 +15,7 @@
 //
 
 //! This module contains structs that can be used to interpret the contents of the secrets page that
-//! is provisioned during SEV-SNP startup.
+//! is provisioned into the VM guest memory during SEV-SNP startup.
 
 use zerocopy::FromBytes;
 

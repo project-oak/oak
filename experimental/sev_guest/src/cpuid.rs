@@ -15,7 +15,7 @@
 //
 
 //! This module contains structs that can be used to interpret the contents of the CPUID page that
-//! is provisioned during SEV-SNP startup.
+//! is provisioned into the VM guest memory during SEV-SNP startup.
 
 use zerocopy::FromBytes;
 
@@ -24,30 +24,29 @@ pub const CPUID_COUNT_MAX: usize = 64;
 /// The size of the CPUID page.
 pub const CPUID_PAGE_SIZE: usize = 4096;
 
-/// The CPUID functions result of a CPUID invocation for a specific leaf and subleaf.
+/// The CPUID function result of an invocation for a specific leaf and subleaf.
 ///
 /// See: Table 14 in <https://www.amd.com/system/files/TechDocs/56860.pdf>
 #[repr(C)]
 #[derive(Debug, FromBytes)]
 pub struct CpuidFunction {
-    /// The input value of the EAX register when CPUID was called. This representd the CPUID leaf.
+    /// The input value of the EAX register when CPUID was called. This represents the CPUID leaf.
     pub eax_in: u32,
     /// The input value of the ECX register when CPUID was called. This represents the CPUID
     /// sub-leaf.
     pub ecx_in: u32,
-    /// The value of the XCR0 control register when CPUID was called.
+    /// The value of the XCR0 extended control register when CPUID was called.
     pub xcr0_in: u64,
     /// The value of the IA32_XSS model-specific register when CPUID was called.
     pub xss_in: u64,
-    /// The EAX register outpur from calling CPUID.
+    /// The EAX register output from calling CPUID.
     pub eax: u32,
-    /// The EBX register outpur from calling CPUID.
+    /// The EBX register output from calling CPUID.
     pub ebx: u32,
-    /// The ECX register outpur from calling CPUID.
+    /// The ECX register output from calling CPUID.
     pub ecx: u32,
-    /// The EDX register outpur from calling CPUID.
+    /// The EDX register output from calling CPUID.
     pub edx: u32,
-    /// Reserved padding that must be 0.
     _reserved: u64,
 }
 

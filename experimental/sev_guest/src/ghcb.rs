@@ -65,7 +65,7 @@ pub struct Ghcb {
     /// Bitmap indicating which quadwords of the save state area are valid in the range from offset
     /// 0x000 through to offset 0x3ef.
     pub valid_bitmap: [u8; 16],
-    /// The guest-physical address of the page that containing the x87-related saved state.
+    /// The guest-physical address of the page that contains the x87-related saved state.
     pub x87_state_gpa: u64,
     _reserved_7: [u8; 1016],
     /// Area that can be used as a shared buffer for communicating additional information.
