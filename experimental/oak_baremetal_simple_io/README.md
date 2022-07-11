@@ -14,8 +14,8 @@ next containing the least significant 4 bytes.
 The current implementation assumes an identity mapping for the memory so that
 guest-phsyical and guest-virtual addresses are the same.
 
-An additional 32-bit I/O port is used for each channel to specify the length of
-each message.
+An additional pre-agreed 32-bit I/O port is used for each channel to specify the
+length of each message.
 
 For the output channel, writing to the length I/O port will act as a doorbell to
 notify the host that a new message is available. It is assumed that the VMM
