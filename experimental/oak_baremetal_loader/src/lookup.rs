@@ -48,6 +48,6 @@ pub fn load_lookup_data(
     file_path: &std::path::PathBuf,
 ) -> anyhow::Result<HashMap<Vec<u8>, Vec<u8>>> {
     let bytes = fs::read(&file_path)
-        .unwrap_or_else(|| &format!("Couldn't read Wasm file {}", &file_path.display()));
+        .unwrap_or_else(|_| panic!("Couldn't read Wasm file {}", &file_path.display()));
     oak_functions_loader::lookup_data::parse_lookup_entries(bytes.as_slice())
 }
