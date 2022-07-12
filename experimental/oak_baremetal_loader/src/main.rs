@@ -34,6 +34,7 @@ use tokio::signal;
 use vmm::{Params, Vmm};
 
 mod crosvm;
+mod lookup;
 mod qemu;
 mod server;
 mod vmm;
@@ -70,6 +71,14 @@ struct Args {
         validator = path_exists,
     )]
     wasm: PathBuf,
+
+    /// Path to a file containing key / value entries in protobuf binary format for lookup.
+    #[clap(
+        long,
+        parse(from_os_str),
+        validator = path_exists,
+    )]
+    lookup_data: PathBuf,
 }
 
 fn path_exists(s: &str) -> Result<(), String> {
@@ -188,29 +197,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             schema::TrustedRuntimeClient::new(client_handler)
         };
 
-        let lookup_data = {
-            let mut builder = oak_idl::utils::MessageBuilder::default();
-            let key = builder.create_vector::<u8>(b"test_key");
-            let value = builder.create_vector::<u8>(b"test_value");
-            let entry = schema::LookupDataEntry::create(
-                &mut builder,
-                &schema::LookupDataEntryArgs {
-                    key: Some(key),
-                    value: Some(value),
-                },
-            );
+        let lookup_data = lookup::load_lookup_data(&cli.lookup_data).unwrap();
+        let encoded_lookup_data = lookup::encode_lookup_data(lookup_data);
 
-            let items = builder.create_vector(&[entry]);
-            let message = schema::LookupData::create(
-                &mut builder,
-                &schema::LookupDataArgs { items: Some(items) },
-            );
-            builder
-                .finish(message)
-                .expect("errored when creating lookup data update message")
-        };
-
-        if let Err(err) = client.update_lookup_data(lookup_data.buf()) {
+        if let Err(err) = client.update_lookup_data(encoded_lookup_data.buf()) {
             panic!("failed to send lookup data: {:?}", err)
         }
 
