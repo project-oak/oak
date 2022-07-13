@@ -6,14 +6,15 @@ edition = "2021"
 license = "Apache-2.0"
 
 [features]
-default = ["pvh"]
+default = ["pvh", "virtio_console_channel"]
 pvh = ["rust-hypervisor-firmware-boot/pvh"]
 multiboot = []
-serial_channel = ["oak_baremetal_kernel/serial_channel"]
+simple_io_channel = ["oak_baremetal_kernel/simple_io_channel"]
+virtio_console_channel = ["oak_baremetal_kernel/virtio_console_channel"]
 
 [dependencies]
 bitflags = "*"
-oak_baremetal_kernel = { path = "../../experimental/oak_baremetal_kernel" }
+oak_baremetal_kernel = { path = "../../experimental/oak_baremetal_kernel", default-features = false }
 rust-hypervisor-firmware-boot = { path = "../../third_party/rust-hypervisor-firmware-boot", default-features = false }
 
 [build-dependencies]
