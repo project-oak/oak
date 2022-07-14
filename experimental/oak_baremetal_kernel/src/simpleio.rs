@@ -39,9 +39,9 @@ impl SimpleIoChannel {
 
     /// Tries once to fill the destination with as much data as is currently available, either in
     /// the pending buffer (if data was left over from the previous read), or from the next
-    /// available buffer in the queue if there was no data in the pending buffer.
+    /// available buffer in the device if there was no data in the pending buffer.
     ///
-    /// If data is read from the queue and not fully used the remainder is stored back into the
+    /// If data is read from the device and not fully used the remainder is stored back into the
     /// pending buffer.
     ///
     /// Returns the number of bytes read if any data was available to read.
