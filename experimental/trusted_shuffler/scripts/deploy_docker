@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+
+set -o errexit
+set -o nounset
+set -o xtrace
+set -o pipefail
+
+export PROJECT=oak-ci
+export DOCKER_IMAGE=europe-docker.pkg.dev/$PROJECT/trusted-shuffler/trusted-shuffler-server:latest
+
+docker push $DOCKER_IMAGE
+gcloud run deploy ent-server \
+  --project=$PROJECT \
+  --region=europe-west1 \
+  --image=$DOCKER_IMAGE \
+  --use-http2 \
+  --allow-unauthenticated
