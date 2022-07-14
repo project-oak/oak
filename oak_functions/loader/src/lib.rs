@@ -53,11 +53,20 @@ mod tests;
 // Instantiate BoxedExtensionFactory with Logger from the Oak Functions runtime.
 pub type OakFunctionsBoxedExtensionFactory = Box<dyn ExtensionFactory<Logger>>;
 
-/// Only the path to the config is a command line argument for the Oak loader. All configuration
-/// is given through the config file.
+/// Command line options specificing how to run the Oak Functions Runtime, which are set by the team
+/// operating Oak Functions Runtime as the platform.
+///
+/// On the other hand, set by the team using the Oak Functions Runtime for their business logic,
+/// is the Config.
 #[derive(Parser, Clone, Debug)]
 #[clap(about = "Oak Functions Loader")]
 pub struct Opt {
+    #[clap(
+        long,
+        default_value = "8080",
+        help = "Port number that the server listens on."
+    )]
+    pub http_listen_port: u16,
     #[clap(
         long,
         help = "Path to a file containing configuration parameters in TOML format."
@@ -92,7 +101,7 @@ pub fn lib_main(
     load_lookup_data_config: LoadLookupDataConfig,
     policy: Option<Policy>,
     wasm_path: String,
-    http_listen_port: Option<u16>,
+    http_listen_port: u16,
     extension_factories: Vec<Box<dyn ExtensionFactory<Logger>>>,
 ) -> anyhow::Result<()> {
     tokio::runtime::Builder::new_multi_thread()
@@ -115,7 +124,7 @@ async fn async_main(
     load_lookup_data_config: LoadLookupDataConfig,
     policy: Option<Policy>,
     wasm_path: String,
-    http_listen_port: Option<u16>,
+    http_listen_port: u16,
     extension_factories: Vec<Box<dyn ExtensionFactory<Logger>>>,
 ) -> anyhow::Result<()> {
     let (notify_sender, notify_receiver) = tokio::sync::oneshot::channel::<()>();
@@ -137,7 +146,7 @@ async fn async_main(
         .ok_or_else(|| anyhow::anyhow!("a valid policy must be provided"))
         .and_then(|policy| policy.validate())?;
 
-    let address = SocketAddr::from((Ipv6Addr::UNSPECIFIED, http_listen_port.unwrap_or(8080)));
+    let address = SocketAddr::from((Ipv6Addr::UNSPECIFIED, http_listen_port));
 
     // Start server.
     let server_handle = tokio::spawn(async move {

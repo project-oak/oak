@@ -24,12 +24,15 @@ use oak_logger::OakLogger;
 use serde_derive::Deserialize;
 use std::fs;
 
-/// Runtime Configuration of Base Runtime.
+/// Runtime Configuration of the Oak Functions Runtime for a Base Oak Functions Runtime with no
+/// experimental features.
 ///
 /// This struct serves as a schema for a static TOML config file provided by
-/// application developers. In deployment, this static config file is typically
-/// bundled with the Oak Runtime binary. Config values captured in it serve
-/// as a type safe version of regular command line flags.
+/// the team using the Oak Functions Runtime for their business logic. In deployment, this
+/// config is bundled with the Oak Functions Runtime binary. The config is
+/// version controlled and testing requires no change. The values in the config serve
+/// as a type safe version of regular command line flags and cannot contain $ENVIRONMENT
+/// variables.
 #[derive(Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
 pub struct Config {
@@ -41,8 +44,6 @@ pub struct Config {
     /// Path to a Wasm module to be loaded and executed per invocation. The Wasm module must export
     /// a function named `main` and `alloc`.
     wasm_path: String,
-    /// Port number that the server listens (defaults to 8080).
-    http_listen_port: Option<u16>,
 }
 
 pub fn main() -> anyhow::Result<()> {
@@ -62,7 +63,7 @@ pub fn main() -> anyhow::Result<()> {
         config.load_lookup_data,
         config.policy,
         config.wasm_path,
-        config.http_listen_port,
+        opt.http_listen_port,
         extension_factories,
     )
 }
