@@ -41,6 +41,8 @@ mod interrupts;
 mod libm;
 mod logging;
 mod memory;
+#[cfg(feature = "serial_channel")]
+mod serial;
 #[cfg(feature = "simple_io_channel")]
 mod simpleio;
 #[cfg(any(feature = "virtio_console_channel", feature = "vsock_channel"))]
@@ -83,6 +85,8 @@ enum ChannelType {
     VirtioConsole,
     #[cfg(feature = "vsock_channel")]
     VirtioVsock,
+    #[cfg(feature = "serial_channel")]
+    Serial,
     #[cfg(feature = "simple_io_channel")]
     SimpleIo,
 }
@@ -110,6 +114,8 @@ fn get_channel(kernel_args: &args::Args) -> Box<dyn Channel> {
         ChannelType::VirtioConsole => Box::new(virtio::get_console_channel()),
         #[cfg(feature = "vsock_channel")]
         ChannelType::VirtioVsock => Box::new(virtio::get_vsock_channel()),
+        #[cfg(feature = "serial_channel")]
+        ChannelType::Serial => Box::new(serial::Serial::new()),
         #[cfg(feature = "simple_io_channel")]
         ChannelType::SimpleIo => Box::new(simpleio::SimpleIoChannel::new()),
     }
