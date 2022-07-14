@@ -1,20 +1,20 @@
 #!/usr/bin/env bash
 
-set -o errexit
-set -o nounset
-set -o xtrace
-set -o pipefail
-
-export PROJECT=oak-ci
-export DOCKER_IMAGE=europe-docker.pkg.dev/$PROJECT/trusted-shuffler/trusted-shuffler-server:latest
+readonly SCRIPTS_DIR="$(dirname "$0")"
+# shellcheck source=scripts/common
+source "$SCRIPTS_DIR/common"
 
 cargo build \
     --manifest-path=experimental/trusted_shuffler/server/Cargo.toml \
     --target=x86_64-unknown-linux-musl \
     --release
+
+# Copy the binary into the `bin` directory because Docker cannot use files that
+# are outside of the Docker context directory.
+mkdir -p ./experimental/trusted_shuffler/bin
 cp -f \
     ./target/x86_64-unknown-linux-musl/release/trusted_shuffler_server \
     ./experimental/trusted_shuffler/bin/trusted_shuffler_server
 docker build \
-    --tag=$DOCKER_IMAGE \
+    --tag="${DOCKER_IMAGE}" \
     ./experimental/trusted_shuffler

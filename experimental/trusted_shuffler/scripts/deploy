@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+
+readonly SCRIPTS_DIR="$(dirname "$0")"
+# shellcheck source=scripts/common
+source "$SCRIPTS_DIR/common"
+
+docker push "${DOCKER_IMAGE}"
+gcloud run deploy "${DEPLOYMENT}" \
+    --project="${PROJECT}" \
+    --region=europe-west1 \
+    --image="${DOCKER_IMAGE}" \
+    --use-http2 \
+    --allow-unauthenticated
