@@ -161,6 +161,9 @@
 <span id="156">156</span>
 <span id="157">157</span>
 <span id="158">158</span>
+<span id="159">159</span>
+<span id="160">160</span>
+<span id="161">161</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2022 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -259,6 +262,9 @@
             <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">length_bytes</span> <span class="op">=</span> [<span class="number">0</span>; <span class="ident">LENGTH_SIZE</span>];
             <span class="self">self</span>.<span class="ident">inner</span>.<span class="ident">read</span>(<span class="kw-2">&amp;mut</span> <span class="ident">length_bytes</span>)<span class="question-mark">?</span>;
             <span class="kw">let</span> <span class="ident">length</span> <span class="op">=</span> <span class="ident">Length::from_le_bytes</span>(<span class="ident">length_bytes</span>).<span class="ident">into</span>();
+            <span class="kw">if</span> <span class="ident">length</span> <span class="op">&lt;</span><span class="op">=</span> <span class="ident">BODY_OFFSET</span> {
+                <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">anyhow::Error::msg</span>(<span class="string">&quot;frame is too small&quot;</span>));
+            };
             <span class="kw">if</span> <span class="ident">length</span> <span class="op">&gt;</span> <span class="ident">MAX_SIZE</span> {
                 <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">anyhow::Error::msg</span>(<span class="string">&quot;frame exceeds the maximum frame size&quot;</span>));
             };
