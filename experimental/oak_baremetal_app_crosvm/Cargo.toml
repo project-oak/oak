@@ -6,7 +6,9 @@ edition = "2021"
 license = "Apache-2.0"
 
 [dependencies]
-oak_baremetal_kernel = { path = "../../experimental/oak_baremetal_kernel" }
+oak_baremetal_kernel = { path = "../../experimental/oak_baremetal_kernel", features = [
+  "vsock_channel"
+] }
 static_assertions = "*"
 
 [patch.crates-io]
