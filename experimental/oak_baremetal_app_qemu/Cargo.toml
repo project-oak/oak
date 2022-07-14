@@ -15,7 +15,7 @@ virtio_console_channel = ["oak_baremetal_kernel/virtio_console_channel"]
 
 [dependencies]
 bitflags = "*"
-oak_baremetal_kernel = { path = "../../experimental/oak_baremetal_kernel" }
+oak_baremetal_kernel = { path = "../../experimental/oak_baremetal_kernel", default-features = false }
 rust-hypervisor-firmware-boot = { path = "../../third_party/rust-hypervisor-firmware-boot", default-features = false }
 
 [build-dependencies]
