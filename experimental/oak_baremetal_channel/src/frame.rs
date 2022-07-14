@@ -96,6 +96,9 @@ impl Framed {
             let mut length_bytes = [0; LENGTH_SIZE];
             self.inner.read(&mut length_bytes)?;
             let length = Length::from_le_bytes(length_bytes).into();
+            if length <= BODY_OFFSET {
+                return Err(anyhow::Error::msg("frame is too small"));
+            };
             if length > MAX_SIZE {
                 return Err(anyhow::Error::msg("frame exceeds the maximum frame size"));
             };
