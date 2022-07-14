@@ -6,10 +6,11 @@ edition = "2021"
 license = "Apache-2.0"
 
 [features]
-default = ["virtio_console_channel"]
-virtio_console_channel = []
-vsock_channel = []
+default = ["vsock_channel"]
+virtio_console_channel = ["virtio"]
+vsock_channel = ["virtio"]
 serial_channel = []
+simple_io_channel = ["oak_baremetal_simple_io"]
 
 [dependencies]
 anyhow = { version = "*", default-features = false }
@@ -26,13 +27,14 @@ oak_remote_attestation = { path = "../../remote_attestation/rust", default-featu
 oak_remote_attestation_amd = { path = "../../oak_remote_attestation_amd", default-features = false, features = [
   "rust-crypto"
 ] }
-oak_baremetal_communication_channel = { path = "../../experimental/oak_baremetal_channel" }
-oak_baremetal_runtime = { path = "../../experimental/oak_baremetal_runtime", default-features = false, features = [
+oak_baremetal_communication_channel = { path = "../oak_baremetal_channel" }
+oak_baremetal_runtime = { path = "../oak_baremetal_runtime", default-features = false, features = [
   "rust-crypto"
 ] }
+oak_baremetal_simple_io = { path = "../oak_baremetal_simple_io", optional = true }
 rust-hypervisor-firmware-boot = { path = "../../third_party/rust-hypervisor-firmware-boot" }
 rust-hypervisor-firmware-virtio = { path = "../../third_party/rust-hypervisor-firmware-virtio" }
 strum = { version = "*", default-features = false, features = ["derive"] }
 uart_16550 = "*"
-virtio = { path = "../virtio" }
+virtio = { path = "../virtio", optional = true }
 x86_64 = "*"
