@@ -31,7 +31,8 @@
 //!
 //! Note: This implementation does not include the AP Reset Hold operations seeing that it is not
 //! the preferred mechanism for starting a new application processor (AP) under AMD SEV-SNP. The
-//! SEV-SNP AP creation NAE should be used instead.
+//! SEV-SNP AP creation NAE should be used instead. See section 4.3.2 of
+//! <https://developer.amd.com/wp-content/resources/56421.pdf>.
 
 use crate::instructions::vmgexit;
 use anyhow::{bail, Result};
@@ -100,7 +101,7 @@ impl TryFrom<u64> for SevInfoResponse {
     fn try_from(msr_value: u64) -> Result<Self> {
         const SEV_INFO_RESPONSE_INFO: u64 = 0x001;
         if msr_value & GHCB_INFO_MASK != SEV_INFO_RESPONSE_INFO {
-            bail!("Value is not a valid SEV information response.");
+            bail!("Value is not a valid SEV information response");
         }
         let max_protocol_version = (msr_value >> 48) as u16;
         let min_protocol_version = (msr_value >> 32) as u16;
@@ -172,7 +173,7 @@ impl TryFrom<u64> for CpuidResponse {
         const SEV_INFO_RESPONSE_INFO: u64 = 0x005;
         const RESERVED_MASK: u64 = 0x3FFFF000;
         if msr_value & GHCB_INFO_MASK != SEV_INFO_RESPONSE_INFO || msr_value & RESERVED_MASK != 0 {
-            bail!("Value is not a valid CPUID response.");
+            bail!("Value is not a valid CPUID response");
         }
         let value = (msr_value >> 32) as u32;
         const REGISTER_MASK: u64 = 0xC0000000;
@@ -209,7 +210,7 @@ impl TryFrom<u64> for PreferredGhcbGpaResponse {
     fn try_from(msr_value: u64) -> Result<Self> {
         const PREFERRED_GPA_RESPONSE_INFO: u64 = 0x011;
         if msr_value & GHCB_INFO_MASK != PREFERRED_GPA_RESPONSE_INFO {
-            bail!("Value is not a valid preferred GHCP GPA response.");
+            bail!("Value is not a valid preferred GHCP GPA response");
         }
         let ghcb_gpa = (msr_value & GCHP_DATA_MASK) as usize;
         Ok(Self { ghcb_gpa })
@@ -221,7 +222,7 @@ impl TryFrom<u64> for PreferredGhcbGpaResponse {
 /// A response of `NO_PREFERRED_GHCB_LOCATION` indicates that the hypervisor does not have a
 /// preferred location.
 ///
-/// The guest must validate that the returned guest-physical address is not part of it know
+/// The guest must validate that the returned guest-physical address is not part of its known
 /// guest-private memory.
 pub fn get_preferred_ghcb_location() -> Result<PreferredGhcbGpaResponse> {
     let request = PreferredGhcbGpaRequest;
@@ -263,7 +264,7 @@ impl TryFrom<u64> for RegisterGhcbGpaResponse {
     fn try_from(msr_value: u64) -> Result<Self> {
         const REGISTER_GHCB_GPA_RESPONSE_INFO: u64 = 0x013;
         if msr_value & GHCB_INFO_MASK != REGISTER_GHCB_GPA_RESPONSE_INFO {
-            bail!("Value is not a valid GHCP GPA registration response.");
+            bail!("Value is not a valid GHCP GPA registration response");
         }
         let ghcb_gpa = msr_value & GCHP_DATA_MASK;
         Ok(Self { ghcb_gpa })
