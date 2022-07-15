@@ -28,12 +28,15 @@ use oak_logger::OakLogger;
 use serde_derive::Deserialize;
 use std::fs;
 
-/// Runtime Configuration of Unsafe Runtime.
+/// Runtime Configuration of the Oak Functions Runtime for a Unsafe Oak Functions Runtime with
+/// logging and experimental features.
 ///
 /// This struct serves as a schema for a static TOML config file provided by
-/// application developers. In deployment, this static config file is typically
-/// bundled with the Oak Runtime binary. Config values captured in it serve
-/// as a type safe version of regular command line flags.
+/// the team using the Oak Functions Runtime for their business logic. In deployment, this
+/// config is bundled with the Oak Functions Runtime binary. The config is
+/// version controlled and testing requires no change. The values in the config serve
+/// as a type safe version of regular command line flags and cannot contain $ENVIRONMENT
+/// variables.
 #[derive(Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
 pub struct Config {
@@ -42,6 +45,9 @@ pub struct Config {
     load_lookup_data: LoadLookupDataConfig,
     /// Security policy guaranteed by the server.
     policy: Option<Policy>,
+    /// Path to a Wasm module to be loaded and executed per invocation. The Wasm module must export
+    /// a function named `main` and `alloc`.
+    wasm_path: String,
     /// Configuration for TensorFlow model.
     #[serde(default)]
     tf_model: Option<TensorFlowModelConfig>,
@@ -53,12 +59,12 @@ pub struct Config {
 pub fn main() -> anyhow::Result<()> {
     let opt = Opt::parse();
     let config_file_bytes = fs::read(&opt.config_path)
-        .with_context(|| format!("Couldn't read config file {}", &opt.config_path))?;
+        .with_context(|| format!("Couldn't read config file {}.", &opt.config_path))?;
     let config: Config =
-        toml::from_slice(&config_file_bytes).context("Couldn't parse config file")?;
+        toml::from_slice(&config_file_bytes).context("Couldn't parse config file.")?;
     // TODO(#1971): Make maximum log level configurable.
     let logger = Logger::default();
-    logger.log_public(Level::Info, &format!("parsed config file:\n{:#?}", config));
+    logger.log_public(Level::Info, &format!("Parsed config file:\n{:#?}.", config));
 
     let mut extension_factories = vec![];
 
@@ -84,10 +90,11 @@ pub fn main() -> anyhow::Result<()> {
     }
 
     oak_functions_loader::lib_main(
-        opt,
         logger,
         config.load_lookup_data,
         config.policy,
+        config.wasm_path,
+        opt.http_listen_port,
         extension_factories,
     )
 }

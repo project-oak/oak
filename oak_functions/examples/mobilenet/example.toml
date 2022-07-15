@@ -4,7 +4,6 @@ name = "mobilenet"
 
 [applications.rust]
 type = "OakFunctions"
-wasm_path = "bin/mobilenet.wasm"
 target = { Cargo = { cargo_manifest = "oak_functions/examples/mobilenet/module/Cargo.toml" } }
 
 [server]

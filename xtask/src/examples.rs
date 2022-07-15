@@ -66,7 +66,6 @@ enum Application {
 #[derive(serde::Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
 struct OakFunctionsApplication {
-    wasm_path: String,
     target: Target,
     wizer: Option<WizerOpt>,
 }
@@ -129,7 +128,7 @@ impl OakFunctionsApplication {
 
     fn construct_server_run_step(&self, example: &OakFunctionsExample, run_clients: Step) -> Step {
         let opt = &example.options;
-        let run_server = run_oak_functions_server(&example.example.server, self);
+        let run_server = run_oak_functions_server(&example.example.server);
 
         if opt.build_client.client_variant == NO_CLIENTS {
             Step::Single {
@@ -475,14 +474,10 @@ fn run_wizer(input: &str, output: &str) -> Step {
     }
 }
 
-fn run_oak_functions_server(
-    server: &Server,
-    application: &OakFunctionsApplication,
-) -> Box<dyn Runnable> {
+fn run_oak_functions_server(server: &Server) -> Box<dyn Runnable> {
     Cmd::new(
         server.server_variant.path_to_executable(),
         spread![
-            format!("--wasm-path={}", application.wasm_path),
             ...server.additional_args.clone(),
         ],
     )
