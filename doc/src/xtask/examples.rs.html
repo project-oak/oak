@@ -696,11 +696,6 @@
 <span id="691">691</span>
 <span id="692">692</span>
 <span id="693">693</span>
-<span id="694">694</span>
-<span id="695">695</span>
-<span id="696">696</span>
-<span id="697">697</span>
-<span id="698">698</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2021 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -769,7 +764,6 @@
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">serde::Deserialize</span>, <span class="ident">Debug</span>)]</span>
 <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">deny_unknown_fields</span>)]</span>
 <span class="kw">struct</span> <span class="ident">OakFunctionsApplication</span> {
-    <span class="ident">wasm_path</span>: <span class="ident">String</span>,
     <span class="ident">target</span>: <span class="ident">Target</span>,
     <span class="ident">wizer</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">WizerOpt</span><span class="op">&gt;</span>,
 }
@@ -832,7 +826,7 @@
 
     <span class="kw">fn</span> <span class="ident">construct_server_run_step</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">example</span>: <span class="kw-2">&amp;</span><span class="ident">OakFunctionsExample</span>, <span class="ident">run_clients</span>: <span class="ident">Step</span>) -&gt; <span class="ident">Step</span> {
         <span class="kw">let</span> <span class="ident">opt</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">example</span>.<span class="ident">options</span>;
-        <span class="kw">let</span> <span class="ident">run_server</span> <span class="op">=</span> <span class="ident">run_oak_functions_server</span>(<span class="kw-2">&amp;</span><span class="ident">example</span>.<span class="ident">example</span>.<span class="ident">server</span>, <span class="self">self</span>);
+        <span class="kw">let</span> <span class="ident">run_server</span> <span class="op">=</span> <span class="ident">run_oak_functions_server</span>(<span class="kw-2">&amp;</span><span class="ident">example</span>.<span class="ident">example</span>.<span class="ident">server</span>);
 
         <span class="kw">if</span> <span class="ident">opt</span>.<span class="ident">build_client</span>.<span class="ident">client_variant</span> <span class="op">==</span> <span class="ident">NO_CLIENTS</span> {
             <span class="ident">Step::Single</span> {
@@ -1178,14 +1172,10 @@
     }
 }
 
-<span class="kw">fn</span> <span class="ident">run_oak_functions_server</span>(
-    <span class="ident">server</span>: <span class="kw-2">&amp;</span><span class="ident">Server</span>,
-    <span class="ident">application</span>: <span class="kw-2">&amp;</span><span class="ident">OakFunctionsApplication</span>,
-) -&gt; <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">Runnable</span><span class="op">&gt;</span> {
+<span class="kw">fn</span> <span class="ident">run_oak_functions_server</span>(<span class="ident">server</span>: <span class="kw-2">&amp;</span><span class="ident">Server</span>) -&gt; <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">Runnable</span><span class="op">&gt;</span> {
     <span class="ident">Cmd::new</span>(
         <span class="ident">server</span>.<span class="ident">server_variant</span>.<span class="ident">path_to_executable</span>(),
         <span class="macro">spread!</span>[
-            <span class="macro">format!</span>(<span class="string">&quot;--wasm-path={}&quot;</span>, <span class="ident">application</span>.<span class="ident">wasm_path</span>),
             ...<span class="ident">server</span>.<span class="ident">additional_args</span>.<span class="ident">clone</span>(),
         ],
     )

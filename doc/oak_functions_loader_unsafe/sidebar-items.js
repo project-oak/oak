@@ -1,1 +1,1 @@
-initSidebarItems({"fn":[["main",""]],"struct":[["Config","Runtime Configuration of Unsafe Runtime."]]});
+initSidebarItems({"fn":[["main",""]],"struct":[["Config","Runtime Configuration of the Oak Functions Runtime for a Unsafe Oak Functions Runtime with logging and experimental features."]]});

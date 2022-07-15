@@ -96,6 +96,13 @@
 <span id="91">91</span>
 <span id="92">92</span>
 <span id="93">93</span>
+<span id="94">94</span>
+<span id="95">95</span>
+<span id="96">96</span>
+<span id="97">97</span>
+<span id="98">98</span>
+<span id="99">99</span>
+<span id="100">100</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2022 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -126,12 +133,15 @@
 <span class="kw">use</span> <span class="ident">serde_derive::Deserialize</span>;
 <span class="kw">use</span> <span class="ident">std::fs</span>;
 
-<span class="doccomment">/// Runtime Configuration of Unsafe Runtime.</span>
+<span class="doccomment">/// Runtime Configuration of the Oak Functions Runtime for a Unsafe Oak Functions Runtime with</span>
+<span class="doccomment">/// logging and experimental features.</span>
 <span class="doccomment">///</span>
 <span class="doccomment">/// This struct serves as a schema for a static TOML config file provided by</span>
-<span class="doccomment">/// application developers. In deployment, this static config file is typically</span>
-<span class="doccomment">/// bundled with the Oak Runtime binary. Config values captured in it serve</span>
-<span class="doccomment">/// as a type safe version of regular command line flags.</span>
+<span class="doccomment">/// the team using the Oak Functions Runtime for their business logic. In deployment, this</span>
+<span class="doccomment">/// config is bundled with the Oak Functions Runtime binary. The config is</span>
+<span class="doccomment">/// version controlled and testing requires no change. The values in the config serve</span>
+<span class="doccomment">/// as a type safe version of regular command line flags and cannot contain $ENVIRONMENT</span>
+<span class="doccomment">/// variables.</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Deserialize</span>, <span class="ident">Debug</span>)]</span>
 <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">deny_unknown_fields</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Config</span> {
@@ -140,6 +150,9 @@
     <span class="ident">load_lookup_data</span>: <span class="ident">LoadLookupDataConfig</span>,
     <span class="doccomment">/// Security policy guaranteed by the server.</span>
     <span class="ident">policy</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Policy</span><span class="op">&gt;</span>,
+    <span class="doccomment">/// Path to a Wasm module to be loaded and executed per invocation. The Wasm module must export</span>
+    <span class="doccomment">/// a function named `main` and `alloc`.</span>
+    <span class="ident">wasm_path</span>: <span class="ident">String</span>,
     <span class="doccomment">/// Configuration for TensorFlow model.</span>
     <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span>)]</span>
     <span class="ident">tf_model</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">TensorFlowModelConfig</span><span class="op">&gt;</span>,
@@ -151,12 +164,12 @@
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">main</span>() -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
     <span class="kw">let</span> <span class="ident">opt</span> <span class="op">=</span> <span class="ident">Opt::parse</span>();
     <span class="kw">let</span> <span class="ident">config_file_bytes</span> <span class="op">=</span> <span class="ident">fs::read</span>(<span class="kw-2">&amp;</span><span class="ident">opt</span>.<span class="ident">config_path</span>)
-        .<span class="ident">with_context</span>(<span class="op">|</span><span class="op">|</span> <span class="macro">format!</span>(<span class="string">&quot;Couldn&#39;t read config file {}&quot;</span>, <span class="kw-2">&amp;</span><span class="ident">opt</span>.<span class="ident">config_path</span>))<span class="question-mark">?</span>;
+        .<span class="ident">with_context</span>(<span class="op">|</span><span class="op">|</span> <span class="macro">format!</span>(<span class="string">&quot;Couldn&#39;t read config file {}.&quot;</span>, <span class="kw-2">&amp;</span><span class="ident">opt</span>.<span class="ident">config_path</span>))<span class="question-mark">?</span>;
     <span class="kw">let</span> <span class="ident">config</span>: <span class="ident">Config</span> <span class="op">=</span>
-        <span class="ident">toml::from_slice</span>(<span class="kw-2">&amp;</span><span class="ident">config_file_bytes</span>).<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t parse config file&quot;</span>)<span class="question-mark">?</span>;
+        <span class="ident">toml::from_slice</span>(<span class="kw-2">&amp;</span><span class="ident">config_file_bytes</span>).<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t parse config file.&quot;</span>)<span class="question-mark">?</span>;
     <span class="comment">// TODO(#1971): Make maximum log level configurable.</span>
     <span class="kw">let</span> <span class="ident">logger</span> <span class="op">=</span> <span class="ident">Logger::default</span>();
-    <span class="ident">logger</span>.<span class="ident">log_public</span>(<span class="ident">Level::Info</span>, <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;parsed config file:\n{:#?}&quot;</span>, <span class="ident">config</span>));
+    <span class="ident">logger</span>.<span class="ident">log_public</span>(<span class="ident">Level::Info</span>, <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;Parsed config file:\n{:#?}.&quot;</span>, <span class="ident">config</span>));
 
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">extension_factories</span> <span class="op">=</span> <span class="macro">vec!</span>[];
 
@@ -182,10 +195,11 @@
     }
 
     <span class="ident">oak_functions_loader::lib_main</span>(
-        <span class="ident">opt</span>,
         <span class="ident">logger</span>,
         <span class="ident">config</span>.<span class="ident">load_lookup_data</span>,
         <span class="ident">config</span>.<span class="ident">policy</span>,
+        <span class="ident">config</span>.<span class="ident">wasm_path</span>,
+        <span class="ident">opt</span>.<span class="ident">http_listen_port</span>,
         <span class="ident">extension_factories</span>,
     )
 }
