@@ -14,8 +14,8 @@
 // limitations under the License.
 //
 
-//! This module contains an implementation of the guest-host communications block (GHCB) page that
-//! can be used for communicating with the hypervisor.
+//! This module contains an implementation of the guest-hypervisor communications block (GHCB) page
+//! that can be used for communicating with the hypervisor.
 
 use bitflags::bitflags;
 use zerocopy::FromBytes;
