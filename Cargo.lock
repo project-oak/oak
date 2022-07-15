@@ -4636,9 +4636,11 @@ dependencies = [
 name = "sev_guest"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "bitflags",
  "static_assertions",
  "strum",
+ "x86_64",
  "zerocopy",
 ]
 
