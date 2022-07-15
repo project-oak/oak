@@ -11,9 +11,6 @@
   "max-atomic-width": 64,
   "panic-strategy": "abort",
   "position-independent-executables": true,
-  "pre-link-args": {
-    "ld.lld": ["--script=layout.ld"]
-  },
   "relocation-model": "static",
   "relro-level": "full",
   "stack-probes": {
