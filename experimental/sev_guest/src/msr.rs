@@ -17,9 +17,9 @@
 //! Rust implementations of the AMD SEV-SNP GHCB MSR protocol.
 //!
 //! The protocol is implemented by writing to, and reading from, model-specific register (MSR)
-//! 0xC001_0130. The guest makes a request by writing and appropriate value to the MSR and calling
-//! VMGEXIT. After the hypervisor processed the request and resumes the guest, the guest can read
-//! the response from the MSR.
+//! 0xC001_0130. The guest makes a request by writing an appropriate value to the MSR and calling
+//! VMGEXIT. After the hypervisor processes the request and resumes the guest, the guest can read
+//! the response from the same MSR.
 //!
 //! The 12 least significant bits represent information about the operation being performed. The
 //! remaining 52 bits represent the data for the operation. The format of the data is dependent on
@@ -129,7 +129,7 @@ pub enum CpuidRegister {
 pub struct CpuidRequest {
     /// The CPUID leaf to request. Sub-leafs are not supported byt this protocol.
     pub leaf: u32,
-    /// The register to return from the result. This protocol only supports a singler register at a
+    /// The register to return from the result. This protocol only supports a single register at a
     /// time.
     pub register: CpuidRegister,
 }
@@ -184,7 +184,10 @@ pub fn write_msr_and_exit(msr_value: u64) {
     vmgexit();
 }
 
-/// Reads the value of the MSR.
+/// Reads the value of the model-specific register.
+///
+/// This typically used to get the result of an operation when the hypervisor resumes the guest
+/// following a call to VMGEGIT.
 pub fn read_msr() -> u64 {
     // Safety: This operation is safe because this specific MSR is used only for communicating with
     // the hypervisor, and does not have any other side-effects within the guest.
