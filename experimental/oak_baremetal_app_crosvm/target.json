@@ -1,18 +1,24 @@
 {
   "arch": "x86_64",
-  "data-layout": "e-m:e-i64:64-f80:128-n8:16:32:64-S128",
+  "code-model": "kernel",
+  "cpu": "x86-64",
+  "data-layout": "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128",
   "disable-redzone": true,
   "executables": true,
   "linker": "rust-lld",
   "linker-flavor": "ld.lld",
-  "llvm-target": "x86_64-unknown-none",
-  "os": "none",
+  "llvm-target": "x86_64-unknown-none-elf",
+  "max-atomic-width": 64,
   "panic-strategy": "abort",
+  "position-independent-executables": true,
   "pre-link-args": {
     "ld.lld": ["--script=layout.ld"]
   },
-  "relocation-model": "pic",
-  "target-c-int-width": "32",
-  "target-endian": "little",
+  "relocation-model": "static",
+  "relro-level": "full",
+  "stack-probes": {
+    "kind": "call"
+  },
+  "static-position-independent-executables": true,
   "target-pointer-width": "64"
 }
