@@ -23,17 +23,36 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
- * This class defines a number of nested classes representing a subset of Rekor types defined in
- * <https://github.com/sigstore/rekor/tree/2978cdc26fdf8f5bfede8459afd9735f0f231a2a/pkg/generated/models>.
+ * This class represents a Rekor LogEntry as defined in
+ * <https://github.com/sigstore/rekor/blob/2978cdc26fdf8f5bfede8459afd9735f0f231a2a/pkg/generated/models/log_entry.go#L89>.
+ *
+ * A static factory method, {@code unmarshalLogEntry}, is provided that creates an instance of this
+ * class by parsing it from a json string.
  */
-public class Model {
+public final class RekorLogEntry {
+  // This filed is intentionally made package-private to allow testing.
+  final LogEntry logEntry;
+
+  private RekorLogEntry(LogEntry logEntry) {
+    this.logEntry = logEntry;
+  }
+
+  //
+  // The following nested classes represent a subset of Rekor types defined in
+  // <https://github.com/sigstore/rekor/tree/2978cdc26fdf8f5bfede8459afd9735f0f231a2a/pkg/generated/models>.
+  //
+  // These classes are intentionally made package-private and immutable, as the clients are not
+  // expected to instantiate them directly. The fields are not explicitly made final to allow
+  // instantiation with Gson.
+  //
+
   /**
    * Represents a Rekor LogEntry.
    *
    * <p>Based on
    * <https://github.com/sigstore/rekor/blob/2978cdc26fdf8f5bfede8459afd9735f0f231a2a/pkg/generated/models/log_entry.go#L89.>
    */
-  public static class LogEntry {
+  static class LogEntry {
     /** We cannot directly use the type `Body` here, since body is Base64-encoded. */
     String body;
 
@@ -65,7 +84,7 @@ public class Model {
    * <https://github.com/sigstore/rekor/blob/fc913fe7800ea5faed1c4900d8a6ffe11eb7be32/pkg/generated/models/rekord.go#L38>.
    * Note that `kind` is a derived field.
    */
-  public static class Body {
+  static class Body {
     String apiVersion;
     String kind;
     Spec spec;
@@ -77,7 +96,7 @@ public class Model {
    * <p>Based on
    * <https://github.com/sigstore/rekor/blob/2978cdc26fdf8f5bfede8459afd9735f0f231a2a/pkg/generated/models/rekord_v001_schema.go#L39.>
    */
-  public static class Spec {
+  static class Spec {
     Data data;
     GenericSignature signature;
   }
@@ -88,7 +107,7 @@ public class Model {
    * <p>Based on
    * <https://github.com/sigstore/rekor/blob/2978cdc26fdf8f5bfede8459afd9735f0f231a2a/pkg/generated/models/rekord_v001_schema.go#L179.>
    */
-  public static class Data {
+  static class Data {
     Hash hash;
   }
 
@@ -98,7 +117,7 @@ public class Model {
    * <p>Based on
    * <https://github.com/sigstore/rekor/blob/2978cdc26fdf8f5bfede8459afd9735f0f231a2a/pkg/generated/models/rekord_v001_schema.go#L273.>
    */
-  public static class Hash {
+  static class Hash {
     String algorithm;
     String value;
   }
@@ -109,7 +128,7 @@ public class Model {
    * <p>Based on
    * <https://github.com/sigstore/rekor/blob/2978cdc26fdf8f5bfede8459afd9735f0f231a2a/pkg/generated/models/rekord_v001_schema.go#L383>
    */
-  public static class GenericSignature {
+  static class GenericSignature {
     /** Base64 content that is signed. */
     String content;
 
@@ -126,7 +145,7 @@ public class Model {
    * <p>Based on
    * <https://github.com/sigstore/rekor/blob/2978cdc26fdf8f5bfede8459afd9735f0f231a2a/pkg/generated/models/rekord_v001_schema.go#L551.>
    */
-  public static class PublicKey {
+  static class PublicKey {
     /** Base64 content of a public key. */
     String content;
   }
@@ -139,7 +158,7 @@ public class Model {
    * <p>Based on
    * <https://github.com/sigstore/rekor/blob/2978cdc26fdf8f5bfede8459afd9735f0f231a2a/pkg/generated/models/log_entry.go#L341>.
    */
-  public static class LogEntryVerification {
+  static class LogEntryVerification {
     /** Base64-encoded signature over the body, integratedTime, logID, and logIndex. */
     String signedEntryTimestamp;
   }
@@ -158,10 +177,10 @@ public class Model {
    * Parses the given JSON string into an instance of {@code Model.LogEntry}.
    *
    * @param json the input JSON string.
-   * @return an instance of Model.LogEntry created from parsing and unmarshaling {@code json}.
+   * @return an instance of Model.RekorLogEntry created from parsing and unmarshaling {@code json}.
    * @throws RekorValidationException if the validation of the unmarshaled LogEntry fails.
    */
-  public static LogEntry unmarshalLogEntry(String json) throws RekorValidationException {
+  public static RekorLogEntry unmarshalLogEntry(String json) throws RekorValidationException {
     // Use a default Gson instance to parse JSON strings into Java objects.
     Gson gson = new GsonBuilder().create();
     Map<String, Object> entryMap = gson.fromJson(json, Map.class);
@@ -178,6 +197,6 @@ public class Model {
     // Parse the body string into an instance of Body, and set entry.bodyObject to it.
     String decodedBody = new String(Base64.getDecoder().decode(entry.body));
     entry.bodyObject = gson.fromJson(decodedBody, Body.class);
-    return entry;
+    return new RekorLogEntry(entry);
   }
 }
