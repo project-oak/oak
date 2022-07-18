@@ -48,10 +48,10 @@ java_library(
 )
 
 java_test(
-    name = "RekorModelTest",
-    srcs = ["tests/com/google/oak/functions/client/rekor/ModelTest.java"],
+    name = "RekorLogEntryTest",
+    srcs = ["tests/com/google/oak/functions/client/rekor/RekorLogEntryTest.java"],
     data = ["//oak_functions/client/testdata:logentry.json"],
-    test_class = "com.google.oak.functions.client.rekor.ModelTest",
+    test_class = "com.google.oak.functions.client.rekor.RekorLogEntryTest",
     deps = [
         ":client_rekor",
     ],
