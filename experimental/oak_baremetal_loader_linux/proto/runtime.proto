@@ -22,9 +22,9 @@ option java_multiple_files = true;
 option java_package = "oak.sandbox.runtime";
 
 message Request {
-  string data = 1;
+  bytes data = 1;
 }
 
 message Response {
-  string data = 1;
+  bytes data = 1;
 }

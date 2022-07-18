@@ -7,6 +7,7 @@ license = "Apache-2.0"
 
 [dependencies]
 anyhow = { version = "*", default-features = false }
+byteorder = "*"
 ciborium-io = { version = "*", default-features = false }
 libc = "*"
 log = "*"

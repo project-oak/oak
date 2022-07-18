@@ -674,6 +674,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "ciborium-io"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "346de753af073cc87b52b2083a506b38ac176a44cfb05497b622e27be899b369"
+
+[[package]]
 name = "cipher"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2925,6 +2931,7 @@ name = "oak_baremetal_loader_linux"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "byteorder",
  "ciborium-io",
  "libc",
  "log",
@@ -4352,19 +4359,6 @@ dependencies = [
  "spin 0.5.2",
  "untrusted",
  "web-sys",
- "winapi",
-]
-
-[[package]]
-
-name = "ring"
-version = "0.17.0-not-released-yet"
-dependencies = [
- "cc",
- "libc",
- "once_cell",
- "spin 0.9.3",
- "untrusted 0.9.0",
  "winapi",
 ]
 
