@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-//! Main 'kernel' for bare-metal Oak Functions.
+//! Main 'kernel' for baremetal Oak Functions.
 //!
 //! This code takes care of initializing the x86-64 machine properly and
 //! handing the reins over to the oak_baremetal_runtime. It is in a separate crate so that we
@@ -121,7 +121,7 @@ fn get_channel(kernel_args: &args::Args) -> Box<dyn Channel> {
     }
 }
 
-/// Common panic routine for the kernel. This needs to be wrrapped in a
+/// Common panic routine for the kernel. This needs to be wrapped in a
 /// panic_handler function in individual bootloader crates.
 pub fn panic(info: &PanicInfo) -> ! {
     error!("PANIC: {}", info);

@@ -1,12 +1,12 @@
 # Oak Baremetal Loader
 
-Untrusted companion app that loads the trusted runtime in either qemu or crosvm,
-and exposes gRPC server for communicating with the runtime. Communicates with
+Untrusted companion app that loads the trusted runtime in either QEMU or crosvm,
+and exposes a gRPC server for communicating with the runtime. Communicates with
 the runtime via the `oak_baremetal_channel`.
 
 ## Starting the baremetal app
 
-The baremetal app may be loaded in qemu via
+The baremetal app may be loaded in QEMU via
 
 ```shell
 (cd experimental/oak_baremetal_app_qemu && cargo build) \
