@@ -113,6 +113,10 @@
 <span id="108">108</span>
 <span id="109">109</span>
 <span id="110">110</span>
+<span id="111">111</span>
+<span id="112">112</span>
+<span id="113">113</span>
+<span id="114">114</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2022 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -171,12 +175,16 @@
         <span class="comment">// Don&#39;t bother running devices in sandboxed processes.</span>
         <span class="ident">cmd</span>.<span class="ident">arg</span>(<span class="string">&quot;--disable-sandbox&quot;</span>);
         <span class="comment">// First serial port: this will be used by the console</span>
-        <span class="ident">cmd</span>.<span class="ident">arg</span>(<span class="macro">format!</span>(
-            <span class="string">&quot;--serial=num=1,hardware=serial,type=file,path=/proc/self/fd/{},console,earlycon&quot;</span>,
-            <span class="ident">params</span>.<span class="ident">console</span>.<span class="ident">as_raw_fd</span>()
-        ));
-        <span class="ident">cmd</span>.<span class="ident">arg</span>(<span class="macro">format!</span>(<span class="string">&quot;--cid={}&quot;</span>, <span class="ident">VSOCK_GUEST_CID</span>));
-        <span class="ident">cmd</span>.<span class="ident">arg</span>(<span class="string">&quot;--params=channel=virtio_vsock&quot;</span>);
+        <span class="ident">cmd</span>.<span class="ident">args</span>(<span class="kw-2">&amp;</span>[
+            <span class="string">&quot;--serial&quot;</span>,
+            <span class="macro">format!</span>(
+                <span class="string">&quot;num=1,hardware=serial,type=file,path=/proc/self/fd/{},console,earlycon&quot;</span>,
+                <span class="ident">params</span>.<span class="ident">console</span>.<span class="ident">as_raw_fd</span>()
+            )
+            .<span class="ident">as_str</span>(),
+        ]);
+        <span class="ident">cmd</span>.<span class="ident">args</span>([<span class="string">&quot;--cid&quot;</span>, <span class="ident">VSOCK_GUEST_CID</span>.<span class="ident">to_string</span>().<span class="ident">as_str</span>()]);
+        <span class="ident">cmd</span>.<span class="ident">args</span>([<span class="string">&quot;--params&quot;</span>, <span class="string">&quot;channel=virtio_vsock&quot;</span>]);
         <span class="ident">cmd</span>.<span class="ident">arg</span>(<span class="ident">params</span>.<span class="ident">app</span>);
 
         <span class="macro">info!</span>(<span class="string">&quot;Executing: {:?}&quot;</span>, <span class="ident">cmd</span>);
