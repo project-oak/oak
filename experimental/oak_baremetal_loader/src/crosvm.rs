@@ -56,12 +56,16 @@ impl Crosvm {
         // Don't bother running devices in sandboxed processes.
         cmd.arg("--disable-sandbox");
         // First serial port: this will be used by the console
-        cmd.arg(format!(
-            "--serial=num=1,hardware=serial,type=file,path=/proc/self/fd/{},console,earlycon",
-            params.console.as_raw_fd()
-        ));
-        cmd.arg(format!("--cid={}", VSOCK_GUEST_CID));
-        cmd.arg("--params=channel=virtio_vsock");
+        cmd.args(&[
+            "--serial",
+            format!(
+                "num=1,hardware=serial,type=file,path=/proc/self/fd/{},console,earlycon",
+                params.console.as_raw_fd()
+            )
+            .as_str(),
+        ]);
+        cmd.args(["--cid", VSOCK_GUEST_CID.to_string().as_str()]);
+        cmd.args(["--params", "channel=virtio_vsock"]);
         cmd.arg(params.app);
 
         info!("Executing: {:?}", cmd);
