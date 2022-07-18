@@ -385,7 +385,7 @@ bitflags! {
         /// Restricted interrrupt injection is supported.
         const RESTRICTED_INJECTION = (1 << 2);
         /// Timer support is available if restricted interrupt injection is enabled.
-        const RESTRICTED_INTECTION_TIMER = (1 << 3);
+        const RESTRICTED_INJECTION_TIMER = (1 << 3);
     }
 }
 
