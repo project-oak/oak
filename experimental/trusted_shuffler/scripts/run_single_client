@@ -1,0 +1,2 @@
+RUST_LOG=info cargo run --manifest-path=experimental/trusted_shuffler/client/Cargo.toml -- \
+     --server-url="http://localhost:8888" --qps=1 --seconds=1
