@@ -148,7 +148,7 @@
 <span class="comment">// limitations under the License.</span>
 <span class="comment">//</span>
 
-<span class="doccomment">//! Main &#39;kernel&#39; for bare-metal Oak Functions.</span>
+<span class="doccomment">//! Main &#39;kernel&#39; for baremetal Oak Functions.</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! This code takes care of initializing the x86-64 machine properly and</span>
 <span class="doccomment">//! handing the reins over to the oak_baremetal_runtime. It is in a separate crate so that we</span>
@@ -255,7 +255,7 @@
     }
 }
 
-<span class="doccomment">/// Common panic routine for the kernel. This needs to be wrrapped in a</span>
+<span class="doccomment">/// Common panic routine for the kernel. This needs to be wrapped in a</span>
 <span class="doccomment">/// panic_handler function in individual bootloader crates.</span>
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">panic</span>(<span class="ident">info</span>: <span class="kw-2">&amp;</span><span class="ident">PanicInfo</span>) -&gt; <span class="op">!</span> {
     <span class="macro">error!</span>(<span class="string">&quot;PANIC: {}&quot;</span>, <span class="ident">info</span>);
