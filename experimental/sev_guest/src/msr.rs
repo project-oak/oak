@@ -35,7 +35,8 @@
 //! <https://developer.amd.com/wp-content/resources/56421.pdf>.
 
 use crate::instructions::vmgexit;
-use anyhow::{bail, Result};
+use anyhow::{anyhow, bail, Result};
+use bitflags::bitflags;
 use strum::FromRepr;
 use x86_64::registers::model_specific::Msr;
 
@@ -152,10 +153,8 @@ pub struct CpuidRequest {
 
 impl From<CpuidRequest> for u64 {
     fn from(request: CpuidRequest) -> Self {
-        let mut result = 0x004;
-        result |= (request.leaf as u64) << 32;
-        result |= (request.register as u64) << 30;
-        result
+        let info = 0x004;
+        info | (request.leaf as u64) << 32 | (request.register as u64) << 30
     }
 }
 
@@ -246,10 +245,9 @@ impl RegisterGhcbGpaRequest {
 }
 
 impl From<RegisterGhcbGpaRequest> for u64 {
-    fn from(register_ghcb_gpa_request: RegisterGhcbGpaRequest) -> Self {
-        let mut result = 0x012;
-        result |= register_ghcb_gpa_request.ghcb_gpa;
-        result
+    fn from(request: RegisterGhcbGpaRequest) -> Self {
+        let info = 0x012;
+        info | request.ghcb_gpa
     }
 }
 
@@ -284,6 +282,165 @@ pub fn register_ghcb_location(request: RegisterGhcbGpaRequest) -> Result<()> {
         bail!("The registration response did not match the request");
     }
     Ok(())
+}
+
+/// Whether a memory page is private to the guest, or shared with the hypervisor.
+#[derive(Debug, FromRepr)]
+#[repr(u8)]
+pub enum PageAssignment {
+    Private = 1,
+    Shared = 2,
+}
+
+/// Request to change a memory page from shared to private or private to shared.
+pub struct SnpPageStateChangeRequest {
+    page_gpa: u64,
+    assignment: PageAssignment,
+}
+
+impl SnpPageStateChangeRequest {
+    pub fn new(page_gpa: usize, assignment: PageAssignment) -> Result<Self> {
+        let page_gpa = page_gpa as u64;
+        if page_gpa & GHCB_INFO_MASK != 0 {
+            bail!("Page must be 4KiB-aligned");
+        }
+        // Only 52 bits can be use for an address.
+        const ADDRESS_MAX: u64 = (1 << 52) - 1;
+        if page_gpa > ADDRESS_MAX {
+            bail!("Page address is too high");
+        }
+        Ok(Self {
+            page_gpa,
+            assignment,
+        })
+    }
+}
+
+impl From<SnpPageStateChangeRequest> for u64 {
+    fn from(request: SnpPageStateChangeRequest) -> Self {
+        let info = 0x014;
+        let assignment = (request.assignment as u64) << 52;
+        info | request.page_gpa | assignment
+    }
+}
+
+/// The response containing the result of the SNP Page State Change operation.
+pub struct SnpPageStateChangeResponse {
+    /// The error code from the page state change operation.
+    ///
+    /// A value of 0 indicates success. Any non-zero value means that the state was not changed.
+    error_code: u32,
+}
+
+impl TryFrom<u64> for SnpPageStateChangeResponse {
+    type Error = anyhow::Error;
+    fn try_from(msr_value: u64) -> Result<Self> {
+        const SNP_PAGE_STATE_CHANGE_RESPONSE_INFO: u64 = 0x015;
+        const RESERVED_MASK: u64 = 0xFFFFF000;
+        if msr_value & GHCB_INFO_MASK != SNP_PAGE_STATE_CHANGE_RESPONSE_INFO
+            || msr_value & RESERVED_MASK != 0
+        {
+            bail!("Value is not a valid SNP Page State Change response");
+        }
+        let error_code = (msr_value >> 32) as u32;
+        Ok(Self { error_code })
+    }
+}
+
+/// Requests a change of state for a page to be either private to the guest VM, or shared with the
+/// hypervisor.
+///
+/// This is useful if the GHCB has not yet been established, for example if a page must be shared
+/// with the hypervisor to establish the GHCB.
+pub fn change_snp_page_state(request: SnpPageStateChangeRequest) -> Result<()> {
+    write_msr_and_exit(request.into());
+    let response: SnpPageStateChangeResponse = read_msr().try_into()?;
+    // Ensure that the page state change was successful.
+    if response.error_code != 0 {
+        bail!(
+            "Page state change failed with error code: {}",
+            response.error_code
+        );
+    }
+    Ok(())
+}
+
+/// A request for the hypervisor's supported features.
+pub struct HypervisorFeatureSupportRequest;
+
+impl From<HypervisorFeatureSupportRequest> for u64 {
+    fn from(_request: HypervisorFeatureSupportRequest) -> Self {
+        0x080
+    }
+}
+
+bitflags! {
+    /// Flags indicating which features are supported by the hypervisor.
+    #[derive(Default)]
+    pub struct HypervisorFeatureSupportResponse: u64 {
+        /// AMD SEV-SNP is supported.
+        const SEV_SNP = (1 << 0);
+        /// The new AMD SEV-SNP feature for starting new Application Processors (APs) is supported.
+        const AP_CREATION = (1 << 1);
+        /// Restricted interrrupt injection is supported.
+        const RESTRICTED_INJECTION = (1 << 2);
+        /// Timer support is available if restricted interrupt injection is enabled.
+        const RESTRICTED_INTECTION_TIMER = (1 << 3);
+    }
+}
+
+impl TryFrom<u64> for HypervisorFeatureSupportResponse {
+    type Error = anyhow::Error;
+    fn try_from(msr_value: u64) -> Result<Self> {
+        const HYPERVISOR_FEATURE_SUPPORT_RESPONSE_INFO: u64 = 0x081;
+        if msr_value & GHCB_INFO_MASK != HYPERVISOR_FEATURE_SUPPORT_RESPONSE_INFO {
+            bail!("Value is not a valid Hypervisor Feature Support response");
+        }
+        HypervisorFeatureSupportResponse::from_bits(msr_value >> 12)
+            .ok_or_else(|| anyhow!("Invalid Hypervisor Feature Support bitmap"))
+    }
+}
+
+/// Requests a bitmap specifying the features supported by the hypervisor.
+pub fn get_hypervisor_feature_support() -> Result<HypervisorFeatureSupportResponse> {
+    let request = HypervisorFeatureSupportRequest;
+    write_msr_and_exit(request.into());
+    read_msr().try_into()
+}
+
+/// The reason for requesting termination from the hypervisor.
+#[derive(Debug)]
+#[repr(u8)]
+pub enum TerminationReason {
+    /// Non-specific termination request.
+    General = 0,
+    /// The supported range for the GHCB protocol version does not match.
+    GhcbProtocolVersion = 1,
+    /// The SEV-SNP features supported by the hypervisor is not sufficient.
+    SnpFeatureNotSupported = 2,
+}
+
+/// Request for the hypervisor to terminate the guest.
+pub struct TerminationRequest {
+    pub reason: TerminationReason,
+}
+
+impl From<TerminationRequest> for u64 {
+    fn from(request: TerminationRequest) -> Self {
+        let info = 0x100;
+        // We use the default reason set (0x0), so don't set any value for bits 12-15.
+        let reason = (request.reason as u64) << 16;
+        info | reason
+    }
+}
+
+/// Requests termination from the hypervisor.
+pub fn request_termination(request: TerminationRequest) {
+    write_msr_and_exit(request.into());
+    // Go into a HALT loop, in case the hypervisor did not honor the termination request.
+    loop {
+        x86_64::instructions::hlt();
+    }
 }
 
 /// Writes a value to the MSR and calls VMGEXIT to hand control to the hypervisor.
