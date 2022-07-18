@@ -3,6 +3,7 @@ target = "target.json"
 
 [target.target]
 runner = "./runner"
+rustflags = "-C relocation-model=static"
 
 [unstable]
 build-std = ["core", "alloc"]
