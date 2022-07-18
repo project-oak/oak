@@ -25,7 +25,14 @@
 //! remaining 52 bits represent the data for the operation. The format of the data is dependent on
 //! the operation.
 //!
+//! The MSR protocol is primarily used to set up the GHCB communications with the hypervisor.
+//!
 //! See section 2.3.1 in <https://developer.amd.com/wp-content/resources/56421.pdf> for more detail.
+//!
+//! Note: This implementation does not include the AP Reset Hold operations seeing that it is not
+//! the preferred mechanism for starting a new application processor (AP) under AMD SEV-SNP. The
+//! SEV-SNP AP creation NAE should be used instead. See section 4.3.2 of
+//! <https://developer.amd.com/wp-content/resources/56421.pdf>.
 
 use crate::instructions::vmgexit;
 use anyhow::{bail, Result};
@@ -36,11 +43,20 @@ use x86_64::registers::model_specific::Msr;
 /// specific to AMD SEV-SNP.
 pub const SUPPORTED_PROTOCOL_VERION: u16 = 2;
 
+/// Value indicating that the hypervisor does not have a preferred location for the GHCB.
+pub const NO_PREFERRED_GHCB_LOCATION: u64 = 0xFFFFFFFFFFFFF000;
+
+/// Value indicating that the hypervisor did not accept the registered location for the GHCB.
+const GHCB_LOCATION_NOT_ACCEPTED: u64 = 0xFFFFFFFFFFFFF000;
+
 /// The identifier for the MSR used in the protocol.
 const MSR_IDENTIFIER: u32 = 0xC001_0130;
 
 /// Mask to extract the GHCB info from a u64 value.
 const GHCB_INFO_MASK: u64 = 0xFFF;
+
+/// Mask to extract the GHCB data from a u64 value.
+const GCHP_DATA_MASK: u64 = !GHCB_INFO_MASK;
 
 /// Contains the guest-physical address of the GHCB page. The address must have been registered with
 /// the hypervisor before using it.
@@ -64,7 +80,7 @@ impl From<GhcbGpa> for u64 {
     }
 }
 
-/// Sets the address of the GHCB page before exiting.
+/// Sets the address of the GHCB page before exiting to the hypervisor.
 pub fn set_ghcb_address_and_exit(ghcb_gpa: GhcbGpa) {
     write_msr_and_exit(ghcb_gpa.into());
 }
@@ -85,7 +101,7 @@ impl TryFrom<u64> for SevInfoResponse {
     fn try_from(msr_value: u64) -> Result<Self> {
         const SEV_INFO_RESPONSE_INFO: u64 = 0x001;
         if msr_value & GHCB_INFO_MASK != SEV_INFO_RESPONSE_INFO {
-            bail!("Value is not a valid SEV information response.");
+            bail!("Value is not a valid SEV information response");
         }
         let max_protocol_version = (msr_value >> 48) as u16;
         let min_protocol_version = (msr_value >> 32) as u16;
@@ -157,7 +173,7 @@ impl TryFrom<u64> for CpuidResponse {
         const SEV_INFO_RESPONSE_INFO: u64 = 0x005;
         const RESERVED_MASK: u64 = 0x3FFFF000;
         if msr_value & GHCB_INFO_MASK != SEV_INFO_RESPONSE_INFO || msr_value & RESERVED_MASK != 0 {
-            bail!("Value is not a valid CPUID response.");
+            bail!("Value is not a valid CPUID response");
         }
         let value = (msr_value >> 32) as u32;
         const REGISTER_MASK: u64 = 0xC0000000;
@@ -172,6 +188,102 @@ impl TryFrom<u64> for CpuidResponse {
 pub fn get_cpuid(request: CpuidRequest) -> Result<CpuidResponse> {
     write_msr_and_exit(request.into());
     read_msr().try_into()
+}
+
+/// A request for the hypervisor's preferred location for the GHCB page.
+pub struct PreferredGhcbGpaRequest;
+
+impl From<PreferredGhcbGpaRequest> for u64 {
+    fn from(_request: PreferredGhcbGpaRequest) -> Self {
+        0x010
+    }
+}
+
+/// The response containing the preferred location of the GHCB.
+pub struct PreferredGhcbGpaResponse {
+    /// The preferred guest-physical address for the GHCB.
+    pub ghcb_gpa: usize,
+}
+
+impl TryFrom<u64> for PreferredGhcbGpaResponse {
+    type Error = anyhow::Error;
+    fn try_from(msr_value: u64) -> Result<Self> {
+        const PREFERRED_GPA_RESPONSE_INFO: u64 = 0x011;
+        if msr_value & GHCB_INFO_MASK != PREFERRED_GPA_RESPONSE_INFO {
+            bail!("Value is not a valid preferred GHCP GPA response");
+        }
+        let ghcb_gpa = (msr_value & GCHP_DATA_MASK) as usize;
+        Ok(Self { ghcb_gpa })
+    }
+}
+
+/// Requests the hypervisor's preferred location for the GHCB page.
+///
+/// A response of `NO_PREFERRED_GHCB_LOCATION` indicates that the hypervisor does not have a
+/// preferred location.
+///
+/// The guest must validate that the returned guest-physical address is not part of its known
+/// guest-private memory.
+pub fn get_preferred_ghcb_location() -> Result<PreferredGhcbGpaResponse> {
+    let request = PreferredGhcbGpaRequest;
+    write_msr_and_exit(request.into());
+    read_msr().try_into()
+}
+
+/// Request to register a guest-physical address for the GHCB with the hypervisor.
+pub struct RegisterGhcbGpaRequest {
+    ghcb_gpa: u64,
+}
+
+impl RegisterGhcbGpaRequest {
+    pub fn new(ghcb_gpa: usize) -> Result<Self> {
+        let ghcb_gpa = ghcb_gpa as u64;
+        if ghcb_gpa & GHCB_INFO_MASK != 0 {
+            bail!("GHCB must be 4KiB-aligned");
+        }
+        Ok(Self { ghcb_gpa })
+    }
+}
+
+impl From<RegisterGhcbGpaRequest> for u64 {
+    fn from(register_ghcb_gpa_request: RegisterGhcbGpaRequest) -> Self {
+        let mut result = 0x012;
+        result |= register_ghcb_gpa_request.ghcb_gpa;
+        result
+    }
+}
+
+/// The response containing the result of the GHCB registration.
+pub struct RegisterGhcbGpaResponse {
+    /// The registered guest-physical address for the GHCB.
+    ghcb_gpa: u64,
+}
+
+impl TryFrom<u64> for RegisterGhcbGpaResponse {
+    type Error = anyhow::Error;
+    fn try_from(msr_value: u64) -> Result<Self> {
+        const REGISTER_GHCB_GPA_RESPONSE_INFO: u64 = 0x013;
+        if msr_value & GHCB_INFO_MASK != REGISTER_GHCB_GPA_RESPONSE_INFO {
+            bail!("Value is not a valid GHCP GPA registration response");
+        }
+        let ghcb_gpa = msr_value & GCHP_DATA_MASK;
+        Ok(Self { ghcb_gpa })
+    }
+}
+
+/// Registers the location of the GHCB page for the current vCPU with the hypervisor.
+pub fn register_ghcb_location(request: RegisterGhcbGpaRequest) -> Result<()> {
+    let request_ghcb_gpa: u64 = request.ghcb_gpa;
+    write_msr_and_exit(request.into());
+    let response: RegisterGhcbGpaResponse = read_msr().try_into()?;
+    // Ensure that the registration was successful.
+    if response.ghcb_gpa == GHCB_LOCATION_NOT_ACCEPTED {
+        bail!("GHCB location registration not accepted");
+    }
+    if response.ghcb_gpa != request_ghcb_gpa {
+        bail!("The registration response did not match the request");
+    }
+    Ok(())
 }
 
 /// Writes a value to the MSR and calls VMGEXIT to hand control to the hypervisor.
