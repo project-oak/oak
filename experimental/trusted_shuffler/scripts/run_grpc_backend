@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+
+RUST_LOG=info cargo run --manifest-path=./experimental/trusted_shuffler/backend/Cargo.toml -- \
+--listen-address="[::]:8888" --use-grpc
