@@ -133,7 +133,7 @@ pub fn get_sev_info() -> Result<SevInfoResponse> {
 }
 
 /// The register of interest from the result of executing CPUID.
-#[derive(Debug, FromRepr)]
+#[derive(Debug, FromRepr, Clone, Copy, PartialEq, Eq)]
 #[repr(u8)]
 pub enum CpuidRegister {
     Eax = 0,
@@ -285,7 +285,7 @@ pub fn register_ghcb_location(request: RegisterGhcbGpaRequest) -> Result<()> {
 }
 
 /// Whether a memory page is private to the guest, or shared with the hypervisor.
-#[derive(Debug, FromRepr)]
+#[derive(Debug, FromRepr, Clone, Copy, PartialEq, Eq)]
 #[repr(u8)]
 pub enum PageAssignment {
     Private = 1,
@@ -461,4 +461,175 @@ pub fn read_msr() -> u64 {
     // Safety: This operation is safe because this specific MSR is used only for communicating with
     // the hypervisor, and does not have any other side-effects within the guest.
     unsafe { Msr::new(MSR_IDENTIFIER).read() }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_ghcb_gpa() {
+        // Page must be 4KiB aligned.
+        let invalid_page = 12345usize << 11;
+        assert!(GhcbGpa::new(invalid_page).is_err());
+
+        let valid_page = 12345usize << 12;
+        let msr_value: u64 = GhcbGpa::new(valid_page).unwrap().into();
+        assert_eq!(valid_page as u64, msr_value);
+    }
+
+    #[test]
+    fn test_sev_info_request() {
+        let request = SevInfoRequest;
+        assert_eq!(2u64, request.into());
+    }
+
+    #[test]
+    fn test_sev_info_response() {
+        let max_version = 3u64;
+        let min_version = 1u64;
+        let enc_bit = 55u64;
+        let invalid = 5u64 | (enc_bit << 24) | (min_version << 32) | (max_version << 48);
+        let valid = 1u64 | (enc_bit << 24) | (min_version << 32) | (max_version << 48);
+
+        let error: Result<SevInfoResponse> = invalid.try_into();
+        assert!(error.is_err());
+
+        let correct: SevInfoResponse = valid.try_into().unwrap();
+        assert_eq!(correct.max_protocol_version, max_version as u16);
+        assert_eq!(correct.min_protocol_version, min_version as u16);
+        assert_eq!(correct.encryption_bit, enc_bit as u8);
+    }
+
+    #[test]
+    fn test_cpuid_request() {
+        let leaf = 54321u32;
+        let register = CpuidRegister::Ecx;
+        let expected = 4u64 | ((leaf as u64) << 32) | ((register as u64) << 30);
+        let request = CpuidRequest { leaf, register };
+        assert_eq!(expected, request.into());
+    }
+
+    #[test]
+    fn test_cpuid_response() {
+        let value = 7531u32;
+        let register = CpuidRegister::Ebx;
+        let invalid = 5u64 | ((value as u64) << 32) | ((register as u64) << 25);
+        let valid = 5u64 | ((value as u64) << 32) | ((register as u64) << 30);
+
+        let error: Result<CpuidResponse> = invalid.try_into();
+        assert!(error.is_err());
+
+        let correct: CpuidResponse = valid.try_into().unwrap();
+        assert_eq!(correct.value, value);
+        assert_eq!(correct.register, register);
+    }
+
+    #[test]
+    fn test_preferred_ghcb_gpa_request() {
+        let request = PreferredGhcbGpaRequest;
+        assert_eq!(16u64, request.into());
+    }
+
+    #[test]
+    fn test_preferred_ghcb_gpa_response() {
+        let page = 97531u64 << 12;
+        let invalid = 0xFu64 | page;
+        let valid = 0x11u64 | page;
+
+        let error: Result<PreferredGhcbGpaResponse> = invalid.try_into();
+        assert!(error.is_err());
+
+        let correct: PreferredGhcbGpaResponse = valid.try_into().unwrap();
+        assert_eq!(correct.ghcb_gpa, page as usize);
+    }
+
+    #[test]
+    fn test_register_ghcb_gpa_request() {
+        // Page must be 4KiB aligned.
+        let invalid_page = 97531usize << 11;
+        assert!(RegisterGhcbGpaRequest::new(invalid_page).is_err());
+
+        let valid_page = 97531usize << 12;
+        let msr_value: u64 = RegisterGhcbGpaRequest::new(valid_page).unwrap().into();
+        assert_eq!((valid_page as u64) | 0x12, msr_value);
+    }
+
+    #[test]
+    fn test_register_ghcb_gpa_response() {
+        let page = 222221u64 << 12;
+        let invalid = 0x12u64 | page;
+        let valid = 0x13u64 | page;
+
+        let error: Result<RegisterGhcbGpaResponse> = invalid.try_into();
+        assert!(error.is_err());
+
+        let correct: RegisterGhcbGpaResponse = valid.try_into().unwrap();
+        assert_eq!(correct.ghcb_gpa, page);
+    }
+
+    #[test]
+    fn test_snp_page_state_change_request() {
+        let assignment = PageAssignment::Shared;
+        // Page must be 4KiB aligned.
+        let invalid_page = 1111111usize << 11;
+        assert!(SnpPageStateChangeRequest::new(invalid_page, assignment).is_err());
+        // Page address can only use 52 bits.
+        let invalid_page = 1usize << 52;
+        assert!(SnpPageStateChangeRequest::new(invalid_page, assignment).is_err());
+
+        let valid_page = 1111111usize << 12;
+        let msr_value: u64 = SnpPageStateChangeRequest::new(valid_page, assignment)
+            .unwrap()
+            .into();
+        assert_eq!(
+            (valid_page as u64) | ((assignment as u64) << 52) | 0x14,
+            msr_value
+        );
+    }
+
+    #[test]
+    fn test_snp_page_state_change_response() {
+        let error_code = 1u64;
+        let invalid = 0x15u64 | (error_code << 31);
+        let invalid2 = 0x16u64 | (error_code << 32);
+        let valid = 0x15u64 | (error_code << 32);
+
+        let error: Result<SnpPageStateChangeResponse> = invalid.try_into();
+        assert!(error.is_err());
+        let error: Result<SnpPageStateChangeResponse> = invalid2.try_into();
+        assert!(error.is_err());
+
+        let correct: SnpPageStateChangeResponse = valid.try_into().unwrap();
+        assert_eq!(correct.error_code, error_code as u32);
+    }
+
+    #[test]
+    fn test_hypervisor_feature_support_request() {
+        let request = HypervisorFeatureSupportRequest;
+        assert_eq!(0x80u64, request.into());
+    }
+
+    #[test]
+    fn test_hypervisor_feature_support_response() {
+        let expected = HypervisorFeatureSupportResponse::SEV_SNP
+            .union(HypervisorFeatureSupportResponse::AP_CREATION);
+        let invalid = 81u64 | (expected.bits() << 12);
+        let valid = 0x81u64 | (expected.bits() << 12);
+
+        let error: Result<HypervisorFeatureSupportResponse> = invalid.try_into();
+        assert!(error.is_err());
+
+        let correct: HypervisorFeatureSupportResponse = valid.try_into().unwrap();
+        assert_eq!(correct, expected);
+    }
+
+    #[test]
+    fn test_termination_request() {
+        let request = TerminationRequest {
+            reason: TerminationReason::GhcbProtocolVersion,
+        };
+        let expected = 0x100u64 | ((TerminationReason::GhcbProtocolVersion as u64) << 16);
+        assert_eq!(expected, request.into());
+    }
 }
