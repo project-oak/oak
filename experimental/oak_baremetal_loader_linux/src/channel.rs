@@ -17,46 +17,44 @@
 use crate::proto::oak::sandbox::runtime::{Request, Response};
 use anyhow::anyhow;
 use byteorder::{BigEndian, ByteOrder};
-use libc::c_int;
-use log::info;
 use prost::Message;
 use ringbuf::{Consumer, Producer, RingBuffer};
 use std::{
     io::{Cursor, Read, Write},
-    os::unix::io::FromRawFd,
+    mem::size_of,
 };
-use vsock::VsockStream;
 
 const BUFFER_SIZE: usize = 65536;
 
-pub struct Channel {
-    stream: VsockStream,
+pub struct Channel<T>
+where
+    T: Read + Write
+{
+    stream: T,
     read_buffer_producer: Producer<u8>,
     read_buffer_consumer: Consumer<u8>,
 }
 
-impl Channel {
-    pub fn create(file_descriptor: c_int) -> anyhow::Result<Self> {
-        let stream = unsafe { VsockStream::from_raw_fd(file_descriptor) };
-        info!(
-            "Connected to the {}",
-            stream
-                .peer_addr()
-                .map_err(|error| anyhow!("Couldn't get peer address: {:?}", error))?
-        );
-
+impl<T> Channel<T>
+where
+    T: Read + Write
+{
+    pub fn new(stream: T) -> Self {
         let read_buffer = RingBuffer::<u8>::new(BUFFER_SIZE);
         let (read_buffer_producer, read_buffer_consumer) = read_buffer.split();
 
-        Ok(Self {
+        Self {
             stream,
             read_buffer_producer,
             read_buffer_consumer,
-        })
+        }
     }
 }
 
-impl oak_baremetal_communication_channel::Read for Channel {
+impl<T> oak_baremetal_communication_channel::Read for Channel<T>
+where
+    T: std::io::Read + std::io::Write
+{
     fn read(&mut self, data: &mut [u8]) -> anyhow::Result<()> {
         let mut buffer = vec![0; BUFFER_SIZE];
         let read_bytes = self
@@ -70,7 +68,7 @@ impl oak_baremetal_communication_channel::Read for Channel {
             // Read multiple size:value pairs from the buffer.
             while !cursor.is_empty() {
                 // Read message size.
-                let mut size_buffer: Vec<u8> = vec![0; std::mem::size_of::<u64>()];
+                let mut size_buffer: Vec<u8> = vec![0; size_of::<u64>()];
                 cursor.read_exact(&mut size_buffer).map_err(|error| {
                     anyhow!(
                         "Couldn't read Protobuf message size from cached buffer: {:?}",
@@ -102,10 +100,13 @@ impl oak_baremetal_communication_channel::Read for Channel {
     }
 }
 
-impl oak_baremetal_communication_channel::Write for Channel {
+impl<T> oak_baremetal_communication_channel::Write for Channel<T>
+where
+    T: Read + Write
+{
     fn write(&mut self, data: &[u8]) -> anyhow::Result<()> {
         // Write message size.
-        let mut size_buffer: Vec<u8> = vec![0; std::mem::size_of::<u64>()];
+        let mut size_buffer: Vec<u8> = vec![0; size_of::<u64>()];
         BigEndian::write_u64(&mut size_buffer, data.len() as u64);
         self.stream
             .write_all(&size_buffer)

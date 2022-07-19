@@ -27,20 +27,37 @@ pub mod proto {
 }
 pub mod channel;
 
+#[cfg(test)]
+mod tests;
+
 use crate::channel::Channel;
 use libc::c_int;
+use log::info;
 use oak_remote_attestation::handshaker::{
     AttestationBehavior, EmptyAttestationGenerator, EmptyAttestationVerifier,
 };
+use std::os::unix::io::FromRawFd;
+use vsock::VsockStream;
 
 const FILE_DESCRIPTOR: c_int = 1023;
 
+pub fn create_vsock_stream(file_descriptor: c_int) -> anyhow::Result<VsockStream> {
+    let stream = unsafe { VsockStream::from_raw_fd(file_descriptor) };
+    Ok(stream)
+}
+
 fn main() {
+    let stream = create_vsock_stream(FILE_DESCRIPTOR).expect("Couldn't create channel");
+    info!(
+        "Connected to the {}",
+        stream
+            .peer_addr()
+            .expect("Couldn't get peer address")
+    );
+
     let attestation_behavior =
         AttestationBehavior::create(EmptyAttestationGenerator, EmptyAttestationVerifier);
+    let channel = Box::new(Channel::new(stream));
     oak_baremetal_runtime::framing::handle_frames(
-        Box::new(Channel::create(FILE_DESCRIPTOR).expect("Couldn't create channel")),
-        attestation_behavior,
-    )
-    .expect("Couldn't handle frames");
+        channel, attestation_behavior).expect("Couldn't handle frames");
 }
