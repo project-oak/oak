@@ -465,6 +465,12 @@ pub fn read_msr() -> u64 {
 
 #[cfg(test)]
 mod tests {
+    //! These tests check the conversion logic between convenience request and response structs, and
+    //! the u64 values used for the MSR protocol.
+    //!
+    //! See section 2.3.1 in <https://developer.amd.com/wp-content/resources/56421.pdf> for details of
+    //! how the requests and responses are represented as u64 values.
+
     use super::*;
 
     #[test]
@@ -591,13 +597,13 @@ mod tests {
     #[test]
     fn test_snp_page_state_change_response() {
         let error_code = 1u64;
-        let invalid = 0x15u64 | (error_code << 31);
-        let invalid2 = 0x16u64 | (error_code << 32);
+        let invalid_misaligned_data = 0x15u64 | (error_code << 31);
+        let invalid_info = 0x16u64 | (error_code << 32);
         let valid = 0x15u64 | (error_code << 32);
 
-        let error: Result<SnpPageStateChangeResponse> = invalid.try_into();
+        let error: Result<SnpPageStateChangeResponse> = invalid_misaligned_data.try_into();
         assert!(error.is_err());
-        let error: Result<SnpPageStateChangeResponse> = invalid2.try_into();
+        let error: Result<SnpPageStateChangeResponse> = invalid_info.try_into();
         assert!(error.is_err());
 
         let correct: SnpPageStateChangeResponse = valid.try_into().unwrap();
