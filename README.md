@@ -1,4 +1,4 @@
-# Project Oak
+# ![Project Oak](docs/oak-logo/svgs/oak-logo.svg?sanitize=true)
 
 [![Build Status](https://img.shields.io/github/workflow/status/project-oak/oak/Continuous%20Integration/main?style=for-the-badge)](https://github.com/project-oak/oak/actions?query=workflow%3A%22Continuous+Integration%22+branch%3Amain)
 [![codecov](https://img.shields.io/codecov/c/github/project-oak/oak?style=for-the-badge)](https://codecov.io/gh/project-oak/oak)
