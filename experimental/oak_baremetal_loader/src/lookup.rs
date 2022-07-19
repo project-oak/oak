@@ -14,6 +14,7 @@
 // limitations under the License.
 //
 
+use anyhow::anyhow;
 use hashbrown::HashMap;
 use oak_baremetal_communication_channel::schema;
 use std::fs;
