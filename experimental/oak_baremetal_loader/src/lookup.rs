@@ -54,7 +54,7 @@ pub fn load_lookup_data(
     let bytes = fs::read(&file_path).map_err(|error| {
         anyhow!(
             "Couldn't read the lookup data file {}: {}",
-            file_path,
+            file_path.display(),
             error
         )
     })?;
