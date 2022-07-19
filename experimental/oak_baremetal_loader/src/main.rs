@@ -176,11 +176,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let comms = vmm.create_comms_channel().await?;
 
-    // Use a bmrng channel for serial communication. The good thing about spawning a separate
-    // task for the serial communication is that it serializes (no pun intended) the communication,
-    // as right now we don't have any mechanisms to track multiple requests in flight.
-    let (tx, mut rx) = bmrng::unbounded_channel::<Vec<u8>, Result<Vec<u8>, oak_idl::Status>>();
+    // A message based communication channel that permits other parts of the
+    // untrusted loader to send requests to the tasks that handles communicating
+    // with the runtime and receive responses. Requests and (ok) responses
+    // sent over this channel represent flatbuffer encoded messages. This is
+    // done as it is not possible to send the flatbuffer Message structs
+    // themselves over the channel.
+    let (request_dispatcher, mut request_receiver) =
+        bmrng::unbounded_channel::<Vec<u8>, Result<Vec<u8>, oak_idl::Status>>();
 
+    // Spawn task that handles communication with the trusted runtime.
     tokio::spawn(async move {
         let mut client = {
             let comms_channel = Box::new(CommsChannel { inner: comms });
@@ -235,29 +240,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             panic!("failed to initialize the runtime: {:?}", err)
         }
 
-        let mut respond = |input: Vec<u8>| -> Result<Vec<u8>, oak_idl::Status> {
-            let request_message = oak_idl::utils::Message::<schema::UserRequest>::from_vec(input)
-                .map_err(|err| {
-                oak_idl::Status::new_with_message(oak_idl::StatusCode::Internal, err.to_string())
-            })?;
-
-            let response_message = client.handle_user_request(request_message.buf())?;
-
-            let response_body = response_message
-                .get()
-                .body()
-                .ok_or_else(|| oak_idl::Status::new(oak_idl::StatusCode::Internal))?;
-
-            Ok(response_body.to_vec())
-        };
-
-        while let Ok((input, responder)) = rx.recv().await {
-            let response = respond(input);
-            responder.respond(response).unwrap();
+        while let Ok((encoded_request, response_dispatcher)) = request_receiver.recv().await {
+            let response = client
+                .handle_user_request(&encoded_request)
+                .map(|oak_idl_message| oak_idl_message.into_vec());
+            response_dispatcher.respond(response).unwrap();
         }
     });
 
-    let server_future = server::server("127.0.0.1:8080".parse()?, tx);
+    let server_future = server::server("127.0.0.1:8080".parse()?, request_dispatcher);
 
     // Wait until something dies or we get a signal to terminate.
     tokio::select! {

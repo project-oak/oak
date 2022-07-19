@@ -19,7 +19,7 @@ use futures::Future;
 use oak_baremetal_communication_channel::schema;
 use oak_remote_attestation_sessions::{SessionId, SESSION_ID_LENGTH};
 use std::net::SocketAddr;
-use tonic::{transport::Server, Request, Response, Status};
+use tonic::{transport::Server, Request, Response};
 
 pub mod proto {
     tonic::include_proto!("oak.session.unary.v1");
@@ -65,6 +65,25 @@ fn encode_request(unary_request: UnaryRequest) -> Result<Vec<u8>, oak_idl::Statu
     Ok(request_message.into_vec())
 }
 
+fn decode_response(
+    encoded_response: Result<Vec<u8>, oak_idl::Status>,
+) -> Result<UnaryResponse, tonic::Status> {
+    let encoded_response_data =
+        encoded_response.map_err(|err| tonic::Status::internal(format!("{:?}", err)))?;
+    let response =
+        oak_idl::utils::Message::<schema::UserRequestResponse>::from_vec(encoded_response_data)
+            .map_err(|err| tonic::Status::internal(err.to_string()))?;
+
+    let response_body = response
+        .get()
+        .body()
+        .ok_or_else(|| tonic::Status::internal(""))?;
+
+    Ok(UnaryResponse {
+        body: response_body.to_vec(),
+    })
+}
+
 pub struct EchoImpl {
     channel: UnboundedRequestSender<Vec<u8>, Result<Vec<u8>, oak_idl::Status>>,
 }
@@ -74,23 +93,18 @@ impl UnarySession for EchoImpl {
     async fn message(
         &self,
         request: Request<UnaryRequest>,
-    ) -> Result<Response<UnaryResponse>, Status> {
+    ) -> Result<Response<UnaryResponse>, tonic::Status> {
         let request = request.into_inner();
-        let session_request = encode_request(request)
-            .map_err(|err| Status::invalid_argument(format!("{:?}", err)))?;
-
-        // There's two nested errors: one for communicating over the channel, and one for
-        // communicating over the underlying device.
-        // We probably want to log the error in the future and serve something more
-        // ambiguous to the end user, but for now that'll do.
-        let body = self
+        let encoded_request = encode_request(request)
+            .map_err(|err| tonic::Status::invalid_argument(format!("{:?}", err)))?;
+        let encoded_response = self
             .channel
-            .send_receive(session_request)
+            .send_receive(encoded_request)
             .await
-            .map_err(|err| Status::internal(format!("{:?}", err)))?
-            .map_err(|err| Status::internal(format!("{:?}", err)))?;
+            .map_err(|err| tonic::Status::internal(format!("{:?}", err)))?;
+        let response = decode_response(encoded_response)?;
 
-        Ok(Response::new(UnaryResponse { body }))
+        Ok(Response::new(response))
     }
 }
 
