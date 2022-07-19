@@ -27,7 +27,7 @@ use std::{
 };
 use tokio::time::Duration;
 use trusted_shuffler::{RequestHandler, TrustedShuffler};
-use trusted_shuffler_common::send_request;
+use trusted_shuffler_common::send_http_request;
 
 struct HttpRequestHandler {
     backend_url: String,
@@ -36,7 +36,7 @@ struct HttpRequestHandler {
 #[async_trait]
 impl RequestHandler for HttpRequestHandler {
     async fn handle(&self, request: Vec<u8>) -> anyhow::Result<Vec<u8>> {
-        let response = send_request(&self.backend_url, Method::POST, &request).await;
+        let response = send_http_request(&self.backend_url, Method::POST, &request).await;
         response.map_or_else(
             |error| {
                 Err(anyhow!(

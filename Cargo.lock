@@ -5657,7 +5657,10 @@ dependencies = [
  "http",
  "hyper",
  "log",
+ "prost 0.10.4",
  "tokio",
+ "tonic",
+ "tonic-build",
 ]
 
 [[package]]
@@ -5683,7 +5686,10 @@ dependencies = [
  "anyhow",
  "http",
  "hyper",
+ "prost 0.10.4",
  "tokio",
+ "tonic",
+ "tonic-build",
 ]
 
 [[package]]

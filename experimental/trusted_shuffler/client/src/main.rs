@@ -23,7 +23,7 @@ use hyper::Method;
 use primes::{PrimeSet, Sieve};
 use std::time::{Duration, Instant};
 use tokio::time::sleep;
-use trusted_shuffler_common::send_request;
+use trusted_shuffler_common::{send_grpc_request, send_http_request};
 
 #[derive(Parser, Clone)]
 #[clap(about = "Client for Trusted Shuffler Example")]
@@ -42,6 +42,8 @@ pub struct Opt {
         default_value = "1"
     )]
     seconds: u32,
+    #[structopt(long, help = "Use gRPC client")]
+    use_grpc: bool,
 }
 
 #[tokio::main(flavor = "multi_thread")]
@@ -62,7 +64,7 @@ async fn main() -> anyhow::Result<()> {
 
     let start_time = Instant::now();
 
-    for (n, p) in Sieve::new()
+    for (n, prime_to_send) in Sieve::new()
         .iter()
         .take((target_qps * seconds) as usize)
         .enumerate()
@@ -70,29 +72,34 @@ async fn main() -> anyhow::Result<()> {
         let server_url = opt.server_url.clone();
 
         // We currently spawn a new client for every new request. Alternatively we could re-use the
-        // client for every round.
+        // client for every round. We measure time when the request is sent and the response
+        // received and return the duration.
         clients.push(tokio::spawn(async move {
-            let request = format!("{}", p);
+            // Prepare the request.
+            let request = format!("{}", prime_to_send);
             let request_sent = start_time.elapsed();
-            log::info!("Client Request {}", p);
+            log::info!("Client Request {} at {:?}", prime_to_send, request_sent);
 
-            let url = format!("{}/request", server_url);
-            let response = send_request(&url, Method::POST, request.as_bytes())
-                .await
-                .context("Couldn't receive response");
-
+            // Send the request either by gRPC or HTTP.
+            let response = if opt.use_grpc {
+                send_grpc_request(server_url, request.as_bytes()).await
+            } else {
+                let url = format!("{}/request", server_url);
+                send_http_request(&url, Method::POST, request.as_bytes()).await
+            }
+            .context("Couldn't receive response");
             let response_received = start_time.elapsed();
 
+            // Parse and check the response.
             let parsed_response =
                 String::from_utf8(response.unwrap()).context("Couldn't decode response body");
-
-            assert_eq!(parsed_response.unwrap(), p.to_string());
-
             log::info!(
-                "Client Response {}: {:?}",
-                p,
-                response_received - request_sent,
+                "Client Response {} at {:?}",
+                prime_to_send,
+                response_received,
             );
+            assert_eq!(parsed_response.unwrap(), prime_to_send.to_string());
+
             response_received - request_sent
         }));
 
