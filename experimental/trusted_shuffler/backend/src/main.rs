@@ -18,13 +18,24 @@
 
 use anyhow::Context;
 use clap::Parser;
+
+use echo::{
+    echo_server::{Echo, EchoServer},
+    EchoRequest, EchoResponse,
+};
+
 use futures_util::FutureExt;
 use hyper::{
     service::{make_service_fn, service_fn},
     Body, Method, Request, Response, Server, StatusCode,
 };
 use log::info;
-use std::time::Instant;
+use std::{net::SocketAddr, time::Instant};
+use tonic::{transport::Server as TonicServer, Status};
+
+pub mod echo {
+    tonic::include_proto!("experimental.trusted_shuffler.echo");
+}
 
 #[derive(Parser, Clone)]
 #[clap(about = "Backend for Trusted Shuffler Example")]
@@ -35,6 +46,24 @@ pub struct Opt {
         default_value = "[::]:8888"
     )]
     listen_address: String,
+}
+
+#[derive(Debug, Default)]
+pub struct MyEcho {}
+
+#[tonic::async_trait]
+impl Echo for MyEcho {
+    async fn echo(
+        &self,
+        request: tonic::Request<EchoRequest>,
+    ) -> Result<tonic::Response<EchoResponse>, Status> {
+        let request = request.into_inner();
+        let reply = EchoResponse {
+            echoed_value: request.value_to_echo.into(),
+        };
+
+        Ok(tonic::Response::new(reply))
+    }
 }
 
 async fn handler(request: Request<Body>) -> Result<Response<Body>, hyper::Error> {
@@ -83,8 +112,23 @@ async fn main() -> anyhow::Result<()> {
         .parse()
         .context("Couldn't parse address")?;
 
-    let service = make_service_fn(|_| async { Ok::<_, hyper::Error>(service_fn(handler)) });
+    // start_http_backend(address).await
+    start_grpc_backend(address).await
+}
 
+async fn start_grpc_backend(address: SocketAddr) -> anyhow::Result<()> {
+    let echoer = MyEcho::default();
+
+    TonicServer::builder()
+        .add_service(EchoServer::new(echoer))
+        .serve(address)
+        .await?;
+
+    Ok(())
+}
+
+async fn start_http_backend(address: SocketAddr) -> anyhow::Result<()> {
+    let service = make_service_fn(|_| async { Ok::<_, hyper::Error>(service_fn(handler)) });
     info!("Starting the backend server at {:?}", address);
     let server = Server::bind(&address).serve(service);
 
@@ -96,6 +140,5 @@ async fn main() -> anyhow::Result<()> {
             info!("Stopping the backend server");
         },
     );
-
     Ok(())
 }

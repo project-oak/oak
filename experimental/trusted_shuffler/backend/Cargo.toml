@@ -23,6 +23,7 @@ hyper = { version = "*", features = [
   "server"
 ] }
 log = "*"
+prost = "0.10"
 tokio = { version = "*", features = [
   "fs",
   "macros",
@@ -31,3 +32,7 @@ tokio = { version = "*", features = [
   "sync",
   "rt-multi-thread"
 ] }
+tonic = { version = "0.7" }
+
+[build-dependencies]
+tonic-build = "0.7"

@@ -23,7 +23,7 @@ use hyper::Method;
 use primes::{PrimeSet, Sieve};
 use std::time::{Duration, Instant};
 use tokio::time::sleep;
-use trusted_shuffler_common::send_request;
+use trusted_shuffler_common::{send_grpc_request, send_request};
 
 #[derive(Parser, Clone)]
 #[clap(about = "Client for Trusted Shuffler Example")]
@@ -72,7 +72,8 @@ async fn main() -> anyhow::Result<()> {
         // We currently spawn a new client for every new request. Alternatively we could re-use the
         // client for every round.
         clients.push(tokio::spawn(async move {
-            http_request(prime, server_url, start_time).await
+            grpc_request(prime, server_url, start_time).await
+            // http_request(prime, server_url, start_time).await
         }));
 
         // Compute current round from queries already sent.
@@ -147,6 +148,35 @@ async fn http_request(prime_to_send: u64, server_url: String, start_time: Instan
 
         let url = format!("{}/request", server_url);
         let response = send_request(&url, Method::POST, request.as_bytes())
+            .await
+            .context("Couldn't receive response");
+
+        let response_received = start_time.elapsed();
+
+        let parsed_response =
+            String::from_utf8(response.unwrap()).context("Couldn't decode response body");
+
+        assert_eq!(parsed_response.unwrap(), prime_to_send.to_string());
+
+        log::info!(
+            "Client Response {}: {:?}",
+            prime_to_send,
+            response_received - request_sent,
+        );
+        response_received - request_sent
+    }
+}
+
+// Send a gRPC request of `prime_to_send` to `server_url` taking time measurement from
+// `start_time` and return duration until response is received.
+async fn grpc_request(prime_to_send: u64, server_url: String, start_time: Instant) -> Duration {
+    {
+        let request = format!("{}", prime_to_send);
+        let request_sent = start_time.elapsed();
+        log::info!("Client Request {}", prime_to_send);
+
+        let url = format!("{}", server_url);
+        let response = send_grpc_request(url.clone(), request.as_bytes())
             .await
             .context("Couldn't receive response");
 
