@@ -23,9 +23,13 @@ package(
 
 java_library(
     name = "client",
-    srcs = glob([
-        "src/main/java/com/google/oak/client/*.java",
-        "src/main/java/com/google/oak/client/providers/*.java",
-    ]),
+    srcs = glob(["src/main/java/com/google/oak/client/*.java"]),
     deps = [],
+)
+
+java_test(
+    name = "client_test",
+    srcs = glob(["src/test/java/com/google/oak/client/*.java"]),
+    test_class = "com.google.oak.client.OakClientTest",
+    deps = [":client"],
 )
