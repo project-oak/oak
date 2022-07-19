@@ -1,4 +1,4 @@
-![Trusted Shuffler](/docs/oak-logo/svgs/oak-trusted-shuffler.svg?sanitize=true)
+# ![Trusted Shuffler](/docs/oak-logo/svgs/oak-trusted-shuffler.svg?sanitize=true)
 
 This directory contains a Trusted Shuffler example application.
 
