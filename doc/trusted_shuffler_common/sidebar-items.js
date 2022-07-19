@@ -1,1 +1,1 @@
-initSidebarItems({"fn":[["send_request",""]]});
+initSidebarItems({"fn":[["send_grpc_request",""],["send_http_request",""]],"mod":[["echo",""]]});
