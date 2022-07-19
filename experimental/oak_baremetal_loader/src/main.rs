@@ -202,8 +202,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             schema::TrustedRuntimeClient::new(client_handler)
         };
 
-        let lookup_data = lookup::load_lookup_data(&cli.lookup_data).unwrap();
-        let encoded_lookup_data = lookup::encode_lookup_data(lookup_data);
+        let lookup_data =
+            lookup::load_lookup_data(&cli.lookup_data).expect("failed to load lookup data");
+        let encoded_lookup_data =
+            lookup::encode_lookup_data(lookup_data).expect("failed to encode lookup data");
 
         if let Err(err) = client.update_lookup_data(encoded_lookup_data.buf()) {
             panic!("failed to send lookup data: {:?}", err)

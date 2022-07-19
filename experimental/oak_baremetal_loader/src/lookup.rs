@@ -20,7 +20,7 @@ use std::fs;
 
 pub fn encode_lookup_data<'a>(
     mut data: HashMap<Vec<u8>, Vec<u8>>,
-) -> oak_idl::utils::Message<schema::LookupData<'a>> {
+) -> anyhow::Result<oak_idl::utils::Message<schema::LookupData<'a>>> {
     let mut builder = oak_idl::utils::MessageBuilder::default();
     let entries: Vec<flatbuffers::WIPOffset<schema::LookupDataEntry>> = data
         .drain()
@@ -39,9 +39,12 @@ pub fn encode_lookup_data<'a>(
     let items = builder.create_vector(&entries);
     let message =
         schema::LookupData::create(&mut builder, &schema::LookupDataArgs { items: Some(items) });
-    builder
-        .finish(message)
-        .expect("errored when creating lookup data update message")
+    builder.finish(message).map_err(|error| {
+        anyhow!(
+            "errored when encoding the lookup data as a flatbuffer message: {}",
+            error
+        )
+    })
 }
 
 pub fn load_lookup_data(
