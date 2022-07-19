@@ -145,7 +145,7 @@ impl Echo for MyEcho {
         let request_start = Instant::now();
         log::info!("Backend Request: {:?},{:?}", request, request_start);
 
-        let echoed_value = request.value_to_echo.into();
+        let echoed_value = request.value_to_echo;
         Ok(tonic::Response::new(EchoResponse { echoed_value }))
     }
 }
