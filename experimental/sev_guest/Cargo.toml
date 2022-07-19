@@ -6,6 +6,9 @@ edition = "2021"
 license = "Apache-2.0"
 
 [dependencies]
+anyhow = { version = "*", default-features = false }
 bitflags = "*"
 static_assertions = "*"
 strum = { version = "*", default-features = false, features = ["derive"] }
+zerocopy = "*"
+x86_64 = "*"

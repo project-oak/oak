@@ -2877,6 +2877,7 @@ dependencies = [
  "log",
  "oak_baremetal_communication_channel",
  "oak_baremetal_runtime",
+ "oak_baremetal_simple_io",
  "oak_remote_attestation",
  "oak_remote_attestation_amd",
  "rust-hypervisor-firmware-boot",
@@ -2930,6 +2931,14 @@ dependencies = [
  "oak_logger",
  "oak_remote_attestation",
  "oak_remote_attestation_sessions",
+]
+
+[[package]]
+name = "oak_baremetal_simple_io"
+version = "0.1.0"
+dependencies = [
+ "bitflags",
+ "x86_64",
 ]
 
 [[package]]
@@ -4640,9 +4649,12 @@ dependencies = [
 name = "sev_guest"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "bitflags",
  "static_assertions",
  "strum",
+ "x86_64",
+ "zerocopy",
 ]
 
 [[package]]
@@ -5219,10 +5231,11 @@ checksum = "cda74da7e1a664f795bb1f8a87ec406fb89a02522cf6e50620d016add6dbbf5c"
 
 [[package]]
 name = "tokio"
-version = "1.19.2"
+version = "1.20.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c51a52ed6686dd62c320f9b89299e9dfb46f730c7a48e635c19f21d116cb1439"
+checksum = "57aec3cfa4c296db7255446efb4928a6be304b431a806216105542a67b6ca82e"
 dependencies = [
+ "autocfg",
  "bytes",
  "libc",
  "memchr",
@@ -5657,7 +5670,10 @@ dependencies = [
  "http",
  "hyper",
  "log",
+ "prost 0.10.4",
  "tokio",
+ "tonic",
+ "tonic-build",
 ]
 
 [[package]]
@@ -5683,7 +5699,10 @@ dependencies = [
  "anyhow",
  "http",
  "hyper",
+ "prost 0.10.4",
  "tokio",
+ "tonic",
+ "tonic-build",
 ]
 
 [[package]]
@@ -6666,6 +6685,27 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "56c1936c4cc7a1c9ab21a1ebb602eb942ba868cbd44a99cb7cdc5892335e1c85"
 dependencies = [
  "linked-hash-map",
+]
+
+[[package]]
+name = "zerocopy"
+version = "0.6.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "332f188cc1bcf1fe1064b8c58d150f497e697f49774aa846f2dc949d9a25f236"
+dependencies = [
+ "byteorder",
+ "zerocopy-derive",
+]
+
+[[package]]
+name = "zerocopy-derive"
+version = "0.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a0fbc82b82efe24da867ee52e015e58178684bd9dd64c34e66bdf21da2582a9f"
+dependencies = [
+ "proc-macro2",
+ "syn",
+ "synstructure",
 ]
 
 [[package]]

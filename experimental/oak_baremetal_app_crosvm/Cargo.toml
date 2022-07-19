@@ -16,3 +16,8 @@ static_assertions = "*"
 flatbuffers = { git = "https://github.com/jul-sh/flatbuffers.git", rev = "a07ddee936737da89aeb5a496f9742a805537188" }
 # Ensure no_std compatibility. Dependency of flatbuffers. TODO(#2920): remove once https://github.com/bbqsrc/thiserror-core2/pull/3 is merged.
 thiserror_core2 = { git = "https://github.com/jul-sh/thiserror-core2.git", rev = "b99e1a0106623cbbd12cbb5562d01df7a3fdc22e" }
+
+[[bin]]
+name = "oak_baremetal_app_crosvm"
+test = false
+bench = false

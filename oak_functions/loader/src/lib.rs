@@ -53,10 +53,11 @@ mod tests;
 // Instantiate BoxedExtensionFactory with Logger from the Oak Functions runtime.
 pub type OakFunctionsBoxedExtensionFactory = Box<dyn ExtensionFactory<Logger>>;
 
-/// Command line options for the Oak loader.
+/// Command line options specificing how to run the Oak Functions Runtime, which are set by the team
+/// operating Oak Functions Runtime as the platform.
 ///
-/// In general, when adding new configuration parameters, they should go in the `Config` struct
-/// instead of here.
+/// On the other hand, set by the team using the Oak Functions Runtime for their business logic,
+/// is the Config.
 #[derive(Parser, Clone, Debug)]
 #[clap(about = "Oak Functions Loader")]
 pub struct Opt {
@@ -65,12 +66,7 @@ pub struct Opt {
         default_value = "8080",
         help = "Port number that the server listens on."
     )]
-    http_listen_port: u16,
-    #[clap(
-        long,
-        help = "Path to a Wasm file to be loaded and executed per invocation. The Wasm module must export a function named `main`."
-    )]
-    wasm_path: String,
+    pub http_listen_port: u16,
     #[clap(
         long,
         help = "Path to a file containing configuration parameters in TOML format."
@@ -101,10 +97,11 @@ async fn background_refresh_lookup_data(
 /// This crate is just a library so this function does not get executed directly by anything, it
 /// needs to be wrapped in the "actual" `main` from a bin crate.
 pub fn lib_main(
-    opt: Opt,
     logger: Logger,
     load_lookup_data_config: LoadLookupDataConfig,
     policy: Option<Policy>,
+    wasm_path: String,
+    http_listen_port: u16,
     extension_factories: Vec<Box<dyn ExtensionFactory<Logger>>>,
 ) -> anyhow::Result<()> {
     tokio::runtime::Builder::new_multi_thread()
@@ -112,26 +109,28 @@ pub fn lib_main(
         .build()
         .unwrap()
         .block_on(async_main(
-            opt,
             logger,
             load_lookup_data_config,
             policy,
+            wasm_path,
+            http_listen_port,
             extension_factories,
         ))
 }
 
 /// Main execution point for the Oak Functions Loader.
 async fn async_main(
-    opt: Opt,
     logger: Logger,
     load_lookup_data_config: LoadLookupDataConfig,
     policy: Option<Policy>,
+    wasm_path: String,
+    http_listen_port: u16,
     extension_factories: Vec<Box<dyn ExtensionFactory<Logger>>>,
 ) -> anyhow::Result<()> {
     let (notify_sender, notify_receiver) = tokio::sync::oneshot::channel::<()>();
 
-    let wasm_module_bytes = fs::read(&opt.wasm_path)
-        .with_context(|| format!("Couldn't read Wasm file {}", &opt.wasm_path))?;
+    let wasm_module_bytes =
+        fs::read(&wasm_path).with_context(|| format!("Couldn't read Wasm file {}", wasm_path))?;
     let mut extensions =
         create_base_extension_factories(load_lookup_data_config, logger.clone()).await?;
 
@@ -147,7 +146,7 @@ async fn async_main(
         .ok_or_else(|| anyhow::anyhow!("a valid policy must be provided"))
         .and_then(|policy| policy.validate())?;
 
-    let address = SocketAddr::from((Ipv6Addr::UNSPECIFIED, opt.http_listen_port));
+    let address = SocketAddr::from((Ipv6Addr::UNSPECIFIED, http_listen_port));
 
     // Start server.
     let server_handle = tokio::spawn(async move {

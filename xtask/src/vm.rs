@@ -49,10 +49,10 @@ impl Variant {
     pub fn binary_path(&self) -> &'static str {
         match self {
             Variant::Qemu => {
-                "./experimental/oak_baremetal_app_qemu/target/target/debug/oak_baremetal_app_qemu"
+                "./experimental/oak_baremetal_app_qemu/target/x86_64-unknown-none/debug/oak_baremetal_app_qemu"
             }
             Variant::Crosvm => {
-                "./experimental/oak_baremetal_app_crosvm/target/target/debug/oak_baremetal_app_crosvm"
+                "./experimental/oak_baremetal_app_crosvm/target/x86_64-unknown-none/debug/oak_baremetal_app_crosvm"
             }
         }
     }

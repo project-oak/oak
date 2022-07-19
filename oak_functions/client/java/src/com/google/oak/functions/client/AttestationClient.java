@@ -206,11 +206,10 @@ public class AttestationClient {
 
     // Send client hello message.
     byte[] clientHello = handshaker.createClientHello();
-    UnaryRequest clientHelloRequest =
-        UnaryRequest.newBuilder()
-            .setBody(ByteString.copyFrom(clientHello))
-            .setSessionId(sessionId)
-            .build();
+    UnaryRequest clientHelloRequest = UnaryRequest.newBuilder()
+                                          .setBody(ByteString.copyFrom(clientHello))
+                                          .setSessionId(sessionId)
+                                          .build();
 
     // Receive server attestation identity containing server's ephemeral public key.
     UnaryResponse serverIdentityResponse = stub.message(clientHelloRequest);
@@ -220,11 +219,10 @@ public class AttestationClient {
     // - Client attestation identity containing client's ephemeral public key
     // - Encryptor used for decrypting/encrypting messages between client and server
     byte[] clientIdentity = handshaker.processServerIdentity(serverIdentity);
-    UnaryRequest clientIdentityRequest =
-        UnaryRequest.newBuilder()
-            .setBody(ByteString.copyFrom(clientIdentity))
-            .setSessionId(sessionId)
-            .build();
+    UnaryRequest clientIdentityRequest = UnaryRequest.newBuilder()
+                                             .setBody(ByteString.copyFrom(clientIdentity))
+                                             .setSessionId(sessionId)
+                                             .build();
     stub.message(clientIdentityRequest);
     encryptor = handshaker.getEncryptor();
   }
@@ -245,11 +243,10 @@ public class AttestationClient {
     }
 
     byte[] encryptedData = encryptor.encrypt(body);
-    UnaryRequest unaryRequest =
-        UnaryRequest.newBuilder()
-            .setBody(ByteString.copyFrom(encryptedData))
-            .setSessionId(sessionId)
-            .build();
+    UnaryRequest unaryRequest = UnaryRequest.newBuilder()
+                                    .setBody(ByteString.copyFrom(encryptedData))
+                                    .setSessionId(sessionId)
+                                    .build();
 
     UnaryResponse streamingResponse = stub.message(unaryRequest);
 
@@ -277,16 +274,15 @@ public class AttestationClient {
         MethodDescriptor<ReqT, RespT> method, CallOptions callOptions, Channel next) {
       ClientCall<ReqT, RespT> call = next.newCall(method, callOptions);
 
-      call =
-          new ForwardingClientCall.SimpleForwardingClientCall<ReqT, RespT>(call) {
-            @Override
-            public void start(Listener<RespT> responseListener, Metadata headers) {
-              if (apiKey != null && !apiKey.isEmpty()) {
-                headers.put(API_KEY_METADATA_HEADER, apiKey);
-              }
-              super.start(responseListener, headers);
-            }
-          };
+      call = new ForwardingClientCall.SimpleForwardingClientCall<ReqT, RespT>(call) {
+        @Override
+        public void start(Listener<RespT> responseListener, Metadata headers) {
+          if (apiKey != null && !apiKey.isEmpty()) {
+            headers.put(API_KEY_METADATA_HEADER, apiKey);
+          }
+          super.start(responseListener, headers);
+        }
+      };
       return call;
     }
   }

@@ -18,23 +18,74 @@
 
 use anyhow::Context;
 use clap::Parser;
+
+use echo::{
+    echo_server::{Echo, EchoServer},
+    EchoRequest, EchoResponse,
+};
+
 use futures_util::FutureExt;
 use hyper::{
     service::{make_service_fn, service_fn},
     Body, Method, Request, Response, Server, StatusCode,
 };
 use log::info;
-use std::time::Instant;
+use std::{net::SocketAddr, time::Instant};
+use tonic::{transport::Server as TonicServer, Status};
+
+pub mod echo {
+    tonic::include_proto!("experimental.trusted_shuffler.echo");
+}
 
 #[derive(Parser, Clone)]
 #[clap(about = "Backend for Trusted Shuffler Example")]
 pub struct Opt {
     #[structopt(
         long,
-        help = "Address to listen on for the HTTP server",
+        help = "Address to listen on for the server",
         default_value = "[::]:8888"
     )]
     listen_address: String,
+    #[structopt(long, help = "Listen for gRPC requests")]
+    use_grpc: bool,
+}
+
+#[tokio::main(flavor = "multi_thread")]
+async fn main() -> anyhow::Result<()> {
+    env_logger::builder()
+        .format_timestamp(None)
+        .format_level(false)
+        .format_module_path(false)
+        .format_target(false)
+        .init();
+    let opt = Opt::parse();
+
+    let address = opt
+        .listen_address
+        .parse()
+        .context("Couldn't parse address")?;
+
+    if opt.use_grpc {
+        start_grpc_backend(address).await
+    } else {
+        start_http_backend(address).await
+    }
+}
+
+async fn start_http_backend(address: SocketAddr) -> anyhow::Result<()> {
+    let service = make_service_fn(|_| async { Ok::<_, hyper::Error>(service_fn(handler)) });
+    info!("Starting the HTTP backend server at {:?}", address);
+    let server = Server::bind(&address).serve(service);
+
+    tokio::select!(
+        result = server => {
+            result.context("Couldn't run server")?;
+        },
+        () = tokio::signal::ctrl_c().map(|r| r.unwrap()) => {
+            info!("Stopping the backend server");
+        },
+    );
+    Ok(())
 }
 
 async fn handler(request: Request<Body>) -> Result<Response<Body>, hyper::Error> {
@@ -68,34 +119,33 @@ async fn handler(request: Request<Body>) -> Result<Response<Body>, hyper::Error>
     }
 }
 
-#[tokio::main(flavor = "multi_thread")]
-async fn main() -> anyhow::Result<()> {
-    env_logger::builder()
-        .format_timestamp(None)
-        .format_level(false)
-        .format_module_path(false)
-        .format_target(false)
-        .init();
-    let opt = Opt::parse();
+async fn start_grpc_backend(address: SocketAddr) -> anyhow::Result<()> {
+    info!("Starting the gRPC backend server at {:?}", address);
 
-    let address = opt
-        .listen_address
-        .parse()
-        .context("Couldn't parse address")?;
-
-    let service = make_service_fn(|_| async { Ok::<_, hyper::Error>(service_fn(handler)) });
-
-    info!("Starting the backend server at {:?}", address);
-    let server = Server::bind(&address).serve(service);
-
-    tokio::select!(
-        result = server => {
-            result.context("Couldn't run server")?;
-        },
-        () = tokio::signal::ctrl_c().map(|r| r.unwrap()) => {
-            info!("Stopping the backend server");
-        },
-    );
+    let echoer = MyEcho::default();
+    TonicServer::builder()
+        .add_service(EchoServer::new(echoer))
+        .serve(address)
+        .await?;
 
     Ok(())
+}
+
+#[derive(Debug, Default)]
+pub struct MyEcho {}
+
+#[tonic::async_trait]
+impl Echo for MyEcho {
+    async fn echo(
+        &self,
+        request: tonic::Request<EchoRequest>,
+    ) -> Result<tonic::Response<EchoResponse>, Status> {
+        let request = request.into_inner();
+
+        let request_start = Instant::now();
+        log::info!("Backend Request: {:?},{:?}", request, request_start);
+
+        let echoed_value = request.value_to_echo;
+        Ok(tonic::Response::new(EchoResponse { echoed_value }))
+    }
 }

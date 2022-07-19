@@ -19,6 +19,7 @@ members = [
   "experimental/oak_baremetal_kernel",
   "experimental/oak_baremetal_loader",
   "experimental/oak_baremetal_runtime",
+  "experimental/oak_baremetal_simple_io",
   "experimental/sev_guest",
   "experimental/virtio",
   "experimental/vsock/echo",

@@ -15,9 +15,10 @@
 //
 
 use anyhow::{anyhow, Context};
+use echo::{echo_client::EchoClient, EchoRequest};
 use hyper::{Body, Client, Method};
 
-pub async fn send_request(uri: &str, method: Method, body: &[u8]) -> anyhow::Result<Vec<u8>> {
+pub async fn send_http_request(uri: &str, method: Method, body: &[u8]) -> anyhow::Result<Vec<u8>> {
     let client = Client::new();
 
     let request = hyper::Request::builder()
@@ -39,4 +40,17 @@ pub async fn send_request(uri: &str, method: Method, body: &[u8]) -> anyhow::Res
         .context("Couldn't read response body")?
         .to_vec();
     Ok(response_body)
+}
+
+pub mod echo {
+    tonic::include_proto!("experimental.trusted_shuffler.echo");
+}
+
+pub async fn send_grpc_request(uri: String, body: &[u8]) -> anyhow::Result<Vec<u8>> {
+    let mut client = EchoClient::connect(uri).await?;
+    let request = tonic::Request::new(EchoRequest {
+        value_to_echo: body.to_vec(),
+    });
+    let response = client.echo(request).await?.into_inner();
+    Ok(response.echoed_value)
 }

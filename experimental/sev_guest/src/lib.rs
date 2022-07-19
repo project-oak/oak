@@ -19,4 +19,8 @@
 
 #![no_std]
 
+pub mod cpuid;
+pub mod ghcb;
 pub mod instructions;
+pub mod msr;
+pub mod secrets;

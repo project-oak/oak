@@ -24,13 +24,13 @@ import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
 @RunWith(JUnit4.class)
-public class ModelTest {
+public class RekorLogEntryTest {
   @Test
   public void testUnmarshalRekorLogEntry() throws Exception {
     String logEntryPath = "oak_functions/client/testdata/logentry.json";
 
     String json = Files.readString(Path.of(logEntryPath));
-    Model.LogEntry entry = Model.unmarshalLogEntry(json);
+    RekorLogEntry.LogEntry entry = RekorLogEntry.unmarshalLogEntry(json).logEntry;
     Assert.assertTrue(entry.body.length() > 0);
     Assert.assertEquals(entry.logIndex, 1323526);
     Assert.assertEquals(entry.bodyObject.kind, "rekord");
