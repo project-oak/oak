@@ -18,5 +18,6 @@ fn main() {
     prost_build::compile_protos(
         &["experimental/oak_baremetal_loader_linux/proto/runtime.proto"],
         &["../.."],
-    ).expect("Proto compilation failed");
+    )
+    .expect("Proto compilation failed");
 }

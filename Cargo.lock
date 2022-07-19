@@ -2935,6 +2935,7 @@ dependencies = [
  "ciborium-io",
  "libc",
  "log",
+ "oak_baremetal_communication_channel",
  "oak_baremetal_runtime",
  "oak_remote_attestation",
  "prost 0.10.4",
