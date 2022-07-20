@@ -153,6 +153,8 @@
 <span id="148">148</span>
 <span id="149">149</span>
 <span id="150">150</span>
+<span id="151">151</span>
+<span id="152">152</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -171,6 +173,7 @@
 
 <span class="kw">const</span> <span class="ident">CLIENT_PATH</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;./target/debug/oak_functions_client&quot;</span>;
 <span class="kw">const</span> <span class="ident">WASM_PATH</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;./experimental/oak_baremetal_loader/key_value_lookup.wasm&quot;</span>;
+<span class="kw">const</span> <span class="ident">LOOKUP_PATH</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;./experimental/oak_baremetal_loader/mock_lookup_data&quot;</span>;
 
 <span class="kw">use</span> <span class="ident">std::path::Path</span>;
 
@@ -276,6 +279,7 @@
             <span class="macro">format!</span>(<span class="string">&quot;--mode={}&quot;</span>, <span class="ident">variant</span>.<span class="ident">loader_mode</span>()),
             <span class="macro">format!</span>(<span class="string">&quot;--app={}&quot;</span>, <span class="ident">variant</span>.<span class="ident">binary_path</span>()),
             <span class="macro">format!</span>(<span class="string">&quot;--wasm={}&quot;</span>, <span class="ident">WASM_PATH</span>),
+            <span class="macro">format!</span>(<span class="string">&quot;--lookup-data={}&quot;</span>, <span class="ident">LOOKUP_PATH</span>),
         ],
     )
 }
