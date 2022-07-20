@@ -14,7 +14,11 @@
 // limitations under the License.
 //
 
+const SCHEMA: &str = "test_schema.fbs";
+
 fn main() {
-    oak_idl_gen_structs::compile_structs("test_schema.fbs");
-    oak_idl_gen_services::compile_services("test_schema.fbs");
+    println!("cargo:rerun-if-changed={}", SCHEMA);
+    oak_idl_gen_structs::compile_structs(SCHEMA);
+    oak_idl_gen_services::compile_services_servers(SCHEMA);
+    oak_idl_gen_services::compile_services_clients(SCHEMA);
 }

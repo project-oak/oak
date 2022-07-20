@@ -19,5 +19,6 @@ const SCHEMA: &str = "schema.fbs";
 fn main() {
     println!("cargo:rerun-if-changed={}", SCHEMA);
     oak_idl_gen_structs::compile_structs(SCHEMA);
-    oak_idl_gen_services::compile_services(SCHEMA);
+    oak_idl_gen_services::compile_services_servers(SCHEMA);
+    oak_idl_gen_services::compile_services_clients(SCHEMA);
 }
