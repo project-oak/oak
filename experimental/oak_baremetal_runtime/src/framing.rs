@@ -65,7 +65,7 @@ where
         &mut self,
         initialization: &schema::Initialization,
     ) -> Result<
-        oak_idl::utils::Message<oak_baremetal_communication_channel::schema::Empty>,
+        oak_idl::utils::OwnedFlatbuffer<oak_baremetal_communication_channel::schema::Empty>,
         oak_idl::Status,
     > {
         match &mut self.initialization_state {
@@ -95,7 +95,7 @@ where
                 ));
                 self.initialization_state = InitializationState::Initialized(attestation_handler);
                 let response_message = {
-                    let mut builder = oak_idl::utils::MessageBuilder::default();
+                    let mut builder = oak_idl::utils::OwnedFlatbufferBuilder::default();
                     let user_request_response =
                         schema::Empty::create(&mut builder, &schema::EmptyArgs {});
                     builder
@@ -110,7 +110,7 @@ where
     fn handle_user_request(
         &mut self,
         request_message: &schema::UserRequest,
-    ) -> Result<oak_idl::utils::Message<schema::UserRequestResponse>, oak_idl::Status> {
+    ) -> Result<oak_idl::utils::OwnedFlatbuffer<schema::UserRequestResponse>, oak_idl::Status> {
         match &mut self.initialization_state {
             InitializationState::Uninitialized(_attestation_behavior) => Err(oak_idl::Status::new(
                 oak_idl::StatusCode::FailedPrecondition,
@@ -130,7 +130,7 @@ where
                     .map_err(|_err| oak_idl::Status::new(oak_idl::StatusCode::Internal))?;
 
                 let response_message = {
-                    let mut builder = oak_idl::utils::MessageBuilder::default();
+                    let mut builder = oak_idl::utils::OwnedFlatbufferBuilder::default();
                     let body = builder.create_vector::<u8>(&response);
                     let user_request_response = schema::UserRequestResponse::create(
                         &mut builder,
@@ -149,7 +149,7 @@ where
         &mut self,
         lookup_data: &schema::LookupData,
     ) -> Result<
-        oak_idl::utils::Message<oak_baremetal_communication_channel::schema::Empty>,
+        oak_idl::utils::OwnedFlatbuffer<oak_baremetal_communication_channel::schema::Empty>,
         oak_idl::Status,
     > {
         let data = lookup_data
@@ -172,7 +172,7 @@ where
 
         self.lookup_data_manager.update_data(data);
         let response_message = {
-            let mut builder = oak_idl::utils::MessageBuilder::default();
+            let mut builder = oak_idl::utils::OwnedFlatbufferBuilder::default();
             let user_request_response = schema::Empty::create(&mut builder, &schema::EmptyArgs {});
             builder
                 .finish(user_request_response)
