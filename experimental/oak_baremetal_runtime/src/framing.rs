@@ -198,7 +198,7 @@ pub fn handle_frames<G: 'static + AttestationGenerator, V: 'static + Attestation
             .read_request()
             .context("couldn't receive message")?;
         let request_message_invocation_id = request_message.invocation_id;
-        let response = invocation_handler.invoke((&request_message).into());
+        let response = invocation_handler.invoke(request_message.into());
         // For now all messages are sent in sequence, hence the id of the next
         // response always matches that of the preceeding request.
         // TODO(#2848): Allow messages to be sent and received out of order.

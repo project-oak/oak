@@ -37,11 +37,11 @@ impl ServerChannelHandle {
 }
 
 /// Construct a [`oak_idl::Request`] from a [`message::RequestMessage`].
-impl<'a> From<&'a message::RequestMessage> for oak_idl::Request<'a> {
-    fn from(message: &'a message::RequestMessage) -> Self {
+impl From<message::RequestMessage> for oak_idl::Request {
+    fn from(message: message::RequestMessage) -> Self {
         oak_idl::Request {
             method_id: message.method_id,
-            body: &message.body,
+            body: message.body,
         }
     }
 }

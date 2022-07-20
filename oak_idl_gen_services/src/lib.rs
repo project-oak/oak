@@ -151,7 +151,7 @@ fn generate_service(service: &Service) -> anyhow::Result<String> {
         format!(""),
         format!("extern crate alloc;"),
         format!(""),
-        format!("use alloc::{{format, string::ToString}};"),
+        format!("use alloc::{{format, string::ToString, vec::Vec}};"),
         format!(""),
         format!(
             "pub struct {}<T: oak_idl::Handler> {{",
@@ -242,12 +242,12 @@ fn generate_client_method(rpc_call: &RPCCall) -> anyhow::Result<Vec<String>> {
     // much benefit.
     Ok(vec![
         format!(
-            "    pub fn {}(&mut self, request_body: &[u8]) -> Result<oak_idl::utils::Message<{}>, oak_idl::Status> {{",
+            "    pub fn {}(&mut self, request_body: Vec<u8>) -> Result<oak_idl::utils::Message<{}>, oak_idl::Status> {{",
             method_name(rpc_call),
             response_type(rpc_call)
         ),
         format!(
-            "        flatbuffers::root::<{}>(request_body).map_err(|err| oak_idl::Status::new_with_message(oak_idl::StatusCode::Internal, format!(\"Client failed to deserialize the request: {{:?}}\", err)))?;",
+            "        flatbuffers::root::<{}>(&request_body).map_err(|err| oak_idl::Status::new_with_message(oak_idl::StatusCode::Internal, format!(\"Client failed to deserialize the request: {{:?}}\", err)))?;",
             request_type(rpc_call)
         ),
         format!("        let request = oak_idl::Request {{"),
@@ -268,7 +268,7 @@ fn generate_server_handler(rpc_call: &RPCCall) -> anyhow::Result<Vec<String>> {
     Ok(vec![
         format!("            {} => {{", method_id(rpc_call)?),
         format!(
-            "                let request = flatbuffers::root::<{}>(request.body).map_err(|err| oak_idl::Status::new_with_message(oak_idl::StatusCode::Internal, format!(\"Service failed to deserialize the request: {{:?}}\", err)))?;",
+            "                let request = flatbuffers::root::<{}>(&request.body).map_err(|err| oak_idl::Status::new_with_message(oak_idl::StatusCode::Internal, format!(\"Service failed to deserialize the request: {{:?}}\", err)))?;",
             request_type(rpc_call),
         ),
         format!(
