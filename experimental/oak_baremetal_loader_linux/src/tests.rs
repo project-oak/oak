@@ -15,30 +15,31 @@
 //
 
 use crate::channel::Channel;
+use assert_matches::assert_matches;
 use oak_baremetal_communication_channel::{Read, Write};
-use std::{
-    io::{BufReader, BufWriter, Cursor},
-};
+use std::io::Cursor;
 
 const TEST_BUFFER_SIZE: usize = 1024;
 const TEST_MESSAGE: [u8; 8] = [0, 1, 2, 3, 4, 5, 6, 7];
 
 #[test]
 fn test_channel() {
-    let buffer = vec![0; TEST_BUFFER_SIZE];
-    let mut stream = Cursor::new(buffer);
-    let mut channel = Channel::new(stream);
+    let mut write_buffer = vec![0; TEST_BUFFER_SIZE];
+    let write_stream = Cursor::new(&mut write_buffer);
+    let mut write_channel = Channel::new(write_stream);
 
-    let write_result = channel.write(&TEST_MESSAGE);
-    assert!(write_result.is_ok());
+    let write_result = write_channel.write(&TEST_MESSAGE);
+    assert_matches!(write_result, Ok(_));
+    // println!("write_buffer: {:?}", write_buffer);
 
-    // // Start reading from the same stream.
-    // stream.set_position(0);
-
-    // Write the message back to the stream.
+    // Copy data to a new stream.
+    let mut read_buffer: Vec<u8> = write_buffer.to_vec();//.into_iter().filter(|&v| v != 0).collect();
+    // println!("read_buffer: {:?}", read_buffer);
+    let read_stream = Cursor::new(&mut read_buffer);
+    let mut read_channel = Channel::new(read_stream);
 
     let mut message_buffer = vec![0; TEST_MESSAGE.len()];
-    let read_result = channel.read(&mut message_buffer);
-    assert!(read_result.is_ok());
+    let read_result = read_channel.read(&mut message_buffer);
+    assert_matches!(read_result, Ok(_));
     assert_eq!(&TEST_MESSAGE[..], message_buffer);
 }

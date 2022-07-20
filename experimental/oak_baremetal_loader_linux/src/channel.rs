@@ -63,7 +63,7 @@ where
             .map_err(|error| anyhow!("Couldn't read from stream: {:?}", error))?;
         if read_bytes > 0 {
             let current_buffer = &buffer[..read_bytes];
-            let mut cursor = Cursor::new(current_buffer);
+            let mut cursor = Cursor::new(&mut current_buffer);
 
             // Read multiple size:value pairs from the buffer.
             while !cursor.is_empty() {
@@ -87,9 +87,11 @@ where
                         error
                     )
                 })?;
+                println!("current_buffer: {:?}", current_buffer);
 
                 let message = Request::decode(&*message_buffer)
                     .map_err(|error| anyhow!("Couldn't decode Protobuf message: {:?}", error))?;
+                println!("message: {:?}", message);
                 self.read_buffer_producer.push_slice(&message.data);
             }
         }

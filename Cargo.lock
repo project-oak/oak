@@ -2931,6 +2931,7 @@ name = "oak_baremetal_loader_linux"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "assert_matches",
  "byteorder",
  "ciborium-io",
  "libc",
