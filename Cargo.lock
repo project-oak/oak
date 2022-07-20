@@ -674,12 +674,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "ciborium-io"
-version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "346de753af073cc87b52b2083a506b38ac176a44cfb05497b622e27be899b369"
-
-[[package]]
 name = "cipher"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3108,7 +3102,6 @@ dependencies = [
  "anyhow",
  "assert_matches",
  "byteorder",
- "ciborium-io",
  "libc",
  "log",
  "oak_baremetal_communication_channel",
