@@ -19,22 +19,22 @@ use assert_matches::assert_matches;
 use oak_baremetal_communication_channel::{Read, Write};
 use std::io::Cursor;
 
-const TEST_BUFFER_SIZE: usize = 1024;
+const TEST_BUFFER_SIZE: usize = 32;
 const TEST_MESSAGE: [u8; 8] = [0, 1, 2, 3, 4, 5, 6, 7];
 
 #[test]
 fn test_channel() {
     let mut write_buffer = vec![0; TEST_BUFFER_SIZE];
+
     let write_stream = Cursor::new(&mut write_buffer);
     let mut write_channel = Channel::new(write_stream);
 
     let write_result = write_channel.write(&TEST_MESSAGE);
     assert_matches!(write_result, Ok(_));
-    // println!("write_buffer: {:?}", write_buffer);
 
-    // Copy data to a new stream.
-    let mut read_buffer: Vec<u8> = write_buffer.to_vec();//.into_iter().filter(|&v| v != 0).collect();
-    // println!("read_buffer: {:?}", read_buffer);
+    // Copy data to a new stream and remove trailing zeroes.
+    let mut read_buffer: Vec<u8> = write_buffer.into_iter().rev().skip_while(|&x| x == 0).collect();
+    read_buffer.reverse();
     let read_stream = Cursor::new(&mut read_buffer);
     let mut read_channel = Channel::new(read_stream);
 

@@ -26,6 +26,8 @@ use std::{
 
 const BUFFER_SIZE: usize = 65536;
 
+// Implements a Bedebox communication channel encoding in which every message is
+// represented as a `length:value` where `value` is a Protobuf encoded message.
 pub struct Channel<T>
 where
     T: Read + Write
@@ -62,7 +64,7 @@ where
             .read(&mut buffer)
             .map_err(|error| anyhow!("Couldn't read from stream: {:?}", error))?;
         if read_bytes > 0 {
-            let current_buffer = &buffer[..read_bytes];
+            let mut current_buffer = &buffer[..read_bytes];
             let mut cursor = Cursor::new(&mut current_buffer);
 
             // Read multiple size:value pairs from the buffer.
@@ -79,20 +81,22 @@ where
                     .try_into()
                     .map_err(|error| anyhow!("Couldn't convert u64 to usize: {:?}", error))?;
 
-                // Read Protobuf message.
-                let mut message_buffer: Vec<u8> = vec![0; size];
-                cursor.read_exact(&mut message_buffer).map_err(|error| {
-                    anyhow!(
-                        "Couldn't read Protobuf message from cached buffer: {:?}",
-                        error
-                    )
-                })?;
-                println!("current_buffer: {:?}", current_buffer);
+                if size > 0 {
+                    // Read Protobuf message.
+                    let mut message_buffer: Vec<u8> = vec![0; size];
+                    cursor.read_exact(&mut message_buffer).map_err(|error| {
+                        anyhow!(
+                            "Couldn't read Protobuf message from cached buffer: {:?}",
+                            error
+                        )
+                    })?;
 
-                let message = Request::decode(&*message_buffer)
-                    .map_err(|error| anyhow!("Couldn't decode Protobuf message: {:?}", error))?;
-                println!("message: {:?}", message);
-                self.read_buffer_producer.push_slice(&message.data);
+                    let message = Request::decode(&*message_buffer)
+                        .map_err(|error| anyhow!("Couldn't decode Protobuf message: {:?}", error))?;
+                    self.read_buffer_producer.push_slice(&message.data);
+                } else {
+                    return Err(anyhow!("Message size is 0"))
+                }
             }
         }
 
@@ -107,14 +111,7 @@ where
     T: Read + Write
 {
     fn write(&mut self, data: &[u8]) -> anyhow::Result<()> {
-        // Write message size.
-        let mut size_buffer: Vec<u8> = vec![0; size_of::<u64>()];
-        BigEndian::write_u64(&mut size_buffer, data.len() as u64);
-        self.stream
-            .write_all(&size_buffer)
-            .map_err(|error| anyhow!("Couldn't write into stream: {:?}", error))?;
-
-        // Write Protobuf message.
+        // Create Protobuf message.
         let message = Response {
             data: data.to_vec(),
         };
@@ -123,6 +120,14 @@ where
             .encode(&mut message_buffer)
             .map_err(|error| anyhow!("Couldn't encode proto message: {:?}", error))?;
 
+        // Write Protobuf message size.
+        let mut size_buffer: Vec<u8> = vec![0; size_of::<u64>()];
+        BigEndian::write_u64(&mut size_buffer, message_buffer.len() as u64);
+        self.stream
+            .write_all(&size_buffer)
+            .map_err(|error| anyhow!("Couldn't write into stream: {:?}", error))?;
+
+        // Write Protobuf message.
         self.stream
             .write_all(&message_buffer)
             .map_err(|error| anyhow!("Couldn't write into stream: {:?}", error))

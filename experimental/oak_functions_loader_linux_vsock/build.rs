@@ -16,7 +16,7 @@
 
 fn main() {
     prost_build::compile_protos(
-        &["experimental/oak_baremetal_loader_linux/proto/runtime.proto"],
+        &["experimental/oak_functions_loader_linux_vsock/proto/runtime.proto"],
         &["../.."],
     )
     .expect("Proto compilation failed");

@@ -41,6 +41,7 @@ use vsock::VsockStream;
 
 const FILE_DESCRIPTOR: c_int = 1023;
 
+// Connect to the file descriptor created by Bedebox using vsock.
 pub fn create_vsock_stream(file_descriptor: c_int) -> anyhow::Result<VsockStream> {
     let stream = unsafe { VsockStream::from_raw_fd(file_descriptor) };
     Ok(stream)

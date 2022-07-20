@@ -2927,25 +2927,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "oak_baremetal_loader_linux"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "assert_matches",
- "byteorder",
- "ciborium-io",
- "libc",
- "log",
- "oak_baremetal_communication_channel",
- "oak_baremetal_runtime",
- "oak_remote_attestation",
- "prost 0.10.4",
- "prost-build 0.10.4",
- "ringbuf",
- "vsock",
-]
-
-[[package]]
 name = "oak_baremetal_runtime"
 version = "0.1.0"
 dependencies = [
@@ -3118,6 +3099,25 @@ dependencies = [
  "serde_derive",
  "serde_json",
  "toml",
+]
+
+[[package]]
+name = "oak_functions_loader_linux_vsock"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "assert_matches",
+ "byteorder",
+ "ciborium-io",
+ "libc",
+ "log",
+ "oak_baremetal_communication_channel",
+ "oak_baremetal_runtime",
+ "oak_remote_attestation",
+ "prost 0.9.0",
+ "prost-build 0.9.0",
+ "ringbuf",
+ "vsock",
 ]
 
 [[package]]
