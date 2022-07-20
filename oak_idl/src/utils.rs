@@ -23,9 +23,9 @@ use core::{
 
 /// A helper struct to facilitate building a [`OwnedFlatbuffer`].
 ///
-/// [`OwnedFlatbufferBuilder`] delegates to the underlying [`flatbuffers::FlatBufferBuilder`] instance, and
-/// it adds a [`OwnedFlatbufferBuilder::finish`] method that returns a completed [`OwnedFlatbuffer`] instance which
-/// owns the underlying buffer.
+/// [`OwnedFlatbufferBuilder`] delegates to the underlying [`flatbuffers::FlatBufferBuilder`]
+/// instance, and it adds a [`OwnedFlatbufferBuilder::finish`] method that returns a completed
+/// [`OwnedFlatbuffer`] instance which owns the underlying buffer.
 ///
 /// We need to have an instance of [`PhantomData`] in the struct in order to use the type paramter
 /// `T`.
@@ -76,7 +76,9 @@ pub struct OwnedFlatbufferBuilder<'a, T> {
     _phantom: PhantomData<T>,
 }
 
-impl<'a, T: flatbuffers::Verifiable + flatbuffers::Follow<'a>> Default for OwnedFlatbufferBuilder<'a, T> {
+impl<'a, T: flatbuffers::Verifiable + flatbuffers::Follow<'a>> Default
+    for OwnedFlatbufferBuilder<'a, T>
+{
     fn default() -> Self {
         Self {
             buf: flatbuffers::FlatBufferBuilder::default(),
