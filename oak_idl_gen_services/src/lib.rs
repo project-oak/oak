@@ -86,7 +86,8 @@ pub fn compile_services_clients(filename: &str) {
     std::fs::write(&out_file, generated_rust_services_clients).unwrap();
 }
 
-/// Compile matching clients for all services compiled via [`compile_services`].
+/// Compile Rust async client code from the services in the provided flatbuffer file using the
+/// `flatc` binary installed on the system.
 ///
 /// For a service called `TestName`, `compile_services_clients` generates the following objects:
 ///
