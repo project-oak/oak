@@ -21,4 +21,5 @@ fn main() {
     oak_idl_gen_structs::compile_structs(SCHEMA);
     oak_idl_gen_services::compile_services_servers(SCHEMA);
     oak_idl_gen_services::compile_services_clients(SCHEMA);
+    oak_idl_gen_services::compile_services_async_clients(SCHEMA);
 }

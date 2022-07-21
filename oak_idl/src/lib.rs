@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-#![no_std]
+#![cfg_attr(not(feature = "std"), no_std)]
 
 extern crate alloc;
 
@@ -163,4 +163,11 @@ pub struct Request {
 /// output.
 pub trait Handler {
     fn invoke(&mut self, request: Request) -> Result<Vec<u8>, Status>;
+}
+
+/// Async version of [`Handler`] to support async clients.
+#[cfg(feature = "async-clients")]
+#[async_trait::async_trait]
+pub trait AsyncHandler {
+    async fn invoke(&mut self, request: Request) -> Result<Vec<u8>, Status>;
 }
