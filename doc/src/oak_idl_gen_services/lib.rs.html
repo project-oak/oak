@@ -391,6 +391,58 @@
 <span id="386">386</span>
 <span id="387">387</span>
 <span id="388">388</span>
+<span id="389">389</span>
+<span id="390">390</span>
+<span id="391">391</span>
+<span id="392">392</span>
+<span id="393">393</span>
+<span id="394">394</span>
+<span id="395">395</span>
+<span id="396">396</span>
+<span id="397">397</span>
+<span id="398">398</span>
+<span id="399">399</span>
+<span id="400">400</span>
+<span id="401">401</span>
+<span id="402">402</span>
+<span id="403">403</span>
+<span id="404">404</span>
+<span id="405">405</span>
+<span id="406">406</span>
+<span id="407">407</span>
+<span id="408">408</span>
+<span id="409">409</span>
+<span id="410">410</span>
+<span id="411">411</span>
+<span id="412">412</span>
+<span id="413">413</span>
+<span id="414">414</span>
+<span id="415">415</span>
+<span id="416">416</span>
+<span id="417">417</span>
+<span id="418">418</span>
+<span id="419">419</span>
+<span id="420">420</span>
+<span id="421">421</span>
+<span id="422">422</span>
+<span id="423">423</span>
+<span id="424">424</span>
+<span id="425">425</span>
+<span id="426">426</span>
+<span id="427">427</span>
+<span id="428">428</span>
+<span id="429">429</span>
+<span id="430">430</span>
+<span id="431">431</span>
+<span id="432">432</span>
+<span id="433">433</span>
+<span id="434">434</span>
+<span id="435">435</span>
+<span id="436">436</span>
+<span id="437">437</span>
+<span id="438">438</span>
+<span id="439">439</span>
+<span id="440">440</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2022 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -429,7 +481,55 @@
     <span class="macro">include!</span>(<span class="macro">concat!</span>(<span class="macro">env!</span>(<span class="string">&quot;OUT_DIR&quot;</span>), <span class="string">&quot;/reflection_generated.rs&quot;</span>));
 }
 
-<span class="doccomment">/// Compile services from the provided flatbuffer file using the `flatc` binary installed on the</span>
+<span class="doccomment">/// Compile Rust server code from the services in the provided flatbuffer file using the `flatc`</span>
+<span class="doccomment">/// binary installed on the system.</span>
+<span class="doccomment">///</span>
+<span class="doccomment">/// For a service called `TestName`, `compile_services` generates the following objects:</span>
+<span class="doccomment">///</span>
+<span class="doccomment">/// - a struct named `TestNameServer`, which implements the `oak_idl::InvocationHandler` trait,</span>
+<span class="doccomment">///   dispatching each request to the appropriate method on the underlying service implementation.</span>
+<span class="doccomment">/// - a trait named `TestName`, with a method for each method defined in the macro, and an</span>
+<span class="doccomment">///   additional default method named `serve` which returns an instance of `TestNameServer`; the</span>
+<span class="doccomment">///   developer of a service would usually define a concrete struct and manually implement this</span>
+<span class="doccomment">///   trait for it.</span>
+<span class="doccomment">///</span>
+<span class="doccomment">/// For an input flatbuffer file with name `test_file.fbs`, the generated Rust file will be located</span>
+<span class="doccomment">/// at `${OUT_DIR}/test_file_services_servers.rs`.</span>
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">compile_services_servers</span>(<span class="ident">filename</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) {
+    <span class="kw">let</span> <span class="ident">schema</span> <span class="op">=</span> <span class="ident">FlatbufferSchema::from_file</span>(<span class="ident">filename</span>).<span class="ident">unwrap</span>();
+    <span class="kw">let</span> <span class="ident">generated_rust_services</span> <span class="op">=</span> <span class="ident">generate_from_bytes</span>(<span class="kw-2">&amp;</span><span class="ident">schema</span>.<span class="ident">bytes</span>, <span class="kw-2">&amp;</span><span class="ident">generate_service</span>).<span class="ident">unwrap</span>();
+    <span class="kw">let</span> <span class="ident">out_file</span> <span class="op">=</span> <span class="macro">format!</span>(
+        <span class="string">&quot;{}/{}_services_servers.rs&quot;</span>,
+        <span class="ident">std::env::var</span>(<span class="string">&quot;OUT_DIR&quot;</span>).<span class="ident">unwrap</span>(),
+        <span class="ident">schema</span>.<span class="ident">file_prefix</span>
+    );
+    <span class="ident">std::fs::write</span>(<span class="kw-2">&amp;</span><span class="ident">out_file</span>, <span class="ident">generated_rust_services</span>).<span class="ident">unwrap</span>();
+}
+
+<span class="doccomment">/// Compile Rust client code from the services in the provided flatbuffer file using the `flatc`</span>
+<span class="doccomment">/// binary installed on the system.</span>
+<span class="doccomment">///</span>
+<span class="doccomment">/// For a service called `TestName`, `compile_services_clients` generates the following objects:</span>
+<span class="doccomment">///</span>
+<span class="doccomment">/// - a struct named `TestNameClient`, exposing a method for each method defined in the service.</span>
+<span class="doccomment">///   This may be used to directly invoke the underlying handler in order to indirectly invoke</span>
+<span class="doccomment">///   methods on the corresponding `Server` object on the other side of the handler.</span>
+<span class="doccomment">///</span>
+<span class="doccomment">/// For an input flatbuffer file with name `test_file.fbs`, the generated Rust file will be located</span>
+<span class="doccomment">/// at `${OUT_DIR}/test_file_services_clients.rs`.</span>
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">compile_services_clients</span>(<span class="ident">filename</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) {
+    <span class="kw">let</span> <span class="ident">schema</span> <span class="op">=</span> <span class="ident">FlatbufferSchema::from_file</span>(<span class="ident">filename</span>).<span class="ident">unwrap</span>();
+    <span class="kw">let</span> <span class="ident">generated_rust_services_clients</span> <span class="op">=</span>
+        <span class="ident">generate_from_bytes</span>(<span class="kw-2">&amp;</span><span class="ident">schema</span>.<span class="ident">bytes</span>, <span class="kw-2">&amp;</span><span class="ident">generate_service_client</span>).<span class="ident">unwrap</span>();
+    <span class="kw">let</span> <span class="ident">out_file</span> <span class="op">=</span> <span class="macro">format!</span>(
+        <span class="string">&quot;{}/{}_services_clients.rs&quot;</span>,
+        <span class="ident">std::env::var</span>(<span class="string">&quot;OUT_DIR&quot;</span>).<span class="ident">unwrap</span>(),
+        <span class="ident">schema</span>.<span class="ident">file_prefix</span>
+    );
+    <span class="ident">std::fs::write</span>(<span class="kw-2">&amp;</span><span class="ident">out_file</span>, <span class="ident">generated_rust_services_clients</span>).<span class="ident">unwrap</span>();
+}
+
+<span class="doccomment">/// Representation of a schema generated with the using the `flatc` binary installed on the</span>
 <span class="doccomment">/// system.</span>
 <span class="doccomment">///</span>
 <span class="doccomment">/// Services are generated targeting the invocation-based handler from the `oak_idl` crate (i.e.</span>
@@ -451,62 +551,53 @@
 <span class="doccomment">///     Method(Request) : Response (method_id: 42);</span>
 <span class="doccomment">/// }</span>
 <span class="doccomment">/// ```</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// For a service called `TestName`, `compile_services` generates the following objects:</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// - a struct named `TestNameClient`, exposing a method for each method defined in the service.</span>
-<span class="doccomment">///   This may be used to directly invoke the underlying handler in order to indirectly invoke</span>
-<span class="doccomment">///   methods on the corresponding `Server` object on the other side of the handler.</span>
-<span class="doccomment">/// - a struct named `TestNameServer`, which implements the `oak_idl::InvocationHandler` trait,</span>
-<span class="doccomment">///   dispatching each request to the appropriate method on the underlying service implementation.</span>
-<span class="doccomment">/// - a trait named `TestName`, with a method for each method defined in the macro, and an</span>
-<span class="doccomment">///   additional default method named `serve` which returns an instance of `TestNameServer`; the</span>
-<span class="doccomment">///   developer of a service would usually define a concrete struct and manually implement this</span>
-<span class="doccomment">///   trait for it.</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// For an input flatbuffer file with name `test_file.fbs`, the generated Rust file will be located</span>
-<span class="doccomment">/// at `${OUT_DIR}/test_file_services.rs`.</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">compile_services</span>(<span class="ident">filename</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) {
-    <span class="macro">println!</span>(<span class="string">&quot;cargo:rerun-if-changed={}&quot;</span>, <span class="ident">filename</span>);
-    <span class="comment">// Run flatc to generate the reflected schema in flatbuffer binary format.</span>
-    <span class="kw">let</span> <span class="ident">output</span> <span class="op">=</span> <span class="ident">std::process::Command::new</span>(<span class="string">&quot;flatc&quot;</span>)
-        .<span class="ident">args</span>([
-            <span class="string">&quot;--schema&quot;</span>,
-            <span class="string">&quot;--binary&quot;</span>,
-            <span class="string">&quot;-o&quot;</span>,
-            <span class="kw-2">&amp;</span><span class="ident">std::env::var</span>(<span class="string">&quot;OUT_DIR&quot;</span>).<span class="ident">unwrap</span>(),
-            <span class="ident">filename</span>,
-        ])
-        .<span class="ident">output</span>()
-        .<span class="ident">unwrap</span>();
-    <span class="kw">if</span> <span class="op">!</span><span class="ident">output</span>.<span class="ident">status</span>.<span class="ident">success</span>() {
-        <span class="macro">eprintln!</span>(<span class="string">&quot;flatc exit code: {}&quot;</span>, <span class="ident">output</span>.<span class="ident">status</span>);
-        <span class="macro">eprintln!</span>(
-            <span class="string">&quot;flatc stdout: {}&quot;</span>,
-            <span class="ident">std::str::from_utf8</span>(<span class="kw-2">&amp;</span><span class="ident">output</span>.<span class="ident">stdout</span>).<span class="ident">unwrap</span>()
-        );
-        <span class="macro">eprintln!</span>(
-            <span class="string">&quot;flatc stderr: {}&quot;</span>,
-            <span class="ident">std::str::from_utf8</span>(<span class="kw-2">&amp;</span><span class="ident">output</span>.<span class="ident">stderr</span>).<span class="ident">unwrap</span>()
-        );
-        <span class="ident">exit</span>(<span class="number">1</span>);
+<span class="kw">struct</span> <span class="ident">FlatbufferSchema</span> {
+    <span class="ident">bytes</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
+    <span class="ident">file_prefix</span>: <span class="ident">String</span>,
+}
+
+<span class="kw">impl</span> <span class="ident">FlatbufferSchema</span> {
+    <span class="doccomment">/// Generate the schema using flatc and read it</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">from_file</span>(<span class="ident">filename</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
+        <span class="macro">println!</span>(<span class="string">&quot;cargo:rerun-if-changed={}&quot;</span>, <span class="ident">filename</span>);
+        <span class="comment">// Run flatc to generate the reflected schema in flatbuffer binary format.</span>
+        <span class="kw">let</span> <span class="ident">output</span> <span class="op">=</span> <span class="ident">std::process::Command::new</span>(<span class="string">&quot;flatc&quot;</span>)
+            .<span class="ident">args</span>([
+                <span class="string">&quot;--schema&quot;</span>,
+                <span class="string">&quot;--binary&quot;</span>,
+                <span class="string">&quot;-o&quot;</span>,
+                <span class="kw-2">&amp;</span><span class="ident">std::env::var</span>(<span class="string">&quot;OUT_DIR&quot;</span>).<span class="ident">unwrap</span>(),
+                <span class="ident">filename</span>,
+            ])
+            .<span class="ident">output</span>()
+            .<span class="ident">unwrap</span>();
+        <span class="kw">if</span> <span class="op">!</span><span class="ident">output</span>.<span class="ident">status</span>.<span class="ident">success</span>() {
+            <span class="macro">eprintln!</span>(<span class="string">&quot;flatc exit code: {}&quot;</span>, <span class="ident">output</span>.<span class="ident">status</span>);
+            <span class="macro">eprintln!</span>(
+                <span class="string">&quot;flatc stdout: {}&quot;</span>,
+                <span class="ident">std::str::from_utf8</span>(<span class="kw-2">&amp;</span><span class="ident">output</span>.<span class="ident">stdout</span>).<span class="ident">unwrap</span>()
+            );
+            <span class="macro">eprintln!</span>(
+                <span class="string">&quot;flatc stderr: {}&quot;</span>,
+                <span class="ident">std::str::from_utf8</span>(<span class="kw-2">&amp;</span><span class="ident">output</span>.<span class="ident">stderr</span>).<span class="ident">unwrap</span>()
+            );
+            <span class="ident">exit</span>(<span class="number">1</span>);
+        }
+        <span class="comment">// We then read back the generated schema and parse it with the reflection flatbuffer</span>
+        <span class="comment">// schema. See https://google.github.io/flatbuffers/intermediate_representation.html.</span>
+        <span class="kw">let</span> <span class="ident">file_prefix</span> <span class="op">=</span> <span class="ident">std::path::Path::new</span>(<span class="ident">filename</span>)
+            .<span class="ident">file_prefix</span>()
+            .<span class="ident">unwrap</span>()
+            .<span class="ident">to_str</span>()
+            .<span class="ident">unwrap</span>();
+        <span class="kw">let</span> <span class="ident">schema_file</span> <span class="op">=</span> <span class="macro">format!</span>(<span class="string">&quot;{}/{}.bfbs&quot;</span>, <span class="ident">std::env::var</span>(<span class="string">&quot;OUT_DIR&quot;</span>).<span class="ident">unwrap</span>(), <span class="ident">file_prefix</span>);
+        <span class="kw">let</span> <span class="ident">schema_bytes</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span> <span class="op">=</span>
+            <span class="ident">std::fs::read</span>(<span class="kw-2">&amp;</span><span class="ident">schema_file</span>).<span class="ident">context</span>(<span class="string">&quot;failed to read schema file&quot;</span>)<span class="question-mark">?</span>;
+        <span class="prelude-val">Ok</span>(<span class="self">Self</span> {
+            <span class="ident">bytes</span>: <span class="ident">schema_bytes</span>,
+            <span class="ident">file_prefix</span>: <span class="ident">file_prefix</span>.<span class="ident">to_string</span>(),
+        })
     }
-    <span class="comment">// We then read back the generated schema and parse it with the reflection flatbuffer schema.</span>
-    <span class="comment">// See https://google.github.io/flatbuffers/intermediate_representation.html.</span>
-    <span class="kw">let</span> <span class="ident">file_prefix</span> <span class="op">=</span> <span class="ident">std::path::Path::new</span>(<span class="ident">filename</span>)
-        .<span class="ident">file_prefix</span>()
-        .<span class="ident">unwrap</span>()
-        .<span class="ident">to_str</span>()
-        .<span class="ident">unwrap</span>();
-    <span class="kw">let</span> <span class="ident">schema_file</span> <span class="op">=</span> <span class="macro">format!</span>(<span class="string">&quot;{}/{}.bfbs&quot;</span>, <span class="ident">std::env::var</span>(<span class="string">&quot;OUT_DIR&quot;</span>).<span class="ident">unwrap</span>(), <span class="ident">file_prefix</span>);
-    <span class="kw">let</span> <span class="ident">schema_bytes</span> <span class="op">=</span> <span class="ident">std::fs::read</span>(<span class="kw-2">&amp;</span><span class="ident">schema_file</span>).<span class="ident">unwrap</span>();
-    <span class="kw">let</span> <span class="ident">generated_schema</span> <span class="op">=</span> <span class="ident">generate_from_bytes</span>(<span class="kw-2">&amp;</span><span class="ident">schema_bytes</span>).<span class="ident">unwrap</span>();
-    <span class="kw">let</span> <span class="ident">out_file</span> <span class="op">=</span> <span class="macro">format!</span>(
-        <span class="string">&quot;{}/{}_services.rs&quot;</span>,
-        <span class="ident">std::env::var</span>(<span class="string">&quot;OUT_DIR&quot;</span>).<span class="ident">unwrap</span>(),
-        <span class="ident">file_prefix</span>
-    );
-    <span class="ident">std::fs::write</span>(<span class="kw-2">&amp;</span><span class="ident">out_file</span>, <span class="ident">generated_schema</span>).<span class="ident">unwrap</span>();
 }
 
 <span class="doccomment">/// Generate the Rust file from the input flatbuffer file.</span>
@@ -519,7 +610,10 @@
 <span class="doccomment">/// See</span>
 <span class="doccomment">/// &lt;https://github.com/google/flatbuffers/blob/9aa08a429e340bb8adf9b2e978ce2817cc8007c5/src/idl_gen_rust.cpp&gt;</span>
 <span class="doccomment">/// for how `flatc` generates Rust code for structs.</span>
-<span class="kw">fn</span> <span class="ident">generate_from_bytes</span>(<span class="ident">schema_bytes</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span> {
+<span class="kw">fn</span> <span class="ident">generate_from_bytes</span>(
+    <span class="ident">schema_bytes</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>],
+    <span class="ident">generator</span>: <span class="kw-2">&amp;</span><span class="kw">dyn</span> <span class="ident">Fn</span>(<span class="kw-2">&amp;</span><span class="ident">Service</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
+) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span> {
     <span class="kw">let</span> <span class="ident">schema</span> <span class="op">=</span> <span class="ident">reflection_generated::reflection::root_as_schema</span>(<span class="ident">schema_bytes</span>)
         .<span class="ident">map_err</span>(<span class="ident">anyhow::Error::msg</span>)
         .<span class="ident">context</span>(<span class="string">&quot;could not parse schema&quot;</span>)<span class="question-mark">?</span>;
@@ -527,7 +621,7 @@
         .<span class="ident">services</span>()
         .<span class="ident">context</span>(<span class="string">&quot;could not find any service definition&quot;</span>)<span class="question-mark">?</span>
         .<span class="ident">iter</span>()
-        .<span class="ident">map</span>(<span class="op">|</span><span class="ident">s</span><span class="op">|</span> <span class="ident">generate_service</span>(<span class="kw-2">&amp;</span><span class="ident">s</span>))
+        .<span class="ident">map</span>(<span class="op">|</span><span class="ident">s</span><span class="op">|</span> <span class="ident">generator</span>(<span class="kw-2">&amp;</span><span class="ident">s</span>))
         .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span>, <span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>()<span class="question-mark">?</span>
         .<span class="ident">into_iter</span>()
         .<span class="ident">intersperse</span>(<span class="string">&quot;\n&quot;</span>.<span class="ident">to_string</span>())
@@ -539,40 +633,13 @@
 <span class="kw">fn</span> <span class="ident">generate_service</span>(<span class="ident">service</span>: <span class="kw-2">&amp;</span><span class="ident">Service</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span> {
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">lines</span> <span class="op">=</span> <span class="ident">Vec::new</span>();
     <span class="ident">lines</span>.<span class="ident">extend</span>(<span class="macro">vec!</span>[
-        <span class="macro">format!</span>(<span class="string">&quot;// File automatically generated by `oak_idl_gen_services`, do not edit.&quot;</span>),
+                <span class="macro">format!</span>(<span class="string">&quot;// File automatically generated by `oak_idl_gen_services`, do not edit.&quot;</span>),
         <span class="macro">format!</span>(<span class="string">&quot;// Original service name: {}&quot;</span>, <span class="ident">service</span>.<span class="ident">name</span>()),
         <span class="macro">format!</span>(<span class="string">&quot;&quot;</span>),
         <span class="macro">format!</span>(<span class="string">&quot;extern crate alloc;&quot;</span>),
         <span class="macro">format!</span>(<span class="string">&quot;&quot;</span>),
         <span class="macro">format!</span>(<span class="string">&quot;use alloc::{{format, string::ToString}};&quot;</span>),
         <span class="macro">format!</span>(<span class="string">&quot;&quot;</span>),
-        <span class="macro">format!</span>(
-            <span class="string">&quot;pub struct {}&lt;T: oak_idl::Handler&gt; {{&quot;</span>,
-            <span class="ident">client_name</span>(<span class="ident">service</span>)
-        ),
-        <span class="macro">format!</span>(<span class="string">&quot;    handler: T&quot;</span>),
-        <span class="macro">format!</span>(<span class="string">&quot;}}&quot;</span>),
-        <span class="macro">format!</span>(<span class="string">&quot;&quot;</span>),
-        <span class="macro">format!</span>(<span class="string">&quot;impl &lt;T: oak_idl::Handler&gt;{}&lt;T&gt; {{&quot;</span>, <span class="ident">client_name</span>(<span class="ident">service</span>)),
-        <span class="macro">format!</span>(<span class="string">&quot;    pub fn new(handler: T) -&gt; Self {{&quot;</span>),
-        <span class="macro">format!</span>(<span class="string">&quot;        Self {{&quot;</span>),
-        <span class="macro">format!</span>(<span class="string">&quot;            handler&quot;</span>),
-        <span class="macro">format!</span>(<span class="string">&quot;        }}&quot;</span>),
-        <span class="macro">format!</span>(<span class="string">&quot;    }}&quot;</span>),
-    ]);
-    <span class="ident">lines</span>.<span class="ident">extend</span>(
-        <span class="ident">service</span>
-            .<span class="ident">calls</span>()
-            .<span class="ident">context</span>(<span class="string">&quot;could not find any call definitions&quot;</span>)<span class="question-mark">?</span>
-            .<span class="ident">iter</span>()
-            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">c</span><span class="op">|</span> <span class="ident">generate_client_method</span>(<span class="kw-2">&amp;</span><span class="ident">c</span>))
-            .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span>, <span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>()
-            .<span class="ident">context</span>(<span class="string">&quot;could not generate client method&quot;</span>)<span class="question-mark">?</span>
-            .<span class="ident">into_iter</span>()
-            .<span class="ident">flatten</span>(),
-    );
-    <span class="ident">lines</span>.<span class="ident">extend</span>(<span class="macro">vec!</span>[<span class="macro">format!</span>(<span class="string">&quot;}}&quot;</span>), <span class="macro">format!</span>(<span class="string">&quot;&quot;</span>)]);
-    <span class="ident">lines</span>.<span class="ident">extend</span>(<span class="macro">vec!</span>[
         <span class="macro">format!</span>(<span class="string">&quot;pub struct {}&lt;S&gt; {{&quot;</span>, <span class="ident">server_name</span>(<span class="ident">service</span>)),
         <span class="macro">format!</span>(<span class="string">&quot;    service: S&quot;</span>),
         <span class="macro">format!</span>(<span class="string">&quot;}}&quot;</span>),
@@ -618,6 +685,43 @@
         <span class="macro">format!</span>(<span class="string">&quot;}}&quot;</span>),
         <span class="macro">format!</span>(<span class="string">&quot;&quot;</span>),
     ]);
+    <span class="prelude-val">Ok</span>(<span class="ident">lines</span>.<span class="ident">into_iter</span>().<span class="ident">intersperse</span>(<span class="string">&quot;\n&quot;</span>.<span class="ident">to_string</span>()).<span class="ident">collect</span>())
+}
+
+<span class="doccomment">/// Generate the Rust objects from the input [`Service`] instance, corresponding to an `rpc_service`</span>
+<span class="doccomment">/// entry.</span>
+<span class="kw">fn</span> <span class="ident">generate_service_client</span>(<span class="ident">service</span>: <span class="kw-2">&amp;</span><span class="ident">Service</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span> {
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">lines</span> <span class="op">=</span> <span class="ident">Vec::new</span>();
+    <span class="ident">lines</span>.<span class="ident">extend</span>(<span class="macro">vec!</span>[
+        <span class="macro">format!</span>(<span class="string">&quot;// File automatically generated by `oak_idl_gen_services`, do not edit.&quot;</span>),
+        <span class="macro">format!</span>(<span class="string">&quot;// Original service name: {}&quot;</span>, <span class="ident">service</span>.<span class="ident">name</span>()),
+        <span class="macro">format!</span>(<span class="string">&quot;&quot;</span>),
+        <span class="macro">format!</span>(
+            <span class="string">&quot;pub struct {}&lt;T: oak_idl::Handler&gt; {{&quot;</span>,
+            <span class="ident">client_name</span>(<span class="ident">service</span>)
+        ),
+        <span class="macro">format!</span>(<span class="string">&quot;    handler: T&quot;</span>),
+        <span class="macro">format!</span>(<span class="string">&quot;}}&quot;</span>),
+        <span class="macro">format!</span>(<span class="string">&quot;&quot;</span>),
+        <span class="macro">format!</span>(<span class="string">&quot;impl &lt;T: oak_idl::Handler&gt;{}&lt;T&gt; {{&quot;</span>, <span class="ident">client_name</span>(<span class="ident">service</span>)),
+        <span class="macro">format!</span>(<span class="string">&quot;    pub fn new(handler: T) -&gt; Self {{&quot;</span>),
+        <span class="macro">format!</span>(<span class="string">&quot;        Self {{&quot;</span>),
+        <span class="macro">format!</span>(<span class="string">&quot;            handler&quot;</span>),
+        <span class="macro">format!</span>(<span class="string">&quot;        }}&quot;</span>),
+        <span class="macro">format!</span>(<span class="string">&quot;    }}&quot;</span>),
+    ]);
+    <span class="ident">lines</span>.<span class="ident">extend</span>(
+        <span class="ident">service</span>
+            .<span class="ident">calls</span>()
+            .<span class="ident">context</span>(<span class="string">&quot;could not find any call definitions&quot;</span>)<span class="question-mark">?</span>
+            .<span class="ident">iter</span>()
+            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">c</span><span class="op">|</span> <span class="ident">generate_client_method</span>(<span class="kw-2">&amp;</span><span class="ident">c</span>))
+            .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span>, <span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>()
+            .<span class="ident">context</span>(<span class="string">&quot;could not generate client method&quot;</span>)<span class="question-mark">?</span>
+            .<span class="ident">into_iter</span>()
+            .<span class="ident">flatten</span>(),
+    );
+    <span class="ident">lines</span>.<span class="ident">extend</span>(<span class="macro">vec!</span>[<span class="macro">format!</span>(<span class="string">&quot;}}&quot;</span>), <span class="macro">format!</span>(<span class="string">&quot;&quot;</span>)]);
     <span class="prelude-val">Ok</span>(<span class="ident">lines</span>.<span class="ident">into_iter</span>().<span class="ident">intersperse</span>(<span class="string">&quot;\n&quot;</span>.<span class="ident">to_string</span>()).<span class="ident">collect</span>())
 }
 
