@@ -85,7 +85,7 @@ fn test_lookup_data() {
             &test_schema::LookupDataRequestArgs { key: Some(key) },
         );
         let owned_flatbuffer = builder.finish(flatbuffer).unwrap();
-        let response = client.lookup_data(owned_flatbuffer.buf()).unwrap();
+        let response = client.lookup_data(owned_flatbuffer.into_vec()).unwrap();
         assert_eq!(Some([19, 88].as_ref()), response.get().value());
     }
     {
@@ -96,7 +96,7 @@ fn test_lookup_data() {
             &test_schema::LookupDataRequestArgs { key: Some(key) },
         );
         let owned_flatbuffer = builder.finish(flatbuffer).unwrap();
-        let response = client.lookup_data(owned_flatbuffer.buf()).unwrap();
+        let response = client.lookup_data(owned_flatbuffer.into_vec()).unwrap();
         assert_eq!(None, response.get().value());
     }
 }
