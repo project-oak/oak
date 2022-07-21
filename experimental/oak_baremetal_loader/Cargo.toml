@@ -28,7 +28,9 @@ tonic = "*"
 vsock = "*"
 oak_remote_attestation_sessions = { path = "../../remote_attestation_sessions" }
 oak_idl = { path = "../../oak_idl" }
-oak_baremetal_communication_channel = { path = "../../experimental/oak_baremetal_channel" }
+oak_baremetal_communication_channel = { path = "../../experimental/oak_baremetal_channel", features = [
+  "client"
+] }
 oak_functions_loader = { path = "../../oak_functions/loader" }
 hashbrown = "*"
 flatbuffers = "*"

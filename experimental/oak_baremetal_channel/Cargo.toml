@@ -5,6 +5,12 @@ authors = ["Juliette Pretot <julsh@google.com>"]
 edition = "2021"
 license = "Apache-2.0"
 
+[features]
+default = []
+std = []
+client = ["std", "oak_idl/async-clients"]
+server = []
+
 [dependencies]
 anyhow = { version = "*", default-features = false }
 oak_idl = { path = "../../oak_idl" }

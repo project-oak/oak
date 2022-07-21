@@ -14,11 +14,13 @@
 // limitations under the License.
 //
 
-#![no_std]
+#![cfg_attr(not(feature = "std"), no_std)]
 #![feature(never_type)]
 #![allow(rustdoc::private_intra_doc_links)]
 
+#[cfg(feature = "client")]
 pub mod client;
+
 pub mod server;
 
 pub mod schema {
@@ -27,7 +29,11 @@ pub mod schema {
 
     include!(concat!(env!("OUT_DIR"), "/schema_generated.rs"));
     include!(concat!(env!("OUT_DIR"), "/schema_services_servers.rs"));
-    include!(concat!(env!("OUT_DIR"), "/schema_services_clients.rs"));
+    #[cfg(feature = "client")]
+    include!(concat!(
+        env!("OUT_DIR"),
+        "/schema_services_async_clients.rs"
+    ));
 }
 
 mod frame;

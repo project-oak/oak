@@ -113,21 +113,46 @@ impl oak_baremetal_communication_channel::Read for CommsChannel {
     }
 }
 
-pub struct ClientHandler {
+/// Client implementation that communicates with the communication
+/// task via a bmrng channel. Used by various parts of the loader to communicate
+/// with the trusted runtime.
+pub struct Client {
+    request_dispatcher: bmrng::unbounded::UnboundedRequestSender<
+        oak_idl::Request,
+        Result<Vec<u8>, oak_idl::Status>,
+    >,
+}
+
+#[async_trait::async_trait]
+impl oak_idl::AsyncHandler for Client {
+    async fn invoke(&mut self, request: oak_idl::Request) -> Result<Vec<u8>, oak_idl::Status> {
+        self.request_dispatcher
+            .send_receive(request)
+            .await
+            .map_err(|err| {
+                oak_idl::Status::new_with_message(
+                    oak_idl::StatusCode::Internal,
+                    format!("failed when invoking the request_dispatcher: {}", err),
+                )
+            })?
+    }
+}
+
+/// Singleton responsible for sending requests, and receiving responses over the underlying
+/// communication channel with the baremetal runtime.
+pub struct BaremetalCommunicationChannel {
     inner: ClientChannelHandle,
     request_encoder: RequestEncoder,
 }
 
-impl ClientHandler {
+impl BaremetalCommunicationChannel {
     pub fn new(inner: Box<dyn oak_baremetal_communication_channel::Channel>) -> Self {
         Self {
             inner: ClientChannelHandle::new(inner),
             request_encoder: RequestEncoder::default(),
         }
     }
-}
 
-impl oak_idl::Handler for ClientHandler {
     fn invoke(&mut self, request: oak_idl::Request) -> Result<Vec<u8>, oak_idl::Status> {
         let request_message = self.request_encoder.encode_request(request);
         let request_message_invocation_id = request_message.invocation_id;
@@ -186,59 +211,63 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let comms = vmm.create_comms_channel().await?;
 
     // A message based communication channel that permits other parts of the
-    // untrusted loader to send requests to the tasks that handles communicating
-    // with the runtime and receive responses. Requests and (ok) responses
-    // sent over this channel represent flatbuffer encoded messages. This is
-    // done as it is not possible to send the flatbuffer Message structs
-    // themselves over the channel.
+    // untrusted loader to send requests to the task that handles communicating
+    // with the runtime and receive responses.
     let (request_dispatcher, mut request_receiver) =
-        bmrng::unbounded_channel::<Vec<u8>, Result<Vec<u8>, oak_idl::Status>>();
+        bmrng::unbounded_channel::<oak_idl::Request, Result<Vec<u8>, oak_idl::Status>>();
 
-    // Spawn task that handles communication with the trusted runtime.
+    // Spawn task to handle communicating with the runtime and receiving responses.
     tokio::spawn(async move {
-        let mut client = {
-            let comms_channel = Box::new(CommsChannel { inner: comms });
-            let client_handler = ClientHandler::new(comms_channel);
-            schema::TrustedRuntimeClient::new(client_handler)
-        };
-
-        let lookup_data =
-            lookup::load_lookup_data(&cli.lookup_data).expect("failed to load lookup data");
-        let encoded_lookup_data =
-            lookup::encode_lookup_data(lookup_data).expect("failed to encode lookup data");
-
-        if let Err(err) = client.update_lookup_data(encoded_lookup_data.into_vec()) {
-            panic!("failed to send lookup data: {:?}", err)
-        }
-
-        let wasm_bytes = fs::read(&cli.wasm)
-            .with_context(|| format!("Couldn't read Wasm file {}", &cli.wasm.display()))
-            .unwrap();
-        let owned_initialization_flatbuffer = {
-            let mut builder = oak_idl::utils::OwnedFlatbufferBuilder::default();
-            let wasm_module = builder.create_vector::<u8>(&wasm_bytes);
-            let initialization_flatbuffer = schema::Initialization::create(
-                &mut builder,
-                &schema::InitializationArgs {
-                    wasm_module: Some(wasm_module),
-                },
-            );
-
-            builder
-                .finish(initialization_flatbuffer)
-                .expect("errored when creating initialization message")
-        };
-        if let Err(err) = client.initialize(owned_initialization_flatbuffer.into_vec()) {
-            panic!("failed to initialize the runtime: {:?}", err)
-        }
-
-        while let Ok((encoded_request, response_dispatcher)) = request_receiver.recv().await {
-            let response = client
-                .handle_user_request(encoded_request)
-                .map(|oak_idl_message| oak_idl_message.into_vec());
+        let mut communication_channel =
+            BaremetalCommunicationChannel::new(Box::new(CommsChannel { inner: comms }));
+        while let Ok((request, response_dispatcher)) = request_receiver.recv().await {
+            // At the moment requests are sent sequentially, and in FIFO order. The next request
+            // is sent only once a response to the previous message has been implemented.
+            // TODO(#2848): Implement message prioritization, and non sequential invocations.
+            let response = communication_channel.invoke(request);
             response_dispatcher.respond(response).unwrap();
         }
     });
+
+    let mut client = schema::TrustedRuntimeAsyncClient::new(Client {
+        request_dispatcher: request_dispatcher.clone(),
+    });
+
+    let lookup_data =
+        lookup::load_lookup_data(&cli.lookup_data).expect("failed to load lookup data");
+    let encoded_lookup_data =
+        lookup::encode_lookup_data(lookup_data).expect("failed to encode lookup data");
+
+    if let Err(err) = client
+        .update_lookup_data(encoded_lookup_data.into_vec())
+        .await
+    {
+        panic!("failed to send lookup data: {:?}", err)
+    }
+
+    let wasm_bytes = fs::read(&cli.wasm)
+        .with_context(|| format!("Couldn't read Wasm file {}", &cli.wasm.display()))
+        .unwrap();
+    let owned_initialization_flatbuffer = {
+        let mut builder = oak_idl::utils::OwnedFlatbufferBuilder::default();
+        let wasm_module = builder.create_vector::<u8>(&wasm_bytes);
+        let initialization_flatbuffer = schema::Initialization::create(
+            &mut builder,
+            &schema::InitializationArgs {
+                wasm_module: Some(wasm_module),
+            },
+        );
+
+        builder
+            .finish(initialization_flatbuffer)
+            .expect("errored when creating initialization message")
+    };
+    if let Err(err) = client
+        .initialize(owned_initialization_flatbuffer.into_vec())
+        .await
+    {
+        panic!("failed to initialize the runtime: {:?}", err)
+    }
 
     let server_future = server::server("127.0.0.1:8080".parse()?, request_dispatcher);
 

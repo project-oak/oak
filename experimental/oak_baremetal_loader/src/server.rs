@@ -14,6 +14,7 @@
 // limitations under the License.
 //
 
+use crate::Client;
 use bmrng::unbounded::UnboundedRequestSender;
 use futures::Future;
 use oak_baremetal_communication_channel::schema;
@@ -65,18 +66,12 @@ fn encode_request(unary_request: UnaryRequest) -> Result<Vec<u8>, oak_idl::Statu
     Ok(owned_request_flatbuffer.into_vec())
 }
 
-fn decode_response(
-    encoded_response: Result<Vec<u8>, oak_idl::Status>,
-) -> Result<UnaryResponse, tonic::Status> {
-    let encoded_response_data =
-        encoded_response.map_err(|err| tonic::Status::internal(format!("{:?}", err)))?;
-    let owned_response_flatbuffer =
-        oak_idl::utils::OwnedFlatbuffer::<schema::UserRequestResponse>::from_vec(
-            encoded_response_data,
-        )
-        .map_err(|err| tonic::Status::internal(err.to_string()))?;
+fn decode_response(encoded_response: Vec<u8>) -> Result<UnaryResponse, tonic::Status> {
+    let response =
+        oak_idl::utils::OwnedFlatbuffer::<schema::UserRequestResponse>::from_vec(encoded_response)
+            .map_err(|err| tonic::Status::internal(err.to_string()))?;
 
-    let response_body = owned_response_flatbuffer
+    let response_body = response
         .get()
         .body()
         .ok_or_else(|| tonic::Status::internal(""))?;
@@ -87,7 +82,7 @@ fn decode_response(
 }
 
 pub struct EchoImpl {
-    channel: UnboundedRequestSender<Vec<u8>, Result<Vec<u8>, oak_idl::Status>>,
+    request_dispatcher: UnboundedRequestSender<oak_idl::Request, Result<Vec<u8>, oak_idl::Status>>,
 }
 
 #[tonic::async_trait]
@@ -99,12 +94,16 @@ impl UnarySession for EchoImpl {
         let request = request.into_inner();
         let encoded_request = encode_request(request)
             .map_err(|err| tonic::Status::invalid_argument(format!("{:?}", err)))?;
-        let encoded_response = self
-            .channel
-            .send_receive(encoded_request)
+
+        let mut client = schema::TrustedRuntimeAsyncClient::new(Client {
+            request_dispatcher: self.request_dispatcher.clone(),
+        });
+
+        let encoded_response = client
+            .handle_user_request(encoded_request)
             .await
             .map_err(|err| tonic::Status::internal(format!("{:?}", err)))?;
-        let response = decode_response(encoded_response)?;
+        let response = decode_response(encoded_response.into_vec())?;
 
         Ok(Response::new(response))
     }
@@ -112,9 +111,9 @@ impl UnarySession for EchoImpl {
 
 pub fn server(
     addr: SocketAddr,
-    channel: UnboundedRequestSender<Vec<u8>, Result<Vec<u8>, oak_idl::Status>>,
+    request_dispatcher: UnboundedRequestSender<oak_idl::Request, Result<Vec<u8>, oak_idl::Status>>,
 ) -> impl Future<Output = Result<(), tonic::transport::Error>> {
-    let server_impl = EchoImpl { channel };
+    let server_impl = EchoImpl { request_dispatcher };
     Server::builder()
         .add_service(UnarySessionServer::new(server_impl))
         .serve(addr)
