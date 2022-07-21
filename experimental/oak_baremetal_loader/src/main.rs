@@ -34,6 +34,7 @@ use tokio::signal;
 use vmm::{Params, Vmm};
 
 mod crosvm;
+mod lookup;
 mod qemu;
 mod server;
 mod vmm;
@@ -70,6 +71,14 @@ struct Args {
         validator = path_exists,
     )]
     wasm: PathBuf,
+
+    /// Path to a file containing key / value entries in protobuf binary format for lookup.
+    #[clap(
+        long,
+        parse(from_os_str),
+        validator = path_exists,
+    )]
+    lookup_data: PathBuf,
 }
 
 fn path_exists(s: &str) -> Result<(), String> {
@@ -193,39 +202,22 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             schema::TrustedRuntimeClient::new(client_handler)
         };
 
-        let lookup_data = {
-            let mut builder = oak_idl::utils::MessageBuilder::default();
-            let key = builder.create_vector::<u8>(b"test_key");
-            let value = builder.create_vector::<u8>(b"test_value");
-            let entry = schema::LookupDataEntry::create(
-                &mut builder,
-                &schema::LookupDataEntryArgs {
-                    key: Some(key),
-                    value: Some(value),
-                },
-            );
+        let lookup_data =
+            lookup::load_lookup_data(&cli.lookup_data).expect("failed to load lookup data");
+        let encoded_lookup_data =
+            lookup::encode_lookup_data(lookup_data).expect("failed to encode lookup data");
 
-            let items = builder.create_vector(&[entry]);
-            let message = schema::LookupData::create(
-                &mut builder,
-                &schema::LookupDataArgs { items: Some(items) },
-            );
-            builder
-                .finish(message)
-                .expect("errored when creating lookup data update message")
-        };
-
-        if let Err(err) = client.update_lookup_data(lookup_data.buf()) {
+        if let Err(err) = client.update_lookup_data(encoded_lookup_data.buf()) {
             panic!("failed to send lookup data: {:?}", err)
         }
 
         let wasm_bytes = fs::read(&cli.wasm)
             .with_context(|| format!("Couldn't read Wasm file {}", &cli.wasm.display()))
             .unwrap();
-        let initialization_message = {
-            let mut builder = oak_idl::utils::MessageBuilder::default();
+        let owned_initialization_flatbuffer = {
+            let mut builder = oak_idl::utils::OwnedFlatbufferBuilder::default();
             let wasm_module = builder.create_vector::<u8>(&wasm_bytes);
-            let message = schema::Initialization::create(
+            let initialization_flatbuffer = schema::Initialization::create(
                 &mut builder,
                 &schema::InitializationArgs {
                     wasm_module: Some(wasm_module),
@@ -233,10 +225,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             );
 
             builder
-                .finish(message)
+                .finish(initialization_flatbuffer)
                 .expect("errored when creating initialization message")
         };
-        if let Err(err) = client.initialize(initialization_message.buf()) {
+        if let Err(err) = client.initialize(owned_initialization_flatbuffer.buf()) {
             panic!("failed to initialize the runtime: {:?}", err)
         }
 
