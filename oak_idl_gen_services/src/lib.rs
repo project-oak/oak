@@ -36,7 +36,55 @@ mod reflection_generated {
     include!(concat!(env!("OUT_DIR"), "/reflection_generated.rs"));
 }
 
-/// Compile services from the provided flatbuffer file using the `flatc` binary installed on the
+/// Compile Rust server code from the services in the provided flatbuffer file using the `flatc`
+/// binary installed on the system.
+///
+/// For a service called `TestName`, `compile_services` generates the following objects:
+///
+/// - a struct named `TestNameServer`, which implements the `oak_idl::InvocationHandler` trait,
+///   dispatching each request to the appropriate method on the underlying service implementation.
+/// - a trait named `TestName`, with a method for each method defined in the macro, and an
+///   additional default method named `serve` which returns an instance of `TestNameServer`; the
+///   developer of a service would usually define a concrete struct and manually implement this
+///   trait for it.
+///
+/// For an input flatbuffer file with name `test_file.fbs`, the generated Rust file will be located
+/// at `${OUT_DIR}/test_file_services_servers.rs`.
+pub fn compile_services_servers(filename: &str) {
+    let schema = FlatbufferSchema::from_file(filename).unwrap();
+    let generated_rust_services = generate_from_bytes(&schema.bytes, &generate_service).unwrap();
+    let out_file = format!(
+        "{}/{}_services_servers.rs",
+        std::env::var("OUT_DIR").unwrap(),
+        schema.file_prefix
+    );
+    std::fs::write(&out_file, generated_rust_services).unwrap();
+}
+
+/// Compile Rust client code from the services in the provided flatbuffer file using the `flatc`
+/// binary installed on the system.
+///
+/// For a service called `TestName`, `compile_services_clients` generates the following objects:
+///
+/// - a struct named `TestNameClient`, exposing a method for each method defined in the service.
+///   This may be used to directly invoke the underlying handler in order to indirectly invoke
+///   methods on the corresponding `Server` object on the other side of the handler.
+///
+/// For an input flatbuffer file with name `test_file.fbs`, the generated Rust file will be located
+/// at `${OUT_DIR}/test_file_services_clients.rs`.
+pub fn compile_services_clients(filename: &str) {
+    let schema = FlatbufferSchema::from_file(filename).unwrap();
+    let generated_rust_services_clients =
+        generate_from_bytes(&schema.bytes, &generate_service_client).unwrap();
+    let out_file = format!(
+        "{}/{}_services_clients.rs",
+        std::env::var("OUT_DIR").unwrap(),
+        schema.file_prefix
+    );
+    std::fs::write(&out_file, generated_rust_services_clients).unwrap();
+}
+
+/// Representation of a schema generated with the using the `flatc` binary installed on the
 /// system.
 ///
 /// Services are generated targeting the invocation-based handler from the `oak_idl` crate (i.e.
@@ -58,62 +106,53 @@ mod reflection_generated {
 ///     Method(Request) : Response (method_id: 42);
 /// }
 /// ```
-///
-/// For a service called `TestName`, `compile_services` generates the following objects:
-///
-/// - a struct named `TestNameClient`, exposing a method for each method defined in the service.
-///   This may be used to directly invoke the underlying handler in order to indirectly invoke
-///   methods on the corresponding `Server` object on the other side of the handler.
-/// - a struct named `TestNameServer`, which implements the `oak_idl::InvocationHandler` trait,
-///   dispatching each request to the appropriate method on the underlying service implementation.
-/// - a trait named `TestName`, with a method for each method defined in the macro, and an
-///   additional default method named `serve` which returns an instance of `TestNameServer`; the
-///   developer of a service would usually define a concrete struct and manually implement this
-///   trait for it.
-///
-/// For an input flatbuffer file with name `test_file.fbs`, the generated Rust file will be located
-/// at `${OUT_DIR}/test_file_services.rs`.
-pub fn compile_services(filename: &str) {
-    println!("cargo:rerun-if-changed={}", filename);
-    // Run flatc to generate the reflected schema in flatbuffer binary format.
-    let output = std::process::Command::new("flatc")
-        .args([
-            "--schema",
-            "--binary",
-            "-o",
-            &std::env::var("OUT_DIR").unwrap(),
-            filename,
-        ])
-        .output()
-        .unwrap();
-    if !output.status.success() {
-        eprintln!("flatc exit code: {}", output.status);
-        eprintln!(
-            "flatc stdout: {}",
-            std::str::from_utf8(&output.stdout).unwrap()
-        );
-        eprintln!(
-            "flatc stderr: {}",
-            std::str::from_utf8(&output.stderr).unwrap()
-        );
-        exit(1);
+struct FlatbufferSchema {
+    bytes: Vec<u8>,
+    file_prefix: String,
+}
+
+impl FlatbufferSchema {
+    /// Generate the schema using flatc and read it
+    pub fn from_file(filename: &str) -> anyhow::Result<Self> {
+        println!("cargo:rerun-if-changed={}", filename);
+        // Run flatc to generate the reflected schema in flatbuffer binary format.
+        let output = std::process::Command::new("flatc")
+            .args([
+                "--schema",
+                "--binary",
+                "-o",
+                &std::env::var("OUT_DIR").unwrap(),
+                filename,
+            ])
+            .output()
+            .unwrap();
+        if !output.status.success() {
+            eprintln!("flatc exit code: {}", output.status);
+            eprintln!(
+                "flatc stdout: {}",
+                std::str::from_utf8(&output.stdout).unwrap()
+            );
+            eprintln!(
+                "flatc stderr: {}",
+                std::str::from_utf8(&output.stderr).unwrap()
+            );
+            exit(1);
+        }
+        // We then read back the generated schema and parse it with the reflection flatbuffer
+        // schema. See https://google.github.io/flatbuffers/intermediate_representation.html.
+        let file_prefix = std::path::Path::new(filename)
+            .file_prefix()
+            .unwrap()
+            .to_str()
+            .unwrap();
+        let schema_file = format!("{}/{}.bfbs", std::env::var("OUT_DIR").unwrap(), file_prefix);
+        let schema_bytes: Vec<u8> =
+            std::fs::read(&schema_file).context("failed to read schema file")?;
+        Ok(Self {
+            bytes: schema_bytes,
+            file_prefix: file_prefix.to_string(),
+        })
     }
-    // We then read back the generated schema and parse it with the reflection flatbuffer schema.
-    // See https://google.github.io/flatbuffers/intermediate_representation.html.
-    let file_prefix = std::path::Path::new(filename)
-        .file_prefix()
-        .unwrap()
-        .to_str()
-        .unwrap();
-    let schema_file = format!("{}/{}.bfbs", std::env::var("OUT_DIR").unwrap(), file_prefix);
-    let schema_bytes = std::fs::read(&schema_file).unwrap();
-    let generated_schema = generate_from_bytes(&schema_bytes).unwrap();
-    let out_file = format!(
-        "{}/{}_services.rs",
-        std::env::var("OUT_DIR").unwrap(),
-        file_prefix
-    );
-    std::fs::write(&out_file, generated_schema).unwrap();
 }
 
 /// Generate the Rust file from the input flatbuffer file.
@@ -126,7 +165,10 @@ pub fn compile_services(filename: &str) {
 /// See
 /// <https://github.com/google/flatbuffers/blob/9aa08a429e340bb8adf9b2e978ce2817cc8007c5/src/idl_gen_rust.cpp>
 /// for how `flatc` generates Rust code for structs.
-fn generate_from_bytes(schema_bytes: &[u8]) -> anyhow::Result<String> {
+fn generate_from_bytes(
+    schema_bytes: &[u8],
+    generator: &dyn Fn(&Service) -> anyhow::Result<String>,
+) -> anyhow::Result<String> {
     let schema = reflection_generated::reflection::root_as_schema(schema_bytes)
         .map_err(anyhow::Error::msg)
         .context("could not parse schema")?;
@@ -134,7 +176,7 @@ fn generate_from_bytes(schema_bytes: &[u8]) -> anyhow::Result<String> {
         .services()
         .context("could not find any service definition")?
         .iter()
-        .map(|s| generate_service(&s))
+        .map(|s| generator(&s))
         .collect::<Result<Vec<_>, _>>()?
         .into_iter()
         .intersperse("\n".to_string())
@@ -146,40 +188,13 @@ fn generate_from_bytes(schema_bytes: &[u8]) -> anyhow::Result<String> {
 fn generate_service(service: &Service) -> anyhow::Result<String> {
     let mut lines = Vec::new();
     lines.extend(vec![
-        format!("// File automatically generated by `oak_idl_gen_services`, do not edit."),
+                format!("// File automatically generated by `oak_idl_gen_services`, do not edit."),
         format!("// Original service name: {}", service.name()),
         format!(""),
         format!("extern crate alloc;"),
         format!(""),
         format!("use alloc::{{format, string::ToString}};"),
         format!(""),
-        format!(
-            "pub struct {}<T: oak_idl::Handler> {{",
-            client_name(service)
-        ),
-        format!("    handler: T"),
-        format!("}}"),
-        format!(""),
-        format!("impl <T: oak_idl::Handler>{}<T> {{", client_name(service)),
-        format!("    pub fn new(handler: T) -> Self {{"),
-        format!("        Self {{"),
-        format!("            handler"),
-        format!("        }}"),
-        format!("    }}"),
-    ]);
-    lines.extend(
-        service
-            .calls()
-            .context("could not find any call definitions")?
-            .iter()
-            .map(|c| generate_client_method(&c))
-            .collect::<Result<Vec<_>, _>>()
-            .context("could not generate client method")?
-            .into_iter()
-            .flatten(),
-    );
-    lines.extend(vec![format!("}}"), format!("")]);
-    lines.extend(vec![
         format!("pub struct {}<S> {{", server_name(service)),
         format!("    service: S"),
         format!("}}"),
@@ -225,6 +240,43 @@ fn generate_service(service: &Service) -> anyhow::Result<String> {
         format!("}}"),
         format!(""),
     ]);
+    Ok(lines.into_iter().intersperse("\n".to_string()).collect())
+}
+
+/// Generate the Rust objects from the input [`Service`] instance, corresponding to an `rpc_service`
+/// entry.
+fn generate_service_client(service: &Service) -> anyhow::Result<String> {
+    let mut lines = Vec::new();
+    lines.extend(vec![
+        format!("// File automatically generated by `oak_idl_gen_services`, do not edit."),
+        format!("// Original service name: {}", service.name()),
+        format!(""),
+        format!(
+            "pub struct {}<T: oak_idl::Handler> {{",
+            client_name(service)
+        ),
+        format!("    handler: T"),
+        format!("}}"),
+        format!(""),
+        format!("impl <T: oak_idl::Handler>{}<T> {{", client_name(service)),
+        format!("    pub fn new(handler: T) -> Self {{"),
+        format!("        Self {{"),
+        format!("            handler"),
+        format!("        }}"),
+        format!("    }}"),
+    ]);
+    lines.extend(
+        service
+            .calls()
+            .context("could not find any call definitions")?
+            .iter()
+            .map(|c| generate_client_method(&c))
+            .collect::<Result<Vec<_>, _>>()
+            .context("could not generate client method")?
+            .into_iter()
+            .flatten(),
+    );
+    lines.extend(vec![format!("}}"), format!("")]);
     Ok(lines.into_iter().intersperse("\n".to_string()).collect())
 }
 

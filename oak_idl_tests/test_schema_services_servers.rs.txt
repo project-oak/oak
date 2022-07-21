@@ -5,36 +5,6 @@ extern crate alloc;
 
 use alloc::{format, string::ToString};
 
-pub struct TestServiceClient<T: oak_idl::Handler> {
-    handler: T
-}
-
-impl <T: oak_idl::Handler>TestServiceClient<T> {
-    pub fn new(handler: T) -> Self {
-        Self {
-            handler
-        }
-    }
-    pub fn lookup_data(&mut self, request_body: &[u8]) -> Result<oak_idl::utils::OwnedFlatbuffer<LookupDataResponse>, oak_idl::Status> {
-        flatbuffers::root::<LookupDataRequest>(request_body).map_err(|err| oak_idl::Status::new_with_message(oak_idl::StatusCode::Internal, format!("Client failed to deserialize the request: {:?}", err)))?;
-        let request = oak_idl::Request {
-            method_id: 222,
-            body: request_body,
-        };
-        let response_body = self.handler.invoke(request)?;
-        oak_idl::utils::OwnedFlatbuffer::from_vec(response_body).map_err(|err| oak_idl::Status::new_with_message(oak_idl::StatusCode::Internal, format!("Client failed to deserialize the response: {:?}", err)))
-    }
-    pub fn log(&mut self, request_body: &[u8]) -> Result<oak_idl::utils::OwnedFlatbuffer<LogResponse>, oak_idl::Status> {
-        flatbuffers::root::<LogRequest>(request_body).map_err(|err| oak_idl::Status::new_with_message(oak_idl::StatusCode::Internal, format!("Client failed to deserialize the request: {:?}", err)))?;
-        let request = oak_idl::Request {
-            method_id: 223,
-            body: request_body,
-        };
-        let response_body = self.handler.invoke(request)?;
-        oak_idl::utils::OwnedFlatbuffer::from_vec(response_body).map_err(|err| oak_idl::Status::new_with_message(oak_idl::StatusCode::Internal, format!("Client failed to deserialize the response: {:?}", err)))
-    }
-}
-
 pub struct TestServiceServer<S> {
     service: S
 }
