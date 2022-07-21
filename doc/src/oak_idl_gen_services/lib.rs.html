@@ -443,6 +443,45 @@
 <span id="438">438</span>
 <span id="439">439</span>
 <span id="440">440</span>
+<span id="441">441</span>
+<span id="442">442</span>
+<span id="443">443</span>
+<span id="444">444</span>
+<span id="445">445</span>
+<span id="446">446</span>
+<span id="447">447</span>
+<span id="448">448</span>
+<span id="449">449</span>
+<span id="450">450</span>
+<span id="451">451</span>
+<span id="452">452</span>
+<span id="453">453</span>
+<span id="454">454</span>
+<span id="455">455</span>
+<span id="456">456</span>
+<span id="457">457</span>
+<span id="458">458</span>
+<span id="459">459</span>
+<span id="460">460</span>
+<span id="461">461</span>
+<span id="462">462</span>
+<span id="463">463</span>
+<span id="464">464</span>
+<span id="465">465</span>
+<span id="466">466</span>
+<span id="467">467</span>
+<span id="468">468</span>
+<span id="469">469</span>
+<span id="470">470</span>
+<span id="471">471</span>
+<span id="472">472</span>
+<span id="473">473</span>
+<span id="474">474</span>
+<span id="475">475</span>
+<span id="476">476</span>
+<span id="477">477</span>
+<span id="478">478</span>
+<span id="479">479</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2022 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -519,10 +558,37 @@
 <span class="doccomment">/// at `${OUT_DIR}/test_file_services_clients.rs`.</span>
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">compile_services_clients</span>(<span class="ident">filename</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) {
     <span class="kw">let</span> <span class="ident">schema</span> <span class="op">=</span> <span class="ident">FlatbufferSchema::from_file</span>(<span class="ident">filename</span>).<span class="ident">unwrap</span>();
-    <span class="kw">let</span> <span class="ident">generated_rust_services_clients</span> <span class="op">=</span>
-        <span class="ident">generate_from_bytes</span>(<span class="kw-2">&amp;</span><span class="ident">schema</span>.<span class="ident">bytes</span>, <span class="kw-2">&amp;</span><span class="ident">generate_service_client</span>).<span class="ident">unwrap</span>();
+    <span class="kw">let</span> <span class="ident">generated_rust_services_clients</span> <span class="op">=</span> <span class="ident">generate_from_bytes</span>(<span class="kw-2">&amp;</span><span class="ident">schema</span>.<span class="ident">bytes</span>, <span class="op">|</span><span class="ident">service</span><span class="op">|</span> {
+        <span class="ident">generate_service_client</span>(<span class="ident">service</span>, <span class="bool-val">false</span>)
+    })
+    .<span class="ident">unwrap</span>();
     <span class="kw">let</span> <span class="ident">out_file</span> <span class="op">=</span> <span class="macro">format!</span>(
         <span class="string">&quot;{}/{}_services_clients.rs&quot;</span>,
+        <span class="ident">std::env::var</span>(<span class="string">&quot;OUT_DIR&quot;</span>).<span class="ident">unwrap</span>(),
+        <span class="ident">schema</span>.<span class="ident">file_prefix</span>
+    );
+    <span class="ident">std::fs::write</span>(<span class="kw-2">&amp;</span><span class="ident">out_file</span>, <span class="ident">generated_rust_services_clients</span>).<span class="ident">unwrap</span>();
+}
+
+<span class="doccomment">/// Compile Rust async client code from the services in the provided flatbuffer file using the</span>
+<span class="doccomment">/// `flatc` binary installed on the system.</span>
+<span class="doccomment">///</span>
+<span class="doccomment">/// For a service called `TestName`, `compile_services_clients` generates the following objects:</span>
+<span class="doccomment">///</span>
+<span class="doccomment">/// - a struct named `TestNameClient`, exposing a method for each method defined in the service.</span>
+<span class="doccomment">///   This may be used to directly invoke the underlying handler in order to indirectly invoke</span>
+<span class="doccomment">///   methods on the corresponding `Server` object on the other side of the handler.</span>
+<span class="doccomment">///</span>
+<span class="doccomment">/// For an input flatbuffer file with name `test_file.fbs`, the generated Rust file will be located</span>
+<span class="doccomment">/// at `${OUT_DIR}/test_file_services_async_clients.rs`.</span>
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">compile_services_async_clients</span>(<span class="ident">filename</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) {
+    <span class="kw">let</span> <span class="ident">schema</span> <span class="op">=</span> <span class="ident">FlatbufferSchema::from_file</span>(<span class="ident">filename</span>).<span class="ident">unwrap</span>();
+    <span class="kw">let</span> <span class="ident">generated_rust_services_clients</span> <span class="op">=</span> <span class="ident">generate_from_bytes</span>(<span class="kw-2">&amp;</span><span class="ident">schema</span>.<span class="ident">bytes</span>, <span class="op">|</span><span class="ident">service</span><span class="op">|</span> {
+        <span class="ident">generate_service_client</span>(<span class="ident">service</span>, <span class="bool-val">true</span>)
+    })
+    .<span class="ident">unwrap</span>();
+    <span class="kw">let</span> <span class="ident">out_file</span> <span class="op">=</span> <span class="macro">format!</span>(
+        <span class="string">&quot;{}/{}_services_async_clients.rs&quot;</span>,
         <span class="ident">std::env::var</span>(<span class="string">&quot;OUT_DIR&quot;</span>).<span class="ident">unwrap</span>(),
         <span class="ident">schema</span>.<span class="ident">file_prefix</span>
     );
@@ -610,9 +676,9 @@
 <span class="doccomment">/// See</span>
 <span class="doccomment">/// &lt;https://github.com/google/flatbuffers/blob/9aa08a429e340bb8adf9b2e978ce2817cc8007c5/src/idl_gen_rust.cpp&gt;</span>
 <span class="doccomment">/// for how `flatc` generates Rust code for structs.</span>
-<span class="kw">fn</span> <span class="ident">generate_from_bytes</span>(
+<span class="kw">fn</span> <span class="ident">generate_from_bytes</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">Fn</span>(<span class="kw-2">&amp;</span><span class="ident">Service</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span><span class="op">&gt;</span>(
     <span class="ident">schema_bytes</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>],
-    <span class="ident">generator</span>: <span class="kw-2">&amp;</span><span class="kw">dyn</span> <span class="ident">Fn</span>(<span class="kw-2">&amp;</span><span class="ident">Service</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
+    <span class="ident">generator</span>: <span class="ident">F</span>,
 ) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span> {
     <span class="kw">let</span> <span class="ident">schema</span> <span class="op">=</span> <span class="ident">reflection_generated::reflection::root_as_schema</span>(<span class="ident">schema_bytes</span>)
         .<span class="ident">map_err</span>(<span class="ident">anyhow::Error::msg</span>)
@@ -688,22 +754,25 @@
     <span class="prelude-val">Ok</span>(<span class="ident">lines</span>.<span class="ident">into_iter</span>().<span class="ident">intersperse</span>(<span class="string">&quot;\n&quot;</span>.<span class="ident">to_string</span>()).<span class="ident">collect</span>())
 }
 
-<span class="doccomment">/// Generate the Rust objects from the input [`Service`] instance, corresponding to an `rpc_service`</span>
-<span class="doccomment">/// entry.</span>
-<span class="kw">fn</span> <span class="ident">generate_service_client</span>(<span class="ident">service</span>: <span class="kw-2">&amp;</span><span class="ident">Service</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span> {
+<span class="doccomment">/// Generate the service client Rust objects from the input [`Service`] instance, corresponding to</span>
+<span class="doccomment">/// an `rpc_service` entry.</span>
+<span class="kw">fn</span> <span class="ident">generate_service_client</span>(<span class="ident">service</span>: <span class="kw-2">&amp;</span><span class="ident">Service</span>, <span class="ident">asynchronous</span>: <span class="ident">bool</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span> {
+    <span class="kw">let</span> <span class="ident">client_name</span> <span class="op">=</span> <span class="ident">client_name</span>(<span class="ident">service</span>, <span class="ident">asynchronous</span>);
+    <span class="kw">let</span> <span class="ident">handler_trait</span> <span class="op">=</span> <span class="kw">if</span> <span class="ident">asynchronous</span> {
+        <span class="string">&quot;oak_idl::AsyncHandler&quot;</span>
+    } <span class="kw">else</span> {
+        <span class="string">&quot;oak_idl::Handler&quot;</span>
+    };
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">lines</span> <span class="op">=</span> <span class="ident">Vec::new</span>();
     <span class="ident">lines</span>.<span class="ident">extend</span>(<span class="macro">vec!</span>[
         <span class="macro">format!</span>(<span class="string">&quot;// File automatically generated by `oak_idl_gen_services`, do not edit.&quot;</span>),
         <span class="macro">format!</span>(<span class="string">&quot;// Original service name: {}&quot;</span>, <span class="ident">service</span>.<span class="ident">name</span>()),
         <span class="macro">format!</span>(<span class="string">&quot;&quot;</span>),
-        <span class="macro">format!</span>(
-            <span class="string">&quot;pub struct {}&lt;T: oak_idl::Handler&gt; {{&quot;</span>,
-            <span class="ident">client_name</span>(<span class="ident">service</span>)
-        ),
+        <span class="macro">format!</span>(<span class="string">&quot;pub struct {}&lt;T: {}&gt; {{&quot;</span>, <span class="ident">client_name</span>, <span class="ident">handler_trait</span>),
         <span class="macro">format!</span>(<span class="string">&quot;    handler: T&quot;</span>),
         <span class="macro">format!</span>(<span class="string">&quot;}}&quot;</span>),
         <span class="macro">format!</span>(<span class="string">&quot;&quot;</span>),
-        <span class="macro">format!</span>(<span class="string">&quot;impl &lt;T: oak_idl::Handler&gt;{}&lt;T&gt; {{&quot;</span>, <span class="ident">client_name</span>(<span class="ident">service</span>)),
+        <span class="macro">format!</span>(<span class="string">&quot;impl &lt;T: {}&gt;{}&lt;T&gt; {{&quot;</span>, <span class="ident">handler_trait</span>, <span class="ident">client_name</span>),
         <span class="macro">format!</span>(<span class="string">&quot;    pub fn new(handler: T) -&gt; Self {{&quot;</span>),
         <span class="macro">format!</span>(<span class="string">&quot;        Self {{&quot;</span>),
         <span class="macro">format!</span>(<span class="string">&quot;            handler&quot;</span>),
@@ -715,7 +784,7 @@
             .<span class="ident">calls</span>()
             .<span class="ident">context</span>(<span class="string">&quot;could not find any call definitions&quot;</span>)<span class="question-mark">?</span>
             .<span class="ident">iter</span>()
-            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">c</span><span class="op">|</span> <span class="ident">generate_client_method</span>(<span class="kw-2">&amp;</span><span class="ident">c</span>))
+            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">c</span><span class="op">|</span> <span class="ident">generate_client_method</span>(<span class="kw-2">&amp;</span><span class="ident">c</span>, <span class="ident">asynchronous</span>))
             .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span>, <span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>()
             .<span class="ident">context</span>(<span class="string">&quot;could not generate client method&quot;</span>)<span class="question-mark">?</span>
             .<span class="ident">into_iter</span>()
@@ -725,7 +794,7 @@
     <span class="prelude-val">Ok</span>(<span class="ident">lines</span>.<span class="ident">into_iter</span>().<span class="ident">intersperse</span>(<span class="string">&quot;\n&quot;</span>.<span class="ident">to_string</span>()).<span class="ident">collect</span>())
 }
 
-<span class="kw">fn</span> <span class="ident">generate_client_method</span>(<span class="ident">rpc_call</span>: <span class="kw-2">&amp;</span><span class="ident">RPCCall</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+<span class="kw">fn</span> <span class="ident">generate_client_method</span>(<span class="ident">rpc_call</span>: <span class="kw-2">&amp;</span><span class="ident">RPCCall</span>, <span class="ident">asynchronous</span>: <span class="ident">bool</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span><span class="op">&gt;</span> {
     <span class="comment">// For each method on the schema, generate a client method with the same name, accepting a</span>
     <span class="comment">// buffer containing the serialized request as input. Unfortunately it does not seem easy to</span>
     <span class="comment">// make this more type safe than this; ideally it would take a reference to a message of the</span>
@@ -738,23 +807,24 @@
     <span class="comment">// fill in, which would remain owned by the caller, but that seems more complicated and for not</span>
     <span class="comment">// much benefit.</span>
     <span class="prelude-val">Ok</span>(<span class="macro">vec!</span>[
-        <span class="macro">format!</span>(
-            <span class="string">&quot;    pub fn {}(&amp;mut self, request_body: Vec&lt;u8&gt;) -&gt; Result&lt;oak_idl::utils::OwnedFlatbuffer&lt;{}&gt;, oak_idl::Status&gt; {{&quot;</span>,
-            <span class="ident">method_name</span>(<span class="ident">rpc_call</span>),
-            <span class="ident">response_type</span>(<span class="ident">rpc_call</span>)
-        ),
-        <span class="macro">format!</span>(
-            <span class="string">&quot;        flatbuffers::root::&lt;{}&gt;(&amp;request_body).map_err(|err| oak_idl::Status::new_with_message(oak_idl::StatusCode::Internal, format!(\&quot;Client failed to deserialize the request: {{:?}}\&quot;, err)))?;&quot;</span>,
-            <span class="ident">request_type</span>(<span class="ident">rpc_call</span>)
-        ),
-        <span class="macro">format!</span>(<span class="string">&quot;        let request = oak_idl::Request {{&quot;</span>),
-        <span class="macro">format!</span>(<span class="string">&quot;            method_id: {},&quot;</span>, <span class="ident">method_id</span>(<span class="ident">rpc_call</span>)<span class="question-mark">?</span>),
-        <span class="macro">format!</span>(<span class="string">&quot;            body: request_body,&quot;</span>),
-        <span class="macro">format!</span>(<span class="string">&quot;        }};&quot;</span>),
-        <span class="macro">format!</span>(<span class="string">&quot;        let response_body = self.handler.invoke(request)?;&quot;</span>),
-        <span class="macro">format!</span>(<span class="string">&quot;        oak_idl::utils::OwnedFlatbuffer::from_vec(response_body).map_err(|err| oak_idl::Status::new_with_message(oak_idl::StatusCode::Internal, format!(\&quot;Client failed to deserialize the response: {{:?}}\&quot;, err)))&quot;</span>),
-        <span class="macro">format!</span>(<span class="string">&quot;    }}&quot;</span>),
-    ])
+            <span class="macro">format!</span>(
+                <span class="string">&quot;    pub {}fn {}(&amp;mut self, request_body: Vec&lt;u8&gt;) -&gt; Result&lt;oak_idl::utils::OwnedFlatbuffer&lt;{}&gt;, oak_idl::Status&gt; {{&quot;</span>,
+                <span class="kw">if</span> <span class="ident">asynchronous</span> {<span class="string">&quot;async &quot;</span>} <span class="kw">else</span> {<span class="string">&quot;&quot;</span>},
+                <span class="ident">method_name</span>(<span class="ident">rpc_call</span>),
+                <span class="ident">response_type</span>(<span class="ident">rpc_call</span>)
+            ),
+            <span class="macro">format!</span>(
+                <span class="string">&quot;        flatbuffers::root::&lt;{}&gt;(&amp;request_body).map_err(|err| oak_idl::Status::new_with_message(oak_idl::StatusCode::Internal, format!(\&quot;Client failed to deserialize the request: {{:?}}\&quot;, err)))?;&quot;</span>,
+                <span class="ident">request_type</span>(<span class="ident">rpc_call</span>)
+            ),
+            <span class="macro">format!</span>(<span class="string">&quot;        let request = oak_idl::Request {{&quot;</span>),
+            <span class="macro">format!</span>(<span class="string">&quot;            method_id: {},&quot;</span>, <span class="ident">method_id</span>(<span class="ident">rpc_call</span>)<span class="question-mark">?</span>),
+            <span class="macro">format!</span>(<span class="string">&quot;            body: request_body,&quot;</span>),
+            <span class="macro">format!</span>(<span class="string">&quot;        }};&quot;</span>),
+            <span class="macro">format!</span>(<span class="string">&quot;        let response_body = self.handler.invoke(request){}?;&quot;</span>, <span class="kw">if</span> <span class="ident">asynchronous</span> {<span class="string">&quot;.await&quot;</span>} <span class="kw">else</span> {<span class="string">&quot;&quot;</span>}),
+            <span class="macro">format!</span>(<span class="string">&quot;        oak_idl::utils::OwnedFlatbuffer::from_vec(response_body).map_err(|err| oak_idl::Status::new_with_message(oak_idl::StatusCode::Internal, format!(\&quot;Client failed to deserialize the response: {{:?}}\&quot;, err)))&quot;</span>),
+            <span class="macro">format!</span>(<span class="string">&quot;    }}&quot;</span>),
+        ])
 }
 
 <span class="kw">fn</span> <span class="ident">generate_server_handler</span>(<span class="ident">rpc_call</span>: <span class="kw-2">&amp;</span><span class="ident">RPCCall</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span><span class="op">&gt;</span> {
@@ -820,8 +890,16 @@
 }
 
 <span class="doccomment">/// The type name of the generated Rust client struct.</span>
-<span class="kw">fn</span> <span class="ident">client_name</span>(<span class="ident">service</span>: <span class="kw-2">&amp;</span><span class="ident">Service</span>) -&gt; <span class="ident">String</span> {
-    <span class="macro">format!</span>(<span class="string">&quot;{}Client&quot;</span>, <span class="ident">unqualified_name</span>(<span class="ident">service</span>.<span class="ident">name</span>()))
+<span class="kw">fn</span> <span class="ident">client_name</span>(<span class="ident">service</span>: <span class="kw-2">&amp;</span><span class="ident">Service</span>, <span class="ident">asynchronous</span>: <span class="ident">bool</span>) -&gt; <span class="ident">String</span> {
+    <span class="macro">format!</span>(
+        <span class="string">&quot;{}{}&quot;</span>,
+        <span class="ident">unqualified_name</span>(<span class="ident">service</span>.<span class="ident">name</span>()),
+        <span class="kw">if</span> <span class="ident">asynchronous</span> {
+            <span class="string">&quot;AsyncClient&quot;</span>
+        } <span class="kw">else</span> {
+            <span class="string">&quot;Client&quot;</span>
+        }
+    )
 }
 
 <span class="doccomment">/// The type name of the generated Rust server struct.</span>
@@ -846,7 +924,7 @@
 
 <span class="doccomment">/// The type name of the generated Rust response struct.</span>
 <span class="kw">fn</span> <span class="ident">response_type</span>(<span class="ident">rpc_call</span>: <span class="kw-2">&amp;</span><span class="ident">RPCCall</span>) -&gt; <span class="ident">String</span> {
-    <span class="ident">qualified_name</span>(<span class="ident">rpc_call</span>.<span class="ident">response</span>().<span class="ident">name</span>())
+    <span class="macro">format!</span>(<span class="string">&quot;{}&lt;&#39;_&gt;&quot;</span>, <span class="ident">qualified_name</span>(<span class="ident">rpc_call</span>.<span class="ident">response</span>().<span class="ident">name</span>()))
 }
 
 <span class="doccomment">/// Returns the last part of the name, splitting on `.`.</span>
