@@ -13,6 +13,11 @@
 // limitations under the License.
 //
 
+const OUTPUTS: [&str; 2] = [
+    "test_schema_services_servers.rs",
+    "test_schema_services_clients.rs",
+];
+
 #[test]
 fn generate() {
     // This test simply copies the output created by the `build.rs` script back into the source
@@ -26,9 +31,11 @@ fn generate() {
     // overwrite the current one whenever it is run. The actual comparison is performed by the
     // developer (who should notice that the generated file has changed), and also in CI (thanks to
     // the git_check_diff step).
-    std::fs::copy(
-        concat!(env!("OUT_DIR"), "/test_schema_services.rs"),
-        "test_schema_services.rs.txt",
-    )
-    .unwrap();
+    for output in OUTPUTS.into_iter() {
+        std::fs::copy(
+            format!("{}/{}", env!("OUT_DIR"), output),
+            format!("{}.txt", output),
+        )
+        .unwrap();
+    }
 }
