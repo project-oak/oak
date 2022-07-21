@@ -242,7 +242,7 @@ fn generate_client_method(rpc_call: &RPCCall) -> anyhow::Result<Vec<String>> {
     // much benefit.
     Ok(vec![
         format!(
-            "    pub fn {}(&mut self, request_body: &[u8]) -> Result<oak_idl::utils::Message<{}>, oak_idl::Status> {{",
+            "    pub fn {}(&mut self, request_body: &[u8]) -> Result<oak_idl::utils::OwnedFlatbuffer<{}>, oak_idl::Status> {{",
             method_name(rpc_call),
             response_type(rpc_call)
         ),
@@ -255,7 +255,7 @@ fn generate_client_method(rpc_call: &RPCCall) -> anyhow::Result<Vec<String>> {
         format!("            body: request_body,"),
         format!("        }};"),
         format!("        let response_body = self.handler.invoke(request)?;"),
-        format!("        oak_idl::utils::Message::from_vec(response_body).map_err(|err| oak_idl::Status::new_with_message(oak_idl::StatusCode::Internal, format!(\"Client failed to deserialize the response: {{:?}}\", err)))"),
+        format!("        oak_idl::utils::OwnedFlatbuffer::from_vec(response_body).map_err(|err| oak_idl::Status::new_with_message(oak_idl::StatusCode::Internal, format!(\"Client failed to deserialize the response: {{:?}}\", err)))"),
         format!("    }}"),
     ])
 }
@@ -287,7 +287,7 @@ fn generate_service_method(rpc_call: &RPCCall) -> Vec<String> {
     // implementation of this method, therefore needs to be wrapped in `oak_idl::Message` in order
     // to transfer its ownership to the caller.
     vec![format!(
-        "    fn {}(&mut self, request: &{}) -> Result<oak_idl::utils::Message<{}>, oak_idl::Status>;",
+        "    fn {}(&mut self, request: &{}) -> Result<oak_idl::utils::OwnedFlatbuffer<{}>, oak_idl::Status>;",
         method_name(rpc_call),
         request_type(rpc_call),
         response_type(rpc_call)

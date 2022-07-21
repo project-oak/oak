@@ -214,10 +214,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let wasm_bytes = fs::read(&cli.wasm)
             .with_context(|| format!("Couldn't read Wasm file {}", &cli.wasm.display()))
             .unwrap();
-        let initialization_message = {
-            let mut builder = oak_idl::utils::MessageBuilder::default();
+        let owned_initialization_flatbuffer = {
+            let mut builder = oak_idl::utils::OwnedFlatbufferBuilder::default();
             let wasm_module = builder.create_vector::<u8>(&wasm_bytes);
-            let message = schema::Initialization::create(
+            let initialization_flatbuffer = schema::Initialization::create(
                 &mut builder,
                 &schema::InitializationArgs {
                     wasm_module: Some(wasm_module),
@@ -225,10 +225,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             );
 
             builder
-                .finish(message)
+                .finish(initialization_flatbuffer)
                 .expect("errored when creating initialization message")
         };
-        if let Err(err) = client.initialize(initialization_message.buf()) {
+        if let Err(err) = client.initialize(owned_initialization_flatbuffer.buf()) {
             panic!("failed to initialize the runtime: {:?}", err)
         }
 
