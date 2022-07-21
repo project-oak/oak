@@ -66,9 +66,7 @@ where
                     error
                 )
             })?;
-            let size: usize = usize::from_be_bytes(size_buffer)
-                .try_into()
-                .map_err(|error| anyhow!("Couldn't convert u64 to usize: {:?}", error))?;
+            let size = usize::from_be_bytes(size_buffer);
 
             if size > 0 {
                 // Read Protobuf message.
