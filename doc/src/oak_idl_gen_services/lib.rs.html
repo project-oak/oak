@@ -638,7 +638,7 @@
         <span class="macro">format!</span>(<span class="string">&quot;&quot;</span>),
         <span class="macro">format!</span>(<span class="string">&quot;extern crate alloc;&quot;</span>),
         <span class="macro">format!</span>(<span class="string">&quot;&quot;</span>),
-        <span class="macro">format!</span>(<span class="string">&quot;use alloc::{{format, string::ToString}};&quot;</span>),
+        <span class="macro">format!</span>(<span class="string">&quot;use alloc::{{format, string::ToString, vec::Vec}};&quot;</span>),
         <span class="macro">format!</span>(<span class="string">&quot;&quot;</span>),
         <span class="macro">format!</span>(<span class="string">&quot;pub struct {}&lt;S&gt; {{&quot;</span>, <span class="ident">server_name</span>(<span class="ident">service</span>)),
         <span class="macro">format!</span>(<span class="string">&quot;    service: S&quot;</span>),
@@ -739,12 +739,12 @@
     <span class="comment">// much benefit.</span>
     <span class="prelude-val">Ok</span>(<span class="macro">vec!</span>[
         <span class="macro">format!</span>(
-            <span class="string">&quot;    pub fn {}(&amp;mut self, request_body: &amp;[u8]) -&gt; Result&lt;oak_idl::utils::OwnedFlatbuffer&lt;{}&gt;, oak_idl::Status&gt; {{&quot;</span>,
+            <span class="string">&quot;    pub fn {}(&amp;mut self, request_body: Vec&lt;u8&gt;) -&gt; Result&lt;oak_idl::utils::OwnedFlatbuffer&lt;{}&gt;, oak_idl::Status&gt; {{&quot;</span>,
             <span class="ident">method_name</span>(<span class="ident">rpc_call</span>),
             <span class="ident">response_type</span>(<span class="ident">rpc_call</span>)
         ),
         <span class="macro">format!</span>(
-            <span class="string">&quot;        flatbuffers::root::&lt;{}&gt;(request_body).map_err(|err| oak_idl::Status::new_with_message(oak_idl::StatusCode::Internal, format!(\&quot;Client failed to deserialize the request: {{:?}}\&quot;, err)))?;&quot;</span>,
+            <span class="string">&quot;        flatbuffers::root::&lt;{}&gt;(&amp;request_body).map_err(|err| oak_idl::Status::new_with_message(oak_idl::StatusCode::Internal, format!(\&quot;Client failed to deserialize the request: {{:?}}\&quot;, err)))?;&quot;</span>,
             <span class="ident">request_type</span>(<span class="ident">rpc_call</span>)
         ),
         <span class="macro">format!</span>(<span class="string">&quot;        let request = oak_idl::Request {{&quot;</span>),
@@ -765,7 +765,7 @@
     <span class="prelude-val">Ok</span>(<span class="macro">vec!</span>[
         <span class="macro">format!</span>(<span class="string">&quot;            {} =&gt; {{&quot;</span>, <span class="ident">method_id</span>(<span class="ident">rpc_call</span>)<span class="question-mark">?</span>),
         <span class="macro">format!</span>(
-            <span class="string">&quot;                let request = flatbuffers::root::&lt;{}&gt;(request.body).map_err(|err| oak_idl::Status::new_with_message(oak_idl::StatusCode::Internal, format!(\&quot;Service failed to deserialize the request: {{:?}}\&quot;, err)))?;&quot;</span>,
+            <span class="string">&quot;                let request = flatbuffers::root::&lt;{}&gt;(&amp;request.body).map_err(|err| oak_idl::Status::new_with_message(oak_idl::StatusCode::Internal, format!(\&quot;Service failed to deserialize the request: {{:?}}\&quot;, err)))?;&quot;</span>,
             <span class="ident">request_type</span>(<span class="ident">rpc_call</span>),
         ),
         <span class="macro">format!</span>(

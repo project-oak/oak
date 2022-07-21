@@ -315,12 +315,12 @@
 
 <span class="doccomment">/// A request message representing an invocation of the method identified by `method_id` with the</span>
 <span class="doccomment">/// argument serialized as `body`.</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Request</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Request</span> {
     <span class="doccomment">/// Identifies the method to be invoked, as defined by the IDL.</span>
     <span class="kw">pub</span> <span class="ident">method_id</span>: <span class="ident">MethodId</span>,
     <span class="doccomment">/// The serialized request payload, corresponding to the argument of the method identified by</span>
     <span class="doccomment">/// `method_id`.</span>
-    <span class="kw">pub</span> <span class="ident">body</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> [<span class="ident">u8</span>],
+    <span class="kw">pub</span> <span class="ident">body</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
 }
 
 <span class="doccomment">/// A message-oriented handler that allows performing invocations.</span>
