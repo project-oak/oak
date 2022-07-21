@@ -31,7 +31,6 @@ fn test_channel() {
     let write_result = write_channel.write(&TEST_MESSAGE);
     assert_matches!(write_result, Ok(_));
 
-    // Copy data to a new stream and remove trailing zeroes.
     let mut read_buffer: Vec<u8> = write_buffer.to_vec();
     let read_stream = Cursor::new(&mut read_buffer);
     let mut read_channel = Channel::new(read_stream);

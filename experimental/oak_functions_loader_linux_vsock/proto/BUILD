@@ -27,8 +27,3 @@ proto_library(
     srcs = ["runtime.proto"],
     cc_api_version = 2,
 )
-
-cc_proto_library(
-    name = "runtime_cc_proto",
-    deps = [":runtime_proto"],
-)
