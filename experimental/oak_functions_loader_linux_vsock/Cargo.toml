@@ -7,7 +7,7 @@ license = "Apache-2.0"
 
 [dependencies]
 anyhow = { version = "*", default-features = false }
-byteorder = "*"
+clap = { version = "*", features = ["derive"] }
 libc = "*"
 log = "*"
 oak_remote_attestation = { path = "../../remote_attestation/rust", default-features = false, features = [

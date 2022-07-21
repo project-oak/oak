@@ -3101,7 +3101,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "assert_matches",
- "byteorder",
+ "clap 3.2.6",
  "libc",
  "log",
  "oak_baremetal_communication_channel",
