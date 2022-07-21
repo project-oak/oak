@@ -44,25 +44,25 @@ fn encode_request(unary_request: UnaryRequest) -> Result<Vec<u8>, oak_idl::Statu
     }
     session_id.copy_from_slice(&unary_request.session_id);
 
-    // Create the flatbuffer message (containing an implicit lifetime)
-    let request_message = {
-        let mut builder = oak_idl::utils::MessageBuilder::default();
+    // Create the flatbuffer (containing an implicit lifetime)
+    let owned_request_flatbuffer = {
+        let mut builder = oak_idl::utils::OwnedFlatbufferBuilder::default();
         let session_id = &schema::SessionId::new(&session_id);
         let body = builder.create_vector::<u8>(&unary_request.body);
-        let message = schema::UserRequest::create(
+        let flatbuffer = schema::UserRequest::create(
             &mut builder,
             &schema::UserRequestArgs {
                 session_id: Some(session_id),
                 body: Some(body),
             },
         );
-        builder.finish(message).map_err(|err| {
+        builder.finish(flatbuffer).map_err(|err| {
             oak_idl::Status::new_with_message(oak_idl::StatusCode::Internal, err.to_string())
         })?
     };
 
     // Return the underlying owned buffer
-    Ok(request_message.into_vec())
+    Ok(owned_request_flatbuffer.into_vec())
 }
 
 fn decode_response(
@@ -70,11 +70,13 @@ fn decode_response(
 ) -> Result<UnaryResponse, tonic::Status> {
     let encoded_response_data =
         encoded_response.map_err(|err| tonic::Status::internal(format!("{:?}", err)))?;
-    let response =
-        oak_idl::utils::Message::<schema::UserRequestResponse>::from_vec(encoded_response_data)
-            .map_err(|err| tonic::Status::internal(err.to_string()))?;
+    let owned_response_flatbuffer =
+        oak_idl::utils::OwnedFlatbuffer::<schema::UserRequestResponse>::from_vec(
+            encoded_response_data,
+        )
+        .map_err(|err| tonic::Status::internal(err.to_string()))?;
 
-    let response_body = response
+    let response_body = owned_response_flatbuffer
         .get()
         .body()
         .ok_or_else(|| tonic::Status::internal(""))?;
