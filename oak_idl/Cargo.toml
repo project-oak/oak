@@ -4,5 +4,11 @@ version = "0.1.0"
 edition = "2021"
 license = "Apache-2.0"
 
+[features]
+default = []
+std = []
+async-clients = ["async-trait", "std"]
+
 [dependencies]
 flatbuffers = { version = "*", features = ["no_std"], default-features = false }
+async-trait = { version = "*", optional = true }
