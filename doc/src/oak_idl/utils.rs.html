@@ -153,6 +153,8 @@
 <span id="148">148</span>
 <span id="149">149</span>
 <span id="150">150</span>
+<span id="151">151</span>
+<span id="152">152</span>
 </pre><pre class="rust"><code><span class="comment">// Copyright 2022 The Project Oak Authors</span>
 <span class="comment">//</span>
 <span class="comment">// Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
@@ -176,11 +178,11 @@
     <span class="ident">ops</span>::{<span class="ident">Deref</span>, <span class="ident">DerefMut</span>},
 };
 
-<span class="doccomment">/// A helper struct to facilitate building a [`Message`].</span>
+<span class="doccomment">/// A helper struct to facilitate building a [`OwnedFlatbuffer`].</span>
 <span class="doccomment">///</span>
-<span class="doccomment">/// [`MessageBuilder`] delegates to the underlying [`flatbuffers::FlatBufferBuilder`] instance, and</span>
-<span class="doccomment">/// it adds a [`MessageBuilder::finish`] method that returns a completed [`Message`] instance which</span>
-<span class="doccomment">/// owns the underlying buffer.</span>
+<span class="doccomment">/// [`OwnedFlatbufferBuilder`] delegates to the underlying [`flatbuffers::FlatBufferBuilder`]</span>
+<span class="doccomment">/// instance, and it adds a [`OwnedFlatbufferBuilder::finish`] method that returns a completed</span>
+<span class="doccomment">/// [`OwnedFlatbuffer`] instance which owns the underlying buffer.</span>
 <span class="doccomment">///</span>
 <span class="doccomment">/// We need to have an instance of [`PhantomData`] in the struct in order to use the type paramter</span>
 <span class="doccomment">/// `T`.</span>
@@ -219,19 +221,21 @@
 <span class="doccomment">/// #     pub value: Option&lt;flatbuffers::WIPOffset&lt;flatbuffers::Vector&lt;&#39;a, u8&gt;&gt;&gt;,</span>
 <span class="doccomment">/// # }</span>
 <span class="doccomment">/// #</span>
-<span class="doccomment">/// let mut b = oak_idl::utils::MessageBuilder::&lt;Request&gt;::default();</span>
+<span class="doccomment">/// let mut b = oak_idl::utils::OwnedFlatbufferBuilder::&lt;Request&gt;::default();</span>
 <span class="doccomment">/// let v = b.create_vector::&lt;u8&gt;(&amp;[14, 12]);</span>
 <span class="doccomment">/// let req = Request::create(&amp;mut b, &amp;RequestArgs {</span>
 <span class="doccomment">///     value: Some(v),</span>
 <span class="doccomment">/// });</span>
 <span class="doccomment">/// let m = b.finish(req);</span>
 <span class="doccomment">/// ```</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">MessageBuilder</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">T</span><span class="op">&gt;</span> {
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">OwnedFlatbufferBuilder</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">T</span><span class="op">&gt;</span> {
     <span class="ident">buf</span>: <span class="ident">flatbuffers::FlatBufferBuilder</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span>,
     <span class="ident">_phantom</span>: <span class="ident">PhantomData</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>,
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">T</span>: <span class="ident">flatbuffers::Verifiable</span> <span class="op">+</span> <span class="ident">flatbuffers::Follow</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="ident">Default</span> <span class="kw">for</span> <span class="ident">MessageBuilder</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">T</span><span class="op">&gt;</span> {
+<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">T</span>: <span class="ident">flatbuffers::Verifiable</span> <span class="op">+</span> <span class="ident">flatbuffers::Follow</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="ident">Default</span>
+    <span class="kw">for</span> <span class="ident">OwnedFlatbufferBuilder</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">T</span><span class="op">&gt;</span>
+{
     <span class="kw">fn</span> <span class="ident">default</span>() -&gt; <span class="self">Self</span> {
         <span class="self">Self</span> {
             <span class="ident">buf</span>: <span class="ident">flatbuffers::FlatBufferBuilder::default</span>(),
@@ -240,19 +244,19 @@
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">T</span>: <span class="ident">flatbuffers::Verifiable</span> <span class="op">+</span> <span class="ident">flatbuffers::Follow</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="ident">MessageBuilder</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">T</span><span class="op">&gt;</span> {
+<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">T</span>: <span class="ident">flatbuffers::Verifiable</span> <span class="op">+</span> <span class="ident">flatbuffers::Follow</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="ident">OwnedFlatbufferBuilder</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">T</span><span class="op">&gt;</span> {
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">finish</span>(
         <span class="self">self</span>,
         <span class="ident">offset</span>: <span class="ident">flatbuffers::WIPOffset</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Message</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>, <span class="ident">flatbuffers::InvalidFlatbuffer</span><span class="op">&gt;</span> {
+    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">OwnedFlatbuffer</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>, <span class="ident">flatbuffers::InvalidFlatbuffer</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">s</span> <span class="op">=</span> <span class="self">self</span>;
         <span class="ident">s</span>.<span class="ident">buf</span>.<span class="ident">finish</span>(<span class="ident">offset</span>, <span class="prelude-val">None</span>);
-        <span class="ident">Message::from_vec</span>(<span class="ident">s</span>.<span class="ident">buf</span>.<span class="ident">finished_data</span>().<span class="ident">to_vec</span>())
+        <span class="ident">OwnedFlatbuffer::from_vec</span>(<span class="ident">s</span>.<span class="ident">buf</span>.<span class="ident">finished_data</span>().<span class="ident">to_vec</span>())
     }
 }
 
-<span class="doccomment">/// Delegate to the underlying [`MessageBuilder`].</span>
-<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">T</span><span class="op">&gt;</span> <span class="ident">Deref</span> <span class="kw">for</span> <span class="ident">MessageBuilder</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">T</span><span class="op">&gt;</span> {
+<span class="doccomment">/// Delegate to the underlying [`OwnedFlatbufferBuilder`].</span>
+<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">T</span><span class="op">&gt;</span> <span class="ident">Deref</span> <span class="kw">for</span> <span class="ident">OwnedFlatbufferBuilder</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">T</span><span class="op">&gt;</span> {
     <span class="kw">type</span> <span class="ident">Target</span> <span class="op">=</span> <span class="ident">flatbuffers::FlatBufferBuilder</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span>;
 
     <span class="kw">fn</span> <span class="ident">deref</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::Target</span> {
@@ -260,20 +264,20 @@
     }
 }
 
-<span class="doccomment">/// Delegate to the underlying [`MessageBuilder`].</span>
-<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">T</span><span class="op">&gt;</span> <span class="ident">DerefMut</span> <span class="kw">for</span> <span class="ident">MessageBuilder</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">T</span><span class="op">&gt;</span> {
+<span class="doccomment">/// Delegate to the underlying [`OwnedFlatbufferBuilder`].</span>
+<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">T</span><span class="op">&gt;</span> <span class="ident">DerefMut</span> <span class="kw">for</span> <span class="ident">OwnedFlatbufferBuilder</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">T</span><span class="op">&gt;</span> {
     <span class="kw">fn</span> <span class="ident">deref_mut</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut</span> <span class="ident"><span class="self">Self</span>::Target</span> {
         <span class="kw-2">&amp;mut</span> <span class="self">self</span>.<span class="ident">buf</span>
     }
 }
 
 <span class="doccomment">/// An owned flatbuffer message, which owns the underlying buffer.</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Message</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">OwnedFlatbuffer</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
     <span class="ident">buf</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
     <span class="ident">_phantom</span>: <span class="ident">PhantomData</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>,
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">flatbuffers::Verifiable</span><span class="op">&gt;</span> <span class="ident">Message</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
+<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">flatbuffers::Verifiable</span><span class="op">&gt;</span> <span class="ident">OwnedFlatbuffer</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">from_vec</span>(<span class="ident">buf</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident">flatbuffers::InvalidFlatbuffer</span><span class="op">&gt;</span> {
         <span class="kw">use</span> <span class="ident">flatbuffers::Verifiable</span>;
         <span class="kw">let</span> <span class="ident">opts</span> <span class="op">=</span> <span class="ident">flatbuffers::VerifierOptions::default</span>();
@@ -286,7 +290,7 @@
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="ident">Message</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
+<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="ident">OwnedFlatbuffer</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
     <span class="doccomment">/// Returns a reference to the underlying owned buffer.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">buf</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>[<span class="ident">u8</span>] {
         <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">buf</span>
@@ -297,7 +301,7 @@
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">T</span>: <span class="ident">flatbuffers::Follow</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">flatbuffers::Verifiable</span><span class="op">&gt;</span> <span class="ident">Message</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
+<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">T</span>: <span class="ident">flatbuffers::Follow</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">flatbuffers::Verifiable</span><span class="op">&gt;</span> <span class="ident">OwnedFlatbuffer</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
     <span class="doccomment">/// Returns a reference to the flatbuffer object, pointing within the underlying owned buffer.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="self">self</span>) -&gt; <span class="ident">T::Inner</span> {
         <span class="ident">flatbuffers::root</span>::<span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">buf</span>).<span class="ident">unwrap</span>()

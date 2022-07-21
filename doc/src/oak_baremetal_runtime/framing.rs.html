@@ -279,7 +279,7 @@
         <span class="kw-2">&amp;mut</span> <span class="self">self</span>,
         <span class="ident">initialization</span>: <span class="kw-2">&amp;</span><span class="ident">schema::Initialization</span>,
     ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>
-        <span class="ident">oak_idl::utils::Message</span><span class="op">&lt;</span><span class="ident">oak_baremetal_communication_channel::schema::Empty</span><span class="op">&gt;</span>,
+        <span class="ident">oak_idl::utils::OwnedFlatbuffer</span><span class="op">&lt;</span><span class="ident">oak_baremetal_communication_channel::schema::Empty</span><span class="op">&gt;</span>,
         <span class="ident">oak_idl::Status</span>,
     <span class="op">&gt;</span> {
         <span class="kw">match</span> <span class="kw-2">&amp;mut</span> <span class="self">self</span>.<span class="ident">initialization_state</span> {
@@ -309,7 +309,7 @@
                 ));
                 <span class="self">self</span>.<span class="ident">initialization_state</span> <span class="op">=</span> <span class="ident">InitializationState::Initialized</span>(<span class="ident">attestation_handler</span>);
                 <span class="kw">let</span> <span class="ident">response_message</span> <span class="op">=</span> {
-                    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">builder</span> <span class="op">=</span> <span class="ident">oak_idl::utils::MessageBuilder::default</span>();
+                    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">builder</span> <span class="op">=</span> <span class="ident">oak_idl::utils::OwnedFlatbufferBuilder::default</span>();
                     <span class="kw">let</span> <span class="ident">user_request_response</span> <span class="op">=</span>
                         <span class="ident">schema::Empty::create</span>(<span class="kw-2">&amp;mut</span> <span class="ident">builder</span>, <span class="kw-2">&amp;</span><span class="ident">schema::EmptyArgs</span> {});
                     <span class="ident">builder</span>
@@ -324,7 +324,7 @@
     <span class="kw">fn</span> <span class="ident">handle_user_request</span>(
         <span class="kw-2">&amp;mut</span> <span class="self">self</span>,
         <span class="ident">request_message</span>: <span class="kw-2">&amp;</span><span class="ident">schema::UserRequest</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">oak_idl::utils::Message</span><span class="op">&lt;</span><span class="ident">schema::UserRequestResponse</span><span class="op">&gt;</span>, <span class="ident">oak_idl::Status</span><span class="op">&gt;</span> {
+    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">oak_idl::utils::OwnedFlatbuffer</span><span class="op">&lt;</span><span class="ident">schema::UserRequestResponse</span><span class="op">&gt;</span>, <span class="ident">oak_idl::Status</span><span class="op">&gt;</span> {
         <span class="kw">match</span> <span class="kw-2">&amp;mut</span> <span class="self">self</span>.<span class="ident">initialization_state</span> {
             <span class="ident">InitializationState::Uninitialized</span>(<span class="ident">_attestation_behavior</span>) =&gt; <span class="prelude-val">Err</span>(<span class="ident">oak_idl::Status::new</span>(
                 <span class="ident">oak_idl::StatusCode::FailedPrecondition</span>,
@@ -344,7 +344,7 @@
                     .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">_err</span><span class="op">|</span> <span class="ident">oak_idl::Status::new</span>(<span class="ident">oak_idl::StatusCode::Internal</span>))<span class="question-mark">?</span>;
 
                 <span class="kw">let</span> <span class="ident">response_message</span> <span class="op">=</span> {
-                    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">builder</span> <span class="op">=</span> <span class="ident">oak_idl::utils::MessageBuilder::default</span>();
+                    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">builder</span> <span class="op">=</span> <span class="ident">oak_idl::utils::OwnedFlatbufferBuilder::default</span>();
                     <span class="kw">let</span> <span class="ident">body</span> <span class="op">=</span> <span class="ident">builder</span>.<span class="ident">create_vector</span>::<span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="ident">response</span>);
                     <span class="kw">let</span> <span class="ident">user_request_response</span> <span class="op">=</span> <span class="ident">schema::UserRequestResponse::create</span>(
                         <span class="kw-2">&amp;mut</span> <span class="ident">builder</span>,
@@ -363,7 +363,7 @@
         <span class="kw-2">&amp;mut</span> <span class="self">self</span>,
         <span class="ident">lookup_data</span>: <span class="kw-2">&amp;</span><span class="ident">schema::LookupData</span>,
     ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>
-        <span class="ident">oak_idl::utils::Message</span><span class="op">&lt;</span><span class="ident">oak_baremetal_communication_channel::schema::Empty</span><span class="op">&gt;</span>,
+        <span class="ident">oak_idl::utils::OwnedFlatbuffer</span><span class="op">&lt;</span><span class="ident">oak_baremetal_communication_channel::schema::Empty</span><span class="op">&gt;</span>,
         <span class="ident">oak_idl::Status</span>,
     <span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">data</span> <span class="op">=</span> <span class="ident">lookup_data</span>
@@ -386,7 +386,7 @@
 
         <span class="self">self</span>.<span class="ident">lookup_data_manager</span>.<span class="ident">update_data</span>(<span class="ident">data</span>);
         <span class="kw">let</span> <span class="ident">response_message</span> <span class="op">=</span> {
-            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">builder</span> <span class="op">=</span> <span class="ident">oak_idl::utils::MessageBuilder::default</span>();
+            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">builder</span> <span class="op">=</span> <span class="ident">oak_idl::utils::OwnedFlatbufferBuilder::default</span>();
             <span class="kw">let</span> <span class="ident">user_request_response</span> <span class="op">=</span> <span class="ident">schema::Empty::create</span>(<span class="kw-2">&amp;mut</span> <span class="ident">builder</span>, <span class="kw-2">&amp;</span><span class="ident">schema::EmptyArgs</span> {});
             <span class="ident">builder</span>
                 .<span class="ident">finish</span>(<span class="ident">user_request_response</span>)
