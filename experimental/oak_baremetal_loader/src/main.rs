@@ -229,21 +229,33 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
+    let mut lookup_data_client = schema::TrustedRuntimeAsyncClient::new(Client {
+        request_dispatcher: request_dispatcher.clone(),
+    });
+    // Spawn task to load & periodically refresh lookup data.
+    tokio::spawn(async move {
+        let mut interval = tokio::time::interval(std::time::Duration::from_millis(1000 * 60 * 10));
+
+        loop {
+            let lookup_data =
+                lookup::load_lookup_data(&cli.lookup_data).expect("failed to load lookup data");
+            let encoded_lookup_data =
+                lookup::encode_lookup_data(lookup_data).expect("failed to encode lookup data");
+
+            if let Err(err) = lookup_data_client
+                .update_lookup_data(encoded_lookup_data.into_vec())
+                .await
+            {
+                panic!("failed to send lookup data: {:?}", err)
+            }
+
+            interval.tick().await;
+        }
+    });
+
     let mut client = schema::TrustedRuntimeAsyncClient::new(Client {
         request_dispatcher: request_dispatcher.clone(),
     });
-
-    let lookup_data =
-        lookup::load_lookup_data(&cli.lookup_data).expect("failed to load lookup data");
-    let encoded_lookup_data =
-        lookup::encode_lookup_data(lookup_data).expect("failed to encode lookup data");
-
-    if let Err(err) = client
-        .update_lookup_data(encoded_lookup_data.into_vec())
-        .await
-    {
-        panic!("failed to send lookup data: {:?}", err)
-    }
 
     let wasm_bytes = fs::read(&cli.wasm)
         .with_context(|| format!("Couldn't read Wasm file {}", &cli.wasm.display()))
