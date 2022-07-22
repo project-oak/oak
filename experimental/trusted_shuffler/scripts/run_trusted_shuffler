@@ -3,3 +3,6 @@
 RUST_LOG=info cargo run --manifest-path=experimental/trusted_shuffler/server/Cargo.toml -- \
 --k=1 --listen-address="[::]:8080" --backend-url="http://localhost:8888" &
    
+# Convenient to know the PID to kill when the Trusted Shuffler crashes.
+echo "Trusted Shuffler PID: "
+echo $!

@@ -16,7 +16,28 @@
 
 use anyhow::{anyhow, Context};
 use echo::{echo_client::EchoClient, EchoRequest};
+use http::{Request, Response};
 use hyper::{Body, Client, Method};
+
+// TODO(mschett): similar functionality to send_http_request, refactor.
+// differences:
+// * client is http2_only
+// * the request is given, not built
+// * returns the whole response, not only the body.
+pub async fn send_with_request(request: Request<Body>) -> anyhow::Result<Response<Body>> {
+    // TODO(mschett): don't use http2_only client.
+    let client = Client::builder().http2_only(true).build_http();
+
+    let response = client
+        .request(request)
+        .await
+        .context("Couldn't send request")?;
+    if response.status() != http::StatusCode::OK {
+        return Err(anyhow!("Non-OK status: {:?}", response.status()));
+    }
+
+    Ok(response)
+}
 
 pub async fn send_http_request(uri: &str, method: Method, body: &[u8]) -> anyhow::Result<Vec<u8>> {
     let client = Client::new();

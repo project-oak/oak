@@ -16,8 +16,8 @@
 
 use anyhow::anyhow;
 use async_trait::async_trait;
+use http::Uri;
 use hyper::{Body, Method, Request, Response, StatusCode};
-use log::error;
 use std::{
     future::Future,
     pin::Pin,
@@ -27,7 +27,7 @@ use std::{
 };
 use tokio::time::Duration;
 use trusted_shuffler::{RequestHandler, TrustedShuffler};
-use trusted_shuffler_common::send_http_request;
+use trusted_shuffler_common::send_with_request;
 
 struct HttpRequestHandler {
     backend_url: String,
@@ -35,8 +35,19 @@ struct HttpRequestHandler {
 
 #[async_trait]
 impl RequestHandler for HttpRequestHandler {
-    async fn handle(&self, request: Vec<u8>) -> anyhow::Result<Vec<u8>> {
-        let response = send_http_request(&self.backend_url, Method::POST, &request).await;
+    async fn handle(&self, mut request: Request<Body>) -> anyhow::Result<Response<Body>> {
+        let uri = request.uri_mut();
+        // TODO(mschett): For now we hard code the string, but we should be able to get it from
+        // request.uri. Also, improve parsing of Uri.
+        *uri = "http://localhost:8888/experimental.trusted_shuffler.echo.Echo/Echo"
+            .parse::<Uri>()
+            .unwrap();
+
+        log::info!("Backend URL: {:?}", self.backend_url);
+
+        log::info!("Request to Backend: {:?}", request);
+
+        let response = send_with_request(request).await;
         response.map_or_else(
             |error| {
                 Err(anyhow!(
@@ -63,30 +74,23 @@ impl hyper::service::Service<Request<Body>> for Service {
     }
 
     fn call(&mut self, request: Request<Body>) -> Self::Future {
+        log::info!("Received Request: {:?}", request);
         let trusted_shuffler = self.trusted_shuffler.clone();
         let response = async move {
-            match (request.method(), request.uri().path()) {
-                (&Method::POST, "/request") => {
-                    let body = hyper::body::to_bytes(request.into_body())
-                        .await
-                        .expect("Couldn't read request body");
-
+            match request.method() {
+                // TODO(mschett): Check if http still works.
+                // (&Method::POST, "/experimental.trusted_shuffler.echo.Echo/Echo")
+                // (&Method::POST, "/request")
+                &Method::POST => {
                     let request_start = Instant::now();
-                    log::info!(
-                        "Server Request: {}",
-                        String::from_utf8(body.to_vec()).unwrap()
-                    );
-                    match trusted_shuffler.invoke(body.to_vec()).await {
+                    match trusted_shuffler.invoke(request).await {
                         Ok(response) => {
                             let _response_time = request_start.elapsed();
-                            log::info!(
-                                "Server Response: {}",
-                                String::from_utf8(body.to_vec()).unwrap()
-                            );
-                            Ok(Response::new(Body::from(response)))
+                            log::info!("Server Response: {:?}", response);
+                            Ok(Response::new(Body::from(response.into_body())))
                         }
                         Err(error) => {
-                            error!("Couldn't receive response: {:?}", error);
+                            log::error!("Couldn't receive response: {:?}", error);
                             let mut internal_error = Response::default();
                             *internal_error.status_mut() = StatusCode::INTERNAL_SERVER_ERROR;
                             Ok(internal_error)
