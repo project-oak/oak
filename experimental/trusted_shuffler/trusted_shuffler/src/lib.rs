@@ -161,39 +161,30 @@ impl TrustedShuffler {
 
         let response_futures: FuturesOrdered<_> = requests
             .into_iter()
-            .map(|request| {
-                // TODO(mschett): Refactor to not build message in every branch.
+            .map(|request_message| {
+                // Deconstruct the Message holding a request in data.
                 let request_handler_clone = request_handler.clone();
-                let index = request.index;
-                let response_sender = request.response_sender;
-                let data = get_request(request.data);
+                let index = request_message.index;
+                let response_sender = request_message.response_sender;
+                let data = get_request(request_message.data);
                 async move {
-                    match timeout {
-                        None => request_handler_clone
-                            .handle(data)
-                            .await
-                            .map(|response| Message {
-                                index,
-                                data: Wrapper::Response(response),
-                                response_sender,
-                            }),
+                    let response = match timeout {
+                        None => request_handler_clone.handle(data).await,
                         Some(timeout) => {
                             match tokio::time::timeout(timeout, request_handler_clone.handle(data))
                                 .await
                             {
-                                Err(_) => Ok(Message {
-                                    index,
-                                    data: Wrapper::Response(hyper::Response::default()),
-                                    response_sender,
-                                }),
-                                Ok(response) => response.map(|response| Message {
-                                    index,
-                                    data: Wrapper::Response(response),
-                                    response_sender,
-                                }),
+                                Err(_) => Ok(hyper::Response::default()),
+                                Ok(response) => response,
                             }
                         }
-                    }
+                    };
+                    // Create a Message holding the response in data.
+                    response.map(|response| Message {
+                        index,
+                        data: Wrapper::Response(response),
+                        response_sender,
+                    })
                 }
             })
             .collect();
