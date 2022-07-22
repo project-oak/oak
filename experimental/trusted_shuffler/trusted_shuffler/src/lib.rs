@@ -55,25 +55,6 @@ struct Message {
     response_sender: oneshot::Sender<Response>,
 }
 
-// TODO(mschett): Remove dead code.
-impl Message {
-    #[allow(dead_code)]
-    fn new_response(self, data: Wrapper) -> Message {
-        Message {
-            index: self.index,
-            data,
-            response_sender: self.response_sender,
-        }
-    }
-
-    // The Trusted Shuffler responds with the `EMPTY_RESPONSE` if the backend does not respond
-    // within a given timeout.
-    #[allow(dead_code)]
-    fn new_empty_response(self) -> Message {
-        self.new_response(Wrapper::Response(hyper::Response::default()))
-    }
-}
-
 #[async_trait]
 pub trait RequestHandler: Send + Sync {
     async fn handle(&self, request: Request) -> anyhow::Result<Response>;
@@ -151,7 +132,8 @@ impl TrustedShuffler {
     }
 
     // Lexicographically sorts requests and sends them to the backend using the
-    // [`TrustedShuffler::request_handler`].
+    // [`TrustedShuffler::request_handler`]. Blocks until all responses are received, except if a
+    // timeout is set, then it sends a default response.
     async fn shuffle_requests(
         mut requests: Vec<Message>,
         request_handler: Arc<dyn RequestHandler>,
