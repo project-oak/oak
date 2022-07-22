@@ -15,11 +15,11 @@
 //
 
 syntax = "proto3";
-   
+
 package experimental.trusted_shuffler.echo;
 
 service Echo {
-  rpc Echo (EchoRequest) returns (EchoResponse);
+  rpc Echo(EchoRequest) returns (EchoResponse);
 }
 
 message EchoRequest {
