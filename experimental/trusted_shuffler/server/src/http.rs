@@ -36,16 +36,13 @@ struct HttpRequestHandler {
 #[async_trait]
 impl RequestHandler for HttpRequestHandler {
     async fn handle(&self, mut request: Request<Body>) -> anyhow::Result<Response<Body>> {
-        let uri = request.uri_mut();
-        // TODO(mschett): For now we hard code the string, but we should be able to get it from
-        // request.uri. Also, improve parsing of Uri.
-        *uri = "http://localhost:8888/experimental.trusted_shuffler.echo.Echo/Echo"
-            .parse::<Uri>()
-            .unwrap();
-
-        log::info!("Backend URL: {:?}", self.backend_url);
-
-        log::info!("Request to Backend: {:?}", request);
+        // We want to keep the path of the orginal request from the client.
+        let path = request.uri().path();
+        // And extend the URL to the backend.
+        let new_uri = format!("{}{}", self.backend_url, path).parse::<Uri>().expect("Couldn't parse URI for backend.");
+         let uri = request.uri_mut();
+        *uri = new_uri;
+        log::info!("New request to the backend: {:?}\n", request);
 
         let response = send_with_request(request).await;
         response.map_or_else(
