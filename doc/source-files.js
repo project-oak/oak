@@ -23,6 +23,7 @@ sourcesIndex["oak_functions_extension"] = {"name":"","files":["lib.rs"]};
 sourcesIndex["oak_functions_load_test"] = {"name":"","files":["main.rs"]};
 sourcesIndex["oak_functions_loader"] = {"name":"","files":["grpc.rs","lib.rs","logger.rs","lookup_data.rs","server.rs"]};
 sourcesIndex["oak_functions_loader_base"] = {"name":"","files":["main.rs"]};
+sourcesIndex["oak_functions_loader_linux_vsock"] = {"name":"","files":["channel.rs","main.rs"]};
 sourcesIndex["oak_functions_loader_unsafe"] = {"name":"","files":["main.rs"]};
 sourcesIndex["oak_functions_lookup"] = {"name":"","files":["lib.rs"]};
 sourcesIndex["oak_functions_metrics"] = {"name":"","files":["lib.rs"]};
