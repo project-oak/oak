@@ -24,7 +24,7 @@ security mechanism on the machine itself and extract secret keys and data.
 [Oak Functions](/oak_functions) is a server binary that exposes an API (over
 gRPC / HTTP) that allows clients to send data, and the server to execute
 untrusted business logic code over client-provided data in a controlled way,
-enforcing strong privacy guarantess about its execution.
+enforcing strong privacy guarantees about its execution.
 
 In order for these guarantees to be transferred to remote clients, Oak Functions
 is expected to be run in a
