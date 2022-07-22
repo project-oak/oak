@@ -493,6 +493,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c4872d67bab6358e59559027aa3b9157c53d9358c51423c17554809a8858e0f8"
 
 [[package]]
+name = "cache-padded"
+version = "1.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c1db59621ec70f09c5e9b597b220c7a2b43611f4710dc03ceb8748637775692c"
+
+[[package]]
 name = "camino"
 version = "1.0.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3090,6 +3096,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "oak_functions_loader_linux_vsock"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "assert_matches",
+ "clap 3.2.10",
+ "libc",
+ "log",
+ "oak_baremetal_communication_channel",
+ "oak_baremetal_runtime",
+ "oak_remote_attestation",
+ "prost 0.9.0",
+ "prost-build 0.9.0",
+ "ringbuf",
+ "vsock",
+]
+
+[[package]]
 name = "oak_functions_loader_unsafe"
 version = "0.1.0"
 dependencies = [
@@ -4334,6 +4358,15 @@ dependencies = [
  "untrusted",
  "web-sys",
  "winapi",
+]
+
+[[package]]
+name = "ringbuf"
+version = "0.2.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f65af18d50f789e74aaf23bbb3f65dcd22a3cb6e029b5bced149f6bd57c5c2a2"
+dependencies = [
+ "cache-padded",
 ]
 
 [[package]]
