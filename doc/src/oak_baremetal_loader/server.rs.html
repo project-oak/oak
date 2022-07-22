@@ -123,7 +123,6 @@
 <span id="118">118</span>
 <span id="119">119</span>
 <span id="120">120</span>
-<span id="121">121</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2022 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -140,6 +139,7 @@
 <span class="comment">// limitations under the License.</span>
 <span class="comment">//</span>
 
+<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::Client</span>;
 <span class="kw">use</span> <span class="ident">bmrng::unbounded::UnboundedRequestSender</span>;
 <span class="kw">use</span> <span class="ident">futures::Future</span>;
 <span class="kw">use</span> <span class="ident">oak_baremetal_communication_channel::schema</span>;
@@ -191,18 +191,12 @@
     <span class="prelude-val">Ok</span>(<span class="ident">owned_request_flatbuffer</span>.<span class="ident">into_vec</span>())
 }
 
-<span class="kw">fn</span> <span class="ident">decode_response</span>(
-    <span class="ident">encoded_response</span>: <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>, <span class="ident">oak_idl::Status</span><span class="op">&gt;</span>,
-) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">UnaryResponse</span>, <span class="ident">tonic::Status</span><span class="op">&gt;</span> {
-    <span class="kw">let</span> <span class="ident">encoded_response_data</span> <span class="op">=</span>
-        <span class="ident">encoded_response</span>.<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> <span class="ident">tonic::Status::internal</span>(<span class="macro">format!</span>(<span class="string">&quot;{:?}&quot;</span>, <span class="ident">err</span>)))<span class="question-mark">?</span>;
-    <span class="kw">let</span> <span class="ident">owned_response_flatbuffer</span> <span class="op">=</span>
-        <span class="ident">oak_idl::utils::OwnedFlatbuffer</span>::<span class="op">&lt;</span><span class="ident">schema::UserRequestResponse</span><span class="op">&gt;</span><span class="ident">::from_vec</span>(
-            <span class="ident">encoded_response_data</span>,
-        )
-        .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> <span class="ident">tonic::Status::internal</span>(<span class="ident">err</span>.<span class="ident">to_string</span>()))<span class="question-mark">?</span>;
+<span class="kw">fn</span> <span class="ident">decode_response</span>(<span class="ident">encoded_response</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">UnaryResponse</span>, <span class="ident">tonic::Status</span><span class="op">&gt;</span> {
+    <span class="kw">let</span> <span class="ident">response</span> <span class="op">=</span>
+        <span class="ident">oak_idl::utils::OwnedFlatbuffer</span>::<span class="op">&lt;</span><span class="ident">schema::UserRequestResponse</span><span class="op">&gt;</span><span class="ident">::from_vec</span>(<span class="ident">encoded_response</span>)
+            .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> <span class="ident">tonic::Status::internal</span>(<span class="ident">err</span>.<span class="ident">to_string</span>()))<span class="question-mark">?</span>;
 
-    <span class="kw">let</span> <span class="ident">response_body</span> <span class="op">=</span> <span class="ident">owned_response_flatbuffer</span>
+    <span class="kw">let</span> <span class="ident">response_body</span> <span class="op">=</span> <span class="ident">response</span>
         .<span class="ident">get</span>()
         .<span class="ident">body</span>()
         .<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">tonic::Status::internal</span>(<span class="string">&quot;&quot;</span>))<span class="question-mark">?</span>;
@@ -213,7 +207,7 @@
 }
 
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">EchoImpl</span> {
-    <span class="ident">channel</span>: <span class="ident">UnboundedRequestSender</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>, <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>, <span class="ident">oak_idl::Status</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+    <span class="ident">request_dispatcher</span>: <span class="ident">UnboundedRequestSender</span><span class="op">&lt;</span><span class="ident">oak_idl::Request</span>, <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>, <span class="ident">oak_idl::Status</span><span class="op">&gt;</span><span class="op">&gt;</span>,
 }
 
 <span class="attribute">#[<span class="ident">tonic::async_trait</span>]</span>
@@ -225,12 +219,16 @@
         <span class="kw">let</span> <span class="ident">request</span> <span class="op">=</span> <span class="ident">request</span>.<span class="ident">into_inner</span>();
         <span class="kw">let</span> <span class="ident">encoded_request</span> <span class="op">=</span> <span class="ident">encode_request</span>(<span class="ident">request</span>)
             .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> <span class="ident">tonic::Status::invalid_argument</span>(<span class="macro">format!</span>(<span class="string">&quot;{:?}&quot;</span>, <span class="ident">err</span>)))<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">encoded_response</span> <span class="op">=</span> <span class="self">self</span>
-            .<span class="ident">channel</span>
-            .<span class="ident">send_receive</span>(<span class="ident">encoded_request</span>)
+
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">client</span> <span class="op">=</span> <span class="ident">schema::TrustedRuntimeAsyncClient::new</span>(<span class="ident">Client</span> {
+            <span class="ident">request_dispatcher</span>: <span class="self">self</span>.<span class="ident">request_dispatcher</span>.<span class="ident">clone</span>(),
+        });
+
+        <span class="kw">let</span> <span class="ident">encoded_response</span> <span class="op">=</span> <span class="ident">client</span>
+            .<span class="ident">handle_user_request</span>(<span class="ident">encoded_request</span>)
             .<span class="kw">await</span>
             .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> <span class="ident">tonic::Status::internal</span>(<span class="macro">format!</span>(<span class="string">&quot;{:?}&quot;</span>, <span class="ident">err</span>)))<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">response</span> <span class="op">=</span> <span class="ident">decode_response</span>(<span class="ident">encoded_response</span>)<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">response</span> <span class="op">=</span> <span class="ident">decode_response</span>(<span class="ident">encoded_response</span>.<span class="ident">into_vec</span>())<span class="question-mark">?</span>;
 
         <span class="prelude-val">Ok</span>(<span class="ident">Response::new</span>(<span class="ident">response</span>))
     }
@@ -238,9 +236,9 @@
 
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">server</span>(
     <span class="ident">addr</span>: <span class="ident">SocketAddr</span>,
-    <span class="ident">channel</span>: <span class="ident">UnboundedRequestSender</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>, <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>, <span class="ident">oak_idl::Status</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+    <span class="ident">request_dispatcher</span>: <span class="ident">UnboundedRequestSender</span><span class="op">&lt;</span><span class="ident">oak_idl::Request</span>, <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>, <span class="ident">oak_idl::Status</span><span class="op">&gt;</span><span class="op">&gt;</span>,
 ) -&gt; <span class="kw">impl</span> <span class="ident">Future</span><span class="op">&lt;</span><span class="ident">Output</span> <span class="op">=</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">tonic::transport::Error</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-    <span class="kw">let</span> <span class="ident">server_impl</span> <span class="op">=</span> <span class="ident">EchoImpl</span> { <span class="ident">channel</span> };
+    <span class="kw">let</span> <span class="ident">server_impl</span> <span class="op">=</span> <span class="ident">EchoImpl</span> { <span class="ident">request_dispatcher</span> };
     <span class="ident">Server::builder</span>()
         .<span class="ident">add_service</span>(<span class="ident">UnarySessionServer::new</span>(<span class="ident">server_impl</span>))
         .<span class="ident">serve</span>(<span class="ident">addr</span>)

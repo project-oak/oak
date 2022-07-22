@@ -127,6 +127,12 @@
 <span id="122">122</span>
 <span id="123">123</span>
 <span id="124">124</span>
+<span id="125">125</span>
+<span id="126">126</span>
+<span id="127">127</span>
+<span id="128">128</span>
+<span id="129">129</span>
+<span id="130">130</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2022 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -143,11 +149,13 @@
 <span class="comment">// limitations under the License.</span>
 <span class="comment">//</span>
 
-<span class="attribute">#![<span class="ident">no_std</span>]</span>
+<span class="attribute">#![<span class="ident">cfg_attr</span>(<span class="ident">not</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;std&quot;</span>), <span class="ident">no_std</span>)]</span>
 <span class="attribute">#![<span class="ident">feature</span>(<span class="ident">never_type</span>)]</span>
 <span class="attribute">#![<span class="ident">allow</span>(<span class="ident">rustdoc::private_intra_doc_links</span>)]</span>
 
+<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;client&quot;</span>)]</span>
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">client</span>;
+
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">server</span>;
 
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">schema</span> {
@@ -156,7 +164,11 @@
 
     <span class="macro">include!</span>(<span class="macro">concat!</span>(<span class="macro">env!</span>(<span class="string">&quot;OUT_DIR&quot;</span>), <span class="string">&quot;/schema_generated.rs&quot;</span>));
     <span class="macro">include!</span>(<span class="macro">concat!</span>(<span class="macro">env!</span>(<span class="string">&quot;OUT_DIR&quot;</span>), <span class="string">&quot;/schema_services_servers.rs&quot;</span>));
-    <span class="macro">include!</span>(<span class="macro">concat!</span>(<span class="macro">env!</span>(<span class="string">&quot;OUT_DIR&quot;</span>), <span class="string">&quot;/schema_services_clients.rs&quot;</span>));
+    <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;client&quot;</span>)]</span>
+    <span class="macro">include!</span>(<span class="macro">concat!</span>(
+        <span class="macro">env!</span>(<span class="string">&quot;OUT_DIR&quot;</span>),
+        <span class="string">&quot;/schema_services_async_clients.rs&quot;</span>
+    ));
 }
 
 <span class="kw">mod</span> <span class="ident">frame</span>;

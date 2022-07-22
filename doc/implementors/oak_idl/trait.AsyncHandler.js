@@ -1,0 +1,3 @@
+(function() {var implementors = {};
+implementors["oak_baremetal_loader"] = [{"text":"impl <a class=\"trait\" href=\"oak_idl/trait.AsyncHandler.html\" title=\"trait oak_idl::AsyncHandler\">AsyncHandler</a> for <a class=\"struct\" href=\"oak_baremetal_loader/struct.Client.html\" title=\"struct oak_baremetal_loader::Client\">Client</a>","synthetic":false,"types":["oak_baremetal_loader::Client"]}];
+if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()
