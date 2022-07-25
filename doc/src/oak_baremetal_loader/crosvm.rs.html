@@ -117,6 +117,12 @@
 <span id="112">112</span>
 <span id="113">113</span>
 <span id="114">114</span>
+<span id="115">115</span>
+<span id="116">116</span>
+<span id="117">117</span>
+<span id="118">118</span>
+<span id="119">119</span>
+<span id="120">120</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2022 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -185,6 +191,12 @@
         ]);
         <span class="ident">cmd</span>.<span class="ident">args</span>([<span class="string">&quot;--cid&quot;</span>, <span class="ident">VSOCK_GUEST_CID</span>.<span class="ident">to_string</span>().<span class="ident">as_str</span>()]);
         <span class="ident">cmd</span>.<span class="ident">args</span>([<span class="string">&quot;--params&quot;</span>, <span class="string">&quot;channel=virtio_vsock&quot;</span>]);
+
+        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">gdb_port</span>) <span class="op">=</span> <span class="ident">params</span>.<span class="ident">gdb</span> {
+            <span class="comment">// Listen for a gdb connection on the provided port and wait for debugger before booting</span>
+            <span class="ident">cmd</span>.<span class="ident">args</span>(<span class="kw-2">&amp;</span>[<span class="string">&quot;--gdb&quot;</span>, <span class="macro">format!</span>(<span class="string">&quot;{}&quot;</span>, <span class="ident">gdb_port</span>).<span class="ident">as_str</span>()]);
+        }
+
         <span class="ident">cmd</span>.<span class="ident">arg</span>(<span class="ident">params</span>.<span class="ident">app</span>);
 
         <span class="macro">info!</span>(<span class="string">&quot;Executing: {:?}&quot;</span>, <span class="ident">cmd</span>);

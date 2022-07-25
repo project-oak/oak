@@ -148,6 +148,16 @@
 <span id="143">143</span>
 <span id="144">144</span>
 <span id="145">145</span>
+<span id="146">146</span>
+<span id="147">147</span>
+<span id="148">148</span>
+<span id="149">149</span>
+<span id="150">150</span>
+<span id="151">151</span>
+<span id="152">152</span>
+<span id="153">153</span>
+<span id="154">154</span>
+<span id="155">155</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2022 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -232,6 +242,16 @@
         <span class="comment">// If the VM exits for some reason, don&#39;t reboot, but rather exit qemu as well, as</span>
         <span class="comment">// that&#39;s an erroneous situation.</span>
         <span class="ident">cmd</span>.<span class="ident">arg</span>(<span class="string">&quot;-no-reboot&quot;</span>);
+
+        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">gdb_port</span>) <span class="op">=</span> <span class="ident">params</span>.<span class="ident">gdb</span> {
+            <span class="comment">// Listen for a gdb connection on the provided port</span>
+            <span class="ident">cmd</span>.<span class="ident">args</span>(<span class="kw-2">&amp;</span>[<span class="string">&quot;-gdb&quot;</span>, <span class="macro">format!</span>(<span class="string">&quot;tcp::{}&quot;</span>, <span class="ident">gdb_port</span>).<span class="ident">as_str</span>()]);
+            <span class="comment">// Wait for debugger before booting</span>
+            <span class="ident">cmd</span>.<span class="ident">arg</span>(<span class="string">&quot;-S&quot;</span>);
+            <span class="comment">// Enable inspection of memory with gdb after a triple fault</span>
+            <span class="ident">cmd</span>.<span class="ident">arg</span>(<span class="string">&quot;-no-shutdown&quot;</span>);
+        }
+
         <span class="comment">// Use the more modern `q35` machine as the basis.</span>
         <span class="comment">// TODO(#2679): q35 comes with a ton of stuff we don&#39;t need (eg a PC speaker). We</span>
         <span class="comment">// should use something simpler (microvm?), if possible.</span>
