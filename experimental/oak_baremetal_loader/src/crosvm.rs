@@ -66,6 +66,12 @@ impl Crosvm {
         ]);
         cmd.args(["--cid", VSOCK_GUEST_CID.to_string().as_str()]);
         cmd.args(["--params", "channel=virtio_vsock"]);
+
+        if let Some(gdb_port) = params.gdb {
+            // Listen for a gdb connection on the provided port and wait for debugger before booting
+            cmd.args(&["--gdb", format!("{}", gdb_port).as_str()]);
+        }
+
         cmd.arg(params.app);
 
         info!("Executing: {:?}", cmd);

@@ -82,6 +82,16 @@ impl Qemu {
         // If the VM exits for some reason, don't reboot, but rather exit qemu as well, as
         // that's an erroneous situation.
         cmd.arg("-no-reboot");
+
+        if let Some(gdb_port) = params.gdb {
+            // Listen for a gdb connection on the provided port
+            cmd.args(&["-gdb", format!("tcp::{}", gdb_port).as_str()]);
+            // Wait for debugger before booting
+            cmd.arg("-S");
+            // Enable inspection of memory with gdb after a triple fault
+            cmd.arg("-no-shutdown");
+        }
+
         // Use the more modern `q35` machine as the basis.
         // TODO(#2679): q35 comes with a ton of stuff we don't need (eg a PC speaker). We
         // should use something simpler (microvm?), if possible.
