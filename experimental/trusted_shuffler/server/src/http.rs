@@ -17,7 +17,7 @@
 use anyhow::anyhow;
 use async_trait::async_trait;
 use http::Uri;
-use hyper::{Body, Method, Request, Response, StatusCode};
+use hyper::{Body, Request, Response, StatusCode};
 use std::{
     future::Future,
     pin::Pin,
@@ -39,8 +39,10 @@ impl RequestHandler for HttpRequestHandler {
         // We want to keep the path of the orginal request from the client.
         let path = request.uri().path();
         // And extend the URL to the backend.
-        let new_uri = format!("{}{}", self.backend_url, path).parse::<Uri>().expect("Couldn't parse URI for backend.");
-         let uri = request.uri_mut();
+        let new_uri = format!("{}{}", self.backend_url, path)
+            .parse::<Uri>()
+            .expect("Couldn't parse URI for backend.");
+        let uri = request.uri_mut();
         *uri = new_uri;
         log::info!("New request to the backend: {:?}\n", request);
 
@@ -74,30 +76,21 @@ impl hyper::service::Service<Request<Body>> for Service {
         log::info!("Received Request: {:?}", request);
         let trusted_shuffler = self.trusted_shuffler.clone();
         let response = async move {
-            match request.method() {
-                // TODO(mschett): Check if http still works.
-                // (&Method::POST, "/experimental.trusted_shuffler.echo.Echo/Echo")
-                // (&Method::POST, "/request")
-                &Method::POST => {
-                    let request_start = Instant::now();
-                    match trusted_shuffler.invoke(request).await {
-                        Ok(response) => {
-                            let _response_time = request_start.elapsed();
-                            log::info!("Server Response: {:?}", response);
-                            Ok(Response::new(Body::from(response.into_body())))
-                        }
-                        Err(error) => {
-                            log::error!("Couldn't receive response: {:?}", error);
-                            let mut internal_error = Response::default();
-                            *internal_error.status_mut() = StatusCode::INTERNAL_SERVER_ERROR;
-                            Ok(internal_error)
-                        }
-                    }
+            // TODO(mschett): Check if http still works.
+            // gRPC call: (&Method::POST, "/experimental.trusted_shuffler.echo.Echo/Echo")
+            // http call: (&Method::POST, "/request")
+            let request_start = Instant::now();
+            match trusted_shuffler.invoke(request).await {
+                Ok(response) => {
+                    let _response_time = request_start.elapsed();
+                    log::info!("Server Response: {:?}", response);
+                    Ok(Response::new(response.into_body()))
                 }
-                _ => {
-                    let mut not_found = Response::default();
-                    *not_found.status_mut() = StatusCode::NOT_FOUND;
-                    Ok(not_found)
+                Err(error) => {
+                    log::error!("Couldn't receive response: {:?}", error);
+                    let mut internal_error = Response::default();
+                    *internal_error.status_mut() = StatusCode::INTERNAL_SERVER_ERROR;
+                    Ok(internal_error)
                 }
             }
         };
