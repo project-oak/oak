@@ -26,7 +26,6 @@ mod asm;
 mod bootparam;
 
 #[no_mangle]
-#[cfg(not(test))]
 pub extern "C" fn rust64_start(_rdi: u64, rsi: &bootparam::BootParams) -> ! {
     oak_baremetal_kernel::start_kernel(rsi);
 }
