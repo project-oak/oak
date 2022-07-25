@@ -79,6 +79,11 @@ struct Args {
         validator = path_exists,
     )]
     lookup_data: PathBuf,
+
+    /// Listen for an incoming connection from gdb on this port.
+    /// The guest will not start until instructed to do so by gdb.
+    #[clap(long = "gdb")]
+    gdb: Option<u16>,
 }
 
 fn path_exists(s: &str) -> Result<(), String> {
@@ -189,11 +194,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             binary: cli.qemu,
             app: cli.app,
             console: console_vmm,
+            gdb: cli.gdb,
         })?),
         Mode::Crosvm => Box::new(Crosvm::start(Params {
             binary: cli.crosvm,
             app: cli.app,
             console: console_vmm,
+            gdb: cli.gdb,
         })?),
     };
 

@@ -29,6 +29,9 @@ pub struct Params {
 
     /// Stream to connect to the console of the VM.
     pub console: UnixStream,
+
+    /// Port to use for debugging with gdb
+    pub gdb: Option<u16>,
 }
 
 #[async_trait]
