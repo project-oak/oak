@@ -76,7 +76,6 @@ impl hyper::service::Service<Request<Body>> for Service {
         log::info!("Received Request: {:?}", request);
         let trusted_shuffler = self.trusted_shuffler.clone();
         let response = async move {
-            // TODO(mschett): Check if http still works.
             // gRPC call: (&Method::POST, "/experimental.trusted_shuffler.echo.Echo/Echo")
             // http call: (&Method::POST, "/request")
             let request_start = Instant::now();
