@@ -218,7 +218,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let comms = vmm.create_comms_channel().await?;
 
     // A message based communication channel that permits other parts of the
-    // untrusted loader to send requests to the task that handles communicating
+    // untrusted launcher to send requests to the task that handles communicating
     // with the runtime and receive responses.
     let (request_dispatcher, mut request_receiver) =
         bmrng::unbounded_channel::<oak_idl::Request, Result<Vec<u8>, oak_idl::Status>>();

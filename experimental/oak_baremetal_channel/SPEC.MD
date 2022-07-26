@@ -1,12 +1,12 @@
 # Oak Baremetal Communication Protocol Specification
 
 This document serves as a specification of the protocol used for communication
-between the Untrusted Loader and Trusted Runtime. The Trusted Runtime should be
-able to communicate with any implementation of the Untrusted Loader that
+between the Untrusted Launcher and Trusted Runtime. The Trusted Runtime should be
+able to communicate with any implementation of the Untrusted Launcher that
 implements this specification.
 
 In the specification below the Trusted Runtime will henceforth be referred to
-the as the "service". The Untrusted Loader will be referred to the as the
+the as the "service". The Untrusted Launcher will be referred to the as the
 "client".
 
 The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD",

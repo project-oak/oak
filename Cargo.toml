@@ -17,7 +17,7 @@ members = [
   "experimental/trusted_shuffler/trusted_shuffler",
   "experimental/oak_baremetal_channel",
   "experimental/oak_baremetal_kernel",
-  "experimental/oak_baremetal_loader",
+  "experimental/oak_baremetal_launcher",
   "experimental/oak_functions_loader_linux_vsock",
   "experimental/oak_baremetal_runtime",
   "experimental/oak_baremetal_simple_io",
