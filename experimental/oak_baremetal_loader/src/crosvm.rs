@@ -14,10 +14,7 @@
 // limitations under the License.
 //
 
-use crate::{
-    vmm::{Params, Vmm},
-    ReadWrite,
-};
+use crate::vmm::{Params, Vmm};
 use anyhow::Result;
 use async_trait::async_trait;
 use command_fds::tokio::CommandFdAsyncExt;
@@ -96,12 +93,14 @@ impl Vmm for Crosvm {
         self.wait().await
     }
 
-    async fn create_comms_channel(&self) -> Result<Box<dyn ReadWrite>> {
+    async fn create_comms_channel(
+        &self,
+    ) -> Result<Box<dyn oak_baremetal_communication_channel::Channel>> {
         // The vsock channel can only be created after the VM is booted. Hence
         // we try a few times to connect, in case the VM is currently starting
         // up. If no connetion is established after a while, we timeout.
         let task = tokio::spawn(async {
-            let stream: Box<dyn ReadWrite> = loop {
+            let stream: Box<dyn oak_baremetal_communication_channel::Channel> = loop {
                 match VsockStream::connect_with_cid_port(VSOCK_GUEST_CID, VSOCK_GUEST_PORT) {
                     Ok(stream) => {
                         break Box::new(stream);
