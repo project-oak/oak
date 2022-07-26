@@ -14,7 +14,6 @@
 // limitations under the License.
 //
 
-use super::ReadWrite;
 use anyhow::Result;
 use async_trait::async_trait;
 use std::{os::unix::net::UnixStream, path::PathBuf};
@@ -46,5 +45,7 @@ pub trait Vmm {
     ///
     /// Since different VMMs might use different comms channels, we leave it up to the VMM to create
     /// the channel rather than passing it in as part of the parameters.
-    async fn create_comms_channel(&self) -> Result<Box<dyn ReadWrite>>;
+    async fn create_comms_channel(
+        &self,
+    ) -> Result<Box<dyn oak_baremetal_communication_channel::Channel>>;
 }

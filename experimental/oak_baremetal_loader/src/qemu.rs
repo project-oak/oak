@@ -14,10 +14,7 @@
 // limitations under the License.
 //
 
-use crate::{
-    vmm::{Params, Vmm},
-    ReadWrite,
-};
+use crate::vmm::{Params, Vmm};
 use anyhow::Result;
 use async_trait::async_trait;
 use command_fds::{tokio::CommandFdAsyncExt, FdMapping};
@@ -148,7 +145,9 @@ impl Vmm for Qemu {
         self.wait().await
     }
 
-    async fn create_comms_channel(&self) -> Result<Box<dyn ReadWrite>> {
+    async fn create_comms_channel(
+        &self,
+    ) -> Result<Box<dyn oak_baremetal_communication_channel::Channel>> {
         let comms_host = self.comms_host.try_clone()?;
         Ok(Box::new(comms_host))
     }
