@@ -122,7 +122,6 @@
 <span id="117">117</span>
 <span id="118">118</span>
 <span id="119">119</span>
-<span id="120">120</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2022 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -139,10 +138,7 @@
 <span class="comment">// limitations under the License.</span>
 <span class="comment">//</span>
 
-<span class="kw">use</span> <span class="kw">crate</span>::{
-    <span class="ident">vmm</span>::{<span class="ident">Params</span>, <span class="ident">Vmm</span>},
-    <span class="ident">ReadWrite</span>,
-};
+<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::vmm</span>::{<span class="ident">Params</span>, <span class="ident">Vmm</span>};
 <span class="kw">use</span> <span class="ident">anyhow::Result</span>;
 <span class="kw">use</span> <span class="ident">async_trait::async_trait</span>;
 <span class="kw">use</span> <span class="ident">command_fds::tokio::CommandFdAsyncExt</span>;
@@ -221,12 +217,14 @@
         <span class="self">self</span>.<span class="ident">wait</span>().<span class="kw">await</span>
     }
 
-    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">create_comms_channel</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">ReadWrite</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">create_comms_channel</span>(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">oak_baremetal_communication_channel::Channel</span><span class="op">&gt;</span><span class="op">&gt;</span> {
         <span class="comment">// The vsock channel can only be created after the VM is booted. Hence</span>
         <span class="comment">// we try a few times to connect, in case the VM is currently starting</span>
         <span class="comment">// up. If no connetion is established after a while, we timeout.</span>
         <span class="kw">let</span> <span class="ident">task</span> <span class="op">=</span> <span class="ident">tokio::spawn</span>(<span class="kw">async</span> {
-            <span class="kw">let</span> <span class="ident">stream</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">ReadWrite</span><span class="op">&gt;</span> <span class="op">=</span> <span class="kw">loop</span> {
+            <span class="kw">let</span> <span class="ident">stream</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">oak_baremetal_communication_channel::Channel</span><span class="op">&gt;</span> <span class="op">=</span> <span class="kw">loop</span> {
                 <span class="kw">match</span> <span class="ident">VsockStream::connect_with_cid_port</span>(<span class="ident">VSOCK_GUEST_CID</span>, <span class="ident">VSOCK_GUEST_PORT</span>) {
                     <span class="prelude-val">Ok</span>(<span class="ident">stream</span>) =&gt; {
                         <span class="kw">break</span> <span class="ident">Box::new</span>(<span class="ident">stream</span>);

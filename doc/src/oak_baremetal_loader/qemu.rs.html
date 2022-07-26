@@ -157,7 +157,6 @@
 <span id="152">152</span>
 <span id="153">153</span>
 <span id="154">154</span>
-<span id="155">155</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2022 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -174,10 +173,7 @@
 <span class="comment">// limitations under the License.</span>
 <span class="comment">//</span>
 
-<span class="kw">use</span> <span class="kw">crate</span>::{
-    <span class="ident">vmm</span>::{<span class="ident">Params</span>, <span class="ident">Vmm</span>},
-    <span class="ident">ReadWrite</span>,
-};
+<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::vmm</span>::{<span class="ident">Params</span>, <span class="ident">Vmm</span>};
 <span class="kw">use</span> <span class="ident">anyhow::Result</span>;
 <span class="kw">use</span> <span class="ident">async_trait::async_trait</span>;
 <span class="kw">use</span> <span class="ident">command_fds</span>::{<span class="ident">tokio::CommandFdAsyncExt</span>, <span class="ident">FdMapping</span>};
@@ -308,7 +304,9 @@
         <span class="self">self</span>.<span class="ident">wait</span>().<span class="kw">await</span>
     }
 
-    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">create_comms_channel</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">ReadWrite</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">create_comms_channel</span>(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">oak_baremetal_communication_channel::Channel</span><span class="op">&gt;</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">comms_host</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">comms_host</span>.<span class="ident">try_clone</span>()<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(<span class="ident">Box::new</span>(<span class="ident">comms_host</span>))
     }
