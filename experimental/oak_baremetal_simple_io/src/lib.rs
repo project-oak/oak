@@ -120,7 +120,7 @@ impl SimpleIo {
         }
 
         let length = core::cmp::min(OUTPUT_BUFFER_LEGNTH, data.len());
-        self.output_buffer.copy_from_slice(&data[..length]);
+        self.output_buffer[..length].copy_from_slice(&data[..length]);
 
         // Use a memory fence to ensure that the data is written to the buffer before we notify the
         // VMM.
