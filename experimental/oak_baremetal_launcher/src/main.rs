@@ -26,7 +26,7 @@ use oak_baremetal_communication_channel::{
 use qemu::Qemu;
 use std::{
     fs,
-    io::{BufRead, BufReader, Read, Write},
+    io::{BufRead, BufReader},
     os::unix::net::UnixStream,
     path::PathBuf,
 };
@@ -91,30 +91,6 @@ fn path_exists(s: &str) -> Result<(), String> {
         Err(String::from("Path does not represent a file"))
     } else {
         Ok(())
-    }
-}
-
-pub trait ReadWrite: Read + Write + Send + Sync {}
-
-impl<T> ReadWrite for T where T: Read + Write + Send + Sync {}
-
-struct CommsChannel {
-    inner: Box<dyn ReadWrite>,
-}
-
-impl oak_baremetal_communication_channel::Write for CommsChannel {
-    fn write(&mut self, data: &[u8]) -> anyhow::Result<()> {
-        self.inner.write_all(data).map_err(anyhow::Error::msg)
-    }
-
-    fn flush(&mut self) -> anyhow::Result<()> {
-        self.inner.flush().map_err(anyhow::Error::msg)
-    }
-}
-
-impl oak_baremetal_communication_channel::Read for CommsChannel {
-    fn read(&mut self, data: &mut [u8]) -> anyhow::Result<()> {
-        self.inner.read_exact(data).map_err(anyhow::Error::msg)
     }
 }
 
@@ -225,8 +201,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Spawn task to handle communicating with the runtime and receiving responses.
     tokio::spawn(async move {
-        let mut communication_channel =
-            BaremetalCommunicationChannel::new(Box::new(CommsChannel { inner: comms }));
+        let mut communication_channel = BaremetalCommunicationChannel::new(comms);
         while let Ok((request, response_dispatcher)) = request_receiver.recv().await {
             // At the moment requests are sent sequentially, and in FIFO order. The next request
             // is sent only once a response to the previous message has been implemented.

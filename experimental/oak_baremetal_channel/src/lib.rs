@@ -50,9 +50,27 @@ pub trait Read {
     fn read(&mut self, data: &mut [u8]) -> anyhow::Result<()>;
 }
 
+#[cfg(feature = "std")]
+impl<T: std::io::Read> Read for T {
+    fn read(&mut self, data: &mut [u8]) -> anyhow::Result<()> {
+        self.read_exact(data).map_err(anyhow::Error::msg)
+    }
+}
+
 pub trait Write {
     fn write(&mut self, data: &[u8]) -> anyhow::Result<()>;
     fn flush(&mut self) -> anyhow::Result<()>;
+}
+
+#[cfg(feature = "std")]
+impl<T: std::io::Write> Write for T {
+    fn write(&mut self, data: &[u8]) -> anyhow::Result<()> {
+        self.write_all(data).map_err(anyhow::Error::msg)
+    }
+
+    fn flush(&mut self) -> anyhow::Result<()> {
+        std::io::Write::flush(self).map_err(anyhow::Error::msg)
+    }
 }
 
 pub trait Channel: Read + Write + Send + Sync {}
