@@ -16,7 +16,7 @@
 
 use anyhow::anyhow;
 use async_trait::async_trait;
-use http::Uri;
+use http::{Method, Uri};
 use hyper::{Body, Request, Response, StatusCode};
 use std::{
     future::Future,
@@ -77,17 +77,22 @@ async fn hyper_to_trusted_request(hyper_request: Request<Body>) -> TrustedShuffl
     }
 }
 
+// We want to build a hyper request for the backend. For our test backend, creating a HTTP/2 POST
+// request seems sufficient.
 fn trusted_to_hyper_request(trusted_shuffler_request: TrustedShufflerRequest) -> Request<Body> {
     let body = Body::from(trusted_shuffler_request.body);
     Request::builder()
         .uri(trusted_shuffler_request.uri)
+        .method(Method::POST)
+        .version(http::Version::HTTP_2)
         .body(body)
         .expect("Failed to convert Trusted to Hyper Request")
 }
 
 fn trusted_to_hyper_response(trusted_shuffler_request: TrustedShufflerResponse) -> Response<Body> {
     let body = Body::from(trusted_shuffler_request.body);
-    Response::new(body)
+    let response = Response::new(body);
+    response
 }
 
 async fn hyper_to_trusted_response(hyper_response: Response<Body>) -> TrustedShufflerResponse {

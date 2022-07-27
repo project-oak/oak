@@ -25,7 +25,6 @@ use hyper::{Body, Client, Method};
 // * the request is given, not built
 // * returns the whole response, not only the body.
 pub async fn send_with_request(request: Request<Body>) -> anyhow::Result<Response<Body>> {
-    // TODO(mschett): don't use http2_only client.
     let client = Client::builder().http2_only(true).build_http();
 
     let response = client
@@ -40,7 +39,7 @@ pub async fn send_with_request(request: Request<Body>) -> anyhow::Result<Respons
 }
 
 pub async fn send_http_request(uri: &str, method: Method, body: &[u8]) -> anyhow::Result<Vec<u8>> {
-    let client = Client::new();
+    let client = Client::builder().http2_only(true).build_http();
 
     let request = hyper::Request::builder()
         .method(method)
