@@ -19,11 +19,7 @@ use echo::{echo_client::EchoClient, EchoRequest};
 use http::{Request, Response};
 use hyper::{Body, Client, Method};
 
-// TODO(mschett): similar functionality to send_http_request, refactor.
-// differences:
-// * client is http2_only
-// * the request is given, not built
-// * returns the whole response, not only the body.
+// Create a HTTP2 client, send the given request, and return a response.
 pub async fn send_with_request(request: Request<Body>) -> anyhow::Result<Response<Body>> {
     let client = Client::builder().http2_only(true).build_http();
 
@@ -39,21 +35,13 @@ pub async fn send_with_request(request: Request<Body>) -> anyhow::Result<Respons
 }
 
 pub async fn send_http_request(uri: &str, method: Method, body: &[u8]) -> anyhow::Result<Vec<u8>> {
-    let client = Client::builder().http2_only(true).build_http();
-
     let request = hyper::Request::builder()
         .method(method)
         .uri(uri)
         .body(Body::from(body.to_vec()))
         .context("Couldn't create request")?;
 
-    let response = client
-        .request(request)
-        .await
-        .context("Couldn't send request")?;
-    if response.status() != http::StatusCode::OK {
-        return Err(anyhow!("Non-OK status: {:?}", response.status()));
-    }
+    let response = send_with_request(request).await?;
 
     let response_body = hyper::body::to_bytes(response.into_body())
         .await
