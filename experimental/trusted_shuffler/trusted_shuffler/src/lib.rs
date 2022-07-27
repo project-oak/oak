@@ -162,8 +162,8 @@ impl TrustedShuffler {
     }
 
     // Lexicographically sorts requests and sends them to the backend using the
-    // [`TrustedShuffler::request_handler`]. Blocks until all responses are received, except if a
-    // timeout is set, then it sends a default response.
+    // [`TrustedShuffler::request_handler`]. For every batch of requests it either waits until all
+    // responses are received, except if a timeout is set, then it sends a default response.
     async fn shuffle_requests(
         mut requests: Vec<Message>,
         request_handler: Arc<dyn RequestHandler>,

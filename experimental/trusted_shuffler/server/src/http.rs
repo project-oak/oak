@@ -16,7 +16,7 @@
 
 use anyhow::anyhow;
 use async_trait::async_trait;
-use http::{Method, Uri};
+use http::{uri::Authority, Method, Uri};
 use hyper::{Body, Request, Response, StatusCode};
 use std::{
     future::Future,
@@ -44,14 +44,13 @@ impl RequestHandler for HttpRequestHandler {
         let mut request = trusted_to_hyper_request(request);
 
         // We want to keep the path of the orginal request from the client.
-        let path = request.uri().path();
+        let parts = request.uri().into_parts();
+        parts.authority = Some(Authority::from_static(&self.backend_url));
         // And extend the URL to the backend.
-        let new_uri = format!("{}{}", self.backend_url, path)
-            .parse::<Uri>()
-            .expect("Couldn't parse URI for backend.");
+        let new_uri = Uri::from_parts(parts).expect("Failed to create new URI");
         let uri = request.uri_mut();
         *uri = new_uri;
-        log::info!("New request to the backend: {:?}\n", request);
+        log::info!("New request to the backend: {:?}", request);
 
         match send_with_request(request).await {
             Err(error) => Err(anyhow!(
@@ -63,8 +62,8 @@ impl RequestHandler for HttpRequestHandler {
     }
 }
 
-// We keep the body and the uri from the `hyper::Request`. We convert the body to vec, so it has to
-// be read fully.
+// We keep the body and the URI from the `hyper::Request`. We convert the body to `Vec`, so it has
+// to be read fully.
 async fn hyper_to_trusted_request(hyper_request: Request<Body>) -> TrustedShufflerRequest {
     let (parts, body) = hyper_request.into_parts();
     let body = hyper::body::to_bytes(body)
@@ -94,7 +93,7 @@ fn trusted_to_hyper_response(trusted_shuffler_request: TrustedShufflerResponse) 
     Response::new(body)
 }
 
-// We keep only the body from the `hyper::Response`. We convert the body to vec, so it has to be
+// We keep only the body from the `hyper::Response`. We convert the body to `Vec`, so it has to be
 // read fully.
 async fn hyper_to_trusted_response(hyper_response: Response<Body>) -> TrustedShufflerResponse {
     let body = hyper::body::to_bytes(hyper_response.into_body())
