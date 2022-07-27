@@ -43,11 +43,10 @@ public class OakClientTest {
     final Encryptor encryptor;
 
     PilotOakClient(final Builder builder) {
-      byte[] emptyPublicKeyForTest = new byte[0];
-      builder.attestationClient.attest();
+      byte[] signingPublicKey = builder.attestationClient.verifyEvidence(new Evidence() {});
       // In reality implementations of OakClient must handle empty Optionals and unexpected types.
       rpcClient = (PilotRpcClient) builder.rpcClientProvider.getRpcClient().get();
-      encryptor = builder.encryptorProvider.getEncryptor(emptyPublicKeyForTest).get();
+      encryptor = builder.encryptorProvider.getEncryptor(signingPublicKey).get();
     }
 
     @Override
@@ -86,7 +85,6 @@ public class OakClientTest {
 
   private static class PilotAttestationClient
       implements OakClient.EncryptorProvider, OakClient.RpcClientProvider<String, String> {
-    final AtomicBoolean attested = new AtomicBoolean(false);
     final PilotRpcClient rpcClient;
     final Encryptor encryptor = new Encryptor() {
       @Override
@@ -104,8 +102,9 @@ public class OakClientTest {
       this.rpcClient = new PilotRpcClient();
     }
 
-    void attest() {
-      attested.set(true);
+    // This function will eventually be provided by an EvidenceProvider.
+    byte[] verifyEvidence(Evidence evidence) {
+      return "TestSigningPublicKey".getBytes(StandardCharsets.UTF_8);
     }
 
     @Override
@@ -115,7 +114,7 @@ public class OakClientTest {
 
     @Override
     public Optional<? extends Encryptor> getEncryptor(byte[] unusedSigningPublicKey) {
-      if (attested.get()) {
+      if (unusedSigningPublicKey.length > 0) {
         return Optional.of(encryptor);
       }
       return Optional.empty();
