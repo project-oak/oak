@@ -57,9 +57,7 @@ public class OakClientTest {
     @Override
     Optional<String> send(final String request) {
       return encryptor.encrypt(request.getBytes())
-          .map(b -> new String(b, StandardCharsets.UTF_8))
           .flatMap(rpcClient::send)
-          .map(String::getBytes)
           .flatMap(encryptor::decrypt)
           .map(b -> new String(b, StandardCharsets.UTF_8));
     }
@@ -84,7 +82,7 @@ public class OakClientTest {
   }
 
   private static class PilotAttestationClient
-      implements OakClient.EncryptorProvider, OakClient.RpcClientProvider<String, String> {
+      implements OakClient.EncryptorProvider, OakClient.RpcClientProvider {
     final PilotRpcClient rpcClient;
     final Encryptor encryptor = new Encryptor() {
       @Override
@@ -108,7 +106,7 @@ public class OakClientTest {
     }
 
     @Override
-    public Optional<? extends RpcClient<String, String>> getRpcClient() {
+    public Optional<? extends RpcClient> getRpcClient() {
       return Optional.of(rpcClient);
     }
 
@@ -121,14 +119,14 @@ public class OakClientTest {
     }
   }
 
-  private static class PilotRpcClient implements RpcClient<String, String> {
+  private static class PilotRpcClient implements RpcClient {
     @Override
     public void close() throws Exception {
       // No resources to close
     }
 
     @Override
-    public Optional<String> send(final String request) {
+    public Optional<byte[]> send(final byte[] request) {
       return Optional.ofNullable(request);
     }
   }

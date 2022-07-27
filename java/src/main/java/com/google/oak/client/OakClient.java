@@ -45,15 +45,14 @@ public abstract class OakClient<R, T> implements AutoCloseable {
    */
   abstract static class Builder<R, T, B extends Builder<R, T, B>> {
     final EncryptorProvider encryptorProvider;
-    final RpcClientProvider<R, T> rpcClientProvider;
+    final RpcClientProvider rpcClientProvider;
     Optional<EvidenceProvider> evidenceProvider = Optional.empty();
 
     /**
      * @param encryptorProvider instance that can provide an {@code Encryptor} instance
      * @param rpcClientProvider instance that can provide an instance of {@code RpcClient}
      */
-    Builder(final EncryptorProvider encryptorProvider,
-        final RpcClientProvider<R, T> rpcClientProvider) {
+    Builder(final EncryptorProvider encryptorProvider, final RpcClientProvider rpcClientProvider) {
       this.encryptorProvider = encryptorProvider;
       this.rpcClientProvider = rpcClientProvider;
     }
@@ -91,11 +90,11 @@ public abstract class OakClient<R, T> implements AutoCloseable {
   /**
    * An interface for providing instances of {@code RpcClient}.
    */
-  public interface RpcClientProvider<R, T> {
+  public interface RpcClientProvider {
     /**
      * @return an instance of {@code RpcClient} wrapped in an Optional.
      */
-    Optional<? extends RpcClient<R, T>> getRpcClient();
+    Optional<? extends RpcClient> getRpcClient();
   }
 
   /**

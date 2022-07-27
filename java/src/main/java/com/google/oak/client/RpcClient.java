@@ -22,11 +22,13 @@ import java.util.Optional;
  * A generic type representing a transport-agnostic RPC client that sends a request and receives a
  * response. This allows reusing the functionality in {@code com.google.oak.client} for both gRPC
  * and HTTP.
- *
- * @param <R> type of the request
- * @param <T> type of the response
  */
-public interface RpcClient<R, T> extends AutoCloseable {
+public interface RpcClient extends AutoCloseable {
   // TODO(#3063): Replace return type with Result<T>.
-  abstract Optional<T> send(final R request);
+  /**
+   * Sends an array of bytes, and returns response as a byte array.
+   * @param request the request as a byte array
+   * @return the response as a byte array
+   */
+  abstract Optional<byte[]> send(final byte[] request);
 }
