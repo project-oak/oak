@@ -291,7 +291,7 @@
         }
 
         <span class="kw">let</span> <span class="ident">length</span> <span class="op">=</span> <span class="ident">core::cmp::min</span>(<span class="ident">OUTPUT_BUFFER_LEGNTH</span>, <span class="ident">data</span>.<span class="ident">len</span>());
-        <span class="self">self</span>.<span class="ident">output_buffer</span>.<span class="ident">copy_from_slice</span>(<span class="kw-2">&amp;</span><span class="ident">data</span>[..<span class="ident">length</span>]);
+        <span class="self">self</span>.<span class="ident">output_buffer</span>[..<span class="ident">length</span>].<span class="ident">copy_from_slice</span>(<span class="kw-2">&amp;</span><span class="ident">data</span>[..<span class="ident">length</span>]);
 
         <span class="comment">// Use a memory fence to ensure that the data is written to the buffer before we notify the</span>
         <span class="comment">// VMM.</span>
