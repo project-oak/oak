@@ -11,9 +11,11 @@ The baremetal app may be loaded in QEMU via
 ```shell
 (cd experimental/oak_baremetal_app_qemu && cargo build) \
 && RUST_LOG=debug cargo run --package oak_baremetal_launcher -- \
---mode qemu \
---app experimental/oak_baremetal_app_qemu/target/target/debug/oak_baremetal_app_qemu \
---wasm experimental/oak_baremetal_launcher/key_value_lookup.wasm
+--wasm experimental/oak_baremetal_launcher/key_value_lookup.wasm \
+--lookup-data experimental/oak_baremetal_launcher/mock_lookup_data \
+qemu \
+--vmm-binary /usr/bin/qemu-system-x86_64 \
+--app-binary experimental/oak_baremetal_app_qemu/target/x86_64-unknown-none/debug/oak_baremetal_app_qemu
 ```
 
 The baremetal app may be loaded in crosvm via
@@ -21,7 +23,11 @@ The baremetal app may be loaded in crosvm via
 ```shell
 (cd experimental/oak_baremetal_app_crosvm && cargo build) \
 && RUST_LOG=debug cargo run --package oak_baremetal_launcher -- \
---mode crosvm \
---app experimental/oak_baremetal_app_crosvm/target/target/debug/oak_baremetal_app_crosvm \
---wasm experimental/oak_baremetal_launcher/key_value_lookup.wasm
+--wasm experimental/oak_baremetal_launcher/key_value_lookup.wasm \
+--lookup-data experimental/oak_baremetal_launcher/mock_lookup_data \
+crosvm \
+--vmm-binary /usr/local/cargo/bin/crosvm \
+--app-binary experimental/oak_baremetal_app_crosvm/target/x86_64-unknown-none/debug/oak_baremetal_app_crosvm
 ```
+
+See also the See the task integration at `xtask/src/vm.rs`. Additionally a documentation is available via `cargo run --package oak_baremetal_launcher -- --help`.

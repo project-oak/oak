@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-use crate::vmm::{Params, Vmm};
+use crate::{instance::LaunchedInstance, VmParams};
 use anyhow::Result;
 use async_trait::async_trait;
 use command_fds::{tokio::CommandFdAsyncExt, FdMapping};
@@ -26,7 +26,7 @@ use std::{
     process::Stdio,
 };
 
-pub struct Qemu {
+pub struct QemuInstance {
     console: UnixStream,
     comms_guest: UnixStream,
     comms_host: UnixStream,
@@ -34,10 +34,10 @@ pub struct Qemu {
     instance: tokio::process::Child,
 }
 
-impl Qemu {
-    pub fn start(params: Params) -> Result<Self> {
+impl QemuInstance {
+    pub fn start(params: VmParams, console: UnixStream) -> Result<Self> {
         let (comms_guest, comms_host) = UnixStream::pair()?;
-        let mut cmd = tokio::process::Command::new(params.binary);
+        let mut cmd = tokio::process::Command::new(params.vmm_binary);
 
         // There should not be any communication over stdin/stdout/stderr, but let's inherit
         // stderr just in case.
@@ -51,7 +51,7 @@ impl Qemu {
         // Set up the plumbing for communication sockets
         cmd.fd_mappings(vec![
             FdMapping {
-                parent_fd: params.console.as_raw_fd(),
+                parent_fd: console.as_raw_fd(),
                 child_fd: 10,
             },
             FdMapping {
@@ -116,13 +116,13 @@ impl Qemu {
         cmd.args(&["-chardev", "socket,id=qmpsock,fd=12"]);
         cmd.args(&["-qmp", "chardev:qmpsock"]);
 
-        cmd.args(&[OsStr::new("-kernel"), params.app.as_os_str()]);
+        cmd.args(&[OsStr::new("-kernel"), params.app_binary.as_os_str()]);
 
         info!("Executing: {:?}", cmd);
 
-        Ok(Qemu {
+        Ok(QemuInstance {
             instance: cmd.spawn()?,
-            console: params.console,
+            console,
             comms_guest,
             comms_host,
             qmp: qmp.0,
@@ -131,7 +131,7 @@ impl Qemu {
 }
 
 #[async_trait]
-impl Vmm for Qemu {
+impl LaunchedInstance for QemuInstance {
     async fn wait(&mut self) -> Result<std::process::ExitStatus> {
         self.instance.wait().await.map_err(anyhow::Error::from)
     }

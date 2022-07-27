@@ -18,12 +18,13 @@
 
 use anyhow::Context;
 use clap::Parser;
-use crosvm::Crosvm;
+use instance::LaunchedInstance;
+use instance_crosvm::CrosvmInstance;
+use instance_qemu::QemuInstance;
 use oak_baremetal_communication_channel::{
     client::{ClientChannelHandle, RequestEncoder},
     schema,
 };
-use qemu::Qemu;
 use std::{
     fs,
     io::{BufRead, BufReader},
@@ -31,37 +32,42 @@ use std::{
     path::PathBuf,
 };
 use tokio::signal;
-use vmm::{Params, Vmm};
 
-mod crosvm;
+mod instance;
+mod instance_crosvm;
+mod instance_qemu;
 mod lookup;
-mod qemu;
 mod server;
-mod vmm;
 
-#[derive(clap::ArgEnum, Clone, Debug, PartialEq)]
+/// Parameters used for launching VM instances
+#[derive(Parser, Clone, Debug, PartialEq)]
+pub struct VmParams {
+    /// Path to the VMM binary to execute.
+    #[clap(long, parse(from_os_str), validator = path_exists)]
+    pub vmm_binary: PathBuf,
+
+    /// Path to the binary to load into the VM.
+    #[clap(long, parse(from_os_str), validator = path_exists)]
+    pub app_binary: PathBuf,
+
+    /// Port to use for debugging with gdb
+    #[clap(long = "gdb")]
+    pub gdb: Option<u16>,
+}
+
+#[derive(clap::Subcommand, Clone, Debug, PartialEq)]
 enum Mode {
-    Qemu,
-    Crosvm,
+    /// Launch runtime in qemu
+    Qemu(VmParams),
+    /// Launch runtime in crosvm
+    Crosvm(VmParams),
 }
 
 #[derive(Parser, Debug)]
 struct Args {
-    /// Path to the `qemu-system-x86_64` binary.
-    #[clap(long, parse(from_os_str), validator = path_exists, default_value_os_t = PathBuf::from("/usr/bin/qemu-system-x86_64"))]
-    qemu: PathBuf,
-
-    /// Path to the `crosvm` binary.
-    #[clap(long, parse(from_os_str), validator = path_exists, default_value_os_t = PathBuf::from("/usr/local/cargo/bin/crosvm"))]
-    crosvm: PathBuf,
-
     /// Execution mode.
-    #[clap(arg_enum, long, default_value = "qemu")]
+    #[clap(subcommand)]
     mode: Mode,
-
-    /// Path to the kernel to execute.
-    #[clap(long, parse(from_os_str), validator = path_exists)]
-    app: PathBuf,
 
     /// Path to a Wasm file to be loaded into the trusted runtime and executed by it per
     /// invocation. See the documentation for details on its ABI. Ref: <https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md>
@@ -79,11 +85,6 @@ struct Args {
         validator = path_exists,
     )]
     lookup_data: PathBuf,
-
-    /// Listen for an incoming connection from gdb on this port.
-    /// The guest will not start until instructed to do so by gdb.
-    #[clap(long = "gdb")]
-    gdb: Option<u16>,
 }
 
 fn path_exists(s: &str) -> Result<(), String> {
@@ -163,35 +164,32 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cli = Args::parse();
     env_logger::init();
 
-    let (console_vmm, console) = UnixStream::pair()?;
+    // Provide a way for the launched instance to send logs
+    let logs_console: UnixStream = {
+        // Create two linked consoles. Technically both can read/write, but we'll
+        // use them as a one way channel.
+        let (console_writer, console_receiver) = UnixStream::pair()?;
 
-    let mut vmm: Box<dyn Vmm> = match cli.mode {
-        Mode::Qemu => Box::new(Qemu::start(Params {
-            binary: cli.qemu,
-            app: cli.app,
-            console: console_vmm,
-            gdb: cli.gdb,
-        })?),
-        Mode::Crosvm => Box::new(Crosvm::start(Params {
-            binary: cli.crosvm,
-            app: cli.app,
-            console: console_vmm,
-            gdb: cli.gdb,
-        })?),
+        // Log everything sent by the writer.
+        tokio::spawn(async {
+            let mut reader = BufReader::new(console_receiver);
+
+            let mut line = String::new();
+            while reader.read_line(&mut line).expect("failed to read line") > 0 {
+                log::info!("console: {:?}", line);
+                line.clear();
+            }
+        });
+
+        console_writer
     };
 
-    // Log everything coming over the console channel.
-    tokio::spawn(async {
-        let mut reader = BufReader::new(console);
+    let mut launched_instance: Box<dyn LaunchedInstance> = match cli.mode {
+        Mode::Qemu(params) => Box::new(QemuInstance::start(params, logs_console)?),
+        Mode::Crosvm(params) => Box::new(CrosvmInstance::start(params, logs_console)?),
+    };
 
-        let mut line = String::new();
-        while reader.read_line(&mut line).expect("failed to read line") > 0 {
-            log::info!("console: {:?}", line);
-            line.clear();
-        }
-    });
-
-    let comms = vmm.create_comms_channel().await?;
+    let comms = launched_instance.create_comms_channel().await?;
 
     // A message based communication channel that permits other parts of the
     // untrusted launcher to send requests to the task that handles communicating
@@ -268,12 +266,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Wait until something dies or we get a signal to terminate.
     tokio::select! {
         _ = signal::ctrl_c() => {
-            vmm.kill().await?;
+            launched_instance.kill().await?;
         },
         _ = server_future => {
-            vmm.kill().await?;
+            launched_instance.kill().await?;
         },
-        val = vmm.wait() => {
+        val = launched_instance.wait() => {
             log::error!("Unexpected VMM exit, status: {:?}", val);
         },
     }
