@@ -283,8 +283,6 @@
 <span id="278">278</span>
 <span id="279">279</span>
 <span id="280">280</span>
-<span id="281">281</span>
-<span id="282">282</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2022 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -305,12 +303,13 @@
 
 <span class="kw">use</span> <span class="ident">anyhow::Context</span>;
 <span class="kw">use</span> <span class="ident">clap::Parser</span>;
-<span class="kw">use</span> <span class="ident">crosvm::Crosvm</span>;
+<span class="kw">use</span> <span class="ident">instance::LaunchedInstance</span>;
+<span class="kw">use</span> <span class="ident">instance_crosvm::CrosvmInstance</span>;
+<span class="kw">use</span> <span class="ident">instance_qemu::QemuInstance</span>;
 <span class="kw">use</span> <span class="ident">oak_baremetal_communication_channel</span>::{
     <span class="ident">client</span>::{<span class="ident">ClientChannelHandle</span>, <span class="ident">RequestEncoder</span>},
     <span class="ident">schema</span>,
 };
-<span class="kw">use</span> <span class="ident">qemu::Qemu</span>;
 <span class="kw">use</span> <span class="ident">std</span>::{
     <span class="ident">fs</span>,
     <span class="ident">io</span>::{<span class="ident">BufRead</span>, <span class="ident">BufReader</span>},
@@ -318,37 +317,42 @@
     <span class="ident">path::PathBuf</span>,
 };
 <span class="kw">use</span> <span class="ident">tokio::signal</span>;
-<span class="kw">use</span> <span class="ident">vmm</span>::{<span class="ident">Params</span>, <span class="ident">Vmm</span>};
 
-<span class="kw">mod</span> <span class="ident">crosvm</span>;
+<span class="kw">mod</span> <span class="ident">instance</span>;
+<span class="kw">mod</span> <span class="ident">instance_crosvm</span>;
+<span class="kw">mod</span> <span class="ident">instance_qemu</span>;
 <span class="kw">mod</span> <span class="ident">lookup</span>;
-<span class="kw">mod</span> <span class="ident">qemu</span>;
 <span class="kw">mod</span> <span class="ident">server</span>;
-<span class="kw">mod</span> <span class="ident">vmm</span>;
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">clap::ArgEnum</span>, <span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">PartialEq</span>)]</span>
+<span class="doccomment">/// Parameters used for launching VM instances</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Parser</span>, <span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">PartialEq</span>)]</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">VmParams</span> {
+    <span class="doccomment">/// Path to the VMM binary to execute.</span>
+    <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">long</span>, <span class="ident">parse</span>(<span class="ident">from_os_str</span>), <span class="ident">validator</span> <span class="op">=</span> <span class="ident">path_exists</span>)]</span>
+    <span class="kw">pub</span> <span class="ident">vmm_binary</span>: <span class="ident">PathBuf</span>,
+
+    <span class="doccomment">/// Path to the binary to load into the VM.</span>
+    <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">long</span>, <span class="ident">parse</span>(<span class="ident">from_os_str</span>), <span class="ident">validator</span> <span class="op">=</span> <span class="ident">path_exists</span>)]</span>
+    <span class="kw">pub</span> <span class="ident">app_binary</span>: <span class="ident">PathBuf</span>,
+
+    <span class="doccomment">/// Port to use for debugging with gdb</span>
+    <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">long</span> <span class="op">=</span> <span class="string">&quot;gdb&quot;</span>)]</span>
+    <span class="kw">pub</span> <span class="ident">gdb</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">u16</span><span class="op">&gt;</span>,
+}
+
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">clap::Subcommand</span>, <span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">PartialEq</span>)]</span>
 <span class="kw">enum</span> <span class="ident">Mode</span> {
-    <span class="ident">Qemu</span>,
-    <span class="ident">Crosvm</span>,
+    <span class="doccomment">/// Launch runtime in qemu</span>
+    <span class="ident">Qemu</span>(<span class="ident">VmParams</span>),
+    <span class="doccomment">/// Launch runtime in crosvm</span>
+    <span class="ident">Crosvm</span>(<span class="ident">VmParams</span>),
 }
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Parser</span>, <span class="ident">Debug</span>)]</span>
 <span class="kw">struct</span> <span class="ident">Args</span> {
-    <span class="doccomment">/// Path to the `qemu-system-x86_64` binary.</span>
-    <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">long</span>, <span class="ident">parse</span>(<span class="ident">from_os_str</span>), <span class="ident">validator</span> <span class="op">=</span> <span class="ident">path_exists</span>, <span class="ident">default_value_os_t</span> <span class="op">=</span> <span class="ident">PathBuf::from</span>(<span class="string">&quot;/usr/bin/qemu-system-x86_64&quot;</span>))]</span>
-    <span class="ident">qemu</span>: <span class="ident">PathBuf</span>,
-
-    <span class="doccomment">/// Path to the `crosvm` binary.</span>
-    <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">long</span>, <span class="ident">parse</span>(<span class="ident">from_os_str</span>), <span class="ident">validator</span> <span class="op">=</span> <span class="ident">path_exists</span>, <span class="ident">default_value_os_t</span> <span class="op">=</span> <span class="ident">PathBuf::from</span>(<span class="string">&quot;/usr/local/cargo/bin/crosvm&quot;</span>))]</span>
-    <span class="ident">crosvm</span>: <span class="ident">PathBuf</span>,
-
     <span class="doccomment">/// Execution mode.</span>
-    <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">arg_enum</span>, <span class="ident">long</span>, <span class="ident">default_value</span> <span class="op">=</span> <span class="string">&quot;qemu&quot;</span>)]</span>
+    <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">subcommand</span>)]</span>
     <span class="ident">mode</span>: <span class="ident">Mode</span>,
-
-    <span class="doccomment">/// Path to the kernel to execute.</span>
-    <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">long</span>, <span class="ident">parse</span>(<span class="ident">from_os_str</span>), <span class="ident">validator</span> <span class="op">=</span> <span class="ident">path_exists</span>)]</span>
-    <span class="ident">app</span>: <span class="ident">PathBuf</span>,
 
     <span class="doccomment">/// Path to a Wasm file to be loaded into the trusted runtime and executed by it per</span>
     <span class="doccomment">/// invocation. See the documentation for details on its ABI. Ref: &lt;https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md&gt;</span>
@@ -366,11 +370,6 @@
         <span class="ident">validator</span> <span class="op">=</span> <span class="ident">path_exists</span>,
     )]</span>
     <span class="ident">lookup_data</span>: <span class="ident">PathBuf</span>,
-
-    <span class="doccomment">/// Listen for an incoming connection from gdb on this port.</span>
-    <span class="doccomment">/// The guest will not start until instructed to do so by gdb.</span>
-    <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">long</span> <span class="op">=</span> <span class="string">&quot;gdb&quot;</span>)]</span>
-    <span class="ident">gdb</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">u16</span><span class="op">&gt;</span>,
 }
 
 <span class="kw">fn</span> <span class="ident">path_exists</span>(<span class="ident">s</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">String</span><span class="op">&gt;</span> {
@@ -450,35 +449,32 @@
     <span class="kw">let</span> <span class="ident">cli</span> <span class="op">=</span> <span class="ident">Args::parse</span>();
     <span class="ident">env_logger::init</span>();
 
-    <span class="kw">let</span> (<span class="ident">console_vmm</span>, <span class="ident">console</span>) <span class="op">=</span> <span class="ident">UnixStream::pair</span>()<span class="question-mark">?</span>;
+    <span class="comment">// Provide a way for the launched instance to send logs</span>
+    <span class="kw">let</span> <span class="ident">logs_console</span>: <span class="ident">UnixStream</span> <span class="op">=</span> {
+        <span class="comment">// Create two linked consoles. Technically both can read/write, but we&#39;ll</span>
+        <span class="comment">// use them as a one way channel.</span>
+        <span class="kw">let</span> (<span class="ident">console_writer</span>, <span class="ident">console_receiver</span>) <span class="op">=</span> <span class="ident">UnixStream::pair</span>()<span class="question-mark">?</span>;
 
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">vmm</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">Vmm</span><span class="op">&gt;</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">cli</span>.<span class="ident">mode</span> {
-        <span class="ident">Mode::Qemu</span> =&gt; <span class="ident">Box::new</span>(<span class="ident">Qemu::start</span>(<span class="ident">Params</span> {
-            <span class="ident">binary</span>: <span class="ident">cli</span>.<span class="ident">qemu</span>,
-            <span class="ident">app</span>: <span class="ident">cli</span>.<span class="ident">app</span>,
-            <span class="ident">console</span>: <span class="ident">console_vmm</span>,
-            <span class="ident">gdb</span>: <span class="ident">cli</span>.<span class="ident">gdb</span>,
-        })<span class="question-mark">?</span>),
-        <span class="ident">Mode::Crosvm</span> =&gt; <span class="ident">Box::new</span>(<span class="ident">Crosvm::start</span>(<span class="ident">Params</span> {
-            <span class="ident">binary</span>: <span class="ident">cli</span>.<span class="ident">crosvm</span>,
-            <span class="ident">app</span>: <span class="ident">cli</span>.<span class="ident">app</span>,
-            <span class="ident">console</span>: <span class="ident">console_vmm</span>,
-            <span class="ident">gdb</span>: <span class="ident">cli</span>.<span class="ident">gdb</span>,
-        })<span class="question-mark">?</span>),
+        <span class="comment">// Log everything sent by the writer.</span>
+        <span class="ident">tokio::spawn</span>(<span class="kw">async</span> {
+            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">reader</span> <span class="op">=</span> <span class="ident">BufReader::new</span>(<span class="ident">console_receiver</span>);
+
+            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">line</span> <span class="op">=</span> <span class="ident">String::new</span>();
+            <span class="kw">while</span> <span class="ident">reader</span>.<span class="ident">read_line</span>(<span class="kw-2">&amp;mut</span> <span class="ident">line</span>).<span class="ident">expect</span>(<span class="string">&quot;failed to read line&quot;</span>) <span class="op">&gt;</span> <span class="number">0</span> {
+                <span class="macro">log::info!</span>(<span class="string">&quot;console: {:?}&quot;</span>, <span class="ident">line</span>);
+                <span class="ident">line</span>.<span class="ident">clear</span>();
+            }
+        });
+
+        <span class="ident">console_writer</span>
     };
 
-    <span class="comment">// Log everything coming over the console channel.</span>
-    <span class="ident">tokio::spawn</span>(<span class="kw">async</span> {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">reader</span> <span class="op">=</span> <span class="ident">BufReader::new</span>(<span class="ident">console</span>);
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">launched_instance</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">LaunchedInstance</span><span class="op">&gt;</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">cli</span>.<span class="ident">mode</span> {
+        <span class="ident">Mode::Qemu</span>(<span class="ident">params</span>) =&gt; <span class="ident">Box::new</span>(<span class="ident">QemuInstance::start</span>(<span class="ident">params</span>, <span class="ident">logs_console</span>)<span class="question-mark">?</span>),
+        <span class="ident">Mode::Crosvm</span>(<span class="ident">params</span>) =&gt; <span class="ident">Box::new</span>(<span class="ident">CrosvmInstance::start</span>(<span class="ident">params</span>, <span class="ident">logs_console</span>)<span class="question-mark">?</span>),
+    };
 
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">line</span> <span class="op">=</span> <span class="ident">String::new</span>();
-        <span class="kw">while</span> <span class="ident">reader</span>.<span class="ident">read_line</span>(<span class="kw-2">&amp;mut</span> <span class="ident">line</span>).<span class="ident">expect</span>(<span class="string">&quot;failed to read line&quot;</span>) <span class="op">&gt;</span> <span class="number">0</span> {
-            <span class="macro">log::info!</span>(<span class="string">&quot;console: {:?}&quot;</span>, <span class="ident">line</span>);
-            <span class="ident">line</span>.<span class="ident">clear</span>();
-        }
-    });
-
-    <span class="kw">let</span> <span class="ident">comms</span> <span class="op">=</span> <span class="ident">vmm</span>.<span class="ident">create_comms_channel</span>().<span class="kw">await</span><span class="question-mark">?</span>;
+    <span class="kw">let</span> <span class="ident">comms</span> <span class="op">=</span> <span class="ident">launched_instance</span>.<span class="ident">create_comms_channel</span>().<span class="kw">await</span><span class="question-mark">?</span>;
 
     <span class="comment">// A message based communication channel that permits other parts of the</span>
     <span class="comment">// untrusted launcher to send requests to the task that handles communicating</span>
@@ -555,12 +551,12 @@
     <span class="comment">// Wait until something dies or we get a signal to terminate.</span>
     <span class="macro">tokio::select!</span> {
         <span class="kw">_</span> <span class="op">=</span> <span class="ident">signal::ctrl_c</span>() =&gt; {
-            <span class="ident">vmm</span>.<span class="ident">kill</span>().<span class="kw">await</span><span class="question-mark">?</span>;
+            <span class="ident">launched_instance</span>.<span class="ident">kill</span>().<span class="kw">await</span><span class="question-mark">?</span>;
         },
         <span class="kw">_</span> <span class="op">=</span> <span class="ident">server_future</span> =&gt; {
-            <span class="ident">vmm</span>.<span class="ident">kill</span>().<span class="kw">await</span><span class="question-mark">?</span>;
+            <span class="ident">launched_instance</span>.<span class="ident">kill</span>().<span class="kw">await</span><span class="question-mark">?</span>;
         },
-        <span class="ident">val</span> <span class="op">=</span> <span class="ident">vmm</span>.<span class="ident">wait</span>() =&gt; {
+        <span class="ident">val</span> <span class="op">=</span> <span class="ident">launched_instance</span>.<span class="ident">wait</span>() =&gt; {
             <span class="macro">log::error!</span>(<span class="string">&quot;Unexpected VMM exit, status: {:?}&quot;</span>, <span class="ident">val</span>);
         },
     }

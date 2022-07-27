@@ -1,3 +1,4 @@
 (function() {var implementors = {};
+implementors["oak_baremetal_launcher"] = [{"text":"impl Subcommand for <a class=\"enum\" href=\"oak_baremetal_launcher/enum.Mode.html\" title=\"enum oak_baremetal_launcher::Mode\">Mode</a>","synthetic":false,"types":["oak_baremetal_launcher::Mode"]}];
 implementors["xtask"] = [{"text":"impl Subcommand for <a class=\"enum\" href=\"xtask/internal/enum.Command.html\" title=\"enum xtask::internal::Command\">Command</a>","synthetic":false,"types":["xtask::internal::Command"]}];
 if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()
