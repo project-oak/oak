@@ -22,22 +22,35 @@ mod tests;
 use anyhow::{anyhow, Context};
 use async_trait::async_trait;
 use futures::{stream::FuturesOrdered, StreamExt};
-use hyper::Body;
+use hyper::Uri;
 use std::{
     cmp::Ordering,
-    marker::{Send, Sync},
     mem::take,
     ops::DerefMut,
     sync::{Arc, Mutex},
+    vec,
 };
 use tokio::{sync::oneshot, time::Duration};
 
-type Request = hyper::Request<Body>;
-type Response = hyper::Response<Body>;
+#[derive(Debug)]
+pub struct TrustedShufflerRequest {
+    pub body: Vec<u8>,
+    pub uri: Uri,
+}
+#[derive(Debug)]
+pub struct TrustedShufflerResponse {
+    pub body: Vec<u8>,
+}
+
+impl TrustedShufflerResponse {
+    fn empty() -> TrustedShufflerResponse {
+        TrustedShufflerResponse { body: vec![] }
+    }
+}
 
 enum Wrapper {
-    Request(Request),
-    Response(Response),
+    Request(TrustedShufflerRequest),
+    Response(TrustedShufflerResponse),
 }
 
 // TODO(mschett): Implement an ordering on wrappers.
@@ -52,12 +65,15 @@ struct Message {
     // Arbitrary message data.
     data: Wrapper,
     // Channel for sending responses back to the client async tasks.
-    response_sender: oneshot::Sender<Response>,
+    response_sender: oneshot::Sender<TrustedShufflerResponse>,
 }
 
 #[async_trait]
 pub trait RequestHandler: Send + Sync {
-    async fn handle(&self, request: Request) -> anyhow::Result<Response>;
+    async fn handle(
+        &self,
+        request: TrustedShufflerRequest,
+    ) -> anyhow::Result<TrustedShufflerResponse>;
 }
 
 // Trusted Shuffler implementation.
@@ -93,7 +109,10 @@ impl TrustedShuffler {
     }
 
     // Asynchronously handles an incoming request.
-    pub async fn invoke(&self, request: Request) -> anyhow::Result<Response> {
+    pub async fn invoke(
+        &self,
+        request: TrustedShufflerRequest,
+    ) -> anyhow::Result<TrustedShufflerResponse> {
         let (response_sender, response_receiver) = oneshot::channel();
 
         // Check if the request batch is filled and create a separate task for shuffling requests.
@@ -156,7 +175,7 @@ impl TrustedShuffler {
                             match tokio::time::timeout(timeout, request_handler_clone.handle(data))
                                 .await
                             {
-                                Err(_) => Ok(hyper::Response::default()),
+                                Err(_) => Ok(TrustedShufflerResponse::empty()),
                                 Ok(response) => response,
                             }
                         }
@@ -204,7 +223,7 @@ impl TrustedShuffler {
 }
 
 // TODO(mschett): Implement todo!()
-fn get_response(w: Wrapper) -> Response {
+fn get_response(w: Wrapper) -> TrustedShufflerResponse {
     match w {
         Wrapper::Response(r) => r,
         _ => todo!(),
@@ -212,7 +231,7 @@ fn get_response(w: Wrapper) -> Response {
 }
 
 // TODO(mschett): Implement todo!()
-fn get_request(w: Wrapper) -> Request {
+fn get_request(w: Wrapper) -> TrustedShufflerRequest {
     match w {
         Wrapper::Request(r) => r,
         _ => todo!(),

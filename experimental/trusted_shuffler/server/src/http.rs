@@ -26,7 +26,9 @@ use std::{
     time::Instant,
 };
 use tokio::time::Duration;
-use trusted_shuffler::{RequestHandler, TrustedShuffler};
+use trusted_shuffler::{
+    RequestHandler, TrustedShuffler, TrustedShufflerRequest, TrustedShufflerResponse,
+};
 use trusted_shuffler_common::send_with_request;
 
 struct HttpRequestHandler {
@@ -35,7 +37,12 @@ struct HttpRequestHandler {
 
 #[async_trait]
 impl RequestHandler for HttpRequestHandler {
-    async fn handle(&self, mut request: Request<Body>) -> anyhow::Result<Response<Body>> {
+    async fn handle(
+        &self,
+        request: TrustedShufflerRequest,
+    ) -> anyhow::Result<TrustedShufflerResponse> {
+        let mut request = trusted_to_hyper_request(request);
+
         // We want to keep the path of the orginal request from the client.
         let path = request.uri().path();
         // And extend the URL to the backend.
@@ -46,16 +53,50 @@ impl RequestHandler for HttpRequestHandler {
         *uri = new_uri;
         log::info!("New request to the backend: {:?}\n", request);
 
-        let response = send_with_request(request).await;
-        response.map_or_else(
-            |error| {
-                Err(anyhow!(
-                    "Couldn't receive response from the backend: {:?}",
-                    error
-                ))
-            },
-            Ok,
-        )
+        // TODO(mschett) Make more rustic.
+        match send_with_request(request).await {
+            Err(error) => Err(anyhow!(
+                "Couldn't receive response from the backend: {:?}",
+                error
+            )),
+            Ok(response) => Ok(hyper_to_trusted_response(response).await),
+        }
+    }
+}
+
+// TODO(mschett): Try to use TryFrom/TryInto.
+async fn hyper_to_trusted_request(hyper_request: Request<Body>) -> TrustedShufflerRequest {
+    let (parts, body) = hyper_request.into_parts();
+    // We have to read all the body.
+    let body = hyper::body::to_bytes(body)
+        .await
+        .expect("Couldn't read request body");
+    TrustedShufflerRequest {
+        body: body.to_vec(),
+        uri: parts.uri.clone(),
+    }
+}
+
+fn trusted_to_hyper_request(trusted_shuffler_request: TrustedShufflerRequest) -> Request<Body> {
+    let body = Body::from(trusted_shuffler_request.body);
+    Request::builder()
+        .uri(trusted_shuffler_request.uri)
+        .body(body)
+        .expect("Failed to convert Trusted to Hyper Request")
+}
+
+fn trusted_to_hyper_response(trusted_shuffler_request: TrustedShufflerResponse) -> Response<Body> {
+    let body = Body::from(trusted_shuffler_request.body);
+    Response::new(body)
+}
+
+async fn hyper_to_trusted_response(hyper_response: Response<Body>) -> TrustedShufflerResponse {
+    // We have to read all the body.
+    let body = hyper::body::to_bytes(hyper_response.into_body())
+        .await
+        .expect("Couldn't read request body");
+    TrustedShufflerResponse {
+        body: body.to_vec(),
     }
 }
 
@@ -79,11 +120,14 @@ impl hyper::service::Service<Request<Body>> for Service {
             // gRPC call: (&Method::POST, "/experimental.trusted_shuffler.echo.Echo/Echo")
             // http call: (&Method::POST, "/request")
             let request_start = Instant::now();
-            match trusted_shuffler.invoke(request).await {
+            match trusted_shuffler
+                .invoke(hyper_to_trusted_request(request).await)
+                .await
+            {
                 Ok(response) => {
                     let _response_time = request_start.elapsed();
                     log::info!("Server Response: {:?}", response);
-                    Ok(Response::new(response.into_body()))
+                    Ok(trusted_to_hyper_response(response))
                 }
                 Err(error) => {
                     log::error!("Couldn't receive response: {:?}", error);
