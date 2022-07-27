@@ -21,7 +21,8 @@ import java.util.Optional;
 // TODO(#3063): Replace Optional<T> with Result<T> in the following.
 
 /**
- * Classes implementing this interface must implement encryption and decryption of messages.
+ * Interface representing an Encryptor. Classes implementing this interface must implement
+ * encryption and decryption of messages.
  */
 public interface Encryptor {
   /**

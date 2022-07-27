@@ -21,9 +21,11 @@ import java.util.Optional;
 /**
  * Abstract client for sending and receiving encrypted messages to a server. This class provides an
  * abstract builder that must be implemented by concrete subclasses of this class. The builder takes
- * a {@code RpcClient} supplier, an {@code Encryptor} supplier, and optionally an evidence
- * supplier to build a concrete instance of {@code OakClient}. If an evidence supplier is provider,
- * the client has to verify the correctness of the evidence prior to sending messages to the server.
+ * a {@code RpcClientProvider}, an {@code EncryptorProvider}, and optionally an {@code
+ * EvidenceProvider} to build a concrete instance of {@code OakClient}. If an evidence supplier is
+ * provided, the client has to verify the correctness of the evidence prior to getting an instance
+ * of {@code Encryptor} and sending messages to the server. In a complete, and production-ready
+ * implementation, an {@code EvidenceProvider} MUST be provided and verified.
  *
  * @param R type of the requests that this client sends
  * @param T type of the responses that this client receives
@@ -32,7 +34,7 @@ public abstract class OakClient<R, T> implements AutoCloseable {
   // TODO(#3063): Replace return type with Result<T>
   /**
    * Sends a request to a remote server and receives the response.
-   * @param request the request to send to server
+   * @param request the request to send to the server
    * @return the response received from the server wrapped in an Optional
    */
   abstract Optional<T> send(final R request);
@@ -47,8 +49,8 @@ public abstract class OakClient<R, T> implements AutoCloseable {
     Optional<EvidenceProvider> evidenceProvider = Optional.empty();
 
     /**
-     * @param encryptorProvider provides an Encryptor instance
-     * @param rpcClientProvider provides an instance of RpcClient
+     * @param encryptorProvider instance that can provide an {@code Encryptor} instance
+     * @param rpcClientProvider instance that can provide an instance of {@code RpcClient}
      */
     Builder(final EncryptorProvider encryptorProvider,
         final RpcClientProvider<R, T> rpcClientProvider) {
@@ -56,18 +58,24 @@ public abstract class OakClient<R, T> implements AutoCloseable {
       this.rpcClientProvider = rpcClientProvider;
     }
 
+    /**
+     * Configure this builder to use the given {@code EvidenceProvider}.
+     * @param evidenceProvider instance that can provide an {@code Evidence} instance
+     * @return this builder
+     */
     public B withEvidenceProvider(final EvidenceProvider evidenceProvider) {
       this.evidenceProvider = Optional.of(evidenceProvider);
       return self();
     }
 
     /**
-     * Builds and returns and instance of OakClient. The build should initialize the client with an
-     * encryptor and verify any evidence provided by the evidence supplier, if one is present. Or
-     * the concrete subclass should provide additional appropriate methods for initializing the
-     * client instance.
+     * Builds and returns and instance of {@code OakClient}. The build should verify any evidence
+     * provided by the {@code EvidenceProvider}, if one is present, and initialize the client with
+     * an {@code Encryptor}. Alternatively, the concrete subclass may provide additional appropriate
+     * methods for initializing the client instance before using it for sending and receiving
+     * messages. However, partial construction of the client is discouraged.
      *
-     * @return an instance of OakClient.
+     * @return an instance of {@code OakClient}.
      */
     abstract OakClient<R, T> build();
 
@@ -75,9 +83,9 @@ public abstract class OakClient<R, T> implements AutoCloseable {
     protected abstract B self();
   }
 
-  // The following functional interfaces could individually have been replaced by a {@code
-  // Supplier<T>}, but to allow a single class implement more than one of these interfaces,
-  // dedicated functional interfaces are preferred.
+  // The following functional interfaces could have individually been replaced by a Supplier<T>, but
+  // to allow a single class implement more than one of these interfaces, dedicated functional
+  // interfaces are preferred.
   // TODO(#3063): Replace Optional<T> with Result<T> in the following.
 
   /**
@@ -96,18 +104,19 @@ public abstract class OakClient<R, T> implements AutoCloseable {
   public interface EncryptorProvider {
     /**
      *
-     * @return an instance of Encryptor wrapped in an Optional.
+     * @param signingPublicKey signing public key of the server
+     * @return an instance of Encryptor wrapped in an Optional
      */
-    Optional<? extends Encryptor> getEncryptor();
+    Optional<? extends Encryptor> getEncryptor(byte[] signingPublicKey);
   }
 
   /**
    * An interface for providing instances of Evidence.
    *
-   * A evidence normally includes an instance of EndorsementEvidence and optionally some server
-   * configuration information. If the client policy requires verification of the server
-   * configuration, then the client should be built with a provider that does provide server
-   * configuration.
+   * A evidence normally includes the public key part of the server's signing key, an instance of
+   * {@code EndorsementEvidence}, and optionally some server configuration information. If the
+   * client policy requires verification of the server configuration, then the client should be
+   * built with a provider that does provide server configuration.
    */
   public interface EvidenceProvider {
     /**

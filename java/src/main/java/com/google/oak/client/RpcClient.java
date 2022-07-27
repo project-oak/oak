@@ -23,10 +23,10 @@ import java.util.Optional;
  * response. This allows reusing the functionality in {@code com.google.oak.client} for both gRPC
  * and HTTP.
  *
- * @param <R> type of the request.
- * @param <T> type of the response.
+ * @param <R> type of the request
+ * @param <T> type of the response
  */
 public interface RpcClient<R, T> extends AutoCloseable {
-  // TODO(#3063): Replace return type with Result<T>
+  // TODO(#3063): Replace return type with Result<T>.
   abstract Optional<T> send(final R request);
 }

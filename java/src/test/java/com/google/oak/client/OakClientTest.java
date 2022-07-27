@@ -43,10 +43,11 @@ public class OakClientTest {
     final Encryptor encryptor;
 
     PilotOakClient(final Builder builder) {
+      byte[] emptyPublicKeyForTest = new byte[0];
       builder.attestationClient.attest();
       // In reality implementations of OakClient must handle empty Optionals and unexpected types.
       rpcClient = (PilotRpcClient) builder.rpcClientProvider.getRpcClient().get();
-      encryptor = builder.encryptorProvider.getEncryptor().get();
+      encryptor = builder.encryptorProvider.getEncryptor(emptyPublicKeyForTest).get();
     }
 
     @Override
@@ -113,7 +114,7 @@ public class OakClientTest {
     }
 
     @Override
-    public Optional<? extends Encryptor> getEncryptor() {
+    public Optional<? extends Encryptor> getEncryptor(byte[] unusedSigningPublicKey) {
       if (attested.get()) {
         return Optional.of(encryptor);
       }
