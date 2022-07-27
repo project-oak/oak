@@ -46,7 +46,7 @@ impl Variant {
         }
     }
 
-    pub fn binary_path(&self) -> &'static str {
+    pub fn app_binary_path(&self) -> &'static str {
         match self {
             Variant::Qemu => {
                 "./experimental/oak_baremetal_app_qemu/target/x86_64-unknown-none/debug/oak_baremetal_app_qemu"
@@ -54,6 +54,13 @@ impl Variant {
             Variant::Crosvm => {
                 "./experimental/oak_baremetal_app_crosvm/target/x86_64-unknown-none/debug/oak_baremetal_app_crosvm"
             }
+        }
+    }
+
+    pub fn vmm_binary_path(&self) -> &'static str {
+        match self {
+            Variant::Qemu => "/usr/bin/qemu-system-x86_64",
+            Variant::Crosvm => "/usr/local/cargo/bin/crosvm",
         }
     }
 }
@@ -122,10 +129,11 @@ fn run_loader(variant: Variant) -> Box<dyn Runnable> {
     Cmd::new(
         "./target/debug/oak_baremetal_launcher",
         vec![
-            format!("--mode={}", variant.loader_mode()),
-            format!("--app={}", variant.binary_path()),
             format!("--wasm={}", WASM_PATH),
             format!("--lookup-data={}", LOOKUP_PATH),
+            variant.loader_mode().to_string(),
+            format!("--app-binary={}", variant.app_binary_path()),
+            format!("--vmm-binary={}", variant.vmm_binary_path()),
         ],
     )
 }
