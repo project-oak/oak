@@ -53,7 +53,6 @@ impl RequestHandler for HttpRequestHandler {
         *uri = new_uri;
         log::info!("New request to the backend: {:?}\n", request);
 
-        // TODO(mschett) Make more rustic.
         match send_with_request(request).await {
             Err(error) => Err(anyhow!(
                 "Couldn't receive response from the backend: {:?}",
@@ -64,10 +63,10 @@ impl RequestHandler for HttpRequestHandler {
     }
 }
 
-// TODO(mschett): Try to use TryFrom/TryInto.
+// We keep the body and the uri from the `hyper::Request`. We convert the body to vec, so it has to
+// be read fully.
 async fn hyper_to_trusted_request(hyper_request: Request<Body>) -> TrustedShufflerRequest {
     let (parts, body) = hyper_request.into_parts();
-    // We have to read all the body.
     let body = hyper::body::to_bytes(body)
         .await
         .expect("Couldn't read request body");
@@ -77,8 +76,8 @@ async fn hyper_to_trusted_request(hyper_request: Request<Body>) -> TrustedShuffl
     }
 }
 
-// We want to build a hyper request for the backend. For our test backend, creating a HTTP/2 POST
-// request seems sufficient.
+// Apart from setting the body and the URI, for our test backend setting to HTTP/2 and POST
+// seems sufficient.
 fn trusted_to_hyper_request(trusted_shuffler_request: TrustedShufflerRequest) -> Request<Body> {
     let body = Body::from(trusted_shuffler_request.body);
     Request::builder()
@@ -89,14 +88,15 @@ fn trusted_to_hyper_request(trusted_shuffler_request: TrustedShufflerRequest) ->
         .expect("Failed to convert Trusted to Hyper Request")
 }
 
+// We generate a default `hyper::Response` and set only the body.
 fn trusted_to_hyper_response(trusted_shuffler_request: TrustedShufflerResponse) -> Response<Body> {
     let body = Body::from(trusted_shuffler_request.body);
-    let response = Response::new(body);
-    response
+    Response::new(body)
 }
 
+// We keep only the body from the `hyper::Response`. We convert the body to vec, so it has to be
+// read fully.
 async fn hyper_to_trusted_response(hyper_response: Response<Body>) -> TrustedShufflerResponse {
-    // We have to read all the body.
     let body = hyper::body::to_bytes(hyper_response.into_body())
         .await
         .expect("Couldn't read request body");

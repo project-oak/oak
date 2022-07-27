@@ -48,6 +48,9 @@ impl TrustedShufflerResponse {
     }
 }
 
+// Workaround so we can have either a request or a response in `data` of `Message`.
+// We should be able to refactor so we do not need the `Wrapper` (and `panics`) any more.
+#[derive(Debug)]
 enum Wrapper {
     Request(TrustedShufflerRequest),
     Response(TrustedShufflerResponse),
@@ -59,8 +62,10 @@ fn cmp(w1: &Wrapper, w2: &Wrapper) -> Ordering {
     match (w1, w2) {
         (Wrapper::Request(r1), Wrapper::Request(r2)) => r1.body.cmp(&r2.body),
         (Wrapper::Response(r1), Wrapper::Response(r2)) => r1.body.cmp(&r2.body),
-        // TODO(mschett): We shouldn't have compared them.
-        (_, _) => todo!(),
+        (_, _) => panic!(
+            "Fail to compare a TrustedShufflerRequest: {:?} and a TrustedShufflerResponse: {:?}",
+            w1, w2
+        ),
     }
 }
 
@@ -228,18 +233,22 @@ impl TrustedShuffler {
     }
 }
 
-// TODO(mschett): Implement todo!()
-fn get_response(w: Wrapper) -> TrustedShufflerResponse {
-    match w {
-        Wrapper::Response(r) => r,
-        _ => todo!(),
-    }
-}
-
-// TODO(mschett): Implement todo!()
 fn get_request(w: Wrapper) -> TrustedShufflerRequest {
     match w {
         Wrapper::Request(r) => r,
-        _ => todo!(),
+        _ => panic!(
+            "Expected a TrustedShufflerRequest, but found a TrustedShufflerResponse: {:?}",
+            w
+        ),
+    }
+}
+
+fn get_response(w: Wrapper) -> TrustedShufflerResponse {
+    match w {
+        Wrapper::Response(r) => r,
+        _ => panic!(
+            "Expected a TrustedShufflerResponse, but found a TrustedShufflerRequest: {:?}",
+            w
+        ),
     }
 }
