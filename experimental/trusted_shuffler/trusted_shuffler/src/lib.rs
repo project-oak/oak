@@ -32,12 +32,12 @@ use std::{
 };
 use tokio::{sync::oneshot, time::Duration};
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct TrustedShufflerRequest {
     pub body: Vec<u8>,
     pub uri: Uri,
 }
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct TrustedShufflerResponse {
     pub body: Vec<u8>,
 }
@@ -53,9 +53,15 @@ enum Wrapper {
     Response(TrustedShufflerResponse),
 }
 
-// TODO(mschett): Implement an ordering on wrappers.
-fn cmp(_w1: &Wrapper, _w2: &Wrapper) -> Ordering {
-    todo!()
+// We only compare the body, but we need revisit this and decide if this
+// is how we want to sort our requests and responses.
+fn cmp(w1: &Wrapper, w2: &Wrapper) -> Ordering {
+    match (w1, w2) {
+        (Wrapper::Request(r1), Wrapper::Request(r2)) => r1.body.cmp(&r2.body),
+        (Wrapper::Response(r1), Wrapper::Response(r2)) => r1.body.cmp(&r2.body),
+        // TODO(mschett): We shouldn't have compared them.
+        (_, _) => todo!(),
+    }
 }
 
 struct Message {
