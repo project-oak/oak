@@ -2895,7 +2895,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "oak_baremetal_loader"
+name = "oak_baremetal_launcher"
 version = "0.1.0"
 dependencies = [
  "anyhow",

@@ -65,12 +65,12 @@ The workflow of the Remote Attestation protocol involves 4 interacting entities:
 1. Client
    - Client application that connects to the Server
    - Client is provided with a TEE Provider's Root key
-2. Untrusted Loader
+2. Untrusted Launcher
    - Companion of the Trusted Runtime
    - Runs directly on the server host
 3. Trusted Runtime
    - Runs inside a secure VM on the server
-   - Communicates with the outside world via the Untrusted Loader
+   - Communicates with the outside world via the Untrusted Launcher
 4. TEE Platform
    - Firmware that provides a TEE support (i.e. Intel SGX or AMD-SEV-SNP capable
      CPU)
@@ -88,7 +88,7 @@ The complete workflow of the Remote Attestation protocol looks as follows:
 
 1. **TEE Provider** creates a signature of the **TEE Platform**'s firmware
    public key
-2. **Untrusted Loader** instructs the **TEE Platform** to start the **Trusted
+2. **Untrusted Launcher** instructs the **TEE Platform** to start the **Trusted
    Runtime** in a secure VM
 3. **TEE Platform** stores a cryptographic measurement of the **Trusted
    Runtime** at launch
@@ -104,8 +104,8 @@ The complete workflow of the Remote Attestation protocol looks as follows:
    - **TEE Platform** signs the `AttestationReport` with its firmware private
      key
 6. **Trusted Runtime** receives the `AttestationReport` and stores it
-7. **Untrusted Loader** sends an initial configuration message to the **Trusted
-   Runtime**, which then initializes
+7. **Untrusted Launcher** sends an initial configuration message to the
+   **Trusted Runtime**, which then initializes
 
 ### Handshake
 
@@ -162,13 +162,13 @@ data.
 ```mermaid
 sequenceDiagram
   participant Client
-  participant Untrusted Loader
+  participant Untrusted Launcher
   participant Trusted Runtime
   participant TEE Platform
 
-  Note over Untrusted Loader,TEE Platform: Load the Trusted Runtime
+  Note over Untrusted Launcher,TEE Platform: Load the Trusted Runtime
 
-  Untrusted Loader->>TEE Platform: Trusted Runtime Memory Contents
+  Untrusted Launcher->>TEE Platform: Trusted Runtime Memory Contents
   TEE Platform -->> TEE Platform: Store a measurement of the Trusted Runtime
   TEE Platform ->> Trusted Runtime: Start the Trusted Runtime in a secure VM
 
@@ -178,25 +178,25 @@ sequenceDiagram
   TEE Platform-->>TEE Platform: Generate AttestationReport
   TEE Platform->>Trusted Runtime: Signed AttestationReport
 
-  Note over Untrusted Loader,Trusted Runtime: Initialization
+  Note over Untrusted Launcher,Trusted Runtime: Initialization
 
-  Untrusted Loader->>Trusted Runtime: Configuration and business logic
+  Untrusted Launcher->>Trusted Runtime: Configuration and business logic
 
   Client-->>Client: Generate a Signing key pair
 
   Note over Client,Trusted Runtime: Handshake Start
 
   Client-->>Client: Generate an Ephemeral key pair
-  Client->>Untrusted Loader: ClientHello
-  Untrusted Loader->>Trusted Runtime: ClientHello
+  Client->>Untrusted Launcher: ClientHello
+  Untrusted Launcher->>Trusted Runtime: ClientHello
   Trusted Runtime-->>Trusted Runtime: Generate an Ephemeral key pair
 
-  Trusted Runtime->>Untrusted Loader: ServerIdentity
-  Untrusted Loader->>Client: ServerIdentity
+  Trusted Runtime->>Untrusted Launcher: ServerIdentity
+  Untrusted Launcher->>Client: ServerIdentity
   Client-->>Client: Validate ServerIdentity
 
-  Client->>Untrusted Loader: ClientIdentity
-  Untrusted Loader->>Trusted Runtime: ClientIdentity
+  Client->>Untrusted Launcher: ClientIdentity
+  Untrusted Launcher->>Trusted Runtime: ClientIdentity
 
   Client-->>Client: Derive Session Keys
   Trusted Runtime-->>Trusted Runtime: Derive Session Keys
@@ -204,10 +204,10 @@ sequenceDiagram
 
 
 loop Data Exchange
-  Client->>Untrusted Loader: Encrypted request
-  Untrusted Loader->>Trusted Runtime: Encrypted request
+  Client->>Untrusted Launcher: Encrypted request
+  Untrusted Launcher->>Trusted Runtime: Encrypted request
   Trusted Runtime-->>Trusted Runtime: Invoke business logic
-  Trusted Runtime->>Untrusted Loader: Encrypted response
-  Untrusted Loader->>Client: Encrypted response
+  Trusted Runtime->>Untrusted Launcher: Encrypted response
+  Untrusted Launcher->>Client: Encrypted response
 end
 ```

@@ -15,8 +15,8 @@
 //
 
 const CLIENT_PATH: &str = "./target/debug/oak_functions_client";
-const WASM_PATH: &str = "./experimental/oak_baremetal_loader/key_value_lookup.wasm";
-const LOOKUP_PATH: &str = "./experimental/oak_baremetal_loader/mock_lookup_data";
+const WASM_PATH: &str = "./experimental/oak_baremetal_launcher/key_value_lookup.wasm";
+const LOOKUP_PATH: &str = "./experimental/oak_baremetal_launcher/mock_lookup_data";
 
 use std::path::Path;
 
@@ -97,7 +97,10 @@ fn run_variant(variant: Variant) -> Step {
     Step::Multiple {
         name: format!("run {} variant", variant),
         steps: vec![
-            build_binary("build loader binary", "./experimental/oak_baremetal_loader"),
+            build_binary(
+                "build loader binary",
+                "./experimental/oak_baremetal_launcher",
+            ),
             build_binary("build payload", variant.payload_crate_path()),
             Step::WithBackground {
                 name: "background loader".to_string(),
@@ -117,7 +120,7 @@ fn build_binary(name: &str, directory: &str) -> Step {
 
 fn run_loader(variant: Variant) -> Box<dyn Runnable> {
     Cmd::new(
-        "./target/debug/oak_baremetal_loader",
+        "./target/debug/oak_baremetal_launcher",
         vec![
             format!("--mode={}", variant.loader_mode()),
             format!("--app={}", variant.binary_path()),
