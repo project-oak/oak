@@ -22,7 +22,6 @@ import static org.junit.Assert.assertTrue;
 import com.google.oak.util.Result;
 import java.nio.charset.StandardCharsets;
 import java.util.Optional;
-import java.util.concurrent.atomic.AtomicBoolean;
 import org.junit.Test;
 
 public class OakClientTest {
@@ -46,8 +45,8 @@ public class OakClientTest {
     PilotOakClient(final Builder builder) {
       byte[] signingPublicKey = builder.attestationClient.verifyEvidence(new Evidence() {});
       // In reality implementations of OakClient must handle empty Optionals and unexpected types.
-      rpcClient = (PilotRpcClient) builder.rpcClientProvider.getRpcClient().success().get();
-      encryptor = builder.encryptorProvider.getEncryptor(signingPublicKey).success().get();
+      rpcClient = builder.attestationClient.getRpcClient().success().get();
+      encryptor = builder.attestationClient.getEncryptor(signingPublicKey).success().get();
     }
 
     @Override
@@ -63,28 +62,22 @@ public class OakClientTest {
           .map(b -> new String(b, StandardCharsets.UTF_8));
     }
 
-    static class Builder extends OakClient.Builder<String, String, Builder> {
+    static class Builder {
       final PilotAttestationClient attestationClient;
 
       Builder(final PilotAttestationClient attestationClient) {
-        super(attestationClient, attestationClient);
         this.attestationClient = attestationClient;
       }
 
-      @Override
       PilotOakClient build() {
         return new PilotOakClient(this);
-      }
-
-      @Override
-      protected Builder self() {
-        return this;
       }
     }
   }
 
   private static class PilotAttestationClient
-      implements OakClient.EncryptorProvider, OakClient.RpcClientProvider {
+      implements OakClient.EncryptorProvider<Encryptor>,
+          OakClient.RpcClientProvider<PilotRpcClient> {
     final PilotRpcClient rpcClient;
     final Encryptor encryptor = new Encryptor() {
       @Override
@@ -108,12 +101,12 @@ public class OakClientTest {
     }
 
     @Override
-    public Result<? extends RpcClient, Exception> getRpcClient() {
+    public Result<?PilotRpcClient, Exception> getRpcClient() {
       return Result.success(rpcClient);
     }
 
     @Override
-    public Result<? extends Encryptor, Exception> getEncryptor(byte[] unusedSigningPublicKey) {
+    public Result<Encryptor, Exception> getEncryptor(byte[] unusedSigningPublicKey) {
       if (unusedSigningPublicKey.length > 0) {
         return Result.success(encryptor);
       }
