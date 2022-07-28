@@ -55,7 +55,7 @@ use check_license::CheckLicense;
 mod check_build_licenses;
 use check_build_licenses::CheckBuildLicenses;
 
-mod vm;
+mod launcher;
 
 static PROCESSES: Lazy<Mutex<Vec<i32>>> = Lazy::new(|| Mutex::new(Vec::new()));
 
@@ -756,6 +756,7 @@ fn run_bazel_build() -> Step {
                 "--",
                 "//oak_functions/client/java/...:all",
                 "//remote_attestation/java/...:all",
+                "//java/...:all",
             ],
         ),
     }
@@ -771,6 +772,7 @@ fn run_bazel_test() -> Step {
                 "--",
                 "//oak_functions/client/java/...:all",
                 "//remote_attestation/java/tests/...:all",
+                "//java/...:all",
             ],
         ),
     }

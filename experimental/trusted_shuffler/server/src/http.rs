@@ -16,8 +16,8 @@
 
 use anyhow::anyhow;
 use async_trait::async_trait;
-use hyper::{Body, Method, Request, Response, StatusCode};
-use log::error;
+use http::{Method, Uri};
+use hyper::{Body, Request, Response, StatusCode};
 use std::{
     future::Future,
     pin::Pin,
@@ -26,8 +26,10 @@ use std::{
     time::Instant,
 };
 use tokio::time::Duration;
-use trusted_shuffler::{RequestHandler, TrustedShuffler};
-use trusted_shuffler_common::send_http_request;
+use trusted_shuffler::{
+    RequestHandler, TrustedShuffler, TrustedShufflerRequest, TrustedShufflerResponse,
+};
+use trusted_shuffler_common::send_with_request;
 
 struct HttpRequestHandler {
     backend_url: String,
@@ -35,17 +37,83 @@ struct HttpRequestHandler {
 
 #[async_trait]
 impl RequestHandler for HttpRequestHandler {
-    async fn handle(&self, request: Vec<u8>) -> anyhow::Result<Vec<u8>> {
-        let response = send_http_request(&self.backend_url, Method::POST, &request).await;
-        response.map_or_else(
-            |error| {
-                Err(anyhow!(
-                    "Couldn't receive response from the backend: {:?}",
-                    error
-                ))
-            },
-            Ok,
-        )
+    async fn handle(
+        &self,
+        request: TrustedShufflerRequest,
+    ) -> anyhow::Result<TrustedShufflerResponse> {
+        let mut request = trusted_shuffler_to_hyper_request(request);
+
+        // We want to keep the path of the orginal request from the client.
+        //
+        // The following does not work, because &self would need 'static life time.
+        // let parts = request.uri().into_parts();
+        // parts.authority = Some(Authority::from_static(&self.backend_url));
+        // let new_uri = Uri::from_parts(parts).expect("Failed to create new URI");
+        let path = request.uri().path();
+        // And extend the URL to the backend.
+        let new_uri = format!("{}{}", self.backend_url, path)
+            .parse::<Uri>()
+            .expect("Couldn't parse URI for backend.");
+        let uri = request.uri_mut();
+        *uri = new_uri;
+
+        log::info!("New request to the backend: {:?}", request);
+
+        match send_with_request(request).await {
+            Err(error) => Err(anyhow!(
+                "Couldn't receive response from the backend: {:?}",
+                error
+            )),
+            Ok(response) => Ok(hyper_to_trusted_shuffler_response(response).await),
+        }
+    }
+}
+
+// We keep the body and the URI from the `hyper::Request`. We convert the body to `Vec`, so it has
+// to be read fully.
+async fn hyper_to_trusted_shuffler_request(hyper_request: Request<Body>) -> TrustedShufflerRequest {
+    let (parts, body) = hyper_request.into_parts();
+    let body = hyper::body::to_bytes(body)
+        .await
+        .expect("Couldn't read request body");
+    TrustedShufflerRequest {
+        body: body.to_vec(),
+        uri: parts.uri.clone(),
+    }
+}
+
+// Apart from setting the body and the URI, for our test backend setting to HTTP/2 and POST
+// seems sufficient.
+fn trusted_shuffler_to_hyper_request(
+    trusted_shuffler_request: TrustedShufflerRequest,
+) -> Request<Body> {
+    let body = Body::from(trusted_shuffler_request.body);
+    Request::builder()
+        .uri(trusted_shuffler_request.uri)
+        .method(Method::POST)
+        .version(http::Version::HTTP_2)
+        .body(body)
+        .expect("Failed to convert Trusted to Hyper Request")
+}
+
+// We generate a default `hyper::Response` and set only the body.
+fn trusted_shuffler_to_hyper_response(
+    trusted_shuffler_request: TrustedShufflerResponse,
+) -> Response<Body> {
+    let body = Body::from(trusted_shuffler_request.body);
+    Response::new(body)
+}
+
+// We keep only the body from the `hyper::Response`. We convert the body to `Vec`, so it has to be
+// read fully.
+async fn hyper_to_trusted_shuffler_response(
+    hyper_response: Response<Body>,
+) -> TrustedShufflerResponse {
+    let body = hyper::body::to_bytes(hyper_response.into_body())
+        .await
+        .expect("Couldn't read request body");
+    TrustedShufflerResponse {
+        body: body.to_vec(),
     }
 }
 
@@ -63,40 +131,29 @@ impl hyper::service::Service<Request<Body>> for Service {
     }
 
     fn call(&mut self, request: Request<Body>) -> Self::Future {
+        log::info!("Received Request: {:?}", request);
         let trusted_shuffler = self.trusted_shuffler.clone();
         let response = async move {
-            match (request.method(), request.uri().path()) {
-                (&Method::POST, "/request") => {
-                    let body = hyper::body::to_bytes(request.into_body())
-                        .await
-                        .expect("Couldn't read request body");
-
-                    let request_start = Instant::now();
+            // gRPC call: (&Method::POST, "/experimental.trusted_shuffler.echo.Echo/Echo")
+            // HTTP call: (&Method::POST, "/request")
+            let request_start = Instant::now();
+            match trusted_shuffler
+                .invoke(hyper_to_trusted_shuffler_request(request).await)
+                .await
+            {
+                Ok(response) => {
                     log::info!(
-                        "Server Request: {}",
-                        String::from_utf8(body.to_vec()).unwrap()
+                        "Server Response: {:?} at {:?}",
+                        response,
+                        request_start.elapsed()
                     );
-                    match trusted_shuffler.invoke(body.to_vec()).await {
-                        Ok(response) => {
-                            let _response_time = request_start.elapsed();
-                            log::info!(
-                                "Server Response: {}",
-                                String::from_utf8(body.to_vec()).unwrap()
-                            );
-                            Ok(Response::new(Body::from(response)))
-                        }
-                        Err(error) => {
-                            error!("Couldn't receive response: {:?}", error);
-                            let mut internal_error = Response::default();
-                            *internal_error.status_mut() = StatusCode::INTERNAL_SERVER_ERROR;
-                            Ok(internal_error)
-                        }
-                    }
+                    Ok(trusted_shuffler_to_hyper_response(response))
                 }
-                _ => {
-                    let mut not_found = Response::default();
-                    *not_found.status_mut() = StatusCode::NOT_FOUND;
-                    Ok(not_found)
+                Err(error) => {
+                    log::error!("Couldn't receive response: {:?}", error);
+                    let mut internal_error = Response::default();
+                    *internal_error.status_mut() = StatusCode::INTERNAL_SERVER_ERROR;
+                    Ok(internal_error)
                 }
             }
         };

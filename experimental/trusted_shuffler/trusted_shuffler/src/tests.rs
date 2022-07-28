@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-use crate::{RequestHandler, TrustedShuffler, EMPTY_RESPONSE};
+use crate::{RequestHandler, TrustedShuffler, TrustedShufflerRequest, TrustedShufflerResponse};
 use async_trait::async_trait;
 use futures::future::join_all;
 use std::{sync::Arc, time::Duration};
@@ -27,40 +27,52 @@ impl RequestHandler for TestRequestHandler {
     // A test function that processes requests.
     // In the real use-case, this function should send requests to the backend and
     // return responses.
-    async fn handle(&self, request: Vec<u8>) -> anyhow::Result<Vec<u8>> {
-        if drop_request(request.clone()) {
+    async fn handle(
+        &self,
+        request: TrustedShufflerRequest,
+    ) -> anyhow::Result<TrustedShufflerResponse> {
+        if drop_request(&request) {
             // In that case we don't send an answer ever.
             loop {
                 tokio::task::yield_now().await;
             }
         }
-        Ok(generate_response(request))
+        Ok(generate_response(&request))
     }
 }
 
 // Non-async version of the `handle_request` function used to create expected responses.
-fn generate_response(request: Vec<u8>) -> Vec<u8> {
-    let parsed_request = String::from_utf8(request).expect("Couldn't parse request");
-    format!("Response for: {}", parsed_request).into_bytes()
+fn generate_response(request: &TrustedShufflerRequest) -> TrustedShufflerResponse {
+    TrustedShufflerResponse {
+        body: request.body.clone(),
+    }
 }
 
 // Generates request which will be dropped by the test backend, because we indicate it has to be
 // dropped in the request itself.
-fn generate_dropped_request() -> Vec<u8> {
+fn generate_dropped_request() -> TrustedShufflerRequest {
     // "Drop" has to be consistent with [`drop_request`].
     let (dropped_request, _) = generate_request_and_expected_response("Drop");
     dropped_request
 }
 
 // If true, then the test backend does not answer the request.
-fn drop_request(request: Vec<u8>) -> bool {
-    String::from_utf8(request).unwrap().contains("Drop")
+fn drop_request(request: &TrustedShufflerRequest) -> bool {
+    String::from_utf8(request.body.clone())
+        .unwrap()
+        .contains("Drop")
 }
 
 // Generates a request and a corresponding response from a string.
-fn generate_request_and_expected_response(data: &str) -> (Vec<u8>, Vec<u8>) {
-    let request = format!("Request: {}", data).into_bytes();
-    let expected_response = generate_response(request.clone());
+fn generate_request_and_expected_response(
+    data: &str,
+) -> (TrustedShufflerRequest, TrustedShufflerResponse) {
+    let request = TrustedShufflerRequest {
+        body: format!("Request: {}", data).into_bytes(),
+        uri: hyper::Uri::from_static("test.com"),
+    };
+
+    let expected_response = generate_response(&request);
     (request, expected_response)
 }
 
@@ -95,7 +107,7 @@ async fn anonymity_value_2_test() {
     let background_result =
         tokio::spawn(async move { trusted_shuffler_clone.invoke(background_request).await });
 
-    let response = trusted_shuffler.invoke(request.clone()).await;
+    let response = trusted_shuffler.invoke(request).await;
     assert!(response.is_ok());
     assert_eq!(expected_response, response.unwrap());
 
@@ -111,18 +123,20 @@ async fn anonymity_value_10_test() {
     let anonymity_value = 10;
     let trusted_shuffler = test_trusted_shuffler(anonymity_value);
 
-    let (requests, expected_responses): (Vec<Vec<u8>>, Vec<Vec<u8>>) = (0..anonymity_value)
+    let (requests, expected_responses): (
+        Vec<TrustedShufflerRequest>,
+        Vec<TrustedShufflerResponse>,
+    ) = (0..anonymity_value)
         .collect::<Vec<_>>()
         .iter()
         .map(|k| generate_request_and_expected_response(&format!("Test {}", k)))
         .unzip();
 
     let mut result_futures = vec![];
-    for request in requests.iter() {
+    for request in requests.into_iter() {
         let trusted_shuffler_clone = trusted_shuffler.clone();
-        let request_clone = request.clone();
         let result_future =
-            tokio::spawn(async move { trusted_shuffler_clone.invoke(request_clone).await });
+            tokio::spawn(async move { trusted_shuffler_clone.invoke(request).await });
         result_futures.push(result_future);
     }
     let results = join_all(result_futures).await;
@@ -188,7 +202,10 @@ async fn one_empty_response_test() {
     // Send the dropped_request. The backend will not answer it, but the Trusted Shuffler will send
     // an empty response.
     let response_from_dropped = trusted_shuffler.invoke(dropped_request).await;
-    assert_eq!(EMPTY_RESPONSE, response_from_dropped.unwrap());
+    assert_eq!(
+        TrustedShufflerResponse::empty(),
+        response_from_dropped.unwrap()
+    );
 
     // The backend did answer the request and the Trusted Shuffler forwarded it.
     let response = response.await.unwrap();
@@ -233,8 +250,8 @@ async fn all_empty_responses_test() {
         tokio::spawn(async move { trusted_shuffler_clone.invoke(dropped_request_1).await });
 
     let response_2 = trusted_shuffler.invoke(dropped_request_2).await;
-    assert_eq!(EMPTY_RESPONSE, response_2.unwrap());
+    assert_eq!(TrustedShufflerResponse::empty(), response_2.unwrap());
 
     let response_1 = response.await.unwrap();
-    assert_eq!(EMPTY_RESPONSE, response_1.unwrap());
+    assert_eq!(TrustedShufflerResponse::empty(), response_1.unwrap());
 }

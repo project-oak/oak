@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-use crate::vmm::{Params, Vmm};
+use crate::{instance::LaunchedInstance, VmParams};
 use anyhow::Result;
 use async_trait::async_trait;
 use command_fds::tokio::CommandFdAsyncExt;
@@ -34,19 +34,19 @@ const VSOCK_GUEST_CID: u32 = 3;
 // The guest VM virtio vsock port.
 const VSOCK_GUEST_PORT: u32 = 1024;
 
-pub struct Crosvm {
+pub struct CrosvmInstance {
     console: UnixStream,
     instance: tokio::process::Child,
 }
 
-impl Crosvm {
-    pub fn start(params: Params) -> Result<Self> {
-        let mut cmd = tokio::process::Command::new(params.binary);
+impl CrosvmInstance {
+    pub fn start(params: VmParams, console: UnixStream) -> Result<Self> {
+        let mut cmd = tokio::process::Command::new(params.vmm_binary);
 
         cmd.stderr(Stdio::inherit());
         cmd.stdin(Stdio::null());
         cmd.stdout(Stdio::inherit());
-        cmd.preserved_fds(vec![params.console.as_raw_fd()]);
+        cmd.preserved_fds(vec![console.as_raw_fd()]);
 
         // Construct the command-line arguments for `crosvm`.
         cmd.arg("run");
@@ -57,7 +57,7 @@ impl Crosvm {
             "--serial",
             format!(
                 "num=1,hardware=serial,type=file,path=/proc/self/fd/{},console,earlycon",
-                params.console.as_raw_fd()
+                console.as_raw_fd()
             )
             .as_str(),
         ]);
@@ -69,19 +69,19 @@ impl Crosvm {
             cmd.args(&["--gdb", format!("{}", gdb_port).as_str()]);
         }
 
-        cmd.arg(params.app);
+        cmd.arg(params.app_binary);
 
         info!("Executing: {:?}", cmd);
 
-        Ok(Crosvm {
+        Ok(CrosvmInstance {
             instance: cmd.spawn()?,
-            console: params.console,
+            console,
         })
     }
 }
 
 #[async_trait]
-impl Vmm for Crosvm {
+impl LaunchedInstance for CrosvmInstance {
     async fn wait(&mut self) -> Result<std::process::ExitStatus> {
         self.instance.wait().await.map_err(anyhow::Error::from)
     }

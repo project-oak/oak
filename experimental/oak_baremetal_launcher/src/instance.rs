@@ -16,32 +16,19 @@
 
 use anyhow::Result;
 use async_trait::async_trait;
-use std::{os::unix::net::UnixStream, path::PathBuf};
 
-#[derive(Debug)]
-pub struct Params {
-    /// Path to the VMM binary to execute.
-    pub binary: PathBuf,
-
-    /// Path to the binary to load into the VM.
-    pub app: PathBuf,
-
-    /// Stream to connect to the console of the VM.
-    pub console: UnixStream,
-
-    /// Port to use for debugging with gdb
-    pub gdb: Option<u16>,
-}
-
+/// Defines the interface of a launched runtime instance. Standardizes the interface of different
+/// implementations, e.g. a VM in which the runtime is running or the runtime running directly as a
+/// unix binary.
 #[async_trait]
-pub trait Vmm {
-    /// Waits for the guest VM to finish.
+pub trait LaunchedInstance {
+    /// Wait for the runtime instance process to finish.
     async fn wait(&mut self) -> Result<std::process::ExitStatus>;
 
-    /// Kills the guest VM.
+    /// Kill the runtime instance.
     async fn kill(self: Box<Self>) -> Result<std::process::ExitStatus>;
 
-    /// Creates a channel to communicate with the VM.
+    /// Creates a channel to communicate with the runtime instance.
     ///
     /// Since different VMMs might use different comms channels, we leave it up to the VMM to create
     /// the channel rather than passing it in as part of the parameters.

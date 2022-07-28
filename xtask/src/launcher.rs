@@ -14,9 +14,12 @@
 // limitations under the License.
 //
 
+//! Functionality for testing variants of the baremetal-compatible runtime exposed by the
+//! launcher.
+
 const CLIENT_PATH: &str = "./target/debug/oak_functions_client";
-const WASM_PATH: &str = "./experimental/oak_baremetal_loader/key_value_lookup.wasm";
-const LOOKUP_PATH: &str = "./experimental/oak_baremetal_loader/mock_lookup_data";
+const WASM_PATH: &str = "./experimental/oak_baremetal_launcher/key_value_lookup.wasm";
+const LOOKUP_PATH: &str = "./experimental/oak_baremetal_launcher/mock_lookup_data";
 
 use std::path::Path;
 
@@ -26,34 +29,47 @@ use strum_macros::{Display, EnumIter};
 use crate::internal::*;
 
 #[derive(Debug, Display, Clone, PartialEq, EnumIter)]
-pub enum Variant {
+pub enum LauncherMode {
     Qemu,
     Crosvm,
 }
 
-impl Variant {
-    pub fn payload_crate_path(&self) -> &'static str {
+impl LauncherMode {
+    /// Get the crate name of respective runtime variant
+    pub fn runtime_crate_name(&self) -> &'static str {
         match self {
-            Variant::Qemu => "./experimental/oak_baremetal_app_qemu",
-            Variant::Crosvm => "./experimental/oak_baremetal_app_crosvm",
+            LauncherMode::Qemu => "oak_baremetal_app_qemu",
+            LauncherMode::Crosvm => "oak_baremetal_app_crosvm",
         }
     }
 
-    pub fn loader_mode(&self) -> &'static str {
-        match self {
-            Variant::Qemu => "qemu",
-            Variant::Crosvm => "crosvm",
-        }
+    /// Get the path to the respective runtime variant that should be launched
+    pub fn runtime_crate_path(&self) -> String {
+        format!("./experimental/{}", self.runtime_crate_name())
     }
 
-    pub fn binary_path(&self) -> &'static str {
+    /// Get the path to the respective runtime variant that should be launched
+    pub fn runtime_binary_path(&self) -> String {
+        format!(
+            "{}/target/x86_64-unknown-none/debug/{}",
+            self.runtime_crate_path(),
+            self.runtime_crate_name()
+        )
+    }
+
+    /// Get the subcommand for launching in this mode
+    pub fn variant_subcommand(&self) -> Vec<String> {
         match self {
-            Variant::Qemu => {
-                "./experimental/oak_baremetal_app_qemu/target/x86_64-unknown-none/debug/oak_baremetal_app_qemu"
-            }
-            Variant::Crosvm => {
-                "./experimental/oak_baremetal_app_crosvm/target/x86_64-unknown-none/debug/oak_baremetal_app_crosvm"
-            }
+            LauncherMode::Qemu => vec![
+                "qemu".to_string(),
+                format!("--app-binary={}", &self.runtime_binary_path()),
+                format!("--vmm-binary={}", "/usr/bin/qemu-system-x86_64"),
+            ],
+            LauncherMode::Crosvm => vec![
+                "crosvm".to_string(),
+                format!("--app-binary={}", &self.runtime_binary_path()),
+                format!("--vmm-binary={}", "/usr/local/cargo/bin/crosvm"),
+            ],
         }
     }
 }
@@ -61,19 +77,22 @@ impl Variant {
 pub fn run_vm_test() -> Step {
     Step::Multiple {
         name: "VM end-to-end test".to_string(),
-        steps: Variant::iter().map(run_variant).collect(),
+        steps: LauncherMode::iter().map(run_variant).collect(),
     }
 }
 
-fn run_variant(variant: Variant) -> Step {
+fn run_variant(variant: LauncherMode) -> Step {
     Step::Multiple {
         name: format!("run {} variant", variant),
         steps: vec![
-            build_binary("build loader binary", "./experimental/oak_baremetal_loader"),
-            build_binary("build payload", variant.payload_crate_path()),
+            build_binary(
+                "build loader binary",
+                "./experimental/oak_baremetal_launcher",
+            ),
+            build_binary("build runtime", &variant.runtime_crate_path()),
             Step::WithBackground {
                 name: "background loader".to_string(),
-                background: run_loader(variant),
+                background: run_launcher(variant),
                 foreground: Box::new(run_client("test_key", "^test_value$", 300)),
             },
         ],
@@ -87,16 +106,13 @@ fn build_binary(name: &str, directory: &str) -> Step {
     }
 }
 
-fn run_loader(variant: Variant) -> Box<dyn Runnable> {
-    Cmd::new(
-        "./target/debug/oak_baremetal_loader",
-        vec![
-            format!("--mode={}", variant.loader_mode()),
-            format!("--app={}", variant.binary_path()),
-            format!("--wasm={}", WASM_PATH),
-            format!("--lookup-data={}", LOOKUP_PATH),
-        ],
-    )
+fn run_launcher(variant: LauncherMode) -> Box<dyn Runnable> {
+    let mut args = vec![
+        format!("--wasm={}", WASM_PATH),
+        format!("--lookup-data={}", LOOKUP_PATH),
+    ];
+    args.append(&mut variant.variant_subcommand());
+    Cmd::new("./target/debug/oak_baremetal_launcher", args)
 }
 
 fn run_client(request: &str, expected_response: &str, iterations: usize) -> Step {

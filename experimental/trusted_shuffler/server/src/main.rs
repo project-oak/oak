@@ -64,7 +64,6 @@ async fn main() -> anyhow::Result<()> {
         .listen_address
         .parse()
         .context("Couldn't parse address")?;
-    let backend_url = format!("{}/request", &opt.backend_url);
     let timeout = opt.timeout_ms.map(Duration::from_millis);
 
     info!(
@@ -73,7 +72,7 @@ async fn main() -> anyhow::Result<()> {
     );
 
     let server =
-        Server::bind(&listen_address).serve(ServiceBuilder::new(opt.k, timeout, &backend_url));
+        Server::bind(&listen_address).serve(ServiceBuilder::new(opt.k, timeout, &opt.backend_url));
     tokio::select!(
         result = server => {
             result.context("Couldn't run server")?;
