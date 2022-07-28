@@ -1,1 +1,1 @@
-initSidebarItems({"struct":[["HttpRequestHandler",""],["Service",""],["ServiceBuilder",""]]});
+initSidebarItems({"fn":[["hyper_to_trusted_shuffler_request",""],["hyper_to_trusted_shuffler_response",""],["trusted_shuffler_to_hyper_request",""],["trusted_shuffler_to_hyper_response",""]],"struct":[["HttpRequestHandler",""],["Service",""],["ServiceBuilder",""]]});

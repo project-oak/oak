@@ -142,6 +142,63 @@
 <span id="137">137</span>
 <span id="138">138</span>
 <span id="139">139</span>
+<span id="140">140</span>
+<span id="141">141</span>
+<span id="142">142</span>
+<span id="143">143</span>
+<span id="144">144</span>
+<span id="145">145</span>
+<span id="146">146</span>
+<span id="147">147</span>
+<span id="148">148</span>
+<span id="149">149</span>
+<span id="150">150</span>
+<span id="151">151</span>
+<span id="152">152</span>
+<span id="153">153</span>
+<span id="154">154</span>
+<span id="155">155</span>
+<span id="156">156</span>
+<span id="157">157</span>
+<span id="158">158</span>
+<span id="159">159</span>
+<span id="160">160</span>
+<span id="161">161</span>
+<span id="162">162</span>
+<span id="163">163</span>
+<span id="164">164</span>
+<span id="165">165</span>
+<span id="166">166</span>
+<span id="167">167</span>
+<span id="168">168</span>
+<span id="169">169</span>
+<span id="170">170</span>
+<span id="171">171</span>
+<span id="172">172</span>
+<span id="173">173</span>
+<span id="174">174</span>
+<span id="175">175</span>
+<span id="176">176</span>
+<span id="177">177</span>
+<span id="178">178</span>
+<span id="179">179</span>
+<span id="180">180</span>
+<span id="181">181</span>
+<span id="182">182</span>
+<span id="183">183</span>
+<span id="184">184</span>
+<span id="185">185</span>
+<span id="186">186</span>
+<span id="187">187</span>
+<span id="188">188</span>
+<span id="189">189</span>
+<span id="190">190</span>
+<span id="191">191</span>
+<span id="192">192</span>
+<span id="193">193</span>
+<span id="194">194</span>
+<span id="195">195</span>
+<span id="196">196</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2022 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -160,8 +217,8 @@
 
 <span class="kw">use</span> <span class="ident">anyhow::anyhow</span>;
 <span class="kw">use</span> <span class="ident">async_trait::async_trait</span>;
-<span class="kw">use</span> <span class="ident">hyper</span>::{<span class="ident">Body</span>, <span class="ident">Method</span>, <span class="ident">Request</span>, <span class="ident">Response</span>, <span class="ident">StatusCode</span>};
-<span class="kw">use</span> <span class="ident">log::error</span>;
+<span class="kw">use</span> <span class="ident">http</span>::{<span class="ident">Method</span>, <span class="ident">Uri</span>};
+<span class="kw">use</span> <span class="ident">hyper</span>::{<span class="ident">Body</span>, <span class="ident">Request</span>, <span class="ident">Response</span>, <span class="ident">StatusCode</span>};
 <span class="kw">use</span> <span class="ident">std</span>::{
     <span class="ident">future::Future</span>,
     <span class="ident">pin::Pin</span>,
@@ -170,8 +227,10 @@
     <span class="ident">time::Instant</span>,
 };
 <span class="kw">use</span> <span class="ident">tokio::time::Duration</span>;
-<span class="kw">use</span> <span class="ident">trusted_shuffler</span>::{<span class="ident">RequestHandler</span>, <span class="ident">TrustedShuffler</span>};
-<span class="kw">use</span> <span class="ident">trusted_shuffler_common::send_http_request</span>;
+<span class="kw">use</span> <span class="ident">trusted_shuffler</span>::{
+    <span class="ident">RequestHandler</span>, <span class="ident">TrustedShuffler</span>, <span class="ident">TrustedShufflerRequest</span>, <span class="ident">TrustedShufflerResponse</span>,
+};
+<span class="kw">use</span> <span class="ident">trusted_shuffler_common::send_with_request</span>;
 
 <span class="kw">struct</span> <span class="ident">HttpRequestHandler</span> {
     <span class="ident">backend_url</span>: <span class="ident">String</span>,
@@ -179,17 +238,83 @@
 
 <span class="attribute">#[<span class="ident">async_trait</span>]</span>
 <span class="kw">impl</span> <span class="ident">RequestHandler</span> <span class="kw">for</span> <span class="ident">HttpRequestHandler</span> {
-    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">handle</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">request</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">response</span> <span class="op">=</span> <span class="ident">send_http_request</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">backend_url</span>, <span class="ident">Method::POST</span>, <span class="kw-2">&amp;</span><span class="ident">request</span>).<span class="kw">await</span>;
-        <span class="ident">response</span>.<span class="ident">map_or_else</span>(
-            <span class="op">|</span><span class="ident">error</span><span class="op">|</span> {
-                <span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(
-                    <span class="string">&quot;Couldn&#39;t receive response from the backend: {:?}&quot;</span>,
-                    <span class="ident">error</span>
-                ))
-            },
-            <span class="prelude-val">Ok</span>,
-        )
+    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">handle</span>(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        <span class="ident">request</span>: <span class="ident">TrustedShufflerRequest</span>,
+    ) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">TrustedShufflerResponse</span><span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">request</span> <span class="op">=</span> <span class="ident">trusted_shuffler_to_hyper_request</span>(<span class="ident">request</span>);
+
+        <span class="comment">// We want to keep the path of the orginal request from the client.</span>
+        <span class="comment">//</span>
+        <span class="comment">// The following does not work, because &amp;self would need &#39;static life time.</span>
+        <span class="comment">// let parts = request.uri().into_parts();</span>
+        <span class="comment">// parts.authority = Some(Authority::from_static(&amp;self.backend_url));</span>
+        <span class="comment">// let new_uri = Uri::from_parts(parts).expect(&quot;Failed to create new URI&quot;);</span>
+        <span class="kw">let</span> <span class="ident">path</span> <span class="op">=</span> <span class="ident">request</span>.<span class="ident">uri</span>().<span class="ident">path</span>();
+        <span class="comment">// And extend the URL to the backend.</span>
+        <span class="kw">let</span> <span class="ident">new_uri</span> <span class="op">=</span> <span class="macro">format!</span>(<span class="string">&quot;{}{}&quot;</span>, <span class="self">self</span>.<span class="ident">backend_url</span>, <span class="ident">path</span>)
+            .<span class="ident">parse</span>::<span class="op">&lt;</span><span class="ident">Uri</span><span class="op">&gt;</span>()
+            .<span class="ident">expect</span>(<span class="string">&quot;Couldn&#39;t parse URI for backend.&quot;</span>);
+        <span class="kw">let</span> <span class="ident">uri</span> <span class="op">=</span> <span class="ident">request</span>.<span class="ident">uri_mut</span>();
+        <span class="kw-2">*</span><span class="ident">uri</span> <span class="op">=</span> <span class="ident">new_uri</span>;
+
+        <span class="macro">log::info!</span>(<span class="string">&quot;New request to the backend: {:?}&quot;</span>, <span class="ident">request</span>);
+
+        <span class="kw">match</span> <span class="ident">send_with_request</span>(<span class="ident">request</span>).<span class="kw">await</span> {
+            <span class="prelude-val">Err</span>(<span class="ident">error</span>) =&gt; <span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(
+                <span class="string">&quot;Couldn&#39;t receive response from the backend: {:?}&quot;</span>,
+                <span class="ident">error</span>
+            )),
+            <span class="prelude-val">Ok</span>(<span class="ident">response</span>) =&gt; <span class="prelude-val">Ok</span>(<span class="ident">hyper_to_trusted_shuffler_response</span>(<span class="ident">response</span>).<span class="kw">await</span>),
+        }
+    }
+}
+
+<span class="comment">// We keep the body and the URI from the `hyper::Request`. We convert the body to `Vec`, so it has</span>
+<span class="comment">// to be read fully.</span>
+<span class="kw">async</span> <span class="kw">fn</span> <span class="ident">hyper_to_trusted_shuffler_request</span>(<span class="ident">hyper_request</span>: <span class="ident">Request</span><span class="op">&lt;</span><span class="ident">Body</span><span class="op">&gt;</span>) -&gt; <span class="ident">TrustedShufflerRequest</span> {
+    <span class="kw">let</span> (<span class="ident">parts</span>, <span class="ident">body</span>) <span class="op">=</span> <span class="ident">hyper_request</span>.<span class="ident">into_parts</span>();
+    <span class="kw">let</span> <span class="ident">body</span> <span class="op">=</span> <span class="ident">hyper::body::to_bytes</span>(<span class="ident">body</span>)
+        .<span class="kw">await</span>
+        .<span class="ident">expect</span>(<span class="string">&quot;Couldn&#39;t read request body&quot;</span>);
+    <span class="ident">TrustedShufflerRequest</span> {
+        <span class="ident">body</span>: <span class="ident">body</span>.<span class="ident">to_vec</span>(),
+        <span class="ident">uri</span>: <span class="ident">parts</span>.<span class="ident">uri</span>.<span class="ident">clone</span>(),
+    }
+}
+
+<span class="comment">// Apart from setting the body and the URI, for our test backend setting to HTTP/2 and POST</span>
+<span class="comment">// seems sufficient.</span>
+<span class="kw">fn</span> <span class="ident">trusted_shuffler_to_hyper_request</span>(
+    <span class="ident">trusted_shuffler_request</span>: <span class="ident">TrustedShufflerRequest</span>,
+) -&gt; <span class="ident">Request</span><span class="op">&lt;</span><span class="ident">Body</span><span class="op">&gt;</span> {
+    <span class="kw">let</span> <span class="ident">body</span> <span class="op">=</span> <span class="ident">Body::from</span>(<span class="ident">trusted_shuffler_request</span>.<span class="ident">body</span>);
+    <span class="ident">Request::builder</span>()
+        .<span class="ident">uri</span>(<span class="ident">trusted_shuffler_request</span>.<span class="ident">uri</span>)
+        .<span class="ident">method</span>(<span class="ident">Method::POST</span>)
+        .<span class="ident">version</span>(<span class="ident">http::Version::HTTP_2</span>)
+        .<span class="ident">body</span>(<span class="ident">body</span>)
+        .<span class="ident">expect</span>(<span class="string">&quot;Failed to convert Trusted to Hyper Request&quot;</span>)
+}
+
+<span class="comment">// We generate a default `hyper::Response` and set only the body.</span>
+<span class="kw">fn</span> <span class="ident">trusted_shuffler_to_hyper_response</span>(
+    <span class="ident">trusted_shuffler_request</span>: <span class="ident">TrustedShufflerResponse</span>,
+) -&gt; <span class="ident">Response</span><span class="op">&lt;</span><span class="ident">Body</span><span class="op">&gt;</span> {
+    <span class="kw">let</span> <span class="ident">body</span> <span class="op">=</span> <span class="ident">Body::from</span>(<span class="ident">trusted_shuffler_request</span>.<span class="ident">body</span>);
+    <span class="ident">Response::new</span>(<span class="ident">body</span>)
+}
+
+<span class="comment">// We keep only the body from the `hyper::Response`. We convert the body to `Vec`, so it has to be</span>
+<span class="comment">// read fully.</span>
+<span class="kw">async</span> <span class="kw">fn</span> <span class="ident">hyper_to_trusted_shuffler_response</span>(
+    <span class="ident">hyper_response</span>: <span class="ident">Response</span><span class="op">&lt;</span><span class="ident">Body</span><span class="op">&gt;</span>,
+) -&gt; <span class="ident">TrustedShufflerResponse</span> {
+    <span class="kw">let</span> <span class="ident">body</span> <span class="op">=</span> <span class="ident">hyper::body::to_bytes</span>(<span class="ident">hyper_response</span>.<span class="ident">into_body</span>())
+        .<span class="kw">await</span>
+        .<span class="ident">expect</span>(<span class="string">&quot;Couldn&#39;t read request body&quot;</span>);
+    <span class="ident">TrustedShufflerResponse</span> {
+        <span class="ident">body</span>: <span class="ident">body</span>.<span class="ident">to_vec</span>(),
     }
 }
 
@@ -207,40 +332,29 @@
     }
 
     <span class="kw">fn</span> <span class="ident">call</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">request</span>: <span class="ident">Request</span><span class="op">&lt;</span><span class="ident">Body</span><span class="op">&gt;</span>) -&gt; <span class="ident"><span class="self">Self</span>::Future</span> {
+        <span class="macro">log::info!</span>(<span class="string">&quot;Received Request: {:?}&quot;</span>, <span class="ident">request</span>);
         <span class="kw">let</span> <span class="ident">trusted_shuffler</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">trusted_shuffler</span>.<span class="ident">clone</span>();
         <span class="kw">let</span> <span class="ident">response</span> <span class="op">=</span> <span class="kw">async</span> <span class="kw">move</span> {
-            <span class="kw">match</span> (<span class="ident">request</span>.<span class="ident">method</span>(), <span class="ident">request</span>.<span class="ident">uri</span>().<span class="ident">path</span>()) {
-                (<span class="kw-2">&amp;</span><span class="ident">Method::POST</span>, <span class="string">&quot;/request&quot;</span>) =&gt; {
-                    <span class="kw">let</span> <span class="ident">body</span> <span class="op">=</span> <span class="ident">hyper::body::to_bytes</span>(<span class="ident">request</span>.<span class="ident">into_body</span>())
-                        .<span class="kw">await</span>
-                        .<span class="ident">expect</span>(<span class="string">&quot;Couldn&#39;t read request body&quot;</span>);
-
-                    <span class="kw">let</span> <span class="ident">request_start</span> <span class="op">=</span> <span class="ident">Instant::now</span>();
+            <span class="comment">// gRPC call: (&amp;Method::POST, &quot;/experimental.trusted_shuffler.echo.Echo/Echo&quot;)</span>
+            <span class="comment">// HTTP call: (&amp;Method::POST, &quot;/request&quot;)</span>
+            <span class="kw">let</span> <span class="ident">request_start</span> <span class="op">=</span> <span class="ident">Instant::now</span>();
+            <span class="kw">match</span> <span class="ident">trusted_shuffler</span>
+                .<span class="ident">invoke</span>(<span class="ident">hyper_to_trusted_shuffler_request</span>(<span class="ident">request</span>).<span class="kw">await</span>)
+                .<span class="kw">await</span>
+            {
+                <span class="prelude-val">Ok</span>(<span class="ident">response</span>) =&gt; {
                     <span class="macro">log::info!</span>(
-                        <span class="string">&quot;Server Request: {}&quot;</span>,
-                        <span class="ident">String::from_utf8</span>(<span class="ident">body</span>.<span class="ident">to_vec</span>()).<span class="ident">unwrap</span>()
+                        <span class="string">&quot;Server Response: {:?} at {:?}&quot;</span>,
+                        <span class="ident">response</span>,
+                        <span class="ident">request_start</span>.<span class="ident">elapsed</span>()
                     );
-                    <span class="kw">match</span> <span class="ident">trusted_shuffler</span>.<span class="ident">invoke</span>(<span class="ident">body</span>.<span class="ident">to_vec</span>()).<span class="kw">await</span> {
-                        <span class="prelude-val">Ok</span>(<span class="ident">response</span>) =&gt; {
-                            <span class="kw">let</span> <span class="ident">_response_time</span> <span class="op">=</span> <span class="ident">request_start</span>.<span class="ident">elapsed</span>();
-                            <span class="macro">log::info!</span>(
-                                <span class="string">&quot;Server Response: {}&quot;</span>,
-                                <span class="ident">String::from_utf8</span>(<span class="ident">body</span>.<span class="ident">to_vec</span>()).<span class="ident">unwrap</span>()
-                            );
-                            <span class="prelude-val">Ok</span>(<span class="ident">Response::new</span>(<span class="ident">Body::from</span>(<span class="ident">response</span>)))
-                        }
-                        <span class="prelude-val">Err</span>(<span class="ident">error</span>) =&gt; {
-                            <span class="macro">error!</span>(<span class="string">&quot;Couldn&#39;t receive response: {:?}&quot;</span>, <span class="ident">error</span>);
-                            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">internal_error</span> <span class="op">=</span> <span class="ident">Response::default</span>();
-                            <span class="kw-2">*</span><span class="ident">internal_error</span>.<span class="ident">status_mut</span>() <span class="op">=</span> <span class="ident">StatusCode::INTERNAL_SERVER_ERROR</span>;
-                            <span class="prelude-val">Ok</span>(<span class="ident">internal_error</span>)
-                        }
-                    }
+                    <span class="prelude-val">Ok</span>(<span class="ident">trusted_shuffler_to_hyper_response</span>(<span class="ident">response</span>))
                 }
-                <span class="kw">_</span> =&gt; {
-                    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">not_found</span> <span class="op">=</span> <span class="ident">Response::default</span>();
-                    <span class="kw-2">*</span><span class="ident">not_found</span>.<span class="ident">status_mut</span>() <span class="op">=</span> <span class="ident">StatusCode::NOT_FOUND</span>;
-                    <span class="prelude-val">Ok</span>(<span class="ident">not_found</span>)
+                <span class="prelude-val">Err</span>(<span class="ident">error</span>) =&gt; {
+                    <span class="macro">log::error!</span>(<span class="string">&quot;Couldn&#39;t receive response: {:?}&quot;</span>, <span class="ident">error</span>);
+                    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">internal_error</span> <span class="op">=</span> <span class="ident">Response::default</span>();
+                    <span class="kw-2">*</span><span class="ident">internal_error</span>.<span class="ident">status_mut</span>() <span class="op">=</span> <span class="ident">StatusCode::INTERNAL_SERVER_ERROR</span>;
+                    <span class="prelude-val">Ok</span>(<span class="ident">internal_error</span>)
                 }
             }
         };

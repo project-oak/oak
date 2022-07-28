@@ -206,6 +206,57 @@
 <span id="201">201</span>
 <span id="202">202</span>
 <span id="203">203</span>
+<span id="204">204</span>
+<span id="205">205</span>
+<span id="206">206</span>
+<span id="207">207</span>
+<span id="208">208</span>
+<span id="209">209</span>
+<span id="210">210</span>
+<span id="211">211</span>
+<span id="212">212</span>
+<span id="213">213</span>
+<span id="214">214</span>
+<span id="215">215</span>
+<span id="216">216</span>
+<span id="217">217</span>
+<span id="218">218</span>
+<span id="219">219</span>
+<span id="220">220</span>
+<span id="221">221</span>
+<span id="222">222</span>
+<span id="223">223</span>
+<span id="224">224</span>
+<span id="225">225</span>
+<span id="226">226</span>
+<span id="227">227</span>
+<span id="228">228</span>
+<span id="229">229</span>
+<span id="230">230</span>
+<span id="231">231</span>
+<span id="232">232</span>
+<span id="233">233</span>
+<span id="234">234</span>
+<span id="235">235</span>
+<span id="236">236</span>
+<span id="237">237</span>
+<span id="238">238</span>
+<span id="239">239</span>
+<span id="240">240</span>
+<span id="241">241</span>
+<span id="242">242</span>
+<span id="243">243</span>
+<span id="244">244</span>
+<span id="245">245</span>
+<span id="246">246</span>
+<span id="247">247</span>
+<span id="248">248</span>
+<span id="249">249</span>
+<span id="250">250</span>
+<span id="251">251</span>
+<span id="252">252</span>
+<span id="253">253</span>
+<span id="254">254</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2022 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -230,48 +281,69 @@
 <span class="kw">use</span> <span class="ident">anyhow</span>::{<span class="ident">anyhow</span>, <span class="ident">Context</span>};
 <span class="kw">use</span> <span class="ident">async_trait::async_trait</span>;
 <span class="kw">use</span> <span class="ident">futures</span>::{<span class="ident">stream::FuturesOrdered</span>, <span class="ident">StreamExt</span>};
+<span class="kw">use</span> <span class="ident">hyper::Uri</span>;
 <span class="kw">use</span> <span class="ident">std</span>::{
-    <span class="ident">marker</span>::{<span class="ident">Send</span>, <span class="ident">Sync</span>},
+    <span class="ident">cmp::Ordering</span>,
     <span class="ident">mem::take</span>,
     <span class="ident">ops::DerefMut</span>,
     <span class="ident">sync</span>::{<span class="ident">Arc</span>, <span class="ident">Mutex</span>},
+    <span class="ident">vec</span>,
 };
 <span class="kw">use</span> <span class="ident">tokio</span>::{<span class="ident">sync::oneshot</span>, <span class="ident">time::Duration</span>};
 
-<span class="kw">type</span> <span class="ident">Request</span> <span class="op">=</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>;
-<span class="kw">type</span> <span class="ident">Response</span> <span class="op">=</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>;
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">PartialEq</span>)]</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">TrustedShufflerRequest</span> {
+    <span class="kw">pub</span> <span class="ident">body</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span> <span class="ident">uri</span>: <span class="ident">Uri</span>,
+}
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">PartialEq</span>)]</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">TrustedShufflerResponse</span> {
+    <span class="kw">pub</span> <span class="ident">body</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
+}
 
-<span class="comment">// The Trusted Shuffler responds with the `EMPTY_RESPONSE` if the backend does not respond within a</span>
-<span class="comment">// given timeout.</span>
-<span class="kw">const</span> <span class="ident">EMPTY_RESPONSE</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span> <span class="op">=</span> <span class="macro">vec!</span>[];
+<span class="kw">impl</span> <span class="ident">TrustedShufflerResponse</span> {
+    <span class="kw">fn</span> <span class="ident">empty</span>() -&gt; <span class="ident">TrustedShufflerResponse</span> {
+        <span class="ident">TrustedShufflerResponse</span> { <span class="ident">body</span>: <span class="macro">vec!</span>[] }
+    }
+}
+
+<span class="comment">// Workaround so we can have either a request or a response in `data` of `Message`.</span>
+<span class="comment">// We should be able to refactor so we do not need the `Wrapper` (and `panics`) any more.</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
+<span class="kw">enum</span> <span class="ident">Wrapper</span> {
+    <span class="ident">Request</span>(<span class="ident">TrustedShufflerRequest</span>),
+    <span class="ident">Response</span>(<span class="ident">TrustedShufflerResponse</span>),
+}
+
+<span class="comment">// We only compare the body, but we need revisit this and decide if this</span>
+<span class="comment">// is how we want to sort our requests and responses.</span>
+<span class="kw">fn</span> <span class="ident">cmp</span>(<span class="ident">w1</span>: <span class="kw-2">&amp;</span><span class="ident">Wrapper</span>, <span class="ident">w2</span>: <span class="kw-2">&amp;</span><span class="ident">Wrapper</span>) -&gt; <span class="ident">Ordering</span> {
+    <span class="kw">match</span> (<span class="ident">w1</span>, <span class="ident">w2</span>) {
+        (<span class="ident">Wrapper::Request</span>(<span class="ident">r1</span>), <span class="ident">Wrapper::Request</span>(<span class="ident">r2</span>)) =&gt; <span class="ident">r1</span>.<span class="ident">body</span>.<span class="ident">cmp</span>(<span class="kw-2">&amp;</span><span class="ident">r2</span>.<span class="ident">body</span>),
+        (<span class="ident">Wrapper::Response</span>(<span class="ident">r1</span>), <span class="ident">Wrapper::Response</span>(<span class="ident">r2</span>)) =&gt; <span class="ident">r1</span>.<span class="ident">body</span>.<span class="ident">cmp</span>(<span class="kw-2">&amp;</span><span class="ident">r2</span>.<span class="ident">body</span>),
+        (<span class="kw">_</span>, <span class="kw">_</span>) =&gt; <span class="macro">panic!</span>(
+            <span class="string">&quot;Fail to compare a TrustedShufflerRequest: {:?} and a TrustedShufflerResponse: {:?}&quot;</span>,
+            <span class="ident">w1</span>, <span class="ident">w2</span>
+        ),
+    }
+}
 
 <span class="kw">struct</span> <span class="ident">Message</span> {
     <span class="comment">// Determines the original order in which messages arrived.</span>
     <span class="comment">// Index is used to send requests back to the client in the order of arrival.</span>
     <span class="ident">index</span>: <span class="ident">usize</span>,
     <span class="comment">// Arbitrary message data.</span>
-    <span class="ident">data</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
+    <span class="ident">data</span>: <span class="ident">Wrapper</span>,
     <span class="comment">// Channel for sending responses back to the client async tasks.</span>
-    <span class="ident">response_sender</span>: <span class="ident">oneshot::Sender</span><span class="op">&lt;</span><span class="ident">Response</span><span class="op">&gt;</span>,
-}
-
-<span class="kw">impl</span> <span class="ident">Message</span> {
-    <span class="kw">fn</span> <span class="ident">new_response</span>(<span class="self">self</span>, <span class="ident">data</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>) -&gt; <span class="ident">Message</span> {
-        <span class="ident">Message</span> {
-            <span class="ident">index</span>: <span class="self">self</span>.<span class="ident">index</span>,
-            <span class="ident">data</span>,
-            <span class="ident">response_sender</span>: <span class="self">self</span>.<span class="ident">response_sender</span>,
-        }
-    }
-
-    <span class="kw">fn</span> <span class="ident">new_empty_response</span>(<span class="self">self</span>) -&gt; <span class="ident">Message</span> {
-        <span class="self">self</span>.<span class="ident">new_response</span>(<span class="ident">EMPTY_RESPONSE</span>)
-    }
+    <span class="ident">response_sender</span>: <span class="ident">oneshot::Sender</span><span class="op">&lt;</span><span class="ident">TrustedShufflerResponse</span><span class="op">&gt;</span>,
 }
 
 <span class="attribute">#[<span class="ident">async_trait</span>]</span>
 <span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">RequestHandler</span>: <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span> {
-    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">handle</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">request</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span>;
+    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">handle</span>(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        <span class="ident">request</span>: <span class="ident">TrustedShufflerRequest</span>,
+    ) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">TrustedShufflerResponse</span><span class="op">&gt;</span>;
 }
 
 <span class="comment">// Trusted Shuffler implementation.</span>
@@ -307,7 +379,10 @@
     }
 
     <span class="comment">// Asynchronously handles an incoming request.</span>
-    <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">invoke</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">request</span>: <span class="ident">Request</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">Response</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">invoke</span>(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        <span class="ident">request</span>: <span class="ident">TrustedShufflerRequest</span>,
+    ) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">TrustedShufflerResponse</span><span class="op">&gt;</span> {
         <span class="kw">let</span> (<span class="ident">response_sender</span>, <span class="ident">response_receiver</span>) <span class="op">=</span> <span class="ident">oneshot::channel</span>();
 
         <span class="comment">// Check if the request batch is filled and create a separate task for shuffling requests.</span>
@@ -319,7 +394,7 @@
 
             <span class="kw">let</span> <span class="ident">request</span> <span class="op">=</span> <span class="ident">Message</span> {
                 <span class="ident">index</span>: <span class="ident">requests_to_shuffle</span>.<span class="ident">len</span>(),
-                <span class="ident">data</span>: <span class="ident">request</span>,
+                <span class="ident">data</span>: <span class="ident">Wrapper::Request</span>(<span class="ident">request</span>),
                 <span class="ident">response_sender</span>,
             };
 
@@ -346,34 +421,41 @@
     }
 
     <span class="comment">// Lexicographically sorts requests and sends them to the backend using the</span>
-    <span class="comment">// [`TrustedShuffler::request_handler`].</span>
+    <span class="comment">// [`TrustedShuffler::request_handler`]. For every batch of requests it either waits until all</span>
+    <span class="comment">// responses are received, except if a timeout is set, then it sends a default response.</span>
     <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">shuffle_requests</span>(
         <span class="kw-2">mut</span> <span class="ident">requests</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Message</span><span class="op">&gt;</span>,
         <span class="ident">request_handler</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">RequestHandler</span><span class="op">&gt;</span>,
         <span class="ident">timeout</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Duration</span><span class="op">&gt;</span>,
     ) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-        <span class="ident">requests</span>.<span class="ident">sort_by</span>(<span class="op">|</span><span class="ident">first</span>, <span class="ident">second</span><span class="op">|</span> <span class="ident">first</span>.<span class="ident">data</span>.<span class="ident">cmp</span>(<span class="kw-2">&amp;</span><span class="ident">second</span>.<span class="ident">data</span>));
+        <span class="ident">requests</span>.<span class="ident">sort_by</span>(<span class="op">|</span><span class="ident">first</span>, <span class="ident">second</span><span class="op">|</span> <span class="ident">cmp</span>(<span class="kw-2">&amp;</span><span class="ident">first</span>.<span class="ident">data</span>, <span class="kw-2">&amp;</span><span class="ident">second</span>.<span class="ident">data</span>));
 
         <span class="kw">let</span> <span class="ident">response_futures</span>: <span class="ident">FuturesOrdered</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">requests</span>
             .<span class="ident">into_iter</span>()
-            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">request</span><span class="op">|</span> {
+            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">request_message</span><span class="op">|</span> {
+                <span class="comment">// Deconstruct the Message holding a request in data.</span>
                 <span class="kw">let</span> <span class="ident">request_handler_clone</span> <span class="op">=</span> <span class="ident">request_handler</span>.<span class="ident">clone</span>();
+                <span class="kw">let</span> <span class="ident">index</span> <span class="op">=</span> <span class="ident">request_message</span>.<span class="ident">index</span>;
+                <span class="kw">let</span> <span class="ident">response_sender</span> <span class="op">=</span> <span class="ident">request_message</span>.<span class="ident">response_sender</span>;
+                <span class="kw">let</span> <span class="ident">data</span> <span class="op">=</span> <span class="ident">get_request</span>(<span class="ident">request_message</span>.<span class="ident">data</span>);
                 <span class="kw">async</span> <span class="kw">move</span> {
-                    <span class="kw">match</span> <span class="ident">timeout</span> {
-                        <span class="prelude-val">None</span> =&gt; <span class="ident">request_handler_clone</span>
-                            .<span class="ident">handle</span>(<span class="ident">request</span>.<span class="ident">data</span>.<span class="ident">clone</span>())
-                            .<span class="kw">await</span>
-                            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">response</span><span class="op">|</span> <span class="ident">request</span>.<span class="ident">new_response</span>(<span class="ident">response</span>)),
-                        <span class="prelude-val">Some</span>(<span class="ident">timeout</span>) =&gt; <span class="kw">match</span> <span class="ident">tokio::time::timeout</span>(
-                            <span class="ident">timeout</span>,
-                            <span class="ident">request_handler_clone</span>.<span class="ident">handle</span>(<span class="ident">request</span>.<span class="ident">data</span>.<span class="ident">clone</span>()),
-                        )
-                        .<span class="kw">await</span>
-                        {
-                            <span class="prelude-val">Err</span>(<span class="kw">_</span>) =&gt; <span class="prelude-val">Ok</span>(<span class="ident">request</span>.<span class="ident">new_empty_response</span>()),
-                            <span class="prelude-val">Ok</span>(<span class="ident">response</span>) =&gt; <span class="ident">response</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">response</span><span class="op">|</span> <span class="ident">request</span>.<span class="ident">new_response</span>(<span class="ident">response</span>)),
-                        },
-                    }
+                    <span class="kw">let</span> <span class="ident">response</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">timeout</span> {
+                        <span class="prelude-val">None</span> =&gt; <span class="ident">request_handler_clone</span>.<span class="ident">handle</span>(<span class="ident">data</span>).<span class="kw">await</span>,
+                        <span class="prelude-val">Some</span>(<span class="ident">timeout</span>) =&gt; {
+                            <span class="kw">match</span> <span class="ident">tokio::time::timeout</span>(<span class="ident">timeout</span>, <span class="ident">request_handler_clone</span>.<span class="ident">handle</span>(<span class="ident">data</span>))
+                                .<span class="kw">await</span>
+                            {
+                                <span class="prelude-val">Err</span>(<span class="kw">_</span>) =&gt; <span class="prelude-val">Ok</span>(<span class="ident">TrustedShufflerResponse::empty</span>()),
+                                <span class="prelude-val">Ok</span>(<span class="ident">response</span>) =&gt; <span class="ident">response</span>,
+                            }
+                        }
+                    };
+                    <span class="comment">// Create a Message holding the response in data.</span>
+                    <span class="ident">response</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">response</span><span class="op">|</span> <span class="ident">Message</span> {
+                        <span class="ident">index</span>,
+                        <span class="ident">data</span>: <span class="ident">Wrapper::Response</span>(<span class="ident">response</span>),
+                        <span class="ident">response_sender</span>,
+                    })
                 }
             })
             .<span class="ident">collect</span>();
@@ -401,12 +483,32 @@
                      <span class="ident">response_sender</span>,
                  }<span class="op">|</span> {
                     <span class="ident">response_sender</span>
-                        .<span class="ident">send</span>(<span class="ident">data</span>)
+                        .<span class="ident">send</span>(<span class="ident">get_response</span>(<span class="ident">data</span>))
                         .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">_data</span><span class="op">|</span> <span class="macro">anyhow!</span>(<span class="string">&quot;Couldn&#39;t send response&quot;</span>))
                 },
             )
             .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span>, <span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>()
             .<span class="ident">map</span>(<span class="op">|</span><span class="kw">_</span>: <span class="ident">Vec</span><span class="op">&lt;</span>()<span class="op">&gt;</span><span class="op">|</span> ())
+    }
+}
+
+<span class="kw">fn</span> <span class="ident">get_request</span>(<span class="ident">w</span>: <span class="ident">Wrapper</span>) -&gt; <span class="ident">TrustedShufflerRequest</span> {
+    <span class="kw">match</span> <span class="ident">w</span> {
+        <span class="ident">Wrapper::Request</span>(<span class="ident">r</span>) =&gt; <span class="ident">r</span>,
+        <span class="kw">_</span> =&gt; <span class="macro">panic!</span>(
+            <span class="string">&quot;Expected a TrustedShufflerRequest, but found a TrustedShufflerResponse: {:?}&quot;</span>,
+            <span class="ident">w</span>
+        ),
+    }
+}
+
+<span class="kw">fn</span> <span class="ident">get_response</span>(<span class="ident">w</span>: <span class="ident">Wrapper</span>) -&gt; <span class="ident">TrustedShufflerResponse</span> {
+    <span class="kw">match</span> <span class="ident">w</span> {
+        <span class="ident">Wrapper::Response</span>(<span class="ident">r</span>) =&gt; <span class="ident">r</span>,
+        <span class="kw">_</span> =&gt; <span class="macro">panic!</span>(
+            <span class="string">&quot;Expected a TrustedShufflerResponse, but found a TrustedShufflerRequest: {:?}&quot;</span>,
+            <span class="ident">w</span>
+        ),
     }
 }
 </code></pre></div>
