@@ -55,7 +55,7 @@ use check_license::CheckLicense;
 mod check_build_licenses;
 use check_build_licenses::CheckBuildLicenses;
 
-mod vm;
+mod launcher;
 
 static PROCESSES: Lazy<Mutex<Vec<i32>>> = Lazy::new(|| Mutex::new(Vec::new()));
 
@@ -114,8 +114,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 fn match_cmd(opt: &Opt) -> Step {
     match opt.cmd {
-        Command::RunVmTest => vm::run_vm_test(),
-        Command::BuildBaremetalVariants(ref opts) => vm::build_baremetal_variants(opts),
+        Command::RunVmTest => launcher::run_vm_test(),
+        Command::BuildBaremetalVariants(ref opts) => launcher::build_baremetal_variants(opts),
         Command::RunOakFunctionsExamples(ref run_opt) => {
             run_oak_functions_examples(run_opt, &opt.scope)
         }
