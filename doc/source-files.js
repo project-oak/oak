@@ -65,5 +65,5 @@ sourcesIndex["trusted_shuffler_server"] = {"name":"","files":["http.rs","main.rs
 sourcesIndex["virtio"] = {"name":"","dirs":[{"name":"console","files":["mod.rs"]},{"name":"queue","files":["mod.rs","virtq.rs"]},{"name":"vsock","dirs":[{"name":"socket","files":["mod.rs"]}],"files":["mod.rs","packet.rs"]}],"files":["lib.rs"]};
 sourcesIndex["vsock_echo"] = {"name":"","files":["main.rs"]};
 sourcesIndex["weather_lookup"] = {"name":"","files":["lib.rs"]};
-sourcesIndex["xtask"] = {"name":"","files":["check_build_licenses.rs","check_license.rs","check_todo.rs","diffs.rs","examples.rs","files.rs","internal.rs","main.rs","vm.rs"]};
+sourcesIndex["xtask"] = {"name":"","files":["check_build_licenses.rs","check_license.rs","check_todo.rs","diffs.rs","examples.rs","files.rs","internal.rs","launcher.rs","main.rs"]};
 createSourceSidebar();

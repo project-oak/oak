@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `xtask/src/vm.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>vm.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../ayu.css" disabled><link rel="stylesheet" type="text/css" href="../../dark.css" disabled><link rel="stylesheet" type="text/css" href="../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../storage.js"></script><script src="../../crates.js"></script><script defer src="../../main.js"></script><script defer src="../../source-script.js"></script><script defer src="../../source-files.js"></script>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `xtask/src/launcher.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>launcher.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../ayu.css" disabled><link rel="stylesheet" type="text/css" href="../../dark.css" disabled><link rel="stylesheet" type="text/css" href="../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../storage.js"></script><script src="../../crates.js"></script><script defer src="../../main.js"></script><script defer src="../../source-script.js"></script><script defer src="../../source-files.js"></script>
     <noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../xtask/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div>
         </a><h2 class="location"></h2>
     </nav>
@@ -166,6 +166,11 @@
 <span id="161">161</span>
 <span id="162">162</span>
 <span id="163">163</span>
+<span id="164">164</span>
+<span id="165">165</span>
+<span id="166">166</span>
+<span id="167">167</span>
+<span id="168">168</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -182,6 +187,9 @@
 <span class="comment">// limitations under the License.</span>
 <span class="comment">//</span>
 
+<span class="doccomment">//! Functionality for testing variants of the baremetal-compatible runtime exposed by the</span>
+<span class="doccomment">//! launcher.</span>
+
 <span class="kw">const</span> <span class="ident">CLIENT_PATH</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;./target/debug/oak_functions_client&quot;</span>;
 <span class="kw">const</span> <span class="ident">WASM_PATH</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;./experimental/oak_baremetal_launcher/key_value_lookup.wasm&quot;</span>;
 <span class="kw">const</span> <span class="ident">LOOKUP_PATH</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;./experimental/oak_baremetal_launcher/mock_lookup_data&quot;</span>;
@@ -194,41 +202,47 @@
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::internal</span>::<span class="kw-2">*</span>;
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Display</span>, <span class="ident">Clone</span>, <span class="ident">PartialEq</span>, <span class="ident">EnumIter</span>)]</span>
-<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">Variant</span> {
+<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">LauncherMode</span> {
     <span class="ident">Qemu</span>,
     <span class="ident">Crosvm</span>,
 }
 
-<span class="kw">impl</span> <span class="ident">Variant</span> {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">payload_crate_path</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span> {
+<span class="kw">impl</span> <span class="ident">LauncherMode</span> {
+    <span class="doccomment">/// Get the crate name of respective runtime variant</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">runtime_crate_name</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span> {
         <span class="kw">match</span> <span class="self">self</span> {
-            <span class="ident">Variant::Qemu</span> =&gt; <span class="string">&quot;./experimental/oak_baremetal_app_qemu&quot;</span>,
-            <span class="ident">Variant::Crosvm</span> =&gt; <span class="string">&quot;./experimental/oak_baremetal_app_crosvm&quot;</span>,
+            <span class="ident">LauncherMode::Qemu</span> =&gt; <span class="string">&quot;oak_baremetal_app_qemu&quot;</span>,
+            <span class="ident">LauncherMode::Crosvm</span> =&gt; <span class="string">&quot;oak_baremetal_app_crosvm&quot;</span>,
         }
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">loader_mode</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span> {
-        <span class="kw">match</span> <span class="self">self</span> {
-            <span class="ident">Variant::Qemu</span> =&gt; <span class="string">&quot;qemu&quot;</span>,
-            <span class="ident">Variant::Crosvm</span> =&gt; <span class="string">&quot;crosvm&quot;</span>,
-        }
+    <span class="doccomment">/// Get the path to the respective runtime variant that should be launched</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">runtime_crate_path</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">String</span> {
+        <span class="macro">format!</span>(<span class="string">&quot;./experimental/{}&quot;</span>, <span class="self">self</span>.<span class="ident">runtime_crate_name</span>())
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">app_binary_path</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span> {
-        <span class="kw">match</span> <span class="self">self</span> {
-            <span class="ident">Variant::Qemu</span> =&gt; {
-                <span class="string">&quot;./experimental/oak_baremetal_app_qemu/target/x86_64-unknown-none/debug/oak_baremetal_app_qemu&quot;</span>
-            }
-            <span class="ident">Variant::Crosvm</span> =&gt; {
-                <span class="string">&quot;./experimental/oak_baremetal_app_crosvm/target/x86_64-unknown-none/debug/oak_baremetal_app_crosvm&quot;</span>
-            }
-        }
+    <span class="doccomment">/// Get the path to the respective runtime variant that should be launched</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">runtime_binary_path</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">String</span> {
+        <span class="macro">format!</span>(
+            <span class="string">&quot;{}/target/x86_64-unknown-none/debug/{}&quot;</span>,
+            <span class="self">self</span>.<span class="ident">runtime_crate_path</span>(),
+            <span class="self">self</span>.<span class="ident">runtime_crate_name</span>()
+        )
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">vmm_binary_path</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span> {
+    <span class="doccomment">/// Get the subcommand for launching in this mode</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">variant_subcommand</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span> {
         <span class="kw">match</span> <span class="self">self</span> {
-            <span class="ident">Variant::Qemu</span> =&gt; <span class="string">&quot;/usr/bin/qemu-system-x86_64&quot;</span>,
-            <span class="ident">Variant::Crosvm</span> =&gt; <span class="string">&quot;/usr/local/cargo/bin/crosvm&quot;</span>,
+            <span class="ident">LauncherMode::Qemu</span> =&gt; <span class="macro">vec!</span>[
+                <span class="string">&quot;qemu&quot;</span>.<span class="ident">to_string</span>(),
+                <span class="macro">format!</span>(<span class="string">&quot;--app-binary={}&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">runtime_binary_path</span>()),
+                <span class="macro">format!</span>(<span class="string">&quot;--vmm-binary={}&quot;</span>, <span class="string">&quot;/usr/bin/qemu-system-x86_64&quot;</span>),
+            ],
+            <span class="ident">LauncherMode::Crosvm</span> =&gt; <span class="macro">vec!</span>[
+                <span class="string">&quot;crosvm&quot;</span>.<span class="ident">to_string</span>(),
+                <span class="macro">format!</span>(<span class="string">&quot;--app-binary={}&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">runtime_binary_path</span>()),
+                <span class="macro">format!</span>(<span class="string">&quot;--vmm-binary={}&quot;</span>, <span class="string">&quot;/usr/local/cargo/bin/crosvm&quot;</span>),
+            ],
         }
     }
 }
@@ -237,19 +251,19 @@
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">build_baremetal_variants</span>(<span class="ident">opt</span>: <span class="kw-2">&amp;</span><span class="ident">BuildBaremetalVariantsOpt</span>) -&gt; <span class="ident">Step</span> {
     <span class="ident">Step::Multiple</span> {
         <span class="ident">name</span>: <span class="string">&quot;Build baremetal variants&quot;</span>.<span class="ident">to_string</span>(),
-        <span class="ident">steps</span>: <span class="ident">Variant::iter</span>()
+        <span class="ident">steps</span>: <span class="ident">LauncherMode::iter</span>()
             .<span class="ident">filter</span>(<span class="op">|</span><span class="ident">v</span><span class="op">|</span> <span class="ident">option_covers_variant</span>(<span class="ident">opt</span>, <span class="ident">v</span>))
-            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">v</span><span class="op">|</span> <span class="ident">build_released_binary</span>(<span class="kw-2">&amp;</span><span class="ident">v</span>.<span class="ident">to_string</span>(), <span class="ident">v</span>.<span class="ident">payload_crate_path</span>()))
+            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">v</span><span class="op">|</span> <span class="ident">build_released_binary</span>(<span class="kw-2">&amp;</span><span class="ident">v</span>.<span class="ident">to_string</span>(), <span class="kw-2">&amp;</span><span class="ident">v</span>.<span class="ident">runtime_crate_path</span>()))
             .<span class="ident">collect</span>(),
     }
 }
 
-<span class="kw">fn</span> <span class="ident">option_covers_variant</span>(<span class="ident">opt</span>: <span class="kw-2">&amp;</span><span class="ident">BuildBaremetalVariantsOpt</span>, <span class="ident">variant</span>: <span class="kw-2">&amp;</span><span class="ident">Variant</span>) -&gt; <span class="ident">bool</span> {
+<span class="kw">fn</span> <span class="ident">option_covers_variant</span>(<span class="ident">opt</span>: <span class="kw-2">&amp;</span><span class="ident">BuildBaremetalVariantsOpt</span>, <span class="ident">variant</span>: <span class="kw-2">&amp;</span><span class="ident">LauncherMode</span>) -&gt; <span class="ident">bool</span> {
     <span class="kw">match</span> <span class="kw-2">&amp;</span><span class="ident">opt</span>.<span class="ident">variant</span> {
         <span class="prelude-val">None</span> =&gt; <span class="bool-val">true</span>,
         <span class="prelude-val">Some</span>(<span class="ident">var</span>) =&gt; <span class="kw">match</span> <span class="kw-2">*</span><span class="ident">variant</span> {
-            <span class="ident">Variant::Qemu</span> =&gt; <span class="ident">var</span> <span class="op">==</span> <span class="string">&quot;qemu&quot;</span>,
-            <span class="ident">Variant::Crosvm</span> =&gt; <span class="ident">var</span> <span class="op">==</span> <span class="string">&quot;crosvm&quot;</span>,
+            <span class="ident">LauncherMode::Qemu</span> =&gt; <span class="ident">var</span> <span class="op">==</span> <span class="string">&quot;qemu&quot;</span>,
+            <span class="ident">LauncherMode::Crosvm</span> =&gt; <span class="ident">var</span> <span class="op">==</span> <span class="string">&quot;crosvm&quot;</span>,
         },
     }
 }
@@ -264,11 +278,11 @@
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">run_vm_test</span>() -&gt; <span class="ident">Step</span> {
     <span class="ident">Step::Multiple</span> {
         <span class="ident">name</span>: <span class="string">&quot;VM end-to-end test&quot;</span>.<span class="ident">to_string</span>(),
-        <span class="ident">steps</span>: <span class="ident">Variant::iter</span>().<span class="ident">map</span>(<span class="ident">run_variant</span>).<span class="ident">collect</span>(),
+        <span class="ident">steps</span>: <span class="ident">LauncherMode::iter</span>().<span class="ident">map</span>(<span class="ident">run_variant</span>).<span class="ident">collect</span>(),
     }
 }
 
-<span class="kw">fn</span> <span class="ident">run_variant</span>(<span class="ident">variant</span>: <span class="ident">Variant</span>) -&gt; <span class="ident">Step</span> {
+<span class="kw">fn</span> <span class="ident">run_variant</span>(<span class="ident">variant</span>: <span class="ident">LauncherMode</span>) -&gt; <span class="ident">Step</span> {
     <span class="ident">Step::Multiple</span> {
         <span class="ident">name</span>: <span class="macro">format!</span>(<span class="string">&quot;run {} variant&quot;</span>, <span class="ident">variant</span>),
         <span class="ident">steps</span>: <span class="macro">vec!</span>[
@@ -276,10 +290,10 @@
                 <span class="string">&quot;build loader binary&quot;</span>,
                 <span class="string">&quot;./experimental/oak_baremetal_launcher&quot;</span>,
             ),
-            <span class="ident">build_binary</span>(<span class="string">&quot;build payload&quot;</span>, <span class="ident">variant</span>.<span class="ident">payload_crate_path</span>()),
+            <span class="ident">build_binary</span>(<span class="string">&quot;build runtime&quot;</span>, <span class="kw-2">&amp;</span><span class="ident">variant</span>.<span class="ident">runtime_crate_path</span>()),
             <span class="ident">Step::WithBackground</span> {
                 <span class="ident">name</span>: <span class="string">&quot;background loader&quot;</span>.<span class="ident">to_string</span>(),
-                <span class="ident">background</span>: <span class="ident">run_loader</span>(<span class="ident">variant</span>),
+                <span class="ident">background</span>: <span class="ident">run_launcher</span>(<span class="ident">variant</span>),
                 <span class="ident">foreground</span>: <span class="ident">Box::new</span>(<span class="ident">run_client</span>(<span class="string">&quot;test_key&quot;</span>, <span class="string">&quot;^test_value$&quot;</span>, <span class="number">300</span>)),
             },
         ],
@@ -293,17 +307,13 @@
     }
 }
 
-<span class="kw">fn</span> <span class="ident">run_loader</span>(<span class="ident">variant</span>: <span class="ident">Variant</span>) -&gt; <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">Runnable</span><span class="op">&gt;</span> {
-    <span class="ident">Cmd::new</span>(
-        <span class="string">&quot;./target/debug/oak_baremetal_launcher&quot;</span>,
-        <span class="macro">vec!</span>[
-            <span class="macro">format!</span>(<span class="string">&quot;--wasm={}&quot;</span>, <span class="ident">WASM_PATH</span>),
-            <span class="macro">format!</span>(<span class="string">&quot;--lookup-data={}&quot;</span>, <span class="ident">LOOKUP_PATH</span>),
-            <span class="ident">variant</span>.<span class="ident">loader_mode</span>().<span class="ident">to_string</span>(),
-            <span class="macro">format!</span>(<span class="string">&quot;--app-binary={}&quot;</span>, <span class="ident">variant</span>.<span class="ident">app_binary_path</span>()),
-            <span class="macro">format!</span>(<span class="string">&quot;--vmm-binary={}&quot;</span>, <span class="ident">variant</span>.<span class="ident">vmm_binary_path</span>()),
-        ],
-    )
+<span class="kw">fn</span> <span class="ident">run_launcher</span>(<span class="ident">variant</span>: <span class="ident">LauncherMode</span>) -&gt; <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">Runnable</span><span class="op">&gt;</span> {
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">args</span> <span class="op">=</span> <span class="macro">vec!</span>[
+        <span class="macro">format!</span>(<span class="string">&quot;--wasm={}&quot;</span>, <span class="ident">WASM_PATH</span>),
+        <span class="macro">format!</span>(<span class="string">&quot;--lookup-data={}&quot;</span>, <span class="ident">LOOKUP_PATH</span>),
+    ];
+    <span class="ident">args</span>.<span class="ident">append</span>(<span class="kw-2">&amp;mut</span> <span class="ident">variant</span>.<span class="ident">variant_subcommand</span>());
+    <span class="ident">Cmd::new</span>(<span class="string">&quot;./target/debug/oak_baremetal_launcher&quot;</span>, <span class="ident">args</span>)
 }
 
 <span class="kw">fn</span> <span class="ident">run_client</span>(<span class="ident">request</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="ident">expected_response</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="ident">iterations</span>: <span class="ident">usize</span>) -&gt; <span class="ident">Step</span> {
