@@ -16,7 +16,7 @@
 
 use anyhow::anyhow;
 use async_trait::async_trait;
-use http::{uri::Authority, Method, Uri};
+use http::{Method, Uri};
 use hyper::{Body, Request, Response, StatusCode};
 use std::{
     future::Future,
@@ -44,12 +44,19 @@ impl RequestHandler for HttpRequestHandler {
         let mut request = trusted_to_hyper_request(request);
 
         // We want to keep the path of the orginal request from the client.
-        let parts = request.uri().into_parts();
-        parts.authority = Some(Authority::from_static(&self.backend_url));
+        //
+        // The following does not work, because &self would need 'static life time.
+        // let parts = request.uri().into_parts();
+        // parts.authority = Some(Authority::from_static(&self.backend_url));
+        // let new_uri = Uri::from_parts(parts).expect("Failed to create new URI");
+        let path = request.uri().path();
         // And extend the URL to the backend.
-        let new_uri = Uri::from_parts(parts).expect("Failed to create new URI");
+        let new_uri = format!("{}{}", self.backend_url, path)
+            .parse::<Uri>()
+            .expect("Couldn't parse URI for backend.");
         let uri = request.uri_mut();
         *uri = new_uri;
+
         log::info!("New request to the backend: {:?}", request);
 
         match send_with_request(request).await {
