@@ -14,6 +14,7 @@ async-trait = "*"
 futures = "*"
 futures-core = "*"
 futures-util = "*"
+hyper = "*"
 log = "*"
 tokio = { version = "*", features = [
   "fs",

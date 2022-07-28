@@ -5690,6 +5690,7 @@ dependencies = [
  "futures",
  "futures-core",
  "futures-util",
+ "hyper",
  "log",
  "tokio",
 ]

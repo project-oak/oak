@@ -22,48 +22,69 @@ mod tests;
 use anyhow::{anyhow, Context};
 use async_trait::async_trait;
 use futures::{stream::FuturesOrdered, StreamExt};
+use hyper::Uri;
 use std::{
-    marker::{Send, Sync},
+    cmp::Ordering,
     mem::take,
     ops::DerefMut,
     sync::{Arc, Mutex},
+    vec,
 };
 use tokio::{sync::oneshot, time::Duration};
 
-type Request = Vec<u8>;
-type Response = Vec<u8>;
+#[derive(Debug, PartialEq)]
+pub struct TrustedShufflerRequest {
+    pub body: Vec<u8>,
+    pub uri: Uri,
+}
+#[derive(Debug, PartialEq)]
+pub struct TrustedShufflerResponse {
+    pub body: Vec<u8>,
+}
 
-// The Trusted Shuffler responds with the `EMPTY_RESPONSE` if the backend does not respond within a
-// given timeout.
-const EMPTY_RESPONSE: Vec<u8> = vec![];
+impl TrustedShufflerResponse {
+    fn empty() -> TrustedShufflerResponse {
+        TrustedShufflerResponse { body: vec![] }
+    }
+}
+
+// Workaround so we can have either a request or a response in `data` of `Message`.
+// We should be able to refactor so we do not need the `Wrapper` (and `panics`) any more.
+#[derive(Debug)]
+enum Wrapper {
+    Request(TrustedShufflerRequest),
+    Response(TrustedShufflerResponse),
+}
+
+// We only compare the body, but we need revisit this and decide if this
+// is how we want to sort our requests and responses.
+fn cmp(w1: &Wrapper, w2: &Wrapper) -> Ordering {
+    match (w1, w2) {
+        (Wrapper::Request(r1), Wrapper::Request(r2)) => r1.body.cmp(&r2.body),
+        (Wrapper::Response(r1), Wrapper::Response(r2)) => r1.body.cmp(&r2.body),
+        (_, _) => panic!(
+            "Fail to compare a TrustedShufflerRequest: {:?} and a TrustedShufflerResponse: {:?}",
+            w1, w2
+        ),
+    }
+}
 
 struct Message {
     // Determines the original order in which messages arrived.
     // Index is used to send requests back to the client in the order of arrival.
     index: usize,
     // Arbitrary message data.
-    data: Vec<u8>,
+    data: Wrapper,
     // Channel for sending responses back to the client async tasks.
-    response_sender: oneshot::Sender<Response>,
-}
-
-impl Message {
-    fn new_response(self, data: Vec<u8>) -> Message {
-        Message {
-            index: self.index,
-            data,
-            response_sender: self.response_sender,
-        }
-    }
-
-    fn new_empty_response(self) -> Message {
-        self.new_response(EMPTY_RESPONSE)
-    }
+    response_sender: oneshot::Sender<TrustedShufflerResponse>,
 }
 
 #[async_trait]
 pub trait RequestHandler: Send + Sync {
-    async fn handle(&self, request: Vec<u8>) -> anyhow::Result<Vec<u8>>;
+    async fn handle(
+        &self,
+        request: TrustedShufflerRequest,
+    ) -> anyhow::Result<TrustedShufflerResponse>;
 }
 
 // Trusted Shuffler implementation.
@@ -99,7 +120,10 @@ impl TrustedShuffler {
     }
 
     // Asynchronously handles an incoming request.
-    pub async fn invoke(&self, request: Request) -> anyhow::Result<Response> {
+    pub async fn invoke(
+        &self,
+        request: TrustedShufflerRequest,
+    ) -> anyhow::Result<TrustedShufflerResponse> {
         let (response_sender, response_receiver) = oneshot::channel();
 
         // Check if the request batch is filled and create a separate task for shuffling requests.
@@ -111,7 +135,7 @@ impl TrustedShuffler {
 
             let request = Message {
                 index: requests_to_shuffle.len(),
-                data: request,
+                data: Wrapper::Request(request),
                 response_sender,
             };
 
@@ -138,34 +162,41 @@ impl TrustedShuffler {
     }
 
     // Lexicographically sorts requests and sends them to the backend using the
-    // [`TrustedShuffler::request_handler`].
+    // [`TrustedShuffler::request_handler`]. For every batch of requests it either waits until all
+    // responses are received, except if a timeout is set, then it sends a default response.
     async fn shuffle_requests(
         mut requests: Vec<Message>,
         request_handler: Arc<dyn RequestHandler>,
         timeout: Option<Duration>,
     ) -> anyhow::Result<()> {
-        requests.sort_by(|first, second| first.data.cmp(&second.data));
+        requests.sort_by(|first, second| cmp(&first.data, &second.data));
 
         let response_futures: FuturesOrdered<_> = requests
             .into_iter()
-            .map(|request| {
+            .map(|request_message| {
+                // Deconstruct the Message holding a request in data.
                 let request_handler_clone = request_handler.clone();
+                let index = request_message.index;
+                let response_sender = request_message.response_sender;
+                let data = get_request(request_message.data);
                 async move {
-                    match timeout {
-                        None => request_handler_clone
-                            .handle(request.data.clone())
-                            .await
-                            .map(|response| request.new_response(response)),
-                        Some(timeout) => match tokio::time::timeout(
-                            timeout,
-                            request_handler_clone.handle(request.data.clone()),
-                        )
-                        .await
-                        {
-                            Err(_) => Ok(request.new_empty_response()),
-                            Ok(response) => response.map(|response| request.new_response(response)),
-                        },
-                    }
+                    let response = match timeout {
+                        None => request_handler_clone.handle(data).await,
+                        Some(timeout) => {
+                            match tokio::time::timeout(timeout, request_handler_clone.handle(data))
+                                .await
+                            {
+                                Err(_) => Ok(TrustedShufflerResponse::empty()),
+                                Ok(response) => response,
+                            }
+                        }
+                    };
+                    // Create a Message holding the response in data.
+                    response.map(|response| Message {
+                        index,
+                        data: Wrapper::Response(response),
+                        response_sender,
+                    })
                 }
             })
             .collect();
@@ -193,11 +224,31 @@ impl TrustedShuffler {
                      response_sender,
                  }| {
                     response_sender
-                        .send(data)
+                        .send(get_response(data))
                         .map_err(|_data| anyhow!("Couldn't send response"))
                 },
             )
             .collect::<Result<Vec<_>, _>>()
             .map(|_: Vec<()>| ())
+    }
+}
+
+fn get_request(w: Wrapper) -> TrustedShufflerRequest {
+    match w {
+        Wrapper::Request(r) => r,
+        _ => panic!(
+            "Expected a TrustedShufflerRequest, but found a TrustedShufflerResponse: {:?}",
+            w
+        ),
+    }
+}
+
+fn get_response(w: Wrapper) -> TrustedShufflerResponse {
+    match w {
+        Wrapper::Response(r) => r,
+        _ => panic!(
+            "Expected a TrustedShufflerResponse, but found a TrustedShufflerRequest: {:?}",
+            w
+        ),
     }
 }

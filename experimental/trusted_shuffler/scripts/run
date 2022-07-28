@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 
+# Note: runs either in container extension for VS Code or on local machine, but
+# for `./scripts/docker_run /bin/bash` we observed `accept error: Too many open files (os error 24)`
+
 # Note: SECONDS_TO_RUN * QPS has to be a multiple of K
 # Otherwise the Trusted Shuffler gets stuck because the last batch does not reach K requests.
 readonly SECONDS_TO_RUN=20 # Don't use $SECONDS.
