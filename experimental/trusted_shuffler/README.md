@@ -4,7 +4,6 @@
 <h1><picture><source media="(prefers-color-scheme: dark)" srcset="/docs/oak-logo/svgs/oak-trusted-shuffler-negative-colour.svg?sanitize=true"><source media="(prefers-color-scheme: light)" srcset="/docs/oak-logo/svgs/oak-trusted-shuffler.svg?sanitize=true"><img alt="Project Oak Trusted Shuffler Logo" src="/docs/oak-logo/svgs/oak-trusted-shuffler.svg?sanitize=true"></picture></h1>
 <!-- Oak Trusted Shuffler Logo End -->
 
-
 This directory contains a Trusted Shuffler example application.
 
 Run an example with the following command:
