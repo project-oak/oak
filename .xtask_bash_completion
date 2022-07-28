@@ -12,9 +12,6 @@ _xtask() {
             "$1")
                 cmd="xtask"
                 ;;
-            build-baremetal-variants)
-                cmd+="__build__baremetal__variants"
-                ;;
             build-oak-functions-example)
                 cmd+="__build__oak__functions__example"
                 ;;
@@ -73,31 +70,13 @@ _xtask() {
 
     case "${cmd}" in
         xtask)
-            opts="-h --help --dry-run --logs --keep-going --scope run-vm-test build-baremetal-variants run-oak-functions-examples build-oak-functions-example build-oak-functions-server-variants format check-format run-tests run-cargo-clippy run-cargo-tests run-bazel-tests run-cargo-fuzz run-cargo-deny run-cargo-udeps run-ci run-cargo-clean completion help"
+            opts="-h --help --dry-run --logs --keep-going --scope run-vm-test run-oak-functions-examples build-oak-functions-example build-oak-functions-server-variants format check-format run-tests run-cargo-clippy run-cargo-tests run-bazel-tests run-cargo-fuzz run-cargo-deny run-cargo-udeps run-ci run-cargo-clean completion help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 1 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
             fi
             case "${prev}" in
                 --scope)
-                    COMPREPLY=($(compgen -f "${cur}"))
-                    return 0
-                    ;;
-                *)
-                    COMPREPLY=()
-                    ;;
-            esac
-            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
-            return 0
-            ;;
-        xtask__build__baremetal__variants)
-            opts="-h --variant --help"
-            if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
-                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
-                return 0
-            fi
-            case "${prev}" in
-                --variant)
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
                     ;;
