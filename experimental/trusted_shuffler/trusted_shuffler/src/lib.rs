@@ -67,8 +67,8 @@ struct RequestMessage {
 
 struct ResponseMessage {
     // Copied from the corresponding RequestMessage.
-    // Determines the original order in which the Trusted Shuffler Request for the Response arrived.
-    // Index is used to send responses back to the client in the order of arrival.
+    // Determines the original order in which the Trusted Shuffler Request for the Response
+    // arrived. Index is used to send responses back to the client in the order of arrival.
     index: usize,
     // The TrustedShufflerResponse to a TrustedShufflerRequest.
     data: TrustedShufflerResponse,
