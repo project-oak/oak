@@ -38,10 +38,12 @@ pub struct TrustedShufflerRequest {
     pub uri: Uri,
 }
 
-// We only compare the body, but we need revisit this and decide if this
-// is how we want to sort our requests.
-fn cmp_requests(r1: &TrustedShufflerRequest, r2: &TrustedShufflerRequest) -> Ordering {
-    r1.body.cmp(&r2.body)
+impl TrustedShufflerRequest {
+    // We only compare the body, and we need revisit this and decide if this
+    // is how we want to sort our requests.
+    fn compare_body(&self, r2: &TrustedShufflerRequest) -> Ordering {
+        self.body.cmp(&r2.body)
+    }
 }
 
 #[derive(Debug, PartialEq)]
@@ -167,7 +169,7 @@ impl TrustedShuffler {
         request_handler: Arc<dyn RequestHandler>,
         timeout: Option<Duration>,
     ) -> anyhow::Result<()> {
-        requests.sort_by(|first, second| cmp_requests(&first.data, &second.data));
+        requests.sort_by(|first, second| first.data.compare_body(&second.data));
 
         let response_futures: FuturesOrdered<_> = requests
             .into_iter()
