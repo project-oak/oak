@@ -1,7 +1,0 @@
-# This is the static build configuration that we use with the transparent
-# release tool for building the provenance of `oak_baremetal_app_qemu`.
-# To be able to use it with the build tool from Transparent Release, additional
-# information must be added. See `./scripts/generate_provenance` for more info.
-repo = "https://github.com/project-oak/oak"
-command = ["./scripts/xtask", "build-baremetal-variants", "--variant", "qemu"]
-output_path = "./experimental/oak_baremetal_app_qemu/target/target/release/oak_baremetal_app_qemu"

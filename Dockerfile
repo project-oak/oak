@@ -39,7 +39,6 @@ RUN apt-get --yes update \
   python3 \
   python3-six \
   python3-distutils \
-  qemu-system-x86 \
   shellcheck \
   software-properties-common \
   vim \
