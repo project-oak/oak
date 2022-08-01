@@ -32,6 +32,7 @@ use crate::internal::*;
 pub enum LauncherMode {
     Qemu,
     Crosvm,
+    Binary,
 }
 
 impl LauncherMode {
@@ -40,6 +41,7 @@ impl LauncherMode {
         match self {
             LauncherMode::Qemu => "oak_baremetal_app_qemu",
             LauncherMode::Crosvm => "oak_baremetal_app_crosvm",
+            LauncherMode::Binary => "oak_functions_loader_linux_uds",
         }
     }
 
@@ -50,11 +52,14 @@ impl LauncherMode {
 
     /// Get the path to the respective runtime variant that should be launched
     pub fn runtime_binary_path(&self) -> String {
-        format!(
-            "{}/target/x86_64-unknown-none/debug/{}",
-            self.runtime_crate_path(),
-            self.runtime_crate_name()
-        )
+        match self {
+            LauncherMode::Crosvm | LauncherMode::Qemu => format!(
+                "{}/target/x86_64-unknown-none/debug/{}",
+                self.runtime_crate_path(),
+                self.runtime_crate_name()
+            ),
+            LauncherMode::Binary => format!("./target/debug/{}", self.runtime_crate_name()),
+        }
     }
 
     /// Get the subcommand for launching in this mode
@@ -70,13 +75,17 @@ impl LauncherMode {
                 format!("--app-binary={}", &self.runtime_binary_path()),
                 format!("--vmm-binary={}", "/usr/local/cargo/bin/crosvm"),
             ],
+            LauncherMode::Binary => vec![
+                "binary".to_string(),
+                format!("--app-binary={}", &self.runtime_binary_path()),
+            ],
         }
     }
 }
 
-pub fn run_vm_test() -> Step {
+pub fn run_launcher_test() -> Step {
     Step::Multiple {
-        name: "VM end-to-end test".to_string(),
+        name: "End-to-end tests for the launcher and runtime".to_string(),
         steps: LauncherMode::iter().map(run_variant).collect(),
     }
 }

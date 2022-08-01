@@ -2902,6 +2902,7 @@ dependencies = [
  "oak_utils",
  "prost 0.10.4",
  "serde",
+ "tempfile",
  "tokio",
  "tonic",
  "vsock",
@@ -3080,6 +3081,19 @@ dependencies = [
  "serde_derive",
  "serde_json",
  "toml",
+]
+
+[[package]]
+name = "oak_functions_loader_linux_uds"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "clap 3.2.10",
+ "log",
+ "oak_baremetal_communication_channel",
+ "oak_baremetal_runtime",
+ "oak_remote_attestation",
+ "oak_remote_attestation_amd",
 ]
 
 [[package]]
