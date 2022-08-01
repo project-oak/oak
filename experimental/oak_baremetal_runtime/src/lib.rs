@@ -19,6 +19,14 @@
 
 extern crate alloc;
 
+pub mod schema {
+    #![allow(clippy::derivable_impls, clippy::needless_borrow)]
+    #![allow(dead_code, unused_imports)]
+
+    include!(concat!(env!("OUT_DIR"), "/schema_generated.rs"));
+    include!(concat!(env!("OUT_DIR"), "/schema_services_servers.rs"));
+}
+
 pub mod framing;
 mod logger;
 mod remote_attestation;

@@ -2851,8 +2851,6 @@ dependencies = [
  "bitflags",
  "flatbuffers",
  "oak_idl",
- "oak_idl_gen_services",
- "oak_idl_gen_structs",
  "static_assertions",
 ]
 
@@ -2898,6 +2896,8 @@ dependencies = [
  "oak_baremetal_communication_channel",
  "oak_functions_loader",
  "oak_idl",
+ "oak_idl_gen_services",
+ "oak_idl_gen_structs",
  "oak_remote_attestation_sessions",
  "oak_utils",
  "prost 0.10.4",
@@ -2921,6 +2921,8 @@ dependencies = [
  "oak_functions_wasm",
  "oak_functions_workload_logging",
  "oak_idl",
+ "oak_idl_gen_services",
+ "oak_idl_gen_structs",
  "oak_logger",
  "oak_remote_attestation",
  "oak_remote_attestation_sessions",

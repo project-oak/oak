@@ -16,6 +16,8 @@
 
 use oak_utils::{generate_grpc_code, CodegenOptions};
 
+const RUNTIME_INTERFACE_SCHEMA: &str = "../../experimental/oak_baremetal_runtime/schema.fbs";
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     generate_grpc_code(
         "../../",
@@ -26,5 +28,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             extern_paths: vec![],
         },
     )?;
+
+    oak_idl_gen_structs::compile_structs(RUNTIME_INTERFACE_SCHEMA);
+    oak_idl_gen_services::compile_services_servers(RUNTIME_INTERFACE_SCHEMA);
+    oak_idl_gen_services::compile_services_async_clients(RUNTIME_INTERFACE_SCHEMA);
+
     Ok(())
 }

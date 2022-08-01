@@ -21,10 +21,7 @@ use clap::Parser;
 use instance::LaunchedInstance;
 use instance_crosvm::CrosvmInstance;
 use instance_qemu::QemuInstance;
-use oak_baremetal_communication_channel::{
-    client::{ClientChannelHandle, RequestEncoder},
-    schema,
-};
+use oak_baremetal_communication_channel::client::{ClientChannelHandle, RequestEncoder};
 use std::{
     fs,
     io::{BufRead, BufReader},
@@ -32,6 +29,18 @@ use std::{
     path::PathBuf,
 };
 use tokio::signal;
+
+pub mod schema {
+    #![allow(clippy::derivable_impls, clippy::needless_borrow)]
+    #![allow(dead_code, unused_imports)]
+
+    include!(concat!(env!("OUT_DIR"), "/schema_generated.rs"));
+    include!(concat!(env!("OUT_DIR"), "/schema_services_servers.rs"));
+    include!(concat!(
+        env!("OUT_DIR"),
+        "/schema_services_async_clients.rs"
+    ));
+}
 
 mod instance;
 mod instance_crosvm;

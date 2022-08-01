@@ -17,13 +17,13 @@
 use crate::{
     logger::StandaloneLogger,
     remote_attestation::{AttestationHandler, AttestationSessionHandler},
+    schema,
+    schema::TrustedRuntime,
     wasm,
 };
 use alloc::{boxed::Box, sync::Arc};
 use anyhow::Context;
 use oak_baremetal_communication_channel::{
-    schema,
-    schema::TrustedRuntime,
     server::{message_from_response_and_id, ServerChannelHandle},
     Channel,
 };
@@ -64,10 +64,7 @@ where
     fn initialize(
         &mut self,
         initialization: &schema::Initialization,
-    ) -> Result<
-        oak_idl::utils::OwnedFlatbuffer<oak_baremetal_communication_channel::schema::Empty>,
-        oak_idl::Status,
-    > {
+    ) -> Result<oak_idl::utils::OwnedFlatbuffer<crate::schema::Empty>, oak_idl::Status> {
         match &mut self.initialization_state {
             InitializationState::Initialized(_attestation_handler) => Err(oak_idl::Status::new(
                 oak_idl::StatusCode::FailedPrecondition,
@@ -148,10 +145,7 @@ where
     fn update_lookup_data(
         &mut self,
         lookup_data: &schema::LookupData,
-    ) -> Result<
-        oak_idl::utils::OwnedFlatbuffer<oak_baremetal_communication_channel::schema::Empty>,
-        oak_idl::Status,
-    > {
+    ) -> Result<oak_idl::utils::OwnedFlatbuffer<crate::schema::Empty>, oak_idl::Status> {
         let data = lookup_data
             .items()
             .ok_or_else(|| oak_idl::Status::new(oak_idl::StatusCode::InvalidArgument))?

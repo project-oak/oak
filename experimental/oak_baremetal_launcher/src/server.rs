@@ -14,10 +14,9 @@
 // limitations under the License.
 //
 
-use crate::Client;
+use crate::{schema, Client};
 use bmrng::unbounded::UnboundedRequestSender;
 use futures::Future;
-use oak_baremetal_communication_channel::schema;
 use oak_remote_attestation_sessions::{SessionId, SESSION_ID_LENGTH};
 use std::net::SocketAddr;
 use tonic::{transport::Server, Request, Response};

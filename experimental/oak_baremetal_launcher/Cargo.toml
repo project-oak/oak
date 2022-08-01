@@ -37,3 +37,5 @@ flatbuffers = "*"
 
 [build-dependencies]
 oak_utils = { path = "../../oak_utils" }
+oak_idl_gen_services = { path = "../../oak_idl_gen_services" }
+oak_idl_gen_structs = { path = "../../oak_idl_gen_structs" }
