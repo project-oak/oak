@@ -608,6 +608,7 @@ dependencies = [
  "log",
  "oak_baremetal_communication_channel",
  "oak_baremetal_runtime",
+ "oak_baremetal_simple_io",
  "oak_remote_attestation",
  "oak_remote_attestation_amd",
  "rust-hypervisor-firmware-boot",
@@ -635,6 +636,14 @@ dependencies = [
  "oak_logger",
  "oak_remote_attestation",
  "oak_remote_attestation_sessions",
+]
+
+[[package]]
+name = "oak_baremetal_simple_io"
+version = "0.1.0"
+dependencies = [
+ "bitflags",
+ "x86_64",
 ]
 
 [[package]]
