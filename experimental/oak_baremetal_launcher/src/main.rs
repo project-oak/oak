@@ -21,7 +21,6 @@ use clap::Parser;
 use instance::LaunchedInstance;
 use instance_crosvm::CrosvmInstance;
 use instance_native::NativeInstance;
-use instance_qemu::QemuInstance;
 use oak_baremetal_communication_channel::client::{ClientChannelHandle, RequestEncoder};
 use std::{
     fs,
@@ -46,7 +45,6 @@ pub mod schema {
 mod instance;
 mod instance_crosvm;
 mod instance_native;
-mod instance_qemu;
 mod lookup;
 mod server;
 
@@ -76,8 +74,6 @@ pub struct NativeParams {
 
 #[derive(clap::Subcommand, Clone, Debug, PartialEq)]
 enum Mode {
-    /// Launch runtime in qemu
-    Qemu(VmParams),
     /// Launch runtime in crosvm
     Crosvm(VmParams),
     /// Launch a runtime binary directly as a child process
@@ -206,7 +202,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
 
     let mut launched_instance: Box<dyn LaunchedInstance> = match cli.mode {
-        Mode::Qemu(params) => Box::new(QemuInstance::start(params, logs_console)?),
         Mode::Crosvm(params) => Box::new(CrosvmInstance::start(params, logs_console)?),
         Mode::Native(params) => Box::new(NativeInstance::start(params)?),
     };

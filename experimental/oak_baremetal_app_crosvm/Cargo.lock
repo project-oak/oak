@@ -957,7 +957,6 @@ dependencies = [
 name = "rust-hypervisor-firmware-boot"
 version = "0.1.0"
 dependencies = [
- "bitflags",
  "log",
  "x86_64",
 ]

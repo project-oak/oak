@@ -27,12 +27,3 @@ updates:
         versions: ['0.10.0']
     labels:
       - 'kokoro:run'
-  - package-ecosystem: 'cargo'
-    directory: '/experimental/oak_baremetal_app_qemu'
-    schedule:
-      interval: 'daily'
-    ignore:
-      - dependency-name: 'linked_list_allocator'
-        versions: ['0.10.0']
-    labels:
-      - 'kokoro:run'
