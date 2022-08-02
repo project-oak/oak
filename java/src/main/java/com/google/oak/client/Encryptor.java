@@ -16,9 +16,7 @@
 
 package com.google.oak.client;
 
-import java.util.Optional;
-
-// TODO(#3063): Replace Optional<T> with Result<T> in the following.
+import com.google.oak.util.Result;
 
 /**
  * Interface representing an Encryptor. Classes implementing this interface must implement
@@ -27,15 +25,17 @@ import java.util.Optional;
 public interface Encryptor {
   /**
    * Encrypts the input byte array and returns the result as a byte array.
+   *
    * @param data the input byte array to be encrypted
-   * @return the result of encryption as a byte array wrapped in an Optional
+   * @return the result of encryption as a byte array wrapped in a {@code Result}
    */
-  Optional<byte[]> encrypt(final byte[] data);
+  Result<byte[], Exception> encrypt(final byte[] data);
 
   /**
    * Decrypts the input byte array and returns the result as a byte array.
+   *
    * @param data the input byte array to be decrypted
-   * @return the result of decryption as a byte array wrapped in an Optional
+   * @return the result of decryption as a byte array wrapped in a {@code Result}
    */
-  Optional<byte[]> decrypt(final byte[] data);
+  Result<byte[], Exception> decrypt(final byte[] data);
 }

@@ -16,6 +16,7 @@
 
 package com.google.oak.client;
 
+import com.google.oak.util.Result;
 import java.util.Optional;
 
 /**
@@ -31,13 +32,13 @@ import java.util.Optional;
  * @param T type of the responses that this client receives
  */
 public abstract class OakClient<R, T> implements AutoCloseable {
-  // TODO(#3063): Replace return type with Result<T>
   /**
    * Sends a request to a remote server and receives the response.
+   *
    * @param request the request to send to the server
-   * @return the response received from the server wrapped in an Optional
+   * @return the response received from the server wrapped in a {@code Result}
    */
-  abstract Optional<T> send(final R request);
+  abstract Result<T, Exception> send(final R request);
 
   /**
    * Abstract builder class that allows subclasses to override it, providing customized {@code
@@ -59,6 +60,7 @@ public abstract class OakClient<R, T> implements AutoCloseable {
 
     /**
      * Configure this builder to use the given {@code EvidenceProvider}.
+     *
      * @param evidenceProvider instance that can provide an {@code Evidence} instance
      * @return this builder
      */
@@ -85,16 +87,15 @@ public abstract class OakClient<R, T> implements AutoCloseable {
   // The following functional interfaces could have individually been replaced by a Supplier<T>, but
   // to allow a single class implement more than one of these interfaces, dedicated functional
   // interfaces are preferred.
-  // TODO(#3063): Replace Optional<T> with Result<T> in the following.
 
   /**
    * An interface for providing instances of {@code RpcClient}.
    */
   public interface RpcClientProvider {
     /**
-     * @return an instance of {@code RpcClient} wrapped in an Optional.
+     * @return an instance of {@code RpcClient} wrapped in a {@code Result}
      */
-    Optional<? extends RpcClient> getRpcClient();
+    Result<? extends RpcClient, Exception> getRpcClient();
   }
 
   /**
@@ -102,18 +103,17 @@ public abstract class OakClient<R, T> implements AutoCloseable {
    */
   public interface EncryptorProvider {
     /**
-     *
      * @param signingPublicKey signing public key of the server
-     * @return an instance of Encryptor wrapped in an Optional
+     * @return an instance of Encryptor wrapped in a {@code Result}
      */
-    Optional<? extends Encryptor> getEncryptor(byte[] signingPublicKey);
+    Result<? extends Encryptor, Exception> getEncryptor(byte[] signingPublicKey);
   }
 
   /**
    * An interface for providing instances of Evidence.
    *
-   * A evidence normally includes the public key part of the server's signing key, an instance of
-   * {@code EndorsementEvidence}, and optionally some server configuration information. If the
+   * <p>An evidence normally includes the public key part of the server's signing key, an instance
+   * of {@code EndorsementEvidence}, and optionally some server configuration information. If the
    * client policy requires verification of the server configuration, then the client should be
    * built with a provider that does provide server configuration.
    */
@@ -121,8 +121,8 @@ public abstract class OakClient<R, T> implements AutoCloseable {
     /**
      * Returns evidence about the trustworthiness of a remote server.
      *
-     * @return the evidence wrapped in an Optional.
+     * @return the evidence wrapped in a {@code Result}
      */
-    Optional<? extends Evidence> getEvidence();
+    Result<? extends Evidence, Exception> getEvidence();
   }
 }

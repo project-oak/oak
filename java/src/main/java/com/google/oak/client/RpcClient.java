@@ -16,7 +16,7 @@
 
 package com.google.oak.client;
 
-import java.util.Optional;
+import com.google.oak.util.Result;
 
 /**
  * A generic type representing a transport-agnostic RPC client that sends a request and receives a
@@ -24,11 +24,11 @@ import java.util.Optional;
  * and HTTP.
  */
 public interface RpcClient extends AutoCloseable {
-  // TODO(#3063): Replace return type with Result<T>.
   /**
    * Sends an array of bytes, and returns response as a byte array.
+   *
    * @param request the request as a byte array
-   * @return the response as a byte array
+   * @return the response as a byte array wrapped in an instance of {@code Result}
    */
-  abstract Optional<byte[]> send(final byte[] request);
+  abstract Result<byte[], Exception> send(final byte[] request);
 }
