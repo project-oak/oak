@@ -34,7 +34,6 @@ oak_baremetal_communication_channel = { path = "../../experimental/oak_baremetal
 oak_functions_loader = { path = "../../oak_functions/loader" }
 hashbrown = "*"
 flatbuffers = "*"
-tempfile = "*"
 
 [build-dependencies]
 oak_utils = { path = "../../oak_utils" }

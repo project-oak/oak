@@ -17,13 +17,13 @@
 use clap::Parser;
 use oak_remote_attestation::handshaker::{AttestationBehavior, EmptyAttestationVerifier};
 use oak_remote_attestation_amd::PlaceholderAmdAttestationGenerator;
-use std::os::unix::net::UnixStream;
+use std::os::unix::io::FromRawFd;
 
 #[derive(Parser, Clone, Debug)]
 #[clap(about = "Oak Functions Loader Linux UDS")]
 pub struct Opt {
-    #[clap(long, help = "UDS address to use for the communication channel")]
-    pub comms_address: std::path::PathBuf,
+    #[clap(long, help = "File descriptor use for the communication channel")]
+    pub comms_fd: i32,
 }
 
 struct Logger {}
@@ -51,11 +51,12 @@ fn main() {
     log::set_logger(&LOGGER).unwrap();
     log::set_max_level(log::LevelFilter::Debug);
     log::info!(
-        "Connecting to the launcher via the socket on: {}",
-        opt.comms_address.to_string_lossy()
+        "Connecting to the launcher via the file descriptor: {}",
+        opt.comms_fd
     );
-    let socket = UnixStream::connect(opt.comms_address)
-        .expect("Could not connect to the communication socket");
+    // Unsafe as each file descriptor must only have one owner, and Rust cannot
+    // enforce this. This should be safe however, since we only call this once.
+    let socket = unsafe { std::os::unix::net::UnixStream::from_raw_fd(opt.comms_fd) };
     let attestation_behavior =
         AttestationBehavior::create(PlaceholderAmdAttestationGenerator, EmptyAttestationVerifier);
     let channel = Box::new(socket);

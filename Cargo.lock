@@ -2902,7 +2902,6 @@ dependencies = [
  "oak_utils",
  "prost 0.10.4",
  "serde",
- "tempfile",
  "tokio",
  "tonic",
  "vsock",
