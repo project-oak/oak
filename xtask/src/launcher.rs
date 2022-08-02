@@ -32,7 +32,7 @@ use crate::internal::*;
 pub enum LauncherMode {
     Qemu,
     Crosvm,
-    Binary,
+    Native,
 }
 
 impl LauncherMode {
@@ -41,7 +41,7 @@ impl LauncherMode {
         match self {
             LauncherMode::Qemu => "oak_baremetal_app_qemu",
             LauncherMode::Crosvm => "oak_baremetal_app_crosvm",
-            LauncherMode::Binary => "oak_functions_loader_linux_uds",
+            LauncherMode::Native => "oak_functions_loader_linux_uds",
         }
     }
 
@@ -58,7 +58,7 @@ impl LauncherMode {
                 self.runtime_crate_path(),
                 self.runtime_crate_name()
             ),
-            LauncherMode::Binary => format!("./target/debug/{}", self.runtime_crate_name()),
+            LauncherMode::Native => format!("./target/debug/{}", self.runtime_crate_name()),
         }
     }
 
@@ -75,8 +75,8 @@ impl LauncherMode {
                 format!("--app-binary={}", &self.runtime_binary_path()),
                 format!("--vmm-binary={}", "/usr/local/cargo/bin/crosvm"),
             ],
-            LauncherMode::Binary => vec![
-                "binary".to_string(),
+            LauncherMode::Native => vec![
+                "native".to_string(),
                 format!("--app-binary={}", &self.runtime_binary_path()),
             ],
         }
