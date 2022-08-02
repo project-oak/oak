@@ -14,24 +14,34 @@
 // limitations under the License.
 //
 
-use crate::{instance::LaunchedInstance, NativeParams};
+use crate::{instance::LaunchedInstance, path_exists};
 use anyhow::Result;
 use async_trait::async_trait;
+use clap::Parser;
 use command_fds::tokio::CommandFdAsyncExt;
 use log::info;
 use std::{
     net::Shutdown,
     os::unix::{io::AsRawFd, net::UnixStream},
+    path::PathBuf,
 };
 
+/// Parameters used for launching the runtime as a native binary
+#[derive(Parser, Clone, Debug, PartialEq)]
+pub struct Params {
+    /// Path to the runtime binary
+    #[clap(long, parse(from_os_str), validator = path_exists)]
+    pub app_binary: PathBuf,
+}
+
 /// An instance of the runtime running directly as a linux binary
-pub struct NativeInstance {
+pub struct Instance {
     comms_host: UnixStream,
     instance: tokio::process::Child,
 }
 
-impl NativeInstance {
-    pub fn start(params: NativeParams) -> Result<Self> {
+impl Instance {
+    pub fn start(params: Params) -> Result<Self> {
         let (comms_guest, comms_host) = UnixStream::pair()?;
 
         let mut cmd = tokio::process::Command::new(params.app_binary);
@@ -53,7 +63,7 @@ impl NativeInstance {
 }
 
 #[async_trait]
-impl LaunchedInstance for NativeInstance {
+impl LaunchedInstance for Instance {
     async fn wait(&mut self) -> Result<std::process::ExitStatus> {
         self.instance.wait().await.map_err(anyhow::Error::from)
     }

@@ -14,15 +14,17 @@
 // limitations under the License.
 //
 
-use crate::{instance::LaunchedInstance, VmParams};
+use crate::{instance::LaunchedInstance, path_exists};
 use anyhow::Result;
 use async_trait::async_trait;
+use clap::Parser;
 use command_fds::tokio::CommandFdAsyncExt;
 use futures::TryFutureExt;
 use log::info;
 use std::{
     net::Shutdown,
     os::unix::{io::AsRawFd, net::UnixStream},
+    path::PathBuf,
     process::Stdio,
 };
 use tokio::time::{sleep, timeout, Duration};
@@ -34,13 +36,29 @@ const VSOCK_GUEST_CID: u32 = 3;
 // The guest VM virtio vsock port.
 const VSOCK_GUEST_PORT: u32 = 1024;
 
-pub struct CrosvmInstance {
+/// Parameters used for launching VM instances
+#[derive(Parser, Clone, Debug, PartialEq)]
+pub struct Params {
+    /// Path to the VMM binary to execute.
+    #[clap(long, parse(from_os_str), validator = path_exists)]
+    pub vmm_binary: PathBuf,
+
+    /// Path to the binary to load into the VM.
+    #[clap(long, parse(from_os_str), validator = path_exists)]
+    pub app_binary: PathBuf,
+
+    /// Port to use for debugging with gdb
+    #[clap(long = "gdb")]
+    pub gdb: Option<u16>,
+}
+
+pub struct Instance {
     console: UnixStream,
     instance: tokio::process::Child,
 }
 
-impl CrosvmInstance {
-    pub fn start(params: VmParams, console: UnixStream) -> Result<Self> {
+impl Instance {
+    pub fn start(params: Params, console: UnixStream) -> Result<Self> {
         let mut cmd = tokio::process::Command::new(params.vmm_binary);
 
         cmd.stderr(Stdio::inherit());
@@ -73,7 +91,7 @@ impl CrosvmInstance {
 
         info!("Executing: {:?}", cmd);
 
-        Ok(CrosvmInstance {
+        Ok(Self {
             instance: cmd.spawn()?,
             console,
         })
@@ -81,7 +99,7 @@ impl CrosvmInstance {
 }
 
 #[async_trait]
-impl LaunchedInstance for CrosvmInstance {
+impl LaunchedInstance for Instance {
     async fn wait(&mut self) -> Result<std::process::ExitStatus> {
         self.instance.wait().await.map_err(anyhow::Error::from)
     }
