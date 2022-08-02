@@ -219,7 +219,7 @@
     }
 }
 
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">run_vm_test</span>() -&gt; <span class="ident">Step</span> {
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">run_launcher_test</span>() -&gt; <span class="ident">Step</span> {
     <span class="ident">Step::Multiple</span> {
         <span class="ident">name</span>: <span class="string">&quot;VM end-to-end test&quot;</span>.<span class="ident">to_string</span>(),
         <span class="ident">steps</span>: <span class="ident">LauncherMode::iter</span>().<span class="ident">map</span>(<span class="ident">run_variant</span>).<span class="ident">collect</span>(),
