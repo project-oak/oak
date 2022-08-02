@@ -5,10 +5,13 @@ authors = ["Andri Saar <andrisaar@google.com>"]
 edition = "2021"
 license = "Apache-2.0"
 
+[features]
+default = ["vsock_channel"]
+vsock_channel = ["oak_baremetal_kernel/vsock_channel"]
+simple_io_channel = ["oak_baremetal_kernel/simple_io_channel"]
+
 [dependencies]
-oak_baremetal_kernel = { path = "../../experimental/oak_baremetal_kernel", features = [
-  "vsock_channel"
-] }
+oak_baremetal_kernel = { path = "../../experimental/oak_baremetal_kernel", default-features = false }
 static_assertions = "*"
 
 [patch.crates-io]
