@@ -25,14 +25,15 @@ use std::{
 
 /// An instance of the runtime running directly as a linux binary
 pub struct BinaryInstance {
+    tempdir: Option<tempfile::TempDir>,
     comms_host: UnixStream,
     instance: tokio::process::Child,
 }
 
 impl BinaryInstance {
     pub fn start(params: BinaryParams) -> Result<Self> {
-        let dir = tempfile::tempdir().context("failed to create temp dir")?;
-        let socket_path = dir.path().join("comms_socket");
+        let tempdir = tempfile::tempdir().context("failed to create temp dir")?;
+        let socket_path = tempdir.path().join("comms_socket");
         let unix_listener =
             UnixListener::bind(&socket_path).context("Could not create the unix socket")?;
 
@@ -55,6 +56,7 @@ impl BinaryInstance {
             .context("Failed at accepting a connection on the unix listener")?;
 
         Ok(Self {
+            tempdir: Some(tempdir),
             instance,
             comms_host,
         })
@@ -70,6 +72,11 @@ impl LaunchedInstance for BinaryInstance {
     async fn kill(mut self: Box<Self>) -> Result<std::process::ExitStatus> {
         info!("Cleaning up and shutting down.");
         self.comms_host.shutdown(Shutdown::Both)?;
+        self.tempdir
+            .take()
+            .ok_or_else(|| anyhow::Error::msg("failed to take the tempdir"))?
+            .close()
+            .context("failed delete the socket file")?;
         self.instance.start_kill()?;
         self.wait().await
     }
