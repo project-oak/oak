@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-use crate::{instance::LaunchedInstance, BinaryParams};
+use crate::{instance::LaunchedInstance, NativeParams};
 use anyhow::{Context, Result};
 use async_trait::async_trait;
 use log::info;
@@ -24,14 +24,14 @@ use std::{
 };
 
 /// An instance of the runtime running directly as a linux binary
-pub struct BinaryInstance {
+pub struct NativeInstance {
     tempdir: Option<tempfile::TempDir>,
     comms_host: UnixStream,
     instance: tokio::process::Child,
 }
 
-impl BinaryInstance {
-    pub fn start(params: BinaryParams) -> Result<Self> {
+impl NativeInstance {
+    pub fn start(params: NativeParams) -> Result<Self> {
         let tempdir = tempfile::tempdir().context("failed to create temp dir")?;
         let socket_path = tempdir.path().join("comms_socket");
         let unix_listener =
@@ -64,7 +64,7 @@ impl BinaryInstance {
 }
 
 #[async_trait]
-impl LaunchedInstance for BinaryInstance {
+impl LaunchedInstance for NativeInstance {
     async fn wait(&mut self) -> Result<std::process::ExitStatus> {
         self.instance.wait().await.map_err(anyhow::Error::from)
     }

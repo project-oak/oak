@@ -19,8 +19,8 @@
 use anyhow::Context;
 use clap::Parser;
 use instance::LaunchedInstance;
-use instance_binary::BinaryInstance;
 use instance_crosvm::CrosvmInstance;
+use instance_native::NativeInstance;
 use instance_qemu::QemuInstance;
 use oak_baremetal_communication_channel::{
     client::{ClientChannelHandle, RequestEncoder},
@@ -35,8 +35,8 @@ use std::{
 use tokio::signal;
 
 mod instance;
-mod instance_binary;
 mod instance_crosvm;
+mod instance_native;
 mod instance_qemu;
 mod lookup;
 mod server;
@@ -57,9 +57,9 @@ pub struct VmParams {
     pub gdb: Option<u16>,
 }
 
-/// Parameters used for launching the runtime as a binary
+/// Parameters used for launching the runtime as a native binary
 #[derive(Parser, Clone, Debug, PartialEq)]
-pub struct BinaryParams {
+pub struct NativeParams {
     /// Path to the runtime binary
     #[clap(long, parse(from_os_str), validator = path_exists)]
     pub app_binary: PathBuf,
@@ -72,7 +72,7 @@ enum Mode {
     /// Launch runtime in crosvm
     Crosvm(VmParams),
     /// Launch a runtime binary directly as a child process
-    Binary(BinaryParams),
+    Native(NativeParams),
 }
 
 #[derive(Parser, Debug)]
@@ -199,7 +199,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut launched_instance: Box<dyn LaunchedInstance> = match cli.mode {
         Mode::Qemu(params) => Box::new(QemuInstance::start(params, logs_console)?),
         Mode::Crosvm(params) => Box::new(CrosvmInstance::start(params, logs_console)?),
-        Mode::Binary(params) => Box::new(BinaryInstance::start(params)?),
+        Mode::Native(params) => Box::new(NativeInstance::start(params)?),
     };
 
     let comms = launched_instance.create_comms_channel().await?;
