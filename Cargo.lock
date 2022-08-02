@@ -3085,6 +3085,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "oak_functions_loader_linux_native"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "clap 3.2.10",
+ "log",
+ "oak_baremetal_communication_channel",
+ "oak_baremetal_runtime",
+ "oak_remote_attestation",
+ "oak_remote_attestation_amd",
+]
+
+[[package]]
 name = "oak_functions_loader_linux_vsock"
 version = "0.1.0"
 dependencies = [

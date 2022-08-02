@@ -18,6 +18,7 @@ members = [
   "experimental/oak_baremetal_channel",
   "experimental/oak_baremetal_kernel",
   "experimental/oak_baremetal_launcher",
+  "experimental/oak_functions_loader_linux_native",
   "experimental/oak_functions_loader_linux_vsock",
   "experimental/oak_baremetal_runtime",
   "experimental/oak_baremetal_simple_io",
