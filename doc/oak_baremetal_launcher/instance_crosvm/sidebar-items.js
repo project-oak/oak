@@ -1,1 +1,0 @@
-initSidebarItems({"constant":[["VSOCK_GUEST_CID",""],["VSOCK_GUEST_PORT",""]],"struct":[["CrosvmInstance",""]]});
