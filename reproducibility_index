@@ -1,2 +1,2 @@
-713ffbe902b3d21aa8f1f64440540b0041d23030705209fe935aaad12e32bcd1  ./target/x86_64-unknown-linux-musl/release/oak_functions_loader_base
-5ca6b5f0688613103186929aed32f8910359004c056233f7dd2bdc1fc38c4cca  ./target/x86_64-unknown-linux-musl/release/oak_functions_loader_unsafe
+5ee5f112f04c6424487ca9e03793a76f472b2b0a86d0462eb84a191b599c4878  ./target/x86_64-unknown-linux-musl/release/oak_functions_loader_base
+e1f975c0d022fef2b514c3c8734eadb47c2409abc8d75c55858783d55a684a29  ./target/x86_64-unknown-linux-musl/release/oak_functions_loader_unsafe
