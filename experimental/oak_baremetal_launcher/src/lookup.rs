@@ -14,9 +14,9 @@
 // limitations under the License.
 //
 
+use crate::schema;
 use anyhow::anyhow;
 use hashbrown::HashMap;
-use oak_baremetal_communication_channel::schema;
 use std::fs;
 
 pub fn encode_lookup_data<'a>(

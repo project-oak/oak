@@ -23,19 +23,6 @@ pub mod client;
 
 pub mod server;
 
-pub mod schema {
-    #![allow(clippy::derivable_impls, clippy::needless_borrow)]
-    #![allow(dead_code, unused_imports)]
-
-    include!(concat!(env!("OUT_DIR"), "/schema_generated.rs"));
-    include!(concat!(env!("OUT_DIR"), "/schema_services_servers.rs"));
-    #[cfg(feature = "client")]
-    include!(concat!(
-        env!("OUT_DIR"),
-        "/schema_services_async_clients.rs"
-    ));
-}
-
 mod frame;
 mod message;
 

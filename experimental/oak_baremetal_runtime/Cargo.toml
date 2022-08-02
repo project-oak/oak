@@ -25,3 +25,7 @@ oak_functions_workload_logging = { path = "../../oak_functions/workload_logging"
 oak_remote_attestation = { path = "../../remote_attestation/rust", default-features = false }
 oak_remote_attestation_sessions = { path = "../../remote_attestation_sessions", default-features = false }
 oak_logger = { path = "../../oak_functions/logger" }
+
+[build-dependencies]
+oak_idl_gen_services = { path = "../../oak_idl_gen_services" }
+oak_idl_gen_structs = { path = "../../oak_idl_gen_structs" }

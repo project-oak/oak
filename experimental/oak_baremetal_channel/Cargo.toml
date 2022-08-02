@@ -16,7 +16,3 @@ oak_idl = { path = "../../oak_idl" }
 flatbuffers = { version = "*", features = ["no_std"], default-features = false }
 static_assertions = "*"
 bitflags = "*"
-
-[build-dependencies]
-oak_idl_gen_services = { path = "../../oak_idl_gen_services" }
-oak_idl_gen_structs = { path = "../../oak_idl_gen_structs" }
