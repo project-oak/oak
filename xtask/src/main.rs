@@ -114,7 +114,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 fn match_cmd(opt: &Opt) -> Step {
     match opt.cmd {
-        Command::RunVmTest => launcher::run_vm_test(),
+        Command::RunLauncherTest => launcher::run_launcher_test(),
         Command::RunOakFunctionsExamples(ref run_opt) => {
             run_oak_functions_examples(run_opt, &opt.scope)
         }
