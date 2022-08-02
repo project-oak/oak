@@ -19,6 +19,7 @@ package com.google.oak.client;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
+import com.google.oak.evidence.Evidence;
 import com.google.oak.util.Result;
 import java.nio.charset.StandardCharsets;
 import java.util.Optional;
@@ -38,7 +39,7 @@ public class OakClientTest {
     assertEquals("Hello!", response.success().get());
   }
 
-  private static class PilotOakClient extends OakClient<String, String> {
+  private static class PilotOakClient implements OakClient<String, String> {
     final PilotRpcClient rpcClient;
     final Encryptor encryptor;
 
@@ -55,7 +56,7 @@ public class OakClientTest {
     }
 
     @Override
-    Result<String, Exception> send(final String request) {
+    public Result<String, Exception> send(final String request) {
       return encryptor.encrypt(request.getBytes())
           .andThen(rpcClient::send)
           .andThen(encryptor::decrypt)
@@ -77,7 +78,7 @@ public class OakClientTest {
 
   private static class PilotAttestationClient
       implements OakClient.EncryptorProvider<Encryptor>,
-          OakClient.RpcClientProvider<PilotRpcClient> {
+                 OakClient.RpcClientProvider<PilotRpcClient> {
     final PilotRpcClient rpcClient;
     final Encryptor encryptor = new Encryptor() {
       @Override
@@ -101,7 +102,7 @@ public class OakClientTest {
     }
 
     @Override
-    public Result<?PilotRpcClient, Exception> getRpcClient() {
+    public Result<PilotRpcClient, Exception> getRpcClient() {
       return Result.success(rpcClient);
     }
 

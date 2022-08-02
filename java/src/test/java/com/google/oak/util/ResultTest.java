@@ -112,4 +112,37 @@ public class ResultTest {
     assertEquals(ERR_MSG, result.error().get());
     assertTrue(result.success().isEmpty());
   }
+
+  @Test
+  public void testMergeSuccessAndSuccess() {
+    Result<Integer, String> first = Result.success(1);
+    Result<Integer, String> second = Result.success(2);
+
+    Result<Integer, String> result = Result.merge(first, second, (f, s) -> f + s);
+    assertTrue(result.isSuccess());
+    assertEquals(3, result.success().get().intValue());
+    assertTrue(result.error().isEmpty());
+  }
+
+  @Test
+  public void testMergeSuccessAndError() {
+    Result<Integer, String> first = Result.success(1);
+    Result<Integer, String> second = Result.error(ERR_MSG);
+
+    Result<Integer, String> result = Result.merge(first, second, (f, s) -> f + s);
+    assertTrue(result.isError());
+    assertEquals(ERR_MSG, result.error().get());
+    assertTrue(result.success().isEmpty());
+  }
+
+  @Test
+  public void testMergeErrorAndError() {
+    Result<Integer, String> first = Result.error(ERR_MSG);
+    Result<Integer, String> second = Result.error(ERR_MSG + ERR_MSG);
+
+    Result<Integer, String> result = Result.merge(first, second, (f, s) -> f + s);
+    assertTrue(result.isError());
+    assertEquals(ERR_MSG, result.error().get());
+    assertTrue(result.success().isEmpty());
+  }
 }

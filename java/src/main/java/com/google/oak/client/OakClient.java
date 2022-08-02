@@ -16,8 +16,8 @@
 
 package com.google.oak.client;
 
+import com.google.oak.evidence.Evidence;
 import com.google.oak.util.Result;
-import java.util.Optional;
 
 /**
  * Abstract client for sending and receiving encrypted messages to a server. We recommend concrete
@@ -31,7 +31,7 @@ import java.util.Optional;
  * @param R type of the requests that this client sends
  * @param T type of the responses that this client receives
  */
-public abstract class OakClient<R, T> implements AutoCloseable {
+public interface OakClient<R, T> extends AutoCloseable {
   /**
    * Sends a request to a remote server and receives the response.
    *
@@ -64,8 +64,8 @@ public abstract class OakClient<R, T> implements AutoCloseable {
   /**
    * An interface for providing instances of Evidence.
    *
-   * <p>A evidence normally includes the public key part of the server's signing key, an instance of
-   * {@code EndorsementEvidence}, and optionally some server configuration information. If the
+   * <p>An evidence normally includes the public key part of the server's signing key, an instance
+   * of {@code EndorsementEvidence}, and optionally some server configuration information. If the
    * client policy requires verification of the server configuration, then the client should be
    * built with a provider that does provide server configuration.
    */
