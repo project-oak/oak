@@ -38,6 +38,6 @@ cargo build --package oak_functions_loader_linux_uds \
 && RUST_LOG=debug cargo run --package oak_baremetal_launcher -- \
 --wasm experimental/oak_baremetal_launcher/key_value_lookup.wasm \
 --lookup-data experimental/oak_baremetal_launcher/mock_lookup_data \
-binary \
+native \
 --app-binary target/debug/oak_functions_loader_linux_uds
 ```
