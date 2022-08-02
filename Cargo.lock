@@ -2296,9 +2296,9 @@ checksum = "7fc7aa29613bd6a620df431842069224d8bc9011086b1db4c0e0cd47fa03ec9a"
 
 [[package]]
 name = "libm"
-version = "0.2.2"
+version = "0.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "33a33a362ce288760ec6a508b94caaec573ae7d3bbbd91b87aa0bad4456839db"
+checksum = "da83a57f3f5ba3680950aa3cbc806fc297bc0b289d42e8942ed528ace71b8145"
 
 [[package]]
 name = "linked-hash-map"
@@ -2804,7 +2804,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "578ede34cf02f8924ab9447f50c28075b4d3e5b269972345e7e0372b38c6cdcd"
 dependencies = [
  "autocfg",
- "libm 0.2.2",
+ "libm 0.2.3",
 ]
 
 [[package]]
@@ -2863,7 +2863,7 @@ dependencies = [
  "atomic_refcell",
  "getrandom 0.2.7",
  "lazy_static",
- "libm 0.2.2",
+ "libm 0.2.3",
  "linked_list_allocator",
  "log",
  "oak_baremetal_communication_channel",
@@ -6176,7 +6176,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ca00c5147c319a8ec91ec1a0edbec31e566ce2c9cc93b3f9bb86a9efd0eb795d"
 dependencies = [
  "downcast-rs",
- "libm 0.2.2",
+ "libm 0.2.3",
  "memory_units",
  "num-rational 0.2.4",
  "num-traits 0.2.15",
