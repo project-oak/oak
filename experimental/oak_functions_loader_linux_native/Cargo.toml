@@ -1,5 +1,5 @@
 [package]
-name = "oak_functions_loader_linux_uds"
+name = "oak_functions_loader_linux_native"
 version = "0.1.0"
 authors = ["Juliette Pretot <julsh@google.com>"]
 edition = "2021"

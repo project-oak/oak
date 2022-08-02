@@ -41,7 +41,7 @@ impl LauncherMode {
         match self {
             LauncherMode::Qemu => "oak_baremetal_app_qemu",
             LauncherMode::Crosvm => "oak_baremetal_app_crosvm",
-            LauncherMode::Native => "oak_functions_loader_linux_uds",
+            LauncherMode::Native => "oak_functions_loader_linux_native",
         }
     }
 
