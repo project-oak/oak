@@ -74,7 +74,7 @@ impl LauncherMode {
     }
 }
 
-pub fn run_vm_test() -> Step {
+pub fn run_launcher_test() -> Step {
     Step::Multiple {
         name: "VM end-to-end test".to_string(),
         steps: LauncherMode::iter().map(run_variant).collect(),

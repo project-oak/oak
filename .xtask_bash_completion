@@ -54,14 +54,14 @@ _xtask() {
             run-ci)
                 cmd+="__run__ci"
                 ;;
+            run-launcher-test)
+                cmd+="__run__launcher__test"
+                ;;
             run-oak-functions-examples)
                 cmd+="__run__oak__functions__examples"
                 ;;
             run-tests)
                 cmd+="__run__tests"
-                ;;
-            run-vm-test)
-                cmd+="__run__vm__test"
                 ;;
             *)
                 ;;
@@ -70,7 +70,7 @@ _xtask() {
 
     case "${cmd}" in
         xtask)
-            opts="-h --help --dry-run --logs --keep-going --scope run-vm-test run-oak-functions-examples build-oak-functions-example build-oak-functions-server-variants format check-format run-tests run-cargo-clippy run-cargo-tests run-bazel-tests run-cargo-fuzz run-cargo-deny run-cargo-udeps run-ci run-cargo-clean completion help"
+            opts="-h --help --dry-run --logs --keep-going --scope run-launcher-test run-oak-functions-examples build-oak-functions-example build-oak-functions-server-variants format check-format run-tests run-cargo-clippy run-cargo-tests run-bazel-tests run-cargo-fuzz run-cargo-deny run-cargo-udeps run-ci run-cargo-clean completion help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 1 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -351,6 +351,20 @@ _xtask() {
             COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
             return 0
             ;;
+        xtask__run__launcher__test)
+            opts="-h --help"
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
         xtask__run__oak__functions__examples)
             opts="-h --application-variant --example-name --client-variant --client-rust-toolchain --client-rust-target --server-variant --server-rust-toolchain --server-rust-target --run-server --client-additional-args --server-additional-args --build-docker --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
@@ -410,20 +424,6 @@ _xtask() {
             return 0
             ;;
         xtask__run__tests)
-            opts="-h --help"
-            if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
-                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
-                return 0
-            fi
-            case "${prev}" in
-                *)
-                    COMPREPLY=()
-                    ;;
-            esac
-            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
-            return 0
-            ;;
-        xtask__run__vm__test)
             opts="-h --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
