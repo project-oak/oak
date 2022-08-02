@@ -18,9 +18,7 @@
 
 use anyhow::Context;
 use clap::Parser;
-use instance::LaunchedInstance;
-use instance_crosvm::CrosvmInstance;
-use instance_native::NativeInstance;
+use instance::{crosvm, native, LaunchedInstance};
 use oak_baremetal_communication_channel::client::{ClientChannelHandle, RequestEncoder};
 use std::{
     fs,
@@ -43,41 +41,15 @@ pub mod schema {
 }
 
 mod instance;
-mod instance_crosvm;
-mod instance_native;
 mod lookup;
 mod server;
-
-/// Parameters used for launching VM instances
-#[derive(Parser, Clone, Debug, PartialEq)]
-pub struct VmParams {
-    /// Path to the VMM binary to execute.
-    #[clap(long, parse(from_os_str), validator = path_exists)]
-    pub vmm_binary: PathBuf,
-
-    /// Path to the binary to load into the VM.
-    #[clap(long, parse(from_os_str), validator = path_exists)]
-    pub app_binary: PathBuf,
-
-    /// Port to use for debugging with gdb
-    #[clap(long = "gdb")]
-    pub gdb: Option<u16>,
-}
-
-/// Parameters used for launching the runtime as a native binary
-#[derive(Parser, Clone, Debug, PartialEq)]
-pub struct NativeParams {
-    /// Path to the runtime binary
-    #[clap(long, parse(from_os_str), validator = path_exists)]
-    pub app_binary: PathBuf,
-}
 
 #[derive(clap::Subcommand, Clone, Debug, PartialEq)]
 enum Mode {
     /// Launch runtime in crosvm
-    Crosvm(VmParams),
+    Crosvm(crosvm::Params),
     /// Launch a runtime binary directly as a child process
-    Native(NativeParams),
+    Native(native::Params),
 }
 
 #[derive(Parser, Debug)]
@@ -202,8 +174,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
 
     let mut launched_instance: Box<dyn LaunchedInstance> = match cli.mode {
-        Mode::Crosvm(params) => Box::new(CrosvmInstance::start(params, logs_console)?),
-        Mode::Native(params) => Box::new(NativeInstance::start(params)?),
+        Mode::Crosvm(params) => Box::new(crosvm::Instance::start(params, logs_console)?),
+        Mode::Native(params) => Box::new(native::Instance::start(params)?),
     };
 
     let comms = launched_instance.create_comms_channel().await?;
