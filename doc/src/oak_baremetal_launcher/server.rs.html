@@ -122,7 +122,6 @@
 <span id="117">117</span>
 <span id="118">118</span>
 <span id="119">119</span>
-<span id="120">120</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2022 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -139,10 +138,9 @@
 <span class="comment">// limitations under the License.</span>
 <span class="comment">//</span>
 
-<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::Client</span>;
+<span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">schema</span>, <span class="ident">Client</span>};
 <span class="kw">use</span> <span class="ident">bmrng::unbounded::UnboundedRequestSender</span>;
 <span class="kw">use</span> <span class="ident">futures::Future</span>;
-<span class="kw">use</span> <span class="ident">oak_baremetal_communication_channel::schema</span>;
 <span class="kw">use</span> <span class="ident">oak_remote_attestation_sessions</span>::{<span class="ident">SessionId</span>, <span class="ident">SESSION_ID_LENGTH</span>};
 <span class="kw">use</span> <span class="ident">std::net::SocketAddr</span>;
 <span class="kw">use</span> <span class="ident">tonic</span>::{<span class="ident">transport::Server</span>, <span class="ident">Request</span>, <span class="ident">Response</span>};

@@ -1,1 +1,1 @@
-initSidebarItems({"mod":[["framing",""]]});
+initSidebarItems({"mod":[["framing",""],["schema",""]]});

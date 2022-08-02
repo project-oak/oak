@@ -206,12 +206,6 @@
 <span id="201">201</span>
 <span id="202">202</span>
 <span id="203">203</span>
-<span id="204">204</span>
-<span id="205">205</span>
-<span id="206">206</span>
-<span id="207">207</span>
-<span id="208">208</span>
-<span id="209">209</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2022 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -231,13 +225,13 @@
 <span class="kw">use</span> <span class="kw">crate</span>::{
     <span class="ident">logger::StandaloneLogger</span>,
     <span class="ident">remote_attestation</span>::{<span class="ident">AttestationHandler</span>, <span class="ident">AttestationSessionHandler</span>},
+    <span class="ident">schema</span>,
+    <span class="ident">schema::TrustedRuntime</span>,
     <span class="ident">wasm</span>,
 };
 <span class="kw">use</span> <span class="ident">alloc</span>::{<span class="ident">boxed::Box</span>, <span class="ident">sync::Arc</span>};
 <span class="kw">use</span> <span class="ident">anyhow::Context</span>;
 <span class="kw">use</span> <span class="ident">oak_baremetal_communication_channel</span>::{
-    <span class="ident">schema</span>,
-    <span class="ident">schema::TrustedRuntime</span>,
     <span class="ident">server</span>::{<span class="ident">message_from_response_and_id</span>, <span class="ident">ServerChannelHandle</span>},
     <span class="ident">Channel</span>,
 };
@@ -278,10 +272,7 @@
     <span class="kw">fn</span> <span class="ident">initialize</span>(
         <span class="kw-2">&amp;mut</span> <span class="self">self</span>,
         <span class="ident">initialization</span>: <span class="kw-2">&amp;</span><span class="ident">schema::Initialization</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>
-        <span class="ident">oak_idl::utils::OwnedFlatbuffer</span><span class="op">&lt;</span><span class="ident">oak_baremetal_communication_channel::schema::Empty</span><span class="op">&gt;</span>,
-        <span class="ident">oak_idl::Status</span>,
-    <span class="op">&gt;</span> {
+    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">oak_idl::utils::OwnedFlatbuffer</span><span class="op">&lt;</span><span class="ident"><span class="kw">crate</span>::schema::Empty</span><span class="op">&gt;</span>, <span class="ident">oak_idl::Status</span><span class="op">&gt;</span> {
         <span class="kw">match</span> <span class="kw-2">&amp;mut</span> <span class="self">self</span>.<span class="ident">initialization_state</span> {
             <span class="ident">InitializationState::Initialized</span>(<span class="ident">_attestation_handler</span>) =&gt; <span class="prelude-val">Err</span>(<span class="ident">oak_idl::Status::new</span>(
                 <span class="ident">oak_idl::StatusCode::FailedPrecondition</span>,
@@ -362,10 +353,7 @@
     <span class="kw">fn</span> <span class="ident">update_lookup_data</span>(
         <span class="kw-2">&amp;mut</span> <span class="self">self</span>,
         <span class="ident">lookup_data</span>: <span class="kw-2">&amp;</span><span class="ident">schema::LookupData</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>
-        <span class="ident">oak_idl::utils::OwnedFlatbuffer</span><span class="op">&lt;</span><span class="ident">oak_baremetal_communication_channel::schema::Empty</span><span class="op">&gt;</span>,
-        <span class="ident">oak_idl::Status</span>,
-    <span class="op">&gt;</span> {
+    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">oak_idl::utils::OwnedFlatbuffer</span><span class="op">&lt;</span><span class="ident"><span class="kw">crate</span>::schema::Empty</span><span class="op">&gt;</span>, <span class="ident">oak_idl::Status</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">data</span> <span class="op">=</span> <span class="ident">lookup_data</span>
             .<span class="ident">items</span>()
             .<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">oak_idl::Status::new</span>(<span class="ident">oak_idl::StatusCode::InvalidArgument</span>))<span class="question-mark">?</span>
