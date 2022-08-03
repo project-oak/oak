@@ -26,8 +26,8 @@ import java.util.function.Function;
  * fail and produce an error of type {@code E}. An instance of {@code Result}
  * can encapsulate both outcomes.
  *
- * <p>The main invariant that instances of this class maintain is that each object always either
- * contains a non-null success value or a non-null error value.
+ * <p>The main invariant that instances of this class maintain is that each object either
+ * contains a nonnull success value or a nonnull error value.
  */
 public class Result<R, E> {
   private final Optional<R> success;
@@ -119,8 +119,8 @@ public class Result<R, E> {
   }
 
   /**
-   * Applied the function on the success value, if one is present, and flattens the result.
-   * Otherwise, returns the error.
+   * Applies {@code function} on the success value, if one is present, and flattens the result.
+   * Otherwise, returns a {@code Result} containing the error value.
    *
    * <p>This function can be used for composing operations that themselves return a {@code Result}.
    *

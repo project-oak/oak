@@ -42,3 +42,12 @@ java_test(
         ":util",
     ],
 )
+
+java_test(
+    name = "util_test",
+    srcs = glob(["src/test/java/com/google/oak/util/*.java"]),
+    test_class = "com.google.oak.util.ResultTest",
+    deps = [
+        ":util",
+    ],
+)
