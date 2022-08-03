@@ -19,6 +19,7 @@ package com.google.oak.client;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
+import com.google.oak.util.Result;
 import java.nio.charset.StandardCharsets;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -33,9 +34,9 @@ public class OakClientTest {
   public void testSend() {
     PilotAttestationClient attestationClient = new PilotAttestationClient();
     PilotOakClient oakClient = new PilotOakClient.Builder(attestationClient).build();
-    Optional<String> response = oakClient.send("Hello!");
-    assertTrue(response.isPresent());
-    assertEquals("Hello!", response.get());
+    Result<String, Exception> response = oakClient.send("Hello!");
+    assertTrue(response.isSuccess());
+    assertEquals("Hello!", response.success().get());
   }
 
   private static class PilotOakClient extends OakClient<String, String> {
@@ -45,8 +46,8 @@ public class OakClientTest {
     PilotOakClient(final Builder builder) {
       byte[] signingPublicKey = builder.attestationClient.verifyEvidence(new Evidence() {});
       // In reality implementations of OakClient must handle empty Optionals and unexpected types.
-      rpcClient = (PilotRpcClient) builder.rpcClientProvider.getRpcClient().get();
-      encryptor = builder.encryptorProvider.getEncryptor(signingPublicKey).get();
+      rpcClient = (PilotRpcClient) builder.rpcClientProvider.getRpcClient().success().get();
+      encryptor = builder.encryptorProvider.getEncryptor(signingPublicKey).success().get();
     }
 
     @Override
@@ -55,15 +56,16 @@ public class OakClientTest {
     }
 
     @Override
-    Optional<String> send(final String request) {
+    Result<String, Exception> send(final String request) {
       return encryptor.encrypt(request.getBytes())
-          .flatMap(rpcClient::send)
-          .flatMap(encryptor::decrypt)
+          .andThen(rpcClient::send)
+          .andThen(encryptor::decrypt)
           .map(b -> new String(b, StandardCharsets.UTF_8));
     }
 
     static class Builder extends OakClient.Builder<String, String, Builder> {
       final PilotAttestationClient attestationClient;
+
       Builder(final PilotAttestationClient attestationClient) {
         super(attestationClient, attestationClient);
         this.attestationClient = attestationClient;
@@ -86,13 +88,13 @@ public class OakClientTest {
     final PilotRpcClient rpcClient;
     final Encryptor encryptor = new Encryptor() {
       @Override
-      public Optional<byte[]> encrypt(final byte[] data) {
-        return Optional.of(data);
+      public Result<byte[], Exception> encrypt(final byte[] data) {
+        return Result.success(data);
       }
 
       @Override
-      public Optional<byte[]> decrypt(final byte[] data) {
-        return Optional.of(data);
+      public Result<byte[], Exception> decrypt(final byte[] data) {
+        return Result.success(data);
       }
     };
 
@@ -106,16 +108,16 @@ public class OakClientTest {
     }
 
     @Override
-    public Optional<? extends RpcClient> getRpcClient() {
-      return Optional.of(rpcClient);
+    public Result<? extends RpcClient, Exception> getRpcClient() {
+      return Result.success(rpcClient);
     }
 
     @Override
-    public Optional<? extends Encryptor> getEncryptor(byte[] unusedSigningPublicKey) {
+    public Result<? extends Encryptor, Exception> getEncryptor(byte[] unusedSigningPublicKey) {
       if (unusedSigningPublicKey.length > 0) {
-        return Optional.of(encryptor);
+        return Result.success(encryptor);
       }
-      return Optional.empty();
+      return Result.error(new IllegalArgumentException("public key cannot be empty"));
     }
   }
 
@@ -126,8 +128,8 @@ public class OakClientTest {
     }
 
     @Override
-    public Optional<byte[]> send(final byte[] request) {
-      return Optional.ofNullable(request);
+    public Result<byte[], Exception> send(final byte[] request) {
+      return Result.success(request);
     }
   }
 }
