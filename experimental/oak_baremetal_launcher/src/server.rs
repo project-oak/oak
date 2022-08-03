@@ -14,8 +14,7 @@
 // limitations under the License.
 //
 
-use crate::{schema, Client};
-use bmrng::unbounded::UnboundedRequestSender;
+use crate::{channel::ConnectorHandle, schema};
 use futures::Future;
 use oak_remote_attestation_sessions::{SessionId, SESSION_ID_LENGTH};
 use std::net::SocketAddr;
@@ -81,7 +80,7 @@ fn decode_response(encoded_response: Vec<u8>) -> Result<UnaryResponse, tonic::St
 }
 
 pub struct EchoImpl {
-    request_dispatcher: UnboundedRequestSender<oak_idl::Request, Result<Vec<u8>, oak_idl::Status>>,
+    connector_handle: ConnectorHandle,
 }
 
 #[tonic::async_trait]
@@ -94,9 +93,7 @@ impl UnarySession for EchoImpl {
         let encoded_request = encode_request(request)
             .map_err(|err| tonic::Status::invalid_argument(format!("{:?}", err)))?;
 
-        let mut client = schema::TrustedRuntimeAsyncClient::new(Client {
-            request_dispatcher: self.request_dispatcher.clone(),
-        });
+        let mut client = schema::TrustedRuntimeAsyncClient::new(self.connector_handle.clone());
 
         let encoded_response = client
             .handle_user_request(encoded_request)
@@ -110,9 +107,9 @@ impl UnarySession for EchoImpl {
 
 pub fn server(
     addr: SocketAddr,
-    request_dispatcher: UnboundedRequestSender<oak_idl::Request, Result<Vec<u8>, oak_idl::Status>>,
+    connector_handle: ConnectorHandle,
 ) -> impl Future<Output = Result<(), tonic::transport::Error>> {
-    let server_impl = EchoImpl { request_dispatcher };
+    let server_impl = EchoImpl { connector_handle };
     Server::builder()
         .add_service(UnarySessionServer::new(server_impl))
         .serve(addr)
