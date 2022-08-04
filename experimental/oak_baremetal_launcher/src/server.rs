@@ -111,12 +111,12 @@ pub fn server(
 ) -> impl Future<Output = Result<(), tonic::transport::Error>> {
     let server_impl = EchoImpl { connector_handle };
 
-    #[cfg(feature = "oak-web")]
+    #[cfg(feature = "grpc-web")]
     return Server::builder()
         .add_service(tonic_web::enable(UnarySessionServer::new(server_impl)))
         .serve(addr);
 
-    #[cfg(not(feature = "oak-web"))]
+    #[cfg(not(feature = "grpc-web"))]
     return Server::builder()
         .add_service(UnarySessionServer::new(server_impl))
         .serve(addr);
