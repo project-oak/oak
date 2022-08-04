@@ -134,7 +134,7 @@
     <span class="prelude-val">Ok</span>(<span class="ident">stream</span>)
 }
 
-<span class="kw">fn</span> <span class="ident">main</span>() {
+<span class="kw">fn</span> <span class="ident">main</span>() -&gt; <span class="op">!</span> {
     <span class="kw">let</span> <span class="ident">opt</span> <span class="op">=</span> <span class="ident">Opt::parse</span>();
 
     <span class="kw">let</span> <span class="ident">stream</span> <span class="op">=</span> <span class="ident">create_vsock_stream</span>(<span class="ident">opt</span>.<span class="ident">file_descriptor</span>).<span class="ident">expect</span>(<span class="string">&quot;Couldn&#39;t create channel&quot;</span>);
@@ -146,8 +146,8 @@
     <span class="kw">let</span> <span class="ident">attestation_behavior</span> <span class="op">=</span>
         <span class="ident">AttestationBehavior::create</span>(<span class="ident">EmptyAttestationGenerator</span>, <span class="ident">EmptyAttestationVerifier</span>);
     <span class="kw">let</span> <span class="ident">channel</span> <span class="op">=</span> <span class="ident">Box::new</span>(<span class="ident">Channel::new</span>(<span class="ident">stream</span>));
-    <span class="ident">oak_baremetal_runtime::framing::handle_frames</span>(<span class="ident">channel</span>, <span class="ident">attestation_behavior</span>)
-        .<span class="ident">expect</span>(<span class="string">&quot;Couldn&#39;t handle frames&quot;</span>);
+    <span class="ident">oak_baremetal_runtime::start</span>(<span class="ident">channel</span>, <span class="ident">attestation_behavior</span>)
+        .<span class="ident">expect</span>(<span class="string">&quot;Runtime encountered an unrecoverable error&quot;</span>);
 }
 </code></pre></div>
 </section><section id="search" class="content hidden"></section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="oak_functions_loader_linux_vsock" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.62.0-nightly (de1bc0008 2022-04-21)" ></div>
