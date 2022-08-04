@@ -56,7 +56,7 @@ pub fn create_vsock_stream(file_descriptor: RawFd) -> anyhow::Result<VsockStream
     Ok(stream)
 }
 
-fn main() {
+fn main() -> ! {
     let opt = Opt::parse();
 
     let stream = create_vsock_stream(opt.file_descriptor).expect("Couldn't create channel");
@@ -68,6 +68,6 @@ fn main() {
     let attestation_behavior =
         AttestationBehavior::create(EmptyAttestationGenerator, EmptyAttestationVerifier);
     let channel = Box::new(Channel::new(stream));
-    oak_baremetal_runtime::framing::handle_frames(channel, attestation_behavior)
-        .expect("Couldn't handle frames");
+    oak_baremetal_runtime::start(channel, attestation_behavior)
+        .expect("Runtime encountered an unrecoverable error");
 }
