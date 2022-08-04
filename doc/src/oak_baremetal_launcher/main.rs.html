@@ -187,91 +187,6 @@
 <span id="182">182</span>
 <span id="183">183</span>
 <span id="184">184</span>
-<span id="185">185</span>
-<span id="186">186</span>
-<span id="187">187</span>
-<span id="188">188</span>
-<span id="189">189</span>
-<span id="190">190</span>
-<span id="191">191</span>
-<span id="192">192</span>
-<span id="193">193</span>
-<span id="194">194</span>
-<span id="195">195</span>
-<span id="196">196</span>
-<span id="197">197</span>
-<span id="198">198</span>
-<span id="199">199</span>
-<span id="200">200</span>
-<span id="201">201</span>
-<span id="202">202</span>
-<span id="203">203</span>
-<span id="204">204</span>
-<span id="205">205</span>
-<span id="206">206</span>
-<span id="207">207</span>
-<span id="208">208</span>
-<span id="209">209</span>
-<span id="210">210</span>
-<span id="211">211</span>
-<span id="212">212</span>
-<span id="213">213</span>
-<span id="214">214</span>
-<span id="215">215</span>
-<span id="216">216</span>
-<span id="217">217</span>
-<span id="218">218</span>
-<span id="219">219</span>
-<span id="220">220</span>
-<span id="221">221</span>
-<span id="222">222</span>
-<span id="223">223</span>
-<span id="224">224</span>
-<span id="225">225</span>
-<span id="226">226</span>
-<span id="227">227</span>
-<span id="228">228</span>
-<span id="229">229</span>
-<span id="230">230</span>
-<span id="231">231</span>
-<span id="232">232</span>
-<span id="233">233</span>
-<span id="234">234</span>
-<span id="235">235</span>
-<span id="236">236</span>
-<span id="237">237</span>
-<span id="238">238</span>
-<span id="239">239</span>
-<span id="240">240</span>
-<span id="241">241</span>
-<span id="242">242</span>
-<span id="243">243</span>
-<span id="244">244</span>
-<span id="245">245</span>
-<span id="246">246</span>
-<span id="247">247</span>
-<span id="248">248</span>
-<span id="249">249</span>
-<span id="250">250</span>
-<span id="251">251</span>
-<span id="252">252</span>
-<span id="253">253</span>
-<span id="254">254</span>
-<span id="255">255</span>
-<span id="256">256</span>
-<span id="257">257</span>
-<span id="258">258</span>
-<span id="259">259</span>
-<span id="260">260</span>
-<span id="261">261</span>
-<span id="262">262</span>
-<span id="263">263</span>
-<span id="264">264</span>
-<span id="265">265</span>
-<span id="266">266</span>
-<span id="267">267</span>
-<span id="268">268</span>
-<span id="269">269</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2022 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -293,7 +208,6 @@
 <span class="kw">use</span> <span class="ident">anyhow::Context</span>;
 <span class="kw">use</span> <span class="ident">clap::Parser</span>;
 <span class="kw">use</span> <span class="ident">instance</span>::{<span class="ident">crosvm</span>, <span class="ident">native</span>, <span class="ident">LaunchedInstance</span>};
-<span class="kw">use</span> <span class="ident">oak_baremetal_communication_channel::client</span>::{<span class="ident">ClientChannelHandle</span>, <span class="ident">RequestEncoder</span>};
 <span class="kw">use</span> <span class="ident">std</span>::{
     <span class="ident">fs</span>,
     <span class="ident">io</span>::{<span class="ident">BufRead</span>, <span class="ident">BufReader</span>},
@@ -314,6 +228,7 @@
     ));
 }
 
+<span class="kw">mod</span> <span class="ident">channel</span>;
 <span class="kw">mod</span> <span class="ident">instance</span>;
 <span class="kw">mod</span> <span class="ident">lookup</span>;
 <span class="kw">mod</span> <span class="ident">server</span>;
@@ -358,70 +273,6 @@
     }
 }
 
-<span class="doccomment">/// Client implementation that communicates with the communication</span>
-<span class="doccomment">/// task via a bmrng channel. Used by various parts of the loader to communicate</span>
-<span class="doccomment">/// with the trusted runtime.</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Client</span> {
-    <span class="ident">request_dispatcher</span>: <span class="ident">bmrng::unbounded::UnboundedRequestSender</span><span class="op">&lt;</span>
-        <span class="ident">oak_idl::Request</span>,
-        <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>, <span class="ident">oak_idl::Status</span><span class="op">&gt;</span>,
-    <span class="op">&gt;</span>,
-}
-
-<span class="attribute">#[<span class="ident">async_trait::async_trait</span>]</span>
-<span class="kw">impl</span> <span class="ident">oak_idl::AsyncHandler</span> <span class="kw">for</span> <span class="ident">Client</span> {
-    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">invoke</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">request</span>: <span class="ident">oak_idl::Request</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>, <span class="ident">oak_idl::Status</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">request_dispatcher</span>
-            .<span class="ident">send_receive</span>(<span class="ident">request</span>)
-            .<span class="kw">await</span>
-            .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> {
-                <span class="ident">oak_idl::Status::new_with_message</span>(
-                    <span class="ident">oak_idl::StatusCode::Internal</span>,
-                    <span class="macro">format!</span>(<span class="string">&quot;failed when invoking the request_dispatcher: {}&quot;</span>, <span class="ident">err</span>),
-                )
-            })<span class="question-mark">?</span>
-    }
-}
-
-<span class="doccomment">/// Singleton responsible for sending requests, and receiving responses over the underlying</span>
-<span class="doccomment">/// communication channel with the baremetal runtime.</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">BaremetalCommunicationChannel</span> {
-    <span class="ident">inner</span>: <span class="ident">ClientChannelHandle</span>,
-    <span class="ident">request_encoder</span>: <span class="ident">RequestEncoder</span>,
-}
-
-<span class="kw">impl</span> <span class="ident">BaremetalCommunicationChannel</span> {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">inner</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">oak_baremetal_communication_channel::Channel</span><span class="op">&gt;</span>) -&gt; <span class="self">Self</span> {
-        <span class="self">Self</span> {
-            <span class="ident">inner</span>: <span class="ident">ClientChannelHandle::new</span>(<span class="ident">inner</span>),
-            <span class="ident">request_encoder</span>: <span class="ident">RequestEncoder::default</span>(),
-        }
-    }
-
-    <span class="kw">fn</span> <span class="ident">invoke</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">request</span>: <span class="ident">oak_idl::Request</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>, <span class="ident">oak_idl::Status</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">request_message</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">request_encoder</span>.<span class="ident">encode_request</span>(<span class="ident">request</span>);
-        <span class="kw">let</span> <span class="ident">request_message_invocation_id</span> <span class="op">=</span> <span class="ident">request_message</span>.<span class="ident">invocation_id</span>;
-        <span class="self">self</span>.<span class="ident">inner</span>
-            .<span class="ident">write_request</span>(<span class="ident">request_message</span>)
-            .<span class="ident">map_err</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">oak_idl::Status::new</span>(<span class="ident">oak_idl::StatusCode::Internal</span>))<span class="question-mark">?</span>;
-
-        <span class="kw">let</span> <span class="ident">response_message</span> <span class="op">=</span> <span class="self">self</span>
-            .<span class="ident">inner</span>
-            .<span class="ident">read_response</span>()
-            .<span class="ident">map_err</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">oak_idl::Status::new</span>(<span class="ident">oak_idl::StatusCode::Internal</span>))<span class="question-mark">?</span>;
-
-        <span class="comment">// For now all messages are sent in sequence, hence we expect that the</span>
-        <span class="comment">// id of the next response matches the preceeding request.</span>
-        <span class="comment">// TODO(#2848): Allow messages to be sent and received out of order.</span>
-        <span class="macro">assert_eq!</span>(
-            <span class="ident">request_message_invocation_id</span>,
-            <span class="ident">response_message</span>.<span class="ident">invocation_id</span>
-        );
-
-        <span class="ident">response_message</span>.<span class="ident">into</span>()
-    }
-}
-
 <span class="attribute">#[<span class="ident">tokio::main</span>]</span>
 <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">main</span>() -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">std::error::Error</span><span class="op">&gt;</span><span class="op">&gt;</span> {
     <span class="kw">let</span> <span class="ident">cli</span> <span class="op">=</span> <span class="ident">Args::parse</span>();
@@ -453,52 +304,31 @@
     };
 
     <span class="kw">let</span> <span class="ident">comms</span> <span class="op">=</span> <span class="ident">launched_instance</span>.<span class="ident">create_comms_channel</span>().<span class="kw">await</span><span class="question-mark">?</span>;
+    <span class="kw">let</span> <span class="ident">connector_handle</span> <span class="op">=</span> <span class="ident">channel::Connector::spawn</span>(<span class="ident">comms</span>);
 
-    <span class="comment">// A message based communication channel that permits other parts of the</span>
-    <span class="comment">// untrusted launcher to send requests to the task that handles communicating</span>
-    <span class="comment">// with the runtime and receive responses.</span>
-    <span class="kw">let</span> (<span class="ident">request_dispatcher</span>, <span class="kw-2">mut</span> <span class="ident">request_receiver</span>) <span class="op">=</span>
-        <span class="ident">bmrng::unbounded_channel</span>::<span class="op">&lt;</span><span class="ident">oak_idl::Request</span>, <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>, <span class="ident">oak_idl::Status</span><span class="op">&gt;</span><span class="op">&gt;</span>();
-
-    <span class="comment">// Spawn task to handle communicating with the runtime and receiving responses.</span>
-    <span class="ident">tokio::spawn</span>(<span class="kw">async</span> <span class="kw">move</span> {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">communication_channel</span> <span class="op">=</span> <span class="ident">BaremetalCommunicationChannel::new</span>(<span class="ident">comms</span>);
-        <span class="kw">while</span> <span class="kw">let</span> <span class="prelude-val">Ok</span>((<span class="ident">request</span>, <span class="ident">response_dispatcher</span>)) <span class="op">=</span> <span class="ident">request_receiver</span>.<span class="ident">recv</span>().<span class="kw">await</span> {
-            <span class="comment">// At the moment requests are sent sequentially, and in FIFO order. The next request</span>
-            <span class="comment">// is sent only once a response to the previous message has been implemented.</span>
-            <span class="comment">// TODO(#2848): Implement message prioritization, and non sequential invocations.</span>
-            <span class="kw">let</span> <span class="ident">response</span> <span class="op">=</span> <span class="ident">communication_channel</span>.<span class="ident">invoke</span>(<span class="ident">request</span>);
-            <span class="ident">response_dispatcher</span>.<span class="ident">respond</span>(<span class="ident">response</span>).<span class="ident">unwrap</span>();
-        }
-    });
-
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">lookup_data_client</span> <span class="op">=</span> <span class="ident">schema::TrustedRuntimeAsyncClient::new</span>(<span class="ident">Client</span> {
-        <span class="ident">request_dispatcher</span>: <span class="ident">request_dispatcher</span>.<span class="ident">clone</span>(),
-    });
     <span class="comment">// Spawn task to load &amp; periodically refresh lookup data.</span>
-    <span class="ident">tokio::spawn</span>(<span class="kw">async</span> <span class="kw">move</span> {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">interval</span> <span class="op">=</span> <span class="ident">tokio::time::interval</span>(<span class="ident">std::time::Duration::from_millis</span>(<span class="number">1000</span> <span class="op">*</span> <span class="number">60</span> <span class="op">*</span> <span class="number">10</span>));
+    {
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">runtime_client</span> <span class="op">=</span> <span class="ident">schema::TrustedRuntimeAsyncClient::new</span>(<span class="ident">connector_handle</span>.<span class="ident">clone</span>());
+        <span class="ident">tokio::spawn</span>(<span class="kw">async</span> <span class="kw">move</span> {
+            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">interval</span> <span class="op">=</span>
+                <span class="ident">tokio::time::interval</span>(<span class="ident">std::time::Duration::from_millis</span>(<span class="number">1000</span> <span class="op">*</span> <span class="number">60</span> <span class="op">*</span> <span class="number">10</span>));
+            <span class="kw">loop</span> {
+                <span class="kw">let</span> <span class="ident">lookup_data</span> <span class="op">=</span>
+                    <span class="ident">lookup::load_lookup_data</span>(<span class="kw-2">&amp;</span><span class="ident">cli</span>.<span class="ident">lookup_data</span>).<span class="ident">expect</span>(<span class="string">&quot;failed to load lookup data&quot;</span>);
+                <span class="kw">let</span> <span class="ident">encoded_lookup_data</span> <span class="op">=</span>
+                    <span class="ident">lookup::encode_lookup_data</span>(<span class="ident">lookup_data</span>).<span class="ident">expect</span>(<span class="string">&quot;failed to encode lookup data&quot;</span>);
 
-        <span class="kw">loop</span> {
-            <span class="kw">let</span> <span class="ident">lookup_data</span> <span class="op">=</span>
-                <span class="ident">lookup::load_lookup_data</span>(<span class="kw-2">&amp;</span><span class="ident">cli</span>.<span class="ident">lookup_data</span>).<span class="ident">expect</span>(<span class="string">&quot;failed to load lookup data&quot;</span>);
-            <span class="kw">let</span> <span class="ident">encoded_lookup_data</span> <span class="op">=</span>
-                <span class="ident">lookup::encode_lookup_data</span>(<span class="ident">lookup_data</span>).<span class="ident">expect</span>(<span class="string">&quot;failed to encode lookup data&quot;</span>);
+                <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">err</span>) <span class="op">=</span> <span class="ident">runtime_client</span>
+                    .<span class="ident">update_lookup_data</span>(<span class="ident">encoded_lookup_data</span>.<span class="ident">into_vec</span>())
+                    .<span class="kw">await</span>
+                {
+                    <span class="macro">panic!</span>(<span class="string">&quot;failed to send lookup data: {:?}&quot;</span>, <span class="ident">err</span>)
+                }
 
-            <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">err</span>) <span class="op">=</span> <span class="ident">lookup_data_client</span>
-                .<span class="ident">update_lookup_data</span>(<span class="ident">encoded_lookup_data</span>.<span class="ident">into_vec</span>())
-                .<span class="kw">await</span>
-            {
-                <span class="macro">panic!</span>(<span class="string">&quot;failed to send lookup data: {:?}&quot;</span>, <span class="ident">err</span>)
+                <span class="ident">interval</span>.<span class="ident">tick</span>().<span class="kw">await</span>;
             }
-
-            <span class="ident">interval</span>.<span class="ident">tick</span>().<span class="kw">await</span>;
-        }
-    });
-
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">client</span> <span class="op">=</span> <span class="ident">schema::TrustedRuntimeAsyncClient::new</span>(<span class="ident">Client</span> {
-        <span class="ident">request_dispatcher</span>: <span class="ident">request_dispatcher</span>.<span class="ident">clone</span>(),
-    });
+        });
+    }
 
     <span class="kw">let</span> <span class="ident">wasm_bytes</span> <span class="op">=</span> <span class="ident">fs::read</span>(<span class="kw-2">&amp;</span><span class="ident">cli</span>.<span class="ident">wasm</span>)
         .<span class="ident">with_context</span>(<span class="op">|</span><span class="op">|</span> <span class="macro">format!</span>(<span class="string">&quot;Couldn&#39;t read Wasm file {}&quot;</span>, <span class="kw-2">&amp;</span><span class="ident">cli</span>.<span class="ident">wasm</span>.<span class="ident">display</span>()))
@@ -517,14 +347,14 @@
             .<span class="ident">finish</span>(<span class="ident">initialization_flatbuffer</span>)
             .<span class="ident">expect</span>(<span class="string">&quot;errored when creating initialization message&quot;</span>)
     };
-    <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">err</span>) <span class="op">=</span> <span class="ident">client</span>
+    <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">err</span>) <span class="op">=</span> <span class="ident">schema::TrustedRuntimeAsyncClient::new</span>(<span class="ident">connector_handle</span>.<span class="ident">clone</span>())
         .<span class="ident">initialize</span>(<span class="ident">owned_initialization_flatbuffer</span>.<span class="ident">into_vec</span>())
         .<span class="kw">await</span>
     {
         <span class="macro">panic!</span>(<span class="string">&quot;failed to initialize the runtime: {:?}&quot;</span>, <span class="ident">err</span>)
     }
 
-    <span class="kw">let</span> <span class="ident">server_future</span> <span class="op">=</span> <span class="ident">server::server</span>(<span class="string">&quot;127.0.0.1:8080&quot;</span>.<span class="ident">parse</span>()<span class="question-mark">?</span>, <span class="ident">request_dispatcher</span>);
+    <span class="kw">let</span> <span class="ident">server_future</span> <span class="op">=</span> <span class="ident">server::server</span>(<span class="string">&quot;127.0.0.1:8080&quot;</span>.<span class="ident">parse</span>()<span class="question-mark">?</span>, <span class="ident">connector_handle</span>);
 
     <span class="comment">// Wait until something dies or we get a signal to terminate.</span>
     <span class="macro">tokio::select!</span> {

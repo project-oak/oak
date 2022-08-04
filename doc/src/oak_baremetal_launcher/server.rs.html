@@ -119,9 +119,6 @@
 <span id="114">114</span>
 <span id="115">115</span>
 <span id="116">116</span>
-<span id="117">117</span>
-<span id="118">118</span>
-<span id="119">119</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2022 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -138,8 +135,7 @@
 <span class="comment">// limitations under the License.</span>
 <span class="comment">//</span>
 
-<span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">schema</span>, <span class="ident">Client</span>};
-<span class="kw">use</span> <span class="ident">bmrng::unbounded::UnboundedRequestSender</span>;
+<span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">channel::ConnectorHandle</span>, <span class="ident">schema</span>};
 <span class="kw">use</span> <span class="ident">futures::Future</span>;
 <span class="kw">use</span> <span class="ident">oak_remote_attestation_sessions</span>::{<span class="ident">SessionId</span>, <span class="ident">SESSION_ID_LENGTH</span>};
 <span class="kw">use</span> <span class="ident">std::net::SocketAddr</span>;
@@ -205,7 +201,7 @@
 }
 
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">EchoImpl</span> {
-    <span class="ident">request_dispatcher</span>: <span class="ident">UnboundedRequestSender</span><span class="op">&lt;</span><span class="ident">oak_idl::Request</span>, <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>, <span class="ident">oak_idl::Status</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+    <span class="ident">connector_handle</span>: <span class="ident">ConnectorHandle</span>,
 }
 
 <span class="attribute">#[<span class="ident">tonic::async_trait</span>]</span>
@@ -218,9 +214,7 @@
         <span class="kw">let</span> <span class="ident">encoded_request</span> <span class="op">=</span> <span class="ident">encode_request</span>(<span class="ident">request</span>)
             .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> <span class="ident">tonic::Status::invalid_argument</span>(<span class="macro">format!</span>(<span class="string">&quot;{:?}&quot;</span>, <span class="ident">err</span>)))<span class="question-mark">?</span>;
 
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">client</span> <span class="op">=</span> <span class="ident">schema::TrustedRuntimeAsyncClient::new</span>(<span class="ident">Client</span> {
-            <span class="ident">request_dispatcher</span>: <span class="self">self</span>.<span class="ident">request_dispatcher</span>.<span class="ident">clone</span>(),
-        });
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">client</span> <span class="op">=</span> <span class="ident">schema::TrustedRuntimeAsyncClient::new</span>(<span class="self">self</span>.<span class="ident">connector_handle</span>.<span class="ident">clone</span>());
 
         <span class="kw">let</span> <span class="ident">encoded_response</span> <span class="op">=</span> <span class="ident">client</span>
             .<span class="ident">handle_user_request</span>(<span class="ident">encoded_request</span>)
@@ -234,9 +228,9 @@
 
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">server</span>(
     <span class="ident">addr</span>: <span class="ident">SocketAddr</span>,
-    <span class="ident">request_dispatcher</span>: <span class="ident">UnboundedRequestSender</span><span class="op">&lt;</span><span class="ident">oak_idl::Request</span>, <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>, <span class="ident">oak_idl::Status</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+    <span class="ident">connector_handle</span>: <span class="ident">ConnectorHandle</span>,
 ) -&gt; <span class="kw">impl</span> <span class="ident">Future</span><span class="op">&lt;</span><span class="ident">Output</span> <span class="op">=</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">tonic::transport::Error</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-    <span class="kw">let</span> <span class="ident">server_impl</span> <span class="op">=</span> <span class="ident">EchoImpl</span> { <span class="ident">request_dispatcher</span> };
+    <span class="kw">let</span> <span class="ident">server_impl</span> <span class="op">=</span> <span class="ident">EchoImpl</span> { <span class="ident">connector_handle</span> };
     <span class="ident">Server::builder</span>()
         .<span class="ident">add_service</span>(<span class="ident">UnarySessionServer::new</span>(<span class="ident">server_impl</span>))
         .<span class="ident">serve</span>(<span class="ident">addr</span>)
