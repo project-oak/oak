@@ -66,29 +66,6 @@ trait FixedSizeBodyPadder {
         Self: std::marker::Sized;
 }
 
-impl FixedSizeBodyPadder for Response {
-    /// Creates and returns a new [`Response`] instance with the same `status` and `body` as `self`,
-    /// except that the `body` may be padded, by adding a number trailing 0s, to make its length
-    /// equal to `body_size`. Sets the `length` of the new instance to the length of `self.body`.
-    /// Returns an error if the length of the `body` is larger than `body_size`.
-    fn pad(&self, body_size: usize) -> anyhow::Result<Self> {
-        if self.body.len() <= body_size {
-            let mut body = self.body.as_slice().to_vec();
-            // Set the length to the actual length of the body before padding.
-            let length = body.len() as u64;
-            // Add trailing 0s
-            body.resize(body_size, 0);
-            Ok(Response {
-                status: self.status,
-                body,
-                length,
-            })
-        } else {
-            anyhow::bail!("response body is larger than the input body_size")
-        }
-    }
-}
-
 /// Runs the given function and applies the given security policy to the execution of the function
 /// and the response returned from it. Serializes and returns the response as a binary
 /// protobuf-encoded byte array of a constant size.
