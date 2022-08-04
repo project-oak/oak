@@ -32,7 +32,6 @@ mod tests;
 
 use crate::channel::Channel;
 use clap::Parser;
-use log::info;
 use oak_remote_attestation::handshaker::{
     AttestationBehavior, EmptyAttestationGenerator, EmptyAttestationVerifier,
 };
@@ -60,7 +59,7 @@ fn main() -> ! {
     let opt = Opt::parse();
 
     let stream = create_vsock_stream(opt.file_descriptor).expect("Couldn't create channel");
-    info!(
+    println!(
         "Connected to the {}",
         stream.peer_addr().expect("Couldn't get peer address")
     );
