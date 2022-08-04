@@ -5,6 +5,9 @@ authors = ["Andri Saar <andrisaar@google.com>"]
 edition = "2021"
 license = "Apache-2.0"
 
+[features]
+grpc-web = ["tonic-web"]
+
 [dependencies]
 anyhow = "*"
 async-trait = "*"
@@ -25,6 +28,7 @@ tokio = { version = "*", features = [
   "sync",
 ] }
 tonic = "*"
+tonic-web = { version = "*", optional = true }
 vsock = "*"
 oak_remote_attestation_sessions = { path = "../../remote_attestation_sessions" }
 oak_idl = { path = "../../oak_idl" }
