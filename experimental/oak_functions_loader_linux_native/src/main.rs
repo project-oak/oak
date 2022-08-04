@@ -46,7 +46,7 @@ impl log::Log for Logger {
 
 static LOGGER: Logger = Logger {};
 
-fn main() {
+fn main() -> ! {
     let opt = Opt::parse();
     log::set_logger(&LOGGER).unwrap();
     log::set_max_level(log::LevelFilter::Debug);
@@ -60,6 +60,6 @@ fn main() {
     let attestation_behavior =
         AttestationBehavior::create(PlaceholderAmdAttestationGenerator, EmptyAttestationVerifier);
     let channel = Box::new(socket);
-    oak_baremetal_runtime::framing::handle_frames(channel, attestation_behavior)
-        .expect("Couldn't handle frames");
+    oak_baremetal_runtime::start(channel, attestation_behavior)
+        .expect("Runtime encountered an unrecoverable error");
 }
