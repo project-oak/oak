@@ -185,10 +185,8 @@ public class AttestationClient {
    * Creates an attested channel over the gRPC channel.
    *
    * @param channel an instance of a gRPC {@code ManagedChannel}.
-   * @param verifier checks that the ServerIdentity contains the expected attestation info as
-   *     described in {@code ServerIdentityVerifier::verifyAttestationInfo}.
    */
-  public void attest(ManagedChannel channel, Predicate<ConfigurationReport> verifier)
+  public void attest(ManagedChannel channel)
       throws GeneralSecurityException, IOException, InterruptedException, VerificationException {
     if (channel == null) {
       throw new NullPointerException("Channel must not be null.");

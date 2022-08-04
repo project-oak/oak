@@ -77,7 +77,7 @@ public class MainActivity extends Activity {
 
       // Attest a gRPC channel.
       AttestationClient client = new AttestationClient();
-      client.attest(channel, (config) -> true); // Currently we are not verifying the config.
+      client.attest(channel);
 
       // Send a request.
       AttestationClient.Response response = client.send(request);

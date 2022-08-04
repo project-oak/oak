@@ -44,7 +44,7 @@ public class Main {
 
     // Attest a gRPC channel.
     AttestationClient client = new AttestationClient();
-    client.attest(channel, (config) -> true); // Currently we are not verifying the configuration.
+    client.attest(channel);
 
     // Test request coordinates are defined in `oak_functions/lookup_data_generator/src/data.rs`.
     byte[] requestBody = "{\"lat\":0,\"lng\":0}".getBytes(UTF_8);
