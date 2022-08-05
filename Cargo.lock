@@ -3106,7 +3106,6 @@ dependencies = [
  "assert_matches",
  "clap 3.2.10",
  "libc",
- "log",
  "oak_baremetal_communication_channel",
  "oak_baremetal_runtime",
  "oak_remote_attestation",

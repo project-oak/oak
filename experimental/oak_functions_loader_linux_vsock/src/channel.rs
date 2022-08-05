@@ -62,7 +62,7 @@ where
             let mut size_buffer: [u8; size_of::<u64>()] = [0; size_of::<u64>()];
             self.stream.read(&mut size_buffer).map_err(|error| {
                 anyhow!(
-                    "Couldn't read Protobuf message size from cached buffer: {:?}",
+                    "Couldn't read Protobuf message size from stream: {:?}",
                     error
                 )
             })?;
@@ -73,7 +73,7 @@ where
                 let mut message_buffer: Vec<u8> = vec![0; size];
                 self.stream.read(&mut message_buffer).map_err(|error| {
                     anyhow!(
-                        "Couldn't read Protobuf message from cached buffer: {:?}",
+                        "Couldn't read Protobuf message from stream: {:?}",
                         error
                     )
                 })?;
