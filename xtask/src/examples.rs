@@ -103,7 +103,8 @@ pub enum Target {
         package_directory: String,
     },
     Shell {
-        script: String,
+        run_script: String,
+        build_script: String,
     },
 }
 
@@ -614,7 +615,7 @@ fn build(target: &Target, opt: &BuildClient) -> Box<dyn Runnable> {
             "npm",
             vec!["ci".to_string(), format!("--prefix={}", package_directory)],
         ),
-        Target::Shell { script } => Cmd::new("bash", &[script]),
+        Target::Shell { build_script, .. } => Cmd::new("bash", &["-c", build_script]),
     }
 }
 
@@ -666,7 +667,7 @@ fn run(
                 format!("--prefix={}", package_directory),
             ],
         ),
-        Target::Shell { script } => Cmd::new("bash", &[script]),
+        Target::Shell { run_script, .. } => Cmd::new("bash", &["-c", run_script]),
     }
 }
 

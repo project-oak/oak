@@ -8,6 +8,7 @@ target = { Cargo = { cargo_manifest = "oak_functions/examples/echo/module/Cargo.
 
 [server]
 additional_args = ["--config-path=./oak_functions/examples/echo/config.toml"]
+# Enables grpc-web support for the web client.
 server_variant = "Unsafe"
 
 [clients]
@@ -17,3 +18,5 @@ rust = { Cargo = { cargo_manifest = "oak_functions/client/rust/Cargo.toml" }, ad
   "--request=test",
   "--expected-response-pattern=test"
 ] }
+# The web client tests are tailored for the echo example.
+web = { Shell = { build_script = "", run_script = "wasm-pack test --chrome --headless experimental/web_client" } }

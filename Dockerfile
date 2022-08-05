@@ -343,6 +343,29 @@ RUN git checkout ${flatc_commit} \
   && rm -rf ${flatbuffer_tmp_dir} \
   && flatc --version
 
+# Install wasm-pack.
+# https://github.com/rustwasm/wasm-pack
+ARG wasm_pack_version=0.10.2
+ARG wasm_pack_digest=sha256:ddf59a454fbee8712932803583d01756204c32fbfb13defa69f08c3e7afb6ac5
+ARG wasm_pack_tmp=/tmp/wasm-pack
+ARG wasm_pack_dir=/usr/local/wasm-pack/bin
+ARG wasm_pack_bin=${wasm_pack_dir}/wasm-pack
+ENV PATH "${wasm_pack_dir}:${PATH}"
+RUN mkdir --parents ${wasm_pack_dir} \
+  && ent get ${wasm_pack_digest} --url=https://github.com/rustwasm/wasm-pack/releases/download/v${wasm_pack_version}/wasm-pack-v${wasm_pack_version}-x86_64-unknown-linux-musl.tar.gz > ${wasm_pack_tmp} \
+  && tar --extract --gzip --file=${wasm_pack_tmp} --directory=${wasm_pack_dir} --strip-components=1 \
+  && rm ${wasm_pack_tmp} \
+  && chmod +x ${wasm_pack_bin} \
+  && wasm-pack --version
+
+# chromium is required to run our tests with wasm-pack
+RUN apt-get --yes update \
+  && apt-get install --no-install-recommends --yes --option Acquire::http::Dl-Limit=500 \
+  chromium \
+  chromium-driver \
+  && apt-get clean \
+  && rm --recursive --force /var/lib/apt/lists/*
+
 # By default, sccache uses `~/.cache/sccache` locally: https://github.com/mozilla/sccache#local.
 ENV RUSTC_WRAPPER sccache
 
