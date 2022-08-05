@@ -30,8 +30,8 @@ pub mod channel;
 #[cfg(test)]
 mod tests;
 
-use anyhow::anyhow;
 use crate::channel::Channel;
+use anyhow::anyhow;
 use clap::Parser;
 use oak_remote_attestation::handshaker::{
     AttestationBehavior, EmptyAttestationGenerator, EmptyAttestationVerifier,
@@ -54,7 +54,8 @@ pub struct Opt {
 pub fn create_vsock_stream(file_descriptor: RawFd) -> anyhow::Result<VsockStream> {
     let stream = unsafe { VsockStream::from_raw_fd(file_descriptor) };
     // Blocking is set in order to not return an error when the host hasn't written anything yet.
-    stream.set_nonblocking(false)
+    stream
+        .set_nonblocking(false)
         .map_err(|error| anyhow!("Couldn't set socket into blocking mode: {}", error))?;
     Ok(stream)
 }

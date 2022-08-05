@@ -72,10 +72,7 @@ where
                 // Read Protobuf message.
                 let mut message_buffer: Vec<u8> = vec![0; size];
                 self.stream.read(&mut message_buffer).map_err(|error| {
-                    anyhow!(
-                        "Couldn't read Protobuf message from stream: {:?}",
-                        error
-                    )
+                    anyhow!("Couldn't read Protobuf message from stream: {:?}", error)
                 })?;
 
                 let message = Request::decode(&*message_buffer)
