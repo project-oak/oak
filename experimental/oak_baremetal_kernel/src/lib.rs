@@ -97,8 +97,12 @@ fn main(protocol: &str, kernel_args: args::Args) -> ! {
     let attestation_behavior =
         AttestationBehavior::create(PlaceholderAmdAttestationGenerator, EmptyAttestationVerifier);
     let channel = get_channel(&kernel_args);
-    oak_baremetal_runtime::start(channel, attestation_behavior)
-        .expect("Runtime encountered an unrecoverable error");
+    let runtime = oak_baremetal_runtime::RuntimeImplementation::new(attestation_behavior);
+    oak_baremetal_communication_channel::server::start_blocking_server(
+        channel,
+        oak_baremetal_runtime::schema::TrustedRuntime::serve(runtime),
+    )
+    .expect("Runtime encountered an unrecoverable error");
 }
 
 fn get_channel(kernel_args: &args::Args) -> Box<dyn Channel> {

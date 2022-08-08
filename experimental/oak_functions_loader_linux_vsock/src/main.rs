@@ -72,6 +72,10 @@ fn main() -> ! {
     let attestation_behavior =
         AttestationBehavior::create(EmptyAttestationGenerator, EmptyAttestationVerifier);
     let channel = Box::new(Channel::new(stream));
-    oak_baremetal_runtime::start(channel, attestation_behavior)
-        .expect("Runtime encountered an unrecoverable error");
+    let runtime = oak_baremetal_runtime::RuntimeImplementation::new(attestation_behavior);
+    oak_baremetal_communication_channel::server::start_blocking_server(
+        channel,
+        oak_baremetal_runtime::schema::TrustedRuntime::serve(runtime),
+    )
+    .expect("Runtime encountered an unrecoverable error");
 }

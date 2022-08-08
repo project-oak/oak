@@ -19,7 +19,7 @@
 
 extern crate alloc;
 
-mod schema {
+pub mod schema {
     #![allow(clippy::derivable_impls, clippy::needless_borrow)]
     #![allow(dead_code, unused_imports)]
 
@@ -33,52 +33,15 @@ mod wasm;
 use crate::{
     logger::StandaloneLogger,
     remote_attestation::{AttestationHandler, AttestationSessionHandler},
-    schema::TrustedRuntime,
 };
 use alloc::{boxed::Box, sync::Arc};
 use anyhow::Context;
-use oak_baremetal_communication_channel::{
-    server::{message_from_response_and_id, ServerChannelHandle},
-    Channel,
-};
 use oak_functions_abi::Request;
 use oak_functions_lookup::LookupDataManager;
-use oak_idl::Handler;
 use oak_remote_attestation::handshaker::{
     AttestationBehavior, AttestationGenerator, AttestationVerifier,
 };
 use oak_remote_attestation_sessions::SessionId;
-
-/// Sole entrypoint to the runtime. Starts the runtime and listens for requests
-/// on the provided channel.
-pub fn start<G, V>(
-    channel: Box<dyn Channel>,
-    attestation_behavior: AttestationBehavior<G, V>,
-) -> anyhow::Result<!>
-where
-    G: 'static + AttestationGenerator,
-    V: 'static + AttestationVerifier,
-{
-    let mut invocation_handler = RuntimeImplementation {
-        initialization_state: InitializationState::Uninitialized(Some(attestation_behavior)),
-        lookup_data_manager: Arc::new(LookupDataManager::new_empty(StandaloneLogger::default())),
-    }
-    .serve();
-    let channel_handle = &mut ServerChannelHandle::new(channel);
-    loop {
-        let request_message = channel_handle
-            .read_request()
-            .context("couldn't receive message")?;
-        let request_message_invocation_id = request_message.invocation_id;
-        let response = invocation_handler.invoke(request_message.into());
-        // For now all messages are sent in sequence, hence the id of the next
-        // response always matches that of the preceeding request.
-        // TODO(#2848): Allow messages to be sent and received out of order.
-        let response_message =
-            message_from_response_and_id(response, request_message_invocation_id);
-        channel_handle.write_response(response_message)?
-    }
-}
 
 enum InitializationState<G, V>
 where
@@ -92,13 +55,28 @@ where
     Initialized(Box<dyn AttestationHandler>),
 }
 
-struct RuntimeImplementation<G, V>
+pub struct RuntimeImplementation<G, V>
 where
     G: 'static + AttestationGenerator,
     V: 'static + AttestationVerifier,
 {
     initialization_state: InitializationState<G, V>,
     lookup_data_manager: Arc<LookupDataManager<logger::StandaloneLogger>>,
+}
+
+impl<G, V> RuntimeImplementation<G, V>
+where
+    G: 'static + AttestationGenerator,
+    V: 'static + AttestationVerifier,
+{
+    pub fn new(attestation_behavior: AttestationBehavior<G, V>) -> Self {
+        Self {
+            initialization_state: InitializationState::Uninitialized(Some(attestation_behavior)),
+            lookup_data_manager: Arc::new(
+                LookupDataManager::new_empty(StandaloneLogger::default()),
+            ),
+        }
+    }
 }
 
 impl<G, V> schema::TrustedRuntime for RuntimeImplementation<G, V>

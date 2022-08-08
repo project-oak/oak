@@ -1,4 +1,5 @@
 # Oak Baremetal Runtime
 
-Common business logic that should run in a VM. Implements the Oak-specific
-features on top of the kernel.
+No-std compatible implementation of the business logic of the Oak Runtime. The
+interface of the runtime is defined using the Oak IDL in `schema.rs`, the Rust
+code implements it using the Oak IDL.
