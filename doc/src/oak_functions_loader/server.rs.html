@@ -139,29 +139,6 @@
 <span id="134">134</span>
 <span id="135">135</span>
 <span id="136">136</span>
-<span id="137">137</span>
-<span id="138">138</span>
-<span id="139">139</span>
-<span id="140">140</span>
-<span id="141">141</span>
-<span id="142">142</span>
-<span id="143">143</span>
-<span id="144">144</span>
-<span id="145">145</span>
-<span id="146">146</span>
-<span id="147">147</span>
-<span id="148">148</span>
-<span id="149">149</span>
-<span id="150">150</span>
-<span id="151">151</span>
-<span id="152">152</span>
-<span id="153">153</span>
-<span id="154">154</span>
-<span id="155">155</span>
-<span id="156">156</span>
-<span id="157">157</span>
-<span id="158">158</span>
-<span id="159">159</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2021 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -228,29 +205,6 @@
     <span class="kw">fn</span> <span class="ident">pad</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">body_size</span>: <span class="ident">usize</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span>
     <span class="kw">where</span>
         <span class="self">Self</span>: <span class="ident">std::marker::Sized</span>;
-}
-
-<span class="kw">impl</span> <span class="ident">FixedSizeBodyPadder</span> <span class="kw">for</span> <span class="ident">Response</span> {
-    <span class="doccomment">/// Creates and returns a new [`Response`] instance with the same `status` and `body` as `self`,</span>
-    <span class="doccomment">/// except that the `body` may be padded, by adding a number trailing 0s, to make its length</span>
-    <span class="doccomment">/// equal to `body_size`. Sets the `length` of the new instance to the length of `self.body`.</span>
-    <span class="doccomment">/// Returns an error if the length of the `body` is larger than `body_size`.</span>
-    <span class="kw">fn</span> <span class="ident">pad</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">body_size</span>: <span class="ident">usize</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
-        <span class="kw">if</span> <span class="self">self</span>.<span class="ident">body</span>.<span class="ident">len</span>() <span class="op">&lt;</span><span class="op">=</span> <span class="ident">body_size</span> {
-            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">body</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">body</span>.<span class="ident">as_slice</span>().<span class="ident">to_vec</span>();
-            <span class="comment">// Set the length to the actual length of the body before padding.</span>
-            <span class="kw">let</span> <span class="ident">length</span> <span class="op">=</span> <span class="ident">body</span>.<span class="ident">len</span>() <span class="kw">as</span> <span class="ident">u64</span>;
-            <span class="comment">// Add trailing 0s</span>
-            <span class="ident">body</span>.<span class="ident">resize</span>(<span class="ident">body_size</span>, <span class="number">0</span>);
-            <span class="prelude-val">Ok</span>(<span class="ident">Response</span> {
-                <span class="ident">status</span>: <span class="self">self</span>.<span class="ident">status</span>,
-                <span class="ident">body</span>,
-                <span class="ident">length</span>,
-            })
-        } <span class="kw">else</span> {
-            <span class="macro">anyhow::bail!</span>(<span class="string">&quot;response body is larger than the input body_size&quot;</span>)
-        }
-    }
 }
 
 <span class="doccomment">/// Runs the given function and applies the given security policy to the execution of the function</span>
