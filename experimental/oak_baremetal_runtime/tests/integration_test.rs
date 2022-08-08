@@ -16,12 +16,18 @@
 
 #![feature(assert_matches)]
 
+extern crate alloc;
+
 use core::assert_matches::assert_matches;
-use oak_baremetal_runtime::{schema::TrustedRuntime, RuntimeImplementation};
+use oak_baremetal_runtime::{
+    schema::{TrustedRuntime, TrustedRuntimeServer},
+    RuntimeImplementation,
+};
 use oak_remote_attestation::handshaker::{
     AttestationBehavior, ClientHandshaker, EmptyAttestationVerifier,
 };
 use oak_remote_attestation_amd::PlaceholderAmdAttestationGenerator;
+use oak_remote_attestation_sessions_client::UnaryClient;
 
 mod schema {
     #![allow(clippy::derivable_impls, clippy::needless_borrow)]
@@ -34,6 +40,59 @@ mod schema {
 const MOCK_SESSION_ID: &[u8; 8] = &[0, 0, 0, 0, 0, 0, 0, 0];
 const MOCK_CONSTANT_RESPONSE_SIZE: u32 = 1024;
 const ECHO_WASM_BYTES: &[u8] = include_bytes!("echo.wasm");
+
+// The type of the client used to interact with the runtime in integration tests
+type RuntimeClient = schema::TrustedRuntimeClient<
+    TrustedRuntimeServer<
+        RuntimeImplementation<PlaceholderAmdAttestationGenerator, EmptyAttestationVerifier>,
+    >,
+>;
+
+/// Simple test client to perform handshakes with the runtime over several user requests. Allows
+/// the subsequent exchange of user data, and testing of the Wasm business logic running in the
+/// runtime.
+struct TestUserClient {
+    inner: alloc::rc::Rc<core::cell::RefCell<RuntimeClient>>,
+}
+
+#[async_trait::async_trait(?Send)]
+impl UnaryClient for TestUserClient {
+    async fn message(
+        &mut self,
+        session_id: oak_remote_attestation_sessions::SessionId,
+        body: Vec<u8>,
+    ) -> anyhow::Result<Vec<u8>> {
+        let owned_request_flatbuffer = {
+            let mut builder = oak_idl::utils::OwnedFlatbufferBuilder::default();
+            let session_id = &schema::SessionId::new(&session_id);
+            let body = builder.create_vector::<u8>(&body);
+            let flatbuffer = schema::UserRequest::create(
+                &mut builder,
+                &schema::UserRequestArgs {
+                    session_id: Some(session_id),
+                    body: Some(body),
+                },
+            );
+            builder
+                .finish(flatbuffer)
+                .map_err(|err| {
+                    oak_idl::Status::new_with_message(
+                        oak_idl::StatusCode::Internal,
+                        err.to_string(),
+                    )
+                })
+                .unwrap()
+        };
+        let mut mutinner = self.inner.borrow_mut();
+        let response_flatbuffer = mutinner
+            .handle_user_request(owned_request_flatbuffer.into_vec())
+            .unwrap();
+
+        let decoded_response = response_flatbuffer.get().body().unwrap();
+
+        Ok(decoded_response.to_vec())
+    }
+}
 
 #[test]
 fn it_should_not_handle_user_requests_before_initialization() {

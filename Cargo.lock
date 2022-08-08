@@ -2937,6 +2937,7 @@ name = "oak_baremetal_runtime"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "async-trait",
  "flatbuffers",
  "hashbrown 0.12.2",
  "log",
@@ -2951,6 +2952,8 @@ dependencies = [
  "oak_remote_attestation",
  "oak_remote_attestation_amd",
  "oak_remote_attestation_sessions",
+ "oak_remote_attestation_sessions_client",
+ "tokio",
 ]
 
 [[package]]
