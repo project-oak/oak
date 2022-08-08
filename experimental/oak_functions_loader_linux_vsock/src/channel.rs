@@ -62,20 +62,17 @@ where
             let mut size_buffer: [u8; size_of::<u64>()] = [0; size_of::<u64>()];
             self.stream.read(&mut size_buffer).map_err(|error| {
                 anyhow!(
-                    "Couldn't read Protobuf message size from cached buffer: {:?}",
+                    "Couldn't read Protobuf message size from stream: {:?}",
                     error
                 )
             })?;
-            let size = usize::from_be_bytes(size_buffer);
+            let size = usize::from_ne_bytes(size_buffer);
 
             if size > 0 {
                 // Read Protobuf message.
                 let mut message_buffer: Vec<u8> = vec![0; size];
                 self.stream.read(&mut message_buffer).map_err(|error| {
-                    anyhow!(
-                        "Couldn't read Protobuf message from cached buffer: {:?}",
-                        error
-                    )
+                    anyhow!("Couldn't read Protobuf message from stream: {:?}", error)
                 })?;
 
                 let message = Request::decode(&*message_buffer)
@@ -107,7 +104,7 @@ where
             .map_err(|error| anyhow!("Couldn't encode proto message: {:?}", error))?;
 
         // Write Protobuf message size.
-        let size_buffer: [u8; size_of::<u64>()] = (message_buffer.len() as u64).to_be_bytes();
+        let size_buffer: [u8; size_of::<u64>()] = (message_buffer.len() as u64).to_ne_bytes();
         self.stream
             .write_all(&size_buffer)
             .map_err(|error| anyhow!("Couldn't write into stream: {:?}", error))?;

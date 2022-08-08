@@ -31,8 +31,8 @@ pub mod channel;
 mod tests;
 
 use crate::channel::Channel;
+use anyhow::anyhow;
 use clap::Parser;
-use log::info;
 use oak_remote_attestation::handshaker::{
     AttestationBehavior, EmptyAttestationGenerator, EmptyAttestationVerifier,
 };
@@ -53,6 +53,10 @@ pub struct Opt {
 // Connect to the file descriptor created by Bedebox using vsock.
 pub fn create_vsock_stream(file_descriptor: RawFd) -> anyhow::Result<VsockStream> {
     let stream = unsafe { VsockStream::from_raw_fd(file_descriptor) };
+    // Blocking is set in order to not return an error when the host hasn't written anything yet.
+    stream
+        .set_nonblocking(false)
+        .map_err(|error| anyhow!("Couldn't set socket into blocking mode: {}", error))?;
     Ok(stream)
 }
 
@@ -60,7 +64,7 @@ fn main() -> ! {
     let opt = Opt::parse();
 
     let stream = create_vsock_stream(opt.file_descriptor).expect("Couldn't create channel");
-    info!(
+    println!(
         "Connected to the {}",
         stream.peer_addr().expect("Couldn't get peer address")
     );
