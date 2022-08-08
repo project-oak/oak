@@ -625,7 +625,6 @@ dependencies = [
  "flatbuffers",
  "hashbrown 0.12.1",
  "log",
- "oak_baremetal_communication_channel",
  "oak_functions_abi",
  "oak_functions_lookup",
  "oak_functions_wasm",
