@@ -51,10 +51,14 @@ use oak_remote_attestation_sessions::SessionId;
 
 /// Sole entrypoint to the runtime. Starts the runtime and listens for requests
 /// on the provided channel.
-pub fn start<G: 'static + AttestationGenerator, V: 'static + AttestationVerifier>(
+pub fn start<G, V>(
     channel: Box<dyn Channel>,
     attestation_behavior: AttestationBehavior<G, V>,
-) -> anyhow::Result<!> {
+) -> anyhow::Result<!>
+where
+    G: 'static + AttestationGenerator,
+    V: 'static + AttestationVerifier,
+{
     let mut invocation_handler = RuntimeImplementation {
         initialization_state: InitializationState::Uninitialized(Some(attestation_behavior)),
         lookup_data_manager: Arc::new(LookupDataManager::new_empty(StandaloneLogger::default())),
@@ -78,8 +82,8 @@ pub fn start<G: 'static + AttestationGenerator, V: 'static + AttestationVerifier
 
 enum InitializationState<G, V>
 where
-    G: AttestationGenerator,
-    V: AttestationVerifier,
+    G: 'static + AttestationGenerator,
+    V: 'static + AttestationVerifier,
 {
     Uninitialized(Option<AttestationBehavior<G, V>>),
     // dyn is used as our attestation implementation uses a closure, which is
@@ -90,17 +94,17 @@ where
 
 struct RuntimeImplementation<G, V>
 where
-    G: AttestationGenerator,
-    V: AttestationVerifier,
+    G: 'static + AttestationGenerator,
+    V: 'static + AttestationVerifier,
 {
     initialization_state: InitializationState<G, V>,
     lookup_data_manager: Arc<LookupDataManager<logger::StandaloneLogger>>,
 }
 
-impl<G: 'static, V: 'static> schema::TrustedRuntime for RuntimeImplementation<G, V>
+impl<G, V> schema::TrustedRuntime for RuntimeImplementation<G, V>
 where
-    G: AttestationGenerator,
-    V: AttestationVerifier,
+    G: 'static + AttestationGenerator,
+    V: 'static + AttestationVerifier,
 {
     fn initialize(
         &mut self,
