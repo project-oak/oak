@@ -2925,6 +2925,7 @@ dependencies = [
  "oak_idl_gen_structs",
  "oak_logger",
  "oak_remote_attestation",
+ "oak_remote_attestation_amd",
  "oak_remote_attestation_sessions",
 ]
 

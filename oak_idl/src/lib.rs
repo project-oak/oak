@@ -24,7 +24,7 @@ use core::fmt::Debug;
 
 pub mod utils;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct Status {
     pub code: StatusCode,
     /// English message that helps developers understand and resolve the error.
@@ -53,7 +53,7 @@ impl Status {
 ///
 /// [gRPC status codes]: https://github.com/grpc/grpc/blob/master/doc/statuscodes.md#status-codes-and-their-use-in-grpc
 // Based on tonic's status code struct: https://github.com/hyperium/tonic/blob/91b73f9fc3c1bc281e85177808721b3efe37ece0/tonic/src/status.rs
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum StatusCode {
     /// The operation completed successfully.
     Ok = 0,
