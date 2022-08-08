@@ -68,6 +68,26 @@
 <span id="63">63</span>
 <span id="64">64</span>
 <span id="65">65</span>
+<span id="66">66</span>
+<span id="67">67</span>
+<span id="68">68</span>
+<span id="69">69</span>
+<span id="70">70</span>
+<span id="71">71</span>
+<span id="72">72</span>
+<span id="73">73</span>
+<span id="74">74</span>
+<span id="75">75</span>
+<span id="76">76</span>
+<span id="77">77</span>
+<span id="78">78</span>
+<span id="79">79</span>
+<span id="80">80</span>
+<span id="81">81</span>
+<span id="82">82</span>
+<span id="83">83</span>
+<span id="84">84</span>
+<span id="85">85</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2022 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -86,8 +106,28 @@
 
 <span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">message</span>, <span class="ident">Channel</span>, <span class="ident">InvocationChannel</span>, <span class="ident">Vec</span>};
 <span class="kw">use</span> <span class="ident">alloc::boxed::Box</span>;
+<span class="kw">use</span> <span class="ident">anyhow::Context</span>;
 
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">ServerChannelHandle</span> {
+<span class="doccomment">/// Starts a blocking server that listens for requests on the provided channel</span>
+<span class="doccomment">/// and responds to them using the provided [`oak_idl::Handler`].</span>
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">start_blocking_server</span><span class="op">&lt;</span><span class="ident">H</span>: <span class="ident">oak_idl::Handler</span><span class="op">&gt;</span>(
+    <span class="ident">channel</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">Channel</span><span class="op">&gt;</span>,
+    <span class="kw-2">mut</span> <span class="ident">oak_idl_service_implementation</span>: <span class="ident">H</span>,
+) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="op">!</span><span class="op">&gt;</span> {
+    <span class="kw">let</span> <span class="ident">channel_handle</span> <span class="op">=</span> <span class="kw-2">&amp;mut</span> <span class="ident">ServerChannelHandle::new</span>(<span class="ident">channel</span>);
+    <span class="kw">loop</span> {
+        <span class="kw">let</span> <span class="ident">request_message</span> <span class="op">=</span> <span class="ident">channel_handle</span>
+            .<span class="ident">read_request</span>()
+            .<span class="ident">context</span>(<span class="string">&quot;couldn&#39;t receive message&quot;</span>)<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">request_message_invocation_id</span> <span class="op">=</span> <span class="ident">request_message</span>.<span class="ident">invocation_id</span>;
+        <span class="kw">let</span> <span class="ident">response</span> <span class="op">=</span> <span class="ident">oak_idl_service_implementation</span>.<span class="ident">invoke</span>(<span class="ident">request_message</span>.<span class="ident">into</span>());
+        <span class="kw">let</span> <span class="ident">response_message</span> <span class="op">=</span>
+            <span class="ident">message_from_response_and_id</span>(<span class="ident">response</span>, <span class="ident">request_message_invocation_id</span>);
+        <span class="ident">channel_handle</span>.<span class="ident">write_response</span>(<span class="ident">response_message</span>)<span class="question-mark">?</span>
+    }
+}
+
+<span class="kw">struct</span> <span class="ident">ServerChannelHandle</span> {
     <span class="ident">inner</span>: <span class="ident">InvocationChannel</span>,
 }
 
@@ -116,7 +156,7 @@
     }
 }
 
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">message_from_response_and_id</span>(
+<span class="kw">fn</span> <span class="ident">message_from_response_and_id</span>(
     <span class="ident">response</span>: <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>, <span class="ident">oak_idl::Status</span><span class="op">&gt;</span>,
     <span class="ident">invocation_id</span>: <span class="ident">message::InvocationId</span>,
 ) -&gt; <span class="ident">message::ResponseMessage</span> {

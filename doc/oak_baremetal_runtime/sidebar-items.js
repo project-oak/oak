@@ -1,1 +1,1 @@
-initSidebarItems({"fn":[["start","Sole entrypoint to the runtime. Starts the runtime and listens for requests on the provided channel."]]});
+initSidebarItems({"mod":[["schema",""]],"struct":[["RuntimeImplementation",""]]});

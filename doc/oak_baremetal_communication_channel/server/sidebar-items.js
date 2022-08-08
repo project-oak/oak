@@ -1,1 +1,1 @@
-initSidebarItems({"fn":[["message_from_response_and_id",""]],"struct":[["ServerChannelHandle",""]]});
+initSidebarItems({"fn":[["start_blocking_server","Starts a blocking server that listens for requests on the provided channel and responds to them using the provided [`oak_idl::Handler`]."]]});
