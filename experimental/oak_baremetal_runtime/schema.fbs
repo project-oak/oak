@@ -22,6 +22,7 @@ table UserRequestResponse {
 
 table Initialization {
     wasm_module: [ubyte];
+    constant_response_size: uint;
 }
 
 table LookupDataEntry {

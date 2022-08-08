@@ -58,6 +58,10 @@ struct Args {
     #[clap(subcommand)]
     mode: Mode,
 
+    /// Consistent response size that the runtime should apply
+    #[clap(long, default_value = "1024")]
+    constant_response_size: u32,
+
     /// Path to a Wasm file to be loaded into the trusted runtime and executed by it per
     /// invocation. See the documentation for details on its ABI. Ref: <https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md>
     #[clap(
@@ -151,6 +155,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             &mut builder,
             &schema::InitializationArgs {
                 wasm_module: Some(wasm_module),
+                constant_response_size: cli.constant_response_size,
             },
         );
 

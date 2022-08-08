@@ -114,6 +114,7 @@ where
                 let attestation_behavior = attestation_behavior
                     .take()
                     .expect("The attestation_behavior should always be present. It is wrapped in an option purely so it can be taken without cloning.");
+                let constant_response_size = initialization.constant_response_size();
                 let wasm_module_bytes: &[u8] = initialization
                     .wasm_module()
                     .ok_or_else(|| oak_idl::Status::new(oak_idl::StatusCode::InvalidArgument))?;
@@ -123,11 +124,19 @@ where
                         .map_err(|_err| oak_idl::Status::new(oak_idl::StatusCode::Internal))?;
                 let attestation_handler = Box::new(AttestationSessionHandler::create(
                     move |decrypted_request| {
-                        wasm_handler
-                            .handle_invoke(Request {
-                                body: decrypted_request,
-                            })
-                            .map(|decrypted_response| decrypted_response.encode_to_vec())
+                        let decrypted_response = wasm_handler.handle_invoke(Request {
+                            body: decrypted_request,
+                        })?;
+
+                        let padded_decrypted_response = decrypted_response
+                            .pad(
+                                constant_response_size
+                                    .try_into()
+                                    .expect("failed to convert constant_response_size to usize"),
+                            )
+                            .context("could not pad the response")?;
+
+                        Ok(padded_decrypted_response.encode_to_vec())
                     },
                     attestation_behavior,
                 ));
