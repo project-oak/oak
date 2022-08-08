@@ -76,6 +76,10 @@
 <span id="71">71</span>
 <span id="72">72</span>
 <span id="73">73</span>
+<span id="74">74</span>
+<span id="75">75</span>
+<span id="76">76</span>
+<span id="77">77</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2022 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -109,8 +113,8 @@
 <span class="kw">mod</span> <span class="ident">tests</span>;
 
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::channel::Channel</span>;
+<span class="kw">use</span> <span class="ident">anyhow::anyhow</span>;
 <span class="kw">use</span> <span class="ident">clap::Parser</span>;
-<span class="kw">use</span> <span class="ident">log::info</span>;
 <span class="kw">use</span> <span class="ident">oak_remote_attestation::handshaker</span>::{
     <span class="ident">AttestationBehavior</span>, <span class="ident">EmptyAttestationGenerator</span>, <span class="ident">EmptyAttestationVerifier</span>,
 };
@@ -131,6 +135,10 @@
 <span class="comment">// Connect to the file descriptor created by Bedebox using vsock.</span>
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">create_vsock_stream</span>(<span class="ident">file_descriptor</span>: <span class="ident">RawFd</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">VsockStream</span><span class="op">&gt;</span> {
     <span class="kw">let</span> <span class="ident">stream</span> <span class="op">=</span> <span class="kw">unsafe</span> { <span class="ident">VsockStream::from_raw_fd</span>(<span class="ident">file_descriptor</span>) };
+    <span class="comment">// Blocking is set in order to not return an error when the host hasn&#39;t written anything yet.</span>
+    <span class="ident">stream</span>
+        .<span class="ident">set_nonblocking</span>(<span class="bool-val">false</span>)
+        .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">error</span><span class="op">|</span> <span class="macro">anyhow!</span>(<span class="string">&quot;Couldn&#39;t set socket into blocking mode: {}&quot;</span>, <span class="ident">error</span>))<span class="question-mark">?</span>;
     <span class="prelude-val">Ok</span>(<span class="ident">stream</span>)
 }
 
@@ -138,7 +146,7 @@
     <span class="kw">let</span> <span class="ident">opt</span> <span class="op">=</span> <span class="ident">Opt::parse</span>();
 
     <span class="kw">let</span> <span class="ident">stream</span> <span class="op">=</span> <span class="ident">create_vsock_stream</span>(<span class="ident">opt</span>.<span class="ident">file_descriptor</span>).<span class="ident">expect</span>(<span class="string">&quot;Couldn&#39;t create channel&quot;</span>);
-    <span class="macro">info!</span>(
+    <span class="macro">println!</span>(
         <span class="string">&quot;Connected to the {}&quot;</span>,
         <span class="ident">stream</span>.<span class="ident">peer_addr</span>().<span class="ident">expect</span>(<span class="string">&quot;Couldn&#39;t get peer address&quot;</span>)
     );
