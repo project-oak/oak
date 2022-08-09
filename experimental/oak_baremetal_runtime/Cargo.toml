@@ -35,4 +35,4 @@ oak_remote_attestation_amd = { path = "../../oak_remote_attestation_amd", defaul
 ] }
 oak_remote_attestation_sessions_client = { path = "../../remote_attestation_sessions_client", default-features = false }
 async-trait = "*"
-tokio = { version = "*", features = ["fs", "macros"] }
+tokio = { version = "*", features = ["rt", "macros"] }
