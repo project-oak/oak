@@ -18,7 +18,9 @@ ENTRY(_start)
 
 PHDRS
 {
-    ram  PT_LOAD FLAGS(5);
+    ram     PT_LOAD FLAGS(5);
+    cpuid   PT_LOAD FLAGS(1 << 23);
+    secrets PT_LOAD FLAGS(1 << 24);
 }
 
 SECTIONS {
@@ -50,11 +52,19 @@ SECTIONS {
         bss_start = .;
         *(.bss .bss.*)
         bss_size = . - bss_start;
-    }
+    } : ram
 
     /* Stack grows down, so stack_start is the upper address in memory. */
     .stack (NOLOAD) : ALIGN(4K) {
         . += 512K;
-    }
+    } : ram
     stack_start = .;
+
+    .cpuid (NOLOAD) : ALIGN(2M) {
+        . += 4K;
+    } : cpuid
+
+    .secrets (NOLOAD) : ALIGN(2M) {
+        . += 4K;
+    } : secrets
 }
