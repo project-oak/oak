@@ -24,6 +24,7 @@ PHDRS
      * first.
      */
     /* Executable text. */
+    boot    PT_LOAD FLAGS(4 + 1); /* PF_R + PF_X */
     text    PT_LOAD FLAGS(4 + 1); /* PF_R + PF_X */
     /* Read-only data. */
     rodata  PT_LOAD FLAGS(4); /* PF_R */
@@ -36,39 +37,54 @@ PHDRS
     secrets PT_LOAD FLAGS(1 << 24);
 }
 
+/* To set kernel VMA to high memory, set this to 0xFFFFFFFF80000000. */
+KERNEL_MEM_START = 0x0;
+
 SECTIONS {
+    /*
+     * Boot code is executed with identity mapping; the main duty of the boot
+     * code is to set up proper page tables before jumping to the kernel proper.
+     * We place that at 2M (both virtual and physical)
+     */
     .boot 0x200000 : {
         ram_min = .;
         *(.boot)
-    } : text
+    } : boot
+
+    /*
+     * Load the rest of the kernel after KERNEL_MEM_START. The idea is that the initial
+     * boot code should set map KERNEL_MEM_START to physical address 0; therefore, all
+     * VMAs will be LMA + KERNEL_MEM_START.
+     */
+    . += KERNEL_MEM_START;
 
     data_start = .;
     text_start = .;
 
-    .text : {
+    .text ALIGN(2M) : AT(ADDR(.text) - KERNEL_MEM_START) {
         *(.text .text.*)
     } : text
 
     text_end = .;
 
-    .rodata : {
+    .rodata ALIGN(2M) : {
         *(.rodata .rodata.*)
     } : rodata
 
-    .data : {
+    .data ALIGN(2M) : {
         *(.data .data.*)
     } : data
 
     data_end = .;
 
-    .bss : {
+    .bss : ALIGN(2M) {
         bss_start = .;
         *(.bss .bss.*)
         bss_size = . - bss_start;
     } : bss
 
     /* Stack grows down, so stack_start is the upper address in memory. */
-    .stack (NOLOAD) : ALIGN(4K) {
+    .stack (NOLOAD) : ALIGN(2M) {
         . += 512K;
     } : bss
     stack_start = .;
@@ -80,4 +96,8 @@ SECTIONS {
     .secrets (NOLOAD) : ALIGN(2M) {
         . += 4K;
     } : secrets
+
+    /DISCARD/ : {
+        *(.eh_frame*)
+    }
 }
