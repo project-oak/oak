@@ -10,4 +10,7 @@ gcloud run deploy "${DEPLOYMENT}" \
     --region=europe-west1 \
     --image="${DOCKER_IMAGE}" \
     --use-http2 \
-    --allow-unauthenticated
+    --allow-unauthenticated \
+    --set-env-vars "BACKEND_URL=http://localhost:8888" \
+    --set-env-vars "K=1" \
+    --set-env-vars "LISTEN_ADDRESS=[::]:8080" 
