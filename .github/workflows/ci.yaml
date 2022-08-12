@@ -28,7 +28,8 @@ jobs:
           - build-oak-functions-server-variants
           - run-cargo-tests
           - run-bazel-tests
-          - run-oak-functions-examples --application-variant=rust
+          - run-oak-functions-examples --application-variant=rust -
+            run-trusted-shuffler
           - run-cargo-fuzz -- -max_total_time=2
           - completion
           - run-cargo-clippy
