@@ -137,6 +137,7 @@ fn match_cmd(opt: &Opt) -> Step {
         Command::RunCargoDeny => run_cargo_deny(),
         Command::RunCargoUdeps => run_cargo_udeps(&opt.scope),
         Command::RunCargoClean => run_cargo_clean(),
+        Command::RunTrustedShuffler => run_trusted_shuffler(),
     }
 }
 

@@ -72,6 +72,7 @@ pub enum Command {
     RunCargoClean,
     #[clap(about = "generate bash completion script to stdout")]
     Completion(Completion),
+    RunTrustedShuffler,
 }
 
 #[derive(Parser, Clone, Debug)]
