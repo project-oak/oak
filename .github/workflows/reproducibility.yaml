@@ -75,10 +75,13 @@ jobs:
           ./scripts/docker_pull
           df --human-readable
 
-      # Build artifacts that are supposed to be reproducible.
-      - name: Build Functions server
+      - name: Generate provenacne for Base Oak Functions Server
         run: |
-          ./scripts/docker_run ./scripts/xtask build-oak-functions-server-variants
+          ./scripts/generate_provenance -c buildconfigs/oak_functions_loader_base.toml -s
+
+      - name: Generate provenance for crosvm Baremetal binary
+        run: |
+          ./scripts/generate_provenance -c buildconfigs/oak_baremetal_app_crosvm.toml -s
 
       # Upload artifacts to Ent, where they will be retained and publicly accessible by their hash.
       # This only applies to `push` events, since it needs access to a valid Ent API key (which is
@@ -88,6 +91,7 @@ jobs:
         run: |
           ent put ./target/x86_64-unknown-linux-musl/release/oak_functions_loader_base
           ent put ./target/x86_64-unknown-linux-musl/release/oak_functions_loader_unsafe
+          ent put ./experimental/oak_baremetal_app_crosvm/target/target/release/oak_baremetal_app_crosvm
 
       # Generate an index of the hashes of the reproducible artifacts.
       - name: Generate Reproducibility Index
