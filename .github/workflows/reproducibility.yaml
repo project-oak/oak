@@ -14,6 +14,10 @@ on:
 jobs:
   build_reproducibility_index:
     runs-on: ubuntu-20.04
+    env:
+      FUNCTIONS_BASE_PATH: './target/x86_64-unknown-linux-musl/release/oak_functions_loader_base'
+      FUNCTIONS_UNSAFE_PATH: './target/x86_64-unknown-linux-musl/release/oak_functions_loader_unsafe'
+      BAREMETAL_CROSSVM_PATH: './experimental/oak_baremetal_app_crosvm/target/target/release/oak_baremetal_app_crosvm'
 
     permissions:
       # Allow the job to update the repo with the latest index.
@@ -89,14 +93,14 @@ jobs:
       - name: Upload to Ent
         if: github.event_name == 'push'
         run: |
-          ent put ./target/x86_64-unknown-linux-musl/release/oak_functions_loader_base
-          ent put ./target/x86_64-unknown-linux-musl/release/oak_functions_loader_unsafe
-          ent put ./experimental/oak_baremetal_app_crosvm/target/target/release/oak_baremetal_app_crosvm
+          ent put ${{env.FUNCTIONS_BASE_PATH}}
+          ent put ${{env.FUNCTIONS_UNSAFE_PATH}}
+          ent put ${{env.BAREMETAL_CROSSVM_PATH}}
 
       # Generate an index of the hashes of the reproducible artifacts.
       - name: Generate Reproducibility Index
         run: |
-          ./scripts/docker_run ./scripts/build_reproducibility_index
+          ./scripts/docker_run ./scripts/build_reproducibility_index ${{env.FUNCTIONS_BASE_PATH}} ${{env.FUNCTIONS_UNSAFE_PATH}} ${{env.BAREMETAL_CROSSVM_PATH}}
 
       # Remove all files from the "out" folder.
       - name: Clear "out" folder

@@ -10,11 +10,8 @@ readonly SCRIPTS_DIR="$(dirname "$0")"
 # shellcheck source=scripts/common
 source "$SCRIPTS_DIR/common"
 
-# List of artifacts that are expected to be reproducibly built.
-readonly REPRODUCIBLE_ARTIFACTS=(
-  ./target/x86_64-unknown-linux-musl/release/oak_functions_loader_base
-  ./target/x86_64-unknown-linux-musl/release/oak_functions_loader_unsafe
-)
+# Convert the input arguments to a list of artifacts that are expected to be reproducibly built.
+readonly REPRODUCIBLE_ARTIFACTS=( "$@" )
 
 # Index file containing hashes of the reproducible artifacts, alongside their file names.
 readonly REPRODUCIBILITY_INDEX='./reproducibility_index'
