@@ -67,14 +67,24 @@ cp "${CONFIG_PATH}" tmp/build.toml
     } >> build.toml
 )
 
-# Build the binary and generate the provenance file.
-# `|| true` is needed so that we can continue to the rest of the script,
-# particularly the cleanup part.
-./tmp/transparent-release -build_config_path=tmp/build.toml -git_root_dir=. -provenance_path="${PROV_FILE_NAME}" || true
+# Disabling failing early so that we can do necessary cleanups.
+set +e
 
+# Build the binary and generate the provenance file.
+./tmp/transparent-release -build_config_path=tmp/build.toml -git_root_dir=. -provenance_path="${PROV_FILE_NAME}"
+EXIT_CODE=$?
 
 # cleanup
 rm -rf tmp
+
+# Terminate if building the binary and generating the provenance failed. 
+if [[ $EXIT_CODE != 0 ]]; then
+  echo "failed to build the binary and generate the provenance"
+  exit 1
+fi
+
+# Reenable failing early.
+set -e
 
 # Copy the provenance file in `./provenance/<BINARY_HASH>/COMMIT_HASH.json`
 # if the `-s` argument is passed in.
