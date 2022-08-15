@@ -14,6 +14,8 @@ on:
 jobs:
   build_provenance:
     runs-on: ubuntu-20.04
+    env:
+      FUNCTIONS_BASE_PATH: './target/x86_64-unknown-linux-musl/release/oak_functions_loader_base'
 
     permissions:
       contents: write
@@ -74,3 +76,16 @@ jobs:
       - name: Push provenance branch
         if: github.event_name == 'push'
         run: git -C ./provenance-branch push --follow-tags
+
+      - name: Archive generated binaries
+        uses: actions/upload-artifact@v3
+        with:
+          name: oak_functions_loader_base
+          path: ${{ env.FUNCTIONS_BASE_PATH }}
+
+  build-reproducibility-index:
+    needs: build_provenance
+    uses: ./.github/workflows/reproducibility.yaml
+    with:
+      binary_path: oak_functions_loader_base
+    secrets: inherit

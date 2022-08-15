@@ -1,22 +1,21 @@
 name: Build Reproducibility Index
 
-# See https://docs.github.com/en/actions/learn-github-actions/workflow-syntax-for-github-actions#example-using-concurrency-to-cancel-any-in-progress-job-or-run
-concurrency:
-  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
-  cancel-in-progress: true
-
 on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
+  # Use this as a reusable workflow that can be called from other workflows.
+  # See https://docs.github.com/en/actions/using-workflows/reusing-workflows.
+  workflow_call:
+    inputs:
+      binary_path:
+        required: true
+        type: string
+    secrets:
+      ENT_API_KEY:
+        # The secret is only required on push
+        required: false
 
 jobs:
   build_reproducibility_index:
     runs-on: ubuntu-20.04
-    env:
-      FUNCTIONS_BASE_PATH: './target/x86_64-unknown-linux-musl/release/oak_functions_loader_base'
-      FUNCTIONS_UNSAFE_PATH: './target/x86_64-unknown-linux-musl/release/oak_functions_loader_unsafe'
 
     permissions:
       # Allow the job to update the repo with the latest index.
@@ -78,9 +77,10 @@ jobs:
           ./scripts/docker_pull
           df --human-readable
 
-      - name: Generate provenacne for Base Oak Functions Server
-        run: |
-          ./scripts/generate_provenance -c buildconfigs/oak_functions_loader_base.toml -s
+      - name: Download binary
+        uses: actions/download-artifact@v3
+        with:
+          name: ${{inputs.binary_path}}
 
       # Upload artifacts to Ent, where they will be retained and publicly accessible by their hash.
       # This only applies to `push` events, since it needs access to a valid Ent API key (which is
@@ -88,13 +88,19 @@ jobs:
       - name: Upload to Ent
         if: github.event_name == 'push'
         run: |
-          ent put ${{env.FUNCTIONS_BASE_PATH}}
-          ent put ${{env.FUNCTIONS_UNSAFE_PATH}}
+          ent put ${{inputs.binary_path}}
+
+      # Since the `Upload to Ent` step above only runs on `push` events, here we do a sanity check
+      # to make sure the path exists before merge. This step only applies to non-push events.
+      - name: Check path
+        if: github.event_name != 'push'
+        run: |
+          sha256sum ${{inputs.binary_path}}
 
       # Generate an index of the hashes of the reproducible artifacts.
       - name: Generate Reproducibility Index
         run: |
-          ./scripts/docker_run ./scripts/build_reproducibility_index ${{env.FUNCTIONS_BASE_PATH}} ${{env.FUNCTIONS_UNSAFE_PATH}}
+          ./scripts/docker_run ./scripts/build_reproducibility_index ${{inputs.binary_path}}
 
       # Remove all files from the "out" folder.
       - name: Clear "out" folder
