@@ -53,9 +53,10 @@ jobs:
         run: |
           ./scripts/generate_provenance -c buildconfigs/oak_functions_loader_base.toml -s
 
-      - name: Generate provenance for crosvm Baremetal binary
-        run: |
-          ./scripts/generate_provenance -c buildconfigs/oak_baremetal_app_crosvm.toml -s
+      # TODO(#3099): Put this back once #3099 is reverted.
+      # - name: Generate provenance for crosvm Baremetal binary
+      #   run: |
+      #     ./scripts/generate_provenance -c buildconfigs/oak_baremetal_app_crosvm.toml -s
 
       - name: Move new provenance files to the provenance branch
         if: github.event_name == 'push'
