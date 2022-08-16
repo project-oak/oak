@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-package com.google.oak.client;
+package com.google.oak.evidence;
 
 /**
  * Marker interface representing evidence about the trustworthiness of a remote server.

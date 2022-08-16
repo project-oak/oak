@@ -14,7 +14,9 @@
 // limitations under the License.
 //
 
-package com.google.oak.client;
+package com.google.oak.evidence;
+
+import com.google.oak.util.Result;
 
 /**
  * Endorsement evidence about a trusted Oak runtime. This class contains five fields:
@@ -31,4 +33,15 @@ package com.google.oak.client;
 public class EndorsementEvidence implements Evidence {
   // TODO(#2854): We probably need a Factory class for generating EndorsementEvidence from an
   // in-toto attestation with attached signature.
+
+  /**
+   * Verifies this endorsement evidence and returns the SHA256 hash of the subject of this
+   * endorsement if the verification succeeds. Otherwise returns a result containing an error.
+   *
+   * @return SHA256 hash of the subject, or an error if the verification fails
+   */
+  Result<byte[], Exception> verify() {
+    // TODO(#2854): Implement this method.
+    return Result.success(new byte[] {});
+  }
 }

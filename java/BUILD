@@ -22,9 +22,33 @@ package(
 )
 
 java_library(
+    name = "amd_client",
+    srcs = glob(["src/main/java/com/google/oak/client/amd/*.java"]),
+    deps = [
+        ":client",
+        ":evidence",
+        ":util",
+        "//remote_attestation/java:remote_attestation",
+    ],
+)
+
+java_library(
     name = "client",
     srcs = glob(["src/main/java/com/google/oak/client/*.java"]),
-    deps = [":util"],
+    deps = [
+        ":evidence",
+        ":util",
+        "//remote_attestation/java:remote_attestation",
+    ],
+)
+
+java_library(
+    name = "evidence",
+    srcs = glob(["src/main/java/com/google/oak/evidence/*.java"]),
+    deps = [
+        ":util",
+        "@com_google_guava_guava",
+    ],
 )
 
 java_library(
@@ -39,7 +63,22 @@ java_test(
     test_class = "com.google.oak.client.OakClientTest",
     deps = [
         ":client",
+        ":evidence",
         ":util",
+    ],
+)
+
+java_test(
+    name = "amd_client_test",
+    srcs = ["src/test/java/com/google/oak/client/amd/AmdAttestedOakClientTest.java"],
+    test_class = "com.google.oak.client.amd.AmdAttestedOakClientTest",
+    deps = [
+        ":amd_client",
+        ":client",
+        ":evidence",
+        ":util",
+        "@com_google_guava_guava",
+        "@maven//:org_mockito_mockito_core",
     ],
 )
 

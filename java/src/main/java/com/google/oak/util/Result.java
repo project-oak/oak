@@ -18,6 +18,7 @@ package com.google.oak.util;
 
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 
 /**
@@ -131,6 +132,26 @@ public class Result<R, E> {
   public <T> Result<T, E> andThen(final Function<R, Result<T, E>> function) {
     Result<Result<T, E>, E> result = map(function);
     return result.isSuccess() ? result.success.get() : error(result.error.get());
+  }
+
+  /**
+   * Merges the success values of two instances of {@code Result} by applying {@code function} on
+   * them. The input {@code Result} instances must have the same error type.
+   *
+   * <p>If {@code first} is an error its error content will be returned, otherwise the error
+   * content of {@code second} will be returned. If neither {@code first} nor {@code second}
+   * contains an error, the result of applying {@code function} on their success values will be
+   * returned as a success value.
+   *
+   * @param <R> type of the success value in {@code first}
+   * @param <T> type of the success value in {@code second}
+   * @param <U> type of the success value of the output
+   * @param <E> type of the error value
+   * @return the result of merging {@code first} and {@code second} as described above
+   */
+  public static <R, T, U, E> Result<U, E> merge(
+      final Result<R, E> first, final Result<T, E> second, BiFunction<R, T, U> function) {
+    return first.andThen(f -> second.map(s -> function.apply(f, s)));
   }
 
   // Private constructor to disallow creation of instances that could violate the invariant of this

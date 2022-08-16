@@ -64,7 +64,7 @@ http_archive(
     url = "https://github.com/bazelbuild/rules_jvm_external/archive/4.1.zip",
 )
 
-# Maven for Tink crypto library.
+# Maven for Tink crypto library and testing.
 load("@rules_jvm_external//:defs.bzl", "maven_install")
 
 maven_install(
@@ -72,6 +72,7 @@ maven_install(
         "com.google.code.findbugs:jsr305:1.3.9",
         "com.google.errorprone:error_prone_annotations:2.0.18",
         "com.google.j2objc:j2objc-annotations:1.1",
+        "org.mockito:mockito-core:3.3.3",
     ],
     repositories = [
         "https://maven.google.com",
