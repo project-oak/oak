@@ -14,6 +14,13 @@
 // limitations under the License.
 //
 
+#![feature(assert_matches)]
+// Permit unused variables as rust errounously complains about variables used
+// only in assert_matches being unused. This cannot be set per line for each
+// macro invocation.
+#![allow(unused_variables)]
+
+use core::assert_matches::assert_matches;
 use oak_baremetal_runtime::{schema::TrustedRuntime, RuntimeImplementation};
 use oak_remote_attestation::handshaker::{
     AttestationBehavior, ClientHandshaker, EmptyAttestationVerifier,
@@ -65,10 +72,9 @@ fn it_should_not_handle_user_requests_before_initialization() {
     };
     let result = client.handle_user_request(owned_request_flatbuffer.into_vec());
 
-    assert_eq!(
-        result.unwrap_err(),
-        oak_idl::Status::new(oak_idl::StatusCode::FailedPrecondition)
-    );
+    let expected_err = oak_idl::Status::new(oak_idl::StatusCode::FailedPrecondition);
+
+    assert_matches!(result, Err(expected_err));
 }
 
 #[test]
@@ -124,7 +130,7 @@ fn it_should_handle_user_requests_after_initialization() {
     };
     let result = client.handle_user_request(owned_request_flatbuffer.into_vec());
 
-    assert!(result.is_ok());
+    assert_matches!(result, Ok(_));
 }
 
 #[test]
@@ -156,8 +162,6 @@ fn it_should_only_initialize_once() {
 
     let result = client.initialize(init_args);
 
-    assert_eq!(
-        result.unwrap_err(),
-        oak_idl::Status::new(oak_idl::StatusCode::FailedPrecondition)
-    );
+    let expected_err = oak_idl::Status::new(oak_idl::StatusCode::FailedPrecondition);
+    assert_matches!(result, Err(_expected_err));
 }
