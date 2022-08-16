@@ -35,7 +35,7 @@
 //! <https://developer.amd.com/wp-content/resources/56421.pdf>.
 
 use crate::instructions::vmgexit;
-use anyhow::{anyhow, bail, Result};
+//use anyhow::{anyhow, bail, Result};
 use bitflags::bitflags;
 use strum::FromRepr;
 use x86_64::registers::model_specific::Msr;
@@ -66,10 +66,10 @@ pub struct GhcbGpa {
 }
 
 impl GhcbGpa {
-    pub fn new(gpa: usize) -> Result<Self> {
+    pub fn new(gpa: usize) -> Result<Self, &'static str> {
         let gpa = gpa as u64;
         if gpa & GHCB_INFO_MASK != 0 {
-            bail!("GHCB must be 4KiB-aligned");
+            return Err("GHCB must be 4KiB-aligned");
         }
         Ok(Self { gpa })
     }
@@ -98,11 +98,11 @@ pub struct SevInfoResponse {
 }
 
 impl TryFrom<u64> for SevInfoResponse {
-    type Error = anyhow::Error;
-    fn try_from(msr_value: u64) -> Result<Self> {
+    type Error = &'static str;
+    fn try_from(msr_value: u64) -> Result<Self, &'static str> {
         const SEV_INFO_RESPONSE_INFO: u64 = 0x001;
         if msr_value & GHCB_INFO_MASK != SEV_INFO_RESPONSE_INFO {
-            bail!("Value is not a valid SEV information response");
+            return Err("Value is not a valid SEV information response");
         }
         let max_protocol_version = (msr_value >> 48) as u16;
         let min_protocol_version = (msr_value >> 32) as u16;
@@ -126,7 +126,7 @@ impl From<SevInfoRequest> for u64 {
 
 /// Gets information about the supported GHCB MSR protocol verions and the location of the
 /// encryption bit.
-pub fn get_sev_info() -> Result<SevInfoResponse> {
+pub fn get_sev_info() -> Result<SevInfoResponse, &'static str> {
     let request = SevInfoRequest;
     write_msr_and_exit(request.into());
     read_msr().try_into()
@@ -167,24 +167,24 @@ pub struct CpuidResponse {
 }
 
 impl TryFrom<u64> for CpuidResponse {
-    type Error = anyhow::Error;
-    fn try_from(msr_value: u64) -> Result<Self> {
+    type Error = &'static str;
+    fn try_from(msr_value: u64) -> Result<Self, &'static str> {
         const SEV_INFO_RESPONSE_INFO: u64 = 0x005;
         const RESERVED_MASK: u64 = 0x3FFFF000;
         if msr_value & GHCB_INFO_MASK != SEV_INFO_RESPONSE_INFO || msr_value & RESERVED_MASK != 0 {
-            bail!("Value is not a valid CPUID response");
+            return Err("Value is not a valid CPUID response");
         }
         let value = (msr_value >> 32) as u32;
         const REGISTER_MASK: u64 = 0xC0000000;
         let register = CpuidRegister::from_repr(((msr_value & REGISTER_MASK) >> 30) as u8)
-            .ok_or_else(|| anyhow::anyhow!("Invalid register"))?;
+            .ok_or("Invalid register")?;
         Ok(Self { value, register })
     }
 }
 
 /// Gets the value of the specified register that was returned when executing CPUID for the
 /// specified leaf. Sub-leafs are not supported.
-pub fn get_cpuid(request: CpuidRequest) -> Result<CpuidResponse> {
+pub fn get_cpuid(request: CpuidRequest) -> Result<CpuidResponse, &'static str> {
     write_msr_and_exit(request.into());
     read_msr().try_into()
 }
@@ -205,11 +205,11 @@ pub struct PreferredGhcbGpaResponse {
 }
 
 impl TryFrom<u64> for PreferredGhcbGpaResponse {
-    type Error = anyhow::Error;
-    fn try_from(msr_value: u64) -> Result<Self> {
+    type Error = &'static str;
+    fn try_from(msr_value: u64) -> Result<Self, &'static str> {
         const PREFERRED_GPA_RESPONSE_INFO: u64 = 0x011;
         if msr_value & GHCB_INFO_MASK != PREFERRED_GPA_RESPONSE_INFO {
-            bail!("Value is not a valid preferred GHCP GPA response");
+            return Err("Value is not a valid preferred GHCP GPA response");
         }
         let ghcb_gpa = (msr_value & GCHP_DATA_MASK) as usize;
         Ok(Self { ghcb_gpa })
@@ -223,7 +223,7 @@ impl TryFrom<u64> for PreferredGhcbGpaResponse {
 ///
 /// The guest must validate that the returned guest-physical address is not part of its known
 /// guest-private memory.
-pub fn get_preferred_ghcb_location() -> Result<PreferredGhcbGpaResponse> {
+pub fn get_preferred_ghcb_location() -> Result<PreferredGhcbGpaResponse, &'static str> {
     let request = PreferredGhcbGpaRequest;
     write_msr_and_exit(request.into());
     read_msr().try_into()
@@ -235,10 +235,10 @@ pub struct RegisterGhcbGpaRequest {
 }
 
 impl RegisterGhcbGpaRequest {
-    pub fn new(ghcb_gpa: usize) -> Result<Self> {
+    pub fn new(ghcb_gpa: usize) -> Result<Self, &'static str> {
         let ghcb_gpa = ghcb_gpa as u64;
         if ghcb_gpa & GHCB_INFO_MASK != 0 {
-            bail!("GHCB must be 4KiB-aligned");
+            return Err("GHCB must be 4KiB-aligned");
         }
         Ok(Self { ghcb_gpa })
     }
@@ -258,11 +258,11 @@ pub struct RegisterGhcbGpaResponse {
 }
 
 impl TryFrom<u64> for RegisterGhcbGpaResponse {
-    type Error = anyhow::Error;
-    fn try_from(msr_value: u64) -> Result<Self> {
+    type Error = &'static str;
+    fn try_from(msr_value: u64) -> Result<Self, &'static str> {
         const REGISTER_GHCB_GPA_RESPONSE_INFO: u64 = 0x013;
         if msr_value & GHCB_INFO_MASK != REGISTER_GHCB_GPA_RESPONSE_INFO {
-            bail!("Value is not a valid GHCP GPA registration response");
+            return Err("Value is not a valid GHCP GPA registration response");
         }
         let ghcb_gpa = msr_value & GCHP_DATA_MASK;
         Ok(Self { ghcb_gpa })
@@ -270,16 +270,16 @@ impl TryFrom<u64> for RegisterGhcbGpaResponse {
 }
 
 /// Registers the location of the GHCB page for the current vCPU with the hypervisor.
-pub fn register_ghcb_location(request: RegisterGhcbGpaRequest) -> Result<()> {
+pub fn register_ghcb_location(request: RegisterGhcbGpaRequest) -> Result<(), &'static str> {
     let request_ghcb_gpa: u64 = request.ghcb_gpa;
     write_msr_and_exit(request.into());
     let response: RegisterGhcbGpaResponse = read_msr().try_into()?;
     // Ensure that the registration was successful.
     if response.ghcb_gpa == GHCB_LOCATION_NOT_ACCEPTED {
-        bail!("GHCB location registration not accepted");
+        return Err("GHCB location registration not accepted");
     }
     if response.ghcb_gpa != request_ghcb_gpa {
-        bail!("The registration response did not match the request");
+        return Err("The registration response did not match the request");
     }
     Ok(())
 }
@@ -299,15 +299,15 @@ pub struct SnpPageStateChangeRequest {
 }
 
 impl SnpPageStateChangeRequest {
-    pub fn new(page_gpa: usize, assignment: PageAssignment) -> Result<Self> {
+    pub fn new(page_gpa: usize, assignment: PageAssignment) -> Result<Self, &'static str> {
         let page_gpa = page_gpa as u64;
         if page_gpa & GHCB_INFO_MASK != 0 {
-            bail!("Page must be 4KiB-aligned");
+            return Err("Page must be 4KiB-aligned");
         }
         // Only 52 bits can be use for an address.
         const ADDRESS_MAX: u64 = (1 << 52) - 1;
         if page_gpa > ADDRESS_MAX {
-            bail!("Page address is too high");
+            return Err("Page address is too high");
         }
         Ok(Self {
             page_gpa,
@@ -333,14 +333,14 @@ pub struct SnpPageStateChangeResponse {
 }
 
 impl TryFrom<u64> for SnpPageStateChangeResponse {
-    type Error = anyhow::Error;
-    fn try_from(msr_value: u64) -> Result<Self> {
+    type Error = &'static str;
+    fn try_from(msr_value: u64) -> Result<Self, &'static str> {
         const SNP_PAGE_STATE_CHANGE_RESPONSE_INFO: u64 = 0x015;
         const RESERVED_MASK: u64 = 0xFFFFF000;
         if msr_value & GHCB_INFO_MASK != SNP_PAGE_STATE_CHANGE_RESPONSE_INFO
             || msr_value & RESERVED_MASK != 0
         {
-            bail!("Value is not a valid SNP Page State Change response");
+            return Err("Value is not a valid SNP Page State Change response");
         }
         let error_code = (msr_value >> 32) as u32;
         Ok(Self { error_code })
@@ -352,15 +352,12 @@ impl TryFrom<u64> for SnpPageStateChangeResponse {
 ///
 /// This is useful if the GHCB has not yet been established, for example if a page must be shared
 /// with the hypervisor to establish the GHCB.
-pub fn change_snp_page_state(request: SnpPageStateChangeRequest) -> Result<()> {
+pub fn change_snp_page_state(request: SnpPageStateChangeRequest) -> Result<(), &'static str> {
     write_msr_and_exit(request.into());
     let response: SnpPageStateChangeResponse = read_msr().try_into()?;
     // Ensure that the page state change was successful.
     if response.error_code != 0 {
-        bail!(
-            "Page state change failed with error code: {}",
-            response.error_code
-        );
+        return Err("Page state change failed");
     }
     Ok(())
 }
@@ -390,19 +387,19 @@ bitflags! {
 }
 
 impl TryFrom<u64> for HypervisorFeatureSupportResponse {
-    type Error = anyhow::Error;
-    fn try_from(msr_value: u64) -> Result<Self> {
+    type Error = &'static str;
+    fn try_from(msr_value: u64) -> Result<Self, &'static str> {
         const HYPERVISOR_FEATURE_SUPPORT_RESPONSE_INFO: u64 = 0x081;
         if msr_value & GHCB_INFO_MASK != HYPERVISOR_FEATURE_SUPPORT_RESPONSE_INFO {
-            bail!("Value is not a valid Hypervisor Feature Support response");
+            return Err("Value is not a valid Hypervisor Feature Support response");
         }
         HypervisorFeatureSupportResponse::from_bits(msr_value >> 12)
-            .ok_or_else(|| anyhow!("Invalid Hypervisor Feature Support bitmap"))
+            .ok_or("Invalid Hypervisor Feature Support bitmap")
     }
 }
 
 /// Requests a bitmap specifying the features supported by the hypervisor.
-pub fn get_hypervisor_feature_support() -> Result<HypervisorFeatureSupportResponse> {
+pub fn get_hypervisor_feature_support() -> Result<HypervisorFeatureSupportResponse, &'static str> {
     let request = HypervisorFeatureSupportRequest;
     write_msr_and_exit(request.into());
     read_msr().try_into()
@@ -498,7 +495,7 @@ mod tests {
         let invalid = 5u64 | (enc_bit << 24) | (min_version << 32) | (max_version << 48);
         let valid = 1u64 | (enc_bit << 24) | (min_version << 32) | (max_version << 48);
 
-        let error: Result<SevInfoResponse> = invalid.try_into();
+        let error: Result<SevInfoResponse, &'static str> = invalid.try_into();
         assert!(error.is_err());
 
         let correct: SevInfoResponse = valid.try_into().unwrap();
@@ -523,7 +520,7 @@ mod tests {
         let invalid = 5u64 | ((value as u64) << 32) | ((register as u64) << 25);
         let valid = 5u64 | ((value as u64) << 32) | ((register as u64) << 30);
 
-        let error: Result<CpuidResponse> = invalid.try_into();
+        let error: Result<CpuidResponse, &'static str> = invalid.try_into();
         assert!(error.is_err());
 
         let correct: CpuidResponse = valid.try_into().unwrap();
@@ -543,7 +540,7 @@ mod tests {
         let invalid = 0xFu64 | page;
         let valid = 0x11u64 | page;
 
-        let error: Result<PreferredGhcbGpaResponse> = invalid.try_into();
+        let error: Result<PreferredGhcbGpaResponse, &'static str> = invalid.try_into();
         assert!(error.is_err());
 
         let correct: PreferredGhcbGpaResponse = valid.try_into().unwrap();
@@ -567,7 +564,7 @@ mod tests {
         let invalid = 0x12u64 | page;
         let valid = 0x13u64 | page;
 
-        let error: Result<RegisterGhcbGpaResponse> = invalid.try_into();
+        let error: Result<RegisterGhcbGpaResponse, &'static str> = invalid.try_into();
         assert!(error.is_err());
 
         let correct: RegisterGhcbGpaResponse = valid.try_into().unwrap();
@@ -601,9 +598,10 @@ mod tests {
         let invalid_info = 0x16u64 | (error_code << 32);
         let valid = 0x15u64 | (error_code << 32);
 
-        let error: Result<SnpPageStateChangeResponse> = invalid_misaligned_data.try_into();
+        let error: Result<SnpPageStateChangeResponse, &'static str> =
+            invalid_misaligned_data.try_into();
         assert!(error.is_err());
-        let error: Result<SnpPageStateChangeResponse> = invalid_info.try_into();
+        let error: Result<SnpPageStateChangeResponse, &'static str> = invalid_info.try_into();
         assert!(error.is_err());
 
         let correct: SnpPageStateChangeResponse = valid.try_into().unwrap();
@@ -623,7 +621,7 @@ mod tests {
         let invalid = 81u64 | (expected.bits() << 12);
         let valid = 0x81u64 | (expected.bits() << 12);
 
-        let error: Result<HypervisorFeatureSupportResponse> = invalid.try_into();
+        let error: Result<HypervisorFeatureSupportResponse, &'static str> = invalid.try_into();
         assert!(error.is_err());
 
         let correct: HypervisorFeatureSupportResponse = valid.try_into().unwrap();
