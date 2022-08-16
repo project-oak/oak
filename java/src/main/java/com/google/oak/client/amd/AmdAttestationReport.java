@@ -25,15 +25,15 @@ import com.google.oak.util.Result;
  * Placeholder implementation of the remote attestation report from AMD SEV-SNP.
  */
 public class AmdAttestationReport implements AttestationReport {
-  // TODO(#2842): in reality, it should be extracte from the report.
-  private final byte[] publicKey;
+  // TODO(#2842): In a valid implementation, it should be extracted from the report.
+  private final byte[] publicKeyHash;
 
-  // TODO(#2842): in reality, it should be extracte from the report.
+  // TODO(#2842): In a valid implementation, it should be extracted from the report.
   private final byte[] binaryHash;
 
   @Override
-  public Result<byte[], Exception> getServerSigningPublicKey() {
-    return Result.success(publicKey.clone());
+  public Result<byte[], Exception> getServerSigningPublicKeySha256Hash() {
+    return Result.success(publicKeyHash.clone());
   }
 
   @Override
@@ -43,25 +43,25 @@ public class AmdAttestationReport implements AttestationReport {
 
   @Override
   public Result<byte[], Exception> verify() {
-    // TODO(#2842): implement the verification logic.
-    return getServerSigningPublicKey();
+    // TODO(#2842): Implement the verification logic.
+    return getServerSigningPublicKeySha256Hash();
   }
 
   // TODO(#2842): Remove once we have a valid implementation.
   /**
    * Creates a placeholder instance of {@code AmdAttestationReport}, with the given {@code
-   * publicKey} and {@code binaryHash}. This is suitable for testing, and will be removed when we
-   * have a complete and valid implementation of the AMD Attestation report.
+   * publicKeyHash} and {@code binaryHash}. This is suitable for testing, and will be removed when
+   * we have a complete and valid implementation of the AMD Attestation report.
    */
   public static AmdAttestationReport createPlaceholder(
-      final byte[] publicKey, final byte[] binaryHash) {
-    return new AmdAttestationReport(publicKey, binaryHash);
+      final byte[] publicKeyHash, final byte[] binaryHash) {
+    return new AmdAttestationReport(publicKeyHash, binaryHash);
   }
 
   // This is a placeholder constructor and is therefore private.
   // TODO(#2842): Remove once we have a valid implementation.
-  private AmdAttestationReport(final byte[] publicKey, final byte[] binaryHash) {
-    this.publicKey = publicKey;
+  private AmdAttestationReport(final byte[] publicKeyHash, final byte[] binaryHash) {
+    this.publicKeyHash = publicKeyHash;
     this.binaryHash = binaryHash;
   }
 }

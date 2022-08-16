@@ -41,7 +41,7 @@ public class EndorsementEvidence implements Evidence {
    * @return SHA256 hash of the subject, or an error if the verification fails
    */
   Result<byte[], Exception> verify() {
-    // TODO(#2854): implement this method.
+    // TODO(#2854): Implement this method.
     return Result.success(new byte[] {});
   }
 }

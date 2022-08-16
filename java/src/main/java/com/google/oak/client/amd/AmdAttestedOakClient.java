@@ -29,6 +29,9 @@ import com.google.oak.remote_attestation.KeyNegotiator;
 import com.google.oak.util.Result;
 import java.security.GeneralSecurityException;
 
+// TODO(#2842): Give this class a better name; "attested client" is not really 100% accurate, as the
+// server provides the attestation evidence and the client verifies it. It is the server state that
+// is attested to.
 /**
  * Placeholder implementation of an AmdAttestedOakClient. To create an instance of this class, an
  * {@code AmdAttestationReport} must be received and verified.
@@ -61,8 +64,7 @@ public class AmdAttestedOakClient<C extends RpcClient> implements OakClient<byte
    */
   public static class Builder<C extends RpcClient> {
     private RpcClientProvider<C> clientProvider;
-    private EvidenceProvider<BasicEvidence<AmdAttestationReport>> evidenceProvider =
-        defaultEvidenceProvider();
+    private EvidenceProvider<BasicEvidence<AmdAttestationReport>> evidenceProvider;
     private EncryptorProvider<? extends Encryptor> encryptorProvider = defaultEncryptorProvider();
 
     /**
@@ -108,7 +110,8 @@ public class AmdAttestedOakClient<C extends RpcClient> implements OakClient<byte
      * <p>{@code clientProvider}, {@code evidenceProvider}, and {@code encryptorProvider} must all
      * be non-null.
      *
-     * @return an instance of {@code AttestedClient<C>} or an error, wrapped in a {@code Result}
+     * @return an instance of {@code AmdAttestedOakClient<C>} or an error, wrapped in a {@code
+     *     Result}
      */
     public Result<AmdAttestedOakClient<C>, Exception> build() {
       if (clientProvider == null || evidenceProvider == null || encryptorProvider == null) {
@@ -118,6 +121,9 @@ public class AmdAttestedOakClient<C extends RpcClient> implements OakClient<byte
       }
 
       Result<C, Exception> clientResult = clientProvider.getRpcClient();
+
+      // Get supporting evidence for public key, verify it, and if valid use the public key to
+      // generate an encryptor.
       Result<? extends Encryptor, Exception> encryptorResult =
           evidenceProvider.getEvidence().andThen(evidence
               -> evidence.verify().andThen(publicKey -> encryptorProvider.getEncryptor(publicKey)));
@@ -142,23 +148,6 @@ public class AmdAttestedOakClient<C extends RpcClient> implements OakClient<byte
           } catch (GeneralSecurityException e) {
             return Result.error(e);
           }
-        }
-      };
-    }
-
-    // TODO(#2842): Update this to provide a more interesting default or remove.
-    /**
-     * Creates and returns a simple {@code EvidenceProvider} that contains an empty
-     * {@code AmdAttestationReport}.
-     */
-    EvidenceProvider<BasicEvidence<AmdAttestationReport>> defaultEvidenceProvider() {
-      return new EvidenceProvider<BasicEvidence<AmdAttestationReport>>() {
-        @Override
-        public Result<BasicEvidence<AmdAttestationReport>, Exception> getEvidence() {
-          BasicEvidence<AmdAttestationReport> evidence = new BasicEvidence<>(
-              AmdAttestationReport.createPlaceholder(new byte[] {}, new byte[] {}),
-              new EndorsementEvidence());
-          return Result.success(evidence);
         }
       };
     }

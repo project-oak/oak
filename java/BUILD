@@ -45,7 +45,10 @@ java_library(
 java_library(
     name = "evidence",
     srcs = glob(["src/main/java/com/google/oak/evidence/*.java"]),
-    deps = [":util"],
+    deps = [
+        ":util",
+        "@com_google_guava_guava",
+    ],
 )
 
 java_library(
@@ -74,6 +77,7 @@ java_test(
         ":client",
         ":evidence",
         ":util",
+        "@com_google_guava_guava",
         "@maven//:org_mockito_mockito_core",
     ],
 )

@@ -21,8 +21,12 @@ import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
+import com.google.common.hash.Hashing;
 import com.google.oak.client.Encryptor;
 import com.google.oak.client.RpcClient;
+import com.google.oak.evidence.AmdAttestationReport;
+import com.google.oak.evidence.BasicEvidence;
+import com.google.oak.evidence.EndorsementEvidence;
 import com.google.oak.evidence.Evidence;
 import com.google.oak.util.Result;
 import java.util.Optional;
@@ -50,6 +54,7 @@ public class AmdAttestedOakClientTest {
   public void testSend() {
     AmdAttestedOakClient<RpcClient> oakClient =
         new AmdAttestedOakClient.Builder<>()
+            .withEvidenceProvider(() -> evidenceForTest())
             .withEncryptorProvider(publicKey -> Result.success(encryptor))
             .withClientProvider(() -> Result.success(rpcClient))
             .build()
@@ -58,5 +63,14 @@ public class AmdAttestedOakClientTest {
     Result<byte[], Exception> response = oakClient.send(MESSAGE_BYTES);
     assertTrue(response.isSuccess());
     assertEquals(MESSAGE_BYTES, response.success().get());
+  }
+
+  Result<BasicEvidence<AmdAttestationReport>, Exception> evidenceForTest() {
+    byte[] testPublicKey = new byte[] {0, 1, 2};
+    byte[] testPublicKeyHash = Hashing.sha256().hashBytes(testPublicKey).asBytes();
+    BasicEvidence<AmdAttestationReport> evidence = new BasicEvidence<>(
+        AmdAttestationReport.createPlaceholder(testPublicKeyHash, new byte[] {}),
+        new EndorsementEvidence(), testPublicKey);
+    return Result.success(evidence);
   }
 }

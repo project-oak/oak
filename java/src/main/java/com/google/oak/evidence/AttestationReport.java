@@ -24,13 +24,13 @@ import com.google.oak.util.Result;
  */
 public interface AttestationReport extends Evidence {
   /**
-   * Extracts and returns the public key part of the server's signing key included in this
-   * attestation report. The client code is responsible for verifying this report before trusting
-   * the public key.
+   * Extracts and returns the SHA256 hash of the public key part of the server's signing key
+   * included in this attestation report. The client code is responsible for verifying this report
+   * before trusting the public key hash.
    *
-   * @return public key part of the remote server's signing key
+   * @return SHA256 hash of the public key part of the remote server's signing key
    */
-  Result<byte[], Exception> getServerSigningPublicKey();
+  Result<byte[], Exception> getServerSigningPublicKeySha256Hash();
 
   /**
    * Extracts and returns the SHA256 hash of the remote server's binary. The client code is
@@ -41,7 +41,7 @@ public interface AttestationReport extends Evidence {
   Result<byte[], Exception> getServerBinarySha256Hash();
 
   /**
-   * Verifies this attestation report. Returns {@code getServerSigningPublicKey()} if the
+   * Verifies this attestation report. Returns {@code getServerSigningPublicKeySha256Hash()} if the
    * verification is successful, otherwise returns an error indicating that the verification failed.
    */
   Result<byte[], Exception> verify();

@@ -20,13 +20,15 @@ import com.google.oak.evidence.Evidence;
 import com.google.oak.util.Result;
 
 /**
- * Abstract client for sending and receiving encrypted messages to a server. We recommend concrete
- * subclasses of this class to provide builders for creating instances of the class. The builders
- * should use a {@code RpcClientProvider}, an {@code EncryptorProvider}, and optionally an {@code
- * EvidenceProvider} to build a concrete instance of {@code OakClient}. If an evidence supplier is
- * provided, the client has to verify the correctness of the evidence prior to getting an instance
- * of {@code Encryptor} and sending messages to the server. In a complete, and production-ready
- * implementation, an {@code EvidenceProvider} MUST be provided and verified.
+ * Generic client interface for sending and receiving encrypted messages to a server.
+ *
+ * <p>Three additional nested interfaces are provided to facilitate instantiating concrete
+ * implementations of this interface: {@code EvidenceProvider}, {@code EncryptorProvider}, and
+ * {@code RpcClientProvider}. Implementations of {@code OakClient} first verify the {@code
+ * Evidence} provided by the {@code EvidenceProvider}. Successful verification yields a public key
+ * that will be used by the {@code EncryptorProvider} to generate an {@code Encryptor}. The {@code
+ * RpcClient} provided by the {@code RpcClientProvider} will be used to send and receive encrypted
+ * messages.
  *
  * @param R type of the requests that this client sends
  * @param T type of the responses that this client receives
