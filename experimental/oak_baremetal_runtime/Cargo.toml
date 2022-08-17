@@ -28,3 +28,8 @@ oak_logger = { path = "../../oak_functions/logger" }
 [build-dependencies]
 oak_idl_gen_services = { path = "../../oak_idl_gen_services" }
 oak_idl_gen_structs = { path = "../../oak_idl_gen_structs" }
+
+[dev-dependencies]
+oak_remote_attestation_amd = { path = "../../oak_remote_attestation_amd", default-features = false, features = [
+  "rust-crypto"
+] }

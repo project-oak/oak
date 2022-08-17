@@ -20,4 +20,10 @@ fn main() {
     println!("cargo:rerun-if-changed={}", SCHEMA);
     oak_idl_gen_structs::compile_structs(SCHEMA);
     oak_idl_gen_services::compile_services_servers(SCHEMA);
+    // Generate client code for integration tests. These are always built, since
+    // we cannot check in this file whether cargo is building for testing or
+    // other cases. Ref: https://github.com/rust-lang/cargo/issues/4001
+    // As long the generated client code is only used in tests it won't be
+    // included in any binaries.
+    oak_idl_gen_services::compile_services_clients(SCHEMA);
 }

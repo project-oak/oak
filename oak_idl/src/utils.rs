@@ -115,6 +115,7 @@ impl<'a, T> DerefMut for OwnedFlatbufferBuilder<'a, T> {
 }
 
 /// An owned flatbuffer message, which owns the underlying buffer.
+#[derive(Debug)]
 pub struct OwnedFlatbuffer<T> {
     buf: Vec<u8>,
     _phantom: PhantomData<T>,
