@@ -90,12 +90,12 @@ SECTIONS {
     stack_start = .;
 
     .cpuid (NOLOAD) : ALIGN(2M) {
-        . += 4K;
     } : cpuid
+    ASSERT((SIZEOF(.cpuid) == 0x1000), "cpuid page needs to be exactly 4K in size")
 
     .secrets (NOLOAD) : ALIGN(2M) {
-        . += 4K;
     } : secrets
+    ASSERT((SIZEOF(.secrets) == 0x1000), "secrets page needs to be exactly 4K in size")
 
     /DISCARD/ : {
         *(.eh_frame*)

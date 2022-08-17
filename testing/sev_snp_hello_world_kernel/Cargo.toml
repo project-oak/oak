@@ -11,6 +11,7 @@ lazy_static = { version = "*", features = ["spin_no_std"] }
 log = "*"
 uart_16550 = "*"
 x86_64 = "*"
+sev_guest = { path = "../../experimental/sev_guest" }
 
 [[bin]]
 name = "sev_snp_hello_world_kernel"
