@@ -77,15 +77,58 @@ jobs:
         if: github.event_name == 'push'
         run: git -C ./provenance-branch push --follow-tags
 
-      - name: Archive generated binaries
-        uses: actions/upload-artifact@v3
+      # Cache ent to speed up future runs.
+      # See https://doc.rust-lang.org/nightly/cargo/guide/cargo-home.html#caching-the-cargo-home-in-ci
+      - name: Cache Ent
+        id: cache-ent
+        uses: actions/cache@v3
         with:
-          name: oak_functions_loader_base
-          path: ${{ env.FUNCTIONS_BASE_PATH }}
+          path: /usr/local/bin/ent
+          key: ${{ runner.os }}-ent
 
-  build-reproducibility-index:
-    needs: build_provenance
-    uses: ./.github/workflows/reproducibility.yaml
-    with:
-      binary_path: oak_functions_loader_base
-    secrets: inherit
+      # Download the Ent CLI and configure a remote with write access using a private API key, if
+      # available (GitHub secrets are not available on forks, see
+      # https://docs.github.com/en/actions/security-guides/encrypted-secrets#using-encrypted-secrets-in-a-workflow).
+      # If this step is run from a fork, the API key will be empty, and Ent will work in read-only
+      # mode.
+      # See https://github.com/google/ent
+      - name: Download Ent CLI
+        if: steps.cache-ent.outputs.cache-hit != 'true'
+        env:
+          ENT_URL: https://ent-server-62sa4xcfia-ew.a.run.app
+          ENT_DIGEST: sha256:944a34854a2bf9c5d32f3bffa93885ee1c7ef8ab0f4fcc30898a981050ae4233
+        run: |
+          curl --fail ${ENT_URL}/raw/${ENT_DIGEST} > /usr/local/bin/ent
+          chmod +x /usr/local/bin/ent
+          ent
+          cat <<EOF > ~/.config/ent.toml
+          [[remotes]]
+          name = 'ent-store'
+          url = '${ENT_URL}'
+          write = true
+          api_key = '${{ secrets.ENT_API_KEY }}'
+          EOF
+
+      # Upload artifacts to Ent, where they will be retained and publicly accessible by their hash.
+      # This only applies to `push` events, since it needs access to a valid Ent API key (which is
+      # not available on forks / PRs).
+      - name: Upload to Ent
+        if: github.event_name == 'push'
+        run: |
+          ent put ${{inputs.binary_path}}
+
+      # Build reproducibility index on `push` events.
+      - name: Build reproducibility index
+        if: github.event_name == 'push'
+        uses: ./.github/actions/reproducibility_index
+        with:
+          binary_path: ${{ env.FUNCTIONS_BASE_PATH }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Build reproducibility index on non-`push` events. This is similar to the previous step,
+      # but does not pass in the GITHUB_TOKEN, which is not available on forks / PRs).
+      - name: Build reproducibility index
+        if: github.event_name != 'push'
+        uses: ./.github/actions/reproducibility_index
+        with:
+          binary_path: ${{ env.FUNCTIONS_BASE_PATH }}
