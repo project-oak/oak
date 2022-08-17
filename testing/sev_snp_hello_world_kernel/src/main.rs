@@ -17,16 +17,32 @@
 #![no_std]
 #![no_main]
 
-use core::panic::PanicInfo;
+use core::{mem::MaybeUninit, panic::PanicInfo};
+use sev_guest::{cpuid::CpuidPage, secrets::SecretsPage};
 use x86_64::instructions::{hlt, port::PortWriteOnly};
 
 mod asm;
 mod serial;
 
+#[link_section = ".cpuid"]
+static CPUID: MaybeUninit<CpuidPage> = MaybeUninit::uninit();
+
+#[link_section = ".secrets"]
+static SECRETS: MaybeUninit<SecretsPage> = MaybeUninit::uninit();
+
 #[no_mangle]
 pub extern "C" fn rust64_start() -> ! {
     serial::init_logging();
     log::info!("Hello World!");
+
+    // Safety: these data structures are placed in valid memory so we won't page fault when
+    // accessing them and the CPU is supposed to initialize them when running under SEV-SNP. If
+    // we're not running under SEV-SNP, we will read garbage from uninialized memory.
+    let cpuid: &CpuidPage = unsafe { CPUID.assume_init_ref() };
+    let secrets: &SecretsPage = unsafe { SECRETS.assume_init_ref() };
+
+    log::info!("CPUID page: {:?}", cpuid);
+    log::info!("Secrets page: {:?}", secrets);
     panic!();
 }
 
