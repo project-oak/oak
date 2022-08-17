@@ -642,8 +642,6 @@
 <span id="637">637</span>
 <span id="638">638</span>
 <span id="639">639</span>
-<span id="640">640</span>
-<span id="641">641</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2022 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -681,7 +679,7 @@
 <span class="doccomment">//! &lt;https://developer.amd.com/wp-content/resources/56421.pdf&gt;.</span>
 
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::instructions::vmgexit</span>;
-<span class="kw">use</span> <span class="ident">anyhow</span>::{<span class="ident">anyhow</span>, <span class="ident">bail</span>, <span class="prelude-ty">Result</span>};
+<span class="comment">//use anyhow::{anyhow, bail, Result};</span>
 <span class="kw">use</span> <span class="ident">bitflags::bitflags</span>;
 <span class="kw">use</span> <span class="ident">strum::FromRepr</span>;
 <span class="kw">use</span> <span class="ident">x86_64::registers::model_specific::Msr</span>;
@@ -712,10 +710,10 @@
 }
 
 <span class="kw">impl</span> <span class="ident">GhcbGpa</span> {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">gpa</span>: <span class="ident">usize</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">gpa</span>: <span class="ident">usize</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">gpa</span> <span class="op">=</span> <span class="ident">gpa</span> <span class="kw">as</span> <span class="ident">u64</span>;
         <span class="kw">if</span> <span class="ident">gpa</span> <span class="op">&amp;</span> <span class="ident">GHCB_INFO_MASK</span> <span class="op">!</span><span class="op">=</span> <span class="number">0</span> {
-            <span class="macro">bail!</span>(<span class="string">&quot;GHCB must be 4KiB-aligned&quot;</span>);
+            <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="string">&quot;GHCB must be 4KiB-aligned&quot;</span>);
         }
         <span class="prelude-val">Ok</span>(<span class="self">Self</span> { <span class="ident">gpa</span> })
     }
@@ -744,11 +742,11 @@
 }
 
 <span class="kw">impl</span> <span class="ident">TryFrom</span><span class="op">&lt;</span><span class="ident">u64</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">SevInfoResponse</span> {
-    <span class="kw">type</span> <span class="ident">Error</span> <span class="op">=</span> <span class="ident">anyhow::Error</span>;
-    <span class="kw">fn</span> <span class="ident">try_from</span>(<span class="ident">msr_value</span>: <span class="ident">u64</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
+    <span class="kw">type</span> <span class="ident">Error</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span>;
+    <span class="kw">fn</span> <span class="ident">try_from</span>(<span class="ident">msr_value</span>: <span class="ident">u64</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span><span class="op">&gt;</span> {
         <span class="kw">const</span> <span class="ident">SEV_INFO_RESPONSE_INFO</span>: <span class="ident">u64</span> <span class="op">=</span> <span class="number">0x001</span>;
         <span class="kw">if</span> <span class="ident">msr_value</span> <span class="op">&amp;</span> <span class="ident">GHCB_INFO_MASK</span> <span class="op">!</span><span class="op">=</span> <span class="ident">SEV_INFO_RESPONSE_INFO</span> {
-            <span class="macro">bail!</span>(<span class="string">&quot;Value is not a valid SEV information response&quot;</span>);
+            <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="string">&quot;Value is not a valid SEV information response&quot;</span>);
         }
         <span class="kw">let</span> <span class="ident">max_protocol_version</span> <span class="op">=</span> (<span class="ident">msr_value</span> <span class="op">&gt;</span><span class="op">&gt;</span> <span class="number">48</span>) <span class="kw">as</span> <span class="ident">u16</span>;
         <span class="kw">let</span> <span class="ident">min_protocol_version</span> <span class="op">=</span> (<span class="ident">msr_value</span> <span class="op">&gt;</span><span class="op">&gt;</span> <span class="number">32</span>) <span class="kw">as</span> <span class="ident">u16</span>;
@@ -772,7 +770,7 @@
 
 <span class="doccomment">/// Gets information about the supported GHCB MSR protocol verions and the location of the</span>
 <span class="doccomment">/// encryption bit.</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_sev_info</span>() -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">SevInfoResponse</span><span class="op">&gt;</span> {
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_sev_info</span>() -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">SevInfoResponse</span>, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span><span class="op">&gt;</span> {
     <span class="kw">let</span> <span class="ident">request</span> <span class="op">=</span> <span class="ident">SevInfoRequest</span>;
     <span class="ident">write_msr_and_exit</span>(<span class="ident">request</span>.<span class="ident">into</span>());
     <span class="ident">read_msr</span>().<span class="ident">try_into</span>()
@@ -813,24 +811,24 @@
 }
 
 <span class="kw">impl</span> <span class="ident">TryFrom</span><span class="op">&lt;</span><span class="ident">u64</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">CpuidResponse</span> {
-    <span class="kw">type</span> <span class="ident">Error</span> <span class="op">=</span> <span class="ident">anyhow::Error</span>;
-    <span class="kw">fn</span> <span class="ident">try_from</span>(<span class="ident">msr_value</span>: <span class="ident">u64</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
+    <span class="kw">type</span> <span class="ident">Error</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span>;
+    <span class="kw">fn</span> <span class="ident">try_from</span>(<span class="ident">msr_value</span>: <span class="ident">u64</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span><span class="op">&gt;</span> {
         <span class="kw">const</span> <span class="ident">SEV_INFO_RESPONSE_INFO</span>: <span class="ident">u64</span> <span class="op">=</span> <span class="number">0x005</span>;
         <span class="kw">const</span> <span class="ident">RESERVED_MASK</span>: <span class="ident">u64</span> <span class="op">=</span> <span class="number">0x3FFFF000</span>;
         <span class="kw">if</span> <span class="ident">msr_value</span> <span class="op">&amp;</span> <span class="ident">GHCB_INFO_MASK</span> <span class="op">!</span><span class="op">=</span> <span class="ident">SEV_INFO_RESPONSE_INFO</span> <span class="op">|</span><span class="op">|</span> <span class="ident">msr_value</span> <span class="op">&amp;</span> <span class="ident">RESERVED_MASK</span> <span class="op">!</span><span class="op">=</span> <span class="number">0</span> {
-            <span class="macro">bail!</span>(<span class="string">&quot;Value is not a valid CPUID response&quot;</span>);
+            <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="string">&quot;Value is not a valid CPUID response&quot;</span>);
         }
         <span class="kw">let</span> <span class="ident">value</span> <span class="op">=</span> (<span class="ident">msr_value</span> <span class="op">&gt;</span><span class="op">&gt;</span> <span class="number">32</span>) <span class="kw">as</span> <span class="ident">u32</span>;
         <span class="kw">const</span> <span class="ident">REGISTER_MASK</span>: <span class="ident">u64</span> <span class="op">=</span> <span class="number">0xC0000000</span>;
         <span class="kw">let</span> <span class="ident">register</span> <span class="op">=</span> <span class="ident">CpuidRegister::from_repr</span>(((<span class="ident">msr_value</span> <span class="op">&amp;</span> <span class="ident">REGISTER_MASK</span>) <span class="op">&gt;</span><span class="op">&gt;</span> <span class="number">30</span>) <span class="kw">as</span> <span class="ident">u8</span>)
-            .<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;Invalid register&quot;</span>))<span class="question-mark">?</span>;
+            .<span class="ident">ok_or</span>(<span class="string">&quot;Invalid register&quot;</span>)<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(<span class="self">Self</span> { <span class="ident">value</span>, <span class="ident">register</span> })
     }
 }
 
 <span class="doccomment">/// Gets the value of the specified register that was returned when executing CPUID for the</span>
 <span class="doccomment">/// specified leaf. Sub-leafs are not supported.</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_cpuid</span>(<span class="ident">request</span>: <span class="ident">CpuidRequest</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">CpuidResponse</span><span class="op">&gt;</span> {
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_cpuid</span>(<span class="ident">request</span>: <span class="ident">CpuidRequest</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">CpuidResponse</span>, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span><span class="op">&gt;</span> {
     <span class="ident">write_msr_and_exit</span>(<span class="ident">request</span>.<span class="ident">into</span>());
     <span class="ident">read_msr</span>().<span class="ident">try_into</span>()
 }
@@ -851,11 +849,11 @@
 }
 
 <span class="kw">impl</span> <span class="ident">TryFrom</span><span class="op">&lt;</span><span class="ident">u64</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">PreferredGhcbGpaResponse</span> {
-    <span class="kw">type</span> <span class="ident">Error</span> <span class="op">=</span> <span class="ident">anyhow::Error</span>;
-    <span class="kw">fn</span> <span class="ident">try_from</span>(<span class="ident">msr_value</span>: <span class="ident">u64</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
+    <span class="kw">type</span> <span class="ident">Error</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span>;
+    <span class="kw">fn</span> <span class="ident">try_from</span>(<span class="ident">msr_value</span>: <span class="ident">u64</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span><span class="op">&gt;</span> {
         <span class="kw">const</span> <span class="ident">PREFERRED_GPA_RESPONSE_INFO</span>: <span class="ident">u64</span> <span class="op">=</span> <span class="number">0x011</span>;
         <span class="kw">if</span> <span class="ident">msr_value</span> <span class="op">&amp;</span> <span class="ident">GHCB_INFO_MASK</span> <span class="op">!</span><span class="op">=</span> <span class="ident">PREFERRED_GPA_RESPONSE_INFO</span> {
-            <span class="macro">bail!</span>(<span class="string">&quot;Value is not a valid preferred GHCP GPA response&quot;</span>);
+            <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="string">&quot;Value is not a valid preferred GHCP GPA response&quot;</span>);
         }
         <span class="kw">let</span> <span class="ident">ghcb_gpa</span> <span class="op">=</span> (<span class="ident">msr_value</span> <span class="op">&amp;</span> <span class="ident">GCHP_DATA_MASK</span>) <span class="kw">as</span> <span class="ident">usize</span>;
         <span class="prelude-val">Ok</span>(<span class="self">Self</span> { <span class="ident">ghcb_gpa</span> })
@@ -869,7 +867,7 @@
 <span class="doccomment">///</span>
 <span class="doccomment">/// The guest must validate that the returned guest-physical address is not part of its known</span>
 <span class="doccomment">/// guest-private memory.</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_preferred_ghcb_location</span>() -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">PreferredGhcbGpaResponse</span><span class="op">&gt;</span> {
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_preferred_ghcb_location</span>() -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">PreferredGhcbGpaResponse</span>, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span><span class="op">&gt;</span> {
     <span class="kw">let</span> <span class="ident">request</span> <span class="op">=</span> <span class="ident">PreferredGhcbGpaRequest</span>;
     <span class="ident">write_msr_and_exit</span>(<span class="ident">request</span>.<span class="ident">into</span>());
     <span class="ident">read_msr</span>().<span class="ident">try_into</span>()
@@ -881,10 +879,10 @@
 }
 
 <span class="kw">impl</span> <span class="ident">RegisterGhcbGpaRequest</span> {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">ghcb_gpa</span>: <span class="ident">usize</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">ghcb_gpa</span>: <span class="ident">usize</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">ghcb_gpa</span> <span class="op">=</span> <span class="ident">ghcb_gpa</span> <span class="kw">as</span> <span class="ident">u64</span>;
         <span class="kw">if</span> <span class="ident">ghcb_gpa</span> <span class="op">&amp;</span> <span class="ident">GHCB_INFO_MASK</span> <span class="op">!</span><span class="op">=</span> <span class="number">0</span> {
-            <span class="macro">bail!</span>(<span class="string">&quot;GHCB must be 4KiB-aligned&quot;</span>);
+            <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="string">&quot;GHCB must be 4KiB-aligned&quot;</span>);
         }
         <span class="prelude-val">Ok</span>(<span class="self">Self</span> { <span class="ident">ghcb_gpa</span> })
     }
@@ -904,11 +902,11 @@
 }
 
 <span class="kw">impl</span> <span class="ident">TryFrom</span><span class="op">&lt;</span><span class="ident">u64</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">RegisterGhcbGpaResponse</span> {
-    <span class="kw">type</span> <span class="ident">Error</span> <span class="op">=</span> <span class="ident">anyhow::Error</span>;
-    <span class="kw">fn</span> <span class="ident">try_from</span>(<span class="ident">msr_value</span>: <span class="ident">u64</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
+    <span class="kw">type</span> <span class="ident">Error</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span>;
+    <span class="kw">fn</span> <span class="ident">try_from</span>(<span class="ident">msr_value</span>: <span class="ident">u64</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span><span class="op">&gt;</span> {
         <span class="kw">const</span> <span class="ident">REGISTER_GHCB_GPA_RESPONSE_INFO</span>: <span class="ident">u64</span> <span class="op">=</span> <span class="number">0x013</span>;
         <span class="kw">if</span> <span class="ident">msr_value</span> <span class="op">&amp;</span> <span class="ident">GHCB_INFO_MASK</span> <span class="op">!</span><span class="op">=</span> <span class="ident">REGISTER_GHCB_GPA_RESPONSE_INFO</span> {
-            <span class="macro">bail!</span>(<span class="string">&quot;Value is not a valid GHCP GPA registration response&quot;</span>);
+            <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="string">&quot;Value is not a valid GHCP GPA registration response&quot;</span>);
         }
         <span class="kw">let</span> <span class="ident">ghcb_gpa</span> <span class="op">=</span> <span class="ident">msr_value</span> <span class="op">&amp;</span> <span class="ident">GCHP_DATA_MASK</span>;
         <span class="prelude-val">Ok</span>(<span class="self">Self</span> { <span class="ident">ghcb_gpa</span> })
@@ -916,16 +914,16 @@
 }
 
 <span class="doccomment">/// Registers the location of the GHCB page for the current vCPU with the hypervisor.</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">register_ghcb_location</span>(<span class="ident">request</span>: <span class="ident">RegisterGhcbGpaRequest</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">register_ghcb_location</span>(<span class="ident">request</span>: <span class="ident">RegisterGhcbGpaRequest</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span><span class="op">&gt;</span> {
     <span class="kw">let</span> <span class="ident">request_ghcb_gpa</span>: <span class="ident">u64</span> <span class="op">=</span> <span class="ident">request</span>.<span class="ident">ghcb_gpa</span>;
     <span class="ident">write_msr_and_exit</span>(<span class="ident">request</span>.<span class="ident">into</span>());
     <span class="kw">let</span> <span class="ident">response</span>: <span class="ident">RegisterGhcbGpaResponse</span> <span class="op">=</span> <span class="ident">read_msr</span>().<span class="ident">try_into</span>()<span class="question-mark">?</span>;
     <span class="comment">// Ensure that the registration was successful.</span>
     <span class="kw">if</span> <span class="ident">response</span>.<span class="ident">ghcb_gpa</span> <span class="op">==</span> <span class="ident">GHCB_LOCATION_NOT_ACCEPTED</span> {
-        <span class="macro">bail!</span>(<span class="string">&quot;GHCB location registration not accepted&quot;</span>);
+        <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="string">&quot;GHCB location registration not accepted&quot;</span>);
     }
     <span class="kw">if</span> <span class="ident">response</span>.<span class="ident">ghcb_gpa</span> <span class="op">!</span><span class="op">=</span> <span class="ident">request_ghcb_gpa</span> {
-        <span class="macro">bail!</span>(<span class="string">&quot;The registration response did not match the request&quot;</span>);
+        <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="string">&quot;The registration response did not match the request&quot;</span>);
     }
     <span class="prelude-val">Ok</span>(())
 }
@@ -945,15 +943,15 @@
 }
 
 <span class="kw">impl</span> <span class="ident">SnpPageStateChangeRequest</span> {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">page_gpa</span>: <span class="ident">usize</span>, <span class="ident">assignment</span>: <span class="ident">PageAssignment</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">page_gpa</span>: <span class="ident">usize</span>, <span class="ident">assignment</span>: <span class="ident">PageAssignment</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">page_gpa</span> <span class="op">=</span> <span class="ident">page_gpa</span> <span class="kw">as</span> <span class="ident">u64</span>;
         <span class="kw">if</span> <span class="ident">page_gpa</span> <span class="op">&amp;</span> <span class="ident">GHCB_INFO_MASK</span> <span class="op">!</span><span class="op">=</span> <span class="number">0</span> {
-            <span class="macro">bail!</span>(<span class="string">&quot;Page must be 4KiB-aligned&quot;</span>);
+            <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="string">&quot;Page must be 4KiB-aligned&quot;</span>);
         }
         <span class="comment">// Only 52 bits can be use for an address.</span>
         <span class="kw">const</span> <span class="ident">ADDRESS_MAX</span>: <span class="ident">u64</span> <span class="op">=</span> (<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">52</span>) <span class="op">-</span> <span class="number">1</span>;
         <span class="kw">if</span> <span class="ident">page_gpa</span> <span class="op">&gt;</span> <span class="ident">ADDRESS_MAX</span> {
-            <span class="macro">bail!</span>(<span class="string">&quot;Page address is too high&quot;</span>);
+            <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="string">&quot;Page address is too high&quot;</span>);
         }
         <span class="prelude-val">Ok</span>(<span class="self">Self</span> {
             <span class="ident">page_gpa</span>,
@@ -979,14 +977,14 @@
 }
 
 <span class="kw">impl</span> <span class="ident">TryFrom</span><span class="op">&lt;</span><span class="ident">u64</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">SnpPageStateChangeResponse</span> {
-    <span class="kw">type</span> <span class="ident">Error</span> <span class="op">=</span> <span class="ident">anyhow::Error</span>;
-    <span class="kw">fn</span> <span class="ident">try_from</span>(<span class="ident">msr_value</span>: <span class="ident">u64</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
+    <span class="kw">type</span> <span class="ident">Error</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span>;
+    <span class="kw">fn</span> <span class="ident">try_from</span>(<span class="ident">msr_value</span>: <span class="ident">u64</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span><span class="op">&gt;</span> {
         <span class="kw">const</span> <span class="ident">SNP_PAGE_STATE_CHANGE_RESPONSE_INFO</span>: <span class="ident">u64</span> <span class="op">=</span> <span class="number">0x015</span>;
         <span class="kw">const</span> <span class="ident">RESERVED_MASK</span>: <span class="ident">u64</span> <span class="op">=</span> <span class="number">0xFFFFF000</span>;
         <span class="kw">if</span> <span class="ident">msr_value</span> <span class="op">&amp;</span> <span class="ident">GHCB_INFO_MASK</span> <span class="op">!</span><span class="op">=</span> <span class="ident">SNP_PAGE_STATE_CHANGE_RESPONSE_INFO</span>
             <span class="op">|</span><span class="op">|</span> <span class="ident">msr_value</span> <span class="op">&amp;</span> <span class="ident">RESERVED_MASK</span> <span class="op">!</span><span class="op">=</span> <span class="number">0</span>
         {
-            <span class="macro">bail!</span>(<span class="string">&quot;Value is not a valid SNP Page State Change response&quot;</span>);
+            <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="string">&quot;Value is not a valid SNP Page State Change response&quot;</span>);
         }
         <span class="kw">let</span> <span class="ident">error_code</span> <span class="op">=</span> (<span class="ident">msr_value</span> <span class="op">&gt;</span><span class="op">&gt;</span> <span class="number">32</span>) <span class="kw">as</span> <span class="ident">u32</span>;
         <span class="prelude-val">Ok</span>(<span class="self">Self</span> { <span class="ident">error_code</span> })
@@ -998,15 +996,12 @@
 <span class="doccomment">///</span>
 <span class="doccomment">/// This is useful if the GHCB has not yet been established, for example if a page must be shared</span>
 <span class="doccomment">/// with the hypervisor to establish the GHCB.</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">change_snp_page_state</span>(<span class="ident">request</span>: <span class="ident">SnpPageStateChangeRequest</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">change_snp_page_state</span>(<span class="ident">request</span>: <span class="ident">SnpPageStateChangeRequest</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span><span class="op">&gt;</span> {
     <span class="ident">write_msr_and_exit</span>(<span class="ident">request</span>.<span class="ident">into</span>());
     <span class="kw">let</span> <span class="ident">response</span>: <span class="ident">SnpPageStateChangeResponse</span> <span class="op">=</span> <span class="ident">read_msr</span>().<span class="ident">try_into</span>()<span class="question-mark">?</span>;
     <span class="comment">// Ensure that the page state change was successful.</span>
     <span class="kw">if</span> <span class="ident">response</span>.<span class="ident">error_code</span> <span class="op">!</span><span class="op">=</span> <span class="number">0</span> {
-        <span class="macro">bail!</span>(
-            <span class="string">&quot;Page state change failed with error code: {}&quot;</span>,
-            <span class="ident">response</span>.<span class="ident">error_code</span>
-        );
+        <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="string">&quot;Page state change failed&quot;</span>);
     }
     <span class="prelude-val">Ok</span>(())
 }
@@ -1036,19 +1031,19 @@
 }
 
 <span class="kw">impl</span> <span class="ident">TryFrom</span><span class="op">&lt;</span><span class="ident">u64</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">HypervisorFeatureSupportResponse</span> {
-    <span class="kw">type</span> <span class="ident">Error</span> <span class="op">=</span> <span class="ident">anyhow::Error</span>;
-    <span class="kw">fn</span> <span class="ident">try_from</span>(<span class="ident">msr_value</span>: <span class="ident">u64</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
+    <span class="kw">type</span> <span class="ident">Error</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span>;
+    <span class="kw">fn</span> <span class="ident">try_from</span>(<span class="ident">msr_value</span>: <span class="ident">u64</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span><span class="op">&gt;</span> {
         <span class="kw">const</span> <span class="ident">HYPERVISOR_FEATURE_SUPPORT_RESPONSE_INFO</span>: <span class="ident">u64</span> <span class="op">=</span> <span class="number">0x081</span>;
         <span class="kw">if</span> <span class="ident">msr_value</span> <span class="op">&amp;</span> <span class="ident">GHCB_INFO_MASK</span> <span class="op">!</span><span class="op">=</span> <span class="ident">HYPERVISOR_FEATURE_SUPPORT_RESPONSE_INFO</span> {
-            <span class="macro">bail!</span>(<span class="string">&quot;Value is not a valid Hypervisor Feature Support response&quot;</span>);
+            <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="string">&quot;Value is not a valid Hypervisor Feature Support response&quot;</span>);
         }
         <span class="ident">HypervisorFeatureSupportResponse::from_bits</span>(<span class="ident">msr_value</span> <span class="op">&gt;</span><span class="op">&gt;</span> <span class="number">12</span>)
-            .<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="macro">anyhow!</span>(<span class="string">&quot;Invalid Hypervisor Feature Support bitmap&quot;</span>))
+            .<span class="ident">ok_or</span>(<span class="string">&quot;Invalid Hypervisor Feature Support bitmap&quot;</span>)
     }
 }
 
 <span class="doccomment">/// Requests a bitmap specifying the features supported by the hypervisor.</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_hypervisor_feature_support</span>() -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">HypervisorFeatureSupportResponse</span><span class="op">&gt;</span> {
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_hypervisor_feature_support</span>() -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">HypervisorFeatureSupportResponse</span>, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span><span class="op">&gt;</span> {
     <span class="kw">let</span> <span class="ident">request</span> <span class="op">=</span> <span class="ident">HypervisorFeatureSupportRequest</span>;
     <span class="ident">write_msr_and_exit</span>(<span class="ident">request</span>.<span class="ident">into</span>());
     <span class="ident">read_msr</span>().<span class="ident">try_into</span>()
@@ -1144,7 +1139,7 @@
         <span class="kw">let</span> <span class="ident">invalid</span> <span class="op">=</span> <span class="number">5u64</span> <span class="op">|</span> (<span class="ident">enc_bit</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">24</span>) <span class="op">|</span> (<span class="ident">min_version</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">32</span>) <span class="op">|</span> (<span class="ident">max_version</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">48</span>);
         <span class="kw">let</span> <span class="ident">valid</span> <span class="op">=</span> <span class="number">1u64</span> <span class="op">|</span> (<span class="ident">enc_bit</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">24</span>) <span class="op">|</span> (<span class="ident">min_version</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">32</span>) <span class="op">|</span> (<span class="ident">max_version</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">48</span>);
 
-        <span class="kw">let</span> <span class="ident">error</span>: <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">SevInfoResponse</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">invalid</span>.<span class="ident">try_into</span>();
+        <span class="kw">let</span> <span class="ident">error</span>: <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">SevInfoResponse</span>, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">invalid</span>.<span class="ident">try_into</span>();
         <span class="macro">assert!</span>(<span class="ident">error</span>.<span class="ident">is_err</span>());
 
         <span class="kw">let</span> <span class="ident">correct</span>: <span class="ident">SevInfoResponse</span> <span class="op">=</span> <span class="ident">valid</span>.<span class="ident">try_into</span>().<span class="ident">unwrap</span>();
@@ -1169,7 +1164,7 @@
         <span class="kw">let</span> <span class="ident">invalid</span> <span class="op">=</span> <span class="number">5u64</span> <span class="op">|</span> ((<span class="ident">value</span> <span class="kw">as</span> <span class="ident">u64</span>) <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">32</span>) <span class="op">|</span> ((<span class="ident">register</span> <span class="kw">as</span> <span class="ident">u64</span>) <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">25</span>);
         <span class="kw">let</span> <span class="ident">valid</span> <span class="op">=</span> <span class="number">5u64</span> <span class="op">|</span> ((<span class="ident">value</span> <span class="kw">as</span> <span class="ident">u64</span>) <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">32</span>) <span class="op">|</span> ((<span class="ident">register</span> <span class="kw">as</span> <span class="ident">u64</span>) <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">30</span>);
 
-        <span class="kw">let</span> <span class="ident">error</span>: <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">CpuidResponse</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">invalid</span>.<span class="ident">try_into</span>();
+        <span class="kw">let</span> <span class="ident">error</span>: <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">CpuidResponse</span>, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">invalid</span>.<span class="ident">try_into</span>();
         <span class="macro">assert!</span>(<span class="ident">error</span>.<span class="ident">is_err</span>());
 
         <span class="kw">let</span> <span class="ident">correct</span>: <span class="ident">CpuidResponse</span> <span class="op">=</span> <span class="ident">valid</span>.<span class="ident">try_into</span>().<span class="ident">unwrap</span>();
@@ -1189,7 +1184,7 @@
         <span class="kw">let</span> <span class="ident">invalid</span> <span class="op">=</span> <span class="number">0xFu64</span> <span class="op">|</span> <span class="ident">page</span>;
         <span class="kw">let</span> <span class="ident">valid</span> <span class="op">=</span> <span class="number">0x11u64</span> <span class="op">|</span> <span class="ident">page</span>;
 
-        <span class="kw">let</span> <span class="ident">error</span>: <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">PreferredGhcbGpaResponse</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">invalid</span>.<span class="ident">try_into</span>();
+        <span class="kw">let</span> <span class="ident">error</span>: <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">PreferredGhcbGpaResponse</span>, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">invalid</span>.<span class="ident">try_into</span>();
         <span class="macro">assert!</span>(<span class="ident">error</span>.<span class="ident">is_err</span>());
 
         <span class="kw">let</span> <span class="ident">correct</span>: <span class="ident">PreferredGhcbGpaResponse</span> <span class="op">=</span> <span class="ident">valid</span>.<span class="ident">try_into</span>().<span class="ident">unwrap</span>();
@@ -1213,7 +1208,7 @@
         <span class="kw">let</span> <span class="ident">invalid</span> <span class="op">=</span> <span class="number">0x12u64</span> <span class="op">|</span> <span class="ident">page</span>;
         <span class="kw">let</span> <span class="ident">valid</span> <span class="op">=</span> <span class="number">0x13u64</span> <span class="op">|</span> <span class="ident">page</span>;
 
-        <span class="kw">let</span> <span class="ident">error</span>: <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">RegisterGhcbGpaResponse</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">invalid</span>.<span class="ident">try_into</span>();
+        <span class="kw">let</span> <span class="ident">error</span>: <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">RegisterGhcbGpaResponse</span>, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">invalid</span>.<span class="ident">try_into</span>();
         <span class="macro">assert!</span>(<span class="ident">error</span>.<span class="ident">is_err</span>());
 
         <span class="kw">let</span> <span class="ident">correct</span>: <span class="ident">RegisterGhcbGpaResponse</span> <span class="op">=</span> <span class="ident">valid</span>.<span class="ident">try_into</span>().<span class="ident">unwrap</span>();
@@ -1247,9 +1242,10 @@
         <span class="kw">let</span> <span class="ident">invalid_info</span> <span class="op">=</span> <span class="number">0x16u64</span> <span class="op">|</span> (<span class="ident">error_code</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">32</span>);
         <span class="kw">let</span> <span class="ident">valid</span> <span class="op">=</span> <span class="number">0x15u64</span> <span class="op">|</span> (<span class="ident">error_code</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">32</span>);
 
-        <span class="kw">let</span> <span class="ident">error</span>: <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">SnpPageStateChangeResponse</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">invalid_misaligned_data</span>.<span class="ident">try_into</span>();
+        <span class="kw">let</span> <span class="ident">error</span>: <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">SnpPageStateChangeResponse</span>, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span><span class="op">&gt;</span> <span class="op">=</span>
+            <span class="ident">invalid_misaligned_data</span>.<span class="ident">try_into</span>();
         <span class="macro">assert!</span>(<span class="ident">error</span>.<span class="ident">is_err</span>());
-        <span class="kw">let</span> <span class="ident">error</span>: <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">SnpPageStateChangeResponse</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">invalid_info</span>.<span class="ident">try_into</span>();
+        <span class="kw">let</span> <span class="ident">error</span>: <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">SnpPageStateChangeResponse</span>, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">invalid_info</span>.<span class="ident">try_into</span>();
         <span class="macro">assert!</span>(<span class="ident">error</span>.<span class="ident">is_err</span>());
 
         <span class="kw">let</span> <span class="ident">correct</span>: <span class="ident">SnpPageStateChangeResponse</span> <span class="op">=</span> <span class="ident">valid</span>.<span class="ident">try_into</span>().<span class="ident">unwrap</span>();
@@ -1269,7 +1265,7 @@
         <span class="kw">let</span> <span class="ident">invalid</span> <span class="op">=</span> <span class="number">81u64</span> <span class="op">|</span> (<span class="ident">expected</span>.<span class="ident">bits</span>() <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">12</span>);
         <span class="kw">let</span> <span class="ident">valid</span> <span class="op">=</span> <span class="number">0x81u64</span> <span class="op">|</span> (<span class="ident">expected</span>.<span class="ident">bits</span>() <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">12</span>);
 
-        <span class="kw">let</span> <span class="ident">error</span>: <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">HypervisorFeatureSupportResponse</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">invalid</span>.<span class="ident">try_into</span>();
+        <span class="kw">let</span> <span class="ident">error</span>: <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">HypervisorFeatureSupportResponse</span>, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">invalid</span>.<span class="ident">try_into</span>();
         <span class="macro">assert!</span>(<span class="ident">error</span>.<span class="ident">is_err</span>());
 
         <span class="kw">let</span> <span class="ident">correct</span>: <span class="ident">HypervisorFeatureSupportResponse</span> <span class="op">=</span> <span class="ident">valid</span>.<span class="ident">try_into</span>().<span class="ident">unwrap</span>();
