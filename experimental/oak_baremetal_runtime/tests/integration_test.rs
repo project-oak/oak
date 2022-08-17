@@ -15,10 +15,6 @@
 //
 
 #![feature(assert_matches)]
-// Permit unused variables as rust errounously complains about variables used
-// only in assert_matches being unused. This cannot be set per line for each
-// macro invocation.
-#![allow(unused_variables)]
 
 use core::assert_matches::assert_matches;
 use oak_baremetal_runtime::{schema::TrustedRuntime, RuntimeImplementation};
@@ -72,9 +68,13 @@ fn it_should_not_handle_user_requests_before_initialization() {
     };
     let result = client.handle_user_request(owned_request_flatbuffer.into_vec());
 
-    let expected_err = oak_idl::Status::new(oak_idl::StatusCode::FailedPrecondition);
-
-    assert_matches!(result, Err(expected_err));
+    assert_matches!(
+        result,
+        Err(oak_idl::Status {
+            code: oak_idl::StatusCode::FailedPrecondition,
+            ..
+        })
+    );
 }
 
 #[test]
@@ -162,6 +162,11 @@ fn it_should_only_initialize_once() {
 
     let result = client.initialize(init_args);
 
-    let expected_err = oak_idl::Status::new(oak_idl::StatusCode::FailedPrecondition);
-    assert_matches!(result, Err(_expected_err));
+    assert_matches!(
+        result,
+        Err(oak_idl::Status {
+            code: oak_idl::StatusCode::FailedPrecondition,
+            ..
+        })
+    );
 }
