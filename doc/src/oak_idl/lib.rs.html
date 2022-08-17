@@ -202,7 +202,7 @@
 
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">utils</span>;
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">PartialEq</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Status</span> {
     <span class="kw">pub</span> <span class="ident">code</span>: <span class="ident">StatusCode</span>,
     <span class="doccomment">/// English message that helps developers understand and resolve the error.</span>
@@ -231,7 +231,7 @@
 <span class="doccomment">///</span>
 <span class="doccomment">/// [gRPC status codes]: https://github.com/grpc/grpc/blob/master/doc/statuscodes.md#status-codes-and-their-use-in-grpc</span>
 <span class="comment">// Based on tonic&#39;s status code struct: https://github.com/hyperium/tonic/blob/91b73f9fc3c1bc281e85177808721b3efe37ece0/tonic/src/status.rs</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">PartialEq</span>)]</span>
 <span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">StatusCode</span> {
     <span class="doccomment">/// The operation completed successfully.</span>
     <span class="prelude-val">Ok</span> <span class="op">=</span> <span class="number">0</span>,
