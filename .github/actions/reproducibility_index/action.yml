@@ -1,11 +1,16 @@
 name: Build Reproducibility Index
-description: 'Updates the reproducibility index for the given path'
+description: 'Updates the reproducibility index for the given path.'
 inputs:
-  binary_path:
+  OAK_FUNCTIONS_BASE_PATH:
     required: true
-    description: 'Path of the generated binary'
-  GITHUB_TOKEN: # GitHub Token
-    description: 'The GitHub token the GitHub repository'
+    description: 'Path to the base oak_functions binary.'
+  OAK_FUNCTIONS_UNSAFE_PATH:
+    required: true
+    description: 'Path to the unsafe oak_functions binary.'
+  GITHUB_TOKEN:
+    description:
+      'The GitHub token of the GitHub repository. Must be provided for push
+      events, or the action fails.'
     required: false
 
 runs:
@@ -21,7 +26,7 @@ runs:
     - name: Generate Reproducibility Index
       shell: bash
       run: |
-        ./scripts/docker_run ./scripts/build_reproducibility_index ${{ inputs.binary_path }}
+        ./scripts/docker_run ./scripts/build_reproducibility_index ${{ inputs.OAK_FUNCTIONS_BASE_PATH }} ${{ inputs.OAK_FUNCTIONS_UNSAFE_PATH }}
 
     # Remove all files from the "out" folder.
     - name: Clear "out" folder
