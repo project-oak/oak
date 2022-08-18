@@ -65,6 +65,7 @@ pub fn start_kernel<E: boot::E820Entry, B: boot::BootInfo<E>>(info: B) -> ! {
     logging::init_logging();
     interrupts::init_idt();
     paging::setup();
+    log::info!("here");
     // We need to be done with the boot info struct before intializing memory. For example, the
     // multiboot protocol explicitly states data can be placed anywhere in memory; therefore, it's
     // highly likely we will overwrite some data after we initialize the heap. args::init_args()

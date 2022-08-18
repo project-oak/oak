@@ -46,10 +46,12 @@ pub fn init_allocator<E: boot::E820Entry, B: boot::BootInfo<E>>(
     let text_end = rust_hypervisor_firmware_boot::text_end();
     let stack_start = rust_hypervisor_firmware_boot::stack_start();
 
-    info!("RAM_MIN: {}", ram_min);
-    info!("TEXT_START: {}", text_start);
-    info!("TEXT_END: {}", text_end);
-    info!("STACK_START: {}", stack_start);
+    info!("RAM_MIN: {:#X}", ram_min);
+    info!("TEXT_START: {:#X}", text_start);
+    info!("TEXT_END: {:#X}", text_end);
+    info!("STACK_START: {:#X}", stack_start);
+
+    let stack_start = stack_start - 0xFFFFFFFF80000000;
 
     // Find the largest slice of memory and use that for the heap.
     let largest = info
