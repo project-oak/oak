@@ -39,8 +39,18 @@ pub fn setup() {
         l3[i].set_addr(phys_addr(l2), pt_flags);
     }
 
+    // Upper half hack: we point the last two entries of the L3 table to the same L2 tables as the
+    // first two entries, and then we point to the last entry of the L4 table to the same L3 table
+    // as the first entry in the L4 table. This means we get an extra identity-mapped region at
+    // -2GB of virtual memory, where the kernel will live.
+    let addr_0 = l3[0].addr();
+    let addr_1 = l3[1].addr();
+    l3[510].set_addr(addr_0, pt_flags);
+    l3[511].set_addr(addr_1, pt_flags);
+
     // Point L4 at L3
     l4[0].set_addr(phys_addr(l3), pt_flags);
+    l4[511].set_addr(phys_addr(l3), pt_flags);
 
     // Point Cr3 at L4
     let (cr3_frame, cr3_flags) = Cr3::read();
