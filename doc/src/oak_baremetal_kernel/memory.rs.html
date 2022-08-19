@@ -89,6 +89,8 @@
 <span id="84">84</span>
 <span id="85">85</span>
 <span id="86">86</span>
+<span id="87">87</span>
+<span id="88">88</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2022 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -137,10 +139,12 @@
     <span class="kw">let</span> <span class="ident">text_end</span> <span class="op">=</span> <span class="ident">rust_hypervisor_firmware_boot::text_end</span>();
     <span class="kw">let</span> <span class="ident">stack_start</span> <span class="op">=</span> <span class="ident">rust_hypervisor_firmware_boot::stack_start</span>();
 
-    <span class="macro">info!</span>(<span class="string">&quot;RAM_MIN: {}&quot;</span>, <span class="ident">ram_min</span>);
-    <span class="macro">info!</span>(<span class="string">&quot;TEXT_START: {}&quot;</span>, <span class="ident">text_start</span>);
-    <span class="macro">info!</span>(<span class="string">&quot;TEXT_END: {}&quot;</span>, <span class="ident">text_end</span>);
-    <span class="macro">info!</span>(<span class="string">&quot;STACK_START: {}&quot;</span>, <span class="ident">stack_start</span>);
+    <span class="macro">info!</span>(<span class="string">&quot;RAM_MIN: {:#X}&quot;</span>, <span class="ident">ram_min</span>);
+    <span class="macro">info!</span>(<span class="string">&quot;TEXT_START: {:#X}&quot;</span>, <span class="ident">text_start</span>);
+    <span class="macro">info!</span>(<span class="string">&quot;TEXT_END: {:#X}&quot;</span>, <span class="ident">text_end</span>);
+    <span class="macro">info!</span>(<span class="string">&quot;STACK_START: {:#X}&quot;</span>, <span class="ident">stack_start</span>);
+
+    <span class="kw">let</span> <span class="ident">stack_start</span> <span class="op">=</span> <span class="ident">stack_start</span> <span class="op">-</span> <span class="number">0xFFFFFFFF80000000</span>;
 
     <span class="comment">// Find the largest slice of memory and use that for the heap.</span>
     <span class="kw">let</span> <span class="ident">largest</span> <span class="op">=</span> <span class="ident">info</span>
