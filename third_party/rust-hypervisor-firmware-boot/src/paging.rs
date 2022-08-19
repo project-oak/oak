@@ -63,5 +63,5 @@ pub fn setup() {
 
 // Map a virtual address to a PhysAddr (assumes identity mapping)
 fn phys_addr<T>(virt_addr: *const T) -> PhysAddr {
-    PhysAddr::new(virt_addr as u64)
+    PhysAddr::new(virt_addr as u64 - 0xFFFFFFFF80000000)
 }

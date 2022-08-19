@@ -37,8 +37,8 @@ PHDRS
     secrets PT_LOAD FLAGS(1 << 24);
 }
 
-/* To set kernel VMA to high memory, set this to 0xFFFFFFFF80000000. */
-KERNEL_MEM_START = 0x0;
+/* To set kernel VMA to low memory, set this to 0x0. */
+KERNEL_MEM_START = 0xFFFFFFFF80000000;
 
 SECTIONS {
     /*
