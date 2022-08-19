@@ -23,6 +23,7 @@ PHDRS
      * has a sanity check that expects the section with the lowest address to come
      * first.
      */
+    hdrs    PT_LOAD FILEHDR PHDRS FLAGS(4);
     /* Executable text. */
     boot    PT_LOAD FLAGS(4 + 1); /* PF_R + PF_X */
     text    PT_LOAD FLAGS(4 + 1); /* PF_R + PF_X */
@@ -41,12 +42,19 @@ PHDRS
 KERNEL_MEM_START = 0xFFFFFFFF80000000;
 
 SECTIONS {
-    /*
+    /* Don't touch the lower 2M of memory; there be dragons there. */
+    . = 2M;
+
+    hdrs = .;
+    . += SIZEOF_HEADERS;
+    .hdrs : {
+    } : hdrs
+
+     /*
      * Boot code is executed with identity mapping; the main duty of the boot
      * code is to set up proper page tables before jumping to the kernel proper.
-     * We place that at 2M (both virtual and physical)
      */
-    .boot 0x200000 : {
+    .boot : ALIGN(4K) {
         ram_min = .;
         *(.boot)
     } : boot
