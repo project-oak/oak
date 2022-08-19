@@ -500,20 +500,49 @@ pub fn run_trusted_shuffler() -> Step {
     let mut path_to_backend: PathBuf = path_to_trusted_shuffler_scripts.clone();
     path_to_backend.push("run_grpc_backend");
 
-    let backend_cmd = Cmd::new("bash", &["-c", path_to_backend.to_str().unwrap()]);
+    let backend_cmd = Cmd::new(
+        "cargo",
+        vec![
+            "run",
+            "--manifest-path=./experimental/trusted_shuffler/backend/Cargo.toml",
+            "--",
+            "--listen-address=[::]:8888",
+            "--use-grpc",
+        ],
+    );
 
     // Build and run the Trusted Shuffler.
     let mut path_to_trusted_shuffler: PathBuf = path_to_trusted_shuffler_scripts.clone();
     path_to_trusted_shuffler.push("run_trusted_shuffler");
 
-    let trusted_shuffler_cmd =
-        Cmd::new("bash", &["-c", path_to_trusted_shuffler.to_str().unwrap()]);
+    let trusted_shuffler_cmd = Cmd::new(
+        "cargo",
+        vec![
+            "run",
+            "--manifest-path=experimental/trusted_shuffler/server/Cargo.toml",
+            "--",
+            "--k=1",
+            "--listen-address=[::]:8080",
+            "--backend-url=http://localhost:8888",
+        ],
+    );
 
     // Build and run the echo gRPC client.
     let mut path_to_client: PathBuf = path_to_trusted_shuffler_scripts;
     path_to_client.push("run_single_grpc_client");
 
-    let client_cmd = Cmd::new("bash", &["-c", path_to_client.to_str().unwrap()]);
+    let client_cmd = Cmd::new(
+        "cargo",
+        vec![
+            "run",
+            "--manifest-path=experimental/trusted_shuffler/client/Cargo.toml",
+            "--",
+            "--server-url=http://localhost:8080",
+            "--qps=1",
+            "--seconds=1",
+            "--use-grpc",
+        ],
+    );
 
     let client_step = Step::Single {
         name: "Client".to_string(),
@@ -521,7 +550,7 @@ pub fn run_trusted_shuffler() -> Step {
     };
 
     let trusted_shuffler_step = Step::WithBackground {
-        name: "Trusted Shufflder and Backend".to_string(),
+        name: "Trusted Shuffler and Backend".to_string(),
         foreground: Box::new(client_step),
         background: trusted_shuffler_cmd,
     };
