@@ -76,6 +76,33 @@ impl LauncherMode {
     }
 }
 
+pub fn build_baremetal_variants(opt: &BuildBaremetalVariantsOpt) -> Step {
+    Step::Multiple {
+        name: "Build baremetal variants".to_string(),
+        steps: LauncherMode::iter()
+            .filter(|v| option_covers_variant(opt, v))
+            .map(|v| build_released_binary(&v.to_string(), &v.runtime_crate_path()))
+            .collect(),
+    }
+}
+
+fn option_covers_variant(opt: &BuildBaremetalVariantsOpt, variant: &LauncherMode) -> bool {
+    match &opt.variant {
+        None => true,
+        Some(var) => match *variant {
+            LauncherMode::Native => var == "native",
+            LauncherMode::Crosvm => var == "crosvm",
+        },
+    }
+}
+
+fn build_released_binary(name: &str, directory: &str) -> Step {
+    Step::Single {
+        name: name.to_string(),
+        command: Cmd::new_in_dir("cargo", vec!["build", "--release"], Path::new(directory)),
+    }
+}
+
 pub fn run_launcher_test() -> Step {
     Step::Multiple {
         name: "End-to-end tests for the launcher and runtime".to_string(),
