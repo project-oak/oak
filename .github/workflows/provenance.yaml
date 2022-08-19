@@ -19,7 +19,10 @@ jobs:
       OAK_FUNCTIONS_UNSAFE_PATH: './target/x86_64-unknown-linux-musl/release/oak_functions_loader_unsafe'
 
     permissions:
+      # Allow the job to update the repo with the latest provenances and index.
       contents: write
+      # Allow the job to add a comment to the PR.
+      pull-requests: write
 
     steps:
       - name: Mount main branch
