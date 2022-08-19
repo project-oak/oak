@@ -890,10 +890,8 @@ dependencies = [
 name = "oak_utils"
 version = "0.1.0"
 dependencies = [
- "proc-macro2",
  "prost",
  "prost-build",
- "quote",
  "tempfile",
  "tonic-build",
 ]
