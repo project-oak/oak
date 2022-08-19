@@ -14,6 +14,9 @@ on:
 jobs:
   build_provenance:
     runs-on: ubuntu-20.04
+    env:
+      OAK_FUNCTIONS_BASE_PATH: './target/x86_64-unknown-linux-musl/release/oak_functions_loader_base'
+      OAK_FUNCTIONS_UNSAFE_PATH: './target/x86_64-unknown-linux-musl/release/oak_functions_loader_unsafe'
 
     permissions:
       contents: write
@@ -53,9 +56,10 @@ jobs:
         run: |
           ./scripts/generate_provenance -c buildconfigs/oak_functions_loader_base.toml -s
 
-      - name: Generate provenance for crosvm Baremetal binary
-        run: |
-          ./scripts/generate_provenance -c buildconfigs/oak_baremetal_app_crosvm.toml -s
+      # TODO(#3099): Uncomment once #3099 is reverted.
+      # - name: Generate provenance for crosvm Baremetal binary
+      #   run: |
+      #     ./scripts/generate_provenance -c buildconfigs/oak_baremetal_app_crosvm.toml -s
 
       - name: Move new provenance files to the provenance branch
         if: github.event_name == 'push'
@@ -73,3 +77,53 @@ jobs:
       - name: Push provenance branch
         if: github.event_name == 'push'
         run: git -C ./provenance-branch push --follow-tags
+
+      # Download the Ent CLI and configure a remote with write access using a private API key, if
+      # available (GitHub secrets are not available on forks, see
+      # https://docs.github.com/en/actions/security-guides/encrypted-secrets#using-encrypted-secrets-in-a-workflow).
+      # If this step is run from a fork, the API key will be empty, and Ent will work in read-only
+      # mode.
+      # See https://github.com/google/ent
+      - name: Download Ent CLI
+        if: steps.cache-ent.outputs.cache-hit != 'true'
+        env:
+          ENT_URL: https://ent-server-62sa4xcfia-ew.a.run.app
+          ENT_DIGEST: sha256:944a34854a2bf9c5d32f3bffa93885ee1c7ef8ab0f4fcc30898a981050ae4233
+        run: |
+          curl --fail ${ENT_URL}/raw/${ENT_DIGEST} > /usr/local/bin/ent
+          chmod +x /usr/local/bin/ent
+          ent
+          cat <<EOF > ~/.config/ent.toml
+          [[remotes]]
+          name = 'ent-store'
+          url = '${ENT_URL}'
+          write = true
+          api_key = '${{ secrets.ENT_API_KEY }}'
+          EOF
+
+      # Upload artifacts to Ent, where they will be retained and publicly accessible by their hash.
+      # This only applies to `push` events, since it needs access to a valid Ent API key (which is
+      # not available on forks / PRs).
+      - name: Upload to Ent
+        if: github.event_name == 'push'
+        run: |
+          ent put ${{ env.OAK_FUNCTIONS_BASE_PATH }}
+          ent put ${{ env.OAK_FUNCTIONS_UNSAFE_PATH }}
+
+      # Build reproducibility index on `push` events.
+      - name: Build reproducibility index
+        if: github.event_name == 'push'
+        uses: ./.github/actions/reproducibility_index
+        with:
+          OAK_FUNCTIONS_BASE_PATH: ${{ env.OAK_FUNCTIONS_BASE_PATH }}
+          OAK_FUNCTIONS_UNSAFE_PATH: ${{ env.OAK_FUNCTIONS_UNSAFE_PATH }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Build reproducibility index on non-`push` events. This is similar to the previous step,
+      # but does not pass in the GITHUB_TOKEN, which is not available on forks / PRs).
+      - name: Build reproducibility index
+        if: github.event_name != 'push'
+        uses: ./.github/actions/reproducibility_index
+        with:
+          OAK_FUNCTIONS_BASE_PATH: ${{ env.OAK_FUNCTIONS_BASE_PATH }}
+          OAK_FUNCTIONS_UNSAFE_PATH: ${{ env.OAK_FUNCTIONS_UNSAFE_PATH }}
