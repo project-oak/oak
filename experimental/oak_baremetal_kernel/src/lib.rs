@@ -28,7 +28,7 @@
 //!   * Implement a `#[panic_handler]` that delegates to `panic()` in this crate.
 //!   * Call `start_kernel` from the entry point of the bootloader.
 
-#![no_std]
+#![cfg_attr(not(test), no_std)]
 #![feature(abi_x86_interrupt)]
 #![feature(core_c_str)]
 #![feature(once_cell)]
@@ -41,6 +41,7 @@ mod interrupts;
 mod libm;
 mod logging;
 mod memory;
+mod mm;
 #[cfg(feature = "serial_channel")]
 mod serial;
 #[cfg(feature = "simple_io_channel")]
