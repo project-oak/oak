@@ -17,7 +17,7 @@ jobs:
     env:
       OAK_FUNCTIONS_BASE_PATH: './target/x86_64-unknown-linux-musl/release/oak_functions_loader_base'
       OAK_FUNCTIONS_UNSAFE_PATH: './target/x86_64-unknown-linux-musl/release/oak_functions_loader_unsafe'
-      OAK_BAREMETAL_CROSVM_PATH: './experimental/oak_baremetal_app_crosvm/target/target/release/oak_baremetal_app_crosvm'
+      OAK_BAREMETAL_CROSVM_PATH: './experimental/oak_baremetal_app_crosvm/target/x86_64-unknown-none/release/oak_baremetal_app_crosvm'
 
     permissions:
       # Allow the job to update the repo with the latest provenances and index.
