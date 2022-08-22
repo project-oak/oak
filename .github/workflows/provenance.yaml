@@ -17,6 +17,7 @@ jobs:
     env:
       OAK_FUNCTIONS_BASE_PATH: './target/x86_64-unknown-linux-musl/release/oak_functions_loader_base'
       OAK_FUNCTIONS_UNSAFE_PATH: './target/x86_64-unknown-linux-musl/release/oak_functions_loader_unsafe'
+      OAK_BAREMETAL_CROSVM_PATH: './experimental/oak_baremetal_app_crosvm/target/x86_64-unknown-none/release/oak_baremetal_app_crosvm'
 
     permissions:
       # Allow the job to update the repo with the latest provenances and index.
@@ -59,10 +60,9 @@ jobs:
         run: |
           ./scripts/generate_provenance -c buildconfigs/oak_functions_loader_base.toml -s
 
-      # TODO(#3099): Uncomment once #3099 is reverted.
-      # - name: Generate provenance for crosvm Baremetal binary
-      #   run: |
-      #     ./scripts/generate_provenance -c buildconfigs/oak_baremetal_app_crosvm.toml -s
+      - name: Generate provenance for crosvm Baremetal binary
+        run: |
+          ./scripts/generate_provenance -c buildconfigs/oak_baremetal_app_crosvm.toml -s
 
       - name: Move new provenance files to the provenance branch
         if: github.event_name == 'push'
@@ -112,6 +112,7 @@ jobs:
         run: |
           ent put ${{ env.OAK_FUNCTIONS_BASE_PATH }}
           ent put ${{ env.OAK_FUNCTIONS_UNSAFE_PATH }}
+          ent put ${{ env.OAK_BAREMETAL_CROSVM_PATH }}
 
       # Build reproducibility index on `push` events.
       - name: Build reproducibility index
@@ -120,6 +121,7 @@ jobs:
         with:
           OAK_FUNCTIONS_BASE_PATH: ${{ env.OAK_FUNCTIONS_BASE_PATH }}
           OAK_FUNCTIONS_UNSAFE_PATH: ${{ env.OAK_FUNCTIONS_UNSAFE_PATH }}
+          OAK_BAREMETAL_CROSVM_PATH: ${{ env.OAK_BAREMETAL_CROSVM_PATH }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       # Build reproducibility index on non-`push` events. This is similar to the previous step,
@@ -130,3 +132,4 @@ jobs:
         with:
           OAK_FUNCTIONS_BASE_PATH: ${{ env.OAK_FUNCTIONS_BASE_PATH }}
           OAK_FUNCTIONS_UNSAFE_PATH: ${{ env.OAK_FUNCTIONS_UNSAFE_PATH }}
+          OAK_BAREMETAL_CROSVM_PATH: ${{ env.OAK_BAREMETAL_CROSVM_PATH }}
