@@ -7,6 +7,9 @@ inputs:
   OAK_FUNCTIONS_UNSAFE_PATH:
     required: true
     description: 'Path to the unsafe oak_functions binary.'
+  OAK_BAREMETAL_CROSVM_PATH:
+    required: true
+    description: 'Path to the oak_baremetal_app_crosvm binary.'
   GITHUB_TOKEN:
     description:
       'The GitHub token of the GitHub repository. Must be provided for push
@@ -26,7 +29,7 @@ runs:
     - name: Generate Reproducibility Index
       shell: bash
       run: |
-        ./scripts/docker_run ./scripts/build_reproducibility_index ${{ inputs.OAK_FUNCTIONS_BASE_PATH }} ${{ inputs.OAK_FUNCTIONS_UNSAFE_PATH }}
+        ./scripts/docker_run ./scripts/build_reproducibility_index ${{ inputs.OAK_FUNCTIONS_BASE_PATH }} ${{ inputs.OAK_FUNCTIONS_UNSAFE_PATH }} ${{ inputs.OAK_BAREMETAL_CROSVM_PATH }}
 
     # Remove all files from the "out" folder.
     - name: Clear "out" folder
