@@ -123,10 +123,18 @@ async fn start_grpc_backend(address: SocketAddr) -> anyhow::Result<()> {
     info!("Starting the gRPC backend server at {:?}", address);
 
     let echoer = MyEcho::default();
-    TonicServer::builder()
+    let server = TonicServer::builder()
         .add_service(EchoServer::new(echoer))
-        .serve(address)
-        .await?;
+        .serve(address);
+
+    tokio::select!(
+        result = server => {
+            result.context("Couldn't run server")?;
+        },
+        () = tokio::signal::ctrl_c().map(|r| r.unwrap()) => {
+            info!("Stopping the backend server");
+        },
+    );
 
     Ok(())
 }

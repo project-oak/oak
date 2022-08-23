@@ -53,7 +53,7 @@ impl RequestHandler for HttpRequestHandler {
         // And extend the URL to the backend.
         let new_uri = format!("{}{}", self.backend_url, path)
             .parse::<Uri>()
-            .expect("Couldn't parse URI for backend.");
+            .map_err(|error| anyhow!("Couldn't parse URI for backend: {:?}", error))?;
         let uri = request.uri_mut();
         *uri = new_uri;
 

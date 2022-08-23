@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC2101 # False positive on [::] in LISTEN_ADDRESS.
 
 readonly SCRIPTS_DIR="$(dirname "$0")"
 # shellcheck source=scripts/common
@@ -10,4 +11,7 @@ gcloud run deploy "${DEPLOYMENT}" \
     --region=europe-west1 \
     --image="${DOCKER_IMAGE}" \
     --use-http2 \
-    --allow-unauthenticated
+    --allow-unauthenticated \
+    --set-env-vars BACKEND_URL=http://localhost:8888 \
+    --set-env-vars K=1 \
+    --set-env-vars LISTEN_ADDRESS=[::]:8080

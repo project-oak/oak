@@ -16,7 +16,7 @@
 
 use crate::{files::*, internal::*};
 use maplit::hashmap;
-use std::collections::HashMap;
+use std::{collections::HashMap, path::PathBuf};
 use strum::IntoEnumIterator;
 
 #[cfg(target_os = "macos")]
@@ -482,6 +482,84 @@ fn run_oak_functions_server(server: &Server) -> Box<dyn Runnable> {
             ...server.additional_args.clone(),
         ],
     )
+}
+
+pub fn run_trusted_shuffler() -> Step {
+    let path_to_trusted_shuffler_scripts: PathBuf = [
+        env!("WORKSPACE_ROOT"),
+        "experimental",
+        "trusted_shuffler",
+        "scripts",
+    ]
+    .iter()
+    .collect();
+
+    // Run gRPC Trusted Shuffler.
+
+    // Build and run the echo gRPC backend.
+    let mut path_to_backend: PathBuf = path_to_trusted_shuffler_scripts.clone();
+    path_to_backend.push("run_grpc_backend");
+
+    let backend_cmd = Cmd::new(
+        "cargo",
+        vec![
+            "run",
+            "--manifest-path=./experimental/trusted_shuffler/backend/Cargo.toml",
+            "--",
+            "--listen-address=[::]:8888",
+            "--use-grpc",
+        ],
+    );
+
+    // Build and run the Trusted Shuffler.
+    let mut path_to_trusted_shuffler: PathBuf = path_to_trusted_shuffler_scripts.clone();
+    path_to_trusted_shuffler.push("run_trusted_shuffler");
+
+    let trusted_shuffler_cmd = Cmd::new(
+        "cargo",
+        vec![
+            "run",
+            "--manifest-path=experimental/trusted_shuffler/server/Cargo.toml",
+            "--",
+            "--k=1",
+            "--listen-address=[::]:8080",
+            "--backend-url=http://localhost:8888",
+        ],
+    );
+
+    // Build and run the echo gRPC client.
+    let mut path_to_client: PathBuf = path_to_trusted_shuffler_scripts;
+    path_to_client.push("run_single_grpc_client");
+
+    let client_cmd = Cmd::new(
+        "cargo",
+        vec![
+            "run",
+            "--manifest-path=experimental/trusted_shuffler/client/Cargo.toml",
+            "--",
+            "--server-url=http://localhost:8080",
+            "--qps=1",
+            "--seconds=1",
+            "--use-grpc",
+        ],
+    );
+
+    let client_step = Step::Single {
+        name: "Client".to_string(),
+        command: client_cmd,
+    };
+
+    let trusted_shuffler_step = Step::WithBackground {
+        name: "Trusted Shuffler and Backend".to_string(),
+        foreground: Box::new(client_step),
+        background: trusted_shuffler_cmd,
+    };
+
+    Step::WithBackground {
+        name: "Run echo gRPC Trusted Shuffler with k=1".to_string(),
+        foreground: Box::new(trusted_shuffler_step),
+        background: backend_cmd,
+    }
 }
 
 fn run_clients(
