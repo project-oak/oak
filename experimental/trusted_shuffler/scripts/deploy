@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC2101 # False positive on [::] in LISTEN_ADDRESS.
 
 readonly SCRIPTS_DIR="$(dirname "$0")"
 # shellcheck source=scripts/common
