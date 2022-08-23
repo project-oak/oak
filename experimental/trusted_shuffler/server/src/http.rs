@@ -51,10 +51,9 @@ impl RequestHandler for HttpRequestHandler {
         // let new_uri = Uri::from_parts(parts).expect("Failed to create new URI");
         let path = request.uri().path();
         // And extend the URL to the backend.
-        let new_uri = match format!("{}{}", self.backend_url, path).parse::<Uri>() {
-            Ok(new_uri) => new_uri,
-            Err(error) => return Err(anyhow!("Couldn't parse URI for backend: {:?}", error)),
-        };
+        let new_uri = format!("{}{}", self.backend_url, path)
+            .parse::<Uri>()
+            .map_err(|error| anyhow!("Couldn't parse URI for backend: {:?}", error))?;
         let uri = request.uri_mut();
         *uri = new_uri;
 
