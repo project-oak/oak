@@ -19,7 +19,7 @@
 
 use core::{mem::MaybeUninit, panic::PanicInfo};
 use sev_guest::{cpuid::CpuidPage, secrets::SecretsPage};
-use x86_64::instructions::{hlt, port::PortWriteOnly};
+use x86_64::instructions::{hlt, interrupts::int3};
 
 mod asm;
 mod serial;
@@ -48,11 +48,9 @@ pub extern "C" fn rust64_start() -> ! {
 
 #[panic_handler]
 fn panic(_info: &PanicInfo) -> ! {
-    // Shut down the machine via the i8042 controller.
-    unsafe {
-        let mut port = PortWriteOnly::new(0x64);
-        port.write(0xFE_u8);
-    }
+    // Trigger a breakpoint exception. As we don't have a #BP handler, this will triple fault and
+    // terminate the program.
+    int3();
 
     loop {
         hlt();
