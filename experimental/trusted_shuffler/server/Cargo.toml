@@ -34,3 +34,4 @@ tokio = { version = "*", features = [
 ] }
 trusted_shuffler_common = { path = "../common" }
 trusted_shuffler = { path = "../trusted_shuffler" }
+hyper-alpn = "*"
