@@ -42,7 +42,6 @@ use oak_remote_attestation::handshaker::{
     AttestationBehavior, AttestationGenerator, AttestationVerifier,
 };
 use oak_remote_attestation_sessions::SessionId;
-use remote_attestation::PublicKeyInfo;
 
 enum InitializationState<G, V>
 where
