@@ -42,6 +42,7 @@ use oak_remote_attestation::handshaker::{
     AttestationBehavior, AttestationGenerator, AttestationVerifier,
 };
 use oak_remote_attestation_sessions::SessionId;
+use remote_attestation::PublicKeyInfo;
 
 enum InitializationState<G, V>
 where
@@ -87,7 +88,8 @@ where
     fn initialize(
         &mut self,
         initialization: &schema::Initialization,
-    ) -> Result<oak_idl::utils::OwnedFlatbuffer<crate::schema::Empty>, oak_idl::Status> {
+    ) -> Result<oak_idl::utils::OwnedFlatbuffer<crate::schema::InitializeResponse>, oak_idl::Status>
+    {
         match &mut self.initialization_state {
             InitializationState::Initialized(_attestation_handler) => Err(oak_idl::Status::new(
                 oak_idl::StatusCode::FailedPrecondition,
@@ -124,13 +126,28 @@ where
                     )
                     .map_err(|_err| oak_idl::Status::new(oak_idl::StatusCode::Internal))?,
                 );
+                let public_key_info = attestation_handler.get_public_key_info();
                 self.initialization_state = InitializationState::Initialized(attestation_handler);
                 let response_message = {
                     let mut builder = oak_idl::utils::OwnedFlatbufferBuilder::default();
-                    let user_request_response =
-                        schema::Empty::create(&mut builder, &schema::EmptyArgs {});
+                    let public_key = builder.create_vector::<u8>(&public_key_info.public_key);
+                    let attestation = builder.create_vector::<u8>(&public_key_info.attestation);
+                    let public_key_info = schema::PublicKeyInfo::create(
+                        &mut builder,
+                        &schema::PublicKeyInfoArgs {
+                            public_key: Some(public_key),
+                            attestation: Some(attestation),
+                        },
+                    );
+
+                    let initialize_response = schema::InitializeResponse::create(
+                        &mut builder,
+                        &schema::InitializeResponseArgs {
+                            public_key_info: Some(public_key_info),
+                        },
+                    );
                     builder
-                        .finish(user_request_response)
+                        .finish(initialize_response)
                         .map_err(|_err| oak_idl::Status::new(oak_idl::StatusCode::Internal))?
                 };
                 Ok(response_message)
