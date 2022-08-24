@@ -18,6 +18,8 @@ syntax = "proto3";
 
 package oak.session.unary.v1;
 
+import "google/protobuf/empty.proto";
+
 option java_multiple_files = true;
 option java_package = "oak.session.unary.v1";
 
@@ -32,6 +34,13 @@ message UnaryRequest {
 
 message UnaryResponse {
   bytes body = 1;
+}
+
+message PublicKeyInfo {
+  // The serialized public key.
+  bytes public_key = 1;
+  // The serialized attestation report binding the public key.
+  bytes attestation = 2;
 }
 
 // Service definition for unary communication with the runtime.
@@ -58,4 +67,8 @@ service UnarySession {
   // Messages are represented as serialized messages defined in the `remote_attestation::message.rs`
   // and `com.google.oak.remote_attestation.Message`.
   rpc Message(UnaryRequest) returns (UnaryResponse);
+
+  // Gets the public key and the attestation report that binds the public key to a specific instance
+  // of the code running in a TEE.
+  rpc GetPublicKeyInfo(google.protobuf.Empty) returns (PublicKeyInfo);
 }

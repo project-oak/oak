@@ -163,14 +163,27 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .finish(initialization_flatbuffer)
             .expect("errored when creating initialization message")
     };
-    if let Err(err) = schema::TrustedRuntimeAsyncClient::new(connector_handle.clone())
+
+    let mut client = schema::TrustedRuntimeAsyncClient::new(connector_handle.clone());
+    let result = client
         .initialize(owned_initialization_flatbuffer.into_vec())
         .await
-    {
-        panic!("failed to initialize the runtime: {:?}", err)
-    }
+        .expect("failed to initialize the runtime");
 
-    let server_future = server::server("127.0.0.1:8080".parse()?, connector_handle);
+    let public_key_info = result
+        .get()
+        .public_key_info()
+        .expect("no public key info returned");
+
+    let server_future = server::server(
+        "127.0.0.1:8080".parse()?,
+        connector_handle,
+        public_key_info
+            .public_key()
+            .expect("missing public key")
+            .to_vec(),
+        public_key_info.attestation().unwrap_or(&[]).to_vec(),
+    );
 
     // Wait until something dies or we get a signal to terminate.
     tokio::select! {

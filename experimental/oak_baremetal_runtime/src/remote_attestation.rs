@@ -21,36 +21,67 @@
 
 extern crate alloc;
 
-use alloc::vec::Vec;
+use alloc::{sync::Arc, vec::Vec};
 use anyhow::Context;
-use oak_remote_attestation::handshaker::{
-    AttestationBehavior, AttestationGenerator, AttestationVerifier,
+use oak_remote_attestation::{
+    crypto::Signer,
+    handshaker::{AttestationBehavior, AttestationGenerator, AttestationVerifier},
 };
 use oak_remote_attestation_sessions::{SessionId, SessionState, SessionTracker};
 
 /// Number of sessions that will be kept in memory.
 const SESSIONS_CACHE_SIZE: usize = 10000;
 
+/// Information about a public key.
+#[derive(Debug, Clone)]
+pub struct PublicKeyInfo {
+    /// The serialized public key.
+    pub public_key: Vec<u8>,
+    /// The serialized attestation report that binds the public key to the specific version of the
+    /// code running in a TEE.
+    pub attestation: Vec<u8>,
+}
+
 pub trait AttestationHandler {
     fn message(&mut self, session_id: SessionId, body: &[u8]) -> anyhow::Result<Vec<u8>>;
+    fn get_public_key_info(&self) -> PublicKeyInfo;
 }
 
 pub struct AttestationSessionHandler<F, G: AttestationGenerator, V: AttestationVerifier> {
     session_tracker: SessionTracker<G, V>,
     request_handler: F,
+    public_key_info: PublicKeyInfo,
 }
 
 impl<F, G: AttestationGenerator, V: AttestationVerifier> AttestationSessionHandler<F, G, V>
 where
     F: Send + Sync + Clone + FnOnce(Vec<u8>) -> anyhow::Result<Vec<u8>>,
 {
-    pub fn create(request_handler: F, attestation_behavior: AttestationBehavior<G, V>) -> Self {
-        let session_tracker = SessionTracker::create(SESSIONS_CACHE_SIZE, attestation_behavior);
+    pub fn create(
+        request_handler: F,
+        attestation_behavior: AttestationBehavior<G, V>,
+    ) -> anyhow::Result<Self> {
+        let signer = Arc::new(Signer::create().context("Couldn't create signer")?);
+        let public_key = signer
+            .public_key()
+            .context("Couldn't get public key")?
+            .to_vec();
+        let attestation = attestation_behavior
+            .generator
+            .generate_attestation(&public_key)
+            .context("Couldn't generate attestation")?;
+        let public_key_info = PublicKeyInfo {
+            public_key,
+            attestation,
+        };
+        let session_tracker =
+            SessionTracker::create(SESSIONS_CACHE_SIZE, attestation_behavior, signer);
 
-        Self {
+        Ok(Self {
             session_tracker,
             request_handler,
-        }
+            public_key_info,
+        })
     }
 }
 
@@ -97,5 +128,9 @@ where
             .put_session_state(session_id, session_state);
 
         Ok(response_body)
+    }
+
+    fn get_public_key_info(&self) -> PublicKeyInfo {
+        self.public_key_info.clone()
     }
 }

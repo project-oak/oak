@@ -20,10 +20,13 @@
 
 extern crate alloc;
 
-use alloc::boxed::Box;
+use alloc::{boxed::Box, sync::Arc};
 use lru::LruCache;
-use oak_remote_attestation::handshaker::{
-    AttestationBehavior, AttestationGenerator, AttestationVerifier, Encryptor, ServerHandshaker,
+use oak_remote_attestation::{
+    crypto::Signer,
+    handshaker::{
+        AttestationBehavior, AttestationGenerator, AttestationVerifier, Encryptor, ServerHandshaker,
+    },
 };
 
 pub const SESSION_ID_LENGTH: usize = 8;
@@ -38,14 +41,20 @@ pub enum SessionState<G: AttestationGenerator, V: AttestationVerifier> {
 /// Maintains remote attestation state for a number of sessions
 pub struct SessionTracker<G: AttestationGenerator, V: AttestationVerifier> {
     attestation_behavior: AttestationBehavior<G, V>,
+    transcript_signer: Arc<Signer>,
     known_sessions: LruCache<SessionId, SessionState<G, V>>,
 }
 
 impl<G: AttestationGenerator, V: AttestationVerifier> SessionTracker<G, V> {
-    pub fn create(cache_size: usize, attestation_behavior: AttestationBehavior<G, V>) -> Self {
+    pub fn create(
+        cache_size: usize,
+        attestation_behavior: AttestationBehavior<G, V>,
+        transcript_signer: Arc<Signer>,
+    ) -> Self {
         let known_sessions = LruCache::new(cache_size);
         Self {
             attestation_behavior,
+            transcript_signer,
             known_sessions,
         }
     }
@@ -65,7 +74,10 @@ impl<G: AttestationGenerator, V: AttestationVerifier> SessionTracker<G, V> {
     ) -> anyhow::Result<SessionState<G, V>> {
         match self.known_sessions.pop(&session_id) {
             None => Ok(SessionState::HandshakeInProgress(Box::new(
-                ServerHandshaker::new(self.attestation_behavior.clone())?,
+                ServerHandshaker::new(
+                    self.attestation_behavior.clone(),
+                    self.transcript_signer.clone(),
+                )?,
             ))),
             Some(SessionState::HandshakeInProgress(handshaker)) => {
                 // Completed handshakers are functionally just wrap an

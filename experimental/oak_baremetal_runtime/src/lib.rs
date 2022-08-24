@@ -104,24 +104,26 @@ where
                 let wasm_handler =
                     wasm::new_wasm_handler(wasm_module_bytes, self.lookup_data_manager.clone())
                         .map_err(|_err| oak_idl::Status::new(oak_idl::StatusCode::Internal))?;
-                let attestation_handler = Box::new(AttestationSessionHandler::create(
-                    move |decrypted_request| {
-                        let decrypted_response = wasm_handler.handle_invoke(Request {
-                            body: decrypted_request,
-                        })?;
+                let attestation_handler = Box::new(
+                    AttestationSessionHandler::create(
+                        move |decrypted_request| {
+                            let decrypted_response = wasm_handler.handle_invoke(Request {
+                                body: decrypted_request,
+                            })?;
 
-                        let padded_decrypted_response = decrypted_response
-                            .pad(
-                                constant_response_size
-                                    .try_into()
-                                    .expect("failed to convert constant_response_size to usize"),
-                            )
-                            .context("could not pad the response")?;
+                            let padded_decrypted_response =
+                                decrypted_response
+                                    .pad(constant_response_size.try_into().expect(
+                                        "failed to convert constant_response_size to usize",
+                                    ))
+                                    .context("could not pad the response")?;
 
-                        Ok(padded_decrypted_response.encode_to_vec())
-                    },
-                    attestation_behavior,
-                ));
+                            Ok(padded_decrypted_response.encode_to_vec())
+                        },
+                        attestation_behavior,
+                    )
+                    .map_err(|_err| oak_idl::Status::new(oak_idl::StatusCode::Internal))?,
+                );
                 self.initialization_state = InitializationState::Initialized(attestation_handler);
                 let response_message = {
                     let mut builder = oak_idl::utils::OwnedFlatbufferBuilder::default();
