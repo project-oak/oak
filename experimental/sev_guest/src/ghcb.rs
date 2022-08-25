@@ -39,7 +39,7 @@ const SW_EXIT_CODE_IOIO_PROT: u64 = 0x7B;
 // See section 15.10.2 of <https://www.amd.com/system/files/TechDocs/24593.pdf> for more details.
 const IOIO_ADDRESS_SIZE_16: u64 = 1 << 7;
 
-// Indicator b it that the IO port will be used for reading data.
+// Indicator bit that the IO port will be used for reading data.
 
 // See section 15.10.2 of <https://www.amd.com/system/files/TechDocs/24593.pdf> for more details.
 const IOIO_READ: u64 = 1;
@@ -171,6 +171,7 @@ impl Ghcb {
     }
 }
 
+/// Implementation of the GHCB protocol using the wrapped GHCB data structure.
 pub struct GhcbProtocol {
     ghcb: Ghcb,
 }
