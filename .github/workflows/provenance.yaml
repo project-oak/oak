@@ -17,7 +17,7 @@ on:
 jobs:
   build_provenance:
     outputs:
-      hashes: ${{ steps.hash.outputs.hashes }}  
+      hashes: ${{ steps.hash.outputs.hashes }}
     runs-on: ubuntu-20.04
     env:
       OAK_FUNCTIONS_BASE_PATH: './target/x86_64-unknown-linux-musl/release/oak_functions_loader_base'
@@ -152,14 +152,6 @@ jobs:
           # sha256sum generates sha256 hash for oak_functions_loader_base.
           # base64 --wrap=0 disables line wrapping, and encodes to base64 and outputs on a single line.
           echo "::set-output name=hashes::$(sha256sum oak_functions_loader_base | base64 --wrap=0)"
-
-  test_subject:
-    needs: [build_provenance]
-    runs-on: ubuntu-20.04
-    steps: 
-      - name: echo
-        run: echo "${{ needs.build_provenance.outputs.hashes }}"
-
 
   # This job calls the generic workflow to generate provenance.
   # See https://github.com/slsa-framework/slsa-github-generator/blob/main/internal/builders/generic/README.md
