@@ -37,6 +37,7 @@
 use crate::instructions::vmgexit;
 //use anyhow::{anyhow, bail, Result};
 use bitflags::bitflags;
+use snafu::prelude::*;
 use strum::FromRepr;
 use x86_64::registers::model_specific::Msr;
 
@@ -235,11 +236,9 @@ pub struct RegisterGhcbGpaRequest {
 }
 
 impl RegisterGhcbGpaRequest {
-    pub fn new(ghcb_gpa: usize) -> Result<Self, &'static str> {
+    pub fn new(ghcb_gpa: usize) -> Result<Self, RegisterGhcbGpaError> {
         let ghcb_gpa = ghcb_gpa as u64;
-        if ghcb_gpa & GHCB_INFO_MASK != 0 {
-            return Err("GHCB must be 4KiB-aligned");
-        }
+        ensure!(ghcb_gpa & GHCB_INFO_MASK == 0, AddressNotAlignedSnafu);
         Ok(Self { ghcb_gpa })
     }
 }
@@ -257,30 +256,46 @@ pub struct RegisterGhcbGpaResponse {
     ghcb_gpa: u64,
 }
 
+#[derive(Debug, Snafu)]
+pub enum RegisterGhcbGpaError {
+    /// GHCB must be 4KiB-aligned.
+    AddressNotAligned,
+    InvalidResponse,
+    GhcbLocationNotAccepted,
+    GhcbResponseLocationNotMatchingRequest {
+        response_ghcb_gpa: u64,
+    },
+}
+
 impl TryFrom<u64> for RegisterGhcbGpaResponse {
-    type Error = &'static str;
-    fn try_from(msr_value: u64) -> Result<Self, &'static str> {
+    type Error = RegisterGhcbGpaError;
+    fn try_from(msr_value: u64) -> Result<Self, Self::Error> {
         const REGISTER_GHCB_GPA_RESPONSE_INFO: u64 = 0x013;
-        if msr_value & GHCB_INFO_MASK != REGISTER_GHCB_GPA_RESPONSE_INFO {
-            return Err("Value is not a valid GHCP GPA registration response");
-        }
+        ensure!(
+            msr_value & GHCB_INFO_MASK == REGISTER_GHCB_GPA_RESPONSE_INFO,
+            InvalidResponseSnafu
+        );
         let ghcb_gpa = msr_value & GCHP_DATA_MASK;
         Ok(Self { ghcb_gpa })
     }
 }
 
 /// Registers the location of the GHCB page for the current vCPU with the hypervisor.
-pub fn register_ghcb_location(request: RegisterGhcbGpaRequest) -> Result<(), &'static str> {
+pub fn register_ghcb_location(request: RegisterGhcbGpaRequest) -> Result<(), RegisterGhcbGpaError> {
     let request_ghcb_gpa: u64 = request.ghcb_gpa;
     write_msr_and_exit(request.into());
     let response: RegisterGhcbGpaResponse = read_msr().try_into()?;
     // Ensure that the registration was successful.
-    if response.ghcb_gpa == GHCB_LOCATION_NOT_ACCEPTED {
-        return Err("GHCB location registration not accepted");
-    }
-    if response.ghcb_gpa != request_ghcb_gpa {
-        return Err("The registration response did not match the request");
-    }
+    ensure!(
+        response.ghcb_gpa != GHCB_LOCATION_NOT_ACCEPTED,
+        GhcbLocationNotAcceptedSnafu
+    );
+    ensure!(
+        response.ghcb_gpa == request_ghcb_gpa,
+        GhcbResponseLocationNotMatchingRequestSnafu {
+            response_ghcb_gpa: response.ghcb_gpa,
+        }
+    );
     Ok(())
 }
 
@@ -564,7 +579,7 @@ mod tests {
         let invalid = 0x12u64 | page;
         let valid = 0x13u64 | page;
 
-        let error: Result<RegisterGhcbGpaResponse, &'static str> = invalid.try_into();
+        let error: Result<RegisterGhcbGpaResponse, RegisterGhcbGpaError> = invalid.try_into();
         assert!(error.is_err());
 
         let correct: RegisterGhcbGpaResponse = valid.try_into().unwrap();

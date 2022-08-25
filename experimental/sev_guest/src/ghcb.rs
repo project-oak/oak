@@ -18,7 +18,8 @@
 //! that can be used for communicating with the hypervisor.
 
 use crate::msr::{
-    register_ghcb_location, set_ghcb_address_and_exit, GhcbGpa, RegisterGhcbGpaRequest,
+    register_ghcb_location, set_ghcb_address_and_exit, GhcbGpa, RegisterGhcbGpaError,
+    RegisterGhcbGpaRequest,
 };
 use bitflags::bitflags;
 use zerocopy::FromBytes;
@@ -124,6 +125,12 @@ pub struct Ghcb {
     pub ghcb_usage: u32,
 }
 
+impl Default for Ghcb {
+    fn default() -> Self {
+        Self::new_zeroed()
+    }
+}
+
 static_assertions::assert_eq_size!(Ghcb, [u8; GHCB_PAGE_SIZE]);
 
 bitflags! {
@@ -194,7 +201,7 @@ impl<'a> GhcbProtocol<'a> {
     }
 
     /// Registers the address of the GHCB with the hypervisor.
-    pub fn register_with_hypervisor(&self) -> Result<(), &'static str> {
+    pub fn register_with_hypervisor(&self) -> Result<(), RegisterGhcbGpaError> {
         register_ghcb_location(RegisterGhcbGpaRequest::new(self.get_gpa())?)
     }
 
