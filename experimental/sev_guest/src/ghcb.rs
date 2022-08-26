@@ -53,6 +53,10 @@ const IOIO_DATA_SIZE_8: u64 = 1 << 4;
 // See section 15.10.2 of <https://www.amd.com/system/files/TechDocs/24593.pdf> for more details.
 const IOIO_DATA_SIZE_32: u64 = 1 << 6;
 
+const BASE_VALID_BITMAP: ValidBitmap = ValidBitmap::SW_EXIT_CODE
+    .union(ValidBitmap::SW_EXIT_INFO_1)
+    .union(ValidBitmap::SW_EXIT_INFO_2);
+
 /// The guest-host communications block.
 ///
 /// See: Table 3 in <https://developer.amd.com/wp-content/resources/56421.pdf>
@@ -172,15 +176,19 @@ impl Ghcb {
 }
 
 /// Implementation of the GHCB protocol using the wrapped GHCB data structure.
-pub struct GhcbProtocol {
-    ghcb: Ghcb,
+pub struct GhcbProtocol<'a> {
+    ghcb: &'a mut Ghcb,
 }
 
-impl GhcbProtocol {
+impl<'a> GhcbProtocol<'a> {
+    pub fn new(ghcb: &'a mut Ghcb) -> Self {
+        Self { ghcb }
+    }
+
     /// Gets the guest-physical address for the guest-hypervisor communication block.
     pub fn get_gpa(&self) -> usize {
         // Assume identity mapping for now.
-        &self.ghcb as *const Ghcb as usize
+        self.ghcb as *const Ghcb as usize
     }
 
     /// Registers the address of the GHCB with the hypervisor.
@@ -198,6 +206,7 @@ impl GhcbProtocol {
         self.ghcb.sw_exit_code = SW_EXIT_CODE_IOIO_PROT;
         self.ghcb.sw_exit_info_1 = io_port;
         self.ghcb.rax = data as u64;
+        self.ghcb.valid_bitmap = BASE_VALID_BITMAP.union(ValidBitmap::RAX);
         self.do_vmg_exit()
     }
 
