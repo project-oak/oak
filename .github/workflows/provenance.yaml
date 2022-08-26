@@ -16,6 +16,8 @@ on:
 
 jobs:
   build_provenance:
+    outputs:
+      hashes: ${{ steps.hash.outputs.hashes }}
     runs-on: ubuntu-20.04
     env:
       OAK_FUNCTIONS_BASE_PATH: './target/x86_64-unknown-linux-musl/release/oak_functions_loader_base'
@@ -154,7 +156,8 @@ jobs:
   # This job calls the generic workflow to generate provenance.
   # See https://github.com/slsa-framework/slsa-github-generator/blob/main/internal/builders/generic/README.md
   provenance:
-    if: github.event_name != 'pull_request'
+    # For now only run it on workflow_dispatch events.
+    if: github.event_name == 'workflow_dispatch'
     needs: [build_provenance]
     permissions:
       actions: read
