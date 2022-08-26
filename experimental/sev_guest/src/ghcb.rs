@@ -34,25 +34,27 @@ pub const GHCB_PROTOCOL_VERSION: u16 = 2;
 /// See section 4.1.2 in <https://developer.amd.com/wp-content/resources/56421.pdf>.
 const SW_EXIT_CODE_IOIO_PROT: u64 = 0x7B;
 
-// Indicator bit that the address is a 16 bit number.
-
-// See section 15.10.2 of <https://www.amd.com/system/files/TechDocs/24593.pdf> for more details.
+/// Indicator bit that the address is a 16 bit number.
+///
+/// See section 15.10.2 of <https://www.amd.com/system/files/TechDocs/24593.pdf> for more details.
 const IOIO_ADDRESS_SIZE_16: u64 = 1 << 7;
 
-// Indicator bit that the IO port will be used for reading data.
-
-// See section 15.10.2 of <https://www.amd.com/system/files/TechDocs/24593.pdf> for more details.
+/// Indicator bit that the IO port will be used for reading data.
+///
+/// See section 15.10.2 of <https://www.amd.com/system/files/TechDocs/24593.pdf> for more details.
 const IOIO_READ: u64 = 1;
 
-// Indicator bit that the IO data is an 8 bit number.
-// See section 15.10.2 of <https://www.amd.com/system/files/TechDocs/24593.pdf> for more details.
+/// Indicator bit that the IO data is an 8 bit number.
+///
+/// See section 15.10.2 of <https://www.amd.com/system/files/TechDocs/24593.pdf> for more details.
 const IOIO_DATA_SIZE_8: u64 = 1 << 4;
 
-// Indicator bit that the IO data is a 32 bit number.
-
-// See section 15.10.2 of <https://www.amd.com/system/files/TechDocs/24593.pdf> for more details.
+/// Indicator bit that the IO data is a 32 bit number.
+///
+/// See section 15.10.2 of <https://www.amd.com/system/files/TechDocs/24593.pdf> for more details.
 const IOIO_DATA_SIZE_32: u64 = 1 << 6;
 
+/// The bitmap representing the minimum fields that must always be valid.
 const BASE_VALID_BITMAP: ValidBitmap = ValidBitmap::SW_EXIT_CODE
     .union(ValidBitmap::SW_EXIT_INFO_1)
     .union(ValidBitmap::SW_EXIT_INFO_2);
