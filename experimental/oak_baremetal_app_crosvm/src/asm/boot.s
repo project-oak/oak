@@ -49,6 +49,12 @@ _start:
     # Finally, trigger a full TLB flush by overwriting CR3, even if it is the same value.
     movq %rbx, %cr3
 
+    # Clear BSS: base address goes to RDI, value goes to AX, count goes into CX.
+    mov $bss_start, %rdi
+    mov $bss_size, %rcx
+    xor %rax, %rax
+    rep stosb
+
     mov $stack_start, %rsp
     # Push 8 bytes to fix stack alignment issue. Because we enter rust64_start with a jmp rather
     # than a call the function prologue means that the stack is no longer 16-byte aligned.
