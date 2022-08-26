@@ -156,7 +156,8 @@ jobs:
   # This job calls the generic workflow to generate provenance.
   # See https://github.com/slsa-framework/slsa-github-generator/blob/main/internal/builders/generic/README.md
   provenance:
-    if: github.event_name != 'pull_request'
+    # For now only run it on workflow_dispatch events.
+    if: github.event_name == 'workflow_dispatch'
     needs: [build_provenance]
     permissions:
       actions: read
