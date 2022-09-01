@@ -59,14 +59,16 @@ where
     pub fn create(request_handler: F, error_logger: L) -> anyhow::Result<Self> {
         let transcript_signer = Arc::new(Signer::create().context("Couldn't create signer")?);
         let signing_public_key = transcript_signer.public_key()?.to_vec();
-        let attestation_generator = PlaceholderAmdAttestationGenerator;
-        let attestation = attestation_generator.generate_attestation(&signing_public_key)?;
+        let attestation_behavior = AttestationBehavior::create(
+            PlaceholderAmdAttestationGenerator,
+            EmptyAttestationVerifier,
+        );
+        let attestation = attestation_behavior
+            .generator
+            .generate_attestation(&signing_public_key)?;
         let session_tracker = Mutex::new(SessionTracker::create(
             SESSIONS_CACHE_SIZE,
-            AttestationBehavior::create(
-                PlaceholderAmdAttestationGenerator,
-                EmptyAttestationVerifier,
-            ),
+            attestation_behavior,
             transcript_signer,
         ));
         Ok(Self {
