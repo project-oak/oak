@@ -272,6 +272,13 @@
 <span id="267">267</span>
 <span id="268">268</span>
 <span id="269">269</span>
+<span id="270">270</span>
+<span id="271">271</span>
+<span id="272">272</span>
+<span id="273">273</span>
+<span id="274">274</span>
+<span id="275">275</span>
+<span id="276">276</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2022 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -292,7 +299,8 @@
 <span class="doccomment">//! that can be used for communicating with the hypervisor.</span>
 
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::msr</span>::{
-    <span class="ident">register_ghcb_location</span>, <span class="ident">set_ghcb_address_and_exit</span>, <span class="ident">GhcbGpa</span>, <span class="ident">RegisterGhcbGpaRequest</span>,
+    <span class="ident">register_ghcb_location</span>, <span class="ident">set_ghcb_address_and_exit</span>, <span class="ident">GhcbGpa</span>, <span class="ident">RegisterGhcbGpaError</span>,
+    <span class="ident">RegisterGhcbGpaRequest</span>,
 };
 <span class="kw">use</span> <span class="ident">bitflags::bitflags</span>;
 <span class="kw">use</span> <span class="ident">zerocopy::FromBytes</span>;
@@ -398,6 +406,12 @@
     <span class="kw">pub</span> <span class="ident">ghcb_usage</span>: <span class="ident">u32</span>,
 }
 
+<span class="kw">impl</span> <span class="ident">Default</span> <span class="kw">for</span> <span class="ident">Ghcb</span> {
+    <span class="kw">fn</span> <span class="ident">default</span>() -&gt; <span class="self">Self</span> {
+        <span class="ident"><span class="self">Self</span>::new_zeroed</span>()
+    }
+}
+
 <span class="macro">static_assertions::assert_eq_size!</span>(<span class="ident">Ghcb</span>, [<span class="ident">u8</span>; <span class="ident">GHCB_PAGE_SIZE</span>]);
 
 <span class="macro">bitflags!</span> {
@@ -468,7 +482,7 @@
     }
 
     <span class="doccomment">/// Registers the address of the GHCB with the hypervisor.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">register_with_hypervisor</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">register_with_hypervisor</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">RegisterGhcbGpaError</span><span class="op">&gt;</span> {
         <span class="ident">register_ghcb_location</span>(<span class="ident">RegisterGhcbGpaRequest::new</span>(<span class="self">self</span>.<span class="ident">get_gpa</span>())<span class="question-mark">?</span>)
     }
 

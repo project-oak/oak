@@ -1,0 +1,3 @@
+(function() {var implementors = {};
+implementors["sev_guest"] = [{"text":"impl ErrorCompat for <a class=\"enum\" href=\"sev_guest/msr/enum.RegisterGhcbGpaError.html\" title=\"enum sev_guest::msr::RegisterGhcbGpaError\">RegisterGhcbGpaError</a>","synthetic":false,"types":["sev_guest::msr::RegisterGhcbGpaError"]}];
+if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()
