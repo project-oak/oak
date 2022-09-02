@@ -126,6 +126,24 @@
 <span id="121">121</span>
 <span id="122">122</span>
 <span id="123">123</span>
+<span id="124">124</span>
+<span id="125">125</span>
+<span id="126">126</span>
+<span id="127">127</span>
+<span id="128">128</span>
+<span id="129">129</span>
+<span id="130">130</span>
+<span id="131">131</span>
+<span id="132">132</span>
+<span id="133">133</span>
+<span id="134">134</span>
+<span id="135">135</span>
+<span id="136">136</span>
+<span id="137">137</span>
+<span id="138">138</span>
+<span id="139">139</span>
+<span id="140">140</span>
+<span id="141">141</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2022 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -154,7 +172,7 @@
 
 <span class="kw">use</span> <span class="ident">proto</span>::{
     <span class="ident">unary_session_server</span>::{<span class="ident">UnarySession</span>, <span class="ident">UnarySessionServer</span>},
-    <span class="ident">UnaryRequest</span>, <span class="ident">UnaryResponse</span>,
+    <span class="ident">PublicKeyInfo</span>, <span class="ident">UnaryRequest</span>, <span class="ident">UnaryResponse</span>,
 };
 
 <span class="kw">fn</span> <span class="ident">encode_request</span>(<span class="ident">unary_request</span>: <span class="ident">UnaryRequest</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>, <span class="ident">oak_idl::Status</span><span class="op">&gt;</span> {
@@ -207,12 +225,14 @@
     })
 }
 
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">EchoImpl</span> {
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">SessionProxy</span> {
     <span class="ident">connector_handle</span>: <span class="ident">ConnectorHandle</span>,
+    <span class="ident">signing_public_key</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
+    <span class="ident">attestation</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
 }
 
 <span class="attribute">#[<span class="ident">tonic::async_trait</span>]</span>
-<span class="kw">impl</span> <span class="ident">UnarySession</span> <span class="kw">for</span> <span class="ident">EchoImpl</span> {
+<span class="kw">impl</span> <span class="ident">UnarySession</span> <span class="kw">for</span> <span class="ident">SessionProxy</span> {
     <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">message</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">request</span>: <span class="ident">Request</span><span class="op">&lt;</span><span class="ident">UnaryRequest</span><span class="op">&gt;</span>,
@@ -231,13 +251,29 @@
 
         <span class="prelude-val">Ok</span>(<span class="ident">Response::new</span>(<span class="ident">response</span>))
     }
+
+    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">get_public_key_info</span>(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        <span class="ident">_request</span>: <span class="ident">Request</span><span class="op">&lt;</span>()<span class="op">&gt;</span>,
+    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Response</span><span class="op">&lt;</span><span class="ident">PublicKeyInfo</span><span class="op">&gt;</span>, <span class="ident">tonic::Status</span><span class="op">&gt;</span> {
+        <span class="prelude-val">Ok</span>(<span class="ident">Response::new</span>(<span class="ident">PublicKeyInfo</span> {
+            <span class="ident">public_key</span>: <span class="self">self</span>.<span class="ident">signing_public_key</span>.<span class="ident">clone</span>(),
+            <span class="ident">attestation</span>: <span class="self">self</span>.<span class="ident">attestation</span>.<span class="ident">clone</span>(),
+        }))
+    }
 }
 
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">server</span>(
     <span class="ident">addr</span>: <span class="ident">SocketAddr</span>,
     <span class="ident">connector_handle</span>: <span class="ident">ConnectorHandle</span>,
+    <span class="ident">signing_public_key</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
+    <span class="ident">attestation</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
 ) -&gt; <span class="kw">impl</span> <span class="ident">Future</span><span class="op">&lt;</span><span class="ident">Output</span> <span class="op">=</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">tonic::transport::Error</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-    <span class="kw">let</span> <span class="ident">server_impl</span> <span class="op">=</span> <span class="ident">EchoImpl</span> { <span class="ident">connector_handle</span> };
+    <span class="kw">let</span> <span class="ident">server_impl</span> <span class="op">=</span> <span class="ident">SessionProxy</span> {
+        <span class="ident">connector_handle</span>,
+        <span class="ident">signing_public_key</span>,
+        <span class="ident">attestation</span>,
+    };
 
     <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;grpc-web&quot;</span>)]</span>
     <span class="kw">return</span> <span class="ident">Server::builder</span>()

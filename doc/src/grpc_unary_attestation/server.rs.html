@@ -146,6 +146,36 @@
 <span id="141">141</span>
 <span id="142">142</span>
 <span id="143">143</span>
+<span id="144">144</span>
+<span id="145">145</span>
+<span id="146">146</span>
+<span id="147">147</span>
+<span id="148">148</span>
+<span id="149">149</span>
+<span id="150">150</span>
+<span id="151">151</span>
+<span id="152">152</span>
+<span id="153">153</span>
+<span id="154">154</span>
+<span id="155">155</span>
+<span id="156">156</span>
+<span id="157">157</span>
+<span id="158">158</span>
+<span id="159">159</span>
+<span id="160">160</span>
+<span id="161">161</span>
+<span id="162">162</span>
+<span id="163">163</span>
+<span id="164">164</span>
+<span id="165">165</span>
+<span id="166">166</span>
+<span id="167">167</span>
+<span id="168">168</span>
+<span id="169">169</span>
+<span id="170">170</span>
+<span id="171">171</span>
+<span id="172">172</span>
+<span id="173">173</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2022 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -165,12 +195,21 @@
 <span class="doccomment">//! Server-side implementation of the bidirectional gRPC remote attestation handshake</span>
 <span class="doccomment">//! protocol.</span>
 
-<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::proto</span>::{<span class="ident">unary_session_server::UnarySession</span>, <span class="ident">UnaryRequest</span>, <span class="ident">UnaryResponse</span>};
-<span class="kw">use</span> <span class="ident">oak_remote_attestation::handshaker</span>::{<span class="ident">AttestationBehavior</span>, <span class="ident">EmptyAttestationVerifier</span>};
+<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::proto</span>::{
+    <span class="ident">unary_session_server::UnarySession</span>, <span class="ident">PublicKeyInfo</span>, <span class="ident">UnaryRequest</span>, <span class="ident">UnaryResponse</span>,
+};
+<span class="kw">use</span> <span class="ident">anyhow::Context</span>;
+<span class="kw">use</span> <span class="ident">oak_remote_attestation</span>::{
+    <span class="ident">crypto::Signer</span>,
+    <span class="ident">handshaker</span>::{<span class="ident">AttestationBehavior</span>, <span class="ident">AttestationGenerator</span>, <span class="ident">EmptyAttestationVerifier</span>},
+};
 <span class="kw">use</span> <span class="ident">oak_remote_attestation_amd::PlaceholderAmdAttestationGenerator</span>;
 <span class="kw">use</span> <span class="ident">oak_remote_attestation_sessions</span>::{<span class="ident">SessionId</span>, <span class="ident">SessionState</span>, <span class="ident">SessionTracker</span>};
 <span class="kw">use</span> <span class="ident">oak_utils::LogError</span>;
-<span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">convert::TryInto</span>, <span class="ident">sync::Mutex</span>};
+<span class="kw">use</span> <span class="ident">std</span>::{
+    <span class="ident">convert::TryInto</span>,
+    <span class="ident">sync</span>::{<span class="ident">Arc</span>, <span class="ident">Mutex</span>},
+};
 <span class="kw">use</span> <span class="ident">tonic</span>;
 
 <span class="doccomment">/// Number of sessions that will be kept in memory.</span>
@@ -185,6 +224,8 @@
     <span class="ident">error_logger</span>: <span class="ident">L</span>,
     <span class="ident">session_tracker</span>:
         <span class="ident">Mutex</span><span class="op">&lt;</span><span class="ident">SessionTracker</span><span class="op">&lt;</span><span class="ident">PlaceholderAmdAttestationGenerator</span>, <span class="ident">EmptyAttestationVerifier</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+    <span class="ident">signing_public_key</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
+    <span class="ident">attestation</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
 }
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">S</span>, <span class="ident">L</span><span class="op">&gt;</span> <span class="ident">AttestationServer</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">L</span><span class="op">&gt;</span>
@@ -194,17 +235,26 @@
     <span class="ident">L</span>: <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span> <span class="op">+</span> <span class="ident">Clone</span> <span class="op">+</span> <span class="ident">LogError</span>,
 {
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">create</span>(<span class="ident">request_handler</span>: <span class="ident">F</span>, <span class="ident">error_logger</span>: <span class="ident">L</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">transcript_signer</span> <span class="op">=</span> <span class="ident">Arc::new</span>(<span class="ident">Signer::create</span>().<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t create signer&quot;</span>)<span class="question-mark">?</span>);
+        <span class="kw">let</span> <span class="ident">signing_public_key</span> <span class="op">=</span> <span class="ident">transcript_signer</span>.<span class="ident">public_key</span>()<span class="question-mark">?</span>.<span class="ident">to_vec</span>();
+        <span class="kw">let</span> <span class="ident">attestation_behavior</span> <span class="op">=</span> <span class="ident">AttestationBehavior::create</span>(
+            <span class="ident">PlaceholderAmdAttestationGenerator</span>,
+            <span class="ident">EmptyAttestationVerifier</span>,
+        );
+        <span class="kw">let</span> <span class="ident">attestation</span> <span class="op">=</span> <span class="ident">attestation_behavior</span>
+            .<span class="ident">generator</span>
+            .<span class="ident">generate_attestation</span>(<span class="kw-2">&amp;</span><span class="ident">signing_public_key</span>)<span class="question-mark">?</span>;
         <span class="kw">let</span> <span class="ident">session_tracker</span> <span class="op">=</span> <span class="ident">Mutex::new</span>(<span class="ident">SessionTracker::create</span>(
             <span class="ident">SESSIONS_CACHE_SIZE</span>,
-            <span class="ident">AttestationBehavior::create</span>(
-                <span class="ident">PlaceholderAmdAttestationGenerator</span>,
-                <span class="ident">EmptyAttestationVerifier</span>,
-            ),
+            <span class="ident">attestation_behavior</span>,
+            <span class="ident">transcript_signer</span>,
         ));
         <span class="prelude-val">Ok</span>(<span class="self">Self</span> {
             <span class="ident">request_handler</span>,
             <span class="ident">error_logger</span>,
             <span class="ident">session_tracker</span>,
+            <span class="ident">signing_public_key</span>,
+            <span class="ident">attestation</span>,
         })
     }
 }
@@ -286,6 +336,16 @@
             .<span class="ident">put_session_state</span>(<span class="ident">session_id</span>, <span class="ident">session_state</span>);
         <span class="prelude-val">Ok</span>(<span class="ident">tonic::Response::new</span>(<span class="ident">UnaryResponse</span> {
             <span class="ident">body</span>: <span class="ident">response_body</span>,
+        }))
+    }
+
+    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">get_public_key_info</span>(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        <span class="ident">_request</span>: <span class="ident">tonic::Request</span><span class="op">&lt;</span>()<span class="op">&gt;</span>,
+    ) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">tonic::Response</span><span class="op">&lt;</span><span class="ident">PublicKeyInfo</span><span class="op">&gt;</span>, <span class="ident">tonic::Status</span><span class="op">&gt;</span> {
+        <span class="prelude-val">Ok</span>(<span class="ident">tonic::Response::new</span>(<span class="ident">PublicKeyInfo</span> {
+            <span class="ident">public_key</span>: <span class="self">self</span>.<span class="ident">signing_public_key</span>.<span class="ident">clone</span>(),
+            <span class="ident">attestation</span>: <span class="self">self</span>.<span class="ident">attestation</span>.<span class="ident">clone</span>(),
         }))
     }
 }

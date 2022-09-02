@@ -704,6 +704,9 @@
 <span id="699">699</span>
 <span id="700">700</span>
 <span id="701">701</span>
+<span id="702">702</span>
+<span id="703">703</span>
+<span id="704">704</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2021 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -741,7 +744,7 @@
         <span class="ident">ServerIdentity</span>,
     },
 };
-<span class="kw">use</span> <span class="ident">alloc</span>::{<span class="ident">vec</span>, <span class="ident">vec::Vec</span>};
+<span class="kw">use</span> <span class="ident">alloc</span>::{<span class="ident">sync::Arc</span>, <span class="ident">vec</span>, <span class="ident">vec::Vec</span>};
 <span class="kw">use</span> <span class="ident">anyhow</span>::{<span class="ident">anyhow</span>, <span class="ident">Context</span>};
 <span class="kw">use</span> <span class="ident">core::fmt::Debug</span>;
 
@@ -1020,18 +1023,21 @@
     <span class="ident">transcript</span>: <span class="ident">Transcript</span>,
     <span class="doccomment">/// Signer containing a key which public part is signed by the TEE firmware key.</span>
     <span class="doccomment">/// Used for signing protocol transcripts and preventing replay attacks.</span>
-    <span class="ident">transcript_signer</span>: <span class="ident">Signer</span>,
+    <span class="ident">transcript_signer</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">Signer</span><span class="op">&gt;</span>,
 }
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">G</span>: <span class="ident">AttestationGenerator</span>, <span class="ident">V</span>: <span class="ident">AttestationVerifier</span><span class="op">&gt;</span> <span class="ident">ServerHandshaker</span><span class="op">&lt;</span><span class="ident">G</span>, <span class="ident">V</span><span class="op">&gt;</span> {
     <span class="doccomment">/// Creates [`ServerHandshaker`] with `ServerHandshakerState::ExpectingClientIdentity`</span>
     <span class="doccomment">/// state.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">behavior</span>: <span class="ident">AttestationBehavior</span><span class="op">&lt;</span><span class="ident">G</span>, <span class="ident">V</span><span class="op">&gt;</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(
+        <span class="ident">behavior</span>: <span class="ident">AttestationBehavior</span><span class="op">&lt;</span><span class="ident">G</span>, <span class="ident">V</span><span class="op">&gt;</span>,
+        <span class="ident">transcript_signer</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">Signer</span><span class="op">&gt;</span>,
+    ) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
         <span class="prelude-val">Ok</span>(<span class="self">Self</span> {
             <span class="ident">behavior</span>,
             <span class="ident">state</span>: <span class="ident">ServerHandshakerState::ExpectingClientHello</span>,
             <span class="ident">transcript</span>: <span class="ident">Transcript::new</span>(),
-            <span class="ident">transcript_signer</span>: <span class="ident">Signer::create</span>().<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t create signer&quot;</span>)<span class="question-mark">?</span>,
+            <span class="ident">transcript_signer</span>,
         })
     }
 
@@ -1271,8 +1277,8 @@
 <span class="doccomment">///     each other.</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">AttestationBehavior</span><span class="op">&lt;</span><span class="ident">G</span>: <span class="ident">AttestationGenerator</span>, <span class="ident">V</span>: <span class="ident">AttestationVerifier</span><span class="op">&gt;</span> {
-    <span class="ident">generator</span>: <span class="ident">G</span>,
-    <span class="ident">verifier</span>: <span class="ident">V</span>,
+    <span class="kw">pub</span> <span class="ident">generator</span>: <span class="ident">G</span>,
+    <span class="kw">pub</span> <span class="ident">verifier</span>: <span class="ident">V</span>,
 }
 
 <span class="doccomment">/// A trait implementing the functionality of generating a remote attestation report.</span>
