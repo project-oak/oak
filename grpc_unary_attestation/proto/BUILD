@@ -27,7 +27,7 @@ package(
 proto_library(
     name = "server_proto",
     srcs = ["unary_server.proto"],
-    deps = [],
+    deps = ["@com_google_protobuf//:empty_proto"],
 )
 
 java_proto_library(

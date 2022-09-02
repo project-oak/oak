@@ -17,12 +17,21 @@
 //! Server-side implementation of the bidirectional gRPC remote attestation handshake
 //! protocol.
 
-use crate::proto::{unary_session_server::UnarySession, UnaryRequest, UnaryResponse};
-use oak_remote_attestation::handshaker::{AttestationBehavior, EmptyAttestationVerifier};
+use crate::proto::{
+    unary_session_server::UnarySession, PublicKeyInfo, UnaryRequest, UnaryResponse,
+};
+use anyhow::Context;
+use oak_remote_attestation::{
+    crypto::Signer,
+    handshaker::{AttestationBehavior, AttestationGenerator, EmptyAttestationVerifier},
+};
 use oak_remote_attestation_amd::PlaceholderAmdAttestationGenerator;
 use oak_remote_attestation_sessions::{SessionId, SessionState, SessionTracker};
 use oak_utils::LogError;
-use std::{convert::TryInto, sync::Mutex};
+use std::{
+    convert::TryInto,
+    sync::{Arc, Mutex},
+};
 use tonic;
 
 /// Number of sessions that will be kept in memory.
@@ -37,6 +46,8 @@ pub struct AttestationServer<F, L: LogError> {
     error_logger: L,
     session_tracker:
         Mutex<SessionTracker<PlaceholderAmdAttestationGenerator, EmptyAttestationVerifier>>,
+    signing_public_key: Vec<u8>,
+    attestation: Vec<u8>,
 }
 
 impl<F, S, L> AttestationServer<F, L>
@@ -46,17 +57,26 @@ where
     L: Send + Sync + Clone + LogError,
 {
     pub fn create(request_handler: F, error_logger: L) -> anyhow::Result<Self> {
+        let transcript_signer = Arc::new(Signer::create().context("Couldn't create signer")?);
+        let signing_public_key = transcript_signer.public_key()?.to_vec();
+        let attestation_behavior = AttestationBehavior::create(
+            PlaceholderAmdAttestationGenerator,
+            EmptyAttestationVerifier,
+        );
+        let attestation = attestation_behavior
+            .generator
+            .generate_attestation(&signing_public_key)?;
         let session_tracker = Mutex::new(SessionTracker::create(
             SESSIONS_CACHE_SIZE,
-            AttestationBehavior::create(
-                PlaceholderAmdAttestationGenerator,
-                EmptyAttestationVerifier,
-            ),
+            attestation_behavior,
+            transcript_signer,
         ));
         Ok(Self {
             request_handler,
             error_logger,
             session_tracker,
+            signing_public_key,
+            attestation,
         })
     }
 }
@@ -138,6 +158,16 @@ where
             .put_session_state(session_id, session_state);
         Ok(tonic::Response::new(UnaryResponse {
             body: response_body,
+        }))
+    }
+
+    async fn get_public_key_info(
+        &self,
+        _request: tonic::Request<()>,
+    ) -> anyhow::Result<tonic::Response<PublicKeyInfo>, tonic::Status> {
+        Ok(tonic::Response::new(PublicKeyInfo {
+            public_key: self.signing_public_key.clone(),
+            attestation: self.attestation.clone(),
         }))
     }
 }

@@ -35,7 +35,7 @@ use crate::{
         ServerIdentity,
     },
 };
-use alloc::{vec, vec::Vec};
+use alloc::{sync::Arc, vec, vec::Vec};
 use anyhow::{anyhow, Context};
 use core::fmt::Debug;
 
@@ -314,18 +314,21 @@ pub struct ServerHandshaker<G: AttestationGenerator, V: AttestationVerifier> {
     transcript: Transcript,
     /// Signer containing a key which public part is signed by the TEE firmware key.
     /// Used for signing protocol transcripts and preventing replay attacks.
-    transcript_signer: Signer,
+    transcript_signer: Arc<Signer>,
 }
 
 impl<G: AttestationGenerator, V: AttestationVerifier> ServerHandshaker<G, V> {
     /// Creates [`ServerHandshaker`] with `ServerHandshakerState::ExpectingClientIdentity`
     /// state.
-    pub fn new(behavior: AttestationBehavior<G, V>) -> anyhow::Result<Self> {
+    pub fn new(
+        behavior: AttestationBehavior<G, V>,
+        transcript_signer: Arc<Signer>,
+    ) -> anyhow::Result<Self> {
         Ok(Self {
             behavior,
             state: ServerHandshakerState::ExpectingClientHello,
             transcript: Transcript::new(),
-            transcript_signer: Signer::create().context("Couldn't create signer")?,
+            transcript_signer,
         })
     }
 
@@ -565,8 +568,8 @@ impl Encryptor {
 ///     each other.
 #[derive(Debug, Clone)]
 pub struct AttestationBehavior<G: AttestationGenerator, V: AttestationVerifier> {
-    generator: G,
-    verifier: V,
+    pub generator: G,
+    pub verifier: V,
 }
 
 /// A trait implementing the functionality of generating a remote attestation report.

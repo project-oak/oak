@@ -15,14 +15,14 @@
 //
 
 use crate::{
-    crypto::{get_sha256, SHA256_HASH_LENGTH},
+    crypto::{get_sha256, Signer, SHA256_HASH_LENGTH},
     handshaker::{
         hash_concat_hash, AttestationBehavior, AttestationGenerator, AttestationVerifier,
         ClientHandshaker, ServerHandshaker,
     },
     tests::message::INVALID_MESSAGE_HEADER,
 };
-use alloc::vec;
+use alloc::{sync::Arc, vec};
 use assert_matches::assert_matches;
 
 const DATA: [u8; 10] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
@@ -70,7 +70,11 @@ fn create_handshakers() -> (
     let bidirectional_attestation =
         AttestationBehavior::create(TestAttestationGenerator, TestAttestationVerifier);
 
-    let server_handshaker = ServerHandshaker::new(bidirectional_attestation).unwrap();
+    let server_handshaker = ServerHandshaker::new(
+        bidirectional_attestation,
+        Arc::new(Signer::create().expect("Couldn't create signer")),
+    )
+    .unwrap();
 
     (client_handshaker, server_handshaker)
 }

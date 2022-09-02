@@ -2,7 +2,7 @@ attribute "method_id";
 
 rpc_service TrustedRuntime {
     HandleUserRequest(UserRequest) : UserRequestResponse (method_id: 0);
-    Initialize(Initialization) : Empty (method_id: 1);
+    Initialize(Initialization) : InitializeResponse (method_id: 1);
     // Replaces the existing lookup data with the new value.
     UpdateLookupData(LookupData) : Empty (method_id: 2);
 }
@@ -23,6 +23,15 @@ table UserRequestResponse {
 table Initialization {
     wasm_module: [ubyte];
     constant_response_size: uint;
+}
+
+table InitializeResponse {
+    public_key_info: PublicKeyInfo;
+}
+
+table PublicKeyInfo {
+    public_key: [ubyte];
+    attestation: [ubyte];
 }
 
 table LookupDataEntry {

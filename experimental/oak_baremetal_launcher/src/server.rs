@@ -26,7 +26,7 @@ pub mod proto {
 
 use proto::{
     unary_session_server::{UnarySession, UnarySessionServer},
-    UnaryRequest, UnaryResponse,
+    PublicKeyInfo, UnaryRequest, UnaryResponse,
 };
 
 fn encode_request(unary_request: UnaryRequest) -> Result<Vec<u8>, oak_idl::Status> {
@@ -79,12 +79,14 @@ fn decode_response(encoded_response: Vec<u8>) -> Result<UnaryResponse, tonic::St
     })
 }
 
-pub struct EchoImpl {
+pub struct SessionProxy {
     connector_handle: ConnectorHandle,
+    signing_public_key: Vec<u8>,
+    attestation: Vec<u8>,
 }
 
 #[tonic::async_trait]
-impl UnarySession for EchoImpl {
+impl UnarySession for SessionProxy {
     async fn message(
         &self,
         request: Request<UnaryRequest>,
@@ -103,13 +105,29 @@ impl UnarySession for EchoImpl {
 
         Ok(Response::new(response))
     }
+
+    async fn get_public_key_info(
+        &self,
+        _request: Request<()>,
+    ) -> Result<Response<PublicKeyInfo>, tonic::Status> {
+        Ok(Response::new(PublicKeyInfo {
+            public_key: self.signing_public_key.clone(),
+            attestation: self.attestation.clone(),
+        }))
+    }
 }
 
 pub fn server(
     addr: SocketAddr,
     connector_handle: ConnectorHandle,
+    signing_public_key: Vec<u8>,
+    attestation: Vec<u8>,
 ) -> impl Future<Output = Result<(), tonic::transport::Error>> {
-    let server_impl = EchoImpl { connector_handle };
+    let server_impl = SessionProxy {
+        connector_handle,
+        signing_public_key,
+        attestation,
+    };
 
     #[cfg(feature = "grpc-web")]
     return Server::builder()
