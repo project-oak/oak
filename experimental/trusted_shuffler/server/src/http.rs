@@ -17,7 +17,7 @@
 use anyhow::anyhow;
 use async_trait::async_trait;
 use http::{Method, Uri};
-use hyper::{Body, Client, Request, Response, StatusCode};
+use hyper::{body::HttpBody, Body, Client, Request, Response, StatusCode};
 use hyper_alpn::AlpnConnector;
 use std::{
     future::Future,
@@ -108,41 +108,51 @@ fn trusted_shuffler_to_hyper_request(
         .uri(trusted_shuffler_request.uri)
         .method(Method::POST)
         .header("content-type", "application/grpc")
+        .header("te", "trailers")
         .version(http::Version::HTTP_2)
         .body(body)
         .expect("Failed to convert Trusted to Hyper Request")
 }
 
-// We generate a default `hyper::Response`. We convert the body to `Vec`, so it has to be
-// read fully.
+// We generate a default `hyper::Response`.
 async fn trusted_shuffler_to_hyper_response(
     trusted_shuffler_response: TrustedShufflerResponse,
 ) -> Response<Body> {
-    log::info!("Response: {:?}", trusted_shuffler_response);
-    let body = Body::from(trusted_shuffler_response.body);
-
-    let streamed_body = hyper::body::to_bytes(body)
+    // We build a body from the data and the trailers from the TrustedShuffler Response.
+    let (mut sender, body) = hyper::Body::channel();
+    sender
+        .send_data(trusted_shuffler_response.data)
         .await
-        .expect("Couldn't read response body.");
+        .expect("Could not build body from data.");
+    sender
+        .send_trailers(trusted_shuffler_response.trailers)
+        .await
+        .expect("Cound not build body from trailers");
 
     Response::builder()
         .header("content-type", "application/grpc")
-        .body(Body::from(streamed_body))
+        .version(http::Version::HTTP_2)
+        .body(body)
         .expect("Failed to convert Trusted to Hyper Response.")
 }
 
-// We keep only the body from the `hyper::Response`. We convert the body to `Vec`, so it has to be
-// read fully.
+// We keep only the body, i.e., data and trailers, from the `hyper::Response`.
 async fn hyper_to_trusted_shuffler_response(
     hyper_response: Response<Body>,
 ) -> TrustedShufflerResponse {
     log::info!("Response from backend: {:?}", hyper_response);
-    let body = hyper::body::to_bytes(hyper_response.into_body())
+    let mut body = hyper_response.into_body();
+
+    let data = hyper::body::to_bytes(&mut body)
         .await
-        .expect("Couldn't read request body");
-    TrustedShufflerResponse {
-        body: body.to_vec(),
-    }
+        .expect("Could not read data.");
+    let trailers = body
+        .trailers()
+        .await
+        .expect("Could not read trailers.")
+        .expect("No trailers found.");
+
+    TrustedShufflerResponse { data, trailers }
 }
 
 pub struct Service {
