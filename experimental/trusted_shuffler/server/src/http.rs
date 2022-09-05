@@ -59,7 +59,27 @@ impl RequestHandler for HttpRequestHandler {
 
         log::info!("New request to the backend: {:?}", request);
 
-        match send_to_backend(request).await {
+        // If the backend_url is a https connection, we need to use the AlpnConnector for the
+        // client connecting to the backend.
+        let is_https_url: bool = request
+            .uri()
+            .scheme()
+            .expect("Could not get scheme from backend_url.")
+            == &http::uri::Scheme::HTTPS;
+
+        let response = if is_https_url {
+            Client::builder()
+                .http2_only(true)
+                .build(AlpnConnector::new())
+                .request(request)
+        } else {
+            Client::builder()
+                .http2_only(true)
+                .build_http()
+                .request(request)
+        };
+
+        match response.await {
             Err(error) => Err(anyhow!(
                 "Couldn't receive response from the backend: {:?}",
                 error
@@ -67,20 +87,6 @@ impl RequestHandler for HttpRequestHandler {
             Ok(response) => Ok(hyper_to_trusted_shuffler_response(response).await),
         }
     }
-}
-
-async fn send_to_backend(request: Request<Body>) -> anyhow::Result<Response<Body>> {
-    let client: Client<AlpnConnector> = Client::builder()
-        .http2_only(true)
-        .build(AlpnConnector::new());
-
-    let response =
-        anyhow::Context::context(client.request(request).await, "Couldn't send request")?;
-    if response.status() != http::StatusCode::OK {
-        return Err(anyhow!("Non-OK status: {:?}", response.status()));
-    }
-
-    Ok(response)
 }
 
 // We keep the body and the URI from the `hyper::Request`. We convert the body to `Vec`, so it has
@@ -108,6 +114,7 @@ fn trusted_shuffler_to_hyper_request(
         .uri(trusted_shuffler_request.uri)
         .method(Method::POST)
         .header("content-type", "application/grpc")
+        .header("grpc-accept-encoding", "gzip")
         .header("te", "trailers")
         .version(http::Version::HTTP_2)
         .body(body)
