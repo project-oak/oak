@@ -44,7 +44,8 @@ impl RequestHandler for TestRequestHandler {
 // Non-async version of the `handle_request` function used to create expected responses.
 fn generate_response(request: &TrustedShufflerRequest) -> TrustedShufflerResponse {
     TrustedShufflerResponse {
-        body: request.body.clone(),
+        data: hyper::body::Bytes::from(request.body.clone()),
+        trailers: hyper::HeaderMap::new(),
     }
 }
 
