@@ -69,6 +69,9 @@ _xtask() {
             run-trusted-shuffler)
                 cmd+="__run__trusted__shuffler"
                 ;;
+            run-trusted-shuffler-grpc)
+                cmd+="__run__trusted__shuffler__grpc"
+                ;;
             *)
                 ;;
         esac
@@ -76,7 +79,7 @@ _xtask() {
 
     case "${cmd}" in
         xtask)
-            opts="-h --help --dry-run --logs --keep-going --scope run-launcher-test build-baremetal-variants run-oak-functions-examples build-oak-functions-example build-oak-functions-server-variants format check-format run-tests run-cargo-clippy run-cargo-tests run-bazel-tests run-cargo-fuzz run-cargo-deny run-cargo-udeps run-ci run-cargo-clean completion run-trusted-shuffler help"
+            opts="-h --help --dry-run --logs --keep-going --scope run-launcher-test build-baremetal-variants run-oak-functions-examples build-oak-functions-example build-oak-functions-server-variants format check-format run-tests run-cargo-clippy run-cargo-tests run-bazel-tests run-cargo-fuzz run-cargo-deny run-cargo-udeps run-ci run-cargo-clean completion run-trusted-shuffler run-trusted-shuffler-grpc help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 1 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -462,6 +465,20 @@ _xtask() {
             return 0
             ;;
         xtask__run__trusted__shuffler)
+            opts="-h --help"
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
+        xtask__run__trusted__shuffler__grpc)
             opts="-h --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )

@@ -30,6 +30,7 @@ jobs:
           - run-bazel-tests
           - run-oak-functions-examples --application-variant=rust
           - run-trusted-shuffler
+          - run-trusted-shuffler-grpc
           - run-cargo-fuzz -- -max_total_time=2
           - completion
           - run-cargo-clippy
