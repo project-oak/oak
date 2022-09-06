@@ -5835,7 +5835,6 @@ dependencies = [
  "log",
  "tokio",
  "trusted_shuffler",
- "trusted_shuffler_common",
 ]
 
 [[package]]
