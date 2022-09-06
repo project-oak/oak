@@ -35,7 +35,7 @@ impl RequestHandler for HttpRequestHandler {
         &self,
         request: TrustedShufflerRequest,
     ) -> anyhow::Result<TrustedShufflerResponse> {
-        let mut request = trusted_shuffler_to_hyper_request(request);
+        let mut request = trusted_shuffler_to_hyper_request(request)?;
 
         // We want to keep the path of the orginal request from the client.
         //
@@ -77,18 +77,20 @@ impl RequestHandler for HttpRequestHandler {
                 "Couldn't receive response from the backend: {:?}",
                 error
             )),
-            Ok(response) => Ok(hyper_to_trusted_shuffler_response(response).await),
+            Ok(response) => Ok(hyper_to_trusted_shuffler_response(response).await?),
         }
     }
 }
 
 // We keep the body and the URI from the `hyper::Request`. We convert the body to `Vec`, so it has
 // to be read fully.
-async fn hyper_to_trusted_shuffler_request(hyper_request: Request<Body>) -> TrustedShufflerRequest {
+async fn hyper_to_trusted_shuffler_request(
+    hyper_request: Request<Body>,
+) -> anyhow::Result<TrustedShufflerRequest> {
     let (parts, body) = hyper_request.into_parts();
     let body = hyper::body::to_bytes(body)
         .await
-        .expect("Couldn't read request body");
+        .context("Couldn't read request body")?;
     log::debug!("Body {:?}", body);
 
     let hyper_headers = parts.headers;
@@ -111,76 +113,80 @@ async fn hyper_to_trusted_shuffler_request(hyper_request: Request<Body>) -> Trus
         }
     }
 
-    TrustedShufflerRequest {
+    let trusted_shuffler_request = TrustedShufflerRequest {
         body: body.to_vec(),
         headers: minimal_headers,
         uri: parts.uri.clone(),
-    }
+    };
+
+    Ok(trusted_shuffler_request)
 }
 
 // Apart from setting the body and the URI, for our test backend setting to HTTP/2 and POST
 // seems sufficient.
 fn trusted_shuffler_to_hyper_request(
     trusted_shuffler_request: TrustedShufflerRequest,
-) -> Request<Body> {
+) -> anyhow::Result<Request<Body>> {
     let body = Body::from(trusted_shuffler_request.body);
 
-    let mut request = Request::builder()
+    let mut hyper_request = Request::builder()
         .uri(trusted_shuffler_request.uri)
         .method(Method::POST)
         .version(http::Version::HTTP_2)
         .body(body)
-        .expect("Failed to convert Trusted to Hyper Request");
+        .context("Failed to convert Trusted to Hyper Request")?;
 
-    let headers = request.headers_mut();
+    let headers = hyper_request.headers_mut();
 
     for (k, v) in trusted_shuffler_request.headers.iter() {
         headers.insert(k, v.clone());
     }
 
-    request
+    Ok(hyper_request)
 }
 
 // We generate a default `hyper::Response`.
 async fn trusted_shuffler_to_hyper_response(
     trusted_shuffler_response: TrustedShufflerResponse,
-) -> Response<Body> {
+) -> anyhow::Result<Response<Body>> {
     // We build a body from the data and the trailers from the TrustedShuffler Response.
     let (mut sender, body) = hyper::Body::channel();
     sender
         .send_data(trusted_shuffler_response.data)
         .await
-        .expect("Could not build body from data.");
+        .context("Could not build body from data.")?;
     sender
         .send_trailers(trusted_shuffler_response.trailers)
         .await
-        .expect("Could not build body from trailers");
+        .context("Could not build body from trailers")?;
 
     Response::builder()
         .header("content-type", "application/grpc")
         .version(http::Version::HTTP_2)
         .body(body)
-        .expect("Failed to convert Trusted to Hyper Response.")
+        .context("Failed to convert Trusted to Hyper Response.")
 }
 
 // We keep only the body, i.e., data and trailers, from the `hyper::Response`.
 async fn hyper_to_trusted_shuffler_response(
     hyper_response: Response<Body>,
-) -> TrustedShufflerResponse {
+) -> anyhow::Result<TrustedShufflerResponse> {
     log::info!("Response from backend: {:?}", hyper_response);
     let mut body = hyper_response.into_body();
 
     let data = hyper::body::to_bytes(&mut body)
         .await
-        .expect("Could not read data.");
+        .context("Could not read data.")?;
 
     let trailers = body
         .trailers()
         .await
-        .expect("Could not read trailers.")
+        .context("Could not read trailers.")?
         .unwrap_or_default();
 
-    TrustedShufflerResponse { data, trailers }
+    let trusted_shuffler_response = TrustedShufflerResponse { data, trailers };
+
+    Ok(trusted_shuffler_response)
 }
 
 pub struct Service {
@@ -189,7 +195,7 @@ pub struct Service {
 
 impl hyper::service::Service<Request<Body>> for Service {
     type Response = Response<Body>;
-    type Error = hyper::Error;
+    type Error = anyhow::Error;
     type Future = Pin<Box<dyn Future<Output = Result<Self::Response, Self::Error>> + Send>>;
 
     fn poll_ready(&mut self, _: &mut std::task::Context) -> Poll<Result<(), Self::Error>> {
@@ -204,7 +210,7 @@ impl hyper::service::Service<Request<Body>> for Service {
             // HTTP call: (&Method::POST, "/request")
             let request_start = Instant::now();
             match trusted_shuffler
-                .invoke(hyper_to_trusted_shuffler_request(request).await)
+                .invoke(hyper_to_trusted_shuffler_request(request).await?)
                 .await
             {
                 Ok(response) => {
@@ -214,7 +220,7 @@ impl hyper::service::Service<Request<Body>> for Service {
                         request_start.elapsed()
                     );
                     let response = trusted_shuffler_to_hyper_response(response).await;
-                    Ok(response)
+                    response
                 }
                 Err(error) => {
                     log::error!("Couldn't receive response: {:?}", error);
