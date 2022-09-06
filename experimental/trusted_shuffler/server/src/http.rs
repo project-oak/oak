@@ -185,7 +185,7 @@ async fn hyper_to_trusted_shuffler_response(
         .trailers()
         .await
         .expect("Could not read trailers.")
-        .unwrap_or(http::HeaderMap::new());
+        .unwrap_or_default();
 
     TrustedShufflerResponse { data, trailers }
 }
