@@ -14,18 +14,12 @@
 // limitations under the License.
 //
 
-use anyhow::anyhow;
+use anyhow::{anyhow, Context};
 use async_trait::async_trait;
 use http::{header, Method, Uri};
 use hyper::{body::HttpBody, Body, Client, Request, Response, StatusCode};
 use hyper_alpn::AlpnConnector;
-use std::{
-    future::Future,
-    pin::Pin,
-    sync::Arc,
-    task::{Context, Poll},
-    time::Instant,
-};
+use std::{future::Future, pin::Pin, sync::Arc, task::Poll, time::Instant};
 use tokio::time::Duration;
 use trusted_shuffler::{
     RequestHandler, TrustedShuffler, TrustedShufflerRequest, TrustedShufflerResponse,
@@ -61,13 +55,12 @@ impl RequestHandler for HttpRequestHandler {
 
         // If the backend_url is a https connection, we need to use the AlpnConnector for the
         // client connecting to the backend.
-        let is_https_url: bool = request
+        let scheme = request
             .uri()
             .scheme()
-            .expect("Could not get scheme from backend_url.")
-            == &http::uri::Scheme::HTTPS;
+            .context("Could not get scheme from backend_url.")?;
 
-        let response = if is_https_url {
+        let response = if scheme == &http::uri::Scheme::HTTPS {
             Client::builder()
                 .http2_only(true)
                 .build(AlpnConnector::new())
@@ -96,7 +89,7 @@ async fn hyper_to_trusted_shuffler_request(hyper_request: Request<Body>) -> Trus
     let body = hyper::body::to_bytes(body)
         .await
         .expect("Couldn't read request body");
-    log::info!("Body {:?}", body);
+    log::debug!("Body {:?}", body);
 
     let hyper_headers = parts.headers;
 
@@ -161,7 +154,7 @@ async fn trusted_shuffler_to_hyper_response(
     sender
         .send_trailers(trusted_shuffler_response.trailers)
         .await
-        .expect("Cound not build body from trailers");
+        .expect("Could not build body from trailers");
 
     Response::builder()
         .header("content-type", "application/grpc")
@@ -199,7 +192,7 @@ impl hyper::service::Service<Request<Body>> for Service {
     type Error = hyper::Error;
     type Future = Pin<Box<dyn Future<Output = Result<Self::Response, Self::Error>> + Send>>;
 
-    fn poll_ready(&mut self, _: &mut Context) -> Poll<Result<(), Self::Error>> {
+    fn poll_ready(&mut self, _: &mut std::task::Context) -> Poll<Result<(), Self::Error>> {
         Poll::Ready(Ok(()))
     }
 
@@ -258,7 +251,7 @@ impl<T> hyper::service::Service<T> for ServiceBuilder {
     type Error = hyper::Error;
     type Future = Pin<Box<dyn Future<Output = Result<Self::Response, Self::Error>> + Send>>;
 
-    fn poll_ready(&mut self, _: &mut Context) -> Poll<Result<(), Self::Error>> {
+    fn poll_ready(&mut self, _: &mut std::task::Context) -> Poll<Result<(), Self::Error>> {
         Poll::Ready(Ok(()))
     }
 
