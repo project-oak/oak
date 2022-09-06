@@ -35,6 +35,7 @@ use tokio::{sync::oneshot, time::Duration};
 #[derive(Debug, PartialEq)]
 pub struct TrustedShufflerRequest {
     pub body: Vec<u8>,
+    pub headers: hyper::HeaderMap,
     pub uri: Uri,
 }
 

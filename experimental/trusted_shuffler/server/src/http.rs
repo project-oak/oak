@@ -16,7 +16,7 @@
 
 use anyhow::anyhow;
 use async_trait::async_trait;
-use http::{Method, Uri};
+use http::{header, Method, Uri};
 use hyper::{body::HttpBody, Body, Client, Request, Response, StatusCode};
 use hyper_alpn::AlpnConnector;
 use std::{
@@ -97,8 +97,30 @@ async fn hyper_to_trusted_shuffler_request(hyper_request: Request<Body>) -> Trus
         .await
         .expect("Couldn't read request body");
     log::info!("Body {:?}", body);
+
+    let hyper_headers = parts.headers;
+
+    // Keep the minimal headers the backend requires to handle the request.
+    let mut minimal_headers = hyper::HeaderMap::new();
+
+    let minimal_keys = [
+        header::CONTENT_TYPE, // for gRPC requests
+        header::HeaderName::from_static(
+            "grpc-accept-encoding", // for gRPC requests
+        ),
+        header::TE, // for gRPC requests
+        header::CONTENT_LENGTH,
+    ];
+
+    for key in minimal_keys {
+        if let Some(value) = hyper_headers.get(&key) {
+            minimal_headers.insert(key, value.clone());
+        }
+    }
+
     TrustedShufflerRequest {
         body: body.to_vec(),
+        headers: minimal_headers,
         uri: parts.uri.clone(),
     }
 }
@@ -110,15 +132,20 @@ fn trusted_shuffler_to_hyper_request(
 ) -> Request<Body> {
     let body = Body::from(trusted_shuffler_request.body);
 
-    Request::builder()
+    let mut request = Request::builder()
         .uri(trusted_shuffler_request.uri)
         .method(Method::POST)
-        .header("content-type", "application/grpc")
-        .header("grpc-accept-encoding", "gzip")
-        .header("te", "trailers")
         .version(http::Version::HTTP_2)
         .body(body)
-        .expect("Failed to convert Trusted to Hyper Request")
+        .expect("Failed to convert Trusted to Hyper Request");
+
+    let headers = request.headers_mut();
+
+    for (k, v) in trusted_shuffler_request.headers.iter() {
+        headers.insert(k, v.clone());
+    }
+
+    request
 }
 
 // We generate a default `hyper::Response`.
@@ -153,11 +180,12 @@ async fn hyper_to_trusted_shuffler_response(
     let data = hyper::body::to_bytes(&mut body)
         .await
         .expect("Could not read data.");
+
     let trailers = body
         .trailers()
         .await
         .expect("Could not read trailers.")
-        .expect("No trailers found.");
+        .unwrap_or(http::HeaderMap::new());
 
     TrustedShufflerResponse { data, trailers }
 }

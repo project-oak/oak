@@ -70,6 +70,7 @@ fn generate_request_and_expected_response(
 ) -> (TrustedShufflerRequest, TrustedShufflerResponse) {
     let request = TrustedShufflerRequest {
         body: format!("Request: {}", data).into_bytes(),
+        headers: hyper::HeaderMap::new(),
         uri: hyper::Uri::from_static("test.com"),
     };
 
