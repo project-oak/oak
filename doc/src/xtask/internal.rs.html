@@ -1028,6 +1028,9 @@
 <span id="1023">1023</span>
 <span id="1024">1024</span>
 <span id="1025">1025</span>
+<span id="1026">1026</span>
+<span id="1027">1027</span>
+<span id="1028">1028</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -1102,7 +1105,10 @@
     <span class="ident">RunCargoClean</span>,
     <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">about</span> <span class="op">=</span> <span class="string">&quot;generate bash completion script to stdout&quot;</span>)]</span>
     <span class="ident">Completion</span>(<span class="ident">Completion</span>),
+    <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">about</span> <span class="op">=</span> <span class="string">&quot;example running Trusted Shuffler forward a HTTP request&quot;</span>)]</span>
     <span class="ident">RunTrustedShuffler</span>,
+    <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">about</span> <span class="op">=</span> <span class="string">&quot;example running Trusted Shuffler forward a gRPC request&quot;</span>)]</span>
+    <span class="ident">RunTrustedShufflerGrpc</span>,
 }
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Parser</span>, <span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>

@@ -237,6 +237,11 @@
 <span id="232">232</span>
 <span id="233">233</span>
 <span id="234">234</span>
+<span id="235">235</span>
+<span id="236">236</span>
+<span id="237">237</span>
+<span id="238">238</span>
+<span id="239">239</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2022 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -274,6 +279,7 @@
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">PartialEq</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">TrustedShufflerRequest</span> {
     <span class="kw">pub</span> <span class="ident">body</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span> <span class="ident">headers</span>: <span class="ident">hyper::HeaderMap</span>,
     <span class="kw">pub</span> <span class="ident">uri</span>: <span class="ident">Uri</span>,
 }
 
@@ -287,12 +293,16 @@
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">PartialEq</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">TrustedShufflerResponse</span> {
-    <span class="kw">pub</span> <span class="ident">body</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span> <span class="ident">data</span>: <span class="ident">hyper::body::Bytes</span>,
+    <span class="kw">pub</span> <span class="ident">trailers</span>: <span class="ident">hyper::HeaderMap</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">TrustedShufflerResponse</span> {
     <span class="kw">fn</span> <span class="ident">empty</span>() -&gt; <span class="ident">TrustedShufflerResponse</span> {
-        <span class="ident">TrustedShufflerResponse</span> { <span class="ident">body</span>: <span class="macro">vec!</span>[] }
+        <span class="ident">TrustedShufflerResponse</span> {
+            <span class="ident">data</span>: <span class="ident">hyper::body::Bytes::new</span>(),
+            <span class="ident">trailers</span>: <span class="ident">hyper::HeaderMap::new</span>(),
+        }
     }
 }
 
