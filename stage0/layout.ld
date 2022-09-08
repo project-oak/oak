@@ -15,9 +15,10 @@
 */
 
 HIDDEN(TOP = 4096M);
+HIDDEN(BIOS_SIZE = 256K);
 
 MEMORY {
-    bios : ORIGIN = TOP - 64K, LENGTH = 64K
+    bios : ORIGIN = TOP - BIOS_SIZE, LENGTH = BIOS_SIZE
 }
 
 ENTRY(reset_vector)
@@ -40,8 +41,57 @@ HIDDEN(PAGE_SIZE = 1 << 7);
 SECTIONS {
     . = ORIGIN(bios);
 
+    .rodata.pml4 ALIGN(4K) : {
+        pml4 = .;
+        QUAD(pdpt | PAGE_PRESENT | PAGE_WRITABLE) /* 0..512 GiB */
+    } > bios
+
+    pml4_offset = ADDR(.rodata.pml4);
+
+    .rodata.pdpt ALIGN(4K) : {
+        pdpt = .;
+        QUAD(pd | PAGE_PRESENT | PAGE_WRITABLE) /* 0..1 GiB */
+        QUAD(0)
+        QUAD(0)
+        QUAD(pd | PAGE_PRESENT | PAGE_WRITABLE) /* 3..4 GiB */
+    } > bios
+
+    .rodata.pd ALIGN(4K) : {
+        pd = .;
+        QUAD(0 | PAGE_PRESENT | PAGE_WRITABLE | PAGE_SIZE) /* 0 .. 2 MiB */
+        FILL(0x00)
+        . += 510 * 8;
+        QUAD((TOP - 2M) | PAGE_PRESENT | PAGE_WRITABLE | PAGE_SIZE) /* (4GiB - 2MiB) .. 4 GiB */
+    } > bios
+
     .rodata : {
-        KEEP(*(.rodata))
+        KEEP(*(.rodata .rodata.*))
+    } > bios
+
+    .text : {
+        *(.text .text.*)
+    } > bios
+
+    .data : {
+        *(.data .data.*)
+    } > bios
+
+    .bss :  {
+        bss_start = .;
+        *(.bss .bss.*)
+        bss_size = . - bss_start;
+    } > bios
+
+    .stack ALIGN(4K) (NOLOAD) : {
+        . += 4K;
+        stack_start = .;
+    } > bios
+
+    /* Everything below this line interacts with 16-bit code, so should be kept as close to the end of the file as
+     * possible; max TOP - 32k. */
+
+    .text16 TOP - 1K : {
+        *(.text16 .text16.*)
     } > bios
 
     .rodata.gdt ALIGN(8) : {
@@ -85,32 +135,6 @@ SECTIONS {
 
     gdt_desc_offset = ADDR(.rodata.gdt_desc) & 0xFFFF;
     idt_desc_offset = ADDR(.rodata.idt_desc) & 0xFFFF;
-
-    .rodata.pml4 ALIGN(4K) : {
-        pml4 = .;
-        QUAD(pdpt | PAGE_PRESENT | PAGE_WRITABLE) /* 0..512 GiB */
-    } > bios
-
-    pml4_offset = ADDR(.rodata.pml4);
-
-    .rodata.pdpt ALIGN(4K) : {
-        pdpt = .;
-        QUAD(0)
-        QUAD(0)
-        QUAD(0)
-        QUAD(pd | PAGE_PRESENT | PAGE_WRITABLE) /* 3..4 GiB */
-    } > bios
-
-    .rodata.pd ALIGN(4K) : {
-        pd = .;
-        FILL(0x00)
-        . += 511 * 8;
-        QUAD((TOP - 2M) | PAGE_PRESENT | PAGE_WRITABLE | PAGE_SIZE) /* (4GiB - 2MiB) .. 4 GiB */
-    } > bios
-
-    .text ORIGIN(bios) + 32K : {
-        *(.text)
-    } > bios
 
     /* The reset vector needs to be placed 0x10 from the end of the file. */
     .reset_vector TOP - 0x10 : {

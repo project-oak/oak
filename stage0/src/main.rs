@@ -22,6 +22,13 @@ use x86_64::instructions::{hlt, interrupts::int3};
 
 mod asm;
 
+#[no_mangle]
+pub extern "C" fn rust64_start() -> ! {
+    loop {
+        hlt();
+    }
+}
+
 #[panic_handler]
 fn panic(_info: &PanicInfo) -> ! {
     // Trigger a breakpoint exception. As we don't have a #BP handler, this will triple fault and

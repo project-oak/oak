@@ -1,5 +1,5 @@
 .code16
-.section .text, "ax"
+.section .text16, "ax"
 .global _start
 _start :
     # Enter log mode. This code is inspired by the approach shown at
@@ -48,6 +48,15 @@ _long_mode_start:
     movw %ax, %gs
     movw %ax, %ss
 
-loop:
-    hlt
-    jmp loop
+    # Set up the stack.
+    mov $stack_start, %esp
+    push $0
+
+    # Clear BSS: base address goes to RDI, value goes to AX, count goes into CX.
+    mov $bss_start, %edi
+    mov $bss_size, %ecx
+    xor %rax, %rax
+    rep stosb
+
+    # ...and jump to Rust code.
+    jmp rust64_start
