@@ -657,6 +657,54 @@
 <span id="652">652</span>
 <span id="653">653</span>
 <span id="654">654</span>
+<span id="655">655</span>
+<span id="656">656</span>
+<span id="657">657</span>
+<span id="658">658</span>
+<span id="659">659</span>
+<span id="660">660</span>
+<span id="661">661</span>
+<span id="662">662</span>
+<span id="663">663</span>
+<span id="664">664</span>
+<span id="665">665</span>
+<span id="666">666</span>
+<span id="667">667</span>
+<span id="668">668</span>
+<span id="669">669</span>
+<span id="670">670</span>
+<span id="671">671</span>
+<span id="672">672</span>
+<span id="673">673</span>
+<span id="674">674</span>
+<span id="675">675</span>
+<span id="676">676</span>
+<span id="677">677</span>
+<span id="678">678</span>
+<span id="679">679</span>
+<span id="680">680</span>
+<span id="681">681</span>
+<span id="682">682</span>
+<span id="683">683</span>
+<span id="684">684</span>
+<span id="685">685</span>
+<span id="686">686</span>
+<span id="687">687</span>
+<span id="688">688</span>
+<span id="689">689</span>
+<span id="690">690</span>
+<span id="691">691</span>
+<span id="692">692</span>
+<span id="693">693</span>
+<span id="694">694</span>
+<span id="695">695</span>
+<span id="696">696</span>
+<span id="697">697</span>
+<span id="698">698</span>
+<span id="699">699</span>
+<span id="700">700</span>
+<span id="701">701</span>
+<span id="702">702</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2022 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -710,8 +758,11 @@
 <span class="doccomment">/// Value indicating that the hypervisor did not accept the registered location for the GHCB.</span>
 <span class="kw">const</span> <span class="ident">GHCB_LOCATION_NOT_ACCEPTED</span>: <span class="ident">u64</span> <span class="op">=</span> <span class="number">0xFFFFFFFFFFFFF000</span>;
 
-<span class="doccomment">/// The identifier for the MSR used in the protocol.</span>
-<span class="kw">const</span> <span class="ident">MSR_IDENTIFIER</span>: <span class="ident">u32</span> <span class="op">=</span> <span class="number">0xC001_0130</span>;
+<span class="doccomment">/// The identifier for the MSR used in the MSR protocol.</span>
+<span class="kw">const</span> <span class="ident">PROTOCOL_MSR_IDENTIFIER</span>: <span class="ident">u32</span> <span class="op">=</span> <span class="number">0xC001_0130</span>;
+
+<span class="doccomment">/// The identifier for the SEV status MSR.</span>
+<span class="kw">const</span> <span class="ident">STATUS_MSR_IDENTIFIER</span>: <span class="ident">u32</span> <span class="op">=</span> <span class="number">0xC001_0131</span>;
 
 <span class="doccomment">/// Mask to extract the GHCB info from a u64 value.</span>
 <span class="kw">const</span> <span class="ident">GHCB_INFO_MASK</span>: <span class="ident">u64</span> <span class="op">=</span> <span class="number">0xFFF</span>;
@@ -743,7 +794,7 @@
 
 <span class="doccomment">/// Sets the address of the GHCB page before exiting to the hypervisor.</span>
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">set_ghcb_address_and_exit</span>(<span class="ident">ghcb_gpa</span>: <span class="ident">GhcbGpa</span>) {
-    <span class="ident">write_msr_and_exit</span>(<span class="ident">ghcb_gpa</span>.<span class="ident">into</span>());
+    <span class="ident">write_protocol_msr_and_exit</span>(<span class="ident">ghcb_gpa</span>.<span class="ident">into</span>());
 }
 
 <span class="doccomment">/// Response from the hypervisor about the encryption bit and supported GHCB protocol versions. The</span>
@@ -788,8 +839,8 @@
 <span class="doccomment">/// encryption bit.</span>
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_sev_info</span>() -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">SevInfoResponse</span>, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span><span class="op">&gt;</span> {
     <span class="kw">let</span> <span class="ident">request</span> <span class="op">=</span> <span class="ident">SevInfoRequest</span>;
-    <span class="ident">write_msr_and_exit</span>(<span class="ident">request</span>.<span class="ident">into</span>());
-    <span class="ident">read_msr</span>().<span class="ident">try_into</span>()
+    <span class="ident">write_protocol_msr_and_exit</span>(<span class="ident">request</span>.<span class="ident">into</span>());
+    <span class="ident">read_protocol_msr</span>().<span class="ident">try_into</span>()
 }
 
 <span class="doccomment">/// The register of interest from the result of executing CPUID.</span>
@@ -845,8 +896,8 @@
 <span class="doccomment">/// Gets the value of the specified register that was returned when executing CPUID for the</span>
 <span class="doccomment">/// specified leaf. Sub-leafs are not supported.</span>
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_cpuid</span>(<span class="ident">request</span>: <span class="ident">CpuidRequest</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">CpuidResponse</span>, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span><span class="op">&gt;</span> {
-    <span class="ident">write_msr_and_exit</span>(<span class="ident">request</span>.<span class="ident">into</span>());
-    <span class="ident">read_msr</span>().<span class="ident">try_into</span>()
+    <span class="ident">write_protocol_msr_and_exit</span>(<span class="ident">request</span>.<span class="ident">into</span>());
+    <span class="ident">read_protocol_msr</span>().<span class="ident">try_into</span>()
 }
 
 <span class="doccomment">/// A request for the hypervisor&#39;s preferred location for the GHCB page.</span>
@@ -885,8 +936,8 @@
 <span class="doccomment">/// guest-private memory.</span>
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_preferred_ghcb_location</span>() -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">PreferredGhcbGpaResponse</span>, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span><span class="op">&gt;</span> {
     <span class="kw">let</span> <span class="ident">request</span> <span class="op">=</span> <span class="ident">PreferredGhcbGpaRequest</span>;
-    <span class="ident">write_msr_and_exit</span>(<span class="ident">request</span>.<span class="ident">into</span>());
-    <span class="ident">read_msr</span>().<span class="ident">try_into</span>()
+    <span class="ident">write_protocol_msr_and_exit</span>(<span class="ident">request</span>.<span class="ident">into</span>());
+    <span class="ident">read_protocol_msr</span>().<span class="ident">try_into</span>()
 }
 
 <span class="doccomment">/// Request to register a guest-physical address for the GHCB with the hypervisor.</span>
@@ -942,8 +993,8 @@
 <span class="doccomment">/// Registers the location of the GHCB page for the current vCPU with the hypervisor.</span>
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">register_ghcb_location</span>(<span class="ident">request</span>: <span class="ident">RegisterGhcbGpaRequest</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">RegisterGhcbGpaError</span><span class="op">&gt;</span> {
     <span class="kw">let</span> <span class="ident">request_ghcb_gpa</span>: <span class="ident">u64</span> <span class="op">=</span> <span class="ident">request</span>.<span class="ident">ghcb_gpa</span>;
-    <span class="ident">write_msr_and_exit</span>(<span class="ident">request</span>.<span class="ident">into</span>());
-    <span class="kw">let</span> <span class="ident">response</span>: <span class="ident">RegisterGhcbGpaResponse</span> <span class="op">=</span> <span class="ident">read_msr</span>().<span class="ident">try_into</span>()<span class="question-mark">?</span>;
+    <span class="ident">write_protocol_msr_and_exit</span>(<span class="ident">request</span>.<span class="ident">into</span>());
+    <span class="kw">let</span> <span class="ident">response</span>: <span class="ident">RegisterGhcbGpaResponse</span> <span class="op">=</span> <span class="ident">read_protocol_msr</span>().<span class="ident">try_into</span>()<span class="question-mark">?</span>;
     <span class="comment">// Ensure that the registration was successful.</span>
     <span class="macro">ensure!</span>(
         <span class="ident">response</span>.<span class="ident">ghcb_gpa</span> <span class="op">!</span><span class="op">=</span> <span class="ident">GHCB_LOCATION_NOT_ACCEPTED</span>,
@@ -1027,8 +1078,8 @@
 <span class="doccomment">/// This is useful if the GHCB has not yet been established, for example if a page must be shared</span>
 <span class="doccomment">/// with the hypervisor to establish the GHCB.</span>
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">change_snp_page_state</span>(<span class="ident">request</span>: <span class="ident">SnpPageStateChangeRequest</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span><span class="op">&gt;</span> {
-    <span class="ident">write_msr_and_exit</span>(<span class="ident">request</span>.<span class="ident">into</span>());
-    <span class="kw">let</span> <span class="ident">response</span>: <span class="ident">SnpPageStateChangeResponse</span> <span class="op">=</span> <span class="ident">read_msr</span>().<span class="ident">try_into</span>()<span class="question-mark">?</span>;
+    <span class="ident">write_protocol_msr_and_exit</span>(<span class="ident">request</span>.<span class="ident">into</span>());
+    <span class="kw">let</span> <span class="ident">response</span>: <span class="ident">SnpPageStateChangeResponse</span> <span class="op">=</span> <span class="ident">read_protocol_msr</span>().<span class="ident">try_into</span>()<span class="question-mark">?</span>;
     <span class="comment">// Ensure that the page state change was successful.</span>
     <span class="kw">if</span> <span class="ident">response</span>.<span class="ident">error_code</span> <span class="op">!</span><span class="op">=</span> <span class="number">0</span> {
         <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="string">&quot;Page state change failed&quot;</span>);
@@ -1075,8 +1126,8 @@
 <span class="doccomment">/// Requests a bitmap specifying the features supported by the hypervisor.</span>
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_hypervisor_feature_support</span>() -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">HypervisorFeatureSupportResponse</span>, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span><span class="op">&gt;</span> {
     <span class="kw">let</span> <span class="ident">request</span> <span class="op">=</span> <span class="ident">HypervisorFeatureSupportRequest</span>;
-    <span class="ident">write_msr_and_exit</span>(<span class="ident">request</span>.<span class="ident">into</span>());
-    <span class="ident">read_msr</span>().<span class="ident">try_into</span>()
+    <span class="ident">write_protocol_msr_and_exit</span>(<span class="ident">request</span>.<span class="ident">into</span>());
+    <span class="ident">read_protocol_msr</span>().<span class="ident">try_into</span>()
 }
 
 <span class="doccomment">/// The reason for requesting termination from the hypervisor.</span>
@@ -1107,31 +1158,76 @@
 
 <span class="doccomment">/// Requests termination from the hypervisor.</span>
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">request_termination</span>(<span class="ident">request</span>: <span class="ident">TerminationRequest</span>) {
-    <span class="ident">write_msr_and_exit</span>(<span class="ident">request</span>.<span class="ident">into</span>());
+    <span class="ident">write_protocol_msr_and_exit</span>(<span class="ident">request</span>.<span class="ident">into</span>());
     <span class="comment">// Go into a HALT loop, in case the hypervisor did not honor the termination request.</span>
     <span class="kw">loop</span> {
         <span class="ident">x86_64::instructions::hlt</span>();
     }
 }
 
-<span class="doccomment">/// Writes a value to the MSR and calls VMGEXIT to hand control to the hypervisor.</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">write_msr_and_exit</span>(<span class="ident">msr_value</span>: <span class="ident">u64</span>) {
+<span class="macro">bitflags!</span> {
+    <span class="doccomment">/// Flags indicating which SEV features are active.</span>
+    <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Default</span>)]</span>
+    <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">SevStatus</span>: <span class="ident">u64</span> {
+        <span class="doccomment">/// SEV is enabled for this guest.</span>
+        <span class="kw">const</span> <span class="ident">SEV_ENABLED</span> <span class="op">=</span> (<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">0</span>);
+        <span class="doccomment">/// SEV-ES is enabled for this guest.</span>
+        <span class="kw">const</span> <span class="ident">SEV_ES_ENABLED</span> <span class="op">=</span> (<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">1</span>);
+        <span class="doccomment">/// SEV-SNP is active for this guest.</span>
+        <span class="kw">const</span> <span class="ident">SNP_ACTIVE</span> <span class="op">=</span> (<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">2</span>);
+        <span class="doccomment">/// Virtual Top-of-Memory is enabled for this guest.</span>
+        <span class="kw">const</span> <span class="ident">VTOM_ENABLED</span> <span class="op">=</span> (<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">3</span>);
+        <span class="doccomment">/// Reflect-VC is enabled for this guest.</span>
+        <span class="kw">const</span> <span class="ident">REFLECT_VC_ENABLED</span> <span class="op">=</span> (<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">4</span>);
+        <span class="doccomment">/// Restricted Injection is enabled for this guest.</span>
+        <span class="kw">const</span> <span class="ident">RESTRICTED_INJECTION_ENABLED</span> <span class="op">=</span> (<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">5</span>);
+        <span class="doccomment">/// Alternate injection is enabled for this guest.</span>
+        <span class="kw">const</span> <span class="ident">ALTERNATE_INJECTION_ENABLED</span> <span class="op">=</span> (<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">6</span>);
+        <span class="doccomment">/// Debug Register Swapping is enabled for this guest.</span>
+        <span class="kw">const</span> <span class="ident">DEBUG_SWAP_ENABLED</span> <span class="op">=</span> (<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">7</span>);
+        <span class="doccomment">/// The Prevent Host IBS feature is enabled for this guest.</span>
+        <span class="kw">const</span> <span class="ident">PREVENT_HOST_IBS_ENABLED</span> <span class="op">=</span> (<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">8</span>);
+        <span class="doccomment">/// SNP Branch Target Buffer Isolation is enabled for this guest.</span>
+        <span class="kw">const</span> <span class="ident">SNP_BTB_ISOLATION_ENABLED</span> <span class="op">=</span> (<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">9</span>);
+        <span class="doccomment">/// Secure Timestamp Counter is enabled for this guest.</span>
+        <span class="kw">const</span> <span class="ident">SECURE_TSC_ENABLED</span> <span class="op">=</span> (<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">11</span>);
+        <span class="doccomment">/// VMSA Register Protection is enabled for this guest.</span>
+        <span class="kw">const</span> <span class="ident">VMSA_REG_PROT_ENABLED</span> <span class="op">=</span> (<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">16</span>);
+    }
+}
+
+<span class="doccomment">/// Gets the status of SEV features for the current guest.</span>
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_sev_status</span>() -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">SevStatus</span>, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span><span class="op">&gt;</span> {
+    <span class="ident">SevStatus::from_bits</span>(<span class="ident">read_status_msr</span>()).<span class="ident">ok_or</span>(<span class="string">&quot;Invalid SEV Status value&quot;</span>)
+}
+
+<span class="doccomment">/// Writes a value to the protocol MSR and calls VMGEXIT to hand control to the hypervisor.</span>
+<span class="kw">fn</span> <span class="ident">write_protocol_msr_and_exit</span>(<span class="ident">msr_value</span>: <span class="ident">u64</span>) {
     <span class="comment">// Safety: This operation is safe because this specific MSR is used only for communicating with</span>
     <span class="comment">// the hypervisor, and does not have any other side-effects within the guest.</span>
     <span class="kw">unsafe</span> {
-        <span class="ident">Msr::new</span>(<span class="ident">MSR_IDENTIFIER</span>).<span class="ident">write</span>(<span class="ident">msr_value</span>);
+        <span class="ident">Msr::new</span>(<span class="ident">PROTOCOL_MSR_IDENTIFIER</span>).<span class="ident">write</span>(<span class="ident">msr_value</span>);
     }
     <span class="ident">vmgexit</span>();
 }
 
-<span class="doccomment">/// Reads the value of the model-specific register.</span>
+<span class="doccomment">/// Reads the value of the protocol model-specific register.</span>
 <span class="doccomment">///</span>
 <span class="doccomment">/// This typically used to get the result of an operation when the hypervisor resumes the guest</span>
 <span class="doccomment">/// following a call to VMGEGIT.</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">read_msr</span>() -&gt; <span class="ident">u64</span> {
+<span class="kw">fn</span> <span class="ident">read_protocol_msr</span>() -&gt; <span class="ident">u64</span> {
     <span class="comment">// Safety: This operation is safe because this specific MSR is used only for communicating with</span>
     <span class="comment">// the hypervisor, and does not have any other side-effects within the guest.</span>
-    <span class="kw">unsafe</span> { <span class="ident">Msr::new</span>(<span class="ident">MSR_IDENTIFIER</span>).<span class="ident">read</span>() }
+    <span class="kw">unsafe</span> { <span class="ident">Msr::new</span>(<span class="ident">PROTOCOL_MSR_IDENTIFIER</span>).<span class="ident">read</span>() }
+}
+
+<span class="doccomment">/// Reads the value of the status model-specific register.</span>
+<span class="doccomment">///</span>
+<span class="doccomment">/// See section 15.34.10 of &lt;https://www.amd.com/system/files/TechDocs/24593.pdf&gt;.</span>
+<span class="kw">fn</span> <span class="ident">read_status_msr</span>() -&gt; <span class="ident">u64</span> {
+    <span class="comment">// Safety: This operation is safe because this specific MSR is used only for reading the SEV</span>
+    <span class="comment">// status and does not have any other side-effects within the guest.</span>
+    <span class="kw">unsafe</span> { <span class="ident">Msr::new</span>(<span class="ident">STATUS_MSR_IDENTIFIER</span>).<span class="ident">read</span>() }
 }
 
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
