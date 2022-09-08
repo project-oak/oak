@@ -58,10 +58,7 @@ use rust_hypervisor_firmware_boot::paging;
 use strum::{EnumIter, EnumString, IntoEnumIterator};
 
 /// Main entry point for the kernel, to be called from bootloader.
-pub fn start_kernel<E: boot::E820Entry, B: boot::BootInfo<E>, H: oak_idl::Handler>(
-    info: B,
-    idl_service: H,
-) -> ! {
+pub fn start_kernel<E: boot::E820Entry, B: boot::BootInfo<E>>(info: B) -> Box<dyn Channel> {
     avx::enable_avx();
     logging::init_logging();
     interrupts::init_idt();
@@ -72,11 +69,14 @@ pub fn start_kernel<E: boot::E820Entry, B: boot::BootInfo<E>, H: oak_idl::Handle
     // caches the arguments (as long they are of reasonable length) in a static variable, allowing
     // us to refer to the args in the future.
     let kernel_args = args::init_args(info.args()).unwrap();
+    info!("Kernel boot args: {}", kernel_args.args());
 
     let protocol = info.protocol();
+    info!("Boot protocol:  {}", protocol);
     // If we don't find memory for heap, it's ok to panic.
     memory::init_allocator(info).unwrap();
-    main(protocol, kernel_args, idl_service);
+
+    get_channel(&kernel_args)
 }
 
 #[derive(EnumIter, EnumString)]
@@ -92,14 +92,7 @@ enum ChannelType {
     SimpleIo,
 }
 
-fn main<H: oak_idl::Handler>(protocol: &str, kernel_args: args::Args, idl_service: H) -> ! {
-    info!("In main! Boot protocol:  {}", protocol);
-    info!("Kernel boot args: {}", kernel_args.args());
-    let channel = get_channel(&kernel_args);
-    oak_baremetal_communication_channel::server::start_blocking_server(channel, idl_service)
-        .expect("Runtime encountered an unrecoverable error");
-}
-
+/// Create a channel for communicating with the Untrusted Launcher.
 fn get_channel(kernel_args: &args::Args) -> Box<dyn Channel> {
     // If we weren't told which channel to use, arbitrarily pick the first one in the `ChannelType`
     // enum. Depending on features that are enabled, this means that the enum acts as kind of a

@@ -2907,7 +2907,6 @@ dependencies = [
  "log",
  "oak_baremetal_communication_channel",
  "oak_baremetal_simple_io",
- "oak_idl",
  "rust-hypervisor-firmware-boot",
  "rust-hypervisor-firmware-virtio",
  "strum",

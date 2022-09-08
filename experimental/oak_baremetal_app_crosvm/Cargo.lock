@@ -577,6 +577,8 @@ dependencies = [
 name = "oak_baremetal_app_crosvm"
 version = "0.1.0"
 dependencies = [
+ "log",
+ "oak_baremetal_communication_channel",
  "oak_baremetal_kernel",
  "oak_baremetal_runtime",
  "oak_idl",
@@ -603,14 +605,12 @@ dependencies = [
  "anyhow",
  "arrayvec",
  "atomic_refcell",
- "getrandom",
  "lazy_static",
  "libm",
  "linked_list_allocator",
  "log",
  "oak_baremetal_communication_channel",
  "oak_baremetal_simple_io",
- "oak_idl",
  "rust-hypervisor-firmware-boot",
  "rust-hypervisor-firmware-virtio",
  "strum",
