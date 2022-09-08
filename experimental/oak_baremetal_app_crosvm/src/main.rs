@@ -21,13 +21,24 @@
 #![feature(core_ffi_c)]
 
 use core::panic::PanicInfo;
+use oak_remote_attestation::handshaker::{AttestationBehavior, EmptyAttestationVerifier};
+use oak_remote_attestation_amd::PlaceholderAmdAttestationGenerator;
 
 mod asm;
 mod bootparam;
 
 #[no_mangle]
 pub extern "C" fn rust64_start(_rdi: u64, rsi: &bootparam::BootParams) -> ! {
-    oak_baremetal_kernel::start_kernel(rsi);
+    let idl_service = create_idl_service();
+    oak_baremetal_kernel::start_kernel(rsi, idl_service);
+}
+
+// Create an IDL service for processing FlatBuffer requests coming from the untrusted launcher.
+fn create_idl_service() -> impl oak_idl::Handler {
+    let attestation_behavior =
+    AttestationBehavior::create(PlaceholderAmdAttestationGenerator, EmptyAttestationVerifier);
+    let runtime = oak_baremetal_runtime::RuntimeImplementation::new(attestation_behavior);
+    oak_baremetal_runtime::schema::TrustedRuntime::serve(runtime)
 }
 
 #[alloc_error_handler]

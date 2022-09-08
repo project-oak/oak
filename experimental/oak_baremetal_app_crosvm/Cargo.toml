@@ -12,6 +12,16 @@ simple_io_channel = ["oak_baremetal_kernel/simple_io_channel"]
 
 [dependencies]
 oak_baremetal_kernel = { path = "../../experimental/oak_baremetal_kernel", default-features = false }
+oak_baremetal_runtime = { path = "../oak_baremetal_runtime", default-features = false, features = [
+  "rust-crypto"
+] }
+oak_remote_attestation = { path = "../../remote_attestation/rust", default-features = false, features = [
+  "rust-crypto"
+] }
+oak_remote_attestation_amd = { path = "../../oak_remote_attestation_amd", default-features = false, features = [
+  "rust-crypto"
+] }
+oak_idl = { path = "../../oak_idl" }
 static_assertions = "*"
 
 [patch.crates-io]

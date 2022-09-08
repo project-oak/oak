@@ -578,6 +578,10 @@ name = "oak_baremetal_app_crosvm"
 version = "0.1.0"
 dependencies = [
  "oak_baremetal_kernel",
+ "oak_baremetal_runtime",
+ "oak_idl",
+ "oak_remote_attestation",
+ "oak_remote_attestation_amd",
  "static_assertions",
 ]
 
@@ -605,10 +609,8 @@ dependencies = [
  "linked_list_allocator",
  "log",
  "oak_baremetal_communication_channel",
- "oak_baremetal_runtime",
  "oak_baremetal_simple_io",
- "oak_remote_attestation",
- "oak_remote_attestation_amd",
+ "oak_idl",
  "rust-hypervisor-firmware-boot",
  "rust-hypervisor-firmware-virtio",
  "strum",
