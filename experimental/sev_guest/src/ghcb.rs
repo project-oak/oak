@@ -228,6 +228,7 @@ impl<'a> GhcbProtocol<'a> {
 
         self.ghcb.sw_exit_code = SW_EXIT_CODE_IOIO_PROT;
         self.ghcb.sw_exit_info_1 = io_port;
+        self.ghcb.valid_bitmap = BASE_VALID_BITMAP;
         self.do_vmg_exit()?;
         Ok(self.ghcb.rax as u8)
     }
@@ -242,6 +243,7 @@ impl<'a> GhcbProtocol<'a> {
         self.ghcb.sw_exit_code = SW_EXIT_CODE_IOIO_PROT;
         self.ghcb.sw_exit_info_1 = io_port;
         self.ghcb.rax = data as u64;
+        self.ghcb.valid_bitmap = BASE_VALID_BITMAP.union(ValidBitmap::RAX);
         self.do_vmg_exit()
     }
 
@@ -254,6 +256,7 @@ impl<'a> GhcbProtocol<'a> {
 
         self.ghcb.sw_exit_code = SW_EXIT_CODE_IOIO_PROT;
         self.ghcb.sw_exit_info_1 = io_port;
+        self.ghcb.valid_bitmap = BASE_VALID_BITMAP;
         self.do_vmg_exit()?;
         Ok(self.ghcb.rax as u32)
     }
