@@ -51,8 +51,11 @@ pub const NO_PREFERRED_GHCB_LOCATION: u64 = 0xFFFFFFFFFFFFF000;
 /// Value indicating that the hypervisor did not accept the registered location for the GHCB.
 const GHCB_LOCATION_NOT_ACCEPTED: u64 = 0xFFFFFFFFFFFFF000;
 
-/// The identifier for the MSR used in the protocol.
-const MSR_IDENTIFIER: u32 = 0xC001_0130;
+/// The identifier for the MSR used in the MSR protocol.
+const PROTOCOL_MSR_IDENTIFIER: u32 = 0xC001_0130;
+
+/// The identifier for the SEV status MSR.
+const STATUS_MSR_IDENTIFIER: u32 = 0xC001_0131;
 
 /// Mask to extract the GHCB info from a u64 value.
 const GHCB_INFO_MASK: u64 = 0xFFF;
@@ -84,7 +87,7 @@ impl From<GhcbGpa> for u64 {
 
 /// Sets the address of the GHCB page before exiting to the hypervisor.
 pub fn set_ghcb_address_and_exit(ghcb_gpa: GhcbGpa) {
-    write_msr_and_exit(ghcb_gpa.into());
+    write_protocol_msr_and_exit(ghcb_gpa.into());
 }
 
 /// Response from the hypervisor about the encryption bit and supported GHCB protocol versions. The
@@ -129,8 +132,8 @@ impl From<SevInfoRequest> for u64 {
 /// encryption bit.
 pub fn get_sev_info() -> Result<SevInfoResponse, &'static str> {
     let request = SevInfoRequest;
-    write_msr_and_exit(request.into());
-    read_msr().try_into()
+    write_protocol_msr_and_exit(request.into());
+    read_protocol_msr().try_into()
 }
 
 /// The register of interest from the result of executing CPUID.
@@ -186,8 +189,8 @@ impl TryFrom<u64> for CpuidResponse {
 /// Gets the value of the specified register that was returned when executing CPUID for the
 /// specified leaf. Sub-leafs are not supported.
 pub fn get_cpuid(request: CpuidRequest) -> Result<CpuidResponse, &'static str> {
-    write_msr_and_exit(request.into());
-    read_msr().try_into()
+    write_protocol_msr_and_exit(request.into());
+    read_protocol_msr().try_into()
 }
 
 /// A request for the hypervisor's preferred location for the GHCB page.
@@ -226,8 +229,8 @@ impl TryFrom<u64> for PreferredGhcbGpaResponse {
 /// guest-private memory.
 pub fn get_preferred_ghcb_location() -> Result<PreferredGhcbGpaResponse, &'static str> {
     let request = PreferredGhcbGpaRequest;
-    write_msr_and_exit(request.into());
-    read_msr().try_into()
+    write_protocol_msr_and_exit(request.into());
+    read_protocol_msr().try_into()
 }
 
 /// Request to register a guest-physical address for the GHCB with the hypervisor.
@@ -283,8 +286,8 @@ impl TryFrom<u64> for RegisterGhcbGpaResponse {
 /// Registers the location of the GHCB page for the current vCPU with the hypervisor.
 pub fn register_ghcb_location(request: RegisterGhcbGpaRequest) -> Result<(), RegisterGhcbGpaError> {
     let request_ghcb_gpa: u64 = request.ghcb_gpa;
-    write_msr_and_exit(request.into());
-    let response: RegisterGhcbGpaResponse = read_msr().try_into()?;
+    write_protocol_msr_and_exit(request.into());
+    let response: RegisterGhcbGpaResponse = read_protocol_msr().try_into()?;
     // Ensure that the registration was successful.
     ensure!(
         response.ghcb_gpa != GHCB_LOCATION_NOT_ACCEPTED,
@@ -368,8 +371,8 @@ impl TryFrom<u64> for SnpPageStateChangeResponse {
 /// This is useful if the GHCB has not yet been established, for example if a page must be shared
 /// with the hypervisor to establish the GHCB.
 pub fn change_snp_page_state(request: SnpPageStateChangeRequest) -> Result<(), &'static str> {
-    write_msr_and_exit(request.into());
-    let response: SnpPageStateChangeResponse = read_msr().try_into()?;
+    write_protocol_msr_and_exit(request.into());
+    let response: SnpPageStateChangeResponse = read_protocol_msr().try_into()?;
     // Ensure that the page state change was successful.
     if response.error_code != 0 {
         return Err("Page state change failed");
@@ -416,8 +419,8 @@ impl TryFrom<u64> for HypervisorFeatureSupportResponse {
 /// Requests a bitmap specifying the features supported by the hypervisor.
 pub fn get_hypervisor_feature_support() -> Result<HypervisorFeatureSupportResponse, &'static str> {
     let request = HypervisorFeatureSupportRequest;
-    write_msr_and_exit(request.into());
-    read_msr().try_into()
+    write_protocol_msr_and_exit(request.into());
+    read_protocol_msr().try_into()
 }
 
 /// The reason for requesting termination from the hypervisor.
@@ -448,31 +451,76 @@ impl From<TerminationRequest> for u64 {
 
 /// Requests termination from the hypervisor.
 pub fn request_termination(request: TerminationRequest) {
-    write_msr_and_exit(request.into());
+    write_protocol_msr_and_exit(request.into());
     // Go into a HALT loop, in case the hypervisor did not honor the termination request.
     loop {
         x86_64::instructions::hlt();
     }
 }
 
-/// Writes a value to the MSR and calls VMGEXIT to hand control to the hypervisor.
-pub fn write_msr_and_exit(msr_value: u64) {
+bitflags! {
+    /// Flags indicating which SEV features are active.
+    #[derive(Default)]
+    pub struct SevStatus: u64 {
+        /// SEV is enabled for this guest.
+        const SEV_ENABLED = (1 << 0);
+        /// SEV-ES is enabled for this guest.
+        const SEV_ES_ENABLED = (1 << 1);
+        /// SEV-SNP is active for this guest.
+        const SNP_ACTIVE = (1 << 2);
+        /// Virtual Top-of-Memory is enabled for this guest.
+        const VTOM_ENABLED = (1 << 3);
+        /// Reflect-VC is enabled for this guest.
+        const REFLECT_VC_ENABLED = (1 << 4);
+        /// Restricted Injection is enabled for this guest.
+        const RESTRICTED_INJECTION_ENABLED = (1 << 5);
+        /// Alternate injection is enabled for this guest.
+        const ALTERNATE_INJECTION_ENABLED = (1 << 6);
+        /// Debug Register Swapping is enabled for this guest.
+        const DEBUG_SWAP_ENABLED = (1 << 7);
+        /// The Prevent Host IBS feature is enabled for this guest.
+        const PREVENT_HOST_IBS_ENABLED = (1 << 8);
+        /// SNP Branch Target Buffer Isolation is enabled for this guest.
+        const SNP_BTB_ISOLATION_ENABLED = (1 << 9);
+        /// Secure Timestamp Counter is enabled for this guest.
+        const SECURE_TSC_ENABLED = (1 << 11);
+        /// VMSA Register Protection is enabled for this guest.
+        const VMSA_REG_PROT_ENABLED = (1 << 16);
+    }
+}
+
+/// Gets the status of SEV features for the current guest.
+pub fn get_sev_status() -> Result<SevStatus, &'static str> {
+    SevStatus::from_bits(read_status_msr()).ok_or("Invalid SEV Status value")
+}
+
+/// Writes a value to the protocol MSR and calls VMGEXIT to hand control to the hypervisor.
+fn write_protocol_msr_and_exit(msr_value: u64) {
     // Safety: This operation is safe because this specific MSR is used only for communicating with
     // the hypervisor, and does not have any other side-effects within the guest.
     unsafe {
-        Msr::new(MSR_IDENTIFIER).write(msr_value);
+        Msr::new(PROTOCOL_MSR_IDENTIFIER).write(msr_value);
     }
     vmgexit();
 }
 
-/// Reads the value of the model-specific register.
+/// Reads the value of the protocol model-specific register.
 ///
 /// This typically used to get the result of an operation when the hypervisor resumes the guest
 /// following a call to VMGEGIT.
-pub fn read_msr() -> u64 {
+fn read_protocol_msr() -> u64 {
     // Safety: This operation is safe because this specific MSR is used only for communicating with
     // the hypervisor, and does not have any other side-effects within the guest.
-    unsafe { Msr::new(MSR_IDENTIFIER).read() }
+    unsafe { Msr::new(PROTOCOL_MSR_IDENTIFIER).read() }
+}
+
+/// Reads the value of the status model-specific register.
+///
+/// See section 15.34.10 of <https://www.amd.com/system/files/TechDocs/24593.pdf>.
+fn read_status_msr() -> u64 {
+    // Safety: This operation is safe because this specific MSR is used only for reading the SEV
+    // status and does not have any other side-effects within the guest.
+    unsafe { Msr::new(STATUS_MSR_IDENTIFIER).read() }
 }
 
 #[cfg(test)]
