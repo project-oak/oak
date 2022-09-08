@@ -24,3 +24,4 @@ pub mod ghcb;
 pub mod instructions;
 pub mod msr;
 pub mod secrets;
+pub mod serial;
