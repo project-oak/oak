@@ -132,7 +132,6 @@ The complete workflow of the Remote Attestation protocol looks as follows:
      closes the connection and aborts the protocol
 6. **Client** sends `ClientIdentity` to the **Trusted Runtime** which contains:
    - **Client**’s _Ephemeral_ public key
-   - New random string
    - _Transcript_: [SHA-256](https://datatracker.ietf.org/doc/html/rfc6234) hash
      of the concatenated `ClientHello`, `ServerIdentity` and current
      `ClientIdentity` (excluding the _Transcript_) signed with the **Client**'s
