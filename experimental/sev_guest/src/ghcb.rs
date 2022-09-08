@@ -219,19 +219,6 @@ impl<'a> GhcbProtocol<'a> {
         self.do_vmg_exit()
     }
 
-    /// Read an 8 bit number from an IO port via the IOIO protocol.
-    ///
-    /// See section 4.1.2 in <https://developer.amd.com/wp-content/resources/56421.pdf>.
-    pub fn io_read_u8(&mut self, port: u16) -> Result<u8, &'static str> {
-        self.ghcb.reset();
-        let io_port = IOIO_ADDRESS_SIZE_16 | IOIO_DATA_SIZE_8 | IOIO_READ | ((port as u64) << 16);
-
-        self.ghcb.sw_exit_code = SW_EXIT_CODE_IOIO_PROT;
-        self.ghcb.sw_exit_info_1 = io_port;
-        self.do_vmg_exit()?;
-        Ok(self.ghcb.rax as u8)
-    }
-
     /// Writes a 32 bit number to an IO port via the IOIO protocol.
     ///
     /// See section 4.1.2 in <https://developer.amd.com/wp-content/resources/56421.pdf>.
