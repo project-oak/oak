@@ -20,6 +20,8 @@
 #![feature(core_c_str)]
 #![feature(core_ffi_c)]
 
+extern crate alloc;
+
 use alloc::boxed::Box;
 use core::panic::PanicInfo;
 use log::info;
