@@ -279,6 +279,22 @@
 <span id="274">274</span>
 <span id="275">275</span>
 <span id="276">276</span>
+<span id="277">277</span>
+<span id="278">278</span>
+<span id="279">279</span>
+<span id="280">280</span>
+<span id="281">281</span>
+<span id="282">282</span>
+<span id="283">283</span>
+<span id="284">284</span>
+<span id="285">285</span>
+<span id="286">286</span>
+<span id="287">287</span>
+<span id="288">288</span>
+<span id="289">289</span>
+<span id="290">290</span>
+<span id="291">291</span>
+<span id="292">292</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2022 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -500,6 +516,20 @@
         <span class="self">self</span>.<span class="ident">do_vmg_exit</span>()
     }
 
+    <span class="doccomment">/// Read an 8 bit number from an IO port via the IOIO protocol.</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// See section 4.1.2 in &lt;https://developer.amd.com/wp-content/resources/56421.pdf&gt;.</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">io_read_u8</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">port</span>: <span class="ident">u16</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">u8</span>, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span><span class="op">&gt;</span> {
+        <span class="self">self</span>.<span class="ident">ghcb</span>.<span class="ident">reset</span>();
+        <span class="kw">let</span> <span class="ident">io_port</span> <span class="op">=</span> <span class="ident">IOIO_ADDRESS_SIZE_16</span> <span class="op">|</span> <span class="ident">IOIO_DATA_SIZE_8</span> <span class="op">|</span> <span class="ident">IOIO_READ</span> <span class="op">|</span> ((<span class="ident">port</span> <span class="kw">as</span> <span class="ident">u64</span>) <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">16</span>);
+
+        <span class="self">self</span>.<span class="ident">ghcb</span>.<span class="ident">sw_exit_code</span> <span class="op">=</span> <span class="ident">SW_EXIT_CODE_IOIO_PROT</span>;
+        <span class="self">self</span>.<span class="ident">ghcb</span>.<span class="ident">sw_exit_info_1</span> <span class="op">=</span> <span class="ident">io_port</span>;
+        <span class="self">self</span>.<span class="ident">ghcb</span>.<span class="ident">valid_bitmap</span> <span class="op">=</span> <span class="ident">BASE_VALID_BITMAP</span>;
+        <span class="self">self</span>.<span class="ident">do_vmg_exit</span>()<span class="question-mark">?</span>;
+        <span class="prelude-val">Ok</span>(<span class="self">self</span>.<span class="ident">ghcb</span>.<span class="ident">rax</span> <span class="kw">as</span> <span class="ident">u8</span>)
+    }
+
     <span class="doccomment">/// Writes a 32 bit number to an IO port via the IOIO protocol.</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// See section 4.1.2 in &lt;https://developer.amd.com/wp-content/resources/56421.pdf&gt;.</span>
@@ -510,6 +540,7 @@
         <span class="self">self</span>.<span class="ident">ghcb</span>.<span class="ident">sw_exit_code</span> <span class="op">=</span> <span class="ident">SW_EXIT_CODE_IOIO_PROT</span>;
         <span class="self">self</span>.<span class="ident">ghcb</span>.<span class="ident">sw_exit_info_1</span> <span class="op">=</span> <span class="ident">io_port</span>;
         <span class="self">self</span>.<span class="ident">ghcb</span>.<span class="ident">rax</span> <span class="op">=</span> <span class="ident">data</span> <span class="kw">as</span> <span class="ident">u64</span>;
+        <span class="self">self</span>.<span class="ident">ghcb</span>.<span class="ident">valid_bitmap</span> <span class="op">=</span> <span class="ident">BASE_VALID_BITMAP</span>.<span class="ident">union</span>(<span class="ident">ValidBitmap::RAX</span>);
         <span class="self">self</span>.<span class="ident">do_vmg_exit</span>()
     }
 
@@ -522,6 +553,7 @@
 
         <span class="self">self</span>.<span class="ident">ghcb</span>.<span class="ident">sw_exit_code</span> <span class="op">=</span> <span class="ident">SW_EXIT_CODE_IOIO_PROT</span>;
         <span class="self">self</span>.<span class="ident">ghcb</span>.<span class="ident">sw_exit_info_1</span> <span class="op">=</span> <span class="ident">io_port</span>;
+        <span class="self">self</span>.<span class="ident">ghcb</span>.<span class="ident">valid_bitmap</span> <span class="op">=</span> <span class="ident">BASE_VALID_BITMAP</span>;
         <span class="self">self</span>.<span class="ident">do_vmg_exit</span>()<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(<span class="self">self</span>.<span class="ident">ghcb</span>.<span class="ident">rax</span> <span class="kw">as</span> <span class="ident">u32</span>)
     }
