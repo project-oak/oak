@@ -92,19 +92,12 @@ enum ChannelType {
     SimpleIo,
 }
 
-fn main<H: oak_idl::Handler>(
-    protocol: &str,
-    kernel_args: args::Args,
-    idl_service: H,
-) -> ! {
+fn main<H: oak_idl::Handler>(protocol: &str, kernel_args: args::Args, idl_service: H) -> ! {
     info!("In main! Boot protocol:  {}", protocol);
     info!("Kernel boot args: {}", kernel_args.args());
     let channel = get_channel(&kernel_args);
-    oak_baremetal_communication_channel::server::start_blocking_server(
-        channel,
-        idl_service,
-    )
-    .expect("Runtime encountered an unrecoverable error");
+    oak_baremetal_communication_channel::server::start_blocking_server(channel, idl_service)
+        .expect("Runtime encountered an unrecoverable error");
 }
 
 fn get_channel(kernel_args: &args::Args) -> Box<dyn Channel> {

@@ -36,7 +36,7 @@ pub extern "C" fn rust64_start(_rdi: u64, rsi: &bootparam::BootParams) -> ! {
 // Create an IDL service for processing FlatBuffer requests coming from the untrusted launcher.
 fn create_idl_service() -> impl oak_idl::Handler {
     let attestation_behavior =
-    AttestationBehavior::create(PlaceholderAmdAttestationGenerator, EmptyAttestationVerifier);
+        AttestationBehavior::create(PlaceholderAmdAttestationGenerator, EmptyAttestationVerifier);
     let runtime = oak_baremetal_runtime::RuntimeImplementation::new(attestation_behavior);
     oak_baremetal_runtime::schema::TrustedRuntime::serve(runtime)
 }
