@@ -112,7 +112,7 @@
 <span class="doccomment">/// and responds to them using the provided [`oak_idl::Handler`].</span>
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">start_blocking_server</span><span class="op">&lt;</span><span class="ident">H</span>: <span class="ident">oak_idl::Handler</span><span class="op">&gt;</span>(
     <span class="ident">channel</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">Channel</span><span class="op">&gt;</span>,
-    <span class="kw-2">mut</span> <span class="ident">oak_idl_service_implementation</span>: <span class="ident">H</span>,
+    <span class="kw-2">mut</span> <span class="ident">idl_service</span>: <span class="ident">H</span>,
 ) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="op">!</span><span class="op">&gt;</span> {
     <span class="kw">let</span> <span class="ident">channel_handle</span> <span class="op">=</span> <span class="kw-2">&amp;mut</span> <span class="ident">ServerChannelHandle::new</span>(<span class="ident">channel</span>);
     <span class="kw">loop</span> {
@@ -120,7 +120,7 @@
             .<span class="ident">read_request</span>()
             .<span class="ident">context</span>(<span class="string">&quot;couldn&#39;t receive message&quot;</span>)<span class="question-mark">?</span>;
         <span class="kw">let</span> <span class="ident">request_message_invocation_id</span> <span class="op">=</span> <span class="ident">request_message</span>.<span class="ident">invocation_id</span>;
-        <span class="kw">let</span> <span class="ident">response</span> <span class="op">=</span> <span class="ident">oak_idl_service_implementation</span>.<span class="ident">invoke</span>(<span class="ident">request_message</span>.<span class="ident">into</span>());
+        <span class="kw">let</span> <span class="ident">response</span> <span class="op">=</span> <span class="ident">idl_service</span>.<span class="ident">invoke</span>(<span class="ident">request_message</span>.<span class="ident">into</span>());
         <span class="kw">let</span> <span class="ident">response_message</span> <span class="op">=</span>
             <span class="ident">message_from_response_and_id</span>(<span class="ident">response</span>, <span class="ident">request_message_invocation_id</span>);
         <span class="ident">channel_handle</span>.<span class="ident">write_response</span>(<span class="ident">response_message</span>)<span class="question-mark">?</span>
