@@ -18,10 +18,15 @@
 #![no_main]
 
 use core::{mem::MaybeUninit, panic::PanicInfo};
-use sev_guest::{cpuid::CpuidPage, secrets::SecretsPage};
+use sev_guest::{
+    cpuid::CpuidPage,
+    msr::{get_sev_status, SevStatus},
+    secrets::SecretsPage,
+};
 use x86_64::instructions::{hlt, interrupts::int3};
 
 mod asm;
+mod ghcb;
 mod serial;
 
 #[link_section = ".cpuid"]
@@ -32,6 +37,10 @@ static SECRETS: MaybeUninit<SecretsPage> = MaybeUninit::uninit();
 
 #[no_mangle]
 pub extern "C" fn rust64_start() -> ! {
+    let sev_status = get_sev_status().unwrap();
+    if sev_status.contains(SevStatus::SEV_ES_ENABLED) {
+        let _ = ghcb::init_ghcb(sev_status.contains(SevStatus::SNP_ACTIVE));
+    }
     serial::init_logging();
     log::info!("Hello World!");
 
