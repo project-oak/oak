@@ -2,7 +2,7 @@
 .section .text16, "ax"
 .global _start
 _start :
-    # Enter log mode. This code is inspired by the approach shown at
+    # Enter long mode. This code is inspired by the approach shown at
     # https://wiki.osdev.org/Entering_Long_Mode_Directly
     cli
 

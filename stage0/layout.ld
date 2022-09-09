@@ -42,22 +42,19 @@ SECTIONS {
     . = ORIGIN(bios);
 
     .rodata.pml4 ALIGN(4K) : {
-        pml4 = .;
-        QUAD(pdpt | PAGE_PRESENT | PAGE_WRITABLE) /* 0..512 GiB */
+        QUAD(ADDR(.rodata.pdpt) | PAGE_PRESENT | PAGE_WRITABLE) /* 0..512 GiB */
     } > bios
 
     pml4_offset = ADDR(.rodata.pml4);
 
     .rodata.pdpt ALIGN(4K) : {
-        pdpt = .;
-        QUAD(pd | PAGE_PRESENT | PAGE_WRITABLE) /* 0..1 GiB */
+        QUAD(ADDR(.rodata.pd) | PAGE_PRESENT | PAGE_WRITABLE) /* 0..1 GiB */
         QUAD(0)
         QUAD(0)
-        QUAD(pd | PAGE_PRESENT | PAGE_WRITABLE) /* 3..4 GiB */
+        QUAD(ADDR(.rodata.pd) | PAGE_PRESENT | PAGE_WRITABLE) /* 3..4 GiB */
     } > bios
 
     .rodata.pd ALIGN(4K) : {
-        pd = .;
         QUAD(0 | PAGE_PRESENT | PAGE_WRITABLE | PAGE_SIZE) /* 0 .. 2 MiB */
         FILL(0x00)
         . += 510 * 8;

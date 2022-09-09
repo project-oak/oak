@@ -1,5 +1,5 @@
 [package]
-name = "stage0"
+name = "oak_stage0"
 version = "0.1.0"
 authors = ["Andri Saar <andrisaar@google.com>"]
 edition = "2021"
@@ -9,6 +9,6 @@ license = "Apache-2.0"
 x86_64 = "*"
 
 [[bin]]
-name = "stage0"
+name = "oak_stage0"
 test = false
 bench = false
