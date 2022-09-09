@@ -1,0 +1,13 @@
+attribute "method_id";
+
+rpc_service TrustedRuntime {
+    Echo(EchoRequest) : EchoResponse (method_id: 0);
+}
+
+table EchoRequest {
+    body: [ubyte];
+}
+
+table EchoResponse {
+    body: [ubyte];
+}
