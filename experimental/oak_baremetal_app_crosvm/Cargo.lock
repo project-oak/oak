@@ -1161,8 +1161,9 @@ dependencies = [
 
 [[package]]
 name = "thiserror_core2"
-version = "2.0.0"
-source = "git+https://github.com/jul-sh/thiserror-core2.git?rev=b99e1a0106623cbbd12cbb5562d01df7a3fdc22e#b99e1a0106623cbbd12cbb5562d01df7a3fdc22e"
+version = "2.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "39f6f9e5af7ca0861a5eae30fe6e95405338f0e92c54424bb66160b01e682243"
 dependencies = [
  "core2",
  "thiserror_core2-impl",
@@ -1171,7 +1172,8 @@ dependencies = [
 [[package]]
 name = "thiserror_core2-impl"
 version = "2.0.0"
-source = "git+https://github.com/jul-sh/thiserror-core2.git?rev=b99e1a0106623cbbd12cbb5562d01df7a3fdc22e#b99e1a0106623cbbd12cbb5562d01df7a3fdc22e"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9c64183aeaddf559344af98f444cd2ea6685ea0136a59c17587a2c759362e523"
 dependencies = [
  "proc-macro2",
  "quote",
