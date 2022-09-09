@@ -22,11 +22,10 @@ use oak_remote_attestation::handshaker::{
 };
 use oak_remote_attestation_amd::PlaceholderAmdAttestationVerifier;
 use oak_remote_attestation_sessions::SessionId;
-use oak_remote_attestation_sessions_client::{GenericAttestationClient, UnaryClient};
+use oak_remote_attestation_sessions_client::{AttestationTransport, GenericAttestationClient};
 use tonic::transport::Channel;
 
-/// gRPC implementation of of [`UnaryClient`]. Serves as an inner of the
-/// public [`AttestationClient`].
+/// Implementation of the [`AttestationTransport`] trait using unary gRPC messages.
 struct GrpcClient {
     inner: UnarySessionClient<Channel>,
 }
@@ -45,7 +44,7 @@ impl GrpcClient {
 // Async trait requires the definition and all implementations to be marked as
 // optionally [`Send`] if one implementation is not.
 #[async_trait(?Send)]
-impl UnaryClient for GrpcClient {
+impl AttestationTransport for GrpcClient {
     async fn message(&mut self, session_id: SessionId, body: Vec<u8>) -> anyhow::Result<Vec<u8>> {
         let response = self
             .inner
