@@ -22,7 +22,7 @@ use anyhow::Context;
 /// and responds to them using the provided [`oak_idl::Handler`].
 pub fn start_blocking_server<H: oak_idl::Handler>(
     channel: Box<dyn Channel>,
-    mut oak_idl_service_implementation: H,
+    mut idl_service: H,
 ) -> anyhow::Result<!> {
     let channel_handle = &mut ServerChannelHandle::new(channel);
     loop {
@@ -30,7 +30,7 @@ pub fn start_blocking_server<H: oak_idl::Handler>(
             .read_request()
             .context("couldn't receive message")?;
         let request_message_invocation_id = request_message.invocation_id;
-        let response = oak_idl_service_implementation.invoke(request_message.into());
+        let response = idl_service.invoke(request_message.into());
         let response_message =
             message_from_response_and_id(response, request_message_invocation_id);
         channel_handle.write_response(response_message)?

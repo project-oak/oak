@@ -20,14 +20,32 @@
 #![feature(core_c_str)]
 #![feature(core_ffi_c)]
 
+extern crate alloc;
+
+use alloc::boxed::Box;
 use core::panic::PanicInfo;
+use log::info;
+use oak_baremetal_communication_channel::Channel;
+use oak_remote_attestation::handshaker::{AttestationBehavior, EmptyAttestationVerifier};
+use oak_remote_attestation_amd::PlaceholderAmdAttestationGenerator;
 
 mod asm;
 mod bootparam;
 
 #[no_mangle]
 pub extern "C" fn rust64_start(_rdi: u64, rsi: &bootparam::BootParams) -> ! {
-    oak_baremetal_kernel::start_kernel(rsi);
+    let channel = oak_baremetal_kernel::start_kernel(rsi);
+    main(channel)
+}
+
+fn main(channel: Box<dyn Channel>) -> ! {
+    info!("In main!");
+    let attestation_behavior =
+        AttestationBehavior::create(PlaceholderAmdAttestationGenerator, EmptyAttestationVerifier);
+    let runtime = oak_baremetal_runtime::RuntimeImplementation::new(attestation_behavior);
+    let service = oak_baremetal_runtime::schema::TrustedRuntime::serve(runtime);
+    oak_baremetal_communication_channel::server::start_blocking_server(channel, service)
+        .expect("Runtime encountered an unrecoverable error");
 }
 
 #[alloc_error_handler]

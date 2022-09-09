@@ -54,13 +54,11 @@ use alloc::boxed::Box;
 use core::{panic::PanicInfo, str::FromStr};
 use log::{error, info};
 use oak_baremetal_communication_channel::Channel;
-use oak_remote_attestation::handshaker::{AttestationBehavior, EmptyAttestationVerifier};
-use oak_remote_attestation_amd::PlaceholderAmdAttestationGenerator;
 use rust_hypervisor_firmware_boot::paging;
 use strum::{EnumIter, EnumString, IntoEnumIterator};
 
 /// Main entry point for the kernel, to be called from bootloader.
-pub fn start_kernel<E: boot::E820Entry, B: boot::BootInfo<E>>(info: B) -> ! {
+pub fn start_kernel<E: boot::E820Entry, B: boot::BootInfo<E>>(info: B) -> Box<dyn Channel> {
     avx::enable_avx();
     logging::init_logging();
     interrupts::init_idt();
@@ -71,11 +69,14 @@ pub fn start_kernel<E: boot::E820Entry, B: boot::BootInfo<E>>(info: B) -> ! {
     // caches the arguments (as long they are of reasonable length) in a static variable, allowing
     // us to refer to the args in the future.
     let kernel_args = args::init_args(info.args()).unwrap();
+    info!("Kernel boot args: {}", kernel_args.args());
 
     let protocol = info.protocol();
+    info!("Boot protocol:  {}", protocol);
     // If we don't find memory for heap, it's ok to panic.
     memory::init_allocator(info).unwrap();
-    main(protocol, kernel_args);
+
+    get_channel(&kernel_args)
 }
 
 #[derive(EnumIter, EnumString)]
@@ -91,20 +92,7 @@ enum ChannelType {
     SimpleIo,
 }
 
-fn main(protocol: &str, kernel_args: args::Args) -> ! {
-    info!("In main! Boot protocol:  {}", protocol);
-    info!("Kernel boot args: {}", kernel_args.args());
-    let attestation_behavior =
-        AttestationBehavior::create(PlaceholderAmdAttestationGenerator, EmptyAttestationVerifier);
-    let channel = get_channel(&kernel_args);
-    let runtime = oak_baremetal_runtime::RuntimeImplementation::new(attestation_behavior);
-    oak_baremetal_communication_channel::server::start_blocking_server(
-        channel,
-        oak_baremetal_runtime::schema::TrustedRuntime::serve(runtime),
-    )
-    .expect("Runtime encountered an unrecoverable error");
-}
-
+/// Create a channel for communicating with the Untrusted Launcher.
 fn get_channel(kernel_args: &args::Args) -> Box<dyn Channel> {
     // If we weren't told which channel to use, arbitrarily pick the first one in the `ChannelType`
     // enum. Depending on features that are enabled, this means that the enum acts as kind of a
