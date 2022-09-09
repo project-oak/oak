@@ -95,6 +95,7 @@ async fn main() -> anyhow::Result<()> {
         .add_service(UnarySessionServer::new(AttestationServer::create(
             request_handler,
             ErrorLogger,
+            oak_remote_attestation_amd::PlaceholderAmdAttestationGenerator,
         )?))
         .serve(address)
         .await

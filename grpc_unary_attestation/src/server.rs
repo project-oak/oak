@@ -25,7 +25,6 @@ use oak_remote_attestation::{
     crypto::Signer,
     handshaker::{AttestationBehavior, AttestationGenerator, EmptyAttestationVerifier},
 };
-use oak_remote_attestation_amd::PlaceholderAmdAttestationGenerator;
 use oak_remote_attestation_sessions::{SessionId, SessionState, SessionTracker};
 use oak_utils::LogError;
 use std::{
@@ -38,31 +37,33 @@ use tonic;
 const SESSIONS_CACHE_SIZE: usize = 10000;
 
 /// gRPC Attestation Service implementation.
-pub struct AttestationServer<F, L: LogError> {
+pub struct AttestationServer<F, L: LogError, A: AttestationGenerator> {
     /// Business logic processor, accepts decrypted request and returns responses.
     request_handler: F,
     /// Error logging function that is required for logging attestation protocol errors.
     /// Errors are only logged on server side and are not sent to clients.
     error_logger: L,
-    session_tracker:
-        Mutex<SessionTracker<PlaceholderAmdAttestationGenerator, EmptyAttestationVerifier>>,
+    session_tracker: Mutex<SessionTracker<A, EmptyAttestationVerifier>>,
     signing_public_key: Vec<u8>,
     attestation: Vec<u8>,
 }
 
-impl<F, S, L> AttestationServer<F, L>
+impl<F, S, L, A> AttestationServer<F, L, A>
 where
     F: Send + Sync + Clone + FnOnce(Vec<u8>) -> S,
     S: std::future::Future<Output = anyhow::Result<Vec<u8>>> + Send + Sync,
     L: Send + Sync + Clone + LogError,
+    A: AttestationGenerator,
 {
-    pub fn create(request_handler: F, error_logger: L) -> anyhow::Result<Self> {
+    pub fn create(
+        request_handler: F,
+        error_logger: L,
+        attestation_generator: A,
+    ) -> anyhow::Result<Self> {
         let transcript_signer = Arc::new(Signer::create().context("Couldn't create signer")?);
         let signing_public_key = transcript_signer.public_key()?.to_vec();
-        let attestation_behavior = AttestationBehavior::create(
-            PlaceholderAmdAttestationGenerator,
-            EmptyAttestationVerifier,
-        );
+        let attestation_behavior =
+            AttestationBehavior::create(attestation_generator, EmptyAttestationVerifier);
         let attestation = attestation_behavior
             .generator
             .generate_attestation(&signing_public_key)?;
@@ -82,11 +83,12 @@ where
 }
 
 #[tonic::async_trait]
-impl<F, S, L> UnarySession for AttestationServer<F, L>
+impl<F, S, L, A> UnarySession for AttestationServer<F, L, A>
 where
     F: 'static + Send + Sync + Clone + FnOnce(Vec<u8>) -> S,
     S: std::future::Future<Output = anyhow::Result<Vec<u8>>> + Send + Sync,
     L: Send + Sync + Clone + LogError + 'static,
+    A: AttestationGenerator + 'static,
 {
     async fn message(
         &self,
