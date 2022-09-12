@@ -23,8 +23,8 @@ use x86_64::{
     structures::paging::page_table::{PageTable, PageTableFlags},
 };
 
-/// The mask for the encrypted bit. For now we assumbe that we will be running on AMD Arcadia Milan
-/// CPUs, which uses bit 51.
+/// The mask for the encrypted bit. For now we assume that we will be running on AMD Arcadia-Milan
+/// CPUs, which use bit 51.
 const ENCRYPTED_BIT: u64 = 1 << 51;
 
 #[link_section = ".ghcb"]
