@@ -16,6 +16,7 @@ sourcesIndex["oak_baremetal_kernel"] = {"name":"","files":["args.rs","avx.rs","b
 sourcesIndex["oak_baremetal_launcher"] = {"name":"","dirs":[{"name":"instance","files":["crosvm.rs","mod.rs","native.rs"]}],"files":["channel.rs","lookup.rs","main.rs","server.rs"]};
 sourcesIndex["oak_baremetal_runtime"] = {"name":"","dirs":[{"name":"wasm","files":["mod.rs"]}],"files":["lib.rs","logger.rs","remote_attestation.rs"]};
 sourcesIndex["oak_baremetal_simple_io"] = {"name":"","files":["lib.rs"]};
+sourcesIndex["oak_echo_runtime"] = {"name":"","files":["lib.rs"]};
 sourcesIndex["oak_functions"] = {"name":"","files":["lib.rs"]};
 sourcesIndex["oak_functions_abi"] = {"name":"","files":["lib.rs"]};
 sourcesIndex["oak_functions_client"] = {"name":"","files":["lib.rs","rekor.rs"]};
