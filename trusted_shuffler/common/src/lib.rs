@@ -51,7 +51,7 @@ pub async fn send_http_request(uri: &str, method: Method, body: &[u8]) -> anyhow
 }
 
 pub mod echo {
-    tonic::include_proto!("experimental.trusted_shuffler.echo");
+    tonic::include_proto!("trusted_shuffler.proto.echo");
 }
 
 pub async fn send_grpc_request(uri: String, body: &[u8]) -> anyhow::Result<Vec<u8>> {
