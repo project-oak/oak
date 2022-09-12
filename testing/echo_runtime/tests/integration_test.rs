@@ -19,10 +19,7 @@
 extern crate alloc;
 
 use core::assert_matches::assert_matches;
-use echo_runtime::{
-    RuntimeImplementation,
-    schema::TrustedRuntime,
-};
+use echo_runtime::{schema::TrustedRuntime, RuntimeImplementation};
 
 mod schema {
     #![allow(clippy::derivable_impls, clippy::needless_borrow)]
@@ -44,9 +41,7 @@ fn it_should_handle_echo_requests() {
         let body = builder.create_vector::<u8>(&TEST_DATA);
         let flatbuffer = schema::EchoRequest::create(
             &mut builder,
-            &schema::EchoRequestArgs {
-                body: Some(body),
-            },
+            &schema::EchoRequestArgs { body: Some(body) },
         );
         builder
             .finish(flatbuffer)

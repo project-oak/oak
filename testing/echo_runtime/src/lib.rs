@@ -41,8 +41,8 @@ impl schema::TrustedRuntime for RuntimeImplementation {
         request_message: &schema::EchoRequest,
     ) -> Result<oak_idl::utils::OwnedFlatbuffer<schema::EchoResponse>, oak_idl::Status> {
         let request_body: &[u8] = request_message
-                    .body()
-                    .ok_or_else(|| oak_idl::Status::new(oak_idl::StatusCode::InvalidArgument))?;
+            .body()
+            .ok_or_else(|| oak_idl::Status::new(oak_idl::StatusCode::InvalidArgument))?;
         let response_body = request_body;
 
         let response_message = {
