@@ -15,7 +15,7 @@
 */
 
 HIDDEN(TOP = 4096M);
-HIDDEN(BIOS_SIZE = 256K);
+HIDDEN(BIOS_SIZE = 512K);
 
 MEMORY {
     bios : ORIGIN = TOP - BIOS_SIZE, LENGTH = BIOS_SIZE
@@ -61,6 +61,8 @@ SECTIONS {
         QUAD((TOP - 2M) | PAGE_PRESENT | PAGE_WRITABLE | PAGE_SIZE) /* (4GiB - 2MiB) .. 4 GiB */
     } > bios
 
+    pd_offset = ADDR(.rodata.pd);
+
     .rodata : {
         KEEP(*(.rodata .rodata.*))
     } > bios
@@ -80,7 +82,7 @@ SECTIONS {
     } > bios
 
     .stack ALIGN(4K) (NOLOAD) : {
-        . += 4K;
+        . += 16K;
         stack_start = .;
     } > bios
 
