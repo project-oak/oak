@@ -83,6 +83,10 @@ SECTIONS {
         bss_size = . - bss_start;
     } : bss
 
+    .ghcb (NOLOAD) : ALIGN(2M) {
+    } : bss
+    ASSERT((SIZEOF(.ghcb) == 0x1000), "GHCB page needs to be exactly 4K in size")
+
     /* Stack grows down, so stack_start is the upper address in memory. */
     .stack (NOLOAD) : ALIGN(2M) {
         . += 512K;
