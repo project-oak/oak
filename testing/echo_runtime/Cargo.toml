@@ -7,7 +7,6 @@ license = "Apache-2.0"
 
 [dependencies]
 hashbrown = "*"
-log = "*"
 oak_idl = { path = "../../oak_idl" }
 flatbuffers = { version = "*", features = ["no_std"], default-features = false }
 
@@ -17,4 +16,3 @@ oak_idl_gen_structs = { path = "../../oak_idl_gen_structs" }
 
 [dev-dependencies]
 async-trait = "*"
-tokio = { version = "*", features = ["rt", "macros"] }
