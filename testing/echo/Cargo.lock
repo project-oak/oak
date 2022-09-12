@@ -71,10 +71,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "echo_baremetal_app_crosvm"
+name = "echo"
 version = "0.1.0"
 dependencies = [
- "echo_baremetal_runtime",
+ "echo_runtime",
  "log",
  "oak_baremetal_communication_channel",
  "oak_baremetal_kernel",
@@ -83,7 +83,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "echo_baremetal_runtime"
+name = "echo_runtime"
 version = "0.1.0"
 dependencies = [
  "flatbuffers",

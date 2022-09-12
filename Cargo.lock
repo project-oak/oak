@@ -1335,7 +1335,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "echo_baremetal_runtime"
+name = "echo_runtime"
 version = "0.1.0"
 dependencies = [
  "async-trait",

@@ -1,5 +1,5 @@
 [package]
-name = "echo_baremetal_app_crosvm"
+name = "echo"
 version = "0.1.0"
 authors = ["Ivan Petrov <ivanpetrov@google.com>"]
 edition = "2021"
@@ -11,7 +11,7 @@ vsock_channel = ["oak_baremetal_kernel/vsock_channel"]
 simple_io_channel = ["oak_baremetal_kernel/simple_io_channel"]
 
 [dependencies]
-echo_baremetal_runtime = { path = "../echo_baremetal_runtime" }
+echo_runtime = { path = "../echo_runtime" }
 log = "*"
 oak_baremetal_communication_channel = { path = "../../experimental/oak_baremetal_channel" }
 oak_baremetal_kernel = { path = "../../experimental/oak_baremetal_kernel", default-features = false }
@@ -23,6 +23,6 @@ static_assertions = "*"
 flatbuffers = { git = "https://github.com/jul-sh/flatbuffers.git", rev = "a07ddee936737da89aeb5a496f9742a805537188" }
 
 [[bin]]
-name = "echo_baremetal_app_crosvm"
+name = "echo"
 test = false
 bench = false
