@@ -10,11 +10,11 @@ To create the BIOS blob, you need to turn it into a headerless file with
 objcopy --output-format binary target/x86_64-unknown-none/{debug,release}/oak_stage0 stage0.bin
 ```
 
-The resulting `stage0.bin` should be exactly 256K in size, and can be used with
-`qemu -bios`; for example:
+The resulting `stage0.bin` should be exactly `BIOS_SIZE` (defined in
+`layout.ld`) in size. The size of the BIOS image should not exceed 1 MB.
+
+To use the binary, pass it to `qemu -bios`; for example:
 
 ```shell
 qemu-system-x86_64 -nodefaults -nographic -no-reboot -machine microvm -bios stage0.bin
 ```
-
-The size is defined in `layout.ld`, and should not exceed 1 MB.
