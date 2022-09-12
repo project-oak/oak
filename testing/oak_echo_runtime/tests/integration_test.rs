@@ -38,7 +38,7 @@ fn it_should_handle_echo_requests() {
 
     let owned_request_flatbuffer = {
         let mut builder = oak_idl::utils::OwnedFlatbufferBuilder::default();
-        let body = builder.create_vector::<u8>(&TEST_DATA);
+        let body = builder.create_vector::<u8>(TEST_DATA);
         let flatbuffer = schema::EchoRequest::create(
             &mut builder,
             &schema::EchoRequestArgs { body: Some(body) },

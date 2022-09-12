@@ -27,6 +27,7 @@ pub mod schema {
     include!(concat!(env!("OUT_DIR"), "/schema_services_servers.rs"));
 }
 
+#[derive(Default)]
 pub struct RuntimeImplementation {}
 
 impl RuntimeImplementation {
@@ -47,7 +48,7 @@ impl schema::EchoRuntime for RuntimeImplementation {
 
         let response_message = {
             let mut builder = oak_idl::utils::OwnedFlatbufferBuilder::default();
-            let body = builder.create_vector::<u8>(&response_body);
+            let body = builder.create_vector::<u8>(response_body);
             let user_request_response = schema::EchoResponse::create(
                 &mut builder,
                 &schema::EchoResponseArgs { body: Some(body) },
