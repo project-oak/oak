@@ -34,7 +34,7 @@ use std::{net::SocketAddr, time::Instant};
 use tonic::{transport::Server as TonicServer, Status};
 
 pub mod echo {
-    tonic::include_proto!("experimental.trusted_shuffler.echo");
+    tonic::include_proto!("trusted_shuffler.proto.echo");
 }
 
 #[derive(Parser, Clone)]

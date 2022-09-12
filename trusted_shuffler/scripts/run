@@ -12,9 +12,9 @@ readonly OUTPUT_FILE="trusted_shuffler_experiment.csv"
 KS=(500 1000 2000)
 QPSS=$(seq 100 100 1000)
 
-cargo build --manifest-path=experimental/trusted_shuffler/server/Cargo.toml
-cargo build --manifest-path=experimental/trusted_shuffler/backend/Cargo.toml
-cargo build --manifest-path=experimental/trusted_shuffler/client/Cargo.toml
+cargo build --manifest-path=trusted_shuffler/server/Cargo.toml
+cargo build --manifest-path=trusted_shuffler/backend/Cargo.toml
+cargo build --manifest-path=trusted_shuffler/client/Cargo.toml
 
 echo "k,qps,seconds,actual_seconds_taken,avg_delay_in_ms,max_delay_in_ms" > ${OUTPUT_FILE}
 
@@ -25,17 +25,17 @@ do
     # Echo progress.
     echo "Starting: $K, $QPS"
 
-    RUST_LOG=$LOG_LEVEL cargo run --manifest-path=experimental/trusted_shuffler/server/Cargo.toml -- \
+    RUST_LOG=$LOG_LEVEL cargo run --manifest-path=trusted_shuffler/server/Cargo.toml -- \
       --k="${K}" --listen-address="[::]:8080" --backend-url="http://localhost:8888" &
     sleep 1
     SERVER_PID=$!
 
-    RUST_LOG=$LOG_LEVEL cargo run --manifest-path=experimental/trusted_shuffler/backend/Cargo.toml -- \
+    RUST_LOG=$LOG_LEVEL cargo run --manifest-path=trusted_shuffler/backend/Cargo.toml -- \
       --listen-address="[::]:8888" &
     sleep 1
     BACKEND_PID=$!
 
-    CLIENT_OUTPUT=$(RUST_LOG=$LOG_LEVEL cargo run --manifest-path=experimental/trusted_shuffler/client/Cargo.toml -- \
+    CLIENT_OUTPUT=$(RUST_LOG=$LOG_LEVEL cargo run --manifest-path=trusted_shuffler/client/Cargo.toml -- \
      --server-url="http://localhost:8080" --qps="${QPS}" --seconds="${SECONDS_TO_RUN}")
 
     echo "${K},${QPS},${SECONDS_TO_RUN},${CLIENT_OUTPUT}" >> ${OUTPUT_FILE}

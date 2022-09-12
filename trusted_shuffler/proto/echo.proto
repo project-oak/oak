@@ -16,7 +16,7 @@
 
 syntax = "proto3";
 
-package experimental.trusted_shuffler.echo;
+package trusted_shuffler.proto.echo;
 
 service Echo {
   rpc Echo(EchoRequest) returns (EchoResponse);

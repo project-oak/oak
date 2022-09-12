@@ -9,7 +9,7 @@ This directory contains a Trusted Shuffler example application.
 Run an example with the following command:
 
 ```bash
-./experimental/trusted_shuffler/scripts/run
+./trusted_shuffler/scripts/run
 ```
 
 ## Components
@@ -22,7 +22,7 @@ can switch between a simple HTTP or gRPC echo service.
 Build and run the gRPC backend with the following command:
 
 ```bash
-./experimental/trusted_shuffler/scripts/run_grpc_backend
+./trusted_shuffler/scripts/run_grpc_backend
 ```
 
 Backend code is in the `backend` directory.
@@ -30,12 +30,12 @@ Backend code is in the `backend` directory.
 ### Client
 
 A Client that connects to the Trusted Shuffler and sends a single of request via
-HTTP.
+gRPC.
 
 Build and run the Client with the following command:
 
 ```bash
-./experimental/trusted_shuffler/scripts/run_grpc_client
+./trusted_shuffler/scripts/run_grpc_client
 ```
 
 Client code is in the `client` directory.

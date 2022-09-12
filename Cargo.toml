@@ -10,11 +10,6 @@ members = [
   "experimental/tf_proxy/client",
   "experimental/tf_proxy/server",
   "experimental/tls_attestation",
-  "experimental/trusted_shuffler/backend",
-  "experimental/trusted_shuffler/client",
-  "experimental/trusted_shuffler/common",
-  "experimental/trusted_shuffler/server",
-  "experimental/trusted_shuffler/trusted_shuffler",
   "experimental/oak_baremetal_channel",
   "experimental/oak_baremetal_kernel",
   "experimental/oak_baremetal_launcher",
@@ -66,6 +61,11 @@ members = [
   "remote_attestation_sessions",
   "remote_attestation_sessions_client",
   "testing/oak_echo_runtime",
+  "trusted_shuffler/backend",
+  "trusted_shuffler/client",
+  "trusted_shuffler/common",
+  "trusted_shuffler/server",
+  "trusted_shuffler/trusted_shuffler",
   "xtask",
 ]
 exclude = [
