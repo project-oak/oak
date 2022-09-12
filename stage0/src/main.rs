@@ -28,8 +28,9 @@ use x86_64::{
         gdt::{Descriptor, GlobalDescriptorTable, SegmentSelector},
         idt::InterruptDescriptorTable,
         paging::{
+            page::Size2MiB,
             page_table::{PageTable, PageTableFlags},
-            PhysFrame,
+            PageSize, PhysFrame,
         },
     },
     PhysAddr, VirtAddr,
@@ -69,7 +70,7 @@ pub fn create_page_tables(pml4: &mut PageTable, pdpt: &mut PageTable, pd: &mut P
 
     pd.iter_mut().enumerate().for_each(|(i, entry)| {
         entry.set_addr(
-            PhysAddr::new((i as u64) * 4096),
+            PhysAddr::new((i as u64) * Size2MiB::SIZE),
             PageTableFlags::PRESENT | PageTableFlags::WRITABLE | PageTableFlags::HUGE_PAGE,
         );
     });
