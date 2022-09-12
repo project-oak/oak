@@ -19,7 +19,7 @@
 extern crate alloc;
 
 use core::assert_matches::assert_matches;
-use echo_runtime::{schema::TrustedRuntime, RuntimeImplementation};
+use oak_echo_runtime::{schema::EchoRuntime, RuntimeImplementation};
 
 mod schema {
     #![allow(clippy::derivable_impls, clippy::needless_borrow)]
@@ -34,7 +34,7 @@ const TEST_DATA: &[u8] = b"test_data";
 #[test]
 fn it_should_handle_echo_requests() {
     let runtime = RuntimeImplementation::new();
-    let mut client = schema::TrustedRuntimeClient::new(TrustedRuntime::serve(runtime));
+    let mut client = schema::EchoRuntimeClient::new(EchoRuntime::serve(runtime));
 
     let owned_request_flatbuffer = {
         let mut builder = oak_idl::utils::OwnedFlatbufferBuilder::default();

@@ -35,7 +35,7 @@ impl RuntimeImplementation {
     }
 }
 
-impl schema::TrustedRuntime for RuntimeImplementation {
+impl schema::EchoRuntime for RuntimeImplementation {
     fn echo(
         &mut self,
         request_message: &schema::EchoRequest,

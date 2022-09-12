@@ -38,8 +38,8 @@ pub extern "C" fn rust64_start(_rdi: u64, rsi: &bootparam::BootParams) -> ! {
 
 fn main(channel: Box<dyn Channel>) -> ! {
     info!("In main!");
-    let runtime = echo_baremetal_runtime::RuntimeImplementation::new();
-    let service = echo_baremetal_runtime::schema::TrustedRuntime::serve(runtime);
+    let runtime = oak_echo_runtime::RuntimeImplementation::new();
+    let service = oak_echo_runtime::schema::EchoRuntime::serve(runtime);
     oak_baremetal_communication_channel::server::start_blocking_server(channel, service)
         .expect("Runtime encountered an unrecoverable error");
 }

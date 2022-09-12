@@ -65,14 +65,14 @@ members = [
   "remote_attestation/rust",
   "remote_attestation_sessions",
   "remote_attestation_sessions_client",
-  "testing/echo_runtime",
+  "testing/oak_echo_runtime",
   "xtask",
 ]
 exclude = [
   "experimental/oak_baremetal_app_crosvm",
   "oak_functions/loader/fuzz",
   "stage0",
-  "testing/echo",
+  "testing/oak_echo",
   "testing/sev_snp_hello_world_kernel",
   "third_party/curve25519-dalek",
   "third_party/rust-hypervisor-firmware-boot",

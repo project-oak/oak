@@ -1,6 +1,6 @@
 attribute "method_id";
 
-rpc_service TrustedRuntime {
+rpc_service EchoRuntime {
     Echo(EchoRequest) : EchoResponse (method_id: 0);
 }
 

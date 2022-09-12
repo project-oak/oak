@@ -71,30 +71,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "echo"
-version = "0.1.0"
-dependencies = [
- "echo_runtime",
- "log",
- "oak_baremetal_communication_channel",
- "oak_baremetal_kernel",
- "oak_idl",
- "static_assertions",
-]
-
-[[package]]
-name = "echo_runtime"
-version = "0.1.0"
-dependencies = [
- "flatbuffers",
- "hashbrown",
- "log",
- "oak_idl",
- "oak_idl_gen_services",
- "oak_idl_gen_structs",
-]
-
-[[package]]
 name = "flatbuffers"
 version = "2.1.2"
 source = "git+https://github.com/jul-sh/flatbuffers.git?rev=a07ddee936737da89aeb5a496f9742a805537188#a07ddee936737da89aeb5a496f9742a805537188"
@@ -224,6 +200,29 @@ version = "0.1.0"
 dependencies = [
  "bitflags",
  "x86_64",
+]
+
+[[package]]
+name = "oak_echo"
+version = "0.1.0"
+dependencies = [
+ "log",
+ "oak_baremetal_communication_channel",
+ "oak_baremetal_kernel",
+ "oak_echo_runtime",
+ "oak_idl",
+ "static_assertions",
+]
+
+[[package]]
+name = "oak_echo_runtime"
+version = "0.1.0"
+dependencies = [
+ "flatbuffers",
+ "hashbrown",
+ "oak_idl",
+ "oak_idl_gen_services",
+ "oak_idl_gen_structs",
 ]
 
 [[package]]
