@@ -58,3 +58,35 @@ Trusted Shuffler code is in the `trusted_shuffler` directory.
 Library that contains an logic shared between `backend`, `server` and `client`.
 
 Common code is in the `common` directory.
+
+### Deploy a Trusted Shuffler on Google Cloud
+
+Build the Docker image running the Server with:
+
+```bash
+./trusted_shuffler/scripts/docker_build
+```
+
+Deploy on [Google Cloud](https://pantheon.corp.google.com/run?project=oak-ci)
+with:
+
+```
+./trusted_shuffler/scripts/deploy_on_google_cloud
+```
+
+Make sure to set the environment variable `BACKEND_URL` to your backend. You can
+also modify the environment variables once deployed.
+
+### Run a Trusted Shuffler on a local machine
+
+Use the Oak Docker container (everything you need is installed in there):
+
+```bash
+./scripts/docker_sh
+```
+
+In the Oak Docker container run:
+
+```
+./trusted_shuffler/scripts/run_trusted_shuffler
+```
