@@ -70,7 +70,7 @@ Build the Docker image running the Server with:
 Deploy on [Google Cloud](https://pantheon.corp.google.com/run?project=oak-ci)
 with:
 
-```
+```bash
 ./trusted_shuffler/scripts/deploy_on_google_cloud
 ```
 
@@ -87,6 +87,6 @@ Use the Oak Docker container (everything you need is installed in there):
 
 In the Oak Docker container run:
 
-```
+```bash
 ./trusted_shuffler/scripts/run_trusted_shuffler
 ```
