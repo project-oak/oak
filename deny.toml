@@ -20,6 +20,8 @@ ignore = [
   "RUSTSEC-2021-0122",
   # TODO(#3179): Remove when mapr is maintained again or no longer a dependency.
   "RUSTSEC-2022-0053",
+  # TODO(#3202): Remove when Tonic depends on a newer version of Axum.
+  "RUSTSEC-2022-0055"
 ]
 
 # Deny multiple versions unless explicitly skipped.
