@@ -11,8 +11,6 @@ unmaintained = "deny"
 yanked = "deny"
 notice = "deny"
 ignore = [
-  # TODO(#3131): Remove when no longer required.
-  "RUSTSEC-2020-0159",
   # TODO(#2421): Remove when no longer required.
   "RUSTSEC-2021-0127",
   # We rely on flatbuffers, which generates potentially unsafe code via "safe" APIs.

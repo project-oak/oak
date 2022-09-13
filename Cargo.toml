@@ -79,7 +79,3 @@ exclude = [
   "third_party/rust-hypervisor-firmware-virtio",
   "third_party/x25519-dalek"
 ]
-
-[patch.crates-io]
-# Ensure no_std compatibility. TODO(#2920): remove once https://github.com/google/flatbuffers/pull/7338 is merged.
-flatbuffers = { git = "https://github.com/jul-sh/flatbuffers.git", rev = "a07ddee936737da89aeb5a496f9742a805537188" }
