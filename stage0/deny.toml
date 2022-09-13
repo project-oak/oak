@@ -12,7 +12,6 @@ yanked = "deny"
 notice = "deny"
 ignore = []
 
-# Deny multiple versions unless explicitly skipped.
 [bans]
 multiple-versions = "allow"
 wildcards = "allow"
