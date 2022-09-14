@@ -25,6 +25,7 @@ prost-build = "*"
 
 # Prevent this from interfering with workspaces
 [workspace]
+resolver = "2"
 members = ["."]
 
 [[bin]]

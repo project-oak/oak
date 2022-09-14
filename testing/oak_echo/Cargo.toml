@@ -5,6 +5,10 @@ authors = ["Ivan Petrov <ivanpetrov@google.com>"]
 edition = "2021"
 license = "Apache-2.0"
 
+[workspace]
+resolver = "2"
+members = ["."]
+
 [features]
 default = ["vsock_channel"]
 vsock_channel = ["oak_baremetal_kernel/vsock_channel"]
@@ -18,11 +22,11 @@ oak_baremetal_kernel = { path = "../../experimental/oak_baremetal_kernel", defau
 oak_idl = { path = "../../oak_idl" }
 static_assertions = "*"
 
-[patch.crates-io]
-# Ensure no_std compatibility. TODO(#2920): remove once https://github.com/google/flatbuffers/pull/7338 is merged.
-flatbuffers = { git = "https://github.com/jul-sh/flatbuffers.git", rev = "a07ddee936737da89aeb5a496f9742a805537188" }
-
 [[bin]]
 name = "oak_echo"
 test = false
 bench = false
+
+[patch.crates-io]
+# Ensure no_std compatibility. TODO(#2920): remove once https://github.com/google/flatbuffers/pull/7338 is merged.
+flatbuffers = { git = "https://github.com/jul-sh/flatbuffers.git", rev = "a07ddee936737da89aeb5a496f9742a805537188" }

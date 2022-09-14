@@ -713,20 +713,23 @@ fn run_cargo_udeps(scope: &Scope) -> Step {
     Step::Multiple {
         name: "cargo udeps".to_string(),
         steps: workspace_manifest_files()
-            .map(to_string)
-            .filter(|path| all_affected_crates.contains(path))
+            .filter(|path| all_affected_crates.contains_path(path))
             .map(|entry| Step::Single {
-                name: entry.clone(),
-                command: Cmd::new(
+                name: entry.to_str().unwrap().to_string(),
+                command: Cmd::new_in_dir(
                     "cargo",
                     &[
                         "udeps",
-                        &format!("--manifest-path={}", &entry),
+                        &format!(
+                            "--manifest-path={}",
+                            entry.file_name().unwrap().to_str().unwrap()
+                        ),
                         "--all-targets",
                         // The depinfo backend seems much faster and precise.
                         "--backend=depinfo",
                         "--workspace",
                     ],
+                    entry.parent().unwrap(),
                 ),
             })
             .collect(),

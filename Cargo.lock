@@ -1542,7 +1542,8 @@ checksum = "0ce7134b9999ecaf8bcd65542e436736ef32ddca1b3e06094cb6ec5755203b80"
 [[package]]
 name = "flatbuffers"
 version = "2.1.2"
-source = "git+https://github.com/jul-sh/flatbuffers.git?rev=a07ddee936737da89aeb5a496f9742a805537188#a07ddee936737da89aeb5a496f9742a805537188"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "86b428b715fdbdd1c364b84573b5fdc0f84f8e423661b9f398735278bc7f2b6a"
 dependencies = [
  "bitflags",
  "core2",
