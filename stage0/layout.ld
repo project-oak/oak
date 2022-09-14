@@ -24,8 +24,10 @@ MEMORY {
 ENTRY(reset_vector)
 
 /* Segment descriptor flags.
- * See Section 4.8 in AMD64 Architecture Programmer's Manual, Volume 2 for more details.
+ * See Sections 4.7 and  4.8 in AMD64 Architecture Programmer's Manual, Volume 2 for more details.
  */
+HIDDEN(SEGMENT_4K = 1 << (32 + 23)); /* G */
+HIDDEN(SEGMENT_DEFAULT_32BIT_OP = 1 << (32 + 22)); /* D/B */
 HIDDEN(SEGMENT_LONG = 1 << (32 + 21));
 HIDDEN(SEGMENT_PRESENT = 1 << (32 + 15)); /* P */
 HIDDEN(SEGMENT_USER = 1 << (32 + 12)); /* S */
@@ -45,7 +47,7 @@ SECTIONS {
         QUAD(ADDR(.rodata.pdpt) | PAGE_PRESENT | PAGE_WRITABLE) /* 0..512 GiB */
     } > bios
 
-    pml4_offset = ADDR(.rodata.pml4);
+    pml4_addr = ADDR(.rodata.pml4);
 
     .rodata.pdpt ALIGN(4K) : {
         QUAD(ADDR(.rodata.pd) | PAGE_PRESENT | PAGE_WRITABLE) /* 0..1 GiB */
@@ -54,6 +56,8 @@ SECTIONS {
         QUAD(ADDR(.rodata.pd) | PAGE_PRESENT | PAGE_WRITABLE) /* 3..4 GiB */
     } > bios
 
+    pdpt_addr = ADDR(.rodata.pdpt);
+
     .rodata.pd ALIGN(4K) : {
         QUAD(0 | PAGE_PRESENT | PAGE_WRITABLE | PAGE_SIZE) /* 0 .. 2 MiB */
         FILL(0x00)
@@ -61,7 +65,7 @@ SECTIONS {
         QUAD((TOP - 2M) | PAGE_PRESENT | PAGE_WRITABLE | PAGE_SIZE) /* (4GiB - 2MiB) .. 4 GiB */
     } > bios
 
-    pd_offset = ADDR(.rodata.pd);
+    pd_addr = ADDR(.rodata.pd);
 
     .rodata : {
         KEEP(*(.rodata .rodata.*))
@@ -111,11 +115,22 @@ SECTIONS {
          *  - P=1 (present)
          *  - S=1 (user)
          *  - C/D=0 (data)
+         * ...and for 32-bit compatibility (see Section 4.7.3):
+         *  - G=1 (limit field is in 4K blocks)
+         *  - D/S=1 (default operations are 32-bit)
+         *  - limit = 0xFFFFF (in 4K blocks because G=1)
+         *
          * Although according to the manual in 64-bit mode WRITABLE should be ignored, at least qemu
          * will cause a #GP if we try to load SS with a segment descriptor that doesn't have it set.
          */
         ds = . - ADDR(.rodata.gdt);
-        QUAD(SEGMENT_PRESENT | SEGMENT_USER | SEGMENT_WRITABLE)
+        QUAD(SEGMENT_4K |
+             SEGMENT_DEFAULT_32BIT_OP |
+             SEGMENT_PRESENT |
+             SEGMENT_USER |
+             SEGMENT_WRITABLE |
+             (0xF << (32 + 16)) | /* Segment Limit [19:16] */
+             0xFFFF); /* Segment Limit [15:0] */
     } > bios
 
     .rodata.idt ALIGN(8) : {
