@@ -18,6 +18,7 @@
 #![no_main]
 
 use core::{arch::asm, ffi::c_void, panic::PanicInfo};
+use sev_guest::msr::{get_sev_status, SevStatus};
 use x86_64::{
     instructions::{hlt, interrupts::int3, segmentation::Segment},
     registers::{
@@ -50,27 +51,32 @@ const BOOT_PDPT_ADDR: PhysAddr = PhysAddr::new(0xA000);
 const BOOT_PD_ADDR: PhysAddr = PhysAddr::new(0xB000);
 
 extern "C" {
-    #[link_name = "pd_offset"]
+    #[link_name = "pd_addr"]
     static BIOS_PD: c_void;
 }
 
 /// Creates page tables that identity-map the first 1GiB of memory using 2MiB hugepages.
-pub fn create_page_tables(pml4: &mut PageTable, pdpt: &mut PageTable, pd: &mut PageTable) {
+pub fn create_page_tables(
+    pml4: &mut PageTable,
+    pdpt: &mut PageTable,
+    pd: &mut PageTable,
+    encrypted: u64,
+) {
     pml4.zero();
     pml4[0].set_addr(
-        PhysAddr::new(pdpt as *const _ as u64),
+        PhysAddr::new(pdpt as *const _ as u64 | encrypted),
         PageTableFlags::PRESENT | PageTableFlags::WRITABLE,
     );
 
     pdpt.zero();
     pdpt[0].set_addr(
-        PhysAddr::new(pd as *const _ as u64),
+        PhysAddr::new(pd as *const _ as u64 | encrypted),
         PageTableFlags::PRESENT | PageTableFlags::WRITABLE,
     );
 
     pd.iter_mut().enumerate().for_each(|(i, entry)| {
         entry.set_addr(
-            PhysAddr::new((i as u64) * Size2MiB::SIZE),
+            PhysAddr::new(((i as u64) * Size2MiB::SIZE) | encrypted),
             PageTableFlags::PRESENT | PageTableFlags::WRITABLE | PageTableFlags::HUGE_PAGE,
         );
     });
@@ -133,14 +139,22 @@ pub extern "C" fn rust64_start() -> ! {
     let pml4 = unsafe { &mut *(BOOT_PML4_ADDR.as_u64() as *mut PageTable) };
     let pdpt = unsafe { &mut *(BOOT_PDPT_ADDR.as_u64() as *mut PageTable) };
     let pd = unsafe { &mut *(BOOT_PD_ADDR.as_u64() as *mut PageTable) };
-    create_page_tables(pml4, pdpt, pd);
+    let sev_status = get_sev_status().unwrap();
+    let encrypted: u64 = if sev_status.contains(SevStatus::SEV_ES_ENABLED)
+        || sev_status.contains(SevStatus::SEV_ENABLED)
+    {
+        1 << 51
+    } else {
+        0
+    };
+    create_page_tables(pml4, pdpt, pd, encrypted);
     /* We need to do some trickery here. All of the stage0 code is somewhere within [4G-2M; 4G).
      * Thus, let's keep our own last PD, so that we can continue executing after reloading the
      * page tables.
      */
     // Safety: dereferencing the raw pointer is safe as that's the currently in-use page directory.
     pdpt[3].set_addr(
-        PhysAddr::new((unsafe { &BIOS_PD as *const _ }) as u64),
+        PhysAddr::new(unsafe { &BIOS_PD } as *const _ as u64 | encrypted),
         PageTableFlags::PRESENT | PageTableFlags::WRITABLE,
     );
     // Safety: changing the page tables here is safe because (a) we've populated the new page tables
