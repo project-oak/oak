@@ -15,12 +15,22 @@
 //
 
 use core::mem::MaybeUninit;
-use sev_guest::ghcb::{Ghcb, GhcbProtocol};
+use sev_guest::{
+    ghcb::{Ghcb, GhcbProtocol},
+    msr::{
+        change_snp_page_state, register_ghcb_location, PageAssignment, RegisterGhcbGpaRequest,
+        SnpPageStateChangeRequest,
+    },
+};
 use x86_64::{
     addr::{PhysAddr, VirtAddr},
+    align_down,
     instructions::tlb::flush_all,
     registers::control::Cr3,
-    structures::paging::page_table::{PageTable, PageTableFlags},
+    structures::paging::{
+        page_table::{PageTable, PageTableFlags},
+        PageSize, Size2MiB, Size4KiB,
+    },
 };
 
 /// The mask for the encrypted bit. For now we assume that we will be running on AMD Arcadia-Milan
@@ -45,11 +55,17 @@ pub fn init_ghcb(snp_enabled: bool) -> GhcbProtocol<'static> {
 fn share_ghcb_with_hypervisor(ghcb: &Ghcb, snp_enabled: bool) {
     let ghcb_address = VirtAddr::new(ghcb as *const Ghcb as usize as u64);
     if snp_enabled {
-        // This code will eventually also mark the page as shared in the RMP and use the MSR
-        // protocol to register the page with the hypervisor.
-        unimplemented!("SNP support is not yet implemented.");
+        // On SEV-SNP we need to additionally update the RMP and register the GHCB location with the
+        // hypervisor. We assume an identity mapping between virtual and physical addresses for now.
+        let ghcb_physical_address = PhysAddr::new(ghcb_address.as_u64());
+        mark_2mib_page_shared_in_rmp(ghcb_physical_address);
+        let ghcb_location_request =
+            RegisterGhcbGpaRequest::new(ghcb_physical_address.as_u64() as usize)
+                .expect("Invalid address for GHCB location");
+        register_ghcb_location(ghcb_location_request)
+            .expect("Couldn't register the GHCB address with the hypervisor");
     }
-    // Mark the page as not encrypted.
+    // Mark the page as not encrypted in the page tables.
     set_encrypted_bit_for_page(&ghcb_address, false);
 }
 
@@ -117,4 +133,23 @@ fn physical_to_virtual(physical: PhysAddr) -> VirtAddr {
 /// The caller must provide a valid address for the start of a valid page table.
 unsafe fn get_mut_page_table_ref<'a>(start_address: VirtAddr) -> &'a mut PageTable {
     &mut *(start_address.as_u64() as usize as *mut PageTable)
+}
+
+/// Marks a 2MiB page as shared in the SEV-SNP reverse-map table (RMP).
+///
+/// Panics if the physical address is not the start of a 2MiB page or if the page sharing request
+/// fails.
+fn mark_2mib_page_shared_in_rmp(physical_address: PhysAddr) {
+    let raw_address = physical_address.as_u64();
+    assert_eq!(align_down(raw_address, Size2MiB::SIZE), raw_address);
+    // Since we don't have the GHCB set up already we need to use the MSR protocol to mark every
+    // individual 4KiB area in the 2MiB page as shared.
+    for i in 0..512 {
+        let request = SnpPageStateChangeRequest::new(
+            (raw_address + i * Size4KiB::SIZE) as usize,
+            PageAssignment::Shared,
+        )
+        .expect("Invalid page address");
+        change_snp_page_state(request).expect("Couldn't change page state");
+    }
 }
