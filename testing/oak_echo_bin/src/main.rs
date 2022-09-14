@@ -23,6 +23,8 @@
 extern crate alloc;
 
 use alloc::boxed::Box;
+#[cfg(feature = "raw_server")]
+use alloc::{vec, vec::Vec};
 use core::panic::PanicInfo;
 use log::info;
 use oak_baremetal_communication_channel::Channel;
@@ -30,14 +32,34 @@ use oak_baremetal_communication_channel::Channel;
 mod asm;
 mod bootparam;
 
+#[cfg(feature = "raw_server")]
+const MESSAGE_SIZE: usize = 1;
+
 #[no_mangle]
 pub extern "C" fn rust64_start(_rdi: u64, rsi: &bootparam::BootParams) -> ! {
     let channel = oak_baremetal_kernel::start_kernel(rsi);
-    main(channel)
+    info!("In main!");
+    start_echo_server(channel)
 }
 
-fn main(channel: Box<dyn Channel>) -> ! {
-    info!("In main!");
+/// Starts an echo server that reads single bytes from the channel and writes
+/// them back.
+#[cfg(feature = "raw_server")]
+fn start_echo_server(mut channel: Box<dyn Channel>) -> ! {
+    loop {
+        let bytes = {
+            let mut bytes: Vec<u8> = vec![0; MESSAGE_SIZE];
+            channel.read(&mut bytes).expect("Couldn't read bytes");
+            bytes
+        };
+        channel.write(&bytes).expect("Couldn't write bytes");
+    }
+}
+
+/// Starts an echo server that uses the Oak communication channel:
+/// https://github.com/project-oak/oak/blob/main/experimental/oak_baremetal_channel/SPEC.MD
+#[cfg(feature = "idl_server")]
+fn start_echo_server(channel: Box<dyn Channel>) -> ! {
     let runtime = oak_echo_runtime::RuntimeImplementation::new();
     let service = oak_echo_runtime::schema::EchoRuntime::serve(runtime);
     oak_baremetal_communication_channel::server::start_blocking_server(channel, service)

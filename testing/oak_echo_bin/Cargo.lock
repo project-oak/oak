@@ -203,7 +203,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "oak_echo"
+name = "oak_echo_bin"
 version = "0.1.0"
 dependencies = [
  "log",
@@ -220,6 +220,7 @@ version = "0.1.0"
 dependencies = [
  "flatbuffers",
  "hashbrown",
+ "log",
  "oak_idl",
  "oak_idl_gen_services",
  "oak_idl_gen_structs",
