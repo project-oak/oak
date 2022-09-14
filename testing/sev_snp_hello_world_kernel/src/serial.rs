@@ -17,20 +17,51 @@
 use atomic_refcell::AtomicRefCell;
 use core::fmt::Write;
 use lazy_static::lazy_static;
-use uart_16550::SerialPort;
+use sev_guest::{
+    msr::{get_sev_status, SevStatus},
+    serial::SerialPort as GhcbSerialPort,
+};
+use uart_16550::SerialPort as RawSerialPort;
 
 extern crate log;
 
-// Base I/O port for the first serial port in the system (colloquially known as COM1)
+// Base I/O port for the first serial port in the system (colloquially known as COM1).
 static COM1_BASE: u16 = 0x3f8;
 
+/// Wrapper for the possible serial port implementations.
+pub enum SerialWrapper<'a> {
+    Raw(RawSerialPort),
+    Ghcb(GhcbSerialPort<'a>),
+}
+
+impl Write for SerialWrapper<'_> {
+    fn write_str(&mut self, s: &str) -> core::fmt::Result {
+        match self {
+            SerialWrapper::Raw(port) => port.write_str(s),
+            SerialWrapper::Ghcb(port) => port.write_str(s),
+        }
+    }
+}
+
 lazy_static! {
-    pub static ref SERIAL1: AtomicRefCell<SerialPort> = {
-        // Our contract with the loader requires the first serial port to be
-        // available, so assuming the loader adheres to it, this is safe.
-        let mut port = unsafe { SerialPort::new(COM1_BASE) };
-        port.init();
-        AtomicRefCell::new(port)
+    pub static ref SERIAL1: AtomicRefCell<SerialWrapper<'static>> = {
+        let sev_status = get_sev_status().unwrap();
+        let wrapper = if sev_status.contains(SevStatus::SEV_ES_ENABLED) {
+            let ghcb_protocol = crate::ghcb::init_ghcb(sev_status.contains(SevStatus::SNP_ACTIVE));
+            // Safety: our contract with the loader requires the first serial port to be available,
+            // so assuming the loader adheres to it, this is safe.
+            let mut port = unsafe { GhcbSerialPort::new(COM1_BASE, ghcb_protocol) };
+            port.init().expect("Couldn't initialize GHCB serial port");
+            SerialWrapper::Ghcb(port)
+        } else {
+            // Safety: our contract with the loader requires the first serial port to be available,
+            // so assuming the loader adheres to it, this is safe.
+            let mut port = unsafe { RawSerialPort::new(COM1_BASE) };
+            port.init();
+            SerialWrapper::Raw(port)
+        };
+
+        AtomicRefCell::new(wrapper)
     };
 }
 
