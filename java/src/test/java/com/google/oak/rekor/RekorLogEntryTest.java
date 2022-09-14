@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-package com.google.oak.functions.client.rekor;
+package com.google.oak.rekor;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
