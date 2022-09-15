@@ -504,7 +504,7 @@ pub fn run_trusted_shuffler(flags: Vec<&str>) -> Step {
             "run",
             "--manifest-path=trusted_shuffler/server/Cargo.toml",
             "--",
-            "--k=1",
+            "--batch-size=1",
             "--listen-address=[::]:8080",
             "--backend-url=http://localhost:8888",
         ],

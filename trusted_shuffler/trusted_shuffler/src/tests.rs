@@ -79,27 +79,30 @@ fn generate_request_and_expected_response(
 }
 
 // Generates a test Trusted Shuffler with no timeout.
-fn test_trusted_shuffler(k: usize) -> Arc<TrustedShuffler> {
+fn test_trusted_shuffler(batch_size: usize) -> Arc<TrustedShuffler> {
     Arc::new(TrustedShuffler::new(
-        k,
+        batch_size,
         None,
         Arc::new(TestRequestHandler {}),
     ))
 }
 
 // Generates a test Trusted Shuffler with given timeout.
-fn test_trusted_shuffler_with_timeout(k: usize, timeout: Duration) -> Arc<TrustedShuffler> {
+fn test_trusted_shuffler_with_timeout(
+    batch_size: usize,
+    timeout: Duration,
+) -> Arc<TrustedShuffler> {
     Arc::new(TrustedShuffler::new(
-        k,
+        batch_size,
         Some(timeout),
         Arc::new(TestRequestHandler {}),
     ))
 }
 
 #[tokio::test]
-async fn anonymity_value_2_test() {
-    let anonymity_value = 2;
-    let trusted_shuffler = test_trusted_shuffler(anonymity_value);
+async fn batch_size_2_test() {
+    let batch_size = 2;
+    let trusted_shuffler = test_trusted_shuffler(batch_size);
 
     let (request, expected_response) = generate_request_and_expected_response("Test");
     let (background_request, expected_background_response) =
@@ -121,14 +124,14 @@ async fn anonymity_value_2_test() {
 }
 
 #[tokio::test]
-async fn anonymity_value_10_test() {
-    let anonymity_value = 10;
-    let trusted_shuffler = test_trusted_shuffler(anonymity_value);
+async fn batch_size_10_test() {
+    let batch_size = 10;
+    let trusted_shuffler = test_trusted_shuffler(batch_size);
 
     let (requests, expected_responses): (
         Vec<TrustedShufflerRequest>,
         Vec<TrustedShufflerResponse>,
-    ) = (0..anonymity_value)
+    ) = (0..batch_size)
         .collect::<Vec<_>>()
         .iter()
         .map(|k| generate_request_and_expected_response(&format!("Test {}", k)))
@@ -155,8 +158,8 @@ async fn anonymity_value_10_test() {
 // doesn't process requests from only 2 clients.
 #[tokio::test]
 async fn waiting_for_enough_requests_test() {
-    let anonymity_value = 3;
-    let trusted_shuffler = test_trusted_shuffler(anonymity_value);
+    let batch_size = 3;
+    let trusted_shuffler = test_trusted_shuffler(batch_size);
 
     let (request_1, _) = generate_request_and_expected_response("Test 1");
     let (request_2, expected_response) = generate_request_and_expected_response("Test 2");
@@ -189,10 +192,10 @@ async fn waiting_for_enough_requests_test() {
 // Shuffler responds with the empty response.
 #[tokio::test]
 async fn one_empty_response_test() {
-    let anonymity_value = 2;
+    let batch_size = 2;
     // This should give the non-empty response enough time to arrive.
     let timeout = Duration::from_millis(200);
-    let trusted_shuffler = test_trusted_shuffler_with_timeout(anonymity_value, timeout);
+    let trusted_shuffler = test_trusted_shuffler_with_timeout(batch_size, timeout);
 
     let (request, expected_response) =
         generate_request_and_expected_response("Request (not-dropped)");
@@ -218,10 +221,10 @@ async fn one_empty_response_test() {
 // Shuffler responds with the all responses.
 #[tokio::test]
 async fn no_empty_response_test() {
-    let anonymity_value = 2;
+    let batch_size = 2;
     // This should give the non-empty response enough time to arrive.
     let timeout = Duration::from_millis(200);
-    let trusted_shuffler = test_trusted_shuffler_with_timeout(anonymity_value, timeout);
+    let trusted_shuffler = test_trusted_shuffler_with_timeout(batch_size, timeout);
 
     let (request_1, expected_response_1) = generate_request_and_expected_response("Request 1");
     let (request_2, expected_response_2) = generate_request_and_expected_response("Request 2");
@@ -240,9 +243,9 @@ async fn no_empty_response_test() {
 // Shuffler responds with the all empty responses.
 #[tokio::test]
 async fn all_empty_responses_test() {
-    let anonymity_value = 2;
+    let batch_size = 2;
     let timeout = Duration::from_millis(200);
-    let trusted_shuffler = test_trusted_shuffler_with_timeout(anonymity_value, timeout);
+    let trusted_shuffler = test_trusted_shuffler_with_timeout(batch_size, timeout);
 
     let dropped_request_1 = generate_dropped_request();
     let dropped_request_2 = generate_dropped_request();

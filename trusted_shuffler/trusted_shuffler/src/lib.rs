@@ -94,10 +94,10 @@ pub trait RequestHandler: Send + Sync {
 
 // Trusted Shuffler implementation.
 pub struct TrustedShuffler {
-    // Value k that represents k-anonymity.
-    k: usize,
+    // The size of a batch.
+    batch_size: usize,
 
-    // When the k-th request in a batch arrives we start a timeout. For any request were the
+    // When `batch_size` requests arrived we start a timeout. For any request were the
     // Trusted Shuffler did not receive a response from the backend after the timeout, the Trusted
     // Shuffler sends an empty response.
     timeout: Option<Duration>,
@@ -112,12 +112,12 @@ pub struct TrustedShuffler {
 
 impl TrustedShuffler {
     pub fn new(
-        k: usize,
+        batch_size: usize,
         timeout: Option<Duration>,
         request_handler: Arc<dyn RequestHandler>,
     ) -> Self {
         Self {
-            k,
+            batch_size,
             timeout,
             requests_to_shuffle: Arc::new(Mutex::new(vec![])),
             request_handler,
@@ -146,7 +146,7 @@ impl TrustedShuffler {
 
             requests_to_shuffle.push(request);
 
-            if requests_to_shuffle.len() >= self.k {
+            if requests_to_shuffle.len() >= self.batch_size {
                 // Replace current requests with an empty vector.
                 let requests = take(requests_to_shuffle.deref_mut());
 

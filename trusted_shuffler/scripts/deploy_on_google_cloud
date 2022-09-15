@@ -13,6 +13,6 @@ gcloud run deploy "${DEPLOYMENT}" \
     --use-http2 \
     --allow-unauthenticated \
     --set-env-vars BACKEND_URL=http://localhost:8888 \
-    --set-env-vars K=1 \
+    --set-env-vars BATCH_SIZE=1 \
     --set-env-vars LISTEN_ADDRESS=[::]:8080 \
     --set-env-vars RUST_LOG=debug
