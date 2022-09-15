@@ -150,6 +150,38 @@ SECTIONS {
     gdt_desc_offset = ADDR(.rodata.gdt_desc) & 0xFFFF;
     idt_desc_offset = ADDR(.rodata.idt_desc) & 0xFFFF;
 
+    /* GUIDed tables have to *end* at 0x20 from the end of the file.
+     * Documentation about the GUID table format can be found in QEMU docs:
+     * https://github.com/qemu/qemu/blob/master/docs/specs/sev-guest-firmware.rst
+     * and EDK2 source code:
+     * https://github.com/tianocore/edk2/blob/master/OvmfPkg/ResetVector/Ia16/ResetVectorVtf0.asm
+     */
+    .guid_tables TOP - 0x20 - 0x28 : {
+        HIDDEN(tables_start = .);
+        /* SEV-ES reset block: uint32 addr, uint16 size, 16-byte GUID */
+        HIDDEN(sev_es_reset_block_start = .);
+        LONG(0xDEADBEEF) /* Placeholder values */
+        SHORT(sev_es_reset_block_end - sev_es_reset_block_start)
+        LONG(0x00f771de)
+        SHORT(0x1a7e)
+        SHORT(0x4fcb)
+        SHORT(0x0e89)
+        BYTE(0x68) BYTE(0xc7) BYTE(0x7e) BYTE(0x2f) BYTE(0xb4) BYTE(0x4e)
+        HIDDEN(sev_es_reset_block_end = .);
+
+        /* Footer: uint16 size, 16-byte GUID */
+        SHORT(tables_end - tables_start)
+        LONG(0x96b582de)
+        SHORT(0x1fb2)
+        SHORT(0x45f7)
+        SHORT(0xeaba)
+        BYTE(0xa3) BYTE(0x66) BYTE(0xc5) BYTE(0x5a) BYTE(0x08) BYTE(0x2d)
+        HIDDEN(tables_end = .);
+        FILL(0x00)
+    } > bios
+
+    ASSERT((. == TOP - 0x20), "GUID tables are to expected to end at top - 0x20")
+
     /* The reset vector needs to be placed 0x10 from the end of the file. */
     .reset_vector TOP - 0x10 : {
         *(.reset_vector)
