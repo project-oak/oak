@@ -450,7 +450,7 @@ impl From<TerminationRequest> for u64 {
 }
 
 /// Requests termination from the hypervisor.
-pub fn request_termination(request: TerminationRequest) {
+pub fn request_termination(request: TerminationRequest) -> ! {
     write_protocol_msr_and_exit(request.into());
     // Go into a HALT loop, in case the hypervisor did not honor the termination request.
     loop {
