@@ -19,6 +19,8 @@
 
 extern crate alloc;
 
+use log::info;
+
 pub mod schema {
     #![allow(clippy::derivable_impls, clippy::needless_borrow)]
     #![allow(dead_code, unused_imports)]
@@ -44,6 +46,7 @@ impl schema::EchoRuntime for RuntimeImplementation {
         let request_body: &[u8] = request_message
             .body()
             .ok_or_else(|| oak_idl::Status::new(oak_idl::StatusCode::InvalidArgument))?;
+        info!("Received a request: {:?}", request_body);
         let response_body = request_body;
 
         let response_message = {
