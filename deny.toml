@@ -26,6 +26,10 @@ ignore = [
 multiple-versions = "allow"
 wildcards = "allow"
 
+# Allow git repositories.
+[sources]
+unknown-git = "allow"
+
 # List of allowed licenses.
 # For more detailed information see http://go/thirdpartylicenses.
 [licenses]
