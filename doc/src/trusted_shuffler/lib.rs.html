@@ -338,10 +338,10 @@
 
 <span class="comment">// Trusted Shuffler implementation.</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">TrustedShuffler</span> {
-    <span class="comment">// Value k that represents k-anonymity.</span>
-    <span class="ident">k</span>: <span class="ident">usize</span>,
+    <span class="comment">// The size of a batch.</span>
+    <span class="ident">batch_size</span>: <span class="ident">usize</span>,
 
-    <span class="comment">// When the k-th request in a batch arrives we start a timeout. For any request were the</span>
+    <span class="comment">// When `batch_size` requests arrived we start a timeout. For any request were the</span>
     <span class="comment">// Trusted Shuffler did not receive a response from the backend after the timeout, the Trusted</span>
     <span class="comment">// Shuffler sends an empty response.</span>
     <span class="ident">timeout</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Duration</span><span class="op">&gt;</span>,
@@ -356,12 +356,12 @@
 
 <span class="kw">impl</span> <span class="ident">TrustedShuffler</span> {
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(
-        <span class="ident">k</span>: <span class="ident">usize</span>,
+        <span class="ident">batch_size</span>: <span class="ident">usize</span>,
         <span class="ident">timeout</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Duration</span><span class="op">&gt;</span>,
         <span class="ident">request_handler</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">RequestHandler</span><span class="op">&gt;</span>,
     ) -&gt; <span class="self">Self</span> {
         <span class="self">Self</span> {
-            <span class="ident">k</span>,
+            <span class="ident">batch_size</span>,
             <span class="ident">timeout</span>,
             <span class="ident">requests_to_shuffle</span>: <span class="ident">Arc::new</span>(<span class="ident">Mutex::new</span>(<span class="macro">vec!</span>[])),
             <span class="ident">request_handler</span>,
@@ -390,7 +390,7 @@
 
             <span class="ident">requests_to_shuffle</span>.<span class="ident">push</span>(<span class="ident">request</span>);
 
-            <span class="kw">if</span> <span class="ident">requests_to_shuffle</span>.<span class="ident">len</span>() <span class="op">&gt;</span><span class="op">=</span> <span class="self">self</span>.<span class="ident">k</span> {
+            <span class="kw">if</span> <span class="ident">requests_to_shuffle</span>.<span class="ident">len</span>() <span class="op">&gt;</span><span class="op">=</span> <span class="self">self</span>.<span class="ident">batch_size</span> {
                 <span class="comment">// Replace current requests with an empty vector.</span>
                 <span class="kw">let</span> <span class="ident">requests</span> <span class="op">=</span> <span class="ident">take</span>(<span class="ident">requests_to_shuffle</span>.<span class="ident">deref_mut</span>());
 

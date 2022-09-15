@@ -89,6 +89,9 @@
 <span id="84">84</span>
 <span id="85">85</span>
 <span id="86">86</span>
+<span id="87">87</span>
+<span id="88">88</span>
+<span id="89">89</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2022 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -120,8 +123,8 @@
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Parser</span>, <span class="ident">Clone</span>)]</span>
 <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">about</span> <span class="op">=</span> <span class="string">&quot;Trusted Shuffler Server&quot;</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Opt</span> {
-    <span class="attribute">#[<span class="ident">structopt</span>(<span class="ident">long</span>, <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;Anonymity value&quot;</span>, <span class="ident">default_value</span> <span class="op">=</span> <span class="string">&quot;1&quot;</span>)]</span>
-    <span class="ident">k</span>: <span class="ident">usize</span>,
+    <span class="attribute">#[<span class="ident">structopt</span>(<span class="ident">long</span>, <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;Size of the batch&quot;</span>, <span class="ident">default_value</span> <span class="op">=</span> <span class="string">&quot;1&quot;</span>)]</span>
+    <span class="ident">batch_size</span>: <span class="ident">usize</span>,
     <span class="attribute">#[<span class="ident">structopt</span>(
         <span class="ident">long</span>,
         <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;Address to listen on for the Trusted Shuffler server&quot;</span>,
@@ -158,12 +161,15 @@
     <span class="kw">let</span> <span class="ident">timeout</span> <span class="op">=</span> <span class="ident">opt</span>.<span class="ident">timeout_ms</span>.<span class="ident">map</span>(<span class="ident">Duration::from_millis</span>);
 
     <span class="macro">info!</span>(
-        <span class="string">&quot;Starting the Trusted Shuffler server at {:?} with k = {} and {:?}&quot;</span>,
-        <span class="ident">listen_address</span>, <span class="ident">opt</span>.<span class="ident">k</span>, <span class="ident">timeout</span>
+        <span class="string">&quot;Starting the Trusted Shuffler server at {:?} with batch_size = {} and Timeout {:?}&quot;</span>,
+        <span class="ident">listen_address</span>, <span class="ident">opt</span>.<span class="ident">batch_size</span>, <span class="ident">timeout</span>
     );
 
-    <span class="kw">let</span> <span class="ident">server</span> <span class="op">=</span>
-        <span class="ident">Server::bind</span>(<span class="kw-2">&amp;</span><span class="ident">listen_address</span>).<span class="ident">serve</span>(<span class="ident">ServiceBuilder::new</span>(<span class="ident">opt</span>.<span class="ident">k</span>, <span class="ident">timeout</span>, <span class="kw-2">&amp;</span><span class="ident">opt</span>.<span class="ident">backend_url</span>));
+    <span class="kw">let</span> <span class="ident">server</span> <span class="op">=</span> <span class="ident">Server::bind</span>(<span class="kw-2">&amp;</span><span class="ident">listen_address</span>).<span class="ident">serve</span>(<span class="ident">ServiceBuilder::new</span>(
+        <span class="ident">opt</span>.<span class="ident">batch_size</span>,
+        <span class="ident">timeout</span>,
+        <span class="kw-2">&amp;</span><span class="ident">opt</span>.<span class="ident">backend_url</span>,
+    ));
     <span class="macro">tokio::select!</span>(
         <span class="ident">result</span> <span class="op">=</span> <span class="ident">server</span> =&gt; {
             <span class="ident">result</span>.<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t run server&quot;</span>)<span class="question-mark">?</span>;
