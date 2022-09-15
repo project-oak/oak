@@ -12,7 +12,7 @@ license = "Apache-2.0"
 anyhow = "*"
 http = "*"
 hyper = { version = "*", features = ["client", "http1", "http2", "runtime"] }
-prost = "0.10"
+prost = "0.11"
 tokio = { version = "*", features = [
   "fs",
   "macros",
