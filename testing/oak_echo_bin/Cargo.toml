@@ -10,7 +10,7 @@ resolver = "2"
 members = ["."]
 
 [features]
-default = ["vsock_channel"]
+default = ["vsock_channel", "raw_server"]
 vsock_channel = ["oak_baremetal_kernel/vsock_channel"]
 simple_io_channel = ["oak_baremetal_kernel/simple_io_channel"]
 raw_server = []
