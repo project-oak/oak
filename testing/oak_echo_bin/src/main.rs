@@ -23,7 +23,7 @@
 extern crate alloc;
 
 use alloc::boxed::Box;
-#[cfg(feature = "raw_server")]
+#[cfg(all(feature = "raw_server", not(feature = "idl_server")))]
 use alloc::{vec, vec::Vec};
 use core::panic::PanicInfo;
 use log::info;
@@ -32,7 +32,7 @@ use oak_baremetal_communication_channel::Channel;
 mod asm;
 mod bootparam;
 
-#[cfg(feature = "raw_server")]
+#[cfg(all(feature = "raw_server", not(feature = "idl_server")))]
 const MESSAGE_SIZE: usize = 1;
 
 #[no_mangle]
@@ -42,28 +42,29 @@ pub extern "C" fn rust64_start(_rdi: u64, rsi: &bootparam::BootParams) -> ! {
     start_echo_server(channel)
 }
 
-/// Starts an echo server that reads single bytes from the channel and writes
-/// them back.
-#[cfg(feature = "raw_server")]
 fn start_echo_server(mut channel: Box<dyn Channel>) -> ! {
-    loop {
-        let bytes = {
-            let mut bytes: Vec<u8> = vec![0; MESSAGE_SIZE];
-            channel.read(&mut bytes).expect("Couldn't read bytes");
-            bytes
-        };
-        channel.write(&bytes).expect("Couldn't write bytes");
+    /// Starts an echo server that reads single bytes from the channel and writes
+    /// them back.
+    #[cfg(all(feature = "raw_server", not(feature = "idl_server")))]
+    {
+        loop {
+            let bytes = {
+                let mut bytes: Vec<u8> = vec![0; MESSAGE_SIZE];
+                channel.read(&mut bytes).expect("Couldn't read bytes");
+                bytes
+            };
+            channel.write(&bytes).expect("Couldn't write bytes");
+        }
     }
-}
-
-/// Starts an echo server that uses the Oak communication channel:
-/// https://github.com/project-oak/oak/blob/main/experimental/oak_baremetal_channel/SPEC.MD
-#[cfg(feature = "idl_server")]
-fn start_echo_server(channel: Box<dyn Channel>) -> ! {
-    let runtime = oak_echo_runtime::RuntimeImplementation::new();
-    let service = oak_echo_runtime::schema::EchoRuntime::serve(runtime);
-    oak_baremetal_communication_channel::server::start_blocking_server(channel, service)
-        .expect("Runtime encountered an unrecoverable error");
+    /// Starts an echo server that uses the Oak communication channel:
+    /// https://github.com/project-oak/oak/blob/main/experimental/oak_baremetal_channel/SPEC.MD
+    #[cfg(all(feature = "idl_server", not(feature = "raw_server")))]
+    {
+        let runtime = oak_echo_runtime::RuntimeImplementation::new();
+        let service = oak_echo_runtime::schema::EchoRuntime::serve(runtime);
+        oak_baremetal_communication_channel::server::start_blocking_server(channel, service)
+            .expect("Runtime encountered an unrecoverable error");
+    }
 }
 
 #[alloc_error_handler]
