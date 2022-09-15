@@ -1157,7 +1157,7 @@
 }
 
 <span class="doccomment">/// Requests termination from the hypervisor.</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">request_termination</span>(<span class="ident">request</span>: <span class="ident">TerminationRequest</span>) {
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">request_termination</span>(<span class="ident">request</span>: <span class="ident">TerminationRequest</span>) -&gt; <span class="op">!</span> {
     <span class="ident">write_protocol_msr_and_exit</span>(<span class="ident">request</span>.<span class="ident">into</span>());
     <span class="comment">// Go into a HALT loop, in case the hypervisor did not honor the termination request.</span>
     <span class="kw">loop</span> {
