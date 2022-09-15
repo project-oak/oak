@@ -21,4 +21,4 @@ cp -f \
     ./trusted_shuffler/bin/trusted_shuffler_server
 docker build \
     --tag="${DOCKER_IMAGE}" \
-    ./experimental/trusted_shuffler
+    ./trusted_shuffler
