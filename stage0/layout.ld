@@ -130,7 +130,23 @@ SECTIONS {
              SEGMENT_USER |
              SEGMENT_WRITABLE |
              (0xF << (32 + 16)) | /* Segment Limit [19:16] */
-             0xFFFF); /* Segment Limit [15:0] */
+             0xFFFF)              /* Segment Limit [15:0] */
+        /* 32-bit code segment, although we only need it for a really short time (see Section 4.7.2):
+         *  - G=1 (limit field is in 4K blocks)
+         *  - D=1 (default operations are 32-bit)
+         *  - P=1 (present)
+         *  - S=1 (user)
+         *  - C/D=1 (code segment)
+         *  - limit = 0xFFFFF (in 4K blocks because G=1)
+         */
+        cs32 = . - ADDR(.rodata.gdt);
+        QUAD(SEGMENT_4K |
+             SEGMENT_DEFAULT_32BIT_OP |
+             SEGMENT_PRESENT |
+             SEGMENT_USER |
+             SEGMENT_CODE |
+             (0xF << (32 + 16)) | /* Segment Limit [19:16] */
+             0xFFFF)              /* Segment Limit [15:0] */
     } > bios
 
     .rodata.idt ALIGN(8) : {
