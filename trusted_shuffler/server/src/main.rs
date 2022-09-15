@@ -29,8 +29,8 @@ use tokio::time::Duration;
 #[derive(Parser, Clone)]
 #[clap(about = "Trusted Shuffler Server")]
 pub struct Opt {
-    #[structopt(long, help = "Anonymity value", default_value = "1")]
-    k: usize,
+    #[structopt(long, help = "Size of the batch", default_value = "1")]
+    batch_size: usize,
     #[structopt(
         long,
         help = "Address to listen on for the Trusted Shuffler server",
@@ -67,12 +67,15 @@ async fn main() -> anyhow::Result<()> {
     let timeout = opt.timeout_ms.map(Duration::from_millis);
 
     info!(
-        "Starting the Trusted Shuffler server at {:?} with k = {} and {:?}",
-        listen_address, opt.k, timeout
+        "Starting the Trusted Shuffler server at {:?} with batch_size = {} and Timeout {:?}",
+        listen_address, opt.batch_size, timeout
     );
 
-    let server =
-        Server::bind(&listen_address).serve(ServiceBuilder::new(opt.k, timeout, &opt.backend_url));
+    let server = Server::bind(&listen_address).serve(ServiceBuilder::new(
+        opt.batch_size,
+        timeout,
+        &opt.backend_url,
+    ));
     tokio::select!(
         result = server => {
             result.context("Couldn't run server")?;

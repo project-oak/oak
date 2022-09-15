@@ -8,12 +8,12 @@ FROM debian/snapshot@${debian_snapshot}
 COPY ./bin/trusted_shuffler_server /trusted_shuffler_server
 
 # Ignoring the linter to use JSON notation, because with JSON notation 
-# the environment variables $K, $BACKEND_URL, and $LISTEN_ADDRESS are not expanded,
+# the environment variables $BATCH_SIZE, $BACKEND_URL, and $LISTEN_ADDRESS are not expanded,
 # and environment variables are the way we give (and modify) the arguments
 # on Google Cloud Run.
 # 
 # hadolint ignore=DL3025
 ENTRYPOINT /trusted_shuffler_server \
     --backend-url="${BACKEND_URL}" \
-    --k="${K}" \
+    --batch-size="${BATCH_SIZE}" \
     --listen-address="${LISTEN_ADDRESS}"

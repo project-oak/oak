@@ -1,4 +1,4 @@
 #!/usr/bin/env bash
 
 RUST_LOG=debug cargo run --manifest-path=trusted_shuffler/server/Cargo.toml -- \
---k=1 --listen-address='[::]:8080' --backend-url='http://localhost:8888'
+--batch-size=1 --listen-address='[::]:8080' --backend-url='http://localhost:8888'
