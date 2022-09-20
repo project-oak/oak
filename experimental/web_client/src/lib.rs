@@ -25,7 +25,7 @@ use oak_functions_abi::Response;
 use oak_remote_attestation::handshaker::{AttestationBehavior, EmptyAttestationGenerator};
 use oak_remote_attestation_amd::PlaceholderAmdAttestationVerifier;
 use oak_remote_attestation_sessions::SessionId;
-use oak_remote_attestation_sessions_client::{GenericAttestationClient, UnaryClient};
+use oak_remote_attestation_sessions_client::{AttestationTransport, GenericAttestationClient};
 use std::rc::Rc;
 use wasm_bindgen::prelude::*;
 
@@ -39,7 +39,8 @@ mod proto {
     include!(concat!(env!("OUT_DIR"), "/oak.session.unary.v1.rs"));
 }
 
-/// gRPC-web implementation of a [`UnaryClient`].
+/// Implementation of the [`AttestationTransport`] trait using gRPC-web with
+/// unary messages.
 struct GrpcWebClient {
     uri: String,
 }
@@ -55,7 +56,7 @@ impl GrpcWebClient {
 // Not marked as [`Send`], as the underlying client uses JavaScript APIs for
 // networking, which are not [`Send`].
 #[async_trait(?Send)]
-impl UnaryClient for GrpcWebClient {
+impl AttestationTransport for GrpcWebClient {
     async fn message(&mut self, session_id: SessionId, body: Vec<u8>) -> anyhow::Result<Vec<u8>> {
         let reply = grpc_web::grpc_web_unary::<UnaryRequest, UnaryResponse>(
             &self.uri,
