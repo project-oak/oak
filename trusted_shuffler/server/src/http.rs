@@ -93,12 +93,10 @@ async fn hyper_to_trusted_shuffler_request(
         .context("Couldn't read request body")?;
     log::debug!("Body {:?}", body);
 
-    let hyper_headers = parts.headers;
+    let uri = parts.uri.clone();
 
     // Keep the minimal headers the backend requires to handle the request.
-    let mut minimal_headers = hyper::HeaderMap::new();
-
-    let minimal_keys = [
+    let minimal_keys = vec![
         header::CONTENT_TYPE, // for gRPC requests
         header::HeaderName::from_static(
             "grpc-accept-encoding", // for gRPC requests
@@ -106,17 +104,12 @@ async fn hyper_to_trusted_shuffler_request(
         header::TE, // for gRPC requests
         header::CONTENT_LENGTH,
     ];
-
-    for key in minimal_keys {
-        if let Some(value) = hyper_headers.get(&key) {
-            minimal_headers.insert(key, value.clone());
-        }
-    }
+    let minimal_headers = copy_selected_keys(parts.headers, minimal_keys);
 
     let trusted_shuffler_request = TrustedShufflerRequest {
         body: body.to_vec(),
         headers: minimal_headers,
-        uri: parts.uri.clone(),
+        uri,
     };
 
     Ok(trusted_shuffler_request)
@@ -160,11 +153,18 @@ async fn trusted_shuffler_to_hyper_response(
         .await
         .context("Could not build body from trailers")?;
 
-    Response::builder()
-        .header("content-type", "application/grpc")
+    let mut hyper_response = Response::builder()
         .version(http::Version::HTTP_2)
         .body(body)
-        .context("Failed to convert Trusted to Hyper Response.")
+        .context("Failed to convert Trusted to Hyper Response.")?;
+
+    let headers = hyper_response.headers_mut();
+
+    for (k, v) in trusted_shuffler_response.headers.iter() {
+        headers.insert(k, v.clone());
+    }
+
+    Ok(hyper_response)
 }
 
 // We keep only the body, i.e., data and trailers, from the `hyper::Response`.
@@ -172,7 +172,14 @@ async fn hyper_to_trusted_shuffler_response(
     hyper_response: Response<Body>,
 ) -> anyhow::Result<TrustedShufflerResponse> {
     log::info!("Response from backend: {:?}", hyper_response);
-    let mut body = hyper_response.into_body();
+    let (parts, mut body) = hyper_response.into_parts();
+
+    let minimal_keys = vec![
+        header::CONTENT_TYPE,
+        header::HeaderName::from_static("grpc-message"),
+        header::HeaderName::from_static("grpc-status"),
+    ];
+    let minimal_headers = copy_selected_keys(parts.headers, minimal_keys);
 
     let data = hyper::body::to_bytes(&mut body)
         .await
@@ -184,7 +191,11 @@ async fn hyper_to_trusted_shuffler_response(
         .context("Could not read trailers.")?
         .unwrap_or_default();
 
-    let trusted_shuffler_response = TrustedShufflerResponse { data, trailers };
+    let trusted_shuffler_response = TrustedShufflerResponse {
+        headers: minimal_headers,
+        data,
+        trailers,
+    };
 
     Ok(trusted_shuffler_response)
 }
@@ -266,4 +277,20 @@ impl<T> hyper::service::Service<T> for ServiceBuilder {
         let future = async move { Ok(Service { trusted_shuffler }) };
         Box::pin(future)
     }
+}
+
+// Helper function copying selected headers from a given header map to a new header map.
+fn copy_selected_keys(
+    header_map: hyper::HeaderMap,
+    keys_to_copy: Vec<hyper::header::HeaderName>,
+) -> hyper::HeaderMap {
+    let mut header_map_copy = hyper::HeaderMap::new();
+
+    for key in keys_to_copy {
+        if let Some(value) = header_map.get(&key) {
+            header_map_copy.insert(key, value.clone());
+        }
+    }
+
+    header_map_copy
 }
