@@ -242,6 +242,8 @@
 <span id="237">237</span>
 <span id="238">238</span>
 <span id="239">239</span>
+<span id="240">240</span>
+<span id="241">241</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2022 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -293,6 +295,7 @@
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">PartialEq</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">TrustedShufflerResponse</span> {
+    <span class="kw">pub</span> <span class="ident">headers</span>: <span class="ident">hyper::HeaderMap</span>,
     <span class="kw">pub</span> <span class="ident">data</span>: <span class="ident">hyper::body::Bytes</span>,
     <span class="kw">pub</span> <span class="ident">trailers</span>: <span class="ident">hyper::HeaderMap</span>,
 }
@@ -300,6 +303,7 @@
 <span class="kw">impl</span> <span class="ident">TrustedShufflerResponse</span> {
     <span class="kw">fn</span> <span class="ident">empty</span>() -&gt; <span class="ident">TrustedShufflerResponse</span> {
         <span class="ident">TrustedShufflerResponse</span> {
+            <span class="ident">headers</span>: <span class="ident">hyper::HeaderMap::new</span>(),
             <span class="ident">data</span>: <span class="ident">hyper::body::Bytes::new</span>(),
             <span class="ident">trailers</span>: <span class="ident">hyper::HeaderMap::new</span>(),
         }

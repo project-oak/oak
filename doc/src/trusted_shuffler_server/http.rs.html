@@ -272,6 +272,33 @@
 <span id="267">267</span>
 <span id="268">268</span>
 <span id="269">269</span>
+<span id="270">270</span>
+<span id="271">271</span>
+<span id="272">272</span>
+<span id="273">273</span>
+<span id="274">274</span>
+<span id="275">275</span>
+<span id="276">276</span>
+<span id="277">277</span>
+<span id="278">278</span>
+<span id="279">279</span>
+<span id="280">280</span>
+<span id="281">281</span>
+<span id="282">282</span>
+<span id="283">283</span>
+<span id="284">284</span>
+<span id="285">285</span>
+<span id="286">286</span>
+<span id="287">287</span>
+<span id="288">288</span>
+<span id="289">289</span>
+<span id="290">290</span>
+<span id="291">291</span>
+<span id="292">292</span>
+<span id="293">293</span>
+<span id="294">294</span>
+<span id="295">295</span>
+<span id="296">296</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2022 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -367,12 +394,10 @@
         .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t read request body&quot;</span>)<span class="question-mark">?</span>;
     <span class="macro">log::debug!</span>(<span class="string">&quot;Body {:?}&quot;</span>, <span class="ident">body</span>);
 
-    <span class="kw">let</span> <span class="ident">hyper_headers</span> <span class="op">=</span> <span class="ident">parts</span>.<span class="ident">headers</span>;
+    <span class="kw">let</span> <span class="ident">uri</span> <span class="op">=</span> <span class="ident">parts</span>.<span class="ident">uri</span>.<span class="ident">clone</span>();
 
     <span class="comment">// Keep the minimal headers the backend requires to handle the request.</span>
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">minimal_headers</span> <span class="op">=</span> <span class="ident">hyper::HeaderMap::new</span>();
-
-    <span class="kw">let</span> <span class="ident">minimal_keys</span> <span class="op">=</span> [
+    <span class="kw">let</span> <span class="ident">minimal_keys</span> <span class="op">=</span> <span class="macro">vec!</span>[
         <span class="ident">header::CONTENT_TYPE</span>, <span class="comment">// for gRPC requests</span>
         <span class="ident">header::HeaderName::from_static</span>(
             <span class="string">&quot;grpc-accept-encoding&quot;</span>, <span class="comment">// for gRPC requests</span>
@@ -380,17 +405,12 @@
         <span class="ident">header::TE</span>, <span class="comment">// for gRPC requests</span>
         <span class="ident">header::CONTENT_LENGTH</span>,
     ];
-
-    <span class="kw">for</span> <span class="ident">key</span> <span class="kw">in</span> <span class="ident">minimal_keys</span> {
-        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">value</span>) <span class="op">=</span> <span class="ident">hyper_headers</span>.<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">key</span>) {
-            <span class="ident">minimal_headers</span>.<span class="ident">insert</span>(<span class="ident">key</span>, <span class="ident">value</span>.<span class="ident">clone</span>());
-        }
-    }
+    <span class="kw">let</span> <span class="ident">minimal_headers</span> <span class="op">=</span> <span class="ident">copy_selected_keys</span>(<span class="ident">parts</span>.<span class="ident">headers</span>, <span class="ident">minimal_keys</span>);
 
     <span class="kw">let</span> <span class="ident">trusted_shuffler_request</span> <span class="op">=</span> <span class="ident">TrustedShufflerRequest</span> {
         <span class="ident">body</span>: <span class="ident">body</span>.<span class="ident">to_vec</span>(),
         <span class="ident">headers</span>: <span class="ident">minimal_headers</span>,
-        <span class="ident">uri</span>: <span class="ident">parts</span>.<span class="ident">uri</span>.<span class="ident">clone</span>(),
+        <span class="ident">uri</span>,
     };
 
     <span class="prelude-val">Ok</span>(<span class="ident">trusted_shuffler_request</span>)
@@ -434,11 +454,18 @@
         .<span class="kw">await</span>
         .<span class="ident">context</span>(<span class="string">&quot;Could not build body from trailers&quot;</span>)<span class="question-mark">?</span>;
 
-    <span class="ident">Response::builder</span>()
-        .<span class="ident">header</span>(<span class="string">&quot;content-type&quot;</span>, <span class="string">&quot;application/grpc&quot;</span>)
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">hyper_response</span> <span class="op">=</span> <span class="ident">Response::builder</span>()
         .<span class="ident">version</span>(<span class="ident">http::Version::HTTP_2</span>)
         .<span class="ident">body</span>(<span class="ident">body</span>)
-        .<span class="ident">context</span>(<span class="string">&quot;Failed to convert Trusted to Hyper Response.&quot;</span>)
+        .<span class="ident">context</span>(<span class="string">&quot;Failed to convert Trusted to Hyper Response.&quot;</span>)<span class="question-mark">?</span>;
+
+    <span class="kw">let</span> <span class="ident">headers</span> <span class="op">=</span> <span class="ident">hyper_response</span>.<span class="ident">headers_mut</span>();
+
+    <span class="kw">for</span> (<span class="ident">k</span>, <span class="ident">v</span>) <span class="kw">in</span> <span class="ident">trusted_shuffler_response</span>.<span class="ident">headers</span>.<span class="ident">iter</span>() {
+        <span class="ident">headers</span>.<span class="ident">insert</span>(<span class="ident">k</span>, <span class="ident">v</span>.<span class="ident">clone</span>());
+    }
+
+    <span class="prelude-val">Ok</span>(<span class="ident">hyper_response</span>)
 }
 
 <span class="comment">// We keep only the body, i.e., data and trailers, from the `hyper::Response`.</span>
@@ -446,7 +473,14 @@
     <span class="ident">hyper_response</span>: <span class="ident">Response</span><span class="op">&lt;</span><span class="ident">Body</span><span class="op">&gt;</span>,
 ) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">TrustedShufflerResponse</span><span class="op">&gt;</span> {
     <span class="macro">log::info!</span>(<span class="string">&quot;Response from backend: {:?}&quot;</span>, <span class="ident">hyper_response</span>);
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">body</span> <span class="op">=</span> <span class="ident">hyper_response</span>.<span class="ident">into_body</span>();
+    <span class="kw">let</span> (<span class="ident">parts</span>, <span class="kw-2">mut</span> <span class="ident">body</span>) <span class="op">=</span> <span class="ident">hyper_response</span>.<span class="ident">into_parts</span>();
+
+    <span class="kw">let</span> <span class="ident">minimal_keys</span> <span class="op">=</span> <span class="macro">vec!</span>[
+        <span class="ident">header::CONTENT_TYPE</span>,
+        <span class="ident">header::HeaderName::from_static</span>(<span class="string">&quot;grpc-message&quot;</span>),
+        <span class="ident">header::HeaderName::from_static</span>(<span class="string">&quot;grpc-status&quot;</span>),
+    ];
+    <span class="kw">let</span> <span class="ident">minimal_headers</span> <span class="op">=</span> <span class="ident">copy_selected_keys</span>(<span class="ident">parts</span>.<span class="ident">headers</span>, <span class="ident">minimal_keys</span>);
 
     <span class="kw">let</span> <span class="ident">data</span> <span class="op">=</span> <span class="ident">hyper::body::to_bytes</span>(<span class="kw-2">&amp;mut</span> <span class="ident">body</span>)
         .<span class="kw">await</span>
@@ -458,7 +492,11 @@
         .<span class="ident">context</span>(<span class="string">&quot;Could not read trailers.&quot;</span>)<span class="question-mark">?</span>
         .<span class="ident">unwrap_or_default</span>();
 
-    <span class="kw">let</span> <span class="ident">trusted_shuffler_response</span> <span class="op">=</span> <span class="ident">TrustedShufflerResponse</span> { <span class="ident">data</span>, <span class="ident">trailers</span> };
+    <span class="kw">let</span> <span class="ident">trusted_shuffler_response</span> <span class="op">=</span> <span class="ident">TrustedShufflerResponse</span> {
+        <span class="ident">headers</span>: <span class="ident">minimal_headers</span>,
+        <span class="ident">data</span>,
+        <span class="ident">trailers</span>,
+    };
 
     <span class="prelude-val">Ok</span>(<span class="ident">trusted_shuffler_response</span>)
 }
@@ -540,6 +578,22 @@
         <span class="kw">let</span> <span class="ident">future</span> <span class="op">=</span> <span class="kw">async</span> <span class="kw">move</span> { <span class="prelude-val">Ok</span>(<span class="ident">Service</span> { <span class="ident">trusted_shuffler</span> }) };
         <span class="ident">Box::pin</span>(<span class="ident">future</span>)
     }
+}
+
+<span class="comment">// Helper function copying selected headers from a given header map to a new header map.</span>
+<span class="kw">fn</span> <span class="ident">copy_selected_keys</span>(
+    <span class="ident">header_map</span>: <span class="ident">hyper::HeaderMap</span>,
+    <span class="ident">keys_to_copy</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">hyper::header::HeaderName</span><span class="op">&gt;</span>,
+) -&gt; <span class="ident">hyper::HeaderMap</span> {
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">header_map_copy</span> <span class="op">=</span> <span class="ident">hyper::HeaderMap::new</span>();
+
+    <span class="kw">for</span> <span class="ident">key</span> <span class="kw">in</span> <span class="ident">keys_to_copy</span> {
+        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">value</span>) <span class="op">=</span> <span class="ident">header_map</span>.<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">key</span>) {
+            <span class="ident">header_map_copy</span>.<span class="ident">insert</span>(<span class="ident">key</span>, <span class="ident">value</span>.<span class="ident">clone</span>());
+        }
+    }
+
+    <span class="ident">header_map_copy</span>
 }
 </code></pre></div>
 </section><section id="search" class="content hidden"></section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="trusted_shuffler_server" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.62.0-nightly (de1bc0008 2022-04-21)" ></div>
