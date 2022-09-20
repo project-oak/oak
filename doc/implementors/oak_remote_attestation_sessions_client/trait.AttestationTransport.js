@@ -1,0 +1,3 @@
+(function() {var implementors = {};
+implementors["grpc_unary_attestation"] = [{"text":"impl <a class=\"trait\" href=\"oak_remote_attestation_sessions_client/trait.AttestationTransport.html\" title=\"trait oak_remote_attestation_sessions_client::AttestationTransport\">AttestationTransport</a> for <a class=\"struct\" href=\"grpc_unary_attestation/client/struct.UnaryGrpcClient.html\" title=\"struct grpc_unary_attestation::client::UnaryGrpcClient\">UnaryGrpcClient</a>","synthetic":false,"types":["grpc_unary_attestation::client::UnaryGrpcClient"]}];
+if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

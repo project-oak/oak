@@ -156,6 +156,7 @@
 <span id="151">151</span>
 <span id="152">152</span>
 <span id="153">153</span>
+<span id="154">154</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2021 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -253,6 +254,7 @@
         .<span class="ident">add_service</span>(<span class="ident">UnarySessionServer::new</span>(<span class="ident">AttestationServer::create</span>(
             <span class="ident">request_handler</span>,
             <span class="ident">ErrorLogger</span>,
+            <span class="ident">oak_remote_attestation_amd::PlaceholderAmdAttestationGenerator</span>,
         )<span class="question-mark">?</span>))
         .<span class="ident">serve</span>(<span class="ident">address</span>)
         .<span class="kw">await</span>

@@ -131,6 +131,7 @@
 <span id="126">126</span>
 <span id="127">127</span>
 <span id="128">128</span>
+<span id="129">129</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2021 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -216,6 +217,7 @@
             <span class="ident">grpc_unary_attestation::server::AttestationServer::create</span>(
                 <span class="ident">request_handler</span>,
                 <span class="ident">ErrorLogger</span> { <span class="ident">logger</span> },
+                <span class="ident">oak_remote_attestation_amd::PlaceholderAmdAttestationGenerator</span>,
             )
             .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t create remote attestation server&quot;</span>)<span class="question-mark">?</span>,
         );
