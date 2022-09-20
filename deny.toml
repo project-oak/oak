@@ -11,8 +11,6 @@ unmaintained = "deny"
 yanked = "deny"
 notice = "deny"
 ignore = [
-  # TODO(#3131): Remove when no longer required.
-  "RUSTSEC-2020-0159",
   # TODO(#2421): Remove when no longer required.
   "RUSTSEC-2021-0127",
   # We rely on flatbuffers, which generates potentially unsafe code via "safe" APIs.
@@ -20,12 +18,17 @@ ignore = [
   "RUSTSEC-2021-0122",
   # TODO(#3179): Remove when mapr is maintained again or no longer a dependency.
   "RUSTSEC-2022-0053",
+  # TODO(#3202): Remove when Tonic depends on a newer version of Axum.
+  "RUSTSEC-2022-0055"
 ]
 
-# Deny multiple versions unless explicitly skipped.
 [bans]
 multiple-versions = "allow"
 wildcards = "allow"
+
+# Allow git repositories.
+[sources]
+unknown-git = "allow"
 
 # List of allowed licenses.
 # For more detailed information see http://go/thirdpartylicenses.

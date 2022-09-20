@@ -90,3 +90,21 @@ java_test(
         ":util",
     ],
 )
+
+java_library(
+    name = "rekor",
+    srcs = glob(["src/main/java/com/google/oak/rekor/*.java"]),
+    deps = [
+        "@com_google_code_gson_gson",
+    ],
+)
+
+java_test(
+    name = "RekorLogEntryTest",
+    srcs = ["src/test/java/com/google/oak/rekor/RekorLogEntryTest.java"],
+    data = ["//oak_functions/client/testdata:logentry.json"],
+    test_class = "com.google.oak.rekor.RekorLogEntryTest",
+    deps = [
+        ":rekor",
+    ],
+)

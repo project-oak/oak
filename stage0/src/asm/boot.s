@@ -15,8 +15,38 @@ _start :
     mov $idt_desc_offset, %si
     lidtl %cs:(%si)
 
+    # Enter protected mode, but don't enable paging.
+    mov %cr0, %eax
+    or $1, %eax
+    mov %eax, %cr0
+    ljmpl $cs32, $_protected_mode_start
+
+.align 16
+.code32
+_protected_mode_start:
+    # Switch to a flat 32-bit data segment, giving us access to all 4G of memory.
+    mov $ds, %eax
+    mov %eax, %ds
+
+    # Determine if we're running under SEV
+    mov $0xc0010131, %ecx     # SEV_STATUS MSR
+    rdmsr                     # EDX:EAX <- MSR[ECX]
+    and $3, %eax              # eax &= 0b11;
+    test %eax, %eax           # is it zero?
+    je no_encryption          # if yes, jump to no_encryption
+    # Memory encryption enabled: set encrypted bits in the page tables.
+    mov $pml4_addr, %eax
+    orl $0x80000, 4(%eax)     # PML4[0] |= (1 << 51)
+    mov $pdpt_addr, %eax
+    orl $0x80000, 4(%eax)     # PDPT[0] |= (1 << 51)
+    orl $0x80000, 4092(%eax)  # PDPT[511] |= (1 << 51)
+    mov $pd_addr, %eax
+    orl $0x80000, 4(%eax)     # PD[0] |= (1 << 51)
+    orl $0x80000, 4092(%eax)  # PD[511] |= (1 << 51)
+no_encryption:
+
     # Load PML4
-    mov $pml4_offset, %eax
+    mov $pml4_addr, %eax
     mov %eax, %cr3
 
     # PAE + PGE

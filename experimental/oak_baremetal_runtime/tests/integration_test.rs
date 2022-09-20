@@ -29,7 +29,7 @@ use oak_remote_attestation::handshaker::{
 use oak_remote_attestation_amd::{
     PlaceholderAmdAttestationGenerator, PlaceholderAmdAttestationVerifier,
 };
-use oak_remote_attestation_sessions_client::{GenericAttestationClient, UnaryClient};
+use oak_remote_attestation_sessions_client::{AttestationTransport, GenericAttestationClient};
 
 mod schema {
     #![allow(clippy::derivable_impls, clippy::needless_borrow)]
@@ -57,7 +57,7 @@ struct TestUserClient {
 }
 
 #[async_trait::async_trait(?Send)]
-impl UnaryClient for TestUserClient {
+impl AttestationTransport for TestUserClient {
     async fn message(
         &mut self,
         session_id: oak_remote_attestation_sessions::SessionId,

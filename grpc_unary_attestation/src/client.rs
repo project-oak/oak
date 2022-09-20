@@ -18,7 +18,7 @@ use crate::proto::{unary_session_client::UnarySessionClient, UnaryRequest};
 use anyhow::Context;
 use async_trait::async_trait;
 use oak_remote_attestation_sessions::SessionId;
-use oak_remote_attestation_sessions_client::UnaryClient;
+use oak_remote_attestation_sessions_client::AttestationTransport;
 use tonic::transport::Channel;
 
 /// gRPC implementation of of [`UnaryClient`].
@@ -40,7 +40,7 @@ impl GrpcClient {
 // Async trait requires the definition and all implementations to be marked as
 // optionally [`Send`] if one implementation is not.
 #[async_trait(?Send)]
-impl UnaryClient for GrpcClient {
+impl AttestationTransport for GrpcClient {
     async fn message(&mut self, session_id: SessionId, body: Vec<u8>) -> anyhow::Result<Vec<u8>> {
         let response = self
             .inner

@@ -490,7 +490,7 @@ pub fn run_trusted_shuffler(flags: Vec<&str>) -> Step {
         "cargo",
         spread![
             "run",
-            "--manifest-path=./experimental/trusted_shuffler/backend/Cargo.toml",
+            "--manifest-path=trusted_shuffler/backend/Cargo.toml",
             "--",
             "--listen-address=[::]:8888",
             ...flags
@@ -502,9 +502,9 @@ pub fn run_trusted_shuffler(flags: Vec<&str>) -> Step {
         "cargo",
         spread![
             "run",
-            "--manifest-path=experimental/trusted_shuffler/server/Cargo.toml",
+            "--manifest-path=trusted_shuffler/server/Cargo.toml",
             "--",
-            "--k=1",
+            "--batch-size=1",
             "--listen-address=[::]:8080",
             "--backend-url=http://localhost:8888",
         ],
@@ -515,7 +515,7 @@ pub fn run_trusted_shuffler(flags: Vec<&str>) -> Step {
         "cargo",
         spread![
             "run",
-            "--manifest-path=experimental/trusted_shuffler/client/Cargo.toml",
+            "--manifest-path=trusted_shuffler/client/Cargo.toml",
             "--",
             "--server-url=http://localhost:8080",
             "--qps=1",

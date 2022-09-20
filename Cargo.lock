@@ -1542,7 +1542,8 @@ checksum = "0ce7134b9999ecaf8bcd65542e436736ef32ddca1b3e06094cb6ec5755203b80"
 [[package]]
 name = "flatbuffers"
 version = "2.1.2"
-source = "git+https://github.com/jul-sh/flatbuffers.git?rev=a07ddee936737da89aeb5a496f9742a805537188#a07ddee936737da89aeb5a496f9742a805537188"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "86b428b715fdbdd1c364b84573b5fdc0f84f8e423661b9f398735278bc7f2b6a"
 dependencies = [
  "bitflags",
  "core2",
@@ -2347,9 +2348,9 @@ checksum = "0717cef1bc8b636c6e1c1bbdefc09e6322da8a9321966e8928ef80d20f7f770f"
 
 [[package]]
 name = "linked_list_allocator"
-version = "0.9.1"
+version = "0.10.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "549ce1740e46b291953c4340adcd74c59bcf4308f4cac050fd33ba91b7168f4a"
+checksum = "2e8da0e6283aace40e4e0395fe5ad7a147fac6ff47bda1f038b5044fb11683c2"
 dependencies = [
  "spinning_top",
 ]
@@ -2973,6 +2974,19 @@ version = "0.1.0"
 dependencies = [
  "bitflags",
  "x86_64",
+]
+
+[[package]]
+name = "oak_echo_runtime"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "flatbuffers",
+ "hashbrown 0.11.2",
+ "log",
+ "oak_idl",
+ "oak_idl_gen_services",
+ "oak_idl_gen_structs",
 ]
 
 [[package]]

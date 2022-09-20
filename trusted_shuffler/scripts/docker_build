@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+
+# Build the Docker image running Trusted Shuffler for Google Cloud.
+# Note, the script cannot be run within a Docker image.
+
+readonly SCRIPTS_DIR="$(dirname "$0")"
+# shellcheck source=scripts/common
+source "$SCRIPTS_DIR/common"
+
+# Use Docker builder image to build the Trusted Shuffler binary.
+./scripts/docker_run cargo build \
+    --manifest-path=trusted_shuffler/server/Cargo.toml \
+    --target=x86_64-unknown-linux-musl \
+    --release
+
+# Copy the binary into the `bin` directory because Docker cannot use files that
+# are outside of the Docker context directory.
+mkdir -p ./trusted_shuffler/bin
+cp -f \
+    ./target/x86_64-unknown-linux-musl/release/trusted_shuffler_server \
+    ./trusted_shuffler/bin/trusted_shuffler_server
+docker build \
+    --tag="${DOCKER_IMAGE}" \
+    ./trusted_shuffler

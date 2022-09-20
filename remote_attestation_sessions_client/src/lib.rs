@@ -21,23 +21,23 @@ use oak_remote_attestation::handshaker::{
 };
 use oak_remote_attestation_sessions::SessionId;
 
-/// Abstract version of networking stub.
+/// Abstract interface for networking using a request/response pattern.
 // Async trait requires the definition and all implementations to be marked as
 // optionally [`Send`] if one implementation is not.
 #[async_trait(?Send)]
-pub trait UnaryClient {
-    /// Constructs a requests, sends it over the network, and returns the result.
+pub trait AttestationTransport {
+    /// Constructs a requests, sends it over the network, and returns the resulting response.
     async fn message(&mut self, session_id: SessionId, body: Vec<u8>) -> anyhow::Result<Vec<u8>>;
 }
 
 /// gRPC Attestation Service client implementation.
-pub struct GenericAttestationClient<T: UnaryClient> {
+pub struct GenericAttestationClient<T: AttestationTransport> {
     session_id: SessionId,
     encryptor: Encryptor,
     client: T,
 }
 
-impl<T: UnaryClient> GenericAttestationClient<T> {
+impl<T: AttestationTransport> GenericAttestationClient<T> {
     pub async fn create<G: AttestationGenerator, V: AttestationVerifier>(
         mut client: T,
         attestation_behavior: AttestationBehavior<G, V>,

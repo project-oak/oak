@@ -18,10 +18,11 @@
 #![no_main]
 
 use core::{mem::MaybeUninit, panic::PanicInfo};
-use sev_guest::{cpuid::CpuidPage, secrets::SecretsPage};
+use sev_guest::{cpuid::CpuidPage, msr, secrets::SecretsPage};
 use x86_64::instructions::{hlt, interrupts::int3};
 
 mod asm;
+mod ghcb;
 mod serial;
 
 #[link_section = ".cpuid"]
@@ -48,11 +49,21 @@ pub extern "C" fn rust64_start() -> ! {
 
 #[panic_handler]
 fn panic(_info: &PanicInfo) -> ! {
-    // Trigger a breakpoint exception. As we don't have a #BP handler, this will triple fault and
-    // terminate the program.
-    int3();
+    if msr::get_sev_status()
+        .unwrap()
+        .contains(msr::SevStatus::SEV_ES_ENABLED)
+    {
+        msr::request_termination(msr::TerminationRequest {
+            reason: msr::TerminationReason::General,
+        });
+    } else {
+        // Trigger a breakpoint exception. As we don't have a #BP handler, this will triple fault
+        // and terminate the program.
+        int3();
 
-    loop {
-        hlt();
+        // ..but if we're still here, just go in an infinite loop.
+        loop {
+            hlt();
+        }
     }
 }
