@@ -26,7 +26,7 @@ package(
 
 proto_library(
     name = "server_proto",
-    srcs = ["unary_server.proto"],
+    srcs = ["attestation.proto"],
     deps = ["@com_google_protobuf//:empty_proto"],
 )
 

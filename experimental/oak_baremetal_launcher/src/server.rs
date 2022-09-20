@@ -21,15 +21,15 @@ use std::net::SocketAddr;
 use tonic::{transport::Server, Request, Response};
 
 pub mod proto {
-    tonic::include_proto!("oak.session.unary.v1");
+    tonic::include_proto!("oak.session.v1");
 }
 
 use proto::{
     unary_session_server::{UnarySession, UnarySessionServer},
-    PublicKeyInfo, UnaryRequest, UnaryResponse,
+    AttestationRequest, AttestationResponse, PublicKeyInfo,
 };
 
-fn encode_request(unary_request: UnaryRequest) -> Result<Vec<u8>, oak_idl::Status> {
+fn encode_request(unary_request: AttestationRequest) -> Result<Vec<u8>, oak_idl::Status> {
     let mut session_id: SessionId = [0; SESSION_ID_LENGTH];
     if unary_request.session_id.len() != SESSION_ID_LENGTH {
         return Err(oak_idl::Status::new_with_message(
@@ -64,7 +64,7 @@ fn encode_request(unary_request: UnaryRequest) -> Result<Vec<u8>, oak_idl::Statu
     Ok(owned_request_flatbuffer.into_vec())
 }
 
-fn decode_response(encoded_response: Vec<u8>) -> Result<UnaryResponse, tonic::Status> {
+fn decode_response(encoded_response: Vec<u8>) -> Result<AttestationResponse, tonic::Status> {
     let response =
         oak_idl::utils::OwnedFlatbuffer::<schema::UserRequestResponse>::from_vec(encoded_response)
             .map_err(|err| tonic::Status::internal(err.to_string()))?;
@@ -74,7 +74,7 @@ fn decode_response(encoded_response: Vec<u8>) -> Result<UnaryResponse, tonic::St
         .body()
         .ok_or_else(|| tonic::Status::internal(""))?;
 
-    Ok(UnaryResponse {
+    Ok(AttestationResponse {
         body: response_body.to_vec(),
     })
 }
@@ -89,8 +89,8 @@ pub struct SessionProxy {
 impl UnarySession for SessionProxy {
     async fn message(
         &self,
-        request: Request<UnaryRequest>,
-    ) -> Result<Response<UnaryResponse>, tonic::Status> {
+        request: Request<AttestationRequest>,
+    ) -> Result<Response<AttestationResponse>, tonic::Status> {
         let request = request.into_inner();
         let encoded_request = encode_request(request)
             .map_err(|err| tonic::Status::invalid_argument(format!("{:?}", err)))?;

@@ -18,7 +18,7 @@
 
 extern crate web_sys;
 
-use crate::proto::{UnaryRequest, UnaryResponse};
+use crate::proto::{AttestationRequest, AttestationResponse};
 use anyhow::Context;
 use async_trait::async_trait;
 use oak_functions_abi::Response;
@@ -36,7 +36,7 @@ mod tests;
 
 mod proto {
     #![allow(clippy::return_self_not_must_use)]
-    include!(concat!(env!("OUT_DIR"), "/oak.session.unary.v1.rs"));
+    include!(concat!(env!("OUT_DIR"), "/oak.session.v1.rs"));
 }
 
 /// Implementation of the [`AttestationTransport`] trait using gRPC-web with
@@ -48,7 +48,7 @@ struct GrpcWebClient {
 impl GrpcWebClient {
     pub fn create(uri: &str) -> Self {
         Self {
-            uri: format!("{}/oak.session.unary.v1.UnarySession/Message", uri),
+            uri: format!("{}/oak.session.v1.UnarySession/Message", uri),
         }
     }
 }
@@ -58,9 +58,9 @@ impl GrpcWebClient {
 #[async_trait(?Send)]
 impl AttestationTransport for GrpcWebClient {
     async fn message(&mut self, session_id: SessionId, body: Vec<u8>) -> anyhow::Result<Vec<u8>> {
-        let reply = grpc_web::grpc_web_unary::<UnaryRequest, UnaryResponse>(
+        let reply = grpc_web::grpc_web_unary::<AttestationRequest, AttestationResponse>(
             &self.uri,
-            UnaryRequest {
+            AttestationRequest {
                 session_id: session_id.to_vec(),
                 body,
             },

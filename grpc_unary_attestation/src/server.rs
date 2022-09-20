@@ -18,7 +18,7 @@
 //! protocol.
 
 use crate::proto::{
-    unary_session_server::UnarySession, PublicKeyInfo, UnaryRequest, UnaryResponse,
+    unary_session_server::UnarySession, AttestationRequest, AttestationResponse, PublicKeyInfo,
 };
 use anyhow::Context;
 use oak_remote_attestation::{
@@ -92,8 +92,8 @@ where
 {
     async fn message(
         &self,
-        request: tonic::Request<UnaryRequest>,
-    ) -> anyhow::Result<tonic::Response<UnaryResponse>, tonic::Status> {
+        request: tonic::Request<AttestationRequest>,
+    ) -> anyhow::Result<tonic::Response<AttestationResponse>, tonic::Status> {
         let error_logger = self.error_logger.clone();
         let request_inner = request.into_inner();
         let session_id: SessionId = request_inner.session_id.try_into().map_err(|error| {
@@ -158,7 +158,7 @@ where
             .lock()
             .expect("Couldn't lock session_state mutex")
             .put_session_state(session_id, session_state);
-        Ok(tonic::Response::new(UnaryResponse {
+        Ok(tonic::Response::new(AttestationResponse {
             body: response_body,
         }))
     }

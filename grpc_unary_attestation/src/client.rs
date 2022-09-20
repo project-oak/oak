@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-use crate::proto::{unary_session_client::UnarySessionClient, UnaryRequest};
+use crate::proto::{unary_session_client::UnarySessionClient, AttestationRequest};
 use anyhow::Context;
 use async_trait::async_trait;
 use oak_remote_attestation_sessions::SessionId;
@@ -44,7 +44,7 @@ impl AttestationTransport for UnaryGrpcClient {
     async fn message(&mut self, session_id: SessionId, body: Vec<u8>) -> anyhow::Result<Vec<u8>> {
         let response = self
             .inner
-            .message(UnaryRequest {
+            .message(AttestationRequest {
                 body,
                 session_id: session_id.to_vec(),
             })

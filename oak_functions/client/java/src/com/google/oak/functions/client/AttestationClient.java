@@ -43,9 +43,9 @@ import java.util.function.Predicate;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import oak.functions.abi.ConfigurationReport;
-import oak.session.unary.v1.UnaryRequest;
-import oak.session.unary.v1.UnaryResponse;
-import oak.session.unary.v1.UnarySessionGrpc;
+import oak.session.v1.AttestationRequest;
+import oak.session.v1.AttestationResponse;
+import oak.session.v1.UnarySessionGrpc;
 
 /** Client with remote attestation support for sending requests to an Oak Functions application. */
 public class AttestationClient {
@@ -204,20 +204,20 @@ public class AttestationClient {
 
     // Send client hello message.
     byte[] clientHello = handshaker.createClientHello();
-    UnaryRequest clientHelloRequest = UnaryRequest.newBuilder()
+    AttestationRequest clientHelloRequest = AttestationRequest.newBuilder()
                                           .setBody(ByteString.copyFrom(clientHello))
                                           .setSessionId(sessionId)
                                           .build();
 
     // Receive server attestation identity containing server's ephemeral public key.
-    UnaryResponse serverIdentityResponse = stub.message(clientHelloRequest);
+    AttestationResponse serverIdentityResponse = stub.message(clientHelloRequest);
     byte[] serverIdentity = serverIdentityResponse.getBody().toByteArray();
 
     // Remotely attest the server and create:
     // - Client attestation identity containing client's ephemeral public key
     // - Encryptor used for decrypting/encrypting messages between client and server
     byte[] clientIdentity = handshaker.processServerIdentity(serverIdentity);
-    UnaryRequest clientIdentityRequest = UnaryRequest.newBuilder()
+    AttestationRequest clientIdentityRequest = AttestationRequest.newBuilder()
                                              .setBody(ByteString.copyFrom(clientIdentity))
                                              .setSessionId(sessionId)
                                              .build();
@@ -241,12 +241,12 @@ public class AttestationClient {
     }
 
     byte[] encryptedData = encryptor.encrypt(body);
-    UnaryRequest unaryRequest = UnaryRequest.newBuilder()
+    AttestationRequest unaryRequest = AttestationRequest.newBuilder()
                                     .setBody(ByteString.copyFrom(encryptedData))
                                     .setSessionId(sessionId)
                                     .build();
 
-    UnaryResponse streamingResponse = stub.message(unaryRequest);
+    AttestationResponse streamingResponse = stub.message(unaryRequest);
 
     byte[] responsePayload = streamingResponse.getBody().toByteArray();
     byte[] decryptedResponse = encryptor.decrypt(responsePayload);
