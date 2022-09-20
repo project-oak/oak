@@ -49,6 +49,7 @@ impl TrustedShufflerRequest {
 
 #[derive(Debug, PartialEq)]
 pub struct TrustedShufflerResponse {
+    pub headers: hyper::HeaderMap,
     pub data: hyper::body::Bytes,
     pub trailers: hyper::HeaderMap,
 }
@@ -56,6 +57,7 @@ pub struct TrustedShufflerResponse {
 impl TrustedShufflerResponse {
     fn empty() -> TrustedShufflerResponse {
         TrustedShufflerResponse {
+            headers: hyper::HeaderMap::new(),
             data: hyper::body::Bytes::new(),
             trailers: hyper::HeaderMap::new(),
         }
