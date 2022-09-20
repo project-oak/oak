@@ -9,10 +9,7 @@ updates:
       interval: 'daily'
     # We do not set an explicit reviewer, as that is already automatically assigned via CODEOWNERS.
     # reviewers
-    ignore:
-      - dependency-name: 'linked_list_allocator'
-        # Ignore buggy version of this dep. Ref: https://github.com/project-oak/oak/pull/3019
-        versions: ['0.10.0']
+
     # Explicitly trigger kokoro checks. They do not automatically run for
     # external users.
     labels:
@@ -22,8 +19,5 @@ updates:
     directory: '/experimental/oak_baremetal_app_crosvm'
     schedule:
       interval: 'daily'
-    ignore:
-      - dependency-name: 'linked_list_allocator'
-        versions: ['0.10.0']
     labels:
       - 'kokoro:run'
