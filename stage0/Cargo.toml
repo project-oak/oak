@@ -10,7 +10,6 @@ resolver = "2"
 members = ["."]
 
 [dependencies]
-sev_guest = { path = "../experimental/sev_guest" }
 x86_64 = "*"
 
 [[bin]]

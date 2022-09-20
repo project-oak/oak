@@ -18,7 +18,6 @@
 #![no_main]
 
 use core::{arch::asm, ffi::c_void, panic::PanicInfo};
-use sev_guest::msr::{get_sev_status, SevStatus};
 use x86_64::{
     instructions::{hlt, interrupts::int3, segmentation::Segment},
     registers::{
@@ -111,8 +110,13 @@ pub unsafe fn jump_to_kernel(entry_point: VirtAddr) -> ! {
     );
 }
 
+/// Entry point for the Rust code in the stage0 BIOS.
+///
+/// # Arguments
+///
+/// * `encrypted` - If not zero, the `encrypted`-th bit will be set in the page tables.
 #[no_mangle]
-pub extern "C" fn rust64_start() -> ! {
+pub extern "C" fn rust64_start(encrypted: u64) -> ! {
     /* Set up the machine according to the 64-bit Linux boot protocol.
      * See https://www.kernel.org/doc/html/latest/x86/boot.html#id1 for the particular requirements.
      */
@@ -136,17 +140,12 @@ pub extern "C" fn rust64_start() -> ! {
     create_idt(idt);
     idt.load();
 
+    // We assume 0-th bit is never the encrypted bit.
+    let encrypted = if encrypted > 0 { 1 << encrypted } else { 0 };
+
     let pml4 = unsafe { &mut *(BOOT_PML4_ADDR.as_u64() as *mut PageTable) };
     let pdpt = unsafe { &mut *(BOOT_PDPT_ADDR.as_u64() as *mut PageTable) };
     let pd = unsafe { &mut *(BOOT_PD_ADDR.as_u64() as *mut PageTable) };
-    let sev_status = get_sev_status().unwrap();
-    let encrypted: u64 = if sev_status.contains(SevStatus::SEV_ES_ENABLED)
-        || sev_status.contains(SevStatus::SEV_ENABLED)
-    {
-        1 << 51
-    } else {
-        0
-    };
     create_page_tables(pml4, pdpt, pd, encrypted);
     /* We need to do some trickery here. All of the stage0 code is somewhere within [4G-2M; 4G).
      * Thus, let's keep our own last PD, so that we can continue executing after reloading the

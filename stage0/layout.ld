@@ -24,7 +24,7 @@ MEMORY {
 ENTRY(reset_vector)
 
 /* Segment descriptor flags.
- * See Sections 4.7 and  4.8 in AMD64 Architecture Programmer's Manual, Volume 2 for more details.
+ * See Sections 4.7 and 4.8 in AMD64 Architecture Programmer's Manual, Volume 2 for more details.
  */
 HIDDEN(SEGMENT_4K = 1 << (32 + 23)); /* G */
 HIDDEN(SEGMENT_DEFAULT_32BIT_OP = 1 << (32 + 22)); /* D/B */
@@ -39,6 +39,10 @@ HIDDEN(SEGMENT_CONFORMING = 1 << (32 + 10));
 HIDDEN(PAGE_PRESENT = 1 << 0);
 HIDDEN(PAGE_WRITABLE = 1 << 1);
 HIDDEN(PAGE_SIZE = 1 << 7);
+
+/* Gate descriptor flags */
+HIDDEN(DESCRIPTOR_PRESENT = 1 << 47);
+HIDDEN(DESCRIPTOR_INTERRUPT_GATE = 0xE << 40);
 
 SECTIONS {
     . = ORIGIN(bios);
@@ -149,8 +153,46 @@ SECTIONS {
              0xFFFF)              /* Segment Limit [15:0] */
     } > bios
 
+    /* 32-bit interrupt table */
+    /* See Section 8.2 in AMD64 Architecture Programmer's Manual, Volume 2 for more details. */
     .rodata.idt ALIGN(8) : {
-        QUAD(0)
+        QUAD(0) /*  0 - #DE */
+        QUAD(0) /*  1 - #DB */
+        QUAD(0) /*  2 - #NMI */
+        QUAD(0) /*  3 - #BP */
+        QUAD(0) /*  4 - #OF */
+        QUAD(0) /*  5 - #BR */
+        QUAD(0) /*  6 - #UD */
+        QUAD(0) /*  7 - #NM */
+        QUAD(0) /*  8 - #DF */
+        QUAD(0) /*  9 - reserved */
+        QUAD(0) /* 10 - #TS */
+        QUAD(0) /* 11 - #NP */
+        QUAD(0) /* 12 - #SS */
+        QUAD(0) /* 13 - #GP */
+        QUAD(0) /* 14 - #PF */
+        QUAD(0) /* 15 - reserved */
+        QUAD(0) /* 16 - #MF */
+        QUAD(0) /* 17 - #AC */
+        QUAD(0) /* 18 - #MC */
+        QUAD(0) /* 19 - #XF */
+        QUAD(0) /* 20 - reserved */
+        QUAD(0) /* 21 - #CP */
+        QUAD(0) /* 22 - reserved */
+        QUAD(0) /* 23 - reserved */
+        QUAD(0) /* 24 - reserved */
+        QUAD(0) /* 25 - reserved */
+        QUAD(0) /* 26 - reserved */
+        QUAD(0) /* 27 - reserved */
+        QUAD(0) /* 28 - #HV */
+        QUAD(   /* 29 - #VC */
+            (vc_handler & 0xFFFF0000) << 32 | /* target offset [31:16] */
+            DESCRIPTOR_PRESENT |
+            DESCRIPTOR_INTERRUPT_GATE |
+            cs32 << 16 |                      /* code segment selector */
+            vc_handler & 0xFFFF)              /* target offset [15:0] */
+        QUAD(0) /* 30 - #SX */
+        QUAD(0) /* 31 - reserved */
     } > bios
     
     .rodata.gdt_desc ALIGN(8) : {
@@ -159,7 +201,7 @@ SECTIONS {
     } > bios
 
     .rodata.idt_desc ALIGN(8) : {
-        SHORT(0)
+        SHORT(SIZEOF(.rodata.idt) - 1)
         LONG(ADDR(.rodata.idt))
     } > bios
 
