@@ -13,6 +13,7 @@ clap = { version = "*", features = ["derive"] }
 env_logger = "*"
 futures = "*"
 grpc_unary_attestation = { path = "../../../grpc_unary_attestation/" }
+oak_remote_attestation_amd = { path = "../../../oak_remote_attestation_amd/" }
 http = "*"
 log = "*"
 oak_functions_abi = { path = "../../../oak_functions/abi" }

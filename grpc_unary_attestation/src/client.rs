@@ -17,20 +17,16 @@
 use crate::proto::{unary_session_client::UnarySessionClient, UnaryRequest};
 use anyhow::Context;
 use async_trait::async_trait;
-use oak_remote_attestation::handshaker::{
-    AttestationBehavior, AttestationVerifier, EmptyAttestationGenerator,
-};
-use oak_remote_attestation_amd::PlaceholderAmdAttestationVerifier;
 use oak_remote_attestation_sessions::SessionId;
-use oak_remote_attestation_sessions_client::{AttestationTransport, GenericAttestationClient};
+use oak_remote_attestation_sessions_client::AttestationTransport;
 use tonic::transport::Channel;
 
-/// Implementation of the [`AttestationTransport`] trait using unary gRPC messages.
-struct GrpcClient {
+/// gRPC implementation of [`AttestationTransport`] trait using unary gRPC messages.
+pub struct UnaryGrpcClient {
     inner: UnarySessionClient<Channel>,
 }
 
-impl GrpcClient {
+impl UnaryGrpcClient {
     pub async fn create(uri: &str) -> anyhow::Result<Self> {
         let channel = Channel::from_shared(uri.to_string())
             .context("Couldn't create gRPC channel")?
@@ -44,7 +40,7 @@ impl GrpcClient {
 // Async trait requires the definition and all implementations to be marked as
 // optionally [`Send`] if one implementation is not.
 #[async_trait(?Send)]
-impl AttestationTransport for GrpcClient {
+impl AttestationTransport for UnaryGrpcClient {
     async fn message(&mut self, session_id: SessionId, body: Vec<u8>) -> anyhow::Result<Vec<u8>> {
         let response = self
             .inner
@@ -58,39 +54,5 @@ impl AttestationTransport for GrpcClient {
             .body;
 
         Ok(response)
-    }
-}
-
-/// gRPC Attestation Service client implementation.
-pub struct AttestationClient {
-    inner: GenericAttestationClient<GrpcClient>,
-}
-
-impl AttestationClient {
-    /// Create an [`AttestationClient`] with a [`PlaceholderAmdAttestationVerifier`].
-    pub async fn create(uri: &str) -> anyhow::Result<Self> {
-        Self::create_with_attestation_verifier(uri, PlaceholderAmdAttestationVerifier).await
-    }
-
-    /// Create an [`AttestationClient`] with the provided [`AttestationVerifier`].
-    ///
-    /// Clients don't usually generate attestations, so this method implies an
-    /// [`EmptyAttestationGenerator`].
-    pub async fn create_with_attestation_verifier<V: AttestationVerifier>(
-        uri: &str,
-        attestation_verifier: V,
-    ) -> anyhow::Result<Self> {
-        let grpc_client = GrpcClient::create(uri).await?;
-        let inner = GenericAttestationClient::create(
-            grpc_client,
-            AttestationBehavior::create(EmptyAttestationGenerator, attestation_verifier),
-        )
-        .await?;
-
-        Ok(Self { inner })
-    }
-
-    pub async fn send(&mut self, payload: &[u8]) -> anyhow::Result<Vec<u8>> {
-        self.inner.message(payload).await
     }
 }

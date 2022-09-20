@@ -21,28 +21,40 @@ pub mod proto {
 pub mod rekor;
 
 use anyhow::Context;
-use grpc_unary_attestation::client::AttestationClient;
+use grpc_unary_attestation::client::UnaryGrpcClient;
 use oak_functions_abi::{Request, Response};
+use oak_remote_attestation::handshaker::{AttestationBehavior, EmptyAttestationGenerator};
+use oak_remote_attestation_amd::PlaceholderAmdAttestationVerifier;
+use oak_remote_attestation_sessions_client::GenericAttestationClient;
 
 #[cfg(test)]
 mod tests;
 
 pub struct Client {
-    inner: AttestationClient,
+    inner: GenericAttestationClient<UnaryGrpcClient>,
 }
 
 impl Client {
     pub async fn new(uri: &str) -> anyhow::Result<Self> {
-        let inner = AttestationClient::create(uri)
+        let grpc_client = UnaryGrpcClient::create(uri)
             .await
             .context("Could not create Oak Functions client")?;
+        let inner = GenericAttestationClient::create(
+            grpc_client,
+            AttestationBehavior::create(
+                EmptyAttestationGenerator,
+                PlaceholderAmdAttestationVerifier,
+            ),
+        )
+        .await
+        .context("Could not create Oak Functions client")?;
         Ok(Client { inner })
     }
 
     pub async fn invoke(&mut self, request: Request) -> anyhow::Result<Response> {
         let encoded_response = self
             .inner
-            .send(&request.body)
+            .message(&request.body)
             .await
             .context("Error invoking Oak Functions instance")?;
 

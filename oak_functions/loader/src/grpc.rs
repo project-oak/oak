@@ -83,6 +83,7 @@ pub async fn create_and_start_grpc_server<F: Future<Output = ()>>(
             grpc_unary_attestation::server::AttestationServer::create(
                 request_handler,
                 ErrorLogger { logger },
+                oak_remote_attestation_amd::PlaceholderAmdAttestationGenerator,
             )
             .context("Couldn't create remote attestation server")?,
         );
