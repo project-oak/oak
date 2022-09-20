@@ -21,12 +21,12 @@ use oak_remote_attestation_sessions::SessionId;
 use oak_remote_attestation_sessions_client::AttestationTransport;
 use tonic::transport::Channel;
 
-/// gRPC implementation of [`AttestationTransport`].
-pub struct GrpcClient {
+/// gRPC implementation of [`AttestationTransport`] trait using unary gRPC messages.
+pub struct UnaryGrpcClient {
     inner: UnarySessionClient<Channel>,
 }
 
-impl GrpcClient {
+impl UnaryGrpcClient {
     pub async fn create(uri: &str) -> anyhow::Result<Self> {
         let channel = Channel::from_shared(uri.to_string())
             .context("Couldn't create gRPC channel")?
@@ -40,7 +40,7 @@ impl GrpcClient {
 // Async trait requires the definition and all implementations to be marked as
 // optionally [`Send`] if one implementation is not.
 #[async_trait(?Send)]
-impl AttestationTransport for GrpcClient {
+impl AttestationTransport for UnaryGrpcClient {
     async fn message(&mut self, session_id: SessionId, body: Vec<u8>) -> anyhow::Result<Vec<u8>> {
         let response = self
             .inner

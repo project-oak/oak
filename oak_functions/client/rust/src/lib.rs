@@ -21,7 +21,7 @@ pub mod proto {
 pub mod rekor;
 
 use anyhow::Context;
-use grpc_unary_attestation::client::GrpcClient;
+use grpc_unary_attestation::client::UnaryGrpcClient;
 use oak_functions_abi::{Request, Response};
 use oak_remote_attestation::handshaker::{AttestationBehavior, EmptyAttestationGenerator};
 use oak_remote_attestation_amd::PlaceholderAmdAttestationVerifier;
@@ -31,12 +31,12 @@ use oak_remote_attestation_sessions_client::GenericAttestationClient;
 mod tests;
 
 pub struct Client {
-    inner: GenericAttestationClient<GrpcClient>,
+    inner: GenericAttestationClient<UnaryGrpcClient>,
 }
 
 impl Client {
     pub async fn new(uri: &str) -> anyhow::Result<Self> {
-        let grpc_client = GrpcClient::create(uri)
+        let grpc_client = UnaryGrpcClient::create(uri)
             .await
             .context("Could not create Oak Functions client")?;
         let inner = GenericAttestationClient::create(
