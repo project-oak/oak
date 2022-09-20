@@ -99,7 +99,6 @@
 <span id="94">94</span>
 <span id="95">95</span>
 <span id="96">96</span>
-<span id="97">97</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2022 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -124,11 +123,10 @@
 };
 <span class="kw">use</span> <span class="ident">oak_remote_attestation_amd::PlaceholderAmdAttestationVerifier</span>;
 <span class="kw">use</span> <span class="ident">oak_remote_attestation_sessions::SessionId</span>;
-<span class="kw">use</span> <span class="ident">oak_remote_attestation_sessions_client</span>::{<span class="ident">GenericAttestationClient</span>, <span class="ident">UnaryClient</span>};
+<span class="kw">use</span> <span class="ident">oak_remote_attestation_sessions_client</span>::{<span class="ident">AttestationTransport</span>, <span class="ident">GenericAttestationClient</span>};
 <span class="kw">use</span> <span class="ident">tonic::transport::Channel</span>;
 
-<span class="doccomment">/// gRPC implementation of of [`UnaryClient`]. Serves as an inner of the</span>
-<span class="doccomment">/// public [`AttestationClient`].</span>
+<span class="doccomment">/// Implementation of the [`AttestationTransport`] trait using unary gRPC messages.</span>
 <span class="kw">struct</span> <span class="ident">GrpcClient</span> {
     <span class="ident">inner</span>: <span class="ident">UnarySessionClient</span><span class="op">&lt;</span><span class="ident">Channel</span><span class="op">&gt;</span>,
 }
@@ -147,7 +145,7 @@
 <span class="comment">// Async trait requires the definition and all implementations to be marked as</span>
 <span class="comment">// optionally [`Send`] if one implementation is not.</span>
 <span class="attribute">#[<span class="ident">async_trait</span>(<span class="question-mark">?</span><span class="ident">Send</span>)]</span>
-<span class="kw">impl</span> <span class="ident">UnaryClient</span> <span class="kw">for</span> <span class="ident">GrpcClient</span> {
+<span class="kw">impl</span> <span class="ident">AttestationTransport</span> <span class="kw">for</span> <span class="ident">GrpcClient</span> {
     <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">message</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">session_id</span>: <span class="ident">SessionId</span>, <span class="ident">body</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">response</span> <span class="op">=</span> <span class="self">self</span>
             .<span class="ident">inner</span>

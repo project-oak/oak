@@ -162,6 +162,7 @@
 <span id="157">157</span>
 <span id="158">158</span>
 <span id="159">159</span>
+<span id="160">160</span>
 </pre><pre class="rust"><code><span class="comment">//</span>
 <span class="comment">// Copyright 2022 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -189,7 +190,7 @@
 <span class="kw">use</span> <span class="ident">oak_remote_attestation::handshaker</span>::{<span class="ident">AttestationBehavior</span>, <span class="ident">EmptyAttestationGenerator</span>};
 <span class="kw">use</span> <span class="ident">oak_remote_attestation_amd::PlaceholderAmdAttestationVerifier</span>;
 <span class="kw">use</span> <span class="ident">oak_remote_attestation_sessions::SessionId</span>;
-<span class="kw">use</span> <span class="ident">oak_remote_attestation_sessions_client</span>::{<span class="ident">GenericAttestationClient</span>, <span class="ident">UnaryClient</span>};
+<span class="kw">use</span> <span class="ident">oak_remote_attestation_sessions_client</span>::{<span class="ident">AttestationTransport</span>, <span class="ident">GenericAttestationClient</span>};
 <span class="kw">use</span> <span class="ident">std::rc::Rc</span>;
 <span class="kw">use</span> <span class="ident">wasm_bindgen::prelude</span>::<span class="kw-2">*</span>;
 
@@ -203,7 +204,8 @@
     <span class="macro">include!</span>(<span class="macro">concat!</span>(<span class="macro">env!</span>(<span class="string">&quot;OUT_DIR&quot;</span>), <span class="string">&quot;/oak.session.unary.v1.rs&quot;</span>));
 }
 
-<span class="doccomment">/// gRPC-web implementation of a [`UnaryClient`].</span>
+<span class="doccomment">/// Implementation of the [`AttestationTransport`] trait using gRPC-web with</span>
+<span class="doccomment">/// unary messages.</span>
 <span class="kw">struct</span> <span class="ident">GrpcWebClient</span> {
     <span class="ident">uri</span>: <span class="ident">String</span>,
 }
@@ -219,7 +221,7 @@
 <span class="comment">// Not marked as [`Send`], as the underlying client uses JavaScript APIs for</span>
 <span class="comment">// networking, which are not [`Send`].</span>
 <span class="attribute">#[<span class="ident">async_trait</span>(<span class="question-mark">?</span><span class="ident">Send</span>)]</span>
-<span class="kw">impl</span> <span class="ident">UnaryClient</span> <span class="kw">for</span> <span class="ident">GrpcWebClient</span> {
+<span class="kw">impl</span> <span class="ident">AttestationTransport</span> <span class="kw">for</span> <span class="ident">GrpcWebClient</span> {
     <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">message</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">session_id</span>: <span class="ident">SessionId</span>, <span class="ident">body</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">reply</span> <span class="op">=</span> <span class="ident">grpc_web::grpc_web_unary</span>::<span class="op">&lt;</span><span class="ident">UnaryRequest</span>, <span class="ident">UnaryResponse</span><span class="op">&gt;</span>(
             <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">uri</span>,
