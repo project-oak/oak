@@ -78,9 +78,9 @@ pub async fn create_and_start_grpc_server<F: Future<Output = ()>>(
     let request_handler =
         async move |request| handle_request(wasm_handler, policy.clone(), request).await;
 
-    let grpc_unary_attestation_service =
-        grpc_unary_attestation::proto::unary_session_server::UnarySessionServer::new(
-            grpc_unary_attestation::unary_server::AttestationServer::create(
+    let grpc_attestation_service =
+        grpc_attestation::proto::unary_session_server::UnarySessionServer::new(
+            grpc_attestation::unary_server::AttestationServer::create(
                 request_handler,
                 ErrorLogger { logger },
                 oak_remote_attestation_amd::PlaceholderAmdAttestationGenerator,
@@ -95,13 +95,13 @@ pub async fn create_and_start_grpc_server<F: Future<Output = ()>>(
         #[cfg(feature = "oak-web")]
         tonic::transport::Server::builder()
             .accept_http1(true)
-            .add_service(tonic_web::enable(grpc_unary_attestation_service))
+            .add_service(tonic_web::enable(grpc_attestation_service))
             .serve_with_shutdown(*address, terminate)
             .await
             .context("Couldn't start server")?;
     } else {
         tonic::transport::Server::builder()
-            .add_service(grpc_unary_attestation_service)
+            .add_service(grpc_attestation_service)
             .serve_with_shutdown(*address, terminate)
             .await
             .context("Couldn't start server")?;

@@ -1,5 +1,5 @@
 [package]
-name = "grpc_unary_attestation"
+name = "grpc_attestation"
 version = "0.1.0"
 authors = ["Juliette Pretot <julsh@google.com>"]
 edition = "2018"

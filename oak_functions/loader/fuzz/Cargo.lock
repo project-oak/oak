@@ -341,7 +341,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "grpc_unary_attestation"
+name = "grpc_attestation"
 version = "0.1.0"
 dependencies = [
  "anyhow",
@@ -749,7 +749,7 @@ dependencies = [
  "chrono",
  "clap",
  "futures",
- "grpc_unary_attestation",
+ "grpc_attestation",
  "hashbrown",
  "http",
  "humantime-serde",

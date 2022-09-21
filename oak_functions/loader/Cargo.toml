@@ -20,7 +20,7 @@ chrono = { version = "*", default-features = false, features = [
 ] }
 clap = { version = "*", features = ["derive"] }
 futures = "*"
-grpc_unary_attestation = { path = "../../grpc_unary_attestation/" }
+grpc_attestation = { path = "../../grpc_attestation/" }
 oak_remote_attestation_amd = { path = "../../oak_remote_attestation_amd/" }
 hashbrown = "*"
 http = "*"

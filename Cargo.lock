@@ -1809,7 +1809,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "grpc_unary_attestation"
+name = "grpc_attestation"
 version = "0.1.0"
 dependencies = [
  "anyhow",
@@ -3034,7 +3034,7 @@ dependencies = [
  "clap 3.2.10",
  "ecdsa 0.13.4",
  "env_logger 0.9.0",
- "grpc_unary_attestation",
+ "grpc_attestation",
  "hex",
  "http",
  "log",
@@ -3089,7 +3089,7 @@ dependencies = [
  "clap 3.2.10",
  "criterion",
  "futures",
- "grpc_unary_attestation",
+ "grpc_attestation",
  "hashbrown 0.12.2",
  "http",
  "humantime-serde",
@@ -5108,7 +5108,7 @@ dependencies = [
  "clap 3.2.10",
  "env_logger 0.9.0",
  "futures",
- "grpc_unary_attestation",
+ "grpc_attestation",
  "http",
  "log",
  "oak_functions_abi",

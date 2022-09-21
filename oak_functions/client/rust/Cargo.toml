@@ -12,7 +12,7 @@ base64 = "*"
 clap = { version = "*", features = ["derive"] }
 ecdsa = { version = "*", features = ["verify", "pkcs8", "pem"] }
 env_logger = "*"
-grpc_unary_attestation = { path = "../../../grpc_unary_attestation/" }
+grpc_attestation = { path = "../../../grpc_attestation/" }
 hex = "*"
 http = "*"
 log = "*"
