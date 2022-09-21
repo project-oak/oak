@@ -6,7 +6,9 @@ source "${SCRIPTS_DIR}/common"
 # Enable BuildKit for improved performance and storage management.
 #
 # See https://docs.docker.com/develop/develop-images/build_enhancements/.
-export DOCKER_BUILDKIT=1
+#
+# TODO(#3225): Re-enable buildkit support when it is compatible with rootless Docker.
+# export DOCKER_BUILDKIT=1
 
 docker build \
   --cache-from="${DOCKER_IMAGE_NAME}" \

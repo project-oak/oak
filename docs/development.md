@@ -119,6 +119,46 @@ recommended, since it requires a lot of effort to manually install all the tool
 natively on your machine and keeping them up to date to the exact same version
 specified in Docker.
 
+## rootless Docker
+
+In order to run Docker without root privileges, follow the guide at
+https://docs.docker.com/engine/security/rootless/ .
+
+Below is a quick summary of the relevant steps.
+
+1. Install `uidmap`.
+
+   ```bash
+   sudo apt install uidmap
+   ```
+
+1. Add a range of subids for the current user.
+
+   ```bash
+   sudo usermod --add-subuids 500000-565535 --add-subgids 500000-565535 $USER
+   ```
+
+1. Download the install script for rootless docker, and run it as the current
+   user.
+
+   ```bash
+   curl -fSSL https://get.docker.com/rootless > $HOME/rootless
+   sh $HOME/rootless
+   ```
+
+1. Add the generated environment variables to your shell.
+
+   ```bash
+   export PATH=$HOME/bin:$PATH
+   export DOCKER_HOST=unix://$XDG_RUNTIME_DIR/docker.sock
+   ```
+
+1. Test whether everything works correctly.
+
+   ```bash
+   docker run hello-world
+   ```
+
 ## xtask
 
 `xtask` is a utility binary to perform a number of common tasks within the Oak

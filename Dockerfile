@@ -372,19 +372,11 @@ ENV RUSTC_WRAPPER sccache
 # Disable cargo incremental compilation, as it conflicts with sccache: https://github.com/mozilla/sccache#rust
 ENV CARGO_INCREMENTAL false
 
-# We use the `docker` user in order to maintain library paths on different
-# machines and to make Wasm modules reproducible.
-#
-# We do not set this as the default user in the Docker image, because we expect its uid not to match
-# uid of the host, therefore we need to first fix the uid before actually using the user. This is
-# done by /scripts/fix_docker_user_and_run .
-RUN useradd --shell=/bin/bash --create-home --user-group docker
-
 # To make the scripts available to call from everywhere.
 ENV PATH "/workspace/scripts:${PATH}"
 
 # Add sourcing of xtask_bash_completion file to .bashrc
-RUN echo -e "\n#activate xtask auto-complete\nif [ -f /workspace/.xtask_bash_completion ]; then\n  source /workspace/.xtask_bash_completion \nfi" >> /home/docker/.bashrc
+RUN echo -e "\n#activate xtask auto-complete\nif [ -f /workspace/.xtask_bash_completion ]; then\n  source /workspace/.xtask_bash_completion \nfi" >> ${HOME}/.bashrc
 
 # Define alias
-RUN echo -e "\nalias ll='ls -l'\n" >> /home/docker/.bashrc
+RUN echo -e "\nalias ll='ls -l'\n" >> ${HOME}/.bashrc
