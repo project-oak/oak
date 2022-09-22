@@ -129,7 +129,7 @@ Below is a quick summary of the relevant steps.
 1. If you have an existing version of Docker running as root, uninstall that
    first.
 
-   ```
+   ```bash
    sudo systemctl disable --now docker.service docker.socket
    sudo apt remove docker-ce docker-engine docker-runc docker-containerd
    ```
@@ -166,6 +166,12 @@ Below is a quick summary of the relevant steps.
    ```bash
    docker run hello-world
    ```
+
+If you rely on VSCode remote / dev container support, that should also keep
+working, but you need to make sure that your VSCode instance sees the update
+environment variables so that it connects to the correct Docker host socket. The
+simplest way of doing this is to invoke `code` from a shell with the updated
+environment variables.
 
 ## xtask
 
