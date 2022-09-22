@@ -23,7 +23,7 @@ readonly DOCKER_IMAGE_NAME='gcr.io/oak-ci/oak:latest'
 readonly DOCKER_IMAGE_ID='sha256:215d9b11115a46f799341852ab6c43147f43414cb5e02be35d0abd63ed75cbb6'
 
 # Do not modify manually. This value is automatically updated by ./scripts/docker_push .
-readonly DOCKER_IMAGE_REPO_DIGEST='gcr.io/oak-ci/oak@sha256:c714d3a51299e3256f58855a1d6c97c5ff4309d9d80aae22458adafd46ef779f'
+readonly DOCKER_IMAGE_REPO_DIGEST='gcr.io/oak-ci/oak@sha256:9e6f478527ad452a83ebfc56e3e0fe2550f164e43bb9810ab989bddf4923f163'
 
 readonly SERVER_DOCKER_IMAGE_NAME='gcr.io/oak-ci/oak-server'
 
