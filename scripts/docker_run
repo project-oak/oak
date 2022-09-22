@@ -7,14 +7,6 @@ readonly SCRIPTS_DIR="$(dirname "$0")"
 # shellcheck source=scripts/common
 source "$SCRIPTS_DIR/common"
 
-# In order for the docker-cli inside the container to use the host dockerd,
-# we need permissions for the user with the same gid as the host
-if [[ "${OSTYPE}" == "darwin"*  ]]; then
-  readonly HOST_DOCKER_GID="$(dscl . -read /Groups/staff | awk '($1 == "PrimaryGroupID:") { print $2 }')"
-else
-  readonly HOST_DOCKER_GID="$(getent group docker | cut -d: -f3)"
-fi
-
 mkdir -p './bazel-cache'
 mkdir -p './cargo-cache'
 mkdir -p './sccache-cache'
@@ -66,4 +58,4 @@ if [[ -z "${CI:-}" ]]; then
 fi
 
 # Run the provided command.
-docker run "${docker_run_flags[@]}" "$DOCKER_IMAGE_ID" $*
+docker run "${docker_run_flags[@]}" "$DOCKER_IMAGE_ID" "$@"

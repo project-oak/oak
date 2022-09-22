@@ -376,7 +376,7 @@ ENV CARGO_INCREMENTAL false
 ENV PATH "/workspace/scripts:${PATH}"
 
 # Add sourcing of xtask_bash_completion file to .bashrc
-RUN echo -e "\n#activate xtask auto-complete\nif [ -f /workspace/.xtask_bash_completion ]; then\n  source /workspace/.xtask_bash_completion \nfi" >> ${HOME}/.bashrc
+RUN echo -e "\n#activate xtask auto-complete\nif [ -f /workspace/.xtask_bash_completion ]; then\n  source /workspace/.xtask_bash_completion \nfi" >> "${HOME}/.bashrc"
 
 # Define alias
-RUN echo -e "\nalias ll='ls -l'\n" >> ${HOME}/.bashrc
+RUN echo -e "\nalias ll='ls -l'\n" >> "${HOME}/.bashrc"
