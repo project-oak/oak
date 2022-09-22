@@ -126,6 +126,14 @@ https://docs.docker.com/engine/security/rootless/ .
 
 Below is a quick summary of the relevant steps.
 
+1. If you have an existing version of Docker running as root, uninstall that
+   first.
+
+   ```
+   sudo systemctl disable --now docker.service docker.socket
+   sudo apt remove docker-ce docker-engine docker-runc docker-containerd
+   ```
+
 1. Install `uidmap`.
 
    ```bash
