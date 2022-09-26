@@ -161,6 +161,27 @@ Below is a quick summary of the relevant steps.
    export DOCKER_HOST=unix://$XDG_RUNTIME_DIR/docker.sock
    ```
 
+   **As an alternative** to setting the `DOCKER_HOST` environment variable, it
+   is possible to instead run the following command to set the Docker context.
+
+   ```bash
+   docker context use rootless
+   ```
+
+   In either case, running the following command should show the current status.
+
+   ```console
+   $ docker context ls
+   NAME        DESCRIPTION                               DOCKER ENDPOINT                       KUBERNETES ENDPOINT   ORCHESTRATOR
+   default *   Current DOCKER_HOST based configuration   unix:///run/user/152101/docker.sock                         swarm
+   rootless    Rootless mode                             unix:///run/user/152101/docker.sock
+   Warning: DOCKER_HOST environment variable overrides the active context. To use a context, either set the global --context flag, or unset DOCKER_HOST environment variable.
+   ```
+
+   This should show either that the default context is selected and is using the
+   user-local docker endpoint from the `DOCKER_HOST` variable, or that the
+   `rootless` context is selected.
+
 1. Test whether everything works correctly.
 
    ```bash
