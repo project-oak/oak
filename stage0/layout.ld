@@ -44,6 +44,13 @@ HIDDEN(PAGE_SIZE = 1 << 7);
 HIDDEN(DESCRIPTOR_PRESENT = 1 << 47);
 HIDDEN(DESCRIPTOR_INTERRUPT_GATE = 0xE << 40);
 
+/* SEV metadata section types; values defined in
+ * https://github.com/tianocore/edk2/blob/master/OvmfPkg/ResetVector/X64/OvmfSevMetadata.asm
+ */
+HIDDEN(SEV_SECTION_UNMEASURED = 0x1);
+HIDDEN(SEV_SECTION_SECRET = 0x2);
+HIDDEN(SEV_SECTION_CPUID = 0x3);
+
 SECTIONS {
     . = ORIGIN(bios);
 
@@ -213,9 +220,59 @@ SECTIONS {
      * https://github.com/qemu/qemu/blob/master/docs/specs/sev-guest-firmware.rst
      * and EDK2 source code:
      * https://github.com/tianocore/edk2/blob/master/OvmfPkg/ResetVector/Ia16/ResetVectorVtf0.asm
+     *
+     * Unfortunately it doesn't look like `SIZEOF()` works here, so we have to keep track of the data
+     * structure size by hand to ensure that it ends at the correct location in memory.
      */
-    .guid_tables TOP - 0x20 - 0x28 : {
+    .guid_tables TOP - 0x20 - (16 + 3*12 + 2*22 + 18) : {
+        /* SEV metadata. This data structure is not part of the GUIDed tables, but it makes sense to have
+         * them together at the end of the file, thus we put them in the .guid_tables section along with
+         * the GUIDed tables themselves. The data structure is defined in the EDK2 source:
+         * https://github.com/tianocore/edk2/blob/master/OvmfPkg/ResetVector/X64/OvmfSevMetadata.asm
+         *
+         * Size: header is 16 bytes + a number of 12-byte sections.
+         */
+        HIDDEN(sev_guided_structure_start = .);
+        /* Header: uint32 signature ("ASEV"), uint32 length, uint32 version, uint32 number of sections */
+        BYTE(0x41) BYTE(0x53) BYTE(0x45) BYTE(0x56)
+        LONG(sev_guided_structure_end - sev_guided_structure_start)
+        LONG(1)
+        LONG((sev_guided_structure_end - sev_guided_structure_start - 16) / 12)
+        /* Each section has the basic structure of uint32 address, uint32 length, uint32 type
+         * The locations of these pages have been chosen to be the same as EDK2:
+         * https://github.com/tianocore/edk2/blob/c05a218a9758225ddf94eedb365633f2154551da/OvmfPkg/OvmfPkgX64.fdf
+         * Thankfully none of these clashed with existing data structures that we're setting up.
+         */
+        /* Unmeasured page location */
+        LONG(0xC000)
+        LONG(0x1000)
+        LONG(SEV_SECTION_UNMEASURED)
+        /* Secrets page location */
+        LONG(0xD000)
+        LONG(0x1000)
+        LONG(SEV_SECTION_SECRET)
+        /* CPUID page location */
+        LONG(0xE000)
+        LONG(0x1000)
+        LONG(SEV_SECTION_CPUID)
+        HIDDEN(sev_guided_structure_end = .);
+
+        /*
+         * This is where the GUIDed tables actually start.
+         * Size: each entry is 22 bytes + a 18-byte footer.
+         */
         HIDDEN(tables_start = .);
+        /* SEV metadata descriptor: uint32 offset, uint16 size, 16-byte GUID */
+        HIDDEN(sev_metadata_offset_start = .);
+        LONG(TOP - sev_guided_structure_start)
+        SHORT(sev_metadata_offset_end - sev_metadata_offset_start)
+        LONG(0xdc886566)
+        SHORT(0x984a)
+        SHORT(0x4798)
+        SHORT(0x5ea7)
+        BYTE(0x55) BYTE(0x85) BYTE(0xa7) BYTE(0xbf) BYTE(0x67) BYTE(0xcc)
+        HIDDEN(sev_metadata_offset_end = .);
+
         /* SEV-ES reset block: uint32 addr, uint16 size, 16-byte GUID */
         HIDDEN(sev_es_reset_block_start = .);
         LONG(0xDEADBEEF) /* Placeholder values */
@@ -235,7 +292,6 @@ SECTIONS {
         SHORT(0xeaba)
         BYTE(0xa3) BYTE(0x66) BYTE(0xc5) BYTE(0x5a) BYTE(0x08) BYTE(0x2d)
         HIDDEN(tables_end = .);
-        FILL(0x00)
     } > bios
 
     ASSERT((. == TOP - 0x20), "GUID tables are to expected to end at top - 0x20")
