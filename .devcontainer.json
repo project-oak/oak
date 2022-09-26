@@ -4,7 +4,7 @@
 // - https://code.visualstudio.com/docs/remote/devcontainerjson-reference
 {
   // Do not modify manually. This value is automatically updated by ./scripts/docker_build .
-  "image": "sha256:d80eb0bfeece9c94d3d56ff9ec2ee3f866ed4f828d83887e5e7d6c6e3397b9e2",
+  "image": "sha256:215d9b11115a46f799341852ab6c43147f43414cb5e02be35d0abd63ed75cbb6",
   "extensions": [
     "13xforever.language-x86-64-assembly",
     "bazelbuild.vscode-bazel",
@@ -46,5 +46,6 @@
   // See https://code.visualstudio.com/docs/remote/containers-advanced#_changing-the-default-source-code-mount.
   "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind,consistency=delegated",
   "workspaceFolder": "/workspace",
-  "containerUser": "docker"
+  // We do not need to fix the UID when running in rootless Docker.
+  "updateRemoteUserUID": false
 }

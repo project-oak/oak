@@ -7,28 +7,9 @@ readonly SCRIPTS_DIR="$(dirname "$0")"
 # shellcheck source=scripts/common
 source "$SCRIPTS_DIR/common"
 
-# In order for the docker-cli inside the container to use the host dockerd,
-# we need permissions for the user with the same gid as the host
-if [[ "${OSTYPE}" == "darwin"*  ]]; then
-  readonly HOST_DOCKER_GID="$(dscl . -read /Groups/staff | awk '($1 == "PrimaryGroupID:") { print $2 }')"
-else
-  readonly HOST_DOCKER_GID="$(getent group docker | cut -d: -f3)"
-fi
-
 mkdir -p './bazel-cache'
 mkdir -p './cargo-cache'
 mkdir -p './sccache-cache'
-
-# The default user for a Docker container has uid 0 (root). To avoid creating
-# root-owned files in the build directory we tell Docker to use the current user
-# ID, if known.
-# See
-# https://github.com/googleapis/google-cloud-cpp/blob/a186208b79d900b4ec71c6f9df3acf7638f01dc6/ci/kokoro/docker/build.sh#L147-L152
-readonly HOST_UID="${UID:-0}"
-readonly HOST_GID="$(id -g)"
-
-export HOST_UID
-export HOST_GID
 
 docker_run_flags=(
   '--rm'
@@ -36,8 +17,6 @@ docker_run_flags=(
   '--env=TERM=xterm-256color'
   '--env=BAZEL_REMOTE_CACHE_ENABLED'
   '--env=BAZEL_GOOGLE_CREDENTIALS'
-  '--env=HOST_UID'
-  '--env=HOST_GID'
   "--volume=$PWD/bazel-cache:/home/docker/.cache/bazel"
   "--volume=$PWD/cargo-cache:/home/docker/.cargo"
   "--volume=$PWD/sccache-cache:/home/docker/.cache/sccache"
@@ -46,9 +25,8 @@ docker_run_flags=(
   '--workdir=/workspace'
   '--network=host'
   # We need to use Docker from inside the container, but only for build.
-  # To do that, we map the socket from the host and add the right group.
-  '--volume=/var/run/docker.sock:/var/run/docker.sock'
-  "--group-add=$HOST_DOCKER_GID"
+  # To do that, we map the socket from the host.
+  "--volume=$XDG_RUNTIME_DIR/docker.sock:/var/run/docker.sock"
 )
 
 # If the host supports KVM, allow the docker image to use it.
@@ -79,6 +57,5 @@ if [[ -z "${CI:-}" ]]; then
   docker_run_flags+=('--interactive')
 fi
 
-# Create a new user with a fixed name but with the same uid and gid as the host user, and use that
-# user to run the provided command.
-docker run "${docker_run_flags[@]}" "$DOCKER_IMAGE_ID" ./scripts/fix_docker_user_and_run "$*"
+# Run the provided command.
+docker run "${docker_run_flags[@]}" "$DOCKER_IMAGE_ID" "$@"

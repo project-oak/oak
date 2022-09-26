@@ -119,6 +119,81 @@ recommended, since it requires a lot of effort to manually install all the tool
 natively on your machine and keeping them up to date to the exact same version
 specified in Docker.
 
+## rootless Docker
+
+In order to run Docker without root privileges, follow the guide at
+https://docs.docker.com/engine/security/rootless/ .
+
+Below is a quick summary of the relevant steps.
+
+1. If you have an existing version of Docker running as root, uninstall that
+   first.
+
+   ```bash
+   sudo systemctl disable --now docker.service docker.socket
+   sudo apt remove docker-ce docker-engine docker-runc docker-containerd
+   ```
+
+1. Install `uidmap`.
+
+   ```bash
+   sudo apt install uidmap
+   ```
+
+1. Add a range of subids for the current user.
+
+   ```bash
+   sudo usermod --add-subuids 500000-565535 --add-subgids 500000-565535 $USER
+   ```
+
+1. Download the install script for rootless docker, and run it as the current
+   user.
+
+   ```bash
+   curl -fSSL https://get.docker.com/rootless > $HOME/rootless
+   sh $HOME/rootless
+   ```
+
+1. Add the generated environment variables to your shell.
+
+   ```bash
+   export PATH=$HOME/bin:$PATH
+   export DOCKER_HOST=unix://$XDG_RUNTIME_DIR/docker.sock
+   ```
+
+   **As an alternative** to setting the `DOCKER_HOST` environment variable, it
+   is possible to instead run the following command to set the Docker context.
+
+   ```bash
+   docker context use rootless
+   ```
+
+   In either case, running the following command should show the current status.
+
+   ```console
+   $ docker context ls
+   NAME        DESCRIPTION                               DOCKER ENDPOINT                       KUBERNETES ENDPOINT   ORCHESTRATOR
+   default *   Current DOCKER_HOST based configuration   unix:///run/user/152101/docker.sock                         swarm
+   rootless    Rootless mode                             unix:///run/user/152101/docker.sock
+   Warning: DOCKER_HOST environment variable overrides the active context. To use a context, either set the global --context flag, or unset DOCKER_HOST environment variable.
+   ```
+
+   This should show either that the default context is selected and is using the
+   user-local docker endpoint from the `DOCKER_HOST` variable, or that the
+   `rootless` context is selected.
+
+1. Test whether everything works correctly.
+
+   ```bash
+   docker run hello-world
+   ```
+
+If you rely on VSCode remote / dev container support, that should also keep
+working, but you need to make sure that your VSCode instance sees the update
+environment variables so that it connects to the correct Docker host socket. The
+simplest way of doing this is to invoke `code` from a shell with the updated
+environment variables.
+
 ## xtask
 
 `xtask` is a utility binary to perform a number of common tasks within the Oak
