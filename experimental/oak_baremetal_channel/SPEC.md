@@ -1,8 +1,8 @@
 # Oak Baremetal Communication Protocol Specification
 
 This document serves as a specification of the protocol used for communication
-between the Untrusted Launcher and Trusted Runtime. The Trusted Runtime should be
-able to communicate with any implementation of the Untrusted Launcher that
+between the Untrusted Launcher and Trusted Runtime. The Trusted Runtime should
+be able to communicate with any implementation of the Untrusted Launcher that
 implements this specification.
 
 In the specification below the Trusted Runtime will henceforth be referred to
