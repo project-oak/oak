@@ -18,6 +18,7 @@
 #![no_main]
 
 use core::{arch::asm, ffi::c_void, panic::PanicInfo};
+use sev_guest::instructions::{pvalidate, PageSize as SevPageSize, Validation};
 use x86_64::{
     instructions::{hlt, interrupts::int3, segmentation::Segment},
     registers::{
@@ -41,10 +42,11 @@ mod asm;
 // Many of these are set to be same as with crosvm; see
 // https://google.github.io/crosvm/appendix/memory_layout.html for more details.
 const BOOT_GDT_ADDR: PhysAddr = PhysAddr::new(0x1500);
-// The GDT provided by crosvm has 4 entries, which means that the IDT can go immediately after that
-// to address 0x1520. The Rust x86_64::GlobalDescriptorTable has 8 entries instead of 4; therefore,
-// we must move our IDT data structure a bit lower in memory.
-const BOOT_IDT_ADDR: PhysAddr = PhysAddr::new(0x1550);
+// The GDT provided by crosvm has 4 entries, which means that the (empty) IDT can go immediately
+// after that to address 0x1520. The Rust x86_64::GlobalDescriptorTable has 8 entries instead of 4,
+// and the x86_64::InterruptDescriptorTable takes a full 4K of memory, so let's move it to the next
+// page.
+const BOOT_IDT_ADDR: PhysAddr = PhysAddr::new(0x2000);
 const BOOT_PML4_ADDR: PhysAddr = PhysAddr::new(0x9000);
 const BOOT_PDPT_ADDR: PhysAddr = PhysAddr::new(0xA000);
 const BOOT_PD_ADDR: PhysAddr = PhysAddr::new(0xB000);
@@ -117,6 +119,15 @@ pub unsafe fn jump_to_kernel(entry_point: VirtAddr) -> ! {
 /// * `encrypted` - If not zero, the `encrypted`-th bit will be set in the page tables.
 #[no_mangle]
 pub extern "C" fn rust64_start(encrypted: u64) -> ! {
+    let snp = if encrypted > 0 {
+        // We're under some form of memory encryption, thus it's safe to access the SEV_STATUS MSR.
+        sev_guest::msr::get_sev_status()
+            .unwrap_or(sev_guest::msr::SevStatus::empty())
+            .contains(sev_guest::msr::SevStatus::SNP_ACTIVE)
+    } else {
+        false
+    };
+
     /* Set up the machine according to the 64-bit Linux boot protocol.
      * See https://www.kernel.org/doc/html/latest/x86/boot.html#id1 for the particular requirements.
      */
@@ -124,6 +135,16 @@ pub extern "C" fn rust64_start(encrypted: u64) -> ! {
     // Safety, for all these data structure dereferences: The addresses are to well-known locations,
     // same as crosvm is using, in the lowest 1MB of memory which we know is valid.
     let gdt = unsafe { &mut *(BOOT_GDT_ADDR.as_u64() as *mut GlobalDescriptorTable) };
+
+    if snp {
+        pvalidate(
+            x86_64::addr::align_down(gdt as *const _ as u64, 0x1000) as usize,
+            SevPageSize::Page4KiB,
+            Validation::Validated,
+        )
+        .unwrap();
+    }
+
     let (cs, ds) = create_gdt(gdt);
     gdt.load();
     // Safety: we've set up the valid data structures in create_gdt, above.
@@ -137,6 +158,16 @@ pub extern "C" fn rust64_start(encrypted: u64) -> ! {
     }
 
     let idt = unsafe { &mut *(BOOT_IDT_ADDR.as_u64() as *mut InterruptDescriptorTable) };
+
+    if snp {
+        pvalidate(
+            idt as *const _ as usize,
+            SevPageSize::Page4KiB,
+            Validation::Validated,
+        )
+        .unwrap();
+    }
+
     create_idt(idt);
     idt.load();
 
@@ -146,6 +177,26 @@ pub extern "C" fn rust64_start(encrypted: u64) -> ! {
     let pml4 = unsafe { &mut *(BOOT_PML4_ADDR.as_u64() as *mut PageTable) };
     let pdpt = unsafe { &mut *(BOOT_PDPT_ADDR.as_u64() as *mut PageTable) };
     let pd = unsafe { &mut *(BOOT_PD_ADDR.as_u64() as *mut PageTable) };
+    if snp {
+        pvalidate(
+            pml4 as *const _ as usize,
+            SevPageSize::Page4KiB,
+            Validation::Validated,
+        )
+        .unwrap();
+        pvalidate(
+            pdpt as *const _ as usize,
+            SevPageSize::Page4KiB,
+            Validation::Validated,
+        )
+        .unwrap();
+        pvalidate(
+            pd as *const _ as usize,
+            SevPageSize::Page4KiB,
+            Validation::Validated,
+        )
+        .unwrap();
+    }
     create_page_tables(pml4, pdpt, pd, encrypted);
     /* We need to do some trickery here. All of the stage0 code is somewhere within [4G-2M; 4G).
      * Thus, let's keep our own last PD, so that we can continue executing after reloading the

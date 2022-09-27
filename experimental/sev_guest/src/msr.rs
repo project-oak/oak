@@ -489,9 +489,14 @@ bitflags! {
     }
 }
 
+#[derive(Debug, Snafu)]
+pub enum SevStatusError {
+    InvalidValue,
+}
+
 /// Gets the status of SEV features for the current guest.
-pub fn get_sev_status() -> Result<SevStatus, &'static str> {
-    SevStatus::from_bits(read_status_msr()).ok_or("Invalid SEV Status value")
+pub fn get_sev_status() -> Result<SevStatus, SevStatusError> {
+    SevStatus::from_bits(read_status_msr()).ok_or(SevStatusError::InvalidValue)
 }
 
 /// Writes a value to the protocol MSR and calls VMGEXIT to hand control to the hypervisor.
