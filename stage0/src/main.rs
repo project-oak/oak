@@ -18,7 +18,7 @@
 #![no_main]
 
 use core::{arch::asm, ffi::c_void, panic::PanicInfo};
-use sev_guest::instructions::{pvalidate, PageSize as SevPageSize, Validation};
+use sev_guest::instructions::{pvalidate, InstructionError, PageSize as SevPageSize, Validation};
 use x86_64::{
     instructions::{hlt, interrupts::int3, segmentation::Segment},
     registers::{
@@ -29,9 +29,9 @@ use x86_64::{
         gdt::{Descriptor, GlobalDescriptorTable, SegmentSelector},
         idt::InterruptDescriptorTable,
         paging::{
-            page::Size2MiB,
+            frame::PhysFrameRange,
             page_table::{PageTable, PageTableFlags},
-            PageSize, PhysFrame,
+            PageSize, PhysFrame, Size2MiB, Size4KiB,
         },
     },
     PhysAddr, VirtAddr,
@@ -110,6 +110,64 @@ pub unsafe fn jump_to_kernel(entry_point: VirtAddr) -> ! {
         in(reg) entry_point.as_u64(),
         options(noreturn, att_syntax)
     );
+}
+
+/// Trait for abstracting the call to `PVALIDATE` over different page sizes and ranges.
+trait Validator {
+    fn pvalidate(self, validated: Validation) -> Result<(), InstructionError>;
+}
+
+impl Validator for PhysFrame<Size2MiB> {
+    fn pvalidate(self, validated: Validation) -> Result<(), InstructionError> {
+        match pvalidate(
+            self.start_address().as_u64() as usize,
+            SevPageSize::Page2MiB,
+            validated,
+        ) {
+            // Safety: These unwraps are safe as this PhysFrame is aligned to 2 MiB, which is always
+            // also aligned to 4 KiB.
+            Err(InstructionError::FailSizeMismatch) => PhysFrame::<Size4KiB>::range(
+                PhysFrame::from_start_address(self.start_address()).unwrap(),
+                PhysFrame::from_start_address((self + 1).start_address()).unwrap(),
+            )
+            .pvalidate(validated),
+            other => other,
+        }
+    }
+}
+
+impl Validator for PhysFrame<Size4KiB> {
+    fn pvalidate(self, validated: Validation) -> Result<(), InstructionError> {
+        pvalidate(
+            self.start_address().as_u64() as usize,
+            SevPageSize::Page4KiB,
+            validated,
+        )
+    }
+}
+
+impl Validator for PhysFrameRange<Size4KiB> {
+    fn pvalidate(self, validated: Validation) -> Result<(), InstructionError> {
+        for frame in self {
+            match frame.pvalidate(validated) {
+                Err(InstructionError::ValidationStatusNotUpdated) => Ok(()),
+                other => other,
+            }?;
+        }
+        Ok(())
+    }
+}
+
+impl Validator for PhysFrameRange<Size2MiB> {
+    fn pvalidate(self, validated: Validation) -> Result<(), InstructionError> {
+        for frame in self {
+            match frame.pvalidate(validated) {
+                Err(InstructionError::ValidationStatusNotUpdated) => Ok(()),
+                other => other,
+            }?;
+        }
+        Ok(())
+    }
 }
 
 /// Entry point for the Rust code in the stage0 BIOS.
@@ -217,6 +275,18 @@ pub extern "C" fn rust64_start(encrypted: u64) -> ! {
         );
     }
     /* TODO(#3198): interrogate qemu for memory areas and set up the zero page. */
+
+    // Temporary hack: PVALIDATE [2..32] MiB of physical memory, ignoring any failures to update
+    // the status for now. In the future, after we have determined the physical memory
+    // layout, we should call PVALIDATE on all of it.
+    if snp {
+        PhysFrame::<Size2MiB>::range(
+            PhysFrame::from_start_address(PhysAddr::new(0x0200000)).unwrap(),
+            PhysFrame::from_start_address(PhysAddr::new(0x2200000)).unwrap(),
+        )
+        .pvalidate(Validation::Validated)
+        .unwrap();
+    }
 
     /* TODO(#3199): determine the correct entry point from the ELF header */
     // Safety: this assumes the kernel is loaded at the given address.
