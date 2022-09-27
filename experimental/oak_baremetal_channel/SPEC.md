@@ -1,8 +1,8 @@
 # Oak Baremetal Communication Protocol Specification
 
 This document serves as a specification of the protocol used for communication
-between the Untrusted Launcher and Trusted Runtime. The Trusted Runtime should be
-able to communicate with any implementation of the Untrusted Launcher that
+between the Untrusted Launcher and Trusted Runtime. The Trusted Runtime should
+be able to communicate with any implementation of the Untrusted Launcher that
 implements this specification.
 
 In the specification below the Trusted Runtime will henceforth be referred to
@@ -61,7 +61,7 @@ There are exactly two messages types: request messages and response messages.
 
 A byte encoded request message MUST consist of the following fields:
 
-```
+```text
  0                   1                   2                   3
  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -82,31 +82,31 @@ A byte encoded request message MUST consist of the following fields:
 <!-- Diagram generated with https://www.luismg.com/protocol/, using the schema
 "length:32,invocation_id:32,method_id:32,padding:32,body bytes...:64"  -->
 
-##### length, u32, little endian
+- `length`, u32, little endian
 
-Length of the entire message, including this field.
+  Length of the entire message, including this field.
 
-##### invocation_id, u32, little endian
+- `invocation_id`, u32, little endian
 
-Identifies the invocation the request initiates.
+  Identifies the invocation the request initiates.
 
-##### method_id, u32, little endian
+- `method_id`, u32, little endian
 
-Identifies the method that is being invoked.
+  Identifies the method that is being invoked.
 
-##### padding, 4 bytes
+- `padding`, 4 bytes
 
-Reserved to maintain 8 byte alignment. MUST be unset and ignored.
+  Reserved to maintain 8 byte alignment. MUST be unset and ignored.
 
-##### body, variable length byte array
+- `body`, variable length byte array
 
-Byte encoded method parameters.
+  Byte encoded method parameters.
 
 #### Response Message
 
 A byte encoded response message MUST consist of the following fields:
 
-```
+```text
  0                   1                   2                   3
  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -127,28 +127,28 @@ A byte encoded response message MUST consist of the following fields:
 <!-- Diagram generated with https://www.luismg.com/protocol/, using the schema
 "length:32,invocation_id:32,status_code:32,padding:32,body bytes...:64" -->
 
-##### length u32, little endian
+- `length`, u32, little endian
 
-Length of the entire message, including this field.
+  Length of the entire message, including this field.
 
-##### invocation_id, u32, little endian
+- `invocation_id`, u32, little endian
 
-MUST match the invocation_id of the relevant request message.
+  MUST match the invocation_id of the relevant request message.
 
-##### status_code, u32, little endian
+- `status_code`, u32, little endian
 
-Response status as a
-[gRPC status code](https://grpc.github.io/grpc/core/md_doc_statuscodes.html).
+  Response status as a
+  [gRPC status code](https://grpc.github.io/grpc/core/md_doc_statuscodes.html).
 
-##### padding, 4 bytes
+- `padding`, 4 bytes
 
-Reserved to maintain 8 byte alignment. MUST be unset and ignored.
+  Reserved to maintain 8 byte alignment. MUST be unset and ignored.
 
-##### body, variable length byte array
+- `body`, variable length byte array
 
-For responses with an "Ok" status code the body MUST be the byte encoded method
-return value. Else the body MUST be a (possibly empty) UTF-8 encoded
-developer-facing error message.
+  For responses with an "Ok" status code the body MUST be the byte encoded
+  method return value. Else the body MUST be a (possibly empty) UTF-8 encoded
+  developer-facing error message.
 
 ### Frame Layer
 
@@ -159,7 +159,7 @@ of one or more frames.
 
 A byte encoded frame MUST consist of the following fields:
 
-```
+```text
  0                   1                   2                   3
  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -176,47 +176,43 @@ A byte encoded frame MUST consist of the following fields:
 <!-- Diagram generated with https://www.luismg.com/protocol/, using the schema
 "padding:32,length:16,flags:16,body bytes...:64" -->
 
-##### padding, 4 bytes
+- `padding`, 4 bytes
 
-For future use.
+  For future use.
 
-##### length, u16, little endian
+- `length`, u16, little endian
 
-Length of the entire frame, including this field. The length of a frame MUST NOT
-exceed 4,000 bytes.
+  Length of the entire frame, including this field. The length of a frame MUST
+  NOT exceed 4,000 bytes.
 
-##### flags, 2 bytes
+- `flags`, 2 bytes
 
-###### flags[0]
+  - `flags[0]`
 
-```
-- 7 (MSB): unused
-- 6: unused
-- 5: unused
-- 4: unused
-- 3: unused
-- 2: unused
-- 1: end flag. MUST be set in the last frame of a message
-- 0 (LSB): start flag. MUST be set in the first frame of a message
-```
+    - 7 (MSB): unused
+    - 6: unused
+    - 5: unused
+    - 4: unused
+    - 3: unused
+    - 2: unused
+    - 1: end flag. MUST be set in the last frame of a message
+    - 0 (LSB): start flag. MUST be set in the first frame of a message
 
-###### flags[1]
+  - `flags[1]`
 
-```
-- 7 (MSB): unused
-- 6: unused
-- 5: unused
-- 4: unused
-- 3: unused
-- 2: unused
-- 1: unused
-- 0 (LSB): unused
-```
+    - 7 (MSB): unused
+    - 6: unused
+    - 5: unused
+    - 4: unused
+    - 3: unused
+    - 2: unused
+    - 1: unused
+    - 0 (LSB): unused
 
-##### body, variable length byte array
+- `body`, variable length byte array
 
-Byte fragment of an encoded message. In order to not exceed the maximum frame
-length, this byte array MUST NOT exceed 3,936 bytes.
+  Byte fragment of an encoded message. In order to not exceed the maximum frame
+  length, this byte array MUST NOT exceed 3,936 bytes.
 
 ## Interaction between the Layers
 
@@ -266,7 +262,7 @@ invocation would look like after being encoded as two frames.
 
 #### Frame 0
 
-```
+```text
  0                   1                   2                   3
  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -297,7 +293,7 @@ invocation would look like after being encoded as two frames.
 
 #### Frame 1
 
-```
+```text
  0                   1                   2                   3
  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+

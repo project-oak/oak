@@ -30,8 +30,9 @@ crosvm \
 --app-binary experimental/oak_baremetal_app_crosvm/target/x86_64-unknown-none/debug/oak_baremetal_app_crosvm
 ```
 
-See also the See the task integration at `xtask/src/vm.rs`. Additionally a documentation is available via `cargo run --package oak_baremetal_launcher -- --help`.
-
+See also the See the task integration at `xtask/src/vm.rs`. Additionally a
+documentation is available via
+`cargo run --package oak_baremetal_launcher -- --help`.
 
 ```shell
 cargo build --package oak_functions_loader_linux_native \
