@@ -45,7 +45,7 @@ impl Write for SerialWrapper<'_> {
 
 lazy_static! {
     pub static ref SERIAL1: AtomicRefCell<SerialWrapper<'static>> = {
-        let sev_status = get_sev_status().unwrap();
+        let sev_status = get_sev_status().unwrap_or(SevStatus::empty());
         let wrapper = if sev_status.contains(SevStatus::SEV_ES_ENABLED) {
             let ghcb_protocol = crate::ghcb::init_ghcb(sev_status.contains(SevStatus::SNP_ACTIVE));
             // Safety: our contract with the loader requires the first serial port to be available,

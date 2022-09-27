@@ -18,7 +18,11 @@
 #![no_main]
 
 use core::{mem::MaybeUninit, panic::PanicInfo};
-use sev_guest::{cpuid::CpuidPage, msr, secrets::SecretsPage};
+use sev_guest::{
+    cpuid::CpuidPage,
+    msr::{get_sev_status, SevStatus},
+    secrets::SecretsPage,
+};
 use x86_64::instructions::{hlt, interrupts::int3};
 
 mod asm;
@@ -49,21 +53,20 @@ pub extern "C" fn rust64_start() -> ! {
 
 #[panic_handler]
 fn panic(_info: &PanicInfo) -> ! {
-    if msr::get_sev_status()
-        .unwrap()
-        .contains(msr::SevStatus::SEV_ES_ENABLED)
-    {
-        msr::request_termination(msr::TerminationRequest {
-            reason: msr::TerminationReason::General,
-        });
+    let sev_status = get_sev_status().unwrap_or(SevStatus::empty());
+    if sev_status.contains(SevStatus::SEV_ES_ENABLED) {
+        let mut ghcb_protocol = crate::ghcb::init_ghcb(sev_status.contains(SevStatus::SNP_ACTIVE));
+        // Use the i8042 device to shut down the machine. Assumes the VMM exposes the device.
+        // This is safe as both qemu and crosvm expose the i8042 device by default.
+        let _ = ghcb_protocol.io_write_u8(0x64, 0xFE);
     } else {
         // Trigger a breakpoint exception. As we don't have a #BP handler, this will triple fault
         // and terminate the program.
         int3();
+    }
 
-        // ..but if we're still here, just go in an infinite loop.
-        loop {
-            hlt();
-        }
+    // But if we're still here for some reason, just go in an infinite halt loop.
+    loop {
+        hlt();
     }
 }
