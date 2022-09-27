@@ -33,7 +33,7 @@ pub const ALL_CLIENTS: &str = "all";
 pub const NO_CLIENTS: &str = "none";
 
 /// Holds the components for running an example in Oak: a `server` running the given
-/// `applications` listening to the `clients` and passing requests to `backends`.
+/// `applications` listening to the `clients`.
 /// Configured through `example.toml` files.
 #[derive(serde::Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
@@ -41,8 +41,6 @@ pub struct OakExample {
     name: String,
     #[serde(default)]
     server: Server,
-    #[serde(default)]
-    backends: HashMap<String, Executable>,
     applications: HashMap<String, Application>,
     clients: HashMap<String, Executable>,
 }
@@ -148,8 +146,6 @@ impl OakFunctionsApplication {
 
 /// Construct run and build steps an `OakExample`.
 trait OakExampleSteps {
-    fn get_backends(&self) -> &HashMap<String, Executable>;
-
     fn get_build_client(&self) -> &BuildClient;
 
     /// Constructs application build steps.
@@ -157,32 +153,6 @@ trait OakExampleSteps {
 
     /// Constructs run step for the example server.
     fn construct_server_run_step(&self, run_clients: Step) -> Step;
-
-    /// Constructs build steps for the backends.
-    fn construct_backend_build_steps(&self) -> Vec<Step> {
-        self.get_backends()
-            .iter()
-            .map(move |(name, backend)| Step::Single {
-                name: name.to_string(),
-                command: build(&backend.target, self.get_build_client()),
-            })
-            .collect()
-    }
-
-    /// Recursively constructs run steps for the backends.
-    fn construct_backend_run_steps(&self, run_server_clients: Step) -> Step {
-        self.get_backends()
-            .iter()
-            // First iteration includes `run_server_clients` as a foreground step.
-            .fold(run_server_clients, |backend_steps, (name, backend)| {
-                Step::WithBackground {
-                    name: name.to_string(),
-                    // Each `backend` is included as background step.
-                    background: run(backend, self.get_build_client(), Vec::new()),
-                    foreground: Box::new(backend_steps),
-                }
-            })
-    }
 }
 pub struct OakFunctionsExample<'a> {
     example: &'a OakExample,
@@ -212,10 +182,6 @@ impl<'a> OakFunctionsExample<'a> {
 }
 
 impl OakExampleSteps for OakFunctionsExample<'_> {
-    fn get_backends(&self) -> &HashMap<String, Executable> {
-        &self.example.backends
-    }
-
     fn get_build_client(&self) -> &BuildClient {
         &self.options.build_client
     }
@@ -283,11 +249,9 @@ fn run_oak_functions_example(example: &OakFunctionsExample) -> Step {
         opt.client_additional_args.clone(),
     );
 
-    // Build any backend server
     #[allow(clippy::collapsible_if)]
-    let run_backend_server_clients: Step = if opt.run_server.unwrap_or(true) {
-        let run_server_clients = example.construct_server_run_step(run_clients);
-        example.construct_backend_run_steps(run_server_clients)
+    let run_server_clients: Step = if opt.run_server.unwrap_or(true) {
+        example.construct_server_run_step(run_clients)
     } else {
         run_clients
     };
@@ -308,10 +272,9 @@ fn run_oak_functions_example(example: &OakFunctionsExample) -> Step {
             } else {
                 vec![]
             },
-            example.construct_backend_build_steps(),
             vec![Step::Multiple {
                 name: "run".to_string(),
-                steps: vec![run_backend_server_clients],
+                steps: vec![run_server_clients],
             }],
         ]
         .into_iter()
@@ -368,7 +331,6 @@ pub fn build_oak_functions_example(opt: &RunOakExamplesOpt, scope: &Scope) -> St
             } else {
                 vec![]
             },
-            oak_functions_example.construct_backend_build_steps(),
             vec![build_client],
         ]
         .into_iter()
