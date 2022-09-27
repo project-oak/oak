@@ -21,7 +21,7 @@ use core::arch::asm;
 use strum::FromRepr;
 
 /// Whether a page is in the validated state or not.
-#[derive(Debug, FromRepr)]
+#[derive(Clone, Copy, Debug, FromRepr)]
 #[repr(u32)]
 pub enum Validation {
     /// The page is not validated.
@@ -52,7 +52,7 @@ pub enum InstructionError {
     FailSizeMismatch = 6,
     /// The page validation status was not updated. This value is software defined and will not be
     /// returned by the hardware instruction.
-    ValdationStatusNotUpdated = 255,
+    ValidationStatusNotUpdated = 255,
 }
 
 /// Marks a page as validated or unvalidated in the RMP.
@@ -87,7 +87,7 @@ pub fn pvalidate(
             Ok(())
         } else {
             // If the carry flag is not 0, it indicates that the validated state was not changed.
-            Err(InstructionError::ValdationStatusNotUpdated)
+            Err(InstructionError::ValidationStatusNotUpdated)
         }
     } else {
         Err(InstructionError::from_repr(result)
