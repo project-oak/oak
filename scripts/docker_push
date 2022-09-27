@@ -9,6 +9,7 @@
 # - `gcloud auth login`
 # - `gcloud config set project oak-ci`
 # - `gcloud auth configure-docker`
+# - `gcloud auth configure-docker europe-west2-docker.pkg.dev`
 
 readonly SCRIPTS_DIR="$(dirname "$0")"
 # shellcheck source=scripts/common

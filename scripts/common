@@ -10,8 +10,8 @@ set -o pipefail
 # https://docs.rs/env_logger
 export RUST_LOG="${RUST_LOG:-info}"
 
-# See https://pantheon.corp.google.com/gcr/images/oak-ci/GLOBAL/oak
-readonly DOCKER_IMAGE_NAME='gcr.io/oak-ci/oak:latest'
+# See https://pantheon.corp.google.com/artifacts/docker/oak-ci/europe-west2/oak-development?project=oak-ci
+readonly DOCKER_IMAGE_NAME='europe-west2-docker.pkg.dev/oak-ci/oak-development/oak-development:latest'
 
 # The difference between Docker image id and image digest is that the image id corresponds to the
 # hash of the contents of the image, while the image digest is a hash of the image and its metadata,
@@ -23,9 +23,7 @@ readonly DOCKER_IMAGE_NAME='gcr.io/oak-ci/oak:latest'
 readonly DOCKER_IMAGE_ID='sha256:215d9b11115a46f799341852ab6c43147f43414cb5e02be35d0abd63ed75cbb6'
 
 # Do not modify manually. This value is automatically updated by ./scripts/docker_push .
-readonly DOCKER_IMAGE_REPO_DIGEST='gcr.io/oak-ci/oak@sha256:9e6f478527ad452a83ebfc56e3e0fe2550f164e43bb9810ab989bddf4923f163'
-
-readonly SERVER_DOCKER_IMAGE_NAME='gcr.io/oak-ci/oak-server'
+readonly DOCKER_IMAGE_REPO_DIGEST='europe-west2-docker.pkg.dev/oak-ci/oak-development/oak-development@sha256:9e6f478527ad452a83ebfc56e3e0fe2550f164e43bb9810ab989bddf4923f163'
 
 readonly CACHE_DIR='bazel-cache'
 readonly SERVER_BIN_DIR="${PWD}/oak_loader/bin"
