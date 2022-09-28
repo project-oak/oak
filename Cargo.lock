@@ -3404,6 +3404,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "oak_linux_boot_params"
+version = "0.1.0"
+dependencies = [
+ "bitflags",
+ "static_assertions",
+ "strum",
+]
+
+[[package]]
 name = "oak_logger"
 version = "0.1.0"
 dependencies = [

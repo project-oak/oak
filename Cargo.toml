@@ -21,6 +21,7 @@ members = [
   "experimental/virtio",
   "experimental/vsock/echo",
   "experimental/web_client",
+  "linux_boot_params",
   "oak_functions/abi",
   "oak_functions/client/rust",
   "oak_functions/examples/benchmark/module",
