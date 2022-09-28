@@ -17,9 +17,8 @@ docker_run_flags=(
   '--env=TERM=xterm-256color'
   '--env=BAZEL_REMOTE_CACHE_ENABLED'
   '--env=BAZEL_GOOGLE_CREDENTIALS'
-  "--volume=$PWD/bazel-cache:/home/docker/.cache/bazel"
-  "--volume=$PWD/cargo-cache:/home/docker/.cargo"
-  "--volume=$PWD/sccache-cache:/home/docker/.cache/sccache"
+  "--volume=$PWD/bazel-cache:/root/.cache/bazel"
+  "--volume=$PWD/sccache-cache:/root/.cache/sccache"
   "--volume=$PWD:/workspace"
   '--volume=/dev/log:/dev/log'
   '--workdir=/workspace'
