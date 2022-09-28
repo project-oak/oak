@@ -17,7 +17,7 @@
 #![no_std]
 #![no_main]
 
-use core::{arch::asm, ffi::c_void, panic::PanicInfo};
+use core::{arch::asm, ffi::c_void, mem::MaybeUninit, panic::PanicInfo};
 use sev_guest::instructions::{pvalidate, InstructionError, PageSize as SevPageSize, Validation};
 use x86_64::{
     instructions::{hlt, interrupts::int3, segmentation::Segment},
@@ -38,22 +38,32 @@ use x86_64::{
 };
 mod asm;
 
-// Magic constants where various data structures will be stored.
-// Many of these are set to be same as with crosvm; see
-// https://google.github.io/crosvm/appendix/memory_layout.html for more details.
-const BOOT_GDT_ADDR: PhysAddr = PhysAddr::new(0x1500);
-// The GDT provided by crosvm has 4 entries, which means that the (empty) IDT can go immediately
-// after that to address 0x1520. The Rust x86_64::GlobalDescriptorTable has 8 entries instead of 4,
-// and the x86_64::InterruptDescriptorTable takes a full 4K of memory, so let's move it to the next
-// page.
-const BOOT_IDT_ADDR: PhysAddr = PhysAddr::new(0x2000);
-const BOOT_PML4_ADDR: PhysAddr = PhysAddr::new(0x9000);
-const BOOT_PDPT_ADDR: PhysAddr = PhysAddr::new(0xA000);
-const BOOT_PD_ADDR: PhysAddr = PhysAddr::new(0xB000);
+#[link_section = ".boot.gdt"]
+static mut BOOT_GDT: MaybeUninit<GlobalDescriptorTable> = MaybeUninit::uninit();
+#[link_section = ".boot.idt"]
+static mut BOOT_IDT: MaybeUninit<InterruptDescriptorTable> = MaybeUninit::uninit();
+#[link_section = ".boot.pml4"]
+static mut BOOT_PML4: MaybeUninit<PageTable> = MaybeUninit::uninit();
+#[link_section = ".boot.pdpt"]
+static mut BOOT_PDPT: MaybeUninit<PageTable> = MaybeUninit::uninit();
+#[link_section = ".boot.pd"]
+static mut BOOT_PD: MaybeUninit<PageTable> = MaybeUninit::uninit();
+#[link_section = ".boot.unmeasured"]
+#[used]
+static mut SEV_UNMEASURED: MaybeUninit<[u8; 4096]> = MaybeUninit::uninit();
+#[link_section = ".boot.secrets"]
+#[used]
+static mut SEV_SECRETS: MaybeUninit<sev_guest::secrets::SecretsPage> = MaybeUninit::uninit();
+#[link_section = ".boot.cpuid"]
+#[used]
+static mut SEV_CPUID: MaybeUninit<sev_guest::cpuid::CpuidPage> = MaybeUninit::uninit();
 
 extern "C" {
     #[link_name = "pd_addr"]
     static BIOS_PD: c_void;
+
+    #[link_name = "boot_stack_pointer"]
+    static BOOT_STACK_POINTER: c_void;
 }
 
 /// Creates page tables that identity-map the first 1GiB of memory using 2MiB hugepages.
@@ -84,15 +94,12 @@ pub fn create_page_tables(
 }
 
 pub fn create_gdt(gdt: &mut GlobalDescriptorTable) -> (SegmentSelector, SegmentSelector) {
-    *gdt = GlobalDescriptorTable::new();
     let cs = gdt.add_entry(Descriptor::kernel_code_segment());
     let ds = gdt.add_entry(Descriptor::kernel_data_segment());
     (cs, ds)
 }
 
-pub fn create_idt(idt: &mut InterruptDescriptorTable) {
-    *idt = InterruptDescriptorTable::new();
-}
+pub fn create_idt(_idt: &mut InterruptDescriptorTable) {}
 
 /// Passes control to the operating system kernel. No more code from the BIOS will run.
 ///
@@ -102,12 +109,13 @@ pub fn create_idt(idt: &mut InterruptDescriptorTable) {
 pub unsafe fn jump_to_kernel(entry_point: VirtAddr) -> ! {
     asm!(
         // Boot stack pointer
-        "mov $0x8000, %rsp",
+        "mov {1}, %rsp",
         // Zero page address
         "mov $0x7000, %rsi",
         // ...and away we go!
         "jmp *{0}",
         in(reg) entry_point.as_u64(),
+        in(reg) &BOOT_STACK_POINTER as *const _ as u64,
         options(noreturn, att_syntax)
     );
 }
@@ -190,18 +198,19 @@ pub extern "C" fn rust64_start(encrypted: u64) -> ! {
      * See https://www.kernel.org/doc/html/latest/x86/boot.html#id1 for the particular requirements.
      */
 
-    // Safety, for all these data structure dereferences: The addresses are to well-known locations,
-    // same as crosvm is using, in the lowest 1MB of memory which we know is valid.
-    let gdt = unsafe { &mut *(BOOT_GDT_ADDR.as_u64() as *mut GlobalDescriptorTable) };
-
+    // Before we access any memory, we need to ensure we've called `PVALIDATE` on the page.
+    // Safety: as all of these are static mut-s, we need to wrap all access to them in `unsafe {}`.
+    // This is safe, as (a) the linker script places them in memory in a way that's not overlapping,
+    // and (b) we do not have threads in stage0 so we're not in danger of concurrent access.
     if snp {
         pvalidate(
-            x86_64::addr::align_down(gdt as *const _ as u64, 0x1000) as usize,
+            x86_64::addr::align_down(unsafe { BOOT_GDT.as_ptr() } as u64, 0x1000) as usize,
             SevPageSize::Page4KiB,
             Validation::Validated,
         )
         .unwrap();
     }
+    let gdt = unsafe { BOOT_GDT.write(GlobalDescriptorTable::new()) };
 
     let (cs, ds) = create_gdt(gdt);
     gdt.load();
@@ -215,16 +224,15 @@ pub extern "C" fn rust64_start(encrypted: u64) -> ! {
         SS::set_reg(ds);
     }
 
-    let idt = unsafe { &mut *(BOOT_IDT_ADDR.as_u64() as *mut InterruptDescriptorTable) };
-
     if snp {
         pvalidate(
-            idt as *const _ as usize,
+            unsafe { BOOT_IDT.as_ptr() } as usize,
             SevPageSize::Page4KiB,
             Validation::Validated,
         )
         .unwrap();
     }
+    let idt = unsafe { BOOT_IDT.write(InterruptDescriptorTable::new()) };
 
     create_idt(idt);
     idt.load();
@@ -232,29 +240,29 @@ pub extern "C" fn rust64_start(encrypted: u64) -> ! {
     // We assume 0-th bit is never the encrypted bit.
     let encrypted = if encrypted > 0 { 1 << encrypted } else { 0 };
 
-    let pml4 = unsafe { &mut *(BOOT_PML4_ADDR.as_u64() as *mut PageTable) };
-    let pdpt = unsafe { &mut *(BOOT_PDPT_ADDR.as_u64() as *mut PageTable) };
-    let pd = unsafe { &mut *(BOOT_PD_ADDR.as_u64() as *mut PageTable) };
     if snp {
         pvalidate(
-            pml4 as *const _ as usize,
+            unsafe { BOOT_PML4.as_ptr() } as usize,
             SevPageSize::Page4KiB,
             Validation::Validated,
         )
         .unwrap();
         pvalidate(
-            pdpt as *const _ as usize,
+            unsafe { BOOT_PDPT.as_ptr() } as usize,
             SevPageSize::Page4KiB,
             Validation::Validated,
         )
         .unwrap();
         pvalidate(
-            pd as *const _ as usize,
+            unsafe { BOOT_PD.as_ptr() } as usize,
             SevPageSize::Page4KiB,
             Validation::Validated,
         )
         .unwrap();
     }
+    let pml4 = unsafe { BOOT_PML4.write(PageTable::new()) };
+    let pdpt = unsafe { BOOT_PDPT.write(PageTable::new()) };
+    let pd = unsafe { BOOT_PD.write(PageTable::new()) };
     create_page_tables(pml4, pdpt, pd, encrypted);
     /* We need to do some trickery here. All of the stage0 code is somewhere within [4G-2M; 4G).
      * Thus, let's keep our own last PD, so that we can continue executing after reloading the
@@ -270,7 +278,7 @@ pub extern "C" fn rust64_start(encrypted: u64) -> ! {
     // own code.
     unsafe {
         Cr3::write(
-            PhysFrame::from_start_address(BOOT_PML4_ADDR).unwrap(),
+            PhysFrame::from_start_address(PhysAddr::new(BOOT_PML4.as_ptr() as u64)).unwrap(),
             Cr3Flags::empty(),
         );
     }

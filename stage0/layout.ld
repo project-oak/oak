@@ -18,6 +18,8 @@ HIDDEN(TOP = 4096M);
 HIDDEN(BIOS_SIZE = 512K);
 
 MEMORY {
+    ram_low : ORIGIN = 0, LENGTH = 1M
+
     bios : ORIGIN = TOP - BIOS_SIZE, LENGTH = BIOS_SIZE
 }
 
@@ -52,6 +54,65 @@ HIDDEN(SEV_SECTION_SECRET = 0x2);
 HIDDEN(SEV_SECTION_CPUID = 0x3);
 
 SECTIONS {
+    /* Lowest 1MB of memory (the real mode address space) where we place a lot of our data structures, as
+     * that region is usually avoided by OS kernels.
+     * The exact addresses for the various data structures are arbitrary, but wherever possible, we've
+     * chosen to follow the examples of either crosvm and/or EDK2.
+     * For more background, see:
+     * https://wiki.osdev.org/Memory_Map_(x86)
+     * https://google.github.io/crosvm/appendix/memory_layout.html
+     * https://github.com/tianocore/edk2/blob/master/OvmfPkg/OvmfPkgX64.fdf
+     * 
+     * These sections have to be marked NOLOAD, otherwise you risk ending up with a 4GB BIOS image.
+     */
+    .boot.gdt 0x1500 (NOLOAD) : {
+        *(.boot.gdt)
+    } > ram_low
+
+    /* The GDT provided by crosvm has 4 entries, which means that the (empty) IDT can go
+     * immediately after that to address 0x1520. The Rust x86_64::GlobalDescriptorTable has 8
+     * entries instead of 4, and the x86_64::InterruptDescriptorTable takes a full 4K of memory, so
+     * let's move it to the next page.
+     */
+    .boot.idt 0x2000 (NOLOAD) : {
+        *(.boot.idt)
+    } > ram_low
+    
+    .boot.zero_page 0x7000 (NOLOAD) : {
+        *(.boot.zero_page)
+    } > ram_low
+
+    boot_stack_pointer = 0x8000;
+
+    .boot.pml4 0x9000 (NOLOAD) : {
+        *(.boot.pml4)
+    } > ram_low
+
+    .boot.pdpt 0xA000 (NOLOAD) : {
+        *(.boot.pdpt)
+    } > ram_low
+
+    .boot.pd 0xB000 (NOLOAD) : {
+        *(.boot.pd)
+    } > ram_low
+
+    .boot.unmeasured 0xC000 (NOLOAD) : {
+        KEEP(*(.boot.unmeasured))
+    } > ram_low
+    ASSERT(SIZEOF(.boot.unmeasured) == 4K, "Unmeasured section has to be exactly one page in size")
+
+    .boot.secrets 0xD000 (NOLOAD) : {
+        KEEP(*(.boot.secrets))
+    } > ram_low
+    ASSERT(SIZEOF(.boot.secrets) == 4K, "Secrets section has to be exactly one page in size")
+
+    .boot.cpuid 0xE000 (NOLOAD) : {
+        KEEP(*(.boot.cpuid))
+    } > ram_low
+    ASSERT(SIZEOF(.boot.cpuid) == 4K, "CPUID section has to be exactly one page in size")
+
+    ASSERT(. < 640K, "Boot data structures overflow low memory")
+
     . = ORIGIN(bios);
 
     .rodata.pml4 ALIGN(4K) : {
@@ -244,16 +305,16 @@ SECTIONS {
          * Thankfully none of these clashed with existing data structures that we're setting up.
          */
         /* Unmeasured page location */
-        LONG(0xC000)
-        LONG(0x1000)
+        LONG(ADDR(.boot.unmeasured))
+        LONG(SIZEOF(.boot.unmeasured))
         LONG(SEV_SECTION_UNMEASURED)
         /* Secrets page location */
-        LONG(0xD000)
-        LONG(0x1000)
+        LONG(ADDR(.boot.secrets))
+        LONG(SIZEOF(.boot.secrets))
         LONG(SEV_SECTION_SECRET)
         /* CPUID page location */
-        LONG(0xE000)
-        LONG(0x1000)
+        LONG(ADDR(.boot.cpuid))
+        LONG(SIZEOF(.boot.cpuid))
         LONG(SEV_SECTION_CPUID)
         HIDDEN(sev_guided_structure_end = .);
 
