@@ -63,6 +63,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "oak_linux_boot_params"
+version = "0.1.0"
+dependencies = [
+ "bitflags",
+ "static_assertions",
+ "strum",
+]
+
+[[package]]
 name = "proc-macro2"
 version = "1.0.43"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -105,6 +114,7 @@ dependencies = [
  "atomic_refcell",
  "lazy_static",
  "log",
+ "oak_linux_boot_params",
  "sev_guest",
  "uart_16550",
  "x86_64",

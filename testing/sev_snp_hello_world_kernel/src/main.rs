@@ -17,7 +17,8 @@
 #![no_std]
 #![no_main]
 
-use core::{mem::MaybeUninit, panic::PanicInfo};
+use core::panic::PanicInfo;
+use oak_linux_boot_params::{BootParams, CCBlobSevInfo, CCSetupData, SetupDataType};
 use sev_guest::{
     cpuid::CpuidPage,
     msr::{get_sev_status, SevStatus},
@@ -29,25 +30,51 @@ mod asm;
 mod ghcb;
 mod serial;
 
-#[link_section = ".cpuid"]
-static CPUID: MaybeUninit<CpuidPage> = MaybeUninit::uninit();
-
-#[link_section = ".secrets"]
-static SECRETS: MaybeUninit<SecretsPage> = MaybeUninit::uninit();
-
 #[no_mangle]
-pub extern "C" fn rust64_start() -> ! {
+pub extern "C" fn rust64_start(_: u64, boot_params: &BootParams) -> ! {
     serial::init_logging();
     log::info!("Hello World!");
 
-    // Safety: these data structures are placed in valid memory so we won't page fault when
-    // accessing them and the CPU is supposed to initialize them when running under SEV-SNP. If
-    // we're not running under SEV-SNP, we will read garbage from uninialized memory.
-    let cpuid: &CpuidPage = unsafe { CPUID.assume_init_ref() };
-    let secrets: &SecretsPage = unsafe { SECRETS.assume_init_ref() };
+    let sev_status = get_sev_status().unwrap_or(SevStatus::empty());
+    if sev_status.contains(SevStatus::SEV_ENABLED) {
+        log::info!("SEV enabled");
+    }
+    if sev_status.contains(SevStatus::SEV_ES_ENABLED) {
+        log::info!("SEV-ES enabled");
+    }
+    if sev_status.contains(SevStatus::SNP_ACTIVE) {
+        log::info!("SNP active");
 
-    log::info!("CPUID page: {:?}", cpuid);
-    log::info!("Secrets page: {:?}", secrets);
+        // Walk the null-terminated setup_data list until we find the CC blob.
+        let mut setup_data = boot_params.hdr.setup_data;
+
+        // Safety: there's a lot of dereferences of raw pointers here; unfortunately necessary as we
+        // need to access the C data structures set up by the bootloader. It is safe as long as the
+        // bootloader populated the zero page correctly.
+        while !setup_data.is_null() {
+            let type_ = unsafe { (*setup_data).type_ };
+            if type_ == SetupDataType::CCBlob {
+                break;
+            }
+            setup_data = unsafe { (*setup_data).next };
+        }
+
+        if !setup_data.is_null() {
+            let cc_setup_data = unsafe { &*(setup_data as *const CCSetupData) };
+            let cc_blob = unsafe { &*(cc_setup_data.cc_blob_address as *const CCBlobSevInfo) };
+            let magic = cc_blob.magic;
+            if magic != oak_linux_boot_params::CC_BLOB_SEV_INFO_MAGIC {
+                panic!("CCBlobSevInfo data structure has invalid magic: {}", magic);
+            }
+            let cpuid = unsafe { &*(cc_blob.cpuid_phys as *const CpuidPage) };
+            let secrets = unsafe { &*(cc_blob.secrets_phys as *const SecretsPage) };
+
+            log::info!("CPUID page: {:?}", cpuid);
+            log::info!("Secrets page: {:?}", secrets);
+        } else {
+            log::warn!("CCSetupData data structure not found in setup_data");
+        }
+    }
     panic!();
 }
 
