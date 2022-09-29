@@ -13,6 +13,7 @@ members = ["."]
 atomic_refcell = "*"
 lazy_static = { version = "*", features = ["spin_no_std"] }
 log = "*"
+oak_linux_boot_params = { path = "../../linux_boot_params" }
 uart_16550 = "*"
 x86_64 = "*"
 sev_guest = { path = "../../experimental/sev_guest" }

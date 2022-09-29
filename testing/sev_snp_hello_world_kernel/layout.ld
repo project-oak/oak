@@ -93,14 +93,6 @@ SECTIONS {
     } : bss
     stack_start = .;
 
-    .cpuid (NOLOAD) : ALIGN(2M) {
-    } : cpuid
-    ASSERT((SIZEOF(.cpuid) == 0x1000), "cpuid page needs to be exactly 4K in size")
-
-    .secrets (NOLOAD) : ALIGN(2M) {
-    } : secrets
-    ASSERT((SIZEOF(.secrets) == 0x1000), "secrets page needs to be exactly 4K in size")
-
     /DISCARD/ : {
         *(.eh_frame*)
     }
