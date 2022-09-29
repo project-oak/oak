@@ -81,6 +81,7 @@ SECTIONS {
     .boot.zero_page 0x7000 (NOLOAD) : {
         *(.boot.zero_page)
     } > ram_low
+    ASSERT(SIZEOF(.boot.zero_page) == 4K, "Zero page has to be exactly one page in size")
 
     boot_stack_pointer = 0x8000;
 
@@ -110,6 +111,13 @@ SECTIONS {
         KEEP(*(.boot.cpuid))
     } > ram_low
     ASSERT(SIZEOF(.boot.cpuid) == 4K, "CPUID section has to be exactly one page in size")
+
+    .boot ALIGN(4K) (NOLOAD) : {
+        boot_data_structs_start = .;
+        KEEP(*(.boot))
+        . = ALIGN(4K);
+        boot_data_structs_end = .;
+    } > ram_low
 
     ASSERT(. < 640K, "Boot data structures overflow low memory")
 
