@@ -16,7 +16,7 @@ humantime-serde = "*"
 # TODO(#2783): Re-enable logging via the log crate once the logging approach has been redisigned.
 log = { version = "*", features = ["max_level_off", "release_max_level_off"] }
 oak_functions_extension = { path = "../extension" }
-oak_functions_loader = { path = "../loader" }
+oak_functions_loader = { path = "../loader", features = ["oak-web"] }
 oak_logger = { path = "../logger" }
 serde = "*"
 serde_derive = "*"

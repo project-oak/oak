@@ -21,7 +21,6 @@ jobs:
     runs-on: ubuntu-20.04
     env:
       OAK_FUNCTIONS_BASE_PATH: './target/x86_64-unknown-linux-musl/release/oak_functions_loader_base'
-      OAK_FUNCTIONS_UNSAFE_PATH: './target/x86_64-unknown-linux-musl/release/oak_functions_loader_unsafe'
       OAK_BAREMETAL_CROSVM_PATH: './experimental/oak_baremetal_app_crosvm/target/x86_64-unknown-none/release/oak_baremetal_app_crosvm'
       OAK_FUNCTIONS_RELEASE_PATH: './target/x86_64-unknown-linux-musl/release'
 
@@ -117,7 +116,6 @@ jobs:
         if: github.event_name == 'push'
         run: |
           ent put ${{ env.OAK_FUNCTIONS_BASE_PATH }}
-          ent put ${{ env.OAK_FUNCTIONS_UNSAFE_PATH }}
           ent put ${{ env.OAK_BAREMETAL_CROSVM_PATH }}
 
       # Build reproducibility index on `push` events.
@@ -126,7 +124,6 @@ jobs:
         uses: ./.github/actions/reproducibility_index
         with:
           OAK_FUNCTIONS_BASE_PATH: ${{ env.OAK_FUNCTIONS_BASE_PATH }}
-          OAK_FUNCTIONS_UNSAFE_PATH: ${{ env.OAK_FUNCTIONS_UNSAFE_PATH }}
           OAK_BAREMETAL_CROSVM_PATH: ${{ env.OAK_BAREMETAL_CROSVM_PATH }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -137,7 +134,6 @@ jobs:
         uses: ./.github/actions/reproducibility_index
         with:
           OAK_FUNCTIONS_BASE_PATH: ${{ env.OAK_FUNCTIONS_BASE_PATH }}
-          OAK_FUNCTIONS_UNSAFE_PATH: ${{ env.OAK_FUNCTIONS_UNSAFE_PATH }}
           OAK_BAREMETAL_CROSVM_PATH: ${{ env.OAK_BAREMETAL_CROSVM_PATH }}
 
       # Experimental step using SLSA generic provenance generator

@@ -16,14 +16,10 @@
 
 use hashbrown::HashMap;
 use lazy_static::lazy_static;
-use maplit::btreemap;
 use oak_functions_abi::{Request, Response};
 use oak_functions_loader::{logger::Logger, server::WasmHandler};
 use oak_functions_lookup::{LookupDataManager, LookupFactory};
-use oak_functions_metrics::{BucketConfig, PrivateMetricsConfig, PrivateMetricsProxyFactory};
-use oak_functions_tf_inference::{read_model_from_path, TensorFlowFactory, TensorFlowModelConfig};
 use oak_functions_workload_logging::WorkloadLoggingFactory;
-
 use std::{path::PathBuf, sync::Arc};
 
 lazy_static! {
@@ -227,82 +223,4 @@ async fn test_blackhole() {
 
     let response: Response = wasm_handler.handle_invoke(request).unwrap();
     test_utils::assert_response_body(response, "Blackholed");
-}
-
-#[tokio::test]
-async fn test_report_metric() {
-    let logger = Logger::for_test();
-
-    // Keep in sync with
-    // `workspace/oak_functions/sdk/oak_functions/tests/metrics_module/src/lib.rs`.
-    let label = "a";
-    let metrics_config = PrivateMetricsConfig {
-        epsilon: 1.0,
-        batch_size: 1,
-        buckets: btreemap![
-            label.to_string() => BucketConfig::Count,
-        ],
-    };
-
-    let metrics_factory =
-        PrivateMetricsProxyFactory::new_boxed_extension_factory(&metrics_config, logger.clone())
-            .expect("Fail to create metrics factory.");
-
-    let wasm_handler =
-        WasmHandler::create(&METRICS_WASM_MODULE_BYTES, vec![metrics_factory], logger)
-            .expect("Could not instantiate WasmHandler.");
-
-    // The request is ignored in the Wasm module.
-    let request = Request {
-        body: b"_".to_vec(),
-    };
-
-    let response: Response = wasm_handler.handle_invoke(request).unwrap();
-    // Keep in sync with
-    // `workspace/oak_functions/sdk/oak_functions/tests/metrics_module/src/lib.rs`.
-    test_utils::assert_response_body(response, "MetricReported");
-
-    // TODO(#2646): Check in the runtime that the metric was reported there.
-}
-
-#[tokio::test]
-async fn test_tf_model_infer_bad_input() {
-    let logger = Logger::for_test();
-
-    // Re-use path and share from oak_functions/examples/mobilenet.
-    let path: PathBuf = [
-        env!("WORKSPACE_ROOT"),
-        "oak_functions",
-        "examples",
-        "mobilenet",
-        "files",
-        "mobilenet_v2_1.4_224_frozen.pb",
-    ]
-    .iter()
-    .collect();
-    let shape = vec![1, 224, 224, 3];
-
-    let tf_model_config = TensorFlowModelConfig {
-        path: path.into_os_string().into_string().unwrap(),
-        shape,
-    };
-
-    let model = read_model_from_path(&tf_model_config.path).expect("Fail to read model.");
-
-    let tf_factory = TensorFlowFactory::new_boxed_extension_factory(
-        model,
-        tf_model_config.shape,
-        logger.clone(),
-    )
-    .expect("Fail to create tf factory.");
-
-    let wasm_handler = WasmHandler::create(&TF_WASM_MODULE_BYTES, vec![tf_factory], logger)
-        .expect("Could not instantiate WasmHandler.");
-
-    let request = Request {
-        body: b"intentionally bad input vector".to_vec(),
-    };
-
-    let response: Response = wasm_handler.handle_invoke(request).unwrap();
-    test_utils::assert_response_body(response, "ErrBadTensorFlowModelInput");
 }
