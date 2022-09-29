@@ -4,7 +4,7 @@ readonly SCRIPTS_DIR="$(dirname "$0")"
 # shellcheck source=scripts/common
 source "$SCRIPTS_DIR/common"
 
-cargo run --manifest-path="${SCRIPTS_DIR}/../xtask/Cargo.toml" -- "$@"
+cargo run --target=x86_64-unknown-linux-musl --manifest-path="${SCRIPTS_DIR}/../xtask/Cargo.toml" -- "$@"
 
 if [[ -n "${CI:-}" ]]; then
   sccache --show-stats
