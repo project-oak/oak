@@ -56,9 +56,6 @@ static mut BOOT_PML4: MaybeUninit<PageTable> = MaybeUninit::uninit();
 static mut BOOT_PDPT: MaybeUninit<PageTable> = MaybeUninit::uninit();
 #[link_section = ".boot.pd"]
 static mut BOOT_PD: MaybeUninit<PageTable> = MaybeUninit::uninit();
-#[link_section = ".boot.unmeasured"]
-#[used]
-static mut SEV_UNMEASURED: MaybeUninit<[u8; 4096]> = MaybeUninit::uninit();
 #[link_section = ".boot.secrets"]
 static mut SEV_SECRETS: MaybeUninit<sev_guest::secrets::SecretsPage> = MaybeUninit::uninit();
 #[link_section = ".boot.cpuid"]
@@ -76,12 +73,6 @@ extern "C" {
 
     #[link_name = "boot_stack_pointer"]
     static BOOT_STACK_POINTER: c_void;
-
-    #[link_name = "boot_data_structs_start"]
-    static BOOT_DATA_STRUCTS_START: c_void;
-
-    #[link_name = "boot_data_structs_end"]
-    static BOOT_DATA_STRUCTS_END: c_void;
 }
 
 /// Creates page tables that identity-map the first 1GiB of memory using 2MiB hugepages.
@@ -309,19 +300,6 @@ pub extern "C" fn rust64_start(encrypted: u64) -> ! {
     let zero_page = unsafe { BOOT_ZERO_PAGE.assume_init_mut() };
 
     if snp {
-        PhysFrame::<Size4KiB>::range(
-            PhysFrame::from_start_address(PhysAddr::new(
-                unsafe { &BOOT_DATA_STRUCTS_START } as *const _ as u64
-            ))
-            .unwrap(),
-            PhysFrame::from_start_address(PhysAddr::new(
-                unsafe { &BOOT_DATA_STRUCTS_END } as *const _ as u64
-            ))
-            .unwrap(),
-        )
-        .pvalidate(Validation::Validated)
-        .unwrap();
-
         let setup_data = unsafe { CC_SETUP_DATA.write(zeroed()) };
         let cc_blob = unsafe { CC_BLOB_SEV_INFO.write(zeroed()) };
 
