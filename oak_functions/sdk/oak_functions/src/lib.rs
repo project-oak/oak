@@ -17,11 +17,7 @@
 //! SDK functionality that provides idiomatic Rust wrappers around the underlying Oak Functions
 //! platform functionality.
 
-use oak_functions_abi::{
-    proto::{Inference, OakStatus},
-    ReportMetricError, ReportMetricRequest, StorageGetItemResponse, TfModelInferError,
-    TfModelInferResponse,
-};
+use oak_functions_abi::{proto::OakStatus, StorageGetItemResponse};
 use std::convert::AsRef;
 
 /// Reads and returns the user request.
@@ -64,53 +60,6 @@ pub fn storage_get_item(key: &[u8]) -> Result<Option<Vec<u8>>, OakStatus> {
     Ok(result.value)
 }
 
-/// Reports an event for a count-based metrics bucket.
-///
-/// If differentially-private metrics are enabled in the configuration the metrics bucket totals
-/// will be logged in batches after sufficient noise has been added. If events for the same bucket
-/// are reported multiple times in a single request it will be counted only once.
-pub fn report_event<T: AsRef<str>>(label: T) -> Result<Result<(), ReportMetricError>, OakStatus> {
-    report_metric(label, 1)
-}
-
-/// Reports a metric value for a sum-based metrics bucket.
-///
-/// If differentially-private metrics are enabled in the configuration the metrics bucket totals
-/// will be logged in batches after sufficient noise has been added. If multiple values are reported
-/// for the same bucket during a single request only the last value will be used. If the reported
-/// value falls outside of the configured range for the bucket, it will be clamped to the minimum or
-/// maximum value.
-///
-/// If no values are reported for a configured bucket during a request, it will be treated as if 0
-/// was reported. If the minimum value of the bucket is larger than 0 it would then be clamped to
-/// the configured minimum. This could lead to unexpected bias in the results, so minimum values
-/// above 0 should be used with care.
-pub fn report_metric<T: AsRef<str>>(
-    label: T,
-    value: i64,
-) -> Result<Result<(), ReportMetricError>, OakStatus> {
-    let label = label.as_ref().to_owned();
-    let request = ReportMetricRequest { label, value };
-
-    let serialized_request = bincode::serialize(&request).map_err(|err| {
-        log!("Failed to serialize request: {}", err);
-        OakStatus::ErrSerializing
-    })?;
-
-    let serialized_response = invoke(
-        oak_functions_abi::ExtensionHandle::MetricsHandle,
-        &serialized_request,
-    )?;
-
-    let response: Result<(), ReportMetricError> = bincode::deserialize(&serialized_response)
-        .map_err(|err| {
-            log!("Failed to deserialize response: {}", err);
-            OakStatus::ErrSerializing
-        })?;
-
-    Ok(response)
-}
-
 /// Writes a debug log message.
 ///
 /// These log messages are considered sensitive, so will only be logged by the runtime if the
@@ -119,27 +68,6 @@ pub fn write_log_message<T: AsRef<str>>(message: T) -> Result<(), OakStatus> {
     let buf = message.as_ref().as_bytes();
     invoke(oak_functions_abi::ExtensionHandle::LoggingHandle, buf)?;
     Ok(())
-}
-
-/// Performs inference for the given input vector with the TensorFlow model specified in the Oak
-/// Functions runtime.
-pub fn tf_model_infer(
-    input_vector: &[u8],
-) -> Result<Result<Inference, TfModelInferError>, OakStatus> {
-    use prost::Message;
-    let response = invoke(oak_functions_abi::ExtensionHandle::TfHandle, input_vector)?;
-    let response: TfModelInferResponse = bincode::deserialize(&response).map_err(|err| {
-        log!("Failed to deserialize response: {}", err);
-        OakStatus::ErrSerializing
-    })?;
-    // We decode the inference bytes.
-    let tf_result = response.result.and_then(|inference_bytes| {
-        Inference::decode(&*inference_bytes).map_err(|err| {
-            log!("Failed to decode: {}", err);
-            TfModelInferError::ErrorDecodingInference
-        })
-    });
-    Ok(tf_result)
 }
 
 /// Calls the testing extension with the given request. The response is directly passed on, as it is

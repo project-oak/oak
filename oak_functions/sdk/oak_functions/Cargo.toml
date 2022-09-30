@@ -15,12 +15,9 @@ serde_derive = "*"
 [dev-dependencies]
 hashbrown = "*"
 lazy_static = "*"
-maplit = "*"
 oak_functions_loader = { path = "../../loader" }
 oak_functions_lookup = { path = "../../lookup" }
-oak_functions_metrics = { path = "../../experimental/metrics" }
 oak_functions_testing_extension = { path = "../../testing" }
-oak_functions_tf_inference = { path = "../../experimental/tf_inference" }
 oak_functions_workload_logging = { path = "../../workload_logging" }
 test_utils = { path = "../test_utils" }
 tokio = "*"

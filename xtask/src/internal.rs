@@ -178,8 +178,6 @@ pub struct BuildClient {
 pub enum ServerVariant {
     /// Production-like server variant, without logging or any of the experimental features enabled
     Base,
-    /// Debug server with logging and experimental features enabled
-    Unsafe,
 }
 
 impl Default for ServerVariant {
@@ -193,7 +191,6 @@ impl std::str::FromStr for ServerVariant {
     fn from_str(variant: &str) -> Result<Self, Self::Err> {
         match variant {
             "base" => Ok(ServerVariant::Base),
-            "unsafe" => Ok(ServerVariant::Unsafe),
             _ => Err(format!(
                 "Failed to parse functions server variant {}",
                 variant
@@ -207,7 +204,6 @@ impl ServerVariant {
     pub fn path_to_manifest(&self) -> &'static str {
         match self {
             ServerVariant::Base => "./oak_functions/oak_functions_loader_base",
-            ServerVariant::Unsafe => "./oak_functions/oak_functions_loader_unsafe",
         }
     }
 
@@ -216,9 +212,6 @@ impl ServerVariant {
         match self {
             ServerVariant::Base => {
                 "./target/x86_64-unknown-linux-musl/release/oak_functions_loader_base"
-            }
-            ServerVariant::Unsafe => {
-                "./target/x86_64-unknown-linux-musl/release/oak_functions_loader_unsafe"
             }
         }
     }
