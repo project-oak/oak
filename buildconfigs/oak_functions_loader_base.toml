@@ -1,9 +1,0 @@
-# This is the static build configuration that we use with the transparent
-# release tool for building the provenance of `oak_functions_loader_base`.
-# To be able to use it with the build tool from Transparent Release, additional
-# information must be added. See `./scripts/generate_provenance` for more info.
-repo = "https://github.com/project-oak/oak"
-command = ["./scripts/xtask", "build-oak-functions-server-variants"]
-# Even though the command above generates all variants, the provenance is only
-# generated for the Base variant (i.e., `oak_functions_loader_base`).
-output_path = "./target/x86_64-unknown-linux-musl/release/oak_functions_loader_base"

@@ -203,7 +203,7 @@ impl ServerVariant {
     // Get path to manifest for the variant.
     pub fn path_to_manifest(&self) -> &'static str {
         match self {
-            ServerVariant::Base => "./oak_functions/oak_functions_loader_base",
+            ServerVariant::Base => "./experimental/oak_baremetal_launcher",
         }
     }
 
@@ -211,7 +211,7 @@ impl ServerVariant {
     pub fn path_to_executable(&self) -> &'static str {
         match self {
             ServerVariant::Base => {
-                "./target/x86_64-unknown-linux-musl/release/oak_functions_loader_base"
+                "./target/x86_64-unknown-linux-musl/release/oak_baremetal_launcher"
             }
         }
     }
