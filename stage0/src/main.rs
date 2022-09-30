@@ -23,6 +23,7 @@ use core::{
     mem::{size_of, zeroed, MaybeUninit},
     panic::PanicInfo,
 };
+use goblin::elf::header;
 use oak_linux_boot_params::BootParams;
 use sev_guest::instructions::{pvalidate, InstructionError, PageSize as SevPageSize, Validation};
 use x86_64::{
@@ -332,10 +333,28 @@ pub extern "C" fn rust64_start(encrypted: u64) -> ! {
         .unwrap();
     }
 
-    /* TODO(#3199): determine the correct entry point from the ELF header */
+    // Attempt to parse 64 bytes at 0x200000 (2MiB) as an ELF header. If it works, extract the entry
+    // point address from there; if there is no valid ELF header at that address, assume it's code,
+    // and jump there directly.
     // Safety: this assumes the kernel is loaded at the given address.
+    let mut entry = VirtAddr::new(0x200000);
+    let header = header::header64::Header::from_bytes(unsafe {
+        &*(entry.as_u64() as *const [u8; header::header64::SIZEOF_EHDR])
+    });
+    if header.e_ident[0] == header::ELFMAG[0]
+        && header.e_ident[1] == header::ELFMAG[1]
+        && header.e_ident[2] == header::ELFMAG[2]
+        && header.e_ident[3] == header::ELFMAG[3]
+        && header.e_ident[4] == header::ELFCLASS64
+        && header.e_ident[5] == header::ELFDATA2LSB
+        && header.e_ident[6] == header::EV_CURRENT
+        && header.e_ident[7] == header::ELFOSABI_SYSV
+    {
+        // Looks like we have a valid ELF header at 0x200000. Trust its entry point.
+        entry = VirtAddr::new(header.e_entry);
+    }
     unsafe {
-        jump_to_kernel(VirtAddr::new(0x200000));
+        jump_to_kernel(entry);
     }
 }
 
