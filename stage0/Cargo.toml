@@ -10,6 +10,7 @@ resolver = "2"
 members = ["."]
 
 [dependencies]
+oak_linux_boot_params = { path = "../linux_boot_params" }
 sev_guest = { path = "../experimental/sev_guest" }
 x86_64 = "*"
 

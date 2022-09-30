@@ -81,6 +81,7 @@ SECTIONS {
     .boot.zero_page 0x7000 (NOLOAD) : {
         *(.boot.zero_page)
     } > ram_low
+    ASSERT(SIZEOF(.boot.zero_page) == 4K, "Zero page has to be exactly one page in size")
 
     boot_stack_pointer = 0x8000;
 
@@ -96,11 +97,6 @@ SECTIONS {
         *(.boot.pd)
     } > ram_low
 
-    .boot.unmeasured 0xC000 (NOLOAD) : {
-        KEEP(*(.boot.unmeasured))
-    } > ram_low
-    ASSERT(SIZEOF(.boot.unmeasured) == 4K, "Unmeasured section has to be exactly one page in size")
-
     .boot.secrets 0xD000 (NOLOAD) : {
         KEEP(*(.boot.secrets))
     } > ram_low
@@ -110,6 +106,11 @@ SECTIONS {
         KEEP(*(.boot.cpuid))
     } > ram_low
     ASSERT(SIZEOF(.boot.cpuid) == 4K, "CPUID section has to be exactly one page in size")
+
+    .boot ALIGN(4K) (NOLOAD) : {
+        KEEP(*(.boot))
+        . = ALIGN(4K);
+    } > ram_low
 
     ASSERT(. < 640K, "Boot data structures overflow low memory")
 
@@ -305,8 +306,8 @@ SECTIONS {
          * Thankfully none of these clashed with existing data structures that we're setting up.
          */
         /* Unmeasured page location */
-        LONG(ADDR(.boot.unmeasured))
-        LONG(SIZEOF(.boot.unmeasured))
+        LONG(ADDR(.boot))
+        LONG(SIZEOF(.boot))
         LONG(SEV_SECTION_UNMEASURED)
         /* Secrets page location */
         LONG(ADDR(.boot.secrets))
