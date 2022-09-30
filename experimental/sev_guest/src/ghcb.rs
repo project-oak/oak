@@ -209,7 +209,6 @@ impl<'a> GhcbProtocol<'a> {
     ///
     /// See section 4.1.2 in <https://developer.amd.com/wp-content/resources/56421.pdf>.
     pub fn io_write_u8(&mut self, port: u16, data: u8) -> Result<(), &'static str> {
-        self.ghcb.reset();
         let io_port = IOIO_ADDRESS_SIZE_16 | IOIO_DATA_SIZE_8 | ((port as u64) << 16);
 
         self.ghcb.sw_exit_code = SW_EXIT_CODE_IOIO_PROT;
@@ -223,7 +222,6 @@ impl<'a> GhcbProtocol<'a> {
     ///
     /// See section 4.1.2 in <https://developer.amd.com/wp-content/resources/56421.pdf>.
     pub fn io_read_u8(&mut self, port: u16) -> Result<u8, &'static str> {
-        self.ghcb.reset();
         let io_port = IOIO_ADDRESS_SIZE_16 | IOIO_DATA_SIZE_8 | IOIO_READ | ((port as u64) << 16);
 
         self.ghcb.sw_exit_code = SW_EXIT_CODE_IOIO_PROT;
@@ -237,7 +235,6 @@ impl<'a> GhcbProtocol<'a> {
     ///
     /// See section 4.1.2 in <https://developer.amd.com/wp-content/resources/56421.pdf>.
     pub fn io_write_u32(&mut self, port: u16, data: u32) -> Result<(), &'static str> {
-        self.ghcb.reset();
         let io_port = IOIO_ADDRESS_SIZE_16 | IOIO_DATA_SIZE_32 | ((port as u64) << 16);
 
         self.ghcb.sw_exit_code = SW_EXIT_CODE_IOIO_PROT;
@@ -251,7 +248,6 @@ impl<'a> GhcbProtocol<'a> {
     ///
     /// See section 4.1.2 in <https://developer.amd.com/wp-content/resources/56421.pdf>.
     pub fn io_read_u32(&mut self, port: u16) -> Result<u32, &'static str> {
-        self.ghcb.reset();
         let io_port = IOIO_ADDRESS_SIZE_16 | IOIO_DATA_SIZE_32 | IOIO_READ | ((port as u64) << 16);
 
         self.ghcb.sw_exit_code = SW_EXIT_CODE_IOIO_PROT;
