@@ -16,8 +16,6 @@ ignore = [
   # We rely on flatbuffers, which generates potentially unsafe code via "safe" APIs.
   # See https://github.com/google/flatbuffers/issues/6627
   "RUSTSEC-2021-0122",
-  # TODO(#3179): Remove when mapr is maintained again or no longer a dependency.
-  "RUSTSEC-2022-0053",
   # TODO(#3202): Remove when Tonic depends on a newer version of Axum.
   "RUSTSEC-2022-0055"
 ]
