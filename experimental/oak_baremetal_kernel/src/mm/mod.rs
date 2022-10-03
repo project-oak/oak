@@ -15,3 +15,4 @@
 //
 
 mod bitmap_frame_allocator;
+mod frame_allocator;
