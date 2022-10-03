@@ -32,9 +32,6 @@ PHDRS
     data    PT_LOAD FLAGS(4 + 2); /* PF_R + PF_W */
     /* Uninitialized read-write data. */
     bss     PT_LOAD FLAGS(4 + 2); /* PF_R + PF_W */
-    /* Special sections for SEV-SNP. */
-    cpuid   PT_LOAD FLAGS(1 << 23);
-    secrets PT_LOAD FLAGS(1 << 24);
 }
 
 /* To set kernel VMA to high memory, set this to 0xFFFFFFFF80000000. */
