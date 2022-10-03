@@ -36,12 +36,12 @@ pub struct PhysicalMemoryAllocator<const N: usize> {
     /// When first asked for a 4K frame, we take one 2 MiB frame to hand out as 4 KiB frames; that
     /// gives us 512 4K frames to hand out. Thus, the allocator bitmap needs to be 512/64 = 8
     /// u64-s, or 64 B.
-    small_frames: Option<BitmapAllocator<Size4KiB, 1>>,
+    small_frames: Option<BitmapAllocator<Size4KiB, 8>>,
 }
 
 impl<const N: usize> PhysicalMemoryAllocator<N> {
     #[allow(dead_code)]
-    fn new(range: PhysFrameRangeInclusive<Size2MiB>) -> Self {
+    pub fn new(range: PhysFrameRangeInclusive<Size2MiB>) -> Self {
         PhysicalMemoryAllocator {
             large_frames: BitmapAllocator::new(range),
             small_frames: None,
@@ -130,7 +130,7 @@ mod tests {
     fn fill_small_frames() {
         let mut allocator =
             PhysicalMemoryAllocator::<1>::new(create_frame_range(0, Size2MiB::SIZE));
-        allocator.mark_valid(create_frame_range(0, 1 * Size2MiB::SIZE), true);
+        allocator.mark_valid(create_frame_range(0, Size2MiB::SIZE), true);
         let alloc_ref = &mut allocator as &mut dyn FrameAllocator<Size4KiB>;
         // 512 allocations should succeed (512 * 4K = 2M)
         for _ in 0..512 {

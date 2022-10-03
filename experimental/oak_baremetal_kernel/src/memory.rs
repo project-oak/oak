@@ -14,10 +14,10 @@
 // limitations under the License.
 //
 
-use crate::boot;
 use core::result::Result;
 use linked_list_allocator::LockedHeap;
 use log::info;
+use x86_64::structures::paging::{frame::PhysFrameRangeInclusive, Size2MiB};
 
 #[cfg(not(test))]
 #[global_allocator]
@@ -38,9 +38,7 @@ static ALLOCATOR: LockedHeap = LockedHeap::empty();
 /// Case in point, boot metadata is often stored somewhere in the memory area, so calling this takes
 /// ownership of the `boot:BootInfo`, as the data provided to us by the bootloader will get
 /// clobbered after initializing the heap.
-pub fn init_allocator<E: boot::E820Entry, B: boot::BootInfo<E>>(
-    info: B,
-) -> Result<(), &'static str> {
+pub fn init_allocator(range: PhysFrameRangeInclusive<Size2MiB>) -> Result<(), &'static str> {
     let ram_min = rust_hypervisor_firmware_boot::ram_min();
     let text_start = rust_hypervisor_firmware_boot::text_start();
     let text_end = rust_hypervisor_firmware_boot::text_end();
@@ -53,36 +51,18 @@ pub fn init_allocator<E: boot::E820Entry, B: boot::BootInfo<E>>(
 
     let stack_start = stack_start - 0xFFFFFFFF80000000;
 
-    // Find the largest slice of memory and use that for the heap.
-    let largest = info
-        .e820_table()
-        .iter()
-        .inspect(|e| {
-            info!(
-                "E820 entry: [{:#016x}..{:#016x}) ({}), type {}",
-                e.addr(),
-                e.addr() + e.size(),
-                e.size(),
-                e.entry_type()
-            );
-        })
-        .filter(|e| e.entry_type() == boot::E820EntryType::RAM)
-        .max_by_key(|e| e.size())
-        .ok_or("No RAM available for heap")?;
-
     // Ensure we don't clash with existing structures.
-    let mut addr = largest.addr();
-    let mut size = largest.size();
+    let mut start = range.start.start_address().as_u64() as usize;
+    let limit = (range.end + 1).start_address().as_u64() as usize;
 
-    if addr < stack_start {
-        size -= stack_start - addr;
-        addr = stack_start;
+    if start < stack_start {
+        start = stack_start;
     }
 
-    info!("Using [{:#016x}..{:#016x}) for heap.", addr, addr + size);
+    info!("Using [{:#016x}..{:#016x}) for heap.", start, limit);
     // This is safe as we know the memory is available based on the e820 map.
     unsafe {
-        ALLOCATOR.lock().init(addr as *mut u8, size);
+        ALLOCATOR.lock().init(start as *mut u8, limit - start);
     }
     Ok(())
 }
