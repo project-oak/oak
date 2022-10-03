@@ -26,8 +26,8 @@ use x86_64::structures::paging::{
 /// it into smaller, 4 KiB frames to satisfy demand.
 ///
 /// The parameter N needs to be set to the number of u64-s required to track the physical memory in
-/// a bitmap. For example, if we want to track 128 GiB of memory, that means 128G/2M = 65K frames,
-/// which in turn means we need 65K/64 = 1K u64-s (or: 1K * 8 = 8 kB of memory).
+/// a bitmap. For example, if we want to track 128 GiB of memory, that means 128Gi/2Mi = 65Ki
+/// frames, which in turn means we need 65Ki/64 = 1Ki u64-s (or: 1Ki * 8 = 8 KiB of memory).
 pub struct PhysicalMemoryAllocator<const N: usize> {
     /// Allocator for 2 MiB frames.
     large_frames: BitmapAllocator<Size2MiB, N>,
@@ -40,7 +40,6 @@ pub struct PhysicalMemoryAllocator<const N: usize> {
 }
 
 impl<const N: usize> PhysicalMemoryAllocator<N> {
-    #[allow(dead_code)]
     pub fn new(range: PhysFrameRangeInclusive<Size2MiB>) -> Self {
         PhysicalMemoryAllocator {
             large_frames: BitmapAllocator::new(range),
@@ -48,12 +47,10 @@ impl<const N: usize> PhysicalMemoryAllocator<N> {
         }
     }
 
-    #[allow(dead_code)]
     pub fn mark_valid(&mut self, range: PhysFrameRangeInclusive<Size2MiB>, valid: bool) {
         self.large_frames.mark_valid(range, valid)
     }
 
-    #[allow(dead_code)]
     pub fn largest_available(&mut self) -> Option<PhysFrameRangeInclusive<Size2MiB>> {
         self.large_frames.largest_available()
     }
