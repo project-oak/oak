@@ -34,8 +34,15 @@ mod bootparam;
 pub extern "C" fn rust64_start(_rdi: u64, rsi: &bootparam::BootParams) -> ! {
     let channel = oak_baremetal_kernel::start_kernel(rsi);
     info!("In main!");
+    start_server(channel)
 }
 
+fn start_server(channel: Box<dyn Channel>) -> ! {
+    let runtime = oak_tensorflow_runtime::RuntimeImplementation::new();
+    let service = oak_tensorflow_runtime::schema::TensorflowRuntime::serve(runtime);
+    oak_baremetal_communication_channel::server::start_blocking_server(channel, service)
+        .expect("Runtime encountered an unrecoverable error");
+}
 
 #[alloc_error_handler]
 fn out_of_memory(layout: ::core::alloc::Layout) -> ! {
