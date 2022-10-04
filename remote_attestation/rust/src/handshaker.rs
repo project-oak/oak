@@ -478,7 +478,6 @@ impl<G: AttestationGenerator, V: AttestationVerifier> ServerHandshaker<G, V> {
             .append(&client_identity_no_signature)
             .context("Couldn't append client identity to the transcript")?;
         let client_signing_public_key = &client_identity.signing_public_key;
-        let transcript_signature_verifier = SignatureVerifier::new(client_signing_public_key)?;
 
         // TODO(#2918): Remove this check when the Java client generates a non-empty signature, and
         // always verify the signature.
@@ -487,6 +486,7 @@ impl<G: AttestationGenerator, V: AttestationVerifier> ServerHandshaker<G, V> {
             // client.
             // Until this is fixed, this version of the server must not be used in production.
         } else {
+            let transcript_signature_verifier = SignatureVerifier::new(client_signing_public_key)?;
             transcript_signature_verifier
                 .verify(
                     &self.transcript.get_sha256(),

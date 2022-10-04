@@ -78,8 +78,9 @@ struct WizerOpt {
 #[derive(serde::Deserialize, Debug, Default)]
 #[serde(deny_unknown_fields)]
 struct Server {
-    #[serde(default)]
-    additional_args: Vec<String>,
+    wasm_path: String,
+    constant_response_size_bytes: u64,
+    lookup_data: String,
     #[serde(default)]
     server_variant: ServerVariant,
 }
@@ -239,6 +240,25 @@ pub fn build_oak_functions_server_variants(opt: &BuildServerOpt) -> Step {
     }
 }
 
+/// Build every variant of the function server.
+/// It's easier to always build all variants than to keep track of which variant to build and
+/// the overhead of building all variants is acceptable.
+pub fn build_oak_functions_loader_linux_native() -> Step {
+    Step::Single {
+        name: "cargo build Oak Functions loader for linux native".to_string(),
+        command: Cmd::new(
+            "cargo",
+            vec![
+                "build".to_string(),
+                "--target=x86_64-unknown-linux-musl".to_string(),
+                "--release".to_string(),
+                "--manifest-path=experimental/oak_functions_loader_linux_native/Cargo.toml"
+                    .to_string(),
+            ],
+        ),
+    }
+}
+
 fn run_oak_functions_example(example: &OakFunctionsExample) -> Step {
     let opt = &example.options;
 
@@ -263,7 +283,10 @@ fn run_oak_functions_example(example: &OakFunctionsExample) -> Step {
             if opt.run_server.unwrap_or(true) {
                 // Build (all variants of) the server first so that when running a variant in the
                 // next step it will start up faster.
-                vec![build_oak_functions_server_variants(&opt.build_server)]
+                vec![
+                    build_oak_functions_server_variants(&opt.build_server),
+                    build_oak_functions_loader_linux_native(),
+                ]
             } else {
                 vec![]
             },
@@ -440,8 +463,16 @@ fn run_wizer(input: &str, output: &str) -> Step {
 fn run_oak_functions_server(server: &Server) -> Box<dyn Runnable> {
     Cmd::new(
         server.server_variant.path_to_executable(),
-        spread![
-            ...server.additional_args.clone(),
+        vec![
+            format!("--wasm={}", server.wasm_path),
+            format!(
+                "--constant-response-size={}",
+                server.constant_response_size_bytes
+            ),
+            format!("--lookup-data={}", server.lookup_data),
+            // Run the "trusted" runtime binary as a native Linux process.
+            "native".to_string(),
+            "--app-binary=target/x86_64-unknown-linux-musl/release/oak_functions_loader_linux_native".to_string(),
         ],
     )
 }

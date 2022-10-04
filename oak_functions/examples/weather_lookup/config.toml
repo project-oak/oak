@@ -1,9 +1,0 @@
-wasm_path = "bin/weather_lookup_init.wasm"
-
-[load_lookup_data]
-lookup_data = { Url = "https://storage.googleapis.com/oak_lookup_data/lookup_data_weather_sparse_s2" }
-lookup_data_download_period = "10m"
-
-[policy]
-constant_response_size_bytes = 900
-constant_processing_time = "1s"

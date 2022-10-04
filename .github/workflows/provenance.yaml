@@ -59,10 +59,6 @@ jobs:
           ./scripts/docker_pull
           df --human-readable
 
-      - name: Generate provenacne for Base Oak Functions Server
-        run: |
-          ./scripts/generate_provenance -c buildconfigs/oak_functions_loader_base.toml -s
-
       - name: Generate provenance for crosvm Baremetal binary
         run: |
           ./scripts/generate_provenance -c buildconfigs/oak_baremetal_app_crosvm.toml -s
