@@ -196,25 +196,24 @@ http_archive(
 )
 
 http_archive(
-    name = "org_tensorflow",
-    sha256 = "4844e49a4d6ed9bceef608ce7f65f41b75e6362b2721c4e0d34a053d58753f42",
-    strip_prefix = "tensorflow-11bed638b14898cdde967f6b108e45732aa4798a",
+    name = "com_github_tensorflow_tflite_micro",
+    patches = [
+        # Makes the custom `generate_cc_arrays` rule use the `tflite-micro` repository.
+        "//third_party/tflite-micro:use-tflite-micro-repo.patch",
+        # Makes the custom `generate_cc_arrays` rule public.
+        "//third_party/tflite-micro:make-generate-cc-arrays-public.patch"
+    ],
+    sha256 = "928705b77a426d8fed69c082bcaa653a2734637a9c2ee31d74075f72ff88a41a",
+    strip_prefix = "tflite-micro-5818e46c78fcce795077c119336265dcacc0bf70",
     urls = [
-        # Head commit on 2020-01-20.
-        "https://github.com/tensorflow/tensorflow/archive/11bed638b14898cdde967f6b108e45732aa4798a.tar.gz",
+        # Head commit on 2022-09-30.
+        "https://github.com/tensorflow/tflite-micro/archive/5818e46c78fcce795077c119336265dcacc0bf70.tar.gz",
     ],
 )
 
-# TensorFlow dependency.
-http_archive(
-    name = "io_bazel_rules_closure",
-    sha256 = "5b00383d08dd71f28503736db0500b6fb4dda47489ff5fc6bed42557c07c6ba9",
-    strip_prefix = "rules_closure-308b05b2419edb5c8ee0471b67a40403df940149",
-    urls = [
-        # Head commit on 2019-06-13.
-        "https://github.com/bazelbuild/rules_closure/archive/308b05b2419edb5c8ee0471b67a40403df940149.tar.gz",
-    ],
-)
+load("@com_github_tensorflow_tflite_micro//tensorflow:workspace.bzl", "tf_repositories")
+
+tf_repositories()
 
 # WebAssembly Binary Toolkit
 #
@@ -420,16 +419,9 @@ load("//toolchain:emcc_toolchain_config.bzl", "emsdk_configure")
 # Should be configured after loading `clang`.
 emsdk_configure(name = "emsdk")
 
-load("@io_bazel_rules_closure//closure:defs.bzl", "closure_repositories")
+# load("@io_bazel_rules_closure//closure:defs.bzl", "closure_repositories")
 
-closure_repositories()
-
-# Do not use `tf_workspace()` - it interferes with c-ares in gRPC loaded and patched
-# and causes missing `ares.h` error.
-# https://github.com/tensorflow/tensorflow/blob/25a06bc503c7d07ffc5480ac107e3c8681937971/tensorflow/workspace.bzl#L970-L975
-load("@org_tensorflow//tensorflow:workspace.bzl", "tf_repositories")
-
-tf_repositories()
+# closure_repositories()
 
 # Bazel rules for packaging and deployment by Grakn Labs
 http_archive(

@@ -1,0 +1,15 @@
+diff --git tensorflow/lite/micro/build_def.bzl tensorflow/lite/micro/build_def.bzl
+index 258107a..20eb702 100644
+--- tensorflow/lite/micro/build_def.bzl
++++ tensorflow/lite/micro/build_def.bzl
+@@ -15,8 +15,8 @@ def generate_cc_arrays(name, src, out, visibility = None):
+         outs = [
+             out,
+         ],
+-        cmd = "$(location //tensorflow/lite/micro/tools:generate_cc_arrays) $@ $<",
+-        tools = ["//tensorflow/lite/micro/tools:generate_cc_arrays"],
++        cmd = "$(location @com_github_tensorflow_tflite_micro//tensorflow/lite/micro/tools:generate_cc_arrays) $@ $<",
++        tools = ["@com_github_tensorflow_tflite_micro//tensorflow/lite/micro/tools:generate_cc_arrays"],
+         visibility = visibility,
+     )
+ 

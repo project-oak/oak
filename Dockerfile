@@ -37,6 +37,7 @@ RUN apt-get --yes update \
   pkg-config \
   procps \
   python3 \
+  python3-pip \
   python3-six \
   python3-distutils \
   shellcheck \
@@ -380,3 +381,9 @@ RUN echo -e "\n#activate xtask auto-complete\nif [ -f /workspace/.xtask_bash_com
 
 # Define alias
 RUN echo -e "\nalias ll='ls -l'\n" >> "${HOME}/.bashrc"
+
+# Create a symbolic link for `python`.
+RUN ln -s /usr/bin/python3 /usr/bin/python
+
+# Pillow package is required by TensorFlow Lite examples.
+RUN pip install pillow

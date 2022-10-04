@@ -1,0 +1,11 @@
+diff --git tensorflow/lite/micro/tools/BUILD tensorflow/lite/micro/tools/BUILD
+index c004684..cca27c6 100644
+--- tensorflow/lite/micro/tools/BUILD
++++ tensorflow/lite/micro/tools/BUILD
+@@ -1,5 +1,5 @@
+ package(
+-    default_visibility = ["//:__subpackages__"],
++    default_visibility = ["//visibility:public"],
+     licenses = ["notice"],
+ )
+ 

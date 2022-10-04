@@ -764,6 +764,7 @@ fn run_bazel_build() -> Step {
                 "//oak_functions/examples/...:all",
                 "//remote_attestation/java/...:all",
                 "//java/...:all",
+                "//third_party/tflite-micro/...:all"
             ],
         ),
     }
@@ -781,6 +782,7 @@ fn run_bazel_test() -> Step {
                 "//oak_functions/examples/...:all",
                 "//remote_attestation/java/tests/...:all",
                 "//java/...:all",
+                "//third_party/tflite-micro/...:all"
             ],
         ),
     }
