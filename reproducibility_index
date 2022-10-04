@@ -1,2 +1,1 @@
-221c51f71569d19c94378b208c61cdb96774669caa851f5f9a222543f09d6d7d  ./target/x86_64-unknown-linux-musl/release/oak_functions_loader_base
-7a6e2d6b7b39ef07d5f6701c88462c8d55ad89b64910cc0856e377f60dd00792  ./experimental/oak_baremetal_app_crosvm/target/x86_64-unknown-none/release/oak_baremetal_app_crosvm
+1745381dacb8a3bbc2593b768a7b41b4bbdc777c0ccd3fdf9299cc1677ae0805  ./experimental/oak_baremetal_app_crosvm/target/x86_64-unknown-none/release/oak_baremetal_app_crosvm
