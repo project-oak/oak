@@ -36,6 +36,7 @@
 mod args;
 mod avx;
 pub mod boot;
+mod elf;
 pub mod i8042;
 mod interrupts;
 mod libm;
@@ -57,6 +58,7 @@ use log::{error, info};
 use oak_baremetal_communication_channel::Channel;
 use rust_hypervisor_firmware_boot::paging;
 use strum::{EnumIter, EnumString, IntoEnumIterator};
+use x86_64::VirtAddr;
 
 /// Main entry point for the kernel, to be called from bootloader.
 pub fn start_kernel<E: boot::E820Entry, B: boot::BootInfo<E>>(info: B) -> Box<dyn Channel> {
@@ -64,8 +66,11 @@ pub fn start_kernel<E: boot::E820Entry, B: boot::BootInfo<E>>(info: B) -> Box<dy
     logging::init_logging();
     interrupts::init_idt();
 
+    // Safety: in the linker script we specify that the ELF header should be placed at 0x200000.
+    let program_headers = unsafe { elf::get_phdrs(VirtAddr::new(0x20_0000)) };
+
     // Physical frame allocator: support up to 128 GiB of memory, for now.
-    let mut frame_allocator = mm::init::<1024, E>(info.e820_table());
+    let mut frame_allocator = mm::init::<1024, E>(info.e820_table(), program_headers);
 
     paging::setup();
     // We need to be done with the boot info struct before intializing memory. For example, the

@@ -31,33 +31,9 @@ static ALLOCATOR: LockedHeap = LockedHeap::empty();
 /// Pointers to addresses in the memory area (or references to data contained within the slice) must
 /// be considered invalid after calling this function, as the allocator may overwrite the data at
 /// any point.
-///
-/// We ensure that data up address specified by `.stack_start` in the linker script is untouched,
-/// even if it falls within the largest slice of memory.
-///
-/// Case in point, boot metadata is often stored somewhere in the memory area, so calling this takes
-/// ownership of the `boot:BootInfo`, as the data provided to us by the bootloader will get
-/// clobbered after initializing the heap.
 pub fn init_allocator(range: PhysFrameRangeInclusive<Size2MiB>) -> Result<(), &'static str> {
-    let ram_min = rust_hypervisor_firmware_boot::ram_min();
-    let text_start = rust_hypervisor_firmware_boot::text_start();
-    let text_end = rust_hypervisor_firmware_boot::text_end();
-    let stack_start = rust_hypervisor_firmware_boot::stack_start();
-
-    info!("RAM_MIN: {:#X}", ram_min);
-    info!("TEXT_START: {:#X}", text_start);
-    info!("TEXT_END: {:#X}", text_end);
-    info!("STACK_START: {:#X}", stack_start);
-
-    let stack_start = stack_start - 0xFFFFFFFF80000000;
-
-    // Ensure we don't clash with existing structures.
-    let mut start = range.start.start_address().as_u64() as usize;
-    let limit = (range.end + 1).start_address().as_u64() as usize;
-
-    if start < stack_start {
-        start = stack_start;
-    }
+    let start = range.start.start_address().as_u64() as usize;
+    let limit = (range.end.start_address().as_u64() + range.end.size()) as usize;
 
     info!("Using [{:#016x}..{:#016x}) for heap.", start, limit);
     // This is safe as we know the memory is available based on the e820 map.
