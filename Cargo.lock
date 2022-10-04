@@ -1415,16 +1415,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "flate2"
-version = "1.0.24"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f82b0f4c27ad9f8bfd1f3208d882da2b09c301bc1c828fd3a00d0216d2fbbff6"
-dependencies = [
- "crc32fast",
- "miniz_oxide",
-]
-
-[[package]]
 name = "fnv"
 version = "1.0.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4482,53 +4472,6 @@ dependencies = [
  "redox_syscall",
  "remove_dir_all",
  "winapi",
-]
-
-[[package]]
-name = "tensorflow_client"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "clap 3.2.10",
- "env_logger 0.9.0",
- "flate2",
- "hyper",
- "hyper-rustls",
- "log",
- "maplit",
- "oak_functions_abi",
- "oak_functions_client",
- "oak_utils",
- "prost 0.10.4",
- "prost-types 0.10.1",
- "tokio",
- "tonic",
-]
-
-[[package]]
-name = "tensorflow_proxy"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "async-stream",
- "bytes",
- "clap 3.2.10",
- "env_logger 0.9.0",
- "futures",
- "grpc_unary_attestation",
- "http",
- "log",
- "oak_functions_abi",
- "oak_remote_attestation",
- "oak_remote_attestation_amd",
- "oak_utils",
- "pin-project-lite",
- "prost 0.10.4",
- "prost-types 0.10.1",
- "sync_wrapper",
- "tokio",
- "tonic",
- "tower",
 ]
 
 [[package]]
