@@ -126,7 +126,7 @@ where
     }
 }
 
-/// Factory for create port reader and writers that perform direct raw IO operations.
+/// Factory for creating port reader and writers that perform direct raw IO operations.
 pub struct RawIoPortFactory;
 
 impl<T> IoPortFactory<T, PortReadOnly<T>, PortWriteOnly<T>> for RawIoPortFactory
