@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+
+readonly TARGET=$1
+
+crosvm_flags=(
+  "--disable-sandbox"
+)
+
+# KVM is required for crosvm. We return 0 here to ensure that the tests would
+# pass under Github Actions.
+if [[ ! -e "/dev/kvm" ]]; then
+  echo "Crosvm requires /dev/kvm to be available."
+  exit 0
+fi
+
+crosvm run "${crosvm_flags[@]}" "${TARGET}"
+
