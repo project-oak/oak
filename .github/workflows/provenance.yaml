@@ -20,9 +20,7 @@ jobs:
       hashes: ${{ steps.hash.outputs.hashes }}
     runs-on: ubuntu-20.04
     env:
-      OAK_FUNCTIONS_BASE_PATH: './target/x86_64-unknown-linux-musl/release/oak_functions_loader_base'
       OAK_BAREMETAL_CROSVM_PATH: './experimental/oak_baremetal_app_crosvm/target/x86_64-unknown-none/release/oak_baremetal_app_crosvm'
-      OAK_FUNCTIONS_RELEASE_PATH: './target/x86_64-unknown-linux-musl/release'
 
     permissions:
       # Allow the job to update the repo with the latest provenances and index.
@@ -115,7 +113,6 @@ jobs:
       - name: Upload to Ent
         if: github.event_name == 'push'
         run: |
-          ent put ${{ env.OAK_FUNCTIONS_BASE_PATH }}
           ent put ${{ env.OAK_BAREMETAL_CROSVM_PATH }}
 
       # Build reproducibility index on `push` events.
@@ -123,7 +120,6 @@ jobs:
         if: github.event_name == 'push'
         uses: ./.github/actions/reproducibility_index
         with:
-          OAK_FUNCTIONS_BASE_PATH: ${{ env.OAK_FUNCTIONS_BASE_PATH }}
           OAK_BAREMETAL_CROSVM_PATH: ${{ env.OAK_BAREMETAL_CROSVM_PATH }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -133,21 +129,16 @@ jobs:
         if: github.event_name != 'push'
         uses: ./.github/actions/reproducibility_index
         with:
-          OAK_FUNCTIONS_BASE_PATH: ${{ env.OAK_FUNCTIONS_BASE_PATH }}
           OAK_BAREMETAL_CROSVM_PATH: ${{ env.OAK_BAREMETAL_CROSVM_PATH }}
 
       # Experimental step using SLSA generic provenance generator
       # See https://github.com/slsa-framework/slsa-github-generator/blob/main/internal/builders/generic/README.md
-      - name: Generate oak_functions_loader_base hash
+      - name: Generate oak_baremetal_app_crosvm hash
         id: hash
         run: |
-          # first cd to the release path. This allows us calling sha256 on oak_functions_loader_base
-          # instead of having to provide the full path. This is fine for this experimental version,
-          # but has to be cleaned-up once we switch completely to SLSA provenance generation.
-          cd ${{ env.OAK_FUNCTIONS_RELEASE_PATH }}
-          # sha256sum generates sha256 hash for oak_functions_loader_base.
+          # sha256sum generates sha256 hash for the target binary.
           # base64 --wrap=0 disables line wrapping, and encodes to base64 and outputs on a single line.
-          echo "::set-output name=hashes::$(sha256sum oak_functions_loader_base | base64 --wrap=0)"
+          echo "::set-output name=hashes::$(sha256sum ${{ env.OAK_BAREMETAL_CROSVM_PATH }} | base64 --wrap=0)"
 
   # This job calls the generic workflow to generate provenance.
   # See https://github.com/slsa-framework/slsa-github-generator/blob/main/internal/builders/generic/README.md
