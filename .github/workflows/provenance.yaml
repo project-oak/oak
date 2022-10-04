@@ -136,9 +136,14 @@ jobs:
       - name: Generate oak_baremetal_app_crosvm hash
         id: hash
         run: |
+          # first cd to the directory containing the target binary. This allows us calling sha256
+          # on the target binary instead of having to provide the full path. This is fine for this
+          # experimental version, but has to be cleaned-up once we switch completely to SLSA
+          # provenance generation.
+          cd $(dirname ${{ env.OAK_BAREMETAL_CROSVM_PATH }})
           # sha256sum generates sha256 hash for the target binary.
           # base64 --wrap=0 disables line wrapping, and encodes to base64 and outputs on a single line.
-          echo "::set-output name=hashes::$(sha256sum ${{ env.OAK_BAREMETAL_CROSVM_PATH }} | base64 --wrap=0)"
+          echo "::set-output name=hashes::$(sha256sum $(basename ${{ env.OAK_BAREMETAL_CROSVM_PATH }}) | base64 --wrap=0)"
 
   # This job calls the generic workflow to generate provenance.
   # See https://github.com/slsa-framework/slsa-github-generator/blob/main/internal/builders/generic/README.md
@@ -154,6 +159,6 @@ jobs:
     with:
       base64-subjects: '${{ needs.build_provenance.outputs.hashes }}'
       # Set a custom name for the provenance attestation.
-      attestation-name: 'oak_functions_loader_base.intoto.jsonl'
+      attestation-name: 'oak_baremetal_app_crosvm.intoto.jsonl'
       # Upload provenance to a new release
       upload-assets: true
