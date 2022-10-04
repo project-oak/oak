@@ -51,7 +51,6 @@ impl<S: PageSize, const N: usize> BitmapAllocator<S, N> {
     /// Creates a new bitmap allocator for a physical frame range.
     /// Panics if N does not match the number of u64-s required to track all frames in that range.
     /// Initially, the allocator will mark the whole range as invalid.
-    #[allow(dead_code)]
     pub fn new(range: PhysFrameRangeInclusive<S>) -> Self {
         // Unfortunately there doesn't seem to be a way to hoist this to the type system.
         let expected = bitvec::mem::elts::<u64>(range.count());
@@ -74,7 +73,6 @@ impl<S: PageSize, const N: usize> BitmapAllocator<S, N> {
     /// Allocations can happen only from regions that are valid. This method does not check whether
     /// any allocations have been made from regions to be marked as invalid, and panics if the range
     /// is outside the range of the allocator.
-    #[allow(dead_code)]
     pub fn mark_valid(&mut self, range: PhysFrameRangeInclusive<S>, valid: bool) {
         if let (Some(start), Some(end)) = (self.frame_idx(range.start), self.frame_idx(range.end)) {
             self.valid.get_mut(start..end + 1).unwrap().fill(valid);
@@ -87,7 +85,6 @@ impl<S: PageSize, const N: usize> BitmapAllocator<S, N> {
     }
 
     /// Returns the largest contiguous section of unallocated memory.
-    #[allow(dead_code)]
     pub fn largest_available(&self) -> Option<PhysFrameRangeInclusive<S>> {
         self.valid
             .bitand(self.allocated.not())

@@ -63,6 +63,10 @@ pub fn start_kernel<E: boot::E820Entry, B: boot::BootInfo<E>>(info: B) -> Box<dy
     avx::enable_avx();
     logging::init_logging();
     interrupts::init_idt();
+
+    // Physical frame allocator: support up to 128 GiB of memory, for now.
+    let mut frame_allocator = mm::init::<1024, E>(info.e820_table());
+
     paging::setup();
     // We need to be done with the boot info struct before intializing memory. For example, the
     // multiboot protocol explicitly states data can be placed anywhere in memory; therefore, it's
@@ -75,7 +79,7 @@ pub fn start_kernel<E: boot::E820Entry, B: boot::BootInfo<E>>(info: B) -> Box<dy
     let protocol = info.protocol();
     info!("Boot protocol:  {}", protocol);
     // If we don't find memory for heap, it's ok to panic.
-    memory::init_allocator(info).unwrap();
+    memory::init_allocator(frame_allocator.largest_available().unwrap()).unwrap();
 
     get_channel(&kernel_args)
 }
