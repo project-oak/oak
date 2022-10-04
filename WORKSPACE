@@ -419,10 +419,6 @@ load("//toolchain:emcc_toolchain_config.bzl", "emsdk_configure")
 # Should be configured after loading `clang`.
 emsdk_configure(name = "emsdk")
 
-# load("@io_bazel_rules_closure//closure:defs.bzl", "closure_repositories")
-
-# closure_repositories()
-
 # Bazel rules for packaging and deployment by Grakn Labs
 http_archive(
     name = "graknlabs_bazel_distribution",
