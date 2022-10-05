@@ -16,7 +16,6 @@ members = [
   "experimental/oak_baremetal_runtime",
   "experimental/oak_baremetal_simple_io",
   "experimental/sev_guest",
-  "experimental/tensorflow/oak_tensorflow_runtime",
   "experimental/virtio",
   "experimental/vsock/echo",
   "experimental/web_client",
@@ -51,6 +50,7 @@ members = [
   "remote_attestation/rust",
   "remote_attestation_sessions",
   "remote_attestation_sessions_client",
+  "tensorflow/oak_tensorflow_runtime",
   "testing/oak_echo_runtime",
   "trusted_shuffler/backend",
   "trusted_shuffler/client",
@@ -61,9 +61,9 @@ members = [
 ]
 exclude = [
   "experimental/oak_baremetal_app_crosvm",
-  "experimental/tensorflow/oak_tensorflow_bin",
   "oak_functions/loader/fuzz",
   "stage0",
+  "tensorflow/oak_tensorflow_bin",
   "testing/oak_echo_bin",
   "testing/sev_snp_hello_world_kernel",
   "third_party/curve25519-dalek",

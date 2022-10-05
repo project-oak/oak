@@ -40,12 +40,13 @@ impl schema::TensorflowRuntime for RuntimeImplementation {
     fn initialize(
         &mut self,
         _initialization: &schema::InitializeRequest,
-    ) -> Result<oak_idl::utils::OwnedFlatbuffer<crate::schema::InitializeResponse>, oak_idl::Status> {
+    ) -> Result<oak_idl::utils::OwnedFlatbuffer<crate::schema::InitializeResponse>, oak_idl::Status>
+    {
         let response_message = {
             let mut builder = oak_idl::utils::OwnedFlatbufferBuilder::default();
             let initialize_response = schema::InitializeResponse::create(
                 &mut builder,
-                &schema::InitializeResponseArgs { },
+                &schema::InitializeResponseArgs {},
             );
             builder
                 .finish(initialize_response)
