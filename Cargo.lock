@@ -4029,6 +4029,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "sev_serial"
+version = "0.1.0"
+dependencies = [
+ "sev_guest",
+ "x86_64",
+]
+
+[[package]]
 name = "sha-1"
 version = "0.9.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"

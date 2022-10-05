@@ -14,14 +14,15 @@
 // limitations under the License.
 //
 
-use atomic_refcell::AtomicRefCell;
 use core::fmt::Write;
 use lazy_static::lazy_static;
 use sev_guest::{
+    ghcb::{Ghcb, GhcbProtocol},
+    io::{GhcbIoFactory, RawIoPortFactory},
     msr::{get_sev_status, SevStatus},
-    serial::SerialPort as GhcbSerialPort,
 };
-use uart_16550::SerialPort as RawSerialPort;
+use sev_serial::{RawSerialPort, StaticGhcbSerialPort};
+use spinning_top::{RawSpinlock, Spinlock};
 
 extern crate log;
 
@@ -30,8 +31,8 @@ static COM1_BASE: u16 = 0x3f8;
 
 /// Wrapper for the possible serial port implementations.
 pub enum SerialWrapper<'a> {
-    Raw(RawSerialPort),
-    Ghcb(GhcbSerialPort<'a>),
+    Raw(RawSerialPort<'a>),
+    Ghcb(StaticGhcbSerialPort<RawSpinlock>),
 }
 
 impl Write for SerialWrapper<'_> {
@@ -44,24 +45,33 @@ impl Write for SerialWrapper<'_> {
 }
 
 lazy_static! {
-    pub static ref SERIAL1: AtomicRefCell<SerialWrapper<'static>> = {
+    static ref GHCB_PROTOCOL: Spinlock<GhcbProtocol<'static, Ghcb>> = {
+        let sev_status = get_sev_status().unwrap_or(SevStatus::empty());
+        Spinlock::new(crate::ghcb::init_ghcb(
+            sev_status.contains(SevStatus::SNP_ACTIVE),
+        ))
+    };
+}
+
+lazy_static! {
+    pub static ref SERIAL1: Spinlock<SerialWrapper<'static>> = {
         let sev_status = get_sev_status().unwrap_or(SevStatus::empty());
         let wrapper = if sev_status.contains(SevStatus::SEV_ES_ENABLED) {
-            let ghcb_protocol = crate::ghcb::init_ghcb(sev_status.contains(SevStatus::SNP_ACTIVE));
+            let ghcb_factory = GhcbIoFactory::new(&GHCB_PROTOCOL);
             // Safety: our contract with the loader requires the first serial port to be available,
             // so assuming the loader adheres to it, this is safe.
-            let mut port = unsafe { GhcbSerialPort::new(COM1_BASE, ghcb_protocol) };
+            let mut port = unsafe { StaticGhcbSerialPort::new(COM1_BASE, ghcb_factory) };
             port.init().expect("Couldn't initialize GHCB serial port");
             SerialWrapper::Ghcb(port)
         } else {
             // Safety: our contract with the loader requires the first serial port to be available,
             // so assuming the loader adheres to it, this is safe.
-            let mut port = unsafe { RawSerialPort::new(COM1_BASE) };
-            port.init();
+            let mut port = unsafe { RawSerialPort::new(COM1_BASE, RawIoPortFactory) };
+            port.init().expect("Couldn't initialize raw serial port");
             SerialWrapper::Raw(port)
         };
 
-        AtomicRefCell::new(wrapper)
+        Spinlock::new(wrapper)
     };
 }
 
@@ -73,13 +83,7 @@ impl log::Log for Logger {
     }
 
     fn log(&self, record: &log::Record) {
-        writeln!(
-            SERIAL1.borrow_mut(),
-            "{}: {}",
-            record.level(),
-            record.args()
-        )
-        .unwrap();
+        writeln!(SERIAL1.lock(), "{}: {}", record.level(), record.args()).unwrap();
     }
 
     fn flush(&self) {
