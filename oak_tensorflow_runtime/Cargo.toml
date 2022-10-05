@@ -7,12 +7,12 @@ license = "Apache-2.0"
 
 [dependencies]
 hashbrown = "*"
-oak_idl = { path = "../../oak_idl" }
+oak_idl = { path = "../oak_idl" }
 flatbuffers = { version = "*", features = ["no_std"], default-features = false }
 
 [build-dependencies]
-oak_idl_gen_services = { path = "../../oak_idl_gen_services" }
-oak_idl_gen_structs = { path = "../../oak_idl_gen_structs" }
+oak_idl_gen_services = { path = "../oak_idl_gen_services" }
+oak_idl_gen_structs = { path = "../oak_idl_gen_structs" }
 
 [dev-dependencies]
 async-trait = "*"
