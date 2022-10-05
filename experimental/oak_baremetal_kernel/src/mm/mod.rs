@@ -130,7 +130,7 @@ pub fn init<const N: usize, E: E820Entry>(
 pub fn init_paging<A: FrameAllocator<Size4KiB> + ?Sized>(
     frame_allocator: &mut A,
 ) -> Result<(), &'static str> {
-    // Safety: this expect the frame allocator to be initialized and the memory region it's hading
+    // Safety: this expects the frame allocator to be initialized and the memory region it's handing
     // memory out of to be identity mapped. This is true for the lower 2 GiB after we boot.
     let pml4_frame = frame_allocator
         .allocate_frame()
@@ -157,7 +157,7 @@ pub fn init_paging<A: FrameAllocator<Size4KiB> + ?Sized>(
             &mut page_table,
             frame_allocator,
         )
-        .map_err(|_| "Failed to set up paging for [0..2GiB)")?;
+        .map_err(|_| "Failed to set up paging for [0..4GiB)")?;
 
         // Mapping for the kernel itself. In the future we should be more clever and only map
         // sections based on the ELF header with the correct permissions, but for now, all of the

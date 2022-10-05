@@ -22,6 +22,12 @@ use x86_64::{
     VirtAddr,
 };
 
+/// Map a region of physical memory to a virtual address using 2 MiB pages.
+///
+/// ## Safety
+///
+/// There are many ways you can cause memory safety errors and undefined behaviour when creating
+/// page mappings. See <Mapper::map_to_with_table_flags> for examples.
 pub unsafe fn create_offset_map<A: FrameAllocator<Size4KiB> + ?Sized, M: Mapper<Size2MiB>>(
     range: PhysFrameRange<Size2MiB>,
     offset: VirtAddr,

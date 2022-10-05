@@ -642,7 +642,6 @@ dependencies = [
  "log",
  "oak_baremetal_communication_channel",
  "oak_baremetal_simple_io",
- "rust-hypervisor-firmware-boot",
  "rust-hypervisor-firmware-virtio",
  "strum",
  "uart_16550",
@@ -995,14 +994,6 @@ dependencies = [
  "crypto-bigint",
  "hmac 0.11.0",
  "zeroize",
-]
-
-[[package]]
-name = "rust-hypervisor-firmware-boot"
-version = "0.1.0"
-dependencies = [
- "log",
- "x86_64",
 ]
 
 [[package]]
