@@ -41,7 +41,7 @@ const ENCRYPTED_BIT: u64 = 1 << 51;
 static mut GHCB: MaybeUninit<Ghcb> = MaybeUninit::uninit();
 
 /// Initializes the GHCB and shares it with the hypervisor.
-pub fn init_ghcb(snp_enabled: bool) -> GhcbProtocol<'static> {
+pub fn init_ghcb(snp_enabled: bool) -> GhcbProtocol<'static, Ghcb> {
     // Safety: this data structure is placed in valid memory so we won't page fault when accessing
     // it. We reset the value of the GHCB immediately after shareing it with the hypervisor, so it
     // will be fine if it is not initialized.

@@ -14,16 +14,16 @@
 // limitations under the License.
 //
 
+use crate::ghcb::{Ghcb, GhcbProtocol};
+use core::marker::PhantomData;
 use lock_api::{Mutex, RawMutex};
 use x86_64::instructions::port::{PortReadOnly, PortWriteOnly};
-
-use crate::ghcb::GhcbProtocol;
 
 /// Factory for instantiating IO port readers and writers.
 ///
 /// The typical usage is to either create raw instances that peform direct IO on the ports, or
 /// instances that use the GHCB IOIO protocol.
-pub trait IoPortFactory<T, R: PortReader<T>, W: PortWriter<T>> {
+pub trait IoPortFactory<'a, T, R: PortReader<T> + 'a, W: PortWriter<T> + 'a> {
     /// Creates a new IO port reader instance.
     fn new_reader(&self, port: u16) -> R;
     /// Creates a new IO port writer instance.
@@ -51,86 +51,123 @@ pub trait PortWriter<T> {
 }
 
 /// A factory for creating port readers and writers that use the GHCB IOIO protocol.
-pub struct GhcbIoFactory<R: RawMutex + 'static> {
-    ghcb_protocol: &'static Mutex<R, GhcbProtocol<'static>>,
+pub struct GhcbIoFactory<
+    'a,
+    R: RawMutex + 'a,
+    P: AsMut<GhcbProtocol<'a, G>> + 'a + ?Sized,
+    G: AsMut<Ghcb> + AsRef<Ghcb> + ?Sized + 'a,
+> {
+    ghcb_protocol: &'a Mutex<R, P>,
+    _phantom: PhantomData<G>,
 }
 
-impl<R> GhcbIoFactory<R>
+impl<'a, R, P, G> GhcbIoFactory<'a, R, P, G>
 where
-    R: RawMutex + 'static,
+    R: RawMutex + 'a,
+    P: AsMut<GhcbProtocol<'a, G>> + 'a + ?Sized,
+    G: AsMut<Ghcb> + AsRef<Ghcb> + ?Sized + 'a,
 {
-    pub fn new(ghcb_protocol: &'static Mutex<R, GhcbProtocol<'static>>) -> Self {
-        GhcbIoFactory { ghcb_protocol }
+    pub fn new(ghcb_protocol: &'a Mutex<R, P>) -> Self {
+        GhcbIoFactory {
+            ghcb_protocol,
+            _phantom: PhantomData,
+        }
     }
 }
 
-impl<T, R> IoPortFactory<T, GhcbIoPort<R>, GhcbIoPort<R>> for GhcbIoFactory<R>
+impl<'a, T, R, P, G> IoPortFactory<'a, T, GhcbIoPort<'a, R, P, G>, GhcbIoPort<'a, R, P, G>>
+    for GhcbIoFactory<'a, R, P, G>
 where
-    R: RawMutex + 'static,
-    GhcbIoPort<R>: PortReader<T> + PortWriter<T>,
+    R: RawMutex + 'a,
+    P: AsMut<GhcbProtocol<'a, G>> + 'a + ?Sized,
+    G: AsMut<Ghcb> + AsRef<Ghcb> + ?Sized + 'a,
+    GhcbIoPort<'a, R, P, G>: PortReader<T> + PortWriter<T>,
 {
-    fn new_reader(&self, port: u16) -> GhcbIoPort<R> {
+    fn new_reader(&self, port: u16) -> GhcbIoPort<'a, R, P, G> {
         GhcbIoPort {
             ghcb_protocol: self.ghcb_protocol,
             port,
+            _phantom: PhantomData,
         }
     }
 
-    fn new_writer(&self, port: u16) -> GhcbIoPort<R> {
+    fn new_writer(&self, port: u16) -> GhcbIoPort<'a, R, P, G> {
         GhcbIoPort {
             ghcb_protocol: self.ghcb_protocol,
             port,
+            _phantom: PhantomData,
         }
     }
 }
 
 /// GHCB-based wrapper for a single IO port.
-pub struct GhcbIoPort<R: RawMutex + 'static> {
-    ghcb_protocol: &'static Mutex<R, GhcbProtocol<'static>>,
+pub struct GhcbIoPort<
+    'a,
+    R: RawMutex + 'a,
+    P: AsMut<GhcbProtocol<'a, G>> + 'a + ?Sized,
+    G: AsMut<Ghcb> + AsRef<Ghcb> + ?Sized + 'a,
+> {
+    ghcb_protocol: &'a Mutex<R, P>,
     port: u16,
+    _phantom: PhantomData<G>,
 }
 
-impl<R> PortReader<u8> for GhcbIoPort<R>
+impl<'a, R, P, G> PortReader<u8> for GhcbIoPort<'a, R, P, G>
 where
-    R: RawMutex + 'static,
+    R: RawMutex + 'a,
+    P: AsMut<GhcbProtocol<'a, G>> + 'a + ?Sized,
+    G: AsMut<Ghcb> + AsRef<Ghcb> + ?Sized + 'a,
 {
     unsafe fn try_read(&mut self) -> Result<u8, &'static str> {
-        self.ghcb_protocol.lock().io_read_u8(self.port)
+        self.ghcb_protocol.lock().as_mut().io_read_u8(self.port)
     }
 }
 
-impl<R> PortReader<u32> for GhcbIoPort<R>
+impl<'a, R, P, G> PortReader<u32> for GhcbIoPort<'a, R, P, G>
 where
-    R: RawMutex + 'static,
+    R: RawMutex + 'a,
+    P: AsMut<GhcbProtocol<'a, G>> + 'a + ?Sized,
+    G: AsMut<Ghcb> + AsRef<Ghcb> + ?Sized + 'a,
 {
     unsafe fn try_read(&mut self) -> Result<u32, &'static str> {
-        self.ghcb_protocol.lock().io_read_u32(self.port)
+        self.ghcb_protocol.lock().as_mut().io_read_u32(self.port)
     }
 }
 
-impl<R> PortWriter<u8> for GhcbIoPort<R>
+impl<'a, R, P, G> PortWriter<u8> for GhcbIoPort<'a, R, P, G>
 where
-    R: RawMutex + 'static,
+    R: RawMutex + 'a,
+    P: AsMut<GhcbProtocol<'a, G>> + 'a + ?Sized,
+    G: AsMut<Ghcb> + AsRef<Ghcb> + ?Sized + 'a,
 {
     unsafe fn try_write(&mut self, value: u8) -> Result<(), &'static str> {
-        self.ghcb_protocol.lock().io_write_u8(self.port, value)
+        self.ghcb_protocol
+            .lock()
+            .as_mut()
+            .io_write_u8(self.port, value)
     }
 }
 
-impl<R> PortWriter<u32> for GhcbIoPort<R>
+impl<'a, R, P, G> PortWriter<u32> for GhcbIoPort<'a, R, P, G>
 where
-    R: RawMutex + 'static,
+    R: RawMutex + 'a,
+    P: AsMut<GhcbProtocol<'a, G>> + 'a + ?Sized,
+    G: AsMut<Ghcb> + AsRef<Ghcb> + ?Sized + 'a,
 {
     unsafe fn try_write(&mut self, value: u32) -> Result<(), &'static str> {
-        self.ghcb_protocol.lock().io_write_u32(self.port, value)
+        self.ghcb_protocol
+            .lock()
+            .as_mut()
+            .io_write_u32(self.port, value)
     }
 }
 
 /// Factory for creating port reader and writers that perform direct raw IO operations.
 pub struct RawIoPortFactory;
 
-impl<T> IoPortFactory<T, PortReadOnly<T>, PortWriteOnly<T>> for RawIoPortFactory
+impl<'a, T> IoPortFactory<'a, T, PortReadOnly<T>, PortWriteOnly<T>> for RawIoPortFactory
 where
+    T: 'a,
     PortReadOnly<T>: PortReader<T>,
     PortWriteOnly<T>: PortWriter<T>,
 {
