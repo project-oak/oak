@@ -42,6 +42,7 @@ SECTIONS {
     /* Don't touch the lower 2M of memory; there be dragons there. */
     . = 2M;
 
+    /* The kernel code expects FILEHDR and PHDRS to be located at 0x20_0000. */
     hdrs = .;
     . += SIZEOF_HEADERS;
     .hdrs : {
