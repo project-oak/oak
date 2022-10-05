@@ -47,6 +47,7 @@ members = [
   "oak_idl_gen_services",
   "oak_idl_gen_structs",
   "oak_idl_tests",
+  "oak_tensorflow_runtime",
   "remote_attestation/rust",
   "remote_attestation_sessions",
   "remote_attestation_sessions_client",
@@ -61,6 +62,7 @@ members = [
 exclude = [
   "experimental/oak_baremetal_app_crosvm",
   "oak_functions/loader/fuzz",
+  "oak_tensorflow_bin",
   "stage0",
   "testing/oak_echo_bin",
   "testing/sev_snp_hello_world_kernel",
