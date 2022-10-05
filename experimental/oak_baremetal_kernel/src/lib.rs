@@ -35,7 +35,6 @@
 
 mod args;
 mod avx;
-pub mod boot;
 mod elf;
 pub mod i8042;
 mod interrupts;
@@ -56,11 +55,12 @@ use alloc::boxed::Box;
 use core::{panic::PanicInfo, str::FromStr};
 use log::{error, info};
 use oak_baremetal_communication_channel::Channel;
+use oak_linux_boot_params::BootParams;
 use strum::{EnumIter, EnumString, IntoEnumIterator};
 use x86_64::VirtAddr;
 
 /// Main entry point for the kernel, to be called from bootloader.
-pub fn start_kernel<E: boot::E820Entry, B: boot::BootInfo<E>>(info: B) -> Box<dyn Channel> {
+pub fn start_kernel(info: &BootParams) -> Box<dyn Channel> {
     avx::enable_avx();
     logging::init_logging();
     interrupts::init_idt();
@@ -69,7 +69,7 @@ pub fn start_kernel<E: boot::E820Entry, B: boot::BootInfo<E>>(info: B) -> Box<dy
     let program_headers = unsafe { elf::get_phdrs(VirtAddr::new(0x20_0000)) };
 
     // Physical frame allocator: support up to 128 GiB of memory, for now.
-    let mut frame_allocator = mm::init::<1024, E>(info.e820_table(), program_headers);
+    let mut frame_allocator = mm::init::<1024>(info.e820_table(), program_headers);
 
     mm::init_paging(&mut frame_allocator).unwrap();
     // We need to be done with the boot info struct before intializing memory. For example, the

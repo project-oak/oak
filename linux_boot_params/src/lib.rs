@@ -15,8 +15,11 @@
 //
 
 #![no_std]
+#![feature(core_ffi_c)]
+#![feature(core_c_str)]
 
 use bitflags::bitflags;
+use core::ffi::{c_char, CStr};
 use strum::{Display, FromRepr};
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Display, FromRepr)]
@@ -466,6 +469,20 @@ pub struct BootE820Entry {
     type_: E820EntryType,
 }
 
+impl BootE820Entry {
+    pub fn entry_type(&self) -> E820EntryType {
+        self.type_
+    }
+
+    pub fn addr(&self) -> usize {
+        self.addr
+    }
+
+    pub fn size(&self) -> usize {
+        self.size
+    }
+}
+
 #[repr(C, packed)]
 #[derive(Debug, Copy, Clone)]
 pub struct ScreenInfo {
@@ -608,6 +625,26 @@ pub struct BootParams {
     pub _pad9: [u8; 276usize],
 }
 static_assertions::assert_eq_size!(BootParams, [u8; 4096usize]);
+
+impl BootParams {
+    pub fn protocol(&self) -> &'static str {
+        "Linux Boot Protocol"
+    }
+
+    pub fn e820_table(&self) -> &[BootE820Entry] {
+        &self.e820_table[..self.e820_entries as usize]
+    }
+
+    pub fn args(&self) -> &CStr {
+        if self.hdr.cmdline_size == 0 {
+            Default::default()
+        } else {
+            // Safety: Linux boot protocol expects the pointer to be valid, even if there are no
+            // args.
+            unsafe { CStr::from_ptr(self.hdr.cmd_line_ptr as *const c_char) }
+        }
+    }
+}
 
 pub const CC_BLOB_SEV_INFO_MAGIC: u32 = 0x45444d41; // 'AMDE'
 

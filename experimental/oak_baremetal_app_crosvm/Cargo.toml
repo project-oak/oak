@@ -21,6 +21,7 @@ oak_baremetal_kernel = { path = "../../experimental/oak_baremetal_kernel", defau
 oak_baremetal_runtime = { path = "../oak_baremetal_runtime", default-features = false, features = [
   "rust-crypto"
 ] }
+oak_linux_boot_params = { path = "../../linux_boot_params" }
 oak_remote_attestation = { path = "../../remote_attestation/rust", default-features = false, features = [
   "rust-crypto"
 ] }

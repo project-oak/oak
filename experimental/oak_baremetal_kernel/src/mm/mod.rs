@@ -14,9 +14,9 @@
 // limitations under the License.
 //
 
-use crate::boot::{E820Entry, E820EntryType};
 use goblin::{elf32::program_header::PT_LOAD, elf64::program_header::ProgramHeader};
 use log::info;
+use oak_linux_boot_params::{BootE820Entry, E820EntryType};
 use x86_64::{
     addr::{align_down, align_up},
     registers::control::{Cr3, Cr3Flags},
@@ -31,8 +31,8 @@ mod bitmap_frame_allocator;
 pub mod frame_allocator;
 mod page_tables;
 
-pub fn init<const N: usize, E: E820Entry>(
-    memory_map: &[E],
+pub fn init<const N: usize>(
+    memory_map: &[BootE820Entry],
     program_headers: &[ProgramHeader],
 ) -> frame_allocator::PhysicalMemoryAllocator<N> {
     // This assumes all memory is in the lower end of the address space.
