@@ -71,7 +71,7 @@ const RESPONSE_LENGTH_OFFSET: usize = RESPONSE_STATUS_CODE_SIZE;
 static_assertions::assert_eq_size!([u8; RESPONSE_LENGTH_SIZE], ResponseLength);
 
 // As defined in REQUEST_RESPONSE_ENCODING.MD in the crate root.
-const RESPONSE_BODY_OFFSET: usize = RESPONSE_STATUS_CODE_SIZE + RESPONSE_LENGTH_SIZE;
+pub const RESPONSE_BODY_OFFSET: usize = RESPONSE_STATUS_CODE_SIZE + RESPONSE_LENGTH_SIZE;
 
 impl Response {
     /// Creates a new instance of Response.

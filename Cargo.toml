@@ -59,6 +59,7 @@ members = [
 ]
 exclude = [
   "experimental/oak_baremetal_app_crosvm",
+  "fuzz",
   "oak_functions/loader/fuzz",
   "oak_tensorflow_bin",
   "stage0",
