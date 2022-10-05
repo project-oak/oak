@@ -611,6 +611,7 @@ dependencies = [
  "oak_baremetal_kernel",
  "oak_baremetal_runtime",
  "oak_idl",
+ "oak_linux_boot_params",
  "oak_remote_attestation",
  "oak_remote_attestation_amd",
  "static_assertions",
@@ -642,6 +643,7 @@ dependencies = [
  "log",
  "oak_baremetal_communication_channel",
  "oak_baremetal_simple_io",
+ "oak_linux_boot_params",
  "rust-hypervisor-firmware-virtio",
  "strum",
  "uart_16550",
@@ -763,6 +765,15 @@ dependencies = [
 [[package]]
 name = "oak_idl_gen_structs"
 version = "0.1.0"
+
+[[package]]
+name = "oak_linux_boot_params"
+version = "0.1.0"
+dependencies = [
+ "bitflags",
+ "static_assertions",
+ "strum",
+]
 
 [[package]]
 name = "oak_logger"
