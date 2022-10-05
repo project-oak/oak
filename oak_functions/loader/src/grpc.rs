@@ -79,8 +79,8 @@ pub async fn create_and_start_grpc_server<F: Future<Output = ()>>(
         async move |request| handle_request(wasm_handler, policy.clone(), request).await;
 
     let grpc_unary_attestation_service =
-        grpc_unary_attestation::proto::unary_session_server::UnarySessionServer::new(
-            grpc_unary_attestation::server::AttestationServer::create(
+        oak_grpc_unary_attestation::proto::unary_session_server::UnarySessionServer::new(
+            oak_grpc_unary_attestation::server::AttestationServer::create(
                 request_handler,
                 ErrorLogger { logger },
                 oak_remote_attestation_amd::PlaceholderAmdAttestationGenerator,

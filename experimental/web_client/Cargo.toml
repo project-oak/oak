@@ -14,12 +14,12 @@ wasm-bindgen-futures = "*"
 console_error_panic_hook = { version = "*" }
 anyhow = { version = "*", default-features = false }
 oak_functions_abi = { path = "../../oak_functions/abi" }
-oak_remote_attestation = { path = "../../remote_attestation/rust/", default-features = false, features = [
+oak_remote_attestation = { path = "../../oak_remote_attestation", default-features = false, features = [
   "web"
 ] }
-oak_remote_attestation_amd = { path = "../../oak_remote_attestation_amd/", default-features = false }
-oak_remote_attestation_sessions = { path = "../../remote_attestation_sessions/", default-features = false }
-oak_remote_attestation_sessions_client = { path = "../../remote_attestation_sessions_client/", default-features = false, features = [
+oak_remote_attestation_amd = { path = "../../oak_remote_attestation_amd", default-features = false }
+oak_remote_attestation_sessions = { path = "../../oak_remote_attestation_sessions", default-features = false }
+oak_remote_attestation_sessions_client = { path = "../../oak_remote_attestation_sessions_client", default-features = false, features = [
   "web"
 ] }
 prost = { version = "*", default-features = false, features = ["prost-derive"] }

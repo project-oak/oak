@@ -12,14 +12,14 @@ base64 = "*"
 clap = { version = "*", features = ["derive"] }
 ecdsa = { version = "*", features = ["verify", "pkcs8", "pem"] }
 env_logger = "*"
-grpc_unary_attestation = { path = "../../../grpc_unary_attestation/" }
+oak_grpc_unary_attestation = { path = "../../../oak_grpc_unary_attestation" }
 hex = "*"
 http = "*"
 log = "*"
 oak_functions_abi = { path = "../../abi" }
-oak_remote_attestation = { path = "../../../remote_attestation/rust/" }
-oak_remote_attestation_sessions_client = { path = "../../../remote_attestation_sessions_client/" }
-oak_remote_attestation_amd = { path = "../../../oak_remote_attestation_amd/" }
+oak_remote_attestation = { path = "../../../oak_remote_attestation" }
+oak_remote_attestation_sessions_client = { path = "../../../oak_remote_attestation_sessions_client" }
+oak_remote_attestation_amd = { path = "../../../oak_remote_attestation_amd" }
 p256 = { version = "*", features = ["ecdsa-core", "ecdsa", "pem"] }
 prost = "*"
 regex = "*"

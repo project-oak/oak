@@ -16,8 +16,10 @@
 
 //! Server-side implementation the remote attestation handshake protocol.
 //!
-//! A simplified version of the implementation from the `grpc_unary_attestation`
-//! crate. TODO(#2741): Refactor this to share more code between the two runtimes.
+//! A simplified version of the implementation from the `oak_grpc_unary_attestation`
+//! crate.
+//!
+//! TODO(#2741): Refactor this to share more code between the two runtimes.
 
 extern crate alloc;
 

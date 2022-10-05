@@ -1576,24 +1576,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "grpc_unary_attestation"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "async-trait",
- "oak_remote_attestation",
- "oak_remote_attestation_sessions",
- "oak_remote_attestation_sessions_client",
- "oak_utils",
- "prost 0.10.4",
- "prost-types 0.10.1",
- "serde",
- "tokio",
- "tonic",
- "tower",
-]
-
-[[package]]
 name = "h2"
 version = "0.3.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2511,11 +2493,11 @@ dependencies = [
  "clap 3.2.10",
  "ecdsa 0.13.4",
  "env_logger 0.9.0",
- "grpc_unary_attestation",
  "hex",
  "http",
  "log",
  "oak_functions_abi",
+ "oak_grpc_unary_attestation",
  "oak_remote_attestation",
  "oak_remote_attestation_amd",
  "oak_remote_attestation_sessions_client",
@@ -2566,7 +2548,6 @@ dependencies = [
  "clap 3.2.10",
  "criterion",
  "futures",
- "grpc_unary_attestation",
  "hashbrown 0.12.2",
  "http",
  "humantime-serde",
@@ -2581,6 +2562,7 @@ dependencies = [
  "oak_functions_util",
  "oak_functions_wasm",
  "oak_functions_workload_logging",
+ "oak_grpc_unary_attestation",
  "oak_logger",
  "oak_remote_attestation",
  "oak_remote_attestation_amd",
@@ -2751,6 +2733,23 @@ dependencies = [
  "oak_functions_abi",
  "oak_functions_extension",
  "oak_logger",
+]
+
+[[package]]
+name = "oak_grpc_unary_attestation"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "oak_remote_attestation",
+ "oak_remote_attestation_sessions",
+ "oak_remote_attestation_sessions_client",
+ "oak_utils",
+ "prost 0.10.4",
+ "serde",
+ "tokio",
+ "tonic",
+ "tower",
 ]
 
 [[package]]

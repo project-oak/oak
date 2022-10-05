@@ -20,8 +20,8 @@ chrono = { version = "*", default-features = false, features = [
 ] }
 clap = { version = "*", features = ["derive"] }
 futures = "*"
-grpc_unary_attestation = { path = "../../grpc_unary_attestation/" }
-oak_remote_attestation_amd = { path = "../../oak_remote_attestation_amd/" }
+oak_grpc_unary_attestation = { path = "../../oak_grpc_unary_attestation" }
+oak_remote_attestation_amd = { path = "../../oak_remote_attestation_amd" }
 hashbrown = "*"
 http = "*"
 hyper = { version = "*", features = [
@@ -48,7 +48,7 @@ oak_functions_wasm = { path = "../wasm" }
 oak_functions_workload_logging = { path = "../workload_logging" }
 oak_logger = { path = "../logger" }
 oak_utils = { path = "../../oak_utils" }
-oak_remote_attestation = { path = "../../remote_attestation/rust/" }
+oak_remote_attestation = { path = "../../oak_remote_attestation" }
 prost = "*"
 rand = "*"
 serde = "*"

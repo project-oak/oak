@@ -21,8 +21,8 @@ pub mod proto {
 pub mod rekor;
 
 use anyhow::Context;
-use grpc_unary_attestation::client::UnaryGrpcClient;
 use oak_functions_abi::{Request, Response};
+use oak_grpc_unary_attestation::client::UnaryGrpcClient;
 use oak_remote_attestation::handshaker::{AttestationBehavior, EmptyAttestationGenerator};
 use oak_remote_attestation_amd::PlaceholderAmdAttestationVerifier;
 use oak_remote_attestation_sessions_client::GenericAttestationClient;

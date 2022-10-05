@@ -16,7 +16,7 @@
 
 fn main() {
     prost_build::compile_protos(
-        &["grpc_unary_attestation/proto/unary_server.proto"],
+        &["oak_grpc_unary_attestation/proto/unary_server.proto"],
         &["../.."],
     )
     .expect("Proto compilation failed");
