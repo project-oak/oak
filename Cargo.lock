@@ -4236,6 +4236,7 @@ name = "sev_guest"
 version = "0.1.0"
 dependencies = [
  "bitflags",
+ "lock_api",
  "snafu",
  "static_assertions",
  "strum",

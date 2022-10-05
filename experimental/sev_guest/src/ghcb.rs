@@ -131,6 +131,40 @@ impl Default for Ghcb {
     }
 }
 
+impl<'a, G> AsMut<GhcbProtocol<'a, G>> for GhcbProtocol<'a, G>
+where
+    G: AsMut<Ghcb> + AsRef<Ghcb> + ?Sized,
+{
+    #[inline]
+    fn as_mut(&mut self) -> &mut GhcbProtocol<'a, G> {
+        self
+    }
+}
+
+impl<'a, G> AsRef<GhcbProtocol<'a, G>> for GhcbProtocol<'a, G>
+where
+    G: AsMut<Ghcb> + AsRef<Ghcb> + ?Sized,
+{
+    #[inline]
+    fn as_ref(&self) -> &GhcbProtocol<'a, G> {
+        self
+    }
+}
+
+impl AsMut<Ghcb> for Ghcb {
+    #[inline]
+    fn as_mut(&mut self) -> &mut Ghcb {
+        self
+    }
+}
+
+impl AsRef<Ghcb> for Ghcb {
+    #[inline]
+    fn as_ref(&self) -> &Ghcb {
+        self
+    }
+}
+
 static_assertions::assert_eq_size!(Ghcb, [u8; GHCB_PAGE_SIZE]);
 
 bitflags! {
@@ -185,19 +219,22 @@ impl Ghcb {
 }
 
 /// Implementation of the GHCB protocol using the wrapped GHCB data structure.
-pub struct GhcbProtocol<'a> {
-    ghcb: &'a mut Ghcb,
+pub struct GhcbProtocol<'a, G: AsMut<Ghcb> + ?Sized> {
+    ghcb: &'a mut G,
 }
 
-impl<'a> GhcbProtocol<'a> {
-    pub fn new(ghcb: &'a mut Ghcb) -> Self {
+impl<'a, G> GhcbProtocol<'a, G>
+where
+    G: AsMut<Ghcb> + AsRef<Ghcb> + ?Sized,
+{
+    pub fn new(ghcb: &'a mut G) -> Self {
         Self { ghcb }
     }
 
     /// Gets the guest-physical address for the guest-hypervisor communication block.
     pub fn get_gpa(&self) -> usize {
         // Assume identity mapping for now.
-        self.ghcb as *const Ghcb as usize
+        self.ghcb.as_ref() as *const Ghcb as usize
     }
 
     /// Registers the address of the GHCB with the hypervisor.
@@ -211,10 +248,10 @@ impl<'a> GhcbProtocol<'a> {
     pub fn io_write_u8(&mut self, port: u16, data: u8) -> Result<(), &'static str> {
         let io_port = IOIO_ADDRESS_SIZE_16 | IOIO_DATA_SIZE_8 | ((port as u64) << 16);
 
-        self.ghcb.sw_exit_code = SW_EXIT_CODE_IOIO_PROT;
-        self.ghcb.sw_exit_info_1 = io_port;
-        self.ghcb.rax = data as u64;
-        self.ghcb.valid_bitmap = BASE_VALID_BITMAP.union(ValidBitmap::RAX);
+        self.ghcb.as_mut().sw_exit_code = SW_EXIT_CODE_IOIO_PROT;
+        self.ghcb.as_mut().sw_exit_info_1 = io_port;
+        self.ghcb.as_mut().rax = data as u64;
+        self.ghcb.as_mut().valid_bitmap = BASE_VALID_BITMAP.union(ValidBitmap::RAX);
         self.do_vmg_exit()
     }
 
@@ -224,11 +261,11 @@ impl<'a> GhcbProtocol<'a> {
     pub fn io_read_u8(&mut self, port: u16) -> Result<u8, &'static str> {
         let io_port = IOIO_ADDRESS_SIZE_16 | IOIO_DATA_SIZE_8 | IOIO_READ | ((port as u64) << 16);
 
-        self.ghcb.sw_exit_code = SW_EXIT_CODE_IOIO_PROT;
-        self.ghcb.sw_exit_info_1 = io_port;
-        self.ghcb.valid_bitmap = BASE_VALID_BITMAP;
+        self.ghcb.as_mut().sw_exit_code = SW_EXIT_CODE_IOIO_PROT;
+        self.ghcb.as_mut().sw_exit_info_1 = io_port;
+        self.ghcb.as_mut().valid_bitmap = BASE_VALID_BITMAP;
         self.do_vmg_exit()?;
-        Ok(self.ghcb.rax as u8)
+        Ok(self.ghcb.as_mut().rax as u8)
     }
 
     /// Writes a 32 bit number to an IO port via the IOIO protocol.
@@ -237,10 +274,10 @@ impl<'a> GhcbProtocol<'a> {
     pub fn io_write_u32(&mut self, port: u16, data: u32) -> Result<(), &'static str> {
         let io_port = IOIO_ADDRESS_SIZE_16 | IOIO_DATA_SIZE_32 | ((port as u64) << 16);
 
-        self.ghcb.sw_exit_code = SW_EXIT_CODE_IOIO_PROT;
-        self.ghcb.sw_exit_info_1 = io_port;
-        self.ghcb.rax = data as u64;
-        self.ghcb.valid_bitmap = BASE_VALID_BITMAP.union(ValidBitmap::RAX);
+        self.ghcb.as_mut().sw_exit_code = SW_EXIT_CODE_IOIO_PROT;
+        self.ghcb.as_mut().sw_exit_info_1 = io_port;
+        self.ghcb.as_mut().rax = data as u64;
+        self.ghcb.as_mut().valid_bitmap = BASE_VALID_BITMAP.union(ValidBitmap::RAX);
         self.do_vmg_exit()
     }
 
@@ -250,17 +287,17 @@ impl<'a> GhcbProtocol<'a> {
     pub fn io_read_u32(&mut self, port: u16) -> Result<u32, &'static str> {
         let io_port = IOIO_ADDRESS_SIZE_16 | IOIO_DATA_SIZE_32 | IOIO_READ | ((port as u64) << 16);
 
-        self.ghcb.sw_exit_code = SW_EXIT_CODE_IOIO_PROT;
-        self.ghcb.sw_exit_info_1 = io_port;
-        self.ghcb.valid_bitmap = BASE_VALID_BITMAP;
+        self.ghcb.as_mut().sw_exit_code = SW_EXIT_CODE_IOIO_PROT;
+        self.ghcb.as_mut().sw_exit_info_1 = io_port;
+        self.ghcb.as_mut().valid_bitmap = BASE_VALID_BITMAP;
         self.do_vmg_exit()?;
-        Ok(self.ghcb.rax as u32)
+        Ok(self.ghcb.as_mut().rax as u32)
     }
 
     /// Sets the address of the GHCB, exits to the hypervisor, and checks the return value when
     /// execution resumes.
     fn do_vmg_exit(&mut self) -> Result<(), &'static str> {
-        self.ghcb.protocol_version = GHCB_PROTOCOL_VERSION;
+        self.ghcb.as_mut().protocol_version = GHCB_PROTOCOL_VERSION;
         // Use a memory fence to ensure all writes happen before we hand over to the VMM.
         core::sync::atomic::fence(core::sync::atomic::Ordering::Release);
         set_ghcb_address_and_exit(GhcbGpa::new(self.get_gpa())?);
@@ -271,7 +308,7 @@ impl<'a> GhcbProtocol<'a> {
         // The mask for extracting the hypervisor's return value from the sw_exit_info_1 field.
         const SW_EXIT_INFO_1_RETURN_MASK: u64 = 0xffff_ffff;
 
-        if self.ghcb.sw_exit_info_1 & SW_EXIT_INFO_1_RETURN_MASK == 0 {
+        if self.ghcb.as_mut().sw_exit_info_1 & SW_EXIT_INFO_1_RETURN_MASK == 0 {
             Ok(())
         } else {
             // For now we treat all non-zero return values as unrecoverable errors.

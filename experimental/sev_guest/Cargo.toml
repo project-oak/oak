@@ -7,6 +7,7 @@ license = "Apache-2.0"
 
 [dependencies]
 bitflags = "*"
+lock_api = "*"
 static_assertions = "*"
 snafu = { version = "*", default-features = false }
 strum = { version = "*", default-features = false, features = ["derive"] }

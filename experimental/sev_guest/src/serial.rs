@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-use crate::ghcb::GhcbProtocol;
+use crate::ghcb::{Ghcb, GhcbProtocol};
 use core::fmt::Write;
 
 /// The offset from the base address to the interrupt register.
@@ -62,7 +62,7 @@ const OUTPUT_EMPTY: u8 = 1 << 5;
 pub struct SerialPort<'a> {
     /// The base address of the serial port.
     base_address: u16,
-    ghcb_protocol: GhcbProtocol<'a>,
+    ghcb_protocol: GhcbProtocol<'a, Ghcb>,
 }
 
 impl<'a> SerialPort<'a> {
@@ -72,7 +72,7 @@ impl<'a> SerialPort<'a> {
     ///
     /// This function is unsafe as callers must make sure that the base address represents a
     /// valid serial port device.
-    pub unsafe fn new(base_address: u16, ghcb_protocol: GhcbProtocol<'a>) -> Self {
+    pub unsafe fn new(base_address: u16, ghcb_protocol: GhcbProtocol<'a, Ghcb>) -> Self {
         Self {
             base_address,
             ghcb_protocol,
