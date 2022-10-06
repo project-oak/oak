@@ -11,8 +11,8 @@ members = ["."]
 
 [features]
 default = ["vsock_channel", "raw_server"]
-vsock_channel = ["oak_baremetal_kernel/vsock_channel"]
-simple_io_channel = ["oak_baremetal_kernel/simple_io_channel"]
+vsock_channel = ["oak_restricted_kernel/vsock_channel"]
+simple_io_channel = ["oak_restricted_kernel/simple_io_channel"]
 raw_server = []
 idl_server = ["oak_echo_runtime"]
 
@@ -20,7 +20,7 @@ idl_server = ["oak_echo_runtime"]
 oak_echo_runtime = { path = "../oak_echo_runtime", optional = true }
 log = "*"
 oak_baremetal_communication_channel = { path = "../../experimental/oak_baremetal_channel" }
-oak_baremetal_kernel = { path = "../../experimental/oak_baremetal_kernel", default-features = false }
+oak_restricted_kernel = { path = "../../oak_restricted_kernel", default-features = false }
 oak_idl = { path = "../../oak_idl" }
 oak_linux_boot_params = { path = "../../linux_boot_params" }
 static_assertions = "*"

@@ -2,7 +2,6 @@
 resolver = "2"
 members = [
   "experimental/oak_baremetal_channel",
-  "experimental/oak_baremetal_kernel",
   "experimental/oak_baremetal_launcher",
   "experimental/oak_baremetal_runtime",
   "experimental/oak_baremetal_simple_io",
@@ -48,6 +47,7 @@ members = [
   "oak_remote_attestation_amd",
   "oak_remote_attestation_sessions",
   "oak_remote_attestation_sessions_client",
+  "oak_restricted_kernel",
   "oak_tensorflow_runtime",
   "testing/oak_echo_runtime",
   "trusted_shuffler/backend",
