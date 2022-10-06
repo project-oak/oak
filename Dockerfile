@@ -220,9 +220,10 @@ RUN rustup target add wasm32-unknown-unknown
 # Install musl target for Rust (for statically linked binaries).
 RUN rustup target add x86_64-unknown-linux-musl
 
-# Install rustfmt and clippy.
+# Install various components we need.
 RUN rustup component add \
   clippy \
+  llvm-tools-preview \
   rust-src \
   rustfmt
 
@@ -237,6 +238,10 @@ RUN cargo install --version=${deadlinks_version} cargo-deadlinks
 # change cargo-fuzz to the following to avoid a recent failure
 # cf. https://github.com/rust-fuzz/cargo-fuzz/pull/277
 RUN cargo install --git https://github.com/rust-fuzz/cargo-fuzz/ --rev 8c964bf183c93cd49ad655eb2f3faecf543d0012
+
+# Install cargo-binutils.
+ARG binutils_version=0.3.6
+RUN cargo install --version=${binutils_version} cargo-binutils
 
 # Install Wizer.
 # To allow running warmup initialisation on example Wasm modules.
