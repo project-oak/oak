@@ -1,13 +1,9 @@
 [workspace]
 resolver = "2"
 members = [
-  "experimental/attestation_common",
-  "experimental/https_attestation",
   "experimental/offline_attestation/client",
   "experimental/offline_attestation/server",
   "experimental/offline_attestation/shared",
-  "experimental/proxy_attestation",
-  "experimental/tls_attestation",
   "experimental/oak_baremetal_channel",
   "experimental/oak_baremetal_kernel",
   "experimental/oak_baremetal_launcher",
