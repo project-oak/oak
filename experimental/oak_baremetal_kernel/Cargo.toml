@@ -28,7 +28,6 @@ log = "*"
 libm = "*"
 oak_baremetal_communication_channel = { path = "../oak_baremetal_channel" }
 oak_baremetal_simple_io = { path = "../oak_baremetal_simple_io", optional = true }
-rust-hypervisor-firmware-boot = { path = "../../third_party/rust-hypervisor-firmware-boot" }
 rust-hypervisor-firmware-virtio = { path = "../../third_party/rust-hypervisor-firmware-virtio" }
 strum = { version = "*", default-features = false, features = ["derive"] }
 uart_16550 = "*"

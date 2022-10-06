@@ -19,12 +19,17 @@ use goblin::{elf32::program_header::PT_LOAD, elf64::program_header::ProgramHeade
 use log::info;
 use x86_64::{
     addr::{align_down, align_up},
-    structures::paging::{PageSize, PhysFrame, Size2MiB},
-    PhysAddr,
+    registers::control::{Cr3, Cr3Flags},
+    structures::paging::{
+        FrameAllocator, OffsetPageTable, PageSize, PageTable, PageTableFlags, PhysFrame, Size2MiB,
+        Size4KiB,
+    },
+    PhysAddr, VirtAddr,
 };
 
 mod bitmap_frame_allocator;
 pub mod frame_allocator;
+mod page_tables;
 
 pub fn init<const N: usize, E: E820Entry>(
     memory_map: &[E],
@@ -108,4 +113,72 @@ pub fn init<const N: usize, E: E820Entry>(
         });
 
     alloc
+}
+
+/// Initializes the page tables used by the kernel.
+///
+/// The memory layout we follow is largely based on the Linux layout
+/// (<https://www.kernel.org/doc/Documentation/x86/x86_64/mm.txt>):
+///
+/// | Start address       | Offset  | End address         | Size   | Description                 |
+/// |---------------------|---------|---------------------|--------|-----------------------------|
+/// | 0000_0000_0000_0000 |    0    | 0000_7FFF_FFFF_FFFF | 128 TB | User space                  |
+/// | 0000_8000_0000_0000 | +128 TB | FFFF_7FFF_FFFF_FFFF |  16 EB | Non-canonical addresses, up |
+/// |                     |         |                     |        | to -128 TB                  |
+/// | FFFF_8000_0000_0000 | -128 TB | FFFF_FFFF_7FFF_FFFF |~128 TB | ... unused hole             |
+/// | FFFF_FFFF_8000_0000 |   -2 GB | FFFF_FFFF_FFFF_FFFF |   2 GB | Kernel code                 |
+pub fn init_paging<A: FrameAllocator<Size4KiB> + ?Sized>(
+    frame_allocator: &mut A,
+) -> Result<(), &'static str> {
+    // Safety: this expects the frame allocator to be initialized and the memory region it's handing
+    // memory out of to be identity mapped. This is true for the lower 2 GiB after we boot.
+    let pml4_frame = frame_allocator
+        .allocate_frame()
+        .ok_or("Could not allocate a frame for PML4")?;
+    let pml4 = unsafe { &mut *(pml4_frame.start_address().as_u64() as *mut PageTable) };
+    pml4.zero();
+
+    // Safety: these page tables are unused (for now) and we have identity mapping for the lowest 2
+    // GiB of memory.
+    let mut page_table = unsafe { OffsetPageTable::new(pml4, VirtAddr::new(0)) };
+
+    // Safety: these operations are safe as they're not done on active page tables.
+    unsafe {
+        // First, set up identity mapping for the lower 4 GiB of memory.
+        // Once we've moved the kernel heap to the kernel memory, and figured out what to do with
+        // MMIO, we should remove this completely.
+        page_tables::create_offset_map(
+            PhysFrame::range(
+                PhysFrame::from_start_address(PhysAddr::new(0x0_0000_0000)).unwrap(),
+                PhysFrame::from_start_address(PhysAddr::new(0x1_0000_0000)).unwrap(),
+            ),
+            VirtAddr::new(0x0000_0000),
+            PageTableFlags::PRESENT | PageTableFlags::GLOBAL | PageTableFlags::WRITABLE,
+            &mut page_table,
+            frame_allocator,
+        )
+        .map_err(|_| "Failed to set up paging for [0..4GiB)")?;
+
+        // Mapping for the kernel itself. In the future we should be more clever and only map
+        // sections based on the ELF header with the correct permissions, but for now, all of the
+        // memory will be writable and executable.
+        page_tables::create_offset_map(
+            PhysFrame::range(
+                PhysFrame::from_start_address(PhysAddr::new(0x0000_0000)).unwrap(),
+                PhysFrame::from_start_address(PhysAddr::new(0x8000_0000)).unwrap(),
+            ),
+            VirtAddr::new(0xFFFF_FFFF_8000_0000),
+            PageTableFlags::PRESENT | PageTableFlags::GLOBAL | PageTableFlags::WRITABLE,
+            &mut page_table,
+            frame_allocator,
+        )
+        .map_err(|_| "Failed to set up paging for [-2GiB..MAX)")?;
+    }
+
+    // Safety: the new page tables keep the identity mapping at -2GB intact, so it's safe to load
+    // the new page tables.
+    unsafe {
+        Cr3::write(pml4_frame, Cr3Flags::empty());
+    }
+    Ok(())
 }

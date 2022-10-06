@@ -2387,7 +2387,6 @@ dependencies = [
  "log",
  "oak_baremetal_communication_channel",
  "oak_baremetal_simple_io",
- "rust-hypervisor-firmware-boot",
  "rust-hypervisor-firmware-virtio",
  "strum",
  "uart_16550",
@@ -3692,14 +3691,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f65af18d50f789e74aaf23bbb3f65dcd22a3cb6e029b5bced149f6bd57c5c2a2"
 dependencies = [
  "cache-padded",
-]
-
-[[package]]
-name = "rust-hypervisor-firmware-boot"
-version = "0.1.0"
-dependencies = [
- "log",
- "x86_64",
 ]
 
 [[package]]

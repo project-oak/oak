@@ -56,7 +56,6 @@ use alloc::boxed::Box;
 use core::{panic::PanicInfo, str::FromStr};
 use log::{error, info};
 use oak_baremetal_communication_channel::Channel;
-use rust_hypervisor_firmware_boot::paging;
 use strum::{EnumIter, EnumString, IntoEnumIterator};
 use x86_64::VirtAddr;
 
@@ -72,7 +71,7 @@ pub fn start_kernel<E: boot::E820Entry, B: boot::BootInfo<E>>(info: B) -> Box<dy
     // Physical frame allocator: support up to 128 GiB of memory, for now.
     let mut frame_allocator = mm::init::<1024, E>(info.e820_table(), program_headers);
 
-    paging::setup();
+    mm::init_paging(&mut frame_allocator).unwrap();
     // We need to be done with the boot info struct before intializing memory. For example, the
     // multiboot protocol explicitly states data can be placed anywhere in memory; therefore, it's
     // highly likely we will overwrite some data after we initialize the heap. args::init_args()

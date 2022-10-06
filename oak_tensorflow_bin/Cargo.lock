@@ -217,7 +217,6 @@ dependencies = [
  "log",
  "oak_baremetal_communication_channel",
  "oak_baremetal_simple_io",
- "rust-hypervisor-firmware-boot",
  "rust-hypervisor-firmware-virtio",
  "strum",
  "uart_16550",
@@ -312,14 +311,6 @@ name = "radium"
 version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "dc33ff2d4973d518d823d61aa239014831e521c75da58e3df4840d3f47749d09"
-
-[[package]]
-name = "rust-hypervisor-firmware-boot"
-version = "0.1.0"
-dependencies = [
- "log",
- "x86_64",
-]
 
 [[package]]
 name = "rust-hypervisor-firmware-virtio"
