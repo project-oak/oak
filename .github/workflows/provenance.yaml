@@ -10,9 +10,6 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
-  # Temporarily add workflow_dispatch as a trigger, for experimenting with the generic SLSA provenance generator.
-  workflow_dispatch:
-    branches: [main]
 
 jobs:
   build_provenance:
@@ -144,8 +141,7 @@ jobs:
   # This job calls the generic workflow to generate provenance.
   # See https://github.com/slsa-framework/slsa-github-generator/blob/main/internal/builders/generic/README.md
   provenance:
-    # For now only run it on workflow_dispatch events.
-    if: github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'push'
     needs: [build_provenance]
     permissions:
       actions: read
@@ -158,3 +154,5 @@ jobs:
       attestation-name: 'oak_baremetal_app_crosvm.intoto.jsonl'
       # Upload provenance to a new release
       upload-assets: true
+      # Build the generator from source.
+      compile-generator: true
