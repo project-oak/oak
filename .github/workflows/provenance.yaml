@@ -154,3 +154,5 @@ jobs:
       attestation-name: 'oak_baremetal_app_crosvm.intoto.jsonl'
       # Upload provenance to a new release
       upload-assets: true
+      # Build the generator from source.
+      compile-generator: true
