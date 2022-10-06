@@ -203,29 +203,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "oak_baremetal_kernel"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "arrayvec",
- "atomic_refcell",
- "bitvec",
- "goblin",
- "lazy_static",
- "libm",
- "linked_list_allocator",
- "log",
- "oak_baremetal_communication_channel",
- "oak_baremetal_simple_io",
- "oak_linux_boot_params",
- "rust-hypervisor-firmware-virtio",
- "strum",
- "uart_16550",
- "virtio",
- "x86_64",
-]
-
-[[package]]
 name = "oak_baremetal_simple_io"
 version = "0.1.0"
 dependencies = [
@@ -239,10 +216,10 @@ version = "0.1.0"
 dependencies = [
  "log",
  "oak_baremetal_communication_channel",
- "oak_baremetal_kernel",
  "oak_echo_runtime",
  "oak_idl",
  "oak_linux_boot_params",
+ "oak_restricted_kernel",
  "static_assertions",
 ]
 
@@ -286,6 +263,29 @@ dependencies = [
  "bitflags",
  "static_assertions",
  "strum",
+]
+
+[[package]]
+name = "oak_restricted_kernel"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "arrayvec",
+ "atomic_refcell",
+ "bitvec",
+ "goblin",
+ "lazy_static",
+ "libm",
+ "linked_list_allocator",
+ "log",
+ "oak_baremetal_communication_channel",
+ "oak_baremetal_simple_io",
+ "oak_linux_boot_params",
+ "rust-hypervisor-firmware-virtio",
+ "strum",
+ "uart_16550",
+ "virtio",
+ "x86_64",
 ]
 
 [[package]]

@@ -32,7 +32,7 @@ mod asm;
 
 #[no_mangle]
 pub extern "C" fn rust64_start(_rdi: u64, rsi: &BootParams) -> ! {
-    let channel = oak_baremetal_kernel::start_kernel(rsi);
+    let channel = oak_restricted_kernel::start_kernel(rsi);
     main(channel)
 }
 
@@ -53,5 +53,5 @@ fn out_of_memory(layout: ::core::alloc::Layout) -> ! {
 
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
-    oak_baremetal_kernel::panic(info);
+    oak_restricted_kernel::panic(info);
 }
