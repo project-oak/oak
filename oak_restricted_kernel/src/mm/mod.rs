@@ -30,9 +30,13 @@ use x86_64::{
     PhysAddr, VirtAddr,
 };
 
+use self::page_tables::DirectMap;
+
 mod bitmap_frame_allocator;
 pub mod frame_allocator;
 mod page_tables;
+
+const DIRECT_MAPPING_OFFSET: VirtAddr = VirtAddr::new_truncate(0x0000_0000_0000_0000);
 
 pub fn init<const N: usize>(
     memory_map: &[BootE820Entry],
@@ -133,7 +137,7 @@ pub fn init<const N: usize>(
 pub fn init_paging<A: FrameAllocator<Size4KiB> + ?Sized>(
     frame_allocator: &mut A,
     program_headers: &[ProgramHeader],
-) -> Result<(), &'static str> {
+) -> Result<DirectMap<'static>, &'static str> {
     // Safety: this expects the frame allocator to be initialized and the memory region it's handing
     // memory out of to be identity mapped. This is true for the lower 2 GiB after we boot.
     let pml4_frame = frame_allocator
@@ -148,16 +152,18 @@ pub fn init_paging<A: FrameAllocator<Size4KiB> + ?Sized>(
 
     // Safety: these operations are safe as they're not done on active page tables.
     unsafe {
-        // First, set up identity mapping for the lower 4 GiB of memory.
-        // Once we've moved the kernel heap to the kernel memory, and figured out what to do with
-        // MMIO, we should remove this completely.
+        // Create a direct map for all physical memory, marking it NO_EXECUTE. The size (128 GB) has
+        // been chosen go coincide with the amout of memory our frame allocator can track.
         page_tables::create_offset_map(
             PhysFrame::<Size2MiB>::range(
-                PhysFrame::from_start_address(PhysAddr::new(0x0_0000_0000)).unwrap(),
-                PhysFrame::from_start_address(PhysAddr::new(0x1_0000_0000)).unwrap(),
+                PhysFrame::from_start_address(PhysAddr::new(0x00_0000_0000)).unwrap(),
+                PhysFrame::from_start_address(PhysAddr::new(0x20_0000_0000)).unwrap(),
             ),
-            VirtAddr::new(0x0000_0000),
-            PageTableFlags::PRESENT | PageTableFlags::GLOBAL | PageTableFlags::WRITABLE,
+            DIRECT_MAPPING_OFFSET,
+            PageTableFlags::PRESENT
+                | PageTableFlags::GLOBAL
+                | PageTableFlags::WRITABLE
+                | PageTableFlags::NO_EXECUTE,
             &mut page_table,
             frame_allocator,
         )
@@ -175,5 +181,7 @@ pub fn init_paging<A: FrameAllocator<Size4KiB> + ?Sized>(
         Efer::update(|flags| flags.insert(EferFlags::NO_EXECUTE_ENABLE));
         Cr3::write(pml4_frame, Cr3Flags::empty());
     }
-    Ok(())
+    Ok(DirectMap(unsafe {
+        OffsetPageTable::new(pml4, DIRECT_MAPPING_OFFSET)
+    }))
 }

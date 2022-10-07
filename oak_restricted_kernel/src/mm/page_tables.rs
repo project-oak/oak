@@ -18,11 +18,41 @@ use goblin::elf64::program_header::{ProgramHeader, PF_W, PF_X, PT_LOAD};
 use x86_64::{
     align_down, align_up,
     structures::paging::{
-        frame::PhysFrameRange, mapper::MapToError, FrameAllocator, Mapper, Page, PageSize,
-        PageTableFlags, PhysFrame, Size2MiB, Size4KiB,
+        frame::PhysFrameRange, mapper::MapToError, FrameAllocator, Mapper, OffsetPageTable, Page,
+        PageSize, PageTableFlags, PhysFrame, Size2MiB, Size4KiB, Translate,
     },
     PhysAddr, VirtAddr,
 };
+
+/// Virtual to physical (and inverse) mapping.
+///
+/// The kernel will map all of the physical memory somewhere in the virtual memory, at some offset.
+/// This struct provides translation functions from virtual to physical addresses, and vice versa,
+/// in the mapped region.
+pub struct DirectMap<'a>(pub(crate) OffsetPageTable<'a>);
+
+impl<'a> DirectMap<'a> {
+    /// Translate a physical address to a virtual address.
+    ///
+    /// Note that a physical address may be mapped multiple times. This function will always return
+    /// the address from the directly mapped region, ignoring ohter mappings if they exist.
+    #[allow(dead_code)]
+    pub fn translate_addr(&self, addr: PhysAddr) -> Option<VirtAddr> {
+        Some(self.0.phys_offset() + addr.as_u64())
+    }
+
+    /// Translate a physical frame to virtual page, using the directly mapped region.
+    #[allow(dead_code)]
+    pub fn translate_frame<S: PageSize>(&self, frame: PhysFrame<S>) -> Option<Page<S>> {
+        Page::from_start_address(self.translate_addr(frame.start_address())?).ok()
+    }
+}
+
+impl<'a> Translate for DirectMap<'a> {
+    fn translate(&self, addr: VirtAddr) -> x86_64::structures::paging::mapper::TranslateResult {
+        self.0.translate(addr)
+    }
+}
 
 /// Map a region of physical memory to a virtual address using 2 MiB pages.
 ///

@@ -17,7 +17,7 @@
 use core::result::Result;
 use linked_list_allocator::LockedHeap;
 use log::info;
-use x86_64::structures::paging::{frame::PhysFrameRangeInclusive, Size2MiB};
+use x86_64::structures::paging::{page::PageRange, PageSize};
 
 #[cfg(not(test))]
 #[global_allocator]
@@ -31,9 +31,9 @@ static ALLOCATOR: LockedHeap = LockedHeap::empty();
 /// Pointers to addresses in the memory area (or references to data contained within the slice) must
 /// be considered invalid after calling this function, as the allocator may overwrite the data at
 /// any point.
-pub fn init_allocator(range: PhysFrameRangeInclusive<Size2MiB>) -> Result<(), &'static str> {
+pub fn init_allocator<S: PageSize>(range: PageRange<S>) -> Result<(), &'static str> {
     let start = range.start.start_address().as_u64() as usize;
-    let limit = (range.end.start_address().as_u64() + range.end.size()) as usize;
+    let limit = range.end.start_address().as_u64() as usize;
 
     info!("Using [{:#016x}..{:#016x}) for heap.", start, limit);
     // This is safe as we know the memory is available based on the e820 map.

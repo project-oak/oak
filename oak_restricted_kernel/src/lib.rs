@@ -57,7 +57,10 @@ use log::{error, info};
 use oak_baremetal_communication_channel::Channel;
 use oak_linux_boot_params::BootParams;
 use strum::{EnumIter, EnumString, IntoEnumIterator};
-use x86_64::VirtAddr;
+use x86_64::{
+    structures::paging::{Page, Size2MiB},
+    VirtAddr,
+};
 
 /// Main entry point for the kernel, to be called from bootloader.
 pub fn start_kernel(info: &BootParams) -> Box<dyn Channel> {
@@ -65,13 +68,6 @@ pub fn start_kernel(info: &BootParams) -> Box<dyn Channel> {
     logging::init_logging();
     interrupts::init_idt();
 
-    // Safety: in the linker script we specify that the ELF header should be placed at 0x200000.
-    let program_headers = unsafe { elf::get_phdrs(VirtAddr::new(0x20_0000)) };
-
-    // Physical frame allocator: support up to 128 GiB of memory, for now.
-    let mut frame_allocator = mm::init::<1024>(info.e820_table(), program_headers);
-
-    mm::init_paging(&mut frame_allocator, program_headers).unwrap();
     // We need to be done with the boot info struct before intializing memory. For example, the
     // multiboot protocol explicitly states data can be placed anywhere in memory; therefore, it's
     // highly likely we will overwrite some data after we initialize the heap. args::init_args()
@@ -82,8 +78,22 @@ pub fn start_kernel(info: &BootParams) -> Box<dyn Channel> {
 
     let protocol = info.protocol();
     info!("Boot protocol:  {}", protocol);
+
+    // Safety: in the linker script we specify that the ELF header should be placed at 0x200000.
+    let program_headers = unsafe { elf::get_phdrs(VirtAddr::new(0x20_0000)) };
+
+    // Physical frame allocator: support up to 128 GiB of memory, for now.
+    let mut frame_allocator = mm::init::<1024>(info.e820_table(), program_headers);
+
+    let translate = mm::init_paging(&mut frame_allocator, program_headers).unwrap();
+
     // If we don't find memory for heap, it's ok to panic.
-    memory::init_allocator(frame_allocator.largest_available().unwrap()).unwrap();
+    let heap_phys_frames = frame_allocator.largest_available().unwrap();
+    memory::init_allocator::<Size2MiB>(Page::range(
+        translate.translate_frame(heap_phys_frames.start).unwrap(),
+        translate.translate_frame(heap_phys_frames.end + 1).unwrap(),
+    ))
+    .unwrap();
 
     get_channel(&kernel_args)
 }
