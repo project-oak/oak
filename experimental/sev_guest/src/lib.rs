@@ -25,4 +25,3 @@ pub mod instructions;
 pub mod io;
 pub mod msr;
 pub mod secrets;
-pub mod serial;

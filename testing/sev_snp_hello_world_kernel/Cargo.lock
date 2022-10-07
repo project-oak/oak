@@ -3,12 +3,6 @@
 version = 3
 
 [[package]]
-name = "atomic_refcell"
-version = "0.1.8"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "73b5e5f48b927f04e952dedc932f31995a65a0bf65ec971c74436e51bf6e970d"
-
-[[package]]
 name = "autocfg"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -131,15 +125,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "sev_serial"
+version = "0.1.0"
+dependencies = [
+ "sev_guest",
+ "x86_64",
+]
+
+[[package]]
 name = "sev_snp_hello_world_kernel"
 version = "0.1.0"
 dependencies = [
- "atomic_refcell",
  "lazy_static",
+ "lock_api",
  "log",
  "oak_linux_boot_params",
  "sev_guest",
- "uart_16550",
+ "sev_serial",
+ "spinning_top",
  "x86_64",
 ]
 
@@ -170,6 +173,15 @@ name = "spin"
 version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6e63cff320ae2c57904679ba7cb63280a3dc4613885beafb148ee7bf9aa9042d"
+
+[[package]]
+name = "spinning_top"
+version = "0.2.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "75adad84ee84b521fb2cca2d4fd0f1dab1d8d026bda3c5bea4ca63b5f9f9293c"
+dependencies = [
+ "lock_api",
+]
 
 [[package]]
 name = "static_assertions"
@@ -220,17 +232,6 @@ dependencies = [
  "quote",
  "syn",
  "unicode-xid",
-]
-
-[[package]]
-name = "uart_16550"
-version = "0.2.18"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b074eb9300ad949edd74c529c0e8d451625af71bb948e6b65fe69f72dc1363d9"
-dependencies = [
- "bitflags",
- "rustversion",
- "x86_64",
 ]
 
 [[package]]

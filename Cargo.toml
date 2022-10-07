@@ -49,6 +49,7 @@ members = [
   "oak_remote_attestation_sessions_client",
   "oak_restricted_kernel",
   "oak_tensorflow_runtime",
+  "sev_serial",
   "testing/oak_echo_runtime",
   "trusted_shuffler/backend",
   "trusted_shuffler/client",
