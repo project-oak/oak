@@ -15,7 +15,8 @@
 //
 
 use crate::{
-    PlainRequest, PlainResponse, RequestHandler, SecretRequest, SecretResponse, TrustedShuffler,
+    EncryptedRequest, EncryptedResponse, PlaintextRequest, PlaintextResponse, RequestHandler,
+    TrustedShuffler,
 };
 use async_trait::async_trait;
 use futures::future::join_all;
@@ -29,7 +30,7 @@ impl RequestHandler for TestRequestHandler {
     // A test function that processes requests.
     // In the real use-case, this function should send requests to the backend and
     // return responses.
-    async fn handle(&self, request: PlainRequest) -> anyhow::Result<PlainResponse> {
+    async fn handle(&self, request: PlaintextRequest) -> anyhow::Result<PlaintextResponse> {
         if drop_request(&request) {
             // In that case we don't send an answer ever.
             loop {
@@ -41,8 +42,8 @@ impl RequestHandler for TestRequestHandler {
 }
 
 // Non-async version of the `handle_request` function used to create expected responses.
-fn generate_plain_response(request: &PlainRequest) -> PlainResponse {
-    PlainResponse {
+fn generate_plain_response(request: &PlaintextRequest) -> PlaintextResponse {
+    PlaintextResponse {
         headers: hyper::HeaderMap::new(),
         data: hyper::body::Bytes::from(request.body.clone()),
         trailers: hyper::HeaderMap::new(),
@@ -50,8 +51,8 @@ fn generate_plain_response(request: &PlainRequest) -> PlainResponse {
 }
 
 // Non-async version of the `handle_request` function used to create expected responses.
-fn generate_secret_response(request: &SecretRequest) -> SecretResponse {
-    SecretResponse {
+fn generate_secret_response(request: &EncryptedRequest) -> EncryptedResponse {
+    EncryptedResponse {
         headers: hyper::HeaderMap::new(),
         data: hyper::body::Bytes::from(request.body.clone()),
         trailers: hyper::HeaderMap::new(),
@@ -60,22 +61,24 @@ fn generate_secret_response(request: &SecretRequest) -> SecretResponse {
 
 // Generates request which will be dropped by the test backend, because we indicate it has to be
 // dropped in the request itself.
-fn generate_dropped_request() -> SecretRequest {
+fn generate_dropped_request() -> EncryptedRequest {
     // "Drop" has to be consistent with [`drop_request`].
     let (dropped_request, _) = generate_secret_request_and_expected_response("Drop");
     dropped_request
 }
 
 // If true, then the test backend does not answer the request.
-fn drop_request(request: &PlainRequest) -> bool {
+fn drop_request(request: &PlaintextRequest) -> bool {
     String::from_utf8(request.body.clone())
         .unwrap()
         .contains("Drop")
 }
 
 // Generates a request and a corresponding response from a string.
-fn generate_secret_request_and_expected_response(data: &str) -> (SecretRequest, SecretResponse) {
-    let request = SecretRequest {
+fn generate_secret_request_and_expected_response(
+    data: &str,
+) -> (EncryptedRequest, EncryptedResponse) {
+    let request = EncryptedRequest {
         body: format!("Request: {}", data).into_bytes(),
         headers: hyper::HeaderMap::new(),
         uri: hyper::Uri::from_static("test.com"),
@@ -135,7 +138,8 @@ async fn batch_size_10_test() {
     let batch_size = 10;
     let trusted_shuffler = test_trusted_shuffler(batch_size);
 
-    let (requests, expected_responses): (Vec<SecretRequest>, Vec<SecretResponse>) = (0..batch_size)
+    let (requests, expected_responses): (Vec<EncryptedRequest>, Vec<EncryptedResponse>) = (0
+        ..batch_size)
         .collect::<Vec<_>>()
         .iter()
         .map(|k| generate_secret_request_and_expected_response(&format!("Test {}", k)))
@@ -212,7 +216,7 @@ async fn one_empty_response_test() {
     // an empty response.
     let response_from_dropped = trusted_shuffler.invoke(dropped_request).await;
     assert_eq!(
-        PlainResponse::empty().encrypt(),
+        PlaintextResponse::empty().encrypt(),
         response_from_dropped.unwrap()
     );
 
@@ -261,8 +265,8 @@ async fn all_empty_responses_test() {
         tokio::spawn(async move { trusted_shuffler_clone.invoke(dropped_request_1).await });
 
     let response_2 = trusted_shuffler.invoke(dropped_request_2).await;
-    assert_eq!(PlainResponse::empty().encrypt(), response_2.unwrap());
+    assert_eq!(PlaintextResponse::empty().encrypt(), response_2.unwrap());
 
     let response_1 = response.await.unwrap();
-    assert_eq!(PlainResponse::empty().encrypt(), response_1.unwrap());
+    assert_eq!(PlaintextResponse::empty().encrypt(), response_1.unwrap());
 }
