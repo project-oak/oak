@@ -24,7 +24,8 @@ use core::{marker::PhantomData, result::Result};
 use sev_guest::io::{IoPortFactory, PortReader, PortWriter};
 use x86_64::{
     instructions::port::{PortReadOnly, PortWriteOnly},
-    PhysAddr, VirtAddr,
+    structures::paging::Translate,
+    VirtAddr,
 };
 
 /// The default I/O port to use for the most significant bytes of the output buffer guest-physical
@@ -67,8 +68,9 @@ where
     R: PortReader<u32> + 'a,
     W: PortWriter<u32> + 'a,
 {
-    pub fn new<F: IoPortFactory<'a, u32, R, W>>(
+    pub fn new<F: IoPortFactory<'a, u32, R, W>, T: Translate>(
         io_port_factory: F,
+        translate: &T,
         output_buffer_msb_port: u16,
         output_buffer_lsb_port: u16,
         output_length_port: u16,
@@ -83,12 +85,14 @@ where
 
         write_address(
             &io_port_factory,
+            translate,
             VirtAddr::from_ptr(output_buffer.as_ptr()),
             output_buffer_msb_port,
             output_buffer_lsb_port,
         )?;
         write_address(
             &io_port_factory,
+            translate,
             VirtAddr::from_ptr(input_buffer.as_ptr()),
             input_buffer_msb_port,
             input_buffer_lsb_port,
@@ -103,11 +107,13 @@ where
         })
     }
 
-    pub fn new_with_defaults<F: IoPortFactory<'a, u32, R, W>>(
+    pub fn new_with_defaults<F: IoPortFactory<'a, u32, R, W>, T: Translate>(
         io_port_factory: F,
+        translate: &T,
     ) -> Result<Self, &'static str> {
         SimpleIo::new(
             io_port_factory,
+            translate,
             DEFAULT_OUTPUT_BUFFER_MSB_PORT,
             DEFAULT_OUTPUT_BUFFER_LSB_PORT,
             DEFAULT_OUTPUT_LENGTH_PORT,
@@ -171,14 +177,19 @@ fn write_address<
     R: PortReader<u32> + 'a,
     W: PortWriter<u32> + 'a,
     F: IoPortFactory<'a, u32, R, W>,
+    T: Translate,
 >(
     io_port_factory: &F,
+    translate: &T,
     buffer_pointer: VirtAddr,
     msb_port: u16,
     lsb_port: u16,
 ) -> Result<(), &'static str> {
     // Split the 64-bit address into its least- and most significant bytes.
-    let address = get_guest_physical_address(buffer_pointer).as_u64();
+    let address = translate
+        .translate_addr(buffer_pointer)
+        .ok_or("Failed to translate VirtAddr to PhysAddr")?
+        .as_u64();
     let address_msb = (address >> 32) as u32;
     let address_lsb = address as u32;
     // Safety: this usage is safe, as we as only write uninterpreted u32 values to the ports.
@@ -188,9 +199,4 @@ fn write_address<
             .try_write(address_msb)?;
         io_port_factory.new_writer(lsb_port).try_write(address_lsb)
     }
-}
-
-fn get_guest_physical_address(pointer: VirtAddr) -> PhysAddr {
-    // Assume identity mapping for now.
-    PhysAddr::new(pointer.as_u64())
 }

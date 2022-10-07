@@ -34,9 +34,9 @@ use self::page_tables::DirectMap;
 
 mod bitmap_frame_allocator;
 pub mod frame_allocator;
-mod page_tables;
+pub mod page_tables;
 
-const DIRECT_MAPPING_OFFSET: VirtAddr = VirtAddr::new_truncate(0x0000_0000_0000_0000);
+const DIRECT_MAPPING_OFFSET: VirtAddr = VirtAddr::new_truncate(0xFFFF_8800_0000_0000);
 
 pub fn init<const N: usize>(
     memory_map: &[BootE820Entry],
@@ -140,6 +140,7 @@ pub fn init_paging<A: FrameAllocator<Size4KiB> + ?Sized>(
 ) -> Result<DirectMap<'static>, &'static str> {
     // Safety: this expects the frame allocator to be initialized and the memory region it's handing
     // memory out of to be identity mapped. This is true for the lower 2 GiB after we boot.
+    // The reference will not be valid after we reload page tables!
     let pml4_frame = frame_allocator
         .allocate_frame()
         .ok_or("Could not allocate a frame for PML4")?;
@@ -177,10 +178,19 @@ pub fn init_paging<A: FrameAllocator<Size4KiB> + ?Sized>(
 
     // Safety: the new page tables keep the identity mapping at -2GB intact, so it's safe to load
     // the new page tables.
+    // This invalidates pointers and references outside of the newly mapped areas!
     unsafe {
         Efer::update(|flags| flags.insert(EferFlags::NO_EXECUTE_ENABLE));
         Cr3::write(pml4_frame, Cr3Flags::empty());
     }
+
+    // We've reloaded the page tables, so our pml4 may no longer be valid! Load the reference again,
+    // but now taking `DIRECT_MAPPING_OFFSET` into account.
+    // Safety: we've loaded the page tables with the direct mapping at the stated location, so this
+    // memory location is safe to access now.
+    let pml4 =
+        unsafe { &mut *(DIRECT_MAPPING_OFFSET + pml4_frame.start_address().as_u64()).as_mut_ptr() };
+
     Ok(DirectMap(unsafe {
         OffsetPageTable::new(pml4, DIRECT_MAPPING_OFFSET)
     }))

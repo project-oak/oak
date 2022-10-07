@@ -25,7 +25,7 @@ use rust_hypervisor_firmware_virtio::{
     pci::{find_device, VirtioPciTransport},
     virtio::VirtioTransport,
 };
-use x86_64::PhysAddr;
+use x86_64::{structures::paging::Translate, PhysAddr, VirtAddr};
 
 pub mod packet;
 pub mod socket;
@@ -92,15 +92,18 @@ pub struct VSock<T: VirtioTransport> {
 
 impl VSock<VirtioPciTransport> {
     /// Finds the virtio vsock PCI device, initialises the device, and configures the queues.
-    pub fn find_and_configure_device() -> anyhow::Result<Self> {
+    pub fn find_and_configure_device<T: Translate, X: Fn(PhysAddr) -> Option<VirtAddr>>(
+        translate: &T,
+        inverse: X,
+    ) -> anyhow::Result<Self> {
         // For now we just scan the first 32 devices on PCI bus 0 to find the first one that matches
         // the vendor ID and device ID.
         let pci_device = find_device(super::PCI_VENDOR_ID, PCI_DEVICE_ID)
             .ok_or_else(|| anyhow::anyhow!("Couldn't find a virtio vsock device."))?;
         let transport = VirtioPciTransport::new(pci_device);
         let device = VirtioBaseDevice::new(transport);
-        let mut result = Self::new(device);
-        result.init()?;
+        let mut result = Self::new(device, translate);
+        result.init(translate, inverse)?;
         // Let the device know there are available buffers in the receiver and event queues.
         result.device.notify_queue(RX_QUEUE_ID);
         result.device.notify_queue(EVENT_QUEUE_ID);
@@ -174,10 +177,10 @@ where
         self.device.get_status()
     }
 
-    fn new(device: VirtioBaseDevice<T>) -> Self {
-        let tx_queue = DriverWriteOnlyQueue::new();
-        let rx_queue = DeviceWriteOnlyQueue::new();
-        let event_queue = DeviceWriteOnlyQueue::new();
+    fn new<L: Translate>(device: VirtioBaseDevice<T>, translate: &L) -> Self {
+        let tx_queue = DriverWriteOnlyQueue::new(translate);
+        let rx_queue = DeviceWriteOnlyQueue::new(translate);
+        let event_queue = DeviceWriteOnlyQueue::new(translate);
         VSock {
             device,
             tx_queue,
@@ -188,9 +191,13 @@ where
     }
 
     /// Initializes the device and configures the queues.
-    fn init(&mut self) -> anyhow::Result<()> {
+    fn init<L: Translate, X: Fn(PhysAddr) -> Option<VirtAddr>>(
+        &mut self,
+        translate: &L,
+        inverse: X,
+    ) -> anyhow::Result<()> {
         self.device
-            .start_init(DEVICE_ID as u32)
+            .start_init(DEVICE_ID as u32, inverse)
             .map_err(|error| anyhow::anyhow!("Virtio error: {:?}", error))
             .context("Couldn't initialize the PCI device")?;
         // We have to configure the event queue before the receive queue, otherwise the event
@@ -200,9 +207,15 @@ where
             .configure_queue(
                 EVENT_QUEUE_ID,
                 QUEUE_SIZE as u16,
-                PhysAddr::new(self.event_queue.inner.get_desc_addr().as_u64()),
-                PhysAddr::new(self.event_queue.inner.get_avail_addr().as_u64()),
-                PhysAddr::new(self.event_queue.inner.get_used_addr().as_u64()),
+                translate
+                    .translate_addr(self.event_queue.inner.get_desc_addr())
+                    .context("Failed to translate VirtAddr to PhysAddr")?,
+                translate
+                    .translate_addr(self.event_queue.inner.get_avail_addr())
+                    .context("Failed to translate VirtAddr to PhysAddr")?,
+                translate
+                    .translate_addr(self.event_queue.inner.get_used_addr())
+                    .context("Failed to translate VirtAddr to PhysAddr")?,
             )
             .map_err(|error| anyhow::anyhow!("Queue configuration error: {:?}", error))
             .context("Couldn't configure the event queue")?;
@@ -210,9 +223,15 @@ where
             .configure_queue(
                 RX_QUEUE_ID,
                 QUEUE_SIZE as u16,
-                PhysAddr::new(self.rx_queue.inner.get_desc_addr().as_u64()),
-                PhysAddr::new(self.rx_queue.inner.get_avail_addr().as_u64()),
-                PhysAddr::new(self.rx_queue.inner.get_used_addr().as_u64()),
+                translate
+                    .translate_addr(self.rx_queue.inner.get_desc_addr())
+                    .context("Failed to translate VirtAddr to PhysAddr")?,
+                translate
+                    .translate_addr(self.rx_queue.inner.get_avail_addr())
+                    .context("Failed to translate VirtAddr to PhysAddr")?,
+                translate
+                    .translate_addr(self.rx_queue.inner.get_used_addr())
+                    .context("Failed to translate VirtAddr to PhysAddr")?,
             )
             .map_err(|error| anyhow::anyhow!("Queue configuration error: {:?}", error))
             .context("Couldn't configure the receive queue")?;
@@ -220,9 +239,15 @@ where
             .configure_queue(
                 TX_QUEUE_ID,
                 QUEUE_SIZE as u16,
-                PhysAddr::new(self.tx_queue.inner.get_desc_addr().as_u64()),
-                PhysAddr::new(self.tx_queue.inner.get_avail_addr().as_u64()),
-                PhysAddr::new(self.tx_queue.inner.get_used_addr().as_u64()),
+                translate
+                    .translate_addr(self.tx_queue.inner.get_desc_addr())
+                    .context("Failed to translate VirtAddr to PhysAddr")?,
+                translate
+                    .translate_addr(self.tx_queue.inner.get_avail_addr())
+                    .context("Failed to translate VirtAddr to PhysAddr")?,
+                translate
+                    .translate_addr(self.tx_queue.inner.get_used_addr())
+                    .context("Failed to translate VirtAddr to PhysAddr")?,
             )
             .map_err(|error| anyhow::anyhow!("Queue configuration error: {:?}", error))
             .context("Couldn't configure the transmit queue")?;

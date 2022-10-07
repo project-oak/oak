@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use x86_64::PhysAddr;
+use x86_64::{PhysAddr, VirtAddr};
 
 /// Virtio related errors
 #[derive(Debug)]
@@ -21,11 +21,16 @@ pub enum Error {
     LegacyOnly,
     FeatureNegotiationFailed,
     QueueTooSmall,
+    AddressTranslationFailure,
 }
 
 /// Trait to allow separation of transport from block driver
 pub trait VirtioTransport {
-    fn init(&mut self, device_type: u32) -> Result<(), Error>;
+    fn init<X: Fn(PhysAddr) -> Option<VirtAddr>>(
+        &mut self,
+        device_type: u32,
+        translate: X,
+    ) -> Result<(), Error>;
     fn get_status(&self) -> u32;
     fn set_status(&self, status: u32);
     fn add_status(&self, status: u32);

@@ -20,7 +20,31 @@ use bitflags::bitflags;
 use core::mem::size_of;
 use rust_hypervisor_firmware_virtio::virtio::{Error, VirtioTransport};
 use std::sync::Mutex;
-use x86_64::PhysAddr;
+use x86_64::{
+    align_down,
+    structures::paging::{
+        mapper::{MappedFrame, TranslateResult},
+        PageSize, PageTableFlags, PhysFrame, Size4KiB, Translate,
+    },
+    PhysAddr, VirtAddr,
+};
+
+pub struct TestTranslate {}
+impl Translate for TestTranslate {
+    fn translate(&self, addr: x86_64::VirtAddr) -> TranslateResult {
+        TranslateResult::Mapped {
+            frame: MappedFrame::Size4KiB(
+                PhysFrame::from_start_address(PhysAddr::new(align_down(
+                    addr.as_u64(),
+                    Size4KiB::SIZE,
+                )))
+                .unwrap(),
+            ),
+            offset: addr.as_u64() % Size4KiB::SIZE,
+            flags: PageTableFlags::empty(),
+        }
+    }
+}
 
 /// Virtio Version 1 feature bit.
 /// See <https://docs.oasis-open.org/virtio/virtio/v1.1/csprd01/virtio-v1.1-csprd01.html#x1-4100006>.
@@ -178,7 +202,11 @@ impl TestingTransport {
 }
 
 impl VirtioTransport for TestingTransport {
-    fn init(&mut self, _device_type: u32) -> Result<(), Error> {
+    fn init<X: Fn(PhysAddr) -> Option<VirtAddr>>(
+        &mut self,
+        _device_type: u32,
+        _inverse: X,
+    ) -> Result<(), Error> {
         Ok(())
     }
 

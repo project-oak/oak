@@ -14,6 +14,8 @@
 // limitations under the License.
 //
 
+use crate::test::TestTranslate;
+
 use super::*;
 
 const QUEUE_SIZE: usize = 4;
@@ -21,7 +23,7 @@ const BUFFER_SIZE: usize = 4;
 
 #[test]
 fn test_read_empty_queue() {
-    let mut queue = DeviceWriteOnlyQueue::<QUEUE_SIZE, BUFFER_SIZE>::new();
+    let mut queue = DeviceWriteOnlyQueue::<QUEUE_SIZE, BUFFER_SIZE>::new(&TestTranslate {});
     let data = queue.read_next_used_buffer();
     assert!(data.is_none());
     assert_eq!(queue.inner.last_used_idx.0, 0);
@@ -33,13 +35,13 @@ fn test_read_empty_queue() {
 #[should_panic]
 fn test_invalid_queue_size() {
     // `QUEUE_SIZE` must be a power of 2.
-    let _ = Queue::<3, BUFFER_SIZE>::new(DescFlags::empty());
+    let _ = Queue::<3, BUFFER_SIZE>::new(DescFlags::empty(), &TestTranslate {});
 }
 
 #[test]
 fn test_read_once() {
     let data = vec![0, 1, 2];
-    let mut queue = DeviceWriteOnlyQueue::<QUEUE_SIZE, BUFFER_SIZE>::new();
+    let mut queue = DeviceWriteOnlyQueue::<QUEUE_SIZE, BUFFER_SIZE>::new(&TestTranslate {});
 
     let result = device_write(queue.inner.virt_queue.as_mut(), &data);
     assert_eq!(Some(3), result);
@@ -57,7 +59,7 @@ fn test_read_once() {
 #[test]
 fn test_write_once() {
     let data = vec![0, 1, 2];
-    let mut queue = DriverWriteOnlyQueue::<QUEUE_SIZE, BUFFER_SIZE>::new();
+    let mut queue = DriverWriteOnlyQueue::<QUEUE_SIZE, BUFFER_SIZE>::new(&TestTranslate {});
 
     let result = queue.write_buffer(&data);
     assert_eq!(Some(3), result);
@@ -71,7 +73,7 @@ fn test_write_once() {
 #[test]
 fn test_wrapping_idx() {
     let data = vec![0, 1, 2];
-    let mut queue = DriverWriteOnlyQueue::<QUEUE_SIZE, BUFFER_SIZE>::new();
+    let mut queue = DriverWriteOnlyQueue::<QUEUE_SIZE, BUFFER_SIZE>::new(&TestTranslate {});
 
     // Move the indices along to the max value.
     queue.inner.virt_queue.avail.idx = Wrapping(u16::MAX);
@@ -90,7 +92,7 @@ fn test_wrapping_idx() {
 #[test]
 fn test_write_too_long() {
     let data = vec![0, 1, 2, 3, 4];
-    let mut queue = DriverWriteOnlyQueue::<QUEUE_SIZE, BUFFER_SIZE>::new();
+    let mut queue = DriverWriteOnlyQueue::<QUEUE_SIZE, BUFFER_SIZE>::new(&TestTranslate {});
 
     let result = queue.write_buffer(&data);
     assert_eq!(Some(4), result);
@@ -98,7 +100,7 @@ fn test_write_too_long() {
 
 #[test]
 fn test_device_queue_exhaustion() {
-    let mut queue = DeviceWriteOnlyQueue::<QUEUE_SIZE, BUFFER_SIZE>::new();
+    let mut queue = DeviceWriteOnlyQueue::<QUEUE_SIZE, BUFFER_SIZE>::new(&TestTranslate {});
     let data = Some(vec![0]);
     // We can write 4 times.
     let result = device_write(queue.inner.virt_queue.as_mut(), data.as_ref().unwrap());
@@ -129,7 +131,7 @@ fn test_device_queue_exhaustion() {
 
 #[test]
 fn test_driver_queue_exhaustion() {
-    let mut queue = DriverWriteOnlyQueue::<QUEUE_SIZE, BUFFER_SIZE>::new();
+    let mut queue = DriverWriteOnlyQueue::<QUEUE_SIZE, BUFFER_SIZE>::new(&TestTranslate {});
     let data = Some(vec![0]);
     // We should be able to write 4 times.
     let result = queue.write_buffer(data.as_ref().unwrap());
@@ -163,8 +165,8 @@ fn test_many_echos() {
     let data_1 = Some(vec![0]);
     let data_2 = Some(vec![1, 2, 3]);
     let data_3 = Some(vec![4, 5]);
-    let mut tx = DriverWriteOnlyQueue::<QUEUE_SIZE, BUFFER_SIZE>::new();
-    let mut rx = DeviceWriteOnlyQueue::<QUEUE_SIZE, BUFFER_SIZE>::new();
+    let mut tx = DriverWriteOnlyQueue::<QUEUE_SIZE, BUFFER_SIZE>::new(&TestTranslate {});
+    let mut rx = DeviceWriteOnlyQueue::<QUEUE_SIZE, BUFFER_SIZE>::new(&TestTranslate {});
     for _ in 0..100 {
         // Run batches of 3 echos or different data lengths repeatedly.
         tx.write_buffer(data_1.as_ref().unwrap()).unwrap();

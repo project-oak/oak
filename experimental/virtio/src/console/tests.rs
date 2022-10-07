@@ -17,22 +17,22 @@
 use super::*;
 use crate::test::{
     new_legacy_transport, new_transport_small_queue, new_valid_transport, DeviceStatus,
-    VIRTIO_F_VERSION_1,
+    TestTranslate, VIRTIO_F_VERSION_1,
 };
 use alloc::{vec, vec::Vec};
 
 #[test]
 fn test_legacy_device_not_supported() {
     let device = VirtioBaseDevice::new(new_legacy_transport());
-    let mut console = Console::new(device);
-    assert!(console.init().is_err());
+    let mut console = Console::new(device, &TestTranslate {});
+    assert!(console.init(&TestTranslate {}, |_| None).is_err());
 }
 
 #[test]
 fn test_max_queue_size_too_small() {
     let device = VirtioBaseDevice::new(new_transport_small_queue());
-    let mut console = Console::new(device);
-    assert!(console.init().is_err());
+    let mut console = Console::new(device, &TestTranslate {});
+    assert!(console.init(&TestTranslate {}, |_| None).is_err());
 }
 
 #[test]
@@ -40,8 +40,8 @@ fn test_device_init() {
     let transport = new_valid_transport();
     let config = transport.config.clone();
     let device = VirtioBaseDevice::new(transport);
-    let mut console = Console::new(device);
-    let result = console.init();
+    let mut console = Console::new(device, &TestTranslate {});
+    let result = console.init(&TestTranslate {}, |_| None);
     assert!(result.is_ok());
 
     let config = config.lock().unwrap();
@@ -70,8 +70,8 @@ fn test_read_bytes() {
     let data = vec![2, 4, 6];
     let transport = new_valid_transport();
     let device = VirtioBaseDevice::new(transport.clone());
-    let mut console = Console::new(device);
-    console.init().unwrap();
+    let mut console = Console::new(device, &TestTranslate {});
+    console.init(&TestTranslate {}, |_| None).unwrap();
     transport.device_write_to_queue::<QUEUE_SIZE>(0, &data[..]);
     let bytes = console.read_bytes().unwrap();
     let bytes: Vec<u8> = bytes.into_iter().collect();
@@ -83,8 +83,8 @@ fn test_write_bytes() {
     let data = vec![7; 5];
     let transport = new_valid_transport();
     let device = VirtioBaseDevice::new(transport.clone());
-    let mut console = Console::new(device);
-    console.init().unwrap();
+    let mut console = Console::new(device, &TestTranslate {});
+    console.init(&TestTranslate {}, |_| None).unwrap();
     let len = console.write_bytes(&data[..]).unwrap();
     assert_eq!(len, 5);
     let bytes = transport
@@ -100,8 +100,8 @@ fn test_read_exact() {
     let mut second = vec![0; 3];
     let transport = new_valid_transport();
     let device = VirtioBaseDevice::new(transport.clone());
-    let mut console = Console::new(device);
-    console.init().unwrap();
+    let mut console = Console::new(device, &TestTranslate {});
+    console.init(&TestTranslate {}, |_| None).unwrap();
     transport.device_write_to_queue::<QUEUE_SIZE>(0, &data[..]);
     assert!(console.read(&mut first).is_ok());
     assert!(console.read(&mut second).is_ok());
@@ -116,8 +116,8 @@ fn test_write_all() {
     let data = vec![13; 5000];
     let transport = new_valid_transport();
     let device = VirtioBaseDevice::new(transport.clone());
-    let mut console = Console::new(device);
-    console.init().unwrap();
+    let mut console = Console::new(device, &TestTranslate {});
+    console.init(&TestTranslate {}, |_| None).unwrap();
     assert!(console.write(&data[..]).is_ok());
     let first = transport
         .device_read_once_from_queue::<QUEUE_SIZE>(1)

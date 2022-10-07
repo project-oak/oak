@@ -16,7 +16,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-use x86_64::PhysAddr;
+use x86_64::{PhysAddr, VirtAddr};
 
 use crate::virtio::{Error as VirtioError, VirtioTransport};
 
@@ -51,9 +51,13 @@ where
     /// Start Initialising the device.
     ///
     /// See <https://docs.oasis-open.org/virtio/virtio/v1.1/csprd01/virtio-v1.1-csprd01.html#x1-920001>.
-    pub fn start_init(&mut self, device_type: u32) -> Result<(), VirtioError> {
+    pub fn start_init<X: Fn(PhysAddr) -> Option<VirtAddr>>(
+        &mut self,
+        device_type: u32,
+        translate: X,
+    ) -> Result<(), VirtioError> {
         // Initialise the transport.
-        self.transport.init(device_type)?;
+        self.transport.init(device_type, translate)?;
 
         // Reset device.
         self.transport.set_status(VIRTIO_STATUS_RESET);
