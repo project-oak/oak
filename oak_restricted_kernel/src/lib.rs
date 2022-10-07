@@ -71,7 +71,7 @@ pub fn start_kernel(info: &BootParams) -> Box<dyn Channel> {
     // Physical frame allocator: support up to 128 GiB of memory, for now.
     let mut frame_allocator = mm::init::<1024>(info.e820_table(), program_headers);
 
-    mm::init_paging(&mut frame_allocator).unwrap();
+    mm::init_paging(&mut frame_allocator, program_headers).unwrap();
     // We need to be done with the boot info struct before intializing memory. For example, the
     // multiboot protocol explicitly states data can be placed anywhere in memory; therefore, it's
     // highly likely we will overwrite some data after we initialize the heap. args::init_args()
