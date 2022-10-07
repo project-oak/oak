@@ -192,15 +192,6 @@ fn run_bazel_tests() -> Step {
 pub fn run_cargo_fuzz(opt: &RunCargoFuzz) -> Step {
     let cargo_manifests: Vec<PathBuf> = crate_manifest_files()
         .filter(|path| is_fuzzing_toml_file(path))
-        .filter(|path| match &opt.crate_name {
-            Some(crate_name) => {
-                let mut crate_path = path.clone();
-                crate_path.pop();
-                crate_path.pop();
-                crate_path.file_name().and_then(|s| s.to_str()).unwrap() == crate_name.as_str()
-            }
-            None => true,
-        })
         .collect();
 
     Step::Multiple {
@@ -214,10 +205,9 @@ pub fn run_cargo_fuzz(opt: &RunCargoFuzz) -> Step {
 
 pub fn run_fuzz_targets_in_crate(path: &Path, opt: &RunCargoFuzz) -> Step {
     // `cargo-fuzz` can only run in the crate that contains the `fuzz` crate. So we need to use
-    // `Cmd::new_in_dir` to execute the command inside the crate's directory. Pop the two components
-    // (i.e., `fuzz/Cargo.toml`) to get to the crate path.
+    // `Cmd::new_in_dir` to execute the command inside the crate's directory. Pop one component
+    // (i.e., `./Cargo.toml`) to get to the crate path.
     let mut crate_path = path.to_path_buf();
-    crate_path.pop();
     crate_path.pop();
 
     let cargo_manifest: CargoManifest = toml::from_str(&read_file(path))
