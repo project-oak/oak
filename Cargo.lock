@@ -2411,6 +2411,7 @@ name = "oak_baremetal_simple_io"
 version = "0.1.0"
 dependencies = [
  "bitflags",
+ "sev_guest",
  "x86_64",
 ]
 
