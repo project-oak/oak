@@ -19,7 +19,10 @@ use log::info;
 use oak_linux_boot_params::{BootE820Entry, E820EntryType};
 use x86_64::{
     addr::{align_down, align_up},
-    registers::control::{Cr3, Cr3Flags},
+    registers::{
+        control::{Cr3, Cr3Flags},
+        model_specific::{Efer, EferFlags},
+    },
     structures::paging::{
         FrameAllocator, OffsetPageTable, PageSize, PageTable, PageTableFlags, PhysFrame, Size2MiB,
         Size4KiB,
@@ -129,6 +132,7 @@ pub fn init<const N: usize>(
 /// | FFFF_FFFF_8000_0000 |   -2 GB | FFFF_FFFF_FFFF_FFFF |   2 GB | Kernel code                 |
 pub fn init_paging<A: FrameAllocator<Size4KiB> + ?Sized>(
     frame_allocator: &mut A,
+    program_headers: &[ProgramHeader],
 ) -> Result<(), &'static str> {
     // Safety: this expects the frame allocator to be initialized and the memory region it's handing
     // memory out of to be identity mapped. This is true for the lower 2 GiB after we boot.
@@ -148,7 +152,7 @@ pub fn init_paging<A: FrameAllocator<Size4KiB> + ?Sized>(
         // Once we've moved the kernel heap to the kernel memory, and figured out what to do with
         // MMIO, we should remove this completely.
         page_tables::create_offset_map(
-            PhysFrame::range(
+            PhysFrame::<Size2MiB>::range(
                 PhysFrame::from_start_address(PhysAddr::new(0x0_0000_0000)).unwrap(),
                 PhysFrame::from_start_address(PhysAddr::new(0x1_0000_0000)).unwrap(),
             ),
@@ -159,25 +163,16 @@ pub fn init_paging<A: FrameAllocator<Size4KiB> + ?Sized>(
         )
         .map_err(|_| "Failed to set up paging for [0..4GiB)")?;
 
-        // Mapping for the kernel itself. In the future we should be more clever and only map
-        // sections based on the ELF header with the correct permissions, but for now, all of the
-        // memory will be writable and executable.
-        page_tables::create_offset_map(
-            PhysFrame::range(
-                PhysFrame::from_start_address(PhysAddr::new(0x0000_0000)).unwrap(),
-                PhysFrame::from_start_address(PhysAddr::new(0x8000_0000)).unwrap(),
-            ),
-            VirtAddr::new(0xFFFF_FFFF_8000_0000),
-            PageTableFlags::PRESENT | PageTableFlags::GLOBAL | PageTableFlags::WRITABLE,
-            &mut page_table,
-            frame_allocator,
-        )
-        .map_err(|_| "Failed to set up paging for [-2GiB..MAX)")?;
+        // Mapping for the kernel itself in the upper -2G of memory, based on the mappings (and
+        // permissions) in the program header.
+        page_tables::create_kernel_map(program_headers, &mut page_table, frame_allocator)
+            .map_err(|_| "Failed to set up paging for the kernel")?;
     }
 
     // Safety: the new page tables keep the identity mapping at -2GB intact, so it's safe to load
     // the new page tables.
     unsafe {
+        Efer::update(|flags| flags.insert(EferFlags::NO_EXECUTE_ENABLE));
         Cr3::write(pml4_frame, Cr3Flags::empty());
     }
     Ok(())
