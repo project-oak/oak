@@ -117,7 +117,7 @@ where
     /// Reads the next available bytes from the input buffer, if any are available.
     pub fn read_bytes(&mut self) -> Option<VecDeque<u8>> {
         // Safety: we read the value as a u32 and validate it before using it.
-        let length = unsafe { self.input_length_port.try_read().unwrap() } as usize;
+        let length = unsafe { self.input_length_port.try_read().ok()? } as usize;
 
         // Use a memory fence to ensure the read from the device happens before the read from the
         // buffer.
@@ -156,7 +156,7 @@ where
 
         // Safety: this usage is safe, as we as only write an uninterpreted u32 value to the port.
         unsafe {
-            self.output_length_port.try_write(length as u32).unwrap();
+            self.output_length_port.try_write(length as u32).ok()?;
         }
 
         Some(length)

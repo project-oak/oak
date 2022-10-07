@@ -15,21 +15,24 @@
 //
 
 use alloc::collections::VecDeque;
-use oak_baremetal_simple_io::SimpleIo;
+use oak_baremetal_simple_io::RawSimpleIo;
+use sev_guest::io::RawIoPortFactory;
 
 /// A communications channel using a simple IO device.
-pub struct SimpleIoChannel {
+pub struct SimpleIoChannel<'a> {
     /// The simple IO device.
-    device: SimpleIo,
+    device: RawSimpleIo<'a>,
     /// A buffer to temporarily store extra data from the device that was not fully read when using
     /// `read`. This could happen if the device sent more bytes in a single buffer than was
     /// expected by `read`.
     pending_data: Option<VecDeque<u8>>,
 }
 
-impl SimpleIoChannel {
+impl SimpleIoChannel<'_> {
     pub fn new() -> Self {
-        let device = SimpleIo::default();
+        let io_port_factory = RawIoPortFactory;
+        let device =
+            RawSimpleIo::new_with_defaults(io_port_factory).expect("couldn't create IO device");
         let pending_data = None;
         Self {
             device,
@@ -69,7 +72,7 @@ impl SimpleIoChannel {
     }
 }
 
-impl oak_baremetal_communication_channel::Write for SimpleIoChannel {
+impl oak_baremetal_communication_channel::Write for SimpleIoChannel<'_> {
     fn write(&mut self, data: &[u8]) -> anyhow::Result<()> {
         let mut start = 0;
         let data_len = data.len();
@@ -86,7 +89,7 @@ impl oak_baremetal_communication_channel::Write for SimpleIoChannel {
     }
 }
 
-impl oak_baremetal_communication_channel::Read for SimpleIoChannel {
+impl oak_baremetal_communication_channel::Read for SimpleIoChannel<'_> {
     fn read(&mut self, data: &mut [u8]) -> anyhow::Result<()> {
         let len = data.len();
         let mut count = 0;
