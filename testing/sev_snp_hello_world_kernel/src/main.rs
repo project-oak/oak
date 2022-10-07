@@ -16,22 +16,55 @@
 
 #![no_std]
 #![no_main]
+#![feature(abi_x86_interrupt)]
 
-use core::panic::PanicInfo;
+use core::{arch::asm, ops::Deref, panic::PanicInfo};
+use lazy_static::lazy_static;
 use oak_linux_boot_params::{BootParams, CCBlobSevInfo, CCSetupData, SetupDataType};
 use sev_guest::{
     cpuid::CpuidPage,
     msr::{get_sev_status, SevStatus},
     secrets::SecretsPage,
 };
-use x86_64::instructions::{hlt, interrupts::int3};
+use x86_64::{
+    instructions::{hlt, interrupts::int3},
+    structures::idt::{InterruptDescriptorTable, InterruptStackFrame},
+};
 
 mod asm;
 mod ghcb;
 mod serial;
 
+lazy_static! {
+    static ref IDT: InterruptDescriptorTable = {
+        let mut idt = InterruptDescriptorTable::new();
+        idt.general_protection_fault.set_handler_fn(gp_handler);
+        idt
+    };
+}
+
+/// Crude implementation of a #GP handler that skips any `rdmsr` instructions that trigger #GP.
+///
+/// Note that this doesn't properly emulate reading the MSR! It doesn't change any register values;
+/// the instruction is just skipped.
+extern "x86-interrupt" fn gp_handler(mut frame: InterruptStackFrame, _: u64) {
+    unsafe {
+        // RDMSR can cause a #GP if you try to read a non-existing MSR
+        if *frame.deref().instruction_pointer.as_ptr::<u16>() == 0x320Fu16 {
+            // just skip the instruction
+            frame.as_mut().update(|val| {
+                val.instruction_pointer += 2u64;
+            });
+        } else {
+            // not a RDMSR, trigger a double fault
+            asm!("int 8", options(noreturn));
+        }
+    }
+}
+
 #[no_mangle]
 pub extern "C" fn rust64_start(_: u64, boot_params: &BootParams) -> ! {
+    IDT.load();
     serial::init_logging();
     log::info!("Hello World!");
 
