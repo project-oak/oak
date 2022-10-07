@@ -14,7 +14,9 @@
 // limitations under the License.
 //
 
-use crate::{RequestHandler, TrustedShuffler, TrustedShufflerRequest, TrustedShufflerResponse};
+use crate::{
+    PlainRequest, PlainResponse, RequestHandler, SecretRequest, SecretResponse, TrustedShuffler,
+};
 use async_trait::async_trait;
 use futures::future::join_all;
 use std::{sync::Arc, time::Duration};
@@ -27,23 +29,29 @@ impl RequestHandler for TestRequestHandler {
     // A test function that processes requests.
     // In the real use-case, this function should send requests to the backend and
     // return responses.
-    async fn handle(
-        &self,
-        request: TrustedShufflerRequest,
-    ) -> anyhow::Result<TrustedShufflerResponse> {
+    async fn handle(&self, request: PlainRequest) -> anyhow::Result<PlainResponse> {
         if drop_request(&request) {
             // In that case we don't send an answer ever.
             loop {
                 tokio::task::yield_now().await;
             }
         }
-        Ok(generate_response(&request))
+        Ok(generate_plain_response(&request))
     }
 }
 
 // Non-async version of the `handle_request` function used to create expected responses.
-fn generate_response(request: &TrustedShufflerRequest) -> TrustedShufflerResponse {
-    TrustedShufflerResponse {
+fn generate_plain_response(request: &PlainRequest) -> PlainResponse {
+    PlainResponse {
+        headers: hyper::HeaderMap::new(),
+        data: hyper::body::Bytes::from(request.body.clone()),
+        trailers: hyper::HeaderMap::new(),
+    }
+}
+
+// Non-async version of the `handle_request` function used to create expected responses.
+fn generate_secret_response(request: &SecretRequest) -> SecretResponse {
+    SecretResponse {
         headers: hyper::HeaderMap::new(),
         data: hyper::body::Bytes::from(request.body.clone()),
         trailers: hyper::HeaderMap::new(),
@@ -52,30 +60,28 @@ fn generate_response(request: &TrustedShufflerRequest) -> TrustedShufflerRespons
 
 // Generates request which will be dropped by the test backend, because we indicate it has to be
 // dropped in the request itself.
-fn generate_dropped_request() -> TrustedShufflerRequest {
+fn generate_dropped_request() -> SecretRequest {
     // "Drop" has to be consistent with [`drop_request`].
-    let (dropped_request, _) = generate_request_and_expected_response("Drop");
+    let (dropped_request, _) = generate_secret_request_and_expected_response("Drop");
     dropped_request
 }
 
 // If true, then the test backend does not answer the request.
-fn drop_request(request: &TrustedShufflerRequest) -> bool {
+fn drop_request(request: &PlainRequest) -> bool {
     String::from_utf8(request.body.clone())
         .unwrap()
         .contains("Drop")
 }
 
 // Generates a request and a corresponding response from a string.
-fn generate_request_and_expected_response(
-    data: &str,
-) -> (TrustedShufflerRequest, TrustedShufflerResponse) {
-    let request = TrustedShufflerRequest {
+fn generate_secret_request_and_expected_response(data: &str) -> (SecretRequest, SecretResponse) {
+    let request = SecretRequest {
         body: format!("Request: {}", data).into_bytes(),
         headers: hyper::HeaderMap::new(),
         uri: hyper::Uri::from_static("test.com"),
     };
 
-    let expected_response = generate_response(&request);
+    let expected_response = generate_secret_response(&request);
     (request, expected_response)
 }
 
@@ -105,9 +111,9 @@ async fn batch_size_2_test() {
     let batch_size = 2;
     let trusted_shuffler = test_trusted_shuffler(batch_size);
 
-    let (request, expected_response) = generate_request_and_expected_response("Test");
+    let (request, expected_response) = generate_secret_request_and_expected_response("Test");
     let (background_request, expected_background_response) =
-        generate_request_and_expected_response("Background test");
+        generate_secret_request_and_expected_response("Background test");
 
     let trusted_shuffler_clone = trusted_shuffler.clone();
     let background_result =
@@ -129,13 +135,10 @@ async fn batch_size_10_test() {
     let batch_size = 10;
     let trusted_shuffler = test_trusted_shuffler(batch_size);
 
-    let (requests, expected_responses): (
-        Vec<TrustedShufflerRequest>,
-        Vec<TrustedShufflerResponse>,
-    ) = (0..batch_size)
+    let (requests, expected_responses): (Vec<SecretRequest>, Vec<SecretResponse>) = (0..batch_size)
         .collect::<Vec<_>>()
         .iter()
-        .map(|k| generate_request_and_expected_response(&format!("Test {}", k)))
+        .map(|k| generate_secret_request_and_expected_response(&format!("Test {}", k)))
         .unzip();
 
     let mut result_futures = vec![];
@@ -162,8 +165,8 @@ async fn waiting_for_enough_requests_test() {
     let batch_size = 3;
     let trusted_shuffler = test_trusted_shuffler(batch_size);
 
-    let (request_1, _) = generate_request_and_expected_response("Test 1");
-    let (request_2, expected_response) = generate_request_and_expected_response("Test 2");
+    let (request_1, _) = generate_secret_request_and_expected_response("Test 1");
+    let (request_2, expected_response) = generate_secret_request_and_expected_response("Test 2");
 
     let trusted_shuffler_clone = trusted_shuffler.clone();
     tokio::spawn(async move { trusted_shuffler_clone.invoke(request_1).await });
@@ -179,7 +182,7 @@ async fn waiting_for_enough_requests_test() {
     assert!(slept);
 
     // Assert that after the third request was sent, request 2 is received.
-    let (request_3, _) = generate_request_and_expected_response("Test 3");
+    let (request_3, _) = generate_secret_request_and_expected_response("Test 3");
     let trusted_shuffler_clone = trusted_shuffler.clone();
     tokio::spawn(async move { trusted_shuffler_clone.invoke(request_3).await });
 
@@ -199,7 +202,7 @@ async fn one_empty_response_test() {
     let trusted_shuffler = test_trusted_shuffler_with_timeout(batch_size, timeout);
 
     let (request, expected_response) =
-        generate_request_and_expected_response("Request (not-dropped)");
+        generate_secret_request_and_expected_response("Request (not-dropped)");
     let dropped_request = generate_dropped_request();
 
     let trusted_shuffler_clone = trusted_shuffler.clone();
@@ -209,7 +212,7 @@ async fn one_empty_response_test() {
     // an empty response.
     let response_from_dropped = trusted_shuffler.invoke(dropped_request).await;
     assert_eq!(
-        TrustedShufflerResponse::empty(),
+        PlainResponse::empty().encrypt(),
         response_from_dropped.unwrap()
     );
 
@@ -227,8 +230,10 @@ async fn no_empty_response_test() {
     let timeout = Duration::from_millis(200);
     let trusted_shuffler = test_trusted_shuffler_with_timeout(batch_size, timeout);
 
-    let (request_1, expected_response_1) = generate_request_and_expected_response("Request 1");
-    let (request_2, expected_response_2) = generate_request_and_expected_response("Request 2");
+    let (request_1, expected_response_1) =
+        generate_secret_request_and_expected_response("Request 1");
+    let (request_2, expected_response_2) =
+        generate_secret_request_and_expected_response("Request 2");
 
     let trusted_shuffler_clone = trusted_shuffler.clone();
     let response = tokio::spawn(async move { trusted_shuffler_clone.invoke(request_1).await });
@@ -256,8 +261,8 @@ async fn all_empty_responses_test() {
         tokio::spawn(async move { trusted_shuffler_clone.invoke(dropped_request_1).await });
 
     let response_2 = trusted_shuffler.invoke(dropped_request_2).await;
-    assert_eq!(TrustedShufflerResponse::empty(), response_2.unwrap());
+    assert_eq!(PlainResponse::empty().encrypt(), response_2.unwrap());
 
     let response_1 = response.await.unwrap();
-    assert_eq!(TrustedShufflerResponse::empty(), response_1.unwrap());
+    assert_eq!(PlainResponse::empty().encrypt(), response_1.unwrap());
 }

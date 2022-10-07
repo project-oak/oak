@@ -22,7 +22,7 @@ use hyper_alpn::AlpnConnector;
 use std::{future::Future, pin::Pin, sync::Arc, task::Poll, time::Instant};
 use tokio::time::Duration;
 use trusted_shuffler::{
-    RequestHandler, TrustedShuffler, TrustedShufflerRequest, TrustedShufflerResponse,
+    PlainRequest, PlainResponse, RequestHandler, SecretRequest, SecretResponse, TrustedShuffler,
 };
 
 struct HttpRequestHandler {
@@ -31,10 +31,7 @@ struct HttpRequestHandler {
 
 #[async_trait]
 impl RequestHandler for HttpRequestHandler {
-    async fn handle(
-        &self,
-        request: TrustedShufflerRequest,
-    ) -> anyhow::Result<TrustedShufflerResponse> {
+    async fn handle(&self, request: PlainRequest) -> anyhow::Result<PlainResponse> {
         let mut request = trusted_shuffler_to_hyper_request(request)?;
 
         // We want to keep the path of the orginal request from the client.
@@ -86,7 +83,7 @@ impl RequestHandler for HttpRequestHandler {
 // to be read fully.
 async fn hyper_to_trusted_shuffler_request(
     hyper_request: Request<Body>,
-) -> anyhow::Result<TrustedShufflerRequest> {
+) -> anyhow::Result<SecretRequest> {
     let (parts, body) = hyper_request.into_parts();
     let body = hyper::body::to_bytes(body)
         .await
@@ -106,7 +103,7 @@ async fn hyper_to_trusted_shuffler_request(
     ];
     let minimal_headers = copy_selected_keys(parts.headers, minimal_keys);
 
-    let trusted_shuffler_request = TrustedShufflerRequest {
+    let trusted_shuffler_request = SecretRequest {
         body: body.to_vec(),
         headers: minimal_headers,
         uri,
@@ -118,7 +115,7 @@ async fn hyper_to_trusted_shuffler_request(
 // Apart from setting the body and the URI, for our test backend setting to HTTP/2 and POST
 // seems sufficient.
 fn trusted_shuffler_to_hyper_request(
-    trusted_shuffler_request: TrustedShufflerRequest,
+    trusted_shuffler_request: PlainRequest,
 ) -> anyhow::Result<Request<Body>> {
     let body = Body::from(trusted_shuffler_request.body);
 
@@ -140,7 +137,7 @@ fn trusted_shuffler_to_hyper_request(
 
 // We generate a default `hyper::Response`.
 async fn trusted_shuffler_to_hyper_response(
-    trusted_shuffler_response: TrustedShufflerResponse,
+    trusted_shuffler_response: SecretResponse,
 ) -> anyhow::Result<Response<Body>> {
     // We build a body from the data and the trailers from the TrustedShuffler Response.
     let (mut sender, body) = hyper::Body::channel();
@@ -170,7 +167,7 @@ async fn trusted_shuffler_to_hyper_response(
 // We keep only the body, i.e., data and trailers, from the `hyper::Response`.
 async fn hyper_to_trusted_shuffler_response(
     hyper_response: Response<Body>,
-) -> anyhow::Result<TrustedShufflerResponse> {
+) -> anyhow::Result<PlainResponse> {
     log::info!("Response from backend: {:?}", hyper_response);
     let (parts, mut body) = hyper_response.into_parts();
 
@@ -191,7 +188,7 @@ async fn hyper_to_trusted_shuffler_response(
         .context("Could not read trailers.")?
         .unwrap_or_default();
 
-    let trusted_shuffler_response = TrustedShufflerResponse {
+    let trusted_shuffler_response = PlainResponse {
         headers: minimal_headers,
         data,
         trailers,
