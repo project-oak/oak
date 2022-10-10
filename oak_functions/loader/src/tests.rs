@@ -71,7 +71,7 @@ async fn test_valid_policy() {
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_long_response_time() {
     // The `constant_processing_time` is too low.
-    let constant_processing_time = Duration::from_millis(10);
+    let constant_processing_time = Duration::from_millis(5);
     let policy = ServerPolicy {
         constant_response_size_bytes: 100,
         constant_processing_time_ms: constant_processing_time.as_millis().try_into().unwrap(),

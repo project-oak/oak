@@ -585,7 +585,7 @@ fn build_docker(example: &OakExample) -> Step {
                 name: "build server image".to_string(),
                 command: Cmd::new(
                     "docker",
-                    &[
+                    [
                         "build",
                         "--tag=oak_docker",
                         "--file=./oak_loader/Dockerfile",
@@ -597,7 +597,7 @@ fn build_docker(example: &OakExample) -> Step {
                 name: "build example image".to_string(),
                 command: Cmd::new(
                     "docker",
-                    &[
+                    [
                         "build",
                         &format!("--tag={}", example.name),
                         "--file=./examples/Dockerfile",
@@ -613,7 +613,7 @@ fn build_docker(example: &OakExample) -> Step {
                 name: "save example image".to_string(),
                 command: Cmd::new(
                     "docker",
-                    &[
+                    [
                         "save",
                         &example.name,
                         &format!(
@@ -666,7 +666,7 @@ fn build(target: &Target, opt: &BuildClient) -> Box<dyn Runnable> {
             "npm",
             vec!["ci".to_string(), format!("--prefix={}", package_directory)],
         ),
-        Target::Shell { build_script, .. } => Cmd::new("bash", &["-c", build_script]),
+        Target::Shell { build_script, .. } => Cmd::new("bash", ["-c", build_script]),
     }
 }
 
@@ -718,7 +718,7 @@ fn run(
                 format!("--prefix={}", package_directory),
             ],
         ),
-        Target::Shell { run_script, .. } => Cmd::new("bash", &["-c", run_script]),
+        Target::Shell { run_script, .. } => Cmd::new("bash", ["-c", run_script]),
     }
 }
 

@@ -22,8 +22,8 @@ const LONDON_LNG: f64 = -0.1278;
 fn test_location_from_degrees() {
     let location = location_from_degrees(LONDON_LAT, LONDON_LNG);
 
-    assert_eq!(Into::<E6>::into(&location.lat), E6(51_507_400));
-    assert_eq!(Into::<E6>::into(&location.lng), E6(-127_800));
+    assert_eq!(Into::<E6>::into(location.lat), E6(51_507_400));
+    assert_eq!(Into::<E6>::into(location.lng), E6(-127_800));
 }
 
 #[test]
@@ -31,8 +31,8 @@ fn test_location_from_bytes() {
     // Valid bytes.
     let location = location_from_bytes(&[3, 17, 240, 200, 255, 254, 12, 200]).unwrap();
 
-    assert_eq!(Into::<E6>::into(&location.lat), E6(51_507_400));
-    assert_eq!(Into::<E6>::into(&location.lng), E6(-127_800));
+    assert_eq!(Into::<E6>::into(location.lat), E6(51_507_400));
+    assert_eq!(Into::<E6>::into(location.lng), E6(-127_800));
 
     // Bytes too short.
     let location_result = location_from_bytes(&[3, 17, 240, 200, 255, 254, 12]);

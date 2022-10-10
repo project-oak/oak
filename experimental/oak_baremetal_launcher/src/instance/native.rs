@@ -51,7 +51,7 @@ impl Instance {
         cmd.stderr(std::process::Stdio::inherit());
 
         cmd.preserved_fds(vec![comms_guest.as_raw_fd()]);
-        cmd.args(&["--comms-fd", &comms_guest.as_raw_fd().to_string()]);
+        cmd.args(["--comms-fd", &comms_guest.as_raw_fd().to_string()]);
 
         let instance = cmd.spawn()?;
 

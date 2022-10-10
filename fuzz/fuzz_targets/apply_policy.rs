@@ -62,6 +62,6 @@ fuzz_target!(|data: ResponseAndValidPolicy| {
     // status code and actual length are stored.
     assert_eq!(
         response.len(),
-        oak_functions_abi::RESPONSE_BODY_OFFSET + constant_response_size_bytes as usize
+        oak_functions_abi::RESPONSE_BODY_OFFSET + constant_response_size_bytes
     )
 });

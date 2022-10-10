@@ -22,7 +22,11 @@ extern crate alloc;
 use log::info;
 
 pub mod schema {
-    #![allow(clippy::derivable_impls, clippy::needless_borrow)]
+    #![allow(
+        clippy::derivable_impls,
+        clippy::extra_unused_lifetimes,
+        clippy::needless_borrow
+    )]
     #![allow(dead_code, unused_imports)]
 
     include!(concat!(env!("OUT_DIR"), "/schema_generated.rs"));

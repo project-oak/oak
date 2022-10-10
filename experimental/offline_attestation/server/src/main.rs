@@ -15,6 +15,7 @@
 //
 
 #![feature(try_blocks)]
+#![allow(opaque_hidden_inferred_bound)]
 
 use anyhow::anyhow;
 use clap::Parser;

@@ -18,7 +18,7 @@ extern crate alloc;
 
 use alloc::collections::btree_map::BTreeMap;
 use arrayvec::ArrayString;
-use core::{ffi::CStr, lazy::Lazy};
+use core::{cell::LazyCell, ffi::CStr};
 
 static mut ARGS: ArrayString<512> = ArrayString::new_const();
 
@@ -27,7 +27,7 @@ static mut ARGS: ArrayString<512> = ArrayString::new_const();
 /// The pattern for arguments is "key1 key2=val2 key3=val3". The tokenization is rather simple, so
 /// whitespace matters and there is no way to escape spaces right now.
 pub struct Args {
-    args: Lazy<BTreeMap<&'static str, &'static str>>,
+    args: LazyCell<BTreeMap<&'static str, &'static str>>,
 }
 
 impl Args {
@@ -59,7 +59,7 @@ pub fn init_args(args: &CStr) -> core::result::Result<Args, &str> {
         .map_err(|arrayvec::CapacityError { .. }| "Kernel arguments too long")?;
     // Safety: we've just populated ARGS, successfully, in the line just above.
     Ok(Args {
-        args: Lazy::new(|| split_args(unsafe { ARGS.as_str() })),
+        args: LazyCell::new(|| split_args(unsafe { ARGS.as_str() })),
     })
 }
 
