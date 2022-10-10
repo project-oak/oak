@@ -14,12 +14,14 @@
 // limitations under the License.
 //
 
-//! Simple I/O driver for communications between the guest and the host via shared memory.
+//! Simple I/O driver for communication between the guest and the host via shared memory.
 
 #![no_std]
 extern crate alloc;
 
 use alloc::{collections::VecDeque, vec, vec::Vec};
+use core::{marker::PhantomData, result::Result};
+use sev_guest::io::{IoPortFactory, PortReader, PortWriter};
 use x86_64::instructions::port::{PortReadOnly, PortWriteOnly};
 
 /// The default I/O port to use for the most significant bytes of the output buffer guest-physical
@@ -45,51 +47,77 @@ pub const OUTPUT_BUFFER_LEGNTH: usize = 4096;
 /// The length of the buffer that will be used for input messages.
 pub const INPUT_BUFFER_LEGNTH: usize = 4096;
 
+/// A Simple IO device implementation that uses direct port-based IO.
+pub type RawSimpleIo<'a> = SimpleIo<'a, PortReadOnly<u32>, PortWriteOnly<u32>>;
+
 /// The simple I/O channel driver implementation.
-pub struct SimpleIo {
+pub struct SimpleIo<'a, R: PortReader<u32> + 'a, W: PortWriter<u32> + 'a> {
     output_buffer: Vec<u8>,
     input_buffer: Vec<u8>,
-    output_length_port: PortWriteOnly<u32>,
-    input_length_port: PortReadOnly<u32>,
+    output_length_port: W,
+    input_length_port: R,
+    _phantom: PhantomData<&'a W>,
 }
 
-impl SimpleIo {
-    pub fn new(
+impl<'a, R, W> SimpleIo<'a, R, W>
+where
+    R: PortReader<u32> + 'a,
+    W: PortWriter<u32> + 'a,
+{
+    pub fn new<F: IoPortFactory<'a, u32, R, W>>(
+        io_port_factory: F,
         output_buffer_msb_port: u16,
         output_buffer_lsb_port: u16,
         output_length_port: u16,
         input_buffer_msb_port: u16,
         input_buffer_lsb_port: u16,
         input_length_port: u16,
-    ) -> Self {
+    ) -> Result<Self, &'static str> {
         let output_buffer = vec![0; OUTPUT_BUFFER_LEGNTH];
         let input_buffer = vec![0; INPUT_BUFFER_LEGNTH];
-        let output_length_port = PortWriteOnly::new(output_length_port);
-        let input_length_port = PortReadOnly::new(input_length_port);
+        let output_length_port = io_port_factory.new_writer(output_length_port);
+        let input_length_port = io_port_factory.new_reader(input_length_port);
 
         write_address(
+            &io_port_factory,
             output_buffer.as_ptr(),
             output_buffer_msb_port,
             output_buffer_lsb_port,
-        );
+        )?;
         write_address(
+            &io_port_factory,
             input_buffer.as_ptr(),
             input_buffer_msb_port,
             input_buffer_lsb_port,
-        );
+        )?;
 
-        Self {
+        Ok(Self {
             output_buffer,
             input_buffer,
             output_length_port,
             input_length_port,
-        }
+            _phantom: PhantomData,
+        })
+    }
+
+    pub fn new_with_defaults<F: IoPortFactory<'a, u32, R, W>>(
+        io_port_factory: F,
+    ) -> Result<Self, &'static str> {
+        SimpleIo::new(
+            io_port_factory,
+            DEFAULT_OUTPUT_BUFFER_MSB_PORT,
+            DEFAULT_OUTPUT_BUFFER_LSB_PORT,
+            DEFAULT_OUTPUT_LENGTH_PORT,
+            DEFAULT_INPUT_BUFFER_MSB_PORT,
+            DEFAULT_INPUT_BUFFER_LSB_PORT,
+            DEFAULT_INPUT_LENGTH_PORT,
+        )
     }
 
     /// Reads the next available bytes from the input buffer, if any are available.
     pub fn read_bytes(&mut self) -> Option<VecDeque<u8>> {
         // Safety: we read the value as a u32 and validate it before using it.
-        let length = unsafe { self.input_length_port.read() } as usize;
+        let length = unsafe { self.input_length_port.try_read().ok()? } as usize;
 
         // Use a memory fence to ensure the read from the device happens before the read from the
         // buffer.
@@ -128,35 +156,34 @@ impl SimpleIo {
 
         // Safety: this usage is safe, as we as only write an uninterpreted u32 value to the port.
         unsafe {
-            self.output_length_port.write(length as u32);
+            self.output_length_port.try_write(length as u32).ok()?;
         }
 
         Some(length)
     }
 }
 
-impl Default for SimpleIo {
-    fn default() -> Self {
-        Self::new(
-            DEFAULT_OUTPUT_BUFFER_MSB_PORT,
-            DEFAULT_OUTPUT_BUFFER_LSB_PORT,
-            DEFAULT_OUTPUT_LENGTH_PORT,
-            DEFAULT_INPUT_BUFFER_MSB_PORT,
-            DEFAULT_INPUT_BUFFER_LSB_PORT,
-            DEFAULT_INPUT_LENGTH_PORT,
-        )
-    }
-}
-
-fn write_address(buffer_pointer: *const u8, msb_port: u16, lsb_port: u16) {
+fn write_address<
+    'a,
+    R: PortReader<u32> + 'a,
+    W: PortWriter<u32> + 'a,
+    F: IoPortFactory<'a, u32, R, W>,
+>(
+    io_port_factory: &F,
+    buffer_pointer: *const u8,
+    msb_port: u16,
+    lsb_port: u16,
+) -> Result<(), &'static str> {
     // Split the 64-bit address into its least- and most significant bytes.
     let address = get_guest_physiscal_address(buffer_pointer) as u64;
     let address_msb = (address >> 32) as u32;
     let address_lsb = address as u32;
     // Safety: this usage is safe, as we as only write uninterpreted u32 values to the ports.
     unsafe {
-        PortWriteOnly::new(msb_port).write(address_msb);
-        PortWriteOnly::new(lsb_port).write(address_lsb);
+        io_port_factory
+            .new_writer(msb_port)
+            .try_write(address_msb)?;
+        io_port_factory.new_writer(lsb_port).try_write(address_lsb)
     }
 }
 
