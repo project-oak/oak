@@ -17,6 +17,7 @@
 use alloc::{boxed::Box, collections::vec_deque::VecDeque, vec, vec::Vec};
 use core::num::Wrapping;
 use virtq::{AvailRing, Desc, DescFlags, RingFlags, UsedElem, UsedRing, VirtQueue};
+use x86_64::{PhysAddr, VirtAddr};
 
 pub mod virtq;
 
@@ -151,7 +152,7 @@ pub struct Queue<const QUEUE_SIZE: usize, const BUFFER_SIZE: usize> {
     buffer: Vec<u8>,
 
     /// The address of the first byte in the global buffer.
-    base_offset: u64,
+    base_offset: PhysAddr,
 
     /// The last index that was used when popping elements from the used ring.
     last_used_idx: Wrapping<u16>,
@@ -167,7 +168,7 @@ impl<const QUEUE_SIZE: usize, const BUFFER_SIZE: usize> Queue<QUEUE_SIZE, BUFFER
         );
 
         let buffer = vec![0u8; BUFFER_SIZE * QUEUE_SIZE];
-        let base_offset = buffer.as_ptr() as u64;
+        let base_offset = PhysAddr::new(VirtAddr::from_ptr(buffer.as_ptr()).as_u64());
         let desc: Vec<Desc> = (0..QUEUE_SIZE)
             .map(|i| {
                 Desc::new(
@@ -192,18 +193,18 @@ impl<const QUEUE_SIZE: usize, const BUFFER_SIZE: usize> Queue<QUEUE_SIZE, BUFFER
     }
 
     /// Gets the address of the descriptor table.
-    pub fn get_desc_addr(&self) -> u64 {
-        self.virt_queue.desc.as_ptr() as u64
+    pub fn get_desc_addr(&self) -> VirtAddr {
+        VirtAddr::from_ptr(self.virt_queue.desc.as_ptr())
     }
 
     /// Gets the address of the available ring.
-    pub fn get_avail_addr(&self) -> u64 {
-        (&self.virt_queue.avail as *const _) as u64
+    pub fn get_avail_addr(&self) -> VirtAddr {
+        VirtAddr::from_ptr(&self.virt_queue.avail as *const _)
     }
 
     /// Gets the address of the used ring.
-    pub fn get_used_addr(&self) -> u64 {
-        (&self.virt_queue.used as *const _) as u64
+    pub fn get_used_addr(&self) -> VirtAddr {
+        VirtAddr::from_ptr(&self.virt_queue.used as *const _)
     }
 
     /// Checks whether the device wants to be notified of queue changes.

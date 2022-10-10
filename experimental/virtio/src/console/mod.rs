@@ -25,6 +25,7 @@ use rust_hypervisor_firmware_virtio::{
     pci::{find_device, VirtioPciTransport},
     virtio::VirtioTransport,
 };
+use x86_64::PhysAddr;
 
 /// The number of buffer descriptors in each of the queues.
 const QUEUE_SIZE: usize = 16;
@@ -144,9 +145,9 @@ where
             .configure_queue(
                 RX_QUEUE_ID,
                 QUEUE_SIZE as u16,
-                self.rx_queue.inner.get_desc_addr(),
-                self.rx_queue.inner.get_avail_addr(),
-                self.rx_queue.inner.get_used_addr(),
+                PhysAddr::new(self.rx_queue.inner.get_desc_addr().as_u64()),
+                PhysAddr::new(self.rx_queue.inner.get_avail_addr().as_u64()),
+                PhysAddr::new(self.rx_queue.inner.get_used_addr().as_u64()),
             )
             .map_err(|error| anyhow::anyhow!("Queue configuration error: {:?}", error))
             .context("Couldn't configure the receive queue.")?;
@@ -154,9 +155,9 @@ where
             .configure_queue(
                 TX_QUEUE_ID,
                 QUEUE_SIZE as u16,
-                self.tx_queue.inner.get_desc_addr(),
-                self.tx_queue.inner.get_avail_addr(),
-                self.tx_queue.inner.get_used_addr(),
+                PhysAddr::new(self.tx_queue.inner.get_desc_addr().as_u64()),
+                PhysAddr::new(self.tx_queue.inner.get_avail_addr().as_u64()),
+                PhysAddr::new(self.tx_queue.inner.get_used_addr().as_u64()),
             )
             .map_err(|error| anyhow::anyhow!("Queue configuration error: {:?}", error))
             .context("Couldn't configure the transmit queue.")?;

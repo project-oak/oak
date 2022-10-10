@@ -16,6 +16,7 @@
 
 use bitflags::bitflags;
 use core::num::Wrapping;
+use x86_64::PhysAddr;
 
 bitflags! {
     /// Flags about a descriptor.
@@ -42,9 +43,7 @@ bitflags! {
 #[derive(Debug)]
 pub struct Desc {
     /// The guest-physical address of the buffer.
-    ///
-    /// We use an identity mapping, so it is also the guest virtual address.
-    pub addr: u64,
+    pub addr: PhysAddr,
     /// The lengths of the buffer.
     pub length: u32,
     /// Flags providing more info about this descriptor.
@@ -57,7 +56,7 @@ pub struct Desc {
 }
 
 impl Desc {
-    pub fn new(flags: DescFlags, addr: u64, length: u32) -> Self {
+    pub fn new(flags: DescFlags, addr: PhysAddr, length: u32) -> Self {
         assert!(
             !flags.contains(DescFlags::VIRTQ_DESC_F_INDIRECT),
             "Indirect descriptors not supported."

@@ -5050,6 +5050,7 @@ dependencies = [
  "rand 0.8.5",
  "rust-hypervisor-firmware-virtio",
  "strum",
+ "x86_64",
 ]
 
 [[package]]
