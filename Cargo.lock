@@ -2343,7 +2343,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "oak_baremetal_communication_channel"
+name = "oak_baremetal_channel"
 version = "0.1.0"
 dependencies = [
  "anyhow",
@@ -2351,59 +2351,6 @@ dependencies = [
  "flatbuffers",
  "oak_idl",
  "static_assertions",
-]
-
-[[package]]
-name = "oak_baremetal_launcher"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "async-trait",
- "bmrng",
- "clap 3.2.10",
- "command-fds",
- "env_logger 0.9.0",
- "flatbuffers",
- "futures",
- "hashbrown 0.12.2",
- "log",
- "oak_baremetal_communication_channel",
- "oak_functions_loader",
- "oak_idl",
- "oak_idl_gen_services",
- "oak_idl_gen_structs",
- "oak_remote_attestation_sessions",
- "oak_utils",
- "prost 0.10.4",
- "serde",
- "tokio",
- "tonic",
- "tonic-web",
- "vsock",
-]
-
-[[package]]
-name = "oak_baremetal_runtime"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "async-trait",
- "flatbuffers",
- "hashbrown 0.12.2",
- "log",
- "oak_functions_abi",
- "oak_functions_lookup",
- "oak_functions_wasm",
- "oak_functions_workload_logging",
- "oak_idl",
- "oak_idl_gen_services",
- "oak_idl_gen_structs",
- "oak_logger",
- "oak_remote_attestation",
- "oak_remote_attestation_amd",
- "oak_remote_attestation_sessions",
- "oak_remote_attestation_sessions_client",
- "tokio",
 ]
 
 [[package]]
@@ -2501,6 +2448,89 @@ dependencies = [
 ]
 
 [[package]]
+name = "oak_functions_freestanding"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "flatbuffers",
+ "hashbrown 0.11.2",
+ "log",
+ "oak_functions_abi",
+ "oak_functions_lookup",
+ "oak_functions_wasm",
+ "oak_functions_workload_logging",
+ "oak_idl",
+ "oak_idl_gen_services",
+ "oak_idl_gen_structs",
+ "oak_logger",
+ "oak_remote_attestation",
+ "oak_remote_attestation_amd",
+ "oak_remote_attestation_sessions",
+ "oak_remote_attestation_sessions_client",
+ "tokio",
+]
+
+[[package]]
+name = "oak_functions_launcher"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "bmrng",
+ "clap 3.2.10",
+ "command-fds",
+ "env_logger 0.9.0",
+ "flatbuffers",
+ "futures",
+ "hashbrown 0.12.2",
+ "log",
+ "oak_baremetal_channel",
+ "oak_functions_loader",
+ "oak_idl",
+ "oak_idl_gen_services",
+ "oak_idl_gen_structs",
+ "oak_remote_attestation_sessions",
+ "oak_utils",
+ "prost 0.10.4",
+ "serde",
+ "tokio",
+ "tonic",
+ "tonic-web",
+ "vsock",
+]
+
+[[package]]
+name = "oak_functions_linux_fd_bin"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "clap 3.2.10",
+ "log",
+ "oak_baremetal_channel",
+ "oak_functions_freestanding",
+ "oak_remote_attestation",
+ "oak_remote_attestation_amd",
+]
+
+[[package]]
+name = "oak_functions_linux_vsock_bin"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "assert_matches",
+ "clap 3.2.10",
+ "libc",
+ "oak_baremetal_channel",
+ "oak_functions_freestanding",
+ "oak_remote_attestation",
+ "prost 0.10.4",
+ "prost-build 0.10.4",
+ "ringbuf",
+ "vsock",
+]
+
+[[package]]
 name = "oak_functions_load_test"
 version = "0.1.0"
 dependencies = [
@@ -2574,36 +2604,6 @@ dependencies = [
  "serde_derive",
  "serde_json",
  "toml",
-]
-
-[[package]]
-name = "oak_functions_loader_linux_native"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "clap 3.2.10",
- "log",
- "oak_baremetal_communication_channel",
- "oak_baremetal_runtime",
- "oak_remote_attestation",
- "oak_remote_attestation_amd",
-]
-
-[[package]]
-name = "oak_functions_loader_linux_vsock"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "assert_matches",
- "clap 3.2.10",
- "libc",
- "oak_baremetal_communication_channel",
- "oak_baremetal_runtime",
- "oak_remote_attestation",
- "prost 0.10.4",
- "prost-build 0.10.4",
- "ringbuf",
- "vsock",
 ]
 
 [[package]]
@@ -2844,7 +2844,7 @@ dependencies = [
  "libm 0.1.4",
  "linked_list_allocator",
  "log",
- "oak_baremetal_communication_channel",
+ "oak_baremetal_channel",
  "oak_baremetal_simple_io",
  "oak_linux_boot_params",
  "rust-hypervisor-firmware-virtio",

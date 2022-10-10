@@ -1,5 +1,5 @@
 [package]
-name = "oak_baremetal_communication_channel"
+name = "oak_baremetal_channel"
 version = "0.1.0"
 authors = ["Juliette Pretot <julsh@google.com>"]
 edition = "2021"

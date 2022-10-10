@@ -26,7 +26,7 @@ lazy_static = { version = "*", features = ["spin_no_std"] }
 linked_list_allocator = { version = "*" }
 log = "*"
 libm = "*"
-oak_baremetal_communication_channel = { path = "../experimental/oak_baremetal_channel" }
+oak_baremetal_channel = { path = "../experimental/oak_baremetal_channel" }
 oak_baremetal_simple_io = { path = "../experimental/oak_baremetal_simple_io", optional = true }
 oak_linux_boot_params = { path = "../linux_boot_params" }
 rust-hypervisor-firmware-virtio = { path = "../third_party/rust-hypervisor-firmware-virtio" }

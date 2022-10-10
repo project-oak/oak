@@ -9,7 +9,7 @@ target = { Cargo = { cargo_manifest = "oak_functions/examples/echo/module/Cargo.
 [server]
 wasm_path = "bin/echo.wasm"
 constant_response_size_bytes = 90
-lookup_data = "experimental/oak_baremetal_launcher/mock_lookup_data"
+lookup_data = "oak_functions_launcher/mock_lookup_data"
 
 [clients]
 # Test request coordinates are defined in `oak_functions/lookup_data_generator/src/data.rs`.

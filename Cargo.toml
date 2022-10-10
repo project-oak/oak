@@ -2,11 +2,7 @@
 resolver = "2"
 members = [
   "experimental/oak_baremetal_channel",
-  "experimental/oak_baremetal_launcher",
-  "experimental/oak_baremetal_runtime",
   "experimental/oak_baremetal_simple_io",
-  "experimental/oak_functions_loader_linux_native",
-  "experimental/oak_functions_loader_linux_vsock",
   "experimental/offline_attestation/client",
   "experimental/offline_attestation/server",
   "experimental/offline_attestation/shared",
@@ -38,6 +34,10 @@ members = [
   "oak_functions/util",
   "oak_functions/wasm",
   "oak_functions/workload_logging",
+  "oak_functions_linux_fd_bin",
+  "oak_functions_linux_vsock_bin",
+  "oak_functions_freestanding",
+  "oak_functions_launcher",
   "oak_grpc_unary_attestation",
   "oak_idl",
   "oak_idl_gen_services",
@@ -59,9 +59,9 @@ members = [
   "xtask",
 ]
 exclude = [
-  "experimental/oak_baremetal_app_crosvm",
   "fuzz",
   "oak_functions/loader/fuzz",
+  "oak_functions_freestanding_bin",
   "oak_tensorflow_bin",
   "stage0",
   "testing/oak_echo_bin",

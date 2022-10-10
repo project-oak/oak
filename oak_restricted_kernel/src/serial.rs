@@ -36,7 +36,7 @@ impl Serial {
     }
 }
 
-impl oak_baremetal_communication_channel::Write for Serial {
+impl oak_baremetal_channel::Write for Serial {
     fn write(&mut self, data: &[u8]) -> anyhow::Result<()> {
         for byte in data {
             self.port.borrow_mut().send_raw(*byte);
@@ -49,7 +49,7 @@ impl oak_baremetal_communication_channel::Write for Serial {
     }
 }
 
-impl oak_baremetal_communication_channel::Read for Serial {
+impl oak_baremetal_channel::Read for Serial {
     fn read(&mut self, data: &mut [u8]) -> anyhow::Result<()> {
         #[allow(clippy::needless_range_loop)]
         for i in 0..data.len() {

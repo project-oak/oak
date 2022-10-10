@@ -25,19 +25,23 @@ use core::panic::PanicInfo;
 use log::info;
 use oak_baremetal_channel::Channel;
 use oak_linux_boot_params::BootParams;
+use oak_remote_attestation::handshaker::{AttestationBehavior, EmptyAttestationVerifier};
+use oak_remote_attestation_amd::PlaceholderAmdAttestationGenerator;
 
 mod asm;
 
 #[no_mangle]
 pub extern "C" fn rust64_start(_rdi: u64, rsi: &BootParams) -> ! {
     let channel = oak_restricted_kernel::start_kernel(rsi);
-    info!("In main!");
-    start_server(channel)
+    main(channel)
 }
 
-fn start_server(channel: Box<dyn Channel>) -> ! {
-    let runtime = oak_tensorflow_runtime::RuntimeImplementation::new();
-    let service = oak_tensorflow_runtime::schema::TensorflowRuntime::serve(runtime);
+fn main(channel: Box<dyn Channel>) -> ! {
+    info!("In main!");
+    let attestation_behavior =
+        AttestationBehavior::create(PlaceholderAmdAttestationGenerator, EmptyAttestationVerifier);
+    let runtime = oak_functions_freestanding::RuntimeImplementation::new(attestation_behavior);
+    let service = oak_functions_freestanding::schema::TrustedRuntime::serve(runtime);
     oak_baremetal_channel::server::start_blocking_server(channel, service)
         .expect("Runtime encountered an unrecoverable error");
 }

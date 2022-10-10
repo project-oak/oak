@@ -204,7 +204,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2dffe52ecf27772e601905b7522cb4ef790d2cc203488bbd0e2fe85fcb74566d"
 
 [[package]]
-name = "oak_baremetal_communication_channel"
+name = "oak_baremetal_channel"
 version = "0.1.0"
 dependencies = [
  "anyhow",
@@ -228,7 +228,7 @@ name = "oak_echo_bin"
 version = "0.1.0"
 dependencies = [
  "log",
- "oak_baremetal_communication_channel",
+ "oak_baremetal_channel",
  "oak_echo_runtime",
  "oak_idl",
  "oak_linux_boot_params",
@@ -291,7 +291,7 @@ dependencies = [
  "libm",
  "linked_list_allocator",
  "log",
- "oak_baremetal_communication_channel",
+ "oak_baremetal_channel",
  "oak_baremetal_simple_io",
  "oak_linux_boot_params",
  "rust-hypervisor-firmware-virtio",
