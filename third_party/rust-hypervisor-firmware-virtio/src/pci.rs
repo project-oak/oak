@@ -14,7 +14,10 @@
 
 use atomic_refcell::AtomicRefCell;
 use log::debug;
-use x86_64::instructions::port::{PortReadOnly, PortWriteOnly};
+use x86_64::{
+    instructions::port::{PortReadOnly, PortWriteOnly},
+    PhysAddr,
+};
 
 use crate::{
     mem,
@@ -380,19 +383,19 @@ impl VirtioTransport for VirtioPciTransport {
         self.region.io_write_u16(0x18, queue_size);
     }
 
-    fn set_descriptors_address(&self, addr: u64) {
+    fn set_descriptors_address(&self, addr: PhysAddr) {
         // queue_desc: 0x20
-        self.region.io_write_u64(0x20, addr);
+        self.region.io_write_u64(0x20, addr.as_u64());
     }
 
-    fn set_avail_ring(&self, addr: u64) {
+    fn set_avail_ring(&self, addr: PhysAddr) {
         // queue_avail: 0x28
-        self.region.io_write_u64(0x28, addr);
+        self.region.io_write_u64(0x28, addr.as_u64());
     }
 
-    fn set_used_ring(&self, addr: u64) {
+    fn set_used_ring(&self, addr: PhysAddr) {
         // queue_used: 0x30
-        self.region.io_write_u64(0x30, addr);
+        self.region.io_write_u64(0x30, addr.as_u64());
     }
 
     fn set_queue_enable(&self) {

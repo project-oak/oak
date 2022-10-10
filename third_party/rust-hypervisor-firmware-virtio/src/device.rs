@@ -16,6 +16,8 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
+use x86_64::PhysAddr;
+
 use crate::virtio::{Error as VirtioError, VirtioTransport};
 
 // Virtio Version 1 feature bit.
@@ -92,9 +94,9 @@ where
         &mut self,
         queue_id: u16,
         queue_size: u16,
-        desc_addr: u64,
-        avail_addr: u64,
-        used_addr: u64,
+        desc_addr: PhysAddr,
+        avail_addr: PhysAddr,
+        used_addr: PhysAddr,
     ) -> Result<(), VirtioError> {
         self.transport.set_queue(queue_id);
 

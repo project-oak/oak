@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use x86_64::PhysAddr;
+
 /// Virtio related errors
 #[derive(Debug)]
 pub enum Error {
@@ -33,9 +35,9 @@ pub trait VirtioTransport {
     fn set_queue(&self, queue: u16);
     fn get_queue_max_size(&self) -> u16;
     fn set_queue_size(&self, queue_size: u16);
-    fn set_descriptors_address(&self, address: u64);
-    fn set_avail_ring(&self, address: u64);
-    fn set_used_ring(&self, address: u64);
+    fn set_descriptors_address(&self, address: PhysAddr);
+    fn set_avail_ring(&self, address: PhysAddr);
+    fn set_used_ring(&self, address: PhysAddr);
     fn set_queue_enable(&self);
     fn notify_queue(&self, queue: u16);
     fn read_device_config(&self, offset: u64) -> u32;

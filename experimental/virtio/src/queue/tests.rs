@@ -204,7 +204,7 @@ fn device_read_once<const QUEUE_SIZE: usize>(
     // with the memory. We treat the contents of the slice as data only and ensure we only pass
     // valid addresses and sizes from the tests.
     let buffer = unsafe {
-        let ptr = desc.addr as usize as *const u8;
+        let ptr = desc.addr.as_u64() as usize as *const u8;
         let len = desc.length as usize;
         alloc::slice::from_raw_parts(ptr, len)
     };
@@ -232,7 +232,7 @@ fn device_write<const QUEUE_SIZE: usize>(
     // with the memory. We treat the contents of the slice as data only and ensure we only pass
     // valid addresses and lengths from the tests.
     let buffer = unsafe {
-        let ptr = desc.addr as usize as *mut u8;
+        let ptr = desc.addr.as_u64() as usize as *mut u8;
         alloc::slice::from_raw_parts_mut(ptr, len)
     };
     buffer.copy_from_slice(data);

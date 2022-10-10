@@ -552,6 +552,7 @@ dependencies = [
  "log",
  "rust-hypervisor-firmware-virtio",
  "strum",
+ "x86_64",
 ]
 
 [[package]]

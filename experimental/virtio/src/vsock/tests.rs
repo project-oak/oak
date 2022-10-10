@@ -62,9 +62,9 @@ fn test_device_init() {
         let queue = queues.get(&i).unwrap();
         assert!(queue.enabled);
         assert_eq!(queue.queue_size as usize, QUEUE_SIZE);
-        assert!(queue.descriptor_address > 0);
-        assert!(queue.avail_ring > 0);
-        assert!(queue.used_ring > 0);
+        assert!(!queue.descriptor_address.is_null());
+        assert!(!queue.avail_ring.is_null());
+        assert!(!queue.used_ring.is_null());
     }
 }
 

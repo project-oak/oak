@@ -20,6 +20,7 @@ use bitflags::bitflags;
 use core::mem::size_of;
 use rust_hypervisor_firmware_virtio::virtio::{Error, VirtioTransport};
 use std::sync::Mutex;
+use x86_64::PhysAddr;
 
 /// Virtio Version 1 feature bit.
 /// See <https://docs.oasis-open.org/virtio/virtio/v1.1/csprd01/virtio-v1.1-csprd01.html#x1-4100006>.
@@ -55,14 +56,27 @@ pub struct TestingConfig {
 }
 
 /// Information about a virtqueue.
-#[derive(Default, Debug)]
+#[derive(Debug)]
 pub struct QueueInfo {
     pub queue_size: u16,
-    pub descriptor_address: u64,
-    pub avail_ring: u64,
-    pub used_ring: u64,
+    pub descriptor_address: PhysAddr,
+    pub avail_ring: PhysAddr,
+    pub used_ring: PhysAddr,
     pub enabled: bool,
     pub notified: bool,
+}
+
+impl Default for QueueInfo {
+    fn default() -> Self {
+        Self {
+            queue_size: Default::default(),
+            descriptor_address: PhysAddr::zero(),
+            avail_ring: PhysAddr::zero(),
+            used_ring: PhysAddr::zero(),
+            enabled: Default::default(),
+            notified: Default::default(),
+        }
+    }
 }
 
 impl TestingTransport {
@@ -91,7 +105,7 @@ impl TestingTransport {
         used_elem.len = 0;
         used.idx += 1;
         let buffer = unsafe {
-            let ptr = desc.addr as usize as *const u8;
+            let ptr = desc.addr.as_u64() as usize as *const u8;
             let len = desc.length as usize;
             alloc::slice::from_raw_parts(ptr, len)
         };
@@ -124,7 +138,7 @@ impl TestingTransport {
         used_elem.len = len as u32;
         used.idx += 1;
         let buffer = unsafe {
-            let ptr = desc.addr as usize as *mut u8;
+            let ptr = desc.addr.as_u64() as usize as *mut u8;
             alloc::slice::from_raw_parts_mut(ptr, len)
         };
         buffer.copy_from_slice(data);
@@ -141,7 +155,8 @@ impl TestingTransport {
         assert!((index as usize) < QUEUE_SIZE);
         let config = self.config.lock().unwrap();
         let queue_info = config.queues.get(&queue_num).unwrap();
-        let address = queue_info.descriptor_address as usize + index as usize * size_of::<Desc>();
+        let address =
+            queue_info.descriptor_address.as_u64() as usize + index as usize * size_of::<Desc>();
         unsafe { &mut *(address as *mut Desc) }
     }
 
@@ -149,7 +164,7 @@ impl TestingTransport {
     fn get_avail_ring<const QUEUE_SIZE: usize>(&self, queue_num: u16) -> &AvailRing<QUEUE_SIZE> {
         let config = self.config.lock().unwrap();
         let queue_info = config.queues.get(&queue_num).unwrap();
-        let address = queue_info.avail_ring as usize;
+        let address = queue_info.avail_ring.as_u64() as usize;
         unsafe { &*(address as *mut AvailRing<QUEUE_SIZE>) }
     }
 
@@ -157,7 +172,7 @@ impl TestingTransport {
     fn get_used_ring<const QUEUE_SIZE: usize>(&self, queue_num: u16) -> &mut UsedRing<QUEUE_SIZE> {
         let config = self.config.lock().unwrap();
         let queue_info = config.queues.get(&queue_num).unwrap();
-        let address = queue_info.used_ring as usize;
+        let address = queue_info.used_ring.as_u64() as usize;
         unsafe { &mut *(address as *mut UsedRing<QUEUE_SIZE>) }
     }
 }
@@ -211,7 +226,7 @@ impl VirtioTransport for TestingTransport {
         config.queues.get_mut(&queue_num).unwrap().queue_size = queue_size;
     }
 
-    fn set_descriptors_address(&self, address: u64) {
+    fn set_descriptors_address(&self, address: PhysAddr) {
         let mut config = self.config.lock().unwrap();
         let queue_num = config.queue_num;
         config
@@ -221,13 +236,13 @@ impl VirtioTransport for TestingTransport {
             .descriptor_address = address;
     }
 
-    fn set_avail_ring(&self, address: u64) {
+    fn set_avail_ring(&self, address: PhysAddr) {
         let mut config = self.config.lock().unwrap();
         let queue_num = config.queue_num;
         config.queues.get_mut(&queue_num).unwrap().avail_ring = address;
     }
 
-    fn set_used_ring(&self, address: u64) {
+    fn set_used_ring(&self, address: PhysAddr) {
         let mut config = self.config.lock().unwrap();
         let queue_num = config.queue_num;
         config.queues.get_mut(&queue_num).unwrap().used_ring = address;
