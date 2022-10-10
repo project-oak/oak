@@ -1,0 +1,64 @@
+# YAML schema for GitHub Actions:
+# https://help.github.com/en/actions/automating-your-workflow-with-github-actions/workflow-syntax-for-github-actions
+#
+# Helpful YAML parser to clarify YAML syntax:
+# https://yaml-online-parser.appspot.com/
+#
+
+name: Sync from Upstream TF
+
+on:
+  schedule:
+    # 2pm UTC is 7am or 8am PT depending on daylight savings.
+    - cron: '0 14 * * *'
+
+  # Allow manually triggering of the workflow.
+  workflow_dispatch: {}
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'schedule' && github.repository == 'tensorflow/tflite-micro')
+
+    steps:
+      - uses: actions/setup-python@v2
+      - uses: actions/checkout@v2
+        with:
+          token: ${{ secrets.TFLM_BOT_REPO_TOKEN }}
+
+      - name: Install dependencies for sync
+        run: |
+          sudo ./ci/install_bazel.sh
+          pip3 install numpy
+
+      - name: Sync the code
+        run: |
+          ./ci/sync_from_upstream_tf.sh
+          git config --local user.name "TFLM-bot"
+          git config --local user.email "tflm-github-bot@google.com"
+          git add *
+
+          if [[ $(git status --porcelain | wc -l) == 0 ]]; then
+            echo "no changes"
+          else
+            git commit -m "Sync from upstream TF."
+          fi
+
+      - name: Create Pull Request
+        id: create-pr
+        uses: peter-evans/create-pull-request@052fc72b4198ba9fbc81b818c6e1859f747d49a8
+        with:
+          branch: sync-from-upstream-tf
+          delete-branch: true
+          token: ${{ secrets.TFLM_BOT_REPO_TOKEN }}
+          title: Automated sync from github.com/tensorflow/tensorflow
+          commit-message: Automated sync from github.com/tensorflow/tensorflow
+          committer: TFLM-bot <tflm-github-bot@google.com>
+          author: TFLM-bot <tflm-github-bot@google.com>
+          body: "BUG=automated sync from upstream\nNO_CHECK_TFLITE_FILES=automated sync from upstream"
+          labels: bot:sync-tf, ci:run
+          reviewers: advaitjain
+
