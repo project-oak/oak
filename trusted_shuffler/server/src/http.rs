@@ -32,8 +32,11 @@ struct HttpRequestHandler {
 
 #[async_trait]
 impl RequestHandler for HttpRequestHandler {
-    async fn handle(&self, request: PlaintextRequest) -> anyhow::Result<PlaintextResponse> {
-        let mut request = trusted_shuffler_to_hyper_request(request)?;
+    async fn handle(
+        &self,
+        plaintext_request: PlaintextRequest,
+    ) -> anyhow::Result<PlaintextResponse> {
+        let mut request = HyperRequestWrapper::build(plaintext_request)?.0;
 
         // We want to keep the path of the orginal request from the client.
         //
@@ -75,127 +78,130 @@ impl RequestHandler for HttpRequestHandler {
                 "Couldn't receive response from the backend: {:?}",
                 error
             )),
-            Ok(response) => Ok(hyper_to_trusted_shuffler_response(response).await?),
+            Ok(response) => Ok(HyperResponseWrapper(response).strip().await?),
         }
     }
 }
 
-// We keep the body and the URI from the `hyper::Request`. We convert the body to `Vec`, so it has
-// to be read fully.
-async fn hyper_to_trusted_shuffler_request(
-    hyper_request: Request<Body>,
-) -> anyhow::Result<EncryptedRequest> {
-    let (parts, body) = hyper_request.into_parts();
-    let body = hyper::body::to_bytes(body)
-        .await
-        .context("Couldn't read request body")?;
-    log::debug!("Body {:?}", body);
+struct HyperRequestWrapper(Request<Body>);
 
-    let uri = parts.uri.clone();
+impl HyperRequestWrapper {
+    // Apart from setting the body and the URI, for our test backend setting to HTTP/2 and POST
+    // seems sufficient.
+    async fn strip(self) -> anyhow::Result<EncryptedRequest> {
+        let (parts, body) = self.0.into_parts();
+        let body = hyper::body::to_bytes(body)
+            .await
+            .context("Failed to read request body.")?;
+        log::debug!("Body {:?}", body);
 
-    // Keep the minimal headers the backend requires to handle the request.
-    let minimal_keys = vec![
-        header::CONTENT_TYPE, // for gRPC requests
-        header::HeaderName::from_static(
-            "grpc-accept-encoding", // for gRPC requests
-        ),
-        header::TE, // for gRPC requests
-        header::CONTENT_LENGTH,
-    ];
-    let minimal_headers = copy_selected_keys(parts.headers, minimal_keys);
+        let uri = parts.uri.clone();
 
-    let trusted_shuffler_request = EncryptedRequest {
-        body: body.to_vec(),
-        headers: minimal_headers,
-        uri,
-    };
+        // Keep the minimal headers the backend requires to handle the request.
+        let minimal_keys = vec![
+            header::CONTENT_TYPE, // for gRPC requests
+            header::HeaderName::from_static(
+                "grpc-accept-encoding", // for gRPC requests
+            ),
+            header::TE, // for gRPC requests
+            header::CONTENT_LENGTH,
+        ];
+        let minimal_headers = copy_selected_keys(parts.headers, minimal_keys);
 
-    Ok(trusted_shuffler_request)
-}
+        let encrypted_request = EncryptedRequest {
+            body: body.to_vec(),
+            headers: minimal_headers,
+            uri,
+        };
 
-// Apart from setting the body and the URI, for our test backend setting to HTTP/2 and POST
-// seems sufficient.
-fn trusted_shuffler_to_hyper_request(
-    trusted_shuffler_request: PlaintextRequest,
-) -> anyhow::Result<Request<Body>> {
-    let body = Body::from(trusted_shuffler_request.body);
-
-    let mut hyper_request = Request::builder()
-        .uri(trusted_shuffler_request.uri)
-        .method(Method::POST)
-        .version(http::Version::HTTP_2)
-        .body(body)
-        .context("Failed to convert Trusted to Hyper Request")?;
-
-    let headers = hyper_request.headers_mut();
-
-    for (k, v) in trusted_shuffler_request.headers.iter() {
-        headers.insert(k, v.clone());
+        Ok(encrypted_request)
     }
 
-    Ok(hyper_request)
+    fn build(plaintext_request: PlaintextRequest) -> anyhow::Result<Self> {
+        let body = Body::from(plaintext_request.body);
+
+        let mut hyper_request = Request::builder()
+            .uri(plaintext_request.uri)
+            .method(Method::POST)
+            .version(http::Version::HTTP_2)
+            .body(body)
+            .context(
+                "Failed to convert a plaintext Trusted Shuffler request to a hyper request.",
+            )?;
+
+        let headers = hyper_request.headers_mut();
+
+        for (k, v) in plaintext_request.headers.iter() {
+            headers.insert(k, v.clone());
+        }
+
+        Ok(HyperRequestWrapper(hyper_request))
+    }
 }
 
-// We generate a default `hyper::Response`.
-async fn trusted_shuffler_to_hyper_response(
-    trusted_shuffler_response: EncryptedResponse,
-) -> anyhow::Result<Response<Body>> {
-    // We build a body from the data and the trailers from the TrustedShuffler Response.
-    let (mut sender, body) = hyper::Body::channel();
-    sender
-        .send_data(trusted_shuffler_response.data)
-        .await
-        .context("Could not build body from data.")?;
-    sender
-        .send_trailers(trusted_shuffler_response.trailers)
-        .await
-        .context("Could not build body from trailers")?;
+struct HyperResponseWrapper(Response<Body>);
 
-    let mut hyper_response = Response::builder()
-        .version(http::Version::HTTP_2)
-        .body(body)
-        .context("Failed to convert Trusted to Hyper Response.")?;
+impl HyperResponseWrapper {
+    async fn strip(self) -> anyhow::Result<PlaintextResponse> {
+        // We keep only the body, i.e., data and trailers, from the `hyper::Response`.
 
-    let headers = hyper_response.headers_mut();
+        log::info!("Response from backend: {:?}", self.0);
+        let (parts, mut body) = self.0.into_parts();
 
-    for (k, v) in trusted_shuffler_response.headers.iter() {
-        headers.insert(k, v.clone());
+        let minimal_keys = vec![
+            header::CONTENT_TYPE,
+            header::HeaderName::from_static("grpc-message"),
+            header::HeaderName::from_static("grpc-status"),
+        ];
+        let minimal_headers = copy_selected_keys(parts.headers, minimal_keys);
+
+        let data = hyper::body::to_bytes(&mut body)
+            .await
+            .context("Could not read data.")?;
+
+        let trailers = body
+            .trailers()
+            .await
+            .context("Could not read trailers.")?
+            .unwrap_or_default();
+
+        let trusted_shuffler_response = PlaintextResponse {
+            headers: minimal_headers,
+            data,
+            trailers,
+        };
+
+        Ok(trusted_shuffler_response)
     }
 
-    Ok(hyper_response)
-}
+    async fn build(encrypted_response: EncryptedResponse) -> anyhow::Result<Self> {
+        // We build a body from the data and the trailers from the encrypted Trusted Shuffler
+        // response.
+        let (mut sender, body) = hyper::Body::channel();
+        sender
+            .send_data(encrypted_response.data)
+            .await
+            .context("Failed to build body from data of encrypted Trusted Shuffler response.")?;
+        sender
+            .send_trailers(encrypted_response.trailers)
+            .await
+            .context(
+                "Failed to build build body from trailers of encrypted Trusted Shuffler response.",
+            )?;
 
-// We keep only the body, i.e., data and trailers, from the `hyper::Response`.
-async fn hyper_to_trusted_shuffler_response(
-    hyper_response: Response<Body>,
-) -> anyhow::Result<PlaintextResponse> {
-    log::info!("Response from backend: {:?}", hyper_response);
-    let (parts, mut body) = hyper_response.into_parts();
+        let mut hyper_response = Response::builder()
+            .version(http::Version::HTTP_2)
+            .body(body)
+            .context("Failed to convert encrypted Trusted Shuffler response to hyper response.")?;
 
-    let minimal_keys = vec![
-        header::CONTENT_TYPE,
-        header::HeaderName::from_static("grpc-message"),
-        header::HeaderName::from_static("grpc-status"),
-    ];
-    let minimal_headers = copy_selected_keys(parts.headers, minimal_keys);
+        let headers = hyper_response.headers_mut();
 
-    let data = hyper::body::to_bytes(&mut body)
-        .await
-        .context("Could not read data.")?;
+        for (k, v) in encrypted_response.headers.iter() {
+            headers.insert(k, v.clone());
+        }
 
-    let trailers = body
-        .trailers()
-        .await
-        .context("Could not read trailers.")?
-        .unwrap_or_default();
-
-    let trusted_shuffler_response = PlaintextResponse {
-        headers: minimal_headers,
-        data,
-        trailers,
-    };
-
-    Ok(trusted_shuffler_response)
+        Ok(HyperResponseWrapper(hyper_response))
+    }
 }
 
 pub struct Service {
@@ -219,7 +225,7 @@ impl hyper::service::Service<Request<Body>> for Service {
             // HTTP call: (&Method::POST, "/request")
             let request_start = Instant::now();
             match trusted_shuffler
-                .invoke(hyper_to_trusted_shuffler_request(request).await?)
+                .invoke((HyperRequestWrapper(request).strip()).await?)
                 .await
             {
                 Ok(response) => {
@@ -228,8 +234,8 @@ impl hyper::service::Service<Request<Body>> for Service {
                         response,
                         request_start.elapsed()
                     );
-                    let response = trusted_shuffler_to_hyper_response(response).await;
-                    response
+                    let response = HyperResponseWrapper::build(response).await?;
+                    Ok(response.0)
                 }
                 Err(error) => {
                     log::error!("Couldn't receive response: {:?}", error);
