@@ -86,9 +86,9 @@ impl RequestHandler for HttpRequestHandler {
 struct HyperRequestWrapper(Request<Body>);
 
 impl HyperRequestWrapper {
-    // Apart from setting the body and the URI, for our test backend setting to HTTP/2 and POST
-    // seems sufficient.
     async fn strip(self) -> anyhow::Result<EncryptedRequest> {
+        // Apart from setting the body and the URI, for our test backend setting to HTTP/2 and POST
+        // seems sufficient.
         let (parts, body) = self.0.into_parts();
         let body = hyper::body::to_bytes(body)
             .await
