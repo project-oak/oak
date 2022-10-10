@@ -4,7 +4,4 @@
 <h1><picture><source media="(prefers-color-scheme: dark)" srcset="/docs/oak-logo/svgs/oak-restricted-kernel-negative-colour.svg?sanitize=true"><source media="(prefers-color-scheme: light)" srcset="/docs/oak-logo/svgs/oak-restricted-kernel.svg?sanitize=true"><img alt="Project Oak Restricted Kernel Logo" src="/docs/oak-logo/svgs/oak-restricted-kernel.svg?sanitize=true"></picture></h1>
 <!-- Oak Logo End -->
 
-
-# Oak Baremetal Kernel
-
-The baremetal unikernel provides minimal features.
+The Oak Restricted Kernel provides minimal features.
