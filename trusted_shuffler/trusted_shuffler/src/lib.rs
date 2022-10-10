@@ -33,33 +33,65 @@ use std::{
 use tokio::{sync::oneshot, time::Duration};
 
 #[derive(Debug, PartialEq)]
-pub struct TrustedShufflerRequest {
+pub struct EncryptedRequest {
+    // TODO(#3282) Unify `body` and `data` from Request and Response.
     pub body: Vec<u8>,
     pub headers: hyper::HeaderMap,
     pub uri: Uri,
 }
 
-impl TrustedShufflerRequest {
-    // We only compare the body, and we need revisit this and decide if this
-    // is how we want to sort our requests.
-    fn compare_body(&self, r2: &TrustedShufflerRequest) -> Ordering {
+// TODO(#3281): Add decryption.
+impl EncryptedRequest {
+    fn decrypt(self) -> PlaintextRequest {
+        PlaintextRequest {
+            body: self.body,
+            headers: self.headers,
+            uri: self.uri,
+        }
+    }
+}
+
+pub struct PlaintextRequest {
+    pub body: Vec<u8>,
+    pub headers: hyper::HeaderMap,
+    pub uri: Uri,
+}
+
+impl PlaintextRequest {
+    // We need to sort the plain requests.
+    fn compare_body(&self, r2: &PlaintextRequest) -> Ordering {
         self.body.cmp(&r2.body)
     }
 }
 
 #[derive(Debug, PartialEq)]
-pub struct TrustedShufflerResponse {
+pub struct EncryptedResponse {
     pub headers: hyper::HeaderMap,
     pub data: hyper::body::Bytes,
     pub trailers: hyper::HeaderMap,
 }
 
-impl TrustedShufflerResponse {
-    fn empty() -> TrustedShufflerResponse {
-        TrustedShufflerResponse {
+pub struct PlaintextResponse {
+    pub headers: hyper::HeaderMap,
+    pub data: hyper::body::Bytes,
+    pub trailers: hyper::HeaderMap,
+}
+
+impl PlaintextResponse {
+    fn empty() -> PlaintextResponse {
+        PlaintextResponse {
             headers: hyper::HeaderMap::new(),
             data: hyper::body::Bytes::new(),
             trailers: hyper::HeaderMap::new(),
+        }
+    }
+
+    // TODO(#3281): Add encryption.
+    fn encrypt(self) -> EncryptedResponse {
+        EncryptedResponse {
+            headers: self.headers,
+            data: self.data,
+            trailers: self.trailers,
         }
     }
 }
@@ -69,9 +101,9 @@ struct RequestMessage {
     // Index is used to send responses back to the client in the order of arrival.
     index: usize,
     // A TrustedShufflerRequest.
-    data: TrustedShufflerRequest,
+    data: PlaintextRequest,
     // Channel for sending responses back to the client async tasks.
-    response_sender: oneshot::Sender<TrustedShufflerResponse>,
+    response_sender: oneshot::Sender<EncryptedResponse>,
 }
 
 struct ResponseMessage {
@@ -80,18 +112,15 @@ struct ResponseMessage {
     // arrived. Index is used to send responses back to the client in the order of arrival.
     index: usize,
     // The TrustedShufflerResponse to a TrustedShufflerRequest.
-    data: TrustedShufflerResponse,
+    data: EncryptedResponse,
     // Copied from the corresponding RequestMessage.
     // Channel for sending responses back to the client async tasks.
-    response_sender: oneshot::Sender<TrustedShufflerResponse>,
+    response_sender: oneshot::Sender<EncryptedResponse>,
 }
 
 #[async_trait]
 pub trait RequestHandler: Send + Sync {
-    async fn handle(
-        &self,
-        request: TrustedShufflerRequest,
-    ) -> anyhow::Result<TrustedShufflerResponse>;
+    async fn handle(&self, request: PlaintextRequest) -> anyhow::Result<PlaintextResponse>;
 }
 
 // Trusted Shuffler implementation.
@@ -127,10 +156,9 @@ impl TrustedShuffler {
     }
 
     // Asynchronously handles an incoming request.
-    pub async fn invoke(
-        &self,
-        request: TrustedShufflerRequest,
-    ) -> anyhow::Result<TrustedShufflerResponse> {
+    pub async fn invoke(&self, request: EncryptedRequest) -> anyhow::Result<EncryptedResponse> {
+        let request = request.decrypt();
+
         let (response_sender, response_receiver) = oneshot::channel();
 
         // Check if the request batch is filled and create a separate task for shuffling requests.
@@ -193,7 +221,7 @@ impl TrustedShuffler {
                             match tokio::time::timeout(timeout, request_handler_clone.handle(data))
                                 .await
                             {
-                                Err(_) => Ok(TrustedShufflerResponse::empty()),
+                                Err(_) => Ok(PlaintextResponse::empty()),
                                 Ok(response) => response,
                             }
                         }
@@ -201,7 +229,7 @@ impl TrustedShuffler {
                     // Create a Message holding the response in data.
                     response.map(|response| ResponseMessage {
                         index,
-                        data: response,
+                        data: response.encrypt(),
                         response_sender,
                     })
                 }
