@@ -37,12 +37,12 @@ impl RequestHandler for TestRequestHandler {
                 tokio::task::yield_now().await;
             }
         }
-        Ok(generate_plain_response(&request))
+        Ok(generate_plaintext_response(&request))
     }
 }
 
 // Non-async version of the `handle_request` function used to create expected responses.
-fn generate_plain_response(request: &PlaintextRequest) -> PlaintextResponse {
+fn generate_plaintext_response(request: &PlaintextRequest) -> PlaintextResponse {
     PlaintextResponse {
         headers: hyper::HeaderMap::new(),
         data: hyper::body::Bytes::from(request.body.clone()),
