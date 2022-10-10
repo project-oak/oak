@@ -37,12 +37,12 @@ impl RequestHandler for TestRequestHandler {
                 tokio::task::yield_now().await;
             }
         }
-        Ok(generate_plaintext_response(&request))
+        Ok(get_plaintext_response(&request))
     }
 }
 
 // Non-async version of the `handle_request` function used to create expected responses.
-fn generate_plaintext_response(request: &PlaintextRequest) -> PlaintextResponse {
+fn get_plaintext_response(request: &PlaintextRequest) -> PlaintextResponse {
     PlaintextResponse {
         headers: hyper::HeaderMap::new(),
         data: hyper::body::Bytes::from(request.body.clone()),
@@ -51,7 +51,7 @@ fn generate_plaintext_response(request: &PlaintextRequest) -> PlaintextResponse 
 }
 
 // Non-async version of the `handle_request` function used to create expected responses.
-fn generate_secret_response(request: &EncryptedRequest) -> EncryptedResponse {
+fn get_encrypted_response(request: &EncryptedRequest) -> EncryptedResponse {
     EncryptedResponse {
         headers: hyper::HeaderMap::new(),
         data: hyper::body::Bytes::from(request.body.clone()),
@@ -84,7 +84,7 @@ fn generate_secret_request_and_expected_response(
         uri: hyper::Uri::from_static("test.com"),
     };
 
-    let expected_response = generate_secret_response(&request);
+    let expected_response = get_encrypted_response(&request);
     (request, expected_response)
 }
 
