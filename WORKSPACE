@@ -206,10 +206,6 @@ http_archive(
     ],
 )
 
-load("@com_github_tensorflow_tflite_micro//tensorflow:workspace.bzl", "tf_repositories")
-
-tf_repositories()
-
 # TensorFlow dependency.
 http_archive(
     name = "io_bazel_rules_closure",
@@ -428,6 +424,10 @@ emsdk_configure(name = "emsdk")
 load("@io_bazel_rules_closure//closure:defs.bzl", "closure_repositories")
 
 closure_repositories()
+
+load("@com_github_tensorflow_tflite_micro//tensorflow:workspace.bzl", "tf_repositories")
+
+tf_repositories()
 
 # Bazel rules for packaging and deployment by Grakn Labs
 http_archive(
