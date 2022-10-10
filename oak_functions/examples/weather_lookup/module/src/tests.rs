@@ -235,11 +235,12 @@ fn bench_wasm_handler(bencher: &mut Bencher, warmup: bool) {
             let resp = wasm_handler.clone().handle_invoke(request).unwrap();
             assert_eq!(resp.status, StatusCode::Success);
         });
+        Ok(())
     });
 
     // When running `cargo test` this benchmark test gets executed too, but `summary` will be `None`
     // in that case. So, here we first check that `summary` is not empty.
-    if let Some(summary) = summary {
+    if let Ok(Some(summary)) = summary {
         // `summary.mean` is in nanoseconds, even though it is not explicitly documented in
         // https://doc.rust-lang.org/test/stats/struct.Summary.html.
         let elapsed = Duration::from_nanos(summary.mean as u64);

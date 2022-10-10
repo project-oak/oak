@@ -338,7 +338,7 @@ fn run_buildifier(mode: FormatMode) -> Step {
                 name: entry.clone(),
                 command: Cmd::new(
                     "buildifier",
-                    &[
+                    [
                         "-lint=warn",
                         match mode {
                             FormatMode::Check => "-mode=check",
@@ -414,7 +414,7 @@ fn run_embedmd(mode: FormatMode) -> Step {
                 name: entry.clone(),
                 command: Cmd::new(
                     "embedmd",
-                    &[
+                    [
                         match mode {
                             FormatMode::Check => "-d",
                             FormatMode::Fix => "-w",
@@ -437,7 +437,7 @@ fn run_liche() -> Step {
             .map(to_string)
             .map(|entry| Step::Single {
                 name: entry.clone(),
-                command: Cmd::new("liche", &[
+                command: Cmd::new("liche", [
                     "--document-root=.",
                     // We exclude the following URLs from the checks:
                     // - https://groups.google.com/g/project-oak-discuss : not publicly accessible
@@ -473,7 +473,7 @@ fn run_shellcheck() -> Step {
             .map(to_string)
             .map(|entry| Step::Single {
                 name: entry.clone(),
-                command: Cmd::new("shellcheck", &["--external-sources", &entry]),
+                command: Cmd::new("shellcheck", ["--external-sources", &entry]),
             })
             .collect(),
     }
@@ -485,7 +485,7 @@ fn run_clang_format(mode: FormatMode) -> Step {
             name: "clang format".to_string(),
             command: Cmd::new(
                 "python3",
-                &[
+                [
                     "./third_party/run-clang-format/run-clang-format.py",
                     "--recursive",
                     "--exclude",
@@ -506,7 +506,7 @@ fn run_clang_format(mode: FormatMode) -> Step {
                 .map(to_string)
                 .map(|entry| Step::Single {
                     name: entry.clone(),
-                    command: Cmd::new("clang-format", &["-i", "-style=file", &entry]),
+                    command: Cmd::new("clang-format", ["-i", "-style=file", &entry]),
                 })
                 .collect(),
         },
@@ -598,7 +598,7 @@ fn run_cargo_test(opt: &RunTestsOpt, all_affected_crates: &ModifiedContent) -> S
                     name,
                     command: Cmd::new_in_dir(
                         "cargo",
-                        &[
+                        [
                             "test",
                             "--all-features",
                             &format!(
@@ -620,7 +620,7 @@ fn run_cargo_test(opt: &RunTestsOpt, all_affected_crates: &ModifiedContent) -> S
                                 name: "cleanup".to_string(),
                                 command: Cmd::new(
                                     "rm",
-                                    &["-rf", entry.with_file_name("target").to_str().unwrap()],
+                                    ["-rf", entry.with_file_name("target").to_str().unwrap()],
                                 ),
                             },
                         ],
@@ -645,7 +645,7 @@ fn run_cargo_doc(all_affected_crates: &ModifiedContent) -> Step {
                 let path = to_string(path).replace("./", "");
                 Step::Single {
                     name: path.clone(),
-                    command: Cmd::new("bash", &["./scripts/check_docs", &path]),
+                    command: Cmd::new("bash", ["./scripts/check_docs", &path]),
                 }
             })
             .collect(),
@@ -662,7 +662,7 @@ fn run_cargo_clippy(scope: &Scope) -> Step {
                 name: entry.to_str().unwrap().to_string(),
                 command: Cmd::new_in_dir(
                     "cargo",
-                    &[
+                    [
                         "clippy",
                         "--all-targets",
                         "--all-features",
@@ -690,7 +690,7 @@ fn run_cargo_deny() -> Step {
                 name: entry.clone(),
                 command: Cmd::new(
                     "cargo",
-                    &["deny", &format!("--manifest-path={}", &entry), "check"],
+                    ["deny", &format!("--manifest-path={}", &entry), "check"],
                 ),
             })
             .collect(),
@@ -708,7 +708,7 @@ fn run_cargo_udeps(scope: &Scope) -> Step {
                 name: entry.to_str().unwrap().to_string(),
                 command: Cmd::new_in_dir(
                     "cargo",
-                    &[
+                    [
                         "udeps",
                         &format!(
                             "--manifest-path={}",
@@ -735,7 +735,7 @@ fn run_cargo_clean() -> Step {
                 name: manifest_path.clone(),
                 command: Cmd::new(
                     "cargo",
-                    &["clean", &format!("--manifest-path={}", manifest_path)],
+                    ["clean", &format!("--manifest-path={}", manifest_path)],
                 ),
             })
             .collect(),
@@ -747,7 +747,7 @@ fn run_bazel_build() -> Step {
         name: "bazel build".to_string(),
         command: Cmd::new(
             "bazel",
-            &[
+            [
                 "build",
                 "--",
                 "//oak_functions/client/java/...:all",
@@ -764,7 +764,7 @@ fn run_bazel_test() -> Step {
         name: "bazel test".to_string(),
         command: Cmd::new(
             "bazel",
-            &[
+            [
                 "test",
                 "--",
                 "//oak_functions/client/java/...:all",

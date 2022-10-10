@@ -51,7 +51,7 @@ pub fn encode_lookup_data<'a>(
 pub fn load_lookup_data(
     file_path: &std::path::PathBuf,
 ) -> anyhow::Result<HashMap<Vec<u8>, Vec<u8>>> {
-    let bytes = fs::read(&file_path).map_err(|error| {
+    let bytes = fs::read(file_path).map_err(|error| {
         anyhow!(
             "Couldn't read the lookup data file {}: {}",
             file_path.display(),

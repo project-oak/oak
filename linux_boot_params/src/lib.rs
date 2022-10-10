@@ -15,8 +15,6 @@
 //
 
 #![no_std]
-#![feature(core_ffi_c)]
-#![feature(core_c_str)]
 
 use bitflags::bitflags;
 use core::ffi::{c_char, CStr};

@@ -32,8 +32,13 @@ use oak_remote_attestation_amd::{
 use oak_remote_attestation_sessions_client::{AttestationTransport, GenericAttestationClient};
 
 mod schema {
-    #![allow(clippy::derivable_impls, clippy::needless_borrow)]
-    #![allow(dead_code, unused_imports)]
+    #![allow(
+        clippy::derivable_impls,
+        clippy::extra_unused_lifetimes,
+        clippy::needless_borrow,
+        dead_code,
+        unused_imports
+    )]
 
     include!(concat!(env!("OUT_DIR"), "/schema_generated.rs"));
     include!(concat!(env!("OUT_DIR"), "/schema_services_clients.rs"));

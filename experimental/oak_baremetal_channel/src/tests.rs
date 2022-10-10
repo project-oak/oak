@@ -14,6 +14,8 @@
 // limitations under the License.
 //
 
+#![allow(clippy::box_default)]
+
 extern crate std;
 
 use super::*;

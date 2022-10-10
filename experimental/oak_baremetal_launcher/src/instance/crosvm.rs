@@ -71,7 +71,7 @@ impl Instance {
         // Don't bother running devices in sandboxed processes.
         cmd.arg("--disable-sandbox");
         // First serial port: this will be used by the console
-        cmd.args(&[
+        cmd.args([
             "--serial",
             format!(
                 "num=1,hardware=serial,type=file,path=/proc/self/fd/{},console,earlycon",
@@ -84,7 +84,7 @@ impl Instance {
 
         if let Some(gdb_port) = params.gdb {
             // Listen for a gdb connection on the provided port and wait for debugger before booting
-            cmd.args(&["--gdb", format!("{}", gdb_port).as_str()]);
+            cmd.args(["--gdb", format!("{}", gdb_port).as_str()]);
         }
 
         cmd.arg(params.app_binary);

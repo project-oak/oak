@@ -30,7 +30,6 @@
 
 #![cfg_attr(not(test), no_std)]
 #![feature(abi_x86_interrupt)]
-#![feature(core_c_str)]
 #![feature(once_cell)]
 
 mod args;
