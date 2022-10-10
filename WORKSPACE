@@ -197,24 +197,31 @@ http_archive(
 
 http_archive(
     name = "org_tensorflow",
-    sha256 = "4844e49a4d6ed9bceef608ce7f65f41b75e6362b2721c4e0d34a053d58753f42",
-    strip_prefix = "tensorflow-11bed638b14898cdde967f6b108e45732aa4798a",
+    sha256 = "ebc42f3ebe8a4198c3e37f6fed84c0f250c3c8c5a9de76d5a20a1f42fb5ce05b",
+    strip_prefix = "tensorflow-9eacd0bec0161541865c5c60b3959faf3f5caaa3",
     urls = [
-        # Head commit on 2020-01-20.
-        "https://github.com/tensorflow/tensorflow/archive/11bed638b14898cdde967f6b108e45732aa4798a.tar.gz",
+        # Head commit on 2022-10-10.
+        "https://github.com/tensorflow/tensorflow/archive/9eacd0bec0161541865c5c60b3959faf3f5caaa3.tar.gz",
     ],
 )
 
-# TensorFlow dependency.
-http_archive(
-    name = "io_bazel_rules_closure",
-    sha256 = "5b00383d08dd71f28503736db0500b6fb4dda47489ff5fc6bed42557c07c6ba9",
-    strip_prefix = "rules_closure-308b05b2419edb5c8ee0471b67a40403df940149",
-    urls = [
-        # Head commit on 2019-06-13.
-        "https://github.com/bazelbuild/rules_closure/archive/308b05b2419edb5c8ee0471b67a40403df940149.tar.gz",
-    ],
-)
+# Initialize the TensorFlow repository and all dependencies.
+# Copied from https://github.com/tensorflow/tensorflow/blob/master/WORKSPACE
+load("@org_tensorflow//tensorflow:workspace3.bzl", "tf_workspace3")
+
+tf_workspace3()
+
+load("@org_tensorflow//tensorflow:workspace2.bzl", "tf_workspace2")
+
+tf_workspace2()
+
+load("@org_tensorflow//tensorflow:workspace1.bzl", "tf_workspace1")
+
+tf_workspace1()
+
+load("@org_tensorflow//tensorflow:workspace0.bzl", "tf_workspace0")
+
+tf_workspace0()
 
 # WebAssembly Binary Toolkit
 #
@@ -419,17 +426,6 @@ load("//toolchain:emcc_toolchain_config.bzl", "emsdk_configure")
 
 # Should be configured after loading `clang`.
 emsdk_configure(name = "emsdk")
-
-load("@io_bazel_rules_closure//closure:defs.bzl", "closure_repositories")
-
-closure_repositories()
-
-# Do not use `tf_workspace()` - it interferes with c-ares in gRPC loaded and patched
-# and causes missing `ares.h` error.
-# https://github.com/tensorflow/tensorflow/blob/25a06bc503c7d07ffc5480ac107e3c8681937971/tensorflow/workspace.bzl#L970-L975
-load("@org_tensorflow//tensorflow:workspace.bzl", "tf_repositories")
-
-tf_repositories()
 
 # Bazel rules for packaging and deployment by Grakn Labs
 http_archive(
