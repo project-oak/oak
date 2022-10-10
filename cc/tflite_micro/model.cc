@@ -16,6 +16,4 @@
 
 #include "model.h"
 
-namespace oak {
-
-}  // namespace oak
+namespace oak {}  // namespace oak

@@ -15,16 +15,16 @@
 #
 
 package(
-    default_visibility = ["//visibility:public"]
+    default_visibility = ["//visibility:public"],
+    licenses = ["notice"],
 )
 
 cc_library(
     name = "model",
     srcs = ["model.cc"],
     hdrs = ["model.h"],
+    linkstatic = 1,
     deps = [
         "@com_github_tensorflow_tflite_micro//tensorflow/lite/micro:micro_framework",
     ],
-    linkstatic = 1,
 )
-

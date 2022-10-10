@@ -17,8 +17,6 @@
 #ifndef CC_TFLITE_MICRO_MODEL_H_
 #define CC_TFLITE_MICRO_MODEL_H_
 
-namespace oak {
-
-}  // namespace oak
+namespace oak {}  // namespace oak
 
 #endif  // CC_TFLITE_MICRO_MODEL_H_
