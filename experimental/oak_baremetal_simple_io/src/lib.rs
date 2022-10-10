@@ -22,7 +22,10 @@ extern crate alloc;
 use alloc::{collections::VecDeque, vec, vec::Vec};
 use core::{marker::PhantomData, result::Result};
 use sev_guest::io::{IoPortFactory, PortReader, PortWriter};
-use x86_64::instructions::port::{PortReadOnly, PortWriteOnly};
+use x86_64::{
+    instructions::port::{PortReadOnly, PortWriteOnly},
+    PhysAddr, VirtAddr,
+};
 
 /// The default I/O port to use for the most significant bytes of the output buffer guest-physical
 /// address.
@@ -80,13 +83,13 @@ where
 
         write_address(
             &io_port_factory,
-            output_buffer.as_ptr(),
+            VirtAddr::from_ptr(output_buffer.as_ptr()),
             output_buffer_msb_port,
             output_buffer_lsb_port,
         )?;
         write_address(
             &io_port_factory,
-            input_buffer.as_ptr(),
+            VirtAddr::from_ptr(input_buffer.as_ptr()),
             input_buffer_msb_port,
             input_buffer_lsb_port,
         )?;
@@ -170,12 +173,12 @@ fn write_address<
     F: IoPortFactory<'a, u32, R, W>,
 >(
     io_port_factory: &F,
-    buffer_pointer: *const u8,
+    buffer_pointer: VirtAddr,
     msb_port: u16,
     lsb_port: u16,
 ) -> Result<(), &'static str> {
     // Split the 64-bit address into its least- and most significant bytes.
-    let address = get_guest_physiscal_address(buffer_pointer) as u64;
+    let address = get_guest_physical_address(buffer_pointer).as_u64();
     let address_msb = (address >> 32) as u32;
     let address_lsb = address as u32;
     // Safety: this usage is safe, as we as only write uninterpreted u32 values to the ports.
@@ -187,7 +190,7 @@ fn write_address<
     }
 }
 
-fn get_guest_physiscal_address(pointer: *const u8) -> usize {
+fn get_guest_physical_address(pointer: VirtAddr) -> PhysAddr {
     // Assume identity mapping for now.
-    pointer as usize
+    PhysAddr::new(pointer.as_u64())
 }
