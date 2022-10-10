@@ -430,7 +430,7 @@ where
         extension_factories: Vec<Box<dyn ExtensionFactory<L>>>,
         logger: L,
     ) -> anyhow::Result<Self> {
-        let module = wasmi::Module::from_buffer(&wasm_module_bytes)
+        let module = wasmi::Module::from_buffer(wasm_module_bytes)
             .map_err(|err| anyhow::anyhow!("could not load module from buffer: {:?}", err))?;
 
         Ok(WasmHandler {

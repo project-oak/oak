@@ -833,7 +833,7 @@ impl Runnable for Cmd {
 pub fn process_gone(raw_pid: i32) -> bool {
     // Shell out to `ps` as there's no portable Rust equivalent.
     let mut cmd = std::process::Command::new("ps");
-    cmd.args(&["-p", &format!("{}", raw_pid)]);
+    cmd.args(["-p", &format!("{}", raw_pid)]);
     let mut child = cmd
         .stdin(std::process::Stdio::null())
         .stdout(std::process::Stdio::null())

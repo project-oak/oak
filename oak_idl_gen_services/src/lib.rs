@@ -30,8 +30,13 @@ use reflection_generated::reflection::{RPCCall, Service};
 use std::process::exit;
 
 mod reflection_generated {
-    #![allow(clippy::derivable_impls, clippy::needless_borrow)]
-    #![allow(dead_code, unused_imports)]
+    #![allow(
+        clippy::derivable_impls,
+        clippy::extra_unused_lifetimes,
+        clippy::needless_borrow,
+        dead_code,
+        unused_imports
+    )]
 
     include!(concat!(env!("OUT_DIR"), "/reflection_generated.rs"));
 }
@@ -52,7 +57,7 @@ mod reflection_generated {
 /// at `${OUT_DIR}/test_file_services_servers.rs`.
 pub fn compile_services_servers(filename: &str) {
     let schema = FlatbufferSchema::from_file(filename).unwrap();
-    let generated_rust_services = generate_from_bytes(&schema.bytes, &generate_service).unwrap();
+    let generated_rust_services = generate_from_bytes(&schema.bytes, generate_service).unwrap();
     let out_file = format!(
         "{}/{}_services_servers.rs",
         std::env::var("OUT_DIR").unwrap(),

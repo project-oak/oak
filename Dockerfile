@@ -1,6 +1,6 @@
 # Use fixed snapshot of Debian to create a deterministic environment.
 # Snapshot tags can be found at https://hub.docker.com/r/debian/snapshot/tags?name=bullseye
-ARG debian_snapshot=sha256:fb7e04be4c79a9eab9c259fd5049f4a1bec321843040184a706bbecdaaacbd32
+ARG debian_snapshot=sha256:d647c95797c43e8ef0e0667c4b4acba752ae70385dcf648877903f15c8977da4
 FROM debian/snapshot@${debian_snapshot}
 
 # Set the SHELL option -o pipefail before RUN with a pipe in.
@@ -210,7 +210,7 @@ RUN curl --location https://sh.rustup.rs > /tmp/rustup \
 # We currently need the nightly version in order to be able to compile some of the examples.
 # See https://rust-lang.github.io/rustup-components-history/ for how to pick a version that supports
 # the appropriate set of components.
-ARG rust_version=nightly-2022-04-22
+ARG rust_version=nightly-2022-10-10
 RUN rustup toolchain install ${rust_version} \
   && rustup default ${rust_version}
 
