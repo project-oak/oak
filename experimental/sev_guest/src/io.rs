@@ -17,7 +17,8 @@
 use crate::ghcb::{Ghcb, GhcbProtocol};
 use core::marker::PhantomData;
 use lock_api::{Mutex, RawMutex};
-use x86_64::instructions::port::{PortReadOnly, PortWriteOnly};
+use spinning_top::{RawSpinlock, Spinlock};
+use x86_64::instructions::port::Port;
 
 /// Factory for instantiating IO port readers and writers.
 ///
@@ -165,43 +166,118 @@ where
 /// Factory for creating port reader and writers that perform direct raw IO operations.
 pub struct RawIoPortFactory;
 
-impl<'a, T> IoPortFactory<'a, T, PortReadOnly<T>, PortWriteOnly<T>> for RawIoPortFactory
+impl<'a, T> IoPortFactory<'a, T, Port<T>, Port<T>> for RawIoPortFactory
 where
     T: 'a,
-    PortReadOnly<T>: PortReader<T>,
-    PortWriteOnly<T>: PortWriter<T>,
+    Port<T>: PortReader<T>,
+    Port<T>: PortWriter<T>,
 {
-    fn new_reader(&self, port: u16) -> PortReadOnly<T> {
-        PortReadOnly::<T>::new(port)
+    fn new_reader(&self, port: u16) -> Port<T> {
+        Port::<T>::new(port)
     }
 
-    fn new_writer(&self, port: u16) -> PortWriteOnly<T> {
-        PortWriteOnly::<T>::new(port)
+    fn new_writer(&self, port: u16) -> Port<T> {
+        Port::<T>::new(port)
     }
 }
 
-impl PortReader<u8> for PortReadOnly<u8> {
+impl PortReader<u8> for Port<u8> {
     unsafe fn try_read(&mut self) -> Result<u8, &'static str> {
         Ok(self.read())
     }
 }
 
-impl PortReader<u32> for PortReadOnly<u32> {
+impl PortReader<u32> for Port<u32> {
     unsafe fn try_read(&mut self) -> Result<u32, &'static str> {
         Ok(self.read())
     }
 }
 
-impl PortWriter<u8> for PortWriteOnly<u8> {
+impl PortWriter<u8> for Port<u8> {
     unsafe fn try_write(&mut self, value: u8) -> Result<(), &'static str> {
         self.write(value);
         Ok(())
     }
 }
 
-impl PortWriter<u32> for PortWriteOnly<u32> {
+impl PortWriter<u32> for Port<u32> {
     unsafe fn try_write(&mut self, value: u32) -> Result<(), &'static str> {
         self.write(value);
         Ok(())
+    }
+}
+
+/// An IO port reader and writer implementation that uses the GHCB protocol, static references and a
+/// spinlock for synchronisation.
+pub type StaticGhcbIoPort = GhcbIoPort<'static, RawSpinlock, GhcbProtocol<'static, Ghcb>, Ghcb>;
+
+/// Wrapper implementation that can either create IO ports that perform direct IO or IO ports that
+/// use the GHCB IOIO protocol.
+pub enum PortFactoryWrapper {
+    Raw(RawIoPortFactory),
+    Ghcb(GhcbIoFactory<'static, RawSpinlock, GhcbProtocol<'static, Ghcb>, Ghcb>),
+}
+
+impl PortFactoryWrapper {
+    pub fn new_raw() -> Self {
+        PortFactoryWrapper::Raw(RawIoPortFactory)
+    }
+
+    pub fn new_ghcb(ghcb_protocol: &'static Spinlock<GhcbProtocol<'static, Ghcb>>) -> Self {
+        PortFactoryWrapper::Ghcb(GhcbIoFactory::new(ghcb_protocol))
+    }
+}
+impl<T> IoPortFactory<'static, T, PortWrapper<T>, PortWrapper<T>> for PortFactoryWrapper
+where
+    T: 'static,
+    PortWrapper<T>: PortReader<T> + PortWriter<T>,
+    Port<T>: PortReader<T> + PortWriter<T>,
+    StaticGhcbIoPort: PortReader<T> + PortWriter<T>,
+{
+    fn new_reader(&self, port: u16) -> PortWrapper<T> {
+        match self {
+            PortFactoryWrapper::Raw(factory) => PortWrapper::Raw(factory.new_reader(port)),
+            PortFactoryWrapper::Ghcb(factory) => PortWrapper::Ghcb(factory.new_reader(port)),
+        }
+    }
+
+    fn new_writer(&self, port: u16) -> PortWrapper<T> {
+        match self {
+            PortFactoryWrapper::Raw(factory) => PortWrapper::Raw(factory.new_writer(port)),
+            PortFactoryWrapper::Ghcb(factory) => PortWrapper::Ghcb(factory.new_writer(port)),
+        }
+    }
+}
+
+// Wrapper implementation of an IO port that either performs direct IO or uses the GHCB IOIO
+// protocol.
+pub enum PortWrapper<T> {
+    Raw(Port<T>),
+    Ghcb(StaticGhcbIoPort),
+}
+
+impl<T> PortReader<T> for PortWrapper<T>
+where
+    Port<T>: PortReader<T>,
+    StaticGhcbIoPort: PortReader<T>,
+{
+    unsafe fn try_read(&mut self) -> Result<T, &'static str> {
+        match self {
+            PortWrapper::Raw(port) => port.try_read(),
+            PortWrapper::Ghcb(port) => port.try_read(),
+        }
+    }
+}
+
+impl<T> PortWriter<T> for PortWrapper<T>
+where
+    Port<T>: PortWriter<T>,
+    StaticGhcbIoPort: PortWriter<T>,
+{
+    unsafe fn try_write(&mut self, value: T) -> Result<(), &'static str> {
+        match self {
+            PortWrapper::Raw(port) => port.try_write(value),
+            PortWrapper::Ghcb(port) => port.try_write(value),
+        }
     }
 }
