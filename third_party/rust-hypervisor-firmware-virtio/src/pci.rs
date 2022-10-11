@@ -22,7 +22,7 @@ use x86_64::{
 use crate::{
     mem,
     virtio::{Error as VirtioError, VirtioTransport},
-    Translator,
+    InverseTranslator,
 };
 
 const MAX_DEVICES: u8 = 32;
@@ -269,7 +269,11 @@ impl VirtioPciTransport {
 /// le64 queue_used;                // 0x30 // read-write
 
 impl VirtioTransport for VirtioPciTransport {
-    fn init<X: Translator>(&mut self, _device_type: u32, translate: X) -> Result<(), VirtioError> {
+    fn init<X: InverseTranslator>(
+        &mut self,
+        _device_type: u32,
+        translate: X,
+    ) -> Result<(), VirtioError> {
         self.device.init();
 
         // Read status register
