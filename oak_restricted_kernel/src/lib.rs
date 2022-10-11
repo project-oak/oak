@@ -53,7 +53,7 @@ extern crate alloc;
 use alloc::boxed::Box;
 use core::{panic::PanicInfo, str::FromStr};
 use log::{error, info};
-use oak_baremetal_channel::Channel;
+use oak_channel::Channel;
 use oak_linux_boot_params::BootParams;
 use strum::{EnumIter, EnumString, IntoEnumIterator};
 use x86_64::{

@@ -35,5 +35,5 @@ pub trait LaunchedInstance {
     ///
     /// Since different VMMs might use different comms channels, we leave it up to the VMM to create
     /// the channel rather than passing it in as part of the parameters.
-    async fn create_comms_channel(&self) -> Result<Box<dyn oak_baremetal_channel::Channel>>;
+    async fn create_comms_channel(&self) -> Result<Box<dyn oak_channel::Channel>>;
 }

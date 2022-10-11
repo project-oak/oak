@@ -52,7 +52,7 @@ where
     }
 }
 
-impl<T> oak_baremetal_channel::Read for Channel<T>
+impl<T> oak_channel::Read for Channel<T>
 where
     T: std::io::Read + std::io::Write,
 {
@@ -89,7 +89,7 @@ where
     }
 }
 
-impl<T> oak_baremetal_channel::Write for Channel<T>
+impl<T> oak_channel::Write for Channel<T>
 where
     T: Read + Write,
 {

@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-use oak_baremetal_channel::client::{ClientChannelHandle, RequestEncoder};
+use oak_channel::client::{ClientChannelHandle, RequestEncoder};
 
 /// Singleton responsible for sending requests, and receiving responses over the underlying
 /// communication channel with the baremetal runtime.
@@ -26,7 +26,7 @@ pub struct Connector {
 impl Connector {
     /// Spawn an instance of the [`Connector`] in a seperate task, and return a
     /// cloneable [`ConnectorHandle`] for it.
-    pub fn spawn(inner: Box<dyn oak_baremetal_channel::Channel>) -> ConnectorHandle {
+    pub fn spawn(inner: Box<dyn oak_channel::Channel>) -> ConnectorHandle {
         // A message based communication channel that permits other parts of the
         // untrusted launcher to send requests to the task that handles communicating
         // with the runtime and receive responses.

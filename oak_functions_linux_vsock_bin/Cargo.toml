@@ -12,7 +12,7 @@ libc = "*"
 oak_remote_attestation = { path = "../oak_remote_attestation", default-features = false, features = [
   "rust-crypto"
 ] }
-oak_baremetal_channel = { path = "../experimental/oak_baremetal_channel" }
+oak_channel = { path = "../oak_channel" }
 oak_functions_freestanding = { path = "../oak_functions_freestanding", default-features = false, features = [
   "rust-crypto"
 ] }

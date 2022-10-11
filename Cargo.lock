@@ -2343,7 +2343,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "oak_baremetal_channel"
+name = "oak_channel"
 version = "0.1.0"
 dependencies = [
  "anyhow",
@@ -2351,15 +2351,6 @@ dependencies = [
  "flatbuffers",
  "oak_idl",
  "static_assertions",
-]
-
-[[package]]
-name = "oak_baremetal_simple_io"
-version = "0.1.0"
-dependencies = [
- "bitflags",
- "sev_guest",
- "x86_64",
 ]
 
 [[package]]
@@ -2485,7 +2476,7 @@ dependencies = [
  "futures",
  "hashbrown 0.12.2",
  "log",
- "oak_baremetal_channel",
+ "oak_channel",
  "oak_functions_loader",
  "oak_idl",
  "oak_idl_gen_services",
@@ -2507,7 +2498,7 @@ dependencies = [
  "anyhow",
  "clap 3.2.10",
  "log",
- "oak_baremetal_channel",
+ "oak_channel",
  "oak_functions_freestanding",
  "oak_remote_attestation",
  "oak_remote_attestation_amd",
@@ -2521,7 +2512,7 @@ dependencies = [
  "assert_matches",
  "clap 3.2.10",
  "libc",
- "oak_baremetal_channel",
+ "oak_channel",
  "oak_functions_freestanding",
  "oak_remote_attestation",
  "prost 0.10.4",
@@ -2844,14 +2835,23 @@ dependencies = [
  "libm 0.1.4",
  "linked_list_allocator",
  "log",
- "oak_baremetal_channel",
- "oak_baremetal_simple_io",
+ "oak_channel",
  "oak_linux_boot_params",
+ "oak_simple_io",
  "rust-hypervisor-firmware-virtio",
  "sev_guest",
  "strum",
  "uart_16550",
  "virtio",
+ "x86_64",
+]
+
+[[package]]
+name = "oak_simple_io"
+version = "0.1.0"
+dependencies = [
+ "bitflags",
+ "sev_guest",
  "x86_64",
 ]
 

@@ -15,7 +15,7 @@
 //
 
 use alloc::collections::VecDeque;
-use oak_baremetal_simple_io::RawSimpleIo;
+use oak_simple_io::RawSimpleIo;
 use sev_guest::io::RawIoPortFactory;
 use x86_64::{PhysAddr, VirtAddr};
 
@@ -75,7 +75,7 @@ impl SimpleIoChannel<'_> {
     }
 }
 
-impl oak_baremetal_channel::Write for SimpleIoChannel<'_> {
+impl oak_channel::Write for SimpleIoChannel<'_> {
     fn write(&mut self, data: &[u8]) -> anyhow::Result<()> {
         let mut start = 0;
         let data_len = data.len();
@@ -92,7 +92,7 @@ impl oak_baremetal_channel::Write for SimpleIoChannel<'_> {
     }
 }
 
-impl oak_baremetal_channel::Read for SimpleIoChannel<'_> {
+impl oak_channel::Read for SimpleIoChannel<'_> {
     fn read(&mut self, data: &mut [u8]) -> anyhow::Result<()> {
         let len = data.len();
         let mut count = 0;

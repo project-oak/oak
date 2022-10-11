@@ -16,7 +16,7 @@
 
 use crate::channel::Channel;
 use assert_matches::assert_matches;
-use oak_baremetal_channel::{Read, Write};
+use oak_channel::{Read, Write};
 use std::io::Cursor;
 
 const TEST_MESSAGE: [u8; 8] = [0, 1, 2, 3, 4, 5, 6, 7];

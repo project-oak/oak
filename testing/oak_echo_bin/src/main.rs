@@ -23,7 +23,7 @@ extern crate alloc;
 use alloc::boxed::Box;
 use core::panic::PanicInfo;
 use log::info;
-use oak_baremetal_channel::Channel;
+use oak_channel::Channel;
 use oak_linux_boot_params::BootParams;
 
 mod asm;
@@ -53,12 +53,12 @@ fn start_echo_server(mut channel: Box<dyn Channel>) -> ! {
         }
     }
     // Starts an echo server that uses the Oak communication channel:
-    // https://github.com/project-oak/oak/blob/main/experimental/oak_baremetal_channel/SPEC.MD
+    // https://github.com/project-oak/oak/blob/main/oak_channel/SPEC.md
     #[cfg(all(feature = "idl_server", not(feature = "raw_server")))]
     {
         let runtime = oak_echo_runtime::RuntimeImplementation::new();
         let service = oak_echo_runtime::schema::EchoRuntime::serve(runtime);
-        oak_baremetal_channel::server::start_blocking_server(channel, service)
+        oak_channel::server::start_blocking_server(channel, service)
             .expect("Runtime encountered an unrecoverable error");
     }
 }
