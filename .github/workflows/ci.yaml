@@ -37,7 +37,7 @@ jobs:
 
     steps:
       - name: Checkout branch
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           fetch-depth: 2
 
@@ -86,7 +86,7 @@ jobs:
       #
       # See https://doc.rust-lang.org/nightly/cargo/guide/cargo-home.html#caching-the-cargo-home-in-ci
       - name: Cache Rust artifacts
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         env:
           # Increment this value to invalidate previous cache entries.
           CACHE_VERSION: 13
@@ -120,7 +120,7 @@ jobs:
       fail-fast: false
     steps:
       - name: Checkout branch
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       # Copied from https://github.com/jens-maus/RaspberryMatic/blob/ea6b8ce0dd2d53ea88b2766ba8d7f8e1d667281f/.github/workflows/ci.yml#L34-L40
       # and https://github.com/actions/virtual-environments/issues/709#issuecomment-612569242
@@ -149,7 +149,7 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
       - name: Checkout branch
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       # Copied from https://github.com/jens-maus/RaspberryMatic/blob/ea6b8ce0dd2d53ea88b2766ba8d7f8e1d667281f/.github/workflows/ci.yml#L34-L40
       # and https://github.com/actions/virtual-environments/issues/709#issuecomment-612569242
