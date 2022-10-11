@@ -14,7 +14,7 @@
 
 use x86_64::PhysAddr;
 
-use crate::Translator;
+use crate::InverseTranslator;
 
 /// Virtio related errors
 #[derive(Debug)]
@@ -28,7 +28,7 @@ pub enum Error {
 
 /// Trait to allow separation of transport from block driver
 pub trait VirtioTransport {
-    fn init<X: Translator>(&mut self, device_type: u32, translate: X) -> Result<(), Error>;
+    fn init<X: InverseTranslator>(&mut self, device_type: u32, translate: X) -> Result<(), Error>;
     fn get_status(&self) -> u32;
     fn set_status(&self, status: u32);
     fn add_status(&self, status: u32);

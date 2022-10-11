@@ -20,7 +20,7 @@ use x86_64::PhysAddr;
 
 use crate::{
     virtio::{Error as VirtioError, VirtioTransport},
-    Translator,
+    InverseTranslator,
 };
 
 // Virtio Version 1 feature bit.
@@ -54,7 +54,7 @@ where
     /// Start Initialising the device.
     ///
     /// See <https://docs.oasis-open.org/virtio/virtio/v1.1/csprd01/virtio-v1.1-csprd01.html#x1-920001>.
-    pub fn start_init<X: Translator>(
+    pub fn start_init<X: InverseTranslator>(
         &mut self,
         device_type: u32,
         translate: X,

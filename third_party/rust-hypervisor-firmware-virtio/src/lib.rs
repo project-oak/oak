@@ -15,5 +15,5 @@ pub mod mem;
 pub mod pci;
 pub mod virtio;
 
-pub trait Translator: Fn(PhysAddr) -> Option<VirtAddr> {}
-impl<X: Fn(PhysAddr) -> Option<VirtAddr>> Translator for X {}
+pub trait InverseTranslator: Fn(PhysAddr) -> Option<VirtAddr> {}
+impl<X: Fn(PhysAddr) -> Option<VirtAddr>> InverseTranslator for X {}
