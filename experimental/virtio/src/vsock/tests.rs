@@ -16,8 +16,8 @@
 
 use super::*;
 use crate::test::{
-    new_legacy_transport, new_transport_small_queue, new_valid_transport, DeviceStatus,
-    TestingTransport, VIRTIO_F_VERSION_1,
+    identity_map, inverse_identity_map, new_legacy_transport, new_transport_small_queue,
+    new_valid_transport, DeviceStatus, TestingTransport, VIRTIO_F_VERSION_1,
 };
 use alloc::vec;
 
@@ -26,15 +26,15 @@ const GUEST_CID: u64 = 3;
 #[test]
 fn test_legacy_device_not_supported() {
     let device = VirtioBaseDevice::new(new_legacy_transport());
-    let mut vsock = VSock::new(device);
-    assert!(vsock.init().is_err());
+    let mut vsock = VSock::new(device, identity_map);
+    assert!(vsock.init(identity_map, inverse_identity_map).is_err());
 }
 
 #[test]
 fn test_max_queue_size_too_small() {
     let device = VirtioBaseDevice::new(new_transport_small_queue());
-    let mut vsock = VSock::new(device);
-    assert!(vsock.init().is_err());
+    let mut vsock = VSock::new(device, identity_map);
+    assert!(vsock.init(identity_map, inverse_identity_map).is_err());
 }
 
 #[test]
@@ -42,8 +42,8 @@ fn test_device_init() {
     let transport = new_configured_transport();
     let config = transport.config.clone();
     let device = VirtioBaseDevice::new(transport);
-    let mut vsock = VSock::new(device);
-    let result = vsock.init();
+    let mut vsock = VSock::new(device, identity_map);
+    let result = vsock.init(identity_map, inverse_identity_map);
     assert!(result.is_ok());
 
     let config = config.lock().unwrap();
@@ -76,8 +76,8 @@ fn test_read_packet() {
     packet.set_src_cid(HOST_CID);
     let transport = new_configured_transport();
     let device = VirtioBaseDevice::new(transport.clone());
-    let mut vsock = VSock::new(device);
-    vsock.init().unwrap();
+    let mut vsock = VSock::new(device, identity_map);
+    vsock.init(identity_map, inverse_identity_map).unwrap();
     transport.device_write_to_queue::<QUEUE_SIZE>(0, packet.as_slice());
     let result = vsock.read_packet().unwrap();
     assert_eq!(packet.as_slice(), result.as_slice());
@@ -89,8 +89,8 @@ fn test_write_packet() {
     let mut packet = Packet::new_data(&data[..], 1, 2).unwrap();
     let transport = new_configured_transport();
     let device = VirtioBaseDevice::new(transport.clone());
-    let mut vsock = VSock::new(device);
-    vsock.init().unwrap();
+    let mut vsock = VSock::new(device, identity_map);
+    vsock.init(identity_map, inverse_identity_map).unwrap();
     vsock.write_packet(&mut packet);
     let bytes = transport
         .device_read_once_from_queue::<QUEUE_SIZE>(1)
