@@ -17,7 +17,7 @@
 #ifndef CC_TFLITE_MICRO_MODEL_H_
 #define CC_TFLITE_MICRO_MODEL_H_
 
-// TODO(b/251098696): Implement a TFLite model that can be called from the Rust runtime.
+// TODO(#3297): Implement a TFLite model that can be called from the Rust runtime.
 namespace oak {}  // namespace oak
 
 #endif  // CC_TFLITE_MICRO_MODEL_H_
