@@ -195,13 +195,14 @@ http_archive(
     urls = ["https://github.com/googleapis/gapic-generator/archive/8e930b79e846b9d4876462be9dc4c1dbc04e2903.zip"],
 )
 
+# TensorFlow Lite for Microcontrollers.
 http_archive(
-    name = "org_tensorflow",
-    sha256 = "4844e49a4d6ed9bceef608ce7f65f41b75e6362b2721c4e0d34a053d58753f42",
-    strip_prefix = "tensorflow-11bed638b14898cdde967f6b108e45732aa4798a",
+    name = "com_github_tensorflow_tflite_micro",
+    sha256 = "922425b778d5c9336b69f7f68b5f76ae7e6834e026d981179259993d1de5476d",
+    strip_prefix = "tflite-micro-3648cf9003d0e2d5658b1add916000ce09a4b427",
     urls = [
-        # Head commit on 2020-01-20.
-        "https://github.com/tensorflow/tensorflow/archive/11bed638b14898cdde967f6b108e45732aa4798a.tar.gz",
+        # Head commit on 2022-10-07.
+        "https://github.com/tensorflow/tflite-micro/archive/3648cf9003d0e2d5658b1add916000ce09a4b427.tar.gz",
     ],
 )
 
@@ -278,13 +279,13 @@ http_archive(
 
 # Bazel rules for Android applications.
 http_archive(
-    name = "rules_android",
+    name = "build_bazel_rules_android",
     sha256 = "cd06d15dd8bb59926e4d65f9003bfc20f9da4b2519985c27e190cddc8b7a7806",
     strip_prefix = "rules_android-0.1.1",
     urls = ["https://github.com/bazelbuild/rules_android/archive/v0.1.1.zip"],
 )
 
-load("@rules_android//android:rules.bzl", "android_ndk_repository", "android_sdk_repository")
+load("@build_bazel_rules_android//android:rules.bzl", "android_ndk_repository", "android_sdk_repository")
 
 android_sdk_repository(
     name = "androidsdk",
@@ -424,10 +425,7 @@ load("@io_bazel_rules_closure//closure:defs.bzl", "closure_repositories")
 
 closure_repositories()
 
-# Do not use `tf_workspace()` - it interferes with c-ares in gRPC loaded and patched
-# and causes missing `ares.h` error.
-# https://github.com/tensorflow/tensorflow/blob/25a06bc503c7d07ffc5480ac107e3c8681937971/tensorflow/workspace.bzl#L970-L975
-load("@org_tensorflow//tensorflow:workspace.bzl", "tf_repositories")
+load("@com_github_tensorflow_tflite_micro//tensorflow:workspace.bzl", "tf_repositories")
 
 tf_repositories()
 
