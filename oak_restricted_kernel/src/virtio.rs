@@ -14,10 +14,11 @@
 // limitations under the License.
 //
 
+use crate::mm::page_tables::DirectMap;
 use log::info;
 use oak_baremetal_channel::{Read, Write};
 use rust_hypervisor_firmware_virtio::pci::VirtioPciTransport;
-use x86_64::{PhysAddr, VirtAddr};
+use x86_64::{structures::paging::mapper::Translate, PhysAddr, VirtAddr};
 
 // The virtio vsock port on which to listen.
 #[cfg(feature = "vsock_channel")]
@@ -49,10 +50,12 @@ where
 }
 
 #[cfg(feature = "virtio_console_channel")]
-pub fn get_console_channel() -> Channel<virtio::console::Console<VirtioPciTransport>> {
+pub fn get_console_channel(
+    mapper: &DirectMap,
+) -> Channel<virtio::console::Console<VirtioPciTransport>> {
     let console = virtio::console::Console::find_and_configure_device(
-        |vaddr: VirtAddr| Some(PhysAddr::new(vaddr.as_u64())),
-        |paddr: PhysAddr| Some(VirtAddr::new(paddr.as_u64())),
+        |vaddr: VirtAddr| (mapper as &dyn Translate).translate_addr(vaddr),
+        |paddr: PhysAddr| mapper.translate_addr(paddr),
     )
     .expect("Couldn't configure PCI virtio console device.");
     info!("Console device status: {}", console.get_status());
@@ -60,10 +63,12 @@ pub fn get_console_channel() -> Channel<virtio::console::Console<VirtioPciTransp
 }
 
 #[cfg(feature = "vsock_channel")]
-pub fn get_vsock_channel() -> Channel<virtio::vsock::socket::Socket<VirtioPciTransport>> {
+pub fn get_vsock_channel(
+    mapper: &DirectMap,
+) -> Channel<virtio::vsock::socket::Socket<VirtioPciTransport>> {
     let vsock = virtio::vsock::VSock::find_and_configure_device(
-        |vaddr: VirtAddr| Some(PhysAddr::new(vaddr.as_u64())),
-        |paddr: PhysAddr| Some(VirtAddr::new(paddr.as_u64())),
+        |vaddr: VirtAddr| (mapper as &dyn Translate).translate_addr(vaddr),
+        |paddr: PhysAddr| mapper.translate_addr(paddr),
     )
     .expect("Couldn't configure PCI virtio vsock device.");
     info!("Socket device status: {}", vsock.get_status());

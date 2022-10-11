@@ -14,10 +14,11 @@
 // limitations under the License.
 //
 
+use crate::mm::page_tables::DirectMap;
 use alloc::collections::VecDeque;
 use oak_baremetal_simple_io::RawSimpleIo;
 use sev_guest::io::RawIoPortFactory;
-use x86_64::{PhysAddr, VirtAddr};
+use x86_64::{structures::paging::Translate, VirtAddr};
 
 /// A communications channel using a simple IO device.
 pub struct SimpleIoChannel<'a> {
@@ -30,10 +31,10 @@ pub struct SimpleIoChannel<'a> {
 }
 
 impl SimpleIoChannel<'_> {
-    pub fn new() -> Self {
+    pub fn new(mapper: &DirectMap) -> Self {
         let io_port_factory = RawIoPortFactory;
         let device = RawSimpleIo::new_with_defaults(io_port_factory, |vaddr: VirtAddr| {
-            Some(PhysAddr::new(vaddr.as_u64()))
+            (mapper as &dyn Translate).translate_addr(vaddr)
         })
         .expect("couldn't create IO device");
         let pending_data = None;
