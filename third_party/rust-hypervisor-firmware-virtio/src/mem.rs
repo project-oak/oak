@@ -14,22 +14,32 @@
 
 #![allow(dead_code)]
 
-#[derive(Default)]
+use x86_64::VirtAddr;
+
 /// Provides a checked way to access memory offsets from a range of raw memory
 pub struct MemoryRegion {
-    base: u64,
+    base: VirtAddr,
     length: u64,
 }
 
+impl Default for MemoryRegion {
+    fn default() -> Self {
+        Self {
+            base: VirtAddr::zero(),
+            length: Default::default(),
+        }
+    }
+}
+
 impl MemoryRegion {
-    pub const fn new(base: u64, length: u64) -> MemoryRegion {
+    pub const fn new(base: VirtAddr, length: u64) -> MemoryRegion {
         MemoryRegion { base, length }
     }
 
     /// Read a value at given offset with a mechanism suitable for MMIO
     fn io_read<T>(&self, offset: u64) -> T {
         assert!((offset + (core::mem::size_of::<T>() - 1) as u64) < self.length);
-        unsafe { core::ptr::read_volatile((self.base + offset) as *const T) }
+        unsafe { core::ptr::read_volatile((self.base + offset).as_ptr()) }
     }
 
     /// Read a single byte at given offset with a mechanism suitable for MMIO
@@ -56,7 +66,7 @@ impl MemoryRegion {
     fn io_write<T>(&self, offset: u64, value: T) {
         assert!((offset + (core::mem::size_of::<T>() - 1) as u64) < self.length);
         unsafe {
-            core::ptr::write_volatile((self.base + offset) as *mut T, value);
+            core::ptr::write_volatile((self.base + offset).as_mut_ptr(), value);
         }
     }
 

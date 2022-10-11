@@ -18,7 +18,10 @@
 
 use x86_64::PhysAddr;
 
-use crate::virtio::{Error as VirtioError, VirtioTransport};
+use crate::{
+    virtio::{Error as VirtioError, VirtioTransport},
+    Translator,
+};
 
 // Virtio Version 1 feature bit.
 // See <https://docs.oasis-open.org/virtio/virtio/v1.1/csprd01/virtio-v1.1-csprd01.html#x1-4100006>.
@@ -51,9 +54,13 @@ where
     /// Start Initialising the device.
     ///
     /// See <https://docs.oasis-open.org/virtio/virtio/v1.1/csprd01/virtio-v1.1-csprd01.html#x1-920001>.
-    pub fn start_init(&mut self, device_type: u32) -> Result<(), VirtioError> {
+    pub fn start_init<X: Translator>(
+        &mut self,
+        device_type: u32,
+        translate: X,
+    ) -> Result<(), VirtioError> {
         // Initialise the transport.
-        self.transport.init(device_type)?;
+        self.transport.init(device_type, translate)?;
 
         // Reset device.
         self.transport.set_status(VIRTIO_STATUS_RESET);
