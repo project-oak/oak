@@ -1,6 +1,6 @@
 attribute "method_id";
 
-rpc_service TensorflowRuntime {
+rpc_service TensorflowService {
     Initialize(InitializeRequest) : InitializeResponse (method_id: 0);
     Invoke(InvokeRequest) : InvokeResponse (method_id: 1);
 }
