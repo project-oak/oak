@@ -34,9 +34,9 @@ use self::page_tables::DirectMap;
 
 mod bitmap_frame_allocator;
 pub mod frame_allocator;
-mod page_tables;
+pub mod page_tables;
 
-const DIRECT_MAPPING_OFFSET: VirtAddr = VirtAddr::new_truncate(0x0000_0000_0000_0000);
+const DIRECT_MAPPING_OFFSET: VirtAddr = VirtAddr::new_truncate(0xFFFF_8800_0000_0000);
 
 pub fn init<const N: usize>(
     memory_map: &[BootE820Entry],
@@ -127,19 +127,23 @@ pub fn init<const N: usize>(
 /// The memory layout we follow is largely based on the Linux layout
 /// (<https://www.kernel.org/doc/Documentation/x86/x86_64/mm.txt>):
 ///
-/// | Start address       | Offset  | End address         | Size   | Description                 |
-/// |---------------------|---------|---------------------|--------|-----------------------------|
-/// | 0000_0000_0000_0000 |    0    | 0000_7FFF_FFFF_FFFF | 128 TB | User space                  |
-/// | 0000_8000_0000_0000 | +128 TB | FFFF_7FFF_FFFF_FFFF |  16 EB | Non-canonical addresses, up |
-/// |                     |         |                     |        | to -128 TB                  |
-/// | FFFF_8000_0000_0000 | -128 TB | FFFF_FFFF_7FFF_FFFF |~128 TB | ... unused hole             |
-/// | FFFF_FFFF_8000_0000 |   -2 GB | FFFF_FFFF_FFFF_FFFF |   2 GB | Kernel code                 |
+/// | Start address       |  Offset  | End address         |  Size   | Description                 |
+/// |---------------------|----------|---------------------|---------|-----------------------------|
+/// | 0000_0000_0000_0000 |     0    | 0000_7FFF_FFFF_FFFF |  128 TB | User space                  |
+/// | 0000_8000_0000_0000 |  +128 TB | FFFF_7FFF_FFFF_FFFF |   16 EB | Non-canonical addresses, up |
+/// |                     |          |                     |         | to -128 TB                  |
+/// | FFFF_8000_0000_0000 |  -128 TB | FFFF_87FF_FFFF_FFFF |    8 TB | ... unused hole             |
+/// | FFFF_8800_0000_0000 |  -120 TB | FFFF_881F_FFFF_FFFF |  128 GB | direct mapping of all       |
+/// |                     |          |                     |         | physical memory             |
+/// | FFFF_8820_0000_0000 | ~-120 TB | FFFF_FFFF_7FFF_FFFF | ~120 TB | ... unused hole             |
+/// | FFFF_FFFF_8000_0000 |    -2 GB | FFFF_FFFF_FFFF_FFFF |    2 GB | Kernel code                 |
 pub fn init_paging<A: FrameAllocator<Size4KiB> + ?Sized>(
     frame_allocator: &mut A,
     program_headers: &[ProgramHeader],
 ) -> Result<DirectMap<'static>, &'static str> {
     // Safety: this expects the frame allocator to be initialized and the memory region it's handing
     // memory out of to be identity mapped. This is true for the lower 2 GiB after we boot.
+    // This reference will no longer be valid after we reload the page tables!
     let pml4_frame = frame_allocator
         .allocate_frame()
         .ok_or("Could not allocate a frame for PML4")?;
@@ -177,10 +181,19 @@ pub fn init_paging<A: FrameAllocator<Size4KiB> + ?Sized>(
 
     // Safety: the new page tables keep the identity mapping at -2GB intact, so it's safe to load
     // the new page tables.
+    // This validates any references that expect boot page tables to be valid!
     unsafe {
         Efer::update(|flags| flags.insert(EferFlags::NO_EXECUTE_ENABLE));
         Cr3::write(pml4_frame, Cr3Flags::empty());
     }
+
+    // Reload the pml4 reference based on the `DIRECT_MAPPING_OFFSET` value, in case the offset is
+    // not zero and the reference is no longer valid.
+    // Safety: we've reloaded page tables that place the direct mapping region at that offset, so
+    // the memory location is safe to access now.
+    let pml4 =
+        unsafe { &mut *(DIRECT_MAPPING_OFFSET + pml4_frame.start_address().as_u64()).as_mut_ptr() };
+
     Ok(DirectMap(unsafe {
         OffsetPageTable::new(pml4, DIRECT_MAPPING_OFFSET)
     }))

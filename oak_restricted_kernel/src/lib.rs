@@ -61,6 +61,8 @@ use x86_64::{
     VirtAddr,
 };
 
+use crate::mm::page_tables::DirectMap;
+
 /// Main entry point for the kernel, to be called from bootloader.
 pub fn start_kernel(info: &BootParams) -> Box<dyn Channel> {
     avx::enable_avx();
@@ -84,17 +86,17 @@ pub fn start_kernel(info: &BootParams) -> Box<dyn Channel> {
     // Physical frame allocator: support up to 128 GiB of memory, for now.
     let mut frame_allocator = mm::init::<1024>(info.e820_table(), program_headers);
 
-    let translate = mm::init_paging(&mut frame_allocator, program_headers).unwrap();
+    let mapper = mm::init_paging(&mut frame_allocator, program_headers).unwrap();
 
     // If we don't find memory for heap, it's ok to panic.
     let heap_phys_frames = frame_allocator.largest_available().unwrap();
     memory::init_allocator::<Size2MiB>(Page::range(
-        translate.translate_frame(heap_phys_frames.start).unwrap(),
-        translate.translate_frame(heap_phys_frames.end + 1).unwrap(),
+        mapper.translate_frame(heap_phys_frames.start).unwrap(),
+        mapper.translate_frame(heap_phys_frames.end + 1).unwrap(),
     ))
     .unwrap();
 
-    get_channel(&kernel_args)
+    get_channel(&kernel_args, &mapper)
 }
 
 #[derive(EnumIter, EnumString)]
@@ -111,7 +113,7 @@ enum ChannelType {
 }
 
 /// Create a channel for communicating with the Untrusted Launcher.
-fn get_channel(kernel_args: &args::Args) -> Box<dyn Channel> {
+fn get_channel(kernel_args: &args::Args, mapper: &DirectMap) -> Box<dyn Channel> {
     // If we weren't told which channel to use, arbitrarily pick the first one in the `ChannelType`
     // enum. Depending on features that are enabled, this means that the enum acts as kind of a
     // reverse priority list for defaults.
@@ -122,13 +124,13 @@ fn get_channel(kernel_args: &args::Args) -> Box<dyn Channel> {
 
     match chan_type {
         #[cfg(feature = "virtio_console_channel")]
-        ChannelType::VirtioConsole => Box::new(virtio::get_console_channel()),
+        ChannelType::VirtioConsole => Box::new(virtio::get_console_channel(mapper)),
         #[cfg(feature = "vsock_channel")]
-        ChannelType::VirtioVsock => Box::new(virtio::get_vsock_channel()),
+        ChannelType::VirtioVsock => Box::new(virtio::get_vsock_channel(mapper)),
         #[cfg(feature = "serial_channel")]
         ChannelType::Serial => Box::new(serial::Serial::new()),
         #[cfg(feature = "simple_io_channel")]
-        ChannelType::SimpleIo => Box::new(simpleio::SimpleIoChannel::new()),
+        ChannelType::SimpleIo => Box::new(simpleio::SimpleIoChannel::new(mapper)),
     }
 }
 
