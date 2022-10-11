@@ -27,23 +27,29 @@ use x86_64::{
     PhysAddr, VirtAddr,
 };
 
-/// The default I/O port to use for the most significant bytes of the output buffer guest-physical
-/// address.
-pub const DEFAULT_OUTPUT_BUFFER_MSB_PORT: u16 = 0x6421;
-/// The default I/O port to use for the least significant bytes of the output buffer guest-physical
-/// address.
-pub const DEFAULT_OUTPUT_BUFFER_LSB_PORT: u16 = 0x6422;
-/// The default I/O port to use for the length of output messages.
-pub const DEFAULT_OUTPUT_LENGTH_PORT: u16 = 0x6423;
+/// I/O port descriptor for a buffer.
+pub struct BufferDescriptor {
+    /// I/O port to use for the most significant bytes of the buffer guest-physical address.
+    buffer_msb_port: u16,
+    /// I/O port to use for the least significant bytes of the buffer guest-physical address.
+    buffer_lsb_port: u16,
+    /// I/O port to use for length of output messages.
+    length_port: u16,
+}
 
-/// The default I/O port to use for the most significant bytes of the input buffer guest-physical
-/// address.
-pub const DEFAULT_INPUT_BUFFER_MSB_PORT: u16 = 0x6424;
-/// The default I/O port to use for the least significant bytes of the input buffer guest-physical
-/// address.
-pub const DEFAULT_INPUT_BUFFER_LSB_PORT: u16 = 0x6425;
-/// The default I/O port to use for the length of input messages.
-pub const DEFAULT_INPUT_LENGTH_PORT: u16 = 0x6426;
+/// Default I/O ports for the output buffer.
+pub const DEFAULT_OUTPUT_BUFFER: BufferDescriptor = BufferDescriptor {
+    buffer_msb_port: 0x6421,
+    buffer_lsb_port: 0x6422,
+    length_port: 0x6423,
+};
+
+/// Default I/O ports for the input buffer.
+pub const DEFAULT_INPUT_BUFFER: BufferDescriptor = BufferDescriptor {
+    buffer_msb_port: 0x6424,
+    buffer_lsb_port: 0x6425,
+    length_port: 0x6426,
+};
 
 /// The length of the buffer that will be used for output messages.
 pub const OUTPUT_BUFFER_LEGNTH: usize = 4096;
@@ -52,6 +58,10 @@ pub const INPUT_BUFFER_LEGNTH: usize = 4096;
 
 /// A Simple IO device implementation that uses direct port-based IO.
 pub type RawSimpleIo<'a> = SimpleIo<'a, PortReadOnly<u32>, PortWriteOnly<u32>>;
+
+/// Memory address translation function.
+pub trait Translator: Fn(VirtAddr) -> Option<PhysAddr> {}
+impl<X: Fn(VirtAddr) -> Option<PhysAddr>> Translator for X {}
 
 /// The simple I/O channel driver implementation.
 pub struct SimpleIo<'a, R: PortReader<u32> + 'a, W: PortWriter<u32> + 'a> {
@@ -67,31 +77,30 @@ where
     R: PortReader<u32> + 'a,
     W: PortWriter<u32> + 'a,
 {
-    pub fn new<F: IoPortFactory<'a, u32, R, W>>(
+    pub fn new<F: IoPortFactory<'a, u32, R, W>, VP: Translator>(
         io_port_factory: F,
-        output_buffer_msb_port: u16,
-        output_buffer_lsb_port: u16,
-        output_length_port: u16,
-        input_buffer_msb_port: u16,
-        input_buffer_lsb_port: u16,
-        input_length_port: u16,
+        translate: VP,
+        output: BufferDescriptor,
+        input: BufferDescriptor,
     ) -> Result<Self, &'static str> {
         let output_buffer = vec![0; OUTPUT_BUFFER_LEGNTH];
         let input_buffer = vec![0; INPUT_BUFFER_LEGNTH];
-        let output_length_port = io_port_factory.new_writer(output_length_port);
-        let input_length_port = io_port_factory.new_reader(input_length_port);
+        let output_length_port = io_port_factory.new_writer(output.length_port);
+        let input_length_port = io_port_factory.new_reader(input.length_port);
 
         write_address(
             &io_port_factory,
-            VirtAddr::from_ptr(output_buffer.as_ptr()),
-            output_buffer_msb_port,
-            output_buffer_lsb_port,
+            translate(VirtAddr::from_ptr(output_buffer.as_ptr()))
+                .ok_or("Failed to translate VirtAddr to PhysAddr")?,
+            output.buffer_msb_port,
+            output.buffer_lsb_port,
         )?;
         write_address(
             &io_port_factory,
-            VirtAddr::from_ptr(input_buffer.as_ptr()),
-            input_buffer_msb_port,
-            input_buffer_lsb_port,
+            translate(VirtAddr::from_ptr(input_buffer.as_ptr()))
+                .ok_or("Failed to translate VirtAddr to PhysAddr")?,
+            input.buffer_msb_port,
+            input.buffer_lsb_port,
         )?;
 
         Ok(Self {
@@ -103,17 +112,15 @@ where
         })
     }
 
-    pub fn new_with_defaults<F: IoPortFactory<'a, u32, R, W>>(
+    pub fn new_with_defaults<F: IoPortFactory<'a, u32, R, W>, VP: Translator>(
         io_port_factory: F,
+        translate: VP,
     ) -> Result<Self, &'static str> {
         SimpleIo::new(
             io_port_factory,
-            DEFAULT_OUTPUT_BUFFER_MSB_PORT,
-            DEFAULT_OUTPUT_BUFFER_LSB_PORT,
-            DEFAULT_OUTPUT_LENGTH_PORT,
-            DEFAULT_INPUT_BUFFER_MSB_PORT,
-            DEFAULT_INPUT_BUFFER_LSB_PORT,
-            DEFAULT_INPUT_LENGTH_PORT,
+            translate,
+            DEFAULT_OUTPUT_BUFFER,
+            DEFAULT_INPUT_BUFFER,
         )
     }
 
@@ -173,12 +180,12 @@ fn write_address<
     F: IoPortFactory<'a, u32, R, W>,
 >(
     io_port_factory: &F,
-    buffer_pointer: VirtAddr,
+    buffer_pointer: PhysAddr,
     msb_port: u16,
     lsb_port: u16,
 ) -> Result<(), &'static str> {
     // Split the 64-bit address into its least- and most significant bytes.
-    let address = get_guest_physical_address(buffer_pointer).as_u64();
+    let address = buffer_pointer.as_u64();
     let address_msb = (address >> 32) as u32;
     let address_lsb = address as u32;
     // Safety: this usage is safe, as we as only write uninterpreted u32 values to the ports.
@@ -188,9 +195,4 @@ fn write_address<
             .try_write(address_msb)?;
         io_port_factory.new_writer(lsb_port).try_write(address_lsb)
     }
-}
-
-fn get_guest_physical_address(pointer: VirtAddr) -> PhysAddr {
-    // Assume identity mapping for now.
-    PhysAddr::new(pointer.as_u64())
 }
