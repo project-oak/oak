@@ -61,7 +61,7 @@ fn main() -> ! {
         AttestationBehavior::create(PlaceholderAmdAttestationGenerator, EmptyAttestationVerifier);
     let channel = Box::new(socket);
     let runtime = oak_functions_freestanding::RuntimeImplementation::new(attestation_behavior);
-    oak_baremetal_channel::server::start_blocking_server(
+    oak_channel::server::start_blocking_server(
         channel,
         oak_functions_freestanding::schema::TrustedRuntime::serve(runtime),
     )

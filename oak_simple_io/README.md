@@ -1,7 +1,7 @@
 # Simple I/O Channel
 
-This library provides a simple guest driver that can be used as a communications
-channel between a bare-metal guest VM and the host.
+This library provides a simple `no_std` compatible guest driver that can be used
+as a communications channel between a bare-metal guest VM and the host.
 
 The communication is based on shared memory. There are two separate channels,
 one for input and one for output. Each channel has one buffer in shared memory.

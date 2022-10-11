@@ -2,7 +2,7 @@
 
 Untrusted companion app that loads the Oak Functions binary in either QEMU or
 crosvm, and exposes a gRPC server for communicating with the binary.
-Communicates with the binary via the `oak_baremetal_channel`.
+Communicates with the binary via the `oak_channel`.
 
 ## Starting the binary
 

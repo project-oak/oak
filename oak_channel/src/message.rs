@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-//! Implements the message layer as defined in /experimental/oak_baremetal_channel/SPEC.MD
+//! Implements the message layer as defined in `/oak_channel/SPEC.md`.
 
 use alloc::vec::Vec;
 
@@ -49,7 +49,7 @@ pub trait Message {
 }
 
 /// Rust implementation of the Request Message structure defined in
-/// /experimental/oak_baremetal_channel/SPEC.MD
+/// `/oak_channel/SPEC.md`
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct RequestMessage {
     pub invocation_id: InvocationId,
@@ -107,7 +107,7 @@ impl Message for RequestMessage {
 }
 
 /// Rust implementation of the Response Message structure defined in
-/// /experimental/oak_baremetal_channel/SPEC.MD
+/// `/oak_channel/SPEC.md`.
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct ResponseMessage {
     pub invocation_id: InvocationId,

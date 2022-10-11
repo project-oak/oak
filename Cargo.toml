@@ -1,8 +1,6 @@
 [workspace]
 resolver = "2"
 members = [
-  "experimental/oak_baremetal_channel",
-  "experimental/oak_baremetal_simple_io",
   "experimental/offline_attestation/client",
   "experimental/offline_attestation/server",
   "experimental/offline_attestation/shared",
@@ -11,6 +9,7 @@ members = [
   "experimental/vsock/echo",
   "experimental/web_client",
   "linux_boot_params",
+  "oak_channel",
   "oak_functions/abi",
   "oak_functions/client/rust",
   "oak_functions/examples/benchmark/module",
@@ -50,6 +49,7 @@ members = [
   "oak_restricted_kernel",
   "oak_tensorflow_runtime",
   "sev_serial",
+  "oak_simple_io",
   "testing/oak_echo_runtime",
   "trusted_shuffler/backend",
   "trusted_shuffler/client",

@@ -16,7 +16,7 @@ simple_io_channel = ["oak_restricted_kernel/simple_io_channel"]
 
 [dependencies]
 log = "*"
-oak_baremetal_channel = { path = "../experimental/oak_baremetal_channel" }
+oak_channel = { path = "../oak_channel" }
 oak_restricted_kernel = { path = "../oak_restricted_kernel", default-features = false }
 oak_functions_freestanding = { path = "../oak_functions_freestanding", default-features = false, features = [
   "rust-crypto"

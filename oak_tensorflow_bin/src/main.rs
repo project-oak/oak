@@ -23,7 +23,7 @@ extern crate alloc;
 use alloc::boxed::Box;
 use core::panic::PanicInfo;
 use log::info;
-use oak_baremetal_channel::Channel;
+use oak_channel::Channel;
 use oak_linux_boot_params::BootParams;
 
 mod asm;
@@ -38,7 +38,7 @@ pub extern "C" fn rust64_start(_rdi: u64, rsi: &BootParams) -> ! {
 fn start_server(channel: Box<dyn Channel>) -> ! {
     let runtime = oak_tensorflow_runtime::RuntimeImplementation::new();
     let service = oak_tensorflow_runtime::schema::TensorflowRuntime::serve(runtime);
-    oak_baremetal_channel::server::start_blocking_server(channel, service)
+    oak_channel::server::start_blocking_server(channel, service)
         .expect("Runtime encountered an unrecoverable error");
 }
 

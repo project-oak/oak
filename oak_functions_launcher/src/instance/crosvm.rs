@@ -111,12 +111,12 @@ impl LaunchedInstance for Instance {
         self.wait().await
     }
 
-    async fn create_comms_channel(&self) -> Result<Box<dyn oak_baremetal_channel::Channel>> {
+    async fn create_comms_channel(&self) -> Result<Box<dyn oak_channel::Channel>> {
         // The vsock channel can only be created after the VM is booted. Hence
         // we try a few times to connect, in case the VM is currently starting
         // up. If no connetion is established after a while, we timeout.
         let task = tokio::spawn(async {
-            let stream: Box<dyn oak_baremetal_channel::Channel> = loop {
+            let stream: Box<dyn oak_channel::Channel> = loop {
                 match VsockStream::connect_with_cid_port(VSOCK_GUEST_CID, VSOCK_GUEST_PORT) {
                     Ok(stream) => {
                         break Box::new(stream);

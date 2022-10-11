@@ -32,9 +32,7 @@ tonic-web = { version = "*", optional = true }
 vsock = "*"
 oak_remote_attestation_sessions = { path = "../oak_remote_attestation_sessions" }
 oak_idl = { path = "../oak_idl" }
-oak_baremetal_channel = { path = "../experimental/oak_baremetal_channel", features = [
-  "client"
-] }
+oak_channel = { path = "../oak_channel", features = ["client"] }
 oak_functions_loader = { path = "../oak_functions/loader" }
 hashbrown = "*"
 flatbuffers = "*"

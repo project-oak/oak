@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-//! Implements the frame layer as defined in /experimental/oak_baremetal_channel/SPEC.MD
+//! Implements the frame layer as defined in `/oak_channel/SPEC.md`.
 
 extern crate alloc;
 
@@ -48,7 +48,7 @@ pub const MAX_SIZE: usize = 4000;
 pub const MAX_BODY_SIZE: usize = MAX_SIZE - BODY_OFFSET;
 
 /// Rust implementation of the Frame structure defined in
-/// /experimental/oak_baremetal_channel/SPEC.MD
+/// `/oak_channel/SPEC.md`.
 #[derive(Clone, Default, Debug)]
 pub struct Frame {
     pub flags: Flags,

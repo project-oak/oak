@@ -10,7 +10,7 @@ default = ["vsock_channel"]
 virtio_console_channel = ["virtio"]
 vsock_channel = ["virtio"]
 serial_channel = []
-simple_io_channel = ["oak_baremetal_simple_io", "sev_guest"]
+simple_io_channel = ["oak_simple_io", "sev_guest"]
 
 [dependencies]
 anyhow = { version = "*", default-features = false }
@@ -26,8 +26,8 @@ lazy_static = { version = "*", features = ["spin_no_std"] }
 linked_list_allocator = { version = "*" }
 log = "*"
 libm = "*"
-oak_baremetal_channel = { path = "../experimental/oak_baremetal_channel" }
-oak_baremetal_simple_io = { path = "../experimental/oak_baremetal_simple_io", optional = true }
+oak_channel = { path = "../oak_channel" }
+oak_simple_io = { path = "../oak_simple_io", optional = true }
 oak_linux_boot_params = { path = "../linux_boot_params" }
 rust-hypervisor-firmware-virtio = { path = "../third_party/rust-hypervisor-firmware-virtio" }
 sev_guest = { path = "../experimental/sev_guest", optional = true }

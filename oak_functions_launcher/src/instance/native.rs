@@ -75,7 +75,7 @@ impl LaunchedInstance for Instance {
         self.wait().await
     }
 
-    async fn create_comms_channel(&self) -> Result<Box<dyn oak_baremetal_channel::Channel>> {
+    async fn create_comms_channel(&self) -> Result<Box<dyn oak_channel::Channel>> {
         let comms_host = self.comms_host.try_clone()?;
         Ok(Box::new(comms_host))
     }
