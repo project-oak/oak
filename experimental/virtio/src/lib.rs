@@ -22,6 +22,8 @@
 #![no_std]
 #![feature(let_chains)]
 
+use x86_64::{PhysAddr, VirtAddr};
+
 extern crate alloc;
 #[cfg(test)]
 extern crate std;
@@ -55,3 +57,9 @@ pub trait Write {
 
 /// The vendor ID for virtio PCI devices.
 const PCI_VENDOR_ID: u16 = 0x1AF4;
+
+/// Memory address translation functions.
+pub trait Translator: Fn(VirtAddr) -> Option<PhysAddr> {}
+impl<X: Fn(VirtAddr) -> Option<PhysAddr>> Translator for X {}
+pub trait InverseTranslator: Fn(PhysAddr) -> Option<VirtAddr> {}
+impl<X: Fn(PhysAddr) -> Option<VirtAddr>> InverseTranslator for X {}

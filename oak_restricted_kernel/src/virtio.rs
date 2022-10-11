@@ -17,6 +17,7 @@
 use log::info;
 use oak_baremetal_communication_channel::{Read, Write};
 use rust_hypervisor_firmware_virtio::pci::VirtioPciTransport;
+use x86_64::{PhysAddr, VirtAddr};
 
 // The virtio vsock port on which to listen.
 #[cfg(feature = "vsock_channel")]
@@ -49,16 +50,22 @@ where
 
 #[cfg(feature = "virtio_console_channel")]
 pub fn get_console_channel() -> Channel<virtio::console::Console<VirtioPciTransport>> {
-    let console = virtio::console::Console::find_and_configure_device()
-        .expect("Couldn't configure PCI virtio console device.");
+    let console = virtio::console::Console::find_and_configure_device(
+        |vaddr: VirtAddr| Some(PhysAddr::new(vaddr.as_u64())),
+        |paddr: PhysAddr| Some(VirtAddr::new(paddr.as_u64())),
+    )
+    .expect("Couldn't configure PCI virtio console device.");
     info!("Console device status: {}", console.get_status());
     Channel { inner: console }
 }
 
 #[cfg(feature = "vsock_channel")]
 pub fn get_vsock_channel() -> Channel<virtio::vsock::socket::Socket<VirtioPciTransport>> {
-    let vsock = virtio::vsock::VSock::find_and_configure_device()
-        .expect("Couldn't configure PCI virtio vsock device.");
+    let vsock = virtio::vsock::VSock::find_and_configure_device(
+        |vaddr: VirtAddr| Some(PhysAddr::new(vaddr.as_u64())),
+        |paddr: PhysAddr| Some(VirtAddr::new(paddr.as_u64())),
+    )
+    .expect("Couldn't configure PCI virtio vsock device.");
     info!("Socket device status: {}", vsock.get_status());
     let listener = virtio::vsock::socket::SocketListener::new(vsock, VSOCK_PORT);
     Channel {

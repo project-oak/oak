@@ -297,3 +297,11 @@ pub fn new_transport_small_queue() -> TestingTransport {
     transport.config.lock().unwrap().max_queue_size = 8;
     transport
 }
+
+pub fn identity_map(addr: VirtAddr) -> Option<PhysAddr> {
+    Some(PhysAddr::new(addr.as_u64()))
+}
+
+pub fn inverse_identity_map(addr: PhysAddr) -> Option<VirtAddr> {
+    Some(VirtAddr::new(addr.as_u64()))
+}

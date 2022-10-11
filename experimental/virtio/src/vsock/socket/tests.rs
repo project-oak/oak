@@ -16,7 +16,7 @@
 
 use super::*;
 use crate::{
-    test::{new_valid_transport, TestingTransport},
+    test::{identity_map, inverse_identity_map, new_valid_transport, TestingTransport},
     vsock::{HOST_CID, QUEUE_SIZE},
     Read, Write,
 };
@@ -176,8 +176,8 @@ fn new_vsock_and_transport() -> (VSock<TestingTransport>, TestingTransport) {
     transport.write_device_config(0, GUEST_CID as u32);
 
     let device = VirtioBaseDevice::new(transport.clone());
-    let mut vsock = VSock::new(device);
-    vsock.init().unwrap();
+    let mut vsock = VSock::new(device, identity_map);
+    vsock.init(identity_map, inverse_identity_map).unwrap();
 
     (vsock, transport)
 }
