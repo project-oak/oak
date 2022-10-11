@@ -14,7 +14,13 @@
 // limitations under the License.
 //
 
+use std::{path::PathBuf, process::Command};
+
 const SCHEMA: &str = "schema.fbs";
+const TFLITE_LIBRARY_NAME: &str = "tflite-micro";
+const TFLITE_BUILD_TARGET: &str = "//cc/tflite_micro:tflite-micro";
+// TODO(#3297): Get workspace path from environment variables.
+const TFLITE_LIBRARY_DIR: &str = "/workspace/bazel-bin/cc/tflite_micro/";
 
 fn main() {
     println!("cargo:rerun-if-changed={}", SCHEMA);
@@ -26,4 +32,27 @@ fn main() {
     // As long the generated client code is only used in tests it won't be
     // included in any binaries.
     oak_idl_gen_services::compile_services_clients(SCHEMA);
+
+    build_tflite();
+}
+
+/// Builds TensorFlow Lite static library and adds the corresponding build
+/// directory to the library search path.
+fn build_tflite() {
+    let status = Command::new("bazel")
+        .arg("build")
+        .arg(TFLITE_BUILD_TARGET)
+        .status()
+        .expect("Failed to run bazel build");
+    if !status.success() {
+        panic!("Failed to run bazel build: exit status is {}", status);
+    }
+
+    // Add TensorFlow Lite build directory to the library search path.
+    println!("cargo:rustc-link-search={}", TFLITE_LIBRARY_DIR);
+
+    // Rerun build.rs if TensorFlow Lite library has been changed.
+    let library_path =
+        PathBuf::from(TFLITE_LIBRARY_DIR).join(format!("lib{}.a", TFLITE_LIBRARY_NAME));
+    println!("cargo:rerun-if-changed={}", library_path.display());
 }
