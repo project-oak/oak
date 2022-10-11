@@ -20,7 +20,7 @@ use bitflags::bitflags;
 use core::mem::size_of;
 use rust_hypervisor_firmware_virtio::virtio::{Error, VirtioTransport};
 use std::sync::Mutex;
-use x86_64::PhysAddr;
+use x86_64::{PhysAddr, VirtAddr};
 
 /// Virtio Version 1 feature bit.
 /// See <https://docs.oasis-open.org/virtio/virtio/v1.1/csprd01/virtio-v1.1-csprd01.html#x1-4100006>.
@@ -178,7 +178,11 @@ impl TestingTransport {
 }
 
 impl VirtioTransport for TestingTransport {
-    fn init(&mut self, _device_type: u32) -> Result<(), Error> {
+    fn init<X: Fn(PhysAddr) -> Option<VirtAddr>>(
+        &mut self,
+        _device_type: u32,
+        _translator: X,
+    ) -> Result<(), Error> {
         Ok(())
     }
 

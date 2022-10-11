@@ -22,6 +22,7 @@ use x86_64::{
 use crate::{
     mem,
     virtio::{Error as VirtioError, VirtioTransport},
+    Translator,
 };
 
 const MAX_DEVICES: u8 = 32;
@@ -117,10 +118,18 @@ impl Default for PciBarType {
     }
 }
 
-#[derive(Default)]
 struct PciBar {
     bar_type: PciBarType,
-    address: u64,
+    address: PhysAddr,
+}
+
+impl Default for PciBar {
+    fn default() -> Self {
+        Self {
+            bar_type: Default::default(),
+            address: PhysAddr::zero(),
+        }
+    }
 }
 
 impl PciDevice {
@@ -178,17 +187,19 @@ impl PciDevice {
             // lsb is 1 for I/O space bars
             if bar & 1 == 1 {
                 self.bars[current_bar].bar_type = PciBarType::IoSpace;
-                self.bars[current_bar].address = u64::from(bar & 0xffff_fffc);
+                self.bars[current_bar].address = PhysAddr::new(u64::from(bar & 0xffff_fffc));
             } else {
                 // bits 2-1 are the type 0 is 32-but, 2 is 64 bit
                 match bar >> 1 & 3 {
                     0 => {
                         self.bars[current_bar].bar_type = PciBarType::MemorySpace32;
-                        self.bars[current_bar].address = u64::from(bar & 0xffff_fff0);
+                        self.bars[current_bar].address =
+                            PhysAddr::new(u64::from(bar & 0xffff_fff0));
                     }
                     2 => {
                         self.bars[current_bar].bar_type = PciBarType::MemorySpace64;
-                        self.bars[current_bar].address = u64::from(bar & 0xffff_fff0);
+                        self.bars[current_bar].address =
+                            PhysAddr::new(u64::from(bar & 0xffff_fff0));
                         current_bar_offset += 4;
 
                         #[allow(clippy::blacklisted_name)]
@@ -258,7 +269,7 @@ impl VirtioPciTransport {
 /// le64 queue_used;                // 0x30 // read-write
 
 impl VirtioTransport for VirtioPciTransport {
-    fn init(&mut self, _device_type: u32) -> Result<(), VirtioError> {
+    fn init<X: Translator>(&mut self, _device_type: u32, translate: X) -> Result<(), VirtioError> {
         self.device.init();
 
         // Read status register
@@ -293,18 +304,15 @@ impl VirtioTransport for VirtioPciTransport {
                 let offset = self.device.read_u32(cap_next + 8);
                 let length = self.device.read_u32(cap_next + 12);
 
+                let addr = self.device.bars[usize::from(bar)].address + u64::from(offset);
+                let addr = translate(addr).ok_or(VirtioError::AddressTranslationFailure(addr))?;
+
                 if cfg_type == VirtioPciCapabilityType::CommonConfig as u8 {
-                    self.region = mem::MemoryRegion::new(
-                        self.device.bars[usize::from(bar)].address + u64::from(offset),
-                        u64::from(length),
-                    );
+                    self.region = mem::MemoryRegion::new(addr, u64::from(length));
                 }
 
                 if cfg_type == VirtioPciCapabilityType::NotifyConfig as u8 {
-                    self.notify_region = mem::MemoryRegion::new(
-                        self.device.bars[usize::from(bar)].address + u64::from(offset),
-                        u64::from(length),
-                    );
+                    self.notify_region = mem::MemoryRegion::new(addr, u64::from(length));
 
                     // struct virtio_pci_notify_cap {
                     //         struct virtio_pci_cap cap;
@@ -314,10 +322,7 @@ impl VirtioTransport for VirtioPciTransport {
                 }
 
                 if cfg_type == VirtioPciCapabilityType::DeviceConfig as u8 {
-                    self.device_config_region = mem::MemoryRegion::new(
-                        self.device.bars[usize::from(bar)].address + u64::from(offset),
-                        u64::from(length),
-                    );
+                    self.device_config_region = mem::MemoryRegion::new(addr, u64::from(length));
                 }
             }
             cap_next = self.device.read_u8(cap_next + 1)

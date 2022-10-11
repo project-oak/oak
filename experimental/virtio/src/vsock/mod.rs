@@ -25,7 +25,7 @@ use rust_hypervisor_firmware_virtio::{
     pci::{find_device, VirtioPciTransport},
     virtio::VirtioTransport,
 };
-use x86_64::PhysAddr;
+use x86_64::{PhysAddr, VirtAddr};
 
 pub mod packet;
 pub mod socket;
@@ -190,7 +190,9 @@ where
     /// Initializes the device and configures the queues.
     fn init(&mut self) -> anyhow::Result<()> {
         self.device
-            .start_init(DEVICE_ID as u32)
+            .start_init(DEVICE_ID as u32, |paddr: PhysAddr| {
+                Some(VirtAddr::new(paddr.as_u64()))
+            })
             .map_err(|error| anyhow::anyhow!("Virtio error: {:?}", error))
             .context("Couldn't initialize the PCI device")?;
         // We have to configure the event queue before the receive queue, otherwise the event
