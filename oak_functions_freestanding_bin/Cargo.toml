@@ -1,7 +1,7 @@
 [package]
-name = "oak_tensorflow_bin"
+name = "oak_functions_freestanding_bin"
 version = "0.1.0"
-authors = ["Ivan Petrov <ivanpetrov@google.com>"]
+authors = ["Andri Saar <andrisaar@google.com>"]
 edition = "2021"
 license = "Apache-2.0"
 
@@ -15,16 +15,24 @@ vsock_channel = ["oak_restricted_kernel/vsock_channel"]
 simple_io_channel = ["oak_restricted_kernel/simple_io_channel"]
 
 [dependencies]
-oak_tensorflow_runtime = { path = "../oak_tensorflow_runtime" }
 log = "*"
 oak_baremetal_channel = { path = "../experimental/oak_baremetal_channel" }
 oak_restricted_kernel = { path = "../oak_restricted_kernel", default-features = false }
-oak_idl = { path = "../oak_idl" }
+oak_functions_freestanding = { path = "../oak_functions_freestanding", default-features = false, features = [
+  "rust-crypto"
+] }
 oak_linux_boot_params = { path = "../linux_boot_params" }
+oak_remote_attestation = { path = "../oak_remote_attestation", default-features = false, features = [
+  "rust-crypto"
+] }
+oak_remote_attestation_amd = { path = "../oak_remote_attestation_amd", default-features = false, features = [
+  "rust-crypto"
+] }
+oak_idl = { path = "../oak_idl" }
 static_assertions = "*"
 
 [[bin]]
-name = "oak_tensorflow_bin"
+name = "oak_functions_freestanding_bin"
 test = false
 bench = false
 

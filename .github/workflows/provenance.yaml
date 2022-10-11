@@ -17,7 +17,7 @@ jobs:
       hashes: ${{ steps.hash.outputs.hashes }}
     runs-on: ubuntu-20.04
     env:
-      OAK_BAREMETAL_CROSVM_PATH: './experimental/oak_baremetal_app_crosvm/target/x86_64-unknown-none/release/oak_baremetal_app_crosvm'
+      OAK_FUNCTIONS_FREESTANDING_BIN_PATH: './oak_functions_freestanding_bin/target/x86_64-unknown-none/release/oak_functions_freestanding_bin'
 
     permissions:
       # Allow the job to update the repo with the latest provenances and index.
@@ -56,9 +56,9 @@ jobs:
           ./scripts/docker_pull
           df --human-readable
 
-      - name: Generate provenance for crosvm Baremetal binary
+      - name: Generate provenance for crosvm freestanding binary
         run: |
-          ./scripts/generate_provenance -c buildconfigs/oak_baremetal_app_crosvm.toml -s
+          ./scripts/generate_provenance -c buildconfigs/oak_functions_freestanding_bin.toml -s
 
       - name: Move new provenance files to the provenance branch
         if: github.event_name == 'push'
@@ -106,14 +106,15 @@ jobs:
       - name: Upload to Ent
         if: github.event_name == 'push'
         run: |
-          ent put ${{ env.OAK_BAREMETAL_CROSVM_PATH }}
+          ent put ${{ env.OAK_FUNCTIONS_FREESTANDING_BIN_PATH }}
 
       # Build reproducibility index on `push` events.
       - name: Build reproducibility index
         if: github.event_name == 'push'
         uses: ./.github/actions/reproducibility_index
         with:
-          OAK_BAREMETAL_CROSVM_PATH: ${{ env.OAK_BAREMETAL_CROSVM_PATH }}
+          OAK_FUNCTIONS_FREESTANDING_BIN_PATH:
+            ${{ env.OAK_FUNCTIONS_FREESTANDING_BIN_PATH }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       # Build reproducibility index on non-`push` events. This is similar to the previous step,
@@ -122,21 +123,22 @@ jobs:
         if: github.event_name != 'push'
         uses: ./.github/actions/reproducibility_index
         with:
-          OAK_BAREMETAL_CROSVM_PATH: ${{ env.OAK_BAREMETAL_CROSVM_PATH }}
+          OAK_FUNCTIONS_FREESTANDING_BIN_PATH:
+            ${{ env.OAK_FUNCTIONS_FREESTANDING_BIN_PATH }}
 
       # Experimental step using SLSA generic provenance generator
       # See https://github.com/slsa-framework/slsa-github-generator/blob/main/internal/builders/generic/README.md
-      - name: Generate oak_baremetal_app_crosvm hash
+      - name: Generate oak_functions_freestanding_bin hash
         id: hash
         run: |
           # first cd to the directory containing the target binary. This allows us calling sha256
           # on the target binary instead of having to provide the full path. This is fine for this
           # experimental version, but has to be cleaned-up once we switch completely to SLSA
           # provenance generation.
-          cd $(dirname ${{ env.OAK_BAREMETAL_CROSVM_PATH }})
+          cd $(dirname ${{ env.OAK_FUNCTIONS_FREESTANDING_BIN_PATH }})
           # sha256sum generates sha256 hash for the target binary.
           # base64 --wrap=0 disables line wrapping, and encodes to base64 and outputs on a single line.
-          echo "::set-output name=hashes::$(sha256sum $(basename ${{ env.OAK_BAREMETAL_CROSVM_PATH }}) | base64 --wrap=0)"
+          echo "::set-output name=hashes::$(sha256sum $(basename ${{ env.OAK_FUNCTIONS_FREESTANDING_BIN_PATH }}) | base64 --wrap=0)"
 
   # This job calls the generic workflow to generate provenance.
   # See https://github.com/slsa-framework/slsa-github-generator/blob/main/internal/builders/generic/README.md
@@ -151,7 +153,7 @@ jobs:
     with:
       base64-subjects: '${{ needs.build_provenance.outputs.hashes }}'
       # Set a custom name for the provenance attestation.
-      attestation-name: 'oak_baremetal_app_crosvm.intoto.jsonl'
+      attestation-name: 'oak_functions_freestanding_bin.intoto.jsonl'
       # Upload provenance to a new release
       upload-assets: true
       # Build the generator from source.

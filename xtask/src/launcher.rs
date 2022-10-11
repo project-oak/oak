@@ -18,15 +18,13 @@
 //! launcher.
 
 const CLIENT_PATH: &str = "./target/debug/oak_functions_client";
-const WASM_PATH: &str = "./experimental/oak_baremetal_launcher/key_value_lookup.wasm";
-const LOOKUP_PATH: &str = "./experimental/oak_baremetal_launcher/mock_lookup_data";
-
-use std::path::Path;
-
-use strum::IntoEnumIterator;
-use strum_macros::{Display, EnumIter};
+const WASM_PATH: &str = "./oak_functions_launcher/key_value_lookup.wasm";
+const LOOKUP_PATH: &str = "./oak_functions_launcher/mock_lookup_data";
 
 use crate::internal::*;
+use std::path::Path;
+use strum::IntoEnumIterator;
+use strum_macros::{Display, EnumIter};
 
 #[derive(Debug, Display, Clone, PartialEq, EnumIter)]
 pub enum LauncherMode {
@@ -38,14 +36,14 @@ impl LauncherMode {
     /// Get the crate name of respective runtime variant
     pub fn runtime_crate_name(&self) -> &'static str {
         match self {
-            LauncherMode::Crosvm => "oak_baremetal_app_crosvm",
-            LauncherMode::Native => "oak_functions_loader_linux_native",
+            LauncherMode::Crosvm => "oak_functions_freestanding_bin",
+            LauncherMode::Native => "oak_functions_linux_fd_bin",
         }
     }
 
-    /// Get the path to the respective runtime variant that should be launched
+    /// Get the path to the respective binary variant that should be launched
     pub fn runtime_crate_path(&self) -> String {
-        format!("./experimental/{}", self.runtime_crate_name())
+        format!("./{}", self.runtime_crate_name())
     }
 
     /// Get the path to the respective runtime variant that should be launched
@@ -114,11 +112,8 @@ fn run_variant(variant: LauncherMode) -> Step {
     Step::Multiple {
         name: format!("run {} variant", variant),
         steps: vec![
-            build_binary(
-                "build loader binary",
-                "./experimental/oak_baremetal_launcher",
-            ),
-            build_binary("build runtime", &variant.runtime_crate_path()),
+            build_binary("build Oak Functions loader", "./oak_functions_launcher"),
+            build_binary("build Oak Functions binary", &variant.runtime_crate_path()),
             Step::WithBackground {
                 name: "background loader".to_string(),
                 background: run_launcher(variant),
@@ -141,7 +136,7 @@ fn run_launcher(variant: LauncherMode) -> Box<dyn Runnable> {
         format!("--lookup-data={}", LOOKUP_PATH),
     ];
     args.append(&mut variant.variant_subcommand());
-    Cmd::new("./target/debug/oak_baremetal_launcher", args)
+    Cmd::new("./target/debug/oak_functions_launcher", args)
 }
 
 fn run_client(request: &str, expected_response: &str, iterations: usize) -> Step {

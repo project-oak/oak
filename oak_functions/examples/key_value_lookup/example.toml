@@ -9,7 +9,7 @@ target = { Cargo = { cargo_manifest = "oak_functions/examples/key_value_lookup/m
 [server]
 wasm_path = "bin/key_value_lookup.wasm"
 constant_response_size_bytes = 90
-lookup_data = "experimental/oak_baremetal_launcher/mock_lookup_data"
+lookup_data = "oak_functions_launcher/mock_lookup_data"
 
 [clients]
 rust = { Cargo = { cargo_manifest = "oak_functions/client/rust/Cargo.toml" }, additional_args = [

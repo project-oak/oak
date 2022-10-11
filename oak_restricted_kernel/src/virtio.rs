@@ -15,7 +15,7 @@
 //
 
 use log::info;
-use oak_baremetal_communication_channel::{Read, Write};
+use oak_baremetal_channel::{Read, Write};
 use rust_hypervisor_firmware_virtio::pci::VirtioPciTransport;
 
 // The virtio vsock port on which to listen.

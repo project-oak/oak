@@ -1,0 +1,27 @@
+[package]
+name = "oak_functions_linux_vsock_bin"
+version = "0.1.0"
+authors = ["Ivan Petrov <ivanpetrov@google.com>"]
+edition = "2021"
+license = "Apache-2.0"
+
+[dependencies]
+anyhow = { version = "*", default-features = false }
+clap = { version = "*", features = ["derive"] }
+libc = "*"
+oak_remote_attestation = { path = "../oak_remote_attestation", default-features = false, features = [
+  "rust-crypto"
+] }
+oak_baremetal_channel = { path = "../experimental/oak_baremetal_channel" }
+oak_functions_freestanding = { path = "../oak_functions_freestanding", default-features = false, features = [
+  "rust-crypto"
+] }
+prost = "*"
+ringbuf = "*"
+vsock = "*"
+
+[dev-dependencies]
+assert_matches = "*"
+
+[build-dependencies]
+prost-build = "*"
