@@ -278,7 +278,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "oak_tensorflow_bin"
+name = "oak_tensorflow_freestanding_bin"
 version = "0.1.0"
 dependencies = [
  "log",
@@ -286,12 +286,12 @@ dependencies = [
  "oak_idl",
  "oak_linux_boot_params",
  "oak_restricted_kernel",
- "oak_tensorflow_runtime",
+ "oak_tensorflow_service",
  "static_assertions",
 ]
 
 [[package]]
-name = "oak_tensorflow_runtime"
+name = "oak_tensorflow_service"
 version = "0.1.0"
 dependencies = [
  "flatbuffers",

@@ -33,15 +33,15 @@ pub mod schema {
 }
 
 #[derive(Default)]
-pub struct RuntimeImplementation {}
+pub struct TensorflowServiceImpl {}
 
-impl RuntimeImplementation {
+impl TensorflowServiceImpl {
     pub fn new() -> Self {
         Self {}
     }
 }
 
-impl schema::TensorflowRuntime for RuntimeImplementation {
+impl schema::TensorflowService for TensorflowServiceImpl {
     fn initialize(
         &mut self,
         _initialization: &schema::InitializeRequest,

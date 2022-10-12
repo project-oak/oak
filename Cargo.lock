@@ -2856,12 +2856,12 @@ dependencies = [
 ]
 
 [[package]]
-name = "oak_tensorflow_runtime"
+name = "oak_tensorflow_service"
 version = "0.1.0"
 dependencies = [
  "async-trait",
  "flatbuffers",
- "hashbrown 0.12.2",
+ "hashbrown 0.11.2",
  "oak_idl",
  "oak_idl_gen_services",
  "oak_idl_gen_structs",
