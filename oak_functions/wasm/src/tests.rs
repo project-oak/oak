@@ -14,11 +14,10 @@
 // limitations under the License.
 //
 
+use crate::{AbiPointer, AbiPointerOffset, WasmHandler, WasmState};
 use alloc::{borrow::ToOwned, vec};
 use oak_functions_abi::{proto::OakStatus, ExtensionHandle, TestingRequest, TestingResponse};
 use oak_functions_testing_extension::{TestingFactory, TestingLogger};
-
-use crate::{AbiPointer, AbiPointerOffset, WasmHandler, WasmState};
 
 #[test]
 fn test_invoke_extension_with_invalid_handle() {
@@ -212,7 +211,8 @@ fn create_test_wasm_state() -> WasmState<TestingLogger> {
     let testing_factory = TestingFactory::new_boxed_extension_factory(logger.clone())
         .expect("Could not create TestingFactory.");
 
-    let wasm_module_bytes = test_utils::create_echo_wasm_module_bytes();
+    let wasm_module_path = test_utils::build_rust_crate_wasm("echo").unwrap();
+    let wasm_module_bytes = std::fs::read(&wasm_module_path).unwrap();
 
     let wasm_handler = WasmHandler::create(&wasm_module_bytes, vec![testing_factory], logger)
         .expect("Could not create WasmHandler.");

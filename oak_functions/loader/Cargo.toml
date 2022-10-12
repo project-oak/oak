@@ -70,7 +70,6 @@ signal-hook = "*"
 [dev-dependencies]
 criterion = "*"
 lookup_data_generator = { path = "../lookup_data_generator" }
-maplit = "*"
 tempfile = "*"
 test_utils = { path = "../sdk/test_utils" }
 

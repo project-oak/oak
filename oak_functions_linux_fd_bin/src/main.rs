@@ -39,7 +39,7 @@ impl log::Log for Logger {
     }
 
     #[cfg(not(debug_assertions))]
-    fn log(&self, record: &log::Record) {}
+    fn log(&self, _record: &log::Record) {}
 
     fn flush(&self) {}
 }

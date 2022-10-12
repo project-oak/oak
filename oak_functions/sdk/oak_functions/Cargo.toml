@@ -16,6 +16,7 @@ serde_derive = "*"
 hashbrown = "*"
 lazy_static = "*"
 oak_functions_loader = { path = "../../loader" }
+oak_functions_wasm = { path = "../../wasm" }
 oak_functions_lookup = { path = "../../lookup" }
 oak_functions_testing_extension = { path = "../../testing" }
 oak_functions_workload_logging = { path = "../../workload_logging" }

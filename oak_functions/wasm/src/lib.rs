@@ -21,6 +21,9 @@
 extern crate alloc;
 
 #[cfg(test)]
+extern crate std;
+
+#[cfg(test)]
 mod tests;
 
 use alloc::{boxed::Box, format, sync::Arc, vec::Vec};

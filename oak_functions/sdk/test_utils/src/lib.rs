@@ -22,6 +22,7 @@ use hyper::{
     Body,
 };
 use log::info;
+use nix::unistd::Pid;
 use oak_functions_abi::{Request, Response};
 
 use oak_functions_client::Client;
@@ -30,6 +31,7 @@ use std::{
     collections::HashMap,
     convert::Infallible,
     future::Future,
+    io::Write,
     net::{Ipv6Addr, SocketAddr},
     pin::Pin,
     process::Command,
@@ -43,7 +45,7 @@ use tokio::{sync::oneshot, task::JoinHandle};
 fn build_wasm_module_path(metadata: &cargo_metadata::Metadata) -> String {
     let package_name = &metadata.root_package().unwrap().name;
     // Keep this in sync with `/xtask/src/main.rs`.
-    format!("{}/bin/{}.wasm", metadata.workspace_root, package_name)
+    format!("{}/bin/{package_name}.wasm", metadata.workspace_root)
 }
 
 /// Uses cargo to compile a Rust manifest to Wasm bytes.
@@ -61,7 +63,7 @@ pub fn compile_rust_wasm(manifest_path: &str, release: bool) -> anyhow::Result<V
         "--target=wasm32-unknown-unknown".to_string(),
         format!("--target-dir={}/wasm", metadata.target_directory),
         format!("--out-dir={}/bin", metadata.workspace_root),
-        format!("--manifest-path={}", manifest_path),
+        format!("--manifest-path={manifest_path}"),
     ];
 
     if release {
@@ -136,6 +138,13 @@ pub fn serialize_entries(entries: HashMap<Vec<u8>, Vec<u8>>) -> Vec<u8> {
     buf
 }
 
+pub fn write_to_temp_file(content: &[u8]) -> tempfile::NamedTempFile {
+    let mut file = tempfile::NamedTempFile::new().expect("could not create temp file");
+    file.write_all(content)
+        .expect("could not write content to temp file");
+    file
+}
+
 pub fn free_port() -> u16 {
     port_check::free_local_port().expect("could not pick free local port")
 }
@@ -180,6 +189,75 @@ where
     }
 }
 
+/// Builds the crate identified by the given name as a Linux binary, and returns the path of the
+/// resulting binary.
+fn build_rust_crate_linux(crate_name: &str) -> anyhow::Result<String> {
+    duct::cmd!(
+        "cargo",
+        "build",
+        "--target=x86_64-unknown-linux-musl",
+        "--release",
+        format!("--package={crate_name}"),
+    )
+    .dir(env!("WORKSPACE_ROOT"))
+    .run()
+    .context(format!("could not compile {crate_name}"))?;
+    Ok(format!(
+        "{}target/x86_64-unknown-linux-musl/release/{crate_name}",
+        env!("WORKSPACE_ROOT")
+    ))
+}
+
+/// Builds the crate identified by the given name as a Wasm module, and returns the path of the
+/// resulting binary.
+pub fn build_rust_crate_wasm(crate_name: &str) -> anyhow::Result<String> {
+    duct::cmd!(
+        "cargo",
+        "build",
+        "--target=wasm32-unknown-unknown",
+        "--release",
+        format!("--package={crate_name}"),
+    )
+    .dir(env!("WORKSPACE_ROOT"))
+    .run()
+    .context(format!("could not compile {crate_name}"))?;
+    Ok(format!(
+        "{}target/wasm32-unknown-unknown/release/{crate_name}.wasm",
+        env!("WORKSPACE_ROOT"),
+    ))
+}
+
+pub fn create_and_start_oak_functions_server(
+    server_port: u16,
+    wasm_module_path: &str,
+    lookup_data_path: &str,
+) -> anyhow::Result<duct::ReaderHandle> {
+    let oak_functions_launcher_path = build_rust_crate_linux("oak_functions_launcher")?;
+    let oak_functions_linux_fd_bin_path = build_rust_crate_linux("oak_functions_linux_fd_bin")?;
+
+    let handle = duct::cmd!(
+        oak_functions_launcher_path,
+        format!("--wasm={wasm_module_path}"),
+        format!("--port={server_port}"),
+        format!("--lookup-data={lookup_data_path}"),
+        "native",
+        format!("--app-binary={oak_functions_linux_fd_bin_path}"),
+    )
+    .dir(env!("WORKSPACE_ROOT"))
+    .reader()
+    .context("could not run oak_functions_launcher")?;
+    Ok(handle)
+}
+
+pub fn kill_process(handle: duct::ReaderHandle) {
+    handle.pids().iter().for_each(|pid| {
+        nix::sys::signal::kill(Pid::from_raw(*pid as i32), nix::sys::signal::SIGINT).unwrap()
+    });
+    // Wait for the process to terminate cleanly, then forcefully kill it.
+    std::thread::sleep(Duration::from_secs(2));
+    handle.kill().unwrap();
+}
+
 /// A wrapper around a termination signal [`oneshot::Receiver`].
 ///
 /// This type manually implements [`Future`] in order to be able to be passed to a closure as part
@@ -209,7 +287,7 @@ pub struct TestResult {
 }
 
 pub async fn make_request(port: u16, request_body: &[u8]) -> TestResult {
-    let uri = format!("http://localhost:{}/", port);
+    let uri = format!("http://localhost:{port}/");
 
     // Create client
     let mut client = Client::new(&uri).await.expect("Could not create client");
@@ -236,25 +314,4 @@ pub fn assert_response_body(response: Response, expected: &str) {
         std::str::from_utf8(body).expect("could not convert response body from utf8"),
         expected
     )
-}
-
-/// Create Wasm bytecode from an Oak Functions example.
-fn create_wasm_module_bytes_from_example(
-    manifest_path_from_examples: &str,
-    release: bool,
-) -> Vec<u8> {
-    let mut manifest_path = std::path::PathBuf::new();
-    // WORKSPACE_ROOT is set in .cargo/config.toml.
-    manifest_path.push(env!("WORKSPACE_ROOT"));
-    manifest_path.push("oak_functions");
-    manifest_path.push("examples");
-    manifest_path.push(manifest_path_from_examples);
-    compile_rust_wasm(manifest_path.to_str().expect("Invalid target dir"), release)
-        .expect("Couldn't read Wasm module")
-}
-
-/// Create valid (release) Wasm bytecode for a minimal "echo" module which only uses the Abi
-/// functions `read_request` and `write_request`.
-pub fn create_echo_wasm_module_bytes() -> Vec<u8> {
-    create_wasm_module_bytes_from_example("echo/module/Cargo.toml", true)
 }
