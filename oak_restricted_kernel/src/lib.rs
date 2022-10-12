@@ -34,6 +34,7 @@
 
 mod args;
 mod avx;
+mod descriptors;
 mod elf;
 pub mod i8042;
 mod interrupts;
@@ -67,6 +68,7 @@ use crate::mm::page_tables::DirectMap;
 pub fn start_kernel(info: &BootParams) -> Box<dyn Channel> {
     avx::enable_avx();
     logging::init_logging();
+    descriptors::init_gdt();
     interrupts::init_idt();
 
     // We need to be done with the boot info struct before intializing memory. For example, the
