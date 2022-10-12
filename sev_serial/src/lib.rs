@@ -16,12 +16,8 @@
 
 #![no_std]
 
-use core::{fmt::Write, marker::PhantomData, result::Result};
-use sev_guest::{
-    ghcb::{Ghcb, GhcbProtocol},
-    io::{GhcbIoFactory, GhcbIoPort, IoPortFactory, PortReader, PortWriter, RawIoPortFactory},
-};
-use x86_64::instructions::port::Port;
+use core::{fmt::Write, result::Result};
+use sev_guest::io::{IoPortFactory, PortFactoryWrapper, PortReader, PortWrapper, PortWriter};
 
 /// The offset from the base address to the interrupt register.
 const INTERRUPT_ENABLE: u16 = 1;
@@ -61,55 +57,31 @@ const DATA_TERMINAL_READY_AND_REQUEST_TO_SEND: u8 = 3;
 /// See <https://wiki.osdev.org/Serial_Ports#Line_status_register>.
 const OUTPUT_EMPTY: u8 = 1 << 5;
 
-/// A serial port implementation that uses direct port-based IO.
-pub type RawSerialPort<'a> = SerialPort<'a, Port<u8>, Port<u8>, RawIoPortFactory>;
-
-/// A serial port implementation that uses the GHCB IOIO protocol and static references.
-pub type StaticGhcbSerialPort<R> = SerialPort<
-    'static,
-    StaticGhcbIoPort<R>,
-    StaticGhcbIoPort<R>,
-    GhcbIoFactory<'static, R, GhcbProtocol<'static, Ghcb>, Ghcb>,
->;
-
-/// An IO port reader and writer implementation that uses the GHCB protocol and static references.
-pub type StaticGhcbIoPort<R> = GhcbIoPort<'static, R, GhcbProtocol<'static, Ghcb>, Ghcb>;
-
 /// Basic implementation that allows for writing to a serial port using the SEV-ES and SEV-SNP GHCB
-/// IOIO protocol, or using direct port-based IO, depending on which IO port factory is used.
+/// IOIO protocol, or using direct port-based IO, depending on which IO port factory is used in the
+/// wrapper enum.
 ///
 /// See section 4.1.2 in <https://developer.amd.com/wp-content/resources/56421.pdf> for more
 /// information on the GHCB IOIO protocol.
-pub struct SerialPort<
-    'a,
-    R: PortReader<u8> + 'a,
-    W: PortWriter<u8> + 'a,
-    F: IoPortFactory<'a, u8, R, W>,
-> {
+pub struct SerialPort {
     /// The base address of the serial port.
     base_address: u16,
     /// The factory for creating port readers and writers.
-    io_port_factory: F,
+    io_port_factory: PortFactoryWrapper,
     /// The port writer for writing a byte of data.
-    data: W,
+    data: PortWrapper<u8>,
     /// The port reader for checking the line status.
-    line_status: R,
-    _phantom: PhantomData<&'a F>,
+    line_status: PortWrapper<u8>,
 }
 
-impl<'a, R, W, F> SerialPort<'a, R, W, F>
-where
-    R: PortReader<u8> + 'a,
-    W: PortWriter<u8> + 'a,
-    F: IoPortFactory<'a, u8, R, W>,
-{
+impl SerialPort {
     /// Creates a new instance of a serial port with the given base address.
     ///
     /// # Safety
     ///
     /// This function is unsafe as callers must make sure that the base address represents a
     /// valid serial port device.
-    pub unsafe fn new(base_address: u16, io_port_factory: F) -> Self {
+    pub unsafe fn new(base_address: u16, io_port_factory: PortFactoryWrapper) -> Self {
         let data = io_port_factory.new_writer(base_address);
         let line_status = io_port_factory.new_reader(base_address + LINE_STATUS);
         Self {
@@ -117,7 +89,6 @@ where
             io_port_factory,
             data,
             line_status,
-            _phantom: PhantomData,
         }
     }
 
@@ -165,12 +136,7 @@ where
     }
 }
 
-impl<'a, R, W, F> Write for SerialPort<'a, R, W, F>
-where
-    R: PortReader<u8> + 'a,
-    W: PortWriter<u8> + 'a,
-    F: IoPortFactory<'a, u8, R, W>,
-{
+impl Write for SerialPort {
     fn write_str(&mut self, s: &str) -> core::fmt::Result {
         for byte in s.bytes() {
             self.send(byte).map_err(|_| core::fmt::Error)?;

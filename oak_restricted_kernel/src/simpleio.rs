@@ -16,24 +16,24 @@
 
 use crate::mm::page_tables::DirectMap;
 use alloc::collections::VecDeque;
-use oak_simple_io::RawSimpleIo;
-use sev_guest::io::RawIoPortFactory;
+use oak_simple_io::SimpleIo;
+use sev_guest::io::PortFactoryWrapper;
 use x86_64::{structures::paging::Translate, VirtAddr};
 
 /// A communications channel using a simple IO device.
-pub struct SimpleIoChannel<'a> {
+pub struct SimpleIoChannel {
     /// The simple IO device.
-    device: RawSimpleIo<'a>,
+    device: SimpleIo,
     /// A buffer to temporarily store extra data from the device that was not fully read when using
     /// `read`. This could happen if the device sent more bytes in a single buffer than was
     /// expected by `read`.
     pending_data: Option<VecDeque<u8>>,
 }
 
-impl SimpleIoChannel<'_> {
+impl SimpleIoChannel {
     pub fn new(mapper: &DirectMap) -> Self {
-        let io_port_factory = RawIoPortFactory;
-        let device = RawSimpleIo::new_with_defaults(io_port_factory, |vaddr: VirtAddr| {
+        let io_port_factory = PortFactoryWrapper::new_raw();
+        let device = SimpleIo::new_with_defaults(io_port_factory, |vaddr: VirtAddr| {
             (mapper as &dyn Translate).translate_addr(vaddr)
         })
         .expect("couldn't create IO device");
@@ -76,7 +76,7 @@ impl SimpleIoChannel<'_> {
     }
 }
 
-impl oak_channel::Write for SimpleIoChannel<'_> {
+impl oak_channel::Write for SimpleIoChannel {
     fn write(&mut self, data: &[u8]) -> anyhow::Result<()> {
         let mut start = 0;
         let data_len = data.len();
@@ -93,7 +93,7 @@ impl oak_channel::Write for SimpleIoChannel<'_> {
     }
 }
 
-impl oak_channel::Read for SimpleIoChannel<'_> {
+impl oak_channel::Read for SimpleIoChannel {
     fn read(&mut self, data: &mut [u8]) -> anyhow::Result<()> {
         let len = data.len();
         let mut count = 0;
