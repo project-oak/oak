@@ -22,10 +22,7 @@ extern crate alloc;
 use alloc::{collections::VecDeque, vec, vec::Vec};
 use core::{marker::PhantomData, result::Result};
 use sev_guest::io::{IoPortFactory, PortReader, PortWriter};
-use x86_64::{
-    instructions::port::{PortReadOnly, PortWriteOnly},
-    PhysAddr, VirtAddr,
-};
+use x86_64::{instructions::port::Port, PhysAddr, VirtAddr};
 
 /// I/O port descriptor for a buffer.
 pub struct BufferDescriptor {
@@ -57,7 +54,7 @@ pub const OUTPUT_BUFFER_LEGNTH: usize = 4096;
 pub const INPUT_BUFFER_LEGNTH: usize = 4096;
 
 /// A Simple IO device implementation that uses direct port-based IO.
-pub type RawSimpleIo<'a> = SimpleIo<'a, PortReadOnly<u32>, PortWriteOnly<u32>>;
+pub type RawSimpleIo<'a> = SimpleIo<'a, Port<u32>, Port<u32>>;
 
 /// Memory address translation function.
 pub trait Translator: Fn(VirtAddr) -> Option<PhysAddr> {}

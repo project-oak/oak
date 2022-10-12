@@ -126,6 +126,7 @@ dependencies = [
  "bitflags",
  "lock_api",
  "snafu",
+ "spinning_top",
  "static_assertions",
  "strum",
  "x86_64",
@@ -152,6 +153,15 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
+]
+
+[[package]]
+name = "spinning_top"
+version = "0.2.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "75adad84ee84b521fb2cca2d4fd0f1dab1d8d026bda3c5bea4ca63b5f9f9293c"
+dependencies = [
+ "lock_api",
 ]
 
 [[package]]

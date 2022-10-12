@@ -21,7 +21,7 @@ use sev_guest::{
     ghcb::{Ghcb, GhcbProtocol},
     io::{GhcbIoFactory, GhcbIoPort, IoPortFactory, PortReader, PortWriter, RawIoPortFactory},
 };
-use x86_64::instructions::port::{PortReadOnly, PortWriteOnly};
+use x86_64::instructions::port::Port;
 
 /// The offset from the base address to the interrupt register.
 const INTERRUPT_ENABLE: u16 = 1;
@@ -62,7 +62,7 @@ const DATA_TERMINAL_READY_AND_REQUEST_TO_SEND: u8 = 3;
 const OUTPUT_EMPTY: u8 = 1 << 5;
 
 /// A serial port implementation that uses direct port-based IO.
-pub type RawSerialPort<'a> = SerialPort<'a, PortReadOnly<u8>, PortWriteOnly<u8>, RawIoPortFactory>;
+pub type RawSerialPort<'a> = SerialPort<'a, Port<u8>, Port<u8>, RawIoPortFactory>;
 
 /// A serial port implementation that uses the GHCB IOIO protocol and static references.
 pub type StaticGhcbSerialPort<R> = SerialPort<
