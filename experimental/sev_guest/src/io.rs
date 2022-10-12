@@ -163,7 +163,7 @@ where
     }
 }
 
-/// Factory for creating port reader and writers that perform direct raw IO operations.
+/// Factory for creating port reader and writers that perform direct IO operations.
 pub struct RawIoPortFactory;
 
 impl<'a, T> IoPortFactory<'a, T, Port<T>, Port<T>> for RawIoPortFactory
@@ -207,8 +207,8 @@ impl PortWriter<u32> for Port<u32> {
     }
 }
 
-/// An IO port reader and writer implementation that uses the GHCB protocol, static references and a
-/// spinlock for synchronisation.
+/// An IO port reader and writer implementation that uses the GHCB IOIO protocol, static references
+/// and a spinlock for synchronisation.
 pub type StaticGhcbIoPort = GhcbIoPort<'static, RawSpinlock, GhcbProtocol<'static, Ghcb>, Ghcb>;
 
 /// Wrapper implementation that can either create IO ports that perform direct IO or IO ports that
