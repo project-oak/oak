@@ -20,9 +20,9 @@
 extern crate alloc;
 
 use alloc::{collections::VecDeque, vec, vec::Vec};
-use core::{marker::PhantomData, result::Result};
-use sev_guest::io::{IoPortFactory, PortReader, PortWriter};
-use x86_64::{instructions::port::Port, PhysAddr, VirtAddr};
+use core::result::Result;
+use sev_guest::io::{IoPortFactory, PortFactoryWrapper, PortReader, PortWrapper, PortWriter};
+use x86_64::{PhysAddr, VirtAddr};
 
 /// I/O port descriptor for a buffer.
 pub struct BufferDescriptor {
@@ -53,29 +53,21 @@ pub const OUTPUT_BUFFER_LEGNTH: usize = 4096;
 /// The length of the buffer that will be used for input messages.
 pub const INPUT_BUFFER_LEGNTH: usize = 4096;
 
-/// A Simple IO device implementation that uses direct port-based IO.
-pub type RawSimpleIo<'a> = SimpleIo<'a, Port<u32>, Port<u32>>;
-
 /// Memory address translation function.
 pub trait Translator: Fn(VirtAddr) -> Option<PhysAddr> {}
 impl<X: Fn(VirtAddr) -> Option<PhysAddr>> Translator for X {}
 
 /// The simple I/O channel driver implementation.
-pub struct SimpleIo<'a, R: PortReader<u32> + 'a, W: PortWriter<u32> + 'a> {
+pub struct SimpleIo {
     output_buffer: Vec<u8>,
     input_buffer: Vec<u8>,
-    output_length_port: W,
-    input_length_port: R,
-    _phantom: PhantomData<&'a W>,
+    output_length_port: PortWrapper<u32>,
+    input_length_port: PortWrapper<u32>,
 }
 
-impl<'a, R, W> SimpleIo<'a, R, W>
-where
-    R: PortReader<u32> + 'a,
-    W: PortWriter<u32> + 'a,
-{
-    pub fn new<F: IoPortFactory<'a, u32, R, W>, VP: Translator>(
-        io_port_factory: F,
+impl SimpleIo {
+    pub fn new<VP: Translator>(
+        io_port_factory: PortFactoryWrapper,
         translate: VP,
         output: BufferDescriptor,
         input: BufferDescriptor,
@@ -105,12 +97,11 @@ where
             input_buffer,
             output_length_port,
             input_length_port,
-            _phantom: PhantomData,
         })
     }
 
-    pub fn new_with_defaults<F: IoPortFactory<'a, u32, R, W>, VP: Translator>(
-        io_port_factory: F,
+    pub fn new_with_defaults<VP: Translator>(
+        io_port_factory: PortFactoryWrapper,
         translate: VP,
     ) -> Result<Self, &'static str> {
         SimpleIo::new(
@@ -170,13 +161,8 @@ where
     }
 }
 
-fn write_address<
-    'a,
-    R: PortReader<u32> + 'a,
-    W: PortWriter<u32> + 'a,
-    F: IoPortFactory<'a, u32, R, W>,
->(
-    io_port_factory: &F,
+fn write_address(
+    io_port_factory: &PortFactoryWrapper,
     buffer_pointer: PhysAddr,
     msb_port: u16,
     lsb_port: u16,
