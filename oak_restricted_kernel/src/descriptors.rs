@@ -16,6 +16,7 @@
 
 use lazy_static::lazy_static;
 use x86_64::{
+    instructions::tables::load_tss,
     registers::segmentation::*,
     structures::{
         gdt::{Descriptor, GlobalDescriptorTable},
@@ -65,5 +66,6 @@ pub fn init_gdt() {
         FS::set_reg(DESCRIPTORS.kernel_ds_selector);
         GS::set_reg(DESCRIPTORS.kernel_ds_selector);
         SS::set_reg(DESCRIPTORS.kernel_ds_selector);
+        load_tss(DESCRIPTORS.tss_selector);
     }
 }
