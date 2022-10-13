@@ -35,10 +35,7 @@ mod logger;
 mod remote_attestation;
 mod wasm;
 
-use crate::{
-    logger::StandaloneLogger,
-    remote_attestation::{AttestationHandler, AttestationSessionHandler},
-};
+use crate::remote_attestation::{AttestationHandler, AttestationSessionHandler};
 use alloc::{boxed::Box, sync::Arc};
 use anyhow::Context;
 use oak_functions_abi::Request;
@@ -47,6 +44,8 @@ use oak_remote_attestation::handshaker::{
     AttestationBehavior, AttestationGenerator, AttestationVerifier,
 };
 use oak_remote_attestation_sessions::SessionId;
+
+pub use crate::logger::StandaloneLogger;
 
 enum InitializationState<G, V>
 where

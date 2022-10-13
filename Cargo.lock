@@ -233,7 +233,7 @@ dependencies = [
  "http",
  "http-body",
  "hyper",
- "itoa 1.0.2",
+ "itoa",
  "matchit",
  "memchr",
  "mime",
@@ -386,18 +386,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "bstr"
-version = "0.2.17"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ba3569f383e8f1598449f1a423e72e99569137b47740b1da11ef19af3d5c3223"
-dependencies = [
- "lazy_static",
- "memchr",
- "regex-automata",
- "serde",
-]
-
-[[package]]
 name = "buf_redux"
 version = "0.8.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -529,21 +517,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "cast"
-version = "0.2.7"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4c24dab4283a142afa2fdca129b80ad2c6284e073930f964c3a1293c225ee39a"
-dependencies = [
- "rustc_version",
-]
-
-[[package]]
-name = "cast"
-version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "37b2a672a2cb129a2e41c10b1224bb368f9f37a2b16b612598138befd7b37eb5"
-
-[[package]]
 name = "cc"
 version = "1.0.73"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -619,17 +592,6 @@ dependencies = [
 
 [[package]]
 name = "clap"
-version = "2.34.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a0610544180c38b88101fecf2dd634b174a62eef6946f84dfc6a7127512b381c"
-dependencies = [
- "bitflags",
- "textwrap 0.11.0",
- "unicode-width",
-]
-
-[[package]]
-name = "clap"
 version = "3.2.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "69c5a7f9997be616e47f0577ee38c91decb33392c5be4866494f34cdf329a9aa"
@@ -642,7 +604,7 @@ dependencies = [
  "once_cell",
  "strsim",
  "termcolor",
- "textwrap 0.15.0",
+ "textwrap",
 ]
 
 [[package]]
@@ -651,7 +613,7 @@ version = "3.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ead064480dfc4880a10764488415a97fdd36a4cf1bb022d372f02e8faf8386e1"
 dependencies = [
- "clap 3.2.10",
+ "clap",
 ]
 
 [[package]]
@@ -896,42 +858,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "criterion"
-version = "0.3.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b01d6de93b2b6c65e17c634a26653a29d107b3c98c607c765bf38d041531cd8f"
-dependencies = [
- "atty",
- "cast 0.3.0",
- "clap 2.34.0",
- "criterion-plot",
- "csv",
- "itertools",
- "lazy_static",
- "num-traits 0.2.15",
- "oorandom",
- "plotters",
- "rayon",
- "regex",
- "serde",
- "serde_cbor",
- "serde_derive",
- "serde_json",
- "tinytemplate",
- "walkdir",
-]
-
-[[package]]
-name = "criterion-plot"
-version = "0.4.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d00996de9f2f7559f7f4dc286073197f83e92256a59ed395f9aac01fe717da57"
-dependencies = [
- "cast 0.2.7",
- "itertools",
-]
-
-[[package]]
 name = "crossbeam-channel"
 version = "0.5.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1019,28 +945,6 @@ dependencies = [
  "cipher",
  "generic-array",
  "subtle",
-]
-
-[[package]]
-name = "csv"
-version = "1.1.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "22813a6dc45b335f9bade10bf7271dc477e81113e89eb251a0bc2a8a81c536e1"
-dependencies = [
- "bstr",
- "csv-core",
- "itoa 0.4.8",
- "ryu",
- "serde",
-]
-
-[[package]]
-name = "csv-core"
-version = "0.1.10"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2b2466559f260f48ad25fe6317b3c8dac77b5bdb5763ac7d9d6103530663bc90"
-dependencies = [
- "memchr",
 ]
 
 [[package]]
@@ -1607,12 +1511,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "half"
-version = "1.8.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "eabb4a44450da02c90444cf74558da904edde8fb4e9035a9a6a4e15445af0bd7"
-
-[[package]]
 name = "hashbrown"
 version = "0.11.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1740,7 +1638,7 @@ checksum = "75f43d41e26995c17e71ee126451dd3941010b0514a81a9d11f3b341debc2399"
 dependencies = [
  "bytes",
  "fnv",
- "itoa 1.0.2",
+ "itoa",
 ]
 
 [[package]]
@@ -1779,16 +1677,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9a3a5bfb195931eeb336b2a7b4d761daec841b97f947d34394601737a7bba5e4"
 
 [[package]]
-name = "humantime-serde"
-version = "1.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "57a3db5ea5923d99402c94e9feb261dc5ee9b4efa158b0315f788cf549cc200c"
-dependencies = [
- "humantime",
- "serde",
-]
-
-[[package]]
 name = "hyper"
 version = "0.14.20"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1803,7 +1691,7 @@ dependencies = [
  "http-body",
  "httparse",
  "httpdate",
- "itoa 1.0.2",
+ "itoa",
  "pin-project-lite",
  "socket2",
  "tokio",
@@ -1826,21 +1714,6 @@ dependencies = [
  "tokio-rustls 0.22.0",
  "webpki 0.21.4",
  "webpki-roots",
-]
-
-[[package]]
-name = "hyper-rustls"
-version = "0.23.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d87c48c02e0dc5e3b849a2041db3029fd066650f8f717c07bf8ed78ccb895cac"
-dependencies = [
- "http",
- "hyper",
- "log",
- "rustls 0.20.6",
- "rustls-native-certs",
- "tokio",
- "tokio-rustls 0.23.4",
 ]
 
 [[package]]
@@ -1958,12 +1831,6 @@ checksum = "a9a9d19fa1e79b6215ff29b9d6880b706147f16e9b1dbb1e4e5947b5b02bc5e3"
 dependencies = [
  "either",
 ]
-
-[[package]]
-name = "itoa"
-version = "0.4.8"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b71991ff56294aa922b450139ee08b3bfc70982c6b2c7562771375cf73542dd4"
 
 [[package]]
 name = "itoa"
@@ -2089,7 +1956,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "bytes",
- "clap 3.2.10",
+ "clap",
  "env_logger 0.9.0",
  "location_utils",
  "log",
@@ -2104,7 +1971,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "bytes",
- "clap 3.2.10",
+ "clap",
  "location_utils",
  "multimap",
  "oak_functions_abi",
@@ -2382,7 +2249,7 @@ dependencies = [
  "hashbrown 0.12.2",
  "lazy_static",
  "oak_functions_abi",
- "oak_functions_loader",
+ "oak_functions_freestanding",
  "oak_functions_lookup",
  "oak_functions_testing_extension",
  "oak_functions_wasm",
@@ -2414,7 +2281,7 @@ dependencies = [
  "async-stream",
  "async-trait",
  "base64",
- "clap 3.2.10",
+ "clap",
  "ecdsa 0.13.4",
  "env_logger 0.9.0",
  "hex",
@@ -2478,7 +2345,7 @@ dependencies = [
  "anyhow",
  "async-trait",
  "bmrng",
- "clap 3.2.10",
+ "clap",
  "command-fds",
  "env_logger 0.9.0",
  "flatbuffers",
@@ -2486,7 +2353,7 @@ dependencies = [
  "hashbrown 0.12.2",
  "log",
  "oak_channel",
- "oak_functions_loader",
+ "oak_functions_abi",
  "oak_idl",
  "oak_idl_gen_services",
  "oak_idl_gen_structs",
@@ -2505,7 +2372,7 @@ name = "oak_functions_linux_fd_bin"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "clap 3.2.10",
+ "clap",
  "log",
  "oak_channel",
  "oak_functions_freestanding",
@@ -2519,7 +2386,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "assert_matches",
- "clap 3.2.10",
+ "clap",
  "libc",
  "oak_channel",
  "oak_functions_freestanding",
@@ -2540,69 +2407,6 @@ dependencies = [
  "oak_functions_client",
  "rand 0.8.5",
  "tokio",
-]
-
-[[package]]
-name = "oak_functions_loader"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "async-stream",
- "async-trait",
- "byteorder",
- "bytes",
- "chrono",
- "clap 3.2.10",
- "criterion",
- "futures",
- "hashbrown 0.12.2",
- "http",
- "humantime-serde",
- "hyper",
- "hyper-rustls",
- "log",
- "lookup_data_generator",
- "oak_functions_abi",
- "oak_functions_extension",
- "oak_functions_lookup",
- "oak_functions_util",
- "oak_functions_wasm",
- "oak_functions_workload_logging",
- "oak_grpc_unary_attestation",
- "oak_logger",
- "oak_remote_attestation",
- "oak_remote_attestation_amd",
- "oak_utils",
- "prost 0.10.4",
- "rand 0.8.5",
- "serde",
- "serde_derive",
- "serde_json",
- "signal-hook",
- "tempfile",
- "test_utils",
- "tokio",
- "tonic",
- "tonic-web",
- "url",
- "wasmi",
-]
-
-[[package]]
-name = "oak_functions_loader_base"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "clap 3.2.10",
- "humantime-serde",
- "log",
- "oak_functions_extension",
- "oak_functions_loader",
- "oak_logger",
- "serde",
- "serde_derive",
- "serde_json",
- "toml",
 ]
 
 [[package]]
@@ -2910,7 +2714,7 @@ name = "offline_attestation_client"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "clap 3.2.10",
+ "clap",
  "env_logger 0.9.0",
  "log",
  "offline_attestation_shared",
@@ -2926,7 +2730,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "bytes",
- "clap 3.2.10",
+ "clap",
  "env_logger 0.9.0",
  "log",
  "offline_attestation_shared",
@@ -2950,12 +2754,6 @@ name = "once_cell"
 version = "1.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "18a6dbe30758c9f83eb00cbea4ac95966305f5a7772f3f42ebfc7fc7eddbd8e1"
-
-[[package]]
-name = "oorandom"
-version = "11.1.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0ab1bc2a289d34bd04a330323ac98a1b4bc82c9d9fcb1e66b63caa84da26b575"
 
 [[package]]
 name = "opaque-debug"
@@ -3148,34 +2946,6 @@ name = "plain"
 version = "0.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b4596b6d070b27117e987119b4dac604f3c58cfb0b191112e24771b2faeac1a6"
-
-[[package]]
-name = "plotters"
-version = "0.3.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9428003b84df1496fb9d6eeee9c5f8145cb41ca375eb0dad204328888832811f"
-dependencies = [
- "num-traits 0.2.15",
- "plotters-backend",
- "plotters-svg",
- "wasm-bindgen",
- "web-sys",
-]
-
-[[package]]
-name = "plotters-backend"
-version = "0.3.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "193228616381fecdc1224c62e96946dfbc73ff4384fba576e052ff8c1bea8142"
-
-[[package]]
-name = "plotters-svg"
-version = "0.3.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e0918736323d1baff32ee0eade54984f6f201ad7e97d5cfb5d6ab4a358529615"
-dependencies = [
- "plotters-backend",
-]
 
 [[package]]
 name = "poly1305"
@@ -3609,12 +3379,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "regex-automata"
-version = "0.1.10"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6c230d73fb8d8c1b9c0b3135c5142a8acee3a0558fb8db5cf1cb65f8d7862132"
-
-[[package]]
 name = "regex-syntax"
 version = "0.6.27"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3736,15 +3500,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "08d43f7aa6b08d49f382cde6a7982047c3426db949b1424bc4b7ec9ae12c6ce2"
 
 [[package]]
-name = "rustc_version"
-version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bfa0f585226d2e68097d4f95d113b15b83a82e819ab25717ec0590d9584ef366"
-dependencies = [
- "semver",
-]
-
-[[package]]
 name = "rustix"
 version = "0.33.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3753,7 +3508,7 @@ dependencies = [
  "bitflags",
  "errno",
  "io-lifetimes",
- "itoa 1.0.2",
+ "itoa",
  "libc",
  "linux-raw-sys",
  "once_cell",
@@ -3969,16 +3724,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "serde_cbor"
-version = "0.11.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2bef2ebfde456fb76bbcf9f59315333decc4fda0b2b44b420243c11e0f5ec1f5"
-dependencies = [
- "half",
- "serde",
-]
-
-[[package]]
 name = "serde_derive"
 version = "1.0.143"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4006,7 +3751,7 @@ version = "1.0.82"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "82c2c1fdcd807d1098552c5b9a36e425e42e9fbd7c6a37a8425f390f781f7fa7"
 dependencies = [
- "itoa 1.0.2",
+ "itoa",
  "ryu",
  "serde",
 ]
@@ -4018,7 +3763,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d3491c14715ca2294c4d6a88f15e84739788c1d030eed8c110436aafdaa2f3fd"
 dependencies = [
  "form_urlencoded",
- "itoa 1.0.2",
+ "itoa",
  "ryu",
  "serde",
 ]
@@ -4122,16 +3867,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "83bdb7831b2d85ddf4a7b148aa19d0587eddbe8671a436b7bd1182eaad0f2829"
 dependencies = [
  "dirs-next",
-]
-
-[[package]]
-name = "signal-hook"
-version = "0.3.14"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a253b5e89e2698464fc26b545c9edceb338e18a89effeeecfea192c3025be29d"
-dependencies = [
- "libc",
- "signal-hook-registry",
 ]
 
 [[package]]
@@ -4379,15 +4114,6 @@ dependencies = [
 
 [[package]]
 name = "textwrap"
-version = "0.11.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d326610f408c7a4eb6f51c37c330e496b08506c9457c9d34287ecc38809fb060"
-dependencies = [
- "unicode-width",
-]
-
-[[package]]
-name = "textwrap"
 version = "0.15.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b1141d4d61095b28419e22cb0bbf02755f5e54e0526f97f1e3d1d160e60885fb"
@@ -4529,16 +4255,6 @@ checksum = "4339caf5fbe6cbcde4683174ab669b5e4bfe63870e7016be8bfa551e24c83c80"
 dependencies = [
  "prost 0.9.0",
  "prost-build 0.9.0",
-]
-
-[[package]]
-name = "tinytemplate"
-version = "1.2.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "be4d6b5f19ff7664e8c98d03e2139cb510db9b0a60b55f8e8709b689d939b6bc"
-dependencies = [
- "serde",
- "serde_json",
 ]
 
 [[package]]
@@ -4869,7 +4585,7 @@ name = "trusted_shuffler_backend"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "clap 3.2.10",
+ "clap",
  "env_logger 0.9.0",
  "futures-core",
  "futures-util",
@@ -4887,7 +4603,7 @@ name = "trusted_shuffler_client"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "clap 3.2.10",
+ "clap",
  "env_logger 0.9.0",
  "futures",
  "http",
@@ -4917,7 +4633,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-trait",
- "clap 3.2.10",
+ "clap",
  "env_logger 0.9.0",
  "futures-core",
  "futures-util",
@@ -5852,7 +5568,7 @@ dependencies = [
  "async-trait",
  "cargo_metadata",
  "chrono",
- "clap 3.2.10",
+ "clap",
  "clap_complete",
  "colored",
  "itertools",

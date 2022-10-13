@@ -15,8 +15,9 @@
 //
 
 use crate::schema;
-use anyhow::anyhow;
+use anyhow::{anyhow, Context};
 use hashbrown::HashMap;
+use prost::Message;
 use std::fs;
 
 pub fn encode_lookup_data<'a>(
@@ -58,5 +59,19 @@ pub fn load_lookup_data(
             error
         )
     })?;
-    oak_functions_loader::lookup_data::parse_lookup_entries(bytes.as_slice())
+    parse_lookup_entries(bytes.as_slice())
+}
+
+fn parse_lookup_entries<B: prost::bytes::Buf>(
+    lookup_data_buffer: B,
+) -> anyhow::Result<HashMap<Vec<u8>, Vec<u8>>> {
+    let mut lookup_data_buffer = lookup_data_buffer;
+    let mut entries = HashMap::new();
+    while lookup_data_buffer.has_remaining() {
+        let entry =
+            oak_functions_abi::proto::Entry::decode_length_delimited(&mut lookup_data_buffer)
+                .context("could not decode entry")?;
+        entries.insert(entry.key, entry.value);
+    }
+    Ok(entries)
 }
