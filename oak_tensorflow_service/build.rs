@@ -18,11 +18,9 @@ use lazy_static::lazy_static;
 use std::{path::PathBuf, process::Command};
 
 const SCHEMA: &str = "schema.fbs";
-const TFLITE_LIBRARY_NAME: &str = "tflite-micro";
+const TFLITE_BUILD_TARGET: &str = "//cc/tflite_micro:tflite-micro";
 
 lazy_static! {
-    static ref TFLITE_BUILD_TARGET: String = format!("//cc/tflite_micro:{}", TFLITE_LIBRARY_NAME);
-
     // WORKSPACE_ROOT is set in .cargo/config.toml.
     static ref TFLITE_LIBRARY_SOURCE_DIR: PathBuf = {
         [env!("WORKSPACE_ROOT"), "cc/tflite_micro/"].iter().collect()
@@ -58,7 +56,7 @@ fn build_tflite() {
 
     let status = Command::new("bazel")
         .arg("build")
-        .arg(TFLITE_BUILD_TARGET.as_str())
+        .arg(TFLITE_BUILD_TARGET)
         .status()
         .expect("Failed to run bazel build");
     if !status.success() {
