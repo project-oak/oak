@@ -64,10 +64,16 @@ pub unsafe fn create_offset_map<S: PageSize, A: FrameAllocator<Size4KiB> + ?Size
     range: PhysFrameRange<S>,
     offset: VirtAddr,
     flags: PageTableFlags,
+    encrypted: Option<u64>,
     mapper: &mut M,
     frame_allocator: &mut A,
 ) -> Result<(), MapToError<S>> {
     for (i, frame) in range.enumerate() {
+        let frame = PhysFrame::from_start_address(PhysAddr::new(
+            frame.start_address().as_u64() | encrypted.unwrap_or_default(),
+        ))
+        .unwrap();
+
         mapper
             .map_to_with_table_flags(
                 Page::<S>::from_start_address(offset + i * (S::SIZE as usize)).unwrap(),
@@ -109,6 +115,7 @@ pub unsafe fn create_kernel_map<
     M: Mapper<Size2MiB> + Mapper<Size4KiB>,
 >(
     program_headers: &[ProgramHeader],
+    encrypted: Option<u64>,
     mapper: &mut M,
     frame_allocator: &mut A,
 ) -> Result<(), MapToError<Size4KiB>> {
@@ -146,6 +153,6 @@ pub unsafe fn create_kernel_map<
             )
         })
         .try_for_each(|(range, offset, flags)| {
-            create_offset_map(range, offset, flags, mapper, frame_allocator)
+            create_offset_map(range, offset, flags, encrypted, mapper, frame_allocator)
         })
 }

@@ -17,6 +17,7 @@
 use goblin::{elf32::program_header::PT_LOAD, elf64::program_header::ProgramHeader};
 use log::info;
 use oak_linux_boot_params::{BootE820Entry, E820EntryType};
+use sev_guest::msr::{get_sev_status, SevStatus};
 use x86_64::{
     addr::{align_down, align_up},
     registers::{
@@ -154,6 +155,12 @@ pub fn init_paging<A: FrameAllocator<Size4KiB> + ?Sized>(
     // GiB of memory.
     let mut page_table = unsafe { OffsetPageTable::new(pml4, VirtAddr::new(0)) };
 
+    // Should we set the C-bit (encrypted memory for SEV)?
+    let encrypted = get_sev_status()
+        .unwrap_or(SevStatus::empty())
+        .contains(SevStatus::SEV_ENABLED)
+        .then_some(1 << 51);
+
     // Safety: these operations are safe as they're not done on active page tables.
     unsafe {
         // Create a direct map for all physical memory, marking it NO_EXECUTE. The size (128 GB) has
@@ -168,6 +175,7 @@ pub fn init_paging<A: FrameAllocator<Size4KiB> + ?Sized>(
                 | PageTableFlags::GLOBAL
                 | PageTableFlags::WRITABLE
                 | PageTableFlags::NO_EXECUTE,
+            encrypted,
             &mut page_table,
             frame_allocator,
         )
@@ -175,8 +183,13 @@ pub fn init_paging<A: FrameAllocator<Size4KiB> + ?Sized>(
 
         // Mapping for the kernel itself in the upper -2G of memory, based on the mappings (and
         // permissions) in the program header.
-        page_tables::create_kernel_map(program_headers, &mut page_table, frame_allocator)
-            .map_err(|_| "Failed to set up paging for the kernel")?;
+        page_tables::create_kernel_map(
+            program_headers,
+            encrypted,
+            &mut page_table,
+            frame_allocator,
+        )
+        .map_err(|_| "Failed to set up paging for the kernel")?;
     }
 
     // Safety: the new page tables keep the identity mapping at -2GB intact, so it's safe to load
