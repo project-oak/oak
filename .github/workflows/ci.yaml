@@ -144,30 +144,3 @@ jobs:
         run:
           docker run --volume=$PWD:/workspace --workdir=/workspace
           gcr.io/oak-ci/oak-android:latest ./scripts/build_examples_android
-
-  cargo-crev-verify:
-    runs-on: ubuntu-20.04
-    steps:
-      - name: Checkout branch
-        uses: actions/checkout@v3
-
-      # Copied from https://github.com/jens-maus/RaspberryMatic/blob/ea6b8ce0dd2d53ea88b2766ba8d7f8e1d667281f/.github/workflows/ci.yml#L34-L40
-      # and https://github.com/actions/virtual-environments/issues/709#issuecomment-612569242
-      - name: Free disk space
-        run: |
-          df --human-readable
-          sudo apt clean
-          docker rmi $(docker image ls --all --quiet)
-          rm --recursive --force "$AGENT_TOOLSDIRECTORY"
-          df --human-readable
-
-      - name: Docker pull
-        timeout-minutes: 10
-        run: |
-          ./scripts/docker_pull
-          df --human-readable
-
-      - name: Cargo crev verification
-        run: |
-          ./scripts/docker_run ./scripts/run_cargo_crev
-          df --human-readable
