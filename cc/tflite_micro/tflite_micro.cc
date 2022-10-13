@@ -21,7 +21,7 @@
 
 // TODO(#3297): Implement TensorFlow Lite initialization logic.
 int tflite_init(const uint8_t* model_bytes, size_t model_bytes_len,
-                const uint8_t* tensor_arena_bytes, size_t tensor_arena_len) {
+                const uint8_t* tensor_arena_bytes, size_t tensor_arena_bytes_len) {
   return 0;
 }
 
