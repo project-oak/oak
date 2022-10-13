@@ -22,12 +22,14 @@ package(
 
 android_library(
     name = "client_activity",
-    srcs = ["com/google/oak/functions/android/client/MainActivity.java"],
+    srcs = ["MainActivity.java"],
     custom_package = "com.google.oak.functions.android.client",
     manifest = "AndroidManifest.xml",
-    resource_files = glob(["com/google/oak/functions/android/client/res/**"]),
+    resource_files = glob(["res/**"]),
+    # Exclude Android specific targets because they will not run in the main Docker Image.
+    tags = ["manual"],
     deps = [
-        "//oak_functions/client/java:client_android",
+        "//java/src/main/java/com/google/oak/functions/client:client_android",
         "//oak_functions/proto:abi_java_proto_lite",
         "@com_google_guava_guava",
         "@com_google_protobuf//:protobuf_javalite",
@@ -40,6 +42,8 @@ android_binary(
     custom_package = "com.google.oak.functions.android.client",
     manifest = "AndroidManifest.xml",
     multidex = "native",
+    # Exclude Android specific targets because they will not run in the main Docker Image.
+    tags = ["manual"],
     deps = [
         ":client_activity",
     ],

@@ -745,33 +745,13 @@ fn run_cargo_clean() -> Step {
 fn run_bazel_build() -> Step {
     Step::Single {
         name: "bazel build".to_string(),
-        command: Cmd::new(
-            "bazel",
-            [
-                "build",
-                "--",
-                "//oak_functions/client/java/...:all",
-                "//oak_functions/examples/...:all",
-                "//remote_attestation/java/...:all",
-                "//java/...:all",
-            ],
-        ),
+        command: Cmd::new("bazel", ["build", "--", "//java/...:all"]),
     }
 }
 
 fn run_bazel_test() -> Step {
     Step::Single {
         name: "bazel test".to_string(),
-        command: Cmd::new(
-            "bazel",
-            [
-                "test",
-                "--",
-                "//oak_functions/client/java/...:all",
-                "//oak_functions/examples/...:all",
-                "//remote_attestation/java/tests/...:all",
-                "//java/...:all",
-            ],
-        ),
+        command: Cmd::new("bazel", ["test", "--", "//java/...:all"]),
     }
 }

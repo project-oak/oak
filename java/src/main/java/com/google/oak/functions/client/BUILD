@@ -24,14 +24,12 @@ package(
 
 java_library(
     name = "client",
-    srcs = [
-        "src/com/google/oak/functions/client/AttestationClient.java",
-    ],
+    srcs = ["AttestationClient.java"],
     deps = [
+        "//java/src/main/java/com/google/oak/remote_attestation",
         "//oak_functions/proto:abi_java_proto",
         "//oak_grpc_unary_attestation/proto:server_java_grpc",
         "//oak_grpc_unary_attestation/proto:server_java_proto",
-        "//remote_attestation/java:remote_attestation",
         "@com_google_protobuf//:protobuf_javalite",
         "@io_grpc_grpc_java//api",
         "@io_grpc_grpc_java//netty",
@@ -42,16 +40,14 @@ java_library(
 # Dedicated Android target is necessary for using Tink internally.
 android_library(
     name = "client_android",
-    srcs = [
-        "src/com/google/oak/functions/client/AttestationClient.java",
-    ],
+    srcs = ["AttestationClient.java"],
     # Exclude Android specific targets because they will not run in the main Docker Image.
     tags = ["manual"],
     deps = [
+        "//java/src/main/java/com/google/oak/remote_attestation:remote_attestation_android",
         "//oak_functions/proto:abi_java_proto_lite",
         "//oak_grpc_unary_attestation/proto:server_java_grpc_lite",
         "//oak_grpc_unary_attestation/proto:server_java_proto_lite",
-        "//remote_attestation/java:remote_attestation_android",
         "@com_google_protobuf//:protobuf_javalite",
         "@io_grpc_grpc_java//api",
         "@io_grpc_grpc_java//okhttp",

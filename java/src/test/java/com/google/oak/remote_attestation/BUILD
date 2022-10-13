@@ -1,5 +1,5 @@
 #
-# Copyright 2021 The Project Oak Authors
+# Copyright 2022 The Project Oak Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,39 +17,32 @@
 load("@rules_java//java:defs.bzl", "java_test")
 
 package(
-    default_visibility = ["//visibility:public"],
     licenses = ["notice"],
 )
 
 java_test(
     name = "message_test",
-    srcs = [
-        "com/google/oak/remote_attestation/MessageTest.java",
-    ],
+    srcs = ["MessageTest.java"],
     test_class = "com.google.oak.remote_attestation.MessageTest",
     deps = [
-        "//remote_attestation/java:remote_attestation",
+        "//java/src/main/java/com/google/oak/remote_attestation",
     ],
 )
 
 java_test(
     name = "key_negotiator_test",
-    srcs = [
-        "com/google/oak/remote_attestation/KeyNegotiatorTest.java",
-    ],
+    srcs = ["KeyNegotiatorTest.java"],
     test_class = "com.google.oak.remote_attestation.KeyNegotiatorTest",
     deps = [
-        "//remote_attestation/java:remote_attestation",
+        "//java/src/main/java/com/google/oak/remote_attestation",
     ],
 )
 
 java_test(
     name = "client_handshaker_test",
-    srcs = [
-        "com/google/oak/remote_attestation/ClientHandshakerTest.java",
-    ],
+    srcs = ["ClientHandshakerTest.java"],
     test_class = "com.google.oak.remote_attestation.ClientHandshakerTest",
     deps = [
-        "//remote_attestation/java:remote_attestation",
+        "//java/src/main/java/com/google/oak/remote_attestation",
     ],
 )

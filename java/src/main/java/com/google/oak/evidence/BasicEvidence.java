@@ -23,7 +23,6 @@ import com.google.oak.evidence.Evidence;
 import com.google.oak.util.Result;
 import java.io.PrintWriter;
 import java.io.StringWriter;
-import java.lang.StackWalker.Option;
 import java.security.PublicKey;
 import java.util.Arrays;
 import java.util.Optional;
