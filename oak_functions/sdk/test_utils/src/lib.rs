@@ -17,26 +17,13 @@
 //! Test utilities to help with unit testing of Oak-Functions SDK code.
 
 use anyhow::Context;
-use hyper::{
-    service::{make_service_fn, service_fn},
-    Body,
-};
 use log::info;
 use nix::unistd::Pid;
 use oak_functions_abi::{Request, Response};
-
 use oak_functions_client::Client;
 use prost::Message;
 use std::{
-    collections::HashMap,
-    convert::Infallible,
-    future::Future,
-    io::Write,
-    net::{Ipv6Addr, SocketAddr},
-    pin::Pin,
-    process::Command,
-    sync::{Arc, Mutex},
-    task::Poll,
+    collections::HashMap, future::Future, io::Write, pin::Pin, process::Command, task::Poll,
     time::Duration,
 };
 use tokio::{sync::oneshot, task::JoinHandle};
@@ -82,47 +69,6 @@ pub fn compile_rust_wasm(manifest_path: &str, release: bool) -> anyhow::Result<V
     info!("Compiled Wasm module path: {:?}", module_path);
 
     std::fs::read(module_path).context("Couldn't read compiled module")
-}
-
-/// A mock implementation of a static server that always returns the same configurable response for
-/// any incoming HTTP request.
-#[derive(Default)]
-pub struct MockStaticServer {
-    response_body: Arc<Mutex<Vec<u8>>>,
-}
-
-impl MockStaticServer {
-    /// Sets the content of the response body to return for any request.
-    pub fn set_response_body(&self, response_body: Vec<u8>) {
-        *self
-            .response_body
-            .lock()
-            .expect("could not lock response body mutex") = response_body;
-    }
-
-    /// Starts serving, listening on the provided port.
-    pub async fn serve<F: Future<Output = ()>>(&self, port: u16, terminate: F) {
-        let address = SocketAddr::from((Ipv6Addr::UNSPECIFIED, port));
-        let response_body = self.response_body.clone();
-        let server = hyper::Server::bind(&address)
-            .serve(make_service_fn(|_conn| {
-                let response_body = response_body.clone();
-                async {
-                    Ok::<_, Infallible>(service_fn(move |_req| {
-                        let response_body = response_body.clone();
-                        async move {
-                            let response_body: Vec<u8> = response_body
-                                .lock()
-                                .expect("could not lock response body mutex")
-                                .clone();
-                            Ok::<_, Infallible>(hyper::Response::new(Body::from(response_body)))
-                        }
-                    }))
-                }
-            }))
-            .with_graceful_shutdown(terminate);
-        server.await.unwrap();
-    }
 }
 
 /// Serializes the provided map as a contiguous buffer of length-delimited protobuf messages of type
@@ -189,8 +135,9 @@ where
     }
 }
 
-/// Builds the crate identified by the given name as a Linux binary, and returns the path of the
-/// resulting binary.
+/// Builds the crate identified by the given package name (as per the `name` attribute in a
+/// Cargo.toml file included in the root cargo workspace) as a Linux binary, and returns the path of
+/// the resulting binary.
 fn build_rust_crate_linux(crate_name: &str) -> anyhow::Result<String> {
     duct::cmd!(
         "cargo",
@@ -208,8 +155,9 @@ fn build_rust_crate_linux(crate_name: &str) -> anyhow::Result<String> {
     ))
 }
 
-/// Builds the crate identified by the given name as a Wasm module, and returns the path of the
-/// resulting binary.
+/// Builds the crate identified by the given package name (as per the `name` attribute in a
+/// Cargo.toml file included in the root cargo workspace) as a Wasm module, and returns the path of
+/// the resulting binary.
 pub fn build_rust_crate_wasm(crate_name: &str) -> anyhow::Result<String> {
     duct::cmd!(
         "cargo",
@@ -227,6 +175,11 @@ pub fn build_rust_crate_wasm(crate_name: &str) -> anyhow::Result<String> {
     ))
 }
 
+/// Starts an instance of the Oak Functions server running in the background, listening on the
+/// provided port, and running the provided Wasm module, with the provided data available for
+/// lookup.
+///
+/// Returns a handle to the background process.
 pub fn create_and_start_oak_functions_server(
     server_port: u16,
     wasm_module_path: &str,
@@ -249,6 +202,10 @@ pub fn create_and_start_oak_functions_server(
     Ok(handle)
 }
 
+/// Kills all the processes identified by the provided handle.
+///
+/// First tries to send them a `SIGINT` signal, then, if they are still running, it sends them a
+/// `SIGKILL` signal.
 pub fn kill_process(handle: duct::ReaderHandle) {
     handle.pids().iter().for_each(|pid| {
         nix::sys::signal::kill(Pid::from_raw(*pid as i32), nix::sys::signal::SIGINT).unwrap()

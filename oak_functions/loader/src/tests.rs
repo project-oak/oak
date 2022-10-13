@@ -16,7 +16,7 @@
 
 use crate::{
     logger::Logger,
-    lookup_data::{parse_lookup_entries, LookupDataAuth, LookupDataRefresher, LookupDataSource},
+    lookup_data::{parse_lookup_entries, LookupDataRefresher, LookupDataSource},
     server::apply_policy,
 };
 use oak_functions_abi::{proto::ServerPolicy, Response, StatusCode};
@@ -108,70 +108,6 @@ fn parse_lookup_entries_invalid() {
     let buf = vec![1, 2, 3];
     let res = parse_lookup_entries(buf.as_ref());
     assert!(res.is_err());
-}
-
-#[tokio::test]
-async fn lookup_data_refresh_http() {
-    let mock_static_server = Arc::new(test_utils::MockStaticServer::default());
-
-    let static_server_port = test_utils::free_port();
-    let mock_static_server_clone = mock_static_server.clone();
-    let mock_static_server_background = test_utils::background(|term| async move {
-        mock_static_server_clone
-            .serve(static_server_port, term)
-            .await
-    });
-
-    let lookup_data_manager = Arc::new(LookupDataManager::new_empty(Logger::for_test()));
-    let lookup_data_refresher = LookupDataRefresher::new(
-        Some(LookupDataSource::Http {
-            url: format!("http://localhost:{}", static_server_port),
-            auth: LookupDataAuth::default(),
-        }),
-        lookup_data_manager.clone(),
-        Logger::for_test(),
-    );
-    let lookup_data = lookup_data_manager.create_lookup_data();
-    assert!(lookup_data.is_empty());
-
-    // Initially empty file, no entries.
-    lookup_data_refresher.refresh().await.unwrap();
-    let lookup_data = lookup_data_manager.create_lookup_data();
-    assert!(lookup_data.is_empty());
-
-    // Single entry.
-    mock_static_server.set_response_body(ENTRY_0_LENGTH_DELIMITED.to_vec());
-    lookup_data_refresher.refresh().await.unwrap();
-    let lookup_data = lookup_data_manager.create_lookup_data();
-    assert_eq!(lookup_data.len(), 1);
-    assert_eq!(lookup_data.get(&[14, 12]), Some(vec![19, 88]));
-    assert_eq!(lookup_data.get(b"Harry"), None);
-
-    // Empty file again.
-    mock_static_server.set_response_body(vec![]);
-    lookup_data_refresher.refresh().await.unwrap();
-    let lookup_data = lookup_data_manager.create_lookup_data();
-    assert!(lookup_data.is_empty());
-
-    // A different entry.
-    mock_static_server.set_response_body(ENTRY_1_LENGTH_DELIMITED.to_vec());
-    lookup_data_refresher.refresh().await.unwrap();
-    let lookup_data = lookup_data_manager.create_lookup_data();
-    assert_eq!(lookup_data.len(), 1);
-    assert_eq!(lookup_data.get(&[14, 12]), None);
-    assert_eq!(lookup_data.get(b"Harry"), Some(b"Potter".to_vec()));
-
-    // Two entries.
-    let mut buf = ENTRY_0_LENGTH_DELIMITED.to_vec();
-    buf.append(&mut ENTRY_1_LENGTH_DELIMITED.to_vec());
-    mock_static_server.set_response_body(buf);
-    lookup_data_refresher.refresh().await.unwrap();
-    let lookup_data = lookup_data_manager.create_lookup_data();
-    assert_eq!(lookup_data.len(), 2);
-    assert_eq!(lookup_data.get(&[14, 12]), Some(vec![19, 88]));
-    assert_eq!(lookup_data.get(b"Harry"), Some(b"Potter".to_vec()));
-
-    mock_static_server_background.terminate_and_join().await;
 }
 
 #[tokio::test]
