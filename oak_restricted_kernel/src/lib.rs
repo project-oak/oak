@@ -30,6 +30,8 @@
 
 #![cfg_attr(not(test), no_std)]
 #![feature(abi_x86_interrupt)]
+#![feature(asm_sym)]
+#![feature(naked_functions)]
 #![feature(once_cell)]
 
 mod args;
