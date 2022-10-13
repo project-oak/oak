@@ -15,7 +15,7 @@
 //
 
 use crate::i8042;
-use core::ops::Deref;
+use core::{arch::asm, ops::Deref};
 use lazy_static::lazy_static;
 use log::error;
 use x86_64::{
@@ -26,11 +26,49 @@ use x86_64::{
 lazy_static! {
     static ref IDT: InterruptDescriptorTable = {
         let mut idt = InterruptDescriptorTable::new();
-        idt.double_fault.set_handler_fn(double_fault_handler);
-        idt.page_fault.set_handler_fn(page_fault_handler);
-        idt.breakpoint.set_handler_fn(breakpoint_handler);
+        idt.breakpoint.set_handler_fn(breakpoint_handler);                             // vector 3
+        idt.double_fault.set_handler_fn(double_fault_handler);                         // vector 8
+        idt.general_protection_fault.set_handler_fn(general_protection_fault_handler); // vector 13
+        idt.page_fault.set_handler_fn(page_fault_handler);                             // vector 14
         idt
     };
+}
+
+#[naked]
+extern "x86-interrupt" fn general_protection_fault_handler(_: InterruptStackFrame, _: u64) {
+    unsafe {
+        asm! {
+            "push %rax",            // save old rax value
+            "mov 16(%rsp), %rax",   // rax = rsp + 16 (address of the return RIP)
+            "cmpw $0x320F, (%rax)", // is RIP pointing to 0x320F (RDMSR)?
+            "jne 2f",               // if not, jump to label 2
+            "add $2, %rax",         // increment rax by 2 (size of RDMSR instruction)
+            "add $24, %rsp",        // drop the saved RAX, error code, and Return IP
+            "push %rax",            // put Return IP back on the stack for iretq
+            "xor %rax, %rax",       // zero out RAX
+            "xor %rdx, %rdx",       // zero out RDX
+            "iretq",                // and go back claiming we've executed the RDMSR
+            "2:",                   // it wasn't because of `rdmsr`
+            "pop %rax",             // restore old rax value. We're now back at the initial state.
+            "jmp {}",               // Let the Rust code take care of it. We jmp instead of call, as the
+                                    // Rust function will call `iretq` instead of `ret` at the end.
+            sym general_protection_fault_handler_inner,
+            options(att_syntax, noreturn)
+        }
+    }
+}
+
+extern "x86-interrupt" fn general_protection_fault_handler_inner(
+    stack_frame: InterruptStackFrame,
+    error_code: u64,
+) {
+    error!("KERNEL PANIC: GENERAL PROTECTION FAULT!");
+    error!(
+        "Instruction pointer: {:#016x}",
+        stack_frame.deref().instruction_pointer.as_u64()
+    );
+    error!("Error code: {:?}", error_code);
+    i8042::shutdown();
 }
 
 extern "x86-interrupt" fn breakpoint_handler(stack_frame: InterruptStackFrame) {
