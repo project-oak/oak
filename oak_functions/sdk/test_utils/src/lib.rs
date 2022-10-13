@@ -17,24 +17,13 @@
 //! Test utilities to help with unit testing of Oak-Functions SDK code.
 
 use anyhow::Context;
-use hyper::{
-    service::{make_service_fn, service_fn},
-    Body,
-};
 use log::info;
+use nix::unistd::Pid;
 use oak_functions_abi::{Request, Response};
-
 use oak_functions_client::Client;
 use prost::Message;
 use std::{
-    collections::HashMap,
-    convert::Infallible,
-    future::Future,
-    net::{Ipv6Addr, SocketAddr},
-    pin::Pin,
-    process::Command,
-    sync::{Arc, Mutex},
-    task::Poll,
+    collections::HashMap, future::Future, io::Write, pin::Pin, process::Command, task::Poll,
     time::Duration,
 };
 use tokio::{sync::oneshot, task::JoinHandle};
@@ -43,7 +32,7 @@ use tokio::{sync::oneshot, task::JoinHandle};
 fn build_wasm_module_path(metadata: &cargo_metadata::Metadata) -> String {
     let package_name = &metadata.root_package().unwrap().name;
     // Keep this in sync with `/xtask/src/main.rs`.
-    format!("{}/bin/{}.wasm", metadata.workspace_root, package_name)
+    format!("{}/bin/{package_name}.wasm", metadata.workspace_root)
 }
 
 /// Uses cargo to compile a Rust manifest to Wasm bytes.
@@ -61,7 +50,7 @@ pub fn compile_rust_wasm(manifest_path: &str, release: bool) -> anyhow::Result<V
         "--target=wasm32-unknown-unknown".to_string(),
         format!("--target-dir={}/wasm", metadata.target_directory),
         format!("--out-dir={}/bin", metadata.workspace_root),
-        format!("--manifest-path={}", manifest_path),
+        format!("--manifest-path={manifest_path}"),
     ];
 
     if release {
@@ -82,47 +71,6 @@ pub fn compile_rust_wasm(manifest_path: &str, release: bool) -> anyhow::Result<V
     std::fs::read(module_path).context("Couldn't read compiled module")
 }
 
-/// A mock implementation of a static server that always returns the same configurable response for
-/// any incoming HTTP request.
-#[derive(Default)]
-pub struct MockStaticServer {
-    response_body: Arc<Mutex<Vec<u8>>>,
-}
-
-impl MockStaticServer {
-    /// Sets the content of the response body to return for any request.
-    pub fn set_response_body(&self, response_body: Vec<u8>) {
-        *self
-            .response_body
-            .lock()
-            .expect("could not lock response body mutex") = response_body;
-    }
-
-    /// Starts serving, listening on the provided port.
-    pub async fn serve<F: Future<Output = ()>>(&self, port: u16, terminate: F) {
-        let address = SocketAddr::from((Ipv6Addr::UNSPECIFIED, port));
-        let response_body = self.response_body.clone();
-        let server = hyper::Server::bind(&address)
-            .serve(make_service_fn(|_conn| {
-                let response_body = response_body.clone();
-                async {
-                    Ok::<_, Infallible>(service_fn(move |_req| {
-                        let response_body = response_body.clone();
-                        async move {
-                            let response_body: Vec<u8> = response_body
-                                .lock()
-                                .expect("could not lock response body mutex")
-                                .clone();
-                            Ok::<_, Infallible>(hyper::Response::new(Body::from(response_body)))
-                        }
-                    }))
-                }
-            }))
-            .with_graceful_shutdown(terminate);
-        server.await.unwrap();
-    }
-}
-
 /// Serializes the provided map as a contiguous buffer of length-delimited protobuf messages of type
 /// [`Entry`](https://github.com/project-oak/oak/blob/main/oak_functions/proto/lookup_data.proto).
 pub fn serialize_entries(entries: HashMap<Vec<u8>, Vec<u8>>) -> Vec<u8> {
@@ -134,6 +82,13 @@ pub fn serialize_entries(entries: HashMap<Vec<u8>, Vec<u8>>) -> Vec<u8> {
             .expect("could not encode entry as length delimited");
     }
     buf
+}
+
+pub fn write_to_temp_file(content: &[u8]) -> tempfile::NamedTempFile {
+    let mut file = tempfile::NamedTempFile::new().expect("could not create temp file");
+    file.write_all(content)
+        .expect("could not write content to temp file");
+    file
 }
 
 pub fn free_port() -> u16 {
@@ -180,6 +135,86 @@ where
     }
 }
 
+/// Builds the crate identified by the given package name (as per the `name` attribute in a
+/// Cargo.toml file included in the root cargo workspace) as a Linux binary, and returns the path of
+/// the resulting binary.
+fn build_rust_crate_linux(crate_name: &str) -> anyhow::Result<String> {
+    duct::cmd!(
+        "cargo",
+        "build",
+        "--target=x86_64-unknown-linux-musl",
+        "--release",
+        format!("--package={crate_name}"),
+    )
+    .dir(env!("WORKSPACE_ROOT"))
+    .run()
+    .context(format!("could not compile {crate_name}"))?;
+    Ok(format!(
+        "{}target/x86_64-unknown-linux-musl/release/{crate_name}",
+        env!("WORKSPACE_ROOT")
+    ))
+}
+
+/// Builds the crate identified by the given package name (as per the `name` attribute in a
+/// Cargo.toml file included in the root cargo workspace) as a Wasm module, and returns the path of
+/// the resulting binary.
+pub fn build_rust_crate_wasm(crate_name: &str) -> anyhow::Result<String> {
+    duct::cmd!(
+        "cargo",
+        "build",
+        "--target=wasm32-unknown-unknown",
+        "--release",
+        format!("--package={crate_name}"),
+    )
+    .dir(env!("WORKSPACE_ROOT"))
+    .run()
+    .context(format!("could not compile {crate_name}"))?;
+    Ok(format!(
+        "{}target/wasm32-unknown-unknown/release/{crate_name}.wasm",
+        env!("WORKSPACE_ROOT"),
+    ))
+}
+
+/// Starts an instance of the Oak Functions server running in the background, listening on the
+/// provided port, and running the provided Wasm module, with the provided data available for
+/// lookup.
+///
+/// Returns a handle to the background process.
+pub fn create_and_start_oak_functions_server(
+    server_port: u16,
+    wasm_module_path: &str,
+    lookup_data_path: &str,
+) -> anyhow::Result<duct::ReaderHandle> {
+    let oak_functions_launcher_path = build_rust_crate_linux("oak_functions_launcher")?;
+    let oak_functions_linux_fd_bin_path = build_rust_crate_linux("oak_functions_linux_fd_bin")?;
+
+    let handle = duct::cmd!(
+        oak_functions_launcher_path,
+        format!("--wasm={wasm_module_path}"),
+        format!("--port={server_port}"),
+        format!("--lookup-data={lookup_data_path}"),
+        "native",
+        format!("--app-binary={oak_functions_linux_fd_bin_path}"),
+    )
+    .dir(env!("WORKSPACE_ROOT"))
+    .reader()
+    .context("could not run oak_functions_launcher")?;
+    Ok(handle)
+}
+
+/// Kills all the processes identified by the provided handle.
+///
+/// First tries to send them a `SIGINT` signal, then, if they are still running, it sends them a
+/// `SIGKILL` signal.
+pub fn kill_process(handle: duct::ReaderHandle) {
+    handle.pids().iter().for_each(|pid| {
+        nix::sys::signal::kill(Pid::from_raw(*pid as i32), nix::sys::signal::SIGINT).unwrap()
+    });
+    // Wait for the process to terminate cleanly, then forcefully kill it.
+    std::thread::sleep(Duration::from_secs(2));
+    handle.kill().unwrap();
+}
+
 /// A wrapper around a termination signal [`oneshot::Receiver`].
 ///
 /// This type manually implements [`Future`] in order to be able to be passed to a closure as part
@@ -209,7 +244,7 @@ pub struct TestResult {
 }
 
 pub async fn make_request(port: u16, request_body: &[u8]) -> TestResult {
-    let uri = format!("http://localhost:{}/", port);
+    let uri = format!("http://localhost:{port}/");
 
     // Create client
     let mut client = Client::new(&uri).await.expect("Could not create client");
@@ -236,25 +271,4 @@ pub fn assert_response_body(response: Response, expected: &str) {
         std::str::from_utf8(body).expect("could not convert response body from utf8"),
         expected
     )
-}
-
-/// Create Wasm bytecode from an Oak Functions example.
-fn create_wasm_module_bytes_from_example(
-    manifest_path_from_examples: &str,
-    release: bool,
-) -> Vec<u8> {
-    let mut manifest_path = std::path::PathBuf::new();
-    // WORKSPACE_ROOT is set in .cargo/config.toml.
-    manifest_path.push(env!("WORKSPACE_ROOT"));
-    manifest_path.push("oak_functions");
-    manifest_path.push("examples");
-    manifest_path.push(manifest_path_from_examples);
-    compile_rust_wasm(manifest_path.to_str().expect("Invalid target dir"), release)
-        .expect("Couldn't read Wasm module")
-}
-
-/// Create valid (release) Wasm bytecode for a minimal "echo" module which only uses the Abi
-/// functions `read_request` and `write_request`.
-pub fn create_echo_wasm_module_bytes() -> Vec<u8> {
-    create_wasm_module_bytes_from_example("echo/module/Cargo.toml", true)
 }

@@ -17,8 +17,9 @@
 use hashbrown::HashMap;
 use lazy_static::lazy_static;
 use oak_functions_abi::{Request, Response};
-use oak_functions_loader::{logger::Logger, server::WasmHandler};
+use oak_functions_loader::logger::Logger;
 use oak_functions_lookup::{LookupDataManager, LookupFactory};
+use oak_functions_wasm::WasmHandler;
 use oak_functions_workload_logging::WorkloadLoggingFactory;
 use std::{path::PathBuf, sync::Arc};
 

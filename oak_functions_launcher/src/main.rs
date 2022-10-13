@@ -20,6 +20,7 @@ use instance::{crosvm, native, LaunchedInstance};
 use std::{
     fs,
     io::{BufRead, BufReader},
+    net::{Ipv6Addr, SocketAddr},
     os::unix::net::UnixStream,
     path::PathBuf,
 };
@@ -64,6 +65,9 @@ struct Args {
     /// Consistent response size that the runtime should apply
     #[clap(long, default_value = "1024")]
     constant_response_size: u32,
+
+    #[clap(long, default_value = "8080")]
+    port: u16,
 
     /// Path to a Wasm file to be loaded into the trusted runtime and executed by it per
     /// invocation. See the documentation for details on its ABI. Ref: <https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md>
@@ -179,7 +183,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .expect("no public key info returned");
 
     let server_future = server::server(
-        "127.0.0.1:8080".parse()?,
+        SocketAddr::from((Ipv6Addr::UNSPECIFIED, cli.port)),
         connector_handle,
         public_key_info
             .public_key()

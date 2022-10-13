@@ -15,168 +15,17 @@
 //
 
 use crate::{
-    grpc::{create_and_start_grpc_server, create_wasm_handler},
     logger::Logger,
-    lookup_data::{parse_lookup_entries, LookupDataAuth, LookupDataRefresher, LookupDataSource},
+    lookup_data::{parse_lookup_entries, LookupDataRefresher, LookupDataSource},
     server::apply_policy,
 };
-use maplit::hashmap;
 use oak_functions_abi::{proto::ServerPolicy, Response, StatusCode};
-use oak_functions_lookup::{LookupDataManager, LookupFactory};
-use oak_functions_workload_logging::WorkloadLoggingFactory;
+use oak_functions_lookup::LookupDataManager;
 use prost::Message;
 use std::{
     io::{Seek, Write},
-    net::{Ipv6Addr, SocketAddr},
     sync::Arc,
-    time::Duration,
 };
-use test_utils::make_request;
-
-const MANIFEST_PATH: &str = "examples/key_value_lookup/module/Cargo.toml";
-
-#[tokio::test]
-async fn test_valid_policy() {
-    // Policy values are large enough to allow successful serving of the request, and responding
-    // with the actual response from the Wasm module.
-    let constant_processing_time = Duration::from_millis(500);
-    let policy = ServerPolicy {
-        constant_response_size_bytes: 100,
-        constant_processing_time_ms: constant_processing_time.as_millis().try_into().unwrap(),
-    };
-
-    let scenario = |server_port: u16| async move {
-        let result = make_request(server_port, br#"key_1"#).await;
-        // Check that the processing time is within a reasonable range of
-        // `constant_processing_time` specified in the policy.
-        assert!(result.elapsed > constant_processing_time);
-        assert!(
-            (result.elapsed.as_millis() as f64)
-                < 1.05 * constant_processing_time.as_millis() as f64,
-            "elapsed time is: {:?}",
-            result.elapsed
-        );
-
-        let response = result.response;
-        assert_eq!(StatusCode::Success, response.status);
-        assert_eq!(
-            std::str::from_utf8(response.body().unwrap()).unwrap(),
-            r#"value_1"#
-        );
-    };
-
-    run_scenario_with_policy(scenario, policy).await;
-}
-
-#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
-async fn test_long_response_time() {
-    // The `constant_processing_time` is too low.
-    let constant_processing_time = Duration::from_millis(5);
-    let policy = ServerPolicy {
-        constant_response_size_bytes: 100,
-        constant_processing_time_ms: constant_processing_time.as_millis().try_into().unwrap(),
-    };
-
-    // So we expect the request to fail, with `response not available error`.
-    let scenario = |server_port: u16| async move {
-        let result = make_request(server_port, br#"key_1"#).await;
-        // Check the elapsed time, allowing a margin of 50ms.
-        // TODO(#2694): Increased the margin from 10 to 50 ms as the test was starting to fail
-        // daily, but we need to investigate the regression.
-        let margin = Duration::from_millis(50);
-        assert!(
-            result.elapsed < constant_processing_time + margin,
-            "elapsed: {:?}",
-            result.elapsed
-        );
-
-        let response = result.response;
-        assert_eq!(StatusCode::PolicyTimeViolation, response.status);
-        assert_eq!(
-            std::str::from_utf8(response.body().unwrap()).unwrap(),
-            "Reason: response not available."
-        );
-    };
-
-    run_scenario_with_policy(scenario, policy).await;
-}
-
-/// Starts the server with the given policy, and runs the given test scenario.
-///
-/// A normal test scenario makes any number of requests and checks the responses. It has to be an
-/// async function, with a single `u16` input argument as the `server_port`, and returning the unit
-/// type (`()`).
-async fn run_scenario_with_policy<F, S>(test_scenario: F, policy: ServerPolicy)
-where
-    F: FnOnce(u16) -> S,
-    S: std::future::Future<Output = ()>,
-{
-    let server_port = test_utils::free_port();
-    let address = SocketAddr::from((Ipv6Addr::UNSPECIFIED, server_port));
-
-    let mut manifest_path = std::env::current_dir().unwrap();
-    manifest_path.pop();
-    manifest_path.push(MANIFEST_PATH);
-    let wasm_module_bytes =
-        test_utils::compile_rust_wasm(manifest_path.to_str().expect("Invalid target dir"), false)
-            .expect("Couldn't read Wasm module");
-
-    let logger = Logger::for_test();
-
-    let mock_static_server = Arc::new(test_utils::MockStaticServer::default());
-
-    let mock_static_server_clone = mock_static_server.clone();
-    let static_server_port = test_utils::free_port();
-    let mock_static_server_background = test_utils::background(|term| async move {
-        mock_static_server_clone
-            .serve(static_server_port, term)
-            .await
-    });
-
-    mock_static_server.set_response_body(test_utils::serialize_entries(hashmap! {
-        b"key_0".to_vec() => br#"value_0"#.to_vec(),
-        b"key_1".to_vec() => br#"value_1"#.to_vec(),
-        b"key_2".to_vec() => br#"value_2"#.to_vec(),
-    }));
-
-    let lookup_data_manager = Arc::new(LookupDataManager::new_empty(logger.clone()));
-    let lookup_data_refresher = LookupDataRefresher::new(
-        Some(LookupDataSource::Http {
-            url: format!("http://localhost:{}", static_server_port),
-            auth: LookupDataAuth::default(),
-        }),
-        lookup_data_manager.clone(),
-        logger.clone(),
-    );
-    lookup_data_refresher.refresh().await.unwrap();
-    let workload_logging_factory =
-        WorkloadLoggingFactory::new_boxed_extension_factory(logger.clone())
-            .expect("could not create WorkloadLoggingFactory");
-    let lookup_factory = LookupFactory::new_boxed_extension_factory(lookup_data_manager.clone())
-        .expect("could not create LookupFactory");
-    let wasm_handler = create_wasm_handler(
-        &wasm_module_bytes,
-        vec![lookup_factory, workload_logging_factory],
-        logger.clone(),
-    )
-    .expect("could not create wasm_handler");
-
-    let server_background = test_utils::background(|term| async move {
-        create_and_start_grpc_server(&address, wasm_handler, policy.clone(), term, logger).await
-    });
-
-    // Wait for the server thread to make progress before starting the client. This is needed for a
-    // more accurate measurement of the processing time, and to avoid `connection refused` from the
-    // client in tests that run with multiple threads.
-    tokio::time::sleep(Duration::from_secs(1)).await;
-
-    test_scenario(server_port).await;
-
-    let res = server_background.terminate_and_join().await;
-    assert!(res.is_ok());
-
-    mock_static_server_background.terminate_and_join().await;
-}
 
 #[test]
 fn parse_lookup_entries_empty() {
@@ -259,70 +108,6 @@ fn parse_lookup_entries_invalid() {
     let buf = vec![1, 2, 3];
     let res = parse_lookup_entries(buf.as_ref());
     assert!(res.is_err());
-}
-
-#[tokio::test]
-async fn lookup_data_refresh_http() {
-    let mock_static_server = Arc::new(test_utils::MockStaticServer::default());
-
-    let static_server_port = test_utils::free_port();
-    let mock_static_server_clone = mock_static_server.clone();
-    let mock_static_server_background = test_utils::background(|term| async move {
-        mock_static_server_clone
-            .serve(static_server_port, term)
-            .await
-    });
-
-    let lookup_data_manager = Arc::new(LookupDataManager::new_empty(Logger::for_test()));
-    let lookup_data_refresher = LookupDataRefresher::new(
-        Some(LookupDataSource::Http {
-            url: format!("http://localhost:{}", static_server_port),
-            auth: LookupDataAuth::default(),
-        }),
-        lookup_data_manager.clone(),
-        Logger::for_test(),
-    );
-    let lookup_data = lookup_data_manager.create_lookup_data();
-    assert!(lookup_data.is_empty());
-
-    // Initially empty file, no entries.
-    lookup_data_refresher.refresh().await.unwrap();
-    let lookup_data = lookup_data_manager.create_lookup_data();
-    assert!(lookup_data.is_empty());
-
-    // Single entry.
-    mock_static_server.set_response_body(ENTRY_0_LENGTH_DELIMITED.to_vec());
-    lookup_data_refresher.refresh().await.unwrap();
-    let lookup_data = lookup_data_manager.create_lookup_data();
-    assert_eq!(lookup_data.len(), 1);
-    assert_eq!(lookup_data.get(&[14, 12]), Some(vec![19, 88]));
-    assert_eq!(lookup_data.get(b"Harry"), None);
-
-    // Empty file again.
-    mock_static_server.set_response_body(vec![]);
-    lookup_data_refresher.refresh().await.unwrap();
-    let lookup_data = lookup_data_manager.create_lookup_data();
-    assert!(lookup_data.is_empty());
-
-    // A different entry.
-    mock_static_server.set_response_body(ENTRY_1_LENGTH_DELIMITED.to_vec());
-    lookup_data_refresher.refresh().await.unwrap();
-    let lookup_data = lookup_data_manager.create_lookup_data();
-    assert_eq!(lookup_data.len(), 1);
-    assert_eq!(lookup_data.get(&[14, 12]), None);
-    assert_eq!(lookup_data.get(b"Harry"), Some(b"Potter".to_vec()));
-
-    // Two entries.
-    let mut buf = ENTRY_0_LENGTH_DELIMITED.to_vec();
-    buf.append(&mut ENTRY_1_LENGTH_DELIMITED.to_vec());
-    mock_static_server.set_response_body(buf);
-    lookup_data_refresher.refresh().await.unwrap();
-    let lookup_data = lookup_data_manager.create_lookup_data();
-    assert_eq!(lookup_data.len(), 2);
-    assert_eq!(lookup_data.get(&[14, 12]), Some(vec![19, 88]));
-    assert_eq!(lookup_data.get(b"Harry"), Some(b"Potter".to_vec()));
-
-    mock_static_server_background.terminate_and_join().await;
 }
 
 #[tokio::test]

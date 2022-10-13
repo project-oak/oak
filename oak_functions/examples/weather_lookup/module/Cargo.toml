@@ -15,14 +15,9 @@ serde = { version = "*", features = ["derive"] }
 serde_json = "*"
 
 [dev-dependencies]
-http = "*"
 lookup_data_generator = { path = "../../../lookup_data_generator" }
 oak_functions_abi = { path = "../../../abi" }
-oak_functions_loader = { path = "../../../loader" }
-oak_functions_lookup = { path = "../../../lookup" }
-oak_functions_workload_logging = { path = "../../../workload_logging" }
 maplit = "*"
-prost = "*"
 rand = "*"
 test_utils = { path = "../../../sdk/test_utils" }
 tokio = { version = "*", features = [

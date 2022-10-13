@@ -15,85 +15,40 @@
 
 extern crate test;
 
-use hashbrown::HashMap;
 use maplit::hashmap;
-use oak_functions_abi::{proto::ServerPolicy, Request, StatusCode};
-use oak_functions_loader::{
-    grpc::{create_and_start_grpc_server, create_wasm_handler},
-    logger::Logger,
-    lookup_data::{LookupDataAuth, LookupDataRefresher, LookupDataSource},
-    server::WasmHandler,
-};
-use oak_functions_lookup::{LookupDataManager, LookupFactory};
-use std::{
-    net::{Ipv6Addr, SocketAddr},
-    sync::Arc,
-    time::Duration,
-};
+use oak_functions_abi::StatusCode;
+use std::time::Duration;
 use test::Bencher;
 use test_utils::make_request;
 
 #[tokio::test]
 async fn test_server() {
+    let wasm_path = test_utils::build_rust_crate_wasm("key_value_lookup").unwrap();
+
+    let lookup_data_file =
+        test_utils::write_to_temp_file(&test_utils::serialize_entries(hashmap! {
+            b"key_0".to_vec() => b"value_0".to_vec(),
+            b"key_1".to_vec() => b"value_1".to_vec(),
+            b"key_2".to_vec() => b"value_2".to_vec(),
+            b"empty".to_vec() => vec![],
+        }));
+
     let server_port = test_utils::free_port();
-    let address = SocketAddr::from((Ipv6Addr::UNSPECIFIED, server_port));
+    let server_background = test_utils::create_and_start_oak_functions_server(
+        server_port,
+        &wasm_path,
+        lookup_data_file.path().to_str().unwrap(),
+    )
+    .unwrap();
 
-    let mut manifest_path = std::env::current_dir().unwrap();
-    manifest_path.push("Cargo.toml");
-
-    let wasm_module_bytes =
-        test_utils::compile_rust_wasm(manifest_path.to_str().expect("Invalid target dir"), false)
-            .expect("Couldn't read Wasm module");
-
-    let mock_static_server = Arc::new(test_utils::MockStaticServer::default());
-
-    let mock_static_server_clone = mock_static_server.clone();
-    let static_server_port = test_utils::free_port();
-    let mock_static_server_background = test_utils::background(|term| async move {
-        mock_static_server_clone
-            .serve(static_server_port, term)
-            .await
-    });
-
-    mock_static_server.set_response_body(test_utils::serialize_entries(hashmap! {
-        b"key_0".to_vec() => b"value_0".to_vec(),
-        b"key_1".to_vec() => b"value_1".to_vec(),
-        b"key_2".to_vec() => b"value_2".to_vec(),
-        b"empty".to_vec() => vec![],
-    }));
-
-    let policy = ServerPolicy {
-        constant_response_size_bytes: 100,
-        constant_processing_time_ms: 200,
-    };
-    let logger = Logger::for_test();
-    let lookup_data_manager = Arc::new(LookupDataManager::new_empty(logger.clone()));
-    let lookup_data_refresher = LookupDataRefresher::new(
-        Some(LookupDataSource::Http {
-            url: format!("http://localhost:{}", static_server_port),
-            auth: LookupDataAuth::default(),
-        }),
-        lookup_data_manager.clone(),
-        logger.clone(),
-    );
-    lookup_data_refresher.refresh().await.unwrap();
-
-    let lookup_factory = LookupFactory::new_boxed_extension_factory(lookup_data_manager)
-        .expect("could not create LookupFactory");
-
-    let wasm_handler =
-        create_wasm_handler(&wasm_module_bytes, vec![lookup_factory], logger.clone())
-            .expect("could not create wasm_handler");
-
-    let server_background = test_utils::background(|term| async move {
-        create_and_start_grpc_server(&address, wasm_handler, policy.clone(), term, logger).await
-    });
+    // Wait for the server to start up.
+    std::thread::sleep(Duration::from_secs(2));
 
     {
         // Lookup match.
         let response = make_request(server_port, b"key_1").await.response;
         assert_eq!(StatusCode::Success, response.status);
-        assert_eq!(b"value_1", response.body().unwrap(),);
+        assert_eq!(b"value_1", response.body().unwrap());
     }
     {
         // Lookup fail.
@@ -108,45 +63,45 @@ async fn test_server() {
         assert_eq!(Vec::<u8>::new(), response.body().unwrap());
     }
 
-    let res = server_background.terminate_and_join().await;
-    assert!(res.is_ok());
-
-    mock_static_server_background.terminate_and_join().await;
+    test_utils::kill_process(server_background);
 }
 
 #[bench]
 fn bench_wasm_handler(bencher: &mut Bencher) {
-    let mut manifest_path = std::env::current_dir().unwrap();
-    manifest_path.push("Cargo.toml");
-    let wasm_module_bytes =
-        test_utils::compile_rust_wasm(manifest_path.to_str().expect("Invalid target dir"), true)
-            .expect("Couldn't read Wasm module");
+    let wasm_path = test_utils::build_rust_crate_wasm("key_value_lookup").unwrap();
 
-    let logger = Logger::for_test();
-    let entries = HashMap::from_iter(
-        [
-            (b"key_0".to_vec(), br#"value_0"#.to_vec()),
-            (b"key_1".to_vec(), br#"value_1"#.to_vec()),
-            (b"key_2".to_vec(), br#"value_2"#.to_vec()),
-        ]
-        .into_iter(),
-    );
+    let lookup_data_file =
+        test_utils::write_to_temp_file(&test_utils::serialize_entries(hashmap! {
+            b"key_0".to_vec() => b"value_0".to_vec(),
+            b"key_1".to_vec() => b"value_1".to_vec(),
+            b"key_2".to_vec() => b"value_2".to_vec(),
+            b"empty".to_vec() => vec![],
+        }));
 
-    let lookup_data_manager = Arc::new(LookupDataManager::for_test(entries, logger.clone()));
-    let lookup_factory = LookupFactory::new_boxed_extension_factory(lookup_data_manager)
-        .expect("could not create LookupFactory");
+    let server_port = test_utils::free_port();
+    let server_background = test_utils::create_and_start_oak_functions_server(
+        server_port,
+        &wasm_path,
+        lookup_data_file.path().to_str().unwrap(),
+    )
+    .unwrap();
 
-    let wasm_handler = WasmHandler::create(&wasm_module_bytes, vec![lookup_factory], logger)
-        .expect("Couldn't create the server");
+    // Wait for the server to start up.
+    std::thread::sleep(Duration::from_secs(2));
+
+    let runtime = tokio::runtime::Builder::new_current_thread()
+        .enable_io()
+        .enable_time()
+        .build()
+        .unwrap();
 
     let summary = bencher.bench(|bencher| {
         bencher.iter(|| {
-            let request = Request {
-                body: br#"key_1"#.to_vec(),
-            };
-            let resp = wasm_handler.clone().handle_invoke(request).unwrap();
-            assert_eq!(resp.status, StatusCode::Success);
-            assert_eq!(std::str::from_utf8(&resp.body).unwrap(), r#"value_1"#);
+            let response = runtime
+                .block_on(make_request(server_port, b"key_1"))
+                .response;
+            assert_eq!(StatusCode::Success, response.status);
+            assert_eq!(b"value_1", response.body().unwrap());
         });
         Ok(())
     });
@@ -165,4 +120,6 @@ fn bench_wasm_handler(bencher: &mut Bencher) {
             elapsed
         );
     }
+
+    test_utils::kill_process(server_background);
 }

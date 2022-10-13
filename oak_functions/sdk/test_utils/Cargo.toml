@@ -8,12 +8,15 @@ license = "Apache-2.0"
 [dependencies]
 anyhow = "*"
 cargo_metadata = "*"
+duct = "*"
 log = "*"
 http = "*"
 hyper = { version = "*", features = ["client", "http1", "runtime", "server"] }
+nix = "*"
 oak_functions_abi = { path = "../../abi" }
 oak_functions_client = { path = "../../client/rust" }
 oak_remote_attestation = { path = "../../../oak_remote_attestation" }
 port_check = "*"
 prost = "*"
+tempfile = "*"
 tokio = { version = "*", features = ["sync"] }

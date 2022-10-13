@@ -21,45 +21,15 @@ use location_utils::{
 };
 use lookup_data_generator::data::generate_and_serialize_sparse_weather_entries;
 use maplit::hashmap;
-use oak_functions_abi::{proto::ServerPolicy, Request, StatusCode};
-use oak_functions_loader::{
-    grpc::{create_and_start_grpc_server, create_wasm_handler},
-    logger::Logger,
-    lookup_data::{parse_lookup_entries, LookupDataAuth, LookupDataRefresher, LookupDataSource},
-    server::WasmHandler,
-};
-use oak_functions_lookup::{LookupDataManager, LookupFactory};
-use oak_functions_workload_logging::WorkloadLoggingFactory;
+use oak_functions_abi::StatusCode;
 use rand::{prelude::StdRng, SeedableRng};
-use std::{
-    net::{Ipv6Addr, SocketAddr},
-    sync::Arc,
-    time::Duration,
-};
+use std::time::Duration;
 use test::Bencher;
 use test_utils::make_request;
 
 #[tokio::test]
 async fn test_server() {
-    let server_port = test_utils::free_port();
-    let address = SocketAddr::from((Ipv6Addr::UNSPECIFIED, server_port));
-
-    let mut manifest_path = std::env::current_dir().unwrap();
-    manifest_path.push("Cargo.toml");
-
-    let wasm_module_bytes =
-        test_utils::compile_rust_wasm(manifest_path.to_str().expect("Invalid target dir"), false)
-            .expect("Couldn't read Wasm module");
-
-    let mock_static_server = Arc::new(test_utils::MockStaticServer::default());
-
-    let mock_static_server_clone = mock_static_server.clone();
-    let static_server_port = test_utils::free_port();
-    let mock_static_server_background = test_utils::background(|term| async move {
-        mock_static_server_clone
-            .serve(static_server_port, term)
-            .await
-    });
+    let wasm_path = test_utils::build_rust_crate_wasm("weather_lookup").unwrap();
 
     let location_0 = location_from_degrees(52., -0.01);
     let location_1 = location_from_degrees(14., -12.);
@@ -70,52 +40,25 @@ async fn test_server() {
     let cell_0 = find_cell(&location_0, level).unwrap();
     let cell_1 = find_cell(&location_1, level).unwrap();
 
-    let lookup_data = hashmap! {
-        location_to_bytes(&location_0).to_vec() => br#"{"temperature_degrees_celsius":10}"#.to_vec(),
-        location_to_bytes(&location_1).to_vec() => br#"{"temperature_degrees_celsius":42}"#.to_vec(),
-        cell_id_to_bytes(&cell_0) => location_to_bytes(&location_0).to_vec(),
-        cell_id_to_bytes(&cell_1) => location_to_bytes(&location_1).to_vec(),
-    };
+    let lookup_data_file = test_utils::write_to_temp_file(&test_utils::serialize_entries(
+        hashmap! {
+            location_to_bytes(&location_0).to_vec() => br#"{"temperature_degrees_celsius":10}"#.to_vec(),
+            location_to_bytes(&location_1).to_vec() => br#"{"temperature_degrees_celsius":42}"#.to_vec(),
+            cell_id_to_bytes(&cell_0) => location_to_bytes(&location_0).to_vec(),
+            cell_id_to_bytes(&cell_1) => location_to_bytes(&location_1).to_vec(),
+        },
+    ));
 
-    mock_static_server.set_response_body(test_utils::serialize_entries(lookup_data));
-
-    let policy = ServerPolicy {
-        constant_response_size_bytes: 100,
-        // Multiply the constant_processing_time_ms since runtime performance
-        // is expected to be slower when running tests. Cargo's test profile
-        // builds the WASM engine without optimizations. Based on test config
-        // the WASM module itself may also not be optimized. Creating lookup
-        // tables for the weather example is computationally expensive.
-        constant_processing_time_ms: 200 * 10,
-    };
-    let logger = Logger::for_test();
-    let workload_logging_factory =
-        WorkloadLoggingFactory::new_boxed_extension_factory(logger.clone())
-            .expect("could not create WorkloadLoggingFactory");
-    let lookup_data_manager = Arc::new(LookupDataManager::new_empty(logger.clone()));
-    let lookup_data_refresher = LookupDataRefresher::new(
-        Some(LookupDataSource::Http {
-            url: format!("http://localhost:{}", static_server_port),
-            auth: LookupDataAuth::default(),
-        }),
-        lookup_data_manager.clone(),
-        logger.clone(),
-    );
-    lookup_data_refresher.refresh().await.unwrap();
-
-    let lookup_factory = LookupFactory::new_boxed_extension_factory(lookup_data_manager)
-        .expect("could not create LookupFactory");
-
-    let wasm_handler = create_wasm_handler(
-        &wasm_module_bytes,
-        vec![lookup_factory, workload_logging_factory],
-        logger.clone(),
+    let server_port = test_utils::free_port();
+    let server_background = test_utils::create_and_start_oak_functions_server(
+        server_port,
+        &wasm_path,
+        lookup_data_file.path().to_str().unwrap(),
     )
-    .expect("could not create wasm_handler");
+    .unwrap();
 
-    let server_background = test_utils::background(|term| async move {
-        create_and_start_grpc_server(&address, wasm_handler, policy.clone(), term, logger).await
-    });
+    // Wait for the server to start up.
+    std::thread::sleep(Duration::from_secs(2));
 
     // Test request coordinates are defined in `oak_functions/lookup_data_generator/src/data.rs`.
     {
@@ -183,10 +126,7 @@ async fn test_server() {
         );
     }
 
-    let res = server_background.terminate_and_join().await;
-    assert!(res.is_ok());
-
-    mock_static_server_background.terminate_and_join().await;
+    test_utils::kill_process(server_background);
 }
 
 #[bench]
@@ -204,36 +144,44 @@ fn bench_wasm_handler(bencher: &mut Bencher, warmup: bool) {
     let entry_count = 200_000;
     let elapsed_limit_millis = 20;
 
-    let mut manifest_path = std::env::current_dir().unwrap();
-    manifest_path.push("Cargo.toml");
-    let wasm_module_bytes =
-        test_utils::compile_rust_wasm(manifest_path.to_str().expect("Invalid target dir"), true)
-            .expect("Couldn't read Wasm module");
+    let wasm_path = test_utils::build_rust_crate_wasm("weather_lookup").unwrap();
+    let wasm_module_bytes = std::fs::read(&wasm_path).expect("could not read Wasm file");
     let wasm_module_bytes = if warmup {
         wizer::Wizer::new()
             .run(&wasm_module_bytes)
-            .expect("Couldn't initialise Wasm module")
+            .expect("Couldn't initialise Wasm module via Wizer")
     } else {
         wasm_module_bytes
     };
-    let mut rng = StdRng::seed_from_u64(42);
-    let buf = generate_and_serialize_sparse_weather_entries(&mut rng, entry_count).unwrap();
-    let entries = parse_lookup_entries(buf).unwrap();
+    let wasm_path_after_optimization = test_utils::write_to_temp_file(&wasm_module_bytes);
 
-    let logger = Logger::for_test();
-    let lookup_data_manager = Arc::new(LookupDataManager::for_test(entries, logger.clone()));
-    let lookup_factory = LookupFactory::new_boxed_extension_factory(lookup_data_manager)
-        .expect("could not create LookupFactory");
-    let wasm_handler = WasmHandler::create(&wasm_module_bytes, vec![lookup_factory], logger)
-        .expect("Couldn't create the server");
+    let mut rng = StdRng::seed_from_u64(42);
+    let lookup_data = generate_and_serialize_sparse_weather_entries(&mut rng, entry_count).unwrap();
+    let lookup_data_file = test_utils::write_to_temp_file(&lookup_data);
+
+    let server_port = test_utils::free_port();
+    let server_background = test_utils::create_and_start_oak_functions_server(
+        server_port,
+        wasm_path_after_optimization.path().to_str().unwrap(),
+        lookup_data_file.path().to_str().unwrap(),
+    )
+    .unwrap();
+
+    // Wait for the server to start up.
+    std::thread::sleep(Duration::from_secs(2));
+
+    let runtime = tokio::runtime::Builder::new_current_thread()
+        .enable_io()
+        .enable_time()
+        .build()
+        .unwrap();
 
     let summary = bencher.bench(|bencher| {
         bencher.iter(|| {
-            let request = Request {
-                body: br#"{"lat":-60.1,"lng":120.1}"#.to_vec(),
-            };
-            let resp = wasm_handler.clone().handle_invoke(request).unwrap();
-            assert_eq!(resp.status, StatusCode::Success);
+            let response = runtime
+                .block_on(make_request(server_port, br#"{"lat":-60.1,"lng":120.1}"#))
+                .response;
+            assert_eq!(response.status, StatusCode::Success);
         });
         Ok(())
     });
@@ -252,4 +200,6 @@ fn bench_wasm_handler(bencher: &mut Bencher, warmup: bool) {
             elapsed
         );
     }
+
+    test_utils::kill_process(server_background);
 }
