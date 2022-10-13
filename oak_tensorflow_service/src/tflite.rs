@@ -23,8 +23,13 @@ extern "C" {
     /// Initializes the TensorFlow model and returns a corresponding error code.
     ///
     /// Memory area that will be used by the TFLM memory manager is defined by `tensor_arena_bytes`:
-    /// https://github.com/tensorflow/tflite-micro/blob/main/tensorflow/lite/micro/docs/memory_management.md
-    fn tflite_init(model_bytes: *const u8, tensor_arena_bytes: *const u8) -> i32;
+    /// <https://github.com/tensorflow/tflite-micro/blob/main/tensorflow/lite/micro/docs/memory_management.md>
+    fn tflite_init(
+        model_bytes: *const u8,
+        model_bytes_len: u64,
+        tensor_arena_bytes: *const u8,
+        tensor_arena_bytes_len: u64,
+    ) -> i32;
 
     /// Performs inference on `input_bytes` and pass inference result to `output_bytes` and returns
     /// an error code.
@@ -36,9 +41,10 @@ extern "C" {
     ) -> i32;
 }
 
-// TODO(#3297): Use 8Gb or 10Gb arena sizes.
+// TODO(#3297): Use 8GiB or 10GiB arena sizes.
 const TENSOR_ARENA_SIZE: usize = 1024;
 
+#[derive(Default)]
 pub struct TfliteModel {
     tensor_arena: Vec<u8>,
 }
@@ -50,9 +56,23 @@ impl TfliteModel {
     }
 
     pub fn initialize(&self, model_bytes: &[u8]) -> anyhow::Result<()> {
-        unsafe {
-            let _ = tflite_init(model_bytes.as_ptr(), self.tensor_arena.as_ptr());
-        }
+        let model_bytes_len = model_bytes
+            .len()
+            .try_into()
+            .map_err(|error| anyhow!("Failed to convert usize to u64: {}", error))?;
+        let tensor_arena_len = self
+            .tensor_arena
+            .len()
+            .try_into()
+            .map_err(|error| anyhow!("Failed to convert usize to u64: {}", error))?;
+        let _ = unsafe {
+            tflite_init(
+                model_bytes.as_ptr(),
+                model_bytes_len,
+                self.tensor_arena.as_ptr(),
+                tensor_arena_len,
+            );
+        };
         Ok(())
     }
 
@@ -63,15 +83,15 @@ impl TfliteModel {
             .map_err(|error| anyhow!("Failed to convert usize to u64: {}", error))?;
         // TODO(#3297): Allocate enough bytes for the TensorFlow Lite model.
         let mut output_bytes = vec![0; input_bytes.len()];
-        let mut output_bytes_len = vec![0; core::mem::size_of::<usize>()];
-        unsafe {
-            let _ = tflite_run(
+        let mut output_bytes_len = 0u64;
+        let _ = unsafe {
+            tflite_run(
                 input_bytes.as_ptr(),
                 input_bytes_len,
                 output_bytes.as_mut_ptr(),
-                output_bytes_len.as_mut_ptr(),
+                &mut output_bytes_len as *mut u64,
             );
-        }
+        };
         Ok(output_bytes)
     }
 }

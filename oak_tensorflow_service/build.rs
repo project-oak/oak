@@ -14,13 +14,24 @@
 // limitations under the License.
 //
 
+use lazy_static::lazy_static;
 use std::{path::PathBuf, process::Command};
 
 const SCHEMA: &str = "schema.fbs";
 const TFLITE_LIBRARY_NAME: &str = "tflite-micro";
-const TFLITE_BUILD_TARGET: &str = "//cc/tflite_micro:tflite-micro";
-// TODO(#3297): Get workspace path from environment variables.
-const TFLITE_LIBRARY_DIR: &str = "/workspace/bazel-bin/cc/tflite_micro/";
+
+lazy_static! {
+    static ref TFLITE_BUILD_TARGET: String = format!("//cc/tflite_micro:{}", TFLITE_LIBRARY_NAME);
+
+    // WORKSPACE_ROOT is set in .cargo/config.toml.
+    static ref TFLITE_LIBRARY_SOURCE_DIR: PathBuf = {
+        [env!("WORKSPACE_ROOT"), "cc/tflite_micro/"].iter().collect()
+    };
+
+    static ref TFLITE_LIBRARY_DIR: PathBuf = {
+        [env!("WORKSPACE_ROOT"), "bazel-bin/cc/tflite_micro/"].iter().collect()
+    };
+}
 
 fn main() {
     println!("cargo:rerun-if-changed={}", SCHEMA);
@@ -39,9 +50,15 @@ fn main() {
 /// Builds TensorFlow Lite static library and adds the corresponding build
 /// directory to the library search path.
 fn build_tflite() {
+    // Rerun `build.rs` next time if TensorFlow Lite library sources have been changed.
+    println!(
+        "cargo:rerun-if-changed={}",
+        TFLITE_LIBRARY_SOURCE_DIR.display()
+    );
+
     let status = Command::new("bazel")
         .arg("build")
-        .arg(TFLITE_BUILD_TARGET)
+        .arg(TFLITE_BUILD_TARGET.as_str())
         .status()
         .expect("Failed to run bazel build");
     if !status.success() {
@@ -49,10 +66,5 @@ fn build_tflite() {
     }
 
     // Add TensorFlow Lite build directory to the library search path.
-    println!("cargo:rustc-link-search={}", TFLITE_LIBRARY_DIR);
-
-    // Rerun build.rs if TensorFlow Lite library has been changed.
-    let library_path =
-        PathBuf::from(TFLITE_LIBRARY_DIR).join(format!("lib{}.a", TFLITE_LIBRARY_NAME));
-    println!("cargo:rerun-if-changed={}", library_path.display());
+    println!("cargo:rustc-link-search={}", TFLITE_LIBRARY_DIR.display());
 }

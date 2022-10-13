@@ -2675,6 +2675,7 @@ dependencies = [
  "async-trait",
  "flatbuffers",
  "hashbrown 0.11.2",
+ "lazy_static",
  "oak_idl",
  "oak_idl_gen_services",
  "oak_idl_gen_structs",
