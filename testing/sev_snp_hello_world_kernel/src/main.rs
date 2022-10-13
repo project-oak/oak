@@ -17,8 +17,9 @@
 #![no_std]
 #![no_main]
 #![feature(abi_x86_interrupt)]
+#![feature(naked_functions)]
 
-use core::{arch::asm, ops::Deref, panic::PanicInfo};
+use core::{arch::asm, panic::PanicInfo};
 use lazy_static::lazy_static;
 use oak_linux_boot_params::{BootParams, CCBlobSevInfo, CCSetupData, SetupDataType};
 use sev_guest::{
@@ -43,21 +44,25 @@ lazy_static! {
     };
 }
 
-/// Crude implementation of a #GP handler that skips any `rdmsr` instructions that trigger #GP.
+/// Crude implementation of a #GP handler that emulates any `rdmsr` instructions that trigger #GP.
 ///
-/// Note that this doesn't properly emulate reading the MSR! It doesn't change any register values;
-/// the instruction is just skipped.
-extern "x86-interrupt" fn gp_handler(mut frame: InterruptStackFrame, _: u64) {
+/// This function emulates the `rdmsr` instruction by returning 0 in RAX and RDX.
+#[naked]
+extern "x86-interrupt" fn gp_handler(_: InterruptStackFrame, _: u64) {
     unsafe {
-        // RDMSR can cause a #GP if you try to read a non-existing MSR
-        if *frame.deref().instruction_pointer.as_ptr::<u16>() == 0x320Fu16 {
-            // just skip the instruction
-            frame.as_mut().update(|val| {
-                val.instruction_pointer += 2u64;
-            });
-        } else {
-            // not a RDMSR, trigger a double fault
-            asm!("int 8", options(noreturn));
+        asm! {
+            "mov 8(%rsp), %rax",    // rax = rsp + 16 (address of the return RIP)
+            "cmpw $0x320F, (%rax)", // is RIP pointing to 0x320F (RDMSR)?
+            "jne 2f",               // if not, jump to label 2
+            "add $2, %rax",         // increment rax by 2 (size of RDMSR instruction)
+            "add $16, %rsp",        // drop the error code and old RIP from stack
+            "push %rax",            // put Return RIP back onto the stack for iretq
+            "xor %rax, %rax",       // zero out RAX
+            "xor %rdx, %rdx",       // zero out RDX
+            "iretq",                // and go back claiming we've executed the RDMSR
+            "2:",                   // it wasn't RDMSR
+            "int $8",               // cause a double fault
+            options(att_syntax, noreturn)
         }
     }
 }
