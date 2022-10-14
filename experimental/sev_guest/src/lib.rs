@@ -22,6 +22,7 @@
 pub mod cpuid;
 pub mod ghcb;
 pub mod instructions;
+pub mod interrupts;
 pub mod io;
 pub mod msr;
 pub mod secrets;
