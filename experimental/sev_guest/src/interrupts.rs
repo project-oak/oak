@@ -26,7 +26,6 @@
 //! #![feature(naked_functions)]
 //! #![feature(asm_sym)]
 //!
-//! use core::arch::asm;
 //! use sev_guest::interrupts::{mutable_interrupt_handler_with_error_code, InterruptStackFrame};
 //!
 //! mutable_interrupt_handler_with_error_code!(
@@ -91,6 +90,8 @@ macro_rules! mutable_interrupt_handler_with_error_code {
     (unsafe fn $name:ident ( $stack_frame:ident : &mut InterruptStackFrame , $error_code:ident : u64 $(,)? ) $code:block) => {
         #[naked]
         unsafe extern "sysv64" fn $name() -> ! {
+            use core::arch::asm;
+
             extern "sysv64" fn inner_function($stack_frame: &mut InterruptStackFrame, $error_code: u64) {
                 $code
             }
