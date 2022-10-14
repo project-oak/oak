@@ -187,9 +187,9 @@ dependencies = [
 
 [[package]]
 name = "async-trait"
-version = "0.1.56"
+version = "0.1.57"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "96cf8829f67d2eab0b2dfa42c5d0ef737e0724e4a82b01b3e292456202b19716"
+checksum = "76464446b8bc32758d7e88ee1a804d9914cd9b1cb264c029899680b0be29826f"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1860,7 +1860,7 @@ dependencies = [
 name = "key_value_lookup"
 version = "0.1.0"
 dependencies = [
- "hashbrown 0.11.2",
+ "hashbrown 0.12.2",
  "http",
  "maplit",
  "oak_functions",
@@ -2674,7 +2674,7 @@ dependencies = [
  "anyhow",
  "async-trait",
  "flatbuffers",
- "hashbrown 0.11.2",
+ "hashbrown 0.12.2",
  "oak_idl",
  "oak_idl_gen_services",
  "oak_idl_gen_structs",
@@ -4103,7 +4103,7 @@ dependencies = [
  "http",
  "hyper",
  "log",
- "nix 0.22.3",
+ "nix 0.24.2",
  "oak_functions_abi",
  "oak_functions_client",
  "oak_remote_attestation",
