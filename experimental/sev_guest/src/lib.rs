@@ -17,8 +17,6 @@
 //! Rust wrappers for instructions and structs for use by SNP-active guests to manage page state and
 //! interact with the hypervisor and the secure processor.
 
-#![feature(naked_functions)]
-#![feature(asm_sym)]
 #![no_std]
 
 pub mod cpuid;

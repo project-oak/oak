@@ -23,7 +23,11 @@
 //! Example usage:
 //!
 //! ```rust
+//! #![feature(naked_functions)]
+//! #![feature(asm_sym)]
+//!
 //! use core::arch::asm;
+//! use sev_guest::interrupts::{mutable_interrupt_handler_with_error_code, InterruptStackFrame};
 //!
 //! mutable_interrupt_handler_with_error_code!(
 //!     unsafe fn vmm_communication_exception_handler(
