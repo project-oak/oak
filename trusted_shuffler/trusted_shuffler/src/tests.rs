@@ -45,7 +45,7 @@ impl RequestHandler for TestRequestHandler {
 fn get_plaintext_response(request: &PlaintextRequest) -> PlaintextResponse {
     PlaintextResponse {
         headers: hyper::HeaderMap::new(),
-        data: hyper::body::Bytes::from(request.body.clone()),
+        body: hyper::body::Bytes::from(request.body.clone()),
         trailers: hyper::HeaderMap::new(),
     }
 }
@@ -54,7 +54,7 @@ fn get_plaintext_response(request: &PlaintextRequest) -> PlaintextResponse {
 fn get_encrypted_response(request: &EncryptedRequest) -> EncryptedResponse {
     EncryptedResponse {
         headers: hyper::HeaderMap::new(),
-        data: hyper::body::Bytes::from(request.body.clone()),
+        body: hyper::body::Bytes::from(request.body.clone()),
         trailers: hyper::HeaderMap::new(),
     }
 }
@@ -76,10 +76,10 @@ fn drop_request(request: &PlaintextRequest) -> bool {
 
 // Generates a request and a corresponding response from a string.
 fn generate_secret_request_and_expected_response(
-    data: &str,
+    body: &str,
 ) -> (EncryptedRequest, EncryptedResponse) {
     let request = EncryptedRequest {
-        body: format!("Request: {}", data).into_bytes(),
+        body: format!("Request: {}", body).into_bytes(),
         headers: hyper::HeaderMap::new(),
         uri: hyper::Uri::from_static("test.com"),
     };

@@ -67,13 +67,13 @@ impl PlaintextRequest {
 #[derive(Debug, PartialEq)]
 pub struct EncryptedResponse {
     pub headers: hyper::HeaderMap,
-    pub data: hyper::body::Bytes,
+    pub body: hyper::body::Bytes,
     pub trailers: hyper::HeaderMap,
 }
 
 pub struct PlaintextResponse {
     pub headers: hyper::HeaderMap,
-    pub data: hyper::body::Bytes,
+    pub body: hyper::body::Bytes,
     pub trailers: hyper::HeaderMap,
 }
 
@@ -81,7 +81,7 @@ impl PlaintextResponse {
     fn empty() -> PlaintextResponse {
         PlaintextResponse {
             headers: hyper::HeaderMap::new(),
-            data: hyper::body::Bytes::new(),
+            body: hyper::body::Bytes::new(),
             trailers: hyper::HeaderMap::new(),
         }
     }
@@ -90,7 +90,7 @@ impl PlaintextResponse {
     fn encrypt(self) -> EncryptedResponse {
         EncryptedResponse {
             headers: self.headers,
-            data: self.data,
+            body: self.body,
             trailers: self.trailers,
         }
     }
