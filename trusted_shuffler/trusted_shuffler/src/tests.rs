@@ -45,7 +45,7 @@ impl RequestHandler for TestRequestHandler {
 fn get_plaintext_response(request: &PlaintextRequest) -> PlaintextResponse {
     PlaintextResponse {
         headers: hyper::HeaderMap::new(),
-        body: hyper::body::Bytes::from(request.body.clone()),
+        body: request.body.clone(),
         trailers: hyper::HeaderMap::new(),
     }
 }
@@ -54,7 +54,7 @@ fn get_plaintext_response(request: &PlaintextRequest) -> PlaintextResponse {
 fn get_encrypted_response(request: &EncryptedRequest) -> EncryptedResponse {
     EncryptedResponse {
         headers: hyper::HeaderMap::new(),
-        body: hyper::body::Bytes::from(request.body.clone()),
+        body: request.body.clone(),
         trailers: hyper::HeaderMap::new(),
     }
 }
