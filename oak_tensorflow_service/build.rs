@@ -14,22 +14,11 @@
 // limitations under the License.
 //
 
-use lazy_static::lazy_static;
 use std::{path::PathBuf, process::Command};
 
 const SCHEMA: &str = "schema.fbs";
-const TFLITE_BUILD_TARGET: &str = "//cc/tflite_micro:tflite-micro";
-
-lazy_static! {
-    // WORKSPACE_ROOT is set in .cargo/config.toml.
-    static ref TFLITE_LIBRARY_SOURCE_DIR: PathBuf = {
-        [env!("WORKSPACE_ROOT"), "cc/tflite_micro/"].iter().collect()
-    };
-
-    static ref TFLITE_LIBRARY_DIR: PathBuf = {
-        [env!("WORKSPACE_ROOT"), "bazel-bin/cc/tflite_micro/"].iter().collect()
-    };
-}
+const TFLITE_SOURCE_DIR: &str = "cc/tflite_micro";
+const TFLITE_LIBRARY_NAME: &str = "tflite-micro";
 
 fn main() {
     println!("cargo:rerun-if-changed={}", SCHEMA);
@@ -48,15 +37,20 @@ fn main() {
 /// Builds TensorFlow Lite static library and adds the corresponding build
 /// directory to the library search path.
 fn build_tflite() {
+    // WORKSPACE_ROOT is set in .cargo/config.toml.
+    let source_dir: PathBuf = {
+        [env!("WORKSPACE_ROOT"), TFLITE_SOURCE_DIR].iter().collect()
+    };
     // Rerun `build.rs` next time if TensorFlow Lite library sources have been changed.
     println!(
         "cargo:rerun-if-changed={}",
-        TFLITE_LIBRARY_SOURCE_DIR.display()
+        source_dir.display()
     );
 
+    let build_target = format!("//{}:{}", TFLITE_SOURCE_DIR, TFLITE_LIBRARY_NAME);
     let status = Command::new("bazel")
         .arg("build")
-        .arg(TFLITE_BUILD_TARGET)
+        .arg(build_target)
         .status()
         .expect("Failed to run bazel build");
     if !status.success() {
@@ -64,5 +58,8 @@ fn build_tflite() {
     }
 
     // Add TensorFlow Lite build directory to the library search path.
-    println!("cargo:rustc-link-search={}", TFLITE_LIBRARY_DIR.display());
+    let build_dir: PathBuf = {
+        [env!("WORKSPACE_ROOT"), "bazel-bin", TFLITE_SOURCE_DIR].iter().collect()
+    };
+    println!("cargo:rustc-link-search={}", build_dir.display());
 }
