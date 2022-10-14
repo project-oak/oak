@@ -109,7 +109,7 @@ impl HyperRequestWrapper {
         let minimal_headers = copy_selected_keys(parts.headers, minimal_keys);
 
         let encrypted_request = EncryptedRequest {
-            body: body.to_vec(),
+            body,
             headers: minimal_headers,
             uri,
         };
@@ -146,7 +146,7 @@ impl HyperResponseWrapper {
         // We keep only the body, i.e., data and trailers, from the `hyper::Response`.
 
         log::info!("Response from backend: {:?}", self.0);
-        let (parts, mut body) = self.0.into_parts();
+        let (parts, mut hyper_body) = self.0.into_parts();
 
         let minimal_keys = vec![
             header::CONTENT_TYPE,
@@ -155,11 +155,11 @@ impl HyperResponseWrapper {
         ];
         let minimal_headers = copy_selected_keys(parts.headers, minimal_keys);
 
-        let data = hyper::body::to_bytes(&mut body)
+        let body = hyper::body::to_bytes(&mut hyper_body)
             .await
-            .context("Could not read data.")?;
+            .context("Could not read body.")?;
 
-        let trailers = body
+        let trailers = hyper_body
             .trailers()
             .await
             .context("Could not read trailers.")?
@@ -167,7 +167,7 @@ impl HyperResponseWrapper {
 
         let trusted_shuffler_response = PlaintextResponse {
             headers: minimal_headers,
-            data,
+            body,
             trailers,
         };
 
@@ -179,7 +179,7 @@ impl HyperResponseWrapper {
         // response.
         let (mut sender, body) = hyper::Body::channel();
         sender
-            .send_data(encrypted_response.data)
+            .send_data(encrypted_response.body)
             .await
             .context("Failed to build body from data of encrypted Trusted Shuffler response.")?;
         sender
