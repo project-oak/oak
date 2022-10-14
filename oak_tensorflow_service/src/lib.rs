@@ -35,6 +35,7 @@ mod tflite;
 
 use alloc::sync::Arc;
 
+#[derive(Default)]
 pub struct TensorflowServiceImpl {
     tflite_model: Arc<tflite::TfliteModel>,
 }

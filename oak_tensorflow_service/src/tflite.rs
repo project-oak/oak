@@ -71,7 +71,7 @@ impl TfliteModel {
                 model_bytes_len,
                 self.tensor_arena.as_ptr(),
                 tensor_arena_len,
-            );
+            )
         };
         Ok(())
     }
@@ -90,7 +90,7 @@ impl TfliteModel {
                 input_bytes_len,
                 output_bytes.as_mut_ptr(),
                 &mut output_bytes_len as *mut u64,
-            );
+            )
         };
         Ok(output_bytes)
     }
