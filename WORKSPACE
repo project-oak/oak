@@ -198,6 +198,10 @@ http_archive(
 # TensorFlow Lite for Microcontrollers.
 http_archive(
     name = "com_github_tensorflow_tflite_micro",
+    patches = [
+        # Replaces debug logging function with an empty stub.
+        "//third_party/tflite-micro:remove-debug-logging.patch",
+    ],
     sha256 = "922425b778d5c9336b69f7f68b5f76ae7e6834e026d981179259993d1de5476d",
     strip_prefix = "tflite-micro-3648cf9003d0e2d5658b1add916000ce09a4b427",
     urls = [
