@@ -1,5 +1,5 @@
 #
-# Copyright 2021 The Project Oak Authors
+# Copyright 2022 The Project Oak Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,24 +14,22 @@
 # limitations under the License.
 #
 
-load("@rules_java//java:defs.bzl", "java_binary")
+load("@rules_java//java:defs.bzl", "java_test")
 
 package(
     licenses = ["notice"],
 )
 
-java_binary(
-    name = "client",
-    srcs = [
-        "src/Main.java",
-    ],
-    main_class = "com.google.oak.functions.examples.weather_lookup.client.Main",
+java_test(
+    name = "amd_client_test",
+    srcs = ["AmdAttestedOakClientTest.java"],
+    test_class = "com.google.oak.client.amd.AmdAttestedOakClientTest",
     deps = [
-        "//oak_functions/client/java:client",
-        "@com_google_protobuf//:protobuf_java",
-        "@com_google_protobuf//:protobuf_java_util",
-        "@io_grpc_grpc_java//api",
-        "@io_grpc_grpc_java//protobuf",
-        "@io_grpc_grpc_java//stub",
+        "//java/src/main/java/com/google/oak/client",
+        "//java/src/main/java/com/google/oak/client/amd",
+        "//java/src/main/java/com/google/oak/evidence",
+        "//java/src/main/java/com/google/oak/util",
+        "@com_google_guava_guava",
+        "@maven//:org_mockito_mockito_core",
     ],
 )

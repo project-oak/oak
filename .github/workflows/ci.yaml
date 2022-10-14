@@ -137,10 +137,8 @@ jobs:
         timeout-minutes: 30
         run: |
           docker pull gcr.io/oak-ci/oak-android:latest
-          docker build --pull --cache-from=gcr.io/oak-ci/oak-android:latest --tag=gcr.io/oak-ci/oak-android:latest --file=android.Dockerfile --build-arg=USER_UID="$DOCKER_UID" --build-arg=USER_GID="$DOCKER_GID" .
+          ./scripts/android_docker_build
 
       # Build Android-based examples.
       - name: Build Android Hello-World
-        run:
-          docker run --volume=$PWD:/workspace --workdir=/workspace
-          gcr.io/oak-ci/oak-android:latest ./scripts/build_examples_android
+        run: ./scripts/android_docker_run ./scripts/build_examples_android

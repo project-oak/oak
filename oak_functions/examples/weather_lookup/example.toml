@@ -19,4 +19,4 @@ rust = { Cargo = { cargo_manifest = "oak_functions/client/rust/Cargo.toml" }, ad
   "--request={\"lat\":0,\"lng\":0}",
   "--expected-response-pattern=\\{\"temperature_degrees_celsius\":.*\\}"
 ] }
-java = { Bazel = { bazel_target = "//oak_functions/examples/weather_lookup/client/java:client" } }
+java = { Bazel = { bazel_target = "//java/src/main/java/com/google/oak/functions/weather_lookup_client" } }
