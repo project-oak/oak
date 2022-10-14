@@ -14,6 +14,23 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 #  deb [arch=amd64] http://ukdebian.mirror.anlx.net/debian buster main non-free contrib\
 # > /etc/apt/sources.list
 
+# First install the minimal set of utils that will be used to setup the rest of the packages to install.
+RUN apt-get --yes update && apt-get install --no-install-recommends --yes curl gnupg2 gnupg-agent ca-certificates
+
+# Install LLDB for debugging support.
+ARG llvm_version=14
+RUN curl --fail --silent --show-error --location https://apt.llvm.org/llvm-snapshot.gpg.key | apt-key add -
+RUN echo "deb http://apt.llvm.org/bullseye/ llvm-toolchain-bullseye-$llvm_version main" >> /etc/apt/sources.list.d/llvm.list
+
+# Install docker CLI.
+RUN curl --fail --silent --show-error --location https://download.docker.com/linux/debian/gpg | apt-key add -
+RUN echo "deb [arch=amd64] https://download.docker.com/linux/debian bullseye stable"  > /etc/apt/sources.list.d/backports.list
+
+# Install NodeJS
+# https://github.com/nodesource/distributions/blob/master/README.md#manual-installation
+RUN curl --fail --silent --show-error --location https://deb.nodesource.com/gpgkey/nodesource.gpg.key | apt-key add -
+RUN echo "deb https://deb.nodesource.com/node_18.x bullseye main" > /etc/apt/sources.list.d/nodesource.list
+
 # Getting curl and certificates dependecies.
 # We're rate-limiting HTTP requests to 500 kB/s as otherwise we may get timeout errors
 # when downloading from snapshot.debian.org.
@@ -22,9 +39,15 @@ RUN apt-get --yes update \
   apt-transport-https \
   build-essential \
   ca-certificates \
+  # `chromium` is required to run our tests with wasm-pack.
+  chromium \
+  chromium-driver \
   clang-format \
   clang-tidy \
+  # `cmake` is needed for flatbuffer.
+  cmake \
   curl \
+  docker-ce-cli \
   git \
   gnupg2 \
   gnupg-agent \
@@ -32,7 +55,9 @@ RUN apt-get --yes update \
   libfl2 \
   libncurses5 \
   libssl-dev \
+  lldb-${llvm_version} \
   musl-tools \
+  nodejs \
   openjdk-11-jdk \
   pkg-config \
   procps \
@@ -54,23 +79,6 @@ RUN apt-get --yes update \
   && git --version \
   && shellcheck --version
 
-# Add LLDB version 14 for debugging support.
-ARG llvm_version=14
-RUN echo "deb http://apt.llvm.org/bullseye/ llvm-toolchain-bullseye-$llvm_version main" >> /etc/apt/sources.list.d/llvm.list \
-  && curl https://apt.llvm.org/llvm-snapshot.gpg.key | apt-key add - \
-  && apt-get update --yes \
-  && apt-get install --no-install-recommends --yes \
-  lldb-${llvm_version} \
-  && rm --recursive --force /var/lib/apt/lists/*
-
-# Install a version of docker CLI.
-RUN curl --fail --silent --show-error --location https://download.docker.com/linux/debian/gpg | apt-key add -
-RUN echo "deb [arch=amd64] https://download.docker.com/linux/debian buster stable"  > /etc/apt/sources.list.d/backports.list \
-  && apt-get --yes update \
-  && apt-get install --no-install-recommends --yes docker-ce-cli \
-  && apt-get clean \
-  && rm --recursive --force /var/lib/apt/lists/*
-
 # Install Ent CLI. We mostly then just use it in order to simplify the logic around fetching
 # artifacts by URL and ensuring that their digest is correct, in order to ensure reproducibility.
 ARG ent_server_url=https://ent-server-62sa4xcfia-ew.a.run.app
@@ -80,8 +88,8 @@ RUN curl --location ${ent_server_url}/raw/${ent_digest} > /usr/local/bin/ent \
   && ent
 
 # Use a fixed version of Bazel.
-ARG bazel_version=4.2.0
-ARG bazel_digest=sha256:89b14fa0d9ce5637f4e0b66df56a531e1e3c50d88614311334d192531cf1e0fa
+ARG bazel_version=5.3.1
+ARG bazel_digest=sha256:1e939b50d90f68d30fa4f3c12dfdf31429b83ddd8076c622429854f64253c23d
 ARG bazel_url=https://storage.googleapis.com/bazel-apt/pool/jdk1.8/b/bazel/bazel_${bazel_version}_amd64.deb
 RUN ent get ${bazel_digest} --url=${bazel_url} > bazel.deb \
   && apt-get install --no-install-recommends --yes ./bazel.deb \
@@ -93,34 +101,10 @@ RUN ent get ${bazel_digest} --url=${bazel_url} > bazel.deb \
 # more frequently changed.
 # See https://docs.docker.com/develop/develop-images/dockerfile_best-practices/#leverage-build-cache.
 
-# Install Emscripten.
-ARG emscripten_version=1.39.17
-# Pick compatible Node version by grepping "node" in the emscripten.zip
-# Node is needed to expose npm needed for installing Prettier.
-ARG emscripten_node_version_directory=12.9.1_64bit
-ARG emscripten_digest=sha256:925dd5ca7dd783d0b367386e81847eaf680d54ae86017c4b5846dea951e17dc9
-
-ARG emscripten_dir=/usr/local/emsdk
-ARG emscripten_temp=/tmp/emscripten.zip
-RUN mkdir --parents ${emscripten_dir} \
-  && ent get ${emscripten_digest} --url=https://github.com/emscripten-core/emsdk/archive/${emscripten_version}.tar.gz > ${emscripten_temp} \
-  && tar --extract --gzip --file=${emscripten_temp} --directory=${emscripten_dir} --strip-components=1 \
-  && rm ${emscripten_temp} \
-  && ${emscripten_dir}/emsdk install ${emscripten_version} \
-  && ${emscripten_dir}/emsdk activate --embedded ${emscripten_version}
-ENV EMSDK "${emscripten_dir}"
-ENV EM_CONFIG "${emscripten_dir}/.emscripten"
-ENV EM_CACHE "${emscripten_dir}/.emscripten_cache"
-ENV PATH "${emscripten_dir}:${emscripten_dir}/node/${emscripten_node_version_directory}/bin:${PATH}"
-# We need to allow a non-root Docker container to write into the directory
-RUN chmod --recursive go+wx "${emscripten_dir}"
-# Emscripten brings Node with it, we need to allow non-root access to temp and
-# config folders
-RUN mkdir -p "/.npm" && chmod a+rwx "/.npm" & mkdir -p "/.config" && chmod a+rwx "/.config"
-
 # Install Go.
-ARG golang_version=1.17.7
-ARG golang_digest=sha256:02b111284bedbfa35a7e5b74a06082d18632eff824fd144312f6063943d49259
+# https://go.dev/dl/
+ARG golang_version=1.19.2
+ARG golang_digest=sha256:5e8c5a74fe6470dd7e055a461acda8bb4050ead8c2df70f227e3ff7d8eb7eeb6
 ARG golang_temp=/tmp/golang.tar.gz
 ENV GOROOT /usr/local/go
 ENV GOPATH ${HOME}/go
@@ -138,21 +122,22 @@ RUN mkdir --parents ${GOROOT} \
 
 # Install embedmd (Markdown snippet embedder) (via Go).
 # https://github.com/campoy/embedmd
-RUN go get github.com/campoy/embedmd@97c13d6 \
+RUN go install github.com/campoy/embedmd@97c13d6 \
   && embedmd -v
 
 # Install liche (Markdown link checker) (via Go).
 # https://github.com/raviqqe/liche
-RUN go get github.com/raviqqe/liche@f9ba5f2 \
+RUN go install github.com/raviqqe/liche@f9ba5f2 \
   && liche --version
 
 # Install prettier and markdownlint (via Node.js).
 # This will use the Node version installed by emscripten.
 # https://prettier.io/
+# https://github.com/prettier/prettier
 # https://github.com/igorshubovych/markdownlint-cli
-ARG prettier_version=2.5.1
+ARG prettier_version=2.7.1
 ARG prettier_plugin_toml_version=0.3.1
-ARG markdownlint_version=0.30.0
+ARG markdownlint_version=0.32.2
 RUN npm install --global \
   prettier@${prettier_version} \
   prettier-plugin-toml@${prettier_plugin_toml_version} \
@@ -162,8 +147,8 @@ RUN npm install --global \
 
 # Install hadolint.
 # https://github.com/hadolint/hadolint
-ARG hadolint_version=2.8.0
-ARG hadolint_digest=sha256:9dfc155139a1e1e9b3b28f3de9907736b9dfe7cead1c3a0ae7ff0158f3191674
+ARG hadolint_version=2.10.0
+ARG hadolint_digest=sha256:8ee6ff537341681f9e91bae2d5da451b15c575691e33980893732d866d3cefc4
 ARG hadolint_dir=/usr/local/hadolint/bin
 ARG hadolint_bin=${hadolint_dir}/hadolint
 ENV PATH "${hadolint_dir}:${PATH}"
@@ -174,8 +159,8 @@ RUN mkdir --parents ${hadolint_dir} \
 
 # Install buildifier.
 # https://github.com/bazelbuild/buildtools/tree/master/buildifier
-ARG bazel_tools_version=5.0.0
-ARG buildifier_digest=sha256:18a518a4b9b83bb96a115a681099ae6c115217e925a2dacfb263089e3a791b5d
+ARG bazel_tools_version=5.1.0
+ARG buildifier_digest=sha256:52bf6b102cb4f88464e197caac06d69793fa2b05f5ad50a7e7bf6fbd656648a3
 ARG buildifier_dir=/usr/local/buildifier/bin
 ARG buildifier_bin=${buildifier_dir}/buildifier
 ENV PATH "${buildifier_dir}:${PATH}"
@@ -185,8 +170,9 @@ RUN mkdir --parents ${buildifier_dir} \
   && buildifier --version
 
 # Install Protobuf compiler.
-ARG protobuf_version=3.19.4
-ARG protobuf_digest=sha256:058d29255a08f8661c8096c92961f3676218704cbd516d3916ec468e139cbd87
+# https://github.com/protocolbuffers/protobuf
+ARG protobuf_version=3.20.3
+ARG protobuf_digest=sha256:44a6b498e996b845edef83864734c0e52f42197e85c9d567af55f4e3ff09d755
 ARG protobuf_dir=/usr/local/protobuf
 ARG protobuf_temp=/tmp/protobuf.zip
 ENV PATH "${protobuf_dir}/bin:${PATH}"
@@ -251,7 +237,12 @@ RUN cargo install --version=${wizer_version} wizer --all-features
 
 # Install crosvm.
 # We're not interested in most of the features in crosvm (e.g. wayland support), but GDB support would be nice.
-RUN cargo install --git https://chromium.googlesource.com/chromiumos/platform/crosvm/ --rev 31f04e92709980a4ffc56b1631f8b4be437cc2fe crosvm --no-default-features --features gdb
+RUN cargo install \
+  --git=https://chromium.googlesource.com/chromiumos/platform/crosvm/ \
+  --rev=31f04e92709980a4ffc56b1631f8b4be437cc2fe \
+  crosvm \
+  --no-default-features \
+  --features=gdb
 
 # Where to install rust tooling
 ARG install_dir=${rustup_dir}/bin
@@ -296,25 +287,6 @@ RUN chmod +x ${install_dir}/rust-analyzer
 # its own home folder.
 ENV CARGO_HOME ""
 
-# Build a statically-linked version of OpenSSL with musl
-ENV OPENSSL_DIR /musl
-RUN mkdir ${OPENSSL_DIR}
-
-RUN ln -s /usr/include/x86_64-linux-gnu/asm /usr/include/x86_64-linux-musl/asm
-RUN ln -s /usr/include/asm-generic /usr/include/x86_64-linux-musl/asm-generic
-RUN ln -s /usr/include/linux /usr/include/x86_64-linux-musl/linux
-
-ARG openssl_dir=/usr/local/openssl
-RUN mkdir --parents ${openssl_dir}
-RUN curl --location https://github.com/openssl/openssl/archive/OpenSSL_1_1_1f.tar.gz | tar --extract --gzip --directory=${openssl_dir}/
-WORKDIR ${openssl_dir}/openssl-OpenSSL_1_1_1f
-RUN CC="musl-gcc -fPIE -pie" ./Configure no-shared no-async --prefix=/musl --openssldir="${OPENSSL_DIR}/ssl" linux-x86_64
-RUN make depend && make -j"$(nproc)"&& make install_sw install_ssldirs
-
-# Allow the build to find statically built OpenSSL.
-ENV PKG_CONFIG_ALLOW_CROSS 1
-ENV OPENSSL_STATIC 1
-
 # Install sccache
 # https://github.com/mozilla/sccache
 ARG sccache_version=v0.2.15
@@ -333,12 +305,6 @@ RUN mkdir --parents ${sccache_dir} \
 # Ref:https://chromium.googlesource.com/external/github.com/google/flatbuffers/+/750dde766990d75f849370582a0f90307c410537
 ARG flatc_commit=750dde766990d75f849370582a0f90307c410537
 ARG flatbuffer_tmp_dir=/tmp/flatbuffer
-# cmake is required to build flatbuffer
-RUN apt-get --yes update \
-  && apt-get install --no-install-recommends --yes --option Acquire::http::Dl-Limit=500 \
-  cmake \
-  && apt-get clean \
-  && rm --recursive --force /var/lib/apt/lists/*
 RUN git clone https://github.com/google/flatbuffers.git ${flatbuffer_tmp_dir}
 WORKDIR ${flatbuffer_tmp_dir}
 RUN git checkout ${flatc_commit} \
@@ -364,19 +330,51 @@ RUN mkdir --parents ${wasm_pack_dir} \
   && chmod +x ${wasm_pack_bin} \
   && wasm-pack --version
 
-# chromium is required to run our tests with wasm-pack
-RUN apt-get --yes update \
-  && apt-get install --no-install-recommends --yes --option Acquire::http::Dl-Limit=500 \
-  chromium \
-  chromium-driver \
-  && apt-get clean \
-  && rm --recursive --force /var/lib/apt/lists/*
-
 # By default, sccache uses `~/.cache/sccache` locally: https://github.com/mozilla/sccache#local.
 ENV RUSTC_WRAPPER sccache
 
 # Disable cargo incremental compilation, as it conflicts with sccache: https://github.com/mozilla/sccache#rust
 ENV CARGO_INCREMENTAL false
+
+# Install Android SDK.
+# https://developer.android.com/studio/#downloads
+# https://developer.android.com/studio/index.html#command-tools
+ARG android_sdk_version=8512546
+ENV ANDROID_HOME /opt/android-sdk
+ENV android_temp /tmp/android-sdk
+RUN mkdir --parents "{android_temp}" \
+    && mkdir --parents "${ANDROID_HOME}/cmdline-tools/latest" \
+    && curl --location "https://dl.google.com/android/repository/commandlinetools-linux-${android_sdk_version}_latest.zip" > android_sdk.zip \
+    && unzip android_sdk.zip -d "${android_temp}" \
+    && mv ${android_temp}/cmdline-tools/* "${ANDROID_HOME}/cmdline-tools/latest/" \
+    && rm android_sdk.zip
+
+# Install Android Platform Tools.
+# https://developer.android.com/studio/releases/platform-tools
+# https://developer.android.com/studio/releases/platforms
+# https://developer.android.com/studio/releases/build-tools
+ARG platform=30
+ARG tools=30.0.0
+RUN "${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager" --update \
+    && (yes || true) | "${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager" --licenses \
+    && (yes || true) | "${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager" \
+    'tools' 'platform-tools' 'cmake;3.6.4111459' \
+    "platforms;android-${platform}" "build-tools;${tools}" \
+    "system-images;android-${platform};default;x86_64"
+
+# Set up Android SDK paths.
+ENV PATH "${PATH}:${ANDROID_HOME}/emulator:${ANDROID_HOME}/tools:${ANDROID_HOME}/platform-tools:${ANDROID_HOME}/tools/bin"
+ENV LD_LIBRARY_PATH "${LD_LIBRARY_PATH}:${ANDROID_HOME}/emulator/lib64:${ANDROID_HOME}/emulator/lib64/qt/lib"
+
+# Install Android NDK
+# https://developer.android.com/ndk/downloads
+ARG android_ndk_version=r25b
+ENV ANDROID_NDK_HOME /opt/android-ndk
+RUN mkdir --parents "${ANDROID_NDK_HOME}" \
+    && curl --location "https://dl.google.com/android/repository/android-ndk-${android_ndk_version}-linux.zip" > android_ndk.zip \
+    && unzip android_ndk.zip -d "${ANDROID_NDK_HOME}" \
+    && mv ${ANDROID_NDK_HOME}/android-ndk-${android_ndk_version}/* "${ANDROID_NDK_HOME}" \
+    && rm android_ndk.zip
 
 # To make the scripts available to call from everywhere.
 ENV PATH "/workspace/scripts:${PATH}"
