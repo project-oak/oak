@@ -109,7 +109,7 @@ impl HyperRequestWrapper {
         let minimal_headers = copy_selected_keys(parts.headers, minimal_keys);
 
         let encrypted_request = EncryptedRequest {
-            body: body.to_vec(),
+            body,
             headers: minimal_headers,
             uri,
         };

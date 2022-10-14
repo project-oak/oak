@@ -69,9 +69,7 @@ fn generate_dropped_request() -> EncryptedRequest {
 
 // If true, then the test backend does not answer the request.
 fn drop_request(request: &PlaintextRequest) -> bool {
-    String::from_utf8(request.body.clone())
-        .unwrap()
-        .contains("Drop")
+    request.body.ends_with("Drop".as_bytes())
 }
 
 // Generates a request and a corresponding response from a string.
@@ -79,7 +77,7 @@ fn generate_secret_request_and_expected_response(
     body: &str,
 ) -> (EncryptedRequest, EncryptedResponse) {
     let request = EncryptedRequest {
-        body: format!("Request: {}", body).into_bytes(),
+        body: hyper::body::Bytes::from(format!("Request: {}", body)),
         headers: hyper::HeaderMap::new(),
         uri: hyper::Uri::from_static("test.com"),
     };

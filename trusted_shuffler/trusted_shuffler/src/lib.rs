@@ -34,8 +34,7 @@ use tokio::{sync::oneshot, time::Duration};
 
 #[derive(Debug, PartialEq)]
 pub struct EncryptedRequest {
-    // TODO(#3282) Unify `body` and `data` from Request and Response.
-    pub body: Vec<u8>,
+    pub body: hyper::body::Bytes,
     pub headers: hyper::HeaderMap,
     pub uri: Uri,
 }
@@ -52,7 +51,7 @@ impl EncryptedRequest {
 }
 
 pub struct PlaintextRequest {
-    pub body: Vec<u8>,
+    pub body: hyper::body::Bytes,
     pub headers: hyper::HeaderMap,
     pub uri: Uri,
 }
