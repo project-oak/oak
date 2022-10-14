@@ -200,6 +200,7 @@ http_archive(
     name = "com_github_tensorflow_tflite_micro",
     patches = [
         # Replaces debug logging function with an empty stub.
+        # TODO(#3297): Replace TFLM logging with Restricted Kernel logging.
         "//third_party/tflite-micro:remove-debug-logging.patch",
     ],
     sha256 = "922425b778d5c9336b69f7f68b5f76ae7e6834e026d981179259993d1de5476d",
