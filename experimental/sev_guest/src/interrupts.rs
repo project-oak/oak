@@ -57,6 +57,7 @@ use x86_64::VirtAddr;
 ///
 /// It will point to the backed-up values of registers on the stack. This makes it possible to
 /// modify the register values that will be restored when the outer handler returns.
+#[repr(C)]
 pub struct InterruptStackFrame {
     /// The backed-up value of the RAX register.
     pub rax: u64,
