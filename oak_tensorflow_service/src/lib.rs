@@ -31,22 +31,36 @@ pub mod schema {
     include!(concat!(env!("OUT_DIR"), "/schema_generated.rs"));
     include!(concat!(env!("OUT_DIR"), "/schema_services_servers.rs"));
 }
+mod tflite;
+
+use alloc::sync::Arc;
 
 #[derive(Default)]
-pub struct TensorflowServiceImpl {}
+pub struct TensorflowServiceImpl {
+    tflite_model: Arc<tflite::TfliteModel>,
+}
 
 impl TensorflowServiceImpl {
     pub fn new() -> Self {
-        Self {}
+        Self {
+            tflite_model: Arc::new(tflite::TfliteModel::new()),
+        }
     }
 }
 
 impl schema::TensorflowService for TensorflowServiceImpl {
     fn initialize(
         &mut self,
-        _initialization: &schema::InitializeRequest,
+        initialization: &schema::InitializeRequest,
     ) -> Result<oak_idl::utils::OwnedFlatbuffer<crate::schema::InitializeResponse>, oak_idl::Status>
     {
+        let tensorflow_model: &[u8] = initialization
+            .tensorflow_model()
+            .ok_or_else(|| oak_idl::Status::new(oak_idl::StatusCode::InvalidArgument))?;
+        self.tflite_model
+            .initialize(tensorflow_model)
+            .map_err(|_err| oak_idl::Status::new(oak_idl::StatusCode::Internal))?;
+
         let response_message = {
             let mut builder = oak_idl::utils::OwnedFlatbufferBuilder::default();
             let initialize_response = schema::InitializeResponse::create(
@@ -62,11 +76,20 @@ impl schema::TensorflowService for TensorflowServiceImpl {
 
     fn invoke(
         &mut self,
-        _request_message: &schema::InvokeRequest,
+        request_message: &schema::InvokeRequest,
     ) -> Result<oak_idl::utils::OwnedFlatbuffer<schema::InvokeResponse>, oak_idl::Status> {
+        let request_body: &[u8] = request_message
+            .body()
+            .ok_or_else(|| oak_idl::Status::new(oak_idl::StatusCode::InvalidArgument))?;
+
+        let response = self
+            .tflite_model
+            .run(request_body)
+            .map_err(|_err| oak_idl::Status::new(oak_idl::StatusCode::Internal))?;
+
         let response_message = {
             let mut builder = oak_idl::utils::OwnedFlatbufferBuilder::default();
-            let body = builder.create_vector::<u8>(&[]);
+            let body = builder.create_vector::<u8>(&response);
             let invoke_response = schema::InvokeResponse::create(
                 &mut builder,
                 &schema::InvokeResponseArgs { body: Some(body) },

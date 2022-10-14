@@ -14,10 +14,19 @@
  * limitations under the License.
  */
 
-#ifndef CC_TFLITE_MICRO_MODEL_H_
-#define CC_TFLITE_MICRO_MODEL_H_
+#include "tflite_micro.h"
 
-// TODO(#3297): Implement a TFLite model that can be called from the Rust runtime.
-namespace oak {}  // namespace oak
+#include <stddef.h>
+#include <stdint.h>
 
-#endif  // CC_TFLITE_MICRO_MODEL_H_
+// TODO(#3297): Implement TensorFlow Lite initialization logic.
+int tflite_init(const uint8_t* model_bytes, size_t model_bytes_len,
+                const uint8_t* tensor_arena_bytes, size_t tensor_arena_bytes_len) {
+  return 0;
+}
+
+// TODO(#3297): Implement TensorFlow Lite inference logic.
+int tflite_run(const uint8_t* input_bytes, size_t input_bytes_len, uint8_t* output_bytes,
+               size_t* output_bytes_len) {
+  return 0;
+}

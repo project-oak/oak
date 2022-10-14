@@ -20,9 +20,9 @@ package(
 )
 
 cc_library(
-    name = "model",
-    srcs = ["model.cc"],
-    hdrs = ["model.h"],
+    name = "tflite-micro",
+    srcs = ["tflite_micro.cc"],
+    hdrs = ["tflite_micro.h"],
     linkstatic = 1,
     deps = [
         "@com_github_tensorflow_tflite_micro//tensorflow/lite/micro:micro_framework",
