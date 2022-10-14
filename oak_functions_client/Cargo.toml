@@ -12,14 +12,14 @@ base64 = "*"
 clap = { version = "*", features = ["derive"] }
 ecdsa = { version = "*", features = ["verify", "pkcs8", "pem"] }
 env_logger = "*"
-oak_grpc_unary_attestation = { path = "../../../oak_grpc_unary_attestation" }
+oak_grpc_unary_attestation = { path = "../oak_grpc_unary_attestation" }
 hex = "*"
 http = "*"
 log = "*"
-oak_functions_abi = { path = "../../abi" }
-oak_remote_attestation = { path = "../../../oak_remote_attestation" }
-oak_remote_attestation_sessions_client = { path = "../../../oak_remote_attestation_sessions_client" }
-oak_remote_attestation_amd = { path = "../../../oak_remote_attestation_amd" }
+oak_functions_abi = { path = "../oak_functions_abi" }
+oak_remote_attestation = { path = "../oak_remote_attestation" }
+oak_remote_attestation_sessions_client = { path = "../oak_remote_attestation_sessions_client" }
+oak_remote_attestation_amd = { path = "../oak_remote_attestation_amd" }
 p256 = { version = "*", features = ["ecdsa-core", "ecdsa", "pem"] }
 prost = "*"
 regex = "*"
@@ -38,4 +38,4 @@ tonic = { version = "*", features = ["tls", "tls-roots"] }
 async-trait = "*"
 
 [build-dependencies]
-oak_utils = { path = "../../../oak_utils" }
+oak_utils = { path = "../oak_utils" }

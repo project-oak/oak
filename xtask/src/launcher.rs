@@ -143,7 +143,7 @@ fn run_client(request: &str, expected_response: &str, iterations: usize) -> Step
     Step::Multiple {
         name: "build and run client".to_string(),
         steps: vec![
-            build_binary("build client binary", "./oak_functions/client/rust"),
+            build_binary("build client binary", "./oak_functions_client"),
             Step::Single {
                 name: "run client".to_string(),
                 command: Cmd::new(

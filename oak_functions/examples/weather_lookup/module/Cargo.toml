@@ -10,16 +10,16 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 location_utils = { path = "../../../location_utils" }
-oak_functions = { path = "../../../sdk/oak_functions" }
+oak_functions_sdk = { path = "../../../../oak_functions_sdk" }
 serde = { version = "*", features = ["derive"] }
 serde_json = "*"
 
 [dev-dependencies]
 lookup_data_generator = { path = "../../../lookup_data_generator" }
-oak_functions_abi = { path = "../../../abi" }
+oak_functions_abi = { path = "../../../../oak_functions_abi" }
 maplit = "*"
 rand = "*"
-test_utils = { path = "../../../sdk/test_utils" }
+oak_functions_test_utils = { path = "../../../../oak_functions_test_utils" }
 tokio = { version = "*", features = [
   "fs",
   "macros",

@@ -8,8 +8,8 @@ license = "Apache-2.0"
 [dependencies]
 anyhow = "*"
 bencher = "*"
-oak_functions_client = { path = "../client/rust" }
-oak_functions_abi = { path = "../abi" }
+oak_functions_client = { path = "../../oak_functions_client" }
+oak_functions_abi = { path = "../../oak_functions_abi" }
 rand = "*"
 tokio = { version = "*", features = [
   "fs",

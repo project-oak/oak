@@ -25,14 +25,14 @@ use std::{path::PathBuf, sync::Arc};
 lazy_static! {
     static ref PATH_TO_MODULES: PathBuf = {
         // WORKSPACE_ROOT is set in .cargo/config.toml.
-         [env!("WORKSPACE_ROOT"),"oak_functions", "sdk", "oak_functions", "tests"].iter().collect()
+         [env!("WORKSPACE_ROOT"),"oak_functions_sdk", "tests"].iter().collect()
     };
     static ref LOOKUP_WASM_MODULE_BYTES: Vec<u8> = {
         let mut manifest_path = PATH_TO_MODULES.clone();
         manifest_path.push("lookup_module");
         manifest_path.push("Cargo.toml");
 
-        test_utils::compile_rust_wasm(manifest_path.to_str().unwrap(), false)
+        oak_functions_test_utils::compile_rust_wasm(manifest_path.to_str().unwrap(), false)
             .expect("Could not read Wasm module")
     };
     static ref TESTING_WASM_MODULE_BYTES: Vec<u8> = {
@@ -40,23 +40,7 @@ lazy_static! {
         manifest_path.push("testing_module");
         manifest_path.push("Cargo.toml");
 
-        test_utils::compile_rust_wasm(manifest_path.to_str().unwrap(), false)
-            .expect("Could not read Wasm module")
-    };
-    static ref METRICS_WASM_MODULE_BYTES: Vec<u8> = {
-        let mut manifest_path = PATH_TO_MODULES.clone();
-        manifest_path.push("metrics_module");
-        manifest_path.push("Cargo.toml");
-
-        test_utils::compile_rust_wasm(manifest_path.to_str().unwrap(), false)
-            .expect("Could not read Wasm module")
-    };
-    static ref TF_WASM_MODULE_BYTES: Vec<u8> = {
-        let mut manifest_path = PATH_TO_MODULES.clone();
-        manifest_path.push("tf_module");
-        manifest_path.push("Cargo.toml");
-
-        test_utils::compile_rust_wasm(manifest_path.to_str().unwrap(), false)
+        oak_functions_test_utils::compile_rust_wasm(manifest_path.to_str().unwrap(), false)
             .expect("Could not read Wasm module")
     };
 }
@@ -75,7 +59,7 @@ async fn test_read_write() {
         body: b"ReadWrite".to_vec(),
     };
     let response: Response = wasm_handler.handle_invoke(request).unwrap();
-    test_utils::assert_response_body(response, "ReadWriteResponse");
+    oak_functions_test_utils::assert_response_body(response, "ReadWriteResponse");
 }
 
 #[tokio::test]
@@ -92,7 +76,7 @@ async fn test_double_read() {
         body: b"DoubleRead".to_vec(),
     };
     let response: Response = wasm_handler.handle_invoke(request).unwrap();
-    test_utils::assert_response_body(response, "DoubleReadResponse");
+    oak_functions_test_utils::assert_response_body(response, "DoubleReadResponse");
 }
 
 #[tokio::test]
@@ -109,7 +93,7 @@ async fn test_double_write() {
         body: b"DoubleWrite".to_vec(),
     };
     let response: Response = wasm_handler.handle_invoke(request).unwrap();
-    test_utils::assert_response_body(response, "DoubleWriteResponse");
+    oak_functions_test_utils::assert_response_body(response, "DoubleWriteResponse");
 }
 
 #[tokio::test]
@@ -133,7 +117,7 @@ async fn test_write_log() {
         body: b"WriteLog".to_vec(),
     };
     let response: Response = wasm_handler.handle_invoke(request).unwrap();
-    test_utils::assert_response_body(response, "WriteLogResponse");
+    oak_functions_test_utils::assert_response_body(response, "WriteLogResponse");
 }
 
 #[tokio::test]
@@ -153,7 +137,7 @@ async fn test_storage_get_item() {
         body: b"StorageGet".to_vec(),
     };
     let response: Response = wasm_handler.handle_invoke(request).unwrap();
-    test_utils::assert_response_body(response, "StorageGetResponse");
+    oak_functions_test_utils::assert_response_body(response, "StorageGetResponse");
 }
 
 #[tokio::test]
@@ -173,7 +157,7 @@ async fn test_storage_get_item_not_found() {
         body: b"StorageGetItemNotFound".to_vec(),
     };
     let response: Response = wasm_handler.handle_invoke(request).unwrap();
-    test_utils::assert_response_body(response, "No item found");
+    oak_functions_test_utils::assert_response_body(response, "No item found");
 }
 
 #[tokio::test]
@@ -196,7 +180,7 @@ async fn test_echo() {
     };
 
     let response: Response = wasm_handler.handle_invoke(request).unwrap();
-    test_utils::assert_response_body(response, message_to_echo);
+    oak_functions_test_utils::assert_response_body(response, message_to_echo);
 }
 
 #[tokio::test]
@@ -222,5 +206,5 @@ async fn test_blackhole() {
     };
 
     let response: Response = wasm_handler.handle_invoke(request).unwrap();
-    test_utils::assert_response_body(response, "Blackholed");
+    oak_functions_test_utils::assert_response_body(response, "Blackholed");
 }

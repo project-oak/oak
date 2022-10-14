@@ -140,7 +140,7 @@ To build and run this example manually follow these steps:
 1. Invoke with:
 
    ```shell
-   cargo run --manifest-path=./oak_functions/client/rust/Cargo.toml -- \
+   cargo run --manifest-path=./oak_functions_client/Cargo.toml -- \
        --uri=http://localhost:8080 \
        --request={\"lat\":0,\"lng\":0}
    ```

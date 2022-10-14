@@ -12,5 +12,5 @@ crate-type = ["cdylib", "rlib"]
 anyhow = "*"
 maplit = "*"
 assert_matches = "*"
-oak_functions = { path = "../../../oak_functions" }
-oak_functions_abi = { path = "../../../../abi" }
+oak_functions_abi = { path = "../../../oak_functions_abi" }
+oak_functions_sdk = { path = "../../../oak_functions_sdk" }

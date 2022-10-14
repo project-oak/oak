@@ -307,7 +307,7 @@ checksum = "7dfdb4953a096c551ce9ace855a604d702e6e62d77fac690575ae347571717f5"
 name = "benchmark"
 version = "0.1.0"
 dependencies = [
- "oak_functions",
+ "oak_functions_sdk",
  "prost 0.10.4",
  "prost-build 0.10.4",
 ]
@@ -1098,8 +1098,8 @@ dependencies = [
 name = "echo"
 version = "0.1.0"
 dependencies = [
- "oak_functions",
  "oak_functions_abi",
+ "oak_functions_sdk",
 ]
 
 [[package]]
@@ -1863,9 +1863,9 @@ dependencies = [
  "hashbrown 0.12.2",
  "http",
  "maplit",
- "oak_functions",
  "oak_functions_abi",
- "test_utils",
+ "oak_functions_sdk",
+ "oak_functions_test_utils",
  "tokio",
 ]
 
@@ -2242,26 +2242,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "oak_functions"
-version = "0.1.0"
-dependencies = [
- "bincode",
- "hashbrown 0.12.2",
- "lazy_static",
- "oak_functions_abi",
- "oak_functions_freestanding",
- "oak_functions_lookup",
- "oak_functions_testing_extension",
- "oak_functions_wasm",
- "oak_functions_workload_logging",
- "prost 0.10.4",
- "serde",
- "serde_derive",
- "test_utils",
- "tokio",
-]
-
-[[package]]
 name = "oak_functions_abi"
 version = "0.1.0"
 dependencies = [
@@ -2418,8 +2398,27 @@ dependencies = [
  "log",
  "oak_functions_abi",
  "oak_functions_extension",
- "oak_functions_util",
+ "oak_functions_utils",
  "oak_logger",
+]
+
+[[package]]
+name = "oak_functions_sdk"
+version = "0.1.0"
+dependencies = [
+ "bincode",
+ "hashbrown 0.12.2",
+ "lazy_static",
+ "oak_functions_abi",
+ "oak_functions_freestanding",
+ "oak_functions_lookup",
+ "oak_functions_test_utils",
+ "oak_functions_testing_extension",
+ "oak_functions_wasm",
+ "oak_functions_workload_logging",
+ "serde",
+ "serde_derive",
+ "tokio",
 ]
 
 [[package]]
@@ -2429,8 +2428,8 @@ dependencies = [
  "anyhow",
  "assert_matches",
  "maplit",
- "oak_functions",
  "oak_functions_abi",
+ "oak_functions_sdk",
 ]
 
 [[package]]
@@ -2438,10 +2437,30 @@ name = "oak_functions_sdk_abi_test_invoke_testing"
 version = "0.1.0"
 dependencies = [
  "bincode",
- "oak_functions",
  "oak_functions_abi",
+ "oak_functions_sdk",
  "serde",
  "serde_derive",
+]
+
+[[package]]
+name = "oak_functions_test_utils"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "cargo_metadata",
+ "duct",
+ "http",
+ "hyper",
+ "log",
+ "nix 0.22.3",
+ "oak_functions_abi",
+ "oak_functions_client",
+ "oak_remote_attestation",
+ "port_check",
+ "prost 0.10.4",
+ "tempfile",
+ "tokio",
 ]
 
 [[package]]
@@ -2457,7 +2476,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "oak_functions_util"
+name = "oak_functions_utils"
 version = "0.1.0"
 dependencies = [
  "lock_api",
@@ -2474,9 +2493,9 @@ dependencies = [
  "log",
  "oak_functions_abi",
  "oak_functions_extension",
+ "oak_functions_test_utils",
  "oak_functions_testing_extension",
  "oak_logger",
- "test_utils",
  "wasmi",
 ]
 
@@ -4094,26 +4113,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "test_utils"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "cargo_metadata",
- "duct",
- "http",
- "hyper",
- "log",
- "nix 0.24.2",
- "oak_functions_abi",
- "oak_functions_client",
- "oak_remote_attestation",
- "port_check",
- "prost 0.10.4",
- "tempfile",
- "tokio",
-]
-
-[[package]]
 name = "textwrap"
 version = "0.15.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5305,12 +5304,12 @@ dependencies = [
  "location_utils",
  "lookup_data_generator",
  "maplit",
- "oak_functions",
  "oak_functions_abi",
+ "oak_functions_sdk",
+ "oak_functions_test_utils",
  "rand 0.8.5",
  "serde",
  "serde_json",
- "test_utils",
  "tokio",
  "tonic",
  "wizer",
