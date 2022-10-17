@@ -112,7 +112,7 @@ macro_rules! mutable_interrupt_handler_with_error_code {
                 "push rax",
                 // We are now at the stack location which we want to pass as the first parameter to
                 // the inner function, so move the current stack pointer into RDI.
-                "move rdi, rsp",
+                "mov rdi, rsp",
                 // Back up remaining scratch registers.
                 "push r8",
                 "push r9",
