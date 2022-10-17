@@ -25,13 +25,13 @@ use x86_64::{
         model_specific::{Efer, EferFlags},
     },
     structures::paging::{
-        FrameAllocator, OffsetPageTable, Page, PageSize, PageTable, PageTableFlags, PhysFrame,
-        Size2MiB, Size4KiB,
+        FrameAllocator, MappedPageTable, OffsetPageTable, Page, PageSize, PageTable,
+        PageTableFlags, PhysFrame, Size2MiB, Size4KiB,
     },
     PhysAddr, VirtAddr,
 };
 
-use self::encrypted_mapper::{EncryptedPageTable, MemoryEncryption};
+use self::encrypted_mapper::{EncryptedPageTable, MemoryEncryption, PhysOffset};
 
 mod bitmap_frame_allocator;
 mod encrypted_mapper;
@@ -158,7 +158,7 @@ pub fn init<const N: usize>(
 pub fn init_paging<A: FrameAllocator<Size4KiB> + ?Sized>(
     frame_allocator: &mut A,
     program_headers: &[ProgramHeader],
-) -> Result<EncryptedPageTable<'static>, &'static str> {
+) -> Result<EncryptedPageTable<MappedPageTable<'static, PhysOffset>>, &'static str> {
     // Safety: this expects the frame allocator to be initialized and the memory region it's handing
     // memory out of to be identity mapped. This is true for the lower 2 GiB after we boot.
     // This reference will no longer be valid after we reload the page tables!
