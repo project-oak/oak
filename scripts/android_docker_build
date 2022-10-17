@@ -1,6 +1,0 @@
-#!/usr/bin/env bash
-readonly SCRIPTS_DIR="$(dirname "$0")"
-# shellcheck source=scripts/common
-source "${SCRIPTS_DIR}/common"
-
-docker build --pull --cache-from=gcr.io/oak-ci/oak-android:latest --tag=gcr.io/oak-ci/oak-android:latest --file=android.Dockerfile .

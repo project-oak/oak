@@ -30,6 +30,6 @@ java_test(
         "//java/src/main/java/com/google/oak/evidence",
         "//java/src/main/java/com/google/oak/util",
         "@com_google_guava_guava",
-        "@maven//:org_mockito_mockito_core",
+        "@org_mockito_mockito_core",
     ],
 )

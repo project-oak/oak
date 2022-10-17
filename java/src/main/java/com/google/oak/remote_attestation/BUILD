@@ -51,8 +51,6 @@ android_library(
         "Message.java",
         "SignatureVerifier.java",
     ],
-    # Exclude Android specific targets because they will not run in the main Docker Image.
-    tags = ["manual"],
     deps = [
         "@com_google_guava_guava",
         "@tink_java//src/main/java/com/google/crypto/tink/subtle:aes_gcm_jce",

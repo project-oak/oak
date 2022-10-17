@@ -4,8 +4,7 @@
 // - https://code.visualstudio.com/docs/remote/devcontainerjson-reference
 {
   // Do not modify manually. This value is automatically updated by ./scripts/docker_build .
-  // "image": "sha256:9a8c29fff8aabccb5be1f7f1117ebf76d4e1d9d05ffc6a9d3db559a8bd40e91d",
-  "image": "europe-west2-docker.pkg.dev/oak-ci/oak-development/oak-development@sha256:4a458d8469a002cc685f1009df0833794b2964ab5cae539445845205304e4be3",
+  "image": "sha256:1e05637c2f2519bad5e79f9c21972fe390ec40fa7e6aa746b61b34cdb0d82fa0",
   "extensions": [
     "13xforever.language-x86-64-assembly",
     "bazelbuild.vscode-bazel",

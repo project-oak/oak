@@ -41,8 +41,6 @@ java_library(
 android_library(
     name = "client_android",
     srcs = ["AttestationClient.java"],
-    # Exclude Android specific targets because they will not run in the main Docker Image.
-    tags = ["manual"],
     deps = [
         "//java/src/main/java/com/google/oak/remote_attestation:remote_attestation_android",
         "//oak_functions/proto:abi_java_proto_lite",
