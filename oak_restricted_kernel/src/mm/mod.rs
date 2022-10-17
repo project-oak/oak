@@ -25,13 +25,12 @@ use x86_64::{
         model_specific::{Efer, EferFlags},
     },
     structures::paging::{
-        FrameAllocator, MappedPageTable, OffsetPageTable, Page, PageSize, PageTable,
-        PageTableFlags, PhysFrame, Size2MiB, Size4KiB,
+        FrameAllocator, MappedPageTable, Page, PageSize, PageTable, PhysFrame, Size2MiB, Size4KiB,
     },
     PhysAddr, VirtAddr,
 };
 
-use self::encrypted_mapper::{EncryptedPageTable, MemoryEncryption, PhysOffset};
+use self::encrypted_mapper::{EncryptedPageTable, MemoryEncryption, PageTableFlags, PhysOffset};
 
 mod bitmap_frame_allocator;
 mod encrypted_mapper;
@@ -155,7 +154,7 @@ pub fn init<const N: usize>(
 /// |                     |          |                     |         | physical memory             |
 /// | FFFF_8820_0000_0000 | ~-120 TB | FFFF_FFFF_7FFF_FFFF | ~120 TB | ... unused hole             |
 /// | FFFF_FFFF_8000_0000 |    -2 GB | FFFF_FFFF_FFFF_FFFF |    2 GB | Kernel code                 |
-pub fn init_paging<A: FrameAllocator<Size4KiB> + ?Sized>(
+pub fn init_paging<A: FrameAllocator<Size4KiB>>(
     frame_allocator: &mut A,
     program_headers: &[ProgramHeader],
 ) -> Result<EncryptedPageTable<MappedPageTable<'static, PhysOffset>>, &'static str> {
@@ -168,10 +167,6 @@ pub fn init_paging<A: FrameAllocator<Size4KiB> + ?Sized>(
     let pml4 = unsafe { &mut *(pml4_frame.start_address().as_u64() as *mut PageTable) };
     pml4.zero();
 
-    // Safety: these page tables are unused (for now) and we have identity mapping for the lowest 2
-    // GiB of memory.
-    let mut page_table = unsafe { OffsetPageTable::new(pml4, VirtAddr::new(0)) };
-
     // Should we set the C-bit (encrypted memory for SEV)? For now, let's assume it's bit 51.
     let encrypted = if get_sev_status()
         .unwrap_or(SevStatus::empty())
@@ -181,6 +176,10 @@ pub fn init_paging<A: FrameAllocator<Size4KiB> + ?Sized>(
     } else {
         MemoryEncryption::NoEncryption
     };
+
+    // Safety: these page tables are unused (for now) and we have identity mapping for the lowest 2
+    // GiB of memory.
+    let mut page_table = EncryptedPageTable::new(pml4, VirtAddr::new(0), encrypted);
 
     // Safety: these operations are safe as they're not done on active page tables.
     unsafe {
@@ -195,22 +194,17 @@ pub fn init_paging<A: FrameAllocator<Size4KiB> + ?Sized>(
             PageTableFlags::PRESENT
                 | PageTableFlags::GLOBAL
                 | PageTableFlags::WRITABLE
-                | PageTableFlags::NO_EXECUTE,
-            encrypted,
+                | PageTableFlags::NO_EXECUTE
+                | PageTableFlags::ENCRYPTED,
             &mut page_table,
             frame_allocator,
         )
-        .map_err(|_| "Failed to set up paging for [0..4GiB)")?;
+        .map_err(|_| "Failed to set up paging for physical memory")?;
 
         // Mapping for the kernel itself in the upper -2G of memory, based on the mappings (and
         // permissions) in the program header.
-        page_tables::create_kernel_map(
-            program_headers,
-            encrypted,
-            &mut page_table,
-            frame_allocator,
-        )
-        .map_err(|_| "Failed to set up paging for the kernel")?;
+        page_tables::create_kernel_map(program_headers, &mut page_table, frame_allocator)
+            .map_err(|_| "Failed to set up paging for the kernel")?;
     }
 
     // Safety: the new page tables keep the identity mapping at -2GB intact, so it's safe to load

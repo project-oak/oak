@@ -155,15 +155,8 @@ unsafe impl<'a, S: PageSize, A: FrameAllocator<S>> FrameAllocator<S>
     for EncryptedFrameAllocator<'a, S, A>
 {
     fn allocate_frame(&mut self) -> Option<PhysFrame<S>> {
-        match self.encryption {
-            // Frame allocator with no memory encryption: just delegate to the inner allocator.
-            MemoryEncryption::NoEncryption => self.inner.allocate_frame(),
-            // Frame allocator with memory encryption: tack on the encrypted bit.
-            MemoryEncryption::Encrypted(c) => {
-                let start_address = self.inner.allocate_frame()?.start_address() + (1u64 << c);
-                Some(PhysFrame::from_start_address(start_address).unwrap())
-            }
-        }
+        let start_address = self.inner.allocate_frame()?.start_address() + self.encryption.bit();
+        Some(PhysFrame::from_start_address(start_address).unwrap())
     }
 }
 
@@ -213,11 +206,10 @@ impl<S: PageSize, N: MapperAllSizes + BaseMapper<S>> Mapper<S> for EncryptedPage
         A: FrameAllocator<Size4KiB>,
     {
         // Set the encrypted bit in the physical frame, if needed.
-        let frame = match self.encryption {
-            MemoryEncryption::Encrypted(c) if flags.contains(PageTableFlags::ENCRYPTED) => {
-                PhysFrame::from_start_address(frame.start_address() + (1u64 << c)).unwrap()
-            }
-            _ => frame,
+        let frame = if flags.contains(PageTableFlags::ENCRYPTED) {
+            PhysFrame::from_start_address(frame.start_address() + self.encryption.bit()).unwrap()
+        } else {
+            frame
         };
 
         self.inner.map_to_with_table_flags(
@@ -232,12 +224,9 @@ impl<S: PageSize, N: MapperAllSizes + BaseMapper<S>> Mapper<S> for EncryptedPage
 
 impl<N: MapperAllSizes + BaseTranslate> Translate for EncryptedPageTable<N> {
     fn translate(&self, addr: VirtAddr) -> Option<PhysAddr> {
-        match self.encryption {
-            MemoryEncryption::Encrypted(c) => Some(PhysAddr::new(
-                self.inner.translate_addr(addr)?.as_u64() & !(1u64 << c),
-            )),
-            MemoryEncryption::NoEncryption => self.inner.translate_addr(addr),
-        }
+        Some(PhysAddr::new(
+            self.inner.translate_addr(addr)?.as_u64() & !self.encryption.bit(),
+        ))
     }
 
     fn translate_addr(&self, addr: PhysAddr) -> Option<VirtAddr> {

@@ -18,13 +18,13 @@ use goblin::elf64::program_header::{ProgramHeader, PF_W, PF_X, PT_LOAD};
 use x86_64::{
     align_down, align_up,
     structures::paging::{
-        frame::PhysFrameRange, mapper::MapToError, FrameAllocator, Mapper, Page, PageSize,
-        PageTableFlags, PhysFrame, Size2MiB, Size4KiB,
+        frame::PhysFrameRange, mapper::MapToError, FrameAllocator, Page, PageSize, PhysFrame,
+        Size2MiB, Size4KiB,
     },
     PhysAddr, VirtAddr,
 };
 
-use super::encrypted_mapper::MemoryEncryption;
+use super::encrypted_mapper::{Mapper, PageTableFlags};
 
 /// Map a region of physical memory to a virtual address using 2 MiB pages.
 ///
@@ -32,26 +32,23 @@ use super::encrypted_mapper::MemoryEncryption;
 ///
 /// There are many ways you can cause memory safety errors and undefined behaviour when creating
 /// page mappings. See <Mapper::map_to_with_table_flags> for examples.
-pub unsafe fn create_offset_map<S: PageSize, A: FrameAllocator<Size4KiB> + ?Sized, M: Mapper<S>>(
+pub unsafe fn create_offset_map<S: PageSize, A: FrameAllocator<Size4KiB>, M: Mapper<S>>(
     range: PhysFrameRange<S>,
     offset: VirtAddr,
     flags: PageTableFlags,
-    encrypted: MemoryEncryption,
     mapper: &mut M,
     frame_allocator: &mut A,
 ) -> Result<(), MapToError<S>> {
     for (i, frame) in range.enumerate() {
-        let frame = PhysFrame::from_start_address(PhysAddr::new(
-            frame.start_address().as_u64() | encrypted.bit(),
-        ))
-        .unwrap();
-
         mapper
             .map_to_with_table_flags(
                 Page::<S>::from_start_address(offset + i * (S::SIZE as usize)).unwrap(),
                 frame,
                 flags,
-                PageTableFlags::PRESENT | PageTableFlags::GLOBAL | PageTableFlags::WRITABLE,
+                PageTableFlags::PRESENT
+                    | PageTableFlags::GLOBAL
+                    | PageTableFlags::WRITABLE
+                    | PageTableFlags::ENCRYPTED,
                 frame_allocator,
             )?
             .ignore();
@@ -83,11 +80,10 @@ pub unsafe fn create_offset_map<S: PageSize, A: FrameAllocator<Size4KiB> + ?Size
 /// `EferFlags::NO_EXECUTE_ENABLE` needs to be enabled before loading the page tables created by
 /// this function.
 pub unsafe fn create_kernel_map<
-    A: FrameAllocator<Size4KiB> + ?Sized,
+    A: FrameAllocator<Size4KiB>,
     M: Mapper<Size2MiB> + Mapper<Size4KiB>,
 >(
     program_headers: &[ProgramHeader],
-    encrypted: MemoryEncryption,
     mapper: &mut M,
     frame_allocator: &mut A,
 ) -> Result<(), MapToError<Size4KiB>> {
@@ -112,6 +108,7 @@ pub unsafe fn create_kernel_map<
                 /* It's not possible to mark a page not readable, so we ignore PF_R. */
                 PageTableFlags::PRESENT
                     | PageTableFlags::GLOBAL
+                    | PageTableFlags::ENCRYPTED
                     | if phdr.p_flags & PF_W > 0 {
                         PageTableFlags::WRITABLE
                     } else {
@@ -125,6 +122,6 @@ pub unsafe fn create_kernel_map<
             )
         })
         .try_for_each(|(range, offset, flags)| {
-            create_offset_map(range, offset, flags, encrypted, mapper, frame_allocator)
+            create_offset_map(range, offset, flags, mapper, frame_allocator)
         })
 }
