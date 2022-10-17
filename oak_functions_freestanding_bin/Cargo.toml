@@ -13,6 +13,7 @@ members = ["."]
 default = ["vsock_channel"]
 vsock_channel = ["oak_restricted_kernel/vsock_channel"]
 simple_io_channel = ["oak_restricted_kernel/simple_io_channel"]
+serial_channel = ["oak_restricted_kernel/serial_channel"]
 
 [dependencies]
 log = "*"

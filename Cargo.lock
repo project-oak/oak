@@ -2652,6 +2652,7 @@ dependencies = [
  "oak_simple_io",
  "rust-hypervisor-firmware-virtio",
  "sev_guest",
+ "sev_serial",
  "strum",
  "uart_16550",
  "virtio",

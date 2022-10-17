@@ -810,6 +810,7 @@ dependencies = [
  "oak_simple_io",
  "rust-hypervisor-firmware-virtio",
  "sev_guest",
+ "sev_serial",
  "strum",
  "uart_16550",
  "virtio",
@@ -1118,6 +1119,14 @@ dependencies = [
  "strum",
  "x86_64",
  "zerocopy",
+]
+
+[[package]]
+name = "sev_serial"
+version = "0.1.0"
+dependencies = [
+ "sev_guest",
+ "x86_64",
 ]
 
 [[package]]

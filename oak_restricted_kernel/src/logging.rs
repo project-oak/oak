@@ -17,7 +17,8 @@
 use atomic_refcell::AtomicRefCell;
 use core::fmt::Write;
 use lazy_static::lazy_static;
-use uart_16550::SerialPort;
+use sev_guest::io::PortFactoryWrapper;
+use sev_serial::SerialPort;
 
 extern crate log;
 
@@ -26,10 +27,11 @@ static COM1_BASE: u16 = 0x3f8;
 
 lazy_static! {
     static ref SERIAL1: AtomicRefCell<SerialPort> = {
-        // Our contract with the loader requires the first serial port to be
+        let port_factory = PortFactoryWrapper::new_raw();
+        // Our contract with the launcher requires the first serial port to be
         // available, so assuming the loader adheres to it, this is safe.
-        let mut port = unsafe { SerialPort::new(COM1_BASE) };
-        port.init();
+        let mut port = unsafe { SerialPort::new(COM1_BASE, port_factory) };
+        port.init().expect("Couldn't initialize logging serial port.");
         AtomicRefCell::new(port)
     };
 }
