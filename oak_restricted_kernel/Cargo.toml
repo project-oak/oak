@@ -16,6 +16,7 @@ simple_io_channel = ["oak_simple_io"]
 anyhow = { version = "*", default-features = false }
 arrayvec = { version = "*", default-features = false }
 atomic_refcell = "*"
+bitflags = "*"
 bitvec = { version = "*", default-features = false }
 goblin = { version = "*", default-features = false, features = [
   "elf32",

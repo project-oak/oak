@@ -276,6 +276,7 @@ dependencies = [
  "anyhow",
  "arrayvec",
  "atomic_refcell",
+ "bitflags",
  "bitvec",
  "goblin",
  "lazy_static",

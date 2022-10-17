@@ -64,7 +64,7 @@ use x86_64::{
     VirtAddr,
 };
 
-use crate::mm::page_tables::DirectMap;
+use crate::mm::Translate;
 
 /// Main entry point for the kernel, to be called from bootloader.
 pub fn start_kernel(info: &BootParams) -> Box<dyn Channel> {
@@ -117,7 +117,7 @@ enum ChannelType {
 }
 
 /// Create a channel for communicating with the Untrusted Launcher.
-fn get_channel(kernel_args: &args::Args, mapper: &DirectMap) -> Box<dyn Channel> {
+fn get_channel<A: Translate>(kernel_args: &args::Args, mapper: &A) -> Box<dyn Channel> {
     // If we weren't told which channel to use, arbitrarily pick the first one in the `ChannelType`
     // enum. Depending on features that are enabled, this means that the enum acts as kind of a
     // reverse priority list for defaults.

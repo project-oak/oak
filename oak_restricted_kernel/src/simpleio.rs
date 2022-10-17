@@ -14,11 +14,12 @@
 // limitations under the License.
 //
 
-use crate::mm::page_tables::DirectMap;
 use alloc::collections::VecDeque;
 use oak_simple_io::SimpleIo;
 use sev_guest::io::PortFactoryWrapper;
-use x86_64::{structures::paging::Translate, VirtAddr};
+use x86_64::VirtAddr;
+
+use crate::mm::Translate;
 
 /// A communications channel using a simple IO device.
 pub struct SimpleIoChannel {
@@ -31,12 +32,11 @@ pub struct SimpleIoChannel {
 }
 
 impl SimpleIoChannel {
-    pub fn new(mapper: &DirectMap) -> Self {
+    pub fn new<A: Translate>(mapper: &A) -> Self {
         let io_port_factory = PortFactoryWrapper::new_raw();
-        let device = SimpleIo::new_with_defaults(io_port_factory, |vaddr: VirtAddr| {
-            (mapper as &dyn Translate).translate_addr(vaddr)
-        })
-        .expect("couldn't create IO device");
+        let device =
+            SimpleIo::new_with_defaults(io_port_factory, |vaddr: VirtAddr| mapper.translate(vaddr))
+                .expect("couldn't create IO device");
         let pending_data = None;
         Self {
             device,
