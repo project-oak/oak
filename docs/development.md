@@ -347,4 +347,5 @@ xtask --logs run-cargo-fuzz --crate-name=loader --target-name=wasm_invoke -- -ma
 
 ## Build and Release
 
-We aspire for a transparent process for building and releasing Oak binaries. See the [build and release documentation](release.md) for more information.
+We aspire for a transparent process for building and releasing Oak binaries. See
+the [build and release documentation](release.md) for more information.
