@@ -262,8 +262,8 @@ dependencies = [
  "oak_simple_io",
  "rust-hypervisor-firmware-virtio",
  "sev_guest",
+ "sev_serial",
  "strum",
- "uart_16550",
  "virtio",
  "x86_64",
 ]
@@ -395,6 +395,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "sev_serial"
+version = "0.1.0"
+dependencies = [
+ "sev_guest",
+ "x86_64",
+]
+
+[[package]]
 name = "smallvec"
 version = "1.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -513,17 +521,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
-]
-
-[[package]]
-name = "uart_16550"
-version = "0.2.18"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b074eb9300ad949edd74c529c0e8d451625af71bb948e6b65fe69f72dc1363d9"
-dependencies = [
- "bitflags",
- "rustversion",
- "x86_64",
 ]
 
 [[package]]
