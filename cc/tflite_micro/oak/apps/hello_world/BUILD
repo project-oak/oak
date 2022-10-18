@@ -47,10 +47,23 @@ cc_library(
     ],
 )
 
+# Can be used i.e. link to custom output handlers for testing
+# where tensor outputs are checked and asserted.
+config_setting(
+    name = "use_custom_output",
+    values = {
+        "define": "use_custom_output=1",
+    },
+)
+
 # Linked by oak_tensorflow_service and the self-contained binary below.
 cc_library(
     name = "lib",
-    srcs = ["hello_world.cc"],
+    srcs = ["hello_world.cc"] + select({
+        ":use_custom_output": [],
+        "//conditions:default": ["output_handler.cc"],
+    }),
+    hdrs = ["output_handler.h"],
     deps = [
         ":hello_world_model",
         "//cc/tflite_micro/generated:tflm",
@@ -58,7 +71,9 @@ cc_library(
     ],
     linkstatic = 1,
     alwayslink = 1,
-    copts = oak_copts(),
+    copts = oak_copts() + [
+        "-Icc/tflite_micro/oak/apps/hello_world",
+    ],
     linkopts = ["-nostdlib"],
 )
 

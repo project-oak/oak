@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+#include "output_handler.h"
 #include "tflite_micro.h"
 
 #include "cc/tflite_micro/oak/apps/hello_world/hello_world_model_data.h"
@@ -112,9 +113,7 @@ int tflite_run(
 
   // Output the results. A custom HandleOutput function can be implemented
   // for each supported hardware target.
-  // HandleOutput(x, y);
-  MicroPrintf("x_value: %f, y_value: %f\n", static_cast<double>(x),
-              static_cast<double>(y));
+  HandleOutput(x, y);
 
   // Increment the inference_counter, and reset it if we have reached
   // the total number per cycle

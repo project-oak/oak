@@ -14,26 +14,9 @@
  * limitations under the License.
  */
 
-#ifndef CC_TFLITE_MICRO_OAK_TFLITE_MICRO_H_
-#define CC_TFLITE_MICRO_OAK_TFLITE_MICRO_H_
+#ifndef CC_TFLITE_MICRO_OAK_APPS_HELLO_WORLD_OUTPUT_HANDLER_H_
+#define CC_TFLITE_MICRO_OAK_APPS_HELLO_WORLD_OUTPUT_HANDLER_H_
 
-#include <stddef.h>
-#include <stdint.h>
+void HandleOutput(float x_value, float y_value);
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-int tflite_init(
-    const uint8_t* model_bytes, size_t model_bytes_len,
-    const uint8_t* tensor_arena_bytes, size_t tensor_arena_bytes_len);
-
-int tflite_run(
-    const uint8_t* input_bytes, size_t input_bytes_len,
-    uint8_t** output_bytes, size_t* output_bytes_len);
-
-#ifdef __cplusplus
-}
-#endif
-
-#endif  // CC_TFLITE_MICRO_OAK_TFLITE_MICRO_H_
+#endif  // CC_TFLITE_MICRO_OAK_APPS_HELLO_WORLD_OUTPUT_HANDLER_H_

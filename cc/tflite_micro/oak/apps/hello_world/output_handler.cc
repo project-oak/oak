@@ -14,26 +14,10 @@
  * limitations under the License.
  */
 
-#ifndef CC_TFLITE_MICRO_OAK_TFLITE_MICRO_H_
-#define CC_TFLITE_MICRO_OAK_TFLITE_MICRO_H_
+#include "tensorflow/lite/micro/micro_log.h"
 
-#include <stddef.h>
-#include <stdint.h>
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-int tflite_init(
-    const uint8_t* model_bytes, size_t model_bytes_len,
-    const uint8_t* tensor_arena_bytes, size_t tensor_arena_bytes_len);
-
-int tflite_run(
-    const uint8_t* input_bytes, size_t input_bytes_len,
-    uint8_t** output_bytes, size_t* output_bytes_len);
-
-#ifdef __cplusplus
+void HandleOutput(float x_value, float y_value) {
+  // Log the current X and Y values
+  MicroPrintf("x_value: %f, y_value: %f\n",
+        static_cast<double>(x_value), static_cast<double>(y_value));
 }
-#endif
-
-#endif  // CC_TFLITE_MICRO_OAK_TFLITE_MICRO_H_
