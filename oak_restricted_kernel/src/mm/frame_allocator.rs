@@ -16,8 +16,7 @@
 
 use super::bitmap_frame_allocator::BitmapAllocator;
 use x86_64::structures::paging::{
-    frame::PhysFrameRangeInclusive, FrameAllocator, FrameDeallocator, PageSize, PhysFrame,
-    Size2MiB, Size4KiB,
+    frame::PhysFrameRange, FrameAllocator, FrameDeallocator, PhysFrame, Size2MiB, Size4KiB,
 };
 
 /// Allocator to track physical memory frames.
@@ -40,18 +39,18 @@ pub struct PhysicalMemoryAllocator<const N: usize> {
 }
 
 impl<const N: usize> PhysicalMemoryAllocator<N> {
-    pub fn new(range: PhysFrameRangeInclusive<Size2MiB>) -> Self {
+    pub fn new(range: PhysFrameRange<Size2MiB>) -> Self {
         PhysicalMemoryAllocator {
             large_frames: BitmapAllocator::new(range),
             small_frames: None,
         }
     }
 
-    pub fn mark_valid(&mut self, range: PhysFrameRangeInclusive<Size2MiB>, valid: bool) {
+    pub fn mark_valid(&mut self, range: PhysFrameRange<Size2MiB>, valid: bool) {
         self.large_frames.mark_valid(range, valid)
     }
 
-    pub fn largest_available(&mut self) -> Option<PhysFrameRangeInclusive<Size2MiB>> {
+    pub fn largest_available(&mut self) -> Option<PhysFrameRange<Size2MiB>> {
         self.large_frames.largest_available()
     }
 }
@@ -74,12 +73,9 @@ unsafe impl<const N: usize> FrameAllocator<Size4KiB> for PhysicalMemoryAllocator
             let frame = self.large_frames.allocate_frame().unwrap();
             // Safety: the frame we get from the 2MiB allocator is aligned to 2 MiB, which means
             // it's by definition aligned to 4K as well.
-            let range = PhysFrame::range_inclusive(
+            let range = PhysFrame::range(
                 PhysFrame::from_start_address(frame.start_address()).unwrap(),
-                PhysFrame::from_start_address(
-                    frame.start_address() + frame.size() - Size4KiB::SIZE,
-                )
-                .unwrap(),
+                PhysFrame::from_start_address(frame.start_address() + frame.size()).unwrap(),
             );
             let mut alloc = BitmapAllocator::new(range);
             alloc.mark_valid(range, true);
@@ -98,16 +94,16 @@ impl<const N: usize> FrameDeallocator<Size4KiB> for PhysicalMemoryAllocator<N> {
 #[cfg(test)]
 mod tests {
     extern crate std;
-    use x86_64::PhysAddr;
 
     use super::*;
+    use x86_64::{structures::paging::PageSize, PhysAddr};
 
     fn create_frame(start: u64) -> PhysFrame<Size2MiB> {
         PhysFrame::from_start_address(PhysAddr::new(start)).unwrap()
     }
 
-    fn create_frame_range(start: u64, end: u64) -> PhysFrameRangeInclusive<Size2MiB> {
-        PhysFrame::range_inclusive(create_frame(start), create_frame(end))
+    fn create_frame_range(start: u64, end: u64) -> PhysFrameRange<Size2MiB> {
+        PhysFrame::range(create_frame(start), create_frame(end) + 1)
     }
 
     #[test]
