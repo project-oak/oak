@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-use self::encrypted_mapper::{EncryptedPageTable, MemoryEncryption, PageTableFlags, PhysOffset};
+use self::encrypted_mapper::{EncryptedPageTable, MemoryEncryption, PhysOffset};
 use goblin::{elf32::program_header::PT_LOAD, elf64::program_header::ProgramHeader};
 use log::info;
 use oak_linux_boot_params::{BootE820Entry, E820EntryType};
@@ -26,7 +26,9 @@ use x86_64::{
         model_specific::{Efer, EferFlags},
     },
     structures::paging::{
-        FrameAllocator, MappedPageTable, Page, PageSize, PageTable, PhysFrame, Size2MiB, Size4KiB,
+        mapper::{FlagUpdateError, MapToError, MapperFlush, UnmapError},
+        FrameAllocator, MappedPageTable, Page, PageSize, PageTable,
+        PageTableFlags as BasePageTableFlags, PhysFrame, Size2MiB, Size4KiB,
     },
     PhysAddr, VirtAddr,
 };
@@ -50,6 +52,105 @@ pub trait Translator {
 
     /// Translate a physical frame to virtual page, using the directly mapped region.
     fn translate_physical_frame<S: PageSize>(&self, frame: PhysFrame<S>) -> Option<Page<S>>;
+}
+
+bitflags::bitflags! {
+    /// Possible flags for a page table entry.
+    ///
+    /// See <x86_64::structures::paging::PageTableFlags> for more details.
+    pub struct PageTableFlags: u64 {
+        const PRESENT = 1;
+        const WRITABLE = 1 << 1;
+        const USER_ACCESSIBLE = 1 << 2;
+        const WRITE_THROUGH = 1 << 3;
+        const NO_CACHE = 1 << 4;
+        const ACCESSED = 1<< 5;
+        const DIRTY = 1 << 6;
+        const HUGE_PAGE = 1 << 7;
+        const GLOBAL = 1 << 8;
+        /// Marks the page as encrypted. Ignored under <NoEncryption>.
+        ///
+        /// The bit value is hardcoded to be 51 here, but that's because it's not possible to
+        /// represent `ENCRYPTED = 1 << C` in Rust right now. The actual bit set may not be 51.
+        const ENCRYPTED = 1 << 51;
+        const NO_EXECUTE = 1 << 63;
+    }
+}
+
+impl From<PageTableFlags> for BasePageTableFlags {
+    fn from(value: PageTableFlags) -> Self {
+        let mut flags = BasePageTableFlags::empty();
+        if value.contains(PageTableFlags::PRESENT) {
+            flags |= BasePageTableFlags::PRESENT
+        }
+        if value.contains(PageTableFlags::WRITABLE) {
+            flags |= BasePageTableFlags::WRITABLE
+        }
+        if value.contains(PageTableFlags::USER_ACCESSIBLE) {
+            flags |= BasePageTableFlags::USER_ACCESSIBLE
+        }
+        if value.contains(PageTableFlags::WRITE_THROUGH) {
+            flags |= BasePageTableFlags::WRITE_THROUGH
+        }
+        if value.contains(PageTableFlags::NO_CACHE) {
+            flags |= BasePageTableFlags::NO_CACHE
+        }
+        if value.contains(PageTableFlags::ACCESSED) {
+            flags |= BasePageTableFlags::ACCESSED
+        }
+        if value.contains(PageTableFlags::DIRTY) {
+            flags |= BasePageTableFlags::DIRTY
+        }
+        if value.contains(PageTableFlags::HUGE_PAGE) {
+            flags |= BasePageTableFlags::HUGE_PAGE
+        }
+        if value.contains(PageTableFlags::GLOBAL) {
+            flags |= BasePageTableFlags::GLOBAL
+        }
+        // There is no equivalent of ENCRYPTED in BasePageTableFlags.
+        if value.contains(PageTableFlags::NO_EXECUTE) {
+            flags |= BasePageTableFlags::NO_EXECUTE
+        }
+        flags
+    }
+}
+
+/// Page mapper for pages of type <S>
+///
+/// This is equivalent to <x86_64::structures::paging::mapper::Mapper>, but knows about memory
+/// encryption.
+pub trait Mapper<S: PageSize> {
+    unsafe fn map_to_with_table_flags<A>(
+        &mut self,
+        page: Page<S>,
+        frame: PhysFrame<S>,
+        flags: PageTableFlags,
+        parent_table_flags: PageTableFlags,
+        frame_allocator: &mut A,
+    ) -> Result<MapperFlush<S>, MapToError<S>>
+    where
+        A: FrameAllocator<Size4KiB>;
+
+    /// Unmaps a page.
+    ///
+    /// # Safety
+    ///
+    /// No checks are done whether the page is actually in use or not.
+    unsafe fn unmap(&mut self, page: Page<S>)
+        -> Result<(PhysFrame<S>, MapperFlush<S>), UnmapError>;
+
+    /// Changes the flags on a page table entry by unmapping and remapping it.
+    ///
+    /// # Safety
+    ///
+    /// There are many ways how changing page table entries can break memory safety or cause other
+    /// failures, e.g. by setting the `NO_EXECUTE` bit on pages that contain your code or removing
+    /// `WRITABLE` from the page that contains your stack.
+    unsafe fn update_flags(
+        &mut self,
+        page: Page<S>,
+        flags: PageTableFlags,
+    ) -> Result<MapperFlush<S>, FlagUpdateError>;
 }
 
 const DIRECT_MAPPING_OFFSET: VirtAddr = VirtAddr::new_truncate(0xFFFF_8800_0000_0000);

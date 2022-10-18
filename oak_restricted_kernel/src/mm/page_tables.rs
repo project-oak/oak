@@ -24,7 +24,7 @@ use x86_64::{
     PhysAddr, VirtAddr,
 };
 
-use super::encrypted_mapper::{Mapper, PageTableFlags};
+use super::{Mapper, PageTableFlags};
 
 /// Map a region of physical memory to a virtual address using 2 MiB pages.
 ///
