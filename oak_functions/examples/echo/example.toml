@@ -13,7 +13,7 @@ lookup_data = "oak_functions_launcher/mock_lookup_data"
 
 [clients]
 # Test request coordinates are defined in `oak_functions/lookup_data_generator/src/data.rs`.
-rust = { Cargo = { cargo_manifest = "oak_functions/client/rust/Cargo.toml" }, additional_args = [
+rust = { Cargo = { cargo_manifest = "oak_functions_client/Cargo.toml" }, additional_args = [
   "--uri=http://localhost:8080",
   "--request=test",
   "--expected-response-pattern=test"

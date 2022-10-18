@@ -11,7 +11,7 @@ byteorder = { version = "*", default-features = false }
 hashbrown = "*"
 log = "*"
 oak_logger = { path = "../logger" }
-oak_functions_abi = { path = "../abi" }
+oak_functions_abi = { path = "../../oak_functions_abi" }
 oak_functions_extension = { path = "../extension" }
 # Use wasmi in `no_std` mode.
 wasmi = { version = "*", default-features = false, features = ["core"] }
@@ -19,4 +19,4 @@ wasmi = { version = "*", default-features = false, features = ["core"] }
 [dev-dependencies]
 bincode = "*"
 oak_functions_testing_extension = { path = "../testing" }
-test_utils = { path = "../sdk/test_utils" }
+oak_functions_test_utils = { path = "../../oak_functions_test_utils" }

@@ -28,7 +28,7 @@ use hashbrown::HashMap;
 use log::Level;
 use oak_functions_abi::{proto::OakStatus, ExtensionHandle, StorageGetItemResponse};
 use oak_functions_extension::{ExtensionFactory, OakApiNativeExtension};
-use oak_functions_util::sync::Mutex;
+use oak_functions_utils::sync::Mutex;
 use oak_logger::OakLogger;
 
 pub struct LookupFactory<L: OakLogger> {

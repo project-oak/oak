@@ -12,7 +12,7 @@ constant_response_size_bytes = 90
 lookup_data = "oak_functions_launcher/mock_lookup_data"
 
 [clients]
-rust = { Cargo = { cargo_manifest = "oak_functions/client/rust/Cargo.toml" }, additional_args = [
+rust = { Cargo = { cargo_manifest = "oak_functions_client/Cargo.toml" }, additional_args = [
   "--uri=http://localhost:8080",
   "--request=test_key",
   "--expected-response-pattern=test_value"

@@ -18,7 +18,7 @@
 
 #[cfg_attr(not(test), no_mangle)]
 pub extern "C" fn main() {
-    let request = oak_functions::read_request().expect("Couldn't read request body.");
+    let request = oak_functions_sdk::read_request().expect("Couldn't read request body.");
     let response = request;
-    oak_functions::write_response(&response).expect("Couldn't write response body.");
+    oak_functions_sdk::write_response(&response).expect("Couldn't write response body.");
 }

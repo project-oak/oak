@@ -1,5 +1,5 @@
 [package]
-name = "test_utils"
+name = "oak_functions_test_utils"
 version = "0.1.0"
 authors = ["Razieh Behjati <razieh@google.com>"]
 edition = "2021"
@@ -13,9 +13,9 @@ log = "*"
 http = "*"
 hyper = { version = "*", features = ["client", "http1", "runtime", "server"] }
 nix = "*"
-oak_functions_abi = { path = "../../abi" }
-oak_functions_client = { path = "../../client/rust" }
-oak_remote_attestation = { path = "../../../oak_remote_attestation" }
+oak_functions_abi = { path = "../oak_functions_abi" }
+oak_functions_client = { path = "../oak_functions_client" }
+oak_remote_attestation = { path = "../oak_remote_attestation" }
 port_check = "*"
 prost = "*"
 tempfile = "*"

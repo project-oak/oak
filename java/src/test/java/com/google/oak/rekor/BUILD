@@ -23,7 +23,7 @@ package(
 java_test(
     name = "rekor_log_entry_test",
     srcs = ["RekorLogEntryTest.java"],
-    data = ["//oak_functions/client/testdata:logentry.json"],
+    data = ["//oak_functions_client/testdata:logentry.json"],
     test_class = "com.google.oak.rekor.RekorLogEntryTest",
     deps = [
         "//java/src/main/java/com/google/oak/rekor",

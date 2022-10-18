@@ -24,7 +24,7 @@ use location_utils::{
     cell_id_to_bytes, find_cell, location_from_bytes, location_from_degrees, location_to_bytes,
     Angle, LatLng, DEFAULT_CUTOFF_RADIUS_RADIANS,
 };
-use oak_functions::log;
+use oak_functions_sdk::log;
 use serde::Deserialize;
 
 #[cfg(test)]
@@ -44,7 +44,7 @@ pub extern "C" fn main() {
     // return to the client (as a human-readable string).
     let result: Result<Vec<u8>, String> = try {
         // Read the request.
-        let request_body = oak_functions::read_request()
+        let request_body = oak_functions_sdk::read_request()
             .map_err(|err| format!("could not read request body: {:?}", err))?;
 
         // Parse the request as JSON.
@@ -60,7 +60,7 @@ pub extern "C" fn main() {
         log!("current location cell token: {}\n", cell.to_token());
 
         // Look up the index values for the list of weather data points in the vicinity of the cell.
-        let index = oak_functions::storage_get_item(&cell_id_to_bytes(&cell))
+        let index = oak_functions_sdk::storage_get_item(&cell_id_to_bytes(&cell))
             .map_err(|err| format!("could not get index item: {:?}", err))?
             .ok_or("could not find index item for cell")?;
 
@@ -82,9 +82,10 @@ pub extern "C" fn main() {
         let result = match best_location {
             Some(key_location) => {
                 log!("nearest data point: {:?}\n", key_location);
-                let best_value = oak_functions::storage_get_item(&location_to_bytes(&key_location))
-                    .map_err(|err| format!("could not get item: {:?}", err))?
-                    .ok_or("could not find item with key")?;
+                let best_value =
+                    oak_functions_sdk::storage_get_item(&location_to_bytes(&key_location))
+                        .map_err(|err| format!("could not get item: {:?}", err))?
+                        .ok_or("could not find item with key")?;
                 log!("nearest location value: {:?}\n", best_value);
 
                 best_value
@@ -98,7 +99,7 @@ pub extern "C" fn main() {
     let response = result.unwrap_or_else(|err| err.as_bytes().to_vec());
 
     // Write the response.
-    oak_functions::write_response(&response).expect("Couldn't write the response body.");
+    oak_functions_sdk::write_response(&response).expect("Couldn't write the response body.");
 }
 
 #[export_name = "wizer.initialize"]

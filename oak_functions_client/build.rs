@@ -14,19 +14,20 @@
 // limitations under the License.
 //
 
-extern crate prost_build;
+use oak_utils::{generate_grpc_code, CodegenOptions, ExternPath};
 
-fn main() {
-    let file_paths = [
-        "oak_functions/proto/abi.proto",
-        "oak_functions/proto/lookup_data.proto",
-    ];
-    prost_build::compile_protos(&file_paths, &["../.."]).expect("Proto compilation failed");
-
-    // Tell cargo to rerun this build script if the proto file has changed.
-    // https://doc.rust-lang.org/cargo/reference/build-scripts.html#cargorerun-if-changedpath
-    for proto_path in file_paths.iter() {
-        let file_path = std::path::Path::new(proto_path);
-        println!("cargo:rerun-if-changed=../../{}", file_path.display());
-    }
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    generate_grpc_code(
+        env!("WORKSPACE_ROOT"),
+        &["oak_grpc_unary_attestation/proto/unary_server.proto"],
+        CodegenOptions {
+            build_client: true,
+            build_server: false,
+            extern_paths: vec![ExternPath::new(
+                ".oak.remote_attestation",
+                "::oak_remote_attestation::proto",
+            )],
+        },
+    )?;
+    Ok(())
 }

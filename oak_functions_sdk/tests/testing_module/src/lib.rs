@@ -21,7 +21,7 @@ use oak_functions_abi::{TestingRequest, TestingResponse};
 #[cfg_attr(not(test), no_mangle)]
 pub extern "C" fn main() {
     // Read the message to echo from the request.
-    let request = oak_functions::read_request().expect("Fail to read request body.");
+    let request = oak_functions_sdk::read_request().expect("Fail to read request body.");
     let request = String::from_utf8(request).expect("Fail to parse request");
 
     match request.as_str() {
@@ -31,14 +31,14 @@ pub extern "C" fn main() {
                 .expect("Fail to serialize testing message.");
             // We invoke the Testing extension with an EchoRequest.
             let serialized_echo_response =
-                oak_functions::testing(&echo_request).expect("Fail to invoke testing.");
+                oak_functions_sdk::testing(&echo_request).expect("Fail to invoke testing.");
 
             let echo_response = bincode::deserialize(&serialized_echo_response)
                 .expect("Fail to deserialize testing message.");
 
             let TestingResponse::Echo(response_body) = echo_response;
 
-            oak_functions::write_response(response_body.as_bytes())
+            oak_functions_sdk::write_response(response_body.as_bytes())
                 .expect("Fail to write response body.");
         }
         "BLACKHOLE" => {
@@ -48,14 +48,14 @@ pub extern "C" fn main() {
                 .expect("Fail to serialize testing message.");
 
             let blackhole_response =
-                oak_functions::testing(&blackhole_request).expect("Fail to invoke testing.");
+                oak_functions_sdk::testing(&blackhole_request).expect("Fail to invoke testing.");
             // We expect an empty response, because blackhole does not give back a result.
             assert!(blackhole_response.is_empty());
 
             // If we reached here, the assert did not fail and we send a response back. This helps
             // us to distinguish from a failure in the Wasm module, where also an
             // empty response would be sent.
-            oak_functions::write_response("Blackholed".as_bytes())
+            oak_functions_sdk::write_response("Blackholed".as_bytes())
                 .expect("Fail to write response body.");
         }
         _ => panic!("Request not recognized"),

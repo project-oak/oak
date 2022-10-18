@@ -482,7 +482,7 @@ where
 /// signature.
 fn oak_functions_resolve_func(field_name: &str) -> Option<(usize, wasmi::Signature)> {
     // The types in the signatures correspond to the parameters from
-    // oak_functions/abi/src/lib.rs
+    // oak_functions_abi/src/lib.rs
     let (index, expected_signature) = match field_name {
         "read_request" => (
             READ_REQUEST,

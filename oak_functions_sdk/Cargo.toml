@@ -1,0 +1,23 @@
+[package]
+name = "oak_functions_sdk"
+version = "0.1.0"
+authors = ["Razieh Behjati <razieh@google.com>"]
+edition = "2021"
+license = "Apache-2.0"
+
+[dependencies]
+bincode = "*"
+oak_functions_abi = { path = "../oak_functions_abi" }
+serde = "*"
+serde_derive = "*"
+
+[dev-dependencies]
+hashbrown = "*"
+lazy_static = "*"
+oak_functions_freestanding = { path = "../oak_functions_freestanding" }
+oak_functions_wasm = { path = "../oak_functions/wasm" }
+oak_functions_lookup = { path = "../oak_functions/lookup" }
+oak_functions_testing_extension = { path = "../oak_functions/testing" }
+oak_functions_workload_logging = { path = "../oak_functions/workload_logging" }
+oak_functions_test_utils = { path = "../oak_functions_test_utils" }
+tokio = "*"

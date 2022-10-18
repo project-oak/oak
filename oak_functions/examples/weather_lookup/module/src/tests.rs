@@ -22,14 +22,14 @@ use location_utils::{
 use lookup_data_generator::data::generate_and_serialize_sparse_weather_entries;
 use maplit::hashmap;
 use oak_functions_abi::StatusCode;
+use oak_functions_test_utils::make_request;
 use rand::{prelude::StdRng, SeedableRng};
 use std::time::Duration;
 use test::Bencher;
-use test_utils::make_request;
 
 #[tokio::test]
 async fn test_server() {
-    let wasm_path = test_utils::build_rust_crate_wasm("weather_lookup").unwrap();
+    let wasm_path = oak_functions_test_utils::build_rust_crate_wasm("weather_lookup").unwrap();
 
     let location_0 = location_from_degrees(52., -0.01);
     let location_1 = location_from_degrees(14., -12.);
@@ -40,17 +40,17 @@ async fn test_server() {
     let cell_0 = find_cell(&location_0, level).unwrap();
     let cell_1 = find_cell(&location_1, level).unwrap();
 
-    let lookup_data_file = test_utils::write_to_temp_file(&test_utils::serialize_entries(
-        hashmap! {
+    let lookup_data_file = oak_functions_test_utils::write_to_temp_file(
+        &oak_functions_test_utils::serialize_entries(hashmap! {
             location_to_bytes(&location_0).to_vec() => br#"{"temperature_degrees_celsius":10}"#.to_vec(),
             location_to_bytes(&location_1).to_vec() => br#"{"temperature_degrees_celsius":42}"#.to_vec(),
             cell_id_to_bytes(&cell_0) => location_to_bytes(&location_0).to_vec(),
             cell_id_to_bytes(&cell_1) => location_to_bytes(&location_1).to_vec(),
-        },
-    ));
+        }),
+    );
 
-    let server_port = test_utils::free_port();
-    let server_background = test_utils::create_and_start_oak_functions_server(
+    let server_port = oak_functions_test_utils::free_port();
+    let server_background = oak_functions_test_utils::create_and_start_oak_functions_server(
         server_port,
         &wasm_path,
         lookup_data_file.path().to_str().unwrap(),
@@ -126,7 +126,7 @@ async fn test_server() {
         );
     }
 
-    test_utils::kill_process(server_background);
+    oak_functions_test_utils::kill_process(server_background);
 }
 
 #[bench]
@@ -144,7 +144,7 @@ fn bench_wasm_handler(bencher: &mut Bencher, warmup: bool) {
     let entry_count = 200_000;
     let elapsed_limit_millis = 20;
 
-    let wasm_path = test_utils::build_rust_crate_wasm("weather_lookup").unwrap();
+    let wasm_path = oak_functions_test_utils::build_rust_crate_wasm("weather_lookup").unwrap();
     let wasm_module_bytes = std::fs::read(&wasm_path).expect("could not read Wasm file");
     let wasm_module_bytes = if warmup {
         wizer::Wizer::new()
@@ -153,14 +153,15 @@ fn bench_wasm_handler(bencher: &mut Bencher, warmup: bool) {
     } else {
         wasm_module_bytes
     };
-    let wasm_path_after_optimization = test_utils::write_to_temp_file(&wasm_module_bytes);
+    let wasm_path_after_optimization =
+        oak_functions_test_utils::write_to_temp_file(&wasm_module_bytes);
 
     let mut rng = StdRng::seed_from_u64(42);
     let lookup_data = generate_and_serialize_sparse_weather_entries(&mut rng, entry_count).unwrap();
-    let lookup_data_file = test_utils::write_to_temp_file(&lookup_data);
+    let lookup_data_file = oak_functions_test_utils::write_to_temp_file(&lookup_data);
 
-    let server_port = test_utils::free_port();
-    let server_background = test_utils::create_and_start_oak_functions_server(
+    let server_port = oak_functions_test_utils::free_port();
+    let server_background = oak_functions_test_utils::create_and_start_oak_functions_server(
         server_port,
         wasm_path_after_optimization.path().to_str().unwrap(),
         lookup_data_file.path().to_str().unwrap(),
@@ -201,5 +202,5 @@ fn bench_wasm_handler(bencher: &mut Bencher, warmup: bool) {
         );
     }
 
-    test_utils::kill_process(server_background);
+    oak_functions_test_utils::kill_process(server_background);
 }

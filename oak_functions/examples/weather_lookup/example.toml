@@ -14,7 +14,7 @@ lookup_data = "oak_functions/examples/weather_lookup/testdata/lookup_data_weathe
 
 [clients]
 # Test request coordinates are defined in `oak_functions/lookup_data_generator/src/data.rs`.
-rust = { Cargo = { cargo_manifest = "oak_functions/client/rust/Cargo.toml" }, additional_args = [
+rust = { Cargo = { cargo_manifest = "oak_functions_client/Cargo.toml" }, additional_args = [
   "--uri=http://localhost:8080",
   "--request={\"lat\":0,\"lng\":0}",
   "--expected-response-pattern=\\{\"temperature_degrees_celsius\":.*\\}"

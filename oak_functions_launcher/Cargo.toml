@@ -30,7 +30,7 @@ tokio = { version = "*", features = [
 tonic = "*"
 tonic-web = { version = "*", optional = true }
 vsock = "*"
-oak_functions_abi = { path = "../oak_functions/abi" }
+oak_functions_abi = { path = "../oak_functions_abi" }
 oak_remote_attestation_sessions = { path = "../oak_remote_attestation_sessions" }
 oak_idl = { path = "../oak_idl" }
 oak_channel = { path = "../oak_channel", features = ["client"] }

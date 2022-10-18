@@ -9,14 +9,13 @@ payload to standard output.
 To compile:
 
 ```sh
-cargo build \
-  --manifest-path=./oak_functions/client/rust/Cargo.toml
+cargo build --package=oak_functions_client
 ```
 
 Example invocation:
 
 ```sh
-./oak_functions/client/target/debug/oak_functions_client \
+./target/debug/oak_functions_client \
   --uri=http://localhost:8080 \
   --request=request_body
 ```

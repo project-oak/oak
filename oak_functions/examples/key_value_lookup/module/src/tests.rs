@@ -17,24 +17,25 @@ extern crate test;
 
 use maplit::hashmap;
 use oak_functions_abi::StatusCode;
+use oak_functions_test_utils::make_request;
 use std::time::Duration;
 use test::Bencher;
-use test_utils::make_request;
 
 #[tokio::test]
 async fn test_server() {
-    let wasm_path = test_utils::build_rust_crate_wasm("key_value_lookup").unwrap();
+    let wasm_path = oak_functions_test_utils::build_rust_crate_wasm("key_value_lookup").unwrap();
 
-    let lookup_data_file =
-        test_utils::write_to_temp_file(&test_utils::serialize_entries(hashmap! {
+    let lookup_data_file = oak_functions_test_utils::write_to_temp_file(
+        &oak_functions_test_utils::serialize_entries(hashmap! {
             b"key_0".to_vec() => b"value_0".to_vec(),
             b"key_1".to_vec() => b"value_1".to_vec(),
             b"key_2".to_vec() => b"value_2".to_vec(),
             b"empty".to_vec() => vec![],
-        }));
+        }),
+    );
 
-    let server_port = test_utils::free_port();
-    let server_background = test_utils::create_and_start_oak_functions_server(
+    let server_port = oak_functions_test_utils::free_port();
+    let server_background = oak_functions_test_utils::create_and_start_oak_functions_server(
         server_port,
         &wasm_path,
         lookup_data_file.path().to_str().unwrap(),
@@ -63,23 +64,24 @@ async fn test_server() {
         assert_eq!(Vec::<u8>::new(), response.body().unwrap());
     }
 
-    test_utils::kill_process(server_background);
+    oak_functions_test_utils::kill_process(server_background);
 }
 
 #[bench]
 fn bench_wasm_handler(bencher: &mut Bencher) {
-    let wasm_path = test_utils::build_rust_crate_wasm("key_value_lookup").unwrap();
+    let wasm_path = oak_functions_test_utils::build_rust_crate_wasm("key_value_lookup").unwrap();
 
-    let lookup_data_file =
-        test_utils::write_to_temp_file(&test_utils::serialize_entries(hashmap! {
+    let lookup_data_file = oak_functions_test_utils::write_to_temp_file(
+        &oak_functions_test_utils::serialize_entries(hashmap! {
             b"key_0".to_vec() => b"value_0".to_vec(),
             b"key_1".to_vec() => b"value_1".to_vec(),
             b"key_2".to_vec() => b"value_2".to_vec(),
             b"empty".to_vec() => vec![],
-        }));
+        }),
+    );
 
-    let server_port = test_utils::free_port();
-    let server_background = test_utils::create_and_start_oak_functions_server(
+    let server_port = oak_functions_test_utils::free_port();
+    let server_background = oak_functions_test_utils::create_and_start_oak_functions_server(
         server_port,
         &wasm_path,
         lookup_data_file.path().to_str().unwrap(),
@@ -121,5 +123,5 @@ fn bench_wasm_handler(bencher: &mut Bencher) {
         );
     }
 
-    test_utils::kill_process(server_background);
+    oak_functions_test_utils::kill_process(server_background);
 }

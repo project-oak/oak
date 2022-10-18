@@ -12,6 +12,6 @@ clap = { version = "*", features = ["derive"] }
 env_logger = "*"
 location_utils = { path = "../location_utils" }
 log = "*"
-oak_functions_abi = { path = "../abi" }
+oak_functions_abi = { path = "../../oak_functions_abi" }
 prost = "*"
 serde = { version = "*", features = ["derive"] }

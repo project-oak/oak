@@ -11,7 +11,7 @@ bytes = "*"
 clap = { version = "*", features = ["derive"] }
 location_utils = { path = "../location_utils" }
 multimap = "*"
-oak_functions_abi = { path = "../abi" }
+oak_functions_abi = { path = "../../oak_functions_abi" }
 prost = "*"
 rand = "*"
 serde = { version = "*", features = ["derive"] }

@@ -13,7 +13,7 @@ wasm-bindgen = "*"
 wasm-bindgen-futures = "*"
 console_error_panic_hook = { version = "*" }
 anyhow = { version = "*", default-features = false }
-oak_functions_abi = { path = "../../oak_functions/abi" }
+oak_functions_abi = { path = "../../oak_functions_abi" }
 oak_remote_attestation = { path = "../../oak_remote_attestation", default-features = false, features = [
   "web"
 ] }
