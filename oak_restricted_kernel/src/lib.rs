@@ -53,6 +53,7 @@ mod virtio;
 
 extern crate alloc;
 
+use crate::mm::Translator;
 use alloc::boxed::Box;
 use core::{panic::PanicInfo, str::FromStr};
 use log::{error, info};
@@ -63,8 +64,6 @@ use x86_64::{
     structures::paging::{Page, Size2MiB},
     VirtAddr,
 };
-
-use crate::mm::page_tables::DirectMap;
 
 /// Main entry point for the kernel, to be called from bootloader.
 pub fn start_kernel(info: &BootParams) -> Box<dyn Channel> {
@@ -95,8 +94,12 @@ pub fn start_kernel(info: &BootParams) -> Box<dyn Channel> {
     // If we don't find memory for heap, it's ok to panic.
     let heap_phys_frames = frame_allocator.largest_available().unwrap();
     memory::init_allocator::<Size2MiB>(Page::range(
-        mapper.translate_frame(heap_phys_frames.start).unwrap(),
-        mapper.translate_frame(heap_phys_frames.end + 1).unwrap(),
+        mapper
+            .translate_physical_frame(heap_phys_frames.start)
+            .unwrap(),
+        mapper
+            .translate_physical_frame(heap_phys_frames.end + 1)
+            .unwrap(),
     ))
     .unwrap();
 
@@ -117,7 +120,7 @@ enum ChannelType {
 }
 
 /// Create a channel for communicating with the Untrusted Launcher.
-fn get_channel(kernel_args: &args::Args, mapper: &DirectMap) -> Box<dyn Channel> {
+fn get_channel<A: Translator>(kernel_args: &args::Args, mapper: &A) -> Box<dyn Channel> {
     // If we weren't told which channel to use, arbitrarily pick the first one in the `ChannelType`
     // enum. Depending on features that are enabled, this means that the enum acts as kind of a
     // reverse priority list for defaults.

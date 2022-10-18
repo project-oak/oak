@@ -14,9 +14,11 @@
 // limitations under the License.
 //
 
+use self::encrypted_mapper::{EncryptedPageTable, MemoryEncryption, PageTableFlags, PhysOffset};
 use goblin::{elf32::program_header::PT_LOAD, elf64::program_header::ProgramHeader};
 use log::info;
 use oak_linux_boot_params::{BootE820Entry, E820EntryType};
+use sev_guest::msr::{get_sev_status, SevStatus};
 use x86_64::{
     addr::{align_down, align_up},
     registers::{
@@ -24,17 +26,31 @@ use x86_64::{
         model_specific::{Efer, EferFlags},
     },
     structures::paging::{
-        FrameAllocator, OffsetPageTable, PageSize, PageTable, PageTableFlags, PhysFrame, Size2MiB,
-        Size4KiB,
+        FrameAllocator, MappedPageTable, Page, PageSize, PageTable, PhysFrame, Size2MiB, Size4KiB,
     },
     PhysAddr, VirtAddr,
 };
 
-use self::page_tables::DirectMap;
-
 mod bitmap_frame_allocator;
+mod encrypted_mapper;
 pub mod frame_allocator;
 pub mod page_tables;
+
+pub trait Translator {
+    /// Translates the given virtual address to the physical address that it maps to.
+    ///
+    /// Returns `None` if there is no valid mapping for the given address.
+    fn translate_virtual(&self, addr: VirtAddr) -> Option<PhysAddr>;
+
+    /// Translate a physical address to a virtual address.
+    ///
+    /// Note that a physical address may be mapped multiple times. This function will always return
+    /// the address from the directly mapped region, ignoring ohter mappings if they exist.
+    fn translate_physical(&self, addr: PhysAddr) -> Option<VirtAddr>;
+
+    /// Translate a physical frame to virtual page, using the directly mapped region.
+    fn translate_physical_frame<S: PageSize>(&self, frame: PhysFrame<S>) -> Option<Page<S>>;
+}
 
 const DIRECT_MAPPING_OFFSET: VirtAddr = VirtAddr::new_truncate(0xFFFF_8800_0000_0000);
 
@@ -137,10 +153,10 @@ pub fn init<const N: usize>(
 /// |                     |          |                     |         | physical memory             |
 /// | FFFF_8820_0000_0000 | ~-120 TB | FFFF_FFFF_7FFF_FFFF | ~120 TB | ... unused hole             |
 /// | FFFF_FFFF_8000_0000 |    -2 GB | FFFF_FFFF_FFFF_FFFF |    2 GB | Kernel code                 |
-pub fn init_paging<A: FrameAllocator<Size4KiB> + ?Sized>(
+pub fn init_paging<A: FrameAllocator<Size4KiB>>(
     frame_allocator: &mut A,
     program_headers: &[ProgramHeader],
-) -> Result<DirectMap<'static>, &'static str> {
+) -> Result<EncryptedPageTable<MappedPageTable<'static, PhysOffset>>, &'static str> {
     // Safety: this expects the frame allocator to be initialized and the memory region it's handing
     // memory out of to be identity mapped. This is true for the lower 2 GiB after we boot.
     // This reference will no longer be valid after we reload the page tables!
@@ -150,9 +166,17 @@ pub fn init_paging<A: FrameAllocator<Size4KiB> + ?Sized>(
     let pml4 = unsafe { &mut *(pml4_frame.start_address().as_u64() as *mut PageTable) };
     pml4.zero();
 
-    // Safety: these page tables are unused (for now) and we have identity mapping for the lowest 2
-    // GiB of memory.
-    let mut page_table = unsafe { OffsetPageTable::new(pml4, VirtAddr::new(0)) };
+    // Should we set the C-bit (encrypted memory for SEV)? For now, let's assume it's bit 51.
+    let encrypted = if get_sev_status()
+        .unwrap_or(SevStatus::empty())
+        .contains(SevStatus::SEV_ENABLED)
+    {
+        MemoryEncryption::Encrypted(51)
+    } else {
+        MemoryEncryption::NoEncryption
+    };
+
+    let mut page_table = EncryptedPageTable::new(pml4, VirtAddr::new(0), encrypted);
 
     // Safety: these operations are safe as they're not done on active page tables.
     unsafe {
@@ -167,11 +191,12 @@ pub fn init_paging<A: FrameAllocator<Size4KiB> + ?Sized>(
             PageTableFlags::PRESENT
                 | PageTableFlags::GLOBAL
                 | PageTableFlags::WRITABLE
-                | PageTableFlags::NO_EXECUTE,
+                | PageTableFlags::NO_EXECUTE
+                | PageTableFlags::ENCRYPTED,
             &mut page_table,
             frame_allocator,
         )
-        .map_err(|_| "Failed to set up paging for [0..4GiB)")?;
+        .map_err(|_| "Failed to set up paging for physical memory")?;
 
         // Mapping for the kernel itself in the upper -2G of memory, based on the mappings (and
         // permissions) in the program header.
@@ -194,7 +219,9 @@ pub fn init_paging<A: FrameAllocator<Size4KiB> + ?Sized>(
     let pml4 =
         unsafe { &mut *(DIRECT_MAPPING_OFFSET + pml4_frame.start_address().as_u64()).as_mut_ptr() };
 
-    Ok(DirectMap(unsafe {
-        OffsetPageTable::new(pml4, DIRECT_MAPPING_OFFSET)
-    }))
+    Ok(EncryptedPageTable::new(
+        pml4,
+        DIRECT_MAPPING_OFFSET,
+        encrypted,
+    ))
 }

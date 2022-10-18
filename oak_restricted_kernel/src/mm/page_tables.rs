@@ -18,41 +18,13 @@ use goblin::elf64::program_header::{ProgramHeader, PF_W, PF_X, PT_LOAD};
 use x86_64::{
     align_down, align_up,
     structures::paging::{
-        frame::PhysFrameRange, mapper::MapToError, FrameAllocator, Mapper, OffsetPageTable, Page,
-        PageSize, PageTableFlags, PhysFrame, Size2MiB, Size4KiB, Translate,
+        frame::PhysFrameRange, mapper::MapToError, FrameAllocator, Page, PageSize, PhysFrame,
+        Size2MiB, Size4KiB,
     },
     PhysAddr, VirtAddr,
 };
 
-/// Virtual to physical (and inverse) mapping.
-///
-/// The kernel will map all of the physical memory somewhere in the virtual memory, at some offset.
-/// This struct provides translation functions from virtual to physical addresses, and vice versa,
-/// in the mapped region.
-pub struct DirectMap<'a>(pub(crate) OffsetPageTable<'a>);
-
-impl<'a> DirectMap<'a> {
-    /// Translate a physical address to a virtual address.
-    ///
-    /// Note that a physical address may be mapped multiple times. This function will always return
-    /// the address from the directly mapped region, ignoring ohter mappings if they exist.
-    #[allow(dead_code)]
-    pub fn translate_addr(&self, addr: PhysAddr) -> Option<VirtAddr> {
-        Some(self.0.phys_offset() + addr.as_u64())
-    }
-
-    /// Translate a physical frame to virtual page, using the directly mapped region.
-    #[allow(dead_code)]
-    pub fn translate_frame<S: PageSize>(&self, frame: PhysFrame<S>) -> Option<Page<S>> {
-        Page::from_start_address(self.translate_addr(frame.start_address())?).ok()
-    }
-}
-
-impl<'a> Translate for DirectMap<'a> {
-    fn translate(&self, addr: VirtAddr) -> x86_64::structures::paging::mapper::TranslateResult {
-        self.0.translate(addr)
-    }
-}
+use super::encrypted_mapper::{Mapper, PageTableFlags};
 
 /// Map a region of physical memory to a virtual address using 2 MiB pages.
 ///
@@ -60,7 +32,7 @@ impl<'a> Translate for DirectMap<'a> {
 ///
 /// There are many ways you can cause memory safety errors and undefined behaviour when creating
 /// page mappings. See <Mapper::map_to_with_table_flags> for examples.
-pub unsafe fn create_offset_map<S: PageSize, A: FrameAllocator<Size4KiB> + ?Sized, M: Mapper<S>>(
+pub unsafe fn create_offset_map<S: PageSize, A: FrameAllocator<Size4KiB>, M: Mapper<S>>(
     range: PhysFrameRange<S>,
     offset: VirtAddr,
     flags: PageTableFlags,
@@ -73,7 +45,10 @@ pub unsafe fn create_offset_map<S: PageSize, A: FrameAllocator<Size4KiB> + ?Size
                 Page::<S>::from_start_address(offset + i * (S::SIZE as usize)).unwrap(),
                 frame,
                 flags,
-                PageTableFlags::PRESENT | PageTableFlags::GLOBAL | PageTableFlags::WRITABLE,
+                PageTableFlags::PRESENT
+                    | PageTableFlags::GLOBAL
+                    | PageTableFlags::WRITABLE
+                    | PageTableFlags::ENCRYPTED,
                 frame_allocator,
             )?
             .ignore();
@@ -105,7 +80,7 @@ pub unsafe fn create_offset_map<S: PageSize, A: FrameAllocator<Size4KiB> + ?Size
 /// `EferFlags::NO_EXECUTE_ENABLE` needs to be enabled before loading the page tables created by
 /// this function.
 pub unsafe fn create_kernel_map<
-    A: FrameAllocator<Size4KiB> + ?Sized,
+    A: FrameAllocator<Size4KiB>,
     M: Mapper<Size2MiB> + Mapper<Size4KiB>,
 >(
     program_headers: &[ProgramHeader],
@@ -133,6 +108,7 @@ pub unsafe fn create_kernel_map<
                 /* It's not possible to mark a page not readable, so we ignore PF_R. */
                 PageTableFlags::PRESENT
                     | PageTableFlags::GLOBAL
+                    | PageTableFlags::ENCRYPTED
                     | if phdr.p_flags & PF_W > 0 {
                         PageTableFlags::WRITABLE
                     } else {
