@@ -47,8 +47,9 @@ cc_library(
     ],
 )
 
+# Linked by oak_tensorflow_service and the self-contained binary below.
 cc_library(
-    name = "hello_world_model_app",
+    name = "lib",
     srcs = ["hello_world.cc"],
     deps = [
         ":hello_world_model",
@@ -65,7 +66,7 @@ cc_binary(
     srcs = ["main.cc"],
     name = "hello_world",
     deps = [
-        ":hello_world_model_app",
+        ":lib",
         "//cc/tflite_micro/oak:hdrs",
         "//cc/tflite_micro/oak/apps:start_file",
     ],
