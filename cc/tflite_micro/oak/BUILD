@@ -30,7 +30,6 @@ cc_library(
         "debug_log.cc",
     ],
     copts = oak_copts(),
-    alwayslink = 1,
 )
 
 cc_library(

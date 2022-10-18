@@ -58,7 +58,7 @@ config_setting(
 
 # Linked by oak_tensorflow_service and the self-contained binary below.
 cc_library(
-    name = "lib",
+    name = "hello_world",
     srcs = ["hello_world.cc"] + select({
         ":use_custom_output": [],
         "//conditions:default": ["output_handler.cc"],
@@ -70,7 +70,6 @@ cc_library(
         "//cc/tflite_micro/oak:hdrs",
     ],
     linkstatic = 1,
-    alwayslink = 1,
     copts = oak_copts() + [
         "-Icc/tflite_micro/oak/apps/hello_world",
     ],
@@ -79,9 +78,9 @@ cc_library(
 
 cc_binary(
     srcs = ["main.cc"],
-    name = "hello_world",
+    name = "hello_world_bin",
     deps = [
-        ":lib",
+        ":hello_world",
         "//cc/tflite_micro/oak:hdrs",
         "//cc/tflite_micro/oak/apps:start_file",
     ],
