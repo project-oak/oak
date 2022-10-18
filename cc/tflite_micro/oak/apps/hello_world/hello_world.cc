@@ -57,8 +57,6 @@ int tflite_init(
   // copying or parsing, it's a very lightweight operation.
   model = tflite::GetModel(g_hello_world_model_data);
 
-  memset(tensor_arena, (int)'c', kTensorArenaSize);
-
   // This pulls in all the operation implementations we need.
   // NOLINTNEXTLINE(runtime-global-variables)
   static tflite::AllOpsResolver resolver;
