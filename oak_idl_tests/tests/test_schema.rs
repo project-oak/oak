@@ -24,6 +24,7 @@ mod test_schema {
     #![allow(
         clippy::derivable_impls,
         clippy::extra_unused_lifetimes,
+        clippy::missing_safety_doc,
         clippy::needless_borrow,
         dead_code,
         unused_imports
@@ -52,7 +53,7 @@ impl test_schema::TestService for TestServiceImpl {
         };
         let mut b = oak_idl::utils::OwnedFlatbufferBuilder::default();
         let value = h
-            .get(request.key().unwrap())
+            .get(request.key().unwrap().bytes())
             .map(|v| b.create_vector::<u8>(v));
         let flatbuffer = test_schema::LookupDataResponse::create(
             &mut b,
@@ -99,7 +100,14 @@ fn test_lookup_data() {
         );
         let owned_flatbuffer = builder.finish(flatbuffer).unwrap();
         let response = client.lookup_data(owned_flatbuffer.into_vec()).unwrap();
-        assert_eq!(Some([19, 88].as_ref()), response.get().value());
+        assert_eq!(
+            Some([19, 88].as_ref()),
+            response
+                .get()
+                .value()
+                .as_ref()
+                .map(flatbuffers::Vector::bytes)
+        );
     }
     {
         let mut builder = oak_idl::utils::OwnedFlatbufferBuilder::default();
@@ -110,7 +118,7 @@ fn test_lookup_data() {
         );
         let owned_flatbuffer = builder.finish(flatbuffer).unwrap();
         let response = client.lookup_data(owned_flatbuffer.into_vec()).unwrap();
-        assert_eq!(None, response.get().value());
+        assert!(response.get().value().is_none());
     }
 }
 
@@ -153,7 +161,14 @@ async fn test_async_lookup_data() {
             .lookup_data(owned_flatbuffer.into_vec())
             .await
             .unwrap();
-        assert_eq!(Some([19, 88].as_ref()), response.get().value());
+        assert_eq!(
+            Some([19, 88].as_ref()),
+            response
+                .get()
+                .value()
+                .as_ref()
+                .map(flatbuffers::Vector::bytes)
+        );
     }
     {
         let mut builder = oak_idl::utils::OwnedFlatbufferBuilder::default();
@@ -167,6 +182,6 @@ async fn test_async_lookup_data() {
             .lookup_data(owned_flatbuffer.into_vec())
             .await
             .unwrap();
-        assert_eq!(None, response.get().value());
+        assert!(response.get().value().is_none());
     }
 }

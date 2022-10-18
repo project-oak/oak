@@ -23,6 +23,7 @@ pub mod schema {
     #![allow(
         clippy::derivable_impls,
         clippy::extra_unused_lifetimes,
+        clippy::missing_safety_doc,
         clippy::needless_borrow,
         dead_code,
         unused_imports
@@ -104,7 +105,8 @@ where
                 let constant_response_size = initialization.constant_response_size();
                 let wasm_module_bytes: &[u8] = initialization
                     .wasm_module()
-                    .ok_or_else(|| oak_idl::Status::new(oak_idl::StatusCode::InvalidArgument))?;
+                    .ok_or_else(|| oak_idl::Status::new(oak_idl::StatusCode::InvalidArgument))?
+                    .bytes();
 
                 let wasm_handler =
                     wasm::new_wasm_handler(wasm_module_bytes, self.lookup_data_manager.clone())
@@ -174,7 +176,8 @@ where
                     .into();
                 let request_body: &[u8] = request_message
                     .body()
-                    .ok_or_else(|| oak_idl::Status::new(oak_idl::StatusCode::InvalidArgument))?;
+                    .ok_or_else(|| oak_idl::Status::new(oak_idl::StatusCode::InvalidArgument))?
+                    .bytes();
 
                 let response = attestation_handler
                     .message(session_id, request_body)
@@ -209,10 +212,12 @@ where
                     entry
                         .key()
                         .ok_or_else(|| oak_idl::Status::new(oak_idl::StatusCode::InvalidArgument))?
+                        .bytes()
                         .to_vec(),
                     entry
                         .value()
                         .ok_or_else(|| oak_idl::Status::new(oak_idl::StatusCode::InvalidArgument))?
+                        .bytes()
                         .to_vec(),
                 ))
             })

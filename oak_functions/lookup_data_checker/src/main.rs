@@ -26,9 +26,9 @@ use std::{
 };
 
 #[derive(Parser, Clone, Debug)]
-#[clap(about = "Oak Functions Lookup Data Checker")]
+#[command(about = "Oak Functions Lookup Data Checker")]
 pub struct Opt {
-    #[clap(long)]
+    #[arg(long)]
     file_path: String,
 }
 

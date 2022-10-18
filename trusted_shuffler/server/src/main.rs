@@ -27,23 +27,23 @@ use log::info;
 use tokio::time::Duration;
 
 #[derive(Parser, Clone)]
-#[clap(about = "Trusted Shuffler Server")]
+#[command(about = "Trusted Shuffler Server")]
 pub struct Opt {
-    #[structopt(long, help = "Size of the batch", default_value = "1")]
+    #[arg(long, help = "Size of the batch", default_value = "1")]
     batch_size: usize,
-    #[structopt(
+    #[arg(
         long,
         help = "Address to listen on for the Trusted Shuffler server",
         default_value = "[::]:8888"
     )]
     listen_address: String,
-    #[structopt(
+    #[arg(
         long,
         help = "URL of the backend to connect to from the Trusted Shuffler server",
         default_value = "http://localhost:8080"
     )]
     backend_url: String,
-    #[structopt(
+    #[arg(
         long,
         help = "Timeout in milliseconds for the backend to respond to the k requests from the server."
     )]

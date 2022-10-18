@@ -30,6 +30,7 @@ pub mod schema {
     #![allow(
         clippy::derivable_impls,
         clippy::extra_unused_lifetimes,
+        clippy::missing_safety_doc,
         clippy::needless_borrow,
         dead_code,
         unused_imports
@@ -59,39 +60,38 @@ enum Mode {
 #[derive(Parser, Debug)]
 struct Args {
     /// Execution mode.
-    #[clap(subcommand)]
+    #[command(subcommand)]
     mode: Mode,
 
     /// Consistent response size that the runtime should apply
-    #[clap(long, default_value = "1024")]
+    #[arg(long, default_value = "1024")]
     constant_response_size: u32,
 
-    #[clap(long, default_value = "8080")]
+    #[arg(long, default_value = "8080")]
     port: u16,
 
     /// Path to a Wasm file to be loaded into the trusted runtime and executed by it per
     /// invocation. See the documentation for details on its ABI. Ref: <https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md>
-    #[clap(
+    #[arg(
         long,
-        parse(from_os_str),
-        validator = path_exists,
+        value_parser = path_exists,
     )]
     wasm: PathBuf,
 
     /// Path to a file containing key / value entries in protobuf binary format for lookup.
-    #[clap(
+    #[arg(
         long,
-        parse(from_os_str),
-        validator = path_exists,
+        value_parser = path_exists,
     )]
     lookup_data: PathBuf,
 }
 
-fn path_exists(s: &str) -> Result<(), String> {
+fn path_exists(s: &str) -> Result<PathBuf, String> {
+    let path = PathBuf::from(s);
     if !fs::metadata(s).map_err(|err| err.to_string())?.is_file() {
         Err(String::from("Path does not represent a file"))
     } else {
-        Ok(())
+        Ok(path)
     }
 }
 
@@ -188,8 +188,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         public_key_info
             .public_key()
             .expect("missing public key")
+            .bytes()
             .to_vec(),
-        public_key_info.attestation().unwrap_or(&[]).to_vec(),
+        public_key_info
+            .attestation()
+            .unwrap_or_default()
+            .bytes()
+            .to_vec(),
     );
 
     // Wait until something dies or we get a signal to terminate.

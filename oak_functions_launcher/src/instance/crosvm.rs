@@ -40,15 +40,15 @@ const VSOCK_GUEST_PORT: u32 = 1024;
 #[derive(Parser, Clone, Debug, PartialEq)]
 pub struct Params {
     /// Path to the VMM binary to execute.
-    #[clap(long, parse(from_os_str), validator = path_exists)]
+    #[arg(long, value_parser = path_exists)]
     pub vmm_binary: PathBuf,
 
     /// Path to the binary to load into the VM.
-    #[clap(long, parse(from_os_str), validator = path_exists)]
+    #[arg(long, value_parser = path_exists)]
     pub app_binary: PathBuf,
 
     /// Port to use for debugging with gdb
-    #[clap(long = "gdb")]
+    #[arg(long = "gdb")]
     pub gdb: Option<u16>,
 }
 

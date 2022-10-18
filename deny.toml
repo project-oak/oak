@@ -13,9 +13,6 @@ notice = "deny"
 ignore = [
   # TODO(#2421): Remove when no longer required.
   "RUSTSEC-2021-0127",
-  # We rely on flatbuffers, which generates potentially unsafe code via "safe" APIs.
-  # See https://github.com/google/flatbuffers/issues/6627
-  "RUSTSEC-2021-0122",
 ]
 
 [bans]
@@ -39,7 +36,8 @@ allow = [
   "MIT",
   "MPL-2.0",
   "OpenSSL",
-  "Zlib"
+  "Zlib",
+  "Unicode-DFS-2016",
 ]
 copyleft = "deny"
 

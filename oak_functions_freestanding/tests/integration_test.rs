@@ -35,6 +35,7 @@ mod schema {
     #![allow(
         clippy::derivable_impls,
         clippy::extra_unused_lifetimes,
+        clippy::missing_safety_doc,
         clippy::needless_borrow,
         dead_code,
         unused_imports
@@ -96,7 +97,7 @@ impl AttestationTransport for TestUserClient {
 
         let decoded_response = response_flatbuffer.get().body().unwrap();
 
-        Ok(decoded_response.to_vec())
+        Ok(decoded_response.bytes().to_vec())
     }
 }
 

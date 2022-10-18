@@ -8,69 +8,129 @@ _xtask() {
 
     for i in ${COMP_WORDS[@]}
     do
-        case "${i}" in
-            "$1")
+        case "${cmd},${i}" in
+            ",$1")
                 cmd="xtask"
                 ;;
-            build-baremetal-variants)
-                cmd+="__build__baremetal__variants"
+            xtask,build-baremetal-variants)
+                cmd="xtask__build__baremetal__variants"
                 ;;
-            build-oak-functions-example)
-                cmd+="__build__oak__functions__example"
+            xtask,build-oak-functions-example)
+                cmd="xtask__build__oak__functions__example"
                 ;;
-            build-oak-functions-server-variants)
-                cmd+="__build__oak__functions__server__variants"
+            xtask,build-oak-functions-server-variants)
+                cmd="xtask__build__oak__functions__server__variants"
                 ;;
-            check-format)
-                cmd+="__check__format"
+            xtask,check-format)
+                cmd="xtask__check__format"
                 ;;
-            completion)
-                cmd+="__completion"
+            xtask,completion)
+                cmd="xtask__completion"
                 ;;
-            format)
-                cmd+="__format"
+            xtask,format)
+                cmd="xtask__format"
                 ;;
-            help)
-                cmd+="__help"
+            xtask,help)
+                cmd="xtask__help"
                 ;;
-            run-bazel-tests)
-                cmd+="__run__bazel__tests"
+            xtask,run-bazel-tests)
+                cmd="xtask__run__bazel__tests"
                 ;;
-            run-cargo-clean)
-                cmd+="__run__cargo__clean"
+            xtask,run-cargo-clean)
+                cmd="xtask__run__cargo__clean"
                 ;;
-            run-cargo-clippy)
-                cmd+="__run__cargo__clippy"
+            xtask,run-cargo-clippy)
+                cmd="xtask__run__cargo__clippy"
                 ;;
-            run-cargo-deny)
-                cmd+="__run__cargo__deny"
+            xtask,run-cargo-deny)
+                cmd="xtask__run__cargo__deny"
                 ;;
-            run-cargo-fuzz)
-                cmd+="__run__cargo__fuzz"
+            xtask,run-cargo-fuzz)
+                cmd="xtask__run__cargo__fuzz"
                 ;;
-            run-cargo-tests)
-                cmd+="__run__cargo__tests"
+            xtask,run-cargo-tests)
+                cmd="xtask__run__cargo__tests"
                 ;;
-            run-cargo-udeps)
-                cmd+="__run__cargo__udeps"
+            xtask,run-cargo-udeps)
+                cmd="xtask__run__cargo__udeps"
                 ;;
-            run-ci)
-                cmd+="__run__ci"
+            xtask,run-ci)
+                cmd="xtask__run__ci"
                 ;;
-            run-launcher-test)
-                cmd+="__run__launcher__test"
+            xtask,run-launcher-test)
+                cmd="xtask__run__launcher__test"
                 ;;
-            run-oak-functions-examples)
-                cmd+="__run__oak__functions__examples"
+            xtask,run-oak-functions-examples)
+                cmd="xtask__run__oak__functions__examples"
                 ;;
-            run-tests)
-                cmd+="__run__tests"
+            xtask,run-tests)
+                cmd="xtask__run__tests"
                 ;;
-            run-trusted-shuffler)
-                cmd+="__run__trusted__shuffler"
+            xtask,run-trusted-shuffler)
+                cmd="xtask__run__trusted__shuffler"
                 ;;
-            run-trusted-shuffler-grpc)
-                cmd+="__run__trusted__shuffler__grpc"
+            xtask,run-trusted-shuffler-grpc)
+                cmd="xtask__run__trusted__shuffler__grpc"
+                ;;
+            xtask__help,build-baremetal-variants)
+                cmd="xtask__help__build__baremetal__variants"
+                ;;
+            xtask__help,build-oak-functions-example)
+                cmd="xtask__help__build__oak__functions__example"
+                ;;
+            xtask__help,build-oak-functions-server-variants)
+                cmd="xtask__help__build__oak__functions__server__variants"
+                ;;
+            xtask__help,check-format)
+                cmd="xtask__help__check__format"
+                ;;
+            xtask__help,completion)
+                cmd="xtask__help__completion"
+                ;;
+            xtask__help,format)
+                cmd="xtask__help__format"
+                ;;
+            xtask__help,help)
+                cmd="xtask__help__help"
+                ;;
+            xtask__help,run-bazel-tests)
+                cmd="xtask__help__run__bazel__tests"
+                ;;
+            xtask__help,run-cargo-clean)
+                cmd="xtask__help__run__cargo__clean"
+                ;;
+            xtask__help,run-cargo-clippy)
+                cmd="xtask__help__run__cargo__clippy"
+                ;;
+            xtask__help,run-cargo-deny)
+                cmd="xtask__help__run__cargo__deny"
+                ;;
+            xtask__help,run-cargo-fuzz)
+                cmd="xtask__help__run__cargo__fuzz"
+                ;;
+            xtask__help,run-cargo-tests)
+                cmd="xtask__help__run__cargo__tests"
+                ;;
+            xtask__help,run-cargo-udeps)
+                cmd="xtask__help__run__cargo__udeps"
+                ;;
+            xtask__help,run-ci)
+                cmd="xtask__help__run__ci"
+                ;;
+            xtask__help,run-launcher-test)
+                cmd="xtask__help__run__launcher__test"
+                ;;
+            xtask__help,run-oak-functions-examples)
+                cmd="xtask__help__run__oak__functions__examples"
+                ;;
+            xtask__help,run-tests)
+                cmd="xtask__help__run__tests"
+                ;;
+            xtask__help,run-trusted-shuffler)
+                cmd="xtask__help__run__trusted__shuffler"
+                ;;
+            xtask__help,run-trusted-shuffler-grpc)
+                cmd="xtask__help__run__trusted__shuffler__grpc"
                 ;;
             *)
                 ;;
@@ -79,7 +139,7 @@ _xtask() {
 
     case "${cmd}" in
         xtask)
-            opts="-h --help --dry-run --logs --keep-going --scope run-launcher-test build-baremetal-variants run-oak-functions-examples build-oak-functions-example build-oak-functions-server-variants format check-format run-tests run-cargo-clippy run-cargo-tests run-bazel-tests run-cargo-fuzz run-cargo-deny run-cargo-udeps run-ci run-cargo-clean completion run-trusted-shuffler run-trusted-shuffler-grpc help"
+            opts="-h --dry-run --logs --keep-going --scope --help run-launcher-test build-baremetal-variants run-oak-functions-examples build-oak-functions-example build-oak-functions-server-variants format check-format run-tests run-cargo-clippy run-cargo-tests run-bazel-tests run-cargo-fuzz run-cargo-deny run-cargo-udeps run-ci run-cargo-clean completion run-trusted-shuffler run-trusted-shuffler-grpc help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 1 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -154,7 +214,7 @@ _xtask() {
                     return 0
                     ;;
                 --run-server)
-                    COMPREPLY=($(compgen -f "${cur}"))
+                    COMPREPLY=($(compgen -W "true false" -- "${cur}"))
                     return 0
                     ;;
                 --client-additional-args)
@@ -245,8 +305,288 @@ _xtask() {
             return 0
             ;;
         xtask__help)
-            opts="<SUBCOMMAND>..."
+            opts="run-launcher-test build-baremetal-variants run-oak-functions-examples build-oak-functions-example build-oak-functions-server-variants format check-format run-tests run-cargo-clippy run-cargo-tests run-bazel-tests run-cargo-fuzz run-cargo-deny run-cargo-udeps run-ci run-cargo-clean completion run-trusted-shuffler run-trusted-shuffler-grpc help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
+        xtask__help__build__baremetal__variants)
+            opts=""
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
+        xtask__help__build__oak__functions__example)
+            opts=""
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
+        xtask__help__build__oak__functions__server__variants)
+            opts=""
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
+        xtask__help__check__format)
+            opts=""
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
+        xtask__help__completion)
+            opts=""
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
+        xtask__help__format)
+            opts=""
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
+        xtask__help__help)
+            opts=""
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
+        xtask__help__run__bazel__tests)
+            opts=""
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
+        xtask__help__run__cargo__clean)
+            opts=""
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
+        xtask__help__run__cargo__clippy)
+            opts=""
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
+        xtask__help__run__cargo__deny)
+            opts=""
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
+        xtask__help__run__cargo__fuzz)
+            opts=""
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
+        xtask__help__run__cargo__tests)
+            opts=""
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
+        xtask__help__run__cargo__udeps)
+            opts=""
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
+        xtask__help__run__ci)
+            opts=""
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
+        xtask__help__run__launcher__test)
+            opts=""
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
+        xtask__help__run__oak__functions__examples)
+            opts=""
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
+        xtask__help__run__tests)
+            opts=""
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
+        xtask__help__run__trusted__shuffler)
+            opts=""
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
+        xtask__help__run__trusted__shuffler__grpc)
+            opts=""
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
             fi
@@ -315,7 +655,7 @@ _xtask() {
             return 0
             ;;
         xtask__run__cargo__fuzz)
-            opts="-h --crate-name --target-name --help <ARGS>..."
+            opts="-h --crate-name --target-name --help [ARGS]..."
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -432,7 +772,7 @@ _xtask() {
                     return 0
                     ;;
                 --run-server)
-                    COMPREPLY=($(compgen -f "${cur}"))
+                    COMPREPLY=($(compgen -W "true false" -- "${cur}"))
                     return 0
                     ;;
                 --client-additional-args)

@@ -25,7 +25,7 @@
 
 #![feature(async_closure)]
 
-use clap::{IntoApp, Parser};
+use clap::{CommandFactory, Parser};
 use colored::*;
 use once_cell::sync::Lazy;
 use std::{

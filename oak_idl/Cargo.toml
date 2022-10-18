@@ -10,5 +10,6 @@ std = []
 async-clients = ["async-trait", "std"]
 
 [dependencies]
-flatbuffers = { version = "*", features = ["no_std"], default-features = false }
+# Ensure no_std compatibility. TODO(#2920): remove once https://github.com/google/flatbuffers/pull/7338 is merged.
+flatbuffers = { git = "https://github.com/google/flatbuffers.git", rev = "5792623df42e6165a376907bbb8e6090d0946db5", default-features = false }
 async-trait = { version = "*", optional = true }

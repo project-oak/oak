@@ -33,6 +33,7 @@ mod reflection_generated {
     #![allow(
         clippy::derivable_impls,
         clippy::extra_unused_lifetimes,
+        clippy::missing_safety_doc,
         clippy::needless_borrow,
         dead_code,
         unused_imports

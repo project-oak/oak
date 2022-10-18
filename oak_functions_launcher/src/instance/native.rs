@@ -30,7 +30,7 @@ use std::{
 #[derive(Parser, Clone, Debug, PartialEq)]
 pub struct Params {
     /// Path to the runtime binary
-    #[clap(long, parse(from_os_str), validator = path_exists)]
+    #[arg(long, value_parser = path_exists)]
     pub app_binary: PathBuf,
 }
 

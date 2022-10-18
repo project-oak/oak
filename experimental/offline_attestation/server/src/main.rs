@@ -35,9 +35,9 @@ const ECHO_PATH: &str = "encrypted_echo";
 const PUBLIC_KEY_INFO_PATH: &str = "public_key_info";
 
 #[derive(Parser, Clone, Debug)]
-#[clap(about = "Offline Attestation Server")]
+#[command(about = "Offline Attestation Server")]
 pub struct Opt {
-    #[clap(long, default_value = "8080", help = "Port number on which to listen.")]
+    #[arg(long, default_value = "8080", help = "Port number on which to listen.")]
     port: u16,
 }
 

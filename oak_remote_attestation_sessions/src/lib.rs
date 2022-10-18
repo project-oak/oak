@@ -21,6 +21,7 @@
 extern crate alloc;
 
 use alloc::{boxed::Box, sync::Arc};
+use core::num::NonZeroUsize;
 use lru::LruCache;
 use oak_remote_attestation::{
     crypto::Signer,
@@ -51,7 +52,7 @@ impl<G: AttestationGenerator, V: AttestationVerifier> SessionTracker<G, V> {
         attestation_behavior: AttestationBehavior<G, V>,
         transcript_signer: Arc<Signer>,
     ) -> Self {
-        let known_sessions = LruCache::new(cache_size);
+        let known_sessions = LruCache::new(NonZeroUsize::new(cache_size).unwrap());
         Self {
             attestation_behavior,
             transcript_signer,

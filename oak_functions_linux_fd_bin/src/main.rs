@@ -20,9 +20,9 @@ use oak_remote_attestation_amd::PlaceholderAmdAttestationGenerator;
 use std::os::unix::io::FromRawFd;
 
 #[derive(Parser, Clone, Debug)]
-#[clap(about = "Oak Functions Loader Linux UDS")]
+#[command(about = "Oak Functions Loader Linux UDS")]
 pub struct Opt {
-    #[clap(long, help = "File descriptor use for the communication channel")]
+    #[arg(long, help = "File descriptor use for the communication channel")]
     pub comms_fd: i32,
 }
 

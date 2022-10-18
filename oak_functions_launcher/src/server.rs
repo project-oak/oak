@@ -75,7 +75,7 @@ fn decode_response(encoded_response: Vec<u8>) -> Result<UnaryResponse, tonic::St
         .ok_or_else(|| tonic::Status::internal(""))?;
 
     Ok(UnaryResponse {
-        body: response_body.to_vec(),
+        body: response_body.bytes().to_vec(),
     })
 }
 

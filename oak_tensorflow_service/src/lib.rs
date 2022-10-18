@@ -23,6 +23,7 @@ pub mod schema {
     #![allow(
         clippy::derivable_impls,
         clippy::extra_unused_lifetimes,
+        clippy::missing_safety_doc,
         clippy::needless_borrow,
         dead_code,
         unused_imports
@@ -56,7 +57,8 @@ impl schema::TensorflowService for TensorflowServiceImpl {
     {
         let tensorflow_model: &[u8] = initialization
             .tensorflow_model()
-            .ok_or_else(|| oak_idl::Status::new(oak_idl::StatusCode::InvalidArgument))?;
+            .ok_or_else(|| oak_idl::Status::new(oak_idl::StatusCode::InvalidArgument))?
+            .bytes();
         self.tflite_model
             .initialize(tensorflow_model)
             .map_err(|_err| oak_idl::Status::new(oak_idl::StatusCode::Internal))?;
@@ -80,7 +82,8 @@ impl schema::TensorflowService for TensorflowServiceImpl {
     ) -> Result<oak_idl::utils::OwnedFlatbuffer<schema::InvokeResponse>, oak_idl::Status> {
         let request_body: &[u8] = request_message
             .body()
-            .ok_or_else(|| oak_idl::Status::new(oak_idl::StatusCode::InvalidArgument))?;
+            .ok_or_else(|| oak_idl::Status::new(oak_idl::StatusCode::InvalidArgument))?
+            .bytes();
 
         let response = self
             .tflite_model

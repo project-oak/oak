@@ -25,10 +25,7 @@ use crate::{
     },
     message::EncryptedData,
 };
-use aes_gcm::{
-    aead::{AeadInPlace, NewAead},
-    Aes256Gcm, Key, Nonce,
-};
+use aes_gcm::{aead::AeadInPlace, Aes256Gcm, Key, KeyInit, Nonce};
 use alloc::vec::Vec;
 use anyhow::{anyhow, Context};
 use core::convert::TryInto;
@@ -75,7 +72,7 @@ impl AeadEncryptor {
     pub fn encrypt(&mut self, data: &[u8]) -> anyhow::Result<EncryptedData> {
         // Generate a random nonce.
         let nonce = Self::generate_nonce().context("Couldn't generate nonce")?;
-        let cipher = Aes256Gcm::new(Key::from_slice(&self.encryption_key.0));
+        let cipher = Aes256Gcm::new(Key::<Aes256Gcm>::from_slice(&self.encryption_key.0));
 
         let mut encrypted_data = data.to_vec();
         // Additional authenticated data is not required for the remotely attested channel,
@@ -98,7 +95,7 @@ impl AeadEncryptor {
     /// `data` must contain an encrypted message prefixed with a random nonce of [`NONCE_LENGTH`]
     /// length.
     pub fn decrypt(&mut self, data: &EncryptedData) -> anyhow::Result<Vec<u8>> {
-        let cipher = Aes256Gcm::new(Key::from_slice(&self.decryption_key.0));
+        let cipher = Aes256Gcm::new(Key::<Aes256Gcm>::from_slice(&self.decryption_key.0));
         let mut decrypted_data = data.data.to_vec();
         // Additional authenticated data is not required for the remotely attested channel,
         // since after session key is established client and server exchange messages with a

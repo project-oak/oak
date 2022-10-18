@@ -29,13 +29,13 @@ use tokio::io::{empty, AsyncRead, AsyncReadExt};
 
 #[derive(Parser, Clone)]
 pub struct Opt {
-    #[clap(long, help = "do not execute commands")]
+    #[arg(long, help = "do not execute commands")]
     dry_run: bool,
-    #[clap(long, help = "show logs of commands")]
+    #[arg(long, help = "show logs of commands")]
     logs: bool,
-    #[clap(long, help = "continue execution after error")]
+    #[arg(long, help = "continue execution after error")]
     keep_going: bool,
-    #[clap(
+    #[arg(
         long,
         help = r#"Scope of the command [all, commits:<count>, diff_to_main].
         all: The command is run for all relevant files.
@@ -48,7 +48,7 @@ pub struct Opt {
         default_value = "diff_to_main"
     )]
     pub scope: Scope,
-    #[clap(subcommand)]
+    #[command(subcommand)]
     pub cmd: Command,
 }
 
@@ -70,21 +70,20 @@ pub enum Command {
     RunCargoUdeps,
     RunCi,
     RunCargoClean,
-    #[clap(about = "generate bash completion script to stdout")]
+    #[command(about = "generate bash completion script to stdout")]
     Completion(Completion),
-    #[clap(about = "example running Trusted Shuffler forward a HTTP request")]
+    #[command(about = "example running Trusted Shuffler forward a HTTP request")]
     RunTrustedShuffler,
-    #[clap(about = "example running Trusted Shuffler forward a gRPC request")]
+    #[command(about = "example running Trusted Shuffler forward a gRPC request")]
     RunTrustedShufflerGrpc,
 }
 
 #[derive(Parser, Clone, Debug)]
 pub struct Completion {
-    #[clap(
+    #[arg(
         long,
         help = "file name to write xtask_bash_completion with full path; defaults to .xtask_bash_completion in current directory",
-        default_value = ".xtask_bash_completion",
-        parse(from_os_str)
+        default_value = ".xtask_bash_completion"
     )]
     pub file_name: PathBuf,
 }
@@ -92,29 +91,29 @@ pub struct Completion {
 /// Holds the options for running the example.
 #[derive(Parser, Clone, Debug)]
 pub struct RunOakExamplesOpt {
-    #[clap(
+    #[arg(
         long,
         help = "application variant: [rust, cpp]",
         default_value = "rust"
     )]
     pub application_variant: String,
     // TODO(#396): Clarify the name and type of this, currently it is not very intuitive.
-    #[clap(
+    #[arg(
         long,
         help = "name of a single example to run; if unset, run all the examples"
     )]
     pub example_name: Option<String>,
-    #[clap(flatten)]
+    #[command(flatten)]
     pub build_client: BuildClient,
-    #[clap(flatten)]
+    #[command(flatten)]
     pub build_server: BuildServerOpt,
-    #[clap(long, help = "run server [default: true]")]
+    #[arg(long, help = "run server [default: true]")]
     pub run_server: Option<bool>,
-    #[clap(long, help = "additional arguments to pass to clients")]
+    #[arg(long, help = "additional arguments to pass to clients")]
     pub client_additional_args: Vec<String>,
-    #[clap(long, help = "additional arguments to pass to server")]
+    #[arg(long, help = "additional arguments to pass to server")]
     pub server_additional_args: Vec<String>,
-    #[clap(long, help = "build a Docker image for the examples")]
+    #[arg(long, help = "build a Docker image for the examples")]
     pub build_docker: bool,
 }
 
@@ -156,18 +155,18 @@ impl std::str::FromStr for Scope {
 
 #[derive(Parser, Clone, Debug)]
 pub struct BuildClient {
-    #[clap(
+    #[arg(
         long,
         help = "client variant: [all, rust, cpp, go, nodejs, none] [default: all]",
         default_value = "all"
     )]
     pub client_variant: String,
-    #[clap(
+    #[arg(
         long,
         help = "rust toolchain override to use for the client compilation [e.g. stable, nightly, stage2]"
     )]
     pub client_rust_toolchain: Option<String>,
-    #[clap(
+    #[arg(
         long,
         help = "rust target to use for the client compilation [e.g. x86_64-unknown-linux-gnu, x86_64-unknown-linux-musl, x86_64-apple-darwin]"
     )]
@@ -219,14 +218,14 @@ impl ServerVariant {
 
 #[derive(Parser, Clone, Debug)]
 pub struct BuildServerOpt {
-    #[clap(long, help = "server variant: [base, unsafe]", default_value = "base")]
+    #[arg(long, help = "server variant: [base, unsafe]", default_value = "base")]
     pub server_variant: ServerVariant,
-    #[clap(
+    #[arg(
         long,
         help = "rust toolchain override to use for the server compilation [e.g. stable, nightly, stage2]"
     )]
     pub server_rust_toolchain: Option<String>,
-    #[clap(
+    #[arg(
         long,
         help = "rust target to use for the server compilation [e.g. x86_64-unknown-linux-gnu, x86_64-unknown-linux-musl, x86_64-apple-darwin]"
     )]
@@ -235,7 +234,7 @@ pub struct BuildServerOpt {
 
 #[derive(Parser, Clone, Debug)]
 pub struct RunTestsOpt {
-    #[clap(
+    #[arg(
         long,
         help = "Remove generated files after running tests for each crate"
     )]
@@ -244,25 +243,25 @@ pub struct RunTestsOpt {
 
 #[derive(Parser, Clone, Debug)]
 pub struct RunCargoFuzz {
-    #[clap(
+    #[arg(
         long,
         help = "name of a specific crate with fuzz-target. If not specified, runs all fuzz targets for all crates."
     )]
     pub crate_name: Option<String>,
-    #[clap(
+    #[arg(
         long,
         help = "name of a specific fuzz-target. If not specified, runs all fuzz targets.",
-        requires("crate-name")
+        requires("crate_name")
     )]
     pub target_name: Option<String>,
     /// Additional `libFuzzer` arguments passed through to the binary
-    #[clap(last(true))]
+    #[arg(last(true))]
     pub args: Vec<String>,
 }
 
 #[derive(Parser, Clone, Debug)]
 pub struct BuildBaremetalVariantsOpt {
-    #[clap(
+    #[arg(
         long,
         help = "name of a specific baremetal variant (qemu, or crosvm). If not specified, builds all variants."
     )]
