@@ -1,4 +1,3 @@
-
 /*
  * Copyright 2022 The Project Oak Authors
  *
