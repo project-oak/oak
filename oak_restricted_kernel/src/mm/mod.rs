@@ -14,6 +14,7 @@
 // limitations under the License.
 //
 
+use self::encrypted_mapper::{EncryptedPageTable, MemoryEncryption, PageTableFlags, PhysOffset};
 use goblin::{elf32::program_header::PT_LOAD, elf64::program_header::ProgramHeader};
 use log::info;
 use oak_linux_boot_params::{BootE820Entry, E820EntryType};
@@ -30,27 +31,25 @@ use x86_64::{
     PhysAddr, VirtAddr,
 };
 
-use self::encrypted_mapper::{EncryptedPageTable, MemoryEncryption, PageTableFlags, PhysOffset};
-
 mod bitmap_frame_allocator;
 mod encrypted_mapper;
 pub mod frame_allocator;
 pub mod page_tables;
 
-pub trait Translate {
+pub trait Translator {
     /// Translates the given virtual address to the physical address that it maps to.
     ///
     /// Returns `None` if there is no valid mapping for the given address.
-    fn translate(&self, addr: VirtAddr) -> Option<PhysAddr>;
+    fn translate_virtual(&self, addr: VirtAddr) -> Option<PhysAddr>;
 
     /// Translate a physical address to a virtual address.
     ///
     /// Note that a physical address may be mapped multiple times. This function will always return
     /// the address from the directly mapped region, ignoring ohter mappings if they exist.
-    fn translate_addr(&self, addr: PhysAddr) -> Option<VirtAddr>;
+    fn translate_physical(&self, addr: PhysAddr) -> Option<VirtAddr>;
 
     /// Translate a physical frame to virtual page, using the directly mapped region.
-    fn translate_frame<S: PageSize>(&self, frame: PhysFrame<S>) -> Option<Page<S>>;
+    fn translate_physical_frame<S: PageSize>(&self, frame: PhysFrame<S>) -> Option<Page<S>>;
 }
 
 const DIRECT_MAPPING_OFFSET: VirtAddr = VirtAddr::new_truncate(0xFFFF_8800_0000_0000);
@@ -177,8 +176,6 @@ pub fn init_paging<A: FrameAllocator<Size4KiB>>(
         MemoryEncryption::NoEncryption
     };
 
-    // Safety: these page tables are unused (for now) and we have identity mapping for the lowest 2
-    // GiB of memory.
     let mut page_table = EncryptedPageTable::new(pml4, VirtAddr::new(0), encrypted);
 
     // Safety: these operations are safe as they're not done on active page tables.

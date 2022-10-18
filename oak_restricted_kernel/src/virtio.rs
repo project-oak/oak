@@ -14,12 +14,11 @@
 // limitations under the License.
 //
 
+use crate::mm::Translator;
 use log::info;
 use oak_channel::{Read, Write};
 use rust_hypervisor_firmware_virtio::pci::VirtioPciTransport;
 use x86_64::{PhysAddr, VirtAddr};
-
-use crate::mm::Translate;
 
 // The virtio vsock port on which to listen.
 #[cfg(feature = "vsock_channel")]
@@ -51,12 +50,12 @@ where
 }
 
 #[cfg(feature = "virtio_console_channel")]
-pub fn get_console_channel<A: Translate>(
-    mapper: &A,
+pub fn get_console_channel<A: Translator>(
+    translator: &A,
 ) -> Channel<virtio::console::Console<VirtioPciTransport>> {
     let console = virtio::console::Console::find_and_configure_device(
-        |vaddr: VirtAddr| mapper.translate(vaddr),
-        |paddr: PhysAddr| mapper.translate_addr(paddr),
+        |vaddr: VirtAddr| translator.translate_virtual(vaddr),
+        |paddr: PhysAddr| translator.translate_physical(paddr),
     )
     .expect("Couldn't configure PCI virtio console device.");
     info!("Console device status: {}", console.get_status());
@@ -64,12 +63,12 @@ pub fn get_console_channel<A: Translate>(
 }
 
 #[cfg(feature = "vsock_channel")]
-pub fn get_vsock_channel<A: Translate>(
-    mapper: &A,
+pub fn get_vsock_channel<A: Translator>(
+    translator: &A,
 ) -> Channel<virtio::vsock::socket::Socket<VirtioPciTransport>> {
     let vsock = virtio::vsock::VSock::find_and_configure_device(
-        |vaddr: VirtAddr| mapper.translate(vaddr),
-        |paddr: PhysAddr| mapper.translate_addr(paddr),
+        |vaddr: VirtAddr| translator.translate_virtual(vaddr),
+        |paddr: PhysAddr| translator.translate_physical(paddr),
     )
     .expect("Couldn't configure PCI virtio vsock device.");
     info!("Socket device status: {}", vsock.get_status());

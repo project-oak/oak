@@ -14,6 +14,7 @@
 // limitations under the License.
 //
 
+use super::Translator;
 use core::marker::PhantomData;
 use x86_64::{
     structures::paging::{
@@ -23,8 +24,6 @@ use x86_64::{
     },
     PhysAddr, VirtAddr,
 };
-
-use super::Translate;
 
 #[derive(Clone, Copy)]
 pub enum MemoryEncryption {
@@ -222,19 +221,19 @@ impl<S: PageSize, N: MapperAllSizes + BaseMapper<S>> Mapper<S> for EncryptedPage
     }
 }
 
-impl<N: MapperAllSizes + BaseTranslate> Translate for EncryptedPageTable<N> {
-    fn translate(&self, addr: VirtAddr) -> Option<PhysAddr> {
+impl<N: MapperAllSizes + BaseTranslate> Translator for EncryptedPageTable<N> {
+    fn translate_virtual(&self, addr: VirtAddr) -> Option<PhysAddr> {
         Some(PhysAddr::new(
             self.inner.translate_addr(addr)?.as_u64() & !self.encryption.bit(),
         ))
     }
 
-    fn translate_addr(&self, addr: PhysAddr) -> Option<VirtAddr> {
+    fn translate_physical(&self, addr: PhysAddr) -> Option<VirtAddr> {
         Some(self.offset + addr.as_u64())
     }
 
-    fn translate_frame<S: PageSize>(&self, frame: PhysFrame<S>) -> Option<Page<S>> {
-        Page::from_start_address(self.translate_addr(frame.start_address())?).ok()
+    fn translate_physical_frame<S: PageSize>(&self, frame: PhysFrame<S>) -> Option<Page<S>> {
+        Page::from_start_address(self.translate_physical(frame.start_address())?).ok()
     }
 }
 
@@ -598,7 +597,7 @@ mod tests {
         }
 
         assert_eq!(
-            mapper.translate(VirtAddr::new(0x12341000)).unwrap(),
+            mapper.translate_virtual(VirtAddr::new(0x12341000)).unwrap(),
             PhysAddr::new(0x1000)
         );
     }
@@ -625,7 +624,7 @@ mod tests {
         }
 
         assert_eq!(
-            mapper.translate(VirtAddr::new(0x12341000)).unwrap(),
+            mapper.translate_virtual(VirtAddr::new(0x12341000)).unwrap(),
             PhysAddr::new(0x1000)
         );
     }
