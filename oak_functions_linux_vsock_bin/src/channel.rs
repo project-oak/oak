@@ -17,7 +17,7 @@
 use crate::proto::oak::sandbox::runtime::{Request, Response};
 use anyhow::anyhow;
 use prost::Message;
-use ringbuf::{Consumer, Producer, RingBuffer};
+use ringbuf::{HeapConsumer, HeapProducer, HeapRb};
 use std::{
     io::{Read, Write},
     mem::size_of,
@@ -32,8 +32,8 @@ where
     T: Read + Write,
 {
     stream: T,
-    read_buffer_producer: Producer<u8>,
-    read_buffer_consumer: Consumer<u8>,
+    read_buffer_producer: HeapProducer<u8>,
+    read_buffer_consumer: HeapConsumer<u8>,
 }
 
 impl<T> Channel<T>
@@ -41,7 +41,7 @@ where
     T: Read + Write,
 {
     pub fn new(stream: T) -> Self {
-        let read_buffer = RingBuffer::<u8>::new(BUFFER_SIZE);
+        let read_buffer = HeapRb::<u8>::new(BUFFER_SIZE);
         let (read_buffer_producer, read_buffer_consumer) = read_buffer.split();
 
         Self {
