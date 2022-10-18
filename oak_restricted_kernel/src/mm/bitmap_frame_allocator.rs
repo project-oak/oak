@@ -20,7 +20,7 @@ use core::{
     option::Option,
 };
 use x86_64::structures::paging::{
-    frame::PhysFrameRangeInclusive, page::PageSize, FrameAllocator, FrameDeallocator, PhysFrame,
+    frame::PhysFrameRange, page::PageSize, FrameAllocator, FrameDeallocator, PhysFrame,
 };
 
 /// Basic frame allocator implementation that keeps track of PageSize-sized chunks of contiguous
@@ -44,14 +44,14 @@ use x86_64::structures::paging::{
 pub(crate) struct BitmapAllocator<S: PageSize, const N: usize> {
     allocated: BitArray<[u64; N], Lsb0>,
     valid: BitArray<[u64; N], Lsb0>,
-    range: PhysFrameRangeInclusive<S>,
+    range: PhysFrameRange<S>,
 }
 
 impl<S: PageSize, const N: usize> BitmapAllocator<S, N> {
     /// Creates a new bitmap allocator for a physical frame range.
     /// Panics if N does not match the number of u64-s required to track all frames in that range.
     /// Initially, the allocator will mark the whole range as invalid.
-    pub fn new(range: PhysFrameRangeInclusive<S>) -> Self {
+    pub fn new(range: PhysFrameRange<S>) -> Self {
         // Unfortunately there doesn't seem to be a way to hoist this to the type system.
         let expected = bitvec::mem::elts::<u64>(range.count());
         if expected != N {
@@ -73,9 +73,9 @@ impl<S: PageSize, const N: usize> BitmapAllocator<S, N> {
     /// Allocations can happen only from regions that are valid. This method does not check whether
     /// any allocations have been made from regions to be marked as invalid, and panics if the range
     /// is outside the range of the allocator.
-    pub fn mark_valid(&mut self, range: PhysFrameRangeInclusive<S>, valid: bool) {
+    pub fn mark_valid(&mut self, range: PhysFrameRange<S>, valid: bool) {
         if let (Some(start), Some(end)) = (self.frame_idx(range.start), self.frame_idx(range.end)) {
-            self.valid.get_mut(start..end + 1).unwrap().fill(valid);
+            self.valid.get_mut(start..end).unwrap().fill(valid);
         } else {
             panic!(
                 "Can't mark validity for frame range that's outside our range; our range: {:?}, frame range: {:?}",
@@ -85,7 +85,7 @@ impl<S: PageSize, const N: usize> BitmapAllocator<S, N> {
     }
 
     /// Returns the largest contiguous section of unallocated memory.
-    pub fn largest_available(&self) -> Option<PhysFrameRangeInclusive<S>> {
+    pub fn largest_available(&self) -> Option<PhysFrameRange<S>> {
         self.valid
             .bitand(self.allocated.not())
             .iter_ones()
@@ -100,9 +100,9 @@ impl<S: PageSize, const N: usize> BitmapAllocator<S, N> {
             })
             .max_by_key(|(start_idx, end_idx)| end_idx - start_idx)
             .map(|(start_idx, end_idx)| {
-                PhysFrame::range_inclusive(
+                PhysFrame::range(
                     self.frame(start_idx).unwrap(),
-                    self.frame(end_idx).unwrap(),
+                    self.frame(end_idx).unwrap() + 1,
                 )
             })
     }
@@ -113,10 +113,7 @@ impl<S: PageSize, const N: usize> BitmapAllocator<S, N> {
     ///
     /// Panics if the frame is outside the bounds of memory that is managed by this allocator.
     #[allow(dead_code)]
-    pub fn allocate(
-        &mut self,
-        frame_range: PhysFrameRangeInclusive<S>,
-    ) -> Option<PhysFrameRangeInclusive<S>> {
+    pub fn allocate(&mut self, frame_range: PhysFrameRange<S>) -> Option<PhysFrameRange<S>> {
         if let (Some(start_idx), Some(end_idx)) = (
             self.frame_idx(frame_range.start),
             self.frame_idx(frame_range.end),
@@ -124,7 +121,7 @@ impl<S: PageSize, const N: usize> BitmapAllocator<S, N> {
             if self.valid.bitand(self.allocated.not())[start_idx..end_idx + 1].not_all() {
                 return None;
             }
-            self.allocated[start_idx..end_idx + 1].fill(true);
+            self.allocated[start_idx..end_idx].fill(true);
             Some(frame_range)
         } else {
             panic!(
@@ -185,9 +182,9 @@ mod tests {
     use x86_64::{structures::paging::Size4KiB, PhysAddr};
 
     fn create_allocator<const N: usize>(start: u64, end: u64) -> BitmapAllocator<Size4KiB, N> {
-        BitmapAllocator::<Size4KiB, N>::new(PhysFrame::range_inclusive(
+        BitmapAllocator::<Size4KiB, N>::new(PhysFrame::range(
             PhysFrame::from_start_address(PhysAddr::new(start)).unwrap(),
-            PhysFrame::from_start_address(PhysAddr::new(end)).unwrap(),
+            PhysFrame::from_start_address(PhysAddr::new(end)).unwrap() + 1,
         ))
     }
 
@@ -195,8 +192,8 @@ mod tests {
         PhysFrame::from_start_address(PhysAddr::new(start)).unwrap()
     }
 
-    fn create_frame_range(start: u64, end: u64) -> PhysFrameRangeInclusive<Size4KiB> {
-        PhysFrame::range_inclusive(create_frame(start), create_frame(end))
+    fn create_frame_range(start: u64, end: u64) -> PhysFrameRange<Size4KiB> {
+        PhysFrame::range(create_frame(start), create_frame(end) + 1)
     }
 
     #[test]
@@ -301,7 +298,7 @@ mod tests {
 
         expected_frames
             .iter()
-            .for_each(|frame| alloc.mark_valid(PhysFrame::range_inclusive(*frame, *frame), true));
+            .for_each(|frame| alloc.mark_valid(PhysFrame::range(*frame, *frame + 1), true));
         let got_frames: Vec<PhysFrame<Size4KiB>> = (0..expected_frames.len())
             .map(|_| alloc.allocate_frame().unwrap())
             .collect();
@@ -322,11 +319,11 @@ mod tests {
         alloc.mark_valid(create_frame_range(0x0000, 0x3000), true);
         let range = alloc.largest_available().unwrap();
         assert_eq!(create_frame(0x0000), range.start);
-        assert_eq!(create_frame(0x3000), range.end);
+        assert_eq!(create_frame(0x4000), range.end);
         alloc.mark_valid(create_frame_range(0x1000, 0x1000), false);
         let range = alloc.largest_available().unwrap();
         assert_eq!(create_frame(0x2000), range.start);
-        assert_eq!(create_frame(0x3000), range.end);
+        assert_eq!(create_frame(0x4000), range.end);
     }
 
     #[test]

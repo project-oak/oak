@@ -59,10 +59,10 @@ pub fn init<const N: usize>(
     program_headers: &[ProgramHeader],
 ) -> frame_allocator::PhysicalMemoryAllocator<N> {
     // This assumes all memory is in the lower end of the address space.
-    let mut alloc = frame_allocator::PhysicalMemoryAllocator::new(PhysFrame::range_inclusive(
+    let mut alloc = frame_allocator::PhysicalMemoryAllocator::new(PhysFrame::range(
         PhysFrame::from_start_address(PhysAddr::new(0x0)).unwrap(),
         // N u64-s * 64 frames per u64 * 2 MiB per frame
-        PhysFrame::from_start_address(PhysAddr::new((N as u64 * 64 - 1) * Size2MiB::SIZE)).unwrap(),
+        PhysFrame::from_start_address(PhysAddr::new(N as u64 * 64 * Size2MiB::SIZE)).unwrap(),
     ));
 
     /* Step 1: mark all RAM as available (event though it may contain data!) */
@@ -89,9 +89,9 @@ pub fn init<const N: usize>(
         .map(|(start, limit)| {
             // Safety: align_down/align_up guarantees we're aligned to 2 MiB boundaries,
             // and we know there's _something_ in the memory range.
-            PhysFrame::range_inclusive(
+            PhysFrame::range(
                 PhysFrame::from_start_address(start).unwrap(),
-                PhysFrame::from_start_address(limit).unwrap() - 1,
+                PhysFrame::from_start_address(limit).unwrap(),
             )
         })
         .for_each(|range| alloc.mark_valid(range, true));
@@ -100,9 +100,9 @@ pub fn init<const N: usize>(
 
     // First, leave out the first 2 MiB as there be dragons (and bootloader data structures)
     alloc.mark_valid(
-        PhysFrame::range_inclusive(
+        PhysFrame::range(
             PhysFrame::from_start_address(PhysAddr::new(0x0)).unwrap(),
-            PhysFrame::from_start_address(PhysAddr::new(0x0)).unwrap(),
+            PhysFrame::from_start_address(PhysAddr::new(Size2MiB::SIZE)).unwrap(),
         ),
         false,
     );
@@ -113,7 +113,7 @@ pub fn init<const N: usize>(
         .filter(|phdr| phdr.p_type == PT_LOAD)
         .map(|phdr| {
             // Align the physical addresses to 2 MiB boundaries, making them larger if necessary.
-            PhysFrame::range_inclusive(
+            PhysFrame::range(
                 PhysFrame::from_start_address(PhysAddr::new(align_down(
                     phdr.p_paddr,
                     Size2MiB::SIZE,
@@ -128,9 +128,9 @@ pub fn init<const N: usize>(
         })
         .for_each(|range| {
             info!(
-                "marking [{:#018x}..{:#018x}] as reserved",
+                "marking [{:#018x}..{:#018x}) as reserved",
                 range.start.start_address().as_u64(),
-                range.end.start_address().as_u64() + range.end.size() - 1
+                range.end.start_address().as_u64()
             );
             alloc.mark_valid(range, false)
         });
