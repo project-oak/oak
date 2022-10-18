@@ -64,7 +64,7 @@ use oak_channel::Channel;
 use oak_linux_boot_params::BootParams;
 use strum::{EnumIter, EnumString, IntoEnumIterator};
 use x86_64::{
-    structures::paging::{Page, Size2MiB},
+    structures::paging::{FrameAllocator, Page, PhysFrame, Size2MiB},
     VirtAddr,
 };
 
@@ -92,11 +92,21 @@ pub fn start_kernel(info: &BootParams) -> Box<dyn Channel> {
     // Physical frame allocator: support up to 128 GiB of memory, for now.
     let mut frame_allocator = mm::init::<1024>(info.e820_table(), program_headers);
 
-    let mapper = mm::init_paging(&mut frame_allocator, program_headers).unwrap();
+    let mut mapper = mm::init_paging(&mut frame_allocator, program_headers).unwrap();
+
+    // Allocate a section for guest-host communication (without the `ENCRYPTED` bit set)
+    let guest_host_frame: PhysFrame<Size2MiB> = frame_allocator.allocate_frame().unwrap();
+    let guest_host_page = mapper.translate_physical_frame(guest_host_frame).unwrap();
+    let _guest_host_heap = unsafe {
+        memory::init_guest_host_heap(
+            Page::range(guest_host_page, guest_host_page + 1),
+            &mut mapper,
+        )
+    };
 
     // If we don't find memory for heap, it's ok to panic.
     let heap_phys_frames = frame_allocator.largest_available().unwrap();
-    memory::init_allocator::<Size2MiB>(Page::range(
+    memory::init_kernel_heap::<Size2MiB>(Page::range(
         mapper
             .translate_physical_frame(heap_phys_frames.start)
             .unwrap(),

@@ -14,13 +14,16 @@
 // limitations under the License.
 //
 
-use super::Translator;
+use super::{Mapper, PageTableFlags, Translator};
 use core::marker::PhantomData;
 use x86_64::{
     structures::paging::{
-        mapper::{MapToError, MapperAllSizes, MapperFlush, PageTableFrameMapping},
+        mapper::{
+            FlagUpdateError, MapToError, MapperAllSizes, MapperFlush, PageTableFrameMapping,
+            UnmapError,
+        },
         FrameAllocator, MappedPageTable, Mapper as BaseMapper, Page, PageSize, PageTable,
-        PageTableFlags as BasePageTableFlags, PhysFrame, Size4KiB, Translate as BaseTranslate,
+        PhysFrame, Size4KiB, Translate as BaseTranslate,
     },
     PhysAddr, VirtAddr,
 };
@@ -45,67 +48,6 @@ impl MemoryEncryption {
             MemoryEncryption::NoEncryption => 0,
             MemoryEncryption::Encrypted(c) => 1u64 << c,
         }
-    }
-}
-
-bitflags::bitflags! {
-    /// Possible flags for a page table entry.
-    ///
-    /// See <x86_64::structures::paging::PageTableFlags> for more details.
-    pub struct PageTableFlags: u64 {
-        const PRESENT = 1;
-        const WRITABLE = 1 << 1;
-        const USER_ACCESSIBLE = 1 << 2;
-        const WRITE_THROUGH = 1 << 3;
-        const NO_CACHE = 1 << 4;
-        const ACCESSED = 1<< 5;
-        const DIRTY = 1 << 6;
-        const HUGE_PAGE = 1 << 7;
-        const GLOBAL = 1 << 8;
-        /// Marks the page as encrypted. Ignored under <NoEncryption>.
-        ///
-        /// The bit value is hardcoded to be 51 here, but that's because it's not possible to
-        /// represent `ENCRYPTED = 1 << C` in Rust right now. The actual bit set may not be 51.
-        const ENCRYPTED = 1 << 51;
-        const NO_EXECUTE = 1 << 63;
-    }
-}
-
-impl From<PageTableFlags> for BasePageTableFlags {
-    fn from(value: PageTableFlags) -> Self {
-        let mut flags = BasePageTableFlags::empty();
-        if value.contains(PageTableFlags::PRESENT) {
-            flags |= BasePageTableFlags::PRESENT
-        }
-        if value.contains(PageTableFlags::WRITABLE) {
-            flags |= BasePageTableFlags::WRITABLE
-        }
-        if value.contains(PageTableFlags::USER_ACCESSIBLE) {
-            flags |= BasePageTableFlags::USER_ACCESSIBLE
-        }
-        if value.contains(PageTableFlags::WRITE_THROUGH) {
-            flags |= BasePageTableFlags::WRITE_THROUGH
-        }
-        if value.contains(PageTableFlags::NO_CACHE) {
-            flags |= BasePageTableFlags::NO_CACHE
-        }
-        if value.contains(PageTableFlags::ACCESSED) {
-            flags |= BasePageTableFlags::ACCESSED
-        }
-        if value.contains(PageTableFlags::DIRTY) {
-            flags |= BasePageTableFlags::DIRTY
-        }
-        if value.contains(PageTableFlags::HUGE_PAGE) {
-            flags |= BasePageTableFlags::HUGE_PAGE
-        }
-        if value.contains(PageTableFlags::GLOBAL) {
-            flags |= BasePageTableFlags::GLOBAL
-        }
-        // There is no equivalent of ENCRYPTED in BasePageTableFlags.
-        if value.contains(PageTableFlags::NO_EXECUTE) {
-            flags |= BasePageTableFlags::NO_EXECUTE
-        }
-        flags
     }
 }
 
@@ -159,21 +101,14 @@ unsafe impl<'a, S: PageSize, A: FrameAllocator<S>> FrameAllocator<S>
     }
 }
 
-/// Page mapper for pages of type <S>
+/// Frame allocator that always fails to allocate.
 ///
-/// This is equivalent to <x86_64::structures::paging::mapper::Mapper>, but knows about memory
-/// encryption.
-pub trait Mapper<S: PageSize> {
-    unsafe fn map_to_with_table_flags<A>(
-        &mut self,
-        page: Page<S>,
-        frame: PhysFrame<S>,
-        flags: PageTableFlags,
-        parent_table_flags: PageTableFlags,
-        frame_allocator: &mut A,
-    ) -> Result<MapperFlush<S>, MapToError<S>>
-    where
-        A: FrameAllocator<Size4KiB>;
+/// This is useful in situations where we do not expect any new allocations to take place.
+struct FailAllocator {}
+unsafe impl<S: PageSize> FrameAllocator<S> for FailAllocator {
+    fn allocate_frame(&mut self) -> Option<PhysFrame<S>> {
+        None
+    }
 }
 
 pub struct EncryptedPageTable<N: MapperAllSizes> {
@@ -219,6 +154,57 @@ impl<S: PageSize, N: MapperAllSizes + BaseMapper<S>> Mapper<S> for EncryptedPage
             &mut EncryptedFrameAllocator::new(frame_allocator, self.encryption),
         )
     }
+
+    unsafe fn unmap(
+        &mut self,
+        page: Page<S>,
+    ) -> Result<(PhysFrame<S>, MapperFlush<S>), UnmapError> {
+        let (frame, flush) = self.inner.unmap(page)?;
+        // if the frame had the encrypted bit set, strip it
+        let frame = PhysFrame::from_start_address(PhysAddr::new(
+            frame.start_address().as_u64() & !self.encryption.bit(),
+        ))
+        .unwrap();
+        Ok((frame, flush))
+    }
+
+    unsafe fn update_flags(
+        &mut self,
+        page: Page<S>,
+        flags: PageTableFlags,
+    ) -> Result<MapperFlush<S>, FlagUpdateError> {
+        // `ENCRYPTED` requires special treatment, therefore it's easier to just re-map the page.
+        let frame = match self.unmap(page) {
+            Err(UnmapError::ParentEntryHugePage) => Err(FlagUpdateError::ParentEntryHugePage),
+            Err(UnmapError::PageNotMapped) => Err(FlagUpdateError::PageNotMapped),
+            Err(UnmapError::InvalidFrameAddress(addr)) => {
+                panic!("page table entry points to invalid address: {:?}", addr)
+            }
+            Ok((frame, _)) => Ok(frame),
+        }?;
+
+        // We're remapping the page, therefore we shouldn't need a frame allocator nor
+        // parent_table_flags, as we shouldn't be allocating new page tables.
+        match self.map_to_with_table_flags(
+            page,
+            frame,
+            flags,
+            PageTableFlags::empty(),
+            &mut FailAllocator {},
+        ) {
+            Ok(flush) => Ok(flush),
+            // This should never happen, as we should not be allocating frames.
+            Err(MapToError::FrameAllocationFailed) => {
+                panic!("unexpected frame allocation when changing page table flags")
+            }
+            // This should never happen, as we've just unmapped the page.
+            Err(MapToError::PageAlreadyMapped(page)) => panic!(
+                "expected page {:?} to be unmapped, but it was still mapped",
+                page
+            ),
+            Err(MapToError::ParentEntryHugePage) => Err(FlagUpdateError::ParentEntryHugePage),
+        }
+    }
 }
 
 impl<N: MapperAllSizes + BaseTranslate> Translator for EncryptedPageTable<N> {
@@ -242,7 +228,7 @@ mod tests {
     extern crate std;
     use x86_64::structures::paging::{
         mapper::{MappedFrame, TranslateResult},
-        Size1GiB, Size2MiB,
+        PageTableFlags as BasePageTableFlags, Size1GiB, Size2MiB,
     };
 
     use super::*;
@@ -325,7 +311,10 @@ mod tests {
         )
     }
 
-    struct FakeMapper(MemoryEncryption);
+    struct FakeMapper {
+        expected_phys_frame: PhysFrame<Size4KiB>,
+    }
+
     impl BaseMapper<Size1GiB> for FakeMapper {
         unsafe fn map_to_with_table_flags<A>(
             &mut self,
@@ -491,25 +480,24 @@ mod tests {
             Self: Sized,
             A: FrameAllocator<Size4KiB> + ?Sized,
         {
-            assert_eq!(
-                frame,
-                PhysFrame::from_start_address(PhysAddr::new(
-                    0x12340000 + page.start_address().as_u64() + self.0.bit()
-                ))
-                .unwrap()
-            );
-
+            assert_eq!(frame, self.expected_phys_frame);
             Ok(MapperFlush::new(page))
         }
 
         fn unmap(
             &mut self,
-            _page: Page<Size4KiB>,
+            page: Page<Size4KiB>,
         ) -> Result<
             (PhysFrame<Size4KiB>, MapperFlush<Size4KiB>),
             x86_64::structures::paging::mapper::UnmapError,
         > {
-            unimplemented!()
+            Ok((
+                PhysFrame::from_start_address(PhysAddr::new(
+                    0x12340000 + page.start_address().as_u64(),
+                ))
+                .unwrap(),
+                MapperFlush::new(page),
+            ))
         }
 
         unsafe fn update_flags(
@@ -580,7 +568,10 @@ mod tests {
         let mut mapper = EncryptedPageTable {
             encryption: MemoryEncryption::NoEncryption,
             offset: VirtAddr::new(0x1234000),
-            inner: FakeMapper(MemoryEncryption::NoEncryption),
+            inner: FakeMapper {
+                expected_phys_frame: PhysFrame::from_start_address(PhysAddr::new(0x12341000))
+                    .unwrap(),
+            },
         };
 
         unsafe {
@@ -607,7 +598,12 @@ mod tests {
         let mut mapper = EncryptedPageTable {
             encryption: MemoryEncryption::Encrypted(51),
             offset: VirtAddr::new(0x1234000),
-            inner: FakeMapper(MemoryEncryption::Encrypted(51)),
+            inner: FakeMapper {
+                expected_phys_frame: PhysFrame::from_start_address(PhysAddr::new(
+                    0x12341000 + (1u64 << 51),
+                ))
+                .unwrap(),
+            },
         };
 
         unsafe {
@@ -627,5 +623,78 @@ mod tests {
             mapper.translate_virtual(VirtAddr::new(0x12341000)).unwrap(),
             PhysAddr::new(0x1000)
         );
+    }
+
+    #[test]
+    fn remap_encrypted() {
+        let mut mapper = EncryptedPageTable {
+            encryption: MemoryEncryption::Encrypted(51),
+            offset: VirtAddr::new(0x1234000),
+            inner: FakeMapper {
+                expected_phys_frame: PhysFrame::from_start_address(PhysAddr::new(
+                    0x12341000 + (1u64 << 51),
+                ))
+                .unwrap(),
+            },
+        };
+
+        unsafe {
+            mapper
+                .update_flags(
+                    Page::<Size4KiB>::from_start_address(VirtAddr::new(0x1000)).unwrap(),
+                    PageTableFlags::ENCRYPTED,
+                )
+                .unwrap()
+                .ignore();
+        }
+
+        let mut mapper = EncryptedPageTable {
+            encryption: MemoryEncryption::Encrypted(51),
+            offset: VirtAddr::new(0x1234000),
+            inner: FakeMapper {
+                expected_phys_frame: PhysFrame::from_start_address(PhysAddr::new(0x12341000))
+                    .unwrap(),
+            },
+        };
+
+        unsafe {
+            mapper
+                .update_flags(
+                    Page::<Size4KiB>::from_start_address(VirtAddr::new(0x1000)).unwrap(),
+                    PageTableFlags::empty(),
+                )
+                .unwrap()
+                .ignore();
+        }
+    }
+
+    #[test]
+    fn remap_unencrypted() {
+        let mut mapper = EncryptedPageTable {
+            encryption: MemoryEncryption::NoEncryption,
+            offset: VirtAddr::new(0x1234000),
+            inner: FakeMapper {
+                expected_phys_frame: PhysFrame::from_start_address(PhysAddr::new(0x12341000))
+                    .unwrap(),
+            },
+        };
+
+        unsafe {
+            mapper
+                .update_flags(
+                    Page::<Size4KiB>::from_start_address(VirtAddr::new(0x1000)).unwrap(),
+                    PageTableFlags::ENCRYPTED,
+                )
+                .unwrap()
+                .ignore();
+
+            mapper
+                .update_flags(
+                    Page::<Size4KiB>::from_start_address(VirtAddr::new(0x1000)).unwrap(),
+                    PageTableFlags::empty(),
+                )
+                .unwrap()
+                .ignore();
+        }
     }
 }
