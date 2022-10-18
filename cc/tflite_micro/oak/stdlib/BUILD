@@ -22,7 +22,6 @@ package(
 cc_library(
     name = "stdlib",
     srcs = [
-        "bsearch.c",
         "ctypes.c",
         "os.cc",
         "stdlib.c",
