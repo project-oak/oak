@@ -26,11 +26,13 @@
 //! #![feature(naked_functions)]
 //! #![feature(asm_sym)]
 //!
-//! use sev_guest::interrupts::{mutable_interrupt_handler_with_error_code, InterruptStackFrame};
+//! use sev_guest::interrupts::{
+//!     mutable_interrupt_handler_with_error_code, MutableInterruptStackFrame,
+//! };
 //!
 //! mutable_interrupt_handler_with_error_code!(
 //!     unsafe fn vmm_communication_exception_handler(
-//!         stack_frame: &mut InterruptStackFrame,
+//!         stack_frame: &mut MutableInterruptStackFrame,
 //!         error_code: u64,
 //!     ) {
 //!         // Provide fake values for CPUID.
@@ -58,7 +60,7 @@ use x86_64::VirtAddr;
 /// It will point to the backed-up values of registers on the stack. This makes it possible to
 /// modify the register values that will be restored when the outer handler returns.
 #[repr(C)]
-pub struct InterruptStackFrame {
+pub struct MutableInterruptStackFrame {
     /// The backed-up value of the RAX register.
     pub rax: u64,
     /// The backed-up value of the RBX register.
@@ -88,12 +90,12 @@ pub struct InterruptStackFrame {
 
 #[macro_export]
 macro_rules! mutable_interrupt_handler_with_error_code {
-    (unsafe fn $name:ident ( $stack_frame:ident : &mut InterruptStackFrame , $error_code:ident : u64 $(,)? ) $code:block) => {
+    (unsafe fn $name:ident ( $stack_frame:ident : &mut MutableInterruptStackFrame , $error_code:ident : u64 $(,)? ) $code:block) => {
         #[naked]
         unsafe extern "sysv64" fn $name() -> ! {
             use core::arch::asm;
 
-            extern "sysv64" fn inner_function($stack_frame: &mut InterruptStackFrame, $error_code: u64) {
+            extern "sysv64" fn inner_function($stack_frame: &mut MutableInterruptStackFrame, $error_code: u64) {
                 $code
             }
 
@@ -110,7 +112,7 @@ macro_rules! mutable_interrupt_handler_with_error_code {
                 "push rax",
                 // We are now at the stack location which we want to pass as the first parameter to
                 // the inner function, so move the current stack pointer into RDI.
-                "move rdi, rsp",
+                "mov rdi, rsp",
                 // Back up remaining scratch registers.
                 "push r8",
                 "push r9",

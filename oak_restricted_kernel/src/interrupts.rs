@@ -18,9 +18,13 @@ use crate::i8042;
 use core::{arch::asm, ops::Deref};
 use lazy_static::lazy_static;
 use log::error;
+use sev_guest::interrupts::{
+    mutable_interrupt_handler_with_error_code, MutableInterruptStackFrame,
+};
 use x86_64::{
     registers::control::Cr2,
     structures::idt::{InterruptDescriptorTable, InterruptStackFrame, PageFaultErrorCode},
+    VirtAddr,
 };
 
 lazy_static! {
@@ -30,6 +34,14 @@ lazy_static! {
         idt.double_fault.set_handler_fn(double_fault_handler);                         // vector 8
         idt.general_protection_fault.set_handler_fn(general_protection_fault_handler); // vector 13
         idt.page_fault.set_handler_fn(page_fault_handler);                             // vector 14
+
+        let vc_handler_address =
+            VirtAddr::new(vmm_communication_exception_handler as usize as u64);
+        // Safety: we are passing a valid address of a function with the correct signature.
+        unsafe {
+            idt.vmm_communication_exception.set_handler_addr(vc_handler_address);      // vector 29
+        }
+
         idt
     };
 }
@@ -113,6 +125,18 @@ extern "x86-interrupt" fn double_fault_handler(
     error!("CPU flags: {:#x}", stack_frame.deref().cpu_flags);
     i8042::shutdown();
 }
+
+mutable_interrupt_handler_with_error_code!(
+    unsafe fn vmm_communication_exception_handler(
+        stack_frame: &mut MutableInterruptStackFrame,
+        error_code: u64,
+    ) {
+        error!("KERNEL PANIC: UNHANDLED #VC EXCEPTION");
+        error!("Instruction pointer: {:#016x}", stack_frame.rip.as_u64());
+        error!("Error code: {:?}", error_code);
+        i8042::shutdown();
+    }
+);
 
 pub fn init_idt() {
     IDT.load();
