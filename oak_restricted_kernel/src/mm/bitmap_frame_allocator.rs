@@ -184,7 +184,7 @@ mod tests {
     fn create_allocator<const N: usize>(start: u64, end: u64) -> BitmapAllocator<Size4KiB, N> {
         BitmapAllocator::<Size4KiB, N>::new(PhysFrame::range(
             PhysFrame::from_start_address(PhysAddr::new(start)).unwrap(),
-            PhysFrame::from_start_address(PhysAddr::new(end)).unwrap() + 1,
+            PhysFrame::from_start_address(PhysAddr::new(end)).unwrap(),
         ))
     }
 
@@ -193,33 +193,33 @@ mod tests {
     }
 
     fn create_frame_range(start: u64, end: u64) -> PhysFrameRange<Size4KiB> {
-        PhysFrame::range(create_frame(start), create_frame(end) + 1)
+        PhysFrame::range(create_frame(start), create_frame(end))
     }
 
     #[test]
     fn silly_allocator_invalid() {
-        let mut alloc = create_allocator::<1>(0x0000, 0x0000);
+        let mut alloc = create_allocator::<1>(0x0000, 0x1000);
         // Nothing is valid yet.
         assert_eq!(None, alloc.allocate_frame());
     }
 
     #[test]
     fn silly_allocator_valid() {
-        let mut alloc = create_allocator::<1>(0x0000, 0x0000);
-        alloc.mark_valid(create_frame_range(0x0000, 0x0000), true);
+        let mut alloc = create_allocator::<1>(0x0000, 0x1000);
+        alloc.mark_valid(create_frame_range(0x0000, 0x1000), true);
         assert_eq!(Some(create_frame(0x0000)), alloc.allocate_frame());
     }
 
     #[should_panic]
     #[test]
     fn silly_allocator_invalid_size() {
-        create_allocator::<0>(0x0000, 0x0000);
+        create_allocator::<0>(0x0000, 0x1000);
     }
 
     #[test]
     fn double_allocate() {
-        let mut alloc = create_allocator::<1>(0x0000, 0x0000);
-        alloc.mark_valid(create_frame_range(0x0000, 0x0000), true);
+        let mut alloc = create_allocator::<1>(0x0000, 0x1000);
+        alloc.mark_valid(create_frame_range(0x0000, 0x1000), true);
         assert_eq!(Some(create_frame(0x0000)), alloc.allocate_frame());
         assert_eq!(None, alloc.allocate_frame());
     }
@@ -229,9 +229,9 @@ mod tests {
         let expected_frames: Vec<PhysFrame<Size4KiB>> =
             (0..9).map(|x| create_frame(x * 0x1000)).collect();
 
-        let mut alloc = create_allocator::<1>(0x0000, (expected_frames.len() - 1) as u64 * 0x1000);
+        let mut alloc = create_allocator::<1>(0x0000, expected_frames.len() as u64 * 0x1000);
         alloc.mark_valid(
-            create_frame_range(0x0000, (expected_frames.len() - 1) as u64 * 0x1000),
+            create_frame_range(0x0000, expected_frames.len() as u64 * 0x1000),
             true,
         );
 
@@ -245,8 +245,8 @@ mod tests {
 
     #[test]
     fn realloc() {
-        let mut alloc = create_allocator::<1>(0x0000, 0x0000);
-        alloc.mark_valid(create_frame_range(0x0000, 0x0000), true);
+        let mut alloc = create_allocator::<1>(0x0000, 0x1000);
+        alloc.mark_valid(create_frame_range(0x0000, 0x1000), true);
         assert_eq!(Some(create_frame(0x0000)), alloc.allocate_frame());
         assert_eq!(None, alloc.allocate_frame());
         unsafe {
@@ -285,15 +285,15 @@ mod tests {
 
     #[test]
     fn alloc_hi() {
-        let mut alloc = create_allocator::<1>(0x1000, 0x1000);
-        alloc.mark_valid(create_frame_range(0x1000, 0x1000), true);
+        let mut alloc = create_allocator::<1>(0x1000, 0x2000);
+        alloc.mark_valid(create_frame_range(0x1000, 0x2000), true);
         assert_eq!(Some(create_frame(0x1000)), alloc.allocate_frame());
         assert_eq!(None, alloc.allocate_frame());
     }
 
     #[test]
     fn hole_in_validity() {
-        let mut alloc = create_allocator::<1>(0x0000, 0x2000);
+        let mut alloc = create_allocator::<1>(0x0000, 0x3000);
         let expected_frames = vec![create_frame(0x0000), create_frame(0x2000)];
 
         expected_frames
@@ -315,12 +315,12 @@ mod tests {
 
     #[test]
     fn get_largest() {
-        let mut alloc = create_allocator::<1>(0x0000, 0x3000);
-        alloc.mark_valid(create_frame_range(0x0000, 0x3000), true);
+        let mut alloc = create_allocator::<1>(0x0000, 0x4000);
+        alloc.mark_valid(create_frame_range(0x0000, 0x4000), true);
         let range = alloc.largest_available().unwrap();
         assert_eq!(create_frame(0x0000), range.start);
         assert_eq!(create_frame(0x4000), range.end);
-        alloc.mark_valid(create_frame_range(0x1000, 0x1000), false);
+        alloc.mark_valid(create_frame_range(0x1000, 0x2000), false);
         let range = alloc.largest_available().unwrap();
         assert_eq!(create_frame(0x2000), range.start);
         assert_eq!(create_frame(0x4000), range.end);
@@ -328,14 +328,14 @@ mod tests {
 
     #[test]
     fn test_allocate_specific_region() {
-        let mut alloc = create_allocator::<1>(0x0000, 0x1000);
-        alloc.mark_valid(create_frame_range(0x0000, 0x1000), true);
-        alloc.allocate(create_frame_range(0x0000, 0x0000)).unwrap();
-        assert_eq!(None, alloc.allocate(create_frame_range(0x0000, 0x0000)));
+        let mut alloc = create_allocator::<1>(0x0000, 0x2000);
+        alloc.mark_valid(create_frame_range(0x0000, 0x2000), true);
+        alloc.allocate(create_frame_range(0x0000, 0x1000)).unwrap();
         assert_eq!(None, alloc.allocate(create_frame_range(0x0000, 0x1000)));
+        assert_eq!(None, alloc.allocate(create_frame_range(0x0000, 0x2000)));
         assert_eq!(Some(create_frame(0x1000)), alloc.allocate_frame());
-        assert_eq!(None, alloc.allocate(create_frame_range(0x0000, 0x1000)));
-        assert_eq!(None, alloc.allocate(create_frame_range(0x1000, 0x1000)));
+        assert_eq!(None, alloc.allocate(create_frame_range(0x0000, 0x2000)));
+        assert_eq!(None, alloc.allocate(create_frame_range(0x1000, 0x2000)));
         assert_eq!(None, alloc.allocate_frame());
     }
 }

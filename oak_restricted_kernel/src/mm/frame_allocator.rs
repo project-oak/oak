@@ -103,7 +103,7 @@ mod tests {
     }
 
     fn create_frame_range(start: u64, end: u64) -> PhysFrameRange<Size2MiB> {
-        PhysFrame::range(create_frame(start), create_frame(end) + 1)
+        PhysFrame::range(create_frame(start), create_frame(end))
     }
 
     #[test]
