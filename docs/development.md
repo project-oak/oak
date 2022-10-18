@@ -344,3 +344,8 @@ respectively.
 ```bash
 xtask --logs run-cargo-fuzz --crate-name=loader --target-name=wasm_invoke -- -max_total_time=20
 ```
+
+## Build and Release
+
+We aspire for a transparent process for building and releasing Oak binaries. See
+the [build and release documentation](release.md) for more information.
