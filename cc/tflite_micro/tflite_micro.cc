@@ -26,7 +26,7 @@ int tflite_init(const uint8_t* model_bytes, size_t model_bytes_len,
 }
 
 // TODO(#3297): Implement TensorFlow Lite inference logic.
-int tflite_run(const uint8_t* input_bytes, size_t input_bytes_len, uint8_t* output_bytes,
+int tflite_run(const uint8_t* input_bytes, size_t input_bytes_len, uint8_t** output_bytes,
                size_t* output_bytes_len) {
   return 0;
 }

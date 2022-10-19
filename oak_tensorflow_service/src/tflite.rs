@@ -33,10 +33,11 @@ extern "C" {
 
     /// Performs inference on `input_bytes` and pass inference result to `output_bytes` and returns
     /// an error code.
+    /// `output_bytes` are allocated and freed by TensorFlow Lite.
     fn tflite_run(
         input_bytes: *const u8,
         input_bytes_len: u64,
-        output_bytes: *mut u8,
+        output_bytes: *mut *const u8,
         output_bytes_len: *mut u64,
     ) -> i32;
 }
@@ -59,12 +60,12 @@ impl TfliteModel {
         let model_bytes_len = model_bytes
             .len()
             .try_into()
-            .map_err(|error| anyhow!("Failed to convert usize to u64: {}", error))?;
+            .map_err(|error| anyhow!("Failed to convert model bytes length to u64: {}", error))?;
         let tensor_arena_len = self
             .tensor_arena
             .len()
             .try_into()
-            .map_err(|error| anyhow!("Failed to convert usize to u64: {}", error))?;
+            .map_err(|error| anyhow!("Failed to convert tensor arena length to u64: {}", error))?;
         let _ = unsafe {
             tflite_init(
                 model_bytes.as_ptr(),
@@ -80,18 +81,28 @@ impl TfliteModel {
         let input_bytes_len = input_bytes
             .len()
             .try_into()
-            .map_err(|error| anyhow!("Failed to convert usize to u64: {}", error))?;
-        // TODO(#3297): Allocate enough bytes for the TensorFlow Lite model.
-        let mut output_bytes = vec![0; input_bytes.len()];
-        let mut output_bytes_len = 0u64;
+            .map_err(|error| anyhow!("Failed to convert input bytes length to u64: {}", error))?;
+
+        // TensorFlow Lite is the owner of the corresponding `output_bytes` buffer.
+        let output_bytes_ptr: *mut *const u8 = &mut core::ptr::null();
+        let mut output_bytes_len_ptr = 0u64;
+
         let _ = unsafe {
             tflite_run(
                 input_bytes.as_ptr(),
                 input_bytes_len,
-                output_bytes.as_mut_ptr(),
-                &mut output_bytes_len as *mut u64,
+                output_bytes_ptr,
+                &mut output_bytes_len_ptr as *mut u64,
             )
         };
-        Ok(output_bytes)
+
+        let output_bytes_len = output_bytes_len_ptr
+            .try_into()
+            .map_err(|error| anyhow!("Failed to get output bytes length from bytes: {}", error))?;
+
+        let output_bytes = unsafe {
+            alloc::slice::from_raw_parts(*output_bytes_ptr, output_bytes_len)
+        };
+        Ok(output_bytes.to_vec())
     }
 }
