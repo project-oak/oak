@@ -16,26 +16,29 @@
 
 use crate::mm::Translator;
 use alloc::collections::VecDeque;
+use core::alloc::Allocator;
 use oak_simple_io::SimpleIo;
 use sev_guest::io::PortFactoryWrapper;
 use x86_64::VirtAddr;
 
 /// A communications channel using a simple IO device.
-pub struct SimpleIoChannel {
+pub struct SimpleIoChannel<'a, A: Allocator> {
     /// The simple IO device.
-    device: SimpleIo,
+    device: SimpleIo<'a, A>,
     /// A buffer to temporarily store extra data from the device that was not fully read when using
     /// `read`. This could happen if the device sent more bytes in a single buffer than was
     /// expected by `read`.
     pending_data: Option<VecDeque<u8>>,
 }
 
-impl SimpleIoChannel {
-    pub fn new<A: Translator>(translator: &A) -> Self {
+impl<'a, A: Allocator> SimpleIoChannel<'a, A> {
+    pub fn new<X: Translator>(translator: &X, alloc: &'a A) -> Self {
         let io_port_factory = PortFactoryWrapper::new_raw();
-        let device = SimpleIo::new_with_defaults(io_port_factory, |vaddr: VirtAddr| {
-            translator.translate_virtual(vaddr)
-        })
+        let device = SimpleIo::new_with_defaults(
+            io_port_factory,
+            |vaddr: VirtAddr| translator.translate_virtual(vaddr),
+            alloc,
+        )
         .expect("couldn't create IO device");
         let pending_data = None;
         Self {
@@ -76,7 +79,7 @@ impl SimpleIoChannel {
     }
 }
 
-impl oak_channel::Write for SimpleIoChannel {
+impl<'a, A: Allocator> oak_channel::Write for SimpleIoChannel<'a, A> {
     fn write(&mut self, data: &[u8]) -> anyhow::Result<()> {
         let mut start = 0;
         let data_len = data.len();
@@ -93,7 +96,7 @@ impl oak_channel::Write for SimpleIoChannel {
     }
 }
 
-impl oak_channel::Read for SimpleIoChannel {
+impl<'a, A: Allocator> oak_channel::Read for SimpleIoChannel<'a, A> {
     fn read(&mut self, data: &mut [u8]) -> anyhow::Result<()> {
         let len = data.len();
         let mut count = 0;

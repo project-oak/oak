@@ -17,10 +17,11 @@
 //! Simple I/O driver for communication between the guest and the host via shared memory.
 
 #![no_std]
+#![feature(allocator_api)]
 extern crate alloc;
 
-use alloc::{collections::VecDeque, vec, vec::Vec};
-use core::result::Result;
+use alloc::{collections::VecDeque, vec::Vec};
+use core::{alloc::Allocator, result::Result};
 use sev_guest::io::{IoPortFactory, PortFactoryWrapper, PortReader, PortWrapper, PortWriter};
 use x86_64::{PhysAddr, VirtAddr};
 
@@ -49,31 +50,34 @@ pub const DEFAULT_INPUT_BUFFER: BufferDescriptor = BufferDescriptor {
 };
 
 /// The length of the buffer that will be used for output messages.
-pub const OUTPUT_BUFFER_LEGNTH: usize = 4096;
+pub const OUTPUT_BUFFER_LENGTH: usize = 4096;
 /// The length of the buffer that will be used for input messages.
-pub const INPUT_BUFFER_LEGNTH: usize = 4096;
+pub const INPUT_BUFFER_LENGTH: usize = 4096;
 
 /// Memory address translation function.
 pub trait Translator: Fn(VirtAddr) -> Option<PhysAddr> {}
 impl<X: Fn(VirtAddr) -> Option<PhysAddr>> Translator for X {}
 
 /// The simple I/O channel driver implementation.
-pub struct SimpleIo {
-    output_buffer: Vec<u8>,
-    input_buffer: Vec<u8>,
+pub struct SimpleIo<'a, A: Allocator> {
+    output_buffer: Vec<u8, &'a A>,
+    input_buffer: Vec<u8, &'a A>,
     output_length_port: PortWrapper<u32>,
     input_length_port: PortWrapper<u32>,
 }
 
-impl SimpleIo {
+impl<'a, A: Allocator> SimpleIo<'a, A> {
     pub fn new<VP: Translator>(
         io_port_factory: PortFactoryWrapper,
         translate: VP,
         output: BufferDescriptor,
         input: BufferDescriptor,
+        alloc: &'a A,
     ) -> Result<Self, &'static str> {
-        let output_buffer = vec![0; OUTPUT_BUFFER_LEGNTH];
-        let input_buffer = vec![0; INPUT_BUFFER_LEGNTH];
+        let mut output_buffer: Vec<u8, &'a A> = Vec::with_capacity_in(OUTPUT_BUFFER_LENGTH, alloc);
+        output_buffer.resize(OUTPUT_BUFFER_LENGTH, 0);
+        let mut input_buffer: Vec<u8, &'a A> = Vec::with_capacity_in(INPUT_BUFFER_LENGTH, alloc);
+        input_buffer.resize(INPUT_BUFFER_LENGTH, 0);
         let output_length_port = io_port_factory.new_writer(output.length_port);
         let input_length_port = io_port_factory.new_reader(input.length_port);
 
@@ -103,12 +107,14 @@ impl SimpleIo {
     pub fn new_with_defaults<VP: Translator>(
         io_port_factory: PortFactoryWrapper,
         translate: VP,
+        alloc: &'a A,
     ) -> Result<Self, &'static str> {
         SimpleIo::new(
             io_port_factory,
             translate,
             DEFAULT_OUTPUT_BUFFER,
             DEFAULT_INPUT_BUFFER,
+            alloc,
         )
     }
 
@@ -128,7 +134,7 @@ impl SimpleIo {
         // A length larger than the buffer size indicates a corrupt or malicious VMM device
         // implementation. This is probably not recoverable, so panic.
         assert!(
-            length <= INPUT_BUFFER_LEGNTH,
+            length <= INPUT_BUFFER_LENGTH,
             "Invalid simple IO input message length."
         );
         let mut result = VecDeque::with_capacity(length);
@@ -145,7 +151,7 @@ impl SimpleIo {
             return None;
         }
 
-        let length = core::cmp::min(OUTPUT_BUFFER_LEGNTH, data.len());
+        let length = core::cmp::min(OUTPUT_BUFFER_LENGTH, data.len());
         self.output_buffer[..length].copy_from_slice(&data[..length]);
 
         // Use a memory fence to ensure that the data is written to the buffer before we notify the

@@ -30,6 +30,7 @@
 
 #![cfg_attr(not(test), no_std)]
 #![feature(abi_x86_interrupt)]
+#![feature(allocator_api)]
 #![feature(asm_sym)]
 #![feature(naked_functions)]
 #![feature(once_cell)]
@@ -137,7 +138,10 @@ fn get_channel<A: Translator>(kernel_args: &args::Args, mapper: &A) -> Box<dyn C
         #[cfg(feature = "serial_channel")]
         ChannelType::Serial => Box::new(serial::Serial::new()),
         #[cfg(feature = "simple_io_channel")]
-        ChannelType::SimpleIo => Box::new(simpleio::SimpleIoChannel::new(mapper)),
+        ChannelType::SimpleIo => Box::new(simpleio::SimpleIoChannel::new(
+            mapper,
+            &alloc::alloc::Global,
+        )),
     }
 }
 
