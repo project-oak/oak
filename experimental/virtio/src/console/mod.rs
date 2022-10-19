@@ -14,6 +14,8 @@
 // limitations under the License.
 //
 
+use core::alloc::Allocator;
+
 use crate::{
     queue::{DeviceWriteOnlyQueue, DriverWriteOnlyQueue},
     InverseTranslator, Read, Translator, Write,
@@ -52,24 +54,25 @@ const PCI_DEVICE_ID: u16 = 0x1040 + DEVICE_ID;
 /// and no configuration.
 ///
 /// See <https://docs.oasis-open.org/virtio/virtio/v1.1/csprd01/virtio-v1.1-csprd01.html#x1-39000010>.
-pub struct Console<T: VirtioTransport> {
+pub struct Console<'a, T: VirtioTransport, A: Allocator> {
     /// The base virtio-over-PCI device used for configuration and notification.
     device: VirtioBaseDevice<T>,
     /// The receive queue, used for receiving bytes.
-    rx_queue: DeviceWriteOnlyQueue<QUEUE_SIZE, DATA_BUFFER_SIZE>,
+    rx_queue: DeviceWriteOnlyQueue<'a, QUEUE_SIZE, DATA_BUFFER_SIZE, A>,
     /// The transmit queue, used for sending bytes.
-    tx_queue: DriverWriteOnlyQueue<QUEUE_SIZE, DATA_BUFFER_SIZE>,
+    tx_queue: DriverWriteOnlyQueue<'a, QUEUE_SIZE, DATA_BUFFER_SIZE, A>,
     /// A buffer to temporarily store extra data from the device that was not fully read when using
     /// `read_all`. This could happen if the device sent more bytes in a single buffer than was
     /// expected by `read_all`.
     pending_data: Option<VecDeque<u8>>,
 }
 
-impl Console<VirtioPciTransport> {
+impl<'a, A: Allocator> Console<'a, VirtioPciTransport, A> {
     /// Finds the virtio console PCI device, initialises the device, and configures the queues.
     pub fn find_and_configure_device<VP: Translator, PV: InverseTranslator>(
         translate: VP,
         inverse: PV,
+        alloc: &'a A,
     ) -> anyhow::Result<Self> {
         // For now we just scan the first 32 devices on PCI bus 0 to find the first one that matches
         // the vendor ID and device ID.
@@ -77,13 +80,13 @@ impl Console<VirtioPciTransport> {
             .ok_or_else(|| anyhow::anyhow!("Couldn't find a virtio console device."))?;
         let transport = VirtioPciTransport::new(pci_device);
         let device = VirtioBaseDevice::new(transport);
-        let mut result = Self::new(device, &translate);
+        let mut result = Self::new(device, &translate, alloc);
         result.init(translate, inverse)?;
         Ok(result)
     }
 }
 
-impl<T> Console<T>
+impl<'a, T, A: Allocator> Console<'a, T, A>
 where
     T: VirtioTransport,
 {
@@ -126,9 +129,9 @@ where
         self.device.get_status()
     }
 
-    fn new<VP: Translator>(device: VirtioBaseDevice<T>, translate: VP) -> Self {
-        let tx_queue = DriverWriteOnlyQueue::new(&translate);
-        let rx_queue = DeviceWriteOnlyQueue::new(&translate);
+    fn new<VP: Translator>(device: VirtioBaseDevice<T>, translate: VP, alloc: &'a A) -> Self {
+        let tx_queue = DriverWriteOnlyQueue::new(&translate, alloc);
+        let rx_queue = DeviceWriteOnlyQueue::new(&translate, alloc);
         Console {
             device,
             tx_queue,
@@ -212,7 +215,7 @@ where
     }
 }
 
-impl<T> Read for Console<T>
+impl<'a, T, A: Allocator> Read for Console<'a, T, A>
 where
     T: VirtioTransport,
 {
@@ -227,7 +230,7 @@ where
     }
 }
 
-impl<T> Write for Console<T>
+impl<'a, T, A: Allocator> Write for Console<'a, T, A>
 where
     T: VirtioTransport,
 {

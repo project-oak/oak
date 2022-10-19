@@ -134,9 +134,13 @@ fn get_channel<A: Translator>(kernel_args: &args::Args, mapper: &A) -> Box<dyn C
 
     match chan_type {
         #[cfg(feature = "virtio_console_channel")]
-        ChannelType::VirtioConsole => Box::new(virtio::get_console_channel(mapper)),
+        ChannelType::VirtioConsole => {
+            Box::new(virtio::get_console_channel(mapper, &alloc::alloc::Global))
+        }
         #[cfg(feature = "vsock_channel")]
-        ChannelType::VirtioVsock => Box::new(virtio::get_vsock_channel(mapper)),
+        ChannelType::VirtioVsock => {
+            Box::new(virtio::get_vsock_channel(mapper, &alloc::alloc::Global))
+        }
         #[cfg(feature = "serial_channel")]
         ChannelType::Serial => Box::new(serial::Serial::new()),
         #[cfg(feature = "simple_io_channel")]

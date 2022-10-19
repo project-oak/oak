@@ -20,6 +20,7 @@
 //! guest-physical addresses are the same.
 
 #![no_std]
+#![feature(allocator_api)]
 #![feature(let_chains)]
 
 use x86_64::{PhysAddr, VirtAddr};

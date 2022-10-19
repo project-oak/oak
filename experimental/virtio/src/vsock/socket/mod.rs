@@ -20,7 +20,7 @@ use super::{
 };
 use crate::{Read, Write};
 use alloc::collections::VecDeque;
-use core::num::Wrapping;
+use core::{alloc::Allocator, num::Wrapping};
 use rust_hypervisor_firmware_virtio::virtio::VirtioTransport;
 
 /// The maximum buffer size used by the socket.
@@ -41,16 +41,16 @@ const CREDIT_UPDATE_LIMIT: Wrapping<u32> = Wrapping(32 * 1024);
 const MAX_PAYLOAD_SIZE: usize = DATA_BUFFER_SIZE - HEADER_SIZE;
 
 /// Connector to initiate a connection to a listener on the host.
-pub struct SocketConnector<T: VirtioTransport> {
+pub struct SocketConnector<'a, T: VirtioTransport, A: Allocator> {
     /// The socket configuration.
-    config: SocketConfiguration<T>,
+    config: SocketConfiguration<'a, T, A>,
 }
 
-impl<T> SocketConnector<T>
+impl<'a, T, A: Allocator> SocketConnector<'a, T, A>
 where
     T: VirtioTransport,
 {
-    pub fn new(vsock: VSock<T>, host_port: u32, local_port: u32) -> Self {
+    pub fn new(vsock: VSock<'a, T, A>, host_port: u32, local_port: u32) -> Self {
         Self {
             config: SocketConfiguration::new(vsock, local_port, host_port),
         }
@@ -60,7 +60,7 @@ where
     ///
     /// Since we don't yet support timeouts it will wait indefinitely for a respone. If the
     /// connection is refused, or it receives an unexpected packet, it will return an error.
-    pub fn connect(mut self) -> anyhow::Result<Socket<T>> {
+    pub fn connect(mut self) -> anyhow::Result<Socket<'a, T, A>> {
         let mut packet = Packet::new_control(
             self.config.local_port,
             self.config.host_port,
@@ -94,16 +94,16 @@ where
 }
 
 /// Listener that waits for a connection initiated from the host.
-pub struct SocketListener<T: VirtioTransport> {
+pub struct SocketListener<'a, T: VirtioTransport, A: Allocator> {
     /// The socket configuration.
-    config: SocketConfiguration<T>,
+    config: SocketConfiguration<'a, T, A>,
 }
 
-impl<T> SocketListener<T>
+impl<'a, T, A: Allocator> SocketListener<'a, T, A>
 where
     T: VirtioTransport,
 {
-    pub fn new(vsock: VSock<T>, port: u32) -> Self {
+    pub fn new(vsock: VSock<'a, T, A>, port: u32) -> Self {
         Self {
             config: SocketConfiguration::new(vsock, port, 0),
         }
@@ -114,7 +114,7 @@ where
     /// Since we don't yet support timeouts it will wait indefinitely for a connection request. If
     /// it receives an unexpected packet (anything other than a connection request) it will return
     /// an error.
-    pub fn accept(mut self) -> anyhow::Result<Socket<T>> {
+    pub fn accept(mut self) -> anyhow::Result<Socket<'a, T, A>> {
         let dst_port = self.config.local_port;
         let peer_buffer_size;
         loop {
@@ -148,9 +148,9 @@ where
 }
 
 /// A connection-oriented socket.
-pub struct Socket<T: VirtioTransport> {
+pub struct Socket<'a, T: VirtioTransport, A: Allocator> {
     /// The socket configuration.
-    config: SocketConfiguration<T>,
+    config: SocketConfiguration<'a, T, A>,
     /// The current state of the connection.
     connection_state: ConnectionState,
     /// The number of payload bytes we have processed.
@@ -173,11 +173,11 @@ pub struct Socket<T: VirtioTransport> {
     pending_data: Option<VecDeque<u8>>,
 }
 
-impl<T> Socket<T>
+impl<'a, T, A: Allocator> Socket<'a, T, A>
 where
     T: VirtioTransport,
 {
-    fn new(config: SocketConfiguration<T>, peer_buffer_size: u32) -> Self {
+    fn new(config: SocketConfiguration<'a, T, A>, peer_buffer_size: u32) -> Self {
         Self {
             config,
             connection_state: ConnectionState::Connected,
@@ -333,7 +333,7 @@ where
     }
 }
 
-impl<T> Read for Socket<T>
+impl<'a, T, A: Allocator> Read for Socket<'a, T, A>
 where
     T: VirtioTransport,
 {
@@ -355,7 +355,7 @@ where
     }
 }
 
-impl<T> Write for Socket<T>
+impl<'a, T, A: Allocator> Write for Socket<'a, T, A>
 where
     T: VirtioTransport,
 {
@@ -386,22 +386,22 @@ enum ConnectionState {
 }
 
 /// The configuration information for the socket.
-struct SocketConfiguration<T: VirtioTransport> {
+struct SocketConfiguration<'a, T: VirtioTransport, A: Allocator> {
     /// The vsock device driver.
     ///
     /// For now we only support one connection, so the driver is owned by this configuration.
-    vsock: VSock<T>,
+    vsock: VSock<'a, T, A>,
     /// The local port for the connection.
     local_port: u32,
     /// The host port for the connection.
     host_port: u32,
 }
 
-impl<T> SocketConfiguration<T>
+impl<'a, T, A: Allocator> SocketConfiguration<'a, T, A>
 where
     T: VirtioTransport,
 {
-    fn new(vsock: VSock<T>, local_port: u32, host_port: u32) -> Self {
+    fn new(vsock: VSock<'a, T, A>, local_port: u32, host_port: u32) -> Self {
         Self {
             vsock,
             local_port,
