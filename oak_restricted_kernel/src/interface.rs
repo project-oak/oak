@@ -40,9 +40,9 @@ static ALLOCATED_ITEMS: Spinlock<LazyCell<RefCell<HashMap<usize, Layout>>>> =
 /// fundamental alignment.
 ///
 /// This function returns a pointer to the allocated memory if the allocation succeeds and null if
-/// it fails. All allocated memory must be deallocated using `free`.
+/// it fails. All allocated memory must be deallocated using `heap_free`.
 #[no_mangle]
-pub extern "C" fn malloc(size: usize) -> *mut c_void {
+pub extern "C" fn heap_alloc(size: usize) -> *mut c_void {
     if size == 0 {
         return null_mut();
     }
@@ -69,12 +69,12 @@ fn calculate_alignment(size: usize) -> usize {
     MAX_ALIGNMENT.min(size.next_power_of_two())
 }
 
-/// Frees memory that was previously allocated using `malloc`.
+/// Frees memory that was previously allocated using `heap_alloc`.
 ///
 /// If the pointer is null, it does nothing. Panics if the pointer is non-null but was not allocated
-/// using `malloc`, or if it was already freed.
+/// using `heap_alloc`, or if it was already freed.
 #[no_mangle]
-pub extern "C" fn free(ptr: *mut c_void) {
+pub extern "C" fn heap_free(ptr: *mut c_void) {
     if ptr.is_null() {
         return;
     }
