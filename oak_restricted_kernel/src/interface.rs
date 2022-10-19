@@ -86,8 +86,8 @@ pub extern "C" fn free(ptr: *mut c_void) {
         .remove(&key)
         .expect("Invalid memory region pointer. It was either already freed or not allocated.");
 
-    // Safety: we have validated that we previously allocated the memory and found the layout that
-    // was used to allocate it.
+    // Safety: we have validated that we previously allocated the memory, found the layout that was
+    // used to allocate it, and it was not yet freed.
     unsafe {
         dealloc(ptr as *mut u8, layout);
     }
