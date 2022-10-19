@@ -61,11 +61,10 @@ impl TfliteModel {
             .len()
             .try_into()
             .map_err(|error| anyhow!("Failed to convert model bytes length to u64: {}", error))?;
-        let tensor_arena_len = self
-            .tensor_arena
-            .len()
-            .try_into()
-            .map_err(|error| anyhow!("Failed to convert tensor arena length to u64: {}", error))?;
+        let tensor_arena_len =
+            self.tensor_arena.len().try_into().map_err(|error| {
+                anyhow!("Failed to convert tensor arena length to u64: {}", error)
+            })?;
         let _ = unsafe {
             tflite_init(
                 model_bytes.as_ptr(),
@@ -100,9 +99,8 @@ impl TfliteModel {
             .try_into()
             .map_err(|error| anyhow!("Failed to get output bytes length from bytes: {}", error))?;
 
-        let output_bytes = unsafe {
-            alloc::slice::from_raw_parts(*output_bytes_ptr, output_bytes_len)
-        };
+        let output_bytes =
+            unsafe { alloc::slice::from_raw_parts(*output_bytes_ptr, output_bytes_len) };
         Ok(output_bytes.to_vec())
     }
 }
