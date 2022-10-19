@@ -2826,6 +2826,7 @@ dependencies = [
  "async-trait",
  "flatbuffers",
  "hashbrown",
+ "log",
  "oak_idl",
  "oak_idl_gen_services",
  "oak_idl_gen_structs",
