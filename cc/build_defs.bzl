@@ -22,7 +22,8 @@ load(
     "use_cpp_toolchain",
 )
 
-# Bazel rule for collecting the header files that a target depends on.
+# Bazel rule for collecting the object files that a target depends on.
+# Modified from https://github.com/bazelbuild/bazel/issues/1920
 def _cc_static_library_impl(ctx):
     output_lib = ctx.actions.declare_file("lib{}.a".format(ctx.attr.name))
     output_flags = ctx.actions.declare_file("lib{}.link".format(ctx.attr.name))
