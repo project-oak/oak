@@ -16,6 +16,7 @@
 
 //! Exported interface for interacting with the kernel from C.
 
+use crate::logging::SERIAL1;
 use alloc::alloc::{alloc, dealloc, Layout};
 use core::{
     cell::{LazyCell, RefCell},
@@ -100,4 +101,29 @@ pub extern "C" fn heap_free(ptr: *mut c_void) {
     unsafe {
         dealloc(ptr as *mut u8, layout);
     }
+}
+
+/// Writes the specified number of bytes from a buffer to the serial console.
+///
+/// To be compatible with C write semantics the number of bytes written is returned on success and
+/// -1 on failure.
+///
+/// #Safety
+///
+/// The pointer must point to a valid location of a buffer with at least the specified size.
+#[no_mangle]
+pub unsafe extern "C" fn write_console(ptr: *const u8, size: usize) -> isize {
+    if ptr.is_null() {
+        return -1;
+    }
+
+    let bytes = core::slice::from_raw_parts(ptr, size);
+    let mut serial = SERIAL1.borrow_mut();
+    for byte in bytes {
+        if serial.send(*byte).is_err() {
+            return -1;
+        }
+    }
+
+    size as isize
 }
