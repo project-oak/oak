@@ -41,6 +41,9 @@ static ALLOCATED_ITEMS: Spinlock<LazyCell<RefCell<HashMap<usize, Layout>>>> =
 ///
 /// This function returns a pointer to the allocated memory if the allocation succeeds and null if
 /// it fails. All allocated memory must be deallocated using `heap_free`.
+///
+/// The function is intentionally not named "malloc" to avoid naming clashes. It is up to the
+/// compatibility layer to make sure that this function is used for allocating memory.
 #[no_mangle]
 pub extern "C" fn heap_alloc(size: usize) -> *mut c_void {
     if size == 0 {
@@ -52,6 +55,9 @@ pub extern "C" fn heap_alloc(size: usize) -> *mut c_void {
     let layout = Layout::from_size_align(size, calculate_alignment(size))
         .expect("Invalid alignment calculated.");
 
+    // We use the global allocator directly (rather than using e.g. `Vec<u8>`) so that we have the
+    // required control over the alignment of the allocated memory.
+    //
     // Safety: we ensured that the size is not 0.
     let result = unsafe { alloc(layout) as *mut c_void };
     if !result.is_null() {
@@ -73,6 +79,9 @@ fn calculate_alignment(size: usize) -> usize {
 ///
 /// If the pointer is null, it does nothing. Panics if the pointer is non-null but was not allocated
 /// using `heap_alloc`, or if it was already freed.
+///
+/// The function is intentionally not named "free" to avoid naming clashes. It is up to the
+/// compatibility layer to make sure that this function is used for freeing memory.
 #[no_mangle]
 pub extern "C" fn heap_free(ptr: *mut c_void) {
     if ptr.is_null() {
