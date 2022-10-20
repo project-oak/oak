@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-"""Library for converting .tflite, .bmp and .wav files to cc arrays."""
+"""Library for converting .tflite and .wav files to cc arrays."""
 
 from __future__ import absolute_import
 from __future__ import division

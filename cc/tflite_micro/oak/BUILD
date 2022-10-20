@@ -15,7 +15,7 @@
 #
 
 load(
-    ":build_def.bzl",
+    ":build_defs.bzl",
     "oak_copts",
 )
 

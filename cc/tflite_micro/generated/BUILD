@@ -15,7 +15,7 @@
 #
 
 load(
-    "//cc/tflite_micro/oak:build_def.bzl",
+    "//cc/tflite_micro/oak:build_defs.bzl",
     "oak_copts",
 )
 

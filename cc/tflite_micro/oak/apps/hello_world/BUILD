@@ -15,9 +15,14 @@
 #
 
 load(
-    "//cc/tflite_micro/oak:build_def.bzl",
+    "//cc/tflite_micro/oak:build_defs.bzl",
     "generate_cc_arrays",
     "oak_copts",
+)
+
+load(
+    "//cc:build_defs.bzl",
+    "cc_static_library",
 )
 
 package(
@@ -56,7 +61,6 @@ config_setting(
     },
 )
 
-# Linked by oak_tensorflow_service and the self-contained binary below.
 cc_library(
     name = "hello_world",
     srcs = ["hello_world.cc"] + select({
@@ -76,9 +80,17 @@ cc_library(
     linkopts = ["-nostdlib"],
 )
 
+# Fully static library linked by oak_tensorflow_service.
+cc_static_library(
+    name = "hello_world_app",
+    deps = [":hello_world"],
+)
+
+# Freestanding executable running on host for debugging
+# i.e. model input, output, ops and pipeline via gdb/lldb.
 cc_binary(
     srcs = ["main.cc"],
-    name = "hello_world_bin",
+    name = "hello_world_freestanding_bin",
     deps = [
         ":hello_world",
         "//cc/tflite_micro/oak:hdrs",
