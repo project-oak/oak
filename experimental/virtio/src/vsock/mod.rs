@@ -20,6 +20,7 @@ use crate::{
     InverseTranslator, Translator,
 };
 use anyhow::Context;
+use core::alloc::Allocator;
 use packet::Packet;
 use rust_hypervisor_firmware_virtio::{
     device::VirtioBaseDevice,
@@ -75,26 +76,27 @@ const HOST_CID: u64 = 2;
 /// Low-level driver interface to interact with a virtio socket device.
 ///
 /// See <https://docs.oasis-open.org/virtio/virtio/v1.1/csprd01/virtio-v1.1-csprd01.html#x1-39000010>.
-pub struct VSock<T: VirtioTransport> {
+pub struct VSock<'a, T: VirtioTransport, A: Allocator> {
     /// The base virtio-over-PCI device used for configuration and notification.
     device: VirtioBaseDevice<T>,
     /// The receive queue.
-    rx_queue: DeviceWriteOnlyQueue<QUEUE_SIZE, DATA_BUFFER_SIZE>,
+    rx_queue: DeviceWriteOnlyQueue<'a, QUEUE_SIZE, DATA_BUFFER_SIZE, A>,
     /// The transmit queue.
-    tx_queue: DriverWriteOnlyQueue<QUEUE_SIZE, DATA_BUFFER_SIZE>,
+    tx_queue: DriverWriteOnlyQueue<'a, QUEUE_SIZE, DATA_BUFFER_SIZE, A>,
     /// The event queue used by the device to notify the driver that the guest CID has changed. We
     /// ignore it for now as we don't support live migration, but it still must exist and be
     /// configured.
-    event_queue: DeviceWriteOnlyQueue<QUEUE_SIZE, EVENT_BUFFER_SIZE>,
+    event_queue: DeviceWriteOnlyQueue<'a, QUEUE_SIZE, EVENT_BUFFER_SIZE, A>,
     /// The the CID assigned to this VM.
     guest_cid: u64,
 }
 
-impl VSock<VirtioPciTransport> {
+impl<'a, A: Allocator> VSock<'a, VirtioPciTransport, A> {
     /// Finds the virtio vsock PCI device, initialises the device, and configures the queues.
     pub fn find_and_configure_device<VP: Translator, PV: InverseTranslator>(
         translate: VP,
         inverse: PV,
+        alloc: &'a A,
     ) -> anyhow::Result<Self> {
         // For now we just scan the first 32 devices on PCI bus 0 to find the first one that matches
         // the vendor ID and device ID.
@@ -102,7 +104,7 @@ impl VSock<VirtioPciTransport> {
             .ok_or_else(|| anyhow::anyhow!("Couldn't find a virtio vsock device."))?;
         let transport = VirtioPciTransport::new(pci_device);
         let device = VirtioBaseDevice::new(transport);
-        let mut result = Self::new(device, &translate);
+        let mut result = Self::new(device, &translate, alloc);
         result.init(translate, inverse)?;
         // Let the device know there are available buffers in the receiver and event queues.
         result.device.notify_queue(RX_QUEUE_ID);
@@ -111,7 +113,7 @@ impl VSock<VirtioPciTransport> {
     }
 }
 
-impl<T> VSock<T>
+impl<'a, T, A: Allocator> VSock<'a, T, A>
 where
     T: VirtioTransport,
 {
@@ -177,10 +179,10 @@ where
         self.device.get_status()
     }
 
-    fn new<VP: Translator>(device: VirtioBaseDevice<T>, translate: VP) -> Self {
-        let tx_queue = DriverWriteOnlyQueue::new(&translate);
-        let rx_queue = DeviceWriteOnlyQueue::new(&translate);
-        let event_queue = DeviceWriteOnlyQueue::new(&translate);
+    fn new<VP: Translator>(device: VirtioBaseDevice<T>, translate: VP, alloc: &'a A) -> Self {
+        let tx_queue = DriverWriteOnlyQueue::new(&translate, alloc);
+        let rx_queue = DeviceWriteOnlyQueue::new(&translate, alloc);
+        let event_queue = DeviceWriteOnlyQueue::new(&translate, alloc);
         VSock {
             device,
             tx_queue,

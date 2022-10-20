@@ -14,31 +14,31 @@
 // limitations under the License.
 //
 
-use alloc::{boxed::Box, collections::vec_deque::VecDeque, vec, vec::Vec};
-use core::num::Wrapping;
+use crate::Translator;
+use alloc::{boxed::Box, collections::vec_deque::VecDeque, vec::Vec};
+use core::{alloc::Allocator, num::Wrapping};
 use virtq::{AvailRing, Desc, DescFlags, RingFlags, UsedElem, UsedRing, VirtQueue};
 use x86_64::{PhysAddr, VirtAddr};
-
-use crate::Translator;
 
 pub mod virtq;
 
 /// A queue where the descriptor buffers are only writable by the driver.
 ///
 /// This is typically used for transmission queues.
-pub struct DriverWriteOnlyQueue<const QUEUE_SIZE: usize, const BUFFER_SIZE: usize> {
+pub struct DriverWriteOnlyQueue<'a, const QUEUE_SIZE: usize, const BUFFER_SIZE: usize, A: Allocator>
+{
     /// The inner queue.
-    pub inner: Queue<QUEUE_SIZE, BUFFER_SIZE>,
+    pub inner: Queue<'a, QUEUE_SIZE, BUFFER_SIZE, A>,
 
     /// The indices of free descriptors that can be used by the driver for writing.
     free_ids: VecDeque<u16>,
 }
 
-impl<const QUEUE_SIZE: usize, const BUFFER_SIZE: usize>
-    DriverWriteOnlyQueue<QUEUE_SIZE, BUFFER_SIZE>
+impl<'a, const QUEUE_SIZE: usize, const BUFFER_SIZE: usize, A: Allocator>
+    DriverWriteOnlyQueue<'a, QUEUE_SIZE, BUFFER_SIZE, A>
 {
-    pub fn new<VP: Translator>(translate: VP) -> Self {
-        let inner = Queue::new(DescFlags::empty(), translate);
+    pub fn new<VP: Translator>(translate: VP, alloc: &'a A) -> Self {
+        let inner = Queue::new(DescFlags::empty(), translate, alloc);
         let mut free_ids = VecDeque::with_capacity(QUEUE_SIZE);
 
         // Add all the descriptors to the free list.
@@ -83,16 +83,17 @@ impl<const QUEUE_SIZE: usize, const BUFFER_SIZE: usize>
 /// A queue where the descriptor buffers are only writable by the device.
 ///
 /// This is typically used for receiver queues.
-pub struct DeviceWriteOnlyQueue<const QUEUE_SIZE: usize, const BUFFER_SIZE: usize> {
+pub struct DeviceWriteOnlyQueue<'a, const QUEUE_SIZE: usize, const BUFFER_SIZE: usize, A: Allocator>
+{
     /// The inner queue.
-    pub inner: Queue<QUEUE_SIZE, BUFFER_SIZE>,
+    pub inner: Queue<'a, QUEUE_SIZE, BUFFER_SIZE, A>,
 }
 
-impl<const QUEUE_SIZE: usize, const BUFFER_SIZE: usize>
-    DeviceWriteOnlyQueue<QUEUE_SIZE, BUFFER_SIZE>
+impl<'a, const QUEUE_SIZE: usize, const BUFFER_SIZE: usize, A: Allocator>
+    DeviceWriteOnlyQueue<'a, QUEUE_SIZE, BUFFER_SIZE, A>
 {
-    pub fn new<VP: Translator>(translate: VP) -> Self {
-        let mut inner = Queue::new(DescFlags::VIRTQ_DESC_F_WRITE, translate);
+    pub fn new<VP: Translator>(translate: VP, alloc: &'a A) -> Self {
+        let mut inner = Queue::new(DescFlags::VIRTQ_DESC_F_WRITE, translate, alloc);
 
         // Add all the descriptors to the available ring.
         for i in 0..QUEUE_SIZE as u16 {
@@ -123,19 +124,13 @@ impl<const QUEUE_SIZE: usize, const BUFFER_SIZE: usize>
 }
 
 /// A container for a boxed virtqueue and its associated buffers.
-pub struct Queue<const QUEUE_SIZE: usize, const BUFFER_SIZE: usize> {
+pub struct Queue<'a, const QUEUE_SIZE: usize, const BUFFER_SIZE: usize, A: Allocator> {
     /// The underlying virtqueue.
-    ///
-    /// We store it on the global heap for now, but in future we would have a dedicated allocator
-    /// to ensure it is in memory pages that are shared with the host.
-    virt_queue: Box<VirtQueue<QUEUE_SIZE>>,
+    virt_queue: Box<VirtQueue<QUEUE_SIZE>, &'a A>,
 
     /// The global buffer used by the virtqueue. Each descriptor uses a slice with an offset into
     /// this single buffer for it own buffer.
-    ///
-    /// We store it as a `Vec` on the global heap for now, but in future we would have a dedicated
-    /// allocator to ensure it is located in memory pages that are shared with the host.
-    buffer: Vec<u8>,
+    buffer: Vec<u8, &'a A>,
 
     /// The address of the first byte in the global buffer.
     base_offset: PhysAddr,
@@ -144,16 +139,19 @@ pub struct Queue<const QUEUE_SIZE: usize, const BUFFER_SIZE: usize> {
     last_used_idx: Wrapping<u16>,
 }
 
-impl<const QUEUE_SIZE: usize, const BUFFER_SIZE: usize> Queue<QUEUE_SIZE, BUFFER_SIZE> {
+impl<'a, const QUEUE_SIZE: usize, const BUFFER_SIZE: usize, A: Allocator>
+    Queue<'a, QUEUE_SIZE, BUFFER_SIZE, A>
+{
     /// Creates a new instance of `Queue` by pre-initialising all the descriptors and creating
     /// enough buffer space for each descriptor.
-    fn new<VP: Translator>(flags: DescFlags, translate: VP) -> Self {
+    fn new<VP: Translator>(flags: DescFlags, translate: VP, alloc: &'a A) -> Self {
         assert!(
             QUEUE_SIZE.is_power_of_two(),
             "Queue size must be a power of 2."
         );
 
-        let buffer = vec![0u8; BUFFER_SIZE * QUEUE_SIZE];
+        let mut buffer = Vec::with_capacity_in(BUFFER_SIZE * QUEUE_SIZE, alloc);
+        buffer.resize(BUFFER_SIZE * QUEUE_SIZE, 0u8);
         let base_offset = translate(VirtAddr::from_ptr(buffer.as_ptr())).unwrap();
         let desc: Vec<Desc> = (0..QUEUE_SIZE)
             .map(|i| {
@@ -165,11 +163,14 @@ impl<const QUEUE_SIZE: usize, const BUFFER_SIZE: usize> Queue<QUEUE_SIZE, BUFFER
             })
             .collect();
         let desc: [Desc; QUEUE_SIZE] = desc.try_into().unwrap();
-        let virt_queue = Box::new(VirtQueue {
-            desc,
-            avail: AvailRing::<QUEUE_SIZE>::default(),
-            used: UsedRing::<QUEUE_SIZE>::default(),
-        });
+        let virt_queue = Box::new_in(
+            VirtQueue {
+                desc,
+                avail: AvailRing::<QUEUE_SIZE>::default(),
+                used: UsedRing::<QUEUE_SIZE>::default(),
+            },
+            alloc,
+        );
         Self {
             virt_queue,
             buffer,
