@@ -20,7 +20,7 @@ use crate::{
     vsock::{HOST_CID, QUEUE_SIZE},
     Read, Write,
 };
-use alloc::vec;
+use alloc::{alloc::Global, vec};
 use rand::RngCore;
 use rust_hypervisor_firmware_virtio::device::VirtioBaseDevice;
 
@@ -171,18 +171,18 @@ fn set_packet_cids_host_to_guest(packet: &mut Packet) {
     packet.set_src_cid(HOST_CID);
 }
 
-fn new_vsock_and_transport() -> (VSock<TestingTransport>, TestingTransport) {
+fn new_vsock_and_transport() -> (VSock<'static, TestingTransport, Global>, TestingTransport) {
     let transport = new_valid_transport();
     transport.write_device_config(0, GUEST_CID as u32);
 
     let device = VirtioBaseDevice::new(transport.clone());
-    let mut vsock = VSock::new(device, identity_map);
+    let mut vsock = VSock::new(device, identity_map, &Global);
     vsock.init(identity_map, inverse_identity_map).unwrap();
 
     (vsock, transport)
 }
 
-fn new_socket_and_transport() -> (Socket<TestingTransport>, TestingTransport) {
+fn new_socket_and_transport() -> (Socket<'static, TestingTransport, Global>, TestingTransport) {
     let (vsock, transport) = new_vsock_and_transport();
     let mut packet = Packet::new_control(HOST_PORT, GUEST_PORT, VSockOp::Request).unwrap();
     set_packet_cids_host_to_guest(&mut packet);

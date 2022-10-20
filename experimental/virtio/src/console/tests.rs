@@ -19,19 +19,19 @@ use crate::test::{
     identity_map, inverse_identity_map, new_legacy_transport, new_transport_small_queue,
     new_valid_transport, DeviceStatus, VIRTIO_F_VERSION_1,
 };
-use alloc::{vec, vec::Vec};
+use alloc::{alloc::Global, vec, vec::Vec};
 
 #[test]
 fn test_legacy_device_not_supported() {
     let device = VirtioBaseDevice::new(new_legacy_transport());
-    let mut console = Console::new(device, identity_map);
+    let mut console = Console::new(device, identity_map, &Global);
     assert!(console.init(identity_map, inverse_identity_map).is_err());
 }
 
 #[test]
 fn test_max_queue_size_too_small() {
     let device = VirtioBaseDevice::new(new_transport_small_queue());
-    let mut console = Console::new(device, identity_map);
+    let mut console = Console::new(device, identity_map, &Global);
     assert!(console.init(identity_map, inverse_identity_map).is_err());
 }
 
@@ -40,7 +40,7 @@ fn test_device_init() {
     let transport = new_valid_transport();
     let config = transport.config.clone();
     let device = VirtioBaseDevice::new(transport);
-    let mut console = Console::new(device, identity_map);
+    let mut console = Console::new(device, identity_map, &Global);
     let result = console.init(identity_map, inverse_identity_map);
     assert!(result.is_ok());
 
@@ -70,7 +70,7 @@ fn test_read_bytes() {
     let data = vec![2, 4, 6];
     let transport = new_valid_transport();
     let device = VirtioBaseDevice::new(transport.clone());
-    let mut console = Console::new(device, identity_map);
+    let mut console = Console::new(device, identity_map, &Global);
     console.init(identity_map, inverse_identity_map).unwrap();
     transport.device_write_to_queue::<QUEUE_SIZE>(0, &data[..]);
     let bytes = console.read_bytes().unwrap();
@@ -83,7 +83,7 @@ fn test_write_bytes() {
     let data = vec![7; 5];
     let transport = new_valid_transport();
     let device = VirtioBaseDevice::new(transport.clone());
-    let mut console = Console::new(device, identity_map);
+    let mut console = Console::new(device, identity_map, &Global);
     console.init(identity_map, inverse_identity_map).unwrap();
     let len = console.write_bytes(&data[..]).unwrap();
     assert_eq!(len, 5);
@@ -100,7 +100,7 @@ fn test_read_exact() {
     let mut second = vec![0; 3];
     let transport = new_valid_transport();
     let device = VirtioBaseDevice::new(transport.clone());
-    let mut console = Console::new(device, identity_map);
+    let mut console = Console::new(device, identity_map, &Global);
     console.init(identity_map, inverse_identity_map).unwrap();
     transport.device_write_to_queue::<QUEUE_SIZE>(0, &data[..]);
     assert!(console.read(&mut first).is_ok());
@@ -116,7 +116,7 @@ fn test_write_all() {
     let data = vec![13; 5000];
     let transport = new_valid_transport();
     let device = VirtioBaseDevice::new(transport.clone());
-    let mut console = Console::new(device, identity_map);
+    let mut console = Console::new(device, identity_map, &Global);
     console.init(identity_map, inverse_identity_map).unwrap();
     assert!(console.write(&data[..]).is_ok());
     let first = transport
