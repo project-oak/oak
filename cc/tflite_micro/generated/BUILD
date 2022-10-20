@@ -42,8 +42,8 @@ cc_library(
     deps = [
         # Use Oak DebugLog implementation
         "//cc/tflite_micro/oak:debug_log",
-        # Use Oak minimal stdlib
-        "//cc/tflite_micro/oak/stdlib",
+        # Use Oak pico libc
+        "//cc/tflite_micro/oak/libc",
     ],
     linkstatic = 1,
 )

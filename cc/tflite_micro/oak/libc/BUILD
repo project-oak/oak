@@ -20,7 +20,7 @@ package(
 )
 
 cc_library(
-    name = "stdlib",
+    name = "libc",
     srcs = [
         "bsearch.c",
         "ctypes.c",
@@ -36,7 +36,7 @@ cc_library(
         "//cc/tflite_micro/oak:no_sse": [],
         "//conditions:default": glob(["string/*.S"]),
     }),
-    copts = ["-Icc/tflite_micro/oak/stdlib/include"],
+    copts = ["-Icc/tflite_micro/oak/libc/include"],
     linkopts = [
         # Implement __clrsbdi2 to count the number of leading redundant sign bits
         "-lgcc",

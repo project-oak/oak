@@ -38,7 +38,7 @@ cc_library(
 )
 
 # --define no_sse=1 to build tflite w/o streaming SIMD instructions.
-# It would also use non-optimized stdlib {str|mem}xxx functions.
+# It would also use non-optimized Oak pico libc {str|mem}xxx functions.
 config_setting(
     name = "no_sse",
     values = {
