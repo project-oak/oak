@@ -19,7 +19,7 @@
 load(
     "@bazel_tools//tools/cpp:toolchain_utils.bzl",
     "find_cpp_toolchain",
-    "use_cpp_toolchain"
+    "use_cpp_toolchain",
 )
 
 # Bazel rule for collecting the header files that a target depends on.
