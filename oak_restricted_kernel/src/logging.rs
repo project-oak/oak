@@ -26,7 +26,7 @@ extern crate log;
 static COM1_BASE: u16 = 0x3f8;
 
 lazy_static! {
-    static ref SERIAL1: AtomicRefCell<SerialPort> = {
+    pub(crate) static ref SERIAL1: AtomicRefCell<SerialPort> = {
         let port_factory = PortFactoryWrapper::new_raw();
         // Our contract with the launcher requires the first serial port to be
         // available, so assuming the loader adheres to it, this is safe.
