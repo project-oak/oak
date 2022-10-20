@@ -6,6 +6,7 @@ edition = "2021"
 license = "Apache-2.0"
 
 [features]
+c_interface = ["hashbrown", "libc", "spinning_top", "static_assertions"]
 default = ["vsock_channel"]
 virtio_console_channel = ["virtio"]
 vsock_channel = ["virtio"]
@@ -23,9 +24,11 @@ goblin = { version = "*", default-features = false, features = [
   "elf64",
   "endian_fd"
 ] }
+hashbrown = { version = "*", optional = true }
 lazy_static = { version = "*", features = ["spin_no_std"] }
 linked_list_allocator = { version = "*" }
 log = "*"
+libc = { version = "*", optional = true }
 libm = "*"
 oak_channel = { path = "../oak_channel" }
 oak_simple_io = { path = "../oak_simple_io", optional = true }
@@ -33,6 +36,8 @@ oak_linux_boot_params = { path = "../linux_boot_params" }
 rust-hypervisor-firmware-virtio = { path = "../third_party/rust-hypervisor-firmware-virtio" }
 sev_guest = { path = "../experimental/sev_guest" }
 sev_serial = { path = "../sev_serial" }
+spinning_top = { version = "*", optional = true }
+static_assertions = { version = "*", optional = true }
 strum = { version = "*", default-features = false, features = ["derive"] }
 uart_16550 = { version = "*", optional = true }
 virtio = { path = "../experimental/virtio", optional = true }

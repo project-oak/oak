@@ -39,6 +39,8 @@ mod avx;
 mod descriptors;
 mod elf;
 pub mod i8042;
+#[cfg(feature = "c_interface")]
+mod interface;
 mod interrupts;
 mod libm;
 mod logging;
