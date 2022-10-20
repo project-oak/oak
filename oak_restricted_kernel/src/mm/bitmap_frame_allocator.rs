@@ -84,10 +84,17 @@ impl<S: PageSize, const N: usize> BitmapAllocator<S, N> {
         }
     }
 
+    /// Returns a BitArray where 1 denotes a frame that's eligible for allocation.
+    ///
+    /// This means that (a) the frame needs to be marked as valid and (b) the frame has not been
+    /// allocated yet.
+    fn available(&self) -> BitArray<[u64; N]> {
+        self.valid.bitand(self.allocated.not())
+    }
+
     /// Returns the largest contiguous section of unallocated memory.
     pub fn largest_available(&self) -> Option<PhysFrameRange<S>> {
-        self.valid
-            .bitand(self.allocated.not())
+        self.available()
             .iter_ones()
             // Identify streaks of zeroes: for example, 0100 will yield (0,0), (2,2), (2,3)
             .scan(None, |state, idx| {
@@ -112,13 +119,12 @@ impl<S: PageSize, const N: usize> BitmapAllocator<S, N> {
     /// Returns the same frame range if the allocation was successful; None, if not.
     ///
     /// Panics if the frame is outside the bounds of memory that is managed by this allocator.
-    #[allow(dead_code)]
     pub fn allocate(&mut self, frame_range: PhysFrameRange<S>) -> Option<PhysFrameRange<S>> {
         if let (Some(start_idx), Some(end_idx)) = (
             self.frame_idx(frame_range.start),
             self.frame_idx(frame_range.end),
         ) {
-            if self.valid.bitand(self.allocated.not())[start_idx..end_idx + 1].not_all() {
+            if self.available()[start_idx..end_idx].not_all() {
                 return None;
             }
             self.allocated[start_idx..end_idx].fill(true);
@@ -131,8 +137,32 @@ impl<S: PageSize, const N: usize> BitmapAllocator<S, N> {
         }
     }
 
+    /// Attempts to allocate `num` contiguous physical frames.
+    pub fn allocate_contiguous(&mut self, num: usize) -> Option<PhysFrameRange<S>> {
+        let (start_idx, end_idx) = self
+            .available()
+            // split into overlapping views of length n
+            .windows(num)
+            // keep an index (the index of the first bit)
+            .enumerate()
+            // find us a window that's all 1-s
+            .find(|(_, window)| window.all())
+            .map(|(idx, _)| (idx, idx + num))?;
+
+        // Safety: unwrapping these indexes is safe as we obtained them by indexing valid entries in
+        // the map, so they shouldn't be outside the range.
+        self.allocate(PhysFrame::range(
+            self.frame(start_idx).unwrap(),
+            self.frame(end_idx).unwrap(),
+        ))
+    }
+
     fn frame(&self, frame_idx: usize) -> Option<PhysFrame<S>> {
-        self.range.clone().nth(frame_idx)
+        if self.range.end < self.range.start + frame_idx as u64 {
+            None
+        } else {
+            Some(self.range.start + frame_idx as u64)
+        }
     }
 
     fn frame_idx(&self, frame: PhysFrame<S>) -> Option<usize> {
@@ -336,6 +366,17 @@ mod tests {
         assert_eq!(Some(create_frame(0x1000)), alloc.allocate_frame());
         assert_eq!(None, alloc.allocate(create_frame_range(0x0000, 0x2000)));
         assert_eq!(None, alloc.allocate(create_frame_range(0x1000, 0x2000)));
+        assert_eq!(None, alloc.allocate_frame());
+    }
+
+    #[test]
+    fn test_allocate_contiguous() {
+        let mut alloc = create_allocator::<1>(0x0000, 0x3000);
+        alloc.mark_valid(create_frame_range(0x0000, 0x3000), true);
+        assert_eq!(None, alloc.allocate_contiguous(4));
+        alloc.allocate_contiguous(2).unwrap();
+        alloc.allocate_contiguous(1).unwrap();
+        assert_eq!(None, alloc.allocate_contiguous(2));
         assert_eq!(None, alloc.allocate_frame());
     }
 }

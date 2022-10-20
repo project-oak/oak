@@ -53,6 +53,14 @@ impl<const N: usize> PhysicalMemoryAllocator<N> {
     pub fn largest_available(&mut self) -> Option<PhysFrameRange<Size2MiB>> {
         self.large_frames.largest_available()
     }
+
+    /// Allocate `num` contiguous 2 MiB pages.
+    ///
+    /// Returns the frame range if a contiguous range of sufficient size was available; the memory
+    /// is marked as allocated before returning.
+    pub fn allocate_contiguous(&mut self, num: usize) -> Option<PhysFrameRange<Size2MiB>> {
+        self.large_frames.allocate_contiguous(num)
+    }
 }
 
 unsafe impl<const N: usize> FrameAllocator<Size2MiB> for PhysicalMemoryAllocator<N> {

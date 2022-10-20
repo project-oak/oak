@@ -57,16 +57,19 @@ mod virtio;
 extern crate alloc;
 
 use crate::mm::Translator;
-use alloc::boxed::Box;
-use core::{panic::PanicInfo, str::FromStr};
+use alloc::{alloc::Allocator, boxed::Box};
+use core::{cell::OnceCell, marker::Sync, panic::PanicInfo, str::FromStr};
+use linked_list_allocator::LockedHeap;
 use log::{error, info};
 use oak_channel::Channel;
 use oak_linux_boot_params::BootParams;
 use strum::{EnumIter, EnumString, IntoEnumIterator};
 use x86_64::{
-    structures::paging::{FrameAllocator, Page, PhysFrame, Size2MiB},
+    structures::paging::{Page, Size2MiB},
     VirtAddr,
 };
+
+static mut GUEST_HOST_HEAP: OnceCell<LockedHeap> = OnceCell::new();
 
 /// Main entry point for the kernel, to be called from bootloader.
 pub fn start_kernel(info: &BootParams) -> Box<dyn Channel> {
@@ -95,13 +98,23 @@ pub fn start_kernel(info: &BootParams) -> Box<dyn Channel> {
     let mut mapper = mm::init_paging(&mut frame_allocator, program_headers).unwrap();
 
     // Allocate a section for guest-host communication (without the `ENCRYPTED` bit set)
-    let guest_host_frame: PhysFrame<Size2MiB> = frame_allocator.allocate_frame().unwrap();
-    let guest_host_page = mapper.translate_physical_frame(guest_host_frame).unwrap();
-    let _guest_host_heap = unsafe {
-        memory::init_guest_host_heap(
-            Page::range(guest_host_page, guest_host_page + 1),
-            &mut mapper,
-        )
+    // We'll allocate 2*2MiB, as virtio needs more than 2 MiB for its data structures.
+    let guest_host_frames = frame_allocator.allocate_contiguous(2).unwrap();
+    let guest_host_pages = Page::range(
+        mapper
+            .translate_physical_frame(guest_host_frames.start)
+            .unwrap(),
+        mapper
+            .translate_physical_frame(guest_host_frames.end)
+            .unwrap(),
+    );
+
+    // Safety: initializing the new heap is safe as the frame allocator guarantees we're not
+    // overwriting any other memory; writing to the static mut is safe as we're in the
+    // initialization code and thus there can be no concurrent access.
+    let guest_host_heap = unsafe {
+        GUEST_HOST_HEAP
+            .get_or_init(|| memory::init_guest_host_heap(guest_host_pages, &mut mapper).unwrap())
     };
 
     // If we don't find memory for heap, it's ok to panic.
@@ -116,7 +129,7 @@ pub fn start_kernel(info: &BootParams) -> Box<dyn Channel> {
     ))
     .unwrap();
 
-    get_channel(&kernel_args, &mapper)
+    get_channel(&kernel_args, &mapper, guest_host_heap)
 }
 
 #[derive(EnumIter, EnumString)]
@@ -133,7 +146,11 @@ enum ChannelType {
 }
 
 /// Create a channel for communicating with the Untrusted Launcher.
-fn get_channel<A: Translator>(kernel_args: &args::Args, mapper: &A) -> Box<dyn Channel> {
+fn get_channel<'a, X: Translator, A: Allocator + Sync>(
+    kernel_args: &args::Args,
+    mapper: &X,
+    alloc: &'a A,
+) -> Box<dyn Channel + 'a> {
     // If we weren't told which channel to use, arbitrarily pick the first one in the `ChannelType`
     // enum. Depending on features that are enabled, this means that the enum acts as kind of a
     // reverse priority list for defaults.
@@ -144,20 +161,13 @@ fn get_channel<A: Translator>(kernel_args: &args::Args, mapper: &A) -> Box<dyn C
 
     match chan_type {
         #[cfg(feature = "virtio_console_channel")]
-        ChannelType::VirtioConsole => {
-            Box::new(virtio::get_console_channel(mapper, &alloc::alloc::Global))
-        }
+        ChannelType::VirtioConsole => Box::new(virtio::get_console_channel(mapper, alloc)),
         #[cfg(feature = "vsock_channel")]
-        ChannelType::VirtioVsock => {
-            Box::new(virtio::get_vsock_channel(mapper, &alloc::alloc::Global))
-        }
+        ChannelType::VirtioVsock => Box::new(virtio::get_vsock_channel(mapper, alloc)),
         #[cfg(feature = "serial_channel")]
         ChannelType::Serial => Box::new(serial::Serial::new()),
         #[cfg(feature = "simple_io_channel")]
-        ChannelType::SimpleIo => Box::new(simpleio::SimpleIoChannel::new(
-            mapper,
-            &alloc::alloc::Global,
-        )),
+        ChannelType::SimpleIo => Box::new(simpleio::SimpleIoChannel::new(mapper, alloc)),
     }
 }
 
