@@ -14,6 +14,9 @@
 // limitations under the License.
 //
 
+//! A library for clients and servers to implement Remote Attestation as described
+//! [here](https://github.com/project-oak/oak/blob/main/docs/remote-attestation.md).
+
 #![no_std]
 
 extern crate alloc;
