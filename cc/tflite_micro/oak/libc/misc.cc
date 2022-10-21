@@ -21,29 +21,26 @@ void MicroPrintf(const char* format, ...);
 #endif
 
 extern "C" {
+// Used by flexbuffers::Reference::AsInt64() and
+// flexbuffers::Reference::AsUInt64() in TFLM.
 int* __errno_location() {
-  // Oak supports only single-threading for now hence
-  // a singleton errno instance is used. 
+  // Oak supports only single-threading for the moment
+  // hence one errno singleton instance is used. 
   static int errno = 0;
   return &errno;
 }
 
+// Used in flatbuffers and gemmlowp/fixedpoint headers
+// when optimization is disabled (--define no_opt=1).
 void __assert_fail(
     const char* assertion,
     const char* file,
     unsigned int line,
     const char* function) {
-  // Pipe to Oak debug log channel.
   MicroPrintf("%s in %s:%d %s", assertion, file, line, function);
 }
 
-int atexit(void (*)()) {
-  // *NOT* used when linking to Oak Kernel/Runtime since
-  // this function is simply used to build a self-contained
-  // program binary to run and debug models locally.
-  return 0;
-}
-
+// Used in TFLM types and runtime_shape header files.
 void abort() {
   // TODO: trigger a panic or VM shutdown
   MicroPrintf("Aborting...");
@@ -52,18 +49,10 @@ void abort() {
   while (1);
 }
 
-// Count the number of leading redundant sign bits.
-// Used by CountLeadingSignBits in TFLM kernels.
-int __clrsbdi2(long long x) {
-  int ret;
-
-  if (x < 0LL)
-    x = ~x;
-
-  if (x == 0LL)
-    return 8 * sizeof(x) - 1;
-
-  ret = __builtin_clzll((unsigned long long)x);
-  return ret - 1;
+// *NOT* used when linking to Oak Kernel/Runtime since
+// this function is simply used to build a freestanding
+// program binary runnable and debuggable locally.
+int atexit(void (*)()) {
+  return 0;
 }
 }

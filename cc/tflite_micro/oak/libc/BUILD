@@ -19,13 +19,13 @@ package(
     licenses = ["notice"],
 )
 
-# pico libc for TFLM on Oak Restricted Kernel.
+# Pico libc for TFLM on Oak Restricted Kernel.
 cc_library(
     name = "libc",
     srcs = [
         "bsearch.c",
         "ctypes.c",
-        "os.cc",
+        "misc.cc",
         "stdlib.c",
     ] + select({
         "//cc/tflite_micro/oak:no_sse": ["string.c"],
