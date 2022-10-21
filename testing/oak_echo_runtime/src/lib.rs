@@ -25,9 +25,11 @@ pub mod schema {
     #![allow(
         clippy::derivable_impls,
         clippy::extra_unused_lifetimes,
-        clippy::needless_borrow
+        clippy::missing_safety_doc,
+        clippy::needless_borrow,
+        dead_code,
+        unused_imports
     )]
-    #![allow(dead_code, unused_imports)]
 
     include!(concat!(env!("OUT_DIR"), "/schema_generated.rs"));
     include!(concat!(env!("OUT_DIR"), "/schema_services_servers.rs"));
@@ -49,7 +51,8 @@ impl schema::EchoRuntime for RuntimeImplementation {
     ) -> Result<oak_idl::utils::OwnedFlatbuffer<schema::EchoResponse>, oak_idl::Status> {
         let request_body: &[u8] = request_message
             .body()
-            .ok_or_else(|| oak_idl::Status::new(oak_idl::StatusCode::InvalidArgument))?;
+            .ok_or_else(|| oak_idl::Status::new(oak_idl::StatusCode::InvalidArgument))?
+            .bytes();
         info!("Received a request: {:?}", request_body);
         let response_body = request_body;
 

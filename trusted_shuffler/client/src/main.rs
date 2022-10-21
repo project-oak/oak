@@ -26,23 +26,23 @@ use tokio::time::sleep;
 use trusted_shuffler_common::{send_grpc_request, send_http_request};
 
 #[derive(Parser, Clone)]
-#[clap(about = "Client for Trusted Shuffler Example")]
+#[command(about = "Client for Trusted Shuffler Example")]
 pub struct Opt {
-    #[structopt(
+    #[arg(
         long,
         help = "URL of the Trusted Shuffler HTTP service to connect to",
         default_value = "http://localhost:8080"
     )]
     server_url: String,
-    #[structopt(long, help = "The QPS to simulate", default_value = "10")]
+    #[arg(long, help = "The QPS to simulate", default_value = "10")]
     qps: u32,
-    #[structopt(
+    #[arg(
         long,
         help = "How many seconds the clients sent requests. Otherwise the Trusted Shuffler gets stuck because the last batch does not reach k requests.",
         default_value = "1"
     )]
     seconds: u32,
-    #[structopt(long, help = "Use gRPC client")]
+    #[arg(long, help = "Use gRPC client")]
     use_grpc: bool,
 }
 

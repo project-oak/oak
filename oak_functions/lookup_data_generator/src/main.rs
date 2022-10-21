@@ -23,32 +23,32 @@ use lookup_data_generator::data::{
 use std::{fs::File, io::Write};
 
 #[derive(Parser, Clone, Debug)]
-#[clap(about = "Oak Functions Lookup Data Generator")]
+#[command(about = "Oak Functions Lookup Data Generator")]
 pub struct Opt {
-    #[clap(long)]
+    #[arg(long)]
     out_file_path: String,
-    #[clap(subcommand)]
+    #[command(subcommand)]
     cmd: Command,
 }
 
 #[derive(Parser, Clone, Debug)]
 pub enum Command {
-    #[clap(about = "Generate random key value pairs")]
+    #[command(about = "Generate random key value pairs")]
     Random {
-        #[clap(long, default_value = "20")]
+        #[arg(long, default_value = "20")]
         key_size_bytes: usize,
-        #[clap(long, default_value = "1000")]
+        #[arg(long, default_value = "1000")]
         value_size_bytes: usize,
-        #[clap(long, default_value = "100")]
+        #[arg(long, default_value = "100")]
         entries: usize,
     },
-    #[clap(about = "Generate entries for the weather lookup example with random values")]
+    #[command(about = "Generate entries for the weather lookup example with random values")]
     Weather {},
-    #[clap(
+    #[command(
         about = "Generate sparse entries plus an index for the weather lookup example with random values"
     )]
     WeatherSparse {
-        #[clap(long, default_value = "100000")]
+        #[arg(long, default_value = "100000")]
         entries: usize,
     },
 }

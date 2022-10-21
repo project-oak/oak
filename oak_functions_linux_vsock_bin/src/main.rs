@@ -40,9 +40,9 @@ use std::os::unix::{io::FromRawFd, prelude::RawFd};
 use vsock::VsockStream;
 
 #[derive(Parser, Clone, Debug)]
-#[clap(about = "Oak Functions Loader Linux VSock")]
+#[command(about = "Oak Functions Loader Linux VSock")]
 pub struct Opt {
-    #[clap(
+    #[arg(
         long,
         default_value = "1023",
         help = "File descriptor to use for the communication channel"

@@ -25,6 +25,7 @@ mod schema {
     #![allow(
         clippy::derivable_impls,
         clippy::extra_unused_lifetimes,
+        clippy::missing_safety_doc,
         clippy::needless_borrow,
         dead_code,
         unused_imports
@@ -58,5 +59,5 @@ fn it_should_handle_echo_requests() {
     let result = client.echo(owned_request_flatbuffer.into_vec());
 
     assert_matches!(result, Ok(_));
-    assert_matches!(result.unwrap().get().body(), Some(body) if body == TEST_DATA);
+    assert_matches!(result.unwrap().get().body(), Some(body) if body.bytes() == TEST_DATA);
 }

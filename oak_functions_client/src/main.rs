@@ -27,32 +27,32 @@ const TWO_MIB: usize = (2 * 1024) ^ 2;
 const LARGE_MESSAGE: [u8; TWO_MIB] = [0; TWO_MIB];
 
 #[derive(Parser, Clone)]
-#[clap(about = "Oak Functions Client")]
+#[command(about = "Oak Functions Client")]
 pub struct Opt {
-    #[clap(
+    #[arg(
         long,
         help = "URI of the Oak Functions application to connect to",
         default_value = "http://localhost:8080"
     )]
     uri: String,
 
-    #[clap(
+    #[arg(
         long,
         help = "request payload",
-        required_unless_present = "test-large-message"
+        required_unless_present = "test_large_message"
     )]
     request: Option<String>,
 
     /// Optional, only for testing.
-    #[clap(long, help = "expected response body, for testing")]
+    #[arg(long, help = "expected response body, for testing")]
     expected_response_pattern: Option<String>,
 
     /// Number of times the request should be sent, and the expected response validated.
-    #[clap(long, requires_all = &["request", "expected-response-pattern"])]
+    #[arg(long, requires_all = &["request", "expected_response_pattern"])]
     iterations: Option<usize>,
 
     /// Test sending a large message
-    #[clap(long, conflicts_with_all = &["request", "expected-response-pattern", "iterations"])]
+    #[arg(long, conflicts_with_all = &["request", "expected_response_pattern", "iterations"])]
     test_large_message: bool,
 }
 

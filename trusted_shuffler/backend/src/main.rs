@@ -18,12 +18,10 @@
 
 use anyhow::Context;
 use clap::Parser;
-
 use echo::{
     echo_server::{Echo, EchoServer},
     EchoRequest, EchoResponse,
 };
-
 use futures_util::FutureExt;
 use hyper::{
     service::{make_service_fn, service_fn},
@@ -38,15 +36,15 @@ pub mod echo {
 }
 
 #[derive(Parser, Clone)]
-#[clap(about = "Backend for Trusted Shuffler Example")]
+#[command(about = "Backend for Trusted Shuffler Example")]
 pub struct Opt {
-    #[structopt(
+    #[arg(
         long,
         help = "Address to listen on for the server",
         default_value = "[::]:8888"
     )]
     listen_address: String,
-    #[structopt(long, help = "Listen for gRPC requests")]
+    #[arg(long, help = "Listen for gRPC requests")]
     use_grpc: bool,
 }
 

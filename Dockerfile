@@ -270,15 +270,15 @@ RUN chmod +x ${install_dir}/cargo-deny
 
 # Install cargo-udeps
 # https://github.com/est31/cargo-udeps
-ARG udeps_version=v0.1.26
-ARG udeps_dir=cargo-udeps-${udeps_version}-x86_64-unknown-linux-gnu
-ARG udeps_location=https://github.com/est31/cargo-udeps/releases/download/${udeps_version}/cargo-udeps-${udeps_version}-x86_64-unknown-linux-gnu.tar.gz
+ARG udeps_version=0.1.33
+ARG udeps_dir=cargo-udeps-v${udeps_version}-x86_64-unknown-linux-gnu
+ARG udeps_location=https://github.com/est31/cargo-udeps/releases/download/v${udeps_version}/cargo-udeps-v${udeps_version}-x86_64-unknown-linux-gnu.tar.gz
 RUN curl --location ${udeps_location} | tar --extract --gzip --directory=${install_dir} --strip-components=2 ./${udeps_dir}/cargo-udeps
 RUN chmod +x ${install_dir}/cargo-udeps
 
 # Install rust-analyzer
 # https://github.com/rust-analyzer/rust-analyzer
-ARG rust_analyzer_version=2022-02-14
+ARG rust_analyzer_version=2022-10-17
 ARG rust_analyzer_location=https://github.com/rust-analyzer/rust-analyzer/releases/download/${rust_analyzer_version}/rust-analyzer-x86_64-unknown-linux-gnu.gz
 RUN curl --location ${rust_analyzer_location} | gzip --decompress "$@" > ${install_dir}/rust-analyzer
 RUN chmod +x ${install_dir}/rust-analyzer
@@ -289,9 +289,9 @@ ENV CARGO_HOME ""
 
 # Install sccache
 # https://github.com/mozilla/sccache
-ARG sccache_version=v0.2.15
+ARG sccache_version=0.2.15
 ARG sccache_dir=/usr/local/sccache
-ARG sccache_location=https://github.com/mozilla/sccache/releases/download/${sccache_version}/sccache-${sccache_version}-x86_64-unknown-linux-musl.tar.gz
+ARG sccache_location=https://github.com/mozilla/sccache/releases/download/v${sccache_version}/sccache-v${sccache_version}-x86_64-unknown-linux-musl.tar.gz
 ENV PATH "${sccache_dir}:${PATH}"
 RUN mkdir --parents ${sccache_dir} \
   && curl --location ${sccache_location} | tar --extract --gzip --directory=${sccache_dir} --strip-components=1 \
@@ -299,20 +299,16 @@ RUN mkdir --parents ${sccache_dir} \
 
 # Install flatbuffers
 # https://github.com/google/flatbuffers
-# We build the recent flatc version that generates no_std compatible rust code.
-# Once a release with that commit has been issued we can revert to using
-# a released binary.
-# Ref:https://chromium.googlesource.com/external/github.com/google/flatbuffers/+/750dde766990d75f849370582a0f90307c410537
-ARG flatc_commit=750dde766990d75f849370582a0f90307c410537
-ARG flatbuffer_tmp_dir=/tmp/flatbuffer
-RUN git clone https://github.com/google/flatbuffers.git ${flatbuffer_tmp_dir}
-WORKDIR ${flatbuffer_tmp_dir}
-RUN git checkout ${flatc_commit} \
-  && cmake -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release \
-  && make -j \
-  && cp ./flatc -d /usr/local/bin/ \
-  && chmod +x /usr/local/bin/flatc \
-  && rm -rf ${flatbuffer_tmp_dir} \
+ARG flatc_version=22.9.29
+ARG flatc_digest=sha256:d5eeb01ff1a9b98573b4c92845ff3adea39be632746a0a0747a24511cac1453a
+ARG flatc_url=https://github.com/google/flatbuffers/releases/download/v${flatc_version}/Linux.flatc.binary.clang++-12.zip
+ARG flatc_temp=/tmp/flatc.zip
+ARG flatc_dir=/usr/local/flatc
+ENV PATH "${flatc_dir}:${PATH}"
+RUN ent get ${flatc_digest} --url=${flatc_url} > ${flatc_temp} \
+  && unzip ${flatc_temp} -d ${flatc_dir} \
+  && chmod +x ${flatc_dir}/flatc \
+  && rm -rf ${flatc_temp} \
   && flatc --version
 
 # Install wasm-pack.

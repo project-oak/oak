@@ -28,15 +28,15 @@ const ECHO_PATH: &str = "encrypted_echo";
 const PUBLIC_KEY_INFO_PATH: &str = "public_key_info";
 
 #[derive(Parser, Clone)]
-#[clap(about = "Offline Attestation Client")]
+#[command(about = "Offline Attestation Client")]
 pub struct Opt {
-    #[clap(
+    #[arg(
         long,
         help = "URL of the server",
         default_value = "http://localhost:8080"
     )]
     url: String,
-    #[clap(
+    #[arg(
         long,
         help = "The message to send to the server",
         default_value = "test"

@@ -7,7 +7,8 @@ license = "Apache-2.0"
 [dependencies]
 
 [dev-dependencies]
-flatbuffers = "*"
+# Ensure no_std compatibility. TODO(#2920): remove once https://github.com/google/flatbuffers/pull/7338 is merged.
+flatbuffers = { git = "https://github.com/google/flatbuffers.git", rev = "5792623df42e6165a376907bbb8e6090d0946db5", default-features = false }
 maplit = "*"
 oak_idl = { path = "../oak_idl", features = ["async-clients"] }
 async-trait = "*"

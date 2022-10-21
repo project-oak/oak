@@ -10,11 +10,7 @@ vulnerability = "deny"
 unmaintained = "deny"
 yanked = "deny"
 notice = "deny"
-ignore = [
-  # We rely on flatbuffers, which generates potentially unsafe code via "safe" APIs.
-  # See https://github.com/google/flatbuffers/issues/6627
-  "RUSTSEC-2021-0122",
-]
+ignore = []
 
 [bans]
 multiple-versions = "allow"
@@ -27,5 +23,5 @@ unknown-git = "allow"
 # List of allowed licenses.
 # For more detailed information see http://go/thirdpartylicenses.
 [licenses]
-allow = ["Apache-2.0", "BSD-2-Clause", "MIT"]
+allow = ["Apache-2.0", "BSD-2-Clause", "MIT", "Unicode-DFS-2016"]
 copyleft = "deny"
