@@ -34,7 +34,7 @@ cc_library(
 
 cc_library(
     name = "hdrs",
-    hdrs = ["tflite_micro.h"],
+    hdrs = ["include/tflite_micro.h"],
 )
 
 # --define no_sse=1 to build tflite w/o streaming SIMD instructions.

@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef CC_TFLITE_MICRO_OAK_TFLITE_MICRO_H_
-#define CC_TFLITE_MICRO_OAK_TFLITE_MICRO_H_
+#ifndef CC_TFLITE_MICRO_OAK_INCLUDE_TFLITE_MICRO_H_
+#define CC_TFLITE_MICRO_OAK_INCLUDE_TFLITE_MICRO_H_
 
 #include <stddef.h>
 #include <stdint.h>
@@ -36,4 +36,4 @@ int tflite_run(
 }
 #endif
 
-#endif  // CC_TFLITE_MICRO_OAK_TFLITE_MICRO_H_
+#endif  // CC_TFLITE_MICRO_OAK_INCLUDE_TFLITE_MICRO_H_

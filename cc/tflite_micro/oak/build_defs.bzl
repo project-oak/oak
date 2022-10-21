@@ -43,7 +43,7 @@ def oak_copts():
         "-Wnon-virtual-dtor",
         "-DFARMHASH_NO_CXX_STRING",
         "-DTF_LITE_STATIC_MEMORY",
-        "-Icc/tflite_micro/oak",
+        "-Icc/tflite_micro/oak/include",
         "-Icc/tflite_micro/generated",
         "-Icc/tflite_micro/generated/third_party/flatbuffers/include",
         "-Icc/tflite_micro/generated/third_party/gemmlowp",
