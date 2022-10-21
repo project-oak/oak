@@ -19,6 +19,7 @@ package(
     licenses = ["notice"],
 )
 
+# pico libc for TFLM on Oak Restricted Kernel.
 cc_library(
     name = "libc",
     srcs = [
@@ -37,8 +38,4 @@ cc_library(
         "//conditions:default": glob(["string/*.S"]),
     }),
     copts = ["-Icc/tflite_micro/oak/libc/include"],
-    linkopts = [
-        # Implement __clrsbdi2 to count the number of leading redundant sign bits
-        "-lgcc",
-    ],
 )
