@@ -53,7 +53,7 @@ def oak_copts():
         "//conditions:default": ["-msse4.2"],
     }) + select({
         "//cc/tflite_micro/oak:no_opt": ["-O0"],
-        "//conditions:default": ["-O3"],
+        "//conditions:default": ["-O2", "-DNDEBUG"],
     })
 
 def generate_cc_arrays(name, src, out, visibility = None):
