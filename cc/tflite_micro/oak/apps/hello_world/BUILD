@@ -77,7 +77,6 @@ cc_library(
     copts = oak_copts() + [
         "-Icc/tflite_micro/oak/apps/hello_world",
     ],
-    linkopts = ["-nostdlib"],
 )
 
 # Fully static library linked by oak_tensorflow_service.
@@ -97,4 +96,5 @@ cc_binary(
         "//cc/tflite_micro/oak/apps:start_file",
     ],
     copts = oak_copts(),
+    linkopts = ["-nostdlib"],
 )
