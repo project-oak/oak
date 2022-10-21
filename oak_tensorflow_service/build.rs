@@ -14,11 +14,13 @@
 // limitations under the License.
 //
 
-use std::{path::PathBuf, process::Command};
+use std::{path::Path, path::PathBuf, process::Command};
+use glob::glob;
 
 const SCHEMA: &str = "schema.fbs";
-const TFLITE_SOURCE_DIR: &str = "cc/tflite_micro";
-const TFLITE_LIBRARY_NAME: &str = "tflite-micro";
+const TFLITE_APP_DIR: &str = "cc/tflite_micro/oak/apps/hello_world";
+const TFLITE_APP_LIBRARY_NAME: &str = "hello_world_app";
+const TFLITE_SOURCES_PATTERN: &str = "cc/tflite_micro/**/*";
 
 fn main() {
     println!("cargo:rerun-if-changed={}", SCHEMA);
@@ -34,15 +36,26 @@ fn main() {
     build_tflite();
 }
 
+fn rerun_if_changed<P: AsRef<Path>>(path: P) {
+    println!("cargo:rerun-if-changed={}", path.as_ref().display());
+}
+
 /// Builds TensorFlow Lite static library and adds the corresponding build
 /// directory to the library search path.
 fn build_tflite() {
     // WORKSPACE_ROOT is set in .cargo/config.toml.
-    let source_dir: PathBuf = { [env!("WORKSPACE_ROOT"), TFLITE_SOURCE_DIR].iter().collect() };
     // Rerun `build.rs` next time if TensorFlow Lite library sources have been changed.
-    println!("cargo:rerun-if-changed={}", source_dir.display());
+    let path_pattern =
+        format!("{}/{}", env!("WORKSPACE_ROOT"), TFLITE_SOURCES_PATTERN);
+    for entry in glob(&path_pattern).expect(
+        "Failed to read tflite source pattern") {
+        match entry {
+            Ok(path) => rerun_if_changed(&path),
+            Err(e) => println!("{:?}", e),
+        }
+    }
 
-    let build_target = format!("//{}:{}", TFLITE_SOURCE_DIR, TFLITE_LIBRARY_NAME);
+    let build_target = format!("//{}:{}", TFLITE_APP_DIR, TFLITE_APP_LIBRARY_NAME);
     let status = Command::new("bazel")
         .arg("build")
         .arg(build_target)
@@ -54,7 +67,7 @@ fn build_tflite() {
 
     // Add TensorFlow Lite build directory to the library search path.
     let build_dir: PathBuf = {
-        [env!("WORKSPACE_ROOT"), "bazel-bin", TFLITE_SOURCE_DIR]
+        [env!("WORKSPACE_ROOT"), "bazel-bin", TFLITE_APP_DIR]
             .iter()
             .collect()
     };
