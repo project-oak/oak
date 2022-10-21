@@ -44,6 +44,8 @@ cc_library(
         "//cc/tflite_micro/oak:debug_log",
         # Use Oak pico libc
         "//cc/tflite_micro/oak/libc",
+        # Pick up libm complements for Oak Restricted Kernel
+        "//cc/tflite_micro/oak/libm:oak_kernel_complements",
     ],
     linkstatic = 1,
 )
