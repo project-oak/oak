@@ -14,8 +14,11 @@
 // limitations under the License.
 //
 
-use std::{path::Path, path::PathBuf, process::Command};
 use glob::glob;
+use std::{
+    path::{Path, PathBuf},
+    process::Command,
+};
 
 const SCHEMA: &str = "schema.fbs";
 const TFLITE_APP_DIR: &str = "cc/tflite_micro/oak/apps/hello_world";
@@ -45,10 +48,8 @@ fn rerun_if_changed<P: AsRef<Path>>(path: P) {
 fn build_tflite() {
     // WORKSPACE_ROOT is set in .cargo/config.toml.
     // Rerun `build.rs` next time if TensorFlow Lite library sources have been changed.
-    let path_pattern =
-        format!("{}/{}", env!("WORKSPACE_ROOT"), TFLITE_SOURCES_PATTERN);
-    for entry in glob(&path_pattern).expect(
-        "Failed to read tflite source pattern") {
+    let path_pattern = format!("{}/{}", env!("WORKSPACE_ROOT"), TFLITE_SOURCES_PATTERN);
+    for entry in glob(&path_pattern).expect("Failed to read tflite source pattern") {
         match entry {
             Ok(path) => rerun_if_changed(&path),
             Err(e) => println!("{:?}", e),

@@ -26,19 +26,20 @@ package(
 
 cc_library(
     name = "tflm",
-    hdrs = glob([
-        "tensorflow/lite/**/*.h",
-        "third_party/flatbuffers/**/*.h",
-        "third_party/gemmlowp/**/*.h",
-        "third_party/ruy/**/*.h",
-    ]),
     srcs = glob(
         ["tensorflow/lite/**/*.cc"],
         exclude = [
             "tensorflow/lite/micro/debug_log.cc",
         ],
     ),
+    hdrs = glob([
+        "tensorflow/lite/**/*.h",
+        "third_party/flatbuffers/**/*.h",
+        "third_party/gemmlowp/**/*.h",
+        "third_party/ruy/**/*.h",
+    ]),
     copts = oak_copts(),
+    linkstatic = 1,
     deps = [
         # Use Oak DebugLog implementation
         "//cc/tflite_micro/oak:debug_log",
@@ -49,5 +50,4 @@ cc_library(
         # Pick up libm complements for Oak Restricted Kernel
         "//cc/tflite_micro/oak/libm:oak_kernel_complements",
     ],
-    linkstatic = 1,
 )

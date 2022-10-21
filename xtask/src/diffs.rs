@@ -97,6 +97,22 @@ pub fn modified_files(scope: &Scope) -> ModifiedContent {
         }
     }
 
+    // Don't check on generated tensorflow-lite-for-microcontroller sources.
+    // Don't check libc whose implementations are mostly pulled from open sources.
+    if let Some(ref paths) = files {
+        return ModifiedContent {
+            files: Some(
+                paths
+                    .iter()
+                    .filter(|path| {
+                        !path.contains("tflite_micro/generated/") && !path.contains("oak/libc/")
+                    })
+                    .cloned()
+                    .collect(),
+            ),
+        };
+    }
+
     ModifiedContent { files }
 }
 

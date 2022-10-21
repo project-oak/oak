@@ -32,7 +32,7 @@ cc_library(
         "//conditions:default": glob(["string/*.S"]) + ["string/memset.cc"],
     }),
     hdrs = glob(["**/*.h"]) + [
-        "strtox.c"
+        "strtox.c",
     ] + select({
         "//cc/tflite_micro/oak:no_sse": [],
         "//conditions:default": glob(["string/*.S"]),

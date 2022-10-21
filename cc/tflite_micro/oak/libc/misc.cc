@@ -42,7 +42,6 @@ void __assert_fail(
 
 // Used in TFLM types and runtime_shape header files.
 void abort() {
-  // TODO: trigger a panic or VM shutdown
   MicroPrintf("Aborting...");
 
   // abort is a 'noreturn' function.

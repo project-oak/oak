@@ -14,6 +14,8 @@
 # limitations under the License.
 #
 
+"""Aggregates TFLM-on-Oak build copts and provides tflite model conversion macro."""
+
 def oak_copts():
     return [
         "-std=c++11",

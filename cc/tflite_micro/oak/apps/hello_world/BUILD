@@ -19,7 +19,6 @@ load(
     "generate_cc_arrays",
     "oak_copts",
 )
-
 load(
     "//cc:build_defs.bzl",
     "cc_static_library",
@@ -68,14 +67,14 @@ cc_library(
         "//conditions:default": ["output_handler.cc"],
     }),
     hdrs = ["output_handler.h"],
+    copts = oak_copts() + [
+        "-Icc/tflite_micro/oak/apps/hello_world",
+    ],
+    linkstatic = 1,
     deps = [
         ":hello_world_model",
         "//cc/tflite_micro/generated:tflm",
         "//cc/tflite_micro/oak:hdrs",
-    ],
-    linkstatic = 1,
-    copts = oak_copts() + [
-        "-Icc/tflite_micro/oak/apps/hello_world",
     ],
 )
 
@@ -88,13 +87,13 @@ cc_static_library(
 # Freestanding executable running on host for debugging
 # i.e. model input, output, ops and pipeline via gdb/lldb.
 cc_binary(
-    srcs = ["main.cc"],
     name = "hello_world_freestanding_bin",
+    srcs = ["main.cc"],
+    copts = oak_copts(),
+    linkopts = ["-nostdlib"],
     deps = [
         ":hello_world",
         "//cc/tflite_micro/oak:hdrs",
         "//cc/tflite_micro/oak/apps:start_file",
     ],
-    copts = oak_copts(),
-    linkopts = ["-nostdlib"],
 )
