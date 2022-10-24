@@ -73,7 +73,7 @@ cc_library(
     linkstatic = 1,
     deps = [
         ":hello_world_model",
-        "//cc/tflite_micro/generated:tflm",
+        "//cc/tflite_micro:tflm-generated",
         "//cc/tflite_micro/oak:hdrs",
     ],
 )

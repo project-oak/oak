@@ -14,17 +14,48 @@
 # limitations under the License.
 #
 
+load(
+    "//cc/tflite_micro/oak:build_defs.bzl",
+    "oak_copts",
+)
+
 package(
     default_visibility = ["//visibility:public"],
     licenses = ["notice"],
 )
 
+#
+# The `generated` directory is generated from the tflite-micro git:
+# https://github.com/tensorflow/tflite-micro by:
+# `python3 tensorflow/lite/micro/tools/project_generation/create_tflm_tree.py generated`
+#
+# The build target residing outside of the generated directory allows us to
+# upgrade/downgrade (delete old then copy new) the generated directory cleanly.
+#
 cc_library(
-    name = "tflite-micro",
-    srcs = ["tflite_micro.cc"],
-    hdrs = ["tflite_micro.h"],
+    name = "tflm-generated",
+    srcs = glob(
+        ["generated/tensorflow/lite/**/*.cc"],
+        exclude = [
+            "generated/tensorflow/lite/micro/debug_log.cc",
+        ],
+    ),
+    hdrs = glob([
+        "generated/tensorflow/lite/**/*.h",
+        "generated/third_party/flatbuffers/**/*.h",
+        "generated/third_party/gemmlowp/**/*.h",
+        "generated/third_party/ruy/**/*.h",
+    ]),
+    copts = oak_copts(),
     linkstatic = 1,
     deps = [
-        "@com_github_tensorflow_tflite_micro//tensorflow/lite/micro:micro_framework",
+        # Use Oak DebugLog implementation
+        "//cc/tflite_micro/oak:debug_log",
+        # Use Oak pico libc
+        "//cc/tflite_micro/oak/libc",
+        # Use Oak pico libgcc
+        "//cc/tflite_micro/oak/libgcc",
+        # Pick up libm complements for Oak Restricted Kernel
+        "//cc/tflite_micro/oak/libm:oak_kernel_complements",
     ],
 )
