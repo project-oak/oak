@@ -16,7 +16,7 @@
 
 //! Exported interface for interacting with the kernel from C.
 
-use crate::logging::SERIAL1;
+use crate::{i8042::shutdown, logging::SERIAL1};
 use alloc::alloc::{alloc, dealloc, Layout};
 use core::{
     cell::{LazyCell, RefCell},
@@ -24,6 +24,7 @@ use core::{
     ptr::null_mut,
 };
 use hashbrown::HashMap;
+use log::info;
 use spinning_top::{const_spinlock, Spinlock};
 use static_assertions::const_assert;
 
@@ -126,4 +127,14 @@ pub unsafe extern "C" fn write_console(ptr: *const u8, size: usize) -> isize {
     }
 
     size as isize
+}
+
+/// Causes the VM to exit after logging the code.
+///
+/// The function is intentionally not named "exit" to avoid naming clashes. It is up to the
+/// compatibility layer to make sure that this function is used for exiting.
+#[no_mangle]
+pub extern "C" fn exit_vm(code: i32) {
+    info!("Exit called with code: {}", code);
+    shutdown();
 }
