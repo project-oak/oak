@@ -55,7 +55,7 @@ that are used during the _Data Exchange_ stage:
 - Client Session Key
   - Which is used to encrypt messages sent by the Client
 
-It's important to node that for each new request **Client** performs the Remote
+It's important to note that for each new request **Client** performs the Remote
 Attestation from the start in order to create a new pair of Session keys.
 
 ## Workflow

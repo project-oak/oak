@@ -516,6 +516,8 @@ impl<G: AttestationGenerator, V: AttestationVerifier> ServerHandshaker<G, V> {
     }
 }
 
+/// Used by the client and server to encrypt and decrypt messages with the keys established in the
+/// remote attestation protocol handshake.
 pub struct Encryptor {
     encryptor: AeadEncryptor,
 }

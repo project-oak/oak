@@ -26,8 +26,7 @@ enforcing strong privacy guarantees about its execution.
 In order for these guarantees to be transferred to remote clients, Oak Functions
 is expected to be run in a
 [Trusted Execution Environment (TEE)](https://en.wikipedia.org/wiki/Trusted_execution_environment),
-so that clients can perform
-[Remote Attestation](https://en.wikipedia.org/wiki/Trusted_Computing#REMOTE-ATTESTATION)
+so that clients can perform [Remote Attestation](./docs/remote-attestation.md)
 in order to establish that a legitimate version of the Oak trusted runtime is
 indeed running server side, before actually sending any data to it.
 
