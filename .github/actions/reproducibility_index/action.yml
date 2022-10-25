@@ -69,7 +69,7 @@ runs:
 
     # Also post a reply on the PR thread with the contents of the index, after merge.
     - name: Post Reproducibility Index (post-merge only)
-      uses: actions/github-script@0.9.0
+      uses: actions/github-script@v6
       if: github.event_name == 'push'
       with:
         github-token: ${{inputs.GITHUB_TOKEN}}
