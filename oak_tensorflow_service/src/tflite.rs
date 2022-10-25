@@ -16,6 +16,25 @@
 
 use alloc::{vec, vec::Vec};
 use anyhow::anyhow;
+use log::{log, Level};
+
+// TODO(#3297): Don't use null terminated and use `string_view` instead.
+/// Prints `message` to the debug Restricted Kernel logs.
+/// These logs are being sent outside of the Trusted Execution Environment.
+#[no_mangle]
+pub unsafe extern "C" fn oak_log_debug(message_ptr: *const core::ffi::c_char, message_len: usize) {
+    let message_bytes =
+        unsafe { alloc::slice::from_raw_parts(message_ptr as *const u8, message_len) };
+    if let Ok(message_string) = core::str::from_utf8(message_bytes) {
+        log!(Level::Debug, "{}", message_string);
+    } else {
+        log!(
+            Level::Debug,
+            "Couldn't parse a UTF-8 string: {:?}",
+            message_bytes
+        );
+    }
+}
 
 // TODO(#3297): Decide the TensorFlow model format to be passed as `model_bytes`.
 #[link(name = "tflite-micro", kind = "static")]

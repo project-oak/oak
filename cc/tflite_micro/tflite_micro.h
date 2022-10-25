@@ -20,6 +20,11 @@
 #include <stddef.h>
 #include <stdint.h>
 
+// TODO(#3297): Don't use null terminated and use `string_view` instead.
+/// Wrapper for the `oak_log_debug` that counts the length of the message
+/// before sending it to the Rust logger.
+void tflite_log_debug(const char* message);
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -29,6 +34,8 @@ int tflite_init(const uint8_t* model_bytes, size_t model_bytes_len,
 
 int tflite_run(const uint8_t* input_bytes, size_t input_bytes_len, uint8_t* output_bytes,
                size_t* output_bytes_len);
+
+void oak_log_debug(const char* message, size_t message_len);
 
 #ifdef __cplusplus
 }
