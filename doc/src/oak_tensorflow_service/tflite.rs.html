@@ -95,6 +95,25 @@
 <span id="95">95</span>
 <span id="96">96</span>
 <span id="97">97</span>
+<span id="98">98</span>
+<span id="99">99</span>
+<span id="100">100</span>
+<span id="101">101</span>
+<span id="102">102</span>
+<span id="103">103</span>
+<span id="104">104</span>
+<span id="105">105</span>
+<span id="106">106</span>
+<span id="107">107</span>
+<span id="108">108</span>
+<span id="109">109</span>
+<span id="110">110</span>
+<span id="111">111</span>
+<span id="112">112</span>
+<span id="113">113</span>
+<span id="114">114</span>
+<span id="115">115</span>
+<span id="116">116</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -113,6 +132,25 @@
 
 </span><span class="kw">use </span>alloc::{vec, vec::Vec};
 <span class="kw">use </span>anyhow::anyhow;
+<span class="kw">use </span>log::{log, Level};
+
+<span class="comment">// TODO(#3297): Don&#39;t use null terminated and use `string_view` instead.
+</span><span class="doccomment">/// Prints `message` to the debug Restricted Kernel logs.
+/// These logs are being sent outside of the Trusted Execution Environment.
+</span><span class="attribute">#[no_mangle]
+</span><span class="kw">pub unsafe extern </span><span class="string">&quot;C&quot; </span><span class="kw">fn </span>oak_log_debug(message_ptr: <span class="kw-2">*const </span>core::ffi::c_char, message_len: usize) {
+    <span class="kw">let </span>message_bytes =
+        <span class="kw">unsafe </span>{ alloc::slice::from_raw_parts(message_ptr <span class="kw">as </span><span class="kw-2">*const </span>u8, message_len) };
+    <span class="kw">if let </span><span class="prelude-val">Ok</span>(message_string) = core::str::from_utf8(message_bytes) {
+        <span class="macro">log!</span>(Level::Debug, <span class="string">&quot;{}&quot;</span>, message_string);
+    } <span class="kw">else </span>{
+        <span class="macro">log!</span>(
+            Level::Debug,
+            <span class="string">&quot;Couldn&#39;t parse a UTF-8 string: {:?}&quot;</span>,
+            message_bytes
+        );
+    }
+}
 
 <span class="comment">// TODO(#3297): Decide the TensorFlow model format to be passed as `model_bytes`.
 </span><span class="attribute">#[link(name = <span class="string">&quot;tflite-micro&quot;</span>, kind = <span class="string">&quot;static&quot;</span>)]
