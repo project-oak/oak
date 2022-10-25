@@ -40,15 +40,16 @@ pub unsafe fn create_offset_map<S: PageSize, A: FrameAllocator<Size4KiB>, M: Map
     frame_allocator: &mut A,
 ) -> Result<(), MapToError<S>> {
     for (i, frame) in range.enumerate() {
+        // We don't set `PageTableFlags::GLOBAL` in `parent_table_flags` because Intel and AMD CPUs
+        // behave differently (Intel ignores the `G` bit in parent page table entries, AMD ignores
+        // it in lower entries _except_ PML4 and PML5); the `G` bit has semantic meaning only in the
+        // lowest level of page tables.
         mapper
             .map_to_with_table_flags(
                 Page::<S>::from_start_address(offset + i * (S::SIZE as usize)).unwrap(),
                 frame,
                 flags,
-                PageTableFlags::PRESENT
-                    | PageTableFlags::GLOBAL
-                    | PageTableFlags::WRITABLE
-                    | PageTableFlags::ENCRYPTED,
+                PageTableFlags::PRESENT | PageTableFlags::WRITABLE | PageTableFlags::ENCRYPTED,
                 frame_allocator,
             )?
             .ignore();
