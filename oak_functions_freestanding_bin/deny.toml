@@ -10,7 +10,10 @@ vulnerability = "deny"
 unmaintained = "deny"
 yanked = "deny"
 notice = "deny"
-ignore = []
+ignore = [
+  # TODO(#3377): Remove when updated.
+  "RUSTSEC-2022-0061"
+]
 
 [bans]
 multiple-versions = "allow"

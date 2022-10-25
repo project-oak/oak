@@ -13,6 +13,8 @@ notice = "deny"
 ignore = [
   # TODO(#2421): Remove when no longer required.
   "RUSTSEC-2021-0127",
+  # TODO(#3377): Remove when updated.
+  "RUSTSEC-2022-0061"
 ]
 
 [bans]
