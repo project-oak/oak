@@ -158,3 +158,38 @@ jobs:
       upload-assets: true
       # Build the generator from source.
       compile-generator: true
+
+  dsse-upload:
+    if: github.event_name == 'push'
+    needs: [provenance]
+    steps:
+      - name: Download DSSE document
+        uses: actions/download-artifact@v3
+        with:
+          name: 'oak_functions_freestanding_bin.intoto.jsonl'
+
+      # See https://github.com/google/ent
+      - name: Download Ent CLI
+        if: steps.cache-ent.outputs.cache-hit != 'true'
+        env:
+          ENT_URL: https://ent-server-62sa4xcfia-ew.a.run.app
+          ENT_DIGEST: sha256:944a34854a2bf9c5d32f3bffa93885ee1c7ef8ab0f4fcc30898a981050ae4233
+        run: |
+          curl --fail ${ENT_URL}/raw/${ENT_DIGEST} > /usr/local/bin/ent
+          chmod +x /usr/local/bin/ent
+          ent
+          cat <<EOF > ~/.config/ent.toml
+          [[remotes]]
+          name = 'ent-store'
+          url = '${ENT_URL}'
+          write = true
+          api_key = '${{ secrets.ENT_API_KEY }}'
+          EOF
+
+      # TODO(#3339): publish as a comment
+      - name: Print SHA256 hash
+        run: sha256sum oak_functions_freestanding_bin.intoto.jsonl
+
+      - name: Upload to Ent
+        run: |
+          ent put oak_functions_freestanding_bin.intoto.jsonl
