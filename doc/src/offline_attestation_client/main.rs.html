@@ -1,9 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `experimental/offline_attestation/client/src/main.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>main.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../ayu.css" disabled><link rel="stylesheet" type="text/css" href="../../dark.css" disabled><link rel="stylesheet" type="text/css" href="../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../storage.js"></script><script src="../../crates.js"></script><script defer src="../../main.js"></script><script defer src="../../source-script.js"></script><script defer src="../../source-files.js"></script>
-    <noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../offline_attestation_client/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div>
-        </a><h2 class="location"></h2>
-    </nav>
-    <nav class="sidebar"><a class="sidebar-logo" href="../../offline_attestation_client/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div>
-        </a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../offline_attestation_client/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><div class="theme-picker hidden"><button id="theme-picker" aria-label="Pick another theme!" aria-haspopup="menu" title="themes"><img width="22" height="22" alt="Pick another theme!" src="../../brush.svg"></button><div id="theme-choices" role="menu"></div></div><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><button type="button" id="help-button" title="help">?</button><a id="settings-menu" href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../wheel.svg"></a></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `experimental/offline_attestation/client/src/main.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>main.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" href="../../normalize.css"><link rel="stylesheet" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" href="../../ayu.css" disabled><link rel="stylesheet" href="../../dark.css" disabled><link rel="stylesheet" href="../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../storage.js"></script><script defer src="../../source-script.js"></script><script defer src="../../source-files.js"></script><script defer src="../../main.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><a class="sidebar-logo" href="../../offline_attestation_client/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../offline_attestation_client/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="src-line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -148,151 +143,150 @@
 <span id="143">143</span>
 <span id="144">144</span>
 <span id="145">145</span>
-</pre><pre class="rust"><code><span class="comment">//</span>
-<span class="comment">// Copyright 2022 The Project Oak Authors</span>
-<span class="comment">//</span>
-<span class="comment">// Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
-<span class="comment">// you may not use this file except in compliance with the License.</span>
-<span class="comment">// You may obtain a copy of the License at</span>
-<span class="comment">//</span>
-<span class="comment">//     http://www.apache.org/licenses/LICENSE-2.0</span>
-<span class="comment">//</span>
-<span class="comment">// Unless required by applicable law or agreed to in writing, software</span>
-<span class="comment">// distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
-<span class="comment">// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
-<span class="comment">// See the License for the specific language governing permissions and</span>
-<span class="comment">// limitations under the License.</span>
-<span class="comment">//</span>
+</pre><pre class="rust"><code><span class="comment">//
+// Copyright 2022 The Project Oak Authors
+//
+// Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
-<span class="kw">use</span> <span class="ident">anyhow::anyhow</span>;
-<span class="kw">use</span> <span class="ident">clap::Parser</span>;
-<span class="kw">use</span> <span class="ident">log</span>::{<span class="ident">debug</span>, <span class="ident">info</span>};
-<span class="kw">use</span> <span class="ident">offline_attestation_shared</span>::{
-    <span class="ident">decrypt</span>, <span class="ident">encrypt</span>, <span class="ident">generate_private_key</span>, <span class="ident">serialize_public_key</span>, <span class="ident">EncryptedRequest</span>,
-    <span class="ident">EncryptedResponse</span>, <span class="ident">Handle</span>, <span class="ident">PublicKeyInfo</span>,
+</span><span class="kw">use </span>anyhow::anyhow;
+<span class="kw">use </span>clap::Parser;
+<span class="kw">use </span>log::{debug, info};
+<span class="kw">use </span>offline_attestation_shared::{
+    decrypt, encrypt, generate_private_key, serialize_public_key, EncryptedRequest,
+    EncryptedResponse, Handle, PublicKeyInfo,
 };
-<span class="kw">use</span> <span class="ident">url::Url</span>;
+<span class="kw">use </span>url::Url;
 
-<span class="kw">const</span> <span class="ident">ECHO_PATH</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;encrypted_echo&quot;</span>;
+<span class="kw">const </span>ECHO_PATH: <span class="kw-2">&amp;</span>str = <span class="string">&quot;encrypted_echo&quot;</span>;
 
-<span class="kw">const</span> <span class="ident">PUBLIC_KEY_INFO_PATH</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;public_key_info&quot;</span>;
+<span class="kw">const </span>PUBLIC_KEY_INFO_PATH: <span class="kw-2">&amp;</span>str = <span class="string">&quot;public_key_info&quot;</span>;
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Parser</span>, <span class="ident">Clone</span>)]</span>
-<span class="attribute">#[<span class="ident">clap</span>(<span class="ident">about</span> <span class="op">=</span> <span class="string">&quot;Offline Attestation Client&quot;</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Opt</span> {
-    <span class="attribute">#[<span class="ident">clap</span>(
-        <span class="ident">long</span>,
-        <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;URL of the server&quot;</span>,
-        <span class="ident">default_value</span> <span class="op">=</span> <span class="string">&quot;http://localhost:8080&quot;</span>
-    )]</span>
-    <span class="ident">url</span>: <span class="ident">String</span>,
-    <span class="attribute">#[<span class="ident">clap</span>(
-        <span class="ident">long</span>,
-        <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;The message to send to the server&quot;</span>,
-        <span class="ident">default_value</span> <span class="op">=</span> <span class="string">&quot;test&quot;</span>
-    )]</span>
-    <span class="ident">message</span>: <span class="ident">String</span>,
+<span class="attribute">#[derive(Parser, Clone)]
+#[command(about = <span class="string">&quot;Offline Attestation Client&quot;</span>)]
+</span><span class="kw">pub struct </span>Opt {
+    <span class="attribute">#[arg(
+        long,
+        help = <span class="string">&quot;URL of the server&quot;</span>,
+        default_value = <span class="string">&quot;http://localhost:8080&quot;
+    </span>)]
+    </span>url: String,
+    <span class="attribute">#[arg(
+        long,
+        help = <span class="string">&quot;The message to send to the server&quot;</span>,
+        default_value = <span class="string">&quot;test&quot;
+    </span>)]
+    </span>message: String,
 }
 
-<span class="attribute">#[<span class="ident">tokio::main</span>]</span>
-<span class="kw">async</span> <span class="kw">fn</span> <span class="ident">main</span>() -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-    <span class="ident">env_logger::init</span>();
-    <span class="ident">offline_attestation_shared::init</span>();
-    <span class="kw">let</span> <span class="ident">opt</span> <span class="op">=</span> <span class="ident">Opt::parse</span>();
-    <span class="kw">let</span> <span class="ident">base_url</span> <span class="op">=</span> <span class="ident">Url::parse</span>(<span class="kw-2">&amp;</span><span class="ident">opt</span>.<span class="ident">url</span>)<span class="question-mark">?</span>;
-    <span class="kw">let</span> <span class="ident">echo_url</span> <span class="op">=</span> <span class="ident">base_url</span>.<span class="ident">join</span>(<span class="ident">ECHO_PATH</span>)<span class="question-mark">?</span>;
-    <span class="kw">let</span> <span class="ident">public_key_info_url</span> <span class="op">=</span> <span class="ident">base_url</span>.<span class="ident">join</span>(<span class="ident">PUBLIC_KEY_INFO_PATH</span>)<span class="question-mark">?</span>;
+<span class="attribute">#[tokio::main]
+</span><span class="kw">async fn </span>main() -&gt; anyhow::Result&lt;()&gt; {
+    env_logger::init();
+    offline_attestation_shared::init();
+    <span class="kw">let </span>opt = Opt::parse();
+    <span class="kw">let </span>base_url = Url::parse(<span class="kw-2">&amp;</span>opt.url)<span class="question-mark">?</span>;
+    <span class="kw">let </span>echo_url = base_url.join(ECHO_PATH)<span class="question-mark">?</span>;
+    <span class="kw">let </span>public_key_info_url = base_url.join(PUBLIC_KEY_INFO_PATH)<span class="question-mark">?</span>;
 
-    <span class="kw">let</span> <span class="ident">message</span> <span class="op">=</span> <span class="ident">opt</span>.<span class="ident">message</span>.<span class="ident">as_bytes</span>();
-    <span class="macro">debug!</span>(<span class="string">&quot;Cleartext message: {:?}&quot;</span>, <span class="ident">message</span>);
+    <span class="kw">let </span>message = opt.message.as_bytes();
+    <span class="macro">debug!</span>(<span class="string">&quot;Cleartext message: {:?}&quot;</span>, message);
 
-    <span class="kw">let</span> <span class="ident">client</span> <span class="op">=</span> <span class="ident">reqwest::Client::new</span>();
+    <span class="kw">let </span>client = reqwest::Client::new();
 
-    <span class="comment">// For this example we fetch and validate the server&#39;s public key. In a more reslistic</span>
-    <span class="comment">// implementation this would happen out of band and be provided to the client.</span>
-    <span class="kw">let</span> <span class="ident">public_key_response</span> <span class="op">=</span> <span class="ident">client</span>.<span class="ident">get</span>(<span class="ident">public_key_info_url</span>).<span class="ident">send</span>().<span class="kw">await</span><span class="question-mark">?</span>;
-    <span class="kw">let</span> <span class="ident">public_key_info</span>: <span class="ident">PublicKeyInfo</span> <span class="op">=</span> <span class="ident">public_key_response</span>.<span class="ident">json</span>().<span class="kw">await</span><span class="question-mark">?</span>;
+    <span class="comment">// For this example we fetch and validate the server&#39;s public key. In a more reslistic
+    // implementation this would happen out of band and be provided to the client.
+    </span><span class="kw">let </span>public_key_response = client.get(public_key_info_url).send().<span class="kw">await</span><span class="question-mark">?</span>;
+    <span class="kw">let </span>public_key_info: PublicKeyInfo = public_key_response.json().<span class="kw">await</span><span class="question-mark">?</span>;
     <span class="macro">debug!</span>(
         <span class="string">&quot;Received server&#39;s public key: {:?}&quot;</span>,
-        <span class="ident">serde_json::to_string</span>(<span class="kw-2">&amp;</span><span class="ident">public_key_info</span>)<span class="question-mark">?</span>
-    );
-    <span class="ident">public_key_info</span>.<span class="ident">validate</span>()<span class="question-mark">?</span>;
+        serde_json::to_string(<span class="kw-2">&amp;</span>public_key_info)<span class="question-mark">?
+    </span>);
+    public_key_info.validate()<span class="question-mark">?</span>;
 
-    <span class="kw">let</span> <span class="ident">request_helper</span> <span class="op">=</span> <span class="ident">RequestHelper::new</span>(<span class="kw-2">&amp;</span><span class="ident">public_key_info</span>, <span class="ident">message</span>)<span class="question-mark">?</span>;
-    <span class="kw">let</span> <span class="ident">encrypted_request</span> <span class="op">=</span> <span class="ident">request_helper</span>.<span class="ident">generate_encrypted_request</span>()<span class="question-mark">?</span>;
+    <span class="kw">let </span>request_helper = RequestHelper::new(<span class="kw-2">&amp;</span>public_key_info, message)<span class="question-mark">?</span>;
+    <span class="kw">let </span>encrypted_request = request_helper.generate_encrypted_request()<span class="question-mark">?</span>;
 
     <span class="macro">debug!</span>(
         <span class="string">&quot;Encrypted request: {}&quot;</span>,
-        <span class="ident">serde_json::to_string</span>(<span class="kw-2">&amp;</span><span class="ident">encrypted_request</span>)<span class="question-mark">?</span>
-    );
+        serde_json::to_string(<span class="kw-2">&amp;</span>encrypted_request)<span class="question-mark">?
+    </span>);
 
-    <span class="comment">// Post the JSON-encoded encrypted request to the server.</span>
-    <span class="kw">let</span> <span class="ident">response</span> <span class="op">=</span> <span class="ident">client</span>
-        .<span class="ident">post</span>(<span class="ident">echo_url</span>)
-        .<span class="ident">json</span>(<span class="kw-2">&amp;</span><span class="ident">encrypted_request</span>)
-        .<span class="ident">send</span>()
+    <span class="comment">// Post the JSON-encoded encrypted request to the server.
+    </span><span class="kw">let </span>response = client
+        .post(echo_url)
+        .json(<span class="kw-2">&amp;</span>encrypted_request)
+        .send()
         .<span class="kw">await</span><span class="question-mark">?</span>;
-    <span class="kw">let</span> <span class="ident">encrypted_response</span>: <span class="ident">EncryptedResponse</span> <span class="op">=</span> <span class="ident">response</span>.<span class="ident">json</span>().<span class="kw">await</span><span class="question-mark">?</span>;
+    <span class="kw">let </span>encrypted_response: EncryptedResponse = response.json().<span class="kw">await</span><span class="question-mark">?</span>;
     <span class="macro">debug!</span>(
         <span class="string">&quot;Encrypted response: {}&quot;</span>,
-        <span class="ident">serde_json::to_string</span>(<span class="kw-2">&amp;</span><span class="ident">encrypted_response</span>)<span class="question-mark">?</span>
-    );
+        serde_json::to_string(<span class="kw-2">&amp;</span>encrypted_response)<span class="question-mark">?
+    </span>);
 
-    <span class="kw">let</span> <span class="ident">response</span> <span class="op">=</span> <span class="ident">request_helper</span>.<span class="ident">decrypt_response</span>(<span class="ident">encrypted_response</span>)<span class="question-mark">?</span>;
+    <span class="kw">let </span>response = request_helper.decrypt_response(encrypted_response)<span class="question-mark">?</span>;
 
-    <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="ident">String::from_utf8</span>(<span class="ident">response</span>)<span class="question-mark">?</span>;
-    <span class="macro">info!</span>(<span class="string">&quot;Result: {}&quot;</span>, <span class="ident">result</span>);
+    <span class="kw">let </span>result = String::from_utf8(response)<span class="question-mark">?</span>;
+    <span class="macro">info!</span>(<span class="string">&quot;Result: {}&quot;</span>, result);
     <span class="prelude-val">Ok</span>(())
 }
 
-<span class="doccomment">/// Utility for creating encrypted requests and decrypting the server response.</span>
-<span class="kw">struct</span> <span class="ident">RequestHelper</span> {
-    <span class="doccomment">/// Handle to the server&#39;s public key for encrypting requests.</span>
-    <span class="ident">server_public_key_handle</span>: <span class="ident">Handle</span>,
-    <span class="doccomment">/// Handle to private key for decrypting the server&#39;s response.</span>
-    <span class="ident">private_key_handle</span>: <span class="ident">Handle</span>,
-    <span class="doccomment">/// The clear-text message to encrypt as part of the request.</span>
-    <span class="ident">message</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
+<span class="doccomment">/// Utility for creating encrypted requests and decrypting the server response.
+</span><span class="kw">struct </span>RequestHelper {
+    <span class="doccomment">/// Handle to the server&#39;s public key for encrypting requests.
+    </span>server_public_key_handle: Handle,
+    <span class="doccomment">/// Handle to private key for decrypting the server&#39;s response.
+    </span>private_key_handle: Handle,
+    <span class="doccomment">/// The clear-text message to encrypt as part of the request.
+    </span>message: Vec&lt;u8&gt;,
 }
 
-<span class="kw">impl</span> <span class="ident">RequestHelper</span> {
-    <span class="doccomment">/// Creates a new instance for handling a single request-response pair.</span>
-    <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">server_public_key_info</span>: <span class="kw-2">&amp;</span><span class="ident">PublicKeyInfo</span>, <span class="ident">message</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">server_public_key_handle</span> <span class="op">=</span> <span class="ident">server_public_key_info</span>.<span class="ident">get_public_key_handle</span>()<span class="question-mark">?</span>;
-        <span class="comment">// Generate a new ephemeral private key for decrypting the response.</span>
-        <span class="kw">let</span> <span class="ident">private_key_handle</span> <span class="op">=</span> <span class="ident">generate_private_key</span>()<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">message</span> <span class="op">=</span> <span class="ident">message</span>.<span class="ident">to_vec</span>();
-        <span class="prelude-val">Ok</span>(<span class="ident">RequestHelper</span> {
-            <span class="ident">server_public_key_handle</span>,
-            <span class="ident">private_key_handle</span>,
-            <span class="ident">message</span>,
+<span class="kw">impl </span>RequestHelper {
+    <span class="doccomment">/// Creates a new instance for handling a single request-response pair.
+    </span><span class="kw">fn </span>new(server_public_key_info: <span class="kw-2">&amp;</span>PublicKeyInfo, message: <span class="kw-2">&amp;</span>[u8]) -&gt; anyhow::Result&lt;<span class="self">Self</span>&gt; {
+        <span class="kw">let </span>server_public_key_handle = server_public_key_info.get_public_key_handle()<span class="question-mark">?</span>;
+        <span class="comment">// Generate a new ephemeral private key for decrypting the response.
+        </span><span class="kw">let </span>private_key_handle = generate_private_key()<span class="question-mark">?</span>;
+        <span class="kw">let </span>message = message.to_vec();
+        <span class="prelude-val">Ok</span>(RequestHelper {
+            server_public_key_handle,
+            private_key_handle,
+            message,
         })
     }
 
-    <span class="doccomment">/// Generates an encrypted request to send to the server.</span>
-    <span class="kw">fn</span> <span class="ident">generate_encrypted_request</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">EncryptedRequest</span><span class="op">&gt;</span> {
-        <span class="comment">// Encrypt the message with the server&#39;s public key.</span>
-        <span class="kw">let</span> <span class="ident">ciphertext</span> <span class="op">=</span> <span class="ident">encrypt</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">server_public_key_handle</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">message</span>)<span class="question-mark">?</span>;
+    <span class="doccomment">/// Generates an encrypted request to send to the server.
+    </span><span class="kw">fn </span>generate_encrypted_request(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; anyhow::Result&lt;EncryptedRequest&gt; {
+        <span class="comment">// Encrypt the message with the server&#39;s public key.
+        </span><span class="kw">let </span>ciphertext = encrypt(<span class="kw-2">&amp;</span><span class="self">self</span>.server_public_key_handle, <span class="kw-2">&amp;</span><span class="self">self</span>.message)<span class="question-mark">?</span>;
 
-        <span class="comment">// Get the public key for the current private key so that the server can use it for</span>
-        <span class="comment">// encrypting the response.</span>
-        <span class="kw">let</span> <span class="ident">response_public_key_handle</span> <span class="op">=</span> <span class="self">self</span>
-            .<span class="ident">private_key_handle</span>
-            .<span class="ident">public</span>()
-            .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">error</span><span class="op">|</span> <span class="macro">anyhow!</span>(<span class="string">&quot;Couldn&#39;t get public key: {}&quot;</span>, <span class="ident">error</span>))<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">response_public_key</span> <span class="op">=</span> <span class="ident">serialize_public_key</span>(<span class="kw-2">&amp;</span><span class="ident">response_public_key_handle</span>)<span class="question-mark">?</span>;
+        <span class="comment">// Get the public key for the current private key so that the server can use it for
+        // encrypting the response.
+        </span><span class="kw">let </span>response_public_key_handle = <span class="self">self
+            </span>.private_key_handle
+            .public()
+            .map_err(|error| <span class="macro">anyhow!</span>(<span class="string">&quot;Couldn&#39;t get public key: {}&quot;</span>, error))<span class="question-mark">?</span>;
+        <span class="kw">let </span>response_public_key = serialize_public_key(<span class="kw-2">&amp;</span>response_public_key_handle)<span class="question-mark">?</span>;
 
-        <span class="prelude-val">Ok</span>(<span class="ident">EncryptedRequest</span> {
-            <span class="ident">ciphertext</span>,
-            <span class="ident">response_public_key</span>,
+        <span class="prelude-val">Ok</span>(EncryptedRequest {
+            ciphertext,
+            response_public_key,
         })
     }
 
-    <span class="doccomment">/// Consumes the helper and decrypts the encrypted response from the server.</span>
-    <span class="kw">fn</span> <span class="ident">decrypt_response</span>(<span class="self">self</span>, <span class="ident">encrypted_response</span>: <span class="ident">EncryptedResponse</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-        <span class="ident">decrypt</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">private_key_handle</span>, <span class="kw-2">&amp;</span><span class="ident">encrypted_response</span>.<span class="ident">ciphertext</span>)
+    <span class="doccomment">/// Consumes the helper and decrypts the encrypted response from the server.
+    </span><span class="kw">fn </span>decrypt_response(<span class="self">self</span>, encrypted_response: EncryptedResponse) -&gt; anyhow::Result&lt;Vec&lt;u8&gt;&gt; {
+        decrypt(<span class="kw-2">&amp;</span><span class="self">self</span>.private_key_handle, <span class="kw-2">&amp;</span>encrypted_response.ciphertext)
     }
 }
 </code></pre></div>
-</section><section id="search" class="content hidden"></section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="offline_attestation_client" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.62.0-nightly (de1bc0008 2022-04-21)" ></div>
-</body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="offline_attestation_client" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (81f391930 2022-10-09)" ></div></body></html>

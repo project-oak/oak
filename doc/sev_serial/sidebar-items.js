@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":[["SerialPort","Basic implementation that allows for writing to a serial port using the SEV-ES and SEV-SNP GHCB IOIO protocol, or using direct port-based IO, depending on which IO port factory is used in the wrapper enum."]]};

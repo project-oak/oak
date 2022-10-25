@@ -1,1 +1,1 @@
-initSidebarItems({"mod":[["echo_client","Generated client implementations."],["echo_server","Generated server implementations."]],"struct":[["EchoRequest",""],["EchoResponse",""]]});
+window.SIDEBAR_ITEMS = {"mod":[["echo_client","Generated client implementations."],["echo_server","Generated server implementations."]],"struct":[["EchoRequest",""],["EchoResponse",""]]};

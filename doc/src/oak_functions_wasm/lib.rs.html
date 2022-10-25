@@ -1,9 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `oak_functions/wasm/src/lib.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>lib.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../ayu.css" disabled><link rel="stylesheet" type="text/css" href="../../dark.css" disabled><link rel="stylesheet" type="text/css" href="../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../storage.js"></script><script src="../../crates.js"></script><script defer src="../../main.js"></script><script defer src="../../source-script.js"></script><script defer src="../../source-files.js"></script>
-    <noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../oak_functions_wasm/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div>
-        </a><h2 class="location"></h2>
-    </nav>
-    <nav class="sidebar"><a class="sidebar-logo" href="../../oak_functions_wasm/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div>
-        </a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../oak_functions_wasm/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><div class="theme-picker hidden"><button id="theme-picker" aria-label="Pick another theme!" aria-haspopup="menu" title="themes"><img width="22" height="22" alt="Pick another theme!" src="../../brush.svg"></button><div id="theme-choices" role="menu"></div></div><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><button type="button" id="help-button" title="help">?</button><a id="settings-menu" href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../wheel.svg"></a></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `oak_functions/wasm/src/lib.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>lib.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" href="../../normalize.css"><link rel="stylesheet" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" href="../../ayu.css" disabled><link rel="stylesheet" href="../../dark.css" disabled><link rel="stylesheet" href="../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../storage.js"></script><script defer src="../../source-script.js"></script><script defer src="../../source-files.js"></script><script defer src="../../main.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><a class="sidebar-logo" href="../../oak_functions_wasm/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../oak_functions_wasm/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="src-line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -536,539 +531,544 @@
 <span id="531">531</span>
 <span id="532">532</span>
 <span id="533">533</span>
-</pre><pre class="rust"><code><span class="comment">//</span>
-<span class="comment">// Copyright 2022 The Project Oak Authors</span>
-<span class="comment">//</span>
-<span class="comment">// Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
-<span class="comment">// you may not use this file except in compliance with the License.</span>
-<span class="comment">// You may obtain a copy of the License at</span>
-<span class="comment">//</span>
-<span class="comment">//     http://www.apache.org/licenses/LICENSE-2.0</span>
-<span class="comment">//</span>
-<span class="comment">// Unless required by applicable law or agreed to in writing, software</span>
-<span class="comment">// distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
-<span class="comment">// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
-<span class="comment">// See the License for the specific language governing permissions and</span>
-<span class="comment">// limitations under the License.</span>
-<span class="comment">//</span>
+<span id="534">534</span>
+<span id="535">535</span>
+<span id="536">536</span>
+</pre><pre class="rust"><code><span class="comment">//
+// Copyright 2022 The Project Oak Authors
+//
+// Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
-<span class="doccomment">//! Wasm business logic provider based on [Wasmi](https://github.com/paritytech/wasmi).</span>
+</span><span class="doccomment">//! Wasm business logic provider based on [Wasmi](https://github.com/paritytech/wasmi).
 
-<span class="attribute">#![<span class="ident">no_std</span>]</span>
+</span><span class="attribute">#![no_std]
 
-<span class="kw">extern</span> <span class="kw">crate</span> <span class="ident">alloc</span>;
+</span><span class="kw">extern crate </span>alloc;
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
-<span class="kw">mod</span> <span class="ident">tests</span>;
+<span class="attribute">#[cfg(test)]
+</span><span class="kw">extern crate </span>std;
 
-<span class="kw">use</span> <span class="ident">alloc</span>::{<span class="ident">boxed::Box</span>, <span class="ident">format</span>, <span class="ident">sync::Arc</span>, <span class="ident">vec::Vec</span>};
-<span class="kw">use</span> <span class="ident">anyhow::Context</span>;
-<span class="kw">use</span> <span class="ident">byteorder</span>::{<span class="ident">ByteOrder</span>, <span class="ident">LittleEndian</span>};
-<span class="kw">use</span> <span class="ident">hashbrown::HashMap</span>;
-<span class="kw">use</span> <span class="ident">oak_functions_abi</span>::{
-    <span class="ident">proto</span>::{<span class="ident">ExtensionHandle</span>, <span class="ident">OakStatus</span>},
-    <span class="ident">Request</span>, <span class="ident">Response</span>, <span class="ident">StatusCode</span>,
+<span class="attribute">#[cfg(test)]
+</span><span class="kw">mod </span>tests;
+
+<span class="kw">use </span>alloc::{boxed::Box, format, sync::Arc, vec::Vec};
+<span class="kw">use </span>anyhow::Context;
+<span class="kw">use </span>byteorder::{ByteOrder, LittleEndian};
+<span class="kw">use </span>hashbrown::HashMap;
+<span class="kw">use </span>oak_functions_abi::{
+    proto::{ExtensionHandle, OakStatus},
+    Request, Response, StatusCode,
 };
-<span class="kw">use</span> <span class="ident">oak_functions_extension</span>::{<span class="ident">ExtensionFactory</span>, <span class="ident">OakApiNativeExtension</span>};
-<span class="kw">use</span> <span class="ident">oak_logger</span>::{<span class="ident">Level</span>, <span class="ident">OakLogger</span>};
-<span class="kw">use</span> <span class="ident">wasmi::ValueType</span>;
+<span class="kw">use </span>oak_functions_extension::{ExtensionFactory, OakApiNativeExtension};
+<span class="kw">use </span>oak_logger::{Level, OakLogger};
+<span class="kw">use </span>wasmi::ValueType;
 
-<span class="kw">const</span> <span class="ident">MAIN_FUNCTION_NAME</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;main&quot;</span>;
-<span class="kw">const</span> <span class="ident">ALLOC_FUNCTION_NAME</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;alloc&quot;</span>;
+<span class="kw">const </span>MAIN_FUNCTION_NAME: <span class="kw-2">&amp;</span>str = <span class="string">&quot;main&quot;</span>;
+<span class="kw">const </span>ALLOC_FUNCTION_NAME: <span class="kw-2">&amp;</span>str = <span class="string">&quot;alloc&quot;</span>;
 
-<span class="doccomment">/// Wasm host function index numbers for `wasmi` to map import names with. This numbering is not</span>
-<span class="doccomment">/// exposed to the Wasm client. See &lt;https://docs.rs/wasmi/0.6.2/wasmi/trait.Externals.html&gt;</span>
-<span class="kw">const</span> <span class="ident">READ_REQUEST</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">0</span>;
-<span class="kw">const</span> <span class="ident">WRITE_RESPONSE</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">1</span>;
-<span class="kw">const</span> <span class="ident">INVOKE</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">4</span>;
+<span class="doccomment">/// Wasm host function index numbers for `wasmi` to map import names with. This numbering is not
+/// exposed to the Wasm client. See &lt;https://docs.rs/wasmi/0.6.2/wasmi/trait.Externals.html&gt;
+</span><span class="kw">const </span>READ_REQUEST: usize = <span class="number">0</span>;
+<span class="kw">const </span>WRITE_RESPONSE: usize = <span class="number">1</span>;
+<span class="kw">const </span>INVOKE: usize = <span class="number">4</span>;
 
-<span class="comment">// Type aliases for positions and offsets in Wasm linear memory. Any future 64-bit version</span>
-<span class="comment">// of Wasm would use different types.</span>
-<span class="kw">pub</span> <span class="kw">type</span> <span class="ident">AbiPointer</span> <span class="op">=</span> <span class="ident">u32</span>;
-<span class="kw">pub</span> <span class="kw">type</span> <span class="ident">AbiPointerOffset</span> <span class="op">=</span> <span class="ident">u32</span>;
-<span class="comment">// Type alias for the ExtensionHandle type, which has to be cast into a ExtensionHandle.</span>
-<span class="kw">pub</span> <span class="kw">type</span> <span class="ident">AbiExtensionHandle</span> <span class="op">=</span> <span class="ident">i32</span>;
-<span class="doccomment">/// Wasm type identifier for position/offset values in linear memory. Any future 64-bit version of</span>
-<span class="doccomment">/// Wasm would use a different value.</span>
-<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">ABI_USIZE</span>: <span class="ident">ValueType</span> <span class="op">=</span> <span class="ident">ValueType::I32</span>;
+<span class="comment">// Type aliases for positions and offsets in Wasm linear memory. Any future 64-bit version
+// of Wasm would use different types.
+</span><span class="kw">pub type </span>AbiPointer = u32;
+<span class="kw">pub type </span>AbiPointerOffset = u32;
+<span class="comment">// Type alias for the ExtensionHandle type, which has to be cast into a ExtensionHandle.
+</span><span class="kw">pub type </span>AbiExtensionHandle = i32;
+<span class="doccomment">/// Wasm type identifier for position/offset values in linear memory. Any future 64-bit version of
+/// Wasm would use a different value.
+</span><span class="kw">pub const </span>ABI_USIZE: ValueType = ValueType::I32;
 
-<span class="doccomment">/// `WasmState` holds runtime values for a particular execution instance of Wasm, handling a</span>
-<span class="doccomment">/// single user request. The methods here correspond to the ABI host functions that allow the Wasm</span>
-<span class="doccomment">/// module to exchange the request and the response with the Oak functions server. These functions</span>
-<span class="doccomment">/// translate values between Wasm linear memory and Rust types.</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">WasmState</span><span class="op">&lt;</span><span class="ident">L</span>: <span class="ident">OakLogger</span><span class="op">&gt;</span> {
-    <span class="ident">request_bytes</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
-    <span class="ident">response_bytes</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
-    <span class="ident">instance</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">wasmi::ModuleRef</span><span class="op">&gt;</span>,
-    <span class="ident">memory</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">wasmi::MemoryRef</span><span class="op">&gt;</span>,
-    <span class="ident">logger</span>: <span class="ident">L</span>,
-    <span class="ident">extensions</span>: <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">ExtensionHandle</span>, <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">OakApiNativeExtension</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+<span class="doccomment">/// `WasmState` holds runtime values for a particular execution instance of Wasm, handling a
+/// single user request. The methods here correspond to the ABI host functions that allow the Wasm
+/// module to exchange the request and the response with the Oak functions server. These functions
+/// translate values between Wasm linear memory and Rust types.
+</span><span class="kw">pub struct </span>WasmState&lt;L: OakLogger&gt; {
+    request_bytes: Vec&lt;u8&gt;,
+    response_bytes: Vec&lt;u8&gt;,
+    instance: <span class="prelude-ty">Option</span>&lt;wasmi::ModuleRef&gt;,
+    memory: <span class="prelude-ty">Option</span>&lt;wasmi::MemoryRef&gt;,
+    logger: L,
+    extensions: HashMap&lt;ExtensionHandle, Box&lt;<span class="kw">dyn </span>OakApiNativeExtension&gt;&gt;,
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">L</span><span class="op">&gt;</span> <span class="ident">WasmState</span><span class="op">&lt;</span><span class="ident">L</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="ident">L</span>: <span class="ident">OakLogger</span>,
+<span class="kw">impl</span>&lt;L&gt; WasmState&lt;L&gt;
+<span class="kw">where
+    </span>L: OakLogger,
 {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(
-        <span class="ident">module</span>: <span class="kw-2">&amp;</span><span class="ident">wasmi::Module</span>,
-        <span class="ident">request_bytes</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
-        <span class="ident">logger</span>: <span class="ident">L</span>,
-        <span class="ident">extensions</span>: <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">ExtensionHandle</span>, <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">OakApiNativeExtension</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-    ) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">abi</span> <span class="op">=</span> <span class="self">Self</span> {
-            <span class="ident">request_bytes</span>,
-            <span class="ident">response_bytes</span>: <span class="ident">Vec::new</span>(),
-            <span class="ident">instance</span>: <span class="prelude-val">None</span>,
-            <span class="ident">memory</span>: <span class="prelude-val">None</span>,
-            <span class="ident">logger</span>,
-            <span class="ident">extensions</span>,
+    <span class="kw">pub fn </span>new(
+        module: <span class="kw-2">&amp;</span>wasmi::Module,
+        request_bytes: Vec&lt;u8&gt;,
+        logger: L,
+        extensions: HashMap&lt;ExtensionHandle, Box&lt;<span class="kw">dyn </span>OakApiNativeExtension&gt;&gt;,
+    ) -&gt; anyhow::Result&lt;<span class="self">Self</span>&gt; {
+        <span class="kw">let </span><span class="kw-2">mut </span>abi = <span class="self">Self </span>{
+            request_bytes,
+            response_bytes: Vec::new(),
+            instance: <span class="prelude-val">None</span>,
+            memory: <span class="prelude-val">None</span>,
+            logger,
+            extensions,
         };
 
-        <span class="kw">let</span> <span class="ident">instance</span> <span class="op">=</span> <span class="ident">wasmi::ModuleInstance::new</span>(
-            <span class="ident">module</span>,
-            <span class="kw-2">&amp;</span><span class="ident">wasmi::ImportsBuilder::new</span>().<span class="ident">with_resolver</span>(<span class="string">&quot;oak_functions&quot;</span>, <span class="kw-2">&amp;</span><span class="ident">abi</span>),
+        <span class="kw">let </span>instance = wasmi::ModuleInstance::new(
+            module,
+            <span class="kw-2">&amp;</span>wasmi::ImportsBuilder::new().with_resolver(<span class="string">&quot;oak_functions&quot;</span>, <span class="kw-2">&amp;</span>abi),
         )
-        .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;failed to instantiate Wasm module: {:?}&quot;</span>, <span class="ident">err</span>))<span class="question-mark">?</span>
-        .<span class="ident">assert_no_start</span>();
+        .map_err(|err| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;failed to instantiate Wasm module: {:?}&quot;</span>, err))<span class="question-mark">?
+        </span>.assert_no_start();
 
-        <span class="ident">check_export_function_signature</span>(
-            <span class="kw-2">&amp;</span><span class="ident">instance</span>,
-            <span class="ident">MAIN_FUNCTION_NAME</span>,
-            <span class="kw-2">&amp;</span><span class="ident">wasmi::Signature::new</span>(<span class="kw-2">&amp;</span>[][..], <span class="prelude-val">None</span>),
+        check_export_function_signature(
+            <span class="kw-2">&amp;</span>instance,
+            MAIN_FUNCTION_NAME,
+            <span class="kw-2">&amp;</span>wasmi::Signature::new(<span class="kw-2">&amp;</span>[][..], <span class="prelude-val">None</span>),
         )
-        .<span class="ident">context</span>(<span class="string">&quot;could not validate `main` export&quot;</span>)<span class="question-mark">?</span>;
-        <span class="ident">check_export_function_signature</span>(
-            <span class="kw-2">&amp;</span><span class="ident">instance</span>,
-            <span class="ident">ALLOC_FUNCTION_NAME</span>,
-            <span class="kw-2">&amp;</span><span class="ident">wasmi::Signature::new</span>(<span class="kw-2">&amp;</span>[<span class="ident">ValueType::I32</span>][..], <span class="prelude-val">Some</span>(<span class="ident">ValueType::I32</span>)),
+        .context(<span class="string">&quot;could not validate `main` export&quot;</span>)<span class="question-mark">?</span>;
+        check_export_function_signature(
+            <span class="kw-2">&amp;</span>instance,
+            ALLOC_FUNCTION_NAME,
+            <span class="kw-2">&amp;</span>wasmi::Signature::new(<span class="kw-2">&amp;</span>[ValueType::I32][..], <span class="prelude-val">Some</span>(ValueType::I32)),
         )
-        .<span class="ident">context</span>(<span class="string">&quot; could not validate `alloc` export&quot;</span>)<span class="question-mark">?</span>;
+        .context(<span class="string">&quot; could not validate `alloc` export&quot;</span>)<span class="question-mark">?</span>;
 
-        <span class="ident">abi</span>.<span class="ident">instance</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">instance</span>.<span class="ident">clone</span>());
-        <span class="comment">// Make sure that non-empty `memory` is attached to the WasmState. Fail early if</span>
-        <span class="comment">// `memory` is not available.</span>
-        <span class="ident">abi</span>.<span class="ident">memory</span> <span class="op">=</span> <span class="prelude-val">Some</span>(
-            <span class="ident">instance</span>
-                .<span class="ident">export_by_name</span>(<span class="string">&quot;memory&quot;</span>)
-                .<span class="ident">context</span>(<span class="string">&quot;could not find Wasm `memory` export&quot;</span>)<span class="question-mark">?</span>
-                .<span class="ident">as_memory</span>()
-                .<span class="ident">cloned</span>()
-                .<span class="ident">context</span>(<span class="string">&quot;could not interpret Wasm `memory` export as memory&quot;</span>)<span class="question-mark">?</span>,
+        abi.instance = <span class="prelude-val">Some</span>(instance.clone());
+        <span class="comment">// Make sure that non-empty `memory` is attached to the WasmState. Fail early if
+        // `memory` is not available.
+        </span>abi.memory = <span class="prelude-val">Some</span>(
+            instance
+                .export_by_name(<span class="string">&quot;memory&quot;</span>)
+                .context(<span class="string">&quot;could not find Wasm `memory` export&quot;</span>)<span class="question-mark">?
+                </span>.as_memory()
+                .cloned()
+                .context(<span class="string">&quot;could not interpret Wasm `memory` export as memory&quot;</span>)<span class="question-mark">?</span>,
         );
 
-        <span class="prelude-val">Ok</span>(<span class="ident">abi</span>)
+        <span class="prelude-val">Ok</span>(abi)
     }
 
-    <span class="kw">fn</span> <span class="ident">invoke</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) {
-        <span class="kw">let</span> <span class="ident">instance</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">instance</span>.<span class="ident">as_ref</span>().<span class="ident">expect</span>(<span class="string">&quot;no instance&quot;</span>).<span class="ident">clone</span>();
-        <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="ident">instance</span>.<span class="ident">invoke_export</span>(<span class="ident">MAIN_FUNCTION_NAME</span>, <span class="kw-2">&amp;</span>[], <span class="self">self</span>);
-        <span class="self">self</span>.<span class="ident">logger</span>.<span class="ident">log_sensitive</span>(
-            <span class="ident">Level::Info</span>,
-            <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;Running Wasm module completed with result: {:?}&quot;</span>, <span class="ident">result</span>),
+    <span class="kw">fn </span>invoke(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
+        <span class="kw">let </span>instance = <span class="self">self</span>.instance.as_ref().expect(<span class="string">&quot;no instance&quot;</span>).clone();
+        <span class="kw">let </span>result = instance.invoke_export(MAIN_FUNCTION_NAME, <span class="kw-2">&amp;</span>[], <span class="self">self</span>);
+        <span class="self">self</span>.logger.log_sensitive(
+            Level::Info,
+            <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;Running Wasm module completed with result: {:?}&quot;</span>, result),
         );
     }
 
-    <span class="kw">fn</span> <span class="ident">get_response_bytes</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">response_bytes</span>.<span class="ident">clone</span>()
+    <span class="kw">fn </span>get_response_bytes(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Vec&lt;u8&gt; {
+        <span class="self">self</span>.response_bytes.clone()
     }
 
-    <span class="doccomment">/// Helper function to get memory.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_memory</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="ident">wasmi::MemoryRef</span> {
-        <span class="self">self</span>.<span class="ident">memory</span>
-            .<span class="ident">as_ref</span>()
-            .<span class="ident">expect</span>(<span class="string">&quot;WasmState memory not attached!?&quot;</span>)
+    <span class="doccomment">/// Helper function to get memory.
+    </span><span class="kw">pub fn </span>get_memory(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>wasmi::MemoryRef {
+        <span class="self">self</span>.memory
+            .as_ref()
+            .expect(<span class="string">&quot;WasmState memory not attached!?&quot;</span>)
     }
 
-    <span class="doccomment">/// Validates whether a given address range (inclusive) falls within the currently allocated</span>
-    <span class="doccomment">/// range of guest memory.</span>
-    <span class="kw">fn</span> <span class="ident">validate_range</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">addr</span>: <span class="ident">AbiPointer</span>, <span class="ident">offset</span>: <span class="ident">AbiPointerOffset</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakStatus</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">memory_size</span>: <span class="ident">wasmi::memory_units::Bytes</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">get_memory</span>().<span class="ident">current_size</span>().<span class="ident">into</span>();
-        <span class="comment">// Check whether the end address is below or equal to the size of the guest memory.</span>
-        <span class="kw">if</span> <span class="ident">wasmi::memory_units::Bytes</span>((<span class="ident">addr</span> <span class="kw">as</span> <span class="ident">usize</span>) <span class="op">+</span> (<span class="ident">offset</span> <span class="kw">as</span> <span class="ident">usize</span>)) <span class="op">&lt;</span><span class="op">=</span> <span class="ident">memory_size</span> {
+    <span class="doccomment">/// Validates whether a given address range (inclusive) falls within the currently allocated
+    /// range of guest memory.
+    </span><span class="kw">fn </span>validate_range(<span class="kw-2">&amp;</span><span class="self">self</span>, addr: AbiPointer, offset: AbiPointerOffset) -&gt; <span class="prelude-ty">Result</span>&lt;(), OakStatus&gt; {
+        <span class="kw">let </span>memory_size: wasmi::memory_units::Bytes = <span class="self">self</span>.get_memory().current_size().into();
+        <span class="comment">// Check whether the end address is below or equal to the size of the guest memory.
+        </span><span class="kw">if </span>wasmi::memory_units::Bytes((addr <span class="kw">as </span>usize) + (offset <span class="kw">as </span>usize)) &lt;= memory_size {
             <span class="prelude-val">Ok</span>(())
-        } <span class="kw">else</span> {
-            <span class="prelude-val">Err</span>(<span class="ident">OakStatus::ErrInvalidArgs</span>)
+        } <span class="kw">else </span>{
+            <span class="prelude-val">Err</span>(OakStatus::ErrInvalidArgs)
         }
     }
 
-    <span class="doccomment">/// Reads the buffer starting at address `buf_ptr` with length `buf_len` from the Wasm memory.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">read_buffer_from_wasm_memory</span>(
+    <span class="doccomment">/// Reads the buffer starting at address `buf_ptr` with length `buf_len` from the Wasm memory.
+    </span><span class="kw">pub fn </span>read_buffer_from_wasm_memory(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">buf_ptr</span>: <span class="ident">AbiPointer</span>,
-        <span class="ident">buf_len</span>: <span class="ident">AbiPointerOffset</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">get_memory</span>()
-            .<span class="ident">get</span>(<span class="ident">buf_ptr</span>, <span class="ident">buf_len</span> <span class="kw">as</span> <span class="ident">usize</span>)
-            .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> {
-                <span class="self">self</span>.<span class="ident">logger</span>.<span class="ident">log_sensitive</span>(
-                    <span class="ident">Level::Error</span>,
-                    <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;Unable to read buffer from guest memory: {:?}&quot;</span>, <span class="ident">err</span>),
+        buf_ptr: AbiPointer,
+        buf_len: AbiPointerOffset,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, OakStatus&gt; {
+        <span class="self">self</span>.get_memory()
+            .get(buf_ptr, buf_len <span class="kw">as </span>usize)
+            .map_err(|err| {
+                <span class="self">self</span>.logger.log_sensitive(
+                    Level::Error,
+                    <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;Unable to read buffer from guest memory: {:?}&quot;</span>, err),
                 );
-                <span class="ident">OakStatus::ErrInvalidArgs</span>
+                OakStatus::ErrInvalidArgs
             })
     }
 
-    <span class="doccomment">/// Writes the buffer `source` at the address `dest` of the Wasm memory, if `source` fits in the</span>
-    <span class="doccomment">/// allocated memory.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">write_buffer_to_wasm_memory</span>(
+    <span class="doccomment">/// Writes the buffer `source` at the address `dest` of the Wasm memory, if `source` fits in the
+    /// allocated memory.
+    </span><span class="kw">pub fn </span>write_buffer_to_wasm_memory(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">source</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>],
-        <span class="ident">dest</span>: <span class="ident">AbiPointer</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakStatus</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">validate_range</span>(<span class="ident">dest</span>, <span class="ident">source</span>.<span class="ident">len</span>() <span class="kw">as</span> <span class="ident">u32</span>)<span class="question-mark">?</span>;
-        <span class="self">self</span>.<span class="ident">get_memory</span>().<span class="ident">set</span>(<span class="ident">dest</span>, <span class="ident">source</span>).<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> {
-            <span class="self">self</span>.<span class="ident">logger</span>.<span class="ident">log_sensitive</span>(
-                <span class="ident">Level::Error</span>,
-                <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;Unable to write buffer into guest memory: {:?}&quot;</span>, <span class="ident">err</span>),
+        source: <span class="kw-2">&amp;</span>[u8],
+        dest: AbiPointer,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;(), OakStatus&gt; {
+        <span class="self">self</span>.validate_range(dest, source.len() <span class="kw">as </span>u32)<span class="question-mark">?</span>;
+        <span class="self">self</span>.get_memory().set(dest, source).map_err(|err| {
+            <span class="self">self</span>.logger.log_sensitive(
+                Level::Error,
+                <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;Unable to write buffer into guest memory: {:?}&quot;</span>, err),
             );
-            <span class="ident">OakStatus::ErrInvalidArgs</span>
+            OakStatus::ErrInvalidArgs
         })
     }
 
-    <span class="doccomment">///  Writes the u32 `value` at the `address` of the Wasm memory.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">write_u32_to_wasm_memory</span>(
+    <span class="doccomment">///  Writes the u32 `value` at the `address` of the Wasm memory.
+    </span><span class="kw">pub fn </span>write_u32_to_wasm_memory(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">value</span>: <span class="ident">u32</span>,
-        <span class="ident">address</span>: <span class="ident">AbiPointer</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakStatus</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">value_bytes</span> <span class="op">=</span> <span class="kw-2">&amp;mut</span> [<span class="number">0</span>; <span class="number">4</span>];
-        <span class="ident">LittleEndian::write_u32</span>(<span class="ident">value_bytes</span>, <span class="ident">value</span>);
-        <span class="self">self</span>.<span class="ident">get_memory</span>().<span class="ident">set</span>(<span class="ident">address</span>, <span class="ident">value_bytes</span>).<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> {
-            <span class="self">self</span>.<span class="ident">logger</span>.<span class="ident">log_sensitive</span>(
-                <span class="ident">Level::Error</span>,
-                <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;Unable to write u32 value into guest memory: {:?}&quot;</span>, <span class="ident">err</span>),
+        value: u32,
+        address: AbiPointer,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;(), OakStatus&gt; {
+        <span class="kw">let </span>value_bytes = <span class="kw-2">&amp;mut </span>[<span class="number">0</span>; <span class="number">4</span>];
+        LittleEndian::write_u32(value_bytes, value);
+        <span class="self">self</span>.get_memory().set(address, value_bytes).map_err(|err| {
+            <span class="self">self</span>.logger.log_sensitive(
+                Level::Error,
+                <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;Unable to write u32 value into guest memory: {:?}&quot;</span>, err),
             );
-            <span class="ident">OakStatus::ErrInvalidArgs</span>
+            OakStatus::ErrInvalidArgs
         })
     }
 
-    <span class="comment">//// Read the u32 value at the `address` from the Wasm memory.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">read_u32_from_wasm_memory</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">address</span>: <span class="ident">AbiPointer</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">u32</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">address</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">get_memory</span>().<span class="ident">get</span>(<span class="ident">address</span>, <span class="number">4</span>).<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> {
-            <span class="self">self</span>.<span class="ident">logger</span>.<span class="ident">log_sensitive</span>(
-                <span class="ident">Level::Error</span>,
-                <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;Unable to read u32 value from guest memory: {:?}&quot;</span>, <span class="ident">err</span>),
+    <span class="comment">//// Read the u32 value at the `address` from the Wasm memory.
+    </span><span class="kw">pub fn </span>read_u32_from_wasm_memory(<span class="kw-2">&amp;</span><span class="self">self</span>, address: AbiPointer) -&gt; <span class="prelude-ty">Result</span>&lt;u32, OakStatus&gt; {
+        <span class="kw">let </span>address = <span class="self">self</span>.get_memory().get(address, <span class="number">4</span>).map_err(|err| {
+            <span class="self">self</span>.logger.log_sensitive(
+                Level::Error,
+                <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;Unable to read u32 value from guest memory: {:?}&quot;</span>, err),
             );
-            <span class="ident">OakStatus::ErrInvalidArgs</span>
+            OakStatus::ErrInvalidArgs
         })<span class="question-mark">?</span>;
-        <span class="prelude-val">Ok</span>(<span class="ident">LittleEndian::read_u32</span>(<span class="kw-2">&amp;</span><span class="ident">address</span>))
+        <span class="prelude-val">Ok</span>(LittleEndian::read_u32(<span class="kw-2">&amp;</span>address))
     }
 
-    <span class="doccomment">/// Writes the given `buffer` by allocating `buffer.len()` Wasm memory and writing the address</span>
-    <span class="doccomment">/// of the allocated memory to `dest_ptr_ptr` and the length to `dest_len_ptr`.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">alloc_and_write_buffer_to_wasm_memory</span>(
-        <span class="kw-2">&amp;mut</span> <span class="self">self</span>,
-        <span class="ident">buffer</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
-        <span class="ident">dest_ptr_ptr</span>: <span class="ident">AbiPointer</span>,
-        <span class="ident">dest_len_ptr</span>: <span class="ident">AbiPointer</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakStatus</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">dest_ptr</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">alloc</span>(<span class="ident">buffer</span>.<span class="ident">len</span>() <span class="kw">as</span> <span class="ident">u32</span>);
-        <span class="self">self</span>.<span class="ident">write_buffer_to_wasm_memory</span>(<span class="kw-2">&amp;</span><span class="ident">buffer</span>, <span class="ident">dest_ptr</span>)<span class="question-mark">?</span>;
-        <span class="self">self</span>.<span class="ident">write_u32_to_wasm_memory</span>(<span class="ident">dest_ptr</span>, <span class="ident">dest_ptr_ptr</span>)<span class="question-mark">?</span>;
-        <span class="self">self</span>.<span class="ident">write_u32_to_wasm_memory</span>(<span class="ident">buffer</span>.<span class="ident">len</span>() <span class="kw">as</span> <span class="ident">u32</span>, <span class="ident">dest_len_ptr</span>)<span class="question-mark">?</span>;
+    <span class="doccomment">/// Writes the given `buffer` by allocating `buffer.len()` Wasm memory and writing the address
+    /// of the allocated memory to `dest_ptr_ptr` and the length to `dest_len_ptr`.
+    </span><span class="kw">pub fn </span>alloc_and_write_buffer_to_wasm_memory(
+        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+        buffer: Vec&lt;u8&gt;,
+        dest_ptr_ptr: AbiPointer,
+        dest_len_ptr: AbiPointer,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;(), OakStatus&gt; {
+        <span class="kw">let </span>dest_ptr = <span class="self">self</span>.alloc(buffer.len() <span class="kw">as </span>u32);
+        <span class="self">self</span>.write_buffer_to_wasm_memory(<span class="kw-2">&amp;</span>buffer, dest_ptr)<span class="question-mark">?</span>;
+        <span class="self">self</span>.write_u32_to_wasm_memory(dest_ptr, dest_ptr_ptr)<span class="question-mark">?</span>;
+        <span class="self">self</span>.write_u32_to_wasm_memory(buffer.len() <span class="kw">as </span>u32, dest_len_ptr)<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(())
     }
 
-    <span class="doccomment">/// Corresponds to the host ABI function [`read_request`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#read_request).</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">read_request</span>(
-        <span class="kw-2">&amp;mut</span> <span class="self">self</span>,
-        <span class="ident">dest_ptr_ptr</span>: <span class="ident">AbiPointer</span>,
-        <span class="ident">dest_len_ptr</span>: <span class="ident">AbiPointer</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakStatus</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">dest_ptr</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">alloc</span>(<span class="self">self</span>.<span class="ident">request_bytes</span>.<span class="ident">len</span>() <span class="kw">as</span> <span class="ident">u32</span>);
-        <span class="self">self</span>.<span class="ident">write_buffer_to_wasm_memory</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">request_bytes</span>, <span class="ident">dest_ptr</span>)<span class="question-mark">?</span>;
-        <span class="self">self</span>.<span class="ident">write_u32_to_wasm_memory</span>(<span class="ident">dest_ptr</span>, <span class="ident">dest_ptr_ptr</span>)<span class="question-mark">?</span>;
-        <span class="self">self</span>.<span class="ident">write_u32_to_wasm_memory</span>(<span class="self">self</span>.<span class="ident">request_bytes</span>.<span class="ident">len</span>() <span class="kw">as</span> <span class="ident">u32</span>, <span class="ident">dest_len_ptr</span>)<span class="question-mark">?</span>;
+    <span class="doccomment">/// Corresponds to the host ABI function [`read_request`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#read_request).
+    </span><span class="kw">pub fn </span>read_request(
+        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+        dest_ptr_ptr: AbiPointer,
+        dest_len_ptr: AbiPointer,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;(), OakStatus&gt; {
+        <span class="kw">let </span>dest_ptr = <span class="self">self</span>.alloc(<span class="self">self</span>.request_bytes.len() <span class="kw">as </span>u32);
+        <span class="self">self</span>.write_buffer_to_wasm_memory(<span class="kw-2">&amp;</span><span class="self">self</span>.request_bytes, dest_ptr)<span class="question-mark">?</span>;
+        <span class="self">self</span>.write_u32_to_wasm_memory(dest_ptr, dest_ptr_ptr)<span class="question-mark">?</span>;
+        <span class="self">self</span>.write_u32_to_wasm_memory(<span class="self">self</span>.request_bytes.len() <span class="kw">as </span>u32, dest_len_ptr)<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(())
     }
 
-    <span class="doccomment">/// Corresponds to the host ABI function [`write_response`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#write_response).</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">write_response</span>(
-        <span class="kw-2">&amp;mut</span> <span class="self">self</span>,
-        <span class="ident">buf_ptr</span>: <span class="ident">AbiPointer</span>,
-        <span class="ident">buf_len</span>: <span class="ident">AbiPointerOffset</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakStatus</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">response</span> <span class="op">=</span> <span class="self">self</span>
-            .<span class="ident">get_memory</span>()
-            .<span class="ident">get</span>(<span class="ident">buf_ptr</span>, <span class="ident">buf_len</span> <span class="kw">as</span> <span class="ident">usize</span>)
-            .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> {
-                <span class="self">self</span>.<span class="ident">logger</span>.<span class="ident">log_sensitive</span>(
-                    <span class="ident">Level::Error</span>,
+    <span class="doccomment">/// Corresponds to the host ABI function [`write_response`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#write_response).
+    </span><span class="kw">pub fn </span>write_response(
+        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+        buf_ptr: AbiPointer,
+        buf_len: AbiPointerOffset,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;(), OakStatus&gt; {
+        <span class="kw">let </span>response = <span class="self">self
+            </span>.get_memory()
+            .get(buf_ptr, buf_len <span class="kw">as </span>usize)
+            .map_err(|err| {
+                <span class="self">self</span>.logger.log_sensitive(
+                    Level::Error,
                     <span class="kw-2">&amp;</span><span class="macro">format!</span>(
                         <span class="string">&quot;write_response(): Unable to read name from guest memory: {:?}&quot;</span>,
-                        <span class="ident">err</span>
+                        err
                     ),
                 );
-                <span class="ident">OakStatus::ErrInvalidArgs</span>
+                OakStatus::ErrInvalidArgs
             })<span class="question-mark">?</span>;
-        <span class="self">self</span>.<span class="ident">response_bytes</span> <span class="op">=</span> <span class="ident">response</span>;
+        <span class="self">self</span>.response_bytes = response;
         <span class="prelude-val">Ok</span>(())
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">invoke_extension</span>(
-        <span class="kw-2">&amp;mut</span> <span class="self">self</span>,
-        <span class="ident">handle</span>: <span class="ident">AbiExtensionHandle</span>,
-        <span class="ident">request_ptr</span>: <span class="ident">AbiPointer</span>,
-        <span class="ident">request_len</span>: <span class="ident">AbiPointerOffset</span>,
-        <span class="ident">response_ptr_ptr</span>: <span class="ident">AbiPointer</span>,
-        <span class="ident">response_len_ptr</span>: <span class="ident">AbiPointer</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakStatus</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">handle</span>: <span class="ident">ExtensionHandle</span> <span class="op">=</span> <span class="ident">ExtensionHandle::from_i32</span>(<span class="ident">handle</span>).<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> {
-            <span class="self">self</span>.<span class="ident">log_error</span>(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;Fail to convert handle {:?} from i32.&quot;</span>, <span class="ident">handle</span>));
-            <span class="ident">OakStatus::ErrInvalidHandle</span>
+    <span class="kw">pub fn </span>invoke_extension(
+        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+        handle: AbiExtensionHandle,
+        request_ptr: AbiPointer,
+        request_len: AbiPointerOffset,
+        response_ptr_ptr: AbiPointer,
+        response_len_ptr: AbiPointer,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;(), OakStatus&gt; {
+        <span class="kw">let </span>handle: ExtensionHandle = ExtensionHandle::from_i32(handle).ok_or_else(|| {
+            <span class="self">self</span>.log_error(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;Fail to convert handle {:?} from i32.&quot;</span>, handle));
+            OakStatus::ErrInvalidHandle
         })<span class="question-mark">?</span>;
 
-        <span class="kw">let</span> <span class="ident">request</span> <span class="op">=</span> <span class="self">self</span>
-            .<span class="ident">read_buffer_from_wasm_memory</span>(<span class="ident">request_ptr</span>, <span class="ident">request_len</span>)
-            .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> {
-                <span class="self">self</span>.<span class="ident">log_error</span>(<span class="kw-2">&amp;</span><span class="macro">format!</span>(
+        <span class="kw">let </span>request = <span class="self">self
+            </span>.read_buffer_from_wasm_memory(request_ptr, request_len)
+            .map_err(|err| {
+                <span class="self">self</span>.log_error(<span class="kw-2">&amp;</span><span class="macro">format!</span>(
                     <span class="string">&quot;Handle {:?}: Unable to read input from guest memory: {:?}&quot;</span>,
-                    <span class="ident">handle</span>, <span class="ident">err</span>
+                    handle, err
                 ));
-                <span class="ident">OakStatus::ErrInvalidArgs</span>
+                OakStatus::ErrInvalidArgs
             })<span class="question-mark">?</span>;
 
-        <span class="kw">let</span> <span class="ident">extension</span> <span class="op">=</span> <span class="kw">match</span> <span class="self">self</span>.<span class="ident">extensions</span>.<span class="ident">get_mut</span>(<span class="kw-2">&amp;</span><span class="ident">handle</span>) {
-            <span class="comment">// Can&#39;t convince the borrow checker to use `ok_or_else` to `self.log_error`.</span>
-            <span class="prelude-val">Some</span>(<span class="ident">extension</span>) =&gt; <span class="prelude-val">Ok</span>(<span class="ident">extension</span>),
-            <span class="prelude-val">None</span> =&gt; {
-                <span class="self">self</span>.<span class="ident">log_error</span>(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;Cannot find extension with handle {:?}.&quot;</span>, <span class="ident">handle</span>));
-                <span class="prelude-val">Err</span>(<span class="ident">OakStatus::ErrInvalidHandle</span>)
+        <span class="kw">let </span>extension = <span class="kw">match </span><span class="self">self</span>.extensions.get_mut(<span class="kw-2">&amp;</span>handle) {
+            <span class="comment">// Can&#39;t convince the borrow checker to use `ok_or_else` to `self.log_error`.
+            </span><span class="prelude-val">Some</span>(extension) =&gt; <span class="prelude-val">Ok</span>(extension),
+            <span class="prelude-val">None </span>=&gt; {
+                <span class="self">self</span>.log_error(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;Cannot find extension with handle {:?}.&quot;</span>, handle));
+                <span class="prelude-val">Err</span>(OakStatus::ErrInvalidHandle)
             }
         }<span class="question-mark">?</span>;
 
-        <span class="kw">let</span> <span class="ident">response</span> <span class="op">=</span> <span class="ident">extension</span>.<span class="ident">invoke</span>(<span class="ident">request</span>)<span class="question-mark">?</span>;
-        <span class="self">self</span>.<span class="ident">alloc_and_write_buffer_to_wasm_memory</span>(<span class="ident">response</span>, <span class="ident">response_ptr_ptr</span>, <span class="ident">response_len_ptr</span>)
+        <span class="kw">let </span>response = extension.invoke(request)<span class="question-mark">?</span>;
+        <span class="self">self</span>.alloc_and_write_buffer_to_wasm_memory(response, response_ptr_ptr, response_len_ptr)
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">alloc</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">len</span>: <span class="ident">u32</span>) -&gt; <span class="ident">AbiPointer</span> {
-        <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">instance</span>.<span class="ident">as_ref</span>().<span class="ident">unwrap</span>().<span class="ident">invoke_export</span>(
-            <span class="ident">ALLOC_FUNCTION_NAME</span>,
-            <span class="kw-2">&amp;</span>[<span class="ident">wasmi::RuntimeValue::I32</span>(<span class="ident">len</span> <span class="kw">as</span> <span class="ident">i32</span>)],
-            <span class="comment">// When calling back into `alloc` we don&#39;t need to expose any of the rest of the ABI</span>
-            <span class="comment">// methods.</span>
-            <span class="kw-2">&amp;mut</span> <span class="ident">wasmi::NopExternals</span>,
+    <span class="kw">pub fn </span>alloc(<span class="kw-2">&amp;mut </span><span class="self">self</span>, len: u32) -&gt; AbiPointer {
+        <span class="kw">let </span>result = <span class="self">self</span>.instance.as_ref().unwrap().invoke_export(
+            ALLOC_FUNCTION_NAME,
+            <span class="kw-2">&amp;</span>[wasmi::RuntimeValue::I32(len <span class="kw">as </span>i32)],
+            <span class="comment">// When calling back into `alloc` we don&#39;t need to expose any of the rest of the ABI
+            // methods.
+            </span><span class="kw-2">&amp;mut </span>wasmi::NopExternals,
         );
-        <span class="kw">let</span> <span class="ident">result_value</span> <span class="op">=</span> <span class="ident">result</span>
-            .<span class="ident">expect</span>(<span class="string">&quot;`alloc` call failed&quot;</span>)
-            .<span class="ident">expect</span>(<span class="string">&quot;no value returned from `alloc`&quot;</span>);
-        <span class="kw">match</span> <span class="ident">result_value</span> {
-            <span class="ident">wasmi::RuntimeValue::I32</span>(<span class="ident">v</span>) =&gt; <span class="ident">v</span> <span class="kw">as</span> <span class="ident">u32</span>,
-            <span class="kw">_</span> =&gt; <span class="macro">panic!</span>(<span class="string">&quot;invalid value type returned from `alloc`&quot;</span>),
+        <span class="kw">let </span>result_value = result
+            .expect(<span class="string">&quot;`alloc` call failed&quot;</span>)
+            .expect(<span class="string">&quot;no value returned from `alloc`&quot;</span>);
+        <span class="kw">match </span>result_value {
+            wasmi::RuntimeValue::I32(v) =&gt; v <span class="kw">as </span>u32,
+            <span class="kw">_ </span>=&gt; <span class="macro">panic!</span>(<span class="string">&quot;invalid value type returned from `alloc`&quot;</span>),
         }
     }
 
-    <span class="kw">fn</span> <span class="ident">log_error</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">message</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) {
-        <span class="self">self</span>.<span class="ident">logger</span>.<span class="ident">log_sensitive</span>(<span class="ident">Level::Error</span>, <span class="ident">message</span>)
+    <span class="kw">fn </span>log_error(<span class="kw-2">&amp;</span><span class="self">self</span>, message: <span class="kw-2">&amp;</span>str) {
+        <span class="self">self</span>.logger.log_sensitive(Level::Error, message)
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">L</span><span class="op">&gt;</span> <span class="ident">wasmi::Externals</span> <span class="kw">for</span> <span class="ident">WasmState</span><span class="op">&lt;</span><span class="ident">L</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="ident">L</span>: <span class="ident">OakLogger</span>,
+<span class="kw">impl</span>&lt;L&gt; wasmi::Externals <span class="kw">for </span>WasmState&lt;L&gt;
+<span class="kw">where
+    </span>L: OakLogger,
 {
-    <span class="doccomment">/// Invocation of a host function specified by its registered index. Acts as a wrapper for</span>
-    <span class="doccomment">/// the relevant native function, just:</span>
-    <span class="doccomment">/// - checking argument types (which should be correct as `wasmi` will only pass through those</span>
-    <span class="doccomment">///   types that were specified when the host function was registered with `resolve_func`).</span>
-    <span class="doccomment">/// - mapping resulting return/error values.</span>
-    <span class="kw">fn</span> <span class="ident">invoke_index</span>(
-        <span class="kw-2">&amp;mut</span> <span class="self">self</span>,
-        <span class="ident">index</span>: <span class="ident">usize</span>,
-        <span class="ident">args</span>: <span class="ident">wasmi::RuntimeArgs</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">wasmi::RuntimeValue</span><span class="op">&gt;</span>, <span class="ident">wasmi::Trap</span><span class="op">&gt;</span> {
-        <span class="kw">match</span> <span class="ident">index</span> {
-            <span class="ident">READ_REQUEST</span> =&gt; <span class="ident">from_oak_status_result</span>(
-                <span class="self">self</span>.<span class="ident">read_request</span>(<span class="ident">args</span>.<span class="ident">nth_checked</span>(<span class="number">0</span>)<span class="question-mark">?</span>, <span class="ident">args</span>.<span class="ident">nth_checked</span>(<span class="number">1</span>)<span class="question-mark">?</span>),
+    <span class="doccomment">/// Invocation of a host function specified by its registered index. Acts as a wrapper for
+    /// the relevant native function, just:
+    /// - checking argument types (which should be correct as `wasmi` will only pass through those
+    ///   types that were specified when the host function was registered with `resolve_func`).
+    /// - mapping resulting return/error values.
+    </span><span class="kw">fn </span>invoke_index(
+        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+        index: usize,
+        args: wasmi::RuntimeArgs,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;wasmi::RuntimeValue&gt;, wasmi::Trap&gt; {
+        <span class="kw">match </span>index {
+            READ_REQUEST =&gt; from_oak_status_result(
+                <span class="self">self</span>.read_request(args.nth_checked(<span class="number">0</span>)<span class="question-mark">?</span>, args.nth_checked(<span class="number">1</span>)<span class="question-mark">?</span>),
             ),
-            <span class="ident">WRITE_RESPONSE</span> =&gt; <span class="ident">from_oak_status_result</span>(
-                <span class="self">self</span>.<span class="ident">write_response</span>(<span class="ident">args</span>.<span class="ident">nth_checked</span>(<span class="number">0</span>)<span class="question-mark">?</span>, <span class="ident">args</span>.<span class="ident">nth_checked</span>(<span class="number">1</span>)<span class="question-mark">?</span>),
+            WRITE_RESPONSE =&gt; from_oak_status_result(
+                <span class="self">self</span>.write_response(args.nth_checked(<span class="number">0</span>)<span class="question-mark">?</span>, args.nth_checked(<span class="number">1</span>)<span class="question-mark">?</span>),
             ),
-            <span class="ident">INVOKE</span> =&gt; <span class="ident">from_oak_status_result</span>(<span class="self">self</span>.<span class="ident">invoke_extension</span>(
-                <span class="ident">args</span>.<span class="ident">nth_checked</span>(<span class="number">0</span>)<span class="question-mark">?</span>,
-                <span class="ident">args</span>.<span class="ident">nth_checked</span>(<span class="number">1</span>)<span class="question-mark">?</span>,
-                <span class="ident">args</span>.<span class="ident">nth_checked</span>(<span class="number">2</span>)<span class="question-mark">?</span>,
-                <span class="ident">args</span>.<span class="ident">nth_checked</span>(<span class="number">3</span>)<span class="question-mark">?</span>,
-                <span class="ident">args</span>.<span class="ident">nth_checked</span>(<span class="number">4</span>)<span class="question-mark">?</span>,
+            INVOKE =&gt; from_oak_status_result(<span class="self">self</span>.invoke_extension(
+                args.nth_checked(<span class="number">0</span>)<span class="question-mark">?</span>,
+                args.nth_checked(<span class="number">1</span>)<span class="question-mark">?</span>,
+                args.nth_checked(<span class="number">2</span>)<span class="question-mark">?</span>,
+                args.nth_checked(<span class="number">3</span>)<span class="question-mark">?</span>,
+                args.nth_checked(<span class="number">4</span>)<span class="question-mark">?</span>,
             )),
-            <span class="kw">_</span> =&gt; {
-                <span class="comment">// Here https://paritytech.github.io/wasmi/wasmi/trait.Externals.html#examples panics with</span>
-                <span class="comment">//  panic!(&quot;Unimplemented function at {}.&quot;, index)</span>
-                <span class="comment">// We prefer not to panic, and trap in an unreachable state instead.</span>
-                <span class="prelude-val">Err</span>(<span class="ident">wasmi::Trap::new</span>(<span class="ident">wasmi::TrapKind::Unreachable</span>))
+            <span class="kw">_ </span>=&gt; {
+                <span class="comment">// Here https://paritytech.github.io/wasmi/wasmi/trait.Externals.html#examples panics with
+                //  panic!(&quot;Unimplemented function at {}.&quot;, index)
+                // We prefer not to panic, and trap in an unreachable state instead.
+                </span><span class="prelude-val">Err</span>(wasmi::Trap::new(wasmi::TrapKind::Unreachable))
             }
         }
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">L</span><span class="op">&gt;</span> <span class="ident">wasmi::ModuleImportResolver</span> <span class="kw">for</span> <span class="ident">WasmState</span><span class="op">&lt;</span><span class="ident">L</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="ident">L</span>: <span class="ident">OakLogger</span>,
+<span class="kw">impl</span>&lt;L&gt; wasmi::ModuleImportResolver <span class="kw">for </span>WasmState&lt;L&gt;
+<span class="kw">where
+    </span>L: OakLogger,
 {
-    <span class="kw">fn</span> <span class="ident">resolve_func</span>(
+    <span class="kw">fn </span>resolve_func(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">field_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
-        <span class="ident">signature</span>: <span class="kw-2">&amp;</span><span class="ident">wasmi::Signature</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">wasmi::FuncRef</span>, <span class="ident">wasmi::Error</span><span class="op">&gt;</span> {
-        <span class="comment">// Look for the function (i.e., `field_name`) in the statically registered functions.</span>
-        <span class="kw">let</span> (<span class="ident">index</span>, <span class="ident">expected_signature</span>) <span class="op">=</span>
-            <span class="ident">oak_functions_resolve_func</span>(<span class="ident">field_name</span>).<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> {
-                <span class="ident">wasmi::Error::Instantiation</span>(<span class="macro">format!</span>(<span class="string">&quot;Export {} not found&quot;</span>, <span class="ident">field_name</span>))
+        field_name: <span class="kw-2">&amp;</span>str,
+        signature: <span class="kw-2">&amp;</span>wasmi::Signature,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;wasmi::FuncRef, wasmi::Error&gt; {
+        <span class="comment">// Look for the function (i.e., `field_name`) in the statically registered functions.
+        </span><span class="kw">let </span>(index, expected_signature) =
+            oak_functions_resolve_func(field_name).ok_or_else(|| {
+                wasmi::Error::Instantiation(<span class="macro">format!</span>(<span class="string">&quot;Export {} not found&quot;</span>, field_name))
             })<span class="question-mark">?</span>;
 
-        <span class="kw">if</span> <span class="ident">signature</span> <span class="op">==</span> <span class="kw-2">&amp;</span><span class="ident">expected_signature</span> {
-            <span class="prelude-val">Ok</span>(<span class="ident">wasmi::FuncInstance::alloc_host</span>(<span class="ident">expected_signature</span>, <span class="ident">index</span>))
-        } <span class="kw">else</span> {
-            <span class="prelude-val">Err</span>(<span class="ident">wasmi::Error::Instantiation</span>(<span class="macro">format!</span>(
+        <span class="kw">if </span>signature == <span class="kw-2">&amp;</span>expected_signature {
+            <span class="prelude-val">Ok</span>(wasmi::FuncInstance::alloc_host(expected_signature, index))
+        } <span class="kw">else </span>{
+            <span class="prelude-val">Err</span>(wasmi::Error::Instantiation(<span class="macro">format!</span>(
                 <span class="string">&quot;Export `{}` doesn&#39;t match expected signature; got: {:?}, expected: {:?}&quot;</span>,
-                <span class="ident">field_name</span>, <span class="ident">signature</span>, <span class="ident">expected_signature</span>
+                field_name, signature, expected_signature
             )))
         }
     }
 }
 
-<span class="kw">fn</span> <span class="ident">check_export_function_signature</span>(
-    <span class="ident">instance</span>: <span class="kw-2">&amp;</span><span class="ident">wasmi::ModuleInstance</span>,
-    <span class="ident">export_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
-    <span class="ident">expected_signature</span>: <span class="kw-2">&amp;</span><span class="ident">wasmi::Signature</span>,
-) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-    <span class="kw">let</span> <span class="ident">export_function</span> <span class="op">=</span> <span class="ident">instance</span>
-        .<span class="ident">export_by_name</span>(<span class="ident">export_name</span>)
-        .<span class="ident">context</span>(<span class="string">&quot;could not find Wasm export&quot;</span>)<span class="question-mark">?</span>
-        .<span class="ident">as_func</span>()
-        .<span class="ident">cloned</span>()
-        .<span class="ident">context</span>(<span class="string">&quot;could not interpret Wasm export as function&quot;</span>)<span class="question-mark">?</span>;
-    <span class="kw">if</span> <span class="ident">export_function</span>.<span class="ident">signature</span>() <span class="op">!</span><span class="op">=</span> <span class="ident">expected_signature</span> {
+<span class="kw">fn </span>check_export_function_signature(
+    instance: <span class="kw-2">&amp;</span>wasmi::ModuleInstance,
+    export_name: <span class="kw-2">&amp;</span>str,
+    expected_signature: <span class="kw-2">&amp;</span>wasmi::Signature,
+) -&gt; anyhow::Result&lt;()&gt; {
+    <span class="kw">let </span>export_function = instance
+        .export_by_name(export_name)
+        .context(<span class="string">&quot;could not find Wasm export&quot;</span>)<span class="question-mark">?
+        </span>.as_func()
+        .cloned()
+        .context(<span class="string">&quot;could not interpret Wasm export as function&quot;</span>)<span class="question-mark">?</span>;
+    <span class="kw">if </span>export_function.signature() != expected_signature {
         <span class="macro">anyhow::bail!</span>(
             <span class="string">&quot;invalid signature for export: {:?}, expected: {:?}&quot;</span>,
-            <span class="ident">export_function</span>.<span class="ident">signature</span>(),
-            <span class="ident">expected_signature</span>
+            export_function.signature(),
+            expected_signature
         );
-    } <span class="kw">else</span> {
+    } <span class="kw">else </span>{
         <span class="prelude-val">Ok</span>(())
     }
 }
 
-<span class="comment">// An ephemeral request handler with a Wasm module for handling the requests.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">WasmHandler</span><span class="op">&lt;</span><span class="ident">L</span>: <span class="ident">OakLogger</span><span class="op">&gt;</span> {
-    <span class="comment">// Wasm module to be served on each invocation. `Arc` is needed to make `WasmHandler`</span>
-    <span class="comment">// cloneable.</span>
-    <span class="ident">module</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">wasmi::Module</span><span class="op">&gt;</span>,
-    <span class="ident">extension_factories</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">ExtensionFactory</span><span class="op">&lt;</span><span class="ident">L</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-    <span class="ident">logger</span>: <span class="ident">L</span>,
+<span class="comment">// An ephemeral request handler with a Wasm module for handling the requests.
+</span><span class="attribute">#[derive(Clone)]
+</span><span class="kw">pub struct </span>WasmHandler&lt;L: OakLogger&gt; {
+    <span class="comment">// Wasm module to be served on each invocation. `Arc` is needed to make `WasmHandler`
+    // cloneable.
+    </span>module: Arc&lt;wasmi::Module&gt;,
+    extension_factories: Arc&lt;Vec&lt;Box&lt;<span class="kw">dyn </span>ExtensionFactory&lt;L&gt;&gt;&gt;&gt;,
+    logger: L,
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">L</span><span class="op">&gt;</span> <span class="ident">WasmHandler</span><span class="op">&lt;</span><span class="ident">L</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="ident">L</span>: <span class="ident">OakLogger</span>,
+<span class="kw">impl</span>&lt;L&gt; WasmHandler&lt;L&gt;
+<span class="kw">where
+    </span>L: OakLogger,
 {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">create</span>(
-        <span class="ident">wasm_module_bytes</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>],
-        <span class="ident">extension_factories</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">ExtensionFactory</span><span class="op">&lt;</span><span class="ident">L</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-        <span class="ident">logger</span>: <span class="ident">L</span>,
-    ) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">module</span> <span class="op">=</span> <span class="ident">wasmi::Module::from_buffer</span>(<span class="kw-2">&amp;</span><span class="ident">wasm_module_bytes</span>)
-            .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;could not load module from buffer: {:?}&quot;</span>, <span class="ident">err</span>))<span class="question-mark">?</span>;
+    <span class="kw">pub fn </span>create(
+        wasm_module_bytes: <span class="kw-2">&amp;</span>[u8],
+        extension_factories: Vec&lt;Box&lt;<span class="kw">dyn </span>ExtensionFactory&lt;L&gt;&gt;&gt;,
+        logger: L,
+    ) -&gt; anyhow::Result&lt;<span class="self">Self</span>&gt; {
+        <span class="kw">let </span>module = wasmi::Module::from_buffer(wasm_module_bytes)
+            .map_err(|err| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;could not load module from buffer: {:?}&quot;</span>, err))<span class="question-mark">?</span>;
 
-        <span class="prelude-val">Ok</span>(<span class="ident">WasmHandler</span> {
-            <span class="ident">module</span>: <span class="ident">Arc::new</span>(<span class="ident">module</span>),
-            <span class="ident">extension_factories</span>: <span class="ident">Arc::new</span>(<span class="ident">extension_factories</span>),
-            <span class="ident">logger</span>,
+        <span class="prelude-val">Ok</span>(WasmHandler {
+            module: Arc::new(module),
+            extension_factories: Arc::new(extension_factories),
+            logger,
         })
     }
 
-    <span class="kw">fn</span> <span class="ident">init_wasm_state</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">request_bytes</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">WasmState</span><span class="op">&lt;</span><span class="ident">L</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">extensions</span> <span class="op">=</span> <span class="ident">HashMap::new</span>();
+    <span class="kw">fn </span>init_wasm_state(<span class="kw-2">&amp;</span><span class="self">self</span>, request_bytes: Vec&lt;u8&gt;) -&gt; anyhow::Result&lt;WasmState&lt;L&gt;&gt; {
+        <span class="kw">let </span><span class="kw-2">mut </span>extensions = HashMap::new();
 
-        <span class="comment">// Create an extension from every factory.</span>
-        <span class="kw">for</span> <span class="ident">factory</span> <span class="kw">in</span> <span class="self">self</span>.<span class="ident">extension_factories</span>.<span class="ident">iter</span>() {
-            <span class="kw">let</span> <span class="ident">extension</span> <span class="op">=</span> <span class="ident">factory</span>.<span class="ident">create</span>()<span class="question-mark">?</span>;
-            <span class="ident">extensions</span>.<span class="ident">insert</span>(<span class="ident">extension</span>.<span class="ident">get_handle</span>(), <span class="ident">extension</span>);
+        <span class="comment">// Create an extension from every factory.
+        </span><span class="kw">for </span>factory <span class="kw">in </span><span class="self">self</span>.extension_factories.iter() {
+            <span class="kw">let </span>extension = factory.create()<span class="question-mark">?</span>;
+            extensions.insert(extension.get_handle(), extension);
         }
 
-        <span class="kw">let</span> <span class="ident">wasm_state</span> <span class="op">=</span>
-            <span class="ident">WasmState::new</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">module</span>, <span class="ident">request_bytes</span>, <span class="self">self</span>.<span class="ident">logger</span>.<span class="ident">clone</span>(), <span class="ident">extensions</span>)<span class="question-mark">?</span>;
+        <span class="kw">let </span>wasm_state =
+            WasmState::new(<span class="kw-2">&amp;</span><span class="self">self</span>.module, request_bytes, <span class="self">self</span>.logger.clone(), extensions)<span class="question-mark">?</span>;
 
-        <span class="prelude-val">Ok</span>(<span class="ident">wasm_state</span>)
+        <span class="prelude-val">Ok</span>(wasm_state)
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">handle_invoke</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">request</span>: <span class="ident">Request</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">Response</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">response_bytes</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">handle_raw_invoke</span>(<span class="ident">request</span>.<span class="ident">body</span>)<span class="question-mark">?</span>;
-        <span class="prelude-val">Ok</span>(<span class="ident">Response::create</span>(<span class="ident">StatusCode::Success</span>, <span class="ident">response_bytes</span>))
+    <span class="kw">pub fn </span>handle_invoke(<span class="kw-2">&amp;</span><span class="self">self</span>, request: Request) -&gt; anyhow::Result&lt;Response&gt; {
+        <span class="kw">let </span>response_bytes = <span class="self">self</span>.handle_raw_invoke(request.body)<span class="question-mark">?</span>;
+        <span class="prelude-val">Ok</span>(Response::create(StatusCode::Success, response_bytes))
     }
 
-    <span class="doccomment">/// Handles an invocation using raw bytes and returns the response as raw bytes.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">handle_raw_invoke</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">request_bytes</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">wasm_state</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">init_wasm_state</span>(<span class="ident">request_bytes</span>)<span class="question-mark">?</span>;
+    <span class="doccomment">/// Handles an invocation using raw bytes and returns the response as raw bytes.
+    </span><span class="kw">pub fn </span>handle_raw_invoke(<span class="kw-2">&amp;</span><span class="self">self</span>, request_bytes: Vec&lt;u8&gt;) -&gt; anyhow::Result&lt;Vec&lt;u8&gt;&gt; {
+        <span class="kw">let </span><span class="kw-2">mut </span>wasm_state = <span class="self">self</span>.init_wasm_state(request_bytes)<span class="question-mark">?</span>;
 
-        <span class="ident">wasm_state</span>.<span class="ident">invoke</span>();
+        wasm_state.invoke();
 
-        <span class="ident">wasm_state</span>
-            .<span class="ident">extensions</span>
-            .<span class="ident">values_mut</span>()
-            .<span class="ident">try_for_each</span>(<span class="op">|</span><span class="ident">e</span><span class="op">|</span> <span class="ident">e</span>.<span class="ident">terminate</span>())<span class="question-mark">?</span>;
+        wasm_state
+            .extensions
+            .values_mut()
+            .try_for_each(|e| e.terminate())<span class="question-mark">?</span>;
 
-        <span class="prelude-val">Ok</span>(<span class="ident">wasm_state</span>.<span class="ident">get_response_bytes</span>())
+        <span class="prelude-val">Ok</span>(wasm_state.get_response_bytes())
     }
 }
 
-<span class="doccomment">/// A resolver function, mapping `oak_functions` host function names to an index and a type</span>
-<span class="doccomment">/// signature.</span>
-<span class="kw">fn</span> <span class="ident">oak_functions_resolve_func</span>(<span class="ident">field_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span>(<span class="ident">usize</span>, <span class="ident">wasmi::Signature</span>)<span class="op">&gt;</span> {
-    <span class="comment">// The types in the signatures correspond to the parameters from</span>
-    <span class="comment">// oak_functions/abi/src/lib.rs</span>
-    <span class="kw">let</span> (<span class="ident">index</span>, <span class="ident">expected_signature</span>) <span class="op">=</span> <span class="kw">match</span> <span class="ident">field_name</span> {
-        <span class="string">&quot;read_request&quot;</span> =&gt; (
-            <span class="ident">READ_REQUEST</span>,
-            <span class="ident">wasmi::Signature::new</span>(
+<span class="doccomment">/// A resolver function, mapping `oak_functions` host function names to an index and a type
+/// signature.
+</span><span class="kw">fn </span>oak_functions_resolve_func(field_name: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;(usize, wasmi::Signature)&gt; {
+    <span class="comment">// The types in the signatures correspond to the parameters from
+    // oak_functions_abi/src/lib.rs
+    </span><span class="kw">let </span>(index, expected_signature) = <span class="kw">match </span>field_name {
+        <span class="string">&quot;read_request&quot; </span>=&gt; (
+            READ_REQUEST,
+            wasmi::Signature::new(
                 <span class="kw-2">&amp;</span>[
-                    <span class="ident">ABI_USIZE</span>, <span class="comment">// buf_ptr_ptr</span>
-                    <span class="ident">ABI_USIZE</span>, <span class="comment">// buf_len_ptr</span>
-                ][..],
-                <span class="prelude-val">Some</span>(<span class="ident">ValueType::I32</span>),
+                    ABI_USIZE, <span class="comment">// buf_ptr_ptr
+                    </span>ABI_USIZE, <span class="comment">// buf_len_ptr
+                </span>][..],
+                <span class="prelude-val">Some</span>(ValueType::I32),
             ),
         ),
-        <span class="string">&quot;write_response&quot;</span> =&gt; (
-            <span class="ident">WRITE_RESPONSE</span>,
-            <span class="ident">wasmi::Signature::new</span>(
+        <span class="string">&quot;write_response&quot; </span>=&gt; (
+            WRITE_RESPONSE,
+            wasmi::Signature::new(
                 <span class="kw-2">&amp;</span>[
-                    <span class="ident">ABI_USIZE</span>, <span class="comment">// buf_ptr</span>
-                    <span class="ident">ABI_USIZE</span>, <span class="comment">// buf_len</span>
-                ][..],
-                <span class="prelude-val">Some</span>(<span class="ident">ValueType::I32</span>),
+                    ABI_USIZE, <span class="comment">// buf_ptr
+                    </span>ABI_USIZE, <span class="comment">// buf_len
+                </span>][..],
+                <span class="prelude-val">Some</span>(ValueType::I32),
             ),
         ),
-        <span class="string">&quot;invoke&quot;</span> =&gt; (
-            <span class="ident">INVOKE</span>,
-            <span class="ident">wasmi::Signature::new</span>(
+        <span class="string">&quot;invoke&quot; </span>=&gt; (
+            INVOKE,
+            wasmi::Signature::new(
                 <span class="kw-2">&amp;</span>[
-                    <span class="ident">ABI_USIZE</span>, <span class="comment">// handle</span>
-                    <span class="ident">ABI_USIZE</span>, <span class="comment">// request_ptr</span>
-                    <span class="ident">ABI_USIZE</span>, <span class="comment">// request_len</span>
-                    <span class="ident">ABI_USIZE</span>, <span class="comment">// response_ptr_ptr</span>
-                    <span class="ident">ABI_USIZE</span>, <span class="comment">// response_len_ptr</span>
-                ][..],
-                <span class="prelude-val">Some</span>(<span class="ident">ValueType::I32</span>),
+                    ABI_USIZE, <span class="comment">// handle
+                    </span>ABI_USIZE, <span class="comment">// request_ptr
+                    </span>ABI_USIZE, <span class="comment">// request_len
+                    </span>ABI_USIZE, <span class="comment">// response_ptr_ptr
+                    </span>ABI_USIZE, <span class="comment">// response_len_ptr
+                </span>][..],
+                <span class="prelude-val">Some</span>(ValueType::I32),
             ),
         ),
-        <span class="kw">_</span> =&gt; <span class="kw">return</span> <span class="prelude-val">None</span>,
+        <span class="kw">_ </span>=&gt; <span class="kw">return </span><span class="prelude-val">None</span>,
     };
 
-    <span class="prelude-val">Some</span>((<span class="ident">index</span>, <span class="ident">expected_signature</span>))
+    <span class="prelude-val">Some</span>((index, expected_signature))
 }
 
-<span class="doccomment">/// A helper function to move between our specific result type `Result&lt;(), OakStatus&gt;` and the</span>
-<span class="doccomment">/// `wasmi` specific result type `Result&lt;Option&lt;wasmi::RuntimeValue&gt;, wasmi::Trap&gt;`, mapping:</span>
-<span class="doccomment">/// - `Ok(())` to `Ok(Some(OakStatus::Ok))`</span>
-<span class="doccomment">/// - `Err(x)` to `Ok(Some(x))`</span>
-<span class="kw">fn</span> <span class="ident">from_oak_status_result</span>(
-    <span class="ident">result</span>: <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakStatus</span><span class="op">&gt;</span>,
-) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">wasmi::RuntimeValue</span><span class="op">&gt;</span>, <span class="ident">wasmi::Trap</span><span class="op">&gt;</span> {
-    <span class="kw">let</span> <span class="ident">oak_status_from_result</span> <span class="op">=</span> <span class="ident">result</span>.<span class="ident">map_or_else</span>(<span class="op">|</span><span class="ident">x</span>: <span class="ident">OakStatus</span><span class="op">|</span> <span class="ident">x</span>, <span class="op">|</span>()<span class="op">|</span> <span class="ident">OakStatus::Ok</span>);
-    <span class="kw">let</span> <span class="ident">wasmi_value</span> <span class="op">=</span> <span class="ident">wasmi::RuntimeValue::I32</span>(<span class="ident">oak_status_from_result</span> <span class="kw">as</span> <span class="ident">i32</span>);
-    <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(<span class="ident">wasmi_value</span>))
+<span class="doccomment">/// A helper function to move between our specific result type `Result&lt;(), OakStatus&gt;` and the
+/// `wasmi` specific result type `Result&lt;Option&lt;wasmi::RuntimeValue&gt;, wasmi::Trap&gt;`, mapping:
+/// - `Ok(())` to `Ok(Some(OakStatus::Ok))`
+/// - `Err(x)` to `Ok(Some(x))`
+</span><span class="kw">fn </span>from_oak_status_result(
+    result: <span class="prelude-ty">Result</span>&lt;(), OakStatus&gt;,
+) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;wasmi::RuntimeValue&gt;, wasmi::Trap&gt; {
+    <span class="kw">let </span>oak_status_from_result = result.map_or_else(|x: OakStatus| x, |()| OakStatus::Ok);
+    <span class="kw">let </span>wasmi_value = wasmi::RuntimeValue::I32(oak_status_from_result <span class="kw">as </span>i32);
+    <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(wasmi_value))
 }
 </code></pre></div>
-</section><section id="search" class="content hidden"></section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="oak_functions_wasm" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.62.0-nightly (de1bc0008 2022-04-21)" ></div>
-</body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="oak_functions_wasm" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (81f391930 2022-10-09)" ></div></body></html>

@@ -1,9 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `remote_attestation/rust/src/message.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>message.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../ayu.css" disabled><link rel="stylesheet" type="text/css" href="../../dark.css" disabled><link rel="stylesheet" type="text/css" href="../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../storage.js"></script><script src="../../crates.js"></script><script defer src="../../main.js"></script><script defer src="../../source-script.js"></script><script defer src="../../source-files.js"></script>
-    <noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../oak_remote_attestation/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div>
-        </a><h2 class="location"></h2>
-    </nav>
-    <nav class="sidebar"><a class="sidebar-logo" href="../../oak_remote_attestation/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div>
-        </a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../oak_remote_attestation/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><div class="theme-picker hidden"><button id="theme-picker" aria-label="Pick another theme!" aria-haspopup="menu" title="themes"><img width="22" height="22" alt="Pick another theme!" src="../../brush.svg"></button><div id="theme-choices" role="menu"></div></div><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><button type="button" id="help-button" title="help">?</button><a id="settings-menu" href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../wheel.svg"></a></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `oak_remote_attestation/src/message.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>message.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" href="../../normalize.css"><link rel="stylesheet" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" href="../../ayu.css" disabled><link rel="stylesheet" href="../../dark.css" disabled><link rel="stylesheet" href="../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../storage.js"></script><script defer src="../../source-script.js"></script><script defer src="../../source-files.js"></script><script defer src="../../main.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><a class="sidebar-logo" href="../../oak_remote_attestation/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../oak_remote_attestation/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="src-line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -486,489 +481,488 @@
 <span id="481">481</span>
 <span id="482">482</span>
 <span id="483">483</span>
-</pre><pre class="rust"><code><span class="comment">//</span>
-<span class="comment">// Copyright 2021 The Project Oak Authors</span>
-<span class="comment">//</span>
-<span class="comment">// Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
-<span class="comment">// you may not use this file except in compliance with the License.</span>
-<span class="comment">// You may obtain a copy of the License at</span>
-<span class="comment">//</span>
-<span class="comment">//     http://www.apache.org/licenses/LICENSE-2.0</span>
-<span class="comment">//</span>
-<span class="comment">// Unless required by applicable law or agreed to in writing, software</span>
-<span class="comment">// distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
-<span class="comment">// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
-<span class="comment">// See the License for the specific language governing permissions and</span>
-<span class="comment">// limitations under the License.</span>
-<span class="comment">//</span>
+</pre><pre class="rust"><code><span class="comment">//
+// Copyright 2021 The Project Oak Authors
+//
+// Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
-<span class="comment">// Messages that implement a simplified version of the Enclave Key Exchange</span>
-<span class="comment">// Protocol (EKEP).</span>
-<span class="comment">//</span>
-<span class="comment">// Unlike other messages exchanged between client &amp; server, these are expressed</span>
-<span class="comment">// as Rust structs and serialized with custom logic. This is done to maintain</span>
-<span class="comment">// binary-compatibility with other implementations of this protocol.</span>
+// Messages that implement a simplified version of the Enclave Key Exchange
+// Protocol (EKEP).
+//
+// Unlike other messages exchanged between client &amp; server, these are expressed
+// as Rust structs and serialized with custom logic. This is done to maintain
+// binary-compatibility with other implementations of this protocol.
 
-<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::crypto</span>::{
-    <span class="ident">KEY_AGREEMENT_ALGORITHM_KEY_LENGTH</span>, <span class="ident">NONCE_LENGTH</span>, <span class="ident">SIGNATURE_LENGTH</span>,
-    <span class="ident">SIGNING_ALGORITHM_KEY_LENGTH</span>,
+</span><span class="kw">use </span><span class="kw">crate</span>::crypto::{
+    KEY_AGREEMENT_ALGORITHM_KEY_LENGTH, NONCE_LENGTH, SIGNATURE_LENGTH,
+    SIGNING_ALGORITHM_KEY_LENGTH,
 };
-<span class="kw">use</span> <span class="ident">alloc::vec::Vec</span>;
-<span class="kw">use</span> <span class="ident">anyhow</span>::{<span class="ident">anyhow</span>, <span class="ident">bail</span>, <span class="ident">Context</span>};
-<span class="kw">use</span> <span class="ident">bytes</span>::{<span class="ident">Buf</span>, <span class="ident">BufMut</span>};
+<span class="kw">use </span>alloc::vec::Vec;
+<span class="kw">use </span>anyhow::{anyhow, bail, Context};
+<span class="kw">use </span>bytes::{Buf, BufMut};
 
-<span class="doccomment">/// Maximum handshake message size is set to be equal to 1KiB.</span>
-<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">MAXIMUM_MESSAGE_SIZE</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">1_024</span>;
+<span class="doccomment">/// Maximum handshake message size is set to be equal to 1KiB.
+</span><span class="kw">pub const </span>MAXIMUM_MESSAGE_SIZE: usize = <span class="number">1_024</span>;
 
-<span class="comment">// Message header values.</span>
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const</span> <span class="ident">CLIENT_HELLO_HEADER</span>: <span class="ident">u8</span> <span class="op">=</span> <span class="number">1</span>;
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const</span> <span class="ident">SERVER_IDENTITY_HEADER</span>: <span class="ident">u8</span> <span class="op">=</span> <span class="number">2</span>;
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const</span> <span class="ident">CLIENT_IDENTITY_HEADER</span>: <span class="ident">u8</span> <span class="op">=</span> <span class="number">3</span>;
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const</span> <span class="ident">ENCRYPTED_DATA_HEADER</span>: <span class="ident">u8</span> <span class="op">=</span> <span class="number">4</span>;
+<span class="comment">// Message header values.
+</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const </span>CLIENT_HELLO_HEADER: u8 = <span class="number">1</span>;
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const </span>SERVER_IDENTITY_HEADER: u8 = <span class="number">2</span>;
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const </span>CLIENT_IDENTITY_HEADER: u8 = <span class="number">3</span>;
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const </span>ENCRYPTED_DATA_HEADER: u8 = <span class="number">4</span>;
 
-<span class="doccomment">/// Remote attestation protocol version.</span>
-<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">PROTOCOL_VERSION</span>: <span class="ident">u8</span> <span class="op">=</span> <span class="number">1</span>;
+<span class="doccomment">/// Remote attestation protocol version.
+</span><span class="kw">pub const </span>PROTOCOL_VERSION: u8 = <span class="number">1</span>;
 
-<span class="doccomment">/// Length (in bytes) of the random vector sent in messages for preventing replay attacks.</span>
-<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">REPLAY_PROTECTION_ARRAY_LENGTH</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">32</span>;
+<span class="doccomment">/// Length (in bytes) of the random vector sent in messages for preventing replay attacks.
+</span><span class="kw">pub const </span>REPLAY_PROTECTION_ARRAY_LENGTH: usize = <span class="number">32</span>;
 
-<span class="doccomment">/// Length (in bytes) of a message header.</span>
-<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">MESSAGE_HEADER_LENGTH</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">1</span>;
+<span class="doccomment">/// Length (in bytes) of a message header.
+</span><span class="kw">pub const </span>MESSAGE_HEADER_LENGTH: usize = <span class="number">1</span>;
 
-<span class="doccomment">/// Length (in bytes) of the protocol version.</span>
-<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">PROTOCOL_VERSION_LENGTH</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">1</span>;
+<span class="doccomment">/// Length (in bytes) of the protocol version.
+</span><span class="kw">pub const </span>PROTOCOL_VERSION_LENGTH: usize = <span class="number">1</span>;
 
-<span class="doccomment">/// Length (in bytes) of the prefix that is used for Little-Endian encoding of the size of a vector</span>
-<span class="doccomment">/// during serailization.</span>
-<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">VEC_SIZE_PREFIX_LENGTH</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">8</span>;
+<span class="doccomment">/// Length (in bytes) of the prefix that is used for Little-Endian encoding of the size of a vector
+/// during serailization.
+</span><span class="kw">pub const </span>VEC_SIZE_PREFIX_LENGTH: usize = <span class="number">8</span>;
 
-<span class="comment">// TODO(#2295): Add Frame struct to remote attestation messages.</span>
-<span class="doccomment">/// Convenience struct that wraps attestation messages.</span>
-<span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy::large_enum_variant</span>)]</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">PartialEq</span>)]</span>
-<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">MessageWrapper</span> {
-    <span class="ident">ClientHello</span>(<span class="ident">ClientHello</span>),
-    <span class="ident">ServerIdentity</span>(<span class="ident">ServerIdentity</span>),
-    <span class="ident">ClientIdentity</span>(<span class="ident">ClientIdentity</span>),
-    <span class="ident">EncryptedData</span>(<span class="ident">EncryptedData</span>),
+<span class="comment">// TODO(#2295): Add Frame struct to remote attestation messages.
+</span><span class="doccomment">/// Convenience struct that wraps attestation messages.
+</span><span class="attribute">#[allow(clippy::large_enum_variant)]
+#[derive(PartialEq)]
+</span><span class="kw">pub enum </span>MessageWrapper {
+    ClientHello(ClientHello),
+    ServerIdentity(ServerIdentity),
+    ClientIdentity(ClientIdentity),
+    EncryptedData(EncryptedData),
 }
 
-<span class="kw">impl</span> <span class="ident">core::fmt::Debug</span> <span class="kw">for</span> <span class="ident">MessageWrapper</span> {
-    <span class="kw">fn</span> <span class="ident">fmt</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">f</span>: <span class="kw-2">&amp;mut</span> <span class="ident">core::fmt::Formatter</span>) -&gt; <span class="ident">core::fmt::Result</span> {
-        <span class="kw">match</span> <span class="self">self</span> {
-            <span class="ident"><span class="self">Self</span>::ClientHello</span>(<span class="kw">_</span>) =&gt; <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;ClientHello&quot;</span>),
-            <span class="ident"><span class="self">Self</span>::ServerIdentity</span>(<span class="kw">_</span>) =&gt; <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;ServerIdentity&quot;</span>),
-            <span class="ident"><span class="self">Self</span>::ClientIdentity</span>(<span class="kw">_</span>) =&gt; <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;ClientIdentity&quot;</span>),
-            <span class="ident"><span class="self">Self</span>::EncryptedData</span>(<span class="kw">_</span>) =&gt; <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;EncryptedData&quot;</span>),
+<span class="kw">impl </span>core::fmt::Debug <span class="kw">for </span>MessageWrapper {
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>core::fmt::Formatter) -&gt; core::fmt::Result {
+        <span class="kw">match </span><span class="self">self </span>{
+            <span class="self">Self</span>::ClientHello(<span class="kw">_</span>) =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;ClientHello&quot;</span>),
+            <span class="self">Self</span>::ServerIdentity(<span class="kw">_</span>) =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;ServerIdentity&quot;</span>),
+            <span class="self">Self</span>::ClientIdentity(<span class="kw">_</span>) =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;ClientIdentity&quot;</span>),
+            <span class="self">Self</span>::EncryptedData(<span class="kw">_</span>) =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;EncryptedData&quot;</span>),
         }
     }
 }
 
-<span class="comment">// TODO(#2105): Implement challenge-response in remote attestation.</span>
-<span class="comment">// TODO(#2106): Support various claims in remote attestation.</span>
-<span class="doccomment">/// Initial message that starts remote attestation handshake.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">PartialEq</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">ClientHello</span> {
-    <span class="doccomment">/// Random vector sent in messages for preventing replay attacks.</span>
-    <span class="kw">pub</span> <span class="ident">random</span>: [<span class="ident">u8</span>; <span class="ident">REPLAY_PROTECTION_ARRAY_LENGTH</span>],
+<span class="comment">// TODO(#2105): Implement challenge-response in remote attestation.
+// TODO(#2106): Support various claims in remote attestation.
+</span><span class="doccomment">/// Initial message that starts remote attestation handshake.
+</span><span class="attribute">#[derive(Clone, PartialEq)]
+</span><span class="kw">pub struct </span>ClientHello {
+    <span class="doccomment">/// Random vector sent in messages for preventing replay attacks.
+    </span><span class="kw">pub </span>random: [u8; REPLAY_PROTECTION_ARRAY_LENGTH],
 }
 
-<span class="doccomment">/// Server identity message containing remote attestation information and a public key for</span>
-<span class="doccomment">/// Diffie-Hellman key negotiation.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">PartialEq</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">ServerIdentity</span> {
-    <span class="doccomment">/// Remote attestation protocol version.</span>
-    <span class="kw">pub</span> <span class="ident">version</span>: <span class="ident">u8</span>,
-    <span class="doccomment">/// Public key needed to establish a session key.</span>
-    <span class="kw">pub</span> <span class="ident">ephemeral_public_key</span>: [<span class="ident">u8</span>; <span class="ident">KEY_AGREEMENT_ALGORITHM_KEY_LENGTH</span>],
-    <span class="doccomment">/// Random vector sent in messages for preventing replay attacks.</span>
-    <span class="kw">pub</span> <span class="ident">random</span>: [<span class="ident">u8</span>; <span class="ident">REPLAY_PROTECTION_ARRAY_LENGTH</span>],
-    <span class="doccomment">/// Signature of the SHA-256 hash of all previously sent and received messages.</span>
-    <span class="doccomment">/// Transcript signature is sent in messages to prevent replay attacks.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// Signature must be an IEEE-P1363 encoded ECDSA-P256 signature.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// &lt;https://datatracker.ietf.org/doc/html/rfc6979&gt;</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// &lt;https://standards.ieee.org/standard/1363-2000.html&gt;</span>
-    <span class="kw">pub</span> <span class="ident">transcript_signature</span>: [<span class="ident">u8</span>; <span class="ident">SIGNATURE_LENGTH</span>],
-    <span class="doccomment">/// Public key used to sign transcripts.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// Public key must be an OpenSSL ECDSA-P256 key, which is represented as</span>
-    <span class="doccomment">/// `0x04 | X: 32-byte | Y: 32-byte`.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// Where X and Y are big-endian coordinates of an Elliptic Curve point.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// &lt;https://datatracker.ietf.org/doc/html/rfc6979&gt;</span>
-    <span class="kw">pub</span> <span class="ident">signing_public_key</span>: [<span class="ident">u8</span>; <span class="ident">SIGNING_ALGORITHM_KEY_LENGTH</span>],
-    <span class="doccomment">/// Information used for remote attestation such as a TEE report and a TEE provider&#39;s</span>
-    <span class="doccomment">/// certificate.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// The report would normally include (and sign over) the SHA256 hash of the concatenation of</span>
-    <span class="doccomment">/// the SHA256 hashes of (in order):</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// - [`ServerIdentity::ephemeral_public_key`]</span>
-    <span class="doccomment">/// - [`ServerIdentity::signing_public_key`]</span>
-    <span class="kw">pub</span> <span class="ident">attestation_report</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
+<span class="doccomment">/// Server identity message containing remote attestation information and a public key for
+/// Diffie-Hellman key negotiation.
+</span><span class="attribute">#[derive(Clone, PartialEq)]
+</span><span class="kw">pub struct </span>ServerIdentity {
+    <span class="doccomment">/// Remote attestation protocol version.
+    </span><span class="kw">pub </span>version: u8,
+    <span class="doccomment">/// Public key needed to establish a session key.
+    </span><span class="kw">pub </span>ephemeral_public_key: [u8; KEY_AGREEMENT_ALGORITHM_KEY_LENGTH],
+    <span class="doccomment">/// Random vector sent in messages for preventing replay attacks.
+    </span><span class="kw">pub </span>random: [u8; REPLAY_PROTECTION_ARRAY_LENGTH],
+    <span class="doccomment">/// Signature of the SHA-256 hash of all previously sent and received messages.
+    /// Transcript signature is sent in messages to prevent replay attacks.
+    ///
+    /// Signature must be an IEEE-P1363 encoded ECDSA-P256 signature.
+    ///
+    /// &lt;https://datatracker.ietf.org/doc/html/rfc6979&gt;
+    ///
+    /// &lt;https://standards.ieee.org/standard/1363-2000.html&gt;
+    </span><span class="kw">pub </span>transcript_signature: [u8; SIGNATURE_LENGTH],
+    <span class="doccomment">/// Public key used to sign transcripts.
+    ///
+    /// Public key must be an OpenSSL ECDSA-P256 key, which is represented as
+    /// `0x04 | X: 32-byte | Y: 32-byte`.
+    ///
+    /// Where X and Y are big-endian coordinates of an Elliptic Curve point.
+    ///
+    /// &lt;https://datatracker.ietf.org/doc/html/rfc6979&gt;
+    </span><span class="kw">pub </span>signing_public_key: [u8; SIGNING_ALGORITHM_KEY_LENGTH],
+    <span class="doccomment">/// Information used for remote attestation such as a TEE report and a TEE provider&#39;s
+    /// certificate.
+    ///
+    /// The report would normally include (and sign over) the SHA256 hash of the concatenation of
+    /// the SHA256 hashes of (in order):
+    ///
+    /// - [`ServerIdentity::ephemeral_public_key`]
+    /// - [`ServerIdentity::signing_public_key`]
+    </span><span class="kw">pub </span>attestation_report: Vec&lt;u8&gt;,
 }
 
-<span class="doccomment">/// Client identity message containing remote attestation information and a public key for</span>
-<span class="doccomment">/// Diffie-Hellman key negotiation.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">PartialEq</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">ClientIdentity</span> {
-    <span class="doccomment">/// See [`ServerIdentity::ephemeral_public_key`].</span>
-    <span class="kw">pub</span> <span class="ident">ephemeral_public_key</span>: [<span class="ident">u8</span>; <span class="ident">KEY_AGREEMENT_ALGORITHM_KEY_LENGTH</span>],
-    <span class="doccomment">/// See [`ServerIdentity::transcript_signature`].</span>
-    <span class="kw">pub</span> <span class="ident">transcript_signature</span>: [<span class="ident">u8</span>; <span class="ident">SIGNATURE_LENGTH</span>],
-    <span class="doccomment">/// See [`ServerIdentity::signing_public_key`].</span>
-    <span class="kw">pub</span> <span class="ident">signing_public_key</span>: [<span class="ident">u8</span>; <span class="ident">SIGNING_ALGORITHM_KEY_LENGTH</span>],
-    <span class="doccomment">/// See [`ServerIdentity::attestation_report`].</span>
-    <span class="kw">pub</span> <span class="ident">attestation_report</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
+<span class="doccomment">/// Client identity message containing remote attestation information and a public key for
+/// Diffie-Hellman key negotiation.
+</span><span class="attribute">#[derive(Clone, PartialEq)]
+</span><span class="kw">pub struct </span>ClientIdentity {
+    <span class="doccomment">/// See [`ServerIdentity::ephemeral_public_key`].
+    </span><span class="kw">pub </span>ephemeral_public_key: [u8; KEY_AGREEMENT_ALGORITHM_KEY_LENGTH],
+    <span class="doccomment">/// See [`ServerIdentity::transcript_signature`].
+    </span><span class="kw">pub </span>transcript_signature: [u8; SIGNATURE_LENGTH],
+    <span class="doccomment">/// See [`ServerIdentity::signing_public_key`].
+    </span><span class="kw">pub </span>signing_public_key: [u8; SIGNING_ALGORITHM_KEY_LENGTH],
+    <span class="doccomment">/// See [`ServerIdentity::attestation_report`].
+    </span><span class="kw">pub </span>attestation_report: Vec&lt;u8&gt;,
 }
 
-<span class="doccomment">/// Message containing data encrypted using a session key.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">PartialEq</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">EncryptedData</span> {
-    <span class="doccomment">/// Random nonce (initialization vector) used for encryption/decryption.</span>
-    <span class="kw">pub</span> <span class="ident">nonce</span>: [<span class="ident">u8</span>; <span class="ident">NONCE_LENGTH</span>],
-    <span class="doccomment">/// Data encrypted using the session key.</span>
-    <span class="kw">pub</span> <span class="ident">data</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
+<span class="doccomment">/// Message containing data encrypted using a session key.
+</span><span class="attribute">#[derive(Clone, Debug, PartialEq)]
+</span><span class="kw">pub struct </span>EncryptedData {
+    <span class="doccomment">/// Random nonce (initialization vector) used for encryption/decryption.
+    </span><span class="kw">pub </span>nonce: [u8; NONCE_LENGTH],
+    <span class="doccomment">/// Data encrypted using the session key.
+    </span><span class="kw">pub </span>data: Vec&lt;u8&gt;,
 }
 
-<span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">Serializable</span> {
-    <span class="kw">fn</span> <span class="ident">serialize</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span>;
+<span class="kw">pub trait </span>Serializable {
+    <span class="kw">fn </span>serialize(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; anyhow::Result&lt;Vec&lt;u8&gt;&gt;;
 }
 
-<span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">Deserializable</span> {
-    <span class="kw">fn</span> <span class="ident">deserialize</span>(<span class="ident">bytes</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span>
-    <span class="kw">where</span>
-        <span class="self">Self</span>: <span class="ident">Sized</span>;
+<span class="kw">pub trait </span>Deserializable {
+    <span class="kw">fn </span>deserialize(bytes: <span class="kw-2">&amp;</span>[u8]) -&gt; anyhow::Result&lt;<span class="self">Self</span>&gt;
+    <span class="kw">where
+        </span><span class="self">Self</span>: Sized;
 }
 
-<span class="kw">impl</span> <span class="ident">ClientHello</span> {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">random</span>: [<span class="ident">u8</span>; <span class="ident">REPLAY_PROTECTION_ARRAY_LENGTH</span>]) -&gt; <span class="self">Self</span> {
-        <span class="self">Self</span> { <span class="ident">random</span> }
+<span class="kw">impl </span>ClientHello {
+    <span class="kw">pub fn </span>new(random: [u8; REPLAY_PROTECTION_ARRAY_LENGTH]) -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{ random }
     }
 
-    <span class="kw">const</span> <span class="kw">fn</span> <span class="ident">len</span>() -&gt; <span class="ident">usize</span> {
-        <span class="ident">MESSAGE_HEADER_LENGTH</span> <span class="op">+</span> <span class="ident">REPLAY_PROTECTION_ARRAY_LENGTH</span>
-    }
-}
-
-<span class="kw">impl</span> <span class="ident">Serializable</span> <span class="kw">for</span> <span class="ident">ClientHello</span> {
-    <span class="kw">fn</span> <span class="ident">serialize</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">result</span> <span class="op">=</span> <span class="ident">Vec::with_capacity</span>(<span class="ident">ClientHello::len</span>());
-        <span class="ident">result</span>.<span class="ident">put_u8</span>(<span class="ident">CLIENT_HELLO_HEADER</span>);
-        <span class="ident">result</span>.<span class="ident">put_slice</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">random</span>);
-        <span class="prelude-val">Ok</span>(<span class="ident">result</span>)
+    <span class="kw">const fn </span>len() -&gt; usize {
+        MESSAGE_HEADER_LENGTH + REPLAY_PROTECTION_ARRAY_LENGTH
     }
 }
 
-<span class="kw">impl</span> <span class="ident">Deserializable</span> <span class="kw">for</span> <span class="ident">ClientHello</span> {
-    <span class="kw">fn</span> <span class="ident">deserialize</span>(<span class="ident">input</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
-        <span class="kw">if</span> <span class="ident">input</span>.<span class="ident">len</span>() <span class="op">!</span><span class="op">=</span> <span class="ident">ClientHello::len</span>() {
+<span class="kw">impl </span>Serializable <span class="kw">for </span>ClientHello {
+    <span class="kw">fn </span>serialize(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; anyhow::Result&lt;Vec&lt;u8&gt;&gt; {
+        <span class="kw">let </span><span class="kw-2">mut </span>result = Vec::with_capacity(ClientHello::len());
+        result.put_u8(CLIENT_HELLO_HEADER);
+        result.put_slice(<span class="kw-2">&amp;</span><span class="self">self</span>.random);
+        <span class="prelude-val">Ok</span>(result)
+    }
+}
+
+<span class="kw">impl </span>Deserializable <span class="kw">for </span>ClientHello {
+    <span class="kw">fn </span>deserialize(input: <span class="kw-2">&amp;</span>[u8]) -&gt; anyhow::Result&lt;<span class="self">Self</span>&gt; {
+        <span class="kw">if </span>input.len() != ClientHello::len() {
             <span class="macro">bail!</span>(
                 <span class="string">&quot;Invalid client hello message length: expected {}, found {}&quot;</span>,
-                <span class="ident">ClientHello::len</span>(),
-                <span class="ident">input</span>.<span class="ident">len</span>(),
+                ClientHello::len(),
+                input.len(),
             );
         }
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">input</span> <span class="op">=</span> <span class="ident">input</span>;
-        <span class="kw">if</span> <span class="ident">input</span>.<span class="ident">get_u8</span>() <span class="op">!</span><span class="op">=</span> <span class="ident">CLIENT_HELLO_HEADER</span> {
+        <span class="kw">let </span><span class="kw-2">mut </span>input = input;
+        <span class="kw">if </span>input.get_u8() != CLIENT_HELLO_HEADER {
             <span class="macro">bail!</span>(<span class="string">&quot;Invalid client hello message header&quot;</span>);
         }
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">random</span> <span class="op">=</span> [<span class="number">0u8</span>; <span class="ident">REPLAY_PROTECTION_ARRAY_LENGTH</span>];
-        <span class="ident">input</span>.<span class="ident">copy_to_slice</span>(<span class="kw-2">&amp;mut</span> <span class="ident">random</span>);
-        <span class="prelude-val">Ok</span>(<span class="self">Self</span> { <span class="ident">random</span> })
+        <span class="kw">let </span><span class="kw-2">mut </span>random = [<span class="number">0u8</span>; REPLAY_PROTECTION_ARRAY_LENGTH];
+        input.copy_to_slice(<span class="kw-2">&amp;mut </span>random);
+        <span class="prelude-val">Ok</span>(<span class="self">Self </span>{ random })
     }
 }
 
-<span class="kw">impl</span> <span class="ident">ServerIdentity</span> {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(
-        <span class="ident">ephemeral_public_key</span>: [<span class="ident">u8</span>; <span class="ident">KEY_AGREEMENT_ALGORITHM_KEY_LENGTH</span>],
-        <span class="ident">random</span>: [<span class="ident">u8</span>; <span class="ident">REPLAY_PROTECTION_ARRAY_LENGTH</span>],
-        <span class="ident">signing_public_key</span>: [<span class="ident">u8</span>; <span class="ident">SIGNING_ALGORITHM_KEY_LENGTH</span>],
-        <span class="ident">attestation_report</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
-    ) -&gt; <span class="self">Self</span> {
-        <span class="self">Self</span> {
-            <span class="ident">version</span>: <span class="ident">PROTOCOL_VERSION</span>,
-            <span class="ident">ephemeral_public_key</span>,
-            <span class="ident">random</span>,
-            <span class="ident">transcript_signature</span>: [<span class="ident">Default::default</span>(); <span class="ident">SIGNATURE_LENGTH</span>],
-            <span class="ident">signing_public_key</span>,
-            <span class="ident">attestation_report</span>,
+<span class="kw">impl </span>ServerIdentity {
+    <span class="kw">pub fn </span>new(
+        ephemeral_public_key: [u8; KEY_AGREEMENT_ALGORITHM_KEY_LENGTH],
+        random: [u8; REPLAY_PROTECTION_ARRAY_LENGTH],
+        signing_public_key: [u8; SIGNING_ALGORITHM_KEY_LENGTH],
+        attestation_report: Vec&lt;u8&gt;,
+    ) -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{
+            version: PROTOCOL_VERSION,
+            ephemeral_public_key,
+            random,
+            transcript_signature: [Default::default(); SIGNATURE_LENGTH],
+            signing_public_key,
+            attestation_report,
         }
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">clear_transcript_signature</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) {
-        <span class="self">self</span>.<span class="ident">transcript_signature</span> <span class="op">=</span> [<span class="ident">Default::default</span>(); <span class="ident">SIGNATURE_LENGTH</span>];
+    <span class="kw">pub fn </span>clear_transcript_signature(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
+        <span class="self">self</span>.transcript_signature = [Default::default(); SIGNATURE_LENGTH];
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">set_transcript_signature</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">transcript_signature</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>; <span class="ident">SIGNATURE_LENGTH</span>]) {
-        <span class="self">self</span>.<span class="ident">transcript_signature</span> <span class="op">=</span> <span class="kw-2">*</span><span class="ident">transcript_signature</span>;
+    <span class="kw">pub fn </span>set_transcript_signature(<span class="kw-2">&amp;mut </span><span class="self">self</span>, transcript_signature: <span class="kw-2">&amp;</span>[u8; SIGNATURE_LENGTH]) {
+        <span class="self">self</span>.transcript_signature = <span class="kw-2">*</span>transcript_signature;
     }
 
-    <span class="kw">const</span> <span class="kw">fn</span> <span class="ident">min_len</span>() -&gt; <span class="ident">usize</span> {
-        <span class="ident">MESSAGE_HEADER_LENGTH</span>
-            <span class="op">+</span> <span class="ident">PROTOCOL_VERSION_LENGTH</span>
-            <span class="op">+</span> <span class="ident">KEY_AGREEMENT_ALGORITHM_KEY_LENGTH</span>
-            <span class="op">+</span> <span class="ident">REPLAY_PROTECTION_ARRAY_LENGTH</span>
-            <span class="op">+</span> <span class="ident">SIGNATURE_LENGTH</span>
-            <span class="op">+</span> <span class="ident">SIGNING_ALGORITHM_KEY_LENGTH</span>
-            <span class="op">+</span> <span class="ident">VEC_SIZE_PREFIX_LENGTH</span> <span class="comment">// for attestation_report</span>
+    <span class="kw">const fn </span>min_len() -&gt; usize {
+        MESSAGE_HEADER_LENGTH
+            + PROTOCOL_VERSION_LENGTH
+            + KEY_AGREEMENT_ALGORITHM_KEY_LENGTH
+            + REPLAY_PROTECTION_ARRAY_LENGTH
+            + SIGNATURE_LENGTH
+            + SIGNING_ALGORITHM_KEY_LENGTH
+            + VEC_SIZE_PREFIX_LENGTH <span class="comment">// for attestation_report
+    </span>}
+}
+
+<span class="kw">impl </span>Serializable <span class="kw">for </span>ServerIdentity {
+    <span class="kw">fn </span>serialize(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; anyhow::Result&lt;Vec&lt;u8&gt;&gt; {
+        <span class="kw">let </span><span class="kw-2">mut </span>result =
+            Vec::with_capacity(ServerIdentity::min_len() + <span class="self">self</span>.attestation_report.len());
+        result.put_u8(SERVER_IDENTITY_HEADER);
+        result.put_u8(<span class="self">self</span>.version);
+        result.put_slice(<span class="kw-2">&amp;</span><span class="self">self</span>.ephemeral_public_key);
+        result.put_slice(<span class="kw-2">&amp;</span><span class="self">self</span>.random);
+        result.put_slice(<span class="kw-2">&amp;</span><span class="self">self</span>.transcript_signature);
+        result.put_slice(<span class="kw-2">&amp;</span><span class="self">self</span>.signing_public_key);
+        put_vec(<span class="kw-2">&amp;mut </span>result, <span class="kw-2">&amp;</span><span class="self">self</span>.attestation_report);
+        <span class="prelude-val">Ok</span>(result)
     }
 }
 
-<span class="kw">impl</span> <span class="ident">Serializable</span> <span class="kw">for</span> <span class="ident">ServerIdentity</span> {
-    <span class="kw">fn</span> <span class="ident">serialize</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">result</span> <span class="op">=</span>
-            <span class="ident">Vec::with_capacity</span>(<span class="ident">ServerIdentity::min_len</span>() <span class="op">+</span> <span class="self">self</span>.<span class="ident">attestation_report</span>.<span class="ident">len</span>());
-        <span class="ident">result</span>.<span class="ident">put_u8</span>(<span class="ident">SERVER_IDENTITY_HEADER</span>);
-        <span class="ident">result</span>.<span class="ident">put_u8</span>(<span class="self">self</span>.<span class="ident">version</span>);
-        <span class="ident">result</span>.<span class="ident">put_slice</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">ephemeral_public_key</span>);
-        <span class="ident">result</span>.<span class="ident">put_slice</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">random</span>);
-        <span class="ident">result</span>.<span class="ident">put_slice</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">transcript_signature</span>);
-        <span class="ident">result</span>.<span class="ident">put_slice</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">signing_public_key</span>);
-        <span class="ident">put_vec</span>(<span class="kw-2">&amp;mut</span> <span class="ident">result</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">attestation_report</span>);
-        <span class="prelude-val">Ok</span>(<span class="ident">result</span>)
-    }
-}
-
-<span class="kw">impl</span> <span class="ident">Deserializable</span> <span class="kw">for</span> <span class="ident">ServerIdentity</span> {
-    <span class="kw">fn</span> <span class="ident">deserialize</span>(<span class="ident">input</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
-        <span class="kw">if</span> <span class="ident">input</span>.<span class="ident">len</span>() <span class="op">&lt;</span> <span class="ident">ServerIdentity::min_len</span>() {
+<span class="kw">impl </span>Deserializable <span class="kw">for </span>ServerIdentity {
+    <span class="kw">fn </span>deserialize(input: <span class="kw-2">&amp;</span>[u8]) -&gt; anyhow::Result&lt;<span class="self">Self</span>&gt; {
+        <span class="kw">if </span>input.len() &lt; ServerIdentity::min_len() {
             <span class="macro">bail!</span>(
                 <span class="string">&quot;Server identity message too short: expected at least {} bytes, found {}&quot;</span>,
-                <span class="ident">ServerIdentity::min_len</span>(),
-                <span class="ident">input</span>.<span class="ident">len</span>(),
+                ServerIdentity::min_len(),
+                input.len(),
             );
         }
-        <span class="kw">if</span> <span class="ident">input</span>.<span class="ident">len</span>() <span class="op">&gt;</span> <span class="ident">MAXIMUM_MESSAGE_SIZE</span> {
+        <span class="kw">if </span>input.len() &gt; MAXIMUM_MESSAGE_SIZE {
             <span class="macro">bail!</span>(
                 <span class="string">&quot;Maximum handshake message size of {} exceeded, found {}&quot;</span>,
-                <span class="ident">MAXIMUM_MESSAGE_SIZE</span>,
-                <span class="ident">input</span>.<span class="ident">len</span>(),
+                MAXIMUM_MESSAGE_SIZE,
+                input.len(),
             );
         }
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">input</span> <span class="op">=</span> <span class="ident">input</span>;
-        <span class="kw">if</span> <span class="ident">input</span>.<span class="ident">get_u8</span>() <span class="op">!</span><span class="op">=</span> <span class="ident">SERVER_IDENTITY_HEADER</span> {
+        <span class="kw">let </span><span class="kw-2">mut </span>input = input;
+        <span class="kw">if </span>input.get_u8() != SERVER_IDENTITY_HEADER {
             <span class="macro">bail!</span>(<span class="string">&quot;Invalid server identity message header&quot;</span>);
         }
 
-        <span class="kw">let</span> <span class="ident">version</span> <span class="op">=</span> <span class="ident">input</span>.<span class="ident">get_u8</span>();
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">ephemeral_public_key</span> <span class="op">=</span> [<span class="number">0u8</span>; <span class="ident">KEY_AGREEMENT_ALGORITHM_KEY_LENGTH</span>];
-        <span class="ident">input</span>.<span class="ident">copy_to_slice</span>(<span class="kw-2">&amp;mut</span> <span class="ident">ephemeral_public_key</span>);
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">random</span> <span class="op">=</span> [<span class="number">0u8</span>; <span class="ident">REPLAY_PROTECTION_ARRAY_LENGTH</span>];
-        <span class="ident">input</span>.<span class="ident">copy_to_slice</span>(<span class="kw-2">&amp;mut</span> <span class="ident">random</span>);
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">transcript_signature</span> <span class="op">=</span> [<span class="number">0u8</span>; <span class="ident">SIGNATURE_LENGTH</span>];
-        <span class="ident">input</span>.<span class="ident">copy_to_slice</span>(<span class="kw-2">&amp;mut</span> <span class="ident">transcript_signature</span>);
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">signing_public_key</span> <span class="op">=</span> [<span class="number">0u8</span>; <span class="ident">SIGNING_ALGORITHM_KEY_LENGTH</span>];
-        <span class="ident">input</span>.<span class="ident">copy_to_slice</span>(<span class="kw-2">&amp;mut</span> <span class="ident">signing_public_key</span>);
-        <span class="kw">let</span> <span class="ident">attestation_report</span> <span class="op">=</span> <span class="ident">get_vec</span>(<span class="kw-2">&amp;mut</span> <span class="ident">input</span>)<span class="question-mark">?</span>;
+        <span class="kw">let </span>version = input.get_u8();
+        <span class="kw">let </span><span class="kw-2">mut </span>ephemeral_public_key = [<span class="number">0u8</span>; KEY_AGREEMENT_ALGORITHM_KEY_LENGTH];
+        input.copy_to_slice(<span class="kw-2">&amp;mut </span>ephemeral_public_key);
+        <span class="kw">let </span><span class="kw-2">mut </span>random = [<span class="number">0u8</span>; REPLAY_PROTECTION_ARRAY_LENGTH];
+        input.copy_to_slice(<span class="kw-2">&amp;mut </span>random);
+        <span class="kw">let </span><span class="kw-2">mut </span>transcript_signature = [<span class="number">0u8</span>; SIGNATURE_LENGTH];
+        input.copy_to_slice(<span class="kw-2">&amp;mut </span>transcript_signature);
+        <span class="kw">let </span><span class="kw-2">mut </span>signing_public_key = [<span class="number">0u8</span>; SIGNING_ALGORITHM_KEY_LENGTH];
+        input.copy_to_slice(<span class="kw-2">&amp;mut </span>signing_public_key);
+        <span class="kw">let </span>attestation_report = get_vec(<span class="kw-2">&amp;mut </span>input)<span class="question-mark">?</span>;
 
-        <span class="kw">if</span> <span class="ident">input</span>.<span class="ident">has_remaining</span>() {
+        <span class="kw">if </span>input.has_remaining() {
             <span class="macro">bail!</span>(
                 <span class="string">&quot;Invalid server identity message: {} unused bytes detected&quot;</span>,
-                <span class="ident">input</span>.<span class="ident">remaining</span>()
+                input.remaining()
             );
         }
 
-        <span class="prelude-val">Ok</span>(<span class="self">Self</span> {
-            <span class="ident">version</span>,
-            <span class="ident">ephemeral_public_key</span>,
-            <span class="ident">random</span>,
-            <span class="ident">transcript_signature</span>,
-            <span class="ident">signing_public_key</span>,
-            <span class="ident">attestation_report</span>,
+        <span class="prelude-val">Ok</span>(<span class="self">Self </span>{
+            version,
+            ephemeral_public_key,
+            random,
+            transcript_signature,
+            signing_public_key,
+            attestation_report,
         })
     }
 }
 
-<span class="kw">impl</span> <span class="ident">ClientIdentity</span> {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(
-        <span class="ident">ephemeral_public_key</span>: [<span class="ident">u8</span>; <span class="ident">KEY_AGREEMENT_ALGORITHM_KEY_LENGTH</span>],
-        <span class="ident">signing_public_key</span>: [<span class="ident">u8</span>; <span class="ident">SIGNING_ALGORITHM_KEY_LENGTH</span>],
-        <span class="ident">attestation_report</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
-    ) -&gt; <span class="self">Self</span> {
-        <span class="self">Self</span> {
-            <span class="ident">ephemeral_public_key</span>,
-            <span class="ident">transcript_signature</span>: [<span class="ident">Default::default</span>(); <span class="ident">SIGNATURE_LENGTH</span>],
-            <span class="ident">signing_public_key</span>,
-            <span class="ident">attestation_report</span>,
+<span class="kw">impl </span>ClientIdentity {
+    <span class="kw">pub fn </span>new(
+        ephemeral_public_key: [u8; KEY_AGREEMENT_ALGORITHM_KEY_LENGTH],
+        signing_public_key: [u8; SIGNING_ALGORITHM_KEY_LENGTH],
+        attestation_report: Vec&lt;u8&gt;,
+    ) -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{
+            ephemeral_public_key,
+            transcript_signature: [Default::default(); SIGNATURE_LENGTH],
+            signing_public_key,
+            attestation_report,
         }
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">clear_transcript_signature</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) {
-        <span class="self">self</span>.<span class="ident">transcript_signature</span> <span class="op">=</span> [<span class="ident">Default::default</span>(); <span class="ident">SIGNATURE_LENGTH</span>];
+    <span class="kw">pub fn </span>clear_transcript_signature(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
+        <span class="self">self</span>.transcript_signature = [Default::default(); SIGNATURE_LENGTH];
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">set_transcript_signature</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">transcript_signature</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>; <span class="ident">SIGNATURE_LENGTH</span>]) {
-        <span class="self">self</span>.<span class="ident">transcript_signature</span> <span class="op">=</span> <span class="kw-2">*</span><span class="ident">transcript_signature</span>;
+    <span class="kw">pub fn </span>set_transcript_signature(<span class="kw-2">&amp;mut </span><span class="self">self</span>, transcript_signature: <span class="kw-2">&amp;</span>[u8; SIGNATURE_LENGTH]) {
+        <span class="self">self</span>.transcript_signature = <span class="kw-2">*</span>transcript_signature;
     }
 
-    <span class="kw">const</span> <span class="kw">fn</span> <span class="ident">min_len</span>() -&gt; <span class="ident">usize</span> {
-        <span class="ident">MESSAGE_HEADER_LENGTH</span>
-            <span class="op">+</span> <span class="ident">KEY_AGREEMENT_ALGORITHM_KEY_LENGTH</span>
-            <span class="op">+</span> <span class="ident">SIGNATURE_LENGTH</span>
-            <span class="op">+</span> <span class="ident">SIGNING_ALGORITHM_KEY_LENGTH</span>
-            <span class="op">+</span> <span class="ident">VEC_SIZE_PREFIX_LENGTH</span> <span class="comment">// for attestation_report</span>
+    <span class="kw">const fn </span>min_len() -&gt; usize {
+        MESSAGE_HEADER_LENGTH
+            + KEY_AGREEMENT_ALGORITHM_KEY_LENGTH
+            + SIGNATURE_LENGTH
+            + SIGNING_ALGORITHM_KEY_LENGTH
+            + VEC_SIZE_PREFIX_LENGTH <span class="comment">// for attestation_report
+    </span>}
+}
+
+<span class="kw">impl </span>Serializable <span class="kw">for </span>ClientIdentity {
+    <span class="kw">fn </span>serialize(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; anyhow::Result&lt;Vec&lt;u8&gt;&gt; {
+        <span class="kw">let </span><span class="kw-2">mut </span>result =
+            Vec::with_capacity(ClientIdentity::min_len() + <span class="self">self</span>.attestation_report.len());
+        result.put_u8(CLIENT_IDENTITY_HEADER);
+        result.put_slice(<span class="kw-2">&amp;</span><span class="self">self</span>.ephemeral_public_key);
+        result.put_slice(<span class="kw-2">&amp;</span><span class="self">self</span>.transcript_signature);
+        result.put_slice(<span class="kw-2">&amp;</span><span class="self">self</span>.signing_public_key);
+        put_vec(<span class="kw-2">&amp;mut </span>result, <span class="kw-2">&amp;</span><span class="self">self</span>.attestation_report);
+        <span class="prelude-val">Ok</span>(result)
     }
 }
 
-<span class="kw">impl</span> <span class="ident">Serializable</span> <span class="kw">for</span> <span class="ident">ClientIdentity</span> {
-    <span class="kw">fn</span> <span class="ident">serialize</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">result</span> <span class="op">=</span>
-            <span class="ident">Vec::with_capacity</span>(<span class="ident">ClientIdentity::min_len</span>() <span class="op">+</span> <span class="self">self</span>.<span class="ident">attestation_report</span>.<span class="ident">len</span>());
-        <span class="ident">result</span>.<span class="ident">put_u8</span>(<span class="ident">CLIENT_IDENTITY_HEADER</span>);
-        <span class="ident">result</span>.<span class="ident">put_slice</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">ephemeral_public_key</span>);
-        <span class="ident">result</span>.<span class="ident">put_slice</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">transcript_signature</span>);
-        <span class="ident">result</span>.<span class="ident">put_slice</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">signing_public_key</span>);
-        <span class="ident">put_vec</span>(<span class="kw-2">&amp;mut</span> <span class="ident">result</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">attestation_report</span>);
-        <span class="prelude-val">Ok</span>(<span class="ident">result</span>)
-    }
-}
-
-<span class="kw">impl</span> <span class="ident">Deserializable</span> <span class="kw">for</span> <span class="ident">ClientIdentity</span> {
-    <span class="kw">fn</span> <span class="ident">deserialize</span>(<span class="ident">input</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
-        <span class="kw">if</span> <span class="ident">input</span>.<span class="ident">len</span>() <span class="op">&lt;</span> <span class="ident">ClientIdentity::min_len</span>() {
+<span class="kw">impl </span>Deserializable <span class="kw">for </span>ClientIdentity {
+    <span class="kw">fn </span>deserialize(input: <span class="kw-2">&amp;</span>[u8]) -&gt; anyhow::Result&lt;<span class="self">Self</span>&gt; {
+        <span class="kw">if </span>input.len() &lt; ClientIdentity::min_len() {
             <span class="macro">bail!</span>(
                 <span class="string">&quot;Client identity message too short: expected at least {} bytes, found {}&quot;</span>,
-                <span class="ident">ClientIdentity::min_len</span>(),
-                <span class="ident">input</span>.<span class="ident">len</span>(),
+                ClientIdentity::min_len(),
+                input.len(),
             );
         }
-        <span class="kw">if</span> <span class="ident">input</span>.<span class="ident">len</span>() <span class="op">&gt;</span> <span class="ident">MAXIMUM_MESSAGE_SIZE</span> {
+        <span class="kw">if </span>input.len() &gt; MAXIMUM_MESSAGE_SIZE {
             <span class="macro">bail!</span>(
                 <span class="string">&quot;Maximum handshake message size of {} exceeded, found {}&quot;</span>,
-                <span class="ident">MAXIMUM_MESSAGE_SIZE</span>,
-                <span class="ident">input</span>.<span class="ident">len</span>(),
+                MAXIMUM_MESSAGE_SIZE,
+                input.len(),
             );
         }
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">input</span> <span class="op">=</span> <span class="ident">input</span>;
-        <span class="kw">if</span> <span class="ident">input</span>.<span class="ident">get_u8</span>() <span class="op">!</span><span class="op">=</span> <span class="ident">CLIENT_IDENTITY_HEADER</span> {
+        <span class="kw">let </span><span class="kw-2">mut </span>input = input;
+        <span class="kw">if </span>input.get_u8() != CLIENT_IDENTITY_HEADER {
             <span class="macro">bail!</span>(<span class="string">&quot;Invalid client identity message header&quot;</span>);
         }
 
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">ephemeral_public_key</span> <span class="op">=</span> [<span class="number">0u8</span>; <span class="ident">KEY_AGREEMENT_ALGORITHM_KEY_LENGTH</span>];
-        <span class="ident">input</span>.<span class="ident">copy_to_slice</span>(<span class="kw-2">&amp;mut</span> <span class="ident">ephemeral_public_key</span>);
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">transcript_signature</span> <span class="op">=</span> [<span class="number">0u8</span>; <span class="ident">SIGNATURE_LENGTH</span>];
-        <span class="ident">input</span>.<span class="ident">copy_to_slice</span>(<span class="kw-2">&amp;mut</span> <span class="ident">transcript_signature</span>);
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">signing_public_key</span> <span class="op">=</span> [<span class="number">0u8</span>; <span class="ident">SIGNING_ALGORITHM_KEY_LENGTH</span>];
-        <span class="ident">input</span>.<span class="ident">copy_to_slice</span>(<span class="kw-2">&amp;mut</span> <span class="ident">signing_public_key</span>);
-        <span class="kw">let</span> <span class="ident">attestation_report</span> <span class="op">=</span> <span class="ident">get_vec</span>(<span class="kw-2">&amp;mut</span> <span class="ident">input</span>)<span class="question-mark">?</span>;
+        <span class="kw">let </span><span class="kw-2">mut </span>ephemeral_public_key = [<span class="number">0u8</span>; KEY_AGREEMENT_ALGORITHM_KEY_LENGTH];
+        input.copy_to_slice(<span class="kw-2">&amp;mut </span>ephemeral_public_key);
+        <span class="kw">let </span><span class="kw-2">mut </span>transcript_signature = [<span class="number">0u8</span>; SIGNATURE_LENGTH];
+        input.copy_to_slice(<span class="kw-2">&amp;mut </span>transcript_signature);
+        <span class="kw">let </span><span class="kw-2">mut </span>signing_public_key = [<span class="number">0u8</span>; SIGNING_ALGORITHM_KEY_LENGTH];
+        input.copy_to_slice(<span class="kw-2">&amp;mut </span>signing_public_key);
+        <span class="kw">let </span>attestation_report = get_vec(<span class="kw-2">&amp;mut </span>input)<span class="question-mark">?</span>;
 
-        <span class="kw">if</span> <span class="ident">input</span>.<span class="ident">has_remaining</span>() {
+        <span class="kw">if </span>input.has_remaining() {
             <span class="macro">bail!</span>(
                 <span class="string">&quot;Invalid client identity message: {} unused bytes detected&quot;</span>,
-                <span class="ident">input</span>.<span class="ident">remaining</span>()
+                input.remaining()
             );
         }
 
-        <span class="prelude-val">Ok</span>(<span class="self">Self</span> {
-            <span class="ident">ephemeral_public_key</span>,
-            <span class="ident">transcript_signature</span>,
-            <span class="ident">signing_public_key</span>,
-            <span class="ident">attestation_report</span>,
+        <span class="prelude-val">Ok</span>(<span class="self">Self </span>{
+            ephemeral_public_key,
+            transcript_signature,
+            signing_public_key,
+            attestation_report,
         })
     }
 }
 
-<span class="kw">impl</span> <span class="ident">EncryptedData</span> {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">nonce</span>: [<span class="ident">u8</span>; <span class="ident">NONCE_LENGTH</span>], <span class="ident">data</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>) -&gt; <span class="self">Self</span> {
-        <span class="self">Self</span> { <span class="ident">nonce</span>, <span class="ident">data</span> }
+<span class="kw">impl </span>EncryptedData {
+    <span class="kw">pub fn </span>new(nonce: [u8; NONCE_LENGTH], data: Vec&lt;u8&gt;) -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{ nonce, data }
     }
 
-    <span class="kw">const</span> <span class="kw">fn</span> <span class="ident">min_len</span>() -&gt; <span class="ident">usize</span> {
-        <span class="ident">MESSAGE_HEADER_LENGTH</span> <span class="op">+</span> <span class="ident">NONCE_LENGTH</span> <span class="op">+</span> <span class="ident">VEC_SIZE_PREFIX_LENGTH</span>
-    }
-}
-
-<span class="kw">impl</span> <span class="ident">Serializable</span> <span class="kw">for</span> <span class="ident">EncryptedData</span> {
-    <span class="kw">fn</span> <span class="ident">serialize</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">result</span> <span class="op">=</span> <span class="ident">Vec::with_capacity</span>(<span class="ident">EncryptedData::min_len</span>() <span class="op">+</span> <span class="self">self</span>.<span class="ident">data</span>.<span class="ident">len</span>());
-        <span class="ident">result</span>.<span class="ident">put_u8</span>(<span class="ident">ENCRYPTED_DATA_HEADER</span>);
-        <span class="ident">result</span>.<span class="ident">put_slice</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">nonce</span>);
-        <span class="ident">put_vec</span>(<span class="kw-2">&amp;mut</span> <span class="ident">result</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">data</span>);
-        <span class="prelude-val">Ok</span>(<span class="ident">result</span>)
+    <span class="kw">const fn </span>min_len() -&gt; usize {
+        MESSAGE_HEADER_LENGTH + NONCE_LENGTH + VEC_SIZE_PREFIX_LENGTH
     }
 }
 
-<span class="kw">impl</span> <span class="ident">Deserializable</span> <span class="kw">for</span> <span class="ident">EncryptedData</span> {
-    <span class="kw">fn</span> <span class="ident">deserialize</span>(<span class="ident">input</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
-        <span class="kw">if</span> <span class="ident">input</span>.<span class="ident">len</span>() <span class="op">&lt;</span> <span class="ident">EncryptedData::min_len</span>() {
+<span class="kw">impl </span>Serializable <span class="kw">for </span>EncryptedData {
+    <span class="kw">fn </span>serialize(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; anyhow::Result&lt;Vec&lt;u8&gt;&gt; {
+        <span class="kw">let </span><span class="kw-2">mut </span>result = Vec::with_capacity(EncryptedData::min_len() + <span class="self">self</span>.data.len());
+        result.put_u8(ENCRYPTED_DATA_HEADER);
+        result.put_slice(<span class="kw-2">&amp;</span><span class="self">self</span>.nonce);
+        put_vec(<span class="kw-2">&amp;mut </span>result, <span class="kw-2">&amp;</span><span class="self">self</span>.data);
+        <span class="prelude-val">Ok</span>(result)
+    }
+}
+
+<span class="kw">impl </span>Deserializable <span class="kw">for </span>EncryptedData {
+    <span class="kw">fn </span>deserialize(input: <span class="kw-2">&amp;</span>[u8]) -&gt; anyhow::Result&lt;<span class="self">Self</span>&gt; {
+        <span class="kw">if </span>input.len() &lt; EncryptedData::min_len() {
             <span class="macro">bail!</span>(
                 <span class="string">&quot;Encrypted data message too short: expected at least {} bytes, found {}&quot;</span>,
-                <span class="ident">EncryptedData::min_len</span>(),
-                <span class="ident">input</span>.<span class="ident">len</span>(),
+                EncryptedData::min_len(),
+                input.len(),
             );
         }
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">input</span> <span class="op">=</span> <span class="ident">input</span>;
-        <span class="kw">if</span> <span class="ident">input</span>.<span class="ident">get_u8</span>() <span class="op">!</span><span class="op">=</span> <span class="ident">ENCRYPTED_DATA_HEADER</span> {
+        <span class="kw">let </span><span class="kw-2">mut </span>input = input;
+        <span class="kw">if </span>input.get_u8() != ENCRYPTED_DATA_HEADER {
             <span class="macro">bail!</span>(<span class="string">&quot;Invalid encrypted data message header&quot;</span>);
         }
 
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">nonce</span> <span class="op">=</span> [<span class="number">0u8</span>; <span class="ident">NONCE_LENGTH</span>];
-        <span class="ident">input</span>.<span class="ident">copy_to_slice</span>(<span class="kw-2">&amp;mut</span> <span class="ident">nonce</span>);
-        <span class="kw">let</span> <span class="ident">data</span> <span class="op">=</span> <span class="ident">get_vec</span>(<span class="kw-2">&amp;mut</span> <span class="ident">input</span>)<span class="question-mark">?</span>;
+        <span class="kw">let </span><span class="kw-2">mut </span>nonce = [<span class="number">0u8</span>; NONCE_LENGTH];
+        input.copy_to_slice(<span class="kw-2">&amp;mut </span>nonce);
+        <span class="kw">let </span>data = get_vec(<span class="kw-2">&amp;mut </span>input)<span class="question-mark">?</span>;
 
-        <span class="kw">if</span> <span class="ident">input</span>.<span class="ident">has_remaining</span>() {
+        <span class="kw">if </span>input.has_remaining() {
             <span class="macro">bail!</span>(
                 <span class="string">&quot;Invalid encrypted data message: {} unused bytes detected&quot;</span>,
-                <span class="ident">input</span>.<span class="ident">remaining</span>()
+                input.remaining()
             );
         }
 
-        <span class="prelude-val">Ok</span>(<span class="self">Self</span> { <span class="ident">nonce</span>, <span class="ident">data</span> })
+        <span class="prelude-val">Ok</span>(<span class="self">Self </span>{ nonce, data })
     }
 }
 
-<span class="doccomment">/// Deserializes an attestation message from a serialized `input` and wraps in a</span>
-<span class="doccomment">/// [`MessageWrapper`].</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">deserialize_message</span>(<span class="ident">input</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">MessageWrapper</span><span class="op">&gt;</span> {
-    <span class="kw">if</span> <span class="ident">input</span>.<span class="ident">is_empty</span>() {
-        <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">&quot;Empty input&quot;</span>));
+<span class="doccomment">/// Deserializes an attestation message from a serialized `input` and wraps in a
+/// [`MessageWrapper`].
+</span><span class="kw">pub fn </span>deserialize_message(input: <span class="kw-2">&amp;</span>[u8]) -&gt; anyhow::Result&lt;MessageWrapper&gt; {
+    <span class="kw">if </span>input.is_empty() {
+        <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">&quot;Empty input&quot;</span>));
     }
-    <span class="kw">match</span> <span class="ident">input</span>[<span class="number">0</span>] {
-        <span class="ident">CLIENT_HELLO_HEADER</span> =&gt; {
-            <span class="kw">let</span> <span class="ident">message</span>: <span class="ident">ClientHello</span> <span class="op">=</span> <span class="ident">Deserializable::deserialize</span>(<span class="ident">input</span>)
-                .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t deserialize client hello message&quot;</span>)<span class="question-mark">?</span>;
-            <span class="prelude-val">Ok</span>(<span class="ident">MessageWrapper::ClientHello</span>(<span class="ident">message</span>))
+    <span class="kw">match </span>input[<span class="number">0</span>] {
+        CLIENT_HELLO_HEADER =&gt; {
+            <span class="kw">let </span>message: ClientHello = Deserializable::deserialize(input)
+                .context(<span class="string">&quot;Couldn&#39;t deserialize client hello message&quot;</span>)<span class="question-mark">?</span>;
+            <span class="prelude-val">Ok</span>(MessageWrapper::ClientHello(message))
         }
-        <span class="ident">SERVER_IDENTITY_HEADER</span> =&gt; {
-            <span class="kw">let</span> <span class="ident">message</span>: <span class="ident">ServerIdentity</span> <span class="op">=</span> <span class="ident">Deserializable::deserialize</span>(<span class="ident">input</span>)
-                .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t deserialize server identity message&quot;</span>)<span class="question-mark">?</span>;
-            <span class="prelude-val">Ok</span>(<span class="ident">MessageWrapper::ServerIdentity</span>(<span class="ident">message</span>))
+        SERVER_IDENTITY_HEADER =&gt; {
+            <span class="kw">let </span>message: ServerIdentity = Deserializable::deserialize(input)
+                .context(<span class="string">&quot;Couldn&#39;t deserialize server identity message&quot;</span>)<span class="question-mark">?</span>;
+            <span class="prelude-val">Ok</span>(MessageWrapper::ServerIdentity(message))
         }
-        <span class="ident">CLIENT_IDENTITY_HEADER</span> =&gt; {
-            <span class="kw">let</span> <span class="ident">message</span>: <span class="ident">ClientIdentity</span> <span class="op">=</span> <span class="ident">Deserializable::deserialize</span>(<span class="ident">input</span>)
-                .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t deserialize client identity message&quot;</span>)<span class="question-mark">?</span>;
-            <span class="prelude-val">Ok</span>(<span class="ident">MessageWrapper::ClientIdentity</span>(<span class="ident">message</span>))
+        CLIENT_IDENTITY_HEADER =&gt; {
+            <span class="kw">let </span>message: ClientIdentity = Deserializable::deserialize(input)
+                .context(<span class="string">&quot;Couldn&#39;t deserialize client identity message&quot;</span>)<span class="question-mark">?</span>;
+            <span class="prelude-val">Ok</span>(MessageWrapper::ClientIdentity(message))
         }
-        <span class="ident">ENCRYPTED_DATA_HEADER</span> =&gt; {
-            <span class="kw">let</span> <span class="ident">message</span>: <span class="ident">EncryptedData</span> <span class="op">=</span> <span class="ident">Deserializable::deserialize</span>(<span class="ident">input</span>)
-                .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t deserialize encrypted data message&quot;</span>)<span class="question-mark">?</span>;
-            <span class="prelude-val">Ok</span>(<span class="ident">MessageWrapper::EncryptedData</span>(<span class="ident">message</span>))
+        ENCRYPTED_DATA_HEADER =&gt; {
+            <span class="kw">let </span>message: EncryptedData = Deserializable::deserialize(input)
+                .context(<span class="string">&quot;Couldn&#39;t deserialize encrypted data message&quot;</span>)<span class="question-mark">?</span>;
+            <span class="prelude-val">Ok</span>(MessageWrapper::EncryptedData(message))
         }
-        <span class="ident">header</span> =&gt; <span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">&quot;Unknown message header: {:#02x}&quot;</span>, <span class="ident">header</span>)),
+        header =&gt; <span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">&quot;Unknown message header: {:#02x}&quot;</span>, header)),
     }
 }
 
-<span class="kw">fn</span> <span class="ident">put_vec</span>(<span class="ident">target</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>, <span class="ident">source</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) {
-    <span class="ident">target</span>.<span class="ident">put_u64_le</span>(<span class="ident">source</span>.<span class="ident">len</span>() <span class="kw">as</span> <span class="ident">u64</span>);
-    <span class="ident">target</span>.<span class="ident">put_slice</span>(<span class="ident">source</span>);
+<span class="kw">fn </span>put_vec(target: <span class="kw-2">&amp;mut </span>Vec&lt;u8&gt;, source: <span class="kw-2">&amp;</span>[u8]) {
+    target.put_u64_le(source.len() <span class="kw">as </span>u64);
+    target.put_slice(source);
 }
 
-<span class="kw">fn</span> <span class="ident">get_vec</span>(<span class="ident">source</span>: <span class="kw-2">&amp;mut</span> <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-    <span class="kw">let</span> <span class="ident">length</span> <span class="op">=</span> <span class="ident">source</span>.<span class="ident">get_u64_le</span>();
-    <span class="kw">if</span> <span class="ident">length</span> <span class="op">&gt;</span> <span class="ident">source</span>.<span class="ident">remaining</span>() <span class="kw">as</span> <span class="ident">u64</span> {
+<span class="kw">fn </span>get_vec(source: <span class="kw-2">&amp;mut &amp;</span>[u8]) -&gt; anyhow::Result&lt;Vec&lt;u8&gt;&gt; {
+    <span class="kw">let </span>length = source.get_u64_le();
+    <span class="kw">if </span>length &gt; source.remaining() <span class="kw">as </span>u64 {
         <span class="macro">bail!</span>(
             <span class="string">&quot;Invalid vector serialization: required length is {} but only {} bytes provided&quot;</span>,
-            <span class="ident">length</span>,
-            <span class="ident">source</span>.<span class="ident">remaining</span>()
+            length,
+            source.remaining()
         )
     }
-    <span class="prelude-val">Ok</span>(<span class="ident">source</span>.<span class="ident">copy_to_bytes</span>(<span class="ident">length</span> <span class="kw">as</span> <span class="ident">usize</span>).<span class="ident">to_vec</span>())
+    <span class="prelude-val">Ok</span>(source.copy_to_bytes(length <span class="kw">as </span>usize).to_vec())
 }
 </code></pre></div>
-</section><section id="search" class="content hidden"></section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="oak_remote_attestation" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.62.0-nightly (de1bc0008 2022-04-21)" ></div>
-</body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="oak_remote_attestation" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (81f391930 2022-10-09)" ></div></body></html>

@@ -1,1 +1,1 @@
-initSidebarItems({"struct":[["EchoClient",""]]});
+window.SIDEBAR_ITEMS = {"struct":[["EchoClient",""]]};

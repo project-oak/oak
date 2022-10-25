@@ -1,1 +1,0 @@
-initSidebarItems({"enum":[["Mode",""]],"fn":[["main",""],["path_exists",""]],"mod":[["channel",""],["instance",""],["lookup",""],["schema",""],["server",""]],"struct":[["Args",""]]});

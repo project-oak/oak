@@ -1,1 +1,0 @@
-initSidebarItems({"struct":[["Dim","One dimension of the tensor."]]});

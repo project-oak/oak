@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":[["UnaryGrpcClient","gRPC implementation of [`AttestationTransport`] trait using unary gRPC messages."]]};

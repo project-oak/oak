@@ -1,9 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `trusted_shuffler/backend/src/main.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>main.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../ayu.css" disabled><link rel="stylesheet" type="text/css" href="../../dark.css" disabled><link rel="stylesheet" type="text/css" href="../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../storage.js"></script><script src="../../crates.js"></script><script defer src="../../main.js"></script><script defer src="../../source-script.js"></script><script defer src="../../source-files.js"></script>
-    <noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../trusted_shuffler_backend/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div>
-        </a><h2 class="location"></h2>
-    </nav>
-    <nav class="sidebar"><a class="sidebar-logo" href="../../trusted_shuffler_backend/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div>
-        </a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../trusted_shuffler_backend/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><div class="theme-picker hidden"><button id="theme-picker" aria-label="Pick another theme!" aria-haspopup="menu" title="themes"><img width="22" height="22" alt="Pick another theme!" src="../../brush.svg"></button><div id="theme-choices" role="menu"></div></div><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><button type="button" id="help-button" title="help">?</button><a id="settings-menu" href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../wheel.svg"></a></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `trusted_shuffler/backend/src/main.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>main.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" href="../../normalize.css"><link rel="stylesheet" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" href="../../ayu.css" disabled><link rel="stylesheet" href="../../dark.css" disabled><link rel="stylesheet" href="../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../storage.js"></script><script defer src="../../source-script.js"></script><script defer src="../../source-files.js"></script><script defer src="../../main.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><a class="sidebar-logo" href="../../trusted_shuffler_backend/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../trusted_shuffler_backend/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="src-line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -160,142 +155,138 @@
 <span id="155">155</span>
 <span id="156">156</span>
 <span id="157">157</span>
-<span id="158">158</span>
-<span id="159">159</span>
-</pre><pre class="rust"><code><span class="comment">//</span>
-<span class="comment">// Copyright 2022 The Project Oak Authors</span>
-<span class="comment">//</span>
-<span class="comment">// Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
-<span class="comment">// you may not use this file except in compliance with the License.</span>
-<span class="comment">// You may obtain a copy of the License at</span>
-<span class="comment">//</span>
-<span class="comment">//     http://www.apache.org/licenses/LICENSE-2.0</span>
-<span class="comment">//</span>
-<span class="comment">// Unless required by applicable law or agreed to in writing, software</span>
-<span class="comment">// distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
-<span class="comment">// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
-<span class="comment">// See the License for the specific language governing permissions and</span>
-<span class="comment">// limitations under the License.</span>
-<span class="comment">//</span>
+</pre><pre class="rust"><code><span class="comment">//
+// Copyright 2022 The Project Oak Authors
+//
+// Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
-<span class="doccomment">//! Backend server for the Trusted Shuffler example.</span>
+</span><span class="doccomment">//! Backend server for the Trusted Shuffler example.
 
-<span class="kw">use</span> <span class="ident">anyhow::Context</span>;
-<span class="kw">use</span> <span class="ident">clap::Parser</span>;
-
-<span class="kw">use</span> <span class="ident">echo</span>::{
-    <span class="ident">echo_server</span>::{<span class="ident">Echo</span>, <span class="ident">EchoServer</span>},
-    <span class="ident">EchoRequest</span>, <span class="ident">EchoResponse</span>,
+</span><span class="kw">use </span>anyhow::Context;
+<span class="kw">use </span>clap::Parser;
+<span class="kw">use </span>echo::{
+    echo_server::{Echo, EchoServer},
+    EchoRequest, EchoResponse,
 };
-
-<span class="kw">use</span> <span class="ident">futures_util::FutureExt</span>;
-<span class="kw">use</span> <span class="ident">hyper</span>::{
-    <span class="ident">service</span>::{<span class="ident">make_service_fn</span>, <span class="ident">service_fn</span>},
-    <span class="ident">Body</span>, <span class="ident">Method</span>, <span class="ident">Request</span>, <span class="ident">Response</span>, <span class="ident">Server</span>, <span class="ident">StatusCode</span>,
+<span class="kw">use </span>futures_util::FutureExt;
+<span class="kw">use </span>hyper::{
+    service::{make_service_fn, service_fn},
+    Body, Method, Request, Response, Server, StatusCode,
 };
-<span class="kw">use</span> <span class="ident">log::info</span>;
-<span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">net::SocketAddr</span>, <span class="ident">time::Instant</span>};
-<span class="kw">use</span> <span class="ident">tonic</span>::{<span class="ident">transport::Server</span> <span class="kw">as</span> <span class="ident">TonicServer</span>, <span class="ident">Status</span>};
+<span class="kw">use </span>log::info;
+<span class="kw">use </span>std::{net::SocketAddr, time::Instant};
+<span class="kw">use </span>tonic::{transport::Server <span class="kw">as </span>TonicServer, Status};
 
-<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">echo</span> {
+<span class="kw">pub mod </span>echo {
     <span class="macro">tonic::include_proto!</span>(<span class="string">&quot;trusted_shuffler.proto.echo&quot;</span>);
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Parser</span>, <span class="ident">Clone</span>)]</span>
-<span class="attribute">#[<span class="ident">clap</span>(<span class="ident">about</span> <span class="op">=</span> <span class="string">&quot;Backend for Trusted Shuffler Example&quot;</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Opt</span> {
-    <span class="attribute">#[<span class="ident">structopt</span>(
-        <span class="ident">long</span>,
-        <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;Address to listen on for the server&quot;</span>,
-        <span class="ident">default_value</span> <span class="op">=</span> <span class="string">&quot;[::]:8888&quot;</span>
-    )]</span>
-    <span class="ident">listen_address</span>: <span class="ident">String</span>,
-    <span class="attribute">#[<span class="ident">structopt</span>(<span class="ident">long</span>, <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;Listen for gRPC requests&quot;</span>)]</span>
-    <span class="ident">use_grpc</span>: <span class="ident">bool</span>,
+<span class="attribute">#[derive(Parser, Clone)]
+#[command(about = <span class="string">&quot;Backend for Trusted Shuffler Example&quot;</span>)]
+</span><span class="kw">pub struct </span>Opt {
+    <span class="attribute">#[arg(
+        long,
+        help = <span class="string">&quot;Address to listen on for the server&quot;</span>,
+        default_value = <span class="string">&quot;[::]:8888&quot;
+    </span>)]
+    </span>listen_address: String,
+    <span class="attribute">#[arg(long, help = <span class="string">&quot;Listen for gRPC requests&quot;</span>)]
+    </span>use_grpc: bool,
 }
 
-<span class="attribute">#[<span class="ident">tokio::main</span>(<span class="ident">flavor</span> <span class="op">=</span> <span class="string">&quot;multi_thread&quot;</span>)]</span>
-<span class="kw">async</span> <span class="kw">fn</span> <span class="ident">main</span>() -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-    <span class="ident">env_logger::builder</span>()
-        .<span class="ident">format_timestamp</span>(<span class="prelude-val">None</span>)
-        .<span class="ident">format_level</span>(<span class="bool-val">false</span>)
-        .<span class="ident">format_module_path</span>(<span class="bool-val">false</span>)
-        .<span class="ident">format_target</span>(<span class="bool-val">false</span>)
-        .<span class="ident">init</span>();
-    <span class="kw">let</span> <span class="ident">opt</span> <span class="op">=</span> <span class="ident">Opt::parse</span>();
+<span class="attribute">#[tokio::main(flavor = <span class="string">&quot;multi_thread&quot;</span>)]
+</span><span class="kw">async fn </span>main() -&gt; anyhow::Result&lt;()&gt; {
+    env_logger::builder()
+        .format_timestamp(<span class="prelude-val">None</span>)
+        .format_level(<span class="bool-val">false</span>)
+        .format_module_path(<span class="bool-val">false</span>)
+        .format_target(<span class="bool-val">false</span>)
+        .init();
+    <span class="kw">let </span>opt = Opt::parse();
 
-    <span class="kw">let</span> <span class="ident">address</span> <span class="op">=</span> <span class="ident">opt</span>
-        .<span class="ident">listen_address</span>
-        .<span class="ident">parse</span>()
-        .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t parse address&quot;</span>)<span class="question-mark">?</span>;
+    <span class="kw">let </span>address = opt
+        .listen_address
+        .parse()
+        .context(<span class="string">&quot;Couldn&#39;t parse address&quot;</span>)<span class="question-mark">?</span>;
 
-    <span class="kw">if</span> <span class="ident">opt</span>.<span class="ident">use_grpc</span> {
-        <span class="ident">start_grpc_backend</span>(<span class="ident">address</span>).<span class="kw">await</span>
-    } <span class="kw">else</span> {
-        <span class="ident">start_http_backend</span>(<span class="ident">address</span>).<span class="kw">await</span>
-    }
+    <span class="kw">if </span>opt.use_grpc {
+        start_grpc_backend(address).<span class="kw">await
+    </span>} <span class="kw">else </span>{
+        start_http_backend(address).<span class="kw">await
+    </span>}
 }
 
-<span class="kw">async</span> <span class="kw">fn</span> <span class="ident">start_http_backend</span>(<span class="ident">address</span>: <span class="ident">SocketAddr</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-    <span class="kw">let</span> <span class="ident">service</span> <span class="op">=</span> <span class="ident">make_service_fn</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="kw">async</span> { <span class="prelude-val">Ok</span>::<span class="op">&lt;</span><span class="kw">_</span>, <span class="ident">hyper::Error</span><span class="op">&gt;</span>(<span class="ident">service_fn</span>(<span class="ident">handler</span>)) });
-    <span class="macro">info!</span>(<span class="string">&quot;Starting the HTTP backend server at {:?}&quot;</span>, <span class="ident">address</span>);
-    <span class="kw">let</span> <span class="ident">server</span> <span class="op">=</span> <span class="ident">Server::bind</span>(<span class="kw-2">&amp;</span><span class="ident">address</span>).<span class="ident">serve</span>(<span class="ident">service</span>);
+<span class="kw">async fn </span>start_http_backend(address: SocketAddr) -&gt; anyhow::Result&lt;()&gt; {
+    <span class="kw">let </span>service = make_service_fn(|<span class="kw">_</span>| <span class="kw">async </span>{ <span class="prelude-val">Ok</span>::&lt;<span class="kw">_</span>, hyper::Error&gt;(service_fn(handler)) });
+    <span class="macro">info!</span>(<span class="string">&quot;Starting the HTTP backend server at {:?}&quot;</span>, address);
+    <span class="kw">let </span>server = Server::bind(<span class="kw-2">&amp;</span>address).serve(service);
 
     <span class="macro">tokio::select!</span>(
-        <span class="ident">result</span> <span class="op">=</span> <span class="ident">server</span> =&gt; {
-            <span class="ident">result</span>.<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t run server&quot;</span>)<span class="question-mark">?</span>;
+        result = server =&gt; {
+            result.context(<span class="string">&quot;Couldn&#39;t run server&quot;</span>)<span class="question-mark">?</span>;
         },
-        () <span class="op">=</span> <span class="ident">tokio::signal::ctrl_c</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">r</span><span class="op">|</span> <span class="ident">r</span>.<span class="ident">unwrap</span>()) =&gt; {
+        () = tokio::signal::ctrl_c().map(|r| r.unwrap()) =&gt; {
             <span class="macro">info!</span>(<span class="string">&quot;Stopping the backend server&quot;</span>);
         },
     );
     <span class="prelude-val">Ok</span>(())
 }
 
-<span class="kw">async</span> <span class="kw">fn</span> <span class="ident">handler</span>(<span class="ident">request</span>: <span class="ident">Request</span><span class="op">&lt;</span><span class="ident">Body</span><span class="op">&gt;</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Response</span><span class="op">&lt;</span><span class="ident">Body</span><span class="op">&gt;</span>, <span class="ident">hyper::Error</span><span class="op">&gt;</span> {
-    <span class="kw">match</span> (<span class="ident">request</span>.<span class="ident">method</span>(), <span class="ident">request</span>.<span class="ident">uri</span>().<span class="ident">path</span>()) {
-        (<span class="kw-2">&amp;</span><span class="ident">Method::POST</span>, <span class="string">&quot;/request&quot;</span>) =&gt; {
-            <span class="kw">let</span> <span class="ident">body</span> <span class="op">=</span> <span class="ident">hyper::body::to_bytes</span>(<span class="ident">request</span>.<span class="ident">into_body</span>()).<span class="kw">await</span><span class="question-mark">?</span>;
+<span class="kw">async fn </span>handler(request: Request&lt;Body&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;Response&lt;Body&gt;, hyper::Error&gt; {
+    <span class="kw">match </span>(request.method(), request.uri().path()) {
+        (<span class="kw-2">&amp;</span>Method::POST, <span class="string">&quot;/request&quot;</span>) =&gt; {
+            <span class="kw">let </span>body = hyper::body::to_bytes(request.into_body()).<span class="kw">await</span><span class="question-mark">?</span>;
 
-            <span class="kw">let</span> <span class="ident">request_start</span> <span class="op">=</span> <span class="ident">Instant::now</span>();
+            <span class="kw">let </span>request_start = Instant::now();
             <span class="macro">log::info!</span>(
                 <span class="string">&quot;Backend Request: {},{:?}&quot;</span>,
-                <span class="ident">String::from_utf8</span>(<span class="ident">body</span>.<span class="ident">to_vec</span>()).<span class="ident">unwrap</span>(),
-                <span class="ident">request_start</span>,
+                String::from_utf8(body.to_vec()).unwrap(),
+                request_start,
             );
 
-            <span class="comment">// Currently we assume the backend takes no time, i.e., no time elapsed between request</span>
-            <span class="comment">// and response.</span>
-            <span class="macro">log::info!</span>(
+            <span class="comment">// Currently we assume the backend takes no time, i.e., no time elapsed between request
+            // and response.
+            </span><span class="macro">log::info!</span>(
                 <span class="string">&quot;Backend Response: {},{:?}&quot;</span>,
-                <span class="ident">String::from_utf8</span>(<span class="ident">body</span>.<span class="ident">to_vec</span>()).<span class="ident">unwrap</span>(),
-                <span class="ident">request_start</span>,
+                String::from_utf8(body.to_vec()).unwrap(),
+                request_start,
             );
-            <span class="comment">// Echo back the response body.</span>
-            <span class="prelude-val">Ok</span>(<span class="ident">Response::new</span>(<span class="ident">Body::from</span>(<span class="ident">body</span>)))
+            <span class="comment">// Echo back the response body.
+            </span><span class="prelude-val">Ok</span>(Response::new(Body::from(body)))
         }
 
-        <span class="kw">_</span> =&gt; {
-            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">not_found</span> <span class="op">=</span> <span class="ident">Response::default</span>();
-            <span class="kw-2">*</span><span class="ident">not_found</span>.<span class="ident">status_mut</span>() <span class="op">=</span> <span class="ident">StatusCode::NOT_FOUND</span>;
-            <span class="prelude-val">Ok</span>(<span class="ident">not_found</span>)
+        <span class="kw">_ </span>=&gt; {
+            <span class="kw">let </span><span class="kw-2">mut </span>not_found = Response::default();
+            <span class="kw-2">*</span>not_found.status_mut() = StatusCode::NOT_FOUND;
+            <span class="prelude-val">Ok</span>(not_found)
         }
     }
 }
 
-<span class="kw">async</span> <span class="kw">fn</span> <span class="ident">start_grpc_backend</span>(<span class="ident">address</span>: <span class="ident">SocketAddr</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-    <span class="macro">info!</span>(<span class="string">&quot;Starting the gRPC backend server at {:?}&quot;</span>, <span class="ident">address</span>);
+<span class="kw">async fn </span>start_grpc_backend(address: SocketAddr) -&gt; anyhow::Result&lt;()&gt; {
+    <span class="macro">info!</span>(<span class="string">&quot;Starting the gRPC backend server at {:?}&quot;</span>, address);
 
-    <span class="kw">let</span> <span class="ident">echoer</span> <span class="op">=</span> <span class="ident">MyEcho::default</span>();
-    <span class="kw">let</span> <span class="ident">server</span> <span class="op">=</span> <span class="ident">TonicServer::builder</span>()
-        .<span class="ident">add_service</span>(<span class="ident">EchoServer::new</span>(<span class="ident">echoer</span>))
-        .<span class="ident">serve</span>(<span class="ident">address</span>);
+    <span class="kw">let </span>echoer = MyEcho::default();
+    <span class="kw">let </span>server = TonicServer::builder()
+        .add_service(EchoServer::new(echoer))
+        .serve(address);
 
     <span class="macro">tokio::select!</span>(
-        <span class="ident">result</span> <span class="op">=</span> <span class="ident">server</span> =&gt; {
-            <span class="ident">result</span>.<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t run server&quot;</span>)<span class="question-mark">?</span>;
+        result = server =&gt; {
+            result.context(<span class="string">&quot;Couldn&#39;t run server&quot;</span>)<span class="question-mark">?</span>;
         },
-        () <span class="op">=</span> <span class="ident">tokio::signal::ctrl_c</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">r</span><span class="op">|</span> <span class="ident">r</span>.<span class="ident">unwrap</span>()) =&gt; {
+        () = tokio::signal::ctrl_c().map(|r| r.unwrap()) =&gt; {
             <span class="macro">info!</span>(<span class="string">&quot;Stopping the backend server&quot;</span>);
         },
     );
@@ -303,24 +294,23 @@
     <span class="prelude-val">Ok</span>(())
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Default</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">MyEcho</span> {}
+<span class="attribute">#[derive(Debug, Default)]
+</span><span class="kw">pub struct </span>MyEcho {}
 
-<span class="attribute">#[<span class="ident">tonic::async_trait</span>]</span>
-<span class="kw">impl</span> <span class="ident">Echo</span> <span class="kw">for</span> <span class="ident">MyEcho</span> {
-    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">echo</span>(
+<span class="attribute">#[tonic::async_trait]
+</span><span class="kw">impl </span>Echo <span class="kw">for </span>MyEcho {
+    <span class="kw">async fn </span>echo(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">request</span>: <span class="ident">tonic::Request</span><span class="op">&lt;</span><span class="ident">EchoRequest</span><span class="op">&gt;</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">tonic::Response</span><span class="op">&lt;</span><span class="ident">EchoResponse</span><span class="op">&gt;</span>, <span class="ident">Status</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">request</span> <span class="op">=</span> <span class="ident">request</span>.<span class="ident">into_inner</span>();
+        request: tonic::Request&lt;EchoRequest&gt;,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;tonic::Response&lt;EchoResponse&gt;, Status&gt; {
+        <span class="kw">let </span>request = request.into_inner();
 
-        <span class="kw">let</span> <span class="ident">request_start</span> <span class="op">=</span> <span class="ident">Instant::now</span>();
-        <span class="macro">log::info!</span>(<span class="string">&quot;Backend Request: {:?},{:?}&quot;</span>, <span class="ident">request</span>, <span class="ident">request_start</span>);
+        <span class="kw">let </span>request_start = Instant::now();
+        <span class="macro">log::info!</span>(<span class="string">&quot;Backend Request: {:?},{:?}&quot;</span>, request, request_start);
 
-        <span class="kw">let</span> <span class="ident">echoed_value</span> <span class="op">=</span> <span class="ident">request</span>.<span class="ident">value_to_echo</span>;
-        <span class="prelude-val">Ok</span>(<span class="ident">tonic::Response::new</span>(<span class="ident">EchoResponse</span> { <span class="ident">echoed_value</span> }))
+        <span class="kw">let </span>echoed_value = request.value_to_echo;
+        <span class="prelude-val">Ok</span>(tonic::Response::new(EchoResponse { echoed_value }))
     }
 }
 </code></pre></div>
-</section><section id="search" class="content hidden"></section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="trusted_shuffler_backend" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.62.0-nightly (de1bc0008 2022-04-21)" ></div>
-</body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="trusted_shuffler_backend" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (81f391930 2022-10-09)" ></div></body></html>

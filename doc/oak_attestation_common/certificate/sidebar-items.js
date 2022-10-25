@@ -1,1 +1,0 @@
-initSidebarItems({"enum":[["AddTeeExtension","Indicates whether to add a custom TEE extension to a certificate."]],"struct":[["CertificateAuthority","Convenience structure for generating X.509 certificates."]]});

@@ -1,4 +1,5 @@
-(function() {var implementors = {};
-implementors["oak_baremetal_launcher"] = [{"text":"impl SimpleToVerifyInSlice for <a class=\"struct\" href=\"oak_baremetal_launcher/schema/struct.SessionId.html\" title=\"struct oak_baremetal_launcher::schema::SessionId\">SessionId</a>","synthetic":false,"types":["oak_baremetal_launcher::schema::SessionId"]}];
-implementors["oak_baremetal_runtime"] = [{"text":"impl SimpleToVerifyInSlice for <a class=\"struct\" href=\"oak_baremetal_runtime/schema/struct.SessionId.html\" title=\"struct oak_baremetal_runtime::schema::SessionId\">SessionId</a>","synthetic":false,"types":["oak_baremetal_runtime::schema::SessionId"]}];
-if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()
+(function() {var implementors = {
+"oak_functions_freestanding":[["impl SimpleToVerifyInSlice for <a class=\"struct\" href=\"oak_functions_freestanding/schema/struct.SessionId.html\" title=\"struct oak_functions_freestanding::schema::SessionId\">SessionId</a>"]],
+"oak_functions_launcher":[["impl SimpleToVerifyInSlice for <a class=\"struct\" href=\"oak_functions_launcher/schema/struct.SessionId.html\" title=\"struct oak_functions_launcher::schema::SessionId\">SessionId</a>"]],
+"oak_tensorflow_service":[["impl SimpleToVerifyInSlice for <a class=\"struct\" href=\"oak_tensorflow_service/schema/struct.SessionId.html\" title=\"struct oak_tensorflow_service::schema::SessionId\">SessionId</a>"]]
+};if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

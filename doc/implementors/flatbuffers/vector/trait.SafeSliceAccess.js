@@ -1,4 +1,0 @@
-(function() {var implementors = {};
-implementors["oak_baremetal_launcher"] = [{"text":"impl SafeSliceAccess for <a class=\"struct\" href=\"oak_baremetal_launcher/schema/struct.SessionId.html\" title=\"struct oak_baremetal_launcher::schema::SessionId\">SessionId</a>","synthetic":false,"types":["oak_baremetal_launcher::schema::SessionId"]}];
-implementors["oak_baremetal_runtime"] = [{"text":"impl SafeSliceAccess for <a class=\"struct\" href=\"oak_baremetal_runtime/schema/struct.SessionId.html\" title=\"struct oak_baremetal_runtime::schema::SessionId\">SessionId</a>","synthetic":false,"types":["oak_baremetal_runtime::schema::SessionId"]}];
-if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

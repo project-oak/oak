@@ -1,1 +1,1 @@
-initSidebarItems({"fn":[["main",""]],"struct":[["WebClient",""]]});
+window.SIDEBAR_ITEMS = {"fn":[["main",""]],"struct":[["WebClient",""]]};

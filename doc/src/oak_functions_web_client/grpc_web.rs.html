@@ -1,9 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `experimental/web_client/src/grpc_web.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>grpc_web.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../ayu.css" disabled><link rel="stylesheet" type="text/css" href="../../dark.css" disabled><link rel="stylesheet" type="text/css" href="../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../storage.js"></script><script src="../../crates.js"></script><script defer src="../../main.js"></script><script defer src="../../source-script.js"></script><script defer src="../../source-files.js"></script>
-    <noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../oak_functions_web_client/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div>
-        </a><h2 class="location"></h2>
-    </nav>
-    <nav class="sidebar"><a class="sidebar-logo" href="../../oak_functions_web_client/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div>
-        </a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../oak_functions_web_client/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><div class="theme-picker hidden"><button id="theme-picker" aria-label="Pick another theme!" aria-haspopup="menu" title="themes"><img width="22" height="22" alt="Pick another theme!" src="../../brush.svg"></button><div id="theme-choices" role="menu"></div></div><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><button type="button" id="help-button" title="help">?</button><a id="settings-menu" href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../wheel.svg"></a></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `experimental/web_client/src/grpc_web.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>grpc_web.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" href="../../normalize.css"><link rel="stylesheet" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" href="../../ayu.css" disabled><link rel="stylesheet" href="../../dark.css" disabled><link rel="stylesheet" href="../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../storage.js"></script><script defer src="../../source-script.js"></script><script defer src="../../source-files.js"></script><script defer src="../../main.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><a class="sidebar-logo" href="../../oak_functions_web_client/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../oak_functions_web_client/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="src-line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -110,113 +105,112 @@
 <span id="105">105</span>
 <span id="106">106</span>
 <span id="107">107</span>
-</pre><pre class="rust"><code><span class="comment">//</span>
-<span class="comment">// Copyright 2022 The Project Oak Authors</span>
-<span class="comment">//</span>
-<span class="comment">// Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
-<span class="comment">// you may not use this file except in compliance with the License.</span>
-<span class="comment">// You may obtain a copy of the License at</span>
-<span class="comment">//</span>
-<span class="comment">//     http://www.apache.org/licenses/LICENSE-2.0</span>
-<span class="comment">//</span>
-<span class="comment">// Unless required by applicable law or agreed to in writing, software</span>
-<span class="comment">// distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
-<span class="comment">// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
-<span class="comment">// See the License for the specific language governing permissions and</span>
-<span class="comment">// limitations under the License.</span>
-<span class="comment">//</span>
+</pre><pre class="rust"><code><span class="comment">//
+// Copyright 2022 The Project Oak Authors
+//
+// Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
-<span class="doccomment">//! A browser compatible gRPC web client for unary requests. Manually written,</span>
-<span class="doccomment">//! as while a web-compatible port of the tonic gRPC client for exists, it</span>
-<span class="doccomment">//! (at the time of writing) is not well maintained and has version conflicts</span>
-<span class="doccomment">//! with the newest tonic.</span>
+</span><span class="doccomment">//! A browser compatible gRPC web client for unary requests. Manually written,
+//! as while a web-compatible port of the tonic gRPC client for exists, it
+//! (at the time of writing) is not well maintained and has version conflicts
+//! with the newest tonic.
 
-<span class="kw">use</span> <span class="ident">anyhow</span>::{<span class="ident">anyhow</span>, <span class="ident">Context</span>};
-<span class="kw">use</span> <span class="ident">bytes</span>::{<span class="ident">Buf</span>, <span class="ident">BufMut</span>, <span class="ident">Bytes</span>, <span class="ident">BytesMut</span>};
+</span><span class="kw">use </span>anyhow::{anyhow, Context};
+<span class="kw">use </span>bytes::{Buf, BufMut, Bytes, BytesMut};
 
-<span class="doccomment">/// Invoke unary gRPC-web service.</span>
-<span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">grpc_web_unary</span><span class="op">&lt;</span><span class="ident">A</span>: <span class="ident">prost::Message</span>, <span class="ident">B</span>: <span class="ident">Default</span> <span class="op">+</span> <span class="ident">prost::Message</span><span class="op">&gt;</span>(
-    <span class="ident">uri</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
-    <span class="ident">message</span>: <span class="ident">A</span>,
-) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">B</span><span class="op">&gt;</span> {
-    <span class="kw">let</span> <span class="ident">request_bytes</span> <span class="op">=</span> <span class="ident">encode_body</span>(<span class="ident">message</span>).<span class="ident">context</span>(<span class="string">&quot;failed to encode message&quot;</span>)<span class="question-mark">?</span>;
-    <span class="kw">let</span> <span class="ident">response_bytes</span> <span class="op">=</span> <span class="ident">send</span>(<span class="ident">uri</span>, <span class="ident">request_bytes</span>)
-        .<span class="kw">await</span>
-        .<span class="ident">context</span>(<span class="string">&quot;failed to send message&quot;</span>)<span class="question-mark">?</span>;
-    <span class="kw">let</span> <span class="ident">reply</span> <span class="op">=</span> <span class="ident">decode_body</span>::<span class="op">&lt;</span><span class="ident">B</span><span class="op">&gt;</span>(<span class="ident">response_bytes</span>)
-        .<span class="kw">await</span>
-        .<span class="ident">context</span>(<span class="string">&quot;failed to decode message&quot;</span>)<span class="question-mark">?</span>;
-    <span class="prelude-val">Ok</span>(<span class="ident">reply</span>)
+<span class="doccomment">/// Invoke unary gRPC-web service.
+</span><span class="kw">pub async fn </span>grpc_web_unary&lt;A: prost::Message, B: Default + prost::Message&gt;(
+    uri: <span class="kw-2">&amp;</span>str,
+    message: A,
+) -&gt; anyhow::Result&lt;B&gt; {
+    <span class="kw">let </span>request_bytes = encode_body(message).context(<span class="string">&quot;failed to encode message&quot;</span>)<span class="question-mark">?</span>;
+    <span class="kw">let </span>response_bytes = send(uri, request_bytes)
+        .<span class="kw">await
+        </span>.context(<span class="string">&quot;failed to send message&quot;</span>)<span class="question-mark">?</span>;
+    <span class="kw">let </span>reply = decode_body::&lt;B&gt;(response_bytes)
+        .<span class="kw">await
+        </span>.context(<span class="string">&quot;failed to decode message&quot;</span>)<span class="question-mark">?</span>;
+    <span class="prelude-val">Ok</span>(reply)
 }
 
-<span class="kw">async</span> <span class="kw">fn</span> <span class="ident">send</span>(<span class="ident">uri</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="ident">request_bytes</span>: <span class="ident">bytes::Bytes</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">bytes::Bytes</span><span class="op">&gt;</span> {
-    <span class="kw">let</span> <span class="ident">client</span> <span class="op">=</span> <span class="ident">reqwest::Client::new</span>();
-    <span class="kw">let</span> <span class="ident">response</span> <span class="op">=</span> <span class="ident">client</span>
-        .<span class="ident">post</span>(<span class="ident">uri</span>)
-        .<span class="ident">header</span>(<span class="ident">reqwest::header::CONTENT_TYPE</span>, <span class="string">&quot;application/grpc-web&quot;</span>)
-        <span class="comment">// Setting this custom header includes its key in preflight request&#39;s</span>
-        <span class="comment">// `access-control-request-headers` header, marking the preflight</span>
-        <span class="comment">// request as related to grpc-web.</span>
-        <span class="comment">// Ref: https://github.com/hyperium/tonic/blob/8084f4ea26cccf9bd2d96d2a81eaea490aaf603b/tonic-web/src/service.rs#L43</span>
-        .<span class="ident">header</span>(<span class="string">&quot;x-grpc-web&quot;</span>, <span class="string">&quot;1&quot;</span>)
-        .<span class="ident">body</span>(<span class="ident">request_bytes</span>)
-        .<span class="ident">send</span>()
-        .<span class="kw">await</span>
-        .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">error</span><span class="op">|</span> <span class="macro">anyhow!</span>(<span class="string">&quot;Couldn&#39;t get response {:?}&quot;</span>, <span class="ident">error</span>))<span class="question-mark">?</span>
-        .<span class="ident">bytes</span>()
-        .<span class="kw">await</span>
-        .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">error</span><span class="op">|</span> <span class="macro">anyhow!</span>(<span class="string">&quot;Couldn&#39;t get response bytes {:?}&quot;</span>, <span class="ident">error</span>))<span class="question-mark">?</span>;
-    <span class="prelude-val">Ok</span>(<span class="ident">response</span>)
+<span class="kw">async fn </span>send(uri: <span class="kw-2">&amp;</span>str, request_bytes: bytes::Bytes) -&gt; anyhow::Result&lt;bytes::Bytes&gt; {
+    <span class="kw">let </span>client = reqwest::Client::new();
+    <span class="kw">let </span>response = client
+        .post(uri)
+        .header(reqwest::header::CONTENT_TYPE, <span class="string">&quot;application/grpc-web&quot;</span>)
+        <span class="comment">// Setting this custom header includes its key in preflight request&#39;s
+        // `access-control-request-headers` header, marking the preflight
+        // request as related to grpc-web.
+        // Ref: https://github.com/hyperium/tonic/blob/8084f4ea26cccf9bd2d96d2a81eaea490aaf603b/tonic-web/src/service.rs#L43
+        </span>.header(<span class="string">&quot;x-grpc-web&quot;</span>, <span class="string">&quot;1&quot;</span>)
+        .body(request_bytes)
+        .send()
+        .<span class="kw">await
+        </span>.map_err(|error| <span class="macro">anyhow!</span>(<span class="string">&quot;Couldn&#39;t get response {:?}&quot;</span>, error))<span class="question-mark">?
+        </span>.bytes()
+        .<span class="kw">await
+        </span>.map_err(|error| <span class="macro">anyhow!</span>(<span class="string">&quot;Couldn&#39;t get response bytes {:?}&quot;</span>, error))<span class="question-mark">?</span>;
+    <span class="prelude-val">Ok</span>(response)
 }
 
-<span class="comment">// One byte for the compression flag plus four bytes for the length.</span>
-<span class="comment">// Ref: https://github.com/grpc/grpc/blob/8558f46d35cedc3ea31787aebf8d9cb07a3fc547/doc/PROTOCOL-HTTP2.md</span>
-<span class="kw">const</span> <span class="ident">GRPC_HEADER_SIZE</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">5</span>;
+<span class="comment">// One byte for the compression flag plus four bytes for the length.
+// Ref: https://github.com/grpc/grpc/blob/8558f46d35cedc3ea31787aebf8d9cb07a3fc547/doc/PROTOCOL-HTTP2.md
+</span><span class="kw">const </span>GRPC_HEADER_SIZE: usize = <span class="number">5</span>;
 
-<span class="comment">// Based off https://github.com/hyperium/tonic/blob/91b73f9fc3c1bc281e85177808721b3efe37ece0/examples/src/grpc-web/client.rs</span>
-<span class="kw">fn</span> <span class="ident">encode_body</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>(<span class="ident">msg</span>: <span class="ident">T</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">Bytes</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="ident">T</span>: <span class="ident">prost::Message</span>,
+<span class="comment">// Based off https://github.com/hyperium/tonic/blob/91b73f9fc3c1bc281e85177808721b3efe37ece0/examples/src/grpc-web/client.rs
+</span><span class="kw">fn </span>encode_body&lt;T&gt;(msg: T) -&gt; anyhow::Result&lt;Bytes&gt;
+<span class="kw">where
+    </span>T: prost::Message,
 {
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">buf</span> <span class="op">=</span> <span class="ident">BytesMut::with_capacity</span>(<span class="number">1024</span>);
+    <span class="kw">let </span><span class="kw-2">mut </span>buf = BytesMut::with_capacity(<span class="number">1024</span>);
 
-    <span class="comment">// first skip past the header by writing placeholder bytes</span>
-    <span class="ident">buf</span>.<span class="ident">reserve</span>(<span class="ident">GRPC_HEADER_SIZE</span>);
-    <span class="ident">buf</span>.<span class="ident">put_bytes</span>(<span class="number">0</span>, <span class="ident">GRPC_HEADER_SIZE</span>);
+    <span class="comment">// first skip past the header by writing placeholder bytes
+    </span>buf.reserve(GRPC_HEADER_SIZE);
+    buf.put_bytes(<span class="number">0</span>, GRPC_HEADER_SIZE);
 
-    <span class="comment">// write the message</span>
-    <span class="ident">msg</span>.<span class="ident">encode</span>(<span class="kw-2">&amp;mut</span> <span class="ident">buf</span>)
-        .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">error</span><span class="op">|</span> <span class="macro">anyhow!</span>(<span class="string">&quot;Couldn&#39;t encode message {:?}&quot;</span>, <span class="ident">error</span>))<span class="question-mark">?</span>;
+    <span class="comment">// write the message
+    </span>msg.encode(<span class="kw-2">&amp;mut </span>buf)
+        .map_err(|error| <span class="macro">anyhow!</span>(<span class="string">&quot;Couldn&#39;t encode message {:?}&quot;</span>, error))<span class="question-mark">?</span>;
 
-    <span class="comment">// now we know the size of encoded message and can write the</span>
-    <span class="comment">// header</span>
-    <span class="kw">let</span> <span class="ident">len</span> <span class="op">=</span> <span class="ident">buf</span>.<span class="ident">len</span>() <span class="op">-</span> <span class="ident">GRPC_HEADER_SIZE</span>;
+    <span class="comment">// now we know the size of encoded message and can write the
+    // header
+    </span><span class="kw">let </span>len = buf.len() - GRPC_HEADER_SIZE;
     {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">buf</span> <span class="op">=</span> <span class="kw-2">&amp;mut</span> <span class="ident">buf</span>[..<span class="ident">GRPC_HEADER_SIZE</span>];
+        <span class="kw">let </span><span class="kw-2">mut </span>buf = <span class="kw-2">&amp;mut </span>buf[..GRPC_HEADER_SIZE];
 
-        <span class="comment">// compression flag, 0 means &quot;no compression&quot;</span>
-        <span class="ident">buf</span>.<span class="ident">put_u8</span>(<span class="number">0</span>);
+        <span class="comment">// compression flag, 0 means &quot;no compression&quot;
+        </span>buf.put_u8(<span class="number">0</span>);
 
-        <span class="ident">buf</span>.<span class="ident">put_u32</span>(<span class="ident">len</span> <span class="kw">as</span> <span class="ident">u32</span>);
+        buf.put_u32(len <span class="kw">as </span>u32);
     }
 
-    <span class="prelude-val">Ok</span>(<span class="ident">buf</span>.<span class="ident">split_to</span>(<span class="ident">len</span> <span class="op">+</span> <span class="ident">GRPC_HEADER_SIZE</span>).<span class="ident">freeze</span>())
+    <span class="prelude-val">Ok</span>(buf.split_to(len + GRPC_HEADER_SIZE).freeze())
 }
 
-<span class="comment">// Based off https://github.com/hyperium/tonic/blob/91b73f9fc3c1bc281e85177808721b3efe37ece0/examples/src/grpc-web/client.rs</span>
-<span class="kw">async</span> <span class="kw">fn</span> <span class="ident">decode_body</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>(<span class="kw-2">mut</span> <span class="ident">body</span>: <span class="ident">Bytes</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="ident">T</span>: <span class="ident">Default</span> <span class="op">+</span> <span class="ident">prost::Message</span>,
+<span class="comment">// Based off https://github.com/hyperium/tonic/blob/91b73f9fc3c1bc281e85177808721b3efe37ece0/examples/src/grpc-web/client.rs
+</span><span class="kw">async fn </span>decode_body&lt;T&gt;(<span class="kw-2">mut </span>body: Bytes) -&gt; anyhow::Result&lt;T&gt;
+<span class="kw">where
+    </span>T: Default + prost::Message,
 {
-    <span class="comment">// ignore the compression flag</span>
-    <span class="ident">body</span>.<span class="ident">advance</span>(<span class="number">1</span>);
+    <span class="comment">// ignore the compression flag
+    </span>body.advance(<span class="number">1</span>);
 
-    <span class="kw">let</span> <span class="ident">len</span> <span class="op">=</span> <span class="ident">body</span>.<span class="ident">get_u32</span>();
-    <span class="kw">let</span> <span class="ident">msg</span> <span class="op">=</span> <span class="ident">T::decode</span>(<span class="kw-2">&amp;mut</span> <span class="ident">body</span>.<span class="ident">split_to</span>(<span class="ident">len</span> <span class="kw">as</span> <span class="ident">usize</span>))
-        .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">error</span><span class="op">|</span> <span class="macro">anyhow!</span>(<span class="string">&quot;Couldn&#39;t decode message {:?}&quot;</span>, <span class="ident">error</span>))<span class="question-mark">?</span>;
+    <span class="kw">let </span>len = body.get_u32();
+    <span class="kw">let </span>msg = T::decode(<span class="kw-2">&amp;mut </span>body.split_to(len <span class="kw">as </span>usize))
+        .map_err(|error| <span class="macro">anyhow!</span>(<span class="string">&quot;Couldn&#39;t decode message {:?}&quot;</span>, error))<span class="question-mark">?</span>;
 
-    <span class="prelude-val">Ok</span>(<span class="ident">msg</span>)
+    <span class="prelude-val">Ok</span>(msg)
 }
 </code></pre></div>
-</section><section id="search" class="content hidden"></section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="oak_functions_web_client" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.62.0-nightly (de1bc0008 2022-04-21)" ></div>
-</body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="oak_functions_web_client" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (81f391930 2022-10-09)" ></div></body></html>

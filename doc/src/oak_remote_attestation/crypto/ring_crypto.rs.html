@@ -1,9 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `remote_attestation/rust/src/crypto/ring_crypto.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>ring_crypto.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" type="text/css" href="../../../normalize.css"><link rel="stylesheet" type="text/css" href="../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../../ayu.css" disabled><link rel="stylesheet" type="text/css" href="../../../dark.css" disabled><link rel="stylesheet" type="text/css" href="../../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../../storage.js"></script><script src="../../../crates.js"></script><script defer src="../../../main.js"></script><script defer src="../../../source-script.js"></script><script defer src="../../../source-files.js"></script>
-    <noscript><link rel="stylesheet" href="../../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../oak_remote_attestation/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div>
-        </a><h2 class="location"></h2>
-    </nav>
-    <nav class="sidebar"><a class="sidebar-logo" href="../../../oak_remote_attestation/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div>
-        </a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../oak_remote_attestation/index.html"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></a><nav class="sub"><div class="theme-picker hidden"><button id="theme-picker" aria-label="Pick another theme!" aria-haspopup="menu" title="themes"><img width="22" height="22" alt="Pick another theme!" src="../../../brush.svg"></button><div id="theme-choices" role="menu"></div></div><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><button type="button" id="help-button" title="help">?</button><a id="settings-menu" href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../wheel.svg"></a></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `oak_remote_attestation/src/crypto/ring_crypto.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>ring_crypto.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" href="../../../normalize.css"><link rel="stylesheet" href="../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" href="../../../ayu.css" disabled><link rel="stylesheet" href="../../../dark.css" disabled><link rel="stylesheet" href="../../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../../storage.js"></script><script defer src="../../../source-script.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../main.js"></script><noscript><link rel="stylesheet" href="../../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><a class="sidebar-logo" href="../../../oak_remote_attestation/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../oak_remote_attestation/index.html"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="src-line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -405,408 +400,407 @@
 <span id="400">400</span>
 <span id="401">401</span>
 <span id="402">402</span>
-</pre><pre class="rust"><code><span class="comment">//</span>
-<span class="comment">// Copyright 2021 The Project Oak Authors</span>
-<span class="comment">//</span>
-<span class="comment">// Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
-<span class="comment">// you may not use this file except in compliance with the License.</span>
-<span class="comment">// You may obtain a copy of the License at</span>
-<span class="comment">//</span>
-<span class="comment">//     http://www.apache.org/licenses/LICENSE-2.0</span>
-<span class="comment">//</span>
-<span class="comment">// Unless required by applicable law or agreed to in writing, software</span>
-<span class="comment">// distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
-<span class="comment">// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
-<span class="comment">// See the License for the specific language governing permissions and</span>
-<span class="comment">// limitations under the License.</span>
-<span class="comment">//</span>
+</pre><pre class="rust"><code><span class="comment">//
+// Copyright 2021 The Project Oak Authors
+//
+// Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
-<span class="doccomment">//! Implementation of the crypto primitives used for remote attestation based on the `ring` crate.</span>
+</span><span class="doccomment">//! Implementation of the crypto primitives used for remote attestation based on the `ring` crate.
 
-<span class="kw">use</span> <span class="kw">crate</span>::{
-    <span class="ident">crypto</span>::{
-        <span class="ident">DecryptionKey</span>, <span class="ident">EncryptionKey</span>, <span class="ident">KeyNegotiatorType</span>, <span class="ident">AEAD_ALGORITHM_KEY_LENGTH</span>,
-        <span class="ident">CLIENT_KEY_PURPOSE</span>, <span class="ident">KEY_AGREEMENT_ALGORITHM_KEY_LENGTH</span>, <span class="ident">KEY_DERIVATION_SALT</span>, <span class="ident">NONCE_LENGTH</span>,
-        <span class="ident">SERVER_KEY_PURPOSE</span>, <span class="ident">SHA256_HASH_LENGTH</span>, <span class="ident">SIGNATURE_LENGTH</span>, <span class="ident">SIGNING_ALGORITHM_KEY_LENGTH</span>,
+</span><span class="kw">use crate</span>::{
+    crypto::{
+        DecryptionKey, EncryptionKey, KeyNegotiatorType, AEAD_ALGORITHM_KEY_LENGTH,
+        CLIENT_KEY_PURPOSE, KEY_AGREEMENT_ALGORITHM_KEY_LENGTH, KEY_DERIVATION_SALT, NONCE_LENGTH,
+        SERVER_KEY_PURPOSE, SHA256_HASH_LENGTH, SIGNATURE_LENGTH, SIGNING_ALGORITHM_KEY_LENGTH,
     },
-    <span class="ident">message::EncryptedData</span>,
+    message::EncryptedData,
 };
-<span class="kw">use</span> <span class="ident">alloc</span>::{<span class="ident">format</span>, <span class="ident">vec</span>, <span class="ident">vec::Vec</span>};
-<span class="kw">use</span> <span class="ident">anyhow</span>::{<span class="ident">anyhow</span>, <span class="ident">Context</span>};
-<span class="kw">use</span> <span class="ident">core::convert::TryInto</span>;
-<span class="kw">use</span> <span class="ident">ring</span>::{
-    <span class="ident">aead</span>::{<span class="self">self</span>, <span class="ident">BoundKey</span>},
-    <span class="ident">agreement</span>,
-    <span class="ident">digest</span>::{<span class="ident">digest</span>, <span class="ident">SHA256</span>},
-    <span class="ident">hkdf</span>::{<span class="ident">Salt</span>, <span class="ident">HKDF_SHA256</span>},
-    <span class="ident">rand</span>::{<span class="ident">SecureRandom</span>, <span class="ident">SystemRandom</span>},
-    <span class="ident">signature</span>::{<span class="ident">EcdsaKeyPair</span>, <span class="ident">EcdsaSigningAlgorithm</span>, <span class="ident">EcdsaVerificationAlgorithm</span>, <span class="ident">KeyPair</span>},
+<span class="kw">use </span>alloc::{format, vec, vec::Vec};
+<span class="kw">use </span>anyhow::{anyhow, Context};
+<span class="kw">use </span>core::convert::TryInto;
+<span class="kw">use </span>ring::{
+    aead::{<span class="self">self</span>, BoundKey},
+    agreement,
+    digest::{digest, SHA256},
+    hkdf::{Salt, HKDF_SHA256},
+    rand::{SecureRandom, SystemRandom},
+    signature::{EcdsaKeyPair, EcdsaSigningAlgorithm, EcdsaVerificationAlgorithm, KeyPair},
 };
 
-<span class="doccomment">/// Algorithm used for encrypting/decrypting messages.</span>
-<span class="doccomment">/// &lt;https://datatracker.ietf.org/doc/html/rfc5288&gt;</span>
-<span class="kw">static</span> <span class="ident">AEAD_ALGORITHM</span>: <span class="kw-2">&amp;</span><span class="ident">aead::Algorithm</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">aead::AES_256_GCM</span>;
+<span class="doccomment">/// Algorithm used for encrypting/decrypting messages.
+/// &lt;https://datatracker.ietf.org/doc/html/rfc5288&gt;
+</span><span class="kw">static </span>AEAD_ALGORITHM: <span class="kw-2">&amp;</span>aead::Algorithm = <span class="kw-2">&amp;</span>aead::AES_256_GCM;
 
-<span class="doccomment">/// Algorithm used for negotiating a session key.</span>
-<span class="doccomment">/// &lt;https://datatracker.ietf.org/doc/html/rfc7748&gt;</span>
-<span class="kw">static</span> <span class="ident">KEY_AGREEMENT_ALGORITHM</span>: <span class="kw-2">&amp;</span><span class="ident">agreement::Algorithm</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">agreement::X25519</span>;
+<span class="doccomment">/// Algorithm used for negotiating a session key.
+/// &lt;https://datatracker.ietf.org/doc/html/rfc7748&gt;
+</span><span class="kw">static </span>KEY_AGREEMENT_ALGORITHM: <span class="kw-2">&amp;</span>agreement::Algorithm = <span class="kw-2">&amp;</span>agreement::X25519;
 
-<span class="doccomment">/// Algorithm used to create cryptographic signatures.</span>
-<span class="kw">static</span> <span class="ident">SIGNING_ALGORITHM</span>: <span class="kw-2">&amp;</span><span class="ident">EcdsaSigningAlgorithm</span> <span class="op">=</span>
-    <span class="kw-2">&amp;</span><span class="ident">ring::signature::ECDSA_P256_SHA256_FIXED_SIGNING</span>;
+<span class="doccomment">/// Algorithm used to create cryptographic signatures.
+</span><span class="kw">static </span>SIGNING_ALGORITHM: <span class="kw-2">&amp;</span>EcdsaSigningAlgorithm =
+    <span class="kw-2">&amp;</span>ring::signature::ECDSA_P256_SHA256_FIXED_SIGNING;
 
-<span class="doccomment">/// Algorithm used to verify cryptographic signatures.</span>
-<span class="kw">static</span> <span class="ident">VERIFICATION_ALGORITHM</span>: <span class="kw-2">&amp;</span><span class="ident">EcdsaVerificationAlgorithm</span> <span class="op">=</span>
-    <span class="kw-2">&amp;</span><span class="ident">ring::signature::ECDSA_P256_SHA256_FIXED</span>;
+<span class="doccomment">/// Algorithm used to verify cryptographic signatures.
+</span><span class="kw">static </span>VERIFICATION_ALGORITHM: <span class="kw-2">&amp;</span>EcdsaVerificationAlgorithm =
+    <span class="kw-2">&amp;</span>ring::signature::ECDSA_P256_SHA256_FIXED;
 
-<span class="doccomment">/// Implementation of Authenticated Encryption with Associated Data (AEAD).</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// &lt;https://datatracker.ietf.org/doc/html/rfc5116&gt;</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// This implementation uses separate keys for encrypting data and decrypting peer encrypted data.</span>
-<span class="doccomment">/// Which means that this implementation uses the same key for encryption, which peer uses for</span>
-<span class="doccomment">/// decryption.</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// It is necessary to prevent the Loopback Attack, where malicious network takes an outgoing packet</span>
-<span class="doccomment">/// and feeds it back as an incoming packet.</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">AeadEncryptor</span> {
-    <span class="doccomment">/// Key used for encrypting data.</span>
-    <span class="ident">encryption_key</span>: <span class="ident">EncryptionKey</span>,
-    <span class="doccomment">/// Key used for decrypting peer encrypted data.</span>
-    <span class="ident">decryption_key</span>: <span class="ident">DecryptionKey</span>,
+<span class="doccomment">/// Implementation of Authenticated Encryption with Associated Data (AEAD).
+///
+/// &lt;https://datatracker.ietf.org/doc/html/rfc5116&gt;
+///
+/// This implementation uses separate keys for encrypting data and decrypting peer encrypted data.
+/// Which means that this implementation uses the same key for encryption, which peer uses for
+/// decryption.
+///
+/// It is necessary to prevent the Loopback Attack, where malicious network takes an outgoing packet
+/// and feeds it back as an incoming packet.
+</span><span class="kw">pub struct </span>AeadEncryptor {
+    <span class="doccomment">/// Key used for encrypting data.
+    </span>encryption_key: EncryptionKey,
+    <span class="doccomment">/// Key used for decrypting peer encrypted data.
+    </span>decryption_key: DecryptionKey,
 }
 
-<span class="kw">impl</span> <span class="ident">AeadEncryptor</span> {
-    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">encryption_key</span>: <span class="ident">EncryptionKey</span>, <span class="ident">decryption_key</span>: <span class="ident">DecryptionKey</span>) -&gt; <span class="self">Self</span> {
-        <span class="self">Self</span> {
-            <span class="ident">encryption_key</span>,
-            <span class="ident">decryption_key</span>,
+<span class="kw">impl </span>AeadEncryptor {
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>new(encryption_key: EncryptionKey, decryption_key: DecryptionKey) -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{
+            encryption_key,
+            decryption_key,
         }
     }
 
-    <span class="doccomment">/// Encrypts `data` using `AeadEncryptor::encryption_key`.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">encrypt</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">data</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">EncryptedData</span><span class="op">&gt;</span> {
-        <span class="comment">// Generate a random nonce.</span>
-        <span class="kw">let</span> <span class="ident">nonce</span> <span class="op">=</span> <span class="ident"><span class="self">Self</span>::generate_nonce</span>().<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t generate nonce&quot;</span>)<span class="question-mark">?</span>;
+    <span class="doccomment">/// Encrypts `data` using `AeadEncryptor::encryption_key`.
+    </span><span class="kw">pub fn </span>encrypt(<span class="kw-2">&amp;mut </span><span class="self">self</span>, data: <span class="kw-2">&amp;</span>[u8]) -&gt; anyhow::Result&lt;EncryptedData&gt; {
+        <span class="comment">// Generate a random nonce.
+        </span><span class="kw">let </span>nonce = <span class="self">Self</span>::generate_nonce().context(<span class="string">&quot;Couldn&#39;t generate nonce&quot;</span>)<span class="question-mark">?</span>;
 
-        <span class="comment">// Bind [`AeadEncryptor::key`] to a `nonce`.</span>
-        <span class="kw">let</span> <span class="ident">unbound_sealing_key</span> <span class="op">=</span> <span class="ident">aead::UnboundKey::new</span>(<span class="ident">AEAD_ALGORITHM</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">encryption_key</span>.<span class="number">0</span>)
-            .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">error</span><span class="op">|</span> <span class="macro">anyhow!</span>(<span class="string">&quot;Couldn&#39;t create sealing key: {:?}&quot;</span>, <span class="ident">error</span>))<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">sealing_key</span> <span class="op">=</span>
-            <span class="ident">ring::aead::SealingKey::new</span>(<span class="ident">unbound_sealing_key</span>, <span class="ident">OneNonceSequence::new</span>(<span class="ident">nonce</span>));
+        <span class="comment">// Bind [`AeadEncryptor::key`] to a `nonce`.
+        </span><span class="kw">let </span>unbound_sealing_key = aead::UnboundKey::new(AEAD_ALGORITHM, <span class="kw-2">&amp;</span><span class="self">self</span>.encryption_key.<span class="number">0</span>)
+            .map_err(|error| <span class="macro">anyhow!</span>(<span class="string">&quot;Couldn&#39;t create sealing key: {:?}&quot;</span>, error))<span class="question-mark">?</span>;
+        <span class="kw">let </span><span class="kw-2">mut </span>sealing_key =
+            ring::aead::SealingKey::new(unbound_sealing_key, OneNonceSequence::new(nonce));
 
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">encrypted_data</span> <span class="op">=</span> <span class="ident">data</span>.<span class="ident">to_vec</span>();
-        <span class="ident">sealing_key</span>
-            <span class="comment">// Additional authenticated data is not required for the remotely attested channel,</span>
-            <span class="comment">// since after session key is established client and server exchange messages with a</span>
-            <span class="comment">// single encrypted field.</span>
-            <span class="comment">// And the nonce is authenticated by the AEAD algorithm itself.</span>
-            <span class="comment">// https://datatracker.ietf.org/doc/html/rfc5116#section-2.1</span>
-            .<span class="ident">seal_in_place_append_tag</span>(<span class="ident">aead::Aad::empty</span>(), <span class="kw-2">&amp;mut</span> <span class="ident">encrypted_data</span>)
-            .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">error</span><span class="op">|</span> <span class="macro">anyhow!</span>(<span class="string">&quot;Couldn&#39;t encrypt data: {:?}&quot;</span>, <span class="ident">error</span>))<span class="question-mark">?</span>;
+        <span class="kw">let </span><span class="kw-2">mut </span>encrypted_data = data.to_vec();
+        sealing_key
+            <span class="comment">// Additional authenticated data is not required for the remotely attested channel,
+            // since after session key is established client and server exchange messages with a
+            // single encrypted field.
+            // And the nonce is authenticated by the AEAD algorithm itself.
+            // https://datatracker.ietf.org/doc/html/rfc5116#section-2.1
+            </span>.seal_in_place_append_tag(aead::Aad::empty(), <span class="kw-2">&amp;mut </span>encrypted_data)
+            .map_err(|error| <span class="macro">anyhow!</span>(<span class="string">&quot;Couldn&#39;t encrypt data: {:?}&quot;</span>, error))<span class="question-mark">?</span>;
 
-        <span class="prelude-val">Ok</span>(<span class="ident">EncryptedData::new</span>(<span class="ident">nonce</span>, <span class="ident">encrypted_data</span>))
+        <span class="prelude-val">Ok</span>(EncryptedData::new(nonce, encrypted_data))
     }
 
-    <span class="doccomment">/// Decrypts and authenticates `data` using `AeadEncryptor::decryption_key`.</span>
-    <span class="doccomment">/// `data` must contain an encrypted message prefixed with a random nonce of [`NONCE_LENGTH`]</span>
-    <span class="doccomment">/// length.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">decrypt</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">data</span>: <span class="kw-2">&amp;</span><span class="ident">EncryptedData</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-        <span class="comment">// Bind `AeadEncryptor::key` to the extracted `nonce`.</span>
-        <span class="kw">let</span> <span class="ident">unbound_opening_key</span> <span class="op">=</span>
-            <span class="ident">aead::UnboundKey::new</span>(<span class="ident">AEAD_ALGORITHM</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">decryption_key</span>.<span class="number">0</span>).<span class="ident">unwrap</span>();
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">opening_key</span> <span class="op">=</span>
-            <span class="ident">ring::aead::OpeningKey::new</span>(<span class="ident">unbound_opening_key</span>, <span class="ident">OneNonceSequence::new</span>(<span class="ident">data</span>.<span class="ident">nonce</span>));
+    <span class="doccomment">/// Decrypts and authenticates `data` using `AeadEncryptor::decryption_key`.
+    /// `data` must contain an encrypted message prefixed with a random nonce of [`NONCE_LENGTH`]
+    /// length.
+    </span><span class="kw">pub fn </span>decrypt(<span class="kw-2">&amp;mut </span><span class="self">self</span>, data: <span class="kw-2">&amp;</span>EncryptedData) -&gt; anyhow::Result&lt;Vec&lt;u8&gt;&gt; {
+        <span class="comment">// Bind `AeadEncryptor::key` to the extracted `nonce`.
+        </span><span class="kw">let </span>unbound_opening_key =
+            aead::UnboundKey::new(AEAD_ALGORITHM, <span class="kw-2">&amp;</span><span class="self">self</span>.decryption_key.<span class="number">0</span>).unwrap();
+        <span class="kw">let </span><span class="kw-2">mut </span>opening_key =
+            ring::aead::OpeningKey::new(unbound_opening_key, OneNonceSequence::new(data.nonce));
 
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">decrypted_data</span> <span class="op">=</span> <span class="ident">data</span>.<span class="ident">data</span>.<span class="ident">to_vec</span>();
-        <span class="kw">let</span> <span class="ident">decrypted_data</span> <span class="op">=</span> <span class="ident">opening_key</span>
-            <span class="comment">// Additional authenticated data is not required for the remotely attested channel,</span>
-            <span class="comment">// since after session key is established client and server exchange messages with a</span>
-            <span class="comment">// single encrypted field.</span>
-            <span class="comment">// And the nonce is authenticated by the AEAD algorithm itself.</span>
-            <span class="comment">// https://datatracker.ietf.org/doc/html/rfc5116#section-2.1</span>
-            .<span class="ident">open_in_place</span>(<span class="ident">aead::Aad::empty</span>(), <span class="kw-2">&amp;mut</span> <span class="ident">decrypted_data</span>)
-            .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">error</span><span class="op">|</span> <span class="macro">anyhow!</span>(<span class="string">&quot;Couldn&#39;t decrypt data: {:?}&quot;</span>, <span class="ident">error</span>))<span class="question-mark">?</span>;
-        <span class="prelude-val">Ok</span>(<span class="ident">decrypted_data</span>.<span class="ident">to_vec</span>())
+        <span class="kw">let </span><span class="kw-2">mut </span>decrypted_data = data.data.to_vec();
+        <span class="kw">let </span>decrypted_data = opening_key
+            <span class="comment">// Additional authenticated data is not required for the remotely attested channel,
+            // since after session key is established client and server exchange messages with a
+            // single encrypted field.
+            // And the nonce is authenticated by the AEAD algorithm itself.
+            // https://datatracker.ietf.org/doc/html/rfc5116#section-2.1
+            </span>.open_in_place(aead::Aad::empty(), <span class="kw-2">&amp;mut </span>decrypted_data)
+            .map_err(|error| <span class="macro">anyhow!</span>(<span class="string">&quot;Couldn&#39;t decrypt data: {:?}&quot;</span>, error))<span class="question-mark">?</span>;
+        <span class="prelude-val">Ok</span>(decrypted_data.to_vec())
     }
 
-    <span class="doccomment">/// Generate a random nonce.</span>
-    <span class="kw">fn</span> <span class="ident">generate_nonce</span>() -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span>[<span class="ident">u8</span>; <span class="ident">NONCE_LENGTH</span>]<span class="op">&gt;</span> {
-        <span class="ident">get_random</span>()
-    }
-}
-
-<span class="doccomment">/// Nonce implementation used by [`AeadEncryptor`].</span>
-<span class="doccomment">/// It returns a single nonce once and then only returns errors.</span>
-<span class="kw">struct</span> <span class="ident">OneNonceSequence</span>(<span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">aead::Nonce</span><span class="op">&gt;</span>);
-
-<span class="kw">impl</span> <span class="ident">OneNonceSequence</span> {
-    <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">nonce</span>: [<span class="ident">u8</span>; <span class="ident">NONCE_LENGTH</span>]) -&gt; <span class="self">Self</span> {
-        <span class="kw">let</span> <span class="ident">nonce</span> <span class="op">=</span> <span class="ident">aead::Nonce::assume_unique_for_key</span>(<span class="ident">nonce</span>);
-        <span class="self">Self</span>(<span class="prelude-val">Some</span>(<span class="ident">nonce</span>))
+    <span class="doccomment">/// Generate a random nonce.
+    </span><span class="kw">fn </span>generate_nonce() -&gt; anyhow::Result&lt;[u8; NONCE_LENGTH]&gt; {
+        get_random()
     }
 }
 
-<span class="kw">impl</span> <span class="ident">aead::NonceSequence</span> <span class="kw">for</span> <span class="ident">OneNonceSequence</span> {
-    <span class="kw">fn</span> <span class="ident">advance</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">aead::Nonce</span>, <span class="ident">ring::error::Unspecified</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="number">0</span>.<span class="ident">take</span>().<span class="ident">ok_or</span>(<span class="ident">ring::error::Unspecified</span>)
+<span class="doccomment">/// Nonce implementation used by [`AeadEncryptor`].
+/// It returns a single nonce once and then only returns errors.
+</span><span class="kw">struct </span>OneNonceSequence(<span class="prelude-ty">Option</span>&lt;aead::Nonce&gt;);
+
+<span class="kw">impl </span>OneNonceSequence {
+    <span class="kw">fn </span>new(nonce: [u8; NONCE_LENGTH]) -&gt; <span class="self">Self </span>{
+        <span class="kw">let </span>nonce = aead::Nonce::assume_unique_for_key(nonce);
+        <span class="self">Self</span>(<span class="prelude-val">Some</span>(nonce))
     }
 }
 
-<span class="doccomment">/// Implementation of the X25519 Elliptic Curve Diffie-Hellman (ECDH) key negotiation.</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// &lt;https://datatracker.ietf.org/doc/html/rfc7748#section-6.1&gt;</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">KeyNegotiator</span> {
-    <span class="ident">type_</span>: <span class="ident">KeyNegotiatorType</span>,
-    <span class="ident">private_key</span>: <span class="ident">agreement::EphemeralPrivateKey</span>,
+<span class="kw">impl </span>aead::NonceSequence <span class="kw">for </span>OneNonceSequence {
+    <span class="kw">fn </span>advance(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;aead::Nonce, ring::error::Unspecified&gt; {
+        <span class="self">self</span>.<span class="number">0</span>.take().ok_or(ring::error::Unspecified)
+    }
 }
 
-<span class="kw">impl</span> <span class="ident">KeyNegotiator</span> {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">create</span>(<span class="ident">type_</span>: <span class="ident">KeyNegotiatorType</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">rng</span> <span class="op">=</span> <span class="ident">ring::rand::SystemRandom::new</span>();
-        <span class="kw">let</span> <span class="ident">private_key</span> <span class="op">=</span> <span class="ident">agreement::EphemeralPrivateKey::generate</span>(<span class="ident">KEY_AGREEMENT_ALGORITHM</span>, <span class="kw-2">&amp;</span><span class="ident">rng</span>)
-            .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">error</span><span class="op">|</span> <span class="macro">anyhow!</span>(<span class="string">&quot;Couldn&#39;t generate private key: {:?}&quot;</span>, <span class="ident">error</span>))<span class="question-mark">?</span>;
-        <span class="prelude-val">Ok</span>(<span class="self">Self</span> { <span class="ident">type_</span>, <span class="ident">private_key</span> })
+<span class="doccomment">/// Implementation of the X25519 Elliptic Curve Diffie-Hellman (ECDH) key negotiation.
+///
+/// &lt;https://datatracker.ietf.org/doc/html/rfc7748#section-6.1&gt;
+</span><span class="kw">pub struct </span>KeyNegotiator {
+    type_: KeyNegotiatorType,
+    private_key: agreement::EphemeralPrivateKey,
+}
+
+<span class="kw">impl </span>KeyNegotiator {
+    <span class="kw">pub fn </span>create(type_: KeyNegotiatorType) -&gt; anyhow::Result&lt;<span class="self">Self</span>&gt; {
+        <span class="kw">let </span>rng = ring::rand::SystemRandom::new();
+        <span class="kw">let </span>private_key = agreement::EphemeralPrivateKey::generate(KEY_AGREEMENT_ALGORITHM, <span class="kw-2">&amp;</span>rng)
+            .map_err(|error| <span class="macro">anyhow!</span>(<span class="string">&quot;Couldn&#39;t generate private key: {:?}&quot;</span>, error))<span class="question-mark">?</span>;
+        <span class="prelude-val">Ok</span>(<span class="self">Self </span>{ type_, private_key })
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">public_key</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span>[<span class="ident">u8</span>; <span class="ident">KEY_AGREEMENT_ALGORITHM_KEY_LENGTH</span>]<span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">public_key</span> <span class="op">=</span> <span class="self">self</span>
-            .<span class="ident">private_key</span>
-            .<span class="ident">compute_public_key</span>()
-            .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">error</span><span class="op">|</span> <span class="macro">anyhow!</span>(<span class="string">&quot;Couldn&#39;t get public key: {:?}&quot;</span>, <span class="ident">error</span>))<span class="question-mark">?</span>
-            .<span class="ident">as_ref</span>()
-            .<span class="ident">to_vec</span>();
-        <span class="ident">public_key</span>
-            .<span class="ident">as_slice</span>()
-            .<span class="ident">try_into</span>()
-            .<span class="ident">map_err</span>(<span class="ident">anyhow::Error::msg</span>)
-            .<span class="ident">context</span>(<span class="macro">format!</span>(
+    <span class="kw">pub fn </span>public_key(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; anyhow::Result&lt;[u8; KEY_AGREEMENT_ALGORITHM_KEY_LENGTH]&gt; {
+        <span class="kw">let </span>public_key = <span class="self">self
+            </span>.private_key
+            .compute_public_key()
+            .map_err(|error| <span class="macro">anyhow!</span>(<span class="string">&quot;Couldn&#39;t get public key: {:?}&quot;</span>, error))<span class="question-mark">?
+            </span>.as_ref()
+            .to_vec();
+        public_key
+            .as_slice()
+            .try_into()
+            .map_err(anyhow::Error::msg)
+            .context(<span class="macro">format!</span>(
                 <span class="string">&quot;Incorrect public key length, expected {}, found {}&quot;</span>,
-                <span class="ident">KEY_AGREEMENT_ALGORITHM_KEY_LENGTH</span>,
-                <span class="ident">public_key</span>.<span class="ident">len</span>()
+                KEY_AGREEMENT_ALGORITHM_KEY_LENGTH,
+                public_key.len()
             ))
     }
 
-    <span class="doccomment">/// Derives session keys from self and peer public keys and creates an [`AeadEncryptor`].</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// HKDF is used to derive both server and client session keys. The information string provided</span>
-    <span class="doccomment">/// to HKDF consists of a purpose string, a server public key and a client public key (in that</span>
-    <span class="doccomment">/// specific order).</span>
-    <span class="doccomment">/// Server session key uses the [`SERVER_KEY_PURPOSE`] purpose string and client session key</span>
-    <span class="doccomment">/// uses [`CLIENT_KEY_PURPOSE`].</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// Depending on `encryptor_type` creates a different type of encryptor: either server encryptor</span>
-    <span class="doccomment">/// or client encryptor.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">create_encryptor</span>(
+    <span class="doccomment">/// Derives session keys from self and peer public keys and creates an [`AeadEncryptor`].
+    ///
+    /// HKDF is used to derive both server and client session keys. The information string provided
+    /// to HKDF consists of a purpose string, a server public key and a client public key (in that
+    /// specific order).
+    /// Server session key uses the [`SERVER_KEY_PURPOSE`] purpose string and client session key
+    /// uses [`CLIENT_KEY_PURPOSE`].
+    ///
+    /// Depending on `encryptor_type` creates a different type of encryptor: either server encryptor
+    /// or client encryptor.
+    </span><span class="kw">pub fn </span>create_encryptor(
         <span class="self">self</span>,
-        <span class="ident">peer_public_key</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>; <span class="ident">KEY_AGREEMENT_ALGORITHM_KEY_LENGTH</span>],
-    ) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">AeadEncryptor</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> (<span class="ident">encryption_key</span>, <span class="ident">decryption_key</span>) <span class="op">=</span> <span class="self">self</span>
-            .<span class="ident">derive_session_keys</span>(<span class="ident">peer_public_key</span>)
-            .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t derive session keys&quot;</span>)<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">encryptor</span> <span class="op">=</span> <span class="ident">AeadEncryptor::new</span>(<span class="ident">encryption_key</span>, <span class="ident">decryption_key</span>);
-        <span class="prelude-val">Ok</span>(<span class="ident">encryptor</span>)
+        peer_public_key: <span class="kw-2">&amp;</span>[u8; KEY_AGREEMENT_ALGORITHM_KEY_LENGTH],
+    ) -&gt; anyhow::Result&lt;AeadEncryptor&gt; {
+        <span class="kw">let </span>(encryption_key, decryption_key) = <span class="self">self
+            </span>.derive_session_keys(peer_public_key)
+            .context(<span class="string">&quot;Couldn&#39;t derive session keys&quot;</span>)<span class="question-mark">?</span>;
+        <span class="kw">let </span>encryptor = AeadEncryptor::new(encryption_key, decryption_key);
+        <span class="prelude-val">Ok</span>(encryptor)
     }
 
-    <span class="doccomment">/// Implementation of the session keys derivation.</span>
-    <span class="doccomment">/// Returns a tuple with an encryption key and a decryption key.</span>
-    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">derive_session_keys</span>(
+    <span class="doccomment">/// Implementation of the session keys derivation.
+    /// Returns a tuple with an encryption key and a decryption key.
+    </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>derive_session_keys(
         <span class="self">self</span>,
-        <span class="ident">peer_public_key</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>; <span class="ident">KEY_AGREEMENT_ALGORITHM_KEY_LENGTH</span>],
-    ) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span>(<span class="ident">EncryptionKey</span>, <span class="ident">DecryptionKey</span>)<span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">type_</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">type_</span>.<span class="ident">clone</span>();
-        <span class="kw">let</span> <span class="ident">self_public_key</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">public_key</span>().<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t get self public key&quot;</span>)<span class="question-mark">?</span>;
-        <span class="ident">agreement::agree_ephemeral</span>(
-            <span class="self">self</span>.<span class="ident">private_key</span>,
-            <span class="kw-2">&amp;</span><span class="ident">agreement::UnparsedPublicKey::new</span>(<span class="ident">KEY_AGREEMENT_ALGORITHM</span>, <span class="ident">peer_public_key</span>),
+        peer_public_key: <span class="kw-2">&amp;</span>[u8; KEY_AGREEMENT_ALGORITHM_KEY_LENGTH],
+    ) -&gt; anyhow::Result&lt;(EncryptionKey, DecryptionKey)&gt; {
+        <span class="kw">let </span>type_ = <span class="self">self</span>.type_.clone();
+        <span class="kw">let </span>self_public_key = <span class="self">self</span>.public_key().context(<span class="string">&quot;Couldn&#39;t get self public key&quot;</span>)<span class="question-mark">?</span>;
+        agreement::agree_ephemeral(
+            <span class="self">self</span>.private_key,
+            <span class="kw-2">&amp;</span>agreement::UnparsedPublicKey::new(KEY_AGREEMENT_ALGORITHM, peer_public_key),
             <span class="macro">anyhow!</span>(<span class="string">&quot;Couldn&#39;t derive session keys&quot;</span>),
-            <span class="op">|</span><span class="ident">key_material</span><span class="op">|</span> -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span>(<span class="ident">EncryptionKey</span>, <span class="ident">DecryptionKey</span>)<span class="op">&gt;</span> {
-                <span class="kw">let</span> <span class="ident">key_material</span> <span class="op">=</span> <span class="ident">key_material</span>
-                    .<span class="ident">try_into</span>()
-                    .<span class="ident">map_err</span>(<span class="ident">anyhow::Error::msg</span>)
-                    .<span class="ident">context</span>(<span class="macro">format!</span>(
+            |key_material| -&gt; anyhow::Result&lt;(EncryptionKey, DecryptionKey)&gt; {
+                <span class="kw">let </span>key_material = key_material
+                    .try_into()
+                    .map_err(anyhow::Error::msg)
+                    .context(<span class="macro">format!</span>(
                         <span class="string">&quot;Incorrect key material length, expected {}, found {}&quot;</span>,
-                        <span class="ident">KEY_AGREEMENT_ALGORITHM_KEY_LENGTH</span>,
-                        <span class="ident">key_material</span>.<span class="ident">len</span>()
+                        KEY_AGREEMENT_ALGORITHM_KEY_LENGTH,
+                        key_material.len()
                     ))<span class="question-mark">?</span>;
-                <span class="kw">let</span> <span class="ident">peer_public_key</span> <span class="op">=</span> <span class="kw-2">*</span><span class="ident">peer_public_key</span>;
-                <span class="kw">match</span> <span class="ident">type_</span> {
-                    <span class="comment">// On the server side `self_public_key` is the server key.</span>
-                    <span class="ident">KeyNegotiatorType::Server</span> =&gt; {
-                        <span class="kw">let</span> <span class="ident">encryption_key</span> <span class="op">=</span> <span class="ident">EncryptionKey</span>(
-                            <span class="ident"><span class="self">Self</span>::key_derivation_function</span>(
-                                <span class="ident">key_material</span>,
-                                <span class="ident">SERVER_KEY_PURPOSE</span>,
-                                <span class="kw-2">&amp;</span><span class="ident">self_public_key</span>,
-                                <span class="kw-2">&amp;</span><span class="ident">peer_public_key</span>,
+                <span class="kw">let </span>peer_public_key = <span class="kw-2">*</span>peer_public_key;
+                <span class="kw">match </span>type_ {
+                    <span class="comment">// On the server side `self_public_key` is the server key.
+                    </span>KeyNegotiatorType::Server =&gt; {
+                        <span class="kw">let </span>encryption_key = EncryptionKey(
+                            <span class="self">Self</span>::key_derivation_function(
+                                key_material,
+                                SERVER_KEY_PURPOSE,
+                                <span class="kw-2">&amp;</span>self_public_key,
+                                <span class="kw-2">&amp;</span>peer_public_key,
                             )
-                            .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t derive decryption key&quot;</span>)<span class="question-mark">?</span>,
+                            .context(<span class="string">&quot;Couldn&#39;t derive decryption key&quot;</span>)<span class="question-mark">?</span>,
                         );
-                        <span class="kw">let</span> <span class="ident">decryption_key</span> <span class="op">=</span> <span class="ident">DecryptionKey</span>(
-                            <span class="ident"><span class="self">Self</span>::key_derivation_function</span>(
-                                <span class="ident">key_material</span>,
-                                <span class="ident">CLIENT_KEY_PURPOSE</span>,
-                                <span class="kw-2">&amp;</span><span class="ident">self_public_key</span>,
-                                <span class="kw-2">&amp;</span><span class="ident">peer_public_key</span>,
+                        <span class="kw">let </span>decryption_key = DecryptionKey(
+                            <span class="self">Self</span>::key_derivation_function(
+                                key_material,
+                                CLIENT_KEY_PURPOSE,
+                                <span class="kw-2">&amp;</span>self_public_key,
+                                <span class="kw-2">&amp;</span>peer_public_key,
                             )
-                            .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t derive encryption key&quot;</span>)<span class="question-mark">?</span>,
+                            .context(<span class="string">&quot;Couldn&#39;t derive encryption key&quot;</span>)<span class="question-mark">?</span>,
                         );
-                        <span class="prelude-val">Ok</span>((<span class="ident">encryption_key</span>, <span class="ident">decryption_key</span>))
+                        <span class="prelude-val">Ok</span>((encryption_key, decryption_key))
                     }
-                    <span class="comment">// On the client side `peer_public_key` is the server key.</span>
-                    <span class="ident">KeyNegotiatorType::Client</span> =&gt; {
-                        <span class="kw">let</span> <span class="ident">encryption_key</span> <span class="op">=</span> <span class="ident">EncryptionKey</span>(
-                            <span class="ident"><span class="self">Self</span>::key_derivation_function</span>(
-                                <span class="ident">key_material</span>,
-                                <span class="ident">CLIENT_KEY_PURPOSE</span>,
-                                <span class="kw-2">&amp;</span><span class="ident">peer_public_key</span>,
-                                <span class="kw-2">&amp;</span><span class="ident">self_public_key</span>,
+                    <span class="comment">// On the client side `peer_public_key` is the server key.
+                    </span>KeyNegotiatorType::Client =&gt; {
+                        <span class="kw">let </span>encryption_key = EncryptionKey(
+                            <span class="self">Self</span>::key_derivation_function(
+                                key_material,
+                                CLIENT_KEY_PURPOSE,
+                                <span class="kw-2">&amp;</span>peer_public_key,
+                                <span class="kw-2">&amp;</span>self_public_key,
                             )
-                            .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t derive decryption key&quot;</span>)<span class="question-mark">?</span>,
+                            .context(<span class="string">&quot;Couldn&#39;t derive decryption key&quot;</span>)<span class="question-mark">?</span>,
                         );
-                        <span class="kw">let</span> <span class="ident">decryption_key</span> <span class="op">=</span> <span class="ident">DecryptionKey</span>(
-                            <span class="ident"><span class="self">Self</span>::key_derivation_function</span>(
-                                <span class="ident">key_material</span>,
-                                <span class="ident">SERVER_KEY_PURPOSE</span>,
-                                <span class="kw-2">&amp;</span><span class="ident">peer_public_key</span>,
-                                <span class="kw-2">&amp;</span><span class="ident">self_public_key</span>,
+                        <span class="kw">let </span>decryption_key = DecryptionKey(
+                            <span class="self">Self</span>::key_derivation_function(
+                                key_material,
+                                SERVER_KEY_PURPOSE,
+                                <span class="kw-2">&amp;</span>peer_public_key,
+                                <span class="kw-2">&amp;</span>self_public_key,
                             )
-                            .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t derive encryption key&quot;</span>)<span class="question-mark">?</span>,
+                            .context(<span class="string">&quot;Couldn&#39;t derive encryption key&quot;</span>)<span class="question-mark">?</span>,
                         );
-                        <span class="prelude-val">Ok</span>((<span class="ident">encryption_key</span>, <span class="ident">decryption_key</span>))
+                        <span class="prelude-val">Ok</span>((encryption_key, decryption_key))
                     }
                 }
             },
         )
-        .<span class="ident">map_err</span>(<span class="ident">anyhow::Error::msg</span>)
-        .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t derive session keys&quot;</span>)
+        .map_err(anyhow::Error::msg)
+        .context(<span class="string">&quot;Couldn&#39;t derive session keys&quot;</span>)
     }
 
-    <span class="doccomment">/// Derives a session key from `key_material` using HKDF.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// &lt;https://datatracker.ietf.org/doc/html/rfc5869&gt;</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// &lt;https://datatracker.ietf.org/doc/html/rfc7748#section-6.1&gt;</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// In order to derive keys, uses the information string that consists of a purpose string, a</span>
-    <span class="doccomment">/// server public key and a client public key (in that specific order).</span>
-    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">key_derivation_function</span>(
-        <span class="ident">key_material</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>; <span class="ident">KEY_AGREEMENT_ALGORITHM_KEY_LENGTH</span>],
-        <span class="ident">key_purpose</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
-        <span class="ident">server_public_key</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>; <span class="ident">KEY_AGREEMENT_ALGORITHM_KEY_LENGTH</span>],
-        <span class="ident">client_public_key</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>; <span class="ident">KEY_AGREEMENT_ALGORITHM_KEY_LENGTH</span>],
-    ) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span>[<span class="ident">u8</span>; <span class="ident">AEAD_ALGORITHM_KEY_LENGTH</span>]<span class="op">&gt;</span> {
-        <span class="comment">// Session key is derived from a purpose string and two public keys.</span>
-        <span class="kw">let</span> <span class="ident">info</span> <span class="op">=</span> <span class="macro">vec!</span>[<span class="ident">key_purpose</span>.<span class="ident">as_bytes</span>(), <span class="ident">server_public_key</span>, <span class="ident">client_public_key</span>];
+    <span class="doccomment">/// Derives a session key from `key_material` using HKDF.
+    ///
+    /// &lt;https://datatracker.ietf.org/doc/html/rfc5869&gt;
+    ///
+    /// &lt;https://datatracker.ietf.org/doc/html/rfc7748#section-6.1&gt;
+    ///
+    /// In order to derive keys, uses the information string that consists of a purpose string, a
+    /// server public key and a client public key (in that specific order).
+    </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>key_derivation_function(
+        key_material: <span class="kw-2">&amp;</span>[u8; KEY_AGREEMENT_ALGORITHM_KEY_LENGTH],
+        key_purpose: <span class="kw-2">&amp;</span>str,
+        server_public_key: <span class="kw-2">&amp;</span>[u8; KEY_AGREEMENT_ALGORITHM_KEY_LENGTH],
+        client_public_key: <span class="kw-2">&amp;</span>[u8; KEY_AGREEMENT_ALGORITHM_KEY_LENGTH],
+    ) -&gt; anyhow::Result&lt;[u8; AEAD_ALGORITHM_KEY_LENGTH]&gt; {
+        <span class="comment">// Session key is derived from a purpose string and two public keys.
+        </span><span class="kw">let </span>info = <span class="macro">vec!</span>[key_purpose.as_bytes(), server_public_key, client_public_key];
 
-        <span class="comment">// Initialize key derivation function.</span>
-        <span class="kw">let</span> <span class="ident">salt</span> <span class="op">=</span> <span class="ident">Salt::new</span>(<span class="ident">HKDF_SHA256</span>, <span class="ident">KEY_DERIVATION_SALT</span>.<span class="ident">as_bytes</span>());
-        <span class="kw">let</span> <span class="ident">kdf</span> <span class="op">=</span> <span class="ident">salt</span>.<span class="ident">extract</span>(<span class="ident">key_material</span>);
+        <span class="comment">// Initialize key derivation function.
+        </span><span class="kw">let </span>salt = Salt::new(HKDF_SHA256, KEY_DERIVATION_SALT.as_bytes());
+        <span class="kw">let </span>kdf = salt.extract(key_material);
 
-        <span class="comment">// Derive session key.</span>
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">session_key</span>: [<span class="ident">u8</span>; <span class="ident">AEAD_ALGORITHM_KEY_LENGTH</span>] <span class="op">=</span> <span class="ident">Default::default</span>();
-        <span class="kw">let</span> <span class="ident">output_key_material</span> <span class="op">=</span> <span class="ident">kdf</span>
-            .<span class="ident">expand</span>(<span class="kw-2">&amp;</span><span class="ident">info</span>, <span class="ident">AEAD_ALGORITHM</span>)
-            .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">error</span><span class="op">|</span> <span class="macro">anyhow!</span>(<span class="string">&quot;Couldn&#39;t run HKDF-Expand operation : {:?}&quot;</span>, <span class="ident">error</span>))<span class="question-mark">?</span>;
-        <span class="ident">output_key_material</span>
-            .<span class="ident">fill</span>(<span class="kw-2">&amp;mut</span> <span class="ident">session_key</span>)
-            .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">error</span><span class="op">|</span> {
+        <span class="comment">// Derive session key.
+        </span><span class="kw">let </span><span class="kw-2">mut </span>session_key: [u8; AEAD_ALGORITHM_KEY_LENGTH] = Default::default();
+        <span class="kw">let </span>output_key_material = kdf
+            .expand(<span class="kw-2">&amp;</span>info, AEAD_ALGORITHM)
+            .map_err(|error| <span class="macro">anyhow!</span>(<span class="string">&quot;Couldn&#39;t run HKDF-Expand operation : {:?}&quot;</span>, error))<span class="question-mark">?</span>;
+        output_key_material
+            .fill(<span class="kw-2">&amp;mut </span>session_key)
+            .map_err(|error| {
                 <span class="macro">anyhow!</span>(
                     <span class="string">&quot;Couldn&#39;t get the output of the HKDF-Expand operation: {:?}&quot;</span>,
-                    <span class="ident">error</span>
+                    error
                 )
             })<span class="question-mark">?</span>;
-        <span class="prelude-val">Ok</span>(<span class="ident">session_key</span>)
+        <span class="prelude-val">Ok</span>(session_key)
     }
 }
 
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Signer</span> {
-    <span class="doccomment">/// Parsed PKCS#8 v2 key pair representation.</span>
-    <span class="ident">key_pair</span>: <span class="ident">EcdsaKeyPair</span>,
+<span class="kw">pub struct </span>Signer {
+    <span class="doccomment">/// Parsed PKCS#8 v2 key pair representation.
+    </span>key_pair: EcdsaKeyPair,
 }
 
-<span class="kw">impl</span> <span class="ident">Signer</span> {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">create</span>() -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">rng</span> <span class="op">=</span> <span class="ident">ring::rand::SystemRandom::new</span>();
-        <span class="kw">let</span> <span class="ident">key_pair_pkcs8</span> <span class="op">=</span> <span class="ident">EcdsaKeyPair::generate_pkcs8</span>(<span class="ident">SIGNING_ALGORITHM</span>, <span class="kw-2">&amp;</span><span class="ident">rng</span>)
-            .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">error</span><span class="op">|</span> <span class="macro">anyhow!</span>(<span class="string">&quot;Couldn&#39;t generate PKCS#8 key pair: {:?}&quot;</span>, <span class="ident">error</span>))<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">key_pair</span> <span class="op">=</span> <span class="ident">EcdsaKeyPair::from_pkcs8</span>(<span class="ident">SIGNING_ALGORITHM</span>, <span class="ident">key_pair_pkcs8</span>.<span class="ident">as_ref</span>())
-            .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">error</span><span class="op">|</span> <span class="macro">anyhow!</span>(<span class="string">&quot;Couldn&#39;t parse generated key pair: {:?}&quot;</span>, <span class="ident">error</span>))<span class="question-mark">?</span>;
+<span class="kw">impl </span>Signer {
+    <span class="kw">pub fn </span>create() -&gt; anyhow::Result&lt;<span class="self">Self</span>&gt; {
+        <span class="kw">let </span>rng = ring::rand::SystemRandom::new();
+        <span class="kw">let </span>key_pair_pkcs8 = EcdsaKeyPair::generate_pkcs8(SIGNING_ALGORITHM, <span class="kw-2">&amp;</span>rng)
+            .map_err(|error| <span class="macro">anyhow!</span>(<span class="string">&quot;Couldn&#39;t generate PKCS#8 key pair: {:?}&quot;</span>, error))<span class="question-mark">?</span>;
+        <span class="kw">let </span>key_pair = EcdsaKeyPair::from_pkcs8(SIGNING_ALGORITHM, key_pair_pkcs8.as_ref())
+            .map_err(|error| <span class="macro">anyhow!</span>(<span class="string">&quot;Couldn&#39;t parse generated key pair: {:?}&quot;</span>, error))<span class="question-mark">?</span>;
 
-        <span class="prelude-val">Ok</span>(<span class="self">Self</span> { <span class="ident">key_pair</span> })
+        <span class="prelude-val">Ok</span>(<span class="self">Self </span>{ key_pair })
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">public_key</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span>[<span class="ident">u8</span>; <span class="ident">SIGNING_ALGORITHM_KEY_LENGTH</span>]<span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">public_key</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">key_pair</span>.<span class="ident">public_key</span>().<span class="ident">as_ref</span>().<span class="ident">to_vec</span>();
-        <span class="ident">public_key</span>
-            .<span class="ident">as_slice</span>()
-            .<span class="ident">try_into</span>()
-            .<span class="ident">map_err</span>(<span class="ident">anyhow::Error::msg</span>)
-            .<span class="ident">context</span>(<span class="macro">format!</span>(
+    <span class="kw">pub fn </span>public_key(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; anyhow::Result&lt;[u8; SIGNING_ALGORITHM_KEY_LENGTH]&gt; {
+        <span class="kw">let </span>public_key = <span class="self">self</span>.key_pair.public_key().as_ref().to_vec();
+        public_key
+            .as_slice()
+            .try_into()
+            .map_err(anyhow::Error::msg)
+            .context(<span class="macro">format!</span>(
                 <span class="string">&quot;Incorrect public key length, expected {}, found {}&quot;</span>,
-                <span class="ident">SIGNING_ALGORITHM_KEY_LENGTH</span>,
-                <span class="ident">public_key</span>.<span class="ident">len</span>()
+                SIGNING_ALGORITHM_KEY_LENGTH,
+                public_key.len()
             ))
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">sign</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">input</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span>[<span class="ident">u8</span>; <span class="ident">SIGNATURE_LENGTH</span>]<span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">rng</span> <span class="op">=</span> <span class="ident">ring::rand::SystemRandom::new</span>();
-        <span class="kw">let</span> <span class="ident">signature</span> <span class="op">=</span> <span class="self">self</span>
-            .<span class="ident">key_pair</span>
-            .<span class="ident">sign</span>(<span class="kw-2">&amp;</span><span class="ident">rng</span>, <span class="ident">input</span>)
-            .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">error</span><span class="op">|</span> <span class="macro">anyhow!</span>(<span class="string">&quot;Couldn&#39;t sign input: {:?}&quot;</span>, <span class="ident">error</span>))<span class="question-mark">?</span>
-            .<span class="ident">as_ref</span>()
-            .<span class="ident">to_vec</span>();
-        <span class="ident">signature</span>
-            .<span class="ident">as_slice</span>()
-            .<span class="ident">try_into</span>()
-            .<span class="ident">map_err</span>(<span class="ident">anyhow::Error::msg</span>)
-            .<span class="ident">context</span>(<span class="macro">format!</span>(
+    <span class="kw">pub fn </span>sign(<span class="kw-2">&amp;</span><span class="self">self</span>, input: <span class="kw-2">&amp;</span>[u8]) -&gt; anyhow::Result&lt;[u8; SIGNATURE_LENGTH]&gt; {
+        <span class="kw">let </span>rng = ring::rand::SystemRandom::new();
+        <span class="kw">let </span>signature = <span class="self">self
+            </span>.key_pair
+            .sign(<span class="kw-2">&amp;</span>rng, input)
+            .map_err(|error| <span class="macro">anyhow!</span>(<span class="string">&quot;Couldn&#39;t sign input: {:?}&quot;</span>, error))<span class="question-mark">?
+            </span>.as_ref()
+            .to_vec();
+        signature
+            .as_slice()
+            .try_into()
+            .map_err(anyhow::Error::msg)
+            .context(<span class="macro">format!</span>(
                 <span class="string">&quot;Incorrect signature length, expected {}, found {}&quot;</span>,
-                <span class="ident">SIGNATURE_LENGTH</span>,
-                <span class="ident">signature</span>.<span class="ident">len</span>()
+                SIGNATURE_LENGTH,
+                signature.len()
             ))
     }
 }
 
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">SignatureVerifier</span> {
-    <span class="ident">public_key_bytes</span>: [<span class="ident">u8</span>; <span class="ident">SIGNING_ALGORITHM_KEY_LENGTH</span>],
+<span class="kw">pub struct </span>SignatureVerifier {
+    public_key_bytes: [u8; SIGNING_ALGORITHM_KEY_LENGTH],
 }
 
-<span class="kw">impl</span> <span class="ident">SignatureVerifier</span> {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">public_key_bytes</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>; <span class="ident">SIGNING_ALGORITHM_KEY_LENGTH</span>]) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
-        <span class="prelude-val">Ok</span>(<span class="self">Self</span> {
-            <span class="ident">public_key_bytes</span>: <span class="kw-2">*</span><span class="ident">public_key_bytes</span>,
+<span class="kw">impl </span>SignatureVerifier {
+    <span class="kw">pub fn </span>new(public_key_bytes: <span class="kw-2">&amp;</span>[u8; SIGNING_ALGORITHM_KEY_LENGTH]) -&gt; anyhow::Result&lt;<span class="self">Self</span>&gt; {
+        <span class="prelude-val">Ok</span>(<span class="self">Self </span>{
+            public_key_bytes: <span class="kw-2">*</span>public_key_bytes,
         })
     }
 
-    <span class="doccomment">/// Verifies the signature validity.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">verify</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">input</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>], <span class="ident">signature</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>; <span class="ident">SIGNATURE_LENGTH</span>]) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">public_key</span> <span class="op">=</span>
-            <span class="ident">ring::signature::UnparsedPublicKey::new</span>(<span class="ident">VERIFICATION_ALGORITHM</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">public_key_bytes</span>);
-        <span class="ident">public_key</span>
-            .<span class="ident">verify</span>(<span class="ident">input</span>, <span class="ident">signature</span>)
-            .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">error</span><span class="op">|</span> <span class="macro">anyhow!</span>(<span class="string">&quot;Signature verification failed: {:?}&quot;</span>, <span class="ident">error</span>))<span class="question-mark">?</span>;
+    <span class="doccomment">/// Verifies the signature validity.
+    </span><span class="kw">pub fn </span>verify(<span class="kw-2">&amp;</span><span class="self">self</span>, input: <span class="kw-2">&amp;</span>[u8], signature: <span class="kw-2">&amp;</span>[u8; SIGNATURE_LENGTH]) -&gt; anyhow::Result&lt;()&gt; {
+        <span class="kw">let </span>public_key =
+            ring::signature::UnparsedPublicKey::new(VERIFICATION_ALGORITHM, <span class="kw-2">&amp;</span><span class="self">self</span>.public_key_bytes);
+        public_key
+            .verify(input, signature)
+            .map_err(|error| <span class="macro">anyhow!</span>(<span class="string">&quot;Signature verification failed: {:?}&quot;</span>, error))<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(())
     }
 }
 
-<span class="doccomment">/// Computes a SHA-256 digest of `input` and returns it in a form of raw bytes.</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_sha256</span>(<span class="ident">input</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) -&gt; [<span class="ident">u8</span>; <span class="ident">SHA256_HASH_LENGTH</span>] {
-    <span class="ident">digest</span>(<span class="kw-2">&amp;</span><span class="ident">SHA256</span>, <span class="ident">input</span>)
-        .<span class="ident">as_ref</span>()
-        .<span class="ident">try_into</span>()
-        .<span class="ident">expect</span>(<span class="string">&quot;Incorrect SHA-256 hash length&quot;</span>)
+<span class="doccomment">/// Computes a SHA-256 digest of `input` and returns it in a form of raw bytes.
+</span><span class="kw">pub fn </span>get_sha256(input: <span class="kw-2">&amp;</span>[u8]) -&gt; [u8; SHA256_HASH_LENGTH] {
+    digest(<span class="kw-2">&amp;</span>SHA256, input)
+        .as_ref()
+        .try_into()
+        .expect(<span class="string">&quot;Incorrect SHA-256 hash length&quot;</span>)
 }
 
-<span class="doccomment">/// Generates a random vector of `size` bytes.</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_random</span><span class="op">&lt;</span><span class="kw">const</span> <span class="ident">L</span>: <span class="ident">usize</span><span class="op">&gt;</span>() -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span>[<span class="ident">u8</span>; <span class="ident">L</span>]<span class="op">&gt;</span> {
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">result</span>: [<span class="ident">u8</span>; <span class="ident">L</span>] <span class="op">=</span> [<span class="ident">Default::default</span>(); <span class="ident">L</span>];
-    <span class="kw">let</span> <span class="ident">rng</span> <span class="op">=</span> <span class="ident">SystemRandom::new</span>();
-    <span class="ident">rng</span>.<span class="ident">fill</span>(<span class="kw-2">&amp;mut</span> <span class="ident">result</span>[..])
-        .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">error</span><span class="op">|</span> <span class="macro">anyhow!</span>(<span class="string">&quot;Couldn&#39;t create random value: {:?}&quot;</span>, <span class="ident">error</span>))<span class="question-mark">?</span>;
-    <span class="prelude-val">Ok</span>(<span class="ident">result</span>)
+<span class="doccomment">/// Generates a random vector of `size` bytes.
+</span><span class="kw">pub fn </span>get_random&lt;<span class="kw">const </span>L: usize&gt;() -&gt; anyhow::Result&lt;[u8; L]&gt; {
+    <span class="kw">let </span><span class="kw-2">mut </span>result: [u8; L] = [Default::default(); L];
+    <span class="kw">let </span>rng = SystemRandom::new();
+    rng.fill(<span class="kw-2">&amp;mut </span>result[..])
+        .map_err(|error| <span class="macro">anyhow!</span>(<span class="string">&quot;Couldn&#39;t create random value: {:?}&quot;</span>, error))<span class="question-mark">?</span>;
+    <span class="prelude-val">Ok</span>(result)
 }
 </code></pre></div>
-</section><section id="search" class="content hidden"></section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="oak_remote_attestation" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.62.0-nightly (de1bc0008 2022-04-21)" ></div>
-</body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="oak_remote_attestation" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (81f391930 2022-10-09)" ></div></body></html>

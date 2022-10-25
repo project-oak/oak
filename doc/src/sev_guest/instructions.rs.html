@@ -1,9 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `experimental/sev_guest/src/instructions.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>instructions.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../ayu.css" disabled><link rel="stylesheet" type="text/css" href="../../dark.css" disabled><link rel="stylesheet" type="text/css" href="../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../storage.js"></script><script src="../../crates.js"></script><script defer src="../../main.js"></script><script defer src="../../source-script.js"></script><script defer src="../../source-files.js"></script>
-    <noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../sev_guest/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div>
-        </a><h2 class="location"></h2>
-    </nav>
-    <nav class="sidebar"><a class="sidebar-logo" href="../../sev_guest/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div>
-        </a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../sev_guest/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><div class="theme-picker hidden"><button id="theme-picker" aria-label="Pick another theme!" aria-haspopup="menu" title="themes"><img width="22" height="22" alt="Pick another theme!" src="../../brush.svg"></button><div id="theme-choices" role="menu"></div></div><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><button type="button" id="help-button" title="help">?</button><a id="settings-menu" href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../wheel.svg"></a></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `experimental/sev_guest/src/instructions.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>instructions.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" href="../../normalize.css"><link rel="stylesheet" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" href="../../ayu.css" disabled><link rel="stylesheet" href="../../dark.css" disabled><link rel="stylesheet" href="../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../storage.js"></script><script defer src="../../source-script.js"></script><script defer src="../../source-files.js"></script><script defer src="../../main.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><a class="sidebar-logo" href="../../sev_guest/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../sev_guest/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="src-line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -196,199 +191,198 @@
 <span id="191">191</span>
 <span id="192">192</span>
 <span id="193">193</span>
-</pre><pre class="rust"><code><span class="comment">//</span>
-<span class="comment">// Copyright 2022 The Project Oak Authors</span>
-<span class="comment">//</span>
-<span class="comment">// Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
-<span class="comment">// you may not use this file except in compliance with the License.</span>
-<span class="comment">// You may obtain a copy of the License at</span>
-<span class="comment">//</span>
-<span class="comment">//     http://www.apache.org/licenses/LICENSE-2.0</span>
-<span class="comment">//</span>
-<span class="comment">// Unless required by applicable law or agreed to in writing, software</span>
-<span class="comment">// distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
-<span class="comment">// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
-<span class="comment">// See the License for the specific language governing permissions and</span>
-<span class="comment">// limitations under the License.</span>
-<span class="comment">//</span>
+</pre><pre class="rust"><code><span class="comment">//
+// Copyright 2022 The Project Oak Authors
+//
+// Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
-<span class="doccomment">//! Rust instruction wrappers for managing page state and interacting with the hypervisor.</span>
+</span><span class="doccomment">//! Rust instruction wrappers for managing page state and interacting with the hypervisor.
 
-<span class="kw">use</span> <span class="ident">bitflags::bitflags</span>;
-<span class="kw">use</span> <span class="ident">core::arch::asm</span>;
-<span class="kw">use</span> <span class="ident">strum::FromRepr</span>;
+</span><span class="kw">use </span>bitflags::bitflags;
+<span class="kw">use </span>core::arch::asm;
+<span class="kw">use </span>strum::FromRepr;
 
-<span class="doccomment">/// Whether a page is in the validated state or not.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">FromRepr</span>)]</span>
-<span class="attribute">#[<span class="ident">repr</span>(<span class="ident">u32</span>)]</span>
-<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">Validation</span> {
-    <span class="doccomment">/// The page is not validated.</span>
-    <span class="ident">Unvalidated</span> <span class="op">=</span> <span class="number">0</span>,
-    <span class="doccomment">/// The page is validated.</span>
-    <span class="ident">Validated</span> <span class="op">=</span> <span class="number">1</span>,
+<span class="doccomment">/// Whether a page is in the validated state or not.
+</span><span class="attribute">#[derive(Clone, Copy, Debug, FromRepr)]
+#[repr(u32)]
+</span><span class="kw">pub enum </span>Validation {
+    <span class="doccomment">/// The page is not validated.
+    </span>Unvalidated = <span class="number">0</span>,
+    <span class="doccomment">/// The page is validated.
+    </span>Validated = <span class="number">1</span>,
 }
 
-<span class="doccomment">/// The size of a memory page.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">FromRepr</span>)]</span>
-<span class="attribute">#[<span class="ident">repr</span>(<span class="ident">u32</span>)]</span>
-<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">PageSize</span> {
-    <span class="doccomment">/// The page is a 4KiB page.</span>
-    <span class="ident">Page4KiB</span> <span class="op">=</span> <span class="number">0</span>,
-    <span class="doccomment">/// The page is a 2MiB page.</span>
-    <span class="ident">Page2MiB</span> <span class="op">=</span> <span class="number">1</span>,
+<span class="doccomment">/// The size of a memory page.
+</span><span class="attribute">#[derive(Debug, FromRepr)]
+#[repr(u32)]
+</span><span class="kw">pub enum </span>PageSize {
+    <span class="doccomment">/// The page is a 4KiB page.
+    </span>Page4KiB = <span class="number">0</span>,
+    <span class="doccomment">/// The page is a 2MiB page.
+    </span>Page2MiB = <span class="number">1</span>,
 }
 
-<span class="doccomment">/// The potential errors when calling the PVALIDATE or RMPADJUST instructions.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">FromRepr</span>)]</span>
-<span class="attribute">#[<span class="ident">repr</span>(<span class="ident">u32</span>)]</span>
-<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">InstructionError</span> {
-    <span class="doccomment">/// The input parameters were invalid.</span>
-    <span class="ident">FailInput</span> <span class="op">=</span> <span class="number">1</span>,
-    <span class="doccomment">/// Insufficient permissions.</span>
-    <span class="ident">FailPermission</span> <span class="op">=</span> <span class="number">2</span>,
-    <span class="doccomment">/// The page size does not match the page size entry in the RMP.</span>
-    <span class="ident">FailSizeMismatch</span> <span class="op">=</span> <span class="number">6</span>,
-    <span class="doccomment">/// The page validation status was not updated. This value is software defined and will not be</span>
-    <span class="doccomment">/// returned by the hardware instruction.</span>
-    <span class="ident">ValdationStatusNotUpdated</span> <span class="op">=</span> <span class="number">255</span>,
+<span class="doccomment">/// The potential errors when calling the PVALIDATE or RMPADJUST instructions.
+</span><span class="attribute">#[derive(Debug, FromRepr)]
+#[repr(u32)]
+</span><span class="kw">pub enum </span>InstructionError {
+    <span class="doccomment">/// The input parameters were invalid.
+    </span>FailInput = <span class="number">1</span>,
+    <span class="doccomment">/// Insufficient permissions.
+    </span>FailPermission = <span class="number">2</span>,
+    <span class="doccomment">/// The page size does not match the page size entry in the RMP.
+    </span>FailSizeMismatch = <span class="number">6</span>,
+    <span class="doccomment">/// The page validation status was not updated. This value is software defined and will not be
+    /// returned by the hardware instruction.
+    </span>ValidationStatusNotUpdated = <span class="number">255</span>,
 }
 
-<span class="doccomment">/// Marks a page as validated or unvalidated in the RMP.</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// See the PVALIDATE instruction in &lt;https://www.amd.com/system/files/TechDocs/24594.pdf&gt; for more details.</span>
-<span class="attribute">#[<span class="ident">inline</span>]</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">pvalidate</span>(
-    <span class="ident">page_guest_physical_address</span>: <span class="ident">usize</span>,
-    <span class="ident">page_size</span>: <span class="ident">PageSize</span>,
-    <span class="ident">validated</span>: <span class="ident">Validation</span>,
-) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">InstructionError</span><span class="op">&gt;</span> {
-    <span class="kw">let</span> <span class="ident">page_size</span> <span class="op">=</span> <span class="ident">page_size</span> <span class="kw">as</span> <span class="ident">u32</span>;
-    <span class="kw">let</span> <span class="ident">validated</span> <span class="op">=</span> <span class="ident">validated</span> <span class="kw">as</span> <span class="ident">u32</span>;
-    <span class="kw">let</span> <span class="ident">result</span>: <span class="ident">u32</span>;
-    <span class="kw">let</span> <span class="ident">carry</span>: <span class="ident">u8</span>;
-    <span class="comment">// Safety: this call does not modify the guest memory contents, so does not violate memory</span>
-    <span class="comment">// safety.</span>
-    <span class="kw">unsafe</span> {
+<span class="doccomment">/// Marks a page as validated or unvalidated in the RMP.
+///
+/// See the PVALIDATE instruction in &lt;https://www.amd.com/system/files/TechDocs/24594.pdf&gt; for more details.
+</span><span class="attribute">#[inline]
+</span><span class="kw">pub fn </span>pvalidate(
+    page_guest_physical_address: usize,
+    page_size: PageSize,
+    validated: Validation,
+) -&gt; <span class="prelude-ty">Result</span>&lt;(), InstructionError&gt; {
+    <span class="kw">let </span>page_size = page_size <span class="kw">as </span>u32;
+    <span class="kw">let </span>validated = validated <span class="kw">as </span>u32;
+    <span class="kw">let </span>result: u32;
+    <span class="kw">let </span>carry: u8;
+    <span class="comment">// Safety: this call does not modify the guest memory contents, so does not violate memory
+    // safety.
+    </span><span class="kw">unsafe </span>{
         <span class="macro">asm!</span>(
             <span class="string">&quot;pvalidate&quot;</span>,
             <span class="string">&quot;setc dl&quot;</span>,
-            <span class="kw">in</span>(<span class="string">&quot;rax&quot;</span>) <span class="ident">page_guest_physical_address</span>,
-            <span class="kw">in</span>(<span class="string">&quot;ecx&quot;</span>) <span class="ident">page_size</span>,
-            <span class="kw">in</span>(<span class="string">&quot;edx&quot;</span>) <span class="ident">validated</span>,
-            <span class="ident">lateout</span>(<span class="string">&quot;eax&quot;</span>) <span class="ident">result</span>,
-            <span class="ident">lateout</span>(<span class="string">&quot;dl&quot;</span>) <span class="ident">carry</span>,
-            <span class="ident">options</span>(<span class="ident">nomem</span>, <span class="ident">nostack</span>)
+            <span class="kw">in</span>(<span class="string">&quot;rax&quot;</span>) page_guest_physical_address,
+            <span class="kw">in</span>(<span class="string">&quot;ecx&quot;</span>) page_size,
+            <span class="kw">in</span>(<span class="string">&quot;edx&quot;</span>) validated,
+            lateout(<span class="string">&quot;eax&quot;</span>) result,
+            lateout(<span class="string">&quot;dl&quot;</span>) carry,
+            options(nomem, nostack)
         );
     }
-    <span class="kw">if</span> <span class="ident">result</span> <span class="op">==</span> <span class="number">0</span> {
-        <span class="kw">if</span> <span class="ident">carry</span> <span class="op">==</span> <span class="number">0</span> {
+    <span class="kw">if </span>result == <span class="number">0 </span>{
+        <span class="kw">if </span>carry == <span class="number">0 </span>{
             <span class="prelude-val">Ok</span>(())
-        } <span class="kw">else</span> {
-            <span class="comment">// If the carry flag is not 0, it indicates that the validated state was not changed.</span>
-            <span class="prelude-val">Err</span>(<span class="ident">InstructionError::ValdationStatusNotUpdated</span>)
+        } <span class="kw">else </span>{
+            <span class="comment">// If the carry flag is not 0, it indicates that the validated state was not changed.
+            </span><span class="prelude-val">Err</span>(InstructionError::ValidationStatusNotUpdated)
         }
-    } <span class="kw">else</span> {
-        <span class="prelude-val">Err</span>(<span class="ident">InstructionError::from_repr</span>(<span class="ident">result</span>)
-            .<span class="ident">expect</span>(<span class="string">&quot;Invalid return value from PVALIDATE instruction.&quot;</span>))
+    } <span class="kw">else </span>{
+        <span class="prelude-val">Err</span>(InstructionError::from_repr(result)
+            .expect(<span class="string">&quot;Invalid return value from PVALIDATE instruction.&quot;</span>))
     }
 }
 
-<span class="macro">bitflags!</span> {
-    <span class="doccomment">/// Permission mask used by the RMP.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// See Table 15-38 in &lt;https://www.amd.com/system/files/TechDocs/24593.pdf&gt; for more details.</span>
-    <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">PermissionMask</span>: <span class="ident">u8</span> {
-        <span class="doccomment">/// The target VMPL can read the page.</span>
-        <span class="kw">const</span> <span class="ident">READ</span> <span class="op">=</span> <span class="number">1</span>;
-        <span class="doccomment">/// The target VMPL can write to the page.</span>
-        <span class="kw">const</span> <span class="ident">WRITE</span> <span class="op">=</span> <span class="number">2</span>;
-        <span class="doccomment">/// Code in the page can be executed in ring 3.</span>
-        <span class="kw">const</span> <span class="ident">EXECUTE_USER</span> <span class="op">=</span> <span class="number">4</span>;
-        <span class="doccomment">/// Code in the page can be executed in rings 0..2.</span>
-        <span class="kw">const</span> <span class="ident">EXECUTE_SUPERVISOR</span> <span class="op">=</span> <span class="number">8</span>;
+<span class="macro">bitflags! </span>{
+    <span class="doccomment">/// Permission mask used by the RMP.
+    ///
+    /// See Table 15-38 in &lt;https://www.amd.com/system/files/TechDocs/24593.pdf&gt; for more details.
+    </span><span class="kw">pub struct </span>PermissionMask: u8 {
+        <span class="doccomment">/// The target VMPL can read the page.
+        </span><span class="kw">const </span>READ = <span class="number">1</span>;
+        <span class="doccomment">/// The target VMPL can write to the page.
+        </span><span class="kw">const </span>WRITE = <span class="number">2</span>;
+        <span class="doccomment">/// Code in the page can be executed in ring 3.
+        </span><span class="kw">const </span>EXECUTE_USER = <span class="number">4</span>;
+        <span class="doccomment">/// Code in the page can be executed in rings 0..2.
+        </span><span class="kw">const </span>EXECUTE_SUPERVISOR = <span class="number">8</span>;
     }
 }
 
-<span class="doccomment">/// Whether the page can be used as a VM save area.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">FromRepr</span>)]</span>
-<span class="attribute">#[<span class="ident">repr</span>(<span class="ident">u8</span>)]</span>
-<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">Vmsa</span> {
-    <span class="doccomment">/// The page cannot be used as a VM save area.</span>
-    <span class="ident">No</span> <span class="op">=</span> <span class="number">0</span>,
-    <span class="doccomment">/// The page can be used as a VM save area.</span>
-    <span class="ident">Yes</span> <span class="op">=</span> <span class="number">1</span>,
+<span class="doccomment">/// Whether the page can be used as a VM save area.
+</span><span class="attribute">#[derive(Debug, FromRepr)]
+#[repr(u8)]
+</span><span class="kw">pub enum </span>Vmsa {
+    <span class="doccomment">/// The page cannot be used as a VM save area.
+    </span>No = <span class="number">0</span>,
+    <span class="doccomment">/// The page can be used as a VM save area.
+    </span>Yes = <span class="number">1</span>,
 }
 
-<span class="doccomment">/// Representation of the RMP permission used by the RMPADJUST instruction.</span>
-<span class="attribute">#[<span class="ident">repr</span>(<span class="ident">C</span>, <span class="ident">align</span>(<span class="number">8</span>))]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">RmpPermission</span> {
-    <span class="doccomment">/// The target VMPL to which the permission applies.</span>
-    <span class="kw">pub</span> <span class="ident">target_vmpl</span>: <span class="ident">u8</span>,
-    <span class="doccomment">/// The bit mask specifying the permission.</span>
-    <span class="kw">pub</span> <span class="ident">perm_mask</span>: <span class="ident">PermissionMask</span>,
-    <span class="doccomment">/// Whether this page can be used as a VM save area.</span>
-    <span class="kw">pub</span> <span class="ident">vmsa</span>: <span class="ident">Vmsa</span>,
-    <span class="doccomment">/// Padding to extend struct to 4 bytes in size.</span>
-    <span class="ident">_reserved_0</span>: <span class="ident">u8</span>,
-    <span class="doccomment">/// Padding to extend struct to 8 bytes in size to enable reinterpreting as a u64.</span>
-    <span class="ident">_reserved_1</span>: <span class="ident">u32</span>,
+<span class="doccomment">/// Representation of the RMP permission used by the RMPADJUST instruction.
+</span><span class="attribute">#[repr(C, align(<span class="number">8</span>))]
+</span><span class="kw">pub struct </span>RmpPermission {
+    <span class="doccomment">/// The target VMPL to which the permission applies.
+    </span><span class="kw">pub </span>target_vmpl: u8,
+    <span class="doccomment">/// The bit mask specifying the permission.
+    </span><span class="kw">pub </span>perm_mask: PermissionMask,
+    <span class="doccomment">/// Whether this page can be used as a VM save area.
+    </span><span class="kw">pub </span>vmsa: Vmsa,
+    <span class="doccomment">/// Padding to extend struct to 4 bytes in size.
+    </span>_reserved_0: u8,
+    <span class="doccomment">/// Padding to extend struct to 8 bytes in size to enable reinterpreting as a u64.
+    </span>_reserved_1: u32,
 }
 
-<span class="macro">static_assertions::assert_eq_size!</span>(<span class="ident">RmpPermission</span>, <span class="ident">u64</span>);
+<span class="macro">static_assertions::assert_eq_size!</span>(RmpPermission, u64);
 
-<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">RmpPermission</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">u64</span> {
-    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">permission</span>: <span class="ident">RmpPermission</span>) -&gt; <span class="ident">u64</span> {
-        <span class="comment">// Safety: reinterpreting the struct as a u64 is safe because the types are guaranteed to</span>
-        <span class="comment">// have the same size and the struct is 8-byte aligned. We are not making any assumptions</span>
-        <span class="comment">// about the individual bits.</span>
-        <span class="kw">unsafe</span> { <span class="ident">core::mem::transmute</span>(<span class="ident">permission</span>) }
+<span class="kw">impl </span>From&lt;RmpPermission&gt; <span class="kw">for </span>u64 {
+    <span class="kw">fn </span>from(permission: RmpPermission) -&gt; u64 {
+        <span class="comment">// Safety: reinterpreting the struct as a u64 is safe because the types are guaranteed to
+        // have the same size and the struct is 8-byte aligned. We are not making any assumptions
+        // about the individual bits.
+        </span><span class="kw">unsafe </span>{ core::mem::transmute(permission) }
     }
 }
 
-<span class="doccomment">/// Adjusts the permissions of a page in the RMP.</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// See the RMPADJUST instruction in &lt;https://www.amd.com/system/files/TechDocs/24594.pdf&gt; for more details.</span>
-<span class="attribute">#[<span class="ident">inline</span>]</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">rmpadjust</span>(
-    <span class="ident">page_guest_physical_address</span>: <span class="ident">usize</span>,
-    <span class="ident">page_size</span>: <span class="ident">PageSize</span>,
-    <span class="ident">permission</span>: <span class="ident">RmpPermission</span>,
-) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">InstructionError</span><span class="op">&gt;</span> {
-    <span class="kw">let</span> <span class="ident">page_size</span> <span class="op">=</span> <span class="ident">page_size</span> <span class="kw">as</span> <span class="ident">u64</span>;
-    <span class="kw">let</span> <span class="ident">permission</span>: <span class="ident">u64</span> <span class="op">=</span> <span class="ident">permission</span>.<span class="ident">into</span>();
-    <span class="kw">let</span> <span class="ident">result</span>: <span class="ident">u64</span>;
-    <span class="comment">// Safety: this call does not modify the guest memory contents, so does not violate memory</span>
-    <span class="comment">// safety.</span>
-    <span class="kw">unsafe</span> {
+<span class="doccomment">/// Adjusts the permissions of a page in the RMP.
+///
+/// See the RMPADJUST instruction in &lt;https://www.amd.com/system/files/TechDocs/24594.pdf&gt; for more details.
+</span><span class="attribute">#[inline]
+</span><span class="kw">pub fn </span>rmpadjust(
+    page_guest_physical_address: usize,
+    page_size: PageSize,
+    permission: RmpPermission,
+) -&gt; <span class="prelude-ty">Result</span>&lt;(), InstructionError&gt; {
+    <span class="kw">let </span>page_size = page_size <span class="kw">as </span>u64;
+    <span class="kw">let </span>permission: u64 = permission.into();
+    <span class="kw">let </span>result: u64;
+    <span class="comment">// Safety: this call does not modify the guest memory contents, so does not violate memory
+    // safety.
+    </span><span class="kw">unsafe </span>{
         <span class="macro">asm!</span>(
             <span class="string">&quot;rmpadjust&quot;</span>,
-            <span class="kw">in</span>(<span class="string">&quot;rax&quot;</span>) <span class="ident">page_guest_physical_address</span>,
-            <span class="kw">in</span>(<span class="string">&quot;rcx&quot;</span>) <span class="ident">page_size</span>,
-            <span class="kw">in</span>(<span class="string">&quot;rdx&quot;</span>) <span class="ident">permission</span>,
-            <span class="ident">lateout</span>(<span class="string">&quot;rax&quot;</span>) <span class="ident">result</span>,
-            <span class="ident">options</span>(<span class="ident">nomem</span>, <span class="ident">nostack</span>)
+            <span class="kw">in</span>(<span class="string">&quot;rax&quot;</span>) page_guest_physical_address,
+            <span class="kw">in</span>(<span class="string">&quot;rcx&quot;</span>) page_size,
+            <span class="kw">in</span>(<span class="string">&quot;rdx&quot;</span>) permission,
+            lateout(<span class="string">&quot;rax&quot;</span>) result,
+            options(nomem, nostack)
         );
     }
-    <span class="kw">if</span> <span class="ident">result</span> <span class="op">==</span> <span class="number">0</span> {
+    <span class="kw">if </span>result == <span class="number">0 </span>{
         <span class="prelude-val">Ok</span>(())
-    } <span class="kw">else</span> {
-        <span class="prelude-val">Err</span>(<span class="ident">InstructionError::from_repr</span>(<span class="ident">result</span> <span class="kw">as</span> <span class="ident">u32</span>)
-            .<span class="ident">expect</span>(<span class="string">&quot;Invalid return value from RMPADJUST instruction.&quot;</span>))
+    } <span class="kw">else </span>{
+        <span class="prelude-val">Err</span>(InstructionError::from_repr(result <span class="kw">as </span>u32)
+            .expect(<span class="string">&quot;Invalid return value from RMPADJUST instruction.&quot;</span>))
     }
 }
 
-<span class="doccomment">/// Unconditionally exits from the guest to the hypervisor.</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// See the VMGEXIT instruction in &lt;https://www.amd.com/system/files/TechDocs/24594.pdf&gt; for more details.</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">vmgexit</span>() {
-    <span class="comment">// Safety: this call does not modify the guest memory contents, so does not violate memory</span>
-    <span class="comment">// safety.</span>
-    <span class="kw">unsafe</span> {
-        <span class="comment">// The REP instruction modifier changes the VMMCALL instruction to be equivalent to the</span>
-        <span class="comment">// VMGEXIT call. This is used as the assembler does not recognise the VMGEXIT mnemonic.</span>
-        <span class="macro">asm!</span>(<span class="string">&quot;rep vmmcall&quot;</span>, <span class="ident">options</span>(<span class="ident">nomem</span>, <span class="ident">nostack</span>, <span class="ident">preserves_flags</span>));
+<span class="doccomment">/// Unconditionally exits from the guest to the hypervisor.
+///
+/// See the VMGEXIT instruction in &lt;https://www.amd.com/system/files/TechDocs/24594.pdf&gt; for more details.
+</span><span class="kw">pub fn </span>vmgexit() {
+    <span class="comment">// Safety: this call does not modify the guest memory contents, so does not violate memory
+    // safety.
+    </span><span class="kw">unsafe </span>{
+        <span class="comment">// The REP instruction modifier changes the VMMCALL instruction to be equivalent to the
+        // VMGEXIT call. This is used as the assembler does not recognise the VMGEXIT mnemonic.
+        </span><span class="macro">asm!</span>(<span class="string">&quot;rep vmmcall&quot;</span>, options(nomem, nostack, preserves_flags));
     }
 }
 </code></pre></div>
-</section><section id="search" class="content hidden"></section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="sev_guest" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.62.0-nightly (de1bc0008 2022-04-21)" ></div>
-</body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="sev_guest" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (81f391930 2022-10-09)" ></div></body></html>

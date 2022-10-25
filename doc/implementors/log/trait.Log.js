@@ -1,3 +1,3 @@
-(function() {var implementors = {};
-implementors["oak_functions_loader_linux_native"] = [{"text":"impl <a class=\"trait\" href=\"https://docs.rs/log/0.4.17/log/trait.Log.html\" title=\"trait log::Log\">Log</a> for <a class=\"struct\" href=\"oak_functions_loader_linux_native/struct.Logger.html\" title=\"struct oak_functions_loader_linux_native::Logger\">Logger</a>","synthetic":false,"types":["oak_functions_loader_linux_native::Logger"]}];
-if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()
+(function() {var implementors = {
+"oak_functions_linux_fd_bin":[["impl <a class=\"trait\" href=\"https://docs.rs/log/0.4.17/log/trait.Log.html\" title=\"trait log::Log\">Log</a> for <a class=\"struct\" href=\"oak_functions_linux_fd_bin/struct.Logger.html\" title=\"struct oak_functions_linux_fd_bin::Logger\">Logger</a>"]]
+};if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

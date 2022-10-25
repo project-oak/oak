@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"mod":[["schema",""]],"struct":[["RuntimeImplementation",""],["StandaloneLogger","Temporary OakLogger implementation using the `log` crate."]]};

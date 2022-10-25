@@ -1,0 +1,288 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `oak_restricted_kernel/src/mm/frame_allocator.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>frame_allocator.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" href="../../../normalize.css"><link rel="stylesheet" href="../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" href="../../../ayu.css" disabled><link rel="stylesheet" href="../../../dark.css" disabled><link rel="stylesheet" href="../../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../../storage.js"></script><script defer src="../../../source-script.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../main.js"></script><noscript><link rel="stylesheet" href="../../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><a class="sidebar-logo" href="../../../oak_restricted_kernel/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../oak_restricted_kernel/index.html"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="src-line-numbers"><span id="1">1</span>
+<span id="2">2</span>
+<span id="3">3</span>
+<span id="4">4</span>
+<span id="5">5</span>
+<span id="6">6</span>
+<span id="7">7</span>
+<span id="8">8</span>
+<span id="9">9</span>
+<span id="10">10</span>
+<span id="11">11</span>
+<span id="12">12</span>
+<span id="13">13</span>
+<span id="14">14</span>
+<span id="15">15</span>
+<span id="16">16</span>
+<span id="17">17</span>
+<span id="18">18</span>
+<span id="19">19</span>
+<span id="20">20</span>
+<span id="21">21</span>
+<span id="22">22</span>
+<span id="23">23</span>
+<span id="24">24</span>
+<span id="25">25</span>
+<span id="26">26</span>
+<span id="27">27</span>
+<span id="28">28</span>
+<span id="29">29</span>
+<span id="30">30</span>
+<span id="31">31</span>
+<span id="32">32</span>
+<span id="33">33</span>
+<span id="34">34</span>
+<span id="35">35</span>
+<span id="36">36</span>
+<span id="37">37</span>
+<span id="38">38</span>
+<span id="39">39</span>
+<span id="40">40</span>
+<span id="41">41</span>
+<span id="42">42</span>
+<span id="43">43</span>
+<span id="44">44</span>
+<span id="45">45</span>
+<span id="46">46</span>
+<span id="47">47</span>
+<span id="48">48</span>
+<span id="49">49</span>
+<span id="50">50</span>
+<span id="51">51</span>
+<span id="52">52</span>
+<span id="53">53</span>
+<span id="54">54</span>
+<span id="55">55</span>
+<span id="56">56</span>
+<span id="57">57</span>
+<span id="58">58</span>
+<span id="59">59</span>
+<span id="60">60</span>
+<span id="61">61</span>
+<span id="62">62</span>
+<span id="63">63</span>
+<span id="64">64</span>
+<span id="65">65</span>
+<span id="66">66</span>
+<span id="67">67</span>
+<span id="68">68</span>
+<span id="69">69</span>
+<span id="70">70</span>
+<span id="71">71</span>
+<span id="72">72</span>
+<span id="73">73</span>
+<span id="74">74</span>
+<span id="75">75</span>
+<span id="76">76</span>
+<span id="77">77</span>
+<span id="78">78</span>
+<span id="79">79</span>
+<span id="80">80</span>
+<span id="81">81</span>
+<span id="82">82</span>
+<span id="83">83</span>
+<span id="84">84</span>
+<span id="85">85</span>
+<span id="86">86</span>
+<span id="87">87</span>
+<span id="88">88</span>
+<span id="89">89</span>
+<span id="90">90</span>
+<span id="91">91</span>
+<span id="92">92</span>
+<span id="93">93</span>
+<span id="94">94</span>
+<span id="95">95</span>
+<span id="96">96</span>
+<span id="97">97</span>
+<span id="98">98</span>
+<span id="99">99</span>
+<span id="100">100</span>
+<span id="101">101</span>
+<span id="102">102</span>
+<span id="103">103</span>
+<span id="104">104</span>
+<span id="105">105</span>
+<span id="106">106</span>
+<span id="107">107</span>
+<span id="108">108</span>
+<span id="109">109</span>
+<span id="110">110</span>
+<span id="111">111</span>
+<span id="112">112</span>
+<span id="113">113</span>
+<span id="114">114</span>
+<span id="115">115</span>
+<span id="116">116</span>
+<span id="117">117</span>
+<span id="118">118</span>
+<span id="119">119</span>
+<span id="120">120</span>
+<span id="121">121</span>
+<span id="122">122</span>
+<span id="123">123</span>
+<span id="124">124</span>
+<span id="125">125</span>
+<span id="126">126</span>
+<span id="127">127</span>
+<span id="128">128</span>
+<span id="129">129</span>
+<span id="130">130</span>
+<span id="131">131</span>
+<span id="132">132</span>
+<span id="133">133</span>
+<span id="134">134</span>
+<span id="135">135</span>
+<span id="136">136</span>
+<span id="137">137</span>
+<span id="138">138</span>
+<span id="139">139</span>
+<span id="140">140</span>
+<span id="141">141</span>
+<span id="142">142</span>
+<span id="143">143</span>
+</pre><pre class="rust"><code><span class="comment">//
+// Copyright 2022 The Project Oak Authors
+//
+// Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
+</span><span class="kw">use </span><span class="kw">super</span>::bitmap_frame_allocator::BitmapAllocator;
+<span class="kw">use </span>x86_64::structures::paging::{
+    frame::PhysFrameRange, FrameAllocator, FrameDeallocator, PhysFrame, Size2MiB, Size4KiB,
+};
+
+<span class="doccomment">/// Allocator to track physical memory frames.
+///
+/// The basic unit we track is a 2 MiB frame. If necessary, we will take one 2 MiB frame and break
+/// it into smaller, 4 KiB frames to satisfy demand.
+///
+/// The parameter N needs to be set to the number of u64-s required to track the physical memory in
+/// a bitmap. For example, if we want to track 128 GiB of memory, that means 128Gi/2Mi = 65Ki
+/// frames, which in turn means we need 65Ki/64 = 1Ki u64-s (or: 1Ki * 8 = 8 KiB of memory).
+</span><span class="kw">pub struct </span>PhysicalMemoryAllocator&lt;<span class="kw">const </span>N: usize&gt; {
+    <span class="doccomment">/// Allocator for 2 MiB frames.
+    </span>large_frames: BitmapAllocator&lt;Size2MiB, N&gt;,
+    <span class="doccomment">/// Allocator for 4 KiB frames.
+    ///
+    /// When first asked for a 4K frame, we take one 2 MiB frame to hand out as 4 KiB frames; that
+    /// gives us 512 4K frames to hand out. Thus, the allocator bitmap needs to be 512/64 = 8
+    /// u64-s, or 64 B.
+    </span>small_frames: <span class="prelude-ty">Option</span>&lt;BitmapAllocator&lt;Size4KiB, <span class="number">8</span>&gt;&gt;,
+}
+
+<span class="kw">impl</span>&lt;<span class="kw">const </span>N: usize&gt; PhysicalMemoryAllocator&lt;N&gt; {
+    <span class="kw">pub fn </span>new(range: PhysFrameRange&lt;Size2MiB&gt;) -&gt; <span class="self">Self </span>{
+        PhysicalMemoryAllocator {
+            large_frames: BitmapAllocator::new(range),
+            small_frames: <span class="prelude-val">None</span>,
+        }
+    }
+
+    <span class="kw">pub fn </span>mark_valid(<span class="kw-2">&amp;mut </span><span class="self">self</span>, range: PhysFrameRange&lt;Size2MiB&gt;, valid: bool) {
+        <span class="self">self</span>.large_frames.mark_valid(range, valid)
+    }
+
+    <span class="kw">pub fn </span>largest_available(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;PhysFrameRange&lt;Size2MiB&gt;&gt; {
+        <span class="self">self</span>.large_frames.largest_available()
+    }
+
+    <span class="doccomment">/// Allocate `num` contiguous 2 MiB pages.
+    ///
+    /// Returns the frame range if a contiguous range of sufficient size was available; the memory
+    /// is marked as allocated before returning.
+    </span><span class="kw">pub fn </span>allocate_contiguous(<span class="kw-2">&amp;mut </span><span class="self">self</span>, num: usize) -&gt; <span class="prelude-ty">Option</span>&lt;PhysFrameRange&lt;Size2MiB&gt;&gt; {
+        <span class="self">self</span>.large_frames.allocate_contiguous(num)
+    }
+}
+
+<span class="kw">unsafe impl</span>&lt;<span class="kw">const </span>N: usize&gt; FrameAllocator&lt;Size2MiB&gt; <span class="kw">for </span>PhysicalMemoryAllocator&lt;N&gt; {
+    <span class="kw">fn </span>allocate_frame(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;PhysFrame&lt;Size2MiB&gt;&gt; {
+        <span class="self">self</span>.large_frames.allocate_frame()
+    }
+}
+
+<span class="kw">impl</span>&lt;<span class="kw">const </span>N: usize&gt; FrameDeallocator&lt;Size2MiB&gt; <span class="kw">for </span>PhysicalMemoryAllocator&lt;N&gt; {
+    <span class="kw">unsafe fn </span>deallocate_frame(<span class="kw-2">&amp;mut </span><span class="self">self</span>, frame: PhysFrame&lt;Size2MiB&gt;) {
+        <span class="self">self</span>.large_frames.deallocate_frame(frame)
+    }
+}
+
+<span class="kw">unsafe impl</span>&lt;<span class="kw">const </span>N: usize&gt; FrameAllocator&lt;Size4KiB&gt; <span class="kw">for </span>PhysicalMemoryAllocator&lt;N&gt; {
+    <span class="kw">fn </span>allocate_frame(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;PhysFrame&lt;Size4KiB&gt;&gt; {
+        <span class="kw">let </span>allocator = <span class="self">self</span>.small_frames.get_or_insert_with(|| {
+            <span class="kw">let </span>frame = <span class="self">self</span>.large_frames.allocate_frame().unwrap();
+            <span class="comment">// Safety: the frame we get from the 2MiB allocator is aligned to 2 MiB, which means
+            // it&#39;s by definition aligned to 4K as well.
+            </span><span class="kw">let </span>range = PhysFrame::range(
+                PhysFrame::from_start_address(frame.start_address()).unwrap(),
+                PhysFrame::from_start_address(frame.start_address() + frame.size()).unwrap(),
+            );
+            <span class="kw">let </span><span class="kw-2">mut </span>alloc = BitmapAllocator::new(range);
+            alloc.mark_valid(range, <span class="bool-val">true</span>);
+            alloc
+        });
+        allocator.allocate_frame()
+    }
+}
+
+<span class="kw">impl</span>&lt;<span class="kw">const </span>N: usize&gt; FrameDeallocator&lt;Size4KiB&gt; <span class="kw">for </span>PhysicalMemoryAllocator&lt;N&gt; {
+    <span class="kw">unsafe fn </span>deallocate_frame(<span class="kw-2">&amp;mut </span><span class="self">self</span>, frame: PhysFrame&lt;Size4KiB&gt;) {
+        <span class="self">self</span>.small_frames.as_mut().unwrap().deallocate_frame(frame)
+    }
+}
+
+<span class="attribute">#[cfg(test)]
+</span><span class="kw">mod </span>tests {
+    <span class="kw">extern crate </span>std;
+
+    <span class="kw">use super</span>::<span class="kw-2">*</span>;
+    <span class="kw">use </span>x86_64::{structures::paging::PageSize, PhysAddr};
+
+    <span class="kw">fn </span>create_frame(start: u64) -&gt; PhysFrame&lt;Size2MiB&gt; {
+        PhysFrame::from_start_address(PhysAddr::new(start)).unwrap()
+    }
+
+    <span class="kw">fn </span>create_frame_range(start: u64, end: u64) -&gt; PhysFrameRange&lt;Size2MiB&gt; {
+        PhysFrame::range(create_frame(start), create_frame(end))
+    }
+
+    <span class="attribute">#[test]
+    </span><span class="kw">fn </span>simple_allocator() {
+        <span class="kw">let </span><span class="kw-2">mut </span>allocator =
+            PhysicalMemoryAllocator::&lt;<span class="number">1</span>&gt;::new(create_frame_range(<span class="number">0</span>, <span class="number">2 </span>* Size2MiB::SIZE));
+        allocator.mark_valid(create_frame_range(<span class="number">0</span>, <span class="number">2 </span>* Size2MiB::SIZE), <span class="bool-val">true</span>);
+        (<span class="kw-2">&amp;mut </span>allocator <span class="kw">as </span><span class="kw-2">&amp;mut </span><span class="kw">dyn </span>FrameAllocator&lt;Size2MiB&gt;)
+            .allocate_frame()
+            .unwrap();
+        (<span class="kw-2">&amp;mut </span>allocator <span class="kw">as </span><span class="kw-2">&amp;mut </span><span class="kw">dyn </span>FrameAllocator&lt;Size4KiB&gt;)
+            .allocate_frame()
+            .unwrap();
+    }
+
+    <span class="attribute">#[test]
+    </span><span class="kw">fn </span>fill_small_frames() {
+        <span class="kw">let </span><span class="kw-2">mut </span>allocator =
+            PhysicalMemoryAllocator::&lt;<span class="number">1</span>&gt;::new(create_frame_range(<span class="number">0</span>, Size2MiB::SIZE));
+        allocator.mark_valid(create_frame_range(<span class="number">0</span>, Size2MiB::SIZE), <span class="bool-val">true</span>);
+        <span class="kw">let </span>alloc_ref = <span class="kw-2">&amp;mut </span>allocator <span class="kw">as </span><span class="kw-2">&amp;mut </span><span class="kw">dyn </span>FrameAllocator&lt;Size4KiB&gt;;
+        <span class="comment">// 512 allocations should succeed (512 * 4K = 2M)
+        </span><span class="kw">for _ in </span><span class="number">0</span>..<span class="number">512 </span>{
+            alloc_ref.allocate_frame().unwrap();
+        }
+        <span class="comment">// and the next one shouldn&#39;t, as we&#39;ve filled the page.
+        </span><span class="macro">assert_eq!</span>(<span class="prelude-val">None</span>, alloc_ref.allocate_frame());
+    }
+}
+</code></pre></div>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="oak_restricted_kernel" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (81f391930 2022-10-09)" ></div></body></html>

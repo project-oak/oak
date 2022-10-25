@@ -1,9 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `experimental/virtio/src/vsock/mod.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>mod.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" type="text/css" href="../../../normalize.css"><link rel="stylesheet" type="text/css" href="../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../../ayu.css" disabled><link rel="stylesheet" type="text/css" href="../../../dark.css" disabled><link rel="stylesheet" type="text/css" href="../../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../../storage.js"></script><script src="../../../crates.js"></script><script defer src="../../../main.js"></script><script defer src="../../../source-script.js"></script><script defer src="../../../source-files.js"></script>
-    <noscript><link rel="stylesheet" href="../../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../virtio/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div>
-        </a><h2 class="location"></h2>
-    </nav>
-    <nav class="sidebar"><a class="sidebar-logo" href="../../../virtio/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div>
-        </a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../virtio/index.html"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></a><nav class="sub"><div class="theme-picker hidden"><button id="theme-picker" aria-label="Pick another theme!" aria-haspopup="menu" title="themes"><img width="22" height="22" alt="Pick another theme!" src="../../../brush.svg"></button><div id="theme-choices" role="menu"></div></div><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><button type="button" id="help-button" title="help">?</button><a id="settings-menu" href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../wheel.svg"></a></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `experimental/virtio/src/vsock/mod.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>mod.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" href="../../../normalize.css"><link rel="stylesheet" href="../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" href="../../../ayu.css" disabled><link rel="stylesheet" href="../../../dark.css" disabled><link rel="stylesheet" href="../../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../../storage.js"></script><script defer src="../../../source-script.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../main.js"></script><noscript><link rel="stylesheet" href="../../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><a class="sidebar-logo" href="../../../virtio/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../virtio/index.html"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="src-line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -254,257 +249,294 @@
 <span id="249">249</span>
 <span id="250">250</span>
 <span id="251">251</span>
-</pre><pre class="rust"><code><span class="comment">//</span>
-<span class="comment">// Copyright 2022 The Project Oak Authors</span>
-<span class="comment">//</span>
-<span class="comment">// Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
-<span class="comment">// you may not use this file except in compliance with the License.</span>
-<span class="comment">// You may obtain a copy of the License at</span>
-<span class="comment">//</span>
-<span class="comment">//     http://www.apache.org/licenses/LICENSE-2.0</span>
-<span class="comment">//</span>
-<span class="comment">// Unless required by applicable law or agreed to in writing, software</span>
-<span class="comment">// distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
-<span class="comment">// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
-<span class="comment">// See the License for the specific language governing permissions and</span>
-<span class="comment">// limitations under the License.</span>
-<span class="comment">//</span>
+<span id="252">252</span>
+<span id="253">253</span>
+<span id="254">254</span>
+<span id="255">255</span>
+<span id="256">256</span>
+<span id="257">257</span>
+<span id="258">258</span>
+<span id="259">259</span>
+<span id="260">260</span>
+<span id="261">261</span>
+<span id="262">262</span>
+<span id="263">263</span>
+<span id="264">264</span>
+<span id="265">265</span>
+<span id="266">266</span>
+<span id="267">267</span>
+<span id="268">268</span>
+<span id="269">269</span>
+<span id="270">270</span>
+</pre><pre class="rust"><code><span class="comment">//
+// Copyright 2022 The Project Oak Authors
+//
+// Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
-<span class="kw">use</span> <span class="kw">crate</span>::{
-    <span class="ident">queue</span>::{<span class="ident">DeviceWriteOnlyQueue</span>, <span class="ident">DriverWriteOnlyQueue</span>},
-    <span class="ident">vsock::packet::VSockOp</span>,
+</span><span class="kw">use crate</span>::{
+    queue::{DeviceWriteOnlyQueue, DriverWriteOnlyQueue},
+    vsock::packet::VSockOp,
+    InverseTranslator, Translator,
 };
-<span class="kw">use</span> <span class="ident">anyhow::Context</span>;
-<span class="kw">use</span> <span class="ident">packet::Packet</span>;
-<span class="kw">use</span> <span class="ident">rust_hypervisor_firmware_virtio</span>::{
-    <span class="ident">device::VirtioBaseDevice</span>,
-    <span class="ident">pci</span>::{<span class="ident">find_device</span>, <span class="ident">VirtioPciTransport</span>},
-    <span class="ident">virtio::VirtioTransport</span>,
+<span class="kw">use </span>anyhow::Context;
+<span class="kw">use </span>core::alloc::Allocator;
+<span class="kw">use </span>packet::Packet;
+<span class="kw">use </span>rust_hypervisor_firmware_virtio::{
+    device::VirtioBaseDevice,
+    pci::{find_device, VirtioPciTransport},
+    virtio::VirtioTransport,
 };
 
-<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">packet</span>;
-<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">socket</span>;
+<span class="kw">pub mod </span>packet;
+<span class="kw">pub mod </span>socket;
 
-<span class="doccomment">/// The number of buffer descriptors in each of the queues.</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// Note: We match the CrosVM max size for vhost vsock, as it seems CrosVM sets the number of</span>
-<span class="doccomment">/// descriptors to the maximum queue size rather than the negotiated size.</span>
-<span class="doccomment">/// See &lt;https://chromium.googlesource.com/chromiumos/platform/crosvm/+/d4505a7f1c9e4aa502ff49367863aedeadbafb9d/devices/src/virtio/vhost/worker.rs#74&gt;.</span>
-<span class="kw">const</span> <span class="ident">QUEUE_SIZE</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">256</span>;
+<span class="doccomment">/// The number of buffer descriptors in each of the queues.
+///
+/// Note: We match the CrosVM max size for vhost vsock, as it seems CrosVM sets the number of
+/// descriptors to the maximum queue size rather than the negotiated size.
+/// See &lt;https://chromium.googlesource.com/chromiumos/platform/crosvm/+/d4505a7f1c9e4aa502ff49367863aedeadbafb9d/devices/src/virtio/vhost/worker.rs#74&gt;.
+</span><span class="kw">const </span>QUEUE_SIZE: usize = <span class="number">256</span>;
 
-<span class="doccomment">/// The size of each of the buffers used by the transmit and receive queues.</span>
-<span class="kw">const</span> <span class="ident">DATA_BUFFER_SIZE</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">4096</span>;
+<span class="doccomment">/// The size of each of the buffers used by the transmit and receive queues.
+</span><span class="kw">const </span>DATA_BUFFER_SIZE: usize = <span class="number">4096</span>;
 
-<span class="doccomment">/// The size of the buffers used by the event queue.</span>
-<span class="kw">const</span> <span class="ident">EVENT_BUFFER_SIZE</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">8</span>;
+<span class="doccomment">/// The size of the buffers used by the event queue.
+</span><span class="kw">const </span>EVENT_BUFFER_SIZE: usize = <span class="number">8</span>;
 
-<span class="doccomment">/// The id of the receive queue.</span>
-<span class="kw">const</span> <span class="ident">RX_QUEUE_ID</span>: <span class="ident">u16</span> <span class="op">=</span> <span class="number">0</span>;
+<span class="doccomment">/// The id of the receive queue.
+</span><span class="kw">const </span>RX_QUEUE_ID: u16 = <span class="number">0</span>;
 
-<span class="doccomment">/// The id of the transmit queue.</span>
-<span class="kw">const</span> <span class="ident">TX_QUEUE_ID</span>: <span class="ident">u16</span> <span class="op">=</span> <span class="number">1</span>;
+<span class="doccomment">/// The id of the transmit queue.
+</span><span class="kw">const </span>TX_QUEUE_ID: u16 = <span class="number">1</span>;
 
-<span class="doccomment">/// The id of the event queue.</span>
-<span class="kw">const</span> <span class="ident">EVENT_QUEUE_ID</span>: <span class="ident">u16</span> <span class="op">=</span> <span class="number">2</span>;
+<span class="doccomment">/// The id of the event queue.
+</span><span class="kw">const </span>EVENT_QUEUE_ID: u16 = <span class="number">2</span>;
 
-<span class="doccomment">/// The virtio device id for a socket device.</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// See &lt;https://docs.oasis-open.org/virtio/virtio/v1.1/csprd01/virtio-v1.1-csprd01.html#x1-1930005&gt;.</span>
-<span class="kw">const</span> <span class="ident">DEVICE_ID</span>: <span class="ident">u16</span> <span class="op">=</span> <span class="number">19</span>;
+<span class="doccomment">/// The virtio device id for a socket device.
+///
+/// See &lt;https://docs.oasis-open.org/virtio/virtio/v1.1/csprd01/virtio-v1.1-csprd01.html#x1-1930005&gt;.
+</span><span class="kw">const </span>DEVICE_ID: u16 = <span class="number">19</span>;
 
-<span class="doccomment">/// The PCI device id for a virtio socket device.</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// See &lt;https://docs.oasis-open.org/virtio/virtio/v1.1/csprd01/virtio-v1.1-csprd01.html#x1-1020002&gt;.</span>
-<span class="kw">const</span> <span class="ident">PCI_DEVICE_ID</span>: <span class="ident">u16</span> <span class="op">=</span> <span class="number">0x1040</span> <span class="op">+</span> <span class="ident">DEVICE_ID</span>;
+<span class="doccomment">/// The PCI device id for a virtio socket device.
+///
+/// See &lt;https://docs.oasis-open.org/virtio/virtio/v1.1/csprd01/virtio-v1.1-csprd01.html#x1-1020002&gt;.
+</span><span class="kw">const </span>PCI_DEVICE_ID: u16 = <span class="number">0x1040 </span>+ DEVICE_ID;
 
-<span class="doccomment">/// The PCI config offset for reading the guest CID.</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// See &lt;https://docs.oasis-open.org/virtio/virtio/v1.1/csprd01/virtio-v1.1-csprd01.html#x1-3940004&gt;.</span>
-<span class="kw">const</span> <span class="ident">CID_CONFIG_OFFSET</span>: <span class="ident">u64</span> <span class="op">=</span> <span class="number">0</span>;
+<span class="doccomment">/// The PCI config offset for reading the guest CID.
+///
+/// See &lt;https://docs.oasis-open.org/virtio/virtio/v1.1/csprd01/virtio-v1.1-csprd01.html#x1-3940004&gt;.
+</span><span class="kw">const </span>CID_CONFIG_OFFSET: u64 = <span class="number">0</span>;
 
-<span class="doccomment">/// The well-known host CID value.</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// See &lt;https://docs.oasis-open.org/virtio/virtio/v1.1/csprd01/virtio-v1.1-csprd01.html#x1-3940004&gt;.</span>
-<span class="kw">const</span> <span class="ident">HOST_CID</span>: <span class="ident">u64</span> <span class="op">=</span> <span class="number">2</span>;
+<span class="doccomment">/// The well-known host CID value.
+///
+/// See &lt;https://docs.oasis-open.org/virtio/virtio/v1.1/csprd01/virtio-v1.1-csprd01.html#x1-3940004&gt;.
+</span><span class="kw">const </span>HOST_CID: u64 = <span class="number">2</span>;
 
-<span class="doccomment">/// Low-level driver interface to interact with a virtio socket device.</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// See &lt;https://docs.oasis-open.org/virtio/virtio/v1.1/csprd01/virtio-v1.1-csprd01.html#x1-39000010&gt;.</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">VSock</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">VirtioTransport</span><span class="op">&gt;</span> {
-    <span class="doccomment">/// The base virtio-over-PCI device used for configuration and notification.</span>
-    <span class="ident">device</span>: <span class="ident">VirtioBaseDevice</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>,
-    <span class="doccomment">/// The receive queue.</span>
-    <span class="ident">rx_queue</span>: <span class="ident">DeviceWriteOnlyQueue</span><span class="op">&lt;</span><span class="ident">QUEUE_SIZE</span>, <span class="ident">DATA_BUFFER_SIZE</span><span class="op">&gt;</span>,
-    <span class="doccomment">/// The transmit queue.</span>
-    <span class="ident">tx_queue</span>: <span class="ident">DriverWriteOnlyQueue</span><span class="op">&lt;</span><span class="ident">QUEUE_SIZE</span>, <span class="ident">DATA_BUFFER_SIZE</span><span class="op">&gt;</span>,
-    <span class="doccomment">/// The event queue used by the device to notify the driver that the guest CID has changed. We</span>
-    <span class="doccomment">/// ignore it for now as we don&#39;t support live migration, but it still must exist and be</span>
-    <span class="doccomment">/// configured.</span>
-    <span class="ident">event_queue</span>: <span class="ident">DeviceWriteOnlyQueue</span><span class="op">&lt;</span><span class="ident">QUEUE_SIZE</span>, <span class="ident">EVENT_BUFFER_SIZE</span><span class="op">&gt;</span>,
-    <span class="doccomment">/// The the CID assigned to this VM.</span>
-    <span class="ident">guest_cid</span>: <span class="ident">u64</span>,
+<span class="doccomment">/// Low-level driver interface to interact with a virtio socket device.
+///
+/// See &lt;https://docs.oasis-open.org/virtio/virtio/v1.1/csprd01/virtio-v1.1-csprd01.html#x1-39000010&gt;.
+</span><span class="kw">pub struct </span>VSock&lt;<span class="lifetime">&#39;a</span>, T: VirtioTransport, A: Allocator&gt; {
+    <span class="doccomment">/// The base virtio-over-PCI device used for configuration and notification.
+    </span>device: VirtioBaseDevice&lt;T&gt;,
+    <span class="doccomment">/// The receive queue.
+    </span>rx_queue: DeviceWriteOnlyQueue&lt;<span class="lifetime">&#39;a</span>, QUEUE_SIZE, DATA_BUFFER_SIZE, A&gt;,
+    <span class="doccomment">/// The transmit queue.
+    </span>tx_queue: DriverWriteOnlyQueue&lt;<span class="lifetime">&#39;a</span>, QUEUE_SIZE, DATA_BUFFER_SIZE, A&gt;,
+    <span class="doccomment">/// The event queue used by the device to notify the driver that the guest CID has changed. We
+    /// ignore it for now as we don&#39;t support live migration, but it still must exist and be
+    /// configured.
+    </span>event_queue: DeviceWriteOnlyQueue&lt;<span class="lifetime">&#39;a</span>, QUEUE_SIZE, EVENT_BUFFER_SIZE, A&gt;,
+    <span class="doccomment">/// The the CID assigned to this VM.
+    </span>guest_cid: u64,
 }
 
-<span class="kw">impl</span> <span class="ident">VSock</span><span class="op">&lt;</span><span class="ident">VirtioPciTransport</span><span class="op">&gt;</span> {
-    <span class="doccomment">/// Finds the virtio vsock PCI device, initialises the device, and configures the queues.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">find_and_configure_device</span>() -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
-        <span class="comment">// For now we just scan the first 32 devices on PCI bus 0 to find the first one that matches</span>
-        <span class="comment">// the vendor ID and device ID.</span>
-        <span class="kw">let</span> <span class="ident">pci_device</span> <span class="op">=</span> <span class="ident">find_device</span>(<span class="ident"><span class="kw">super</span>::PCI_VENDOR_ID</span>, <span class="ident">PCI_DEVICE_ID</span>)
-            .<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;Couldn&#39;t find a virtio vsock device.&quot;</span>))<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">transport</span> <span class="op">=</span> <span class="ident">VirtioPciTransport::new</span>(<span class="ident">pci_device</span>);
-        <span class="kw">let</span> <span class="ident">device</span> <span class="op">=</span> <span class="ident">VirtioBaseDevice::new</span>(<span class="ident">transport</span>);
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">result</span> <span class="op">=</span> <span class="ident"><span class="self">Self</span>::new</span>(<span class="ident">device</span>);
-        <span class="ident">result</span>.<span class="ident">init</span>()<span class="question-mark">?</span>;
-        <span class="comment">// Let the device know there are available buffers in the receiver and event queues.</span>
-        <span class="ident">result</span>.<span class="ident">device</span>.<span class="ident">notify_queue</span>(<span class="ident">RX_QUEUE_ID</span>);
-        <span class="ident">result</span>.<span class="ident">device</span>.<span class="ident">notify_queue</span>(<span class="ident">EVENT_QUEUE_ID</span>);
-        <span class="prelude-val">Ok</span>(<span class="ident">result</span>)
+<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, A: Allocator&gt; VSock&lt;<span class="lifetime">&#39;a</span>, VirtioPciTransport, A&gt; {
+    <span class="doccomment">/// Finds the virtio vsock PCI device, initialises the device, and configures the queues.
+    </span><span class="kw">pub fn </span>find_and_configure_device&lt;VP: Translator, PV: InverseTranslator&gt;(
+        translate: VP,
+        inverse: PV,
+        alloc: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>A,
+    ) -&gt; anyhow::Result&lt;<span class="self">Self</span>&gt; {
+        <span class="comment">// For now we just scan the first 32 devices on PCI bus 0 to find the first one that matches
+        // the vendor ID and device ID.
+        </span><span class="kw">let </span>pci_device = find_device(<span class="kw">super</span>::PCI_VENDOR_ID, PCI_DEVICE_ID)
+            .ok_or_else(|| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;Couldn&#39;t find a virtio vsock device.&quot;</span>))<span class="question-mark">?</span>;
+        <span class="kw">let </span>transport = VirtioPciTransport::new(pci_device);
+        <span class="kw">let </span>device = VirtioBaseDevice::new(transport);
+        <span class="kw">let </span><span class="kw-2">mut </span>result = <span class="self">Self</span>::new(device, <span class="kw-2">&amp;</span>translate, alloc);
+        result.init(translate, inverse)<span class="question-mark">?</span>;
+        <span class="comment">// Let the device know there are available buffers in the receiver and event queues.
+        </span>result.device.notify_queue(RX_QUEUE_ID);
+        result.device.notify_queue(EVENT_QUEUE_ID);
+        <span class="prelude-val">Ok</span>(result)
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="ident">VSock</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="ident">T</span>: <span class="ident">VirtioTransport</span>,
+<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, T, A: Allocator&gt; VSock&lt;<span class="lifetime">&#39;a</span>, T, A&gt;
+<span class="kw">where
+    </span>T: VirtioTransport,
 {
-    <span class="doccomment">/// Reads the next valid packet from the receive queue, if one is available.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">read_packet</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Packet</span><span class="op">&gt;</span> {
-        <span class="kw">loop</span> {
-            <span class="kw">let</span> <span class="ident">buffer</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">rx_queue</span>.<span class="ident">read_next_used_buffer</span>()<span class="question-mark">?</span>;
-            <span class="kw">if</span> <span class="self">self</span>.<span class="ident">rx_queue</span>.<span class="ident">inner</span>.<span class="ident">must_notify_device</span>() {
-                <span class="comment">// Notify the device that a packet has been read and the buffer is available again.</span>
-                <span class="self">self</span>.<span class="ident">device</span>.<span class="ident">notify_queue</span>(<span class="ident">RX_QUEUE_ID</span>);
+    <span class="doccomment">/// Reads the next valid packet from the receive queue, if one is available.
+    </span><span class="kw">pub fn </span>read_packet(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;Packet&gt; {
+        <span class="kw">loop </span>{
+            <span class="kw">let </span>buffer = <span class="self">self</span>.rx_queue.read_next_used_buffer()<span class="question-mark">?</span>;
+            <span class="kw">if </span><span class="self">self</span>.rx_queue.inner.must_notify_device() {
+                <span class="comment">// Notify the device that a packet has been read and the buffer is available again.
+                </span><span class="self">self</span>.device.notify_queue(RX_QUEUE_ID);
             }
-            <span class="comment">// Silently drop packets where the CIDs don&#39;t match.</span>
-            <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Ok</span>(<span class="ident">packet</span>) <span class="op">=</span> <span class="ident">Packet::new</span>(<span class="ident">buffer</span>) {
-                <span class="kw">if</span> <span class="ident">packet</span>.<span class="ident">get_src_cid</span>() <span class="op">==</span> <span class="ident">HOST_CID</span> <span class="op">&amp;&amp;</span> <span class="ident">packet</span>.<span class="ident">get_dst_cid</span>() <span class="op">==</span> <span class="self">self</span>.<span class="ident">guest_cid</span> {
-                    <span class="kw">return</span> <span class="prelude-val">Some</span>(<span class="ident">packet</span>);
+            <span class="comment">// Silently drop packets where the CIDs don&#39;t match.
+            </span><span class="kw">if let </span><span class="prelude-val">Ok</span>(packet) = Packet::new(buffer) {
+                <span class="kw">if </span>packet.get_src_cid() == HOST_CID &amp;&amp; packet.get_dst_cid() == <span class="self">self</span>.guest_cid {
+                    <span class="kw">return </span><span class="prelude-val">Some</span>(packet);
                 }
             }
         }
     }
 
-    <span class="doccomment">/// Reads the next valid packet that matches the filter, if one is available.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// If invalid packets are found it will continue reading until a valid one is found, or no more</span>
-    <span class="doccomment">/// packets are available to read.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// If `reset_unmatched` is true we send RST packets in response to unmatched packets to notify</span>
-    <span class="doccomment">/// the host that the packets are not part of a valid connected socket (e.g. unexpected source</span>
-    <span class="doccomment">/// or destintation ports) and any related connections on the host should be disconnected.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">read_filtered_packet</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">Fn</span>(<span class="kw-2">&amp;</span><span class="ident">Packet</span>) -&gt; <span class="ident">bool</span><span class="op">&gt;</span>(
-        <span class="kw-2">&amp;mut</span> <span class="self">self</span>,
-        <span class="ident">filter</span>: <span class="ident">F</span>,
-        <span class="ident">reset_unmatched</span>: <span class="ident">bool</span>,
-    ) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Packet</span><span class="op">&gt;</span> {
-        <span class="kw">loop</span> {
-            <span class="kw">let</span> <span class="ident">packet</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">read_packet</span>()<span class="question-mark">?</span>;
-            <span class="kw">if</span> <span class="ident">filter</span>(<span class="kw-2">&amp;</span><span class="ident">packet</span>) {
-                <span class="kw">return</span> <span class="prelude-val">Some</span>(<span class="ident">packet</span>);
+    <span class="doccomment">/// Reads the next valid packet that matches the filter, if one is available.
+    ///
+    /// If invalid packets are found it will continue reading until a valid one is found, or no more
+    /// packets are available to read.
+    ///
+    /// If `reset_unmatched` is true we send RST packets in response to unmatched packets to notify
+    /// the host that the packets are not part of a valid connected socket (e.g. unexpected source
+    /// or destintation ports) and any related connections on the host should be disconnected.
+    </span><span class="kw">pub fn </span>read_filtered_packet&lt;F: Fn(<span class="kw-2">&amp;</span>Packet) -&gt; bool&gt;(
+        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+        filter: F,
+        reset_unmatched: bool,
+    ) -&gt; <span class="prelude-ty">Option</span>&lt;Packet&gt; {
+        <span class="kw">loop </span>{
+            <span class="kw">let </span>packet = <span class="self">self</span>.read_packet()<span class="question-mark">?</span>;
+            <span class="kw">if </span>filter(<span class="kw-2">&amp;</span>packet) {
+                <span class="kw">return </span><span class="prelude-val">Some</span>(packet);
             }
-            <span class="kw">if</span> <span class="ident">reset_unmatched</span> {
-                <span class="self">self</span>.<span class="ident">send_rst_packet</span>(<span class="ident">packet</span>.<span class="ident">get_src_port</span>(), <span class="ident">packet</span>.<span class="ident">get_dst_port</span>())
+            <span class="kw">if </span>reset_unmatched {
+                <span class="self">self</span>.send_rst_packet(packet.get_src_port(), packet.get_dst_port())
             }
         }
     }
 
-    <span class="doccomment">/// Writes the packet to the transmit queue.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">write_packet</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">packet</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Packet</span>) {
-        <span class="comment">// Ensure that the CIDs are set correctly.</span>
-        <span class="ident">packet</span>.<span class="ident">set_dst_cid</span>(<span class="ident">HOST_CID</span>);
-        <span class="ident">packet</span>.<span class="ident">set_src_cid</span>(<span class="self">self</span>.<span class="ident">guest_cid</span>);
+    <span class="doccomment">/// Writes the packet to the transmit queue.
+    </span><span class="kw">pub fn </span>write_packet(<span class="kw-2">&amp;mut </span><span class="self">self</span>, packet: <span class="kw-2">&amp;mut </span>Packet) {
+        <span class="comment">// Ensure that the CIDs are set correctly.
+        </span>packet.set_dst_cid(HOST_CID);
+        packet.set_src_cid(<span class="self">self</span>.guest_cid);
 
-        <span class="self">self</span>.<span class="ident">tx_queue</span>.<span class="ident">write_buffer</span>(<span class="ident">packet</span>.<span class="ident">as_slice</span>());
+        <span class="self">self</span>.tx_queue.write_buffer(packet.as_slice());
 
-        <span class="kw">if</span> <span class="self">self</span>.<span class="ident">tx_queue</span>.<span class="ident">inner</span>.<span class="ident">must_notify_device</span>() {
-            <span class="comment">// Notify the device that a new packet has been written.</span>
-            <span class="self">self</span>.<span class="ident">device</span>.<span class="ident">notify_queue</span>(<span class="ident">TX_QUEUE_ID</span>);
+        <span class="kw">if </span><span class="self">self</span>.tx_queue.inner.must_notify_device() {
+            <span class="comment">// Notify the device that a new packet has been written.
+            </span><span class="self">self</span>.device.notify_queue(TX_QUEUE_ID);
         }
     }
 
-    <span class="doccomment">/// Gets the device status.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// See &lt;https://docs.oasis-open.org/virtio/virtio/v1.1/csprd01/virtio-v1.1-csprd01.html#x1-100001&gt;.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_status</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">u32</span> {
-        <span class="self">self</span>.<span class="ident">device</span>.<span class="ident">get_status</span>()
+    <span class="doccomment">/// Gets the device status.
+    ///
+    /// See &lt;https://docs.oasis-open.org/virtio/virtio/v1.1/csprd01/virtio-v1.1-csprd01.html#x1-100001&gt;.
+    </span><span class="kw">pub fn </span>get_status(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; u32 {
+        <span class="self">self</span>.device.get_status()
     }
 
-    <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">device</span>: <span class="ident">VirtioBaseDevice</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>) -&gt; <span class="self">Self</span> {
-        <span class="kw">let</span> <span class="ident">tx_queue</span> <span class="op">=</span> <span class="ident">DriverWriteOnlyQueue::new</span>();
-        <span class="kw">let</span> <span class="ident">rx_queue</span> <span class="op">=</span> <span class="ident">DeviceWriteOnlyQueue::new</span>();
-        <span class="kw">let</span> <span class="ident">event_queue</span> <span class="op">=</span> <span class="ident">DeviceWriteOnlyQueue::new</span>();
-        <span class="ident">VSock</span> {
-            <span class="ident">device</span>,
-            <span class="ident">tx_queue</span>,
-            <span class="ident">rx_queue</span>,
-            <span class="ident">event_queue</span>,
-            <span class="ident">guest_cid</span>: <span class="ident">Default::default</span>(),
+    <span class="kw">fn </span>new&lt;VP: Translator&gt;(device: VirtioBaseDevice&lt;T&gt;, translate: VP, alloc: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>A) -&gt; <span class="self">Self </span>{
+        <span class="kw">let </span>tx_queue = DriverWriteOnlyQueue::new(<span class="kw-2">&amp;</span>translate, alloc);
+        <span class="kw">let </span>rx_queue = DeviceWriteOnlyQueue::new(<span class="kw-2">&amp;</span>translate, alloc);
+        <span class="kw">let </span>event_queue = DeviceWriteOnlyQueue::new(<span class="kw-2">&amp;</span>translate, alloc);
+        VSock {
+            device,
+            tx_queue,
+            rx_queue,
+            event_queue,
+            guest_cid: Default::default(),
         }
     }
 
-    <span class="doccomment">/// Initializes the device and configures the queues.</span>
-    <span class="kw">fn</span> <span class="ident">init</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">device</span>
-            .<span class="ident">start_init</span>(<span class="ident">DEVICE_ID</span> <span class="kw">as</span> <span class="ident">u32</span>)
-            .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">error</span><span class="op">|</span> <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;Virtio error: {:?}&quot;</span>, <span class="ident">error</span>))
-            .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t initialize the PCI device&quot;</span>)<span class="question-mark">?</span>;
-        <span class="comment">// We have to configure the event queue before the receive queue, otherwise the event</span>
-        <span class="comment">// queue&#39;s configuration interferes with the receiver queue. This seems to be related to</span>
-        <span class="comment">// something specific in the Linux kernel vhost vsock implementation.</span>
-        <span class="self">self</span>.<span class="ident">device</span>
-            .<span class="ident">configure_queue</span>(
-                <span class="ident">EVENT_QUEUE_ID</span>,
-                <span class="ident">QUEUE_SIZE</span> <span class="kw">as</span> <span class="ident">u16</span>,
-                <span class="self">self</span>.<span class="ident">event_queue</span>.<span class="ident">inner</span>.<span class="ident">get_desc_addr</span>(),
-                <span class="self">self</span>.<span class="ident">event_queue</span>.<span class="ident">inner</span>.<span class="ident">get_avail_addr</span>(),
-                <span class="self">self</span>.<span class="ident">event_queue</span>.<span class="ident">inner</span>.<span class="ident">get_used_addr</span>(),
+    <span class="doccomment">/// Initializes the device and configures the queues.
+    </span><span class="kw">fn </span>init&lt;VP: Translator, PV: InverseTranslator&gt;(
+        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+        translate: VP,
+        inverse: PV,
+    ) -&gt; anyhow::Result&lt;()&gt; {
+        <span class="self">self</span>.device
+            .start_init(DEVICE_ID <span class="kw">as </span>u32, inverse)
+            .map_err(|error| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;Virtio error: {:?}&quot;</span>, error))
+            .context(<span class="string">&quot;Couldn&#39;t initialize the PCI device&quot;</span>)<span class="question-mark">?</span>;
+        <span class="comment">// We have to configure the event queue before the receive queue, otherwise the event
+        // queue&#39;s configuration interferes with the receiver queue. This seems to be related to
+        // something specific in the Linux kernel vhost vsock implementation.
+        </span><span class="self">self</span>.device
+            .configure_queue(
+                EVENT_QUEUE_ID,
+                QUEUE_SIZE <span class="kw">as </span>u16,
+                translate(<span class="self">self</span>.event_queue.inner.get_desc_addr())
+                    .context(<span class="string">&quot;Failed to translate VirtAddr to PhysAddr&quot;</span>)<span class="question-mark">?</span>,
+                translate(<span class="self">self</span>.event_queue.inner.get_avail_addr())
+                    .context(<span class="string">&quot;Failed to translate VirtAddr to PhysAddr&quot;</span>)<span class="question-mark">?</span>,
+                translate(<span class="self">self</span>.event_queue.inner.get_used_addr())
+                    .context(<span class="string">&quot;Failed to translate VirtAddr to PhysAddr&quot;</span>)<span class="question-mark">?</span>,
             )
-            .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">error</span><span class="op">|</span> <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;Queue configuration error: {:?}&quot;</span>, <span class="ident">error</span>))
-            .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t configure the event queue&quot;</span>)<span class="question-mark">?</span>;
-        <span class="self">self</span>.<span class="ident">device</span>
-            .<span class="ident">configure_queue</span>(
-                <span class="ident">RX_QUEUE_ID</span>,
-                <span class="ident">QUEUE_SIZE</span> <span class="kw">as</span> <span class="ident">u16</span>,
-                <span class="self">self</span>.<span class="ident">rx_queue</span>.<span class="ident">inner</span>.<span class="ident">get_desc_addr</span>(),
-                <span class="self">self</span>.<span class="ident">rx_queue</span>.<span class="ident">inner</span>.<span class="ident">get_avail_addr</span>(),
-                <span class="self">self</span>.<span class="ident">rx_queue</span>.<span class="ident">inner</span>.<span class="ident">get_used_addr</span>(),
+            .map_err(|error| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;Queue configuration error: {:?}&quot;</span>, error))
+            .context(<span class="string">&quot;Couldn&#39;t configure the event queue&quot;</span>)<span class="question-mark">?</span>;
+        <span class="self">self</span>.device
+            .configure_queue(
+                RX_QUEUE_ID,
+                QUEUE_SIZE <span class="kw">as </span>u16,
+                translate(<span class="self">self</span>.rx_queue.inner.get_desc_addr())
+                    .context(<span class="string">&quot;Failed to translate VirtAddr to PhysAddr&quot;</span>)<span class="question-mark">?</span>,
+                translate(<span class="self">self</span>.rx_queue.inner.get_avail_addr())
+                    .context(<span class="string">&quot;Failed to translate VirtAddr to PhysAddr&quot;</span>)<span class="question-mark">?</span>,
+                translate(<span class="self">self</span>.rx_queue.inner.get_used_addr())
+                    .context(<span class="string">&quot;Failed to translate VirtAddr to PhysAddr&quot;</span>)<span class="question-mark">?</span>,
             )
-            .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">error</span><span class="op">|</span> <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;Queue configuration error: {:?}&quot;</span>, <span class="ident">error</span>))
-            .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t configure the receive queue&quot;</span>)<span class="question-mark">?</span>;
-        <span class="self">self</span>.<span class="ident">device</span>
-            .<span class="ident">configure_queue</span>(
-                <span class="ident">TX_QUEUE_ID</span>,
-                <span class="ident">QUEUE_SIZE</span> <span class="kw">as</span> <span class="ident">u16</span>,
-                <span class="self">self</span>.<span class="ident">tx_queue</span>.<span class="ident">inner</span>.<span class="ident">get_desc_addr</span>(),
-                <span class="self">self</span>.<span class="ident">tx_queue</span>.<span class="ident">inner</span>.<span class="ident">get_avail_addr</span>(),
-                <span class="self">self</span>.<span class="ident">tx_queue</span>.<span class="ident">inner</span>.<span class="ident">get_used_addr</span>(),
+            .map_err(|error| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;Queue configuration error: {:?}&quot;</span>, error))
+            .context(<span class="string">&quot;Couldn&#39;t configure the receive queue&quot;</span>)<span class="question-mark">?</span>;
+        <span class="self">self</span>.device
+            .configure_queue(
+                TX_QUEUE_ID,
+                QUEUE_SIZE <span class="kw">as </span>u16,
+                translate(<span class="self">self</span>.tx_queue.inner.get_desc_addr())
+                    .context(<span class="string">&quot;Failed to translate VirtAddr to PhysAddr&quot;</span>)<span class="question-mark">?</span>,
+                translate(<span class="self">self</span>.tx_queue.inner.get_avail_addr())
+                    .context(<span class="string">&quot;Failed to translate VirtAddr to PhysAddr&quot;</span>)<span class="question-mark">?</span>,
+                translate(<span class="self">self</span>.tx_queue.inner.get_used_addr())
+                    .context(<span class="string">&quot;Failed to translate VirtAddr to PhysAddr&quot;</span>)<span class="question-mark">?</span>,
             )
-            .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">error</span><span class="op">|</span> <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;Queue configuration error: {:?}&quot;</span>, <span class="ident">error</span>))
-            .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t configure the transmit queue&quot;</span>)<span class="question-mark">?</span>;
-        <span class="self">self</span>.<span class="ident">device</span>
-            .<span class="ident">complete_init</span>()
-            .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">error</span><span class="op">|</span> <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;Device activation error: {:?}&quot;</span>, <span class="ident">error</span>))
-            .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t activate the PCI device&quot;</span>)<span class="question-mark">?</span>;
+            .map_err(|error| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;Queue configuration error: {:?}&quot;</span>, error))
+            .context(<span class="string">&quot;Couldn&#39;t configure the transmit queue&quot;</span>)<span class="question-mark">?</span>;
+        <span class="self">self</span>.device
+            .complete_init()
+            .map_err(|error| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;Device activation error: {:?}&quot;</span>, error))
+            .context(<span class="string">&quot;Couldn&#39;t activate the PCI device&quot;</span>)<span class="question-mark">?</span>;
 
-        <span class="comment">// Read the guest CID from the PCI config. The upper 32 bits must be 0, so we only read the</span>
-        <span class="comment">// lower 32 bits.</span>
-        <span class="self">self</span>.<span class="ident">guest_cid</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">device</span>.<span class="ident">get_config</span>(<span class="ident">CID_CONFIG_OFFSET</span>) <span class="kw">as</span> <span class="ident">u64</span>;
+        <span class="comment">// Read the guest CID from the PCI config. The upper 32 bits must be 0, so we only read the
+        // lower 32 bits.
+        </span><span class="self">self</span>.guest_cid = <span class="self">self</span>.device.get_config(CID_CONFIG_OFFSET) <span class="kw">as </span>u64;
         <span class="prelude-val">Ok</span>(())
     }
 
-    <span class="doccomment">/// Sends a vsock RST packet indicating that a socket is disconnected, or must be forcibly</span>
-    <span class="doccomment">/// disconnected.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// This is typically done in response to a packet with unexpected source or destination ports,</span>
-    <span class="doccomment">/// an invalid op for the connection state, or to confirm that a socket has been diconnected.</span>
-    <span class="kw">fn</span> <span class="ident">send_rst_packet</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">host_port</span>: <span class="ident">u32</span>, <span class="ident">local_port</span>: <span class="ident">u32</span>) {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">packet</span> <span class="op">=</span> <span class="ident">Packet::new_control</span>(<span class="ident">local_port</span>, <span class="ident">host_port</span>, <span class="ident">VSockOp::Rst</span>).<span class="ident">unwrap</span>();
-        <span class="self">self</span>.<span class="ident">write_packet</span>(<span class="kw-2">&amp;mut</span> <span class="ident">packet</span>);
+    <span class="doccomment">/// Sends a vsock RST packet indicating that a socket is disconnected, or must be forcibly
+    /// disconnected.
+    ///
+    /// This is typically done in response to a packet with unexpected source or destination ports,
+    /// an invalid op for the connection state, or to confirm that a socket has been diconnected.
+    </span><span class="kw">fn </span>send_rst_packet(<span class="kw-2">&amp;mut </span><span class="self">self</span>, host_port: u32, local_port: u32) {
+        <span class="kw">let </span><span class="kw-2">mut </span>packet = Packet::new_control(local_port, host_port, VSockOp::Rst).unwrap();
+        <span class="self">self</span>.write_packet(<span class="kw-2">&amp;mut </span>packet);
     }
 }
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
-<span class="kw">mod</span> <span class="ident">tests</span>;
+<span class="attribute">#[cfg(test)]
+</span><span class="kw">mod </span>tests;
 </code></pre></div>
-</section><section id="search" class="content hidden"></section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="virtio" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.62.0-nightly (de1bc0008 2022-04-21)" ></div>
-</body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="virtio" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (81f391930 2022-10-09)" ></div></body></html>

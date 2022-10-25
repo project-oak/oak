@@ -1,9 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `experimental/web_client/src/lib.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>lib.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../ayu.css" disabled><link rel="stylesheet" type="text/css" href="../../dark.css" disabled><link rel="stylesheet" type="text/css" href="../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../storage.js"></script><script src="../../crates.js"></script><script defer src="../../main.js"></script><script defer src="../../source-script.js"></script><script defer src="../../source-files.js"></script>
-    <noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../oak_functions_web_client/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div>
-        </a><h2 class="location"></h2>
-    </nav>
-    <nav class="sidebar"><a class="sidebar-logo" href="../../oak_functions_web_client/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div>
-        </a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../oak_functions_web_client/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><div class="theme-picker hidden"><button id="theme-picker" aria-label="Pick another theme!" aria-haspopup="menu" title="themes"><img width="22" height="22" alt="Pick another theme!" src="../../brush.svg"></button><div id="theme-choices" role="menu"></div></div><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><button type="button" id="help-button" title="help">?</button><a id="settings-menu" href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../wheel.svg"></a></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `experimental/web_client/src/lib.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>lib.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" href="../../normalize.css"><link rel="stylesheet" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" href="../../ayu.css" disabled><link rel="stylesheet" href="../../dark.css" disabled><link rel="stylesheet" href="../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../storage.js"></script><script defer src="../../source-script.js"></script><script defer src="../../source-files.js"></script><script defer src="../../main.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><a class="sidebar-logo" href="../../oak_functions_web_client/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../oak_functions_web_client/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="src-line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -163,166 +158,165 @@
 <span id="158">158</span>
 <span id="159">159</span>
 <span id="160">160</span>
-</pre><pre class="rust"><code><span class="comment">//</span>
-<span class="comment">// Copyright 2022 The Project Oak Authors</span>
-<span class="comment">//</span>
-<span class="comment">// Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
-<span class="comment">// you may not use this file except in compliance with the License.</span>
-<span class="comment">// You may obtain a copy of the License at</span>
-<span class="comment">//</span>
-<span class="comment">//     http://www.apache.org/licenses/LICENSE-2.0</span>
-<span class="comment">//</span>
-<span class="comment">// Unless required by applicable law or agreed to in writing, software</span>
-<span class="comment">// distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
-<span class="comment">// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
-<span class="comment">// See the License for the specific language governing permissions and</span>
-<span class="comment">// limitations under the License.</span>
-<span class="comment">//</span>
+</pre><pre class="rust"><code><span class="comment">//
+// Copyright 2022 The Project Oak Authors
+//
+// Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
-<span class="attribute">#![<span class="ident">feature</span>(<span class="ident">async_closure</span>)]</span>
+</span><span class="attribute">#![feature(async_closure)]
 
-<span class="kw">extern</span> <span class="kw">crate</span> <span class="ident">web_sys</span>;
+</span><span class="kw">extern crate </span>web_sys;
 
-<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::proto</span>::{<span class="ident">UnaryRequest</span>, <span class="ident">UnaryResponse</span>};
-<span class="kw">use</span> <span class="ident">anyhow::Context</span>;
-<span class="kw">use</span> <span class="ident">async_trait::async_trait</span>;
-<span class="kw">use</span> <span class="ident">oak_functions_abi::Response</span>;
-<span class="kw">use</span> <span class="ident">oak_remote_attestation::handshaker</span>::{<span class="ident">AttestationBehavior</span>, <span class="ident">EmptyAttestationGenerator</span>};
-<span class="kw">use</span> <span class="ident">oak_remote_attestation_amd::PlaceholderAmdAttestationVerifier</span>;
-<span class="kw">use</span> <span class="ident">oak_remote_attestation_sessions::SessionId</span>;
-<span class="kw">use</span> <span class="ident">oak_remote_attestation_sessions_client</span>::{<span class="ident">AttestationTransport</span>, <span class="ident">GenericAttestationClient</span>};
-<span class="kw">use</span> <span class="ident">std::rc::Rc</span>;
-<span class="kw">use</span> <span class="ident">wasm_bindgen::prelude</span>::<span class="kw-2">*</span>;
+<span class="kw">use </span><span class="kw">crate</span>::proto::{UnaryRequest, UnaryResponse};
+<span class="kw">use </span>anyhow::Context;
+<span class="kw">use </span>async_trait::async_trait;
+<span class="kw">use </span>oak_functions_abi::Response;
+<span class="kw">use </span>oak_remote_attestation::handshaker::{AttestationBehavior, EmptyAttestationGenerator};
+<span class="kw">use </span>oak_remote_attestation_amd::PlaceholderAmdAttestationVerifier;
+<span class="kw">use </span>oak_remote_attestation_sessions::SessionId;
+<span class="kw">use </span>oak_remote_attestation_sessions_client::{AttestationTransport, GenericAttestationClient};
+<span class="kw">use </span>std::rc::Rc;
+<span class="kw">use </span>wasm_bindgen::prelude::<span class="kw-2">*</span>;
 
-<span class="kw">mod</span> <span class="ident">grpc_web</span>;
+<span class="kw">mod </span>grpc_web;
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
-<span class="kw">mod</span> <span class="ident">tests</span>;
+<span class="attribute">#[cfg(test)]
+</span><span class="kw">mod </span>tests;
 
-<span class="kw">mod</span> <span class="ident">proto</span> {
-    <span class="attribute">#![<span class="ident">allow</span>(<span class="ident">clippy::return_self_not_must_use</span>)]</span>
-    <span class="macro">include!</span>(<span class="macro">concat!</span>(<span class="macro">env!</span>(<span class="string">&quot;OUT_DIR&quot;</span>), <span class="string">&quot;/oak.session.unary.v1.rs&quot;</span>));
+<span class="kw">mod </span>proto {
+    <span class="attribute">#![allow(clippy::return_self_not_must_use)]
+    </span><span class="macro">include!</span>(<span class="macro">concat!</span>(<span class="macro">env!</span>(<span class="string">&quot;OUT_DIR&quot;</span>), <span class="string">&quot;/oak.session.unary.v1.rs&quot;</span>));
 }
 
-<span class="doccomment">/// Implementation of the [`AttestationTransport`] trait using gRPC-web with</span>
-<span class="doccomment">/// unary messages.</span>
-<span class="kw">struct</span> <span class="ident">GrpcWebClient</span> {
-    <span class="ident">uri</span>: <span class="ident">String</span>,
+<span class="doccomment">/// Implementation of the [`AttestationTransport`] trait using gRPC-web with
+/// unary messages.
+</span><span class="kw">struct </span>GrpcWebClient {
+    uri: String,
 }
 
-<span class="kw">impl</span> <span class="ident">GrpcWebClient</span> {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">create</span>(<span class="ident">uri</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) -&gt; <span class="self">Self</span> {
-        <span class="self">Self</span> {
-            <span class="ident">uri</span>: <span class="macro">format!</span>(<span class="string">&quot;{}/oak.session.unary.v1.UnarySession/Message&quot;</span>, <span class="ident">uri</span>),
+<span class="kw">impl </span>GrpcWebClient {
+    <span class="kw">pub fn </span>create(uri: <span class="kw-2">&amp;</span>str) -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{
+            uri: <span class="macro">format!</span>(<span class="string">&quot;{}/oak.session.unary.v1.UnarySession/Message&quot;</span>, uri),
         }
     }
 }
 
-<span class="comment">// Not marked as [`Send`], as the underlying client uses JavaScript APIs for</span>
-<span class="comment">// networking, which are not [`Send`].</span>
-<span class="attribute">#[<span class="ident">async_trait</span>(<span class="question-mark">?</span><span class="ident">Send</span>)]</span>
-<span class="kw">impl</span> <span class="ident">AttestationTransport</span> <span class="kw">for</span> <span class="ident">GrpcWebClient</span> {
-    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">message</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">session_id</span>: <span class="ident">SessionId</span>, <span class="ident">body</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">reply</span> <span class="op">=</span> <span class="ident">grpc_web::grpc_web_unary</span>::<span class="op">&lt;</span><span class="ident">UnaryRequest</span>, <span class="ident">UnaryResponse</span><span class="op">&gt;</span>(
-            <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">uri</span>,
-            <span class="ident">UnaryRequest</span> {
-                <span class="ident">session_id</span>: <span class="ident">session_id</span>.<span class="ident">to_vec</span>(),
-                <span class="ident">body</span>,
+<span class="comment">// Not marked as [`Send`], as the underlying client uses JavaScript APIs for
+// networking, which are not [`Send`].
+</span><span class="attribute">#[async_trait(<span class="question-mark">?</span>Send)]
+</span><span class="kw">impl </span>AttestationTransport <span class="kw">for </span>GrpcWebClient {
+    <span class="kw">async fn </span>message(<span class="kw-2">&amp;mut </span><span class="self">self</span>, session_id: SessionId, body: Vec&lt;u8&gt;) -&gt; anyhow::Result&lt;Vec&lt;u8&gt;&gt; {
+        <span class="kw">let </span>reply = grpc_web::grpc_web_unary::&lt;UnaryRequest, UnaryResponse&gt;(
+            <span class="kw-2">&amp;</span><span class="self">self</span>.uri,
+            UnaryRequest {
+                session_id: session_id.to_vec(),
+                body,
             },
         )
         .<span class="kw">await</span><span class="question-mark">?</span>;
-        <span class="prelude-val">Ok</span>(<span class="ident">reply</span>.<span class="ident">body</span>)
+        <span class="prelude-val">Ok</span>(reply.body)
     }
 }
 
-<span class="comment">// The underlying [`GenericAttestationClient`] is held in a [`wasm_mutex::Mutex`],</span>
-<span class="comment">// which provides a queue of invocations. Ref: https://lib.rs/crates/wasm_mutex</span>
-<span class="comment">// TODO(#2908): Support concurrent invocations.</span>
-<span class="kw">type</span> <span class="ident">WebClientInner</span> <span class="op">=</span> <span class="ident">Rc</span><span class="op">&lt;</span><span class="ident">wasm_mutex::Mutex</span><span class="op">&lt;</span><span class="ident">GenericAttestationClient</span><span class="op">&lt;</span><span class="ident">GrpcWebClient</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>;
+<span class="comment">// The underlying [`GenericAttestationClient`] is held in a [`wasm_mutex::Mutex`],
+// which provides a queue of invocations. Ref: https://lib.rs/crates/wasm_mutex
+// TODO(#2908): Support concurrent invocations.
+</span><span class="kw">type </span>WebClientInner = Rc&lt;wasm_mutex::Mutex&lt;GenericAttestationClient&lt;GrpcWebClient&gt;&gt;&gt;;
 
-<span class="attribute">#[<span class="ident">wasm_bindgen</span>]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">WebClient</span> {
-    <span class="ident">inner</span>: <span class="ident">WebClientInner</span>,
+<span class="attribute">#[wasm_bindgen]
+</span><span class="kw">pub struct </span>WebClient {
+    inner: WebClientInner,
 }
 
-<span class="attribute">#[<span class="ident">wasm_bindgen</span>]</span>
-<span class="kw">impl</span> <span class="ident">WebClient</span> {
-    <span class="attribute">#[<span class="ident">wasm_bindgen</span>(<span class="ident">constructor</span>)]</span>
-    <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">uri</span>: <span class="ident">String</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">WebClient</span>, <span class="ident">String</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">grpc_web_client</span> <span class="op">=</span> <span class="ident">GrpcWebClient::create</span>(<span class="kw-2">&amp;</span><span class="ident">uri</span>);
-        <span class="kw">let</span> <span class="ident">inner</span> <span class="op">=</span> <span class="ident">GenericAttestationClient::create</span>(
-            <span class="ident">grpc_web_client</span>,
-            <span class="ident">AttestationBehavior::create</span>(
-                <span class="ident">EmptyAttestationGenerator</span>,
-                <span class="ident">PlaceholderAmdAttestationVerifier</span>,
+<span class="attribute">#[wasm_bindgen]
+</span><span class="kw">impl </span>WebClient {
+    <span class="attribute">#[wasm_bindgen(constructor)]
+    </span><span class="kw">pub async fn </span>new(uri: String) -&gt; <span class="prelude-ty">Result</span>&lt;WebClient, String&gt; {
+        <span class="kw">let </span>grpc_web_client = GrpcWebClient::create(<span class="kw-2">&amp;</span>uri);
+        <span class="kw">let </span>inner = GenericAttestationClient::create(
+            grpc_web_client,
+            AttestationBehavior::create(
+                EmptyAttestationGenerator,
+                PlaceholderAmdAttestationVerifier,
             ),
         )
-        .<span class="kw">await</span>
-        .<span class="ident">context</span>(<span class="string">&quot;Could not create Oak Functions client&quot;</span>)
-        .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">error</span><span class="op">|</span> <span class="ident">error</span>.<span class="ident">to_string</span>())<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">inner</span> <span class="op">=</span> <span class="ident">Rc::new</span>(<span class="ident">wasm_mutex::Mutex::new</span>(<span class="ident">inner</span>));
-        <span class="prelude-val">Ok</span>(<span class="ident">WebClient</span> { <span class="ident">inner</span> })
+        .<span class="kw">await
+        </span>.context(<span class="string">&quot;Could not create Oak Functions client&quot;</span>)
+        .map_err(|error| error.to_string())<span class="question-mark">?</span>;
+        <span class="kw">let </span>inner = Rc::new(wasm_mutex::Mutex::new(inner));
+        <span class="prelude-val">Ok</span>(WebClient { inner })
     }
 
-    <span class="comment">// Typically this would be an async function. Instead it&#39;s a sync function</span>
-    <span class="comment">// that returns a JS Promise (the JS equivalent of a Rust future).</span>
-    <span class="comment">// The reason for this is that we cannot access the stack allocated self</span>
-    <span class="comment">// inside a Rust future.</span>
-    <span class="comment">// Ref: https://github.com/rustwasm/wasm-bindgen/issues/1858</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">invoke</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">request</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>) -&gt; <span class="ident">js_sys::Promise</span> {
-        <span class="kw">let</span> <span class="ident">inner</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">inner</span>.<span class="ident">clone</span>();
+    <span class="comment">// Typically this would be an async function. Instead it&#39;s a sync function
+    // that returns a JS Promise (the JS equivalent of a Rust future).
+    // The reason for this is that we cannot access the stack allocated self
+    // inside a Rust future.
+    // Ref: https://github.com/rustwasm/wasm-bindgen/issues/1858
+    </span><span class="kw">pub fn </span>invoke(<span class="kw-2">&amp;</span><span class="self">self</span>, request: Vec&lt;u8&gt;) -&gt; js_sys::Promise {
+        <span class="kw">let </span>inner = <span class="self">self</span>.inner.clone();
 
-        <span class="ident">wasm_bindgen_futures::future_to_promise</span>(<span class="kw">async</span> <span class="kw">move</span> {
-            <span class="kw">let</span> <span class="ident">response</span> <span class="op">=</span> <span class="ident">WebClient::inner_invoke</span>(<span class="ident">inner</span>, <span class="ident">request</span>)
-                .<span class="kw">await</span>
-                .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">error</span><span class="op">|</span> <span class="ident">error</span>.<span class="ident">to_string</span>())<span class="question-mark">?</span>;
+        wasm_bindgen_futures::future_to_promise(<span class="kw">async move </span>{
+            <span class="kw">let </span>response = WebClient::inner_invoke(inner, request)
+                .<span class="kw">await
+                </span>.map_err(|error| error.to_string())<span class="question-mark">?</span>;
 
-            <span class="comment">// Get the response body, while removing trailing empty space.</span>
-            <span class="kw">let</span> <span class="ident">length</span> <span class="op">=</span> <span class="ident">response</span>
-                .<span class="ident">length</span>
-                .<span class="ident">try_into</span>()
-                .<span class="ident">map_err</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="string">&quot;Could not fit the response length into usize&quot;</span>)<span class="question-mark">?</span>;
-            <span class="kw">let</span> <span class="ident">body</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">response</span>.<span class="ident">body</span>[<span class="number">0</span>..<span class="ident">length</span>];
+            <span class="comment">// Get the response body, while removing trailing empty space.
+            </span><span class="kw">let </span>length = response
+                .length
+                .try_into()
+                .map_err(|<span class="kw">_</span>| <span class="string">&quot;Could not fit the response length into usize&quot;</span>)<span class="question-mark">?</span>;
+            <span class="kw">let </span>body = <span class="kw-2">&amp;</span>response.body[<span class="number">0</span>..length];
 
-            <span class="comment">// Construct a JavaScript object that contains the response status</span>
-            <span class="comment">// and body.</span>
-            <span class="kw">let</span> <span class="ident">js_response_object</span> <span class="op">=</span> <span class="ident">js_sys::Object::new</span>();
-            <span class="ident">js_sys::Reflect::set</span>(
-                <span class="kw-2">&amp;</span><span class="ident">js_response_object</span>,
-                <span class="kw-2">&amp;</span><span class="string">&quot;status&quot;</span>.<span class="ident">into</span>(),
-                <span class="kw-2">&amp;</span>(<span class="ident">response</span>.<span class="ident">status</span> <span class="kw">as</span> <span class="ident">u32</span>).<span class="ident">into</span>(),
+            <span class="comment">// Construct a JavaScript object that contains the response status
+            // and body.
+            </span><span class="kw">let </span>js_response_object = js_sys::Object::new();
+            js_sys::Reflect::set(
+                <span class="kw-2">&amp;</span>js_response_object,
+                <span class="kw-2">&amp;</span><span class="string">&quot;status&quot;</span>.into(),
+                <span class="kw-2">&amp;</span>(response.status <span class="kw">as </span>u32).into(),
             )<span class="question-mark">?</span>;
-            <span class="ident">js_sys::Reflect::set</span>(
-                <span class="kw-2">&amp;</span><span class="ident">js_response_object</span>,
-                <span class="kw-2">&amp;</span><span class="string">&quot;body&quot;</span>.<span class="ident">into</span>(),
-                <span class="kw-2">&amp;</span><span class="ident">js_sys::Uint8Array::from</span>(<span class="ident">body</span>),
+            js_sys::Reflect::set(
+                <span class="kw-2">&amp;</span>js_response_object,
+                <span class="kw-2">&amp;</span><span class="string">&quot;body&quot;</span>.into(),
+                <span class="kw-2">&amp;</span>js_sys::Uint8Array::from(body),
             )<span class="question-mark">?</span>;
 
-            <span class="prelude-val">Ok</span>(<span class="ident">JsValue::from</span>(<span class="ident">js_response_object</span>))
+            <span class="prelude-val">Ok</span>(JsValue::from(js_response_object))
         })
     }
-    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">inner_invoke</span>(<span class="ident">inner</span>: <span class="ident">WebClientInner</span>, <span class="ident">request</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">Response</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">encoded_response</span> <span class="op">=</span> <span class="ident">inner</span>
-            .<span class="ident">lock</span>()
-            .<span class="kw">await</span>
-            .<span class="ident">message</span>(<span class="kw-2">&amp;</span><span class="ident">request</span>)
-            .<span class="kw">await</span>
-            .<span class="ident">context</span>(<span class="string">&quot;Error invoking Oak Functions instance&quot;</span>)<span class="question-mark">?</span>;
+    <span class="kw">async fn </span>inner_invoke(inner: WebClientInner, request: Vec&lt;u8&gt;) -&gt; anyhow::Result&lt;Response&gt; {
+        <span class="kw">let </span>encoded_response = inner
+            .lock()
+            .<span class="kw">await
+            </span>.message(<span class="kw-2">&amp;</span>request)
+            .<span class="kw">await
+            </span>.context(<span class="string">&quot;Error invoking Oak Functions instance&quot;</span>)<span class="question-mark">?</span>;
 
-        <span class="ident">Response::decode</span>(<span class="ident">encoded_response</span>.<span class="ident">as_ref</span>())
-            .<span class="ident">map_err</span>(<span class="ident">anyhow::Error::msg</span>)
-            .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t decode response&quot;</span>)
+        Response::decode(encoded_response.as_ref())
+            .map_err(anyhow::Error::msg)
+            .context(<span class="string">&quot;Couldn&#39;t decode response&quot;</span>)
     }
 }
 
-<span class="comment">// Executed automtically</span>
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">not</span>(<span class="ident">test</span>))]</span>
-<span class="attribute">#[<span class="ident">wasm_bindgen</span>(<span class="ident">start</span>)]</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">main</span>() {
-    <span class="comment">// Register panic handler to output more detailed error messages to the console</span>
-    <span class="comment">// Ref: https://github.com/rustwasm/console_error_panic_hook#readme</span>
-    <span class="ident">console_error_panic_hook::set_once</span>();
+<span class="comment">// Executed automtically
+</span><span class="attribute">#[cfg(not(test))]
+#[wasm_bindgen(start)]
+</span><span class="kw">pub fn </span>main() {
+    <span class="comment">// Register panic handler to output more detailed error messages to the console
+    // Ref: https://github.com/rustwasm/console_error_panic_hook#readme
+    </span>console_error_panic_hook::set_once();
 }
 </code></pre></div>
-</section><section id="search" class="content hidden"></section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="oak_functions_web_client" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.62.0-nightly (de1bc0008 2022-04-21)" ></div>
-</body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="oak_functions_web_client" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (81f391930 2022-10-09)" ></div></body></html>

@@ -1,1 +1,0 @@
-initSidebarItems({"struct":[["SerialPort","Basic implementation that allows for writing to a serial port using the SEV-ES and SEV-SNP GHCB IOIO protocol."]]});

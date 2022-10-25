@@ -1,1 +1,0 @@
-initSidebarItems({"fn":[["shutdown","Shuts down the machine via i8042. Assumes the VMM exposes the device."]]});

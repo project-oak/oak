@@ -1,9 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `xtask/src/examples.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>examples.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../ayu.css" disabled><link rel="stylesheet" type="text/css" href="../../dark.css" disabled><link rel="stylesheet" type="text/css" href="../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../storage.js"></script><script src="../../crates.js"></script><script defer src="../../main.js"></script><script defer src="../../source-script.js"></script><script defer src="../../source-files.js"></script>
-    <noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../xtask/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div>
-        </a><h2 class="location"></h2>
-    </nav>
-    <nav class="sidebar"><a class="sidebar-logo" href="../../xtask/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div>
-        </a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../xtask/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><div class="theme-picker hidden"><button id="theme-picker" aria-label="Pick another theme!" aria-haspopup="menu" title="themes"><img width="22" height="22" alt="Pick another theme!" src="../../brush.svg"></button><div id="theme-choices" role="menu"></div></div><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><button type="button" id="help-button" title="help">?</button><a id="settings-menu" href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../wheel.svg"></a></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `xtask/src/examples.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>examples.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" href="../../normalize.css"><link rel="stylesheet" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" href="../../ayu.css" disabled><link rel="stylesheet" href="../../dark.css" disabled><link rel="stylesheet" href="../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../storage.js"></script><script defer src="../../source-script.js"></script><script defer src="../../source-files.js"></script><script defer src="../../main.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><a class="sidebar-logo" href="../../xtask/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../xtask/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="src-line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -749,513 +744,501 @@
 <span id="744">744</span>
 <span id="745">745</span>
 <span id="746">746</span>
-<span id="747">747</span>
-<span id="748">748</span>
-<span id="749">749</span>
-<span id="750">750</span>
-<span id="751">751</span>
-<span id="752">752</span>
-</pre><pre class="rust"><code><span class="comment">//</span>
-<span class="comment">// Copyright 2021 The Project Oak Authors</span>
-<span class="comment">//</span>
-<span class="comment">// Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
-<span class="comment">// you may not use this file except in compliance with the License.</span>
-<span class="comment">// You may obtain a copy of the License at</span>
-<span class="comment">//</span>
-<span class="comment">//     http://www.apache.org/licenses/LICENSE-2.0</span>
-<span class="comment">//</span>
-<span class="comment">// Unless required by applicable law or agreed to in writing, software</span>
-<span class="comment">// distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
-<span class="comment">// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
-<span class="comment">// See the License for the specific language governing permissions and</span>
-<span class="comment">// limitations under the License.</span>
-<span class="comment">//</span>
+</pre><pre class="rust"><code><span class="comment">//
+// Copyright 2021 The Project Oak Authors
+//
+// Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
-<span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">files</span>::<span class="kw-2">*</span>, <span class="ident">internal</span>::<span class="kw-2">*</span>};
-<span class="kw">use</span> <span class="ident">maplit::hashmap</span>;
-<span class="kw">use</span> <span class="ident">std::collections::HashMap</span>;
-<span class="kw">use</span> <span class="ident">strum::IntoEnumIterator</span>;
+</span><span class="kw">use crate</span>::{files::<span class="kw-2">*</span>, internal::<span class="kw-2">*</span>};
+<span class="kw">use </span>maplit::hashmap;
+<span class="kw">use </span>std::collections::HashMap;
+<span class="kw">use </span>strum::IntoEnumIterator;
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">target_os</span> <span class="op">=</span> <span class="string">&quot;macos&quot;</span>)]</span>
-<span class="kw">const</span> <span class="ident">DEFAULT_SERVER_RUST_TARGET</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;x86_64-apple-darwin&quot;</span>;
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">not</span>(<span class="ident">target_os</span> <span class="op">=</span> <span class="string">&quot;macos&quot;</span>))]</span>
-<span class="kw">const</span> <span class="ident">DEFAULT_SERVER_RUST_TARGET</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;x86_64-unknown-linux-musl&quot;</span>;
+<span class="attribute">#[cfg(target_os = <span class="string">&quot;macos&quot;</span>)]
+</span><span class="kw">const </span>DEFAULT_SERVER_RUST_TARGET: <span class="kw-2">&amp;</span>str = <span class="string">&quot;x86_64-apple-darwin&quot;</span>;
+<span class="attribute">#[cfg(not(target_os = <span class="string">&quot;macos&quot;</span>))]
+</span><span class="kw">const </span>DEFAULT_SERVER_RUST_TARGET: <span class="kw-2">&amp;</span>str = <span class="string">&quot;x86_64-unknown-linux-musl&quot;</span>;
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">target_os</span> <span class="op">=</span> <span class="string">&quot;macos&quot;</span>)]</span>
-<span class="kw">const</span> <span class="ident">DEFAULT_EXAMPLE_BACKEND_RUST_TARGET</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;x86_64-apple-darwin&quot;</span>;
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">not</span>(<span class="ident">target_os</span> <span class="op">=</span> <span class="string">&quot;macos&quot;</span>))]</span>
-<span class="kw">const</span> <span class="ident">DEFAULT_EXAMPLE_BACKEND_RUST_TARGET</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;x86_64-unknown-linux-gnu&quot;</span>;
+<span class="attribute">#[cfg(target_os = <span class="string">&quot;macos&quot;</span>)]
+</span><span class="kw">const </span>DEFAULT_EXAMPLE_BACKEND_RUST_TARGET: <span class="kw-2">&amp;</span>str = <span class="string">&quot;x86_64-apple-darwin&quot;</span>;
+<span class="attribute">#[cfg(not(target_os = <span class="string">&quot;macos&quot;</span>))]
+</span><span class="kw">const </span>DEFAULT_EXAMPLE_BACKEND_RUST_TARGET: <span class="kw-2">&amp;</span>str = <span class="string">&quot;x86_64-unknown-linux-gnu&quot;</span>;
 
-<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">ALL_CLIENTS</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;all&quot;</span>;
-<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">NO_CLIENTS</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;none&quot;</span>;
+<span class="kw">pub const </span>ALL_CLIENTS: <span class="kw-2">&amp;</span>str = <span class="string">&quot;all&quot;</span>;
+<span class="kw">pub const </span>NO_CLIENTS: <span class="kw-2">&amp;</span>str = <span class="string">&quot;none&quot;</span>;
 
-<span class="doccomment">/// Holds the components for running an example in Oak: a `server` running the given</span>
-<span class="doccomment">/// `applications` listening to the `clients` and passing requests to `backends`.</span>
-<span class="doccomment">/// Configured through `example.toml` files.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">serde::Deserialize</span>, <span class="ident">Debug</span>)]</span>
-<span class="attribute">#[<span class="ident">serde</span>(<span class="ident">deny_unknown_fields</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">OakExample</span> {
-    <span class="ident">name</span>: <span class="ident">String</span>,
-    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span>)]</span>
-    <span class="ident">server</span>: <span class="ident">Server</span>,
-    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span>)]</span>
-    <span class="ident">backends</span>: <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">Executable</span><span class="op">&gt;</span>,
-    <span class="ident">applications</span>: <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">Application</span><span class="op">&gt;</span>,
-    <span class="ident">clients</span>: <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">Executable</span><span class="op">&gt;</span>,
+<span class="doccomment">/// Holds the components for running an example in Oak: a `server` running the given
+/// `applications` listening to the `clients`.
+/// Configured through `example.toml` files.
+</span><span class="attribute">#[derive(serde::Deserialize, Debug)]
+#[serde(deny_unknown_fields)]
+</span><span class="kw">pub struct </span>OakExample {
+    name: String,
+    <span class="attribute">#[serde(default)]
+    </span>server: Server,
+    applications: HashMap&lt;String, Application&gt;,
+    clients: HashMap&lt;String, Executable&gt;,
 }
 
-<span class="kw">impl</span> <span class="ident">OakExample</span> {
-    <span class="kw">fn</span> <span class="ident">has_oak_functions_application</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">bool</span> {
-        <span class="self">self</span>.<span class="ident">applications</span>.<span class="ident">values</span>().<span class="ident">any</span>(<span class="op">|</span><span class="ident">app</span><span class="op">|</span> <span class="kw">match</span> <span class="ident">app</span> {
-            <span class="ident">Application::OakFunctions</span>(<span class="kw">_</span>) =&gt; <span class="bool-val">true</span>,
+<span class="kw">impl </span>OakExample {
+    <span class="kw">fn </span>has_oak_functions_application(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
+        <span class="self">self</span>.applications.values().any(|app| <span class="kw">match </span>app {
+            Application::OakFunctions(<span class="kw">_</span>) =&gt; <span class="bool-val">true</span>,
         })
     }
 }
 
-<span class="doccomment">/// Identify the application the server runs.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">serde::Deserialize</span>, <span class="ident">Debug</span>)]</span>
-<span class="attribute">#[<span class="ident">serde</span>(<span class="ident">deny_unknown_fields</span>)]</span>
-<span class="attribute">#[<span class="ident">serde</span>(<span class="ident">tag</span> <span class="op">=</span> <span class="string">&quot;type&quot;</span>)]</span>
-<span class="kw">enum</span> <span class="ident">Application</span> {
-    <span class="ident">OakFunctions</span>(<span class="ident">OakFunctionsApplication</span>),
+<span class="doccomment">/// Identify the application the server runs.
+</span><span class="attribute">#[derive(serde::Deserialize, Debug)]
+#[serde(deny_unknown_fields)]
+#[serde(tag = <span class="string">&quot;type&quot;</span>)]
+</span><span class="kw">enum </span>Application {
+    OakFunctions(OakFunctionsApplication),
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">serde::Deserialize</span>, <span class="ident">Debug</span>)]</span>
-<span class="attribute">#[<span class="ident">serde</span>(<span class="ident">deny_unknown_fields</span>)]</span>
-<span class="kw">struct</span> <span class="ident">OakFunctionsApplication</span> {
-    <span class="ident">target</span>: <span class="ident">Target</span>,
-    <span class="ident">wizer</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">WizerOpt</span><span class="op">&gt;</span>,
+<span class="attribute">#[derive(serde::Deserialize, Debug)]
+#[serde(deny_unknown_fields)]
+</span><span class="kw">struct </span>OakFunctionsApplication {
+    target: Target,
+    wizer: <span class="prelude-ty">Option</span>&lt;WizerOpt&gt;,
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">serde::Deserialize</span>, <span class="ident">Debug</span>)]</span>
-<span class="attribute">#[<span class="ident">serde</span>(<span class="ident">deny_unknown_fields</span>)]</span>
-<span class="kw">struct</span> <span class="ident">WizerOpt</span> {
-    <span class="ident">input</span>: <span class="ident">String</span>,
-    <span class="ident">output</span>: <span class="ident">String</span>,
+<span class="attribute">#[derive(serde::Deserialize, Debug)]
+#[serde(deny_unknown_fields)]
+</span><span class="kw">struct </span>WizerOpt {
+    input: String,
+    output: String,
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">serde::Deserialize</span>, <span class="ident">Debug</span>, <span class="ident">Default</span>)]</span>
-<span class="attribute">#[<span class="ident">serde</span>(<span class="ident">deny_unknown_fields</span>)]</span>
-<span class="kw">struct</span> <span class="ident">Server</span> {
-    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span>)]</span>
-    <span class="ident">additional_args</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
-    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span>)]</span>
-    <span class="ident">server_variant</span>: <span class="ident">ServerVariant</span>,
+<span class="attribute">#[derive(serde::Deserialize, Debug, Default)]
+#[serde(deny_unknown_fields)]
+</span><span class="kw">struct </span>Server {
+    wasm_path: String,
+    constant_response_size_bytes: u64,
+    lookup_data: String,
+    <span class="attribute">#[serde(default)]
+    </span>server_variant: ServerVariant,
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">serde::Deserialize</span>, <span class="ident">Debug</span>)]</span>
-<span class="attribute">#[<span class="ident">serde</span>(<span class="ident">deny_unknown_fields</span>)]</span>
-<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">Target</span> {
-    <span class="ident">Bazel</span> {
-        <span class="ident">bazel_target</span>: <span class="ident">String</span>,
-        <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span>)]</span>
-        <span class="ident">config</span>: <span class="ident">String</span>,
+<span class="attribute">#[derive(serde::Deserialize, Debug)]
+#[serde(deny_unknown_fields)]
+</span><span class="kw">pub enum </span>Target {
+    Bazel {
+        bazel_target: String,
+        <span class="attribute">#[serde(default)]
+        </span>config: String,
     },
-    <span class="ident">Cargo</span> {
-        <span class="ident">cargo_manifest</span>: <span class="ident">String</span>,
-        <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span>)]</span>
-        <span class="ident">additional_build_args</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
+    Cargo {
+        cargo_manifest: String,
+        <span class="attribute">#[serde(default)]
+        </span>additional_build_args: Vec&lt;String&gt;,
     },
-    <span class="ident">Npm</span> {
-        <span class="ident">package_directory</span>: <span class="ident">String</span>,
+    Npm {
+        package_directory: String,
     },
-    <span class="ident">Shell</span> {
-        <span class="ident">run_script</span>: <span class="ident">String</span>,
-        <span class="ident">build_script</span>: <span class="ident">String</span>,
+    Shell {
+        run_script: String,
+        build_script: String,
     },
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">serde::Deserialize</span>, <span class="ident">Debug</span>)]</span>
-<span class="attribute">#[<span class="ident">serde</span>(<span class="ident">deny_unknown_fields</span>)]</span>
-<span class="kw">struct</span> <span class="ident">Executable</span> {
-    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">flatten</span>)]</span>
-    <span class="ident">target</span>: <span class="ident">Target</span>,
-    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span>)]</span>
-    <span class="ident">additional_args</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
+<span class="attribute">#[derive(serde::Deserialize, Debug)]
+#[serde(deny_unknown_fields)]
+</span><span class="kw">struct </span>Executable {
+    <span class="attribute">#[serde(flatten)]
+    </span>target: Target,
+    <span class="attribute">#[serde(default)]
+    </span>additional_args: Vec&lt;String&gt;,
 }
 
-<span class="kw">impl</span> <span class="ident">OakFunctionsApplication</span> {
-    <span class="kw">fn</span> <span class="ident">construct_application_build_steps</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">example_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) -&gt; <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Step</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">result</span> <span class="op">=</span> <span class="macro">vec!</span>[<span class="ident">build_wasm_module</span>(<span class="ident">example_name</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">target</span>, <span class="ident">example_name</span>)];
-        <span class="comment">// If Wizer configuration is specified, run Wizer after the build.</span>
-        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">wizer</span>) <span class="op">=</span> <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">wizer</span> {
-            <span class="ident">result</span>.<span class="ident">push</span>(<span class="ident">run_wizer</span>(<span class="kw-2">&amp;</span><span class="ident">wizer</span>.<span class="ident">input</span>, <span class="kw-2">&amp;</span><span class="ident">wizer</span>.<span class="ident">output</span>));
+<span class="kw">impl </span>OakFunctionsApplication {
+    <span class="kw">fn </span>construct_application_build_steps(<span class="kw-2">&amp;</span><span class="self">self</span>, example_name: <span class="kw-2">&amp;</span>str) -&gt; Vec&lt;Step&gt; {
+        <span class="kw">let </span><span class="kw-2">mut </span>result = <span class="macro">vec!</span>[build_wasm_module(example_name, <span class="kw-2">&amp;</span><span class="self">self</span>.target, example_name)];
+        <span class="comment">// If Wizer configuration is specified, run Wizer after the build.
+        </span><span class="kw">if let </span><span class="prelude-val">Some</span>(wizer) = <span class="kw-2">&amp;</span><span class="self">self</span>.wizer {
+            result.push(run_wizer(<span class="kw-2">&amp;</span>wizer.input, <span class="kw-2">&amp;</span>wizer.output));
         }
-        <span class="ident">result</span>
+        result
     }
 
-    <span class="kw">fn</span> <span class="ident">construct_server_run_step</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">example</span>: <span class="kw-2">&amp;</span><span class="ident">OakFunctionsExample</span>, <span class="ident">run_clients</span>: <span class="ident">Step</span>) -&gt; <span class="ident">Step</span> {
-        <span class="kw">let</span> <span class="ident">opt</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">example</span>.<span class="ident">options</span>;
-        <span class="kw">let</span> <span class="ident">run_server</span> <span class="op">=</span> <span class="ident">run_oak_functions_server</span>(<span class="kw-2">&amp;</span><span class="ident">example</span>.<span class="ident">example</span>.<span class="ident">server</span>);
+    <span class="kw">fn </span>construct_server_run_step(<span class="kw-2">&amp;</span><span class="self">self</span>, example: <span class="kw-2">&amp;</span>OakFunctionsExample, run_clients: Step) -&gt; Step {
+        <span class="kw">let </span>opt = <span class="kw-2">&amp;</span>example.options;
+        <span class="kw">let </span>run_server = run_oak_functions_server(<span class="kw-2">&amp;</span>example.example.server);
 
-        <span class="kw">if</span> <span class="ident">opt</span>.<span class="ident">build_client</span>.<span class="ident">client_variant</span> <span class="op">==</span> <span class="ident">NO_CLIENTS</span> {
-            <span class="ident">Step::Single</span> {
-                <span class="ident">name</span>: <span class="string">&quot;run server&quot;</span>.<span class="ident">to_string</span>(),
-                <span class="ident">command</span>: <span class="ident">run_server</span>,
+        <span class="kw">if </span>opt.build_client.client_variant == NO_CLIENTS {
+            Step::Single {
+                name: <span class="string">&quot;run server&quot;</span>.to_string(),
+                command: run_server,
             }
-        } <span class="kw">else</span> {
-            <span class="ident">Step::WithBackground</span> {
-                <span class="ident">name</span>: <span class="string">&quot;background server&quot;</span>.<span class="ident">to_string</span>(),
-                <span class="ident">background</span>: <span class="ident">run_server</span>,
-                <span class="ident">foreground</span>: <span class="ident">Box::new</span>(<span class="ident">run_clients</span>),
+        } <span class="kw">else </span>{
+            Step::WithBackground {
+                name: <span class="string">&quot;background server&quot;</span>.to_string(),
+                background: run_server,
+                foreground: Box::new(run_clients),
             }
         }
     }
 }
 
-<span class="doccomment">/// Construct run and build steps an `OakExample`.</span>
-<span class="kw">trait</span> <span class="ident">OakExampleSteps</span> {
-    <span class="kw">fn</span> <span class="ident">get_backends</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">Executable</span><span class="op">&gt;</span>;
+<span class="doccomment">/// Construct run and build steps an `OakExample`.
+</span><span class="kw">trait </span>OakExampleSteps {
+    <span class="kw">fn </span>get_build_client(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>BuildClient;
 
-    <span class="kw">fn</span> <span class="ident">get_build_client</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="ident">BuildClient</span>;
+    <span class="doccomment">/// Constructs application build steps.
+    </span><span class="kw">fn </span>construct_application_build_steps(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Vec&lt;Step&gt;;
 
-    <span class="doccomment">/// Constructs application build steps.</span>
-    <span class="kw">fn</span> <span class="ident">construct_application_build_steps</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Step</span><span class="op">&gt;</span>;
-
-    <span class="doccomment">/// Constructs run step for the example server.</span>
-    <span class="kw">fn</span> <span class="ident">construct_server_run_step</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">run_clients</span>: <span class="ident">Step</span>) -&gt; <span class="ident">Step</span>;
-
-    <span class="doccomment">/// Constructs build steps for the backends.</span>
-    <span class="kw">fn</span> <span class="ident">construct_backend_build_steps</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Step</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">get_backends</span>()
-            .<span class="ident">iter</span>()
-            .<span class="ident">map</span>(<span class="kw">move</span> <span class="op">|</span>(<span class="ident">name</span>, <span class="ident">backend</span>)<span class="op">|</span> <span class="ident">Step::Single</span> {
-                <span class="ident">name</span>: <span class="ident">name</span>.<span class="ident">to_string</span>(),
-                <span class="ident">command</span>: <span class="ident">build</span>(<span class="kw-2">&amp;</span><span class="ident">backend</span>.<span class="ident">target</span>, <span class="self">self</span>.<span class="ident">get_build_client</span>()),
-            })
-            .<span class="ident">collect</span>()
-    }
-
-    <span class="doccomment">/// Recursively constructs run steps for the backends.</span>
-    <span class="kw">fn</span> <span class="ident">construct_backend_run_steps</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">run_server_clients</span>: <span class="ident">Step</span>) -&gt; <span class="ident">Step</span> {
-        <span class="self">self</span>.<span class="ident">get_backends</span>()
-            .<span class="ident">iter</span>()
-            <span class="comment">// First iteration includes `run_server_clients` as a foreground step.</span>
-            .<span class="ident">fold</span>(<span class="ident">run_server_clients</span>, <span class="op">|</span><span class="ident">backend_steps</span>, (<span class="ident">name</span>, <span class="ident">backend</span>)<span class="op">|</span> {
-                <span class="ident">Step::WithBackground</span> {
-                    <span class="ident">name</span>: <span class="ident">name</span>.<span class="ident">to_string</span>(),
-                    <span class="comment">// Each `backend` is included as background step.</span>
-                    <span class="ident">background</span>: <span class="ident">run</span>(<span class="ident">backend</span>, <span class="self">self</span>.<span class="ident">get_build_client</span>(), <span class="ident">Vec::new</span>()),
-                    <span class="ident">foreground</span>: <span class="ident">Box::new</span>(<span class="ident">backend_steps</span>),
-                }
-            })
-    }
+    <span class="doccomment">/// Constructs run step for the example server.
+    </span><span class="kw">fn </span>construct_server_run_step(<span class="kw-2">&amp;</span><span class="self">self</span>, run_clients: Step) -&gt; Step;
 }
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">OakFunctionsExample</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
-    <span class="ident">example</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">OakExample</span>,
-    <span class="ident">applications</span>: <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">OakFunctionsApplication</span><span class="op">&gt;</span>,
-    <span class="ident">options</span>: <span class="ident">RunOakExamplesOpt</span>,
+<span class="kw">pub struct </span>OakFunctionsExample&lt;<span class="lifetime">&#39;a</span>&gt; {
+    example: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>OakExample,
+    applications: HashMap&lt;String, <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>OakFunctionsApplication&gt;,
+    options: RunOakExamplesOpt,
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> <span class="ident">OakFunctionsExample</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
-    <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">example</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">OakExample</span>, <span class="ident">options</span>: <span class="ident">RunOakExamplesOpt</span>) -&gt; <span class="self">Self</span> {
-        <span class="kw">let</span> <span class="ident">applications</span> <span class="op">=</span>
-            <span class="ident">example</span>
-                .<span class="ident">applications</span>
-                .<span class="ident">iter</span>()
-                .<span class="ident">fold</span>(<span class="macro">hashmap!</span> {}, <span class="op">|</span><span class="kw-2">mut</span> <span class="ident">apps</span>, <span class="ident">app</span><span class="op">|</span> <span class="kw">match</span> <span class="ident">app</span> {
-                    (<span class="ident">name</span>, <span class="ident">Application::OakFunctions</span>(<span class="kw-2">ref</span> <span class="ident">app</span>)) =&gt; {
-                        <span class="ident">apps</span>.<span class="ident">insert</span>(<span class="ident">name</span>.<span class="ident">clone</span>(), <span class="ident">app</span>);
-                        <span class="ident">apps</span>
+<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; OakFunctionsExample&lt;<span class="lifetime">&#39;a</span>&gt; {
+    <span class="kw">fn </span>new(example: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>OakExample, options: RunOakExamplesOpt) -&gt; <span class="self">Self </span>{
+        <span class="kw">let </span>applications =
+            example
+                .applications
+                .iter()
+                .fold(<span class="macro">hashmap! </span>{}, |<span class="kw-2">mut </span>apps, app| <span class="kw">match </span>app {
+                    (name, Application::OakFunctions(<span class="kw-2">ref </span>app)) =&gt; {
+                        apps.insert(name.clone(), app);
+                        apps
                     }
                 });
 
-        <span class="ident">OakFunctionsExample</span> {
-            <span class="ident">example</span>,
-            <span class="ident">applications</span>,
-            <span class="ident">options</span>,
+        OakFunctionsExample {
+            example,
+            applications,
+            options,
         }
     }
 }
 
-<span class="kw">impl</span> <span class="ident">OakExampleSteps</span> <span class="kw">for</span> <span class="ident">OakFunctionsExample</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span> {
-    <span class="kw">fn</span> <span class="ident">get_backends</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">Executable</span><span class="op">&gt;</span> {
-        <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">example</span>.<span class="ident">backends</span>
+<span class="kw">impl </span>OakExampleSteps <span class="kw">for </span>OakFunctionsExample&lt;<span class="lifetime">&#39;_</span>&gt; {
+    <span class="kw">fn </span>get_build_client(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>BuildClient {
+        <span class="kw-2">&amp;</span><span class="self">self</span>.options.build_client
     }
 
-    <span class="kw">fn</span> <span class="ident">get_build_client</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="ident">BuildClient</span> {
-        <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">options</span>.<span class="ident">build_client</span>
-    }
-
-    <span class="kw">fn</span> <span class="ident">construct_application_build_steps</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Step</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">app_variant</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">options</span>.<span class="ident">application_variant</span>.<span class="ident">as_str</span>();
-        <span class="kw">match</span> <span class="self">self</span>.<span class="ident">applications</span>.<span class="ident">get</span>(<span class="ident">app_variant</span>) {
-            <span class="prelude-val">None</span> =&gt; <span class="macro">vec!</span>[],
-            <span class="prelude-val">Some</span>(<span class="ident">app</span>) =&gt; <span class="ident">app</span>.<span class="ident">construct_application_build_steps</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">example</span>.<span class="ident">name</span>),
+    <span class="kw">fn </span>construct_application_build_steps(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Vec&lt;Step&gt; {
+        <span class="kw">let </span>app_variant = <span class="self">self</span>.options.application_variant.as_str();
+        <span class="kw">match </span><span class="self">self</span>.applications.get(app_variant) {
+            <span class="prelude-val">None </span>=&gt; <span class="macro">vec!</span>[],
+            <span class="prelude-val">Some</span>(app) =&gt; app.construct_application_build_steps(<span class="kw-2">&amp;</span><span class="self">self</span>.example.name),
         }
     }
 
-    <span class="kw">fn</span> <span class="ident">construct_server_run_step</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">run_clients</span>: <span class="ident">Step</span>) -&gt; <span class="ident">Step</span> {
-        <span class="kw">let</span> <span class="ident">app_variant</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">options</span>.<span class="ident">application_variant</span>.<span class="ident">as_str</span>();
-        <span class="kw">match</span> <span class="self">self</span>.<span class="ident">applications</span>.<span class="ident">get</span>(<span class="ident">app_variant</span>) {
-            <span class="prelude-val">None</span> =&gt; <span class="ident">run_clients</span>,
-            <span class="prelude-val">Some</span>(<span class="ident">app</span>) =&gt; <span class="ident">app</span>.<span class="ident">construct_server_run_step</span>(<span class="self">self</span>, <span class="ident">run_clients</span>),
+    <span class="kw">fn </span>construct_server_run_step(<span class="kw-2">&amp;</span><span class="self">self</span>, run_clients: Step) -&gt; Step {
+        <span class="kw">let </span>app_variant = <span class="self">self</span>.options.application_variant.as_str();
+        <span class="kw">match </span><span class="self">self</span>.applications.get(app_variant) {
+            <span class="prelude-val">None </span>=&gt; run_clients,
+            <span class="prelude-val">Some</span>(app) =&gt; app.construct_server_run_step(<span class="self">self</span>, run_clients),
         }
     }
 }
 
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">run_oak_functions_examples</span>(<span class="ident">opt</span>: <span class="kw-2">&amp;</span><span class="ident">RunOakExamplesOpt</span>, <span class="ident">scope</span>: <span class="kw-2">&amp;</span><span class="ident">Scope</span>) -&gt; <span class="ident">Step</span> {
-    <span class="kw">let</span> <span class="ident">examples</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">OakExample</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">example_toml_files</span>(<span class="ident">scope</span>)
-        .<span class="ident">map</span>(<span class="op">|</span><span class="ident">path</span><span class="op">|</span> {
-            <span class="ident">toml::from_str</span>(<span class="kw-2">&amp;</span><span class="ident">read_file</span>(<span class="kw-2">&amp;</span><span class="ident">path</span>)).<span class="ident">unwrap_or_else</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> {
-                <span class="macro">panic!</span>(<span class="string">&quot;could not parse example manifest file {:?}: {}&quot;</span>, <span class="ident">path</span>, <span class="ident">err</span>)
+<span class="kw">pub fn </span>run_oak_functions_examples(opt: <span class="kw-2">&amp;</span>RunOakExamplesOpt, scope: <span class="kw-2">&amp;</span>Scope) -&gt; Step {
+    <span class="kw">let </span>examples: Vec&lt;OakExample&gt; = example_toml_files(scope)
+        .map(|path| {
+            toml::from_str(<span class="kw-2">&amp;</span>read_file(<span class="kw-2">&amp;</span>path)).unwrap_or_else(|err| {
+                <span class="macro">panic!</span>(<span class="string">&quot;could not parse example manifest file {:?}: {}&quot;</span>, path, err)
             })
         })
-        .<span class="ident">filter</span>(<span class="op">|</span><span class="ident">example</span>: <span class="kw-2">&amp;</span><span class="ident">OakExample</span><span class="op">|</span> <span class="ident">example</span>.<span class="ident">has_oak_functions_application</span>())
-        .<span class="ident">collect</span>();
+        .filter(|example: <span class="kw-2">&amp;</span>OakExample| example.has_oak_functions_application())
+        .collect();
 
-    <span class="ident">Step::Multiple</span> {
-        <span class="ident">name</span>: <span class="string">&quot;oak-functions examples&quot;</span>.<span class="ident">to_string</span>(),
-        <span class="ident">steps</span>: <span class="ident">examples</span>
-            .<span class="ident">iter</span>()
-            .<span class="ident">filter</span>(<span class="op">|</span><span class="ident">example</span><span class="op">|</span> <span class="kw">match</span> <span class="kw-2">&amp;</span><span class="ident">opt</span>.<span class="ident">example_name</span> {
-                <span class="prelude-val">Some</span>(<span class="ident">example_name</span>) =&gt; <span class="kw-2">&amp;</span><span class="ident">example</span>.<span class="ident">name</span> <span class="op">==</span> <span class="ident">example_name</span>,
-                <span class="prelude-val">None</span> =&gt; <span class="bool-val">true</span>,
+    Step::Multiple {
+        name: <span class="string">&quot;oak-functions examples&quot;</span>.to_string(),
+        steps: examples
+            .iter()
+            .filter(|example| <span class="kw">match </span><span class="kw-2">&amp;</span>opt.example_name {
+                <span class="prelude-val">Some</span>(example_name) =&gt; <span class="kw-2">&amp;</span>example.name == example_name,
+                <span class="prelude-val">None </span>=&gt; <span class="bool-val">true</span>,
             })
-            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">example</span><span class="op">|</span> <span class="ident">OakFunctionsExample::new</span>(<span class="ident">example</span>, <span class="ident">opt</span>.<span class="ident">clone</span>()))
-            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">example</span><span class="op">|</span> <span class="ident">run_oak_functions_example</span>(<span class="kw-2">&amp;</span><span class="ident">example</span>))
-            .<span class="ident">collect</span>(),
+            .map(|example| OakFunctionsExample::new(example, opt.clone()))
+            .map(|example| run_oak_functions_example(<span class="kw-2">&amp;</span>example))
+            .collect(),
     }
 }
 
-<span class="doccomment">/// Build every variant of the function server.</span>
-<span class="doccomment">/// It&#39;s easier to always build all variants than to keep track of which variant to build and</span>
-<span class="doccomment">/// the overhead of building all variants is acceptable.</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">build_oak_functions_server_variants</span>(<span class="ident">opt</span>: <span class="kw-2">&amp;</span><span class="ident">BuildServerOpt</span>) -&gt; <span class="ident">Step</span> {
-    <span class="ident">Step::Multiple</span> {
-        <span class="ident">name</span>: <span class="string">&quot;cargo build all variants of function server&quot;</span>.<span class="ident">to_string</span>(),
-        <span class="ident">steps</span>: <span class="ident">ServerVariant::iter</span>()
-            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">variant</span><span class="op">|</span> <span class="ident">build_rust_binary</span>(<span class="ident">variant</span>.<span class="ident">path_to_manifest</span>(), <span class="ident">opt</span>))
-            .<span class="ident">collect</span>(),
+<span class="doccomment">/// Build every variant of the function server.
+/// It&#39;s easier to always build all variants than to keep track of which variant to build and
+/// the overhead of building all variants is acceptable.
+</span><span class="kw">pub fn </span>build_oak_functions_server_variants(opt: <span class="kw-2">&amp;</span>BuildServerOpt) -&gt; Step {
+    Step::Multiple {
+        name: <span class="string">&quot;cargo build all variants of function server&quot;</span>.to_string(),
+        steps: ServerVariant::iter()
+            .map(|variant| build_rust_binary(variant.path_to_manifest(), opt))
+            .collect(),
     }
 }
 
-<span class="kw">fn</span> <span class="ident">run_oak_functions_example</span>(<span class="ident">example</span>: <span class="kw-2">&amp;</span><span class="ident">OakFunctionsExample</span>) -&gt; <span class="ident">Step</span> {
-    <span class="kw">let</span> <span class="ident">opt</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">example</span>.<span class="ident">options</span>;
+<span class="doccomment">/// Build every variant of the function server.
+/// It&#39;s easier to always build all variants than to keep track of which variant to build and
+/// the overhead of building all variants is acceptable.
+</span><span class="kw">pub fn </span>build_oak_functions_linux_fd_bin() -&gt; Step {
+    Step::Single {
+        name: <span class="string">&quot;cargo build Oak Functions loader for linux native&quot;</span>.to_string(),
+        command: Cmd::new(
+            <span class="string">&quot;cargo&quot;</span>,
+            <span class="macro">vec!</span>[
+                <span class="string">&quot;build&quot;</span>.to_string(),
+                <span class="string">&quot;--target=x86_64-unknown-linux-musl&quot;</span>.to_string(),
+                <span class="string">&quot;--release&quot;</span>.to_string(),
+                <span class="string">&quot;--manifest-path=oak_functions_linux_fd_bin/Cargo.toml&quot;</span>.to_string(),
+            ],
+        ),
+    }
+}
 
-    <span class="comment">// Build steps for running clients</span>
-    <span class="kw">let</span> <span class="ident">run_clients</span> <span class="op">=</span> <span class="ident">run_clients</span>(
-        <span class="ident">example</span>.<span class="ident">example</span>,
-        <span class="kw-2">&amp;</span><span class="ident">opt</span>.<span class="ident">build_client</span>,
-        <span class="ident">opt</span>.<span class="ident">client_additional_args</span>.<span class="ident">clone</span>(),
+<span class="kw">fn </span>run_oak_functions_example(example: <span class="kw-2">&amp;</span>OakFunctionsExample) -&gt; Step {
+    <span class="kw">let </span>opt = <span class="kw-2">&amp;</span>example.options;
+
+    <span class="comment">// Build steps for running clients
+    </span><span class="kw">let </span>run_clients = run_clients(
+        example.example,
+        <span class="kw-2">&amp;</span>opt.build_client,
+        opt.client_additional_args.clone(),
     );
 
-    <span class="comment">// Build any backend server</span>
-    <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy::collapsible_if</span>)]</span>
-    <span class="kw">let</span> <span class="ident">run_backend_server_clients</span>: <span class="ident">Step</span> <span class="op">=</span> <span class="kw">if</span> <span class="ident">opt</span>.<span class="ident">run_server</span>.<span class="ident">unwrap_or</span>(<span class="bool-val">true</span>) {
-        <span class="kw">let</span> <span class="ident">run_server_clients</span> <span class="op">=</span> <span class="ident">example</span>.<span class="ident">construct_server_run_step</span>(<span class="ident">run_clients</span>);
-        <span class="ident">example</span>.<span class="ident">construct_backend_run_steps</span>(<span class="ident">run_server_clients</span>)
-    } <span class="kw">else</span> {
-        <span class="ident">run_clients</span>
+    <span class="attribute">#[allow(clippy::collapsible_if)]
+    </span><span class="kw">let </span>run_server_clients: Step = <span class="kw">if </span>opt.run_server.unwrap_or(<span class="bool-val">true</span>) {
+        example.construct_server_run_step(run_clients)
+    } <span class="kw">else </span>{
+        run_clients
     };
 
-    <span class="ident">Step::Multiple</span> {
-        <span class="ident">name</span>: <span class="ident">example</span>.<span class="ident">example</span>.<span class="ident">name</span>.<span class="ident">to_string</span>(),
-        <span class="ident">steps</span>: <span class="macro">vec!</span>[
-            <span class="ident">example</span>.<span class="ident">construct_application_build_steps</span>(),
-            <span class="kw">if</span> <span class="ident">opt</span>.<span class="ident">run_server</span>.<span class="ident">unwrap_or</span>(<span class="bool-val">true</span>) {
-                <span class="comment">// Build (all variants of) the server first so that when running a variant in the</span>
-                <span class="comment">// next step it will start up faster.</span>
-                <span class="macro">vec!</span>[<span class="ident">build_oak_functions_server_variants</span>(<span class="kw-2">&amp;</span><span class="ident">opt</span>.<span class="ident">build_server</span>)]
-            } <span class="kw">else</span> {
+    Step::Multiple {
+        name: example.example.name.to_string(),
+        steps: <span class="macro">vec!</span>[
+            example.construct_application_build_steps(),
+            <span class="kw">if </span>opt.run_server.unwrap_or(<span class="bool-val">true</span>) {
+                <span class="comment">// Build (all variants of) the server first so that when running a variant in the
+                // next step it will start up faster.
+                </span><span class="macro">vec!</span>[
+                    build_oak_functions_server_variants(<span class="kw-2">&amp;</span>opt.build_server),
+                    build_oak_functions_linux_fd_bin(),
+                ]
+            } <span class="kw">else </span>{
                 <span class="macro">vec!</span>[]
             },
-            <span class="kw">if</span> <span class="ident">opt</span>.<span class="ident">build_docker</span> {
-                <span class="macro">vec!</span>[<span class="ident">build_docker</span>(<span class="ident">example</span>.<span class="ident">example</span>)]
-            } <span class="kw">else</span> {
+            <span class="kw">if </span>opt.build_docker {
+                <span class="macro">vec!</span>[build_docker(example.example)]
+            } <span class="kw">else </span>{
                 <span class="macro">vec!</span>[]
             },
-            <span class="ident">example</span>.<span class="ident">construct_backend_build_steps</span>(),
-            <span class="macro">vec!</span>[<span class="ident">Step::Multiple</span> {
-                <span class="ident">name</span>: <span class="string">&quot;run&quot;</span>.<span class="ident">to_string</span>(),
-                <span class="ident">steps</span>: <span class="macro">vec!</span>[<span class="ident">run_backend_server_clients</span>],
+            <span class="macro">vec!</span>[Step::Multiple {
+                name: <span class="string">&quot;run&quot;</span>.to_string(),
+                steps: <span class="macro">vec!</span>[run_server_clients],
             }],
         ]
-        .<span class="ident">into_iter</span>()
-        .<span class="ident">flatten</span>()
-        .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>(),
+        .into_iter()
+        .flatten()
+        .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;(),
     }
 }
 
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">build_oak_functions_example</span>(<span class="ident">opt</span>: <span class="kw-2">&amp;</span><span class="ident">RunOakExamplesOpt</span>, <span class="ident">scope</span>: <span class="kw-2">&amp;</span><span class="ident">Scope</span>) -&gt; <span class="ident">Step</span> {
-    <span class="kw">let</span> <span class="ident">example_name</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">opt</span>
-        .<span class="ident">example_name</span>
-        .<span class="ident">as_ref</span>()
-        .<span class="ident">expect</span>(<span class="string">&quot;--example-name must be specified&quot;</span>)
-        .<span class="ident">clone</span>();
+<span class="kw">pub fn </span>build_oak_functions_example(opt: <span class="kw-2">&amp;</span>RunOakExamplesOpt, scope: <span class="kw-2">&amp;</span>Scope) -&gt; Step {
+    <span class="kw">let </span>example_name = <span class="kw-2">&amp;</span>opt
+        .example_name
+        .as_ref()
+        .expect(<span class="string">&quot;--example-name must be specified&quot;</span>)
+        .clone();
 
-    <span class="kw">let</span> <span class="ident">example</span>: <span class="ident">OakExample</span> <span class="op">=</span> <span class="ident">example_toml_files</span>(<span class="ident">scope</span>)
-        .<span class="ident">map</span>(<span class="op">|</span><span class="ident">path</span><span class="op">|</span> {
-            <span class="ident">toml::from_str</span>(<span class="kw-2">&amp;</span><span class="ident">read_file</span>(<span class="kw-2">&amp;</span><span class="ident">path</span>)).<span class="ident">unwrap_or_else</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> {
-                <span class="macro">panic!</span>(<span class="string">&quot;could not parse example manifest file {:?}: {}&quot;</span>, <span class="ident">path</span>, <span class="ident">err</span>)
+    <span class="kw">let </span>example: OakExample = example_toml_files(scope)
+        .map(|path| {
+            toml::from_str(<span class="kw-2">&amp;</span>read_file(<span class="kw-2">&amp;</span>path)).unwrap_or_else(|err| {
+                <span class="macro">panic!</span>(<span class="string">&quot;could not parse example manifest file {:?}: {}&quot;</span>, path, err)
             })
         })
-        .<span class="ident">find</span>(<span class="op">|</span><span class="ident">example</span>: <span class="kw-2">&amp;</span><span class="ident">OakExample</span><span class="op">|</span> <span class="kw-2">&amp;</span><span class="ident">example</span>.<span class="ident">name</span> <span class="op">==</span> <span class="ident">example_name</span>)
-        .<span class="ident">filter</span>(<span class="op">|</span><span class="ident">example</span><span class="op">|</span> <span class="ident">example</span>.<span class="ident">has_oak_functions_application</span>())
-        .<span class="ident">expect</span>(<span class="string">&quot;could not find the specified functions example, try with `--scope=all`&quot;</span>);
+        .find(|example: <span class="kw-2">&amp;</span>OakExample| <span class="kw-2">&amp;</span>example.name == example_name)
+        .filter(|example| example.has_oak_functions_application())
+        .expect(<span class="string">&quot;could not find the specified functions example, try with `--scope=all`&quot;</span>);
 
-    <span class="comment">// Build steps for building clients</span>
-    <span class="kw">let</span> <span class="ident">build_client</span> <span class="op">=</span> <span class="ident">Step::Multiple</span> {
-        <span class="ident">name</span>: <span class="string">&quot;build clients&quot;</span>.<span class="ident">to_string</span>(),
-        <span class="ident">steps</span>: <span class="ident">example</span>
-            .<span class="ident">clients</span>
-            .<span class="ident">iter</span>()
-            .<span class="ident">filter</span>(<span class="op">|</span>(<span class="ident">name</span>, <span class="kw">_</span>)<span class="op">|</span> <span class="kw">match</span> <span class="ident">opt</span>.<span class="ident">build_client</span>.<span class="ident">client_variant</span>.<span class="ident">as_str</span>() {
-                <span class="ident">ALL_CLIENTS</span> =&gt; <span class="bool-val">true</span>,
-                <span class="ident">client</span> =&gt; <span class="kw-2">*</span><span class="ident">name</span> <span class="op">==</span> <span class="ident">client</span>,
+    <span class="comment">// Build steps for building clients
+    </span><span class="kw">let </span>build_client = Step::Multiple {
+        name: <span class="string">&quot;build clients&quot;</span>.to_string(),
+        steps: example
+            .clients
+            .iter()
+            .filter(|(name, <span class="kw">_</span>)| <span class="kw">match </span>opt.build_client.client_variant.as_str() {
+                ALL_CLIENTS =&gt; <span class="bool-val">true</span>,
+                client =&gt; <span class="kw-2">*</span>name == client,
             })
-            .<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">name</span>, <span class="ident">client</span>)<span class="op">|</span> <span class="ident">Step::Single</span> {
-                <span class="ident">name</span>: <span class="macro">format!</span>(<span class="string">&quot;build{}&quot;</span>, <span class="ident">name</span>),
-                <span class="ident">command</span>: <span class="ident">build</span>(<span class="kw-2">&amp;</span><span class="ident">client</span>.<span class="ident">target</span>, <span class="kw-2">&amp;</span><span class="ident">opt</span>.<span class="ident">build_client</span>),
+            .map(|(name, client)| Step::Single {
+                name: <span class="macro">format!</span>(<span class="string">&quot;build{}&quot;</span>, name),
+                command: build(<span class="kw-2">&amp;</span>client.target, <span class="kw-2">&amp;</span>opt.build_client),
             })
-            .<span class="ident">collect</span>(),
+            .collect(),
     };
 
-    <span class="kw">let</span> <span class="ident">oak_functions_example</span> <span class="op">=</span> <span class="ident">OakFunctionsExample::new</span>(<span class="kw-2">&amp;</span><span class="ident">example</span>, <span class="ident">opt</span>.<span class="ident">clone</span>());
+    <span class="kw">let </span>oak_functions_example = OakFunctionsExample::new(<span class="kw-2">&amp;</span>example, opt.clone());
 
-    <span class="ident">Step::Multiple</span> {
-        <span class="ident">name</span>: <span class="ident">example</span>.<span class="ident">name</span>.<span class="ident">to_string</span>(),
-        <span class="ident">steps</span>: <span class="macro">vec!</span>[
-            <span class="ident">oak_functions_example</span>.<span class="ident">construct_application_build_steps</span>(),
-            <span class="comment">// Build the server first so that when running it in the next step it will start up</span>
-            <span class="comment">// faster.</span>
-            <span class="macro">vec!</span>[<span class="ident">build_oak_functions_server_variants</span>(<span class="kw-2">&amp;</span><span class="ident">opt</span>.<span class="ident">build_server</span>)],
-            <span class="kw">if</span> <span class="ident">opt</span>.<span class="ident">build_docker</span> {
-                <span class="macro">vec!</span>[<span class="ident">build_docker</span>(<span class="kw-2">&amp;</span><span class="ident">example</span>)]
-            } <span class="kw">else</span> {
+    Step::Multiple {
+        name: example.name.to_string(),
+        steps: <span class="macro">vec!</span>[
+            oak_functions_example.construct_application_build_steps(),
+            <span class="comment">// Build the server first so that when running it in the next step it will start up
+            // faster.
+            </span><span class="macro">vec!</span>[build_oak_functions_server_variants(<span class="kw-2">&amp;</span>opt.build_server)],
+            <span class="kw">if </span>opt.build_docker {
+                <span class="macro">vec!</span>[build_docker(<span class="kw-2">&amp;</span>example)]
+            } <span class="kw">else </span>{
                 <span class="macro">vec!</span>[]
             },
-            <span class="ident">oak_functions_example</span>.<span class="ident">construct_backend_build_steps</span>(),
-            <span class="macro">vec!</span>[<span class="ident">build_client</span>],
+            <span class="macro">vec!</span>[build_client],
         ]
-        .<span class="ident">into_iter</span>()
-        .<span class="ident">flatten</span>()
-        .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>(),
+        .into_iter()
+        .flatten()
+        .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;(),
     }
 }
 
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">build_wasm_module</span>(<span class="ident">name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="ident">target</span>: <span class="kw-2">&amp;</span><span class="ident">Target</span>, <span class="ident">example_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) -&gt; <span class="ident">Step</span> {
-    <span class="kw">match</span> <span class="ident">target</span> {
-        <span class="ident">Target::Cargo</span> {
-            <span class="ident">cargo_manifest</span>,
-            <span class="ident">additional_build_args</span>,
+<span class="kw">pub fn </span>build_wasm_module(name: <span class="kw-2">&amp;</span>str, target: <span class="kw-2">&amp;</span>Target, example_name: <span class="kw-2">&amp;</span>str) -&gt; Step {
+    <span class="kw">match </span>target {
+        Target::Cargo {
+            cargo_manifest,
+            additional_build_args,
         } =&gt; {
-            <span class="kw">let</span> <span class="ident">metadata</span> <span class="op">=</span> <span class="ident">cargo_metadata::MetadataCommand::new</span>()
-                .<span class="ident">manifest_path</span>(<span class="ident">cargo_manifest</span>)
-                .<span class="ident">exec</span>()
-                .<span class="ident">unwrap</span>();
-            <span class="ident">Step::Single</span> {
-                <span class="ident">name</span>: <span class="macro">format!</span>(<span class="string">&quot;wasm:{}:{}&quot;</span>, <span class="ident">name</span>, <span class="ident">cargo_manifest</span>),
-                <span class="ident">command</span>: <span class="ident">Cmd::new</span>(
+            <span class="kw">let </span>metadata = cargo_metadata::MetadataCommand::new()
+                .manifest_path(cargo_manifest)
+                .exec()
+                .unwrap();
+            Step::Single {
+                name: <span class="macro">format!</span>(<span class="string">&quot;wasm:{}:{}&quot;</span>, name, cargo_manifest),
+                command: Cmd::new(
                     <span class="string">&quot;cargo&quot;</span>,
-                    <span class="comment">// Keep this in sync with `/oak_functions/sdk/test/utils/src/lib.rs`.</span>
-                    <span class="macro">spread!</span>[
-                        <span class="comment">// `--out-dir` is unstable and requires `-Zunstable-options`.</span>
-                        <span class="string">&quot;-Zunstable-options&quot;</span>.<span class="ident">to_string</span>(),
-                        <span class="string">&quot;build&quot;</span>.<span class="ident">to_string</span>(),
-                        <span class="string">&quot;--target=wasm32-unknown-unknown&quot;</span>.<span class="ident">to_string</span>(),
-                        <span class="comment">// Use a fixed `--target-dir`, because it influences the SHA256 hash of the</span>
-                        <span class="comment">// Wasm module.</span>
-                        <span class="comment">//</span>
-                        <span class="comment">// This directory is separate from `examples/target` because it is used by</span>
-                        <span class="comment">// `cargo test`, which also executes [`oak_tests::compile_rust_wasm`] and</span>
-                        <span class="comment">// thus runs `cargo build` inside it. It may lead to errors, since</span>
-                        <span class="comment">// dependencies may be recompiled by `cargo build` and `cargo test` will</span>
-                        <span class="comment">// fail to continue.</span>
-                        <span class="macro">format!</span>(<span class="string">&quot;--target-dir={}/wasm&quot;</span>, <span class="ident">metadata</span>.<span class="ident">target_directory</span>),
-                        <span class="macro">format!</span>(<span class="string">&quot;--manifest-path={}&quot;</span>, <span class="ident">cargo_manifest</span>),
-                        <span class="macro">format!</span>(<span class="string">&quot;--out-dir={}/bin&quot;</span>, <span class="ident">metadata</span>.<span class="ident">workspace_root</span>),
-                        <span class="string">&quot;--release&quot;</span>.<span class="ident">to_string</span>(),
-                        ...<span class="ident">additional_build_args</span>
+                    <span class="comment">// Keep this in sync with `/oak_functions/sdk/test/utils/src/lib.rs`.
+                    </span><span class="macro">spread!</span>[
+                        <span class="comment">// `--out-dir` is unstable and requires `-Zunstable-options`.
+                        </span><span class="string">&quot;-Zunstable-options&quot;</span>.to_string(),
+                        <span class="string">&quot;build&quot;</span>.to_string(),
+                        <span class="string">&quot;--target=wasm32-unknown-unknown&quot;</span>.to_string(),
+                        <span class="comment">// Use a fixed `--target-dir`, because it influences the SHA256 hash of the
+                        // Wasm module.
+                        //
+                        // This directory is separate from `examples/target` because it is used by
+                        // `cargo test`, which also executes [`oak_tests::compile_rust_wasm`] and
+                        // thus runs `cargo build` inside it. It may lead to errors, since
+                        // dependencies may be recompiled by `cargo build` and `cargo test` will
+                        // fail to continue.
+                        </span><span class="macro">format!</span>(<span class="string">&quot;--target-dir={}/wasm&quot;</span>, metadata.target_directory),
+                        <span class="macro">format!</span>(<span class="string">&quot;--manifest-path={}&quot;</span>, cargo_manifest),
+                        <span class="macro">format!</span>(<span class="string">&quot;--out-dir={}/bin&quot;</span>, metadata.workspace_root),
+                        <span class="string">&quot;--release&quot;</span>.to_string(),
+                        ...additional_build_args
                     ],
                 ),
             }
         }
-        <span class="ident">Target::Bazel</span> {
-            <span class="ident">bazel_target</span>,
-            <span class="ident">config</span>,
-        } =&gt; <span class="ident">Step::Multiple</span> {
-            <span class="ident">name</span>: <span class="string">&quot;wasm&quot;</span>.<span class="ident">to_string</span>(),
-            <span class="ident">steps</span>: <span class="macro">vec!</span>[
-                <span class="ident">Step::Single</span> {
-                    <span class="ident">name</span>: <span class="macro">format!</span>(<span class="string">&quot;wasm:{}:{}&quot;</span>, <span class="ident">name</span>, <span class="ident">bazel_target</span>),
-                    <span class="ident">command</span>: <span class="ident">Cmd::new</span>(
+        Target::Bazel {
+            bazel_target,
+            config,
+        } =&gt; Step::Multiple {
+            name: <span class="string">&quot;wasm&quot;</span>.to_string(),
+            steps: <span class="macro">vec!</span>[
+                Step::Single {
+                    name: <span class="macro">format!</span>(<span class="string">&quot;wasm:{}:{}&quot;</span>, name, bazel_target),
+                    command: Cmd::new(
                         <span class="string">&quot;bazel&quot;</span>,
                         <span class="macro">vec!</span>[
-                            <span class="string">&quot;build&quot;</span>.<span class="ident">to_string</span>(),
-                            <span class="macro">format!</span>(<span class="string">&quot;--config={}&quot;</span>, <span class="ident">config</span>),
-                            <span class="ident">bazel_target</span>.<span class="ident">to_string</span>(),
+                            <span class="string">&quot;build&quot;</span>.to_string(),
+                            <span class="macro">format!</span>(<span class="string">&quot;--config={}&quot;</span>, config),
+                            bazel_target.to_string(),
                         ],
                     ),
                 },
-                <span class="ident">Step::Single</span> {
-                    <span class="ident">name</span>: <span class="string">&quot;create bin folder&quot;</span>.<span class="ident">to_string</span>(),
-                    <span class="ident">command</span>: <span class="ident">Cmd::new</span>(
+                Step::Single {
+                    name: <span class="string">&quot;create bin folder&quot;</span>.to_string(),
+                    command: Cmd::new(
                         <span class="string">&quot;mkdir&quot;</span>,
-                        <span class="macro">vec!</span>[<span class="string">&quot;-p&quot;</span>.<span class="ident">to_string</span>(), <span class="macro">format!</span>(<span class="string">&quot;examples/{}/bin&quot;</span>, <span class="ident">example_name</span>)],
+                        <span class="macro">vec!</span>[<span class="string">&quot;-p&quot;</span>.to_string(), <span class="macro">format!</span>(<span class="string">&quot;examples/{}/bin&quot;</span>, example_name)],
                     ),
                 },
-                <span class="ident">Step::Single</span> {
-                    <span class="ident">name</span>: <span class="string">&quot;copy wasm module&quot;</span>.<span class="ident">to_string</span>(),
-                    <span class="ident">command</span>: <span class="ident">Cmd::new</span>(
+                Step::Single {
+                    name: <span class="string">&quot;copy wasm module&quot;</span>.to_string(),
+                    command: Cmd::new(
                         <span class="string">&quot;cp&quot;</span>,
                         <span class="macro">vec!</span>[
-                            <span class="string">&quot;-f&quot;</span>.<span class="ident">to_string</span>(),
+                            <span class="string">&quot;-f&quot;</span>.to_string(),
                             <span class="macro">format!</span>(
                                 <span class="string">&quot;bazel-{}-bin/{}&quot;</span>,
-                                <span class="kw">match</span> <span class="ident">config</span>.<span class="ident">as_ref</span>() {
-                                    <span class="string">&quot;emscripten&quot;</span> =&gt; <span class="string">&quot;emscripten&quot;</span>,
-                                    <span class="string">&quot;wasm32&quot;</span> =&gt; <span class="string">&quot;wasm&quot;</span>,
-                                    <span class="kw">_</span> =&gt; <span class="macro">panic!</span>(<span class="string">&quot;unsupported Bazel config: {}&quot;</span>, <span class="ident">config</span>),
+                                <span class="kw">match </span>config.as_ref() {
+                                    <span class="string">&quot;emscripten&quot; </span>=&gt; <span class="string">&quot;emscripten&quot;</span>,
+                                    <span class="string">&quot;wasm32&quot; </span>=&gt; <span class="string">&quot;wasm&quot;</span>,
+                                    <span class="kw">_ </span>=&gt; <span class="macro">panic!</span>(<span class="string">&quot;unsupported Bazel config: {}&quot;</span>, config),
                                 },
-                                <span class="ident">bazel_target</span>.<span class="ident">replace</span>(<span class="string">&quot;//&quot;</span>, <span class="string">&quot;&quot;</span>).<span class="ident">replace</span>(<span class="string">&#39;:&#39;</span>, <span class="string">&quot;/&quot;</span>)
+                                bazel_target.replace(<span class="string">&quot;//&quot;</span>, <span class="string">&quot;&quot;</span>).replace(<span class="string">&#39;:&#39;</span>, <span class="string">&quot;/&quot;</span>)
                             ),
-                            <span class="macro">format!</span>(<span class="string">&quot;examples/{}/bin&quot;</span>, <span class="ident">example_name</span>),
+                            <span class="macro">format!</span>(<span class="string">&quot;examples/{}/bin&quot;</span>, example_name),
                         ],
                     ),
                 },
             ],
         },
-        <span class="ident">Target::Npm</span> { .. } =&gt; <span class="macro">todo!</span>(),
-        <span class="ident">Target::Shell</span> { .. } =&gt; <span class="macro">todo!</span>(),
+        Target::Npm { .. } =&gt; <span class="macro">todo!</span>(),
+        Target::Shell { .. } =&gt; <span class="macro">todo!</span>(),
     }
 }
 
-<span class="kw">fn</span> <span class="ident">run_wizer</span>(<span class="ident">input</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="ident">output</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) -&gt; <span class="ident">Step</span> {
-    <span class="ident">Step::Single</span> {
-        <span class="ident">name</span>: <span class="macro">format!</span>(<span class="string">&quot;wizer:{}:{}&quot;</span>, <span class="ident">input</span>, <span class="ident">output</span>),
-        <span class="ident">command</span>: <span class="ident">Cmd::new</span>(
+<span class="kw">fn </span>run_wizer(input: <span class="kw-2">&amp;</span>str, output: <span class="kw-2">&amp;</span>str) -&gt; Step {
+    Step::Single {
+        name: <span class="macro">format!</span>(<span class="string">&quot;wizer:{}:{}&quot;</span>, input, output),
+        command: Cmd::new(
             <span class="string">&quot;wizer&quot;</span>,
-            <span class="comment">// See https://github.com/bytecodealliance/wizer#example-usage.</span>
-            <span class="macro">spread!</span>[<span class="macro">format!</span>(<span class="string">&quot;{}&quot;</span>, <span class="ident">input</span>), <span class="macro">format!</span>(<span class="string">&quot;-o={}&quot;</span>, <span class="ident">output</span>),],
+            <span class="comment">// See https://github.com/bytecodealliance/wizer#example-usage.
+            </span><span class="macro">spread!</span>[<span class="macro">format!</span>(<span class="string">&quot;{}&quot;</span>, input), <span class="macro">format!</span>(<span class="string">&quot;-o={}&quot;</span>, output),],
         ),
     }
 }
 
-<span class="kw">fn</span> <span class="ident">run_oak_functions_server</span>(<span class="ident">server</span>: <span class="kw-2">&amp;</span><span class="ident">Server</span>) -&gt; <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">Runnable</span><span class="op">&gt;</span> {
-    <span class="ident">Cmd::new</span>(
-        <span class="ident">server</span>.<span class="ident">server_variant</span>.<span class="ident">path_to_executable</span>(),
-        <span class="macro">spread!</span>[
-            ...<span class="ident">server</span>.<span class="ident">additional_args</span>.<span class="ident">clone</span>(),
+<span class="kw">fn </span>run_oak_functions_server(server: <span class="kw-2">&amp;</span>Server) -&gt; Box&lt;<span class="kw">dyn </span>Runnable&gt; {
+    Cmd::new(
+        server.server_variant.path_to_executable(),
+        <span class="macro">vec!</span>[
+            <span class="macro">format!</span>(<span class="string">&quot;--wasm={}&quot;</span>, server.wasm_path),
+            <span class="macro">format!</span>(
+                <span class="string">&quot;--constant-response-size={}&quot;</span>,
+                server.constant_response_size_bytes
+            ),
+            <span class="macro">format!</span>(<span class="string">&quot;--lookup-data={}&quot;</span>, server.lookup_data),
+            <span class="comment">// Run the &quot;trusted&quot; runtime binary as a native Linux process, connecting over a file
+            // descriptor.
+            </span><span class="string">&quot;native&quot;</span>.to_string(),
+            <span class="string">&quot;--app-binary=target/x86_64-unknown-linux-musl/release/oak_functions_linux_fd_bin&quot;
+                </span>.to_string(),
         ],
     )
 }
 
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">run_trusted_shuffler</span>(<span class="ident">flags</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">str</span><span class="op">&gt;</span>) -&gt; <span class="ident">Step</span> {
-    <span class="comment">// Build and run the echo backend.</span>
-    <span class="kw">let</span> <span class="ident">backend_cmd</span> <span class="op">=</span> <span class="ident">Cmd::new</span>(
+<span class="kw">pub fn </span>run_trusted_shuffler(flags: Vec&lt;<span class="kw-2">&amp;</span>str&gt;) -&gt; Step {
+    <span class="comment">// Build and run the echo backend.
+    </span><span class="kw">let </span>backend_cmd = Cmd::new(
         <span class="string">&quot;cargo&quot;</span>,
         <span class="macro">spread!</span>[
             <span class="string">&quot;run&quot;</span>,
             <span class="string">&quot;--manifest-path=trusted_shuffler/backend/Cargo.toml&quot;</span>,
             <span class="string">&quot;--&quot;</span>,
             <span class="string">&quot;--listen-address=[::]:8888&quot;</span>,
-            ...<span class="ident">flags</span>
+            ...flags
         ],
     );
 
-    <span class="comment">// Build and run the Trusted Shuffler.</span>
-    <span class="kw">let</span> <span class="ident">trusted_shuffler_cmd</span> <span class="op">=</span> <span class="ident">Cmd::new</span>(
+    <span class="comment">// Build and run the Trusted Shuffler.
+    </span><span class="kw">let </span>trusted_shuffler_cmd = Cmd::new(
         <span class="string">&quot;cargo&quot;</span>,
         <span class="macro">spread!</span>[
             <span class="string">&quot;run&quot;</span>,
@@ -1267,8 +1250,8 @@
         ],
     );
 
-    <span class="comment">// Build and run the echo gRPC client.</span>
-    <span class="kw">let</span> <span class="ident">client_cmd</span> <span class="op">=</span> <span class="ident">Cmd::new</span>(
+    <span class="comment">// Build and run the echo gRPC client.
+    </span><span class="kw">let </span>client_cmd = Cmd::new(
         <span class="string">&quot;cargo&quot;</span>,
         <span class="macro">spread!</span>[
             <span class="string">&quot;run&quot;</span>,
@@ -1277,79 +1260,79 @@
             <span class="string">&quot;--server-url=http://localhost:8080&quot;</span>,
             <span class="string">&quot;--qps=1&quot;</span>,
             <span class="string">&quot;--seconds=1&quot;</span>,
-            ...<span class="ident">flags</span>
+            ...flags
         ],
     );
 
-    <span class="kw">let</span> <span class="ident">client_step</span> <span class="op">=</span> <span class="ident">Step::Single</span> {
-        <span class="ident">name</span>: <span class="string">&quot;Client&quot;</span>.<span class="ident">to_string</span>(),
-        <span class="ident">command</span>: <span class="ident">client_cmd</span>,
+    <span class="kw">let </span>client_step = Step::Single {
+        name: <span class="string">&quot;Client&quot;</span>.to_string(),
+        command: client_cmd,
     };
 
-    <span class="kw">let</span> <span class="ident">trusted_shuffler_step</span> <span class="op">=</span> <span class="ident">Step::WithBackground</span> {
-        <span class="ident">name</span>: <span class="string">&quot;Trusted Shuffler and Backend&quot;</span>.<span class="ident">to_string</span>(),
-        <span class="ident">foreground</span>: <span class="ident">Box::new</span>(<span class="ident">client_step</span>),
-        <span class="ident">background</span>: <span class="ident">trusted_shuffler_cmd</span>,
+    <span class="kw">let </span>trusted_shuffler_step = Step::WithBackground {
+        name: <span class="string">&quot;Trusted Shuffler and Backend&quot;</span>.to_string(),
+        foreground: Box::new(client_step),
+        background: trusted_shuffler_cmd,
     };
 
-    <span class="ident">Step::WithBackground</span> {
-        <span class="ident">name</span>: <span class="string">&quot;Run echo Trusted Shuffler with k=1&quot;</span>.<span class="ident">to_string</span>(),
-        <span class="ident">foreground</span>: <span class="ident">Box::new</span>(<span class="ident">trusted_shuffler_step</span>),
-        <span class="ident">background</span>: <span class="ident">backend_cmd</span>,
+    Step::WithBackground {
+        name: <span class="string">&quot;Run echo Trusted Shuffler with k=1&quot;</span>.to_string(),
+        foreground: Box::new(trusted_shuffler_step),
+        background: backend_cmd,
     }
 }
 
-<span class="kw">fn</span> <span class="ident">run_clients</span>(
-    <span class="ident">example</span>: <span class="kw-2">&amp;</span><span class="ident">OakExample</span>,
-    <span class="ident">build_client</span>: <span class="kw-2">&amp;</span><span class="ident">BuildClient</span>,
-    <span class="ident">client_additional_args</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
-) -&gt; <span class="ident">Step</span> {
-    <span class="ident">Step::Multiple</span> {
-        <span class="ident">name</span>: <span class="string">&quot;run clients&quot;</span>.<span class="ident">to_string</span>(),
-        <span class="ident">steps</span>: <span class="ident">example</span>
-            .<span class="ident">clients</span>
-            .<span class="ident">iter</span>()
-            .<span class="ident">filter</span>(<span class="op">|</span>(<span class="ident">name</span>, <span class="kw">_</span>)<span class="op">|</span> <span class="kw">match</span> <span class="ident">build_client</span>.<span class="ident">client_variant</span>.<span class="ident">as_str</span>() {
-                <span class="ident">ALL_CLIENTS</span> =&gt; <span class="bool-val">true</span>,
-                <span class="ident">client</span> =&gt; <span class="kw-2">*</span><span class="ident">name</span> <span class="op">==</span> <span class="ident">client</span>,
+<span class="kw">fn </span>run_clients(
+    example: <span class="kw-2">&amp;</span>OakExample,
+    build_client: <span class="kw-2">&amp;</span>BuildClient,
+    client_additional_args: Vec&lt;String&gt;,
+) -&gt; Step {
+    Step::Multiple {
+        name: <span class="string">&quot;run clients&quot;</span>.to_string(),
+        steps: example
+            .clients
+            .iter()
+            .filter(|(name, <span class="kw">_</span>)| <span class="kw">match </span>build_client.client_variant.as_str() {
+                ALL_CLIENTS =&gt; <span class="bool-val">true</span>,
+                client =&gt; <span class="kw-2">*</span>name == client,
             })
-            .<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">name</span>, <span class="ident">client</span>)<span class="op">|</span> {
-                <span class="ident">run_client</span>(<span class="ident">name</span>, <span class="ident">client</span>, <span class="ident">build_client</span>, <span class="ident">client_additional_args</span>.<span class="ident">clone</span>())
+            .map(|(name, client)| {
+                run_client(name, client, build_client, client_additional_args.clone())
             })
-            .<span class="ident">collect</span>(),
+            .collect(),
     }
 }
 
-<span class="kw">fn</span> <span class="ident">run_client</span>(
-    <span class="ident">name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
-    <span class="ident">executable</span>: <span class="kw-2">&amp;</span><span class="ident">Executable</span>,
-    <span class="ident">opt</span>: <span class="kw-2">&amp;</span><span class="ident">BuildClient</span>,
-    <span class="ident">additional_args</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
-) -&gt; <span class="ident">Step</span> {
-    <span class="ident">Step::Multiple</span> {
-        <span class="ident">name</span>: <span class="ident">name</span>.<span class="ident">to_string</span>(),
-        <span class="ident">steps</span>: <span class="macro">vec!</span>[
-            <span class="ident">Step::Single</span> {
-                <span class="ident">name</span>: <span class="string">&quot;build&quot;</span>.<span class="ident">to_string</span>(),
-                <span class="ident">command</span>: <span class="ident">build</span>(<span class="kw-2">&amp;</span><span class="ident">executable</span>.<span class="ident">target</span>, <span class="ident">opt</span>),
+<span class="kw">fn </span>run_client(
+    name: <span class="kw-2">&amp;</span>str,
+    executable: <span class="kw-2">&amp;</span>Executable,
+    opt: <span class="kw-2">&amp;</span>BuildClient,
+    additional_args: Vec&lt;String&gt;,
+) -&gt; Step {
+    Step::Multiple {
+        name: name.to_string(),
+        steps: <span class="macro">vec!</span>[
+            Step::Single {
+                name: <span class="string">&quot;build&quot;</span>.to_string(),
+                command: build(<span class="kw-2">&amp;</span>executable.target, opt),
             },
-            <span class="ident">Step::Single</span> {
-                <span class="ident">name</span>: <span class="string">&quot;run&quot;</span>.<span class="ident">to_string</span>(),
-                <span class="ident">command</span>: <span class="ident">run</span>(<span class="ident">executable</span>, <span class="ident">opt</span>, <span class="ident">additional_args</span>),
+            Step::Single {
+                name: <span class="string">&quot;run&quot;</span>.to_string(),
+                command: run(executable, opt, additional_args),
             },
         ],
     }
 }
 
-<span class="kw">fn</span> <span class="ident">build_docker</span>(<span class="ident">example</span>: <span class="kw-2">&amp;</span><span class="ident">OakExample</span>) -&gt; <span class="ident">Step</span> {
-    <span class="ident">Step::Multiple</span> {
-        <span class="ident">name</span>: <span class="string">&quot;docker&quot;</span>.<span class="ident">to_string</span>(),
-        <span class="ident">steps</span>: <span class="macro">vec!</span>[
-            <span class="ident">Step::Single</span> {
-                <span class="ident">name</span>: <span class="string">&quot;build server image&quot;</span>.<span class="ident">to_string</span>(),
-                <span class="ident">command</span>: <span class="ident">Cmd::new</span>(
+<span class="kw">fn </span>build_docker(example: <span class="kw-2">&amp;</span>OakExample) -&gt; Step {
+    Step::Multiple {
+        name: <span class="string">&quot;docker&quot;</span>.to_string(),
+        steps: <span class="macro">vec!</span>[
+            Step::Single {
+                name: <span class="string">&quot;build server image&quot;</span>.to_string(),
+                command: Cmd::new(
                     <span class="string">&quot;docker&quot;</span>,
-                    <span class="kw-2">&amp;</span>[
+                    [
                         <span class="string">&quot;build&quot;</span>,
                         <span class="string">&quot;--tag=oak_docker&quot;</span>,
                         <span class="string">&quot;--file=./oak_loader/Dockerfile&quot;</span>,
@@ -1357,32 +1340,32 @@
                     ],
                 ),
             },
-            <span class="ident">Step::Single</span> {
-                <span class="ident">name</span>: <span class="string">&quot;build example image&quot;</span>.<span class="ident">to_string</span>(),
-                <span class="ident">command</span>: <span class="ident">Cmd::new</span>(
+            Step::Single {
+                name: <span class="string">&quot;build example image&quot;</span>.to_string(),
+                command: Cmd::new(
                     <span class="string">&quot;docker&quot;</span>,
-                    <span class="kw-2">&amp;</span>[
+                    [
                         <span class="string">&quot;build&quot;</span>,
-                        <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;--tag={}&quot;</span>, <span class="ident">example</span>.<span class="ident">name</span>),
+                        <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;--tag={}&quot;</span>, example.name),
                         <span class="string">&quot;--file=./examples/Dockerfile&quot;</span>,
-                        <span class="comment">// An example may have more than one application, and the applications may</span>
-                        <span class="comment">// have arbitrary names, so this is an approximation of the expected</span>
-                        <span class="comment">// application file name of one of them.</span>
-                        <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;--build-arg=application_file_name={}.oak&quot;</span>, <span class="ident">example</span>.<span class="ident">name</span>),
-                        <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;./examples/{}&quot;</span>, <span class="ident">example</span>.<span class="ident">name</span>),
+                        <span class="comment">// An example may have more than one application, and the applications may
+                        // have arbitrary names, so this is an approximation of the expected
+                        // application file name of one of them.
+                        </span><span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;--build-arg=application_file_name={}.oak&quot;</span>, example.name),
+                        <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;./examples/{}&quot;</span>, example.name),
                     ],
                 ),
             },
-            <span class="ident">Step::Single</span> {
-                <span class="ident">name</span>: <span class="string">&quot;save example image&quot;</span>.<span class="ident">to_string</span>(),
-                <span class="ident">command</span>: <span class="ident">Cmd::new</span>(
+            Step::Single {
+                name: <span class="string">&quot;save example image&quot;</span>.to_string(),
+                command: Cmd::new(
                     <span class="string">&quot;docker&quot;</span>,
-                    <span class="kw-2">&amp;</span>[
+                    [
                         <span class="string">&quot;save&quot;</span>,
-                        <span class="kw-2">&amp;</span><span class="ident">example</span>.<span class="ident">name</span>,
+                        <span class="kw-2">&amp;</span>example.name,
                         <span class="kw-2">&amp;</span><span class="macro">format!</span>(
                             <span class="string">&quot;--output=./examples/{}/bin/{}.tar&quot;</span>,
-                            <span class="ident">example</span>.<span class="ident">name</span>, <span class="ident">example</span>.<span class="ident">name</span>
+                            example.name, example.name
                         ),
                     ],
                 ),
@@ -1391,122 +1374,121 @@
     }
 }
 
-<span class="kw">fn</span> <span class="ident">build</span>(<span class="ident">target</span>: <span class="kw-2">&amp;</span><span class="ident">Target</span>, <span class="ident">opt</span>: <span class="kw-2">&amp;</span><span class="ident">BuildClient</span>) -&gt; <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">Runnable</span><span class="op">&gt;</span> {
-    <span class="kw">match</span> <span class="ident">target</span> {
-        <span class="ident">Target::Cargo</span> {
-            <span class="ident">cargo_manifest</span>,
-            <span class="ident">additional_build_args</span>,
-        } =&gt; <span class="ident">Cmd::new</span>(
+<span class="kw">fn </span>build(target: <span class="kw-2">&amp;</span>Target, opt: <span class="kw-2">&amp;</span>BuildClient) -&gt; Box&lt;<span class="kw">dyn </span>Runnable&gt; {
+    <span class="kw">match </span>target {
+        Target::Cargo {
+            cargo_manifest,
+            additional_build_args,
+        } =&gt; Cmd::new(
             <span class="string">&quot;cargo&quot;</span>,
             <span class="macro">spread!</span>[
-                <span class="string">&quot;build&quot;</span>.<span class="ident">to_string</span>(),
-                <span class="string">&quot;--release&quot;</span>.<span class="ident">to_string</span>(),
+                <span class="string">&quot;build&quot;</span>.to_string(),
+                <span class="string">&quot;--release&quot;</span>.to_string(),
                 <span class="macro">format!</span>(
                     <span class="string">&quot;--target={}&quot;</span>,
-                    <span class="ident">opt</span>.<span class="ident">client_rust_target</span>
-                        .<span class="ident">as_deref</span>()
-                        .<span class="ident">unwrap_or</span>(<span class="ident">DEFAULT_EXAMPLE_BACKEND_RUST_TARGET</span>)
+                    opt.client_rust_target
+                        .as_deref()
+                        .unwrap_or(DEFAULT_EXAMPLE_BACKEND_RUST_TARGET)
                 ),
-                <span class="macro">format!</span>(<span class="string">&quot;--manifest-path={}&quot;</span>, <span class="ident">cargo_manifest</span>),
-                ...<span class="ident">additional_build_args</span>,
+                <span class="macro">format!</span>(<span class="string">&quot;--manifest-path={}&quot;</span>, cargo_manifest),
+                ...additional_build_args,
             ],
         ),
-        <span class="ident">Target::Bazel</span> {
-            <span class="ident">bazel_target</span>,
-            <span class="ident">config</span>,
-        } =&gt; <span class="ident">Cmd::new</span>(
+        Target::Bazel {
+            bazel_target,
+            config,
+        } =&gt; Cmd::new(
             <span class="string">&quot;bazel&quot;</span>,
             <span class="macro">spread!</span>[
-                <span class="string">&quot;build&quot;</span>.<span class="ident">to_string</span>(),
-                ...<span class="kw">if</span> <span class="ident">config</span>.<span class="ident">is_empty</span>() {
+                <span class="string">&quot;build&quot;</span>.to_string(),
+                ...<span class="kw">if </span>config.is_empty() {
                     <span class="macro">vec!</span>[]
-                } <span class="kw">else</span> {
-                    <span class="macro">vec!</span>[<span class="macro">format!</span>(<span class="string">&quot;--config={}&quot;</span>, <span class="ident">config</span>)]
+                } <span class="kw">else </span>{
+                    <span class="macro">vec!</span>[<span class="macro">format!</span>(<span class="string">&quot;--config={}&quot;</span>, config)]
                 },
-                <span class="ident">bazel_target</span>.<span class="ident">to_string</span>(),
+                bazel_target.to_string(),
             ],
         ),
-        <span class="ident">Target::Npm</span> { <span class="ident">package_directory</span> } =&gt; <span class="ident">Cmd::new</span>(
+        Target::Npm { package_directory } =&gt; Cmd::new(
             <span class="string">&quot;npm&quot;</span>,
-            <span class="macro">vec!</span>[<span class="string">&quot;ci&quot;</span>.<span class="ident">to_string</span>(), <span class="macro">format!</span>(<span class="string">&quot;--prefix={}&quot;</span>, <span class="ident">package_directory</span>)],
+            <span class="macro">vec!</span>[<span class="string">&quot;ci&quot;</span>.to_string(), <span class="macro">format!</span>(<span class="string">&quot;--prefix={}&quot;</span>, package_directory)],
         ),
-        <span class="ident">Target::Shell</span> { <span class="ident">build_script</span>, .. } =&gt; <span class="ident">Cmd::new</span>(<span class="string">&quot;bash&quot;</span>, <span class="kw-2">&amp;</span>[<span class="string">&quot;-c&quot;</span>, <span class="ident">build_script</span>]),
+        Target::Shell { build_script, .. } =&gt; Cmd::new(<span class="string">&quot;bash&quot;</span>, [<span class="string">&quot;-c&quot;</span>, build_script]),
     }
 }
 
-<span class="kw">fn</span> <span class="ident">run</span>(
-    <span class="ident">executable</span>: <span class="kw-2">&amp;</span><span class="ident">Executable</span>,
-    <span class="ident">opt</span>: <span class="kw-2">&amp;</span><span class="ident">BuildClient</span>,
-    <span class="ident">additional_args</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
-) -&gt; <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">Runnable</span><span class="op">&gt;</span> {
-    <span class="kw">match</span> <span class="kw-2">&amp;</span><span class="ident">executable</span>.<span class="ident">target</span> {
-        <span class="ident">Target::Cargo</span> {
-            <span class="ident">cargo_manifest</span>,
-            <span class="ident">additional_build_args</span>,
-        } =&gt; <span class="ident">Cmd::new</span>(
+<span class="kw">fn </span>run(
+    executable: <span class="kw-2">&amp;</span>Executable,
+    opt: <span class="kw-2">&amp;</span>BuildClient,
+    additional_args: Vec&lt;String&gt;,
+) -&gt; Box&lt;<span class="kw">dyn </span>Runnable&gt; {
+    <span class="kw">match </span><span class="kw-2">&amp;</span>executable.target {
+        Target::Cargo {
+            cargo_manifest,
+            additional_build_args,
+        } =&gt; Cmd::new(
             <span class="string">&quot;cargo&quot;</span>,
             <span class="macro">spread!</span>[
-                <span class="string">&quot;run&quot;</span>.<span class="ident">to_string</span>(),
-                <span class="string">&quot;--release&quot;</span>.<span class="ident">to_string</span>(),
-                <span class="macro">format!</span>(<span class="string">&quot;--target={}&quot;</span>, <span class="ident">opt</span>.<span class="ident">client_rust_target</span>.<span class="ident">as_deref</span>().<span class="ident">unwrap_or</span>(<span class="ident">DEFAULT_EXAMPLE_BACKEND_RUST_TARGET</span>)),
-                <span class="macro">format!</span>(<span class="string">&quot;--manifest-path={}&quot;</span>, <span class="ident">cargo_manifest</span>),
-                ...<span class="ident">additional_build_args</span>,
-                <span class="string">&quot;--&quot;</span>.<span class="ident">to_string</span>(),
-                ...<span class="ident">executable</span>.<span class="ident">additional_args</span>.<span class="ident">clone</span>(),
-                ...<span class="ident">additional_args</span>,
+                <span class="string">&quot;run&quot;</span>.to_string(),
+                <span class="string">&quot;--release&quot;</span>.to_string(),
+                <span class="macro">format!</span>(<span class="string">&quot;--target={}&quot;</span>, opt.client_rust_target.as_deref().unwrap_or(DEFAULT_EXAMPLE_BACKEND_RUST_TARGET)),
+                <span class="macro">format!</span>(<span class="string">&quot;--manifest-path={}&quot;</span>, cargo_manifest),
+                ...additional_build_args,
+                <span class="string">&quot;--&quot;</span>.to_string(),
+                ...executable.additional_args.clone(),
+                ...additional_args,
             ],
         ),
-        <span class="ident">Target::Bazel</span> {
-            <span class="ident">bazel_target</span>,
-            <span class="ident">config</span>,
-        } =&gt; <span class="ident">Cmd::new</span>(
+        Target::Bazel {
+            bazel_target,
+            config,
+        } =&gt; Cmd::new(
             <span class="string">&quot;bazel&quot;</span>,
             <span class="macro">spread!</span>[
-                <span class="string">&quot;run&quot;</span>.<span class="ident">to_string</span>(),
-                ...<span class="kw">if</span> <span class="ident">config</span>.<span class="ident">is_empty</span>() {
+                <span class="string">&quot;run&quot;</span>.to_string(),
+                ...<span class="kw">if </span>config.is_empty() {
                     <span class="macro">vec!</span>[]
-                } <span class="kw">else</span> {
-                    <span class="macro">vec!</span>[<span class="macro">format!</span>(<span class="string">&quot;--config={}&quot;</span>, <span class="ident">config</span>)]
+                } <span class="kw">else </span>{
+                    <span class="macro">vec!</span>[<span class="macro">format!</span>(<span class="string">&quot;--config={}&quot;</span>, config)]
                 },
-                <span class="string">&quot;--&quot;</span>.<span class="ident">to_string</span>(),
-                <span class="ident">bazel_target</span>.<span class="ident">to_string</span>(),
-                <span class="string">&quot;--ca_cert_path=../../../../../../../../../examples/certs/local/ca.pem&quot;</span>.<span class="ident">to_string</span>(),
-                ...<span class="ident">executable</span>.<span class="ident">additional_args</span>.<span class="ident">clone</span>(),
-                ...<span class="ident">additional_args</span>,
+                <span class="string">&quot;--&quot;</span>.to_string(),
+                bazel_target.to_string(),
+                <span class="string">&quot;--ca_cert_path=../../../../../../../../../examples/certs/local/ca.pem&quot;</span>.to_string(),
+                ...executable.additional_args.clone(),
+                ...additional_args,
             ],
         ),
-        <span class="ident">Target::Npm</span> { <span class="ident">package_directory</span> } =&gt; <span class="ident">Cmd::new</span>(
+        Target::Npm { package_directory } =&gt; Cmd::new(
             <span class="string">&quot;npm&quot;</span>,
             <span class="macro">vec!</span>[
-                <span class="string">&quot;start&quot;</span>.<span class="ident">to_string</span>(),
-                <span class="macro">format!</span>(<span class="string">&quot;--prefix={}&quot;</span>, <span class="ident">package_directory</span>),
+                <span class="string">&quot;start&quot;</span>.to_string(),
+                <span class="macro">format!</span>(<span class="string">&quot;--prefix={}&quot;</span>, package_directory),
             ],
         ),
-        <span class="ident">Target::Shell</span> { <span class="ident">run_script</span>, .. } =&gt; <span class="ident">Cmd::new</span>(<span class="string">&quot;bash&quot;</span>, <span class="kw-2">&amp;</span>[<span class="string">&quot;-c&quot;</span>, <span class="ident">run_script</span>]),
+        Target::Shell { run_script, .. } =&gt; Cmd::new(<span class="string">&quot;bash&quot;</span>, [<span class="string">&quot;-c&quot;</span>, run_script]),
     }
 }
 
-<span class="kw">fn</span> <span class="ident">build_rust_binary</span>(<span class="ident">manifest_dir</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="ident">opt</span>: <span class="kw-2">&amp;</span><span class="ident">BuildServerOpt</span>) -&gt; <span class="ident">Step</span> {
-    <span class="ident">Step::Single</span> {
-        <span class="ident">name</span>: <span class="macro">format!</span>(<span class="string">&quot;build rust binary {}&quot;</span>, <span class="ident">manifest_dir</span>),
-        <span class="ident">command</span>: <span class="ident">Cmd::new</span>(
+<span class="kw">fn </span>build_rust_binary(manifest_dir: <span class="kw-2">&amp;</span>str, opt: <span class="kw-2">&amp;</span>BuildServerOpt) -&gt; Step {
+    Step::Single {
+        name: <span class="macro">format!</span>(<span class="string">&quot;build rust binary {}&quot;</span>, manifest_dir),
+        command: Cmd::new(
             <span class="string">&quot;cargo&quot;</span>,
             <span class="macro">spread!</span>[
-                ...<span class="kw">match</span> <span class="kw-2">&amp;</span><span class="ident">opt</span>.<span class="ident">server_rust_toolchain</span> {
-                    <span class="comment">// This overrides the toolchain used by `rustup` to invoke the actual</span>
-                    <span class="comment">// `cargo` binary.</span>
-                    <span class="comment">// See https://github.com/rust-lang/rustup#toolchain-override-shorthand</span>
-                    <span class="prelude-val">Some</span>(<span class="ident">server_rust_toolchain</span>) =&gt; <span class="macro">vec!</span>[<span class="macro">format!</span>(<span class="string">&quot;+{}&quot;</span>, <span class="ident">server_rust_toolchain</span>)],
-                    <span class="prelude-val">None</span> =&gt; <span class="macro">vec!</span>[],
+                ...<span class="kw">match </span><span class="kw-2">&amp;</span>opt.server_rust_toolchain {
+                    <span class="comment">// This overrides the toolchain used by `rustup` to invoke the actual
+                    // `cargo` binary.
+                    // See https://github.com/rust-lang/rustup#toolchain-override-shorthand
+                    </span><span class="prelude-val">Some</span>(server_rust_toolchain) =&gt; <span class="macro">vec!</span>[<span class="macro">format!</span>(<span class="string">&quot;+{}&quot;</span>, server_rust_toolchain)],
+                    <span class="prelude-val">None </span>=&gt; <span class="macro">vec!</span>[],
                 },
-                <span class="string">&quot;build&quot;</span>.<span class="ident">to_string</span>(),
-                <span class="macro">format!</span>(<span class="string">&quot;--manifest-path={}/Cargo.toml&quot;</span>, <span class="ident">manifest_dir</span>),
-                <span class="macro">format!</span>(<span class="string">&quot;--target={}&quot;</span>, <span class="ident">opt</span>.<span class="ident">server_rust_target</span>.<span class="ident">as_deref</span>().<span class="ident">unwrap_or</span>(<span class="ident">DEFAULT_SERVER_RUST_TARGET</span>)),
-                <span class="string">&quot;--release&quot;</span>.<span class="ident">to_string</span>(),
+                <span class="string">&quot;build&quot;</span>.to_string(),
+                <span class="macro">format!</span>(<span class="string">&quot;--manifest-path={}/Cargo.toml&quot;</span>, manifest_dir),
+                <span class="macro">format!</span>(<span class="string">&quot;--target={}&quot;</span>, opt.server_rust_target.as_deref().unwrap_or(DEFAULT_SERVER_RUST_TARGET)),
+                <span class="string">&quot;--release&quot;</span>.to_string(),
             ],
         ),
     }
 }
 </code></pre></div>
-</section><section id="search" class="content hidden"></section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="xtask" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.62.0-nightly (de1bc0008 2022-04-21)" ></div>
-</body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="xtask" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (81f391930 2022-10-09)" ></div></body></html>

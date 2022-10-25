@@ -1,9 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `xtask/src/internal.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>internal.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../ayu.css" disabled><link rel="stylesheet" type="text/css" href="../../dark.css" disabled><link rel="stylesheet" type="text/css" href="../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../storage.js"></script><script src="../../crates.js"></script><script defer src="../../main.js"></script><script defer src="../../source-script.js"></script><script defer src="../../source-files.js"></script>
-    <noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../xtask/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div>
-        </a><h2 class="location"></h2>
-    </nav>
-    <nav class="sidebar"><a class="sidebar-logo" href="../../xtask/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div>
-        </a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../xtask/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><div class="theme-picker hidden"><button id="theme-picker" aria-label="Pick another theme!" aria-haspopup="menu" title="themes"><img width="22" height="22" alt="Pick another theme!" src="../../brush.svg"></button><div id="theme-choices" role="menu"></div></div><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><button type="button" id="help-button" title="help">?</button><a id="settings-menu" href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../wheel.svg"></a></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `xtask/src/internal.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>internal.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" href="../../normalize.css"><link rel="stylesheet" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" href="../../ayu.css" disabled><link rel="stylesheet" href="../../dark.css" disabled><link rel="stylesheet" href="../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../storage.js"></script><script defer src="../../source-script.js"></script><script defer src="../../source-files.js"></script><script defer src="../../main.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><a class="sidebar-logo" href="../../xtask/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../xtask/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="src-line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -1023,54 +1018,46 @@
 <span id="1018">1018</span>
 <span id="1019">1019</span>
 <span id="1020">1020</span>
-<span id="1021">1021</span>
-<span id="1022">1022</span>
-<span id="1023">1023</span>
-<span id="1024">1024</span>
-<span id="1025">1025</span>
-<span id="1026">1026</span>
-<span id="1027">1027</span>
-<span id="1028">1028</span>
-</pre><pre class="rust"><code><span class="comment">//</span>
-<span class="comment">// Copyright 2020 The Project Oak Authors</span>
-<span class="comment">//</span>
-<span class="comment">// Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
-<span class="comment">// you may not use this file except in compliance with the License.</span>
-<span class="comment">// You may obtain a copy of the License at</span>
-<span class="comment">//</span>
-<span class="comment">//     http://www.apache.org/licenses/LICENSE-2.0</span>
-<span class="comment">//</span>
-<span class="comment">// Unless required by applicable law or agreed to in writing, software</span>
-<span class="comment">// distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
-<span class="comment">// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
-<span class="comment">// See the License for the specific language governing permissions and</span>
-<span class="comment">// limitations under the License.</span>
-<span class="comment">//</span>
+</pre><pre class="rust"><code><span class="comment">//
+// Copyright 2020 The Project Oak Authors
+//
+// Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
-<span class="kw">use</span> <span class="ident">async_recursion::async_recursion</span>;
-<span class="kw">use</span> <span class="ident">async_trait::async_trait</span>;
-<span class="kw">use</span> <span class="ident">clap</span>::{<span class="ident">Parser</span>, <span class="ident">Subcommand</span>};
-<span class="kw">use</span> <span class="ident">colored</span>::<span class="kw-2">*</span>;
-<span class="kw">use</span> <span class="ident">nix::sys::signal::Signal</span>;
-<span class="kw">use</span> <span class="ident">std</span>::{
-    <span class="ident">collections</span>::{<span class="ident">HashMap</span>, <span class="ident">HashSet</span>},
-    <span class="ident">path</span>::{<span class="ident">Path</span>, <span class="ident">PathBuf</span>},
-    <span class="ident">time::Instant</span>,
+</span><span class="kw">use </span>async_recursion::async_recursion;
+<span class="kw">use </span>async_trait::async_trait;
+<span class="kw">use </span>clap::{Parser, Subcommand};
+<span class="kw">use </span>colored::<span class="kw-2">*</span>;
+<span class="kw">use </span>nix::sys::signal::Signal;
+<span class="kw">use </span>std::{
+    collections::{HashMap, HashSet},
+    path::{Path, PathBuf},
+    time::Instant,
 };
-<span class="kw">use</span> <span class="ident">strum_macros::EnumIter</span>;
-<span class="kw">use</span> <span class="ident">tokio::io</span>::{<span class="ident">empty</span>, <span class="ident">AsyncRead</span>, <span class="ident">AsyncReadExt</span>};
+<span class="kw">use </span>strum_macros::EnumIter;
+<span class="kw">use </span>tokio::io::{empty, AsyncRead, AsyncReadExt};
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Parser</span>, <span class="ident">Clone</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Opt</span> {
-    <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">long</span>, <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;do not execute commands&quot;</span>)]</span>
-    <span class="ident">dry_run</span>: <span class="ident">bool</span>,
-    <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">long</span>, <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;show logs of commands&quot;</span>)]</span>
-    <span class="ident">logs</span>: <span class="ident">bool</span>,
-    <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">long</span>, <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;continue execution after error&quot;</span>)]</span>
-    <span class="ident">keep_going</span>: <span class="ident">bool</span>,
-    <span class="attribute">#[<span class="ident">clap</span>(
-        <span class="ident">long</span>,
-        <span class="ident">help</span> <span class="op">=</span> <span class="string">r#&quot;Scope of the command [all, commits:&lt;count&gt;, diff_to_main].
+<span class="attribute">#[derive(Parser, Clone)]
+</span><span class="kw">pub struct </span>Opt {
+    <span class="attribute">#[arg(long, help = <span class="string">&quot;do not execute commands&quot;</span>)]
+    </span>dry_run: bool,
+    <span class="attribute">#[arg(long, help = <span class="string">&quot;show logs of commands&quot;</span>)]
+    </span>logs: bool,
+    <span class="attribute">#[arg(long, help = <span class="string">&quot;continue execution after error&quot;</span>)]
+    </span>keep_going: bool,
+    <span class="attribute">#[arg(
+        long,
+        help = <span class="string">r#&quot;Scope of the command [all, commits:&lt;count&gt;, diff_to_main].
         all: The command is run for all relevant files.
         commits:&lt;count&gt;: The command is run only for the files modified in the last number of
         commits given in &lt;count&gt;, as well as the files affected by them. All tracked files
@@ -1078,987 +1065,978 @@
         not staged yet. &lt;count&gt; must be positive.
         diff_to_main: Similar to commits:&lt;count&gt;, except that the diff to main is used for
         identifying the set of modified files, instead of using a number of commits.&quot;#</span>,
-        <span class="ident">default_value</span> <span class="op">=</span> <span class="string">&quot;diff_to_main&quot;</span>
-    )]</span>
-    <span class="kw">pub</span> <span class="ident">scope</span>: <span class="ident">Scope</span>,
-    <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">subcommand</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">cmd</span>: <span class="ident">Command</span>,
+        default_value = <span class="string">&quot;diff_to_main&quot;
+    </span>)]
+    </span><span class="kw">pub </span>scope: Scope,
+    <span class="attribute">#[command(subcommand)]
+    </span><span class="kw">pub </span>cmd: Command,
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Subcommand</span>, <span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">Command</span> {
-    <span class="ident">RunLauncherTest</span>,
-    <span class="ident">BuildBaremetalVariants</span>(<span class="ident">BuildBaremetalVariantsOpt</span>),
-    <span class="ident">RunOakFunctionsExamples</span>(<span class="ident">RunOakExamplesOpt</span>),
-    <span class="ident">BuildOakFunctionsExample</span>(<span class="ident">RunOakExamplesOpt</span>),
-    <span class="ident">BuildOakFunctionsServerVariants</span>(<span class="ident">BuildServerOpt</span>),
-    <span class="ident">Format</span>,
-    <span class="ident">CheckFormat</span>,
-    <span class="ident">RunTests</span>,
-    <span class="ident">RunCargoClippy</span>,
-    <span class="ident">RunCargoTests</span>(<span class="ident">RunTestsOpt</span>),
-    <span class="ident">RunBazelTests</span>,
-    <span class="ident">RunCargoFuzz</span>(<span class="ident">RunCargoFuzz</span>),
-    <span class="ident">RunCargoDeny</span>,
-    <span class="ident">RunCargoUdeps</span>,
-    <span class="ident">RunCi</span>,
-    <span class="ident">RunCargoClean</span>,
-    <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">about</span> <span class="op">=</span> <span class="string">&quot;generate bash completion script to stdout&quot;</span>)]</span>
-    <span class="ident">Completion</span>(<span class="ident">Completion</span>),
-    <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">about</span> <span class="op">=</span> <span class="string">&quot;example running Trusted Shuffler forward a HTTP request&quot;</span>)]</span>
-    <span class="ident">RunTrustedShuffler</span>,
-    <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">about</span> <span class="op">=</span> <span class="string">&quot;example running Trusted Shuffler forward a gRPC request&quot;</span>)]</span>
-    <span class="ident">RunTrustedShufflerGrpc</span>,
+<span class="attribute">#[derive(Subcommand, Clone, Debug)]
+</span><span class="kw">pub enum </span>Command {
+    RunLauncherTest,
+    BuildBaremetalVariants(BuildBaremetalVariantsOpt),
+    RunOakFunctionsExamples(RunOakExamplesOpt),
+    BuildOakFunctionsExample(RunOakExamplesOpt),
+    BuildOakFunctionsServerVariants(BuildServerOpt),
+    Format,
+    CheckFormat,
+    RunTests,
+    RunCargoClippy,
+    RunCargoTests(RunTestsOpt),
+    RunBazelTests,
+    RunCargoFuzz(RunCargoFuzz),
+    RunCargoDeny,
+    RunCargoUdeps,
+    RunCi,
+    RunCargoClean,
+    <span class="attribute">#[command(about = <span class="string">&quot;generate bash completion script to stdout&quot;</span>)]
+    </span>Completion(Completion),
+    <span class="attribute">#[command(about = <span class="string">&quot;example running Trusted Shuffler forward a HTTP request&quot;</span>)]
+    </span>RunTrustedShuffler,
+    <span class="attribute">#[command(about = <span class="string">&quot;example running Trusted Shuffler forward a gRPC request&quot;</span>)]
+    </span>RunTrustedShufflerGrpc,
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Parser</span>, <span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Completion</span> {
-    <span class="attribute">#[<span class="ident">clap</span>(
-        <span class="ident">long</span>,
-        <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;file name to write xtask_bash_completion with full path; defaults to .xtask_bash_completion in current directory&quot;</span>,
-        <span class="ident">default_value</span> <span class="op">=</span> <span class="string">&quot;.xtask_bash_completion&quot;</span>,
-        <span class="ident">parse</span>(<span class="ident">from_os_str</span>)
-    )]</span>
-    <span class="kw">pub</span> <span class="ident">file_name</span>: <span class="ident">PathBuf</span>,
+<span class="attribute">#[derive(Parser, Clone, Debug)]
+</span><span class="kw">pub struct </span>Completion {
+    <span class="attribute">#[arg(
+        long,
+        help = <span class="string">&quot;file name to write xtask_bash_completion with full path; defaults to .xtask_bash_completion in current directory&quot;</span>,
+        default_value = <span class="string">&quot;.xtask_bash_completion&quot;
+    </span>)]
+    </span><span class="kw">pub </span>file_name: PathBuf,
 }
 
-<span class="doccomment">/// Holds the options for running the example.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Parser</span>, <span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">RunOakExamplesOpt</span> {
-    <span class="attribute">#[<span class="ident">clap</span>(
-        <span class="ident">long</span>,
-        <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;application variant: [rust, cpp]&quot;</span>,
-        <span class="ident">default_value</span> <span class="op">=</span> <span class="string">&quot;rust&quot;</span>
-    )]</span>
-    <span class="kw">pub</span> <span class="ident">application_variant</span>: <span class="ident">String</span>,
-    <span class="comment">// TODO(#396): Clarify the name and type of this, currently it is not very intuitive.</span>
-    <span class="attribute">#[<span class="ident">clap</span>(
-        <span class="ident">long</span>,
-        <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;name of a single example to run; if unset, run all the examples&quot;</span>
-    )]</span>
-    <span class="kw">pub</span> <span class="ident">example_name</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
-    <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">flatten</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">build_client</span>: <span class="ident">BuildClient</span>,
-    <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">flatten</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">build_server</span>: <span class="ident">BuildServerOpt</span>,
-    <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">long</span>, <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;run server [default: true]&quot;</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">run_server</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">bool</span><span class="op">&gt;</span>,
-    <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">long</span>, <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;additional arguments to pass to clients&quot;</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">client_additional_args</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
-    <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">long</span>, <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;additional arguments to pass to server&quot;</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">server_additional_args</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
-    <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">long</span>, <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;build a Docker image for the examples&quot;</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">build_docker</span>: <span class="ident">bool</span>,
+<span class="doccomment">/// Holds the options for running the example.
+</span><span class="attribute">#[derive(Parser, Clone, Debug)]
+</span><span class="kw">pub struct </span>RunOakExamplesOpt {
+    <span class="attribute">#[arg(
+        long,
+        help = <span class="string">&quot;application variant: [rust, cpp]&quot;</span>,
+        default_value = <span class="string">&quot;rust&quot;
+    </span>)]
+    </span><span class="kw">pub </span>application_variant: String,
+    <span class="comment">// TODO(#396): Clarify the name and type of this, currently it is not very intuitive.
+    </span><span class="attribute">#[arg(
+        long,
+        help = <span class="string">&quot;name of a single example to run; if unset, run all the examples&quot;
+    </span>)]
+    </span><span class="kw">pub </span>example_name: <span class="prelude-ty">Option</span>&lt;String&gt;,
+    <span class="attribute">#[command(flatten)]
+    </span><span class="kw">pub </span>build_client: BuildClient,
+    <span class="attribute">#[command(flatten)]
+    </span><span class="kw">pub </span>build_server: BuildServerOpt,
+    <span class="attribute">#[arg(long, help = <span class="string">&quot;run server [default: true]&quot;</span>)]
+    </span><span class="kw">pub </span>run_server: <span class="prelude-ty">Option</span>&lt;bool&gt;,
+    <span class="attribute">#[arg(long, help = <span class="string">&quot;additional arguments to pass to clients&quot;</span>)]
+    </span><span class="kw">pub </span>client_additional_args: Vec&lt;String&gt;,
+    <span class="attribute">#[arg(long, help = <span class="string">&quot;additional arguments to pass to server&quot;</span>)]
+    </span><span class="kw">pub </span>server_additional_args: Vec&lt;String&gt;,
+    <span class="attribute">#[arg(long, help = <span class="string">&quot;build a Docker image for the examples&quot;</span>)]
+    </span><span class="kw">pub </span>build_docker: bool,
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">PartialEq</span>)]</span>
+<span class="attribute">#[derive(Clone, Debug, PartialEq)]
 
-<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">Scope</span> {
-    <span class="comment">// The entire code base.</span>
-    <span class="ident">All</span>,
-    <span class="comment">// Parts of the code base, affected by the changes in the diff between this branch and main.</span>
-    <span class="ident">DiffToMain</span>,
-    <span class="comment">// Parts of the code base, affected by the changes in the specified commits.</span>
-    <span class="ident">Commits</span>(<span class="ident">u8</span>),
+</span><span class="kw">pub enum </span>Scope {
+    <span class="comment">// The entire code base.
+    </span>All,
+    <span class="comment">// Parts of the code base, affected by the changes in the diff between this branch and main.
+    </span>DiffToMain,
+    <span class="comment">// Parts of the code base, affected by the changes in the specified commits.
+    </span>Commits(u8),
 }
 
-<span class="kw">impl</span> <span class="ident">std::str::FromStr</span> <span class="kw">for</span> <span class="ident">Scope</span> {
-    <span class="kw">type</span> <span class="prelude-val">Err</span> <span class="op">=</span> <span class="ident">String</span>;
-    <span class="kw">fn</span> <span class="ident">from_str</span>(<span class="ident">scope</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident"><span class="self">Self</span>::Err</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">commits_pattern</span> <span class="op">=</span> <span class="ident">regex::Regex::new</span>(<span class="string">r&quot;commits:(\d+)&quot;</span>).<span class="ident">unwrap</span>();
-        <span class="kw">match</span> <span class="ident">scope</span> {
-            <span class="string">&quot;all&quot;</span> =&gt; <span class="prelude-val">Ok</span>(<span class="ident"><span class="self">Self</span>::All</span>),
-            <span class="string">&quot;diff_to_main&quot;</span> =&gt; <span class="prelude-val">Ok</span>(<span class="ident"><span class="self">Self</span>::DiffToMain</span>),
-            <span class="ident">scope</span> =&gt; <span class="kw">match</span> <span class="ident">commits_pattern</span>.<span class="ident">captures</span>(<span class="ident">scope</span>) {
-                <span class="prelude-val">Some</span>(<span class="ident">groups</span>) =&gt; {
-                    <span class="kw">let</span> <span class="ident">commits_count</span> <span class="op">=</span> <span class="ident">groups</span>
-                        .<span class="ident">get</span>(<span class="number">1</span>)
-                        .<span class="ident">ok_or</span>(<span class="macro">format!</span>(<span class="string">&quot;Failed to parse commits {}&quot;</span>, <span class="ident">scope</span>))<span class="question-mark">?</span>
-                        .<span class="ident">as_str</span>()
-                        .<span class="ident">to_string</span>();
-                    <span class="kw">let</span> <span class="ident">count</span> <span class="op">=</span> <span class="ident">commits_count</span>
-                        .<span class="ident">parse</span>::<span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>()
-                        .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> <span class="macro">format!</span>(<span class="string">&quot;Could not parse to u8 {:?}&quot;</span>, <span class="ident">err</span>))<span class="question-mark">?</span>;
-                    <span class="prelude-val">Ok</span>(<span class="ident"><span class="self">Self</span>::Commits</span>(<span class="ident">count</span>))
+<span class="kw">impl </span>std::str::FromStr <span class="kw">for </span>Scope {
+    <span class="kw">type </span><span class="prelude-val">Err </span>= String;
+    <span class="kw">fn </span>from_str(scope: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="self">Self</span>::Err&gt; {
+        <span class="kw">let </span>commits_pattern = regex::Regex::new(<span class="string">r&quot;commits:(\d+)&quot;</span>).unwrap();
+        <span class="kw">match </span>scope {
+            <span class="string">&quot;all&quot; </span>=&gt; <span class="prelude-val">Ok</span>(<span class="self">Self</span>::All),
+            <span class="string">&quot;diff_to_main&quot; </span>=&gt; <span class="prelude-val">Ok</span>(<span class="self">Self</span>::DiffToMain),
+            scope =&gt; <span class="kw">match </span>commits_pattern.captures(scope) {
+                <span class="prelude-val">Some</span>(groups) =&gt; {
+                    <span class="kw">let </span>commits_count = groups
+                        .get(<span class="number">1</span>)
+                        .ok_or(<span class="macro">format!</span>(<span class="string">&quot;Failed to parse commits {}&quot;</span>, scope))<span class="question-mark">?
+                        </span>.as_str()
+                        .to_string();
+                    <span class="kw">let </span>count = commits_count
+                        .parse::&lt;u8&gt;()
+                        .map_err(|err| <span class="macro">format!</span>(<span class="string">&quot;Could not parse to u8 {:?}&quot;</span>, err))<span class="question-mark">?</span>;
+                    <span class="prelude-val">Ok</span>(<span class="self">Self</span>::Commits(count))
                 }
-                <span class="prelude-val">None</span> =&gt; <span class="prelude-val">Err</span>(<span class="macro">format!</span>(<span class="string">&quot;Failed to parse scope {}&quot;</span>, <span class="ident">scope</span>)),
+                <span class="prelude-val">None </span>=&gt; <span class="prelude-val">Err</span>(<span class="macro">format!</span>(<span class="string">&quot;Failed to parse scope {}&quot;</span>, scope)),
             },
         }
     }
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Parser</span>, <span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">BuildClient</span> {
-    <span class="attribute">#[<span class="ident">clap</span>(
-        <span class="ident">long</span>,
-        <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;client variant: [all, rust, cpp, go, nodejs, none] [default: all]&quot;</span>,
-        <span class="ident">default_value</span> <span class="op">=</span> <span class="string">&quot;all&quot;</span>
-    )]</span>
-    <span class="kw">pub</span> <span class="ident">client_variant</span>: <span class="ident">String</span>,
-    <span class="attribute">#[<span class="ident">clap</span>(
-        <span class="ident">long</span>,
-        <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;rust toolchain override to use for the client compilation [e.g. stable, nightly, stage2]&quot;</span>
-    )]</span>
-    <span class="kw">pub</span> <span class="ident">client_rust_toolchain</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
-    <span class="attribute">#[<span class="ident">clap</span>(
-        <span class="ident">long</span>,
-        <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;rust target to use for the client compilation [e.g. x86_64-unknown-linux-gnu, x86_64-unknown-linux-musl, x86_64-apple-darwin]&quot;</span>
-    )]</span>
-    <span class="kw">pub</span> <span class="ident">client_rust_target</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
+<span class="attribute">#[derive(Parser, Clone, Debug)]
+</span><span class="kw">pub struct </span>BuildClient {
+    <span class="attribute">#[arg(
+        long,
+        help = <span class="string">&quot;client variant: [all, rust, cpp, go, nodejs, none] [default: all]&quot;</span>,
+        default_value = <span class="string">&quot;all&quot;
+    </span>)]
+    </span><span class="kw">pub </span>client_variant: String,
+    <span class="attribute">#[arg(
+        long,
+        help = <span class="string">&quot;rust toolchain override to use for the client compilation [e.g. stable, nightly, stage2]&quot;
+    </span>)]
+    </span><span class="kw">pub </span>client_rust_toolchain: <span class="prelude-ty">Option</span>&lt;String&gt;,
+    <span class="attribute">#[arg(
+        long,
+        help = <span class="string">&quot;rust target to use for the client compilation [e.g. x86_64-unknown-linux-gnu, x86_64-unknown-linux-musl, x86_64-apple-darwin]&quot;
+    </span>)]
+    </span><span class="kw">pub </span>client_rust_target: <span class="prelude-ty">Option</span>&lt;String&gt;,
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">serde::Deserialize</span>, <span class="ident">Debug</span>, <span class="ident">Clone</span>, <span class="ident">PartialEq</span>, <span class="ident">EnumIter</span>)]</span>
-<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">ServerVariant</span> {
-    <span class="doccomment">/// Production-like server variant, without logging or any of the experimental features enabled</span>
-    <span class="ident">Base</span>,
-    <span class="doccomment">/// Debug server with logging and experimental features enabled</span>
-    <span class="ident">Unsafe</span>,
+<span class="attribute">#[derive(serde::Deserialize, Debug, Clone, PartialEq, EnumIter)]
+</span><span class="kw">pub enum </span>ServerVariant {
+    <span class="doccomment">/// Production-like server variant, without logging or any of the experimental features enabled
+    </span>Base,
 }
 
-<span class="kw">impl</span> <span class="ident">Default</span> <span class="kw">for</span> <span class="ident">ServerVariant</span> {
-    <span class="kw">fn</span> <span class="ident">default</span>() -&gt; <span class="self">Self</span> {
-        <span class="ident">ServerVariant::Base</span>
+<span class="kw">impl </span>Default <span class="kw">for </span>ServerVariant {
+    <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
+        ServerVariant::Base
     }
 }
 
-<span class="kw">impl</span> <span class="ident">std::str::FromStr</span> <span class="kw">for</span> <span class="ident">ServerVariant</span> {
-    <span class="kw">type</span> <span class="prelude-val">Err</span> <span class="op">=</span> <span class="ident">String</span>;
-    <span class="kw">fn</span> <span class="ident">from_str</span>(<span class="ident">variant</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident"><span class="self">Self</span>::Err</span><span class="op">&gt;</span> {
-        <span class="kw">match</span> <span class="ident">variant</span> {
-            <span class="string">&quot;base&quot;</span> =&gt; <span class="prelude-val">Ok</span>(<span class="ident">ServerVariant::Base</span>),
-            <span class="string">&quot;unsafe&quot;</span> =&gt; <span class="prelude-val">Ok</span>(<span class="ident">ServerVariant::Unsafe</span>),
-            <span class="kw">_</span> =&gt; <span class="prelude-val">Err</span>(<span class="macro">format!</span>(
+<span class="kw">impl </span>std::str::FromStr <span class="kw">for </span>ServerVariant {
+    <span class="kw">type </span><span class="prelude-val">Err </span>= String;
+    <span class="kw">fn </span>from_str(variant: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="self">Self</span>::Err&gt; {
+        <span class="kw">match </span>variant {
+            <span class="string">&quot;base&quot; </span>=&gt; <span class="prelude-val">Ok</span>(ServerVariant::Base),
+            <span class="kw">_ </span>=&gt; <span class="prelude-val">Err</span>(<span class="macro">format!</span>(
                 <span class="string">&quot;Failed to parse functions server variant {}&quot;</span>,
-                <span class="ident">variant</span>
+                variant
             )),
         }
     }
 }
 
-<span class="kw">impl</span> <span class="ident">ServerVariant</span> {
-    <span class="comment">// Get path to manifest for the variant.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">path_to_manifest</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span> {
-        <span class="kw">match</span> <span class="self">self</span> {
-            <span class="ident">ServerVariant::Base</span> =&gt; <span class="string">&quot;./oak_functions/oak_functions_loader_base&quot;</span>,
-            <span class="ident">ServerVariant::Unsafe</span> =&gt; <span class="string">&quot;./oak_functions/oak_functions_loader_unsafe&quot;</span>,
+<span class="kw">impl </span>ServerVariant {
+    <span class="comment">// Get path to manifest for the variant.
+    </span><span class="kw">pub fn </span>path_to_manifest(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str {
+        <span class="kw">match </span><span class="self">self </span>{
+            ServerVariant::Base =&gt; <span class="string">&quot;./oak_functions_launcher&quot;</span>,
         }
     }
 
-    <span class="doccomment">/// Get path to the executable server binary for the server variant.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">path_to_executable</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span> {
-        <span class="kw">match</span> <span class="self">self</span> {
-            <span class="ident">ServerVariant::Base</span> =&gt; {
-                <span class="string">&quot;./target/x86_64-unknown-linux-musl/release/oak_functions_loader_base&quot;</span>
-            }
-            <span class="ident">ServerVariant::Unsafe</span> =&gt; {
-                <span class="string">&quot;./target/x86_64-unknown-linux-musl/release/oak_functions_loader_unsafe&quot;</span>
-            }
+    <span class="doccomment">/// Get path to the executable server binary for the server variant.
+    </span><span class="kw">pub fn </span>path_to_executable(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str {
+        <span class="kw">match </span><span class="self">self </span>{
+            ServerVariant::Base =&gt; {
+                <span class="string">&quot;./target/x86_64-unknown-linux-musl/release/oak_functions_launcher&quot;
+            </span>}
         }
     }
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Parser</span>, <span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">BuildServerOpt</span> {
-    <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">long</span>, <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;server variant: [base, unsafe]&quot;</span>, <span class="ident">default_value</span> <span class="op">=</span> <span class="string">&quot;base&quot;</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">server_variant</span>: <span class="ident">ServerVariant</span>,
-    <span class="attribute">#[<span class="ident">clap</span>(
-        <span class="ident">long</span>,
-        <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;rust toolchain override to use for the server compilation [e.g. stable, nightly, stage2]&quot;</span>
-    )]</span>
-    <span class="kw">pub</span> <span class="ident">server_rust_toolchain</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
-    <span class="attribute">#[<span class="ident">clap</span>(
-        <span class="ident">long</span>,
-        <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;rust target to use for the server compilation [e.g. x86_64-unknown-linux-gnu, x86_64-unknown-linux-musl, x86_64-apple-darwin]&quot;</span>
-    )]</span>
-    <span class="kw">pub</span> <span class="ident">server_rust_target</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
+<span class="attribute">#[derive(Parser, Clone, Debug)]
+</span><span class="kw">pub struct </span>BuildServerOpt {
+    <span class="attribute">#[arg(long, help = <span class="string">&quot;server variant: [base, unsafe]&quot;</span>, default_value = <span class="string">&quot;base&quot;</span>)]
+    </span><span class="kw">pub </span>server_variant: ServerVariant,
+    <span class="attribute">#[arg(
+        long,
+        help = <span class="string">&quot;rust toolchain override to use for the server compilation [e.g. stable, nightly, stage2]&quot;
+    </span>)]
+    </span><span class="kw">pub </span>server_rust_toolchain: <span class="prelude-ty">Option</span>&lt;String&gt;,
+    <span class="attribute">#[arg(
+        long,
+        help = <span class="string">&quot;rust target to use for the server compilation [e.g. x86_64-unknown-linux-gnu, x86_64-unknown-linux-musl, x86_64-apple-darwin]&quot;
+    </span>)]
+    </span><span class="kw">pub </span>server_rust_target: <span class="prelude-ty">Option</span>&lt;String&gt;,
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Parser</span>, <span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">RunTestsOpt</span> {
-    <span class="attribute">#[<span class="ident">clap</span>(
-        <span class="ident">long</span>,
-        <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;Remove generated files after running tests for each crate&quot;</span>
-    )]</span>
-    <span class="kw">pub</span> <span class="ident">cleanup</span>: <span class="ident">bool</span>,
+<span class="attribute">#[derive(Parser, Clone, Debug)]
+</span><span class="kw">pub struct </span>RunTestsOpt {
+    <span class="attribute">#[arg(
+        long,
+        help = <span class="string">&quot;Remove generated files after running tests for each crate&quot;
+    </span>)]
+    </span><span class="kw">pub </span>cleanup: bool,
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Parser</span>, <span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">RunCargoFuzz</span> {
-    <span class="attribute">#[<span class="ident">clap</span>(
-        <span class="ident">long</span>,
-        <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;name of a specific crate with fuzz-target. If not specified, runs all fuzz targets for all crates.&quot;</span>
-    )]</span>
-    <span class="kw">pub</span> <span class="ident">crate_name</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
-    <span class="attribute">#[<span class="ident">clap</span>(
-        <span class="ident">long</span>,
-        <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;name of a specific fuzz-target. If not specified, runs all fuzz targets.&quot;</span>,
-        <span class="ident">requires</span>(<span class="string">&quot;crate-name&quot;</span>)
-    )]</span>
-    <span class="kw">pub</span> <span class="ident">target_name</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
-    <span class="doccomment">/// Additional `libFuzzer` arguments passed through to the binary</span>
-    <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">last</span>(<span class="bool-val">true</span>))]</span>
-    <span class="kw">pub</span> <span class="ident">args</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
+<span class="attribute">#[derive(Parser, Clone, Debug)]
+</span><span class="kw">pub struct </span>RunCargoFuzz {
+    <span class="attribute">#[arg(
+        long,
+        help = <span class="string">&quot;name of a specific crate with fuzz-target. If not specified, runs all fuzz targets for all crates.&quot;
+    </span>)]
+    </span><span class="kw">pub </span>crate_name: <span class="prelude-ty">Option</span>&lt;String&gt;,
+    <span class="attribute">#[arg(
+        long,
+        help = <span class="string">&quot;name of a specific fuzz-target. If not specified, runs all fuzz targets.&quot;</span>,
+        requires(<span class="string">&quot;crate_name&quot;</span>)
+    )]
+    </span><span class="kw">pub </span>target_name: <span class="prelude-ty">Option</span>&lt;String&gt;,
+    <span class="doccomment">/// Additional `libFuzzer` arguments passed through to the binary
+    </span><span class="attribute">#[arg(last(<span class="bool-val">true</span>))]
+    </span><span class="kw">pub </span>args: Vec&lt;String&gt;,
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Parser</span>, <span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">BuildBaremetalVariantsOpt</span> {
-    <span class="attribute">#[<span class="ident">clap</span>(
-        <span class="ident">long</span>,
-        <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;name of a specific baremetal variant (qemu, or crosvm). If not specified, builds all variants.&quot;</span>
-    )]</span>
-    <span class="kw">pub</span> <span class="ident">variant</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
+<span class="attribute">#[derive(Parser, Clone, Debug)]
+</span><span class="kw">pub struct </span>BuildBaremetalVariantsOpt {
+    <span class="attribute">#[arg(
+        long,
+        help = <span class="string">&quot;name of a specific baremetal variant (qemu, or crosvm). If not specified, builds all variants.&quot;
+    </span>)]
+    </span><span class="kw">pub </span>variant: <span class="prelude-ty">Option</span>&lt;String&gt;,
 }
 
-<span class="doccomment">/// Partial representation of Cargo manifest files.</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// Only the fields that are required for extracting specific information (e.g., names of fuzz</span>
-<span class="doccomment">/// targets) are included.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">serde::Deserialize</span>, <span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">CargoManifest</span> {
-    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">bin</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">CargoBinary</span><span class="op">&gt;</span>,
-    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">dependencies</span>: <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">Dependency</span><span class="op">&gt;</span>,
-    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span>)]</span>
-    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">rename</span> <span class="op">=</span> <span class="string">&quot;dev-dependencies&quot;</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">dev_dependencies</span>: <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">Dependency</span><span class="op">&gt;</span>,
-    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span>)]</span>
-    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">rename</span> <span class="op">=</span> <span class="string">&quot;build-dependencies&quot;</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">build_dependencies</span>: <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">Dependency</span><span class="op">&gt;</span>,
+<span class="doccomment">/// Partial representation of Cargo manifest files.
+///
+/// Only the fields that are required for extracting specific information (e.g., names of fuzz
+/// targets) are included.
+</span><span class="attribute">#[derive(serde::Deserialize, Debug)]
+</span><span class="kw">pub struct </span>CargoManifest {
+    <span class="attribute">#[serde(default)]
+    </span><span class="kw">pub </span>bin: Vec&lt;CargoBinary&gt;,
+    <span class="attribute">#[serde(default)]
+    </span><span class="kw">pub </span>dependencies: HashMap&lt;String, Dependency&gt;,
+    <span class="attribute">#[serde(default)]
+    #[serde(rename = <span class="string">&quot;dev-dependencies&quot;</span>)]
+    </span><span class="kw">pub </span>dev_dependencies: HashMap&lt;String, Dependency&gt;,
+    <span class="attribute">#[serde(default)]
+    #[serde(rename = <span class="string">&quot;build-dependencies&quot;</span>)]
+    </span><span class="kw">pub </span>build_dependencies: HashMap&lt;String, Dependency&gt;,
 }
 
-<span class="doccomment">/// Partial information about a Cargo binary, as included in a Cargo manifest.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">serde::Deserialize</span>, <span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">CargoBinary</span> {
-    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">name</span>: <span class="ident">String</span>,
+<span class="doccomment">/// Partial information about a Cargo binary, as included in a Cargo manifest.
+</span><span class="attribute">#[derive(serde::Deserialize, Debug)]
+</span><span class="kw">pub struct </span>CargoBinary {
+    <span class="attribute">#[serde(default)]
+    </span><span class="kw">pub </span>name: String,
 }
 
-<span class="doccomment">/// Partial representation of a dependency in a `Cargo.toml` file.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">serde::Deserialize</span>, <span class="ident">Debug</span>, <span class="ident">PartialEq</span>, <span class="ident">PartialOrd</span>)]</span>
-<span class="attribute">#[<span class="ident">serde</span>(<span class="ident">untagged</span>)]</span>
-<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">Dependency</span> {
-    <span class="doccomment">/// Plaintext specification of a dependency with only the version number.</span>
-    <span class="ident">Text</span>(<span class="ident">String</span>),
-    <span class="doccomment">/// Json specification of a dependency.</span>
-    <span class="ident">Json</span>(<span class="ident">DependencySpec</span>),
+<span class="doccomment">/// Partial representation of a dependency in a `Cargo.toml` file.
+</span><span class="attribute">#[derive(serde::Deserialize, Debug, PartialEq, PartialOrd)]
+#[serde(untagged)]
+</span><span class="kw">pub enum </span>Dependency {
+    <span class="doccomment">/// Plaintext specification of a dependency with only the version number.
+    </span>Text(String),
+    <span class="doccomment">/// Json specification of a dependency.
+    </span>Json(DependencySpec),
 }
 
-<span class="doccomment">/// Partial representation of a Json specification of a dependency in a `Cargo.toml` file.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">serde::Deserialize</span>, <span class="ident">Debug</span>, <span class="ident">PartialEq</span>, <span class="ident">PartialOrd</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">DependencySpec</span> {
-    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">path</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
+<span class="doccomment">/// Partial representation of a Json specification of a dependency in a `Cargo.toml` file.
+</span><span class="attribute">#[derive(serde::Deserialize, Debug, PartialEq, PartialOrd)]
+</span><span class="kw">pub struct </span>DependencySpec {
+    <span class="attribute">#[serde(default)]
+    </span><span class="kw">pub </span>path: <span class="prelude-ty">Option</span>&lt;String&gt;,
 }
 
-<span class="kw">impl</span> <span class="ident">CargoManifest</span> {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">all_dependencies_with_toml_path</span>(<span class="self">self</span>) -&gt; <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">all_deps</span> <span class="op">=</span> <span class="macro">vec!</span>[
-            <span class="self">self</span>.<span class="ident">dependencies</span>.<span class="ident">into_values</span>().<span class="ident">collect</span>(),
-            <span class="self">self</span>.<span class="ident">dev_dependencies</span>.<span class="ident">into_values</span>().<span class="ident">collect</span>(),
-            <span class="self">self</span>.<span class="ident">build_dependencies</span>.<span class="ident">into_values</span>().<span class="ident">collect</span>(),
+<span class="kw">impl </span>CargoManifest {
+    <span class="kw">pub fn </span>all_dependencies_with_toml_path(<span class="self">self</span>) -&gt; Vec&lt;String&gt; {
+        <span class="kw">let </span>all_deps = <span class="macro">vec!</span>[
+            <span class="self">self</span>.dependencies.into_values().collect(),
+            <span class="self">self</span>.dev_dependencies.into_values().collect(),
+            <span class="self">self</span>.build_dependencies.into_values().collect(),
         ];
-        <span class="kw">let</span> <span class="ident">all_deps</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Dependency</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">itertools::concat</span>(<span class="ident">all_deps</span>);
+        <span class="kw">let </span>all_deps: Vec&lt;Dependency&gt; = itertools::concat(all_deps);
 
-        <span class="comment">// Collect all the dependencies that specify a path.</span>
-        <span class="ident">all_deps</span>
-            .<span class="ident">iter</span>()
-            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">dep</span><span class="op">|</span> <span class="kw">match</span> <span class="ident">dep</span> {
-                <span class="ident">Dependency::Json</span>(<span class="ident">spec</span>) =&gt; <span class="ident">spec</span>.<span class="ident">path</span>.<span class="ident">clone</span>(),
-                <span class="ident">Dependency::Text</span>(<span class="kw">_</span>) =&gt; <span class="prelude-val">None</span>,
+        <span class="comment">// Collect all the dependencies that specify a path.
+        </span>all_deps
+            .iter()
+            .map(|dep| <span class="kw">match </span>dep {
+                Dependency::Json(spec) =&gt; spec.path.clone(),
+                Dependency::Text(<span class="kw">_</span>) =&gt; <span class="prelude-val">None</span>,
             })
-            .<span class="ident">filter</span>(<span class="op">|</span><span class="ident">path</span><span class="op">|</span> <span class="ident">path</span>.<span class="ident">is_some</span>())
-            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">path</span><span class="op">|</span> {
-                <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">path</span> <span class="op">=</span> <span class="ident">PathBuf::from</span>(<span class="ident">path</span>.<span class="ident">unwrap</span>());
-                <span class="ident">path</span>.<span class="ident">push</span>(<span class="string">&quot;Cargo.toml&quot;</span>);
-                <span class="ident">path</span>.<span class="ident">to_str</span>().<span class="ident">unwrap</span>().<span class="ident">to_string</span>()
+            .filter(|path| path.is_some())
+            .map(|path| {
+                <span class="kw">let </span><span class="kw-2">mut </span>path = PathBuf::from(path.unwrap());
+                path.push(<span class="string">&quot;Cargo.toml&quot;</span>);
+                path.to_str().unwrap().to_string()
             })
-            .<span class="ident">collect</span>()
+            .collect()
     }
 }
 
-<span class="doccomment">/// Struct representing config files for fuzzing.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">serde::Deserialize</span>, <span class="ident">Debug</span>)]</span>
-<span class="attribute">#[<span class="ident">serde</span>(<span class="ident">deny_unknown_fields</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">FuzzConfig</span> {
-    <span class="kw">pub</span> <span class="ident">examples</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">FuzzableExample</span><span class="op">&gt;</span>,
+<span class="doccomment">/// Struct representing config files for fuzzing.
+</span><span class="attribute">#[derive(serde::Deserialize, Debug)]
+#[serde(deny_unknown_fields)]
+</span><span class="kw">pub struct </span>FuzzConfig {
+    <span class="kw">pub </span>examples: Vec&lt;FuzzableExample&gt;,
 }
 
-<span class="doccomment">/// Config for building an example for fuzzing.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">serde::Deserialize</span>, <span class="ident">Debug</span>)]</span>
-<span class="attribute">#[<span class="ident">serde</span>(<span class="ident">deny_unknown_fields</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">FuzzableExample</span> {
-    <span class="doccomment">/// Name of the example</span>
-    <span class="kw">pub</span> <span class="ident">name</span>: <span class="ident">String</span>,
-    <span class="doccomment">/// Path to the Cargo.toml file for the example.</span>
-    <span class="kw">pub</span> <span class="ident">manifest_path</span>: <span class="ident">String</span>,
-    <span class="doccomment">/// Path to desired location of the .wasm file.</span>
-    <span class="kw">pub</span> <span class="ident">out_dir</span>: <span class="ident">String</span>,
+<span class="doccomment">/// Config for building an example for fuzzing.
+</span><span class="attribute">#[derive(serde::Deserialize, Debug)]
+#[serde(deny_unknown_fields)]
+</span><span class="kw">pub struct </span>FuzzableExample {
+    <span class="doccomment">/// Name of the example
+    </span><span class="kw">pub </span>name: String,
+    <span class="doccomment">/// Path to the Cargo.toml file for the example.
+    </span><span class="kw">pub </span>manifest_path: String,
+    <span class="doccomment">/// Path to desired location of the .wasm file.
+    </span><span class="kw">pub </span>out_dir: String,
 }
 
-<span class="doccomment">/// A construct to keep track of the status of the execution. It only cares about the top-level</span>
-<span class="doccomment">/// steps.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Status</span> {
-    <span class="ident">error</span>: <span class="ident">usize</span>,
-    <span class="ident">ok</span>: <span class="ident">usize</span>,
-    <span class="ident">remaining</span>: <span class="ident">usize</span>,
+<span class="doccomment">/// A construct to keep track of the status of the execution. It only cares about the top-level
+/// steps.
+</span><span class="attribute">#[derive(Clone)]
+</span><span class="kw">pub struct </span>Status {
+    error: usize,
+    ok: usize,
+    remaining: usize,
 }
 
-<span class="kw">impl</span> <span class="ident">Status</span> {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">remaining</span>: <span class="ident">usize</span>) -&gt; <span class="self">Self</span> {
-        <span class="ident">Status</span> {
-            <span class="ident">error</span>: <span class="number">0</span>,
-            <span class="ident">ok</span>: <span class="number">0</span>,
-            <span class="ident">remaining</span>,
+<span class="kw">impl </span>Status {
+    <span class="kw">pub fn </span>new(remaining: usize) -&gt; <span class="self">Self </span>{
+        Status {
+            error: <span class="number">0</span>,
+            ok: <span class="number">0</span>,
+            remaining,
         }
     }
 
-    <span class="doccomment">/// Guarantees that the `error`, `ok`, and `remaining` counts are updated only after the</span>
-    <span class="doccomment">/// completions of each top-level step.</span>
-    <span class="kw">fn</span> <span class="ident">update</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">context</span>: <span class="kw-2">&amp;</span><span class="ident">Context</span>, <span class="ident">step_has_error</span>: <span class="ident">bool</span>) {
-        <span class="comment">// Update the status with results from the step, only if it is a top-level step.</span>
-        <span class="kw">if</span> <span class="ident">context</span>.<span class="ident">depth</span>() <span class="op">==</span> <span class="number">1</span> {
-            <span class="self">self</span>.<span class="ident">remaining</span> <span class="op">-</span><span class="op">=</span> <span class="number">1</span>;
-            <span class="comment">// We only care about pass (`ok`) and fail (`error`). If an entire step is skipped, we</span>
-            <span class="comment">// count it as a passed step.</span>
-            <span class="kw">if</span> <span class="ident">step_has_error</span> {
-                <span class="self">self</span>.<span class="ident">error</span> <span class="op">+</span><span class="op">=</span> <span class="number">1</span>;
-            } <span class="kw">else</span> {
-                <span class="self">self</span>.<span class="ident">ok</span> <span class="op">+</span><span class="op">=</span> <span class="number">1</span>;
+    <span class="doccomment">/// Guarantees that the `error`, `ok`, and `remaining` counts are updated only after the
+    /// completions of each top-level step.
+    </span><span class="kw">fn </span>update(<span class="kw-2">&amp;mut </span><span class="self">self</span>, context: <span class="kw-2">&amp;</span>Context, step_has_error: bool) {
+        <span class="comment">// Update the status with results from the step, only if it is a top-level step.
+        </span><span class="kw">if </span>context.depth() == <span class="number">1 </span>{
+            <span class="self">self</span>.remaining -= <span class="number">1</span>;
+            <span class="comment">// We only care about pass (`ok`) and fail (`error`). If an entire step is skipped, we
+            // count it as a passed step.
+            </span><span class="kw">if </span>step_has_error {
+                <span class="self">self</span>.error += <span class="number">1</span>;
+            } <span class="kw">else </span>{
+                <span class="self">self</span>.ok += <span class="number">1</span>;
             }
         }
     }
 }
 
-<span class="doccomment">/// Formats the status as `E:&lt;error-count&gt;,O:&lt;ok-count&gt;,R:&lt;remaining-count&gt;`, suitable for</span>
-<span class="doccomment">/// annotating the log lines.</span>
-<span class="kw">impl</span> <span class="ident">std::fmt::Display</span> <span class="kw">for</span> <span class="ident">Status</span> {
-    <span class="kw">fn</span> <span class="ident">fmt</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">f</span>: <span class="kw-2">&amp;mut</span> <span class="ident">std::fmt::Formatter</span>) -&gt; <span class="ident">std::fmt::Result</span> {
-        <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;✓:{},✗:{},⠇:{}&quot;</span>, <span class="self">self</span>.<span class="ident">ok</span>, <span class="self">self</span>.<span class="ident">error</span>, <span class="self">self</span>.<span class="ident">remaining</span>)
+<span class="doccomment">/// Formats the status as `E:&lt;error-count&gt;,O:&lt;ok-count&gt;,R:&lt;remaining-count&gt;`, suitable for
+/// annotating the log lines.
+</span><span class="kw">impl </span>std::fmt::Display <span class="kw">for </span>Status {
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>std::fmt::Formatter) -&gt; std::fmt::Result {
+        <span class="macro">write!</span>(f, <span class="string">&quot;✓:{},✗:{},⠇:{}&quot;</span>, <span class="self">self</span>.ok, <span class="self">self</span>.error, <span class="self">self</span>.remaining)
     }
 }
 
-<span class="doccomment">/// Encapsulates all the local state relative to a step, and is propagated to child steps.</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Context</span> {
-    <span class="ident">opt</span>: <span class="ident">Opt</span>,
-    <span class="ident">prefix</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
+<span class="doccomment">/// Encapsulates all the local state relative to a step, and is propagated to child steps.
+</span><span class="kw">pub struct </span>Context {
+    opt: Opt,
+    prefix: Vec&lt;String&gt;,
 }
 
-<span class="kw">impl</span> <span class="ident">Context</span> {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">root</span>(<span class="ident">opt</span>: <span class="kw-2">&amp;</span><span class="ident">Opt</span>) -&gt; <span class="self">Self</span> {
-        <span class="ident">Context</span> {
-            <span class="ident">opt</span>: <span class="ident">opt</span>.<span class="ident">clone</span>(),
-            <span class="ident">prefix</span>: <span class="macro">vec!</span>[],
+<span class="kw">impl </span>Context {
+    <span class="kw">pub fn </span>root(opt: <span class="kw-2">&amp;</span>Opt) -&gt; <span class="self">Self </span>{
+        Context {
+            opt: opt.clone(),
+            prefix: <span class="macro">vec!</span>[],
         }
     }
 
-    <span class="kw">fn</span> <span class="ident">child</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) -&gt; <span class="self">Self</span> {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">prefix</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">prefix</span>.<span class="ident">clone</span>();
-        <span class="ident">prefix</span>.<span class="ident">push</span>(<span class="ident">name</span>.<span class="ident">to_string</span>());
-        <span class="ident">Context</span> {
-            <span class="ident">opt</span>: <span class="self">self</span>.<span class="ident">opt</span>.<span class="ident">clone</span>(),
-            <span class="ident">prefix</span>,
+    <span class="kw">fn </span>child(<span class="kw-2">&amp;</span><span class="self">self</span>, name: <span class="kw-2">&amp;</span>str) -&gt; <span class="self">Self </span>{
+        <span class="kw">let </span><span class="kw-2">mut </span>prefix = <span class="self">self</span>.prefix.clone();
+        prefix.push(name.to_string());
+        Context {
+            opt: <span class="self">self</span>.opt.clone(),
+            prefix,
         }
     }
 
-    <span class="kw">fn</span> <span class="ident">depth</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">usize</span> {
-        <span class="self">self</span>.<span class="ident">prefix</span>.<span class="ident">len</span>()
+    <span class="kw">fn </span>depth(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
+        <span class="self">self</span>.prefix.len()
     }
 
-    <span class="kw">fn</span> <span class="ident">header</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">String</span> {
-        <span class="kw">let</span> <span class="ident">margin</span> <span class="op">=</span> <span class="string">&quot;│&quot;</span>.<span class="ident">repeat</span>(<span class="self">self</span>.<span class="ident">depth</span>() <span class="op">-</span> <span class="number">1</span>);
-        <span class="macro">format!</span>(<span class="string">&quot;{}┌[{}]&quot;</span>, <span class="ident">margin</span>, <span class="self">self</span>.<span class="ident">prefix</span>.<span class="ident">last</span>().<span class="ident">unwrap</span>().<span class="ident">cyan</span>())
+    <span class="kw">fn </span>header(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String {
+        <span class="kw">let </span>margin = <span class="string">&quot;│&quot;</span>.repeat(<span class="self">self</span>.depth() - <span class="number">1</span>);
+        <span class="macro">format!</span>(<span class="string">&quot;{}┌[{}]&quot;</span>, margin, <span class="self">self</span>.prefix.last().unwrap().cyan())
     }
 
-    <span class="doccomment">/// Prints a footer that repeats information from the header.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// Useful when footer and header are expected to be far away from each other.</span>
-    <span class="kw">fn</span> <span class="ident">footer_long</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">String</span> {
-        <span class="kw">let</span> <span class="ident">margin</span> <span class="op">=</span> <span class="string">&quot;│&quot;</span>.<span class="ident">repeat</span>(<span class="self">self</span>.<span class="ident">depth</span>() <span class="op">-</span> <span class="number">1</span>);
-        <span class="macro">format!</span>(<span class="string">&quot;{}└[{}]─▶&quot;</span>, <span class="ident">margin</span>, <span class="self">self</span>.<span class="ident">prefix</span>.<span class="ident">last</span>().<span class="ident">unwrap</span>().<span class="ident">cyan</span>())
+    <span class="doccomment">/// Prints a footer that repeats information from the header.
+    ///
+    /// Useful when footer and header are expected to be far away from each other.
+    </span><span class="kw">fn </span>footer_long(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String {
+        <span class="kw">let </span>margin = <span class="string">&quot;│&quot;</span>.repeat(<span class="self">self</span>.depth() - <span class="number">1</span>);
+        <span class="macro">format!</span>(<span class="string">&quot;{}└[{}]─▶&quot;</span>, margin, <span class="self">self</span>.prefix.last().unwrap().cyan())
     }
 
-    <span class="doccomment">/// Prints a footer that does not repeat information from the header.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// Useful when it follows the header almost immediately.</span>
-    <span class="kw">fn</span> <span class="ident">footer_short</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">String</span> {
-        <span class="kw">let</span> <span class="ident">margin</span> <span class="op">=</span> <span class="string">&quot;│&quot;</span>.<span class="ident">repeat</span>(<span class="self">self</span>.<span class="ident">depth</span>() <span class="op">-</span> <span class="number">1</span>);
-        <span class="macro">format!</span>(<span class="string">&quot;{}└─▶&quot;</span>, <span class="ident">margin</span>)
+    <span class="doccomment">/// Prints a footer that does not repeat information from the header.
+    ///
+    /// Useful when it follows the header almost immediately.
+    </span><span class="kw">fn </span>footer_short(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String {
+        <span class="kw">let </span>margin = <span class="string">&quot;│&quot;</span>.repeat(<span class="self">self</span>.depth() - <span class="number">1</span>);
+        <span class="macro">format!</span>(<span class="string">&quot;{}└─▶&quot;</span>, margin)
     }
 
-    <span class="kw">fn</span> <span class="ident">margin</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">String</span> {
-        <span class="string">&quot;│&quot;</span>.<span class="ident">repeat</span>(<span class="self">self</span>.<span class="ident">depth</span>())
-    }
-}
-
-<span class="kw">impl</span> <span class="ident">std::fmt::Display</span> <span class="kw">for</span> <span class="ident">Context</span> {
-    <span class="kw">fn</span> <span class="ident">fmt</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">f</span>: <span class="kw-2">&amp;mut</span> <span class="ident">std::fmt::Formatter</span>) -&gt; <span class="ident">std::fmt::Result</span> {
-        <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;{}&quot;</span>, <span class="self">self</span>.<span class="ident">prefix</span>.<span class="ident">join</span>(<span class="string">&quot; ❯ &quot;</span>))
+    <span class="kw">fn </span>margin(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String {
+        <span class="string">&quot;│&quot;</span>.repeat(<span class="self">self</span>.depth())
     }
 }
 
-<span class="doccomment">/// The outcome of an individual step of execution.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">PartialEq</span>, <span class="ident">Eq</span>, <span class="ident">Clone</span>, <span class="ident">Hash</span>)]</span>
-<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">StatusResultValue</span> {
+<span class="kw">impl </span>std::fmt::Display <span class="kw">for </span>Context {
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>std::fmt::Formatter) -&gt; std::fmt::Result {
+        <span class="macro">write!</span>(f, <span class="string">&quot;{}&quot;</span>, <span class="self">self</span>.prefix.join(<span class="string">&quot; ❯ &quot;</span>))
+    }
+}
+
+<span class="doccomment">/// The outcome of an individual step of execution.
+</span><span class="attribute">#[derive(PartialEq, Eq, Clone, Hash)]
+</span><span class="kw">pub enum </span>StatusResultValue {
     <span class="prelude-val">Ok</span>,
-    <span class="ident">Error</span>,
-    <span class="ident">Skipped</span>,
+    Error,
+    Skipped,
 }
 
-<span class="kw">impl</span> <span class="ident">std::fmt::Display</span> <span class="kw">for</span> <span class="ident">StatusResultValue</span> {
-    <span class="kw">fn</span> <span class="ident">fmt</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">f</span>: <span class="kw-2">&amp;mut</span> <span class="ident">std::fmt::Formatter</span>) -&gt; <span class="ident">std::fmt::Result</span> {
-        <span class="kw">match</span> <span class="kw-2">*</span><span class="self">self</span> {
-            <span class="ident">StatusResultValue::Ok</span> =&gt; <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;{}&quot;</span>, <span class="string">&quot;OK&quot;</span>.<span class="ident">bold</span>().<span class="ident">bright_green</span>()),
-            <span class="ident">StatusResultValue::Error</span> =&gt; <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;{}&quot;</span>, <span class="string">&quot;ERROR&quot;</span>.<span class="ident">bold</span>().<span class="ident">bright_red</span>()),
-            <span class="ident">StatusResultValue::Skipped</span> =&gt; <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;{}&quot;</span>, <span class="string">&quot;SKIPPED&quot;</span>.<span class="ident">bold</span>().<span class="ident">bright_yellow</span>()),
+<span class="kw">impl </span>std::fmt::Display <span class="kw">for </span>StatusResultValue {
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>std::fmt::Formatter) -&gt; std::fmt::Result {
+        <span class="kw">match </span><span class="kw-2">*</span><span class="self">self </span>{
+            StatusResultValue::Ok =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;{}&quot;</span>, <span class="string">&quot;OK&quot;</span>.bold().bright_green()),
+            StatusResultValue::Error =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;{}&quot;</span>, <span class="string">&quot;ERROR&quot;</span>.bold().bright_red()),
+            StatusResultValue::Skipped =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;{}&quot;</span>, <span class="string">&quot;SKIPPED&quot;</span>.bold().bright_yellow()),
         }
     }
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">SingleStatusResult</span> {
-    <span class="kw">pub</span> <span class="ident">value</span>: <span class="ident">StatusResultValue</span>,
-    <span class="kw">pub</span> <span class="ident">logs</span>: <span class="ident">String</span>,
+<span class="attribute">#[derive(Clone)]
+</span><span class="kw">pub struct </span>SingleStatusResult {
+    <span class="kw">pub </span>value: StatusResultValue,
+    <span class="kw">pub </span>logs: String,
 }
 
-<span class="doccomment">/// An execution step, which may be a single `Runnable`, or a collection of sub-steps.</span>
-<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">Step</span> {
-    <span class="ident">Single</span> {
-        <span class="ident">name</span>: <span class="ident">String</span>,
-        <span class="ident">command</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">Runnable</span><span class="op">&gt;</span>,
+<span class="doccomment">/// An execution step, which may be a single `Runnable`, or a collection of sub-steps.
+</span><span class="kw">pub enum </span>Step {
+    Single {
+        name: String,
+        command: Box&lt;<span class="kw">dyn </span>Runnable&gt;,
     },
-    <span class="ident">Multiple</span> {
-        <span class="ident">name</span>: <span class="ident">String</span>,
-        <span class="ident">steps</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Step</span><span class="op">&gt;</span>,
+    Multiple {
+        name: String,
+        steps: Vec&lt;Step&gt;,
     },
-    <span class="ident">WithBackground</span> {
-        <span class="ident">name</span>: <span class="ident">String</span>,
-        <span class="ident">background</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">Runnable</span><span class="op">&gt;</span>,
-        <span class="ident">foreground</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="ident">Step</span><span class="op">&gt;</span>,
+    WithBackground {
+        name: String,
+        background: Box&lt;<span class="kw">dyn </span>Runnable&gt;,
+        foreground: Box&lt;Step&gt;,
     },
 }
 
-<span class="kw">impl</span> <span class="ident">Step</span> {
-    <span class="doccomment">/// Returns the number of top-level steps or commands. The number of sub-steps is not</span>
-    <span class="doccomment">/// recursively accumulated in the returned length.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">len</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">usize</span> {
-        <span class="kw">match</span> <span class="self">self</span> {
-            <span class="ident">Step::Single</span> {
-                <span class="ident">name</span>: <span class="kw">_</span>,
-                <span class="ident">command</span>: <span class="kw">_</span>,
+<span class="kw">impl </span>Step {
+    <span class="doccomment">/// Returns the number of top-level steps or commands. The number of sub-steps is not
+    /// recursively accumulated in the returned length.
+    </span><span class="kw">pub fn </span>len(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
+        <span class="kw">match </span><span class="self">self </span>{
+            Step::Single {
+                name: <span class="kw">_</span>,
+                command: <span class="kw">_</span>,
             } =&gt; <span class="number">1</span>,
-            <span class="ident">Step::Multiple</span> { <span class="ident">name</span>: <span class="kw">_</span>, <span class="ident">steps</span>: <span class="ident">s</span> } =&gt; <span class="ident">s</span>.<span class="ident">len</span>(),
-            <span class="ident">Step::WithBackground</span> {
-                <span class="ident">name</span>: <span class="kw">_</span>,
-                <span class="ident">background</span>: <span class="kw">_</span>,
-                <span class="ident">foreground</span>: <span class="ident">f</span>,
-            } =&gt; <span class="ident">f</span>.<span class="ident">len</span>(),
+            Step::Multiple { name: <span class="kw">_</span>, steps: s } =&gt; s.len(),
+            Step::WithBackground {
+                name: <span class="kw">_</span>,
+                background: <span class="kw">_</span>,
+                foreground: f,
+            } =&gt; f.len(),
         }
     }
 }
 
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">StepResult</span> {
-    <span class="kw">pub</span> <span class="ident">values</span>: <span class="ident">HashSet</span><span class="op">&lt;</span><span class="ident">StatusResultValue</span><span class="op">&gt;</span>,
-    <span class="kw">pub</span> <span class="ident">failed_steps_prefixes</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
+<span class="kw">pub struct </span>StepResult {
+    <span class="kw">pub </span>values: HashSet&lt;StatusResultValue&gt;,
+    <span class="kw">pub </span>failed_steps_prefixes: Vec&lt;String&gt;,
 }
 
-<span class="kw">impl</span> <span class="ident">StepResult</span> {
-    <span class="kw">fn</span> <span class="ident">new</span>() -&gt; <span class="self">Self</span> {
-        <span class="self">Self</span> {
-            <span class="ident">values</span>: <span class="ident">HashSet::new</span>(),
-            <span class="ident">failed_steps_prefixes</span>: <span class="macro">vec!</span>[],
+<span class="kw">impl </span>StepResult {
+    <span class="kw">fn </span>new() -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{
+            values: HashSet::new(),
+            failed_steps_prefixes: <span class="macro">vec!</span>[],
         }
     }
 }
 
-<span class="kw">fn</span> <span class="ident">values_to_string</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>(<span class="ident">values</span>: <span class="ident">T</span>) -&gt; <span class="ident">String</span>
-<span class="kw">where</span>
-    <span class="ident">T</span>: <span class="ident">IntoIterator</span>,
-    <span class="ident">T::Item</span>: <span class="ident">std::fmt::Display</span>,
+<span class="kw">fn </span>values_to_string&lt;T&gt;(values: T) -&gt; String
+<span class="kw">where
+    </span>T: IntoIterator,
+    T::Item: std::fmt::Display,
 {
     <span class="macro">format!</span>(
         <span class="string">&quot;[{}]&quot;</span>,
-        <span class="ident">values</span>
-            .<span class="ident">into_iter</span>()
-            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">v</span><span class="op">|</span> <span class="ident">v</span>.<span class="ident">to_string</span>())
-            .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>()
-            .<span class="ident">join</span>(<span class="string">&quot;,&quot;</span>)
+        values
+            .into_iter()
+            .map(|v| v.to_string())
+            .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;()
+            .join(<span class="string">&quot;,&quot;</span>)
     )
 }
 
-<span class="doccomment">/// Run the provided step, printing out information about the execution, and returning a set of</span>
-<span class="doccomment">/// status results from the single or multiple steps that were executed.</span>
-<span class="attribute">#[<span class="ident">async_recursion</span>]</span>
-<span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">run_step</span>(<span class="ident">context</span>: <span class="kw-2">&amp;</span><span class="ident">Context</span>, <span class="ident">step</span>: <span class="ident">Step</span>, <span class="kw-2">mut</span> <span class="ident">run_status</span>: <span class="ident">Status</span>) -&gt; <span class="ident">StepResult</span> {
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">step_result</span> <span class="op">=</span> <span class="ident">StepResult::new</span>();
-    <span class="kw">fn</span> <span class="ident">prefix</span>(<span class="ident">run_status</span>: <span class="kw-2">&amp;</span><span class="ident">Status</span>) -&gt; <span class="ident">String</span> {
-        <span class="kw">let</span> <span class="ident">now</span> <span class="op">=</span> <span class="ident">chrono::Utc::now</span>();
-        <span class="kw">let</span> <span class="ident">time_of_day</span> <span class="op">=</span> <span class="ident">now</span>.<span class="ident">format</span>(<span class="string">&quot;%H:%M:%S&quot;</span>);
-        <span class="macro">format!</span>(<span class="string">&quot;[{} {}] &quot;</span>, <span class="ident">time_of_day</span>, <span class="ident">run_status</span>)
+<span class="doccomment">/// Run the provided step, printing out information about the execution, and returning a set of
+/// status results from the single or multiple steps that were executed.
+</span><span class="attribute">#[async_recursion]
+</span><span class="kw">pub async fn </span>run_step(context: <span class="kw-2">&amp;</span>Context, step: Step, <span class="kw-2">mut </span>run_status: Status) -&gt; StepResult {
+    <span class="kw">let </span><span class="kw-2">mut </span>step_result = StepResult::new();
+    <span class="kw">fn </span>prefix(run_status: <span class="kw-2">&amp;</span>Status) -&gt; String {
+        <span class="kw">let </span>now = chrono::Utc::now();
+        <span class="kw">let </span>time_of_day = now.format(<span class="string">&quot;%H:%M:%S&quot;</span>);
+        <span class="macro">format!</span>(<span class="string">&quot;[{} {}] &quot;</span>, time_of_day, run_status)
     }
-    <span class="kw">match</span> <span class="ident">step</span> {
-        <span class="ident">Step::Single</span> { <span class="ident">name</span>, <span class="ident">command</span> } =&gt; {
-            <span class="kw">let</span> <span class="ident">context</span> <span class="op">=</span> <span class="ident">context</span>.<span class="ident">child</span>(<span class="kw-2">&amp;</span><span class="ident">name</span>);
+    <span class="kw">match </span>step {
+        Step::Single { name, command } =&gt; {
+            <span class="kw">let </span>context = context.child(<span class="kw-2">&amp;</span>name);
 
-            <span class="kw">let</span> <span class="ident">start</span> <span class="op">=</span> <span class="ident">Instant::now</span>();
+            <span class="kw">let </span>start = Instant::now();
 
-            <span class="macro">eprintln!</span>(<span class="string">&quot;{}{}&quot;</span>, <span class="ident">prefix</span>(<span class="kw-2">&amp;</span><span class="ident">run_status</span>), <span class="ident">context</span>.<span class="ident">header</span>());
+            <span class="macro">eprintln!</span>(<span class="string">&quot;{}{}&quot;</span>, prefix(<span class="kw-2">&amp;</span>run_status), context.header());
 
             <span class="macro">eprintln!</span>(
                 <span class="string">&quot;{}{} {}&quot;</span>,
-                <span class="ident">prefix</span>(<span class="kw-2">&amp;</span><span class="ident">run_status</span>),
-                <span class="ident">context</span>.<span class="ident">margin</span>(),
-                <span class="ident">command</span>.<span class="ident">description</span>().<span class="ident">blue</span>()
+                prefix(<span class="kw-2">&amp;</span>run_status),
+                context.margin(),
+                command.description().blue()
             );
 
-            <span class="kw">let</span> <span class="ident">status</span> <span class="op">=</span> <span class="ident">command</span>.<span class="ident">run</span>(<span class="kw-2">&amp;</span><span class="ident">context</span>.<span class="ident">opt</span>).<span class="ident">result</span>().<span class="kw">await</span>;
-            <span class="kw">let</span> <span class="ident">end</span> <span class="op">=</span> <span class="ident">Instant::now</span>();
-            <span class="kw">let</span> <span class="ident">elapsed</span> <span class="op">=</span> <span class="ident">end</span>.<span class="ident">duration_since</span>(<span class="ident">start</span>);
+            <span class="kw">let </span>status = command.run(<span class="kw-2">&amp;</span>context.opt).result().<span class="kw">await</span>;
+            <span class="kw">let </span>end = Instant::now();
+            <span class="kw">let </span>elapsed = end.duration_since(start);
 
-            <span class="kw">let</span> <span class="ident">step_failed</span> <span class="op">=</span> <span class="ident">status</span>.<span class="ident">value</span> <span class="op">==</span> <span class="ident">StatusResultValue::Error</span>;
-            <span class="kw">if</span> (<span class="ident">step_failed</span> <span class="op">|</span><span class="op">|</span> <span class="ident">context</span>.<span class="ident">opt</span>.<span class="ident">logs</span>) <span class="op">&amp;&amp;</span> <span class="op">!</span><span class="ident">status</span>.<span class="ident">logs</span>.<span class="ident">is_empty</span>() {
+            <span class="kw">let </span>step_failed = status.value == StatusResultValue::Error;
+            <span class="kw">if </span>(step_failed || context.opt.logs) &amp;&amp; !status.logs.is_empty() {
                 <span class="macro">eprintln!</span>(
                     <span class="string">&quot;{}{} {}&quot;</span>,
-                    <span class="ident">prefix</span>(<span class="kw-2">&amp;</span><span class="ident">run_status</span>),
-                    <span class="ident">context</span>.<span class="ident">margin</span>(),
-                    <span class="string">&quot;╔════════════════════════&quot;</span>.<span class="ident">blue</span>()
+                    prefix(<span class="kw-2">&amp;</span>run_status),
+                    context.margin(),
+                    <span class="string">&quot;╔════════════════════════&quot;</span>.blue()
                 );
-                <span class="kw">for</span> <span class="ident">line</span> <span class="kw">in</span> <span class="ident">status</span>.<span class="ident">logs</span>.<span class="ident">lines</span>() {
+                <span class="kw">for </span>line <span class="kw">in </span>status.logs.lines() {
                     <span class="macro">eprintln!</span>(
                         <span class="string">&quot;{}{} {} {}&quot;</span>,
-                        <span class="ident">prefix</span>(<span class="kw-2">&amp;</span><span class="ident">run_status</span>),
-                        <span class="ident">context</span>.<span class="ident">margin</span>(),
-                        <span class="string">&quot;║&quot;</span>.<span class="ident">blue</span>(),
-                        <span class="ident">line</span>
+                        prefix(<span class="kw-2">&amp;</span>run_status),
+                        context.margin(),
+                        <span class="string">&quot;║&quot;</span>.blue(),
+                        line
                     );
                 }
                 <span class="macro">eprintln!</span>(
                     <span class="string">&quot;{}{} {}&quot;</span>,
-                    <span class="ident">prefix</span>(<span class="kw-2">&amp;</span><span class="ident">run_status</span>),
-                    <span class="ident">context</span>.<span class="ident">margin</span>(),
-                    <span class="string">&quot;╚════════════════════════&quot;</span>.<span class="ident">blue</span>()
+                    prefix(<span class="kw-2">&amp;</span>run_status),
+                    context.margin(),
+                    <span class="string">&quot;╚════════════════════════&quot;</span>.blue()
                 );
-                <span class="ident">step_result</span>
-                    .<span class="ident">failed_steps_prefixes</span>
-                    .<span class="ident">push</span>(<span class="macro">format!</span>(<span class="string">&quot;{}&quot;</span>, <span class="ident">context</span>));
+                step_result
+                    .failed_steps_prefixes
+                    .push(<span class="macro">format!</span>(<span class="string">&quot;{}&quot;</span>, context));
             }
 
             <span class="macro">eprintln!</span>(
                 <span class="string">&quot;{}{}{} {:.0?}&quot;</span>,
-                <span class="ident">prefix</span>(<span class="kw-2">&amp;</span><span class="ident">run_status</span>),
-                <span class="ident">context</span>.<span class="ident">footer_short</span>(),
-                <span class="ident">status</span>.<span class="ident">value</span>,
-                <span class="ident">elapsed</span>
+                prefix(<span class="kw-2">&amp;</span>run_status),
+                context.footer_short(),
+                status.value,
+                elapsed
             );
 
-            <span class="ident">step_result</span>.<span class="ident">values</span>.<span class="ident">insert</span>(<span class="ident">status</span>.<span class="ident">value</span>);
-            <span class="ident">run_status</span>.<span class="ident">update</span>(<span class="kw-2">&amp;</span><span class="ident">context</span>, <span class="ident">step_failed</span>);
+            step_result.values.insert(status.value);
+            run_status.update(<span class="kw-2">&amp;</span>context, step_failed);
         }
-        <span class="ident">Step::Multiple</span> { <span class="ident">name</span>, <span class="ident">steps</span> } =&gt; {
-            <span class="kw">let</span> <span class="ident">context</span> <span class="op">=</span> <span class="ident">context</span>.<span class="ident">child</span>(<span class="kw-2">&amp;</span><span class="ident">name</span>);
-            <span class="macro">eprintln!</span>(<span class="string">&quot;{}{}&quot;</span>, <span class="ident">prefix</span>(<span class="kw-2">&amp;</span><span class="ident">run_status</span>), <span class="ident">context</span>.<span class="ident">header</span>());
-            <span class="kw">let</span> <span class="ident">start</span> <span class="op">=</span> <span class="ident">Instant::now</span>();
-            <span class="kw">for</span> <span class="ident">step</span> <span class="kw">in</span> <span class="ident">steps</span> {
-                <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">result</span> <span class="op">=</span> <span class="ident">run_step</span>(<span class="kw-2">&amp;</span><span class="ident">context</span>, <span class="ident">step</span>, <span class="ident">run_status</span>.<span class="ident">clone</span>()).<span class="kw">await</span>;
-                <span class="ident">step_result</span>.<span class="ident">values</span> <span class="op">=</span> <span class="ident">step_result</span>.<span class="ident">values</span>.<span class="ident">union</span>(<span class="kw-2">&amp;</span><span class="ident">result</span>.<span class="ident">values</span>).<span class="ident">cloned</span>().<span class="ident">collect</span>();
-                <span class="ident">step_result</span>
-                    .<span class="ident">failed_steps_prefixes</span>
-                    .<span class="ident">append</span>(<span class="kw-2">&amp;mut</span> <span class="ident">result</span>.<span class="ident">failed_steps_prefixes</span>);
-                <span class="kw">let</span> <span class="ident">failed</span> <span class="op">=</span> <span class="ident">result</span>.<span class="ident">values</span>.<span class="ident">contains</span>(<span class="kw-2">&amp;</span><span class="ident">StatusResultValue::Error</span>);
-                <span class="ident">run_status</span>.<span class="ident">update</span>(<span class="kw-2">&amp;</span><span class="ident">context</span>, <span class="ident">failed</span>);
-                <span class="kw">if</span> <span class="ident">failed</span> <span class="op">&amp;&amp;</span> <span class="op">!</span><span class="ident">context</span>.<span class="ident">opt</span>.<span class="ident">keep_going</span> {
+        Step::Multiple { name, steps } =&gt; {
+            <span class="kw">let </span>context = context.child(<span class="kw-2">&amp;</span>name);
+            <span class="macro">eprintln!</span>(<span class="string">&quot;{}{}&quot;</span>, prefix(<span class="kw-2">&amp;</span>run_status), context.header());
+            <span class="kw">let </span>start = Instant::now();
+            <span class="kw">for </span>step <span class="kw">in </span>steps {
+                <span class="kw">let </span><span class="kw-2">mut </span>result = run_step(<span class="kw-2">&amp;</span>context, step, run_status.clone()).<span class="kw">await</span>;
+                step_result.values = step_result.values.union(<span class="kw-2">&amp;</span>result.values).cloned().collect();
+                step_result
+                    .failed_steps_prefixes
+                    .append(<span class="kw-2">&amp;mut </span>result.failed_steps_prefixes);
+                <span class="kw">let </span>failed = result.values.contains(<span class="kw-2">&amp;</span>StatusResultValue::Error);
+                run_status.update(<span class="kw-2">&amp;</span>context, failed);
+                <span class="kw">if </span>failed &amp;&amp; !context.opt.keep_going {
                     <span class="kw">break</span>;
                 }
             }
-            <span class="kw">let</span> <span class="ident">end</span> <span class="op">=</span> <span class="ident">Instant::now</span>();
-            <span class="kw">let</span> <span class="ident">elapsed</span> <span class="op">=</span> <span class="ident">end</span>.<span class="ident">duration_since</span>(<span class="ident">start</span>);
+            <span class="kw">let </span>end = Instant::now();
+            <span class="kw">let </span>elapsed = end.duration_since(start);
             <span class="macro">eprintln!</span>(
                 <span class="string">&quot;{}{}{} {:.0?}&quot;</span>,
-                <span class="ident">prefix</span>(<span class="kw-2">&amp;</span><span class="ident">run_status</span>),
-                <span class="ident">context</span>.<span class="ident">footer_long</span>(),
-                <span class="ident">values_to_string</span>(<span class="kw-2">&amp;</span><span class="ident">step_result</span>.<span class="ident">values</span>),
-                <span class="ident">elapsed</span>
+                prefix(<span class="kw-2">&amp;</span>run_status),
+                context.footer_long(),
+                values_to_string(<span class="kw-2">&amp;</span>step_result.values),
+                elapsed
             );
         }
-        <span class="ident">Step::WithBackground</span> {
-            <span class="ident">name</span>,
-            <span class="ident">background</span>,
-            <span class="ident">foreground</span>,
+        Step::WithBackground {
+            name,
+            background,
+            foreground,
         } =&gt; {
-            <span class="kw">let</span> <span class="ident">context</span> <span class="op">=</span> <span class="ident">context</span>.<span class="ident">child</span>(<span class="kw-2">&amp;</span><span class="ident">name</span>);
-            <span class="macro">eprintln!</span>(<span class="string">&quot;{}{}&quot;</span>, <span class="ident">prefix</span>(<span class="kw-2">&amp;</span><span class="ident">run_status</span>), <span class="ident">context</span>.<span class="ident">header</span>());
+            <span class="kw">let </span>context = context.child(<span class="kw-2">&amp;</span>name);
+            <span class="macro">eprintln!</span>(<span class="string">&quot;{}{}&quot;</span>, prefix(<span class="kw-2">&amp;</span>run_status), context.header());
 
             <span class="macro">eprintln!</span>(
                 <span class="string">&quot;{}{} {}&quot;</span>,
-                <span class="ident">prefix</span>(<span class="kw-2">&amp;</span><span class="ident">run_status</span>),
-                <span class="ident">context</span>.<span class="ident">margin</span>(),
-                <span class="ident">background</span>.<span class="ident">description</span>().<span class="ident">blue</span>()
+                prefix(<span class="kw-2">&amp;</span>run_status),
+                context.margin(),
+                background.description().blue()
             );
 
-            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">running_background</span> <span class="op">=</span> <span class="ident">background</span>.<span class="ident">run</span>(<span class="kw-2">&amp;</span><span class="ident">context</span>.<span class="ident">opt</span>);
+            <span class="kw">let </span><span class="kw-2">mut </span>running_background = background.run(<span class="kw-2">&amp;</span>context.opt);
 
-            <span class="comment">// Small delay to make it more likely that the background process started.</span>
-            <span class="ident">std::thread::sleep</span>(<span class="ident">std::time::Duration::from_millis</span>(<span class="number">6_000</span>));
+            <span class="comment">// Small delay to make it more likely that the background process started.
+            </span>std::thread::sleep(std::time::Duration::from_millis(<span class="number">6_000</span>));
 
-            <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">read_to_end</span><span class="op">&lt;</span><span class="ident">A</span>: <span class="ident">AsyncRead</span> <span class="op">+</span> <span class="ident">Unpin</span><span class="op">&gt;</span>(<span class="kw-2">mut</span> <span class="ident">io</span>: <span class="ident">A</span>) -&gt; <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span> {
-                <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">buf</span> <span class="op">=</span> <span class="ident">Vec::new</span>();
-                <span class="ident">io</span>.<span class="ident">read_to_end</span>(<span class="kw-2">&amp;mut</span> <span class="ident">buf</span>)
-                    .<span class="kw">await</span>
-                    .<span class="ident">expect</span>(<span class="string">&quot;could not read from future&quot;</span>);
-                <span class="ident">buf</span>
+            <span class="kw">async fn </span>read_to_end&lt;A: AsyncRead + Unpin&gt;(<span class="kw-2">mut </span>io: A) -&gt; Vec&lt;u8&gt; {
+                <span class="kw">let </span><span class="kw-2">mut </span>buf = Vec::new();
+                io.read_to_end(<span class="kw-2">&amp;mut </span>buf)
+                    .<span class="kw">await
+                    </span>.expect(<span class="string">&quot;could not read from future&quot;</span>);
+                buf
             }
 
-            <span class="kw">let</span> <span class="ident">background_stdout_future</span> <span class="op">=</span> <span class="ident">tokio::spawn</span>(<span class="ident">read_to_end</span>(<span class="ident">running_background</span>.<span class="ident">stdout</span>()));
-            <span class="kw">let</span> <span class="ident">background_stderr_future</span> <span class="op">=</span> <span class="ident">tokio::spawn</span>(<span class="ident">read_to_end</span>(<span class="ident">running_background</span>.<span class="ident">stderr</span>()));
+            <span class="kw">let </span>background_stdout_future = tokio::spawn(read_to_end(running_background.stdout()));
+            <span class="kw">let </span>background_stderr_future = tokio::spawn(read_to_end(running_background.stderr()));
 
-            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">foreground_result</span> <span class="op">=</span> <span class="ident">run_step</span>(<span class="kw-2">&amp;</span><span class="ident">context</span>, <span class="kw-2">*</span><span class="ident">foreground</span>, <span class="ident">run_status</span>.<span class="ident">clone</span>()).<span class="kw">await</span>;
+            <span class="kw">let </span><span class="kw-2">mut </span>foreground_result = run_step(<span class="kw-2">&amp;</span>context, <span class="kw-2">*</span>foreground, run_status.clone()).<span class="kw">await</span>;
 
-            <span class="comment">// TODO(#396): If the background task was already spontaneously terminated by now, it is</span>
-            <span class="comment">// probably a sign that something went wrong, so we should return an error.</span>
-            <span class="ident">running_background</span>.<span class="ident">kill</span>();
+            <span class="comment">// TODO(#396): If the background task was already spontaneously terminated by now, it is
+            // probably a sign that something went wrong, so we should return an error.
+            </span>running_background.kill();
 
-            <span class="kw">let</span> <span class="ident">stdout</span> <span class="op">=</span> <span class="ident">background_stdout_future</span>
-                .<span class="kw">await</span>
-                .<span class="ident">expect</span>(<span class="string">&quot;could not read stdout&quot;</span>);
-            <span class="kw">let</span> <span class="ident">stderr</span> <span class="op">=</span> <span class="ident">background_stderr_future</span>
-                .<span class="kw">await</span>
-                .<span class="ident">expect</span>(<span class="string">&quot;could not read stderr&quot;</span>);
+            <span class="kw">let </span>stdout = background_stdout_future
+                .<span class="kw">await
+                </span>.expect(<span class="string">&quot;could not read stdout&quot;</span>);
+            <span class="kw">let </span>stderr = background_stderr_future
+                .<span class="kw">await
+                </span>.expect(<span class="string">&quot;could not read stderr&quot;</span>);
 
-            <span class="kw">let</span> <span class="ident">logs</span> <span class="op">=</span> <span class="ident">format_logs</span>(<span class="kw-2">&amp;</span><span class="ident">stdout</span>, <span class="kw-2">&amp;</span><span class="ident">stderr</span>);
+            <span class="kw">let </span>logs = format_logs(<span class="kw-2">&amp;</span>stdout, <span class="kw-2">&amp;</span>stderr);
 
             <span class="macro">eprintln!</span>(
                 <span class="string">&quot;{}{} (waiting for completion)&quot;</span>,
-                <span class="ident">prefix</span>(<span class="kw-2">&amp;</span><span class="ident">run_status</span>),
-                <span class="ident">context</span>.<span class="ident">margin</span>(),
+                prefix(<span class="kw-2">&amp;</span>run_status),
+                context.margin(),
             );
-            <span class="kw">let</span> <span class="ident">background_status</span> <span class="op">=</span> <span class="ident">running_background</span>.<span class="ident">result</span>().<span class="kw">await</span>;
+            <span class="kw">let </span>background_status = running_background.result().<span class="kw">await</span>;
             <span class="macro">eprintln!</span>(
                 <span class="string">&quot;{}{}{}&quot;</span>,
-                <span class="ident">prefix</span>(<span class="kw-2">&amp;</span><span class="ident">run_status</span>),
-                <span class="ident">context</span>.<span class="ident">footer_long</span>(),
-                <span class="ident">background_status</span>.<span class="ident">value</span>,
+                prefix(<span class="kw-2">&amp;</span>run_status),
+                context.footer_long(),
+                background_status.value,
             );
 
-            <span class="kw">if</span> (<span class="ident">background_status</span>.<span class="ident">value</span> <span class="op">==</span> <span class="ident">StatusResultValue::Error</span>
-                <span class="op">|</span><span class="op">|</span> <span class="ident">foreground_result</span>.<span class="ident">values</span>.<span class="ident">contains</span>(<span class="kw-2">&amp;</span><span class="ident">StatusResultValue::Error</span>)
-                <span class="op">|</span><span class="op">|</span> <span class="ident">context</span>.<span class="ident">opt</span>.<span class="ident">logs</span>)
-                <span class="op">&amp;&amp;</span> <span class="op">!</span><span class="ident">logs</span>.<span class="ident">is_empty</span>()
+            <span class="kw">if </span>(background_status.value == StatusResultValue::Error
+                || foreground_result.values.contains(<span class="kw-2">&amp;</span>StatusResultValue::Error)
+                || context.opt.logs)
+                &amp;&amp; !logs.is_empty()
             {
-                <span class="macro">eprintln!</span>(<span class="string">&quot;{} {}&quot;</span>, <span class="ident">context</span>, <span class="string">&quot;╔════════════════════════&quot;</span>.<span class="ident">blue</span>());
-                <span class="kw">for</span> <span class="ident">line</span> <span class="kw">in</span> <span class="ident">logs</span>.<span class="ident">lines</span>() {
-                    <span class="macro">eprintln!</span>(<span class="string">&quot;{} {} {}&quot;</span>, <span class="ident">context</span>, <span class="string">&quot;║&quot;</span>.<span class="ident">blue</span>(), <span class="ident">line</span>);
+                <span class="macro">eprintln!</span>(<span class="string">&quot;{} {}&quot;</span>, context, <span class="string">&quot;╔════════════════════════&quot;</span>.blue());
+                <span class="kw">for </span>line <span class="kw">in </span>logs.lines() {
+                    <span class="macro">eprintln!</span>(<span class="string">&quot;{} {} {}&quot;</span>, context, <span class="string">&quot;║&quot;</span>.blue(), line);
                 }
-                <span class="macro">eprintln!</span>(<span class="string">&quot;{} {}&quot;</span>, <span class="ident">context</span>, <span class="string">&quot;╚════════════════════════&quot;</span>.<span class="ident">blue</span>());
+                <span class="macro">eprintln!</span>(<span class="string">&quot;{} {}&quot;</span>, context, <span class="string">&quot;╚════════════════════════&quot;</span>.blue());
             }
 
-            <span class="ident">step_result</span>.<span class="ident">values</span> <span class="op">=</span> <span class="ident">foreground_result</span>.<span class="ident">values</span>;
-            <span class="ident">step_result</span>
-                .<span class="ident">failed_steps_prefixes</span>
-                .<span class="ident">append</span>(<span class="kw-2">&amp;mut</span> <span class="ident">foreground_result</span>.<span class="ident">failed_steps_prefixes</span>);
+            step_result.values = foreground_result.values;
+            step_result
+                .failed_steps_prefixes
+                .append(<span class="kw-2">&amp;mut </span>foreground_result.failed_steps_prefixes);
 
-            <span class="comment">// Also propagate the status of the background process.</span>
-            <span class="kw">if</span> <span class="ident">background_status</span>.<span class="ident">value</span> <span class="op">==</span> <span class="ident">StatusResultValue::Error</span> {
-                <span class="ident">step_result</span>
-                    .<span class="ident">failed_steps_prefixes</span>
-                    .<span class="ident">push</span>(<span class="macro">format!</span>(<span class="string">&quot;{}&quot;</span>, <span class="ident">context</span>));
+            <span class="comment">// Also propagate the status of the background process.
+            </span><span class="kw">if </span>background_status.value == StatusResultValue::Error {
+                step_result
+                    .failed_steps_prefixes
+                    .push(<span class="macro">format!</span>(<span class="string">&quot;{}&quot;</span>, context));
             }
-            <span class="ident">step_result</span>.<span class="ident">values</span>.<span class="ident">insert</span>(<span class="ident">background_status</span>.<span class="ident">value</span>);
+            step_result.values.insert(background_status.value);
 
-            <span class="ident">run_status</span>.<span class="ident">update</span>(
-                <span class="kw-2">&amp;</span><span class="ident">context</span>,
-                <span class="ident">step_result</span>.<span class="ident">values</span>.<span class="ident">contains</span>(<span class="kw-2">&amp;</span><span class="ident">StatusResultValue::Error</span>),
+            run_status.update(
+                <span class="kw-2">&amp;</span>context,
+                step_result.values.contains(<span class="kw-2">&amp;</span>StatusResultValue::Error),
             );
         }
     }
-    <span class="ident">step_result</span>
+    step_result
 }
 
-<span class="doccomment">/// A single command.</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Cmd</span> {
-    <span class="ident">executable</span>: <span class="ident">String</span>,
-    <span class="ident">args</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
-    <span class="ident">current_dir</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">PathBuf</span><span class="op">&gt;</span>,
+<span class="doccomment">/// A single command.
+</span><span class="kw">pub struct </span>Cmd {
+    executable: String,
+    args: Vec&lt;String&gt;,
+    current_dir: <span class="prelude-ty">Option</span>&lt;PathBuf&gt;,
 }
 
-<span class="kw">impl</span> <span class="ident">Cmd</span> {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span><span class="op">&lt;</span><span class="ident">I</span>, <span class="ident">S</span><span class="op">&gt;</span>(<span class="ident">executable</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="ident">args</span>: <span class="ident">I</span>) -&gt; <span class="ident">Box</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span>
-    <span class="kw">where</span>
-        <span class="ident">I</span>: <span class="ident">IntoIterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="ident">S</span><span class="op">&gt;</span>,
-        <span class="ident">S</span>: <span class="ident">AsRef</span><span class="op">&lt;</span><span class="ident">str</span><span class="op">&gt;</span>,
+<span class="kw">impl </span>Cmd {
+    <span class="kw">pub fn </span>new&lt;I, S&gt;(executable: <span class="kw-2">&amp;</span>str, args: I) -&gt; Box&lt;<span class="self">Self</span>&gt;
+    <span class="kw">where
+        </span>I: IntoIterator&lt;Item = S&gt;,
+        S: AsRef&lt;str&gt;,
     {
-        <span class="ident">Box::new</span>(<span class="ident">Cmd</span> {
-            <span class="ident">executable</span>: <span class="ident">executable</span>.<span class="ident">to_string</span>(),
-            <span class="ident">args</span>: <span class="ident">args</span>.<span class="ident">into_iter</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">s</span><span class="op">|</span> <span class="ident">s</span>.<span class="ident">as_ref</span>().<span class="ident">to_string</span>()).<span class="ident">collect</span>(),
-            <span class="ident">current_dir</span>: <span class="prelude-val">None</span>,
+        Box::new(Cmd {
+            executable: executable.to_string(),
+            args: args.into_iter().map(|s| s.as_ref().to_string()).collect(),
+            current_dir: <span class="prelude-val">None</span>,
         })
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new_in_dir</span><span class="op">&lt;</span><span class="ident">I</span>, <span class="ident">S</span><span class="op">&gt;</span>(<span class="ident">executable</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="ident">args</span>: <span class="ident">I</span>, <span class="ident">current_dir</span>: <span class="kw-2">&amp;</span><span class="ident">Path</span>) -&gt; <span class="ident">Box</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span>
-    <span class="kw">where</span>
-        <span class="ident">I</span>: <span class="ident">IntoIterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="ident">S</span><span class="op">&gt;</span>,
-        <span class="ident">S</span>: <span class="ident">AsRef</span><span class="op">&lt;</span><span class="ident">str</span><span class="op">&gt;</span>,
+    <span class="kw">pub fn </span>new_in_dir&lt;I, S&gt;(executable: <span class="kw-2">&amp;</span>str, args: I, current_dir: <span class="kw-2">&amp;</span>Path) -&gt; Box&lt;<span class="self">Self</span>&gt;
+    <span class="kw">where
+        </span>I: IntoIterator&lt;Item = S&gt;,
+        S: AsRef&lt;str&gt;,
     {
-        <span class="ident">Box::new</span>(<span class="ident">Cmd</span> {
-            <span class="ident">executable</span>: <span class="ident">executable</span>.<span class="ident">to_string</span>(),
-            <span class="ident">args</span>: <span class="ident">args</span>.<span class="ident">into_iter</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">s</span><span class="op">|</span> <span class="ident">s</span>.<span class="ident">as_ref</span>().<span class="ident">to_string</span>()).<span class="ident">collect</span>(),
-            <span class="ident">current_dir</span>: <span class="prelude-val">Some</span>(<span class="ident">current_dir</span>.<span class="ident">to_path_buf</span>()),
+        Box::new(Cmd {
+            executable: executable.to_string(),
+            args: args.into_iter().map(|s| s.as_ref().to_string()).collect(),
+            current_dir: <span class="prelude-val">Some</span>(current_dir.to_path_buf()),
         })
     }
 }
 
-<span class="kw">impl</span> <span class="ident">Runnable</span> <span class="kw">for</span> <span class="ident">Cmd</span> {
-    <span class="kw">fn</span> <span class="ident">description</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">String</span> {
+<span class="kw">impl </span>Runnable <span class="kw">for </span>Cmd {
+    <span class="kw">fn </span>description(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String {
         <span class="macro">format!</span>(
             <span class="string">&quot;{} {}{}&quot;</span>,
-            <span class="self">self</span>.<span class="ident">executable</span>,
-            <span class="self">self</span>.<span class="ident">args</span>.<span class="ident">join</span>(<span class="string">&quot; &quot;</span>),
-            <span class="self">self</span>.<span class="ident">current_dir</span>
-                .<span class="ident">as_ref</span>()
-                .<span class="ident">map_or</span>(<span class="string">&quot;&quot;</span>.<span class="ident">to_string</span>(), <span class="op">|</span><span class="ident">dir</span><span class="op">|</span> <span class="macro">format!</span>(
+            <span class="self">self</span>.executable,
+            <span class="self">self</span>.args.join(<span class="string">&quot; &quot;</span>),
+            <span class="self">self</span>.current_dir
+                .as_ref()
+                .map_or(<span class="string">&quot;&quot;</span>.to_string(), |dir| <span class="macro">format!</span>(
                     <span class="string">&quot; (in directory {})&quot;</span>,
-                    <span class="ident">dir</span>.<span class="ident">display</span>()
+                    dir.display()
                 ))
         )
     }
-    <span class="doccomment">/// Run the provided command, printing a status message with the current prefix.</span>
-    <span class="doccomment">/// TODO(#396): Return one of three results: pass, fail, or internal error (e.g. if the binary</span>
-    <span class="doccomment">/// to run was not found).</span>
-    <span class="kw">fn</span> <span class="ident">run</span>(<span class="self">self</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span>, <span class="ident">opt</span>: <span class="kw-2">&amp;</span><span class="ident">Opt</span>) -&gt; <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">Running</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">cmd</span> <span class="op">=</span> <span class="ident">tokio::process::Command::new</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">executable</span>);
-        <span class="ident">cmd</span>.<span class="ident">args</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">args</span>);
+    <span class="doccomment">/// Run the provided command, printing a status message with the current prefix.
+    /// TODO(#396): Return one of three results: pass, fail, or internal error (e.g. if the binary
+    /// to run was not found).
+    </span><span class="kw">fn </span>run(<span class="self">self</span>: Box&lt;<span class="self">Self</span>&gt;, opt: <span class="kw-2">&amp;</span>Opt) -&gt; Box&lt;<span class="kw">dyn </span>Running&gt; {
+        <span class="kw">let </span><span class="kw-2">mut </span>cmd = tokio::process::Command::new(<span class="kw-2">&amp;</span><span class="self">self</span>.executable);
+        cmd.args(<span class="kw-2">&amp;</span><span class="self">self</span>.args);
 
-        <span class="kw">if</span> <span class="ident">opt</span>.<span class="ident">dry_run</span> {
-            <span class="ident">Box::new</span>(<span class="ident">SingleStatusResult</span> {
-                <span class="ident">value</span>: <span class="ident">StatusResultValue::Skipped</span>,
-                <span class="ident">logs</span>: <span class="ident">String::new</span>(),
+        <span class="kw">if </span>opt.dry_run {
+            Box::new(SingleStatusResult {
+                value: StatusResultValue::Skipped,
+                logs: String::new(),
             })
-        } <span class="kw">else</span> {
-            <span class="comment">// If the `logs` flag is enabled, inherit stdout and stderr from the main xtask</span>
-            <span class="comment">// process.</span>
-            <span class="kw">let</span> <span class="ident">stdout</span> <span class="op">=</span> <span class="kw">if</span> <span class="ident">opt</span>.<span class="ident">logs</span> {
-                <span class="ident">std::process::Stdio::inherit</span>()
-            } <span class="kw">else</span> {
-                <span class="ident">std::process::Stdio::piped</span>()
+        } <span class="kw">else </span>{
+            <span class="comment">// If the `logs` flag is enabled, inherit stdout and stderr from the main xtask
+            // process.
+            </span><span class="kw">let </span>stdout = <span class="kw">if </span>opt.logs {
+                std::process::Stdio::inherit()
+            } <span class="kw">else </span>{
+                std::process::Stdio::piped()
             };
-            <span class="kw">let</span> <span class="ident">stderr</span> <span class="op">=</span> <span class="kw">if</span> <span class="ident">opt</span>.<span class="ident">logs</span> {
-                <span class="ident">std::process::Stdio::inherit</span>()
-            } <span class="kw">else</span> {
-                <span class="ident">std::process::Stdio::piped</span>()
+            <span class="kw">let </span>stderr = <span class="kw">if </span>opt.logs {
+                std::process::Stdio::inherit()
+            } <span class="kw">else </span>{
+                std::process::Stdio::piped()
             };
-            <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">current_dir</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">current_dir</span> {
-                <span class="ident">cmd</span>.<span class="ident">current_dir</span>(<span class="ident">current_dir</span>);
+            <span class="kw">if let </span><span class="prelude-val">Some</span>(current_dir) = <span class="self">self</span>.current_dir {
+                cmd.current_dir(current_dir);
             }
 
-            <span class="kw">let</span> <span class="ident">child</span> <span class="op">=</span> <span class="ident">cmd</span>
-                <span class="comment">// Close stdin to avoid hanging.</span>
-                .<span class="ident">stdin</span>(<span class="ident">std::process::Stdio::null</span>())
-                .<span class="ident">stdout</span>(<span class="ident">stdout</span>)
-                .<span class="ident">stderr</span>(<span class="ident">stderr</span>)
-                .<span class="ident">spawn</span>()
-                .<span class="ident">unwrap_or_else</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> <span class="macro">panic!</span>(<span class="string">&quot;could not spawn command: {:?}: {}&quot;</span>, <span class="ident">cmd</span>, <span class="ident">err</span>));
+            <span class="kw">let </span>child = cmd
+                <span class="comment">// Close stdin to avoid hanging.
+                </span>.stdin(std::process::Stdio::null())
+                .stdout(stdout)
+                .stderr(stderr)
+                .spawn()
+                .unwrap_or_else(|err| <span class="macro">panic!</span>(<span class="string">&quot;could not spawn command: {:?}: {}&quot;</span>, cmd, err));
 
-            <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">pid</span>) <span class="op">=</span> <span class="ident">child</span>.<span class="ident">id</span>() {
-                <span class="ident"><span class="kw">crate</span>::PROCESSES</span>
-                    .<span class="ident">lock</span>()
-                    .<span class="ident">expect</span>(<span class="string">&quot;could not acquire processes lock&quot;</span>)
-                    .<span class="ident">push</span>(<span class="ident">pid</span> <span class="kw">as</span> <span class="ident">i32</span>);
+            <span class="kw">if let </span><span class="prelude-val">Some</span>(pid) = child.id() {
+                <span class="kw">crate</span>::PROCESSES
+                    .lock()
+                    .expect(<span class="string">&quot;could not acquire processes lock&quot;</span>)
+                    .push(pid <span class="kw">as </span>i32);
             }
 
-            <span class="ident">Box::new</span>(<span class="ident">RunningCmd</span> { <span class="ident">child</span> })
+            Box::new(RunningCmd { child })
         }
     }
 }
 
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">process_gone</span>(<span class="ident">raw_pid</span>: <span class="ident">i32</span>) -&gt; <span class="ident">bool</span> {
-    <span class="comment">// Shell out to `ps` as there&#39;s no portable Rust equivalent.</span>
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">cmd</span> <span class="op">=</span> <span class="ident">std::process::Command::new</span>(<span class="string">&quot;ps&quot;</span>);
-    <span class="ident">cmd</span>.<span class="ident">args</span>(<span class="kw-2">&amp;</span>[<span class="string">&quot;-p&quot;</span>, <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;{}&quot;</span>, <span class="ident">raw_pid</span>)]);
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">child</span> <span class="op">=</span> <span class="ident">cmd</span>
-        .<span class="ident">stdin</span>(<span class="ident">std::process::Stdio::null</span>())
-        .<span class="ident">stdout</span>(<span class="ident">std::process::Stdio::null</span>())
-        .<span class="ident">stderr</span>(<span class="ident">std::process::Stdio::null</span>())
-        .<span class="ident">spawn</span>()
-        .<span class="ident">unwrap_or_else</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> <span class="macro">panic!</span>(<span class="string">&quot;could not spawn command: {:?}: {}&quot;</span>, <span class="ident">cmd</span>, <span class="ident">err</span>));
-    <span class="kw">let</span> <span class="ident">output</span> <span class="op">=</span> <span class="ident">child</span>.<span class="ident">wait</span>().<span class="ident">expect</span>(<span class="string">&quot;could not get exit status&quot;</span>);
-    <span class="comment">// ps -p has success exit code if the pid exists.</span>
-    <span class="op">!</span><span class="ident">output</span>.<span class="ident">success</span>()
+<span class="kw">pub fn </span>process_gone(raw_pid: i32) -&gt; bool {
+    <span class="comment">// Shell out to `ps` as there&#39;s no portable Rust equivalent.
+    </span><span class="kw">let </span><span class="kw-2">mut </span>cmd = std::process::Command::new(<span class="string">&quot;ps&quot;</span>);
+    cmd.args([<span class="string">&quot;-p&quot;</span>, <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;{}&quot;</span>, raw_pid)]);
+    <span class="kw">let </span><span class="kw-2">mut </span>child = cmd
+        .stdin(std::process::Stdio::null())
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .spawn()
+        .unwrap_or_else(|err| <span class="macro">panic!</span>(<span class="string">&quot;could not spawn command: {:?}: {}&quot;</span>, cmd, err));
+    <span class="kw">let </span>output = child.wait().expect(<span class="string">&quot;could not get exit status&quot;</span>);
+    <span class="comment">// ps -p has success exit code if the pid exists.
+    </span>!output.success()
 }
 
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">kill_process</span>(<span class="ident">raw_pid</span>: <span class="ident">i32</span>) {
-    <span class="kw">let</span> <span class="ident">pid</span> <span class="op">=</span> <span class="ident">nix::unistd::Pid::from_raw</span>(<span class="ident">raw_pid</span>);
-    <span class="kw">for</span> <span class="ident">i</span> <span class="kw">in</span> <span class="number">0</span>..<span class="number">5</span> {
-        <span class="kw">if</span> <span class="ident">process_gone</span>(<span class="ident">raw_pid</span>) {
+<span class="kw">pub fn </span>kill_process(raw_pid: i32) {
+    <span class="kw">let </span>pid = nix::unistd::Pid::from_raw(raw_pid);
+    <span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..<span class="number">5 </span>{
+        <span class="kw">if </span>process_gone(raw_pid) {
             <span class="kw">return</span>;
         }
 
-        <span class="comment">// Ignore errors.</span>
-        <span class="kw">let</span> <span class="kw">_</span> <span class="op">=</span> <span class="ident">nix::sys::signal::kill</span>(<span class="ident">pid</span>, <span class="ident">Signal::SIGINT</span>);
+        <span class="comment">// Ignore errors.
+        </span><span class="kw">let _ </span>= nix::sys::signal::kill(pid, Signal::SIGINT);
 
-        <span class="ident">std::thread::sleep</span>(<span class="ident">std::time::Duration::from_millis</span>(<span class="number">200</span> <span class="op">*</span> <span class="ident">i</span>));
+        std::thread::sleep(std::time::Duration::from_millis(<span class="number">200 </span>* i));
     }
-    <span class="kw">let</span> <span class="kw">_</span> <span class="op">=</span> <span class="ident">nix::sys::signal::kill</span>(<span class="ident">pid</span>, <span class="ident">Signal::SIGKILL</span>);
+    <span class="kw">let _ </span>= nix::sys::signal::kill(pid, Signal::SIGKILL);
 }
 
-<span class="kw">struct</span> <span class="ident">RunningCmd</span> {
-    <span class="ident">child</span>: <span class="ident">tokio::process::Child</span>,
+<span class="kw">struct </span>RunningCmd {
+    child: tokio::process::Child,
 }
 
-<span class="attribute">#[<span class="ident">async_trait</span>]</span>
-<span class="kw">impl</span> <span class="ident">Running</span> <span class="kw">for</span> <span class="ident">RunningCmd</span> {
-    <span class="kw">fn</span> <span class="ident">kill</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) {
-        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">pid</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">child</span>.<span class="ident">id</span>() {
-            <span class="ident">kill_process</span>(<span class="ident">pid</span> <span class="kw">as</span> <span class="ident">i32</span>);
+<span class="attribute">#[async_trait]
+</span><span class="kw">impl </span>Running <span class="kw">for </span>RunningCmd {
+    <span class="kw">fn </span>kill(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(pid) = <span class="self">self</span>.child.id() {
+            kill_process(pid <span class="kw">as </span>i32);
         }
     }
 
-    <span class="kw">fn</span> <span class="ident">stdout</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) -&gt; <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">AsyncRead</span> <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Unpin</span><span class="op">&gt;</span> {
-        <span class="kw">match</span> <span class="self">self</span>.<span class="ident">child</span>.<span class="ident">stdout</span>.<span class="ident">take</span>() {
-            <span class="prelude-val">Some</span>(<span class="ident">stdout</span>) =&gt; <span class="ident">Box::new</span>(<span class="ident">stdout</span>),
-            <span class="prelude-val">None</span> =&gt; <span class="ident">Box::new</span>(<span class="ident">empty</span>()),
+    <span class="kw">fn </span>stdout(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; Box&lt;<span class="kw">dyn </span>AsyncRead + Send + Unpin&gt; {
+        <span class="kw">match </span><span class="self">self</span>.child.stdout.take() {
+            <span class="prelude-val">Some</span>(stdout) =&gt; Box::new(stdout),
+            <span class="prelude-val">None </span>=&gt; Box::new(empty()),
         }
     }
-    <span class="kw">fn</span> <span class="ident">stderr</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) -&gt; <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">AsyncRead</span> <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Unpin</span><span class="op">&gt;</span> {
-        <span class="kw">match</span> <span class="self">self</span>.<span class="ident">child</span>.<span class="ident">stderr</span>.<span class="ident">take</span>() {
-            <span class="prelude-val">Some</span>(<span class="ident">stderr</span>) =&gt; <span class="ident">Box::new</span>(<span class="ident">stderr</span>),
-            <span class="prelude-val">None</span> =&gt; <span class="ident">Box::new</span>(<span class="ident">empty</span>()),
+    <span class="kw">fn </span>stderr(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; Box&lt;<span class="kw">dyn </span>AsyncRead + Send + Unpin&gt; {
+        <span class="kw">match </span><span class="self">self</span>.child.stderr.take() {
+            <span class="prelude-val">Some</span>(stderr) =&gt; Box::new(stderr),
+            <span class="prelude-val">None </span>=&gt; Box::new(empty()),
         }
     }
 
-    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">result</span>(<span class="kw-2">mut</span> <span class="self">self</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span>) -&gt; <span class="ident">SingleStatusResult</span> {
-        <span class="kw">let</span> <span class="ident">output</span> <span class="op">=</span> <span class="self">self</span>
-            .<span class="ident">child</span>
-            .<span class="ident">wait_with_output</span>()
-            .<span class="kw">await</span>
-            .<span class="ident">expect</span>(<span class="string">&quot;could not get exit status&quot;</span>);
-        <span class="kw">let</span> <span class="ident">logs</span> <span class="op">=</span> <span class="ident">format_logs</span>(<span class="kw-2">&amp;</span><span class="ident">output</span>.<span class="ident">stdout</span>, <span class="kw-2">&amp;</span><span class="ident">output</span>.<span class="ident">stderr</span>);
-        <span class="kw">if</span> <span class="ident">output</span>.<span class="ident">status</span>.<span class="ident">success</span>() {
-            <span class="ident">SingleStatusResult</span> {
-                <span class="ident">value</span>: <span class="ident">StatusResultValue::Ok</span>,
-                <span class="ident">logs</span>,
+    <span class="kw">async fn </span>result(<span class="kw-2">mut </span><span class="self">self</span>: Box&lt;<span class="self">Self</span>&gt;) -&gt; SingleStatusResult {
+        <span class="kw">let </span>output = <span class="self">self
+            </span>.child
+            .wait_with_output()
+            .<span class="kw">await
+            </span>.expect(<span class="string">&quot;could not get exit status&quot;</span>);
+        <span class="kw">let </span>logs = format_logs(<span class="kw-2">&amp;</span>output.stdout, <span class="kw-2">&amp;</span>output.stderr);
+        <span class="kw">if </span>output.status.success() {
+            SingleStatusResult {
+                value: StatusResultValue::Ok,
+                logs,
             }
-        } <span class="kw">else</span> {
-            <span class="ident">SingleStatusResult</span> {
-                <span class="ident">value</span>: <span class="ident">StatusResultValue::Error</span>,
-                <span class="ident">logs</span>,
+        } <span class="kw">else </span>{
+            SingleStatusResult {
+                value: StatusResultValue::Error,
+                logs,
             }
         }
     }
 }
 
-<span class="kw">fn</span> <span class="ident">format_logs</span>(<span class="ident">stdout</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>], <span class="ident">stderr</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) -&gt; <span class="ident">String</span> {
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">logs</span> <span class="op">=</span> <span class="ident">String::new</span>();
-    <span class="kw">if</span> <span class="op">!</span><span class="ident">stdout</span>.<span class="ident">is_empty</span>() {
-        <span class="ident">logs</span> <span class="op">+</span><span class="op">=</span> <span class="kw-2">&amp;</span><span class="macro">format!</span>(
+<span class="kw">fn </span>format_logs(stdout: <span class="kw-2">&amp;</span>[u8], stderr: <span class="kw-2">&amp;</span>[u8]) -&gt; String {
+    <span class="kw">let </span><span class="kw-2">mut </span>logs = String::new();
+    <span class="kw">if </span>!stdout.is_empty() {
+        logs += <span class="kw-2">&amp;</span><span class="macro">format!</span>(
             <span class="string">&quot;════╡ stdout ╞════\n{}&quot;</span>,
-            <span class="ident">std::str::from_utf8</span>(<span class="ident">stdout</span>).<span class="ident">expect</span>(<span class="string">&quot;could not parse stdout as UTF8&quot;</span>)
+            std::str::from_utf8(stdout).expect(<span class="string">&quot;could not parse stdout as UTF8&quot;</span>)
         );
     }
-    <span class="kw">if</span> <span class="op">!</span><span class="ident">stderr</span>.<span class="ident">is_empty</span>() {
-        <span class="ident">logs</span> <span class="op">+</span><span class="op">=</span> <span class="kw-2">&amp;</span><span class="macro">format!</span>(
+    <span class="kw">if </span>!stderr.is_empty() {
+        logs += <span class="kw-2">&amp;</span><span class="macro">format!</span>(
             <span class="string">&quot;════╡ stderr ╞════\n{}&quot;</span>,
-            <span class="ident">std::str::from_utf8</span>(<span class="ident">stderr</span>).<span class="ident">expect</span>(<span class="string">&quot;could not parse stderr as UTF8&quot;</span>)
+            std::str::from_utf8(stderr).expect(<span class="string">&quot;could not parse stderr as UTF8&quot;</span>)
         );
     }
-    <span class="ident">logs</span>
+    logs
 }
 
-<span class="doccomment">/// A task that can be run asynchronously.</span>
-<span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">Runnable</span>: <span class="ident">Send</span> {
-    <span class="doccomment">/// Returns a description of the task, e.g. the command line arguments that are part of it.</span>
-    <span class="kw">fn</span> <span class="ident">description</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">String</span>;
-    <span class="doccomment">/// Starts the task and returns a [`Running`] implementation.</span>
-    <span class="kw">fn</span> <span class="ident">run</span>(<span class="self">self</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span>, <span class="ident">opt</span>: <span class="kw-2">&amp;</span><span class="ident">Opt</span>) -&gt; <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">Running</span><span class="op">&gt;</span>;
+<span class="doccomment">/// A task that can be run asynchronously.
+</span><span class="kw">pub trait </span>Runnable: Send {
+    <span class="doccomment">/// Returns a description of the task, e.g. the command line arguments that are part of it.
+    </span><span class="kw">fn </span>description(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String;
+    <span class="doccomment">/// Starts the task and returns a [`Running`] implementation.
+    </span><span class="kw">fn </span>run(<span class="self">self</span>: Box&lt;<span class="self">Self</span>&gt;, opt: <span class="kw-2">&amp;</span>Opt) -&gt; Box&lt;<span class="kw">dyn </span>Running&gt;;
 }
 
-<span class="doccomment">/// A task that is currently running asynchronously.</span>
-<span class="attribute">#[<span class="ident">async_trait</span>]</span>
-<span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">Running</span>: <span class="ident">Send</span> {
-    <span class="doccomment">/// Attempts to kill the running task.</span>
-    <span class="kw">fn</span> <span class="ident">kill</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) {}
-    <span class="doccomment">/// Returns an [`AsyncRead`] object to stream stdout logs from the task.</span>
-    <span class="kw">fn</span> <span class="ident">stdout</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) -&gt; <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">AsyncRead</span> <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Unpin</span><span class="op">&gt;</span> {
-        <span class="ident">Box::new</span>(<span class="ident">empty</span>())
+<span class="doccomment">/// A task that is currently running asynchronously.
+</span><span class="attribute">#[async_trait]
+</span><span class="kw">pub trait </span>Running: Send {
+    <span class="doccomment">/// Attempts to kill the running task.
+    </span><span class="kw">fn </span>kill(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {}
+    <span class="doccomment">/// Returns an [`AsyncRead`] object to stream stdout logs from the task.
+    </span><span class="kw">fn </span>stdout(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; Box&lt;<span class="kw">dyn </span>AsyncRead + Send + Unpin&gt; {
+        Box::new(empty())
     }
-    <span class="doccomment">/// Returns an [`AsyncRead`] object to stream stderr logs from the task.</span>
-    <span class="kw">fn</span> <span class="ident">stderr</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) -&gt; <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">AsyncRead</span> <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Unpin</span><span class="op">&gt;</span> {
-        <span class="ident">Box::new</span>(<span class="ident">empty</span>())
+    <span class="doccomment">/// Returns an [`AsyncRead`] object to stream stderr logs from the task.
+    </span><span class="kw">fn </span>stderr(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; Box&lt;<span class="kw">dyn </span>AsyncRead + Send + Unpin&gt; {
+        Box::new(empty())
     }
-    <span class="doccomment">/// Returns the final result of the task, upon spontaneous termination.</span>
-    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">result</span>(<span class="self">self</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span>) -&gt; <span class="ident">SingleStatusResult</span>;
+    <span class="doccomment">/// Returns the final result of the task, upon spontaneous termination.
+    </span><span class="kw">async fn </span>result(<span class="self">self</span>: Box&lt;<span class="self">Self</span>&gt;) -&gt; SingleStatusResult;
 }
 
-<span class="attribute">#[<span class="ident">async_trait</span>]</span>
-<span class="kw">impl</span> <span class="ident">Running</span> <span class="kw">for</span> <span class="ident">SingleStatusResult</span> {
-    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">result</span>(<span class="self">self</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span>) -&gt; <span class="ident">SingleStatusResult</span> {
-        <span class="kw-2">*</span><span class="self">self</span>
-    }
+<span class="attribute">#[async_trait]
+</span><span class="kw">impl </span>Running <span class="kw">for </span>SingleStatusResult {
+    <span class="kw">async fn </span>result(<span class="self">self</span>: Box&lt;<span class="self">Self</span>&gt;) -&gt; SingleStatusResult {
+        <span class="kw-2">*</span><span class="self">self
+    </span>}
 }
 
-<span class="doccomment">/// Similar to the `vec!` macro, but also allows a &quot;spread&quot; operator syntax (`...`) to inline and</span>
-<span class="doccomment">/// expand nested iterable values.</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// See &lt;https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Spread_syntax&gt;.</span>
-<span class="attribute">#[<span class="ident">macro_export</span>]</span>
-<span class="macro">macro_rules!</span> <span class="ident">spread</span> [
-    <span class="comment">// Empty case.</span>
-    () =&gt; (
-        <span class="macro">vec!</span>[].<span class="ident">iter</span>()
+<span class="doccomment">/// Similar to the `vec!` macro, but also allows a &quot;spread&quot; operator syntax (`...`) to inline and
+/// expand nested iterable values.
+///
+/// See &lt;https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Spread_syntax&gt;.
+</span><span class="attribute">#[macro_export]
+</span><span class="macro">macro_rules! </span>spread [
+    <span class="comment">// Empty case.
+    </span>() =&gt; (
+        <span class="macro">vec!</span>[].iter()
     );
-    <span class="comment">// Spread value base case.</span>
-    (...<span class="macro-nonterminal">$</span><span class="macro-nonterminal">vv</span>:<span class="ident">expr</span>) =&gt; (
-        <span class="macro-nonterminal">$</span><span class="macro-nonterminal">vv</span>.<span class="ident">iter</span>()
+    <span class="comment">// Spread value base case.
+    </span>(...<span class="macro-nonterminal">$vv</span>:expr) =&gt; (
+        <span class="macro-nonterminal">$vv</span>.iter()
     );
-    <span class="comment">// Spread value recursive case.</span>
-    (...<span class="macro-nonterminal">$</span><span class="macro-nonterminal">vv</span>:<span class="ident">expr</span>, $(<span class="macro-nonterminal">$</span><span class="macro-nonterminal">rest</span>:<span class="ident">tt</span>)<span class="kw-2">*</span>) =&gt; (
-        <span class="macro-nonterminal">$</span><span class="macro-nonterminal">vv</span>.<span class="ident">iter</span>().<span class="ident">chain</span>( <span class="macro">spread!</span>[$(<span class="macro-nonterminal">$</span><span class="macro-nonterminal">rest</span>)<span class="kw-2">*</span>] )
+    <span class="comment">// Spread value recursive case.
+    </span>(...<span class="macro-nonterminal">$vv</span>:expr, $(<span class="macro-nonterminal">$rest</span>:tt)<span class="kw-2">*</span>) =&gt; (
+        <span class="macro-nonterminal">$vv</span>.iter().chain( <span class="macro">spread!</span>[$(<span class="macro-nonterminal">$rest</span>)<span class="kw-2">*</span>] )
     );
-    <span class="comment">// Single value base case.</span>
-    (<span class="macro-nonterminal">$</span><span class="macro-nonterminal">v</span>:<span class="ident">expr</span>) =&gt; (
-        <span class="macro">vec!</span>[<span class="macro-nonterminal">$</span><span class="macro-nonterminal">v</span>].<span class="ident">iter</span>()
+    <span class="comment">// Single value base case.
+    </span>(<span class="macro-nonterminal">$v</span>:expr) =&gt; (
+        <span class="macro">vec!</span>[<span class="macro-nonterminal">$v</span>].iter()
     );
-    <span class="comment">// Single value recursive case.</span>
-    (<span class="macro-nonterminal">$</span><span class="macro-nonterminal">v</span>:<span class="ident">expr</span>, $(<span class="macro-nonterminal">$</span><span class="macro-nonterminal">rest</span>:<span class="ident">tt</span>)<span class="kw-2">*</span>) =&gt; (
-        <span class="macro">vec!</span>[<span class="macro-nonterminal">$</span><span class="macro-nonterminal">v</span>].<span class="ident">iter</span>().<span class="ident">chain</span>( <span class="macro">spread!</span>[$(<span class="macro-nonterminal">$</span><span class="macro-nonterminal">rest</span>)<span class="kw-2">*</span>] )
+    <span class="comment">// Single value recursive case.
+    </span>(<span class="macro-nonterminal">$v</span>:expr, $(<span class="macro-nonterminal">$rest</span>:tt)<span class="kw-2">*</span>) =&gt; (
+        <span class="macro">vec!</span>[<span class="macro-nonterminal">$v</span>].iter().chain( <span class="macro">spread!</span>[$(<span class="macro-nonterminal">$rest</span>)<span class="kw-2">*</span>] )
     );
 ];
 
-<span class="attribute">#[<span class="ident">test</span>]</span>
-<span class="kw">fn</span> <span class="ident">test_spread</span>() {
-    <span class="macro">assert_eq!</span>(<span class="macro">vec!</span>[<span class="number">1</span>], <span class="macro">spread!</span>[<span class="number">1</span>].<span class="ident">cloned</span>().<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">i32</span><span class="op">&gt;</span><span class="op">&gt;</span>());
-    <span class="macro">assert_eq!</span>(<span class="macro">vec!</span>[<span class="number">1</span>, <span class="number">2</span>], <span class="macro">spread!</span>[<span class="number">1</span>, <span class="number">2</span>].<span class="ident">cloned</span>().<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">i32</span><span class="op">&gt;</span><span class="op">&gt;</span>());
+<span class="attribute">#[test]
+</span><span class="kw">fn </span>test_spread() {
+    <span class="macro">assert_eq!</span>(<span class="macro">vec!</span>[<span class="number">1</span>], <span class="macro">spread!</span>[<span class="number">1</span>].cloned().collect::&lt;Vec&lt;i32&gt;&gt;());
+    <span class="macro">assert_eq!</span>(<span class="macro">vec!</span>[<span class="number">1</span>, <span class="number">2</span>], <span class="macro">spread!</span>[<span class="number">1</span>, <span class="number">2</span>].cloned().collect::&lt;Vec&lt;i32&gt;&gt;());
     <span class="macro">assert_eq!</span>(
         <span class="macro">vec!</span>[<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>, <span class="number">4</span>],
-        <span class="macro">spread!</span>[<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>, <span class="number">4</span>].<span class="ident">cloned</span>().<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">i32</span><span class="op">&gt;</span><span class="op">&gt;</span>()
+        <span class="macro">spread!</span>[<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>, <span class="number">4</span>].cloned().collect::&lt;Vec&lt;i32&gt;&gt;()
     );
     <span class="macro">assert_eq!</span>(
         <span class="macro">vec!</span>[<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>, <span class="number">4</span>],
-        <span class="macro">spread!</span>[...<span class="macro">vec!</span>[<span class="number">1</span>, <span class="number">2</span>], <span class="number">3</span>, <span class="number">4</span>].<span class="ident">cloned</span>().<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">i32</span><span class="op">&gt;</span><span class="op">&gt;</span>()
+        <span class="macro">spread!</span>[...<span class="macro">vec!</span>[<span class="number">1</span>, <span class="number">2</span>], <span class="number">3</span>, <span class="number">4</span>].cloned().collect::&lt;Vec&lt;i32&gt;&gt;()
     );
     <span class="macro">assert_eq!</span>(
         <span class="macro">vec!</span>[<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>, <span class="number">4</span>],
-        <span class="macro">spread!</span>[<span class="number">1</span>, ...<span class="macro">vec!</span>[<span class="number">2</span>, <span class="number">3</span>], <span class="number">4</span>].<span class="ident">cloned</span>().<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">i32</span><span class="op">&gt;</span><span class="op">&gt;</span>()
+        <span class="macro">spread!</span>[<span class="number">1</span>, ...<span class="macro">vec!</span>[<span class="number">2</span>, <span class="number">3</span>], <span class="number">4</span>].cloned().collect::&lt;Vec&lt;i32&gt;&gt;()
     );
     <span class="macro">assert_eq!</span>(
         <span class="macro">vec!</span>[<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>, <span class="number">4</span>],
-        <span class="macro">spread!</span>[<span class="number">1</span>, <span class="number">2</span>, ...<span class="macro">vec!</span>[<span class="number">3</span>, <span class="number">4</span>]].<span class="ident">cloned</span>().<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">i32</span><span class="op">&gt;</span><span class="op">&gt;</span>()
+        <span class="macro">spread!</span>[<span class="number">1</span>, <span class="number">2</span>, ...<span class="macro">vec!</span>[<span class="number">3</span>, <span class="number">4</span>]].cloned().collect::&lt;Vec&lt;i32&gt;&gt;()
     );
     <span class="macro">assert_eq!</span>(
         <span class="macro">vec!</span>[<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>, <span class="number">4</span>],
         <span class="macro">spread!</span>[...<span class="macro">vec!</span>[<span class="number">1</span>, <span class="number">2</span>], ...<span class="macro">vec!</span>[<span class="number">3</span>, <span class="number">4</span>]]
-            .<span class="ident">cloned</span>()
-            .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">i32</span><span class="op">&gt;</span><span class="op">&gt;</span>()
+            .cloned()
+            .collect::&lt;Vec&lt;i32&gt;&gt;()
     );
     <span class="macro">assert_eq!</span>(
         <span class="macro">vec!</span>[<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>, <span class="number">4</span>],
-        <span class="macro">spread!</span>[...<span class="macro">vec!</span>[<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>, <span class="number">4</span>]].<span class="ident">cloned</span>().<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">i32</span><span class="op">&gt;</span><span class="op">&gt;</span>()
+        <span class="macro">spread!</span>[...<span class="macro">vec!</span>[<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>, <span class="number">4</span>]].cloned().collect::&lt;Vec&lt;i32&gt;&gt;()
     );
 
     <span class="macro">assert_eq!</span>(
         <span class="macro">vec!</span>[<span class="string">&quot;foo&quot;</span>, <span class="string">&quot;bar&quot;</span>],
-        <span class="macro">spread!</span>[<span class="string">&quot;foo&quot;</span>, <span class="string">&quot;bar&quot;</span>].<span class="ident">cloned</span>().<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>()
+        <span class="macro">spread!</span>[<span class="string">&quot;foo&quot;</span>, <span class="string">&quot;bar&quot;</span>].cloned().collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;()
     );
 }
 </code></pre></div>
-</section><section id="search" class="content hidden"></section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="xtask" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.62.0-nightly (de1bc0008 2022-04-21)" ></div>
-</body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="xtask" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (81f391930 2022-10-09)" ></div></body></html>

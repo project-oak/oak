@@ -1,9 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `oak_functions/abi/src/lib.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>lib.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../ayu.css" disabled><link rel="stylesheet" type="text/css" href="../../dark.css" disabled><link rel="stylesheet" type="text/css" href="../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../storage.js"></script><script src="../../crates.js"></script><script defer src="../../main.js"></script><script defer src="../../source-script.js"></script><script defer src="../../source-files.js"></script>
-    <noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../oak_functions_abi/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div>
-        </a><h2 class="location"></h2>
-    </nav>
-    <nav class="sidebar"><a class="sidebar-logo" href="../../oak_functions_abi/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div>
-        </a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../oak_functions_abi/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><div class="theme-picker hidden"><button id="theme-picker" aria-label="Pick another theme!" aria-haspopup="menu" title="themes"><img width="22" height="22" alt="Pick another theme!" src="../../brush.svg"></button><div id="theme-choices" role="menu"></div></div><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><button type="button" id="help-button" title="help">?</button><a id="settings-menu" href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../wheel.svg"></a></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `oak_functions_abi/src/lib.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>lib.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" href="../../normalize.css"><link rel="stylesheet" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" href="../../ayu.css" disabled><link rel="stylesheet" href="../../dark.css" disabled><link rel="stylesheet" href="../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../storage.js"></script><script defer src="../../source-script.js"></script><script defer src="../../source-files.js"></script><script defer src="../../main.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><a class="sidebar-logo" href="../../oak_functions_abi/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../oak_functions_abi/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="src-line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -276,279 +271,278 @@
 <span id="271">271</span>
 <span id="272">272</span>
 <span id="273">273</span>
-</pre><pre class="rust"><code><span class="comment">//</span>
-<span class="comment">// Copyright 2021 The Project Oak Authors</span>
-<span class="comment">//</span>
-<span class="comment">// Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
-<span class="comment">// you may not use this file except in compliance with the License.</span>
-<span class="comment">// You may obtain a copy of the License at</span>
-<span class="comment">//</span>
-<span class="comment">//     http://www.apache.org/licenses/LICENSE-2.0</span>
-<span class="comment">//</span>
-<span class="comment">// Unless required by applicable law or agreed to in writing, software</span>
-<span class="comment">// distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
-<span class="comment">// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
-<span class="comment">// See the License for the specific language governing permissions and</span>
-<span class="comment">// limitations under the License.</span>
-<span class="comment">//</span>
+</pre><pre class="rust"><code><span class="comment">//
+// Copyright 2021 The Project Oak Authors
+//
+// Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
-<span class="doccomment">//! Type, constant and Wasm host function definitions for the Oak-Functions application</span>
-<span class="doccomment">//! binary interface (ABI).</span>
+</span><span class="doccomment">//! Type, constant and Wasm host function definitions for the Oak-Functions application
+//! binary interface (ABI).
 
-<span class="attribute">#![<span class="ident">no_std</span>]</span>
+</span><span class="attribute">#![no_std]
 
-<span class="kw">extern</span> <span class="kw">crate</span> <span class="ident">alloc</span>;
+</span><span class="kw">extern crate </span>alloc;
 
-<span class="kw">pub</span> <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::proto::ExtensionHandle</span>;
-<span class="kw">use</span> <span class="ident">alloc</span>::{<span class="ident">string::String</span>, <span class="ident">vec::Vec</span>};
-<span class="kw">use</span> <span class="ident">core::mem::size_of</span>;
-<span class="kw">use</span> <span class="ident">serde</span>::{<span class="ident">Deserialize</span>, <span class="ident">Serialize</span>};
+<span class="kw">pub use </span><span class="kw">crate</span>::proto::ExtensionHandle;
+<span class="kw">use </span>alloc::{string::String, vec::Vec};
+<span class="kw">use </span>core::mem::size_of;
+<span class="kw">use </span>serde::{Deserialize, Serialize};
 
-<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">proto</span> {
+<span class="kw">pub mod </span>proto {
     <span class="macro">include!</span>(<span class="macro">concat!</span>(<span class="macro">env!</span>(<span class="string">&quot;OUT_DIR&quot;</span>), <span class="string">&quot;/oak.functions.abi.rs&quot;</span>));
     <span class="macro">include!</span>(<span class="macro">concat!</span>(<span class="macro">env!</span>(<span class="string">&quot;OUT_DIR&quot;</span>), <span class="string">&quot;/oak.functions.lookup_data.rs&quot;</span>));
 }
 
-<span class="doccomment">/// See REQUEST_RESPONSE_ENCODING.MD in the crate root.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">PartialEq</span>, <span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Request</span> {
-    <span class="kw">pub</span> <span class="ident">body</span>: <span class="ident">alloc::vec::Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
+<span class="doccomment">/// See REQUEST_RESPONSE_ENCODING.MD in the crate root.
+</span><span class="attribute">#[derive(Clone, PartialEq, Debug)]
+</span><span class="kw">pub struct </span>Request {
+    <span class="kw">pub </span>body: alloc::vec::Vec&lt;u8&gt;,
 }
 
-<span class="doccomment">/// See REQUEST_RESPONSE_ENCODING.MD in the crate root.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">PartialEq</span>, <span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Response</span> {
-    <span class="kw">pub</span> <span class="ident">status</span>: <span class="ident">StatusCode</span>,
-    <span class="doccomment">/// body (may include padding 0s)</span>
-    <span class="kw">pub</span> <span class="ident">body</span>: <span class="ident">alloc::vec::Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
-    <span class="doccomment">/// The effective length of the body, excluding any padding contained</span>
-    <span class="kw">pub</span> <span class="ident">length</span>: <span class="ident">u64</span>,
+<span class="doccomment">/// See REQUEST_RESPONSE_ENCODING.MD in the crate root.
+</span><span class="attribute">#[derive(Clone, PartialEq, Debug)]
+</span><span class="kw">pub struct </span>Response {
+    <span class="kw">pub </span>status: StatusCode,
+    <span class="doccomment">/// body (may include padding 0s)
+    </span><span class="kw">pub </span>body: alloc::vec::Vec&lt;u8&gt;,
+    <span class="doccomment">/// The effective length of the body, excluding any padding contained
+    </span><span class="kw">pub </span>length: u64,
 }
 
-<span class="doccomment">/// See REQUEST_RESPONSE_ENCODING.MD in the crate root.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Copy</span>, <span class="ident">Debug</span>, <span class="ident">strum::Display</span>, <span class="ident">strum::FromRepr</span>, <span class="ident">PartialEq</span>)]</span>
-<span class="attribute">#[<span class="ident">repr</span>(<span class="ident">u32</span>)]</span>
-<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">StatusCode</span> {
-    <span class="ident">Unspecified</span> <span class="op">=</span> <span class="number">0</span>,
-    <span class="ident">Success</span> <span class="op">=</span> <span class="number">1</span>,
-    <span class="ident">BadRequest</span> <span class="op">=</span> <span class="number">2</span>,
-    <span class="ident">PolicySizeViolation</span> <span class="op">=</span> <span class="number">3</span>,
-    <span class="ident">PolicyTimeViolation</span> <span class="op">=</span> <span class="number">4</span>,
-    <span class="ident">InternalServerError</span> <span class="op">=</span> <span class="number">5</span>,
+<span class="doccomment">/// See REQUEST_RESPONSE_ENCODING.MD in the crate root.
+</span><span class="attribute">#[derive(Clone, Copy, Debug, strum::Display, strum::FromRepr, PartialEq)]
+#[repr(u32)]
+</span><span class="kw">pub enum </span>StatusCode {
+    Unspecified = <span class="number">0</span>,
+    Success = <span class="number">1</span>,
+    BadRequest = <span class="number">2</span>,
+    PolicySizeViolation = <span class="number">3</span>,
+    PolicyTimeViolation = <span class="number">4</span>,
+    InternalServerError = <span class="number">5</span>,
 }
 
-<span class="comment">// As defined in REQUEST_RESPONSE_ENCODING.MD in the crate root.</span>
-<span class="kw">const</span> <span class="ident">RESPONSE_STATUS_CODE_SIZE</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">4</span>;
-<span class="kw">const</span> <span class="ident">RESPONSE_STATUS_CODE_OFFSET</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">0</span>;
-<span class="macro">static_assertions::assert_eq_size!</span>([<span class="ident">u8</span>; <span class="ident">RESPONSE_STATUS_CODE_SIZE</span>], <span class="ident">StatusCode</span>);
+<span class="comment">// As defined in REQUEST_RESPONSE_ENCODING.MD in the crate root.
+</span><span class="kw">const </span>RESPONSE_STATUS_CODE_SIZE: usize = <span class="number">4</span>;
+<span class="kw">const </span>RESPONSE_STATUS_CODE_OFFSET: usize = <span class="number">0</span>;
+<span class="macro">static_assertions::assert_eq_size!</span>([u8; RESPONSE_STATUS_CODE_SIZE], StatusCode);
 
-<span class="comment">// As defined in REQUEST_RESPONSE_ENCODING.MD in the crate root.</span>
-<span class="kw">type</span> <span class="ident">ResponseLength</span> <span class="op">=</span> <span class="ident">u64</span>;
-<span class="kw">const</span> <span class="ident">RESPONSE_LENGTH_SIZE</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">8</span>;
-<span class="kw">const</span> <span class="ident">RESPONSE_LENGTH_OFFSET</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="ident">RESPONSE_STATUS_CODE_SIZE</span>;
-<span class="macro">static_assertions::assert_eq_size!</span>([<span class="ident">u8</span>; <span class="ident">RESPONSE_LENGTH_SIZE</span>], <span class="ident">ResponseLength</span>);
+<span class="comment">// As defined in REQUEST_RESPONSE_ENCODING.MD in the crate root.
+</span><span class="kw">type </span>ResponseLength = u64;
+<span class="kw">const </span>RESPONSE_LENGTH_SIZE: usize = <span class="number">8</span>;
+<span class="kw">const </span>RESPONSE_LENGTH_OFFSET: usize = RESPONSE_STATUS_CODE_SIZE;
+<span class="macro">static_assertions::assert_eq_size!</span>([u8; RESPONSE_LENGTH_SIZE], ResponseLength);
 
-<span class="comment">// As defined in REQUEST_RESPONSE_ENCODING.MD in the crate root.</span>
-<span class="kw">const</span> <span class="ident">RESPONSE_BODY_OFFSET</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="ident">RESPONSE_STATUS_CODE_SIZE</span> <span class="op">+</span> <span class="ident">RESPONSE_LENGTH_SIZE</span>;
+<span class="comment">// As defined in REQUEST_RESPONSE_ENCODING.MD in the crate root.
+</span><span class="kw">pub const </span>RESPONSE_BODY_OFFSET: usize = RESPONSE_STATUS_CODE_SIZE + RESPONSE_LENGTH_SIZE;
 
-<span class="kw">impl</span> <span class="ident">Response</span> {
-    <span class="doccomment">/// Creates a new instance of Response.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// Sets the `status` and `body` to the given status and body, and sets the</span>
-    <span class="doccomment">/// `length` to the length of the body.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">create</span>(<span class="ident">status</span>: <span class="ident">StatusCode</span>, <span class="ident">body</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>) -&gt; <span class="self">Self</span> {
-        <span class="ident">Response</span> {
-            <span class="ident">status</span>,
-            <span class="ident">body</span>: <span class="ident">body</span>.<span class="ident">clone</span>(),
-            <span class="ident">length</span>: <span class="ident">body</span>.<span class="ident">len</span>() <span class="kw">as</span> <span class="ident">u64</span>,
+<span class="kw">impl </span>Response {
+    <span class="doccomment">/// Creates a new instance of Response.
+    ///
+    /// Sets the `status` and `body` to the given status and body, and sets the
+    /// `length` to the length of the body.
+    </span><span class="kw">pub fn </span>create(status: StatusCode, body: Vec&lt;u8&gt;) -&gt; <span class="self">Self </span>{
+        Response {
+            status,
+            body: body.clone(),
+            length: body.len() <span class="kw">as </span>u64,
         }
     }
 
-    <span class="doccomment">/// Returns the body of the response, excluding any trailing 0s.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// Uses the effective length of the body, in `self.length`, to remove the trailing 0s.</span>
-    <span class="doccomment">/// Returns as error if `self.length` cannot be converted to `usize` due to an overflow.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">body</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="kw-2">&amp;</span>[<span class="ident">u8</span>], <span class="ident">core::num::TryFromIntError</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">length</span> <span class="op">=</span> <span class="ident">usize::try_from</span>(<span class="self">self</span>.<span class="ident">length</span>)<span class="question-mark">?</span>;
-        <span class="prelude-val">Ok</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">body</span>.<span class="ident">as_slice</span>()[..<span class="ident">length</span>])
+    <span class="doccomment">/// Returns the body of the response, excluding any trailing 0s.
+    ///
+    /// Uses the effective length of the body, in `self.length`, to remove the trailing 0s.
+    /// Returns as error if `self.length` cannot be converted to `usize` due to an overflow.
+    </span><span class="kw">pub fn </span>body(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span>[u8], core::num::TryFromIntError&gt; {
+        <span class="kw">let </span>length = usize::try_from(<span class="self">self</span>.length)<span class="question-mark">?</span>;
+        <span class="prelude-val">Ok</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.body.as_slice()[..length])
     }
 
-    <span class="doccomment">/// Creates and returns a new [`Response`] instance with the same `status` and `body` as `self`,</span>
-    <span class="doccomment">/// except that the `body` may be padded, by adding a number trailing 0s, to make its length</span>
-    <span class="doccomment">/// equal to `body_size`. Sets the `length` of the new instance to the length of `self.body`.</span>
-    <span class="doccomment">/// Returns an error if the length of the `body` is larger than `body_size`.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">pad</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">body_size</span>: <span class="ident">usize</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
-        <span class="kw">if</span> <span class="self">self</span>.<span class="ident">body</span>.<span class="ident">len</span>() <span class="op">&lt;</span><span class="op">=</span> <span class="ident">body_size</span> {
-            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">body</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">body</span>.<span class="ident">as_slice</span>().<span class="ident">to_vec</span>();
-            <span class="comment">// Set the length to the actual length of the body before padding.</span>
-            <span class="kw">let</span> <span class="ident">length</span> <span class="op">=</span> <span class="ident">body</span>.<span class="ident">len</span>() <span class="kw">as</span> <span class="ident">u64</span>;
-            <span class="comment">// Add trailing 0s</span>
-            <span class="ident">body</span>.<span class="ident">resize</span>(<span class="ident">body_size</span>, <span class="number">0</span>);
-            <span class="prelude-val">Ok</span>(<span class="ident">Response</span> {
-                <span class="ident">status</span>: <span class="self">self</span>.<span class="ident">status</span>,
-                <span class="ident">body</span>,
-                <span class="ident">length</span>,
+    <span class="doccomment">/// Creates and returns a new [`Response`] instance with the same `status` and `body` as `self`,
+    /// except that the `body` may be padded, by adding a number trailing 0s, to make its length
+    /// equal to `body_size`. Sets the `length` of the new instance to the length of `self.body`.
+    /// Returns an error if the length of the `body` is larger than `body_size`.
+    </span><span class="kw">pub fn </span>pad(<span class="kw-2">&amp;</span><span class="self">self</span>, body_size: usize) -&gt; anyhow::Result&lt;<span class="self">Self</span>&gt; {
+        <span class="kw">if </span><span class="self">self</span>.body.len() &lt;= body_size {
+            <span class="kw">let </span><span class="kw-2">mut </span>body = <span class="self">self</span>.body.as_slice().to_vec();
+            <span class="comment">// Set the length to the actual length of the body before padding.
+            </span><span class="kw">let </span>length = body.len() <span class="kw">as </span>u64;
+            <span class="comment">// Add trailing 0s
+            </span>body.resize(body_size, <span class="number">0</span>);
+            <span class="prelude-val">Ok</span>(Response {
+                status: <span class="self">self</span>.status,
+                body,
+                length,
             })
-        } <span class="kw">else</span> {
+        } <span class="kw">else </span>{
             <span class="macro">anyhow::bail!</span>(<span class="string">&quot;response body is larger than the input body_size&quot;</span>)
         }
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">encode_to_vec</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">vec</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span> <span class="op">=</span>
-            <span class="ident">Vec::with_capacity</span>(<span class="ident">RESPONSE_LENGTH_SIZE</span> <span class="op">+</span> <span class="ident">RESPONSE_STATUS_CODE_SIZE</span> <span class="op">+</span> <span class="self">self</span>.<span class="ident">body</span>.<span class="ident">len</span>());
-        <span class="ident">vec</span>.<span class="ident">extend_from_slice</span>(<span class="kw-2">&amp;</span>(<span class="self">self</span>.<span class="ident">status</span> <span class="kw">as</span> <span class="ident">u32</span>).<span class="ident">to_le_bytes</span>());
-        <span class="ident">vec</span>.<span class="ident">extend_from_slice</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">length</span>.<span class="ident">to_le_bytes</span>());
-        <span class="ident">vec</span>.<span class="ident">extend_from_slice</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">body</span>);
-        <span class="ident">vec</span>
+    <span class="kw">pub fn </span>encode_to_vec(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Vec&lt;u8&gt; {
+        <span class="kw">let </span><span class="kw-2">mut </span>vec: Vec&lt;u8&gt; =
+            Vec::with_capacity(RESPONSE_LENGTH_SIZE + RESPONSE_STATUS_CODE_SIZE + <span class="self">self</span>.body.len());
+        vec.extend_from_slice(<span class="kw-2">&amp;</span>(<span class="self">self</span>.status <span class="kw">as </span>u32).to_le_bytes());
+        vec.extend_from_slice(<span class="kw-2">&amp;</span><span class="self">self</span>.length.to_le_bytes());
+        vec.extend_from_slice(<span class="kw-2">&amp;</span><span class="self">self</span>.body);
+        vec
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">decode</span>(<span class="ident">bytes</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">status</span>: <span class="ident">StatusCode</span> <span class="op">=</span> {
-            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">status_bytes</span>: [<span class="ident">u8</span>; <span class="ident">RESPONSE_STATUS_CODE_SIZE</span>] <span class="op">=</span> [<span class="number">0</span>; <span class="ident">RESPONSE_STATUS_CODE_SIZE</span>];
-            <span class="ident">status_bytes</span>.<span class="ident">copy_from_slice</span>(
-                <span class="kw-2">&amp;</span><span class="ident">bytes</span>[<span class="ident">RESPONSE_STATUS_CODE_OFFSET</span>
-                    ..(<span class="ident">RESPONSE_STATUS_CODE_OFFSET</span> <span class="op">+</span> <span class="ident">RESPONSE_STATUS_CODE_SIZE</span>)],
+    <span class="kw">pub fn </span>decode(bytes: <span class="kw-2">&amp;</span>[u8]) -&gt; anyhow::Result&lt;<span class="self">Self</span>&gt; {
+        <span class="kw">let </span>status: StatusCode = {
+            <span class="kw">let </span><span class="kw-2">mut </span>status_bytes: [u8; RESPONSE_STATUS_CODE_SIZE] = [<span class="number">0</span>; RESPONSE_STATUS_CODE_SIZE];
+            status_bytes.copy_from_slice(
+                <span class="kw-2">&amp;</span>bytes[RESPONSE_STATUS_CODE_OFFSET
+                    ..(RESPONSE_STATUS_CODE_OFFSET + RESPONSE_STATUS_CODE_SIZE)],
             );
-            <span class="ident">StatusCode::from_repr</span>(<span class="ident">u32::from_le_bytes</span>(<span class="ident">status_bytes</span>))
-                .<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">anyhow::Error::msg</span>(<span class="string">&quot;Invalid status code&quot;</span>))<span class="question-mark">?</span>
-        };
-        <span class="kw">let</span> <span class="ident">length</span> <span class="op">=</span> {
-            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">length_bytes</span>: [<span class="ident">u8</span>; <span class="ident">RESPONSE_LENGTH_SIZE</span>] <span class="op">=</span> [<span class="number">0</span>; <span class="ident">RESPONSE_LENGTH_SIZE</span>];
-            <span class="ident">length_bytes</span>.<span class="ident">copy_from_slice</span>(
-                <span class="kw-2">&amp;</span><span class="ident">bytes</span>[<span class="ident">RESPONSE_LENGTH_OFFSET</span>..(<span class="ident">RESPONSE_LENGTH_OFFSET</span> <span class="op">+</span> <span class="ident">RESPONSE_LENGTH_SIZE</span>)],
+            StatusCode::from_repr(u32::from_le_bytes(status_bytes))
+                .ok_or_else(|| anyhow::Error::msg(<span class="string">&quot;Invalid status code&quot;</span>))<span class="question-mark">?
+        </span>};
+        <span class="kw">let </span>length = {
+            <span class="kw">let </span><span class="kw-2">mut </span>length_bytes: [u8; RESPONSE_LENGTH_SIZE] = [<span class="number">0</span>; RESPONSE_LENGTH_SIZE];
+            length_bytes.copy_from_slice(
+                <span class="kw-2">&amp;</span>bytes[RESPONSE_LENGTH_OFFSET..(RESPONSE_LENGTH_OFFSET + RESPONSE_LENGTH_SIZE)],
             );
-            <span class="ident">ResponseLength::from_le_bytes</span>(<span class="ident">length_bytes</span>)
+            ResponseLength::from_le_bytes(length_bytes)
         };
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">body</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span> <span class="op">=</span>
-            <span class="ident">Vec::with_capacity</span>(<span class="ident">bytes</span>.<span class="ident">len</span>() <span class="op">-</span> <span class="ident">RESPONSE_LENGTH_SIZE</span> <span class="op">-</span> <span class="ident">RESPONSE_STATUS_CODE_SIZE</span>);
+        <span class="kw">let </span><span class="kw-2">mut </span>body: Vec&lt;u8&gt; =
+            Vec::with_capacity(bytes.len() - RESPONSE_LENGTH_SIZE - RESPONSE_STATUS_CODE_SIZE);
 
-        <span class="ident">body</span>.<span class="ident">extend_from_slice</span>(<span class="kw-2">&amp;</span><span class="ident">bytes</span>[<span class="ident">RESPONSE_BODY_OFFSET</span>..<span class="ident">bytes</span>.<span class="ident">len</span>()]);
+        body.extend_from_slice(<span class="kw-2">&amp;</span>bytes[RESPONSE_BODY_OFFSET..bytes.len()]);
 
-        <span class="prelude-val">Ok</span>(<span class="self">Self</span> {
-            <span class="ident">status</span>,
-            <span class="ident">body</span>,
-            <span class="ident">length</span>,
+        <span class="prelude-val">Ok</span>(<span class="self">Self </span>{
+            status,
+            body,
+            length,
         })
     }
 }
 
-<span class="doccomment">/// Holds the optional value from the storage.</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">StorageGetItemResponse</span> {
-    <span class="kw">pub</span> <span class="ident">value</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+<span class="doccomment">/// Holds the optional value from the storage.
+</span><span class="kw">pub struct </span>StorageGetItemResponse {
+    <span class="kw">pub </span>value: <span class="prelude-ty">Option</span>&lt;Vec&lt;u8&gt;&gt;,
 }
 
-<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">StorageGetItemResponse</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span> {
-    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">response</span>: <span class="ident">StorageGetItemResponse</span>) -&gt; <span class="self">Self</span> {
-        <span class="comment">// Temporary manual serialisation to avoid `bincode` when using `no_std`.</span>
-        <span class="comment">// TODO(#2975): Replace this with an IDL-based implemenation when the ABI is converted.</span>
-        <span class="kw">match</span> <span class="ident">response</span>.<span class="ident">value</span> {
-            <span class="prelude-val">None</span> =&gt; <span class="ident">Vec::new</span>(),
-            <span class="prelude-val">Some</span>(<span class="ident">value</span>) =&gt; {
-                <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">result</span> <span class="op">=</span> <span class="ident">Vec::with_capacity</span>(<span class="ident">value</span>.<span class="ident">len</span>() <span class="op">+</span> <span class="ident">size_of</span>::<span class="op">&lt;</span><span class="ident">u64</span><span class="op">&gt;</span>());
-                <span class="ident">result</span>.<span class="ident">extend_from_slice</span>(<span class="kw-2">&amp;</span>(<span class="ident">value</span>.<span class="ident">len</span>() <span class="kw">as</span> <span class="ident">u64</span>).<span class="ident">to_le_bytes</span>());
-                <span class="ident">result</span>.<span class="ident">extend_from_slice</span>(<span class="kw-2">&amp;</span><span class="ident">value</span>);
-                <span class="ident">result</span>
+<span class="kw">impl </span>From&lt;StorageGetItemResponse&gt; <span class="kw">for </span>Vec&lt;u8&gt; {
+    <span class="kw">fn </span>from(response: StorageGetItemResponse) -&gt; <span class="self">Self </span>{
+        <span class="comment">// Temporary manual serialisation to avoid `bincode` when using `no_std`.
+        // TODO(#2975): Replace this with an IDL-based implemenation when the ABI is converted.
+        </span><span class="kw">match </span>response.value {
+            <span class="prelude-val">None </span>=&gt; Vec::new(),
+            <span class="prelude-val">Some</span>(value) =&gt; {
+                <span class="kw">let </span><span class="kw-2">mut </span>result = Vec::with_capacity(value.len() + size_of::&lt;u64&gt;());
+                result.extend_from_slice(<span class="kw-2">&amp;</span>(value.len() <span class="kw">as </span>u64).to_le_bytes());
+                result.extend_from_slice(<span class="kw-2">&amp;</span>value);
+                result
             }
         }
     }
 }
 
-<span class="kw">impl</span> <span class="ident">TryFrom</span><span class="op">&lt;</span><span class="kw-2">&amp;</span>[<span class="ident">u8</span>]<span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">StorageGetItemResponse</span> {
-    <span class="kw">type</span> <span class="ident">Error</span> <span class="op">=</span> <span class="ident">anyhow::Error</span>;
-    <span class="kw">fn</span> <span class="ident">try_from</span>(<span class="ident">buffer</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident"><span class="self">Self</span>::Error</span><span class="op">&gt;</span> {
-        <span class="comment">// Temporary manual deserialisation to avoid `bincode` when using `no_std`.</span>
-        <span class="comment">// TODO(#2975): Replace this with an IDL-based implemenation when the ABI is converted.</span>
-        <span class="kw">const</span> <span class="ident">LENGTH_SIZE</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="ident">size_of</span>::<span class="op">&lt;</span><span class="ident">u64</span><span class="op">&gt;</span>();
-        <span class="comment">// The encoding represents the `None` value as an empty buffer. For a value of</span>
-        <span class="comment">// `Some(Vec&lt;u8&gt;)` it adds a length-prefix that is also used for additional validation,</span>
-        <span class="kw">if</span> <span class="ident">buffer</span>.<span class="ident">is_empty</span>() {
-            <span class="kw">return</span> <span class="prelude-val">Ok</span>(<span class="ident">StorageGetItemResponse</span> { <span class="ident">value</span>: <span class="prelude-val">None</span> });
+<span class="kw">impl </span>TryFrom&lt;<span class="kw-2">&amp;</span>[u8]&gt; <span class="kw">for </span>StorageGetItemResponse {
+    <span class="kw">type </span>Error = anyhow::Error;
+    <span class="kw">fn </span>try_from(buffer: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="self">Self</span>::Error&gt; {
+        <span class="comment">// Temporary manual deserialisation to avoid `bincode` when using `no_std`.
+        // TODO(#2975): Replace this with an IDL-based implemenation when the ABI is converted.
+        </span><span class="kw">const </span>LENGTH_SIZE: usize = size_of::&lt;u64&gt;();
+        <span class="comment">// The encoding represents the `None` value as an empty buffer. For a value of
+        // `Some(Vec&lt;u8&gt;)` it adds a length-prefix that is also used for additional validation,
+        </span><span class="kw">if </span>buffer.is_empty() {
+            <span class="kw">return </span><span class="prelude-val">Ok</span>(StorageGetItemResponse { value: <span class="prelude-val">None </span>});
         }
-        <span class="kw">if</span> <span class="ident">buffer</span>.<span class="ident">len</span>() <span class="op">&lt;</span> <span class="ident">LENGTH_SIZE</span> {
+        <span class="kw">if </span>buffer.len() &lt; LENGTH_SIZE {
             <span class="macro">anyhow::bail!</span>(<span class="string">&quot;Invalid buffer: buffer too small.&quot;</span>)
         }
 
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">len_buffer</span> <span class="op">=</span> [<span class="number">0</span>; <span class="ident">LENGTH_SIZE</span>];
-        <span class="ident">len_buffer</span>.<span class="ident">copy_from_slice</span>(<span class="kw-2">&amp;</span><span class="ident">buffer</span>[..<span class="ident">LENGTH_SIZE</span>]);
-        <span class="kw">let</span> <span class="ident">len</span> <span class="op">=</span> <span class="ident">u64::from_le_bytes</span>(<span class="ident">len_buffer</span>);
+        <span class="kw">let </span><span class="kw-2">mut </span>len_buffer = [<span class="number">0</span>; LENGTH_SIZE];
+        len_buffer.copy_from_slice(<span class="kw-2">&amp;</span>buffer[..LENGTH_SIZE]);
+        <span class="kw">let </span>len = u64::from_le_bytes(len_buffer);
 
-        <span class="kw">if</span> <span class="ident">buffer</span>.<span class="ident">len</span>() <span class="op">!</span><span class="op">=</span> <span class="ident">len</span> <span class="kw">as</span> <span class="ident">usize</span> <span class="op">+</span> <span class="ident">LENGTH_SIZE</span> {
+        <span class="kw">if </span>buffer.len() != len <span class="kw">as </span>usize + LENGTH_SIZE {
             <span class="macro">anyhow::bail!</span>(
                 <span class="string">&quot;Invalid buffer: expected buffer size of {}, but found {}&quot;</span>,
-                <span class="ident">len</span> <span class="kw">as</span> <span class="ident">usize</span> <span class="op">+</span> <span class="ident">LENGTH_SIZE</span>,
-                <span class="ident">buffer</span>.<span class="ident">len</span>()
+                len <span class="kw">as </span>usize + LENGTH_SIZE,
+                buffer.len()
             )
         }
 
-        <span class="prelude-val">Ok</span>(<span class="ident">StorageGetItemResponse</span> {
-            <span class="ident">value</span>: <span class="prelude-val">Some</span>(<span class="ident">buffer</span>[<span class="ident">LENGTH_SIZE</span>..].<span class="ident">to_vec</span>()),
+        <span class="prelude-val">Ok</span>(StorageGetItemResponse {
+            value: <span class="prelude-val">Some</span>(buffer[LENGTH_SIZE..].to_vec()),
         })
     }
 }
 
-<span class="doccomment">/// Holds the `label` and the `value` to report a metric.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Serialize</span>, <span class="ident">Deserialize</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">ReportMetricRequest</span> {
-    <span class="kw">pub</span> <span class="ident">label</span>: <span class="ident">String</span>,
-    <span class="kw">pub</span> <span class="ident">value</span>: <span class="ident">i64</span>,
+<span class="doccomment">/// Holds the `label` and the `value` to report a metric.
+</span><span class="attribute">#[derive(Serialize, Deserialize)]
+</span><span class="kw">pub struct </span>ReportMetricRequest {
+    <span class="kw">pub </span>label: String,
+    <span class="kw">pub </span>value: i64,
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Serialize</span>, <span class="ident">Deserialize</span>, <span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">ReportMetricError</span> {
-    <span class="ident">ProxyAlreadyConsumed</span>,
+<span class="attribute">#[derive(Serialize, Deserialize, Debug)]
+</span><span class="kw">pub enum </span>ReportMetricError {
+    ProxyAlreadyConsumed,
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Serialize</span>, <span class="ident">Deserialize</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">ReportMetricResponse</span> {
-    <span class="kw">pub</span> <span class="ident">result</span>: <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">ReportMetricError</span><span class="op">&gt;</span>,
+<span class="attribute">#[derive(Serialize, Deserialize)]
+</span><span class="kw">pub struct </span>ReportMetricResponse {
+    <span class="kw">pub </span>result: <span class="prelude-ty">Result</span>&lt;(), ReportMetricError&gt;,
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Serialize</span>, <span class="ident">Deserialize</span>, <span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">TfModelInferError</span> {
-    <span class="comment">// Error when running the TensorFlow model, due to bad input tensor.</span>
-    <span class="ident">BadTensorFlowModelInput</span>,
-    <span class="comment">// Error when decoding the inference bytes.</span>
-    <span class="ident">ErrorDecodingInference</span>,
+<span class="attribute">#[derive(Serialize, Deserialize, Debug)]
+</span><span class="kw">pub enum </span>TfModelInferError {
+    <span class="comment">// Error when running the TensorFlow model, due to bad input tensor.
+    </span>BadTensorFlowModelInput,
+    <span class="comment">// Error when decoding the inference bytes.
+    </span>ErrorDecodingInference,
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Serialize</span>, <span class="ident">Deserialize</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">TfModelInferResponse</span> {
-    <span class="kw">pub</span> <span class="ident">result</span>: <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>, <span class="ident">TfModelInferError</span><span class="op">&gt;</span>,
+<span class="attribute">#[derive(Serialize, Deserialize)]
+</span><span class="kw">pub struct </span>TfModelInferResponse {
+    <span class="kw">pub </span>result: <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, TfModelInferError&gt;,
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Serialize</span>, <span class="ident">Deserialize</span>)]</span>
-<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">TestingRequest</span> {
-    <span class="ident">Echo</span>(<span class="ident">String</span>),
-    <span class="ident">Blackhole</span>(<span class="ident">String</span>),
+<span class="attribute">#[derive(Serialize, Deserialize)]
+</span><span class="kw">pub enum </span>TestingRequest {
+    Echo(String),
+    Blackhole(String),
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Serialize</span>, <span class="ident">Deserialize</span>)]</span>
-<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">TestingResponse</span> {
-    <span class="ident">Echo</span>(<span class="ident">String</span>),
+<span class="attribute">#[derive(Serialize, Deserialize)]
+</span><span class="kw">pub enum </span>TestingResponse {
+    Echo(String),
 }
 
-<span class="comment">// The Oak-Functions ABI primarily consists of a collection of Wasm host functions in the</span>
-<span class="comment">// &quot;oak_functions&quot; module that are made available to WebAssembly modules running as Oak-Functions</span>
-<span class="comment">// workloads.</span>
-<span class="comment">// See https://rustwasm.github.io/book/reference/js-ffi.html</span>
-<span class="attribute">#[<span class="ident">link</span>(<span class="ident">wasm_import_module</span> <span class="op">=</span> <span class="string">&quot;oak_functions&quot;</span>)]</span>
-<span class="kw">extern</span> <span class="string">&quot;C&quot;</span> {
-    <span class="doccomment">/// See [`read_request`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#read_request).</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">read_request</span>(<span class="ident">buf_ptr_ptr</span>: <span class="kw-2">*mut</span> <span class="kw-2">*mut</span> <span class="ident">u8</span>, <span class="ident">buf_len_ptr</span>: <span class="kw-2">*mut</span> <span class="ident">usize</span>) -&gt; <span class="ident">u32</span>;
+<span class="comment">// The Oak-Functions ABI primarily consists of a collection of Wasm host functions in the
+// &quot;oak_functions&quot; module that are made available to WebAssembly modules running as Oak-Functions
+// workloads.
+// See https://rustwasm.github.io/book/reference/js-ffi.html
+</span><span class="attribute">#[link(wasm_import_module = <span class="string">&quot;oak_functions&quot;</span>)]
+</span><span class="kw">extern </span><span class="string">&quot;C&quot; </span>{
+    <span class="doccomment">/// See [`read_request`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#read_request).
+    </span><span class="kw">pub fn </span>read_request(buf_ptr_ptr: <span class="kw-2">*mut *mut </span>u8, buf_len_ptr: <span class="kw-2">*mut </span>usize) -&gt; u32;
 
-    <span class="doccomment">/// See [`write_response`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#write_response).</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">write_response</span>(<span class="ident">buf_ptr</span>: <span class="kw-2">*const</span> <span class="ident">u8</span>, <span class="ident">buf_len</span>: <span class="ident">usize</span>) -&gt; <span class="ident">u32</span>;
+    <span class="doccomment">/// See [`write_response`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#write_response).
+    </span><span class="kw">pub fn </span>write_response(buf_ptr: <span class="kw-2">*const </span>u8, buf_len: usize) -&gt; u32;
 
-    <span class="doccomment">/// See [`invoke`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#invoke).</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">invoke</span>(
-        <span class="ident">handle</span>: <span class="ident">ExtensionHandle</span>,
-        <span class="ident">request_ptr</span>: <span class="kw-2">*const</span> <span class="ident">u8</span>,
-        <span class="ident">request_len</span>: <span class="ident">usize</span>,
-        <span class="ident">response_ptr_ptr</span>: <span class="kw-2">*mut</span> <span class="kw-2">*mut</span> <span class="ident">u8</span>,
-        <span class="ident">response_len_ptr</span>: <span class="kw-2">*mut</span> <span class="ident">usize</span>,
-    ) -&gt; <span class="ident">u32</span>;
+    <span class="doccomment">/// See [`invoke`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#invoke).
+    </span><span class="kw">pub fn </span>invoke(
+        handle: ExtensionHandle,
+        request_ptr: <span class="kw-2">*const </span>u8,
+        request_len: usize,
+        response_ptr_ptr: <span class="kw-2">*mut *mut </span>u8,
+        response_len_ptr: <span class="kw-2">*mut </span>usize,
+    ) -&gt; u32;
 }
 </code></pre></div>
-</section><section id="search" class="content hidden"></section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="oak_functions_abi" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.62.0-nightly (de1bc0008 2022-04-21)" ></div>
-</body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="oak_functions_abi" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (81f391930 2022-10-09)" ></div></body></html>

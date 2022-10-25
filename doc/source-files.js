@@ -1,71 +1,57 @@
-var N = null;var sourcesIndex = {};
-sourcesIndex["benchmark"] = {"name":"","files":["lib.rs"]};
-sourcesIndex["echo"] = {"name":"","files":["lib.rs"]};
-sourcesIndex["grpc_unary_attestation"] = {"name":"","files":["client.rs","lib.rs","server.rs"]};
-sourcesIndex["key_value_lookup"] = {"name":"","files":["lib.rs"]};
-sourcesIndex["location_utils"] = {"name":"","files":["lib.rs"]};
-sourcesIndex["lookup_data_checker"] = {"name":"","files":["main.rs"]};
-sourcesIndex["lookup_data_generator"] = {"name":"","files":["data.rs","lib.rs"]};
-sourcesIndex["metrics"] = {"name":"","files":["lib.rs"]};
-sourcesIndex["metrics_client"] = {"name":"","files":["main.rs"]};
-sourcesIndex["mobilenet"] = {"name":"","files":["lib.rs"]};
-sourcesIndex["mobilenet_client"] = {"name":"","files":["main.rs"]};
-sourcesIndex["oak_attestation_common"] = {"name":"","files":["certificate.rs","keying_material.rs","lib.rs","report.rs"]};
-sourcesIndex["oak_baremetal_communication_channel"] = {"name":"","files":["client.rs","frame.rs","lib.rs","message.rs","server.rs"]};
-sourcesIndex["oak_baremetal_kernel"] = {"name":"","files":["args.rs","avx.rs","boot.rs","i8042.rs","interrupts.rs","lib.rs","libm.rs","logging.rs","memory.rs","virtio.rs"]};
-sourcesIndex["oak_baremetal_launcher"] = {"name":"","dirs":[{"name":"instance","files":["crosvm.rs","mod.rs","native.rs"]}],"files":["channel.rs","lookup.rs","main.rs","server.rs"]};
-sourcesIndex["oak_baremetal_runtime"] = {"name":"","dirs":[{"name":"wasm","files":["mod.rs"]}],"files":["lib.rs","logger.rs","remote_attestation.rs"]};
-sourcesIndex["oak_baremetal_simple_io"] = {"name":"","files":["lib.rs"]};
-sourcesIndex["oak_echo_runtime"] = {"name":"","files":["lib.rs"]};
-sourcesIndex["oak_functions"] = {"name":"","files":["lib.rs"]};
-sourcesIndex["oak_functions_abi"] = {"name":"","files":["lib.rs"]};
-sourcesIndex["oak_functions_client"] = {"name":"","files":["lib.rs","rekor.rs"]};
-sourcesIndex["oak_functions_extension"] = {"name":"","files":["lib.rs"]};
-sourcesIndex["oak_functions_load_test"] = {"name":"","files":["main.rs"]};
-sourcesIndex["oak_functions_loader"] = {"name":"","files":["grpc.rs","lib.rs","logger.rs","lookup_data.rs","server.rs"]};
-sourcesIndex["oak_functions_loader_base"] = {"name":"","files":["main.rs"]};
-sourcesIndex["oak_functions_loader_linux_native"] = {"name":"","files":["main.rs"]};
-sourcesIndex["oak_functions_loader_linux_vsock"] = {"name":"","files":["channel.rs","main.rs"]};
-sourcesIndex["oak_functions_loader_unsafe"] = {"name":"","files":["main.rs"]};
-sourcesIndex["oak_functions_lookup"] = {"name":"","files":["lib.rs"]};
-sourcesIndex["oak_functions_metrics"] = {"name":"","files":["lib.rs"]};
-sourcesIndex["oak_functions_sdk_abi_test_get_storage_item"] = {"name":"","files":["lib.rs"]};
-sourcesIndex["oak_functions_sdk_abi_test_invoke_testing"] = {"name":"","files":["lib.rs"]};
-sourcesIndex["oak_functions_sdk_abi_test_report_metric"] = {"name":"","files":["lib.rs"]};
-sourcesIndex["oak_functions_sdk_abi_test_tf_model_infer"] = {"name":"","files":["lib.rs"]};
-sourcesIndex["oak_functions_testing_extension"] = {"name":"","files":["lib.rs"]};
-sourcesIndex["oak_functions_tf_inference"] = {"name":"","files":["lib.rs"]};
-sourcesIndex["oak_functions_util"] = {"name":"","files":["lib.rs","sync.rs"]};
-sourcesIndex["oak_functions_wasm"] = {"name":"","files":["lib.rs"]};
-sourcesIndex["oak_functions_web_client"] = {"name":"","files":["grpc_web.rs","lib.rs"]};
-sourcesIndex["oak_functions_workload_logging"] = {"name":"","files":["lib.rs"]};
-sourcesIndex["oak_https_attestation"] = {"name":"","files":["main.rs","server.rs"]};
-sourcesIndex["oak_idl"] = {"name":"","files":["lib.rs","utils.rs"]};
-sourcesIndex["oak_idl_gen_services"] = {"name":"","files":["lib.rs"]};
-sourcesIndex["oak_idl_gen_structs"] = {"name":"","files":["lib.rs"]};
-sourcesIndex["oak_logger"] = {"name":"","files":["lib.rs"]};
-sourcesIndex["oak_proxy_attestation"] = {"name":"","files":["lib.rs"]};
-sourcesIndex["oak_proxy_attestation_bin"] = {"name":"","files":["main.rs"]};
-sourcesIndex["oak_remote_attestation"] = {"name":"","dirs":[{"name":"crypto","files":["mod.rs","ring_crypto.rs"]}],"files":["handshaker.rs","lib.rs","message.rs"]};
-sourcesIndex["oak_remote_attestation_amd"] = {"name":"","files":["lib.rs"]};
-sourcesIndex["oak_remote_attestation_sessions"] = {"name":"","files":["lib.rs"]};
-sourcesIndex["oak_remote_attestation_sessions_client"] = {"name":"","files":["lib.rs"]};
-sourcesIndex["oak_tls_attestation"] = {"name":"","files":["main.rs","server.rs"]};
-sourcesIndex["oak_utils"] = {"name":"","files":["lib.rs"]};
-sourcesIndex["offline_attestation_client"] = {"name":"","files":["main.rs"]};
-sourcesIndex["offline_attestation_server"] = {"name":"","files":["main.rs"]};
-sourcesIndex["offline_attestation_shared"] = {"name":"","files":["lib.rs"]};
-sourcesIndex["sev_guest"] = {"name":"","files":["cpuid.rs","ghcb.rs","instructions.rs","lib.rs","msr.rs","secrets.rs","serial.rs"]};
-sourcesIndex["tensorflow_client"] = {"name":"","files":["data.rs","main.rs"]};
-sourcesIndex["tensorflow_proxy"] = {"name":"","files":["grpc.rs","main.rs"]};
-sourcesIndex["test_utils"] = {"name":"","files":["lib.rs"]};
-sourcesIndex["trusted_shuffler"] = {"name":"","files":["lib.rs"]};
-sourcesIndex["trusted_shuffler_backend"] = {"name":"","files":["main.rs"]};
-sourcesIndex["trusted_shuffler_client"] = {"name":"","files":["main.rs"]};
-sourcesIndex["trusted_shuffler_common"] = {"name":"","files":["lib.rs"]};
-sourcesIndex["trusted_shuffler_server"] = {"name":"","files":["http.rs","main.rs"]};
-sourcesIndex["virtio"] = {"name":"","dirs":[{"name":"console","files":["mod.rs"]},{"name":"queue","files":["mod.rs","virtq.rs"]},{"name":"vsock","dirs":[{"name":"socket","files":["mod.rs"]}],"files":["mod.rs","packet.rs"]}],"files":["lib.rs"]};
-sourcesIndex["vsock_echo"] = {"name":"","files":["main.rs"]};
-sourcesIndex["weather_lookup"] = {"name":"","files":["lib.rs"]};
-sourcesIndex["xtask"] = {"name":"","files":["check_build_licenses.rs","check_license.rs","check_todo.rs","diffs.rs","examples.rs","files.rs","internal.rs","launcher.rs","main.rs"]};
+var sourcesIndex = JSON.parse('{\
+"benchmark":["",[],["lib.rs"]],\
+"echo":["",[],["lib.rs"]],\
+"key_value_lookup":["",[],["lib.rs"]],\
+"location_utils":["",[],["lib.rs"]],\
+"lookup_data_checker":["",[],["main.rs"]],\
+"lookup_data_generator":["",[],["data.rs","lib.rs"]],\
+"oak_channel":["",[],["client.rs","frame.rs","lib.rs","message.rs","server.rs"]],\
+"oak_echo_runtime":["",[],["lib.rs"]],\
+"oak_functions_abi":["",[],["lib.rs"]],\
+"oak_functions_client":["",[],["lib.rs","rekor.rs"]],\
+"oak_functions_extension":["",[],["lib.rs"]],\
+"oak_functions_freestanding":["",[["wasm",[],["mod.rs"]]],["lib.rs","logger.rs","remote_attestation.rs"]],\
+"oak_functions_launcher":["",[["instance",[],["crosvm.rs","mod.rs","native.rs"]]],["channel.rs","lookup.rs","main.rs","server.rs"]],\
+"oak_functions_linux_fd_bin":["",[],["main.rs"]],\
+"oak_functions_linux_vsock_bin":["",[],["channel.rs","main.rs"]],\
+"oak_functions_load_test":["",[],["main.rs"]],\
+"oak_functions_lookup":["",[],["lib.rs"]],\
+"oak_functions_sdk":["",[],["lib.rs"]],\
+"oak_functions_sdk_abi_test_get_storage_item":["",[],["lib.rs"]],\
+"oak_functions_sdk_abi_test_invoke_testing":["",[],["lib.rs"]],\
+"oak_functions_test_utils":["",[],["lib.rs"]],\
+"oak_functions_testing_extension":["",[],["lib.rs"]],\
+"oak_functions_utils":["",[],["lib.rs","sync.rs"]],\
+"oak_functions_wasm":["",[],["lib.rs"]],\
+"oak_functions_web_client":["",[],["grpc_web.rs","lib.rs"]],\
+"oak_functions_workload_logging":["",[],["lib.rs"]],\
+"oak_grpc_unary_attestation":["",[],["client.rs","lib.rs","server.rs"]],\
+"oak_idl":["",[],["lib.rs","utils.rs"]],\
+"oak_idl_gen_services":["",[],["lib.rs"]],\
+"oak_idl_gen_structs":["",[],["lib.rs"]],\
+"oak_linux_boot_params":["",[],["lib.rs"]],\
+"oak_logger":["",[],["lib.rs"]],\
+"oak_remote_attestation":["",[["crypto",[],["mod.rs","ring_crypto.rs"]]],["handshaker.rs","lib.rs","message.rs"]],\
+"oak_remote_attestation_amd":["",[],["lib.rs"]],\
+"oak_remote_attestation_sessions":["",[],["lib.rs"]],\
+"oak_remote_attestation_sessions_client":["",[],["lib.rs"]],\
+"oak_restricted_kernel":["",[["mm",[],["bitmap_frame_allocator.rs","encrypted_mapper.rs","frame_allocator.rs","mod.rs","page_tables.rs"]]],["args.rs","avx.rs","descriptors.rs","elf.rs","i8042.rs","interrupts.rs","lib.rs","libm.rs","logging.rs","memory.rs","virtio.rs"]],\
+"oak_simple_io":["",[],["lib.rs"]],\
+"oak_tensorflow_service":["",[],["lib.rs","tflite.rs"]],\
+"oak_utils":["",[],["lib.rs"]],\
+"offline_attestation_client":["",[],["main.rs"]],\
+"offline_attestation_server":["",[],["main.rs"]],\
+"offline_attestation_shared":["",[],["lib.rs"]],\
+"sev_guest":["",[],["cpuid.rs","ghcb.rs","instructions.rs","interrupts.rs","io.rs","lib.rs","msr.rs","secrets.rs"]],\
+"sev_serial":["",[],["lib.rs"]],\
+"trusted_shuffler":["",[],["lib.rs"]],\
+"trusted_shuffler_backend":["",[],["main.rs"]],\
+"trusted_shuffler_client":["",[],["main.rs"]],\
+"trusted_shuffler_common":["",[],["lib.rs"]],\
+"trusted_shuffler_server":["",[],["http.rs","main.rs"]],\
+"virtio":["",[["console",[],["mod.rs"]],["queue",[],["mod.rs","virtq.rs"]],["vsock",[["socket",[],["mod.rs"]]],["mod.rs","packet.rs"]]],["lib.rs"]],\
+"vsock_echo":["",[],["main.rs"]],\
+"weather_lookup":["",[],["lib.rs"]],\
+"xtask":["",[],["check_build_licenses.rs","check_license.rs","check_todo.rs","diffs.rs","examples.rs","files.rs","internal.rs","launcher.rs","main.rs"]]\
+}');
 createSourceSidebar();

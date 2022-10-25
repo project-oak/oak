@@ -1,9 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `experimental/virtio/src/queue/mod.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>mod.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" type="text/css" href="../../../normalize.css"><link rel="stylesheet" type="text/css" href="../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../../ayu.css" disabled><link rel="stylesheet" type="text/css" href="../../../dark.css" disabled><link rel="stylesheet" type="text/css" href="../../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../../storage.js"></script><script src="../../../crates.js"></script><script defer src="../../../main.js"></script><script defer src="../../../source-script.js"></script><script defer src="../../../source-files.js"></script>
-    <noscript><link rel="stylesheet" href="../../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../virtio/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div>
-        </a><h2 class="location"></h2>
-    </nav>
-    <nav class="sidebar"><a class="sidebar-logo" href="../../../virtio/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div>
-        </a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../virtio/index.html"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></a><nav class="sub"><div class="theme-picker hidden"><button id="theme-picker" aria-label="Pick another theme!" aria-haspopup="menu" title="themes"><img width="22" height="22" alt="Pick another theme!" src="../../../brush.svg"></button><div id="theme-choices" role="menu"></div></div><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><button type="button" id="help-button" title="help">?</button><a id="settings-menu" href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../wheel.svg"></a></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `experimental/virtio/src/queue/mod.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>mod.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" href="../../../normalize.css"><link rel="stylesheet" href="../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" href="../../../ayu.css" disabled><link rel="stylesheet" href="../../../dark.css" disabled><link rel="stylesheet" href="../../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../../storage.js"></script><script defer src="../../../source-script.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../main.js"></script><noscript><link rel="stylesheet" href="../../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><a class="sidebar-logo" href="../../../virtio/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../virtio/index.html"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="src-line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -245,272 +240,247 @@
 <span id="240">240</span>
 <span id="241">241</span>
 <span id="242">242</span>
-<span id="243">243</span>
-<span id="244">244</span>
-<span id="245">245</span>
-<span id="246">246</span>
-<span id="247">247</span>
-<span id="248">248</span>
-<span id="249">249</span>
-<span id="250">250</span>
-<span id="251">251</span>
-<span id="252">252</span>
-<span id="253">253</span>
-<span id="254">254</span>
-</pre><pre class="rust"><code><span class="comment">//</span>
-<span class="comment">// Copyright 2022 The Project Oak Authors</span>
-<span class="comment">//</span>
-<span class="comment">// Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
-<span class="comment">// you may not use this file except in compliance with the License.</span>
-<span class="comment">// You may obtain a copy of the License at</span>
-<span class="comment">//</span>
-<span class="comment">//     http://www.apache.org/licenses/LICENSE-2.0</span>
-<span class="comment">//</span>
-<span class="comment">// Unless required by applicable law or agreed to in writing, software</span>
-<span class="comment">// distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
-<span class="comment">// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
-<span class="comment">// See the License for the specific language governing permissions and</span>
-<span class="comment">// limitations under the License.</span>
-<span class="comment">//</span>
+</pre><pre class="rust"><code><span class="comment">//
+// Copyright 2022 The Project Oak Authors
+//
+// Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
-<span class="kw">use</span> <span class="ident">alloc</span>::{<span class="ident">boxed::Box</span>, <span class="ident">collections::vec_deque::VecDeque</span>, <span class="ident">vec</span>, <span class="ident">vec::Vec</span>};
-<span class="kw">use</span> <span class="ident">core::num::Wrapping</span>;
-<span class="kw">use</span> <span class="ident">virtq</span>::{<span class="ident">AvailRing</span>, <span class="ident">Desc</span>, <span class="ident">DescFlags</span>, <span class="ident">RingFlags</span>, <span class="ident">UsedElem</span>, <span class="ident">UsedRing</span>, <span class="ident">VirtQueue</span>};
+</span><span class="kw">use </span><span class="kw">crate</span>::Translator;
+<span class="kw">use </span>alloc::{boxed::Box, collections::vec_deque::VecDeque, vec::Vec};
+<span class="kw">use </span>core::{alloc::Allocator, num::Wrapping};
+<span class="kw">use </span>virtq::{AvailRing, Desc, DescFlags, RingFlags, UsedElem, UsedRing, VirtQueue};
+<span class="kw">use </span>x86_64::{PhysAddr, VirtAddr};
 
-<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">virtq</span>;
+<span class="kw">pub mod </span>virtq;
 
-<span class="doccomment">/// A queue where the descriptor buffers are only writable by the driver.</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// This is typically used for transmission queues.</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">DriverWriteOnlyQueue</span><span class="op">&lt;</span><span class="kw">const</span> <span class="ident">QUEUE_SIZE</span>: <span class="ident">usize</span>, <span class="kw">const</span> <span class="ident">BUFFER_SIZE</span>: <span class="ident">usize</span><span class="op">&gt;</span> {
-    <span class="doccomment">/// The inner queue.</span>
-    <span class="kw">pub</span> <span class="ident">inner</span>: <span class="ident">Queue</span><span class="op">&lt;</span><span class="ident">QUEUE_SIZE</span>, <span class="ident">BUFFER_SIZE</span><span class="op">&gt;</span>,
+<span class="doccomment">/// A queue where the descriptor buffers are only writable by the driver.
+///
+/// This is typically used for transmission queues.
+</span><span class="kw">pub struct </span>DriverWriteOnlyQueue&lt;<span class="lifetime">&#39;a</span>, <span class="kw">const </span>QUEUE_SIZE: usize, <span class="kw">const </span>BUFFER_SIZE: usize, A: Allocator&gt;
+{
+    <span class="doccomment">/// The inner queue.
+    </span><span class="kw">pub </span>inner: Queue&lt;<span class="lifetime">&#39;a</span>, QUEUE_SIZE, BUFFER_SIZE, A&gt;,
 
-    <span class="doccomment">/// The indices of free descriptors that can be used by the driver for writing.</span>
-    <span class="ident">free_ids</span>: <span class="ident">VecDeque</span><span class="op">&lt;</span><span class="ident">u16</span><span class="op">&gt;</span>,
+    <span class="doccomment">/// The indices of free descriptors that can be used by the driver for writing.
+    </span>free_ids: VecDeque&lt;u16&gt;,
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="kw">const</span> <span class="ident">QUEUE_SIZE</span>: <span class="ident">usize</span>, <span class="kw">const</span> <span class="ident">BUFFER_SIZE</span>: <span class="ident">usize</span><span class="op">&gt;</span>
-    <span class="ident">DriverWriteOnlyQueue</span><span class="op">&lt;</span><span class="ident">QUEUE_SIZE</span>, <span class="ident">BUFFER_SIZE</span><span class="op">&gt;</span>
+<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, <span class="kw">const </span>QUEUE_SIZE: usize, <span class="kw">const </span>BUFFER_SIZE: usize, A: Allocator&gt;
+    DriverWriteOnlyQueue&lt;<span class="lifetime">&#39;a</span>, QUEUE_SIZE, BUFFER_SIZE, A&gt;
 {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>() -&gt; <span class="self">Self</span> {
-        <span class="kw">let</span> <span class="ident">inner</span> <span class="op">=</span> <span class="ident">Queue::new</span>(<span class="ident">DescFlags::empty</span>());
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">free_ids</span> <span class="op">=</span> <span class="ident">VecDeque::with_capacity</span>(<span class="ident">QUEUE_SIZE</span>);
+    <span class="kw">pub fn </span>new&lt;VP: Translator&gt;(translate: VP, alloc: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>A) -&gt; <span class="self">Self </span>{
+        <span class="kw">let </span>inner = Queue::new(DescFlags::empty(), translate, alloc);
+        <span class="kw">let </span><span class="kw-2">mut </span>free_ids = VecDeque::with_capacity(QUEUE_SIZE);
 
-        <span class="comment">// Add all the descriptors to the free list.</span>
-        <span class="kw">for</span> <span class="ident">i</span> <span class="kw">in</span> <span class="number">0</span>..<span class="ident">QUEUE_SIZE</span> <span class="kw">as</span> <span class="ident">u16</span> {
-            <span class="ident">free_ids</span>.<span class="ident">push_back</span>(<span class="ident">i</span>);
+        <span class="comment">// Add all the descriptors to the free list.
+        </span><span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..QUEUE_SIZE <span class="kw">as </span>u16 {
+            free_ids.push_back(i);
         }
 
-        <span class="self">Self</span> { <span class="ident">inner</span>, <span class="ident">free_ids</span> }
+        <span class="self">Self </span>{ inner, free_ids }
     }
 
-    <span class="doccomment">/// Writes the data to a buffer and adds its descriptor to the available ring if possible and</span>
-    <span class="doccomment">/// returns the number of bytes that was copied from the `data` slice.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// If there are no free buffers (the device has not used any of the available buffers) we</span>
-    <span class="doccomment">/// cannot write and have to wait.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// Note: we can only write data to a driver-write-only queue.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">write_buffer</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">data</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span> {
-        <span class="comment">// Add used buffers to free index queue.</span>
-        <span class="kw">while</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">element</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">inner</span>.<span class="ident">get_next_used_element</span>() {
-            <span class="self">self</span>.<span class="ident">free_ids</span>.<span class="ident">push_back</span>(<span class="ident">element</span>.<span class="ident">id</span> <span class="kw">as</span> <span class="ident">u16</span>)
+    <span class="doccomment">/// Writes the data to a buffer and adds its descriptor to the available ring if possible and
+    /// returns the number of bytes that was copied from the `data` slice.
+    ///
+    /// If there are no free buffers (the device has not used any of the available buffers) we
+    /// cannot write and have to wait.
+    ///
+    /// Note: we can only write data to a driver-write-only queue.
+    </span><span class="kw">pub fn </span>write_buffer(<span class="kw-2">&amp;mut </span><span class="self">self</span>, data: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Option</span>&lt;usize&gt; {
+        <span class="comment">// Add used buffers to free index queue.
+        </span><span class="kw">while let </span><span class="prelude-val">Some</span>(element) = <span class="self">self</span>.inner.get_next_used_element() {
+            <span class="self">self</span>.free_ids.push_back(element.id <span class="kw">as </span>u16)
         }
 
-        <span class="kw">let</span> <span class="ident">len</span> <span class="op">=</span> <span class="ident">core::cmp::min</span>(<span class="ident">data</span>.<span class="ident">len</span>(), <span class="ident">BUFFER_SIZE</span>);
+        <span class="kw">let </span>len = core::cmp::min(data.len(), BUFFER_SIZE);
 
-        <span class="kw">let</span> <span class="ident">id</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">free_ids</span>.<span class="ident">pop_back</span>()<span class="question-mark">?</span>;
-        <span class="comment">// TODO(#2876): Avoid copying the buffer slice if possible.</span>
-        <span class="self">self</span>.<span class="ident">inner</span>
-            .<span class="ident">get_mut_slice_from_index</span>(<span class="ident">id</span> <span class="kw">as</span> <span class="ident">usize</span>, <span class="ident">len</span>)
-            .<span class="ident">copy_from_slice</span>(<span class="kw-2">&amp;</span><span class="ident">data</span>[..<span class="ident">len</span>]);
+        <span class="kw">let </span>id = <span class="self">self</span>.free_ids.pop_back()<span class="question-mark">?</span>;
+        <span class="comment">// TODO(#2876): Avoid copying the buffer slice if possible.
+        </span><span class="self">self</span>.inner
+            .get_mut_slice_from_index(id <span class="kw">as </span>usize, len)
+            .copy_from_slice(<span class="kw-2">&amp;</span>data[..len]);
 
-        <span class="comment">// Update the length of the descriptor.</span>
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">desc</span> <span class="op">=</span> <span class="kw-2">&amp;mut</span> <span class="self">self</span>.<span class="ident">inner</span>.<span class="ident">virt_queue</span>.<span class="ident">desc</span>[<span class="ident">id</span> <span class="kw">as</span> <span class="ident">usize</span>];
-        <span class="ident">desc</span>.<span class="ident">length</span> <span class="op">=</span> <span class="ident">len</span> <span class="kw">as</span> <span class="ident">u32</span>;
+        <span class="comment">// Update the length of the descriptor.
+        </span><span class="kw">let </span><span class="kw-2">mut </span>desc = <span class="kw-2">&amp;mut </span><span class="self">self</span>.inner.virt_queue.desc[id <span class="kw">as </span>usize];
+        desc.length = len <span class="kw">as </span>u32;
 
-        <span class="self">self</span>.<span class="ident">inner</span>.<span class="ident">add_available_descriptor</span>(<span class="ident">id</span>);
+        <span class="self">self</span>.inner.add_available_descriptor(id);
 
-        <span class="prelude-val">Some</span>(<span class="ident">len</span>)
+        <span class="prelude-val">Some</span>(len)
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="kw">const</span> <span class="ident">QUEUE_SIZE</span>: <span class="ident">usize</span>, <span class="kw">const</span> <span class="ident">BUFFER_SIZE</span>: <span class="ident">usize</span><span class="op">&gt;</span> <span class="ident">Default</span>
-    <span class="kw">for</span> <span class="ident">DriverWriteOnlyQueue</span><span class="op">&lt;</span><span class="ident">QUEUE_SIZE</span>, <span class="ident">BUFFER_SIZE</span><span class="op">&gt;</span>
+<span class="doccomment">/// A queue where the descriptor buffers are only writable by the device.
+///
+/// This is typically used for receiver queues.
+</span><span class="kw">pub struct </span>DeviceWriteOnlyQueue&lt;<span class="lifetime">&#39;a</span>, <span class="kw">const </span>QUEUE_SIZE: usize, <span class="kw">const </span>BUFFER_SIZE: usize, A: Allocator&gt;
 {
-    <span class="kw">fn</span> <span class="ident">default</span>() -&gt; <span class="self">Self</span> {
-        <span class="ident"><span class="self">Self</span>::new</span>()
-    }
+    <span class="doccomment">/// The inner queue.
+    </span><span class="kw">pub </span>inner: Queue&lt;<span class="lifetime">&#39;a</span>, QUEUE_SIZE, BUFFER_SIZE, A&gt;,
 }
 
-<span class="doccomment">/// A queue where the descriptor buffers are only writable by the device.</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// This is typically used for receiver queues.</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">DeviceWriteOnlyQueue</span><span class="op">&lt;</span><span class="kw">const</span> <span class="ident">QUEUE_SIZE</span>: <span class="ident">usize</span>, <span class="kw">const</span> <span class="ident">BUFFER_SIZE</span>: <span class="ident">usize</span><span class="op">&gt;</span> {
-    <span class="doccomment">/// The inner queue.</span>
-    <span class="kw">pub</span> <span class="ident">inner</span>: <span class="ident">Queue</span><span class="op">&lt;</span><span class="ident">QUEUE_SIZE</span>, <span class="ident">BUFFER_SIZE</span><span class="op">&gt;</span>,
-}
-
-<span class="kw">impl</span><span class="op">&lt;</span><span class="kw">const</span> <span class="ident">QUEUE_SIZE</span>: <span class="ident">usize</span>, <span class="kw">const</span> <span class="ident">BUFFER_SIZE</span>: <span class="ident">usize</span><span class="op">&gt;</span>
-    <span class="ident">DeviceWriteOnlyQueue</span><span class="op">&lt;</span><span class="ident">QUEUE_SIZE</span>, <span class="ident">BUFFER_SIZE</span><span class="op">&gt;</span>
+<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, <span class="kw">const </span>QUEUE_SIZE: usize, <span class="kw">const </span>BUFFER_SIZE: usize, A: Allocator&gt;
+    DeviceWriteOnlyQueue&lt;<span class="lifetime">&#39;a</span>, QUEUE_SIZE, BUFFER_SIZE, A&gt;
 {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>() -&gt; <span class="self">Self</span> {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">inner</span> <span class="op">=</span> <span class="ident">Queue::new</span>(<span class="ident">DescFlags::VIRTQ_DESC_F_WRITE</span>);
+    <span class="kw">pub fn </span>new&lt;VP: Translator&gt;(translate: VP, alloc: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>A) -&gt; <span class="self">Self </span>{
+        <span class="kw">let </span><span class="kw-2">mut </span>inner = Queue::new(DescFlags::VIRTQ_DESC_F_WRITE, translate, alloc);
 
-        <span class="comment">// Add all the descriptors to the available ring.</span>
-        <span class="kw">for</span> <span class="ident">i</span> <span class="kw">in</span> <span class="number">0</span>..<span class="ident">QUEUE_SIZE</span> <span class="kw">as</span> <span class="ident">u16</span> {
-            <span class="ident">inner</span>.<span class="ident">add_available_descriptor</span>(<span class="ident">i</span>);
+        <span class="comment">// Add all the descriptors to the available ring.
+        </span><span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..QUEUE_SIZE <span class="kw">as </span>u16 {
+            inner.add_available_descriptor(i);
         }
 
-        <span class="self">Self</span> { <span class="ident">inner</span> }
+        <span class="self">Self </span>{ inner }
     }
 
-    <span class="doccomment">/// Reads the contents of the next used buffer from the queue, if one is avaialble.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// If a used buffer is found, this also advances the last used index by one.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// Note: we can only read data from a device-write-only queue.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">read_next_used_buffer</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">UsedElem</span> { <span class="ident">id</span>, <span class="ident">len</span> } <span class="op">=</span> <span class="self">self</span>.<span class="ident">inner</span>.<span class="ident">get_next_used_element</span>()<span class="question-mark">?</span>;
-        <span class="comment">// TODO(#2876): Avoid copying the buffer slice if possible.</span>
-        <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="self">self</span>
-            .<span class="ident">inner</span>
-            .<span class="ident">get_mut_slice_from_index</span>(<span class="ident">id</span> <span class="kw">as</span> <span class="ident">usize</span>, <span class="ident">len</span> <span class="kw">as</span> <span class="ident">usize</span>)
-            .<span class="ident">to_vec</span>();
+    <span class="doccomment">/// Reads the contents of the next used buffer from the queue, if one is avaialble.
+    ///
+    /// If a used buffer is found, this also advances the last used index by one.
+    ///
+    /// Note: we can only read data from a device-write-only queue.
+    </span><span class="kw">pub fn </span>read_next_used_buffer(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;Vec&lt;u8&gt;&gt; {
+        <span class="kw">let </span>UsedElem { id, len } = <span class="self">self</span>.inner.get_next_used_element()<span class="question-mark">?</span>;
+        <span class="comment">// TODO(#2876): Avoid copying the buffer slice if possible.
+        </span><span class="kw">let </span>result = <span class="self">self
+            </span>.inner
+            .get_mut_slice_from_index(id <span class="kw">as </span>usize, len <span class="kw">as </span>usize)
+            .to_vec();
 
-        <span class="comment">// Recycle used element to so the buffer is available again.</span>
-        <span class="self">self</span>.<span class="ident">inner</span>.<span class="ident">add_available_descriptor</span>(<span class="ident">id</span> <span class="kw">as</span> <span class="ident">u16</span>);
+        <span class="comment">// Recycle used element to so the buffer is available again.
+        </span><span class="self">self</span>.inner.add_available_descriptor(id <span class="kw">as </span>u16);
 
-        <span class="prelude-val">Some</span>(<span class="ident">result</span>)
+        <span class="prelude-val">Some</span>(result)
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="kw">const</span> <span class="ident">QUEUE_SIZE</span>: <span class="ident">usize</span>, <span class="kw">const</span> <span class="ident">BUFFER_SIZE</span>: <span class="ident">usize</span><span class="op">&gt;</span> <span class="ident">Default</span>
-    <span class="kw">for</span> <span class="ident">DeviceWriteOnlyQueue</span><span class="op">&lt;</span><span class="ident">QUEUE_SIZE</span>, <span class="ident">BUFFER_SIZE</span><span class="op">&gt;</span>
+<span class="doccomment">/// A container for a boxed virtqueue and its associated buffers.
+</span><span class="kw">pub struct </span>Queue&lt;<span class="lifetime">&#39;a</span>, <span class="kw">const </span>QUEUE_SIZE: usize, <span class="kw">const </span>BUFFER_SIZE: usize, A: Allocator&gt; {
+    <span class="doccomment">/// The underlying virtqueue.
+    </span>virt_queue: Box&lt;VirtQueue&lt;QUEUE_SIZE&gt;, <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>A&gt;,
+
+    <span class="doccomment">/// The global buffer used by the virtqueue. Each descriptor uses a slice with an offset into
+    /// this single buffer for it own buffer.
+    </span>buffer: Vec&lt;u8, <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>A&gt;,
+
+    <span class="doccomment">/// The address of the first byte in the global buffer.
+    </span>base_offset: PhysAddr,
+
+    <span class="doccomment">/// The last index that was used when popping elements from the used ring.
+    </span>last_used_idx: Wrapping&lt;u16&gt;,
+}
+
+<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, <span class="kw">const </span>QUEUE_SIZE: usize, <span class="kw">const </span>BUFFER_SIZE: usize, A: Allocator&gt;
+    Queue&lt;<span class="lifetime">&#39;a</span>, QUEUE_SIZE, BUFFER_SIZE, A&gt;
 {
-    <span class="kw">fn</span> <span class="ident">default</span>() -&gt; <span class="self">Self</span> {
-        <span class="ident"><span class="self">Self</span>::new</span>()
-    }
-}
-
-<span class="doccomment">/// A container for a boxed virtqueue and its associated buffers.</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Queue</span><span class="op">&lt;</span><span class="kw">const</span> <span class="ident">QUEUE_SIZE</span>: <span class="ident">usize</span>, <span class="kw">const</span> <span class="ident">BUFFER_SIZE</span>: <span class="ident">usize</span><span class="op">&gt;</span> {
-    <span class="doccomment">/// The underlying virtqueue.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// We store it on the global heap for now, but in future we would have a dedicated allocator</span>
-    <span class="doccomment">/// to ensure it is in memory pages that are shared with the host.</span>
-    <span class="ident">virt_queue</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="ident">VirtQueue</span><span class="op">&lt;</span><span class="ident">QUEUE_SIZE</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-
-    <span class="doccomment">/// The global buffer used by the virtqueue. Each descriptor uses a slice with an offset into</span>
-    <span class="doccomment">/// this single buffer for it own buffer.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// We store it as a `Vec` on the global heap for now, but in future we would have a dedicated</span>
-    <span class="doccomment">/// allocator to ensure it is located in memory pages that are shared with the host.</span>
-    <span class="ident">buffer</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
-
-    <span class="doccomment">/// The address of the first byte in the global buffer.</span>
-    <span class="ident">base_offset</span>: <span class="ident">u64</span>,
-
-    <span class="doccomment">/// The last index that was used when popping elements from the used ring.</span>
-    <span class="ident">last_used_idx</span>: <span class="ident">Wrapping</span><span class="op">&lt;</span><span class="ident">u16</span><span class="op">&gt;</span>,
-}
-
-<span class="kw">impl</span><span class="op">&lt;</span><span class="kw">const</span> <span class="ident">QUEUE_SIZE</span>: <span class="ident">usize</span>, <span class="kw">const</span> <span class="ident">BUFFER_SIZE</span>: <span class="ident">usize</span><span class="op">&gt;</span> <span class="ident">Queue</span><span class="op">&lt;</span><span class="ident">QUEUE_SIZE</span>, <span class="ident">BUFFER_SIZE</span><span class="op">&gt;</span> {
-    <span class="doccomment">/// Creates a new instance of `Queue` by pre-initialising all the descriptors and creating</span>
-    <span class="doccomment">/// enough buffer space for each descriptor.</span>
-    <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">flags</span>: <span class="ident">DescFlags</span>) -&gt; <span class="self">Self</span> {
+    <span class="doccomment">/// Creates a new instance of `Queue` by pre-initialising all the descriptors and creating
+    /// enough buffer space for each descriptor.
+    </span><span class="kw">fn </span>new&lt;VP: Translator&gt;(flags: DescFlags, translate: VP, alloc: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>A) -&gt; <span class="self">Self </span>{
         <span class="macro">assert!</span>(
-            <span class="ident">QUEUE_SIZE</span>.<span class="ident">is_power_of_two</span>(),
-            <span class="string">&quot;Queue size must be a power of 2.&quot;</span>
-        );
+            QUEUE_SIZE.is_power_of_two(),
+            <span class="string">&quot;Queue size must be a power of 2.&quot;
+        </span>);
 
-        <span class="kw">let</span> <span class="ident">buffer</span> <span class="op">=</span> <span class="macro">vec!</span>[<span class="number">0u8</span>; <span class="ident">BUFFER_SIZE</span> <span class="op">*</span> <span class="ident">QUEUE_SIZE</span>];
-        <span class="kw">let</span> <span class="ident">base_offset</span> <span class="op">=</span> <span class="ident">buffer</span>.<span class="ident">as_ptr</span>() <span class="kw">as</span> <span class="ident">u64</span>;
-        <span class="kw">let</span> <span class="ident">desc</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Desc</span><span class="op">&gt;</span> <span class="op">=</span> (<span class="number">0</span>..<span class="ident">QUEUE_SIZE</span>)
-            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">i</span><span class="op">|</span> {
-                <span class="ident">Desc::new</span>(
-                    <span class="ident">flags</span>,
-                    <span class="ident">base_offset</span> <span class="op">+</span> (<span class="ident">i</span> <span class="op">*</span> <span class="ident">BUFFER_SIZE</span>) <span class="kw">as</span> <span class="ident">u64</span>,
-                    <span class="ident">BUFFER_SIZE</span> <span class="kw">as</span> <span class="ident">u32</span>,
+        <span class="kw">let </span><span class="kw-2">mut </span>buffer = Vec::with_capacity_in(BUFFER_SIZE * QUEUE_SIZE, alloc);
+        buffer.resize(BUFFER_SIZE * QUEUE_SIZE, <span class="number">0u8</span>);
+        <span class="kw">let </span>base_offset = translate(VirtAddr::from_ptr(buffer.as_ptr())).unwrap();
+        <span class="kw">let </span>desc: Vec&lt;Desc&gt; = (<span class="number">0</span>..QUEUE_SIZE)
+            .map(|i| {
+                Desc::new(
+                    flags,
+                    base_offset + (i * BUFFER_SIZE) <span class="kw">as </span>u64,
+                    BUFFER_SIZE <span class="kw">as </span>u32,
                 )
             })
-            .<span class="ident">collect</span>();
-        <span class="kw">let</span> <span class="ident">desc</span>: [<span class="ident">Desc</span>; <span class="ident">QUEUE_SIZE</span>] <span class="op">=</span> <span class="ident">desc</span>.<span class="ident">try_into</span>().<span class="ident">unwrap</span>();
-        <span class="kw">let</span> <span class="ident">virt_queue</span> <span class="op">=</span> <span class="ident">Box::new</span>(<span class="ident">VirtQueue</span> {
-            <span class="ident">desc</span>,
-            <span class="ident">avail</span>: <span class="ident">AvailRing</span>::<span class="op">&lt;</span><span class="ident">QUEUE_SIZE</span><span class="op">&gt;</span><span class="ident">::default</span>(),
-            <span class="ident">used</span>: <span class="ident">UsedRing</span>::<span class="op">&lt;</span><span class="ident">QUEUE_SIZE</span><span class="op">&gt;</span><span class="ident">::default</span>(),
-        });
-        <span class="self">Self</span> {
-            <span class="ident">virt_queue</span>,
-            <span class="ident">buffer</span>,
-            <span class="ident">base_offset</span>,
-            <span class="ident">last_used_idx</span>: <span class="ident">Wrapping</span>(<span class="number">0</span>),
+            .collect();
+        <span class="kw">let </span>desc: [Desc; QUEUE_SIZE] = desc.try_into().unwrap();
+        <span class="kw">let </span>virt_queue = Box::new_in(
+            VirtQueue {
+                desc,
+                avail: AvailRing::&lt;QUEUE_SIZE&gt;::default(),
+                used: UsedRing::&lt;QUEUE_SIZE&gt;::default(),
+            },
+            alloc,
+        );
+        <span class="self">Self </span>{
+            virt_queue,
+            buffer,
+            base_offset,
+            last_used_idx: Wrapping(<span class="number">0</span>),
         }
     }
 
-    <span class="doccomment">/// Gets the address of the descriptor table.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_desc_addr</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">u64</span> {
-        <span class="self">self</span>.<span class="ident">virt_queue</span>.<span class="ident">desc</span>.<span class="ident">as_ptr</span>() <span class="kw">as</span> <span class="ident">u64</span>
+    <span class="doccomment">/// Gets the address of the descriptor table.
+    </span><span class="kw">pub fn </span>get_desc_addr(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; VirtAddr {
+        VirtAddr::from_ptr(<span class="self">self</span>.virt_queue.desc.as_ptr())
     }
 
-    <span class="doccomment">/// Gets the address of the available ring.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_avail_addr</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">u64</span> {
-        (<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">virt_queue</span>.<span class="ident">avail</span> <span class="kw">as</span> <span class="kw-2">*const</span> <span class="kw">_</span>) <span class="kw">as</span> <span class="ident">u64</span>
+    <span class="doccomment">/// Gets the address of the available ring.
+    </span><span class="kw">pub fn </span>get_avail_addr(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; VirtAddr {
+        VirtAddr::from_ptr(<span class="kw-2">&amp;</span><span class="self">self</span>.virt_queue.avail <span class="kw">as </span><span class="kw-2">*const </span><span class="kw">_</span>)
     }
 
-    <span class="doccomment">/// Gets the address of the used ring.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_used_addr</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">u64</span> {
-        (<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">virt_queue</span>.<span class="ident">used</span> <span class="kw">as</span> <span class="kw-2">*const</span> <span class="kw">_</span>) <span class="kw">as</span> <span class="ident">u64</span>
+    <span class="doccomment">/// Gets the address of the used ring.
+    </span><span class="kw">pub fn </span>get_used_addr(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; VirtAddr {
+        VirtAddr::from_ptr(<span class="kw-2">&amp;</span><span class="self">self</span>.virt_queue.used <span class="kw">as </span><span class="kw-2">*const </span><span class="kw">_</span>)
     }
 
-    <span class="doccomment">/// Checks whether the device wants to be notified of queue changes.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">must_notify_device</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">bool</span> {
-        <span class="comment">// Memory fence so that we read a fresh value from the device-owned section.</span>
-        <span class="ident">core::sync::atomic::fence</span>(<span class="ident">core::sync::atomic::Ordering::Acquire</span>);
-        <span class="op">!</span><span class="self">self</span>.<span class="ident">virt_queue</span>.<span class="ident">used</span>.<span class="ident">flags</span>.<span class="ident">contains</span>(<span class="ident">RingFlags::NO_NOTIFY</span>)
+    <span class="doccomment">/// Checks whether the device wants to be notified of queue changes.
+    </span><span class="kw">pub fn </span>must_notify_device(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
+        <span class="comment">// Memory fence so that we read a fresh value from the device-owned section.
+        </span>core::sync::atomic::fence(core::sync::atomic::Ordering::Acquire);
+        !<span class="self">self</span>.virt_queue.used.flags.contains(RingFlags::NO_NOTIFY)
     }
 
-    <span class="doccomment">/// Gets a mutable slice into the buffer based on the index and length.</span>
-    <span class="kw">fn</span> <span class="ident">get_mut_slice_from_index</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">index</span>: <span class="ident">usize</span>, <span class="ident">len</span>: <span class="ident">usize</span>) -&gt; <span class="kw-2">&amp;mut</span> [<span class="ident">u8</span>] {
-        <span class="kw">let</span> <span class="ident">start</span> <span class="op">=</span> (<span class="self">self</span>.<span class="ident">virt_queue</span>.<span class="ident">desc</span>[<span class="ident">index</span>].<span class="ident">addr</span> <span class="op">-</span> <span class="self">self</span>.<span class="ident">base_offset</span>) <span class="kw">as</span> <span class="ident">usize</span>;
-        <span class="kw">let</span> <span class="ident">end</span> <span class="op">=</span> <span class="ident">start</span> <span class="op">+</span> <span class="ident">len</span>;
-        <span class="kw-2">&amp;mut</span> <span class="self">self</span>.<span class="ident">buffer</span>[<span class="ident">start</span>..<span class="ident">end</span>]
+    <span class="doccomment">/// Gets a mutable slice into the buffer based on the index and length.
+    </span><span class="kw">fn </span>get_mut_slice_from_index(<span class="kw-2">&amp;mut </span><span class="self">self</span>, index: usize, len: usize) -&gt; <span class="kw-2">&amp;mut </span>[u8] {
+        <span class="kw">let </span>start = (<span class="self">self</span>.virt_queue.desc[index].addr - <span class="self">self</span>.base_offset) <span class="kw">as </span>usize;
+        <span class="kw">let </span>end = start + len;
+        <span class="kw-2">&amp;mut </span><span class="self">self</span>.buffer[start..end]
     }
 
-    <span class="doccomment">/// Tries to get the element referencing the next used descriptor that we have not yet seen, if</span>
-    <span class="doccomment">/// any.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// If an unseen used descriptor is found, this also advances the last used index by one.</span>
-    <span class="kw">fn</span> <span class="ident">get_next_used_element</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">UsedElem</span><span class="op">&gt;</span> {
-        <span class="comment">// Memory fence so that we read a fresh value from the device-owned section.</span>
-        <span class="ident">core::sync::atomic::fence</span>(<span class="ident">core::sync::atomic::Ordering::Acquire</span>);
-        <span class="kw">let</span> <span class="ident">next_used</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">last_used_idx</span>;
-        <span class="kw">if</span> <span class="ident">next_used</span> <span class="op">==</span> <span class="self">self</span>.<span class="ident">virt_queue</span>.<span class="ident">used</span>.<span class="ident">idx</span> {
-            <span class="prelude-val">None</span>
-        } <span class="kw">else</span> {
-            <span class="self">self</span>.<span class="ident">last_used_idx</span> <span class="op">+</span><span class="op">=</span> <span class="number">1</span>;
-            <span class="prelude-val">Some</span>(<span class="self">self</span>.<span class="ident">virt_queue</span>.<span class="ident">used</span>.<span class="ident">ring</span>[<span class="ident">next_used</span>.<span class="number">0</span> <span class="kw">as</span> <span class="ident">usize</span> <span class="op">%</span> <span class="ident">QUEUE_SIZE</span>])
+    <span class="doccomment">/// Tries to get the element referencing the next used descriptor that we have not yet seen, if
+    /// any.
+    ///
+    /// If an unseen used descriptor is found, this also advances the last used index by one.
+    </span><span class="kw">fn </span>get_next_used_element(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;UsedElem&gt; {
+        <span class="comment">// Memory fence so that we read a fresh value from the device-owned section.
+        </span>core::sync::atomic::fence(core::sync::atomic::Ordering::Acquire);
+        <span class="kw">let </span>next_used = <span class="self">self</span>.last_used_idx;
+        <span class="kw">if </span>next_used == <span class="self">self</span>.virt_queue.used.idx {
+            <span class="prelude-val">None
+        </span>} <span class="kw">else </span>{
+            <span class="self">self</span>.last_used_idx += <span class="number">1</span>;
+            <span class="prelude-val">Some</span>(<span class="self">self</span>.virt_queue.used.ring[next_used.<span class="number">0 </span><span class="kw">as </span>usize % QUEUE_SIZE])
         }
     }
 
-    <span class="doccomment">/// Adds a descriptor to the available ring.</span>
-    <span class="kw">fn</span> <span class="ident">add_available_descriptor</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">index</span>: <span class="ident">u16</span>) {
-        <span class="comment">// Add the descriptor index to the available ring at the next location.</span>
-        <span class="self">self</span>.<span class="ident">virt_queue</span>.<span class="ident">avail</span>.<span class="ident">ring</span>[<span class="self">self</span>.<span class="ident">virt_queue</span>.<span class="ident">avail</span>.<span class="ident">idx</span>.<span class="number">0</span> <span class="kw">as</span> <span class="ident">usize</span> <span class="op">%</span> <span class="ident">QUEUE_SIZE</span>] <span class="op">=</span> <span class="ident">index</span>;
-        <span class="comment">// Increment the available ring index to use next time.</span>
-        <span class="kw">let</span> <span class="ident">next</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">virt_queue</span>.<span class="ident">avail</span>.<span class="ident">idx</span> <span class="op">+</span> <span class="ident">Wrapping</span>(<span class="number">1</span>);
-        <span class="kw">let</span> <span class="ident">idx</span> <span class="op">=</span> <span class="kw-2">&amp;mut</span> <span class="self">self</span>.<span class="ident">virt_queue</span>.<span class="ident">avail</span>.<span class="ident">idx</span>;
-        <span class="comment">// Memory fence to ensure the device will not see the index update before the available ring</span>
-        <span class="comment">// entry update.</span>
-        <span class="ident">core::sync::atomic::fence</span>(<span class="ident">core::sync::atomic::Ordering::Release</span>);
-        <span class="kw-2">*</span><span class="ident">idx</span> <span class="op">=</span> <span class="ident">next</span>;
+    <span class="doccomment">/// Adds a descriptor to the available ring.
+    </span><span class="kw">fn </span>add_available_descriptor(<span class="kw-2">&amp;mut </span><span class="self">self</span>, index: u16) {
+        <span class="comment">// Add the descriptor index to the available ring at the next location.
+        </span><span class="self">self</span>.virt_queue.avail.ring[<span class="self">self</span>.virt_queue.avail.idx.<span class="number">0 </span><span class="kw">as </span>usize % QUEUE_SIZE] = index;
+        <span class="comment">// Increment the available ring index to use next time.
+        </span><span class="kw">let </span>next = <span class="self">self</span>.virt_queue.avail.idx + Wrapping(<span class="number">1</span>);
+        <span class="kw">let </span>idx = <span class="kw-2">&amp;mut </span><span class="self">self</span>.virt_queue.avail.idx;
+        <span class="comment">// Memory fence to ensure the device will not see the index update before the available ring
+        // entry update.
+        </span>core::sync::atomic::fence(core::sync::atomic::Ordering::Release);
+        <span class="kw-2">*</span>idx = next;
     }
 }
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
-<span class="kw">mod</span> <span class="ident">tests</span>;
+<span class="attribute">#[cfg(test)]
+</span><span class="kw">mod </span>tests;
 </code></pre></div>
-</section><section id="search" class="content hidden"></section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="virtio" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.62.0-nightly (de1bc0008 2022-04-21)" ></div>
-</body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="virtio" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (81f391930 2022-10-09)" ></div></body></html>

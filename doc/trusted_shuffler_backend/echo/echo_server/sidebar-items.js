@@ -1,1 +1,1 @@
-initSidebarItems({"struct":[["EchoServer",""],["_Inner",""]],"trait":[["Echo","Generated trait containing gRPC methods that should be implemented for use with EchoServer."]]});
+window.SIDEBAR_ITEMS = {"struct":[["EchoServer",""],["_Inner",""]],"trait":[["Echo","Generated trait containing gRPC methods that should be implemented for use with EchoServer."]]};

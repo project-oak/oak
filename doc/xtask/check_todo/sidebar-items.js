@@ -1,1 +1,1 @@
-initSidebarItems({"static":[["PATTERN",""]],"struct":[["CheckTodo","A [`Runnable`] command that checks for the existence of todos in the codebase with no associated GitHub issue number."]]});
+window.SIDEBAR_ITEMS = {"static":[["PATTERN",""]],"struct":[["CheckTodo","A [`Runnable`] command that checks for the existence of todos in the codebase with no associated GitHub issue number."]]};

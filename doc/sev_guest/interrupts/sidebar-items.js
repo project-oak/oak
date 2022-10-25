@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":[["MutableInterruptStackFrame","A reference to the interrupt stack frame will be passed as the first argument of the inner handler function."]]};

@@ -1,9 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `oak_idl/src/lib.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>lib.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../ayu.css" disabled><link rel="stylesheet" type="text/css" href="../../dark.css" disabled><link rel="stylesheet" type="text/css" href="../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../storage.js"></script><script src="../../crates.js"></script><script defer src="../../main.js"></script><script defer src="../../source-script.js"></script><script defer src="../../source-files.js"></script>
-    <noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../oak_idl/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div>
-        </a><h2 class="location"></h2>
-    </nav>
-    <nav class="sidebar"><a class="sidebar-logo" href="../../oak_idl/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div>
-        </a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../oak_idl/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><div class="theme-picker hidden"><button id="theme-picker" aria-label="Pick another theme!" aria-haspopup="menu" title="themes"><img width="22" height="22" alt="Pick another theme!" src="../../brush.svg"></button><div id="theme-choices" role="menu"></div></div><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><button type="button" id="help-button" title="help">?</button><a id="settings-menu" href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../wheel.svg"></a></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `oak_idl/src/lib.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>lib.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" href="../../normalize.css"><link rel="stylesheet" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" href="../../ayu.css" disabled><link rel="stylesheet" href="../../dark.css" disabled><link rel="stylesheet" href="../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../storage.js"></script><script defer src="../../source-script.js"></script><script defer src="../../source-files.js"></script><script defer src="../../main.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><a class="sidebar-logo" href="../../oak_idl/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../oak_idl/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="src-line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -176,179 +171,178 @@
 <span id="171">171</span>
 <span id="172">172</span>
 <span id="173">173</span>
-</pre><pre class="rust"><code><span class="comment">//</span>
-<span class="comment">// Copyright 2022 The Project Oak Authors</span>
-<span class="comment">//</span>
-<span class="comment">// Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
-<span class="comment">// you may not use this file except in compliance with the License.</span>
-<span class="comment">// You may obtain a copy of the License at</span>
-<span class="comment">//</span>
-<span class="comment">//     http://www.apache.org/licenses/LICENSE-2.0</span>
-<span class="comment">//</span>
-<span class="comment">// Unless required by applicable law or agreed to in writing, software</span>
-<span class="comment">// distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
-<span class="comment">// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
-<span class="comment">// See the License for the specific language governing permissions and</span>
-<span class="comment">// limitations under the License.</span>
-<span class="comment">//</span>
+</pre><pre class="rust"><code><span class="comment">//
+// Copyright 2022 The Project Oak Authors
+//
+// Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
-<span class="attribute">#![<span class="ident">cfg_attr</span>(<span class="ident">not</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;std&quot;</span>), <span class="ident">no_std</span>)]</span>
+</span><span class="attribute">#![cfg_attr(not(feature = <span class="string">&quot;std&quot;</span>), no_std)]
 
-<span class="kw">extern</span> <span class="kw">crate</span> <span class="ident">alloc</span>;
+</span><span class="kw">extern crate </span>alloc;
 
-<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::alloc::string::ToString</span>;
-<span class="kw">use</span> <span class="ident">alloc</span>::{<span class="ident">string::String</span>, <span class="ident">vec::Vec</span>};
-<span class="kw">use</span> <span class="ident">core::fmt::Debug</span>;
+<span class="kw">use </span><span class="kw">crate</span>::alloc::string::ToString;
+<span class="kw">use </span>alloc::{string::String, vec::Vec};
+<span class="kw">use </span>core::fmt::Debug;
 
-<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">utils</span>;
+<span class="kw">pub mod </span>utils;
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">PartialEq</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Status</span> {
-    <span class="kw">pub</span> <span class="ident">code</span>: <span class="ident">StatusCode</span>,
-    <span class="doccomment">/// English message that helps developers understand and resolve the error.</span>
-    <span class="kw">pub</span> <span class="ident">message</span>: <span class="ident">String</span>,
+<span class="attribute">#[derive(Debug, PartialEq)]
+</span><span class="kw">pub struct </span>Status {
+    <span class="kw">pub </span>code: StatusCode,
+    <span class="doccomment">/// English message that helps developers understand and resolve the error.
+    </span><span class="kw">pub </span>message: String,
 }
 
-<span class="kw">impl</span> <span class="ident">Status</span> {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">code</span>: <span class="ident">StatusCode</span>) -&gt; <span class="self">Self</span> {
-        <span class="self">Self</span> {
-            <span class="ident">code</span>,
-            <span class="ident">message</span>: <span class="string">&quot;&quot;</span>.<span class="ident">to_string</span>(),
+<span class="kw">impl </span>Status {
+    <span class="kw">pub fn </span>new(code: StatusCode) -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{
+            code,
+            message: <span class="string">&quot;&quot;</span>.to_string(),
         }
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new_with_message</span>(<span class="ident">code</span>: <span class="ident">StatusCode</span>, <span class="ident">message</span>: <span class="kw">impl</span> <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>) -&gt; <span class="self">Self</span> {
-        <span class="self">Self</span> {
-            <span class="ident">code</span>,
-            <span class="ident">message</span>: <span class="ident">message</span>.<span class="ident">into</span>(),
-        }
-    }
-}
-
-<span class="doccomment">/// gRPC status codes used by [`Status`].</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// These variants match the [gRPC status codes].</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// [gRPC status codes]: https://github.com/grpc/grpc/blob/master/doc/statuscodes.md#status-codes-and-their-use-in-grpc</span>
-<span class="comment">// Based on tonic&#39;s status code struct: https://github.com/hyperium/tonic/blob/91b73f9fc3c1bc281e85177808721b3efe37ece0/tonic/src/status.rs</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">PartialEq</span>)]</span>
-<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">StatusCode</span> {
-    <span class="doccomment">/// The operation completed successfully.</span>
-    <span class="prelude-val">Ok</span> <span class="op">=</span> <span class="number">0</span>,
-
-    <span class="doccomment">/// The operation was cancelled.</span>
-    <span class="ident">Cancelled</span> <span class="op">=</span> <span class="number">1</span>,
-
-    <span class="doccomment">/// Unknown error.</span>
-    <span class="ident">Unknown</span> <span class="op">=</span> <span class="number">2</span>,
-
-    <span class="doccomment">/// Client specified an invalid argument.</span>
-    <span class="ident">InvalidArgument</span> <span class="op">=</span> <span class="number">3</span>,
-
-    <span class="doccomment">/// Deadline expired before operation could complete.</span>
-    <span class="ident">DeadlineExceeded</span> <span class="op">=</span> <span class="number">4</span>,
-
-    <span class="doccomment">/// Some requested entity was not found.</span>
-    <span class="ident">NotFound</span> <span class="op">=</span> <span class="number">5</span>,
-
-    <span class="doccomment">/// Some entity that we attempted to create already exists.</span>
-    <span class="ident">AlreadyExists</span> <span class="op">=</span> <span class="number">6</span>,
-
-    <span class="doccomment">/// The caller does not have permission to execute the specified operation.</span>
-    <span class="ident">PermissionDenied</span> <span class="op">=</span> <span class="number">7</span>,
-
-    <span class="doccomment">/// Some resource has been exhausted.</span>
-    <span class="ident">ResourceExhausted</span> <span class="op">=</span> <span class="number">8</span>,
-
-    <span class="doccomment">/// The system is not in a state required for the operation&#39;s execution.</span>
-    <span class="ident">FailedPrecondition</span> <span class="op">=</span> <span class="number">9</span>,
-
-    <span class="doccomment">/// The operation was aborted.</span>
-    <span class="ident">Aborted</span> <span class="op">=</span> <span class="number">10</span>,
-
-    <span class="doccomment">/// Operation was attempted past the valid range.</span>
-    <span class="ident">OutOfRange</span> <span class="op">=</span> <span class="number">11</span>,
-
-    <span class="doccomment">/// Operation is not implemented or not supported.</span>
-    <span class="ident">Unimplemented</span> <span class="op">=</span> <span class="number">12</span>,
-
-    <span class="doccomment">/// Internal error.</span>
-    <span class="ident">Internal</span> <span class="op">=</span> <span class="number">13</span>,
-
-    <span class="doccomment">/// The service is currently unavailable.</span>
-    <span class="ident">Unavailable</span> <span class="op">=</span> <span class="number">14</span>,
-
-    <span class="doccomment">/// Unrecoverable data loss or corruption.</span>
-    <span class="ident">DataLoss</span> <span class="op">=</span> <span class="number">15</span>,
-
-    <span class="doccomment">/// The request does not have valid authentication credentials</span>
-    <span class="ident">Unauthenticated</span> <span class="op">=</span> <span class="number">16</span>,
-}
-
-<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">u32</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">StatusCode</span> {
-    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">i</span>: <span class="ident">u32</span>) -&gt; <span class="self">Self</span> {
-        <span class="kw">match</span> <span class="ident">i</span> {
-            <span class="number">0</span> =&gt; <span class="ident">StatusCode::Ok</span>,
-            <span class="number">1</span> =&gt; <span class="ident">StatusCode::Cancelled</span>,
-            <span class="number">2</span> =&gt; <span class="ident">StatusCode::Unknown</span>,
-            <span class="number">3</span> =&gt; <span class="ident">StatusCode::InvalidArgument</span>,
-            <span class="number">4</span> =&gt; <span class="ident">StatusCode::DeadlineExceeded</span>,
-            <span class="number">5</span> =&gt; <span class="ident">StatusCode::NotFound</span>,
-            <span class="number">6</span> =&gt; <span class="ident">StatusCode::AlreadyExists</span>,
-            <span class="number">7</span> =&gt; <span class="ident">StatusCode::PermissionDenied</span>,
-            <span class="number">8</span> =&gt; <span class="ident">StatusCode::ResourceExhausted</span>,
-            <span class="number">9</span> =&gt; <span class="ident">StatusCode::FailedPrecondition</span>,
-            <span class="number">10</span> =&gt; <span class="ident">StatusCode::Aborted</span>,
-            <span class="number">11</span> =&gt; <span class="ident">StatusCode::OutOfRange</span>,
-            <span class="number">12</span> =&gt; <span class="ident">StatusCode::Unimplemented</span>,
-            <span class="number">13</span> =&gt; <span class="ident">StatusCode::Internal</span>,
-            <span class="number">14</span> =&gt; <span class="ident">StatusCode::Unavailable</span>,
-            <span class="number">15</span> =&gt; <span class="ident">StatusCode::DataLoss</span>,
-            <span class="number">16</span> =&gt; <span class="ident">StatusCode::Unauthenticated</span>,
-
-            <span class="kw">_</span> =&gt; <span class="ident">StatusCode::Unknown</span>,
+    <span class="kw">pub fn </span>new_with_message(code: StatusCode, message: <span class="kw">impl </span>Into&lt;String&gt;) -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{
+            code,
+            message: message.into(),
         }
     }
 }
 
-<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">StatusCode</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">u32</span> {
-    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">code</span>: <span class="ident">StatusCode</span>) -&gt; <span class="ident">u32</span> {
-        <span class="ident">code</span> <span class="kw">as</span> <span class="ident">u32</span>
+<span class="doccomment">/// gRPC status codes used by [`Status`].
+///
+/// These variants match the [gRPC status codes].
+///
+/// [gRPC status codes]: https://github.com/grpc/grpc/blob/master/doc/statuscodes.md#status-codes-and-their-use-in-grpc
+</span><span class="comment">// Based on tonic&#39;s status code struct: https://github.com/hyperium/tonic/blob/91b73f9fc3c1bc281e85177808721b3efe37ece0/tonic/src/status.rs
+</span><span class="attribute">#[derive(Debug, PartialEq)]
+</span><span class="kw">pub enum </span>StatusCode {
+    <span class="doccomment">/// The operation completed successfully.
+    </span><span class="prelude-val">Ok </span>= <span class="number">0</span>,
+
+    <span class="doccomment">/// The operation was cancelled.
+    </span>Cancelled = <span class="number">1</span>,
+
+    <span class="doccomment">/// Unknown error.
+    </span>Unknown = <span class="number">2</span>,
+
+    <span class="doccomment">/// Client specified an invalid argument.
+    </span>InvalidArgument = <span class="number">3</span>,
+
+    <span class="doccomment">/// Deadline expired before operation could complete.
+    </span>DeadlineExceeded = <span class="number">4</span>,
+
+    <span class="doccomment">/// Some requested entity was not found.
+    </span>NotFound = <span class="number">5</span>,
+
+    <span class="doccomment">/// Some entity that we attempted to create already exists.
+    </span>AlreadyExists = <span class="number">6</span>,
+
+    <span class="doccomment">/// The caller does not have permission to execute the specified operation.
+    </span>PermissionDenied = <span class="number">7</span>,
+
+    <span class="doccomment">/// Some resource has been exhausted.
+    </span>ResourceExhausted = <span class="number">8</span>,
+
+    <span class="doccomment">/// The system is not in a state required for the operation&#39;s execution.
+    </span>FailedPrecondition = <span class="number">9</span>,
+
+    <span class="doccomment">/// The operation was aborted.
+    </span>Aborted = <span class="number">10</span>,
+
+    <span class="doccomment">/// Operation was attempted past the valid range.
+    </span>OutOfRange = <span class="number">11</span>,
+
+    <span class="doccomment">/// Operation is not implemented or not supported.
+    </span>Unimplemented = <span class="number">12</span>,
+
+    <span class="doccomment">/// Internal error.
+    </span>Internal = <span class="number">13</span>,
+
+    <span class="doccomment">/// The service is currently unavailable.
+    </span>Unavailable = <span class="number">14</span>,
+
+    <span class="doccomment">/// Unrecoverable data loss or corruption.
+    </span>DataLoss = <span class="number">15</span>,
+
+    <span class="doccomment">/// The request does not have valid authentication credentials
+    </span>Unauthenticated = <span class="number">16</span>,
+}
+
+<span class="kw">impl </span>From&lt;u32&gt; <span class="kw">for </span>StatusCode {
+    <span class="kw">fn </span>from(i: u32) -&gt; <span class="self">Self </span>{
+        <span class="kw">match </span>i {
+            <span class="number">0 </span>=&gt; StatusCode::Ok,
+            <span class="number">1 </span>=&gt; StatusCode::Cancelled,
+            <span class="number">2 </span>=&gt; StatusCode::Unknown,
+            <span class="number">3 </span>=&gt; StatusCode::InvalidArgument,
+            <span class="number">4 </span>=&gt; StatusCode::DeadlineExceeded,
+            <span class="number">5 </span>=&gt; StatusCode::NotFound,
+            <span class="number">6 </span>=&gt; StatusCode::AlreadyExists,
+            <span class="number">7 </span>=&gt; StatusCode::PermissionDenied,
+            <span class="number">8 </span>=&gt; StatusCode::ResourceExhausted,
+            <span class="number">9 </span>=&gt; StatusCode::FailedPrecondition,
+            <span class="number">10 </span>=&gt; StatusCode::Aborted,
+            <span class="number">11 </span>=&gt; StatusCode::OutOfRange,
+            <span class="number">12 </span>=&gt; StatusCode::Unimplemented,
+            <span class="number">13 </span>=&gt; StatusCode::Internal,
+            <span class="number">14 </span>=&gt; StatusCode::Unavailable,
+            <span class="number">15 </span>=&gt; StatusCode::DataLoss,
+            <span class="number">16 </span>=&gt; StatusCode::Unauthenticated,
+
+            <span class="kw">_ </span>=&gt; StatusCode::Unknown,
+        }
     }
 }
 
-<span class="doccomment">/// Unique identifier of a method within a service.</span>
-<span class="kw">type</span> <span class="ident">MethodId</span> <span class="op">=</span> <span class="ident">u32</span>;
-
-<span class="doccomment">/// A request message representing an invocation of the method identified by `method_id` with the</span>
-<span class="doccomment">/// argument serialized as `body`.</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Request</span> {
-    <span class="doccomment">/// Identifies the method to be invoked, as defined by the IDL.</span>
-    <span class="kw">pub</span> <span class="ident">method_id</span>: <span class="ident">MethodId</span>,
-    <span class="doccomment">/// The serialized request payload, corresponding to the argument of the method identified by</span>
-    <span class="doccomment">/// `method_id`.</span>
-    <span class="kw">pub</span> <span class="ident">body</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
+<span class="kw">impl </span>From&lt;StatusCode&gt; <span class="kw">for </span>u32 {
+    <span class="kw">fn </span>from(code: StatusCode) -&gt; u32 {
+        code <span class="kw">as </span>u32
+    }
 }
 
-<span class="doccomment">/// A message-oriented handler that allows performing invocations.</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// The asymmetry between the request and response types is due to the fact that a [`Request`]</span>
-<span class="doccomment">/// instance contains a reference to the request body buffer, and also contains the method id of the</span>
-<span class="doccomment">/// invocation, while the return value is a `Vec&lt;u8&gt;` since it is allocated and owned by the</span>
-<span class="doccomment">/// invocation handler.</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// This is conceptually similar to a method that takes `&amp;[u8]` as input but returns `Vec&lt;u8&gt;` as</span>
-<span class="doccomment">/// output.</span>
-<span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">Handler</span> {
-    <span class="kw">fn</span> <span class="ident">invoke</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">request</span>: <span class="ident">Request</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>, <span class="ident">Status</span><span class="op">&gt;</span>;
+<span class="doccomment">/// Unique identifier of a method within a service.
+</span><span class="kw">type </span>MethodId = u32;
+
+<span class="doccomment">/// A request message representing an invocation of the method identified by `method_id` with the
+/// argument serialized as `body`.
+</span><span class="kw">pub struct </span>Request {
+    <span class="doccomment">/// Identifies the method to be invoked, as defined by the IDL.
+    </span><span class="kw">pub </span>method_id: MethodId,
+    <span class="doccomment">/// The serialized request payload, corresponding to the argument of the method identified by
+    /// `method_id`.
+    </span><span class="kw">pub </span>body: Vec&lt;u8&gt;,
 }
 
-<span class="doccomment">/// Async version of [`Handler`] to support async clients.</span>
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;async-clients&quot;</span>)]</span>
-<span class="attribute">#[<span class="ident">async_trait::async_trait</span>]</span>
-<span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">AsyncHandler</span> {
-    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">invoke</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">request</span>: <span class="ident">Request</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>, <span class="ident">Status</span><span class="op">&gt;</span>;
+<span class="doccomment">/// A message-oriented handler that allows performing invocations.
+///
+/// The asymmetry between the request and response types is due to the fact that a [`Request`]
+/// instance contains a reference to the request body buffer, and also contains the method id of the
+/// invocation, while the return value is a `Vec&lt;u8&gt;` since it is allocated and owned by the
+/// invocation handler.
+///
+/// This is conceptually similar to a method that takes `&amp;[u8]` as input but returns `Vec&lt;u8&gt;` as
+/// output.
+</span><span class="kw">pub trait </span>Handler {
+    <span class="kw">fn </span>invoke(<span class="kw-2">&amp;mut </span><span class="self">self</span>, request: Request) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, Status&gt;;
+}
+
+<span class="doccomment">/// Async version of [`Handler`] to support async clients.
+</span><span class="attribute">#[cfg(feature = <span class="string">&quot;async-clients&quot;</span>)]
+#[async_trait::async_trait]
+</span><span class="kw">pub trait </span>AsyncHandler {
+    <span class="kw">async fn </span>invoke(<span class="kw-2">&amp;mut </span><span class="self">self</span>, request: Request) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, Status&gt;;
 }
 </code></pre></div>
-</section><section id="search" class="content hidden"></section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="oak_idl" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.62.0-nightly (de1bc0008 2022-04-21)" ></div>
-</body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="oak_idl" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (81f391930 2022-10-09)" ></div></body></html>

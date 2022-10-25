@@ -1,1 +1,1 @@
-initSidebarItems({"fn":[["copy_selected_keys",""],["hyper_to_trusted_shuffler_request",""],["hyper_to_trusted_shuffler_response",""],["trusted_shuffler_to_hyper_request",""],["trusted_shuffler_to_hyper_response",""]],"struct":[["HttpRequestHandler",""],["Service",""],["ServiceBuilder",""]]});
+window.SIDEBAR_ITEMS = {"fn":[["copy_selected_keys",""]],"struct":[["HttpRequestHandler",""],["HyperRequestWrapper",""],["HyperResponseWrapper",""],["Service",""],["ServiceBuilder",""]]};

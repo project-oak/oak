@@ -1,9 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `experimental/sev_guest/src/ghcb.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>ghcb.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../ayu.css" disabled><link rel="stylesheet" type="text/css" href="../../dark.css" disabled><link rel="stylesheet" type="text/css" href="../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../storage.js"></script><script src="../../crates.js"></script><script defer src="../../main.js"></script><script defer src="../../source-script.js"></script><script defer src="../../source-files.js"></script>
-    <noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../sev_guest/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div>
-        </a><h2 class="location"></h2>
-    </nav>
-    <nav class="sidebar"><a class="sidebar-logo" href="../../sev_guest/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div>
-        </a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../sev_guest/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><div class="theme-picker hidden"><button id="theme-picker" aria-label="Pick another theme!" aria-haspopup="menu" title="themes"><img width="22" height="22" alt="Pick another theme!" src="../../brush.svg"></button><div id="theme-choices" role="menu"></div></div><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><button type="button" id="help-button" title="help">?</button><a id="settings-menu" href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../wheel.svg"></a></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `experimental/sev_guest/src/ghcb.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>ghcb.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" href="../../normalize.css"><link rel="stylesheet" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" href="../../ayu.css" disabled><link rel="stylesheet" href="../../dark.css" disabled><link rel="stylesheet" href="../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../storage.js"></script><script defer src="../../source-script.js"></script><script defer src="../../source-files.js"></script><script defer src="../../main.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><a class="sidebar-logo" href="../../sev_guest/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../sev_guest/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="src-line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -295,298 +290,363 @@
 <span id="290">290</span>
 <span id="291">291</span>
 <span id="292">292</span>
-</pre><pre class="rust"><code><span class="comment">//</span>
-<span class="comment">// Copyright 2022 The Project Oak Authors</span>
-<span class="comment">//</span>
-<span class="comment">// Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
-<span class="comment">// you may not use this file except in compliance with the License.</span>
-<span class="comment">// You may obtain a copy of the License at</span>
-<span class="comment">//</span>
-<span class="comment">//     http://www.apache.org/licenses/LICENSE-2.0</span>
-<span class="comment">//</span>
-<span class="comment">// Unless required by applicable law or agreed to in writing, software</span>
-<span class="comment">// distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
-<span class="comment">// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
-<span class="comment">// See the License for the specific language governing permissions and</span>
-<span class="comment">// limitations under the License.</span>
-<span class="comment">//</span>
+<span id="293">293</span>
+<span id="294">294</span>
+<span id="295">295</span>
+<span id="296">296</span>
+<span id="297">297</span>
+<span id="298">298</span>
+<span id="299">299</span>
+<span id="300">300</span>
+<span id="301">301</span>
+<span id="302">302</span>
+<span id="303">303</span>
+<span id="304">304</span>
+<span id="305">305</span>
+<span id="306">306</span>
+<span id="307">307</span>
+<span id="308">308</span>
+<span id="309">309</span>
+<span id="310">310</span>
+<span id="311">311</span>
+<span id="312">312</span>
+<span id="313">313</span>
+<span id="314">314</span>
+<span id="315">315</span>
+<span id="316">316</span>
+<span id="317">317</span>
+<span id="318">318</span>
+<span id="319">319</span>
+<span id="320">320</span>
+<span id="321">321</span>
+<span id="322">322</span>
+<span id="323">323</span>
+<span id="324">324</span>
+<span id="325">325</span>
+</pre><pre class="rust"><code><span class="comment">//
+// Copyright 2022 The Project Oak Authors
+//
+// Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
-<span class="doccomment">//! This module contains an implementation of the guest-hypervisor communications block (GHCB) page</span>
-<span class="doccomment">//! that can be used for communicating with the hypervisor.</span>
+</span><span class="doccomment">//! This module contains an implementation of the guest-hypervisor communications block (GHCB) page
+//! that can be used for communicating with the hypervisor.
 
-<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::msr</span>::{
-    <span class="ident">register_ghcb_location</span>, <span class="ident">set_ghcb_address_and_exit</span>, <span class="ident">GhcbGpa</span>, <span class="ident">RegisterGhcbGpaError</span>,
-    <span class="ident">RegisterGhcbGpaRequest</span>,
+</span><span class="kw">use </span><span class="kw">crate</span>::msr::{
+    register_ghcb_location, set_ghcb_address_and_exit, GhcbGpa, RegisterGhcbGpaError,
+    RegisterGhcbGpaRequest,
 };
-<span class="kw">use</span> <span class="ident">bitflags::bitflags</span>;
-<span class="kw">use</span> <span class="ident">zerocopy::FromBytes</span>;
+<span class="kw">use </span>bitflags::bitflags;
+<span class="kw">use </span>zerocopy::FromBytes;
 
-<span class="doccomment">/// The size of the GHCB page.</span>
-<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">GHCB_PAGE_SIZE</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">4096</span>;
+<span class="doccomment">/// The size of the GHCB page.
+</span><span class="kw">pub const </span>GHCB_PAGE_SIZE: usize = <span class="number">4096</span>;
 
-<span class="doccomment">/// The version of the GHCB protocol and page layout that we expect to use.</span>
-<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">GHCB_PROTOCOL_VERSION</span>: <span class="ident">u16</span> <span class="op">=</span> <span class="number">2</span>;
+<span class="doccomment">/// The version of the GHCB protocol and page layout that we expect to use.
+</span><span class="kw">pub const </span>GHCB_PROTOCOL_VERSION: u16 = <span class="number">2</span>;
 
-<span class="doccomment">/// The value of the sw_exit_code field when doing the IOIO protocol.</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// See section 4.1.2 in &lt;https://developer.amd.com/wp-content/resources/56421.pdf&gt;.</span>
-<span class="kw">const</span> <span class="ident">SW_EXIT_CODE_IOIO_PROT</span>: <span class="ident">u64</span> <span class="op">=</span> <span class="number">0x7B</span>;
+<span class="doccomment">/// The value of the sw_exit_code field when doing the IOIO protocol.
+///
+/// See section 4.1.2 in &lt;https://developer.amd.com/wp-content/resources/56421.pdf&gt;.
+</span><span class="kw">const </span>SW_EXIT_CODE_IOIO_PROT: u64 = <span class="number">0x7B</span>;
 
-<span class="doccomment">/// Indicator bit that the address is a 16 bit number.</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// See section 15.10.2 of &lt;https://www.amd.com/system/files/TechDocs/24593.pdf&gt; for more details.</span>
-<span class="kw">const</span> <span class="ident">IOIO_ADDRESS_SIZE_16</span>: <span class="ident">u64</span> <span class="op">=</span> <span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">7</span>;
+<span class="doccomment">/// Indicator bit that the address is a 16 bit number.
+///
+/// See section 15.10.2 of &lt;https://www.amd.com/system/files/TechDocs/24593.pdf&gt; for more details.
+</span><span class="kw">const </span>IOIO_ADDRESS_SIZE_16: u64 = <span class="number">1 </span>&lt;&lt; <span class="number">7</span>;
 
-<span class="doccomment">/// Indicator bit that the IO port will be used for reading data.</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// See section 15.10.2 of &lt;https://www.amd.com/system/files/TechDocs/24593.pdf&gt; for more details.</span>
-<span class="kw">const</span> <span class="ident">IOIO_READ</span>: <span class="ident">u64</span> <span class="op">=</span> <span class="number">1</span>;
+<span class="doccomment">/// Indicator bit that the IO port will be used for reading data.
+///
+/// See section 15.10.2 of &lt;https://www.amd.com/system/files/TechDocs/24593.pdf&gt; for more details.
+</span><span class="kw">const </span>IOIO_READ: u64 = <span class="number">1</span>;
 
-<span class="doccomment">/// Indicator bit that the IO data is an 8 bit number.</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// See section 15.10.2 of &lt;https://www.amd.com/system/files/TechDocs/24593.pdf&gt; for more details.</span>
-<span class="kw">const</span> <span class="ident">IOIO_DATA_SIZE_8</span>: <span class="ident">u64</span> <span class="op">=</span> <span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">4</span>;
+<span class="doccomment">/// Indicator bit that the IO data is an 8 bit number.
+///
+/// See section 15.10.2 of &lt;https://www.amd.com/system/files/TechDocs/24593.pdf&gt; for more details.
+</span><span class="kw">const </span>IOIO_DATA_SIZE_8: u64 = <span class="number">1 </span>&lt;&lt; <span class="number">4</span>;
 
-<span class="doccomment">/// Indicator bit that the IO data is a 32 bit number.</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// See section 15.10.2 of &lt;https://www.amd.com/system/files/TechDocs/24593.pdf&gt; for more details.</span>
-<span class="kw">const</span> <span class="ident">IOIO_DATA_SIZE_32</span>: <span class="ident">u64</span> <span class="op">=</span> <span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">6</span>;
+<span class="doccomment">/// Indicator bit that the IO data is a 32 bit number.
+///
+/// See section 15.10.2 of &lt;https://www.amd.com/system/files/TechDocs/24593.pdf&gt; for more details.
+</span><span class="kw">const </span>IOIO_DATA_SIZE_32: u64 = <span class="number">1 </span>&lt;&lt; <span class="number">6</span>;
 
-<span class="doccomment">/// The bitmap representing the minimum fields that must always be valid.</span>
-<span class="kw">const</span> <span class="ident">BASE_VALID_BITMAP</span>: <span class="ident">ValidBitmap</span> <span class="op">=</span> <span class="ident">ValidBitmap::SW_EXIT_CODE</span>
-    .<span class="ident">union</span>(<span class="ident">ValidBitmap::SW_EXIT_INFO_1</span>)
-    .<span class="ident">union</span>(<span class="ident">ValidBitmap::SW_EXIT_INFO_2</span>);
+<span class="doccomment">/// The bitmap representing the minimum fields that must always be valid.
+</span><span class="kw">const </span>BASE_VALID_BITMAP: ValidBitmap = ValidBitmap::SW_EXIT_CODE
+    .union(ValidBitmap::SW_EXIT_INFO_1)
+    .union(ValidBitmap::SW_EXIT_INFO_2);
 
-<span class="doccomment">/// The guest-host communications block.</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// See: Table 3 in &lt;https://developer.amd.com/wp-content/resources/56421.pdf&gt;</span>
-<span class="attribute">#[<span class="ident">repr</span>(<span class="ident">C</span>, <span class="ident">align</span>(<span class="number">4096</span>))]</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">FromBytes</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Ghcb</span> {
-    <span class="doccomment">/// Reserved. Must be 0.</span>
-    <span class="ident">_reserved_0</span>: [<span class="ident">u8</span>; <span class="number">203</span>],
-    <span class="doccomment">/// The current privilege level of the executing code.</span>
-    <span class="kw">pub</span> <span class="ident">cpl</span>: <span class="ident">u8</span>,
-    <span class="doccomment">/// Reserved. Must be 0.</span>
-    <span class="ident">_reserved_1</span>: [<span class="ident">u8</span>; <span class="number">116</span>],
-    <span class="doccomment">/// The value of the IA32_XSS model-specific reqister.</span>
-    <span class="kw">pub</span> <span class="ident">xss</span>: <span class="ident">u64</span>,
-    <span class="doccomment">/// Reserved. Must be 0.</span>
-    <span class="ident">_reserved_2</span>: [<span class="ident">u8</span>; <span class="number">24</span>],
-    <span class="doccomment">/// The value of the DR7 debug register.</span>
-    <span class="kw">pub</span> <span class="ident">dr7</span>: <span class="ident">u64</span>,
-    <span class="doccomment">/// Reserved. Must be 0.</span>
-    <span class="ident">_reserved_3</span>: [<span class="ident">u8</span>; <span class="number">144</span>],
-    <span class="doccomment">/// The value of the RAX register.</span>
-    <span class="kw">pub</span> <span class="ident">rax</span>: <span class="ident">u64</span>,
-    <span class="doccomment">/// Reserved. Must be 0.</span>
-    <span class="ident">_reserved_4</span>: [<span class="ident">u8</span>; <span class="number">264</span>],
-    <span class="doccomment">/// The value of the RBX register.</span>
-    <span class="kw">pub</span> <span class="ident">rbx</span>: <span class="ident">u64</span>,
-    <span class="doccomment">/// The value of the RCX register.</span>
-    <span class="kw">pub</span> <span class="ident">rcx</span>: <span class="ident">u64</span>,
-    <span class="doccomment">/// The value of the RDX register.</span>
-    <span class="kw">pub</span> <span class="ident">rdx</span>: <span class="ident">u64</span>,
-    <span class="doccomment">/// Reserved. Must be 0.</span>
-    <span class="ident">_reserved_5</span>: [<span class="ident">u8</span>; <span class="number">112</span>],
-    <span class="doccomment">/// Guest-controlled exit code.</span>
-    <span class="kw">pub</span> <span class="ident">sw_exit_code</span>: <span class="ident">u64</span>,
-    <span class="doccomment">/// Guest-controlled exit information 1.</span>
-    <span class="kw">pub</span> <span class="ident">sw_exit_info_1</span>: <span class="ident">u64</span>,
-    <span class="doccomment">/// Guest-controlled exit information 2.</span>
-    <span class="kw">pub</span> <span class="ident">sw_exit_info_2</span>: <span class="ident">u64</span>,
-    <span class="doccomment">/// Guest-controlled additional information.</span>
-    <span class="kw">pub</span> <span class="ident">sw_scratch</span>: <span class="ident">u64</span>,
-    <span class="doccomment">/// Reserved. Must be 0.</span>
-    <span class="ident">_reserved_6</span>: [<span class="ident">u8</span>; <span class="number">56</span>],
-    <span class="doccomment">/// Value of the XCR0 extended control register.</span>
-    <span class="kw">pub</span> <span class="ident">xcr0</span>: <span class="ident">u64</span>,
-    <span class="doccomment">/// Bitmap indicating which quadwords of the save state area are valid in the range from offset</span>
-    <span class="doccomment">/// 0x000 through to offset 0x3ef.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// A flag must be set for each field that is set as part of handling a non-automatic exit</span>
-    <span class="doccomment">/// event. The value must also be checked on the return from the hypervisor.</span>
-    <span class="kw">pub</span> <span class="ident">valid_bitmap</span>: <span class="ident">ValidBitmap</span>,
-    <span class="doccomment">/// The guest-physical address of the page that contains the x87-related saved state.</span>
-    <span class="kw">pub</span> <span class="ident">x87_state_gpa</span>: <span class="ident">u64</span>,
-    <span class="doccomment">/// Reserved. Must be 0.</span>
-    <span class="ident">_reserved_7</span>: [<span class="ident">u8</span>; <span class="number">1016</span>],
-    <span class="doccomment">/// Area that can be used as a shared buffer for communicating additional information.</span>
-    <span class="kw">pub</span> <span class="ident">shared_buffer</span>: [<span class="ident">u8</span>; <span class="number">2032</span>],
-    <span class="doccomment">/// Reserved. Must be 0.</span>
-    <span class="ident">_reserved_8</span>: [<span class="ident">u8</span>; <span class="number">10</span>],
-    <span class="doccomment">/// The version of the GHCB protocol and page layout in use.</span>
-    <span class="kw">pub</span> <span class="ident">protocol_version</span>: <span class="ident">u16</span>,
-    <span class="doccomment">/// The usage of the GHCB page. A value of 0 indicates the usage is in line with the definition</span>
-    <span class="doccomment">/// as specified in this struct. Any other value indicates a hypervisor-defined usage.</span>
-    <span class="kw">pub</span> <span class="ident">ghcb_usage</span>: <span class="ident">u32</span>,
+<span class="doccomment">/// The guest-host communications block.
+///
+/// See: Table 3 in &lt;https://developer.amd.com/wp-content/resources/56421.pdf&gt;
+</span><span class="attribute">#[repr(C, align(<span class="number">4096</span>))]
+#[derive(Debug, FromBytes)]
+</span><span class="kw">pub struct </span>Ghcb {
+    <span class="doccomment">/// Reserved. Must be 0.
+    </span>_reserved_0: [u8; <span class="number">203</span>],
+    <span class="doccomment">/// The current privilege level of the executing code.
+    </span><span class="kw">pub </span>cpl: u8,
+    <span class="doccomment">/// Reserved. Must be 0.
+    </span>_reserved_1: [u8; <span class="number">116</span>],
+    <span class="doccomment">/// The value of the IA32_XSS model-specific reqister.
+    </span><span class="kw">pub </span>xss: u64,
+    <span class="doccomment">/// Reserved. Must be 0.
+    </span>_reserved_2: [u8; <span class="number">24</span>],
+    <span class="doccomment">/// The value of the DR7 debug register.
+    </span><span class="kw">pub </span>dr7: u64,
+    <span class="doccomment">/// Reserved. Must be 0.
+    </span>_reserved_3: [u8; <span class="number">144</span>],
+    <span class="doccomment">/// The value of the RAX register.
+    </span><span class="kw">pub </span>rax: u64,
+    <span class="doccomment">/// Reserved. Must be 0.
+    </span>_reserved_4: [u8; <span class="number">264</span>],
+    <span class="doccomment">/// The value of the RBX register.
+    </span><span class="kw">pub </span>rbx: u64,
+    <span class="doccomment">/// The value of the RCX register.
+    </span><span class="kw">pub </span>rcx: u64,
+    <span class="doccomment">/// The value of the RDX register.
+    </span><span class="kw">pub </span>rdx: u64,
+    <span class="doccomment">/// Reserved. Must be 0.
+    </span>_reserved_5: [u8; <span class="number">112</span>],
+    <span class="doccomment">/// Guest-controlled exit code.
+    </span><span class="kw">pub </span>sw_exit_code: u64,
+    <span class="doccomment">/// Guest-controlled exit information 1.
+    </span><span class="kw">pub </span>sw_exit_info_1: u64,
+    <span class="doccomment">/// Guest-controlled exit information 2.
+    </span><span class="kw">pub </span>sw_exit_info_2: u64,
+    <span class="doccomment">/// Guest-controlled additional information.
+    </span><span class="kw">pub </span>sw_scratch: u64,
+    <span class="doccomment">/// Reserved. Must be 0.
+    </span>_reserved_6: [u8; <span class="number">56</span>],
+    <span class="doccomment">/// Value of the XCR0 extended control register.
+    </span><span class="kw">pub </span>xcr0: u64,
+    <span class="doccomment">/// Bitmap indicating which quadwords of the save state area are valid in the range from offset
+    /// 0x000 through to offset 0x3ef.
+    ///
+    /// A flag must be set for each field that is set as part of handling a non-automatic exit
+    /// event. The value must also be checked on the return from the hypervisor.
+    </span><span class="kw">pub </span>valid_bitmap: ValidBitmap,
+    <span class="doccomment">/// The guest-physical address of the page that contains the x87-related saved state.
+    </span><span class="kw">pub </span>x87_state_gpa: u64,
+    <span class="doccomment">/// Reserved. Must be 0.
+    </span>_reserved_7: [u8; <span class="number">1016</span>],
+    <span class="doccomment">/// Area that can be used as a shared buffer for communicating additional information.
+    </span><span class="kw">pub </span>shared_buffer: [u8; <span class="number">2032</span>],
+    <span class="doccomment">/// Reserved. Must be 0.
+    </span>_reserved_8: [u8; <span class="number">10</span>],
+    <span class="doccomment">/// The version of the GHCB protocol and page layout in use.
+    </span><span class="kw">pub </span>protocol_version: u16,
+    <span class="doccomment">/// The usage of the GHCB page. A value of 0 indicates the usage is in line with the definition
+    /// as specified in this struct. Any other value indicates a hypervisor-defined usage.
+    </span><span class="kw">pub </span>ghcb_usage: u32,
 }
 
-<span class="kw">impl</span> <span class="ident">Default</span> <span class="kw">for</span> <span class="ident">Ghcb</span> {
-    <span class="kw">fn</span> <span class="ident">default</span>() -&gt; <span class="self">Self</span> {
-        <span class="ident"><span class="self">Self</span>::new_zeroed</span>()
-    }
-}
-
-<span class="macro">static_assertions::assert_eq_size!</span>(<span class="ident">Ghcb</span>, [<span class="ident">u8</span>; <span class="ident">GHCB_PAGE_SIZE</span>]);
-
-<span class="macro">bitflags!</span> {
-    <span class="doccomment">/// Flags indicating which fields in a specific GHCB instance are valid.</span>
-    <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Default</span>, <span class="ident">FromBytes</span>)]</span>
-    <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">ValidBitmap</span>: <span class="ident">u128</span> {
-        <span class="kw">const</span> <span class="ident">CPL</span> <span class="op">=</span> (<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">25</span>);
-        <span class="kw">const</span> <span class="ident">XSS</span> <span class="op">=</span> (<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">40</span>);
-        <span class="kw">const</span> <span class="ident">DR7</span> <span class="op">=</span> (<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">44</span>);
-        <span class="kw">const</span> <span class="ident">RAX</span> <span class="op">=</span> (<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">63</span>);
-        <span class="kw">const</span> <span class="ident">RBX</span> <span class="op">=</span> (<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">97</span>);
-        <span class="kw">const</span> <span class="ident">RCX</span> <span class="op">=</span> (<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">98</span>);
-        <span class="kw">const</span> <span class="ident">RDX</span> <span class="op">=</span> (<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">99</span>);
-        <span class="kw">const</span> <span class="ident">SW_EXIT_CODE</span> <span class="op">=</span> (<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">114</span>);
-        <span class="kw">const</span> <span class="ident">SW_EXIT_INFO_1</span> <span class="op">=</span> (<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">115</span>);
-        <span class="kw">const</span> <span class="ident">SW_EXIT_INFO_2</span> <span class="op">=</span> (<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">116</span>);
-        <span class="kw">const</span> <span class="ident">SW_SCRATCH</span> <span class="op">=</span> (<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">117</span>);
-        <span class="kw">const</span> <span class="ident">XCR0</span> <span class="op">=</span> (<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">125</span>);
+<span class="kw">impl </span>Default <span class="kw">for </span>Ghcb {
+    <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
+        <span class="self">Self</span>::new_zeroed()
     }
 }
 
-<span class="kw">impl</span> <span class="ident">Ghcb</span> {
-    <span class="doccomment">/// Zeroes the entire GHCB.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">reset</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) {
-        <span class="ident">reset_slice</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>.<span class="ident">_reserved_0</span>[..]);
-        <span class="self">self</span>.<span class="ident">cpl</span> <span class="op">=</span> <span class="number">0</span>;
-        <span class="ident">reset_slice</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>.<span class="ident">_reserved_1</span>[..]);
-        <span class="self">self</span>.<span class="ident">xss</span> <span class="op">=</span> <span class="number">0</span>;
-        <span class="ident">reset_slice</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>.<span class="ident">_reserved_2</span>[..]);
-        <span class="self">self</span>.<span class="ident">dr7</span> <span class="op">=</span> <span class="number">0</span>;
-        <span class="ident">reset_slice</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>.<span class="ident">_reserved_3</span>[..]);
-        <span class="self">self</span>.<span class="ident">rax</span> <span class="op">=</span> <span class="number">0</span>;
-        <span class="ident">reset_slice</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>.<span class="ident">_reserved_4</span>[..]);
-        <span class="self">self</span>.<span class="ident">rbx</span> <span class="op">=</span> <span class="number">0</span>;
-        <span class="self">self</span>.<span class="ident">rcx</span> <span class="op">=</span> <span class="number">0</span>;
-        <span class="self">self</span>.<span class="ident">rcx</span> <span class="op">=</span> <span class="number">0</span>;
-        <span class="ident">reset_slice</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>.<span class="ident">_reserved_5</span>[..]);
-        <span class="self">self</span>.<span class="ident">sw_exit_code</span> <span class="op">=</span> <span class="number">0</span>;
-        <span class="self">self</span>.<span class="ident">sw_exit_info_1</span> <span class="op">=</span> <span class="number">0</span>;
-        <span class="self">self</span>.<span class="ident">sw_exit_info_2</span> <span class="op">=</span> <span class="number">0</span>;
-        <span class="self">self</span>.<span class="ident">sw_scratch</span> <span class="op">=</span> <span class="number">0</span>;
-        <span class="ident">reset_slice</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>.<span class="ident">_reserved_6</span>[..]);
-        <span class="self">self</span>.<span class="ident">xcr0</span> <span class="op">=</span> <span class="number">0</span>;
-        <span class="self">self</span>.<span class="ident">valid_bitmap</span> <span class="op">=</span> <span class="ident">ValidBitmap::empty</span>();
-        <span class="self">self</span>.<span class="ident">x87_state_gpa</span> <span class="op">=</span> <span class="number">0</span>;
-        <span class="ident">reset_slice</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>.<span class="ident">_reserved_7</span>[..]);
-        <span class="ident">reset_slice</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>.<span class="ident">shared_buffer</span>[..]);
-        <span class="ident">reset_slice</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>.<span class="ident">_reserved_8</span>[..]);
-        <span class="self">self</span>.<span class="ident">protocol_version</span> <span class="op">=</span> <span class="number">0</span>;
-        <span class="self">self</span>.<span class="ident">ghcb_usage</span> <span class="op">=</span> <span class="number">0</span>;
+<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, G&gt; AsMut&lt;GhcbProtocol&lt;<span class="lifetime">&#39;a</span>, G&gt;&gt; <span class="kw">for </span>GhcbProtocol&lt;<span class="lifetime">&#39;a</span>, G&gt;
+<span class="kw">where
+    </span>G: AsMut&lt;Ghcb&gt; + AsRef&lt;Ghcb&gt; + <span class="question-mark">?</span>Sized,
+{
+    <span class="attribute">#[inline]
+    </span><span class="kw">fn </span>as_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut </span>GhcbProtocol&lt;<span class="lifetime">&#39;a</span>, G&gt; {
+        <span class="self">self
+    </span>}
+}
+
+<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, G&gt; AsRef&lt;GhcbProtocol&lt;<span class="lifetime">&#39;a</span>, G&gt;&gt; <span class="kw">for </span>GhcbProtocol&lt;<span class="lifetime">&#39;a</span>, G&gt;
+<span class="kw">where
+    </span>G: AsMut&lt;Ghcb&gt; + AsRef&lt;Ghcb&gt; + <span class="question-mark">?</span>Sized,
+{
+    <span class="attribute">#[inline]
+    </span><span class="kw">fn </span>as_ref(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>GhcbProtocol&lt;<span class="lifetime">&#39;a</span>, G&gt; {
+        <span class="self">self
+    </span>}
+}
+
+<span class="kw">impl </span>AsMut&lt;Ghcb&gt; <span class="kw">for </span>Ghcb {
+    <span class="attribute">#[inline]
+    </span><span class="kw">fn </span>as_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut </span>Ghcb {
+        <span class="self">self
+    </span>}
+}
+
+<span class="kw">impl </span>AsRef&lt;Ghcb&gt; <span class="kw">for </span>Ghcb {
+    <span class="attribute">#[inline]
+    </span><span class="kw">fn </span>as_ref(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>Ghcb {
+        <span class="self">self
+    </span>}
+}
+
+<span class="macro">static_assertions::assert_eq_size!</span>(Ghcb, [u8; GHCB_PAGE_SIZE]);
+
+<span class="macro">bitflags! </span>{
+    <span class="doccomment">/// Flags indicating which fields in a specific GHCB instance are valid.
+    </span><span class="attribute">#[derive(Default, FromBytes)]
+    </span><span class="kw">pub struct </span>ValidBitmap: u128 {
+        <span class="kw">const </span>CPL = (<span class="number">1 </span>&lt;&lt; <span class="number">25</span>);
+        <span class="kw">const </span>XSS = (<span class="number">1 </span>&lt;&lt; <span class="number">40</span>);
+        <span class="kw">const </span>DR7 = (<span class="number">1 </span>&lt;&lt; <span class="number">44</span>);
+        <span class="kw">const </span>RAX = (<span class="number">1 </span>&lt;&lt; <span class="number">63</span>);
+        <span class="kw">const </span>RBX = (<span class="number">1 </span>&lt;&lt; <span class="number">97</span>);
+        <span class="kw">const </span>RCX = (<span class="number">1 </span>&lt;&lt; <span class="number">98</span>);
+        <span class="kw">const </span>RDX = (<span class="number">1 </span>&lt;&lt; <span class="number">99</span>);
+        <span class="kw">const </span>SW_EXIT_CODE = (<span class="number">1 </span>&lt;&lt; <span class="number">114</span>);
+        <span class="kw">const </span>SW_EXIT_INFO_1 = (<span class="number">1 </span>&lt;&lt; <span class="number">115</span>);
+        <span class="kw">const </span>SW_EXIT_INFO_2 = (<span class="number">1 </span>&lt;&lt; <span class="number">116</span>);
+        <span class="kw">const </span>SW_SCRATCH = (<span class="number">1 </span>&lt;&lt; <span class="number">117</span>);
+        <span class="kw">const </span>XCR0 = (<span class="number">1 </span>&lt;&lt; <span class="number">125</span>);
     }
 }
 
-<span class="doccomment">/// Implementation of the GHCB protocol using the wrapped GHCB data structure.</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">GhcbProtocol</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
-    <span class="ident">ghcb</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="kw-2">mut</span> <span class="ident">Ghcb</span>,
+<span class="kw">impl </span>Ghcb {
+    <span class="doccomment">/// Zeroes the entire GHCB.
+    </span><span class="kw">pub fn </span>reset(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
+        reset_slice(<span class="kw-2">&amp;mut </span><span class="self">self</span>._reserved_0[..]);
+        <span class="self">self</span>.cpl = <span class="number">0</span>;
+        reset_slice(<span class="kw-2">&amp;mut </span><span class="self">self</span>._reserved_1[..]);
+        <span class="self">self</span>.xss = <span class="number">0</span>;
+        reset_slice(<span class="kw-2">&amp;mut </span><span class="self">self</span>._reserved_2[..]);
+        <span class="self">self</span>.dr7 = <span class="number">0</span>;
+        reset_slice(<span class="kw-2">&amp;mut </span><span class="self">self</span>._reserved_3[..]);
+        <span class="self">self</span>.rax = <span class="number">0</span>;
+        reset_slice(<span class="kw-2">&amp;mut </span><span class="self">self</span>._reserved_4[..]);
+        <span class="self">self</span>.rbx = <span class="number">0</span>;
+        <span class="self">self</span>.rcx = <span class="number">0</span>;
+        <span class="self">self</span>.rcx = <span class="number">0</span>;
+        reset_slice(<span class="kw-2">&amp;mut </span><span class="self">self</span>._reserved_5[..]);
+        <span class="self">self</span>.sw_exit_code = <span class="number">0</span>;
+        <span class="self">self</span>.sw_exit_info_1 = <span class="number">0</span>;
+        <span class="self">self</span>.sw_exit_info_2 = <span class="number">0</span>;
+        <span class="self">self</span>.sw_scratch = <span class="number">0</span>;
+        reset_slice(<span class="kw-2">&amp;mut </span><span class="self">self</span>._reserved_6[..]);
+        <span class="self">self</span>.xcr0 = <span class="number">0</span>;
+        <span class="self">self</span>.valid_bitmap = ValidBitmap::empty();
+        <span class="self">self</span>.x87_state_gpa = <span class="number">0</span>;
+        reset_slice(<span class="kw-2">&amp;mut </span><span class="self">self</span>._reserved_7[..]);
+        reset_slice(<span class="kw-2">&amp;mut </span><span class="self">self</span>.shared_buffer[..]);
+        reset_slice(<span class="kw-2">&amp;mut </span><span class="self">self</span>._reserved_8[..]);
+        <span class="self">self</span>.protocol_version = <span class="number">0</span>;
+        <span class="self">self</span>.ghcb_usage = <span class="number">0</span>;
+    }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> <span class="ident">GhcbProtocol</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">ghcb</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="kw-2">mut</span> <span class="ident">Ghcb</span>) -&gt; <span class="self">Self</span> {
-        <span class="self">Self</span> { <span class="ident">ghcb</span> }
+<span class="doccomment">/// Implementation of the GHCB protocol using the wrapped GHCB data structure.
+</span><span class="kw">pub struct </span>GhcbProtocol&lt;<span class="lifetime">&#39;a</span>, G: AsMut&lt;Ghcb&gt; + <span class="question-mark">?</span>Sized&gt; {
+    ghcb: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>G,
+}
+
+<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, G&gt; GhcbProtocol&lt;<span class="lifetime">&#39;a</span>, G&gt;
+<span class="kw">where
+    </span>G: AsMut&lt;Ghcb&gt; + AsRef&lt;Ghcb&gt; + <span class="question-mark">?</span>Sized,
+{
+    <span class="kw">pub fn </span>new(ghcb: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>G) -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{ ghcb }
     }
 
-    <span class="doccomment">/// Gets the guest-physical address for the guest-hypervisor communication block.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_gpa</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">usize</span> {
-        <span class="comment">// Assume identity mapping for now.</span>
-        <span class="self">self</span>.<span class="ident">ghcb</span> <span class="kw">as</span> <span class="kw-2">*const</span> <span class="ident">Ghcb</span> <span class="kw">as</span> <span class="ident">usize</span>
+    <span class="doccomment">/// Gets the guest-physical address for the guest-hypervisor communication block.
+    </span><span class="kw">pub fn </span>get_gpa(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
+        <span class="comment">// Assume identity mapping for now.
+        </span><span class="self">self</span>.ghcb.as_ref() <span class="kw">as </span><span class="kw-2">*const </span>Ghcb <span class="kw">as </span>usize
     }
 
-    <span class="doccomment">/// Registers the address of the GHCB with the hypervisor.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">register_with_hypervisor</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">RegisterGhcbGpaError</span><span class="op">&gt;</span> {
-        <span class="ident">register_ghcb_location</span>(<span class="ident">RegisterGhcbGpaRequest::new</span>(<span class="self">self</span>.<span class="ident">get_gpa</span>())<span class="question-mark">?</span>)
+    <span class="doccomment">/// Registers the address of the GHCB with the hypervisor.
+    </span><span class="kw">pub fn </span>register_with_hypervisor(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;(), RegisterGhcbGpaError&gt; {
+        register_ghcb_location(RegisterGhcbGpaRequest::new(<span class="self">self</span>.get_gpa())<span class="question-mark">?</span>)
     }
 
-    <span class="doccomment">/// Writes an 8 bit number to an IO port via the IOIO protocol.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// See section 4.1.2 in &lt;https://developer.amd.com/wp-content/resources/56421.pdf&gt;.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">io_write_u8</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">port</span>: <span class="ident">u16</span>, <span class="ident">data</span>: <span class="ident">u8</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">ghcb</span>.<span class="ident">reset</span>();
-        <span class="kw">let</span> <span class="ident">io_port</span> <span class="op">=</span> <span class="ident">IOIO_ADDRESS_SIZE_16</span> <span class="op">|</span> <span class="ident">IOIO_DATA_SIZE_8</span> <span class="op">|</span> ((<span class="ident">port</span> <span class="kw">as</span> <span class="ident">u64</span>) <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">16</span>);
+    <span class="doccomment">/// Writes an 8 bit number to an IO port via the IOIO protocol.
+    ///
+    /// See section 4.1.2 in &lt;https://developer.amd.com/wp-content/resources/56421.pdf&gt;.
+    </span><span class="kw">pub fn </span>io_write_u8(<span class="kw-2">&amp;mut </span><span class="self">self</span>, port: u16, data: u8) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+        <span class="kw">let </span>io_port = IOIO_ADDRESS_SIZE_16 | IOIO_DATA_SIZE_8 | ((port <span class="kw">as </span>u64) &lt;&lt; <span class="number">16</span>);
 
-        <span class="self">self</span>.<span class="ident">ghcb</span>.<span class="ident">sw_exit_code</span> <span class="op">=</span> <span class="ident">SW_EXIT_CODE_IOIO_PROT</span>;
-        <span class="self">self</span>.<span class="ident">ghcb</span>.<span class="ident">sw_exit_info_1</span> <span class="op">=</span> <span class="ident">io_port</span>;
-        <span class="self">self</span>.<span class="ident">ghcb</span>.<span class="ident">rax</span> <span class="op">=</span> <span class="ident">data</span> <span class="kw">as</span> <span class="ident">u64</span>;
-        <span class="self">self</span>.<span class="ident">ghcb</span>.<span class="ident">valid_bitmap</span> <span class="op">=</span> <span class="ident">BASE_VALID_BITMAP</span>.<span class="ident">union</span>(<span class="ident">ValidBitmap::RAX</span>);
-        <span class="self">self</span>.<span class="ident">do_vmg_exit</span>()
+        <span class="self">self</span>.ghcb.as_mut().sw_exit_code = SW_EXIT_CODE_IOIO_PROT;
+        <span class="self">self</span>.ghcb.as_mut().sw_exit_info_1 = io_port;
+        <span class="self">self</span>.ghcb.as_mut().rax = data <span class="kw">as </span>u64;
+        <span class="self">self</span>.ghcb.as_mut().valid_bitmap = BASE_VALID_BITMAP.union(ValidBitmap::RAX);
+        <span class="self">self</span>.do_vmg_exit()
     }
 
-    <span class="doccomment">/// Read an 8 bit number from an IO port via the IOIO protocol.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// See section 4.1.2 in &lt;https://developer.amd.com/wp-content/resources/56421.pdf&gt;.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">io_read_u8</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">port</span>: <span class="ident">u16</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">u8</span>, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">ghcb</span>.<span class="ident">reset</span>();
-        <span class="kw">let</span> <span class="ident">io_port</span> <span class="op">=</span> <span class="ident">IOIO_ADDRESS_SIZE_16</span> <span class="op">|</span> <span class="ident">IOIO_DATA_SIZE_8</span> <span class="op">|</span> <span class="ident">IOIO_READ</span> <span class="op">|</span> ((<span class="ident">port</span> <span class="kw">as</span> <span class="ident">u64</span>) <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">16</span>);
+    <span class="doccomment">/// Read an 8 bit number from an IO port via the IOIO protocol.
+    ///
+    /// See section 4.1.2 in &lt;https://developer.amd.com/wp-content/resources/56421.pdf&gt;.
+    </span><span class="kw">pub fn </span>io_read_u8(<span class="kw-2">&amp;mut </span><span class="self">self</span>, port: u16) -&gt; <span class="prelude-ty">Result</span>&lt;u8, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+        <span class="kw">let </span>io_port = IOIO_ADDRESS_SIZE_16 | IOIO_DATA_SIZE_8 | IOIO_READ | ((port <span class="kw">as </span>u64) &lt;&lt; <span class="number">16</span>);
 
-        <span class="self">self</span>.<span class="ident">ghcb</span>.<span class="ident">sw_exit_code</span> <span class="op">=</span> <span class="ident">SW_EXIT_CODE_IOIO_PROT</span>;
-        <span class="self">self</span>.<span class="ident">ghcb</span>.<span class="ident">sw_exit_info_1</span> <span class="op">=</span> <span class="ident">io_port</span>;
-        <span class="self">self</span>.<span class="ident">ghcb</span>.<span class="ident">valid_bitmap</span> <span class="op">=</span> <span class="ident">BASE_VALID_BITMAP</span>;
-        <span class="self">self</span>.<span class="ident">do_vmg_exit</span>()<span class="question-mark">?</span>;
-        <span class="prelude-val">Ok</span>(<span class="self">self</span>.<span class="ident">ghcb</span>.<span class="ident">rax</span> <span class="kw">as</span> <span class="ident">u8</span>)
+        <span class="self">self</span>.ghcb.as_mut().sw_exit_code = SW_EXIT_CODE_IOIO_PROT;
+        <span class="self">self</span>.ghcb.as_mut().sw_exit_info_1 = io_port;
+        <span class="self">self</span>.ghcb.as_mut().valid_bitmap = BASE_VALID_BITMAP;
+        <span class="self">self</span>.do_vmg_exit()<span class="question-mark">?</span>;
+        <span class="prelude-val">Ok</span>(<span class="self">self</span>.ghcb.as_mut().rax <span class="kw">as </span>u8)
     }
 
-    <span class="doccomment">/// Writes a 32 bit number to an IO port via the IOIO protocol.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// See section 4.1.2 in &lt;https://developer.amd.com/wp-content/resources/56421.pdf&gt;.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">io_write_u32</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">port</span>: <span class="ident">u16</span>, <span class="ident">data</span>: <span class="ident">u32</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">ghcb</span>.<span class="ident">reset</span>();
-        <span class="kw">let</span> <span class="ident">io_port</span> <span class="op">=</span> <span class="ident">IOIO_ADDRESS_SIZE_16</span> <span class="op">|</span> <span class="ident">IOIO_DATA_SIZE_32</span> <span class="op">|</span> ((<span class="ident">port</span> <span class="kw">as</span> <span class="ident">u64</span>) <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">16</span>);
+    <span class="doccomment">/// Writes a 32 bit number to an IO port via the IOIO protocol.
+    ///
+    /// See section 4.1.2 in &lt;https://developer.amd.com/wp-content/resources/56421.pdf&gt;.
+    </span><span class="kw">pub fn </span>io_write_u32(<span class="kw-2">&amp;mut </span><span class="self">self</span>, port: u16, data: u32) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+        <span class="kw">let </span>io_port = IOIO_ADDRESS_SIZE_16 | IOIO_DATA_SIZE_32 | ((port <span class="kw">as </span>u64) &lt;&lt; <span class="number">16</span>);
 
-        <span class="self">self</span>.<span class="ident">ghcb</span>.<span class="ident">sw_exit_code</span> <span class="op">=</span> <span class="ident">SW_EXIT_CODE_IOIO_PROT</span>;
-        <span class="self">self</span>.<span class="ident">ghcb</span>.<span class="ident">sw_exit_info_1</span> <span class="op">=</span> <span class="ident">io_port</span>;
-        <span class="self">self</span>.<span class="ident">ghcb</span>.<span class="ident">rax</span> <span class="op">=</span> <span class="ident">data</span> <span class="kw">as</span> <span class="ident">u64</span>;
-        <span class="self">self</span>.<span class="ident">ghcb</span>.<span class="ident">valid_bitmap</span> <span class="op">=</span> <span class="ident">BASE_VALID_BITMAP</span>.<span class="ident">union</span>(<span class="ident">ValidBitmap::RAX</span>);
-        <span class="self">self</span>.<span class="ident">do_vmg_exit</span>()
+        <span class="self">self</span>.ghcb.as_mut().sw_exit_code = SW_EXIT_CODE_IOIO_PROT;
+        <span class="self">self</span>.ghcb.as_mut().sw_exit_info_1 = io_port;
+        <span class="self">self</span>.ghcb.as_mut().rax = data <span class="kw">as </span>u64;
+        <span class="self">self</span>.ghcb.as_mut().valid_bitmap = BASE_VALID_BITMAP.union(ValidBitmap::RAX);
+        <span class="self">self</span>.do_vmg_exit()
     }
 
-    <span class="doccomment">/// Read a 32 bit number from an IO port via the IOIO protocol.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// See section 4.1.2 in &lt;https://developer.amd.com/wp-content/resources/56421.pdf&gt;.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">io_read_u32</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">port</span>: <span class="ident">u16</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">u32</span>, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">ghcb</span>.<span class="ident">reset</span>();
-        <span class="kw">let</span> <span class="ident">io_port</span> <span class="op">=</span> <span class="ident">IOIO_ADDRESS_SIZE_16</span> <span class="op">|</span> <span class="ident">IOIO_DATA_SIZE_32</span> <span class="op">|</span> <span class="ident">IOIO_READ</span> <span class="op">|</span> ((<span class="ident">port</span> <span class="kw">as</span> <span class="ident">u64</span>) <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">16</span>);
+    <span class="doccomment">/// Read a 32 bit number from an IO port via the IOIO protocol.
+    ///
+    /// See section 4.1.2 in &lt;https://developer.amd.com/wp-content/resources/56421.pdf&gt;.
+    </span><span class="kw">pub fn </span>io_read_u32(<span class="kw-2">&amp;mut </span><span class="self">self</span>, port: u16) -&gt; <span class="prelude-ty">Result</span>&lt;u32, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+        <span class="kw">let </span>io_port = IOIO_ADDRESS_SIZE_16 | IOIO_DATA_SIZE_32 | IOIO_READ | ((port <span class="kw">as </span>u64) &lt;&lt; <span class="number">16</span>);
 
-        <span class="self">self</span>.<span class="ident">ghcb</span>.<span class="ident">sw_exit_code</span> <span class="op">=</span> <span class="ident">SW_EXIT_CODE_IOIO_PROT</span>;
-        <span class="self">self</span>.<span class="ident">ghcb</span>.<span class="ident">sw_exit_info_1</span> <span class="op">=</span> <span class="ident">io_port</span>;
-        <span class="self">self</span>.<span class="ident">ghcb</span>.<span class="ident">valid_bitmap</span> <span class="op">=</span> <span class="ident">BASE_VALID_BITMAP</span>;
-        <span class="self">self</span>.<span class="ident">do_vmg_exit</span>()<span class="question-mark">?</span>;
-        <span class="prelude-val">Ok</span>(<span class="self">self</span>.<span class="ident">ghcb</span>.<span class="ident">rax</span> <span class="kw">as</span> <span class="ident">u32</span>)
+        <span class="self">self</span>.ghcb.as_mut().sw_exit_code = SW_EXIT_CODE_IOIO_PROT;
+        <span class="self">self</span>.ghcb.as_mut().sw_exit_info_1 = io_port;
+        <span class="self">self</span>.ghcb.as_mut().valid_bitmap = BASE_VALID_BITMAP;
+        <span class="self">self</span>.do_vmg_exit()<span class="question-mark">?</span>;
+        <span class="prelude-val">Ok</span>(<span class="self">self</span>.ghcb.as_mut().rax <span class="kw">as </span>u32)
     }
 
-    <span class="doccomment">/// Sets the address of the GHCB, exits to the hypervisor, and checks the return value when</span>
-    <span class="doccomment">/// execution resumes.</span>
-    <span class="kw">fn</span> <span class="ident">do_vmg_exit</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">ghcb</span>.<span class="ident">protocol_version</span> <span class="op">=</span> <span class="ident">GHCB_PROTOCOL_VERSION</span>;
-        <span class="comment">// Use a memory fence to ensure all writes happen before we hand over to the VMM.</span>
-        <span class="ident">core::sync::atomic::fence</span>(<span class="ident">core::sync::atomic::Ordering::Release</span>);
-        <span class="ident">set_ghcb_address_and_exit</span>(<span class="ident">GhcbGpa::new</span>(<span class="self">self</span>.<span class="ident">get_gpa</span>())<span class="question-mark">?</span>);
-        <span class="comment">// Use a memory fence to ensure that all earlier writes are commited before we read from the</span>
-        <span class="comment">// GHCB.</span>
-        <span class="ident">core::sync::atomic::fence</span>(<span class="ident">core::sync::atomic::Ordering::Acquire</span>);
+    <span class="doccomment">/// Sets the address of the GHCB, exits to the hypervisor, and checks the return value when
+    /// execution resumes.
+    </span><span class="kw">fn </span>do_vmg_exit(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+        <span class="self">self</span>.ghcb.as_mut().protocol_version = GHCB_PROTOCOL_VERSION;
+        <span class="comment">// Use a memory fence to ensure all writes happen before we hand over to the VMM.
+        </span>core::sync::atomic::fence(core::sync::atomic::Ordering::Release);
+        set_ghcb_address_and_exit(GhcbGpa::new(<span class="self">self</span>.get_gpa())<span class="question-mark">?</span>);
+        <span class="comment">// Use a memory fence to ensure that all earlier writes are commited before we read from the
+        // GHCB.
+        </span>core::sync::atomic::fence(core::sync::atomic::Ordering::Acquire);
 
-        <span class="comment">// The mask for extracting the hypervisor&#39;s return value from the sw_exit_info_1 field.</span>
-        <span class="kw">const</span> <span class="ident">SW_EXIT_INFO_1_RETURN_MASK</span>: <span class="ident">u64</span> <span class="op">=</span> <span class="number">0xffff_ffff</span>;
+        <span class="comment">// The mask for extracting the hypervisor&#39;s return value from the sw_exit_info_1 field.
+        </span><span class="kw">const </span>SW_EXIT_INFO_1_RETURN_MASK: u64 = <span class="number">0xffff_ffff</span>;
 
-        <span class="kw">if</span> <span class="self">self</span>.<span class="ident">ghcb</span>.<span class="ident">sw_exit_info_1</span> <span class="op">&amp;</span> <span class="ident">SW_EXIT_INFO_1_RETURN_MASK</span> <span class="op">==</span> <span class="number">0</span> {
+        <span class="kw">if </span><span class="self">self</span>.ghcb.as_mut().sw_exit_info_1 &amp; SW_EXIT_INFO_1_RETURN_MASK == <span class="number">0 </span>{
             <span class="prelude-val">Ok</span>(())
-        } <span class="kw">else</span> {
-            <span class="comment">// For now we treat all non-zero return values as unrecoverable errors.</span>
-            <span class="prelude-val">Err</span>(<span class="string">&quot;VMGEXIT call returned an error.&quot;</span>)
+        } <span class="kw">else </span>{
+            <span class="comment">// For now we treat all non-zero return values as unrecoverable errors.
+            </span><span class="prelude-val">Err</span>(<span class="string">&quot;VMGEXIT call returned an error.&quot;</span>)
         }
     }
 }
 
-<span class="doccomment">/// Resets a byte slice to all zeroes.</span>
-<span class="kw">fn</span> <span class="ident">reset_slice</span>(<span class="ident">slice</span>: <span class="kw-2">&amp;mut</span> [<span class="ident">u8</span>]) {
-    <span class="kw">for</span> <span class="ident">byte</span> <span class="kw">in</span> <span class="ident">slice</span> {
-        <span class="kw-2">*</span><span class="ident">byte</span> <span class="op">=</span> <span class="number">0</span>;
+<span class="doccomment">/// Resets a byte slice to all zeroes.
+</span><span class="kw">fn </span>reset_slice(slice: <span class="kw-2">&amp;mut </span>[u8]) {
+    <span class="kw">for </span>byte <span class="kw">in </span>slice {
+        <span class="kw-2">*</span>byte = <span class="number">0</span>;
     }
 }
 </code></pre></div>
-</section><section id="search" class="content hidden"></section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="sev_guest" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.62.0-nightly (de1bc0008 2022-04-21)" ></div>
-</body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="sev_guest" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (81f391930 2022-10-09)" ></div></body></html>

@@ -1,9 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `oak_functions/client/rust/src/rekor.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>rekor.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../ayu.css" disabled><link rel="stylesheet" type="text/css" href="../../dark.css" disabled><link rel="stylesheet" type="text/css" href="../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../storage.js"></script><script src="../../crates.js"></script><script defer src="../../main.js"></script><script defer src="../../source-script.js"></script><script defer src="../../source-files.js"></script>
-    <noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../oak_functions_client/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div>
-        </a><h2 class="location"></h2>
-    </nav>
-    <nav class="sidebar"><a class="sidebar-logo" href="../../oak_functions_client/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div>
-        </a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../oak_functions_client/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><div class="theme-picker hidden"><button id="theme-picker" aria-label="Pick another theme!" aria-haspopup="menu" title="themes"><img width="22" height="22" alt="Pick another theme!" src="../../brush.svg"></button><div id="theme-choices" role="menu"></div></div><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><button type="button" id="help-button" title="help">?</button><a id="settings-menu" href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../wheel.svg"></a></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `oak_functions_client/src/rekor.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>rekor.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" href="../../normalize.css"><link rel="stylesheet" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" href="../../ayu.css" disabled><link rel="stylesheet" href="../../dark.css" disabled><link rel="stylesheet" href="../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../storage.js"></script><script defer src="../../source-script.js"></script><script defer src="../../source-files.js"></script><script defer src="../../main.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><a class="sidebar-logo" href="../../oak_functions_client/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../oak_functions_client/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="src-line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -334,337 +329,336 @@
 <span id="329">329</span>
 <span id="330">330</span>
 <span id="331">331</span>
-</pre><pre class="rust"><code><span class="comment">//</span>
-<span class="comment">// Copyright 2022 The Project Oak Authors</span>
-<span class="comment">//</span>
-<span class="comment">// Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
-<span class="comment">// you may not use this file except in compliance with the License.</span>
-<span class="comment">// You may obtain a copy of the License at</span>
-<span class="comment">//</span>
-<span class="comment">//     http://www.apache.org/licenses/LICENSE-2.0</span>
-<span class="comment">//</span>
-<span class="comment">// Unless required by applicable law or agreed to in writing, software</span>
-<span class="comment">// distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
-<span class="comment">// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
-<span class="comment">// See the License for the specific language governing permissions and</span>
-<span class="comment">// limitations under the License.</span>
-<span class="comment">//</span>
+</pre><pre class="rust"><code><span class="comment">//
+// Copyright 2022 The Project Oak Authors
+//
+// Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
-<span class="doccomment">//! This module provides structs for representing a Rekor LogEntry, as well as logic for parsing and</span>
-<span class="doccomment">//! verifying signatures in a Rekor LogEntry.</span>
+</span><span class="doccomment">//! This module provides structs for representing a Rekor LogEntry, as well as logic for parsing and
+//! verifying signatures in a Rekor LogEntry.
 
-<span class="kw">use</span> <span class="ident">anyhow::Context</span>;
-<span class="kw">use</span> <span class="ident">ecdsa::Signature</span>;
-<span class="kw">use</span> <span class="ident">serde</span>::{<span class="ident">Deserialize</span>, <span class="ident">Serialize</span>};
-<span class="kw">use</span> <span class="ident">sha2</span>::{<span class="ident">Digest</span>, <span class="ident">Sha256</span>};
-<span class="kw">use</span> <span class="ident">signature::Verifier</span>;
-<span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">cmp::Ordering</span>, <span class="ident">str::FromStr</span>};
+</span><span class="kw">use </span>anyhow::Context;
+<span class="kw">use </span>ecdsa::Signature;
+<span class="kw">use </span>serde::{Deserialize, Serialize};
+<span class="kw">use </span>sha2::{Digest, Sha256};
+<span class="kw">use </span>signature::Verifier;
+<span class="kw">use </span>std::{cmp::Ordering, str::FromStr};
 
-<span class="doccomment">/// Struct representing a Rekor LogEntry.</span>
-<span class="doccomment">/// Based on &lt;https://github.com/sigstore/rekor/blob/2978cdc26fdf8f5bfede8459afd9735f0f231a2a/pkg/generated/models/log_entry.go#L89.&gt;</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Deserialize</span>, <span class="ident">PartialEq</span>, <span class="ident">Serialize</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">LogEntry</span> {
-    <span class="doccomment">/// We cannot directly use the type `Body` here, since body is Base64-encoded.</span>
-    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">rename</span> <span class="op">=</span> <span class="string">&quot;body&quot;</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">body</span>: <span class="ident">String</span>,
+<span class="doccomment">/// Struct representing a Rekor LogEntry.
+/// Based on &lt;https://github.com/sigstore/rekor/blob/2978cdc26fdf8f5bfede8459afd9735f0f231a2a/pkg/generated/models/log_entry.go#L89.&gt;
+</span><span class="attribute">#[derive(Debug, Deserialize, PartialEq, Serialize)]
+</span><span class="kw">pub struct </span>LogEntry {
+    <span class="doccomment">/// We cannot directly use the type `Body` here, since body is Base64-encoded.
+    </span><span class="attribute">#[serde(rename = <span class="string">&quot;body&quot;</span>)]
+    </span><span class="kw">pub </span>body: String,
 
-    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">rename</span> <span class="op">=</span> <span class="string">&quot;integratedTime&quot;</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">integrated_time</span>: <span class="ident">usize</span>,
+    <span class="attribute">#[serde(rename = <span class="string">&quot;integratedTime&quot;</span>)]
+    </span><span class="kw">pub </span>integrated_time: usize,
 
-    <span class="doccomment">/// This is the SHA256 hash of the DER-encoded public key for the log at the time the entry was</span>
-    <span class="doccomment">/// included in the log</span>
-    <span class="doccomment">/// Pattern: ^[0-9a-fA-F]{64}$</span>
-    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">rename</span> <span class="op">=</span> <span class="string">&quot;logID&quot;</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">log_id</span>: <span class="ident">String</span>,
+    <span class="doccomment">/// This is the SHA256 hash of the DER-encoded public key for the log at the time the entry was
+    /// included in the log
+    /// Pattern: ^[0-9a-fA-F]{64}$
+    </span><span class="attribute">#[serde(rename = <span class="string">&quot;logID&quot;</span>)]
+    </span><span class="kw">pub </span>log_id: String,
 
-    <span class="doccomment">/// Minimum: 0</span>
-    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">rename</span> <span class="op">=</span> <span class="string">&quot;logIndex&quot;</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">log_index</span>: <span class="ident">u64</span>,
+    <span class="doccomment">/// Minimum: 0
+    </span><span class="attribute">#[serde(rename = <span class="string">&quot;logIndex&quot;</span>)]
+    </span><span class="kw">pub </span>log_index: u64,
 
-    <span class="doccomment">/// Includes a signature over the body, integratedTime, logID, and logIndex.</span>
-    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">skip_serializing_if</span> <span class="op">=</span> <span class="string">&quot;Option::is_none&quot;</span>)]</span>
-    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">rename</span> <span class="op">=</span> <span class="string">&quot;verification&quot;</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">verification</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">LogEntryVerification</span><span class="op">&gt;</span>,
+    <span class="doccomment">/// Includes a signature over the body, integratedTime, logID, and logIndex.
+    </span><span class="attribute">#[serde(skip_serializing_if = <span class="string">&quot;Option::is_none&quot;</span>)]
+    #[serde(rename = <span class="string">&quot;verification&quot;</span>)]
+    </span><span class="kw">pub </span>verification: <span class="prelude-ty">Option</span>&lt;LogEntryVerification&gt;,
 }
 
-<span class="doccomment">/// Struct representing the body in a Rekor LogEntry.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Deserialize</span>, <span class="ident">PartialEq</span>, <span class="ident">Serialize</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Body</span> {
-    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">rename</span> <span class="op">=</span> <span class="string">&quot;apiVersion&quot;</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">api_version</span>: <span class="ident">String</span>,
-    <span class="kw">pub</span> <span class="ident">kind</span>: <span class="ident">String</span>,
-    <span class="kw">pub</span> <span class="ident">spec</span>: <span class="ident">Spec</span>,
+<span class="doccomment">/// Struct representing the body in a Rekor LogEntry.
+</span><span class="attribute">#[derive(Debug, Deserialize, PartialEq, Serialize)]
+</span><span class="kw">pub struct </span>Body {
+    <span class="attribute">#[serde(rename = <span class="string">&quot;apiVersion&quot;</span>)]
+    </span><span class="kw">pub </span>api_version: String,
+    <span class="kw">pub </span>kind: String,
+    <span class="kw">pub </span>spec: Spec,
 }
 
-<span class="doccomment">/// Struct representing the `spec` in the body of a Rekor LogEntry.</span>
-<span class="doccomment">/// Based on &lt;https://github.com/sigstore/rekor/blob/2978cdc26fdf8f5bfede8459afd9735f0f231a2a/pkg/generated/models/rekord_v001_schema.go#L39.&gt;</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Deserialize</span>, <span class="ident">PartialEq</span>, <span class="ident">Serialize</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Spec</span> {
-    <span class="kw">pub</span> <span class="ident">data</span>: <span class="ident">Data</span>,
-    <span class="kw">pub</span> <span class="ident">signature</span>: <span class="ident">GenericSignature</span>,
+<span class="doccomment">/// Struct representing the `spec` in the body of a Rekor LogEntry.
+/// Based on &lt;https://github.com/sigstore/rekor/blob/2978cdc26fdf8f5bfede8459afd9735f0f231a2a/pkg/generated/models/rekord_v001_schema.go#L39.&gt;
+</span><span class="attribute">#[derive(Debug, Deserialize, PartialEq, Serialize)]
+</span><span class="kw">pub struct </span>Spec {
+    <span class="kw">pub </span>data: Data,
+    <span class="kw">pub </span>signature: GenericSignature,
 }
 
-<span class="doccomment">/// Struct representing the hashed data in the body of a Rekor LogEntry.</span>
-<span class="doccomment">/// Based on &lt;https://github.com/sigstore/rekor/blob/2978cdc26fdf8f5bfede8459afd9735f0f231a2a/pkg/generated/models/rekord_v001_schema.go#L179.&gt;</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Deserialize</span>, <span class="ident">PartialEq</span>, <span class="ident">Serialize</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Data</span> {
-    <span class="kw">pub</span> <span class="ident">hash</span>: <span class="ident">Hash</span>,
+<span class="doccomment">/// Struct representing the hashed data in the body of a Rekor LogEntry.
+/// Based on &lt;https://github.com/sigstore/rekor/blob/2978cdc26fdf8f5bfede8459afd9735f0f231a2a/pkg/generated/models/rekord_v001_schema.go#L179.&gt;
+</span><span class="attribute">#[derive(Debug, Deserialize, PartialEq, Serialize)]
+</span><span class="kw">pub struct </span>Data {
+    <span class="kw">pub </span>hash: Hash,
 }
 
-<span class="doccomment">/// Struct representing a hash digest.</span>
-<span class="doccomment">/// Based on &lt;https://github.com/sigstore/rekor/blob/2978cdc26fdf8f5bfede8459afd9735f0f231a2a/pkg/generated/models/rekord_v001_schema.go#L273.&gt;</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Deserialize</span>, <span class="ident">PartialEq</span>, <span class="ident">Serialize</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Hash</span> {
-    <span class="kw">pub</span> <span class="ident">algorithm</span>: <span class="ident">String</span>,
-    <span class="kw">pub</span> <span class="ident">value</span>: <span class="ident">String</span>,
+<span class="doccomment">/// Struct representing a hash digest.
+/// Based on &lt;https://github.com/sigstore/rekor/blob/2978cdc26fdf8f5bfede8459afd9735f0f231a2a/pkg/generated/models/rekord_v001_schema.go#L273.&gt;
+</span><span class="attribute">#[derive(Debug, Deserialize, PartialEq, Serialize)]
+</span><span class="kw">pub struct </span>Hash {
+    <span class="kw">pub </span>algorithm: String,
+    <span class="kw">pub </span>value: String,
 }
 
-<span class="doccomment">/// Struct representing a signature in the body of a Rekor LogEntry.</span>
-<span class="doccomment">/// Based on &lt;https://github.com/sigstore/rekor/blob/2978cdc26fdf8f5bfede8459afd9735f0f231a2a/pkg/generated/models/rekord_v001_schema.go#L383&gt;</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Deserialize</span>, <span class="ident">PartialEq</span>, <span class="ident">Serialize</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">GenericSignature</span> {
-    <span class="doccomment">/// Base64 content that is signed.</span>
-    <span class="kw">pub</span> <span class="ident">content</span>: <span class="ident">String</span>,
-    <span class="kw">pub</span> <span class="ident">format</span>: <span class="ident">String</span>,
-    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">rename</span> <span class="op">=</span> <span class="string">&quot;publicKey&quot;</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">public_key</span>: <span class="ident">PublicKey</span>,
+<span class="doccomment">/// Struct representing a signature in the body of a Rekor LogEntry.
+/// Based on &lt;https://github.com/sigstore/rekor/blob/2978cdc26fdf8f5bfede8459afd9735f0f231a2a/pkg/generated/models/rekord_v001_schema.go#L383&gt;
+</span><span class="attribute">#[derive(Debug, Deserialize, PartialEq, Serialize)]
+</span><span class="kw">pub struct </span>GenericSignature {
+    <span class="doccomment">/// Base64 content that is signed.
+    </span><span class="kw">pub </span>content: String,
+    <span class="kw">pub </span>format: String,
+    <span class="attribute">#[serde(rename = <span class="string">&quot;publicKey&quot;</span>)]
+    </span><span class="kw">pub </span>public_key: PublicKey,
 }
 
-<span class="doccomment">/// Struct representing a public key included in the body of a Rekor LogEntry.</span>
-<span class="doccomment">/// Based on &lt;https://github.com/sigstore/rekor/blob/2978cdc26fdf8f5bfede8459afd9735f0f231a2a/pkg/generated/models/rekord_v001_schema.go#L551.&gt;</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Deserialize</span>, <span class="ident">PartialEq</span>, <span class="ident">Serialize</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">PublicKey</span> {
-    <span class="doccomment">/// Base64 content of a public key.</span>
-    <span class="kw">pub</span> <span class="ident">content</span>: <span class="ident">String</span>,
+<span class="doccomment">/// Struct representing a public key included in the body of a Rekor LogEntry.
+/// Based on &lt;https://github.com/sigstore/rekor/blob/2978cdc26fdf8f5bfede8459afd9735f0f231a2a/pkg/generated/models/rekord_v001_schema.go#L551.&gt;
+</span><span class="attribute">#[derive(Debug, Deserialize, PartialEq, Serialize)]
+</span><span class="kw">pub struct </span>PublicKey {
+    <span class="doccomment">/// Base64 content of a public key.
+    </span><span class="kw">pub </span>content: String,
 }
 
-<span class="doccomment">/// Struct representing a verification object in a Rekor LogEntry. The verification object in Rekor</span>
-<span class="doccomment">/// also contains an inclusion proof. Since we currently don&#39;t verify the inclusion proof in the</span>
-<span class="doccomment">/// client, it is omitted from this struct.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Deserialize</span>, <span class="ident">PartialEq</span>, <span class="ident">Serialize</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">LogEntryVerification</span> {
-    <span class="comment">// Base64-encoded signature over the body, integratedTime, logID, and logIndex.</span>
-    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">rename</span> <span class="op">=</span> <span class="string">&quot;signedEntryTimestamp&quot;</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">signed_entry_timestamp</span>: <span class="ident">String</span>,
+<span class="doccomment">/// Struct representing a verification object in a Rekor LogEntry. The verification object in Rekor
+/// also contains an inclusion proof. Since we currently don&#39;t verify the inclusion proof in the
+/// client, it is omitted from this struct.
+</span><span class="attribute">#[derive(Debug, Deserialize, PartialEq, Serialize)]
+</span><span class="kw">pub struct </span>LogEntryVerification {
+    <span class="comment">// Base64-encoded signature over the body, integratedTime, logID, and logIndex.
+    </span><span class="attribute">#[serde(rename = <span class="string">&quot;signedEntryTimestamp&quot;</span>)]
+    </span><span class="kw">pub </span>signed_entry_timestamp: String,
 }
 
-<span class="doccomment">/// Convenient struct for verifying the `signedEntryTimestamp` in a Rekor LogEntry.</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// This bundle can be verified using the public key from Rekor. The public key can</span>
-<span class="doccomment">/// be obtained from the `/api/v1/log/publicKey` Rest API. For `sigstore.dev`, it is a PEM-encoded</span>
-<span class="doccomment">/// x509/PKIX public key. The PEM-encoded content can be parsed into a `p256::ecdsa::VerifyingKey`</span>
-<span class="doccomment">/// using `unmarshal_pem_to_p256_public_key`.</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">RekorSignatureBundle</span> {
-    <span class="doccomment">/// Canonicalized JSON representation, based on RFC 8785 rules, of a subset of a Rekor LogEntry</span>
-    <span class="doccomment">/// fields that are signed to generate `signedEntryTimestamp` (also a field in the Rekor</span>
-    <span class="doccomment">/// LogEntry). These fields include body, integratedTime, logID and logIndex.</span>
-    <span class="kw">pub</span> <span class="ident">canonicalized</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
+<span class="doccomment">/// Convenient struct for verifying the `signedEntryTimestamp` in a Rekor LogEntry.
+///
+/// This bundle can be verified using the public key from Rekor. The public key can
+/// be obtained from the `/api/v1/log/publicKey` Rest API. For `sigstore.dev`, it is a PEM-encoded
+/// x509/PKIX public key. The PEM-encoded content can be parsed into a `p256::ecdsa::VerifyingKey`
+/// using `unmarshal_pem_to_p256_public_key`.
+</span><span class="kw">pub struct </span>RekorSignatureBundle {
+    <span class="doccomment">/// Canonicalized JSON representation, based on RFC 8785 rules, of a subset of a Rekor LogEntry
+    /// fields that are signed to generate `signedEntryTimestamp` (also a field in the Rekor
+    /// LogEntry). These fields include body, integratedTime, logID and logIndex.
+    </span><span class="kw">pub </span>canonicalized: Vec&lt;u8&gt;,
 
-    <span class="doccomment">/// Base64-encoded signature over the canonicalized JSON document.</span>
-    <span class="kw">pub</span> <span class="ident">base64_signature</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
+    <span class="doccomment">/// Base64-encoded signature over the canonicalized JSON document.
+    </span><span class="kw">pub </span>base64_signature: Vec&lt;u8&gt;,
 }
 
-<span class="doccomment">/// Converter for creating a RekorSignatureBundle from a Rekor LogEntry as described in</span>
-<span class="doccomment">/// &lt;https://github.com/sigstore/rekor/blob/4fcdcaa58fd5263560a82978d781eb64f5c5f93c/openapi.yaml#L433-L476&gt;.</span>
-<span class="kw">impl</span> <span class="ident">TryFrom</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">LogEntry</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">RekorSignatureBundle</span> {
-    <span class="kw">type</span> <span class="ident">Error</span> <span class="op">=</span> <span class="ident">anyhow::Error</span>;
+<span class="doccomment">/// Converter for creating a RekorSignatureBundle from a Rekor LogEntry as described in
+/// &lt;https://github.com/sigstore/rekor/blob/4fcdcaa58fd5263560a82978d781eb64f5c5f93c/openapi.yaml#L433-L476&gt;.
+</span><span class="kw">impl </span>TryFrom&lt;<span class="kw-2">&amp;</span>LogEntry&gt; <span class="kw">for </span>RekorSignatureBundle {
+    <span class="kw">type </span>Error = anyhow::Error;
 
-    <span class="kw">fn</span> <span class="ident">try_from</span>(<span class="ident">log_entry</span>: <span class="kw-2">&amp;</span><span class="ident">LogEntry</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
-        <span class="comment">// Create a copy of the LogEntry, but skip the verification.</span>
-        <span class="kw">let</span> <span class="ident">entry_subset</span> <span class="op">=</span> <span class="ident">LogEntry</span> {
-            <span class="ident">body</span>: <span class="ident">log_entry</span>.<span class="ident">body</span>.<span class="ident">clone</span>(),
-            <span class="ident">integrated_time</span>: <span class="ident">log_entry</span>.<span class="ident">integrated_time</span>,
-            <span class="ident">log_id</span>: <span class="ident">log_entry</span>.<span class="ident">log_id</span>.<span class="ident">clone</span>(),
-            <span class="ident">log_index</span>: <span class="ident">log_entry</span>.<span class="ident">log_index</span>,
-            <span class="ident">verification</span>: <span class="prelude-val">None</span>,
+    <span class="kw">fn </span>try_from(log_entry: <span class="kw-2">&amp;</span>LogEntry) -&gt; anyhow::Result&lt;<span class="self">Self</span>&gt; {
+        <span class="comment">// Create a copy of the LogEntry, but skip the verification.
+        </span><span class="kw">let </span>entry_subset = LogEntry {
+            body: log_entry.body.clone(),
+            integrated_time: log_entry.integrated_time,
+            log_id: log_entry.log_id.clone(),
+            log_index: log_entry.log_index,
+            verification: <span class="prelude-val">None</span>,
         };
 
-        <span class="comment">// Canonicalized JSON document that is signed. Canonicalization should follow the RFC 8785</span>
-        <span class="comment">// rules.</span>
-        <span class="kw">let</span> <span class="ident">canonicalized</span> <span class="op">=</span> <span class="ident">serde_jcs::to_string</span>(<span class="kw-2">&amp;</span><span class="ident">entry_subset</span>)
-            .<span class="ident">context</span>(<span class="string">&quot;couldn&#39;t create canonicalized json string&quot;</span>)<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">canonicalized</span> <span class="op">=</span> <span class="ident">canonicalized</span>.<span class="ident">as_bytes</span>().<span class="ident">to_vec</span>();
+        <span class="comment">// Canonicalized JSON document that is signed. Canonicalization should follow the RFC 8785
+        // rules.
+        </span><span class="kw">let </span>canonicalized = serde_jcs::to_string(<span class="kw-2">&amp;</span>entry_subset)
+            .context(<span class="string">&quot;couldn&#39;t create canonicalized json string&quot;</span>)<span class="question-mark">?</span>;
+        <span class="kw">let </span>canonicalized = canonicalized.as_bytes().to_vec();
 
-        <span class="comment">// Extract the signature from the LogEntry.</span>
-        <span class="kw">let</span> <span class="ident">sig_base64</span> <span class="op">=</span> <span class="ident">log_entry</span>
-            .<span class="ident">verification</span>
-            .<span class="ident">as_ref</span>()
-            .<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;no verification field in the log entry&quot;</span>))<span class="question-mark">?</span>
-            .<span class="ident">signed_entry_timestamp</span>
-            .<span class="ident">clone</span>();
-        <span class="kw">let</span> <span class="ident">base64_signature</span> <span class="op">=</span> <span class="ident">sig_base64</span>.<span class="ident">as_str</span>().<span class="ident">as_bytes</span>().<span class="ident">to_vec</span>();
+        <span class="comment">// Extract the signature from the LogEntry.
+        </span><span class="kw">let </span>sig_base64 = log_entry
+            .verification
+            .as_ref()
+            .ok_or_else(|| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;no verification field in the log entry&quot;</span>))<span class="question-mark">?
+            </span>.signed_entry_timestamp
+            .clone();
+        <span class="kw">let </span>base64_signature = sig_base64.as_str().as_bytes().to_vec();
 
-        <span class="prelude-val">Ok</span>(<span class="self">Self</span> {
-            <span class="ident">canonicalized</span>,
-            <span class="ident">base64_signature</span>,
+        <span class="prelude-val">Ok</span>(<span class="self">Self </span>{
+            canonicalized,
+            base64_signature,
         })
     }
 }
 
-<span class="doccomment">/// Verifies a Rekor LogEntry.</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// The verification involves the following:</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// 1. verifying the signature in `signedEntryTimestamp`, using Rekor&#39;s public key,</span>
-<span class="doccomment">/// 1. verifying the signature in `body.RekordObj.signature`, using Oak&#39;s public key,</span>
-<span class="doccomment">/// 1. verifying that the content of the body matches the input `endorsement_bytes`.</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// Returns `Ok(())` if the verification succeeds, otherwise returns `Err()`.</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">verify_rekor_log_entry</span>(
-    <span class="ident">log_entry_bytes</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>],
-    <span class="ident">pem_encoded_public_key_bytes</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>],
-    <span class="ident">oak_public_key_bytes</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>],
-    <span class="ident">endorsement_bytes</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>],
-) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-    <span class="ident">verify_rekor_signature</span>(<span class="ident">log_entry_bytes</span>, <span class="ident">pem_encoded_public_key_bytes</span>)<span class="question-mark">?</span>;
+<span class="doccomment">/// Verifies a Rekor LogEntry.
+///
+/// The verification involves the following:
+///
+/// 1. verifying the signature in `signedEntryTimestamp`, using Rekor&#39;s public key,
+/// 1. verifying the signature in `body.RekordObj.signature`, using Oak&#39;s public key,
+/// 1. verifying that the content of the body matches the input `endorsement_bytes`.
+///
+/// Returns `Ok(())` if the verification succeeds, otherwise returns `Err()`.
+</span><span class="kw">pub fn </span>verify_rekor_log_entry(
+    log_entry_bytes: <span class="kw-2">&amp;</span>[u8],
+    pem_encoded_public_key_bytes: <span class="kw-2">&amp;</span>[u8],
+    oak_public_key_bytes: <span class="kw-2">&amp;</span>[u8],
+    endorsement_bytes: <span class="kw-2">&amp;</span>[u8],
+) -&gt; anyhow::Result&lt;()&gt; {
+    verify_rekor_signature(log_entry_bytes, pem_encoded_public_key_bytes)<span class="question-mark">?</span>;
 
-    <span class="kw">let</span> <span class="ident">parsed</span>: <span class="ident">std::collections::HashMap</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">LogEntry</span><span class="op">&gt;</span> <span class="op">=</span>
-        <span class="ident">serde_json::from_slice</span>(<span class="ident">log_entry_bytes</span>)
-            .<span class="ident">context</span>(<span class="string">&quot;couldn&#39;t parse bytes into a LogEntry object.&quot;</span>)<span class="question-mark">?</span>;
-    <span class="kw">let</span> <span class="ident">entry</span> <span class="op">=</span> <span class="ident">parsed</span>.<span class="ident">values</span>().<span class="ident">next</span>().<span class="ident">context</span>(<span class="string">&quot;no entry in the map&quot;</span>)<span class="question-mark">?</span>;
+    <span class="kw">let </span>parsed: std::collections::HashMap&lt;String, LogEntry&gt; =
+        serde_json::from_slice(log_entry_bytes)
+            .context(<span class="string">&quot;couldn&#39;t parse bytes into a LogEntry object.&quot;</span>)<span class="question-mark">?</span>;
+    <span class="kw">let </span>entry = parsed.values().next().context(<span class="string">&quot;no entry in the map&quot;</span>)<span class="question-mark">?</span>;
 
-    <span class="comment">// Parse base64-encoded entry.body into an instance of Body.</span>
-    <span class="kw">let</span> <span class="ident">body_bytes</span> <span class="op">=</span>
-        <span class="ident">base64::decode</span>(<span class="ident">entry</span>.<span class="ident">body</span>.<span class="ident">clone</span>()).<span class="ident">context</span>(<span class="string">&quot;couldn&#39;t decode Base64 signature&quot;</span>)<span class="question-mark">?</span>;
-    <span class="kw">let</span> <span class="ident">body</span>: <span class="ident">Body</span> <span class="op">=</span>
-        <span class="ident">serde_json::from_slice</span>(<span class="kw-2">&amp;</span><span class="ident">body_bytes</span>).<span class="ident">context</span>(<span class="string">&quot;couldn&#39;t parse bytes into a Body object.&quot;</span>)<span class="question-mark">?</span>;
+    <span class="comment">// Parse base64-encoded entry.body into an instance of Body.
+    </span><span class="kw">let </span>body_bytes =
+        base64::decode(entry.body.clone()).context(<span class="string">&quot;couldn&#39;t decode Base64 signature&quot;</span>)<span class="question-mark">?</span>;
+    <span class="kw">let </span>body: Body =
+        serde_json::from_slice(<span class="kw-2">&amp;</span>body_bytes).context(<span class="string">&quot;couldn&#39;t parse bytes into a Body object.&quot;</span>)<span class="question-mark">?</span>;
 
-    <span class="comment">// Verify the body in the Rekor LogEntry</span>
-    <span class="ident">verify_rekor_body</span>(<span class="kw-2">&amp;</span><span class="ident">body</span>, <span class="ident">endorsement_bytes</span>, <span class="ident">oak_public_key_bytes</span>)<span class="question-mark">?</span>;
+    <span class="comment">// Verify the body in the Rekor LogEntry
+    </span>verify_rekor_body(<span class="kw-2">&amp;</span>body, endorsement_bytes, oak_public_key_bytes)<span class="question-mark">?</span>;
 
     <span class="prelude-val">Ok</span>(())
 }
 
-<span class="doccomment">/// Parses `log_entry_bytes` into a Rekor LogEntry, and verifies the signature in</span>
-<span class="doccomment">/// signedEntryTimestamp using the public key in `pem_encoded_public_key_bytes`.</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// `log_entry_bytes`: LogEntry downloaded from Rekor as a byte array.</span>
-<span class="doccomment">/// `pem_encoded_public_key_bytes`: PEM-encoded public key of Rekor as a byte array.</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// Returns `Ok(())` if the verification succeeds, otherwise returns `Err()`.</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">verify_rekor_signature</span>(
-    <span class="ident">log_entry_bytes</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>],
-    <span class="ident">pem_encoded_public_key_bytes</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>],
-) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-    <span class="kw">let</span> <span class="ident">signature_bundle</span> <span class="op">=</span> <span class="ident">rekor_signature_bundle</span>(<span class="ident">log_entry_bytes</span>)<span class="question-mark">?</span>;
+<span class="doccomment">/// Parses `log_entry_bytes` into a Rekor LogEntry, and verifies the signature in
+/// signedEntryTimestamp using the public key in `pem_encoded_public_key_bytes`.
+///
+/// `log_entry_bytes`: LogEntry downloaded from Rekor as a byte array.
+/// `pem_encoded_public_key_bytes`: PEM-encoded public key of Rekor as a byte array.
+///
+/// Returns `Ok(())` if the verification succeeds, otherwise returns `Err()`.
+</span><span class="kw">pub fn </span>verify_rekor_signature(
+    log_entry_bytes: <span class="kw-2">&amp;</span>[u8],
+    pem_encoded_public_key_bytes: <span class="kw-2">&amp;</span>[u8],
+) -&gt; anyhow::Result&lt;()&gt; {
+    <span class="kw">let </span>signature_bundle = rekor_signature_bundle(log_entry_bytes)<span class="question-mark">?</span>;
 
-    <span class="ident">verify_signature</span>(
-        <span class="kw-2">&amp;</span><span class="ident">signature_bundle</span>.<span class="ident">base64_signature</span>,
-        <span class="kw-2">&amp;</span><span class="ident">signature_bundle</span>.<span class="ident">canonicalized</span>,
-        <span class="ident">pem_encoded_public_key_bytes</span>,
+    verify_signature(
+        <span class="kw-2">&amp;</span>signature_bundle.base64_signature,
+        <span class="kw-2">&amp;</span>signature_bundle.canonicalized,
+        pem_encoded_public_key_bytes,
     )
-    .<span class="ident">context</span>(<span class="string">&quot;failed to verify signedEntryTimestamp of the Rekor LogEntry&quot;</span>)
+    .context(<span class="string">&quot;failed to verify signedEntryTimestamp of the Rekor LogEntry&quot;</span>)
 }
 
-<span class="doccomment">/// Verifies the signature in the `body` over the `contents_bytes`, using the public key in</span>
-<span class="doccomment">/// `pem_encoded_public_key_bytes`.</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// Returns `Ok(())` if the verification succeeds, otherwise returns `Err()`.</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">verify_rekor_body</span>(
-    <span class="ident">body</span>: <span class="kw-2">&amp;</span><span class="ident">Body</span>,
-    <span class="ident">contents_bytes</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>],
-    <span class="ident">pem_encoded_public_key_bytes</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>],
-) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-    <span class="kw">if</span> <span class="ident">body</span>.<span class="ident">spec</span>.<span class="ident">signature</span>.<span class="ident">format</span> <span class="op">!</span><span class="op">=</span> <span class="string">&quot;x509&quot;</span> {
+<span class="doccomment">/// Verifies the signature in the `body` over the `contents_bytes`, using the public key in
+/// `pem_encoded_public_key_bytes`.
+///
+/// Returns `Ok(())` if the verification succeeds, otherwise returns `Err()`.
+</span><span class="kw">pub fn </span>verify_rekor_body(
+    body: <span class="kw-2">&amp;</span>Body,
+    contents_bytes: <span class="kw-2">&amp;</span>[u8],
+    pem_encoded_public_key_bytes: <span class="kw-2">&amp;</span>[u8],
+) -&gt; anyhow::Result&lt;()&gt; {
+    <span class="kw">if </span>body.spec.signature.format != <span class="string">&quot;x509&quot; </span>{
         <span class="macro">anyhow::bail!</span>(
             <span class="string">&quot;unsupported signature format: {}; only x509 is supported&quot;</span>,
-            <span class="ident">body</span>.<span class="ident">spec</span>.<span class="ident">signature</span>.<span class="ident">format</span>
+            body.spec.signature.format
         )
     }
 
-    <span class="comment">// For now, we only support `sha256` as the hashing algorithm.</span>
-    <span class="kw">if</span> <span class="ident">body</span>.<span class="ident">spec</span>.<span class="ident">data</span>.<span class="ident">hash</span>.<span class="ident">algorithm</span> <span class="op">!</span><span class="op">=</span> <span class="string">&quot;sha256&quot;</span> {
+    <span class="comment">// For now, we only support `sha256` as the hashing algorithm.
+    </span><span class="kw">if </span>body.spec.data.hash.algorithm != <span class="string">&quot;sha256&quot; </span>{
         <span class="macro">anyhow::bail!</span>(
             <span class="string">&quot;unsupported hash algorithm: {}; only sha256 is supported&quot;</span>,
-            <span class="ident">body</span>.<span class="ident">spec</span>.<span class="ident">data</span>.<span class="ident">hash</span>.<span class="ident">algorithm</span>
+            body.spec.data.hash.algorithm
         )
     }
 
-    <span class="comment">// Check that hash of the endorsement statement matches the hash of the data in the Body.</span>
-    <span class="kw">let</span> <span class="ident">contents_hash</span> <span class="op">=</span> <span class="ident">get_sha256</span>(<span class="ident">contents_bytes</span>);
-    <span class="kw">let</span> <span class="ident">contents_hash_hex</span> <span class="op">=</span> <span class="ident">hex::encode</span>(<span class="ident">contents_hash</span>);
-    <span class="kw">if</span> <span class="ident">contents_hash_hex</span> <span class="op">!</span><span class="op">=</span> <span class="ident">body</span>.<span class="ident">spec</span>.<span class="ident">data</span>.<span class="ident">hash</span>.<span class="ident">value</span> {
+    <span class="comment">// Check that hash of the endorsement statement matches the hash of the data in the Body.
+    </span><span class="kw">let </span>contents_hash = get_sha256(contents_bytes);
+    <span class="kw">let </span>contents_hash_hex = hex::encode(contents_hash);
+    <span class="kw">if </span>contents_hash_hex != body.spec.data.hash.value {
         <span class="macro">anyhow::bail!</span>(
             <span class="string">&quot;the hash of the endorsement file ({:?}) does not match the hash of the data in the body of the rekor entry ({:?})&quot;</span>,
-            <span class="ident">contents_hash_hex</span>,
-            <span class="ident">body</span>.<span class="ident">spec</span>.<span class="ident">data</span>.<span class="ident">hash</span>.<span class="ident">value</span>
+            contents_hash_hex,
+            body.spec.data.hash.value
         )
     }
 
-    <span class="comment">// Check that the public key in the body matches the given public key. This in fact checks the</span>
-    <span class="comment">// consistency of the Rekor LogEntry, and we expect these public keys to always be the same.</span>
-    <span class="kw">let</span> <span class="ident">public_key_bytes</span> <span class="op">=</span> <span class="ident">base64::decode</span>(<span class="ident">body</span>.<span class="ident">spec</span>.<span class="ident">signature</span>.<span class="ident">public_key</span>.<span class="ident">content</span>.<span class="ident">as_bytes</span>())
-        .<span class="ident">expect</span>(<span class="string">&quot;failed to base64-decode the public key bytes in the Rekor LogEntry body&quot;</span>);
-    <span class="kw">if</span> <span class="ident">compare_keys</span>(<span class="kw-2">&amp;</span><span class="ident">public_key_bytes</span>, <span class="ident">pem_encoded_public_key_bytes</span>)<span class="question-mark">?</span> <span class="op">!</span><span class="op">=</span> <span class="ident">Ordering::Equal</span> {
+    <span class="comment">// Check that the public key in the body matches the given public key. This in fact checks the
+    // consistency of the Rekor LogEntry, and we expect these public keys to always be the same.
+    </span><span class="kw">let </span>public_key_bytes = base64::decode(body.spec.signature.public_key.content.as_bytes())
+        .expect(<span class="string">&quot;failed to base64-decode the public key bytes in the Rekor LogEntry body&quot;</span>);
+    <span class="kw">if </span>compare_keys(<span class="kw-2">&amp;</span>public_key_bytes, pem_encoded_public_key_bytes)<span class="question-mark">? </span>!= Ordering::Equal {
         <span class="macro">anyhow::bail!</span>(
             <span class="string">&quot;the given public key is different from the public key in the rekor entry: {:?} vs. {:?}&quot;</span>,
-            <span class="ident">public_key_bytes</span>,
-            <span class="ident">pem_encoded_public_key_bytes</span>,
+            public_key_bytes,
+            pem_encoded_public_key_bytes,
         )
     }
 
-    <span class="ident">verify_signature</span>(
-        <span class="ident">body</span>.<span class="ident">spec</span>.<span class="ident">signature</span>.<span class="ident">content</span>.<span class="ident">as_str</span>().<span class="ident">as_bytes</span>(),
-        <span class="ident">contents_bytes</span>,
-        <span class="ident">pem_encoded_public_key_bytes</span>,
+    verify_signature(
+        body.spec.signature.content.as_str().as_bytes(),
+        contents_bytes,
+        pem_encoded_public_key_bytes,
     )
-    .<span class="ident">context</span>(<span class="string">&quot;failed to verify signature over the endorsement file&quot;</span>)
+    .context(<span class="string">&quot;failed to verify signature over the endorsement file&quot;</span>)
 }
 
-<span class="doccomment">/// Verifies the given base64-encoded signature over the given data bytes, using the given</span>
-<span class="doccomment">/// PEM-encoded public key.</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// Returns `Ok(())` if the verification succeeds, otherwise returns `Err()`.</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">verify_signature</span>(
-    <span class="ident">base64_signature_bytes</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>],
-    <span class="ident">content_bytes</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>],
-    <span class="ident">pem_encoded_public_key_bytes</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>],
-) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-    <span class="kw">let</span> <span class="ident">sig</span> <span class="op">=</span> <span class="ident">base64::decode</span>(<span class="ident">base64_signature_bytes</span>).<span class="ident">context</span>(<span class="string">&quot;couldn&#39;t decode Base64 signature&quot;</span>)<span class="question-mark">?</span>;
-    <span class="kw">let</span> <span class="ident">signature</span> <span class="op">=</span> <span class="ident">Signature::from_der</span>(<span class="kw-2">&amp;</span><span class="ident">sig</span>).<span class="ident">context</span>(<span class="string">&quot;invalid ASN.1 signature&quot;</span>)<span class="question-mark">?</span>;
-    <span class="kw">let</span> <span class="ident">key</span> <span class="op">=</span> <span class="ident">unmarshal_pem_to_p256_public_key</span>(<span class="ident">pem_encoded_public_key_bytes</span>)<span class="question-mark">?</span>;
+<span class="doccomment">/// Verifies the given base64-encoded signature over the given data bytes, using the given
+/// PEM-encoded public key.
+///
+/// Returns `Ok(())` if the verification succeeds, otherwise returns `Err()`.
+</span><span class="kw">pub fn </span>verify_signature(
+    base64_signature_bytes: <span class="kw-2">&amp;</span>[u8],
+    content_bytes: <span class="kw-2">&amp;</span>[u8],
+    pem_encoded_public_key_bytes: <span class="kw-2">&amp;</span>[u8],
+) -&gt; anyhow::Result&lt;()&gt; {
+    <span class="kw">let </span>sig = base64::decode(base64_signature_bytes).context(<span class="string">&quot;couldn&#39;t decode Base64 signature&quot;</span>)<span class="question-mark">?</span>;
+    <span class="kw">let </span>signature = Signature::from_der(<span class="kw-2">&amp;</span>sig).context(<span class="string">&quot;invalid ASN.1 signature&quot;</span>)<span class="question-mark">?</span>;
+    <span class="kw">let </span>key = unmarshal_pem_to_p256_public_key(pem_encoded_public_key_bytes)<span class="question-mark">?</span>;
 
-    <span class="ident">key</span>.<span class="ident">verify</span>(<span class="ident">content_bytes</span>, <span class="kw-2">&amp;</span><span class="ident">signature</span>)
-        .<span class="ident">context</span>(<span class="string">&quot;failed to verify signature&quot;</span>)
+    key.verify(content_bytes, <span class="kw-2">&amp;</span>signature)
+        .context(<span class="string">&quot;failed to verify signature&quot;</span>)
 }
 
-<span class="doccomment">/// Parses a PEM-encoded x509/PKIX public key into a `p256::ecdsa::VerifyingKey`.</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// `pem_bytes`: A PEM-encoded public key as a byte array.</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">unmarshal_pem_to_p256_public_key</span>(
-    <span class="ident">pem_bytes</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>],
-) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">p256::ecdsa::VerifyingKey</span><span class="op">&gt;</span> {
-    <span class="kw">let</span> <span class="ident">pem_str</span> <span class="op">=</span> <span class="ident">std::str::from_utf8</span>(<span class="ident">pem_bytes</span>).<span class="ident">context</span>(<span class="string">&quot;couldn&#39;t convert bytes to string&quot;</span>)<span class="question-mark">?</span>;
-    <span class="ident">p256::ecdsa::VerifyingKey::from_str</span>(<span class="ident">pem_str</span>)
-        .<span class="ident">context</span>(<span class="string">&quot;couldn&#39;t parse pem as a p256::ecdsa::VerifyingKey&quot;</span>)
+<span class="doccomment">/// Parses a PEM-encoded x509/PKIX public key into a `p256::ecdsa::VerifyingKey`.
+///
+/// `pem_bytes`: A PEM-encoded public key as a byte array.
+</span><span class="kw">pub fn </span>unmarshal_pem_to_p256_public_key(
+    pem_bytes: <span class="kw-2">&amp;</span>[u8],
+) -&gt; anyhow::Result&lt;p256::ecdsa::VerifyingKey&gt; {
+    <span class="kw">let </span>pem_str = std::str::from_utf8(pem_bytes).context(<span class="string">&quot;couldn&#39;t convert bytes to string&quot;</span>)<span class="question-mark">?</span>;
+    p256::ecdsa::VerifyingKey::from_str(pem_str)
+        .context(<span class="string">&quot;couldn&#39;t parse pem as a p256::ecdsa::VerifyingKey&quot;</span>)
 }
 
-<span class="kw">fn</span> <span class="ident">rekor_signature_bundle</span>(<span class="ident">log_entry_bytes</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">RekorSignatureBundle</span><span class="op">&gt;</span> {
-    <span class="kw">let</span> <span class="ident">parsed</span>: <span class="ident">std::collections::HashMap</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">LogEntry</span><span class="op">&gt;</span> <span class="op">=</span>
-        <span class="ident">serde_json::from_slice</span>(<span class="ident">log_entry_bytes</span>)
-            .<span class="ident">context</span>(<span class="string">&quot;couldn&#39;t parse bytes into a LogEntry object.&quot;</span>)<span class="question-mark">?</span>;
-    <span class="kw">let</span> <span class="ident">entry</span> <span class="op">=</span> <span class="ident">parsed</span>.<span class="ident">values</span>().<span class="ident">next</span>().<span class="ident">context</span>(<span class="string">&quot;no entry in the map&quot;</span>)<span class="question-mark">?</span>;
+<span class="kw">fn </span>rekor_signature_bundle(log_entry_bytes: <span class="kw-2">&amp;</span>[u8]) -&gt; anyhow::Result&lt;RekorSignatureBundle&gt; {
+    <span class="kw">let </span>parsed: std::collections::HashMap&lt;String, LogEntry&gt; =
+        serde_json::from_slice(log_entry_bytes)
+            .context(<span class="string">&quot;couldn&#39;t parse bytes into a LogEntry object.&quot;</span>)<span class="question-mark">?</span>;
+    <span class="kw">let </span>entry = parsed.values().next().context(<span class="string">&quot;no entry in the map&quot;</span>)<span class="question-mark">?</span>;
 
-    <span class="ident">RekorSignatureBundle::try_from</span>(<span class="ident">entry</span>)
+    RekorSignatureBundle::try_from(entry)
 }
 
-<span class="doccomment">/// Compares two pem-encoded ECDSA public keys. Instead of comparing the bytes, we parse the bytes</span>
-<span class="doccomment">/// and compare p256 keys. Keys are considered equal if they are the same on the elliptic curve.</span>
-<span class="doccomment">/// This means that the keys could have different bytes, but still be the same key.</span>
-<span class="kw">fn</span> <span class="ident">compare_keys</span>(<span class="ident">public_key_bytes_a</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>], <span class="ident">public_key_bytes_b</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">Ordering</span><span class="op">&gt;</span> {
-    <span class="kw">let</span> <span class="ident">key_a</span> <span class="op">=</span> <span class="ident">unmarshal_pem_to_p256_public_key</span>(<span class="ident">public_key_bytes_a</span>)<span class="question-mark">?</span>;
-    <span class="kw">let</span> <span class="ident">key_b</span> <span class="op">=</span> <span class="ident">unmarshal_pem_to_p256_public_key</span>(<span class="ident">public_key_bytes_b</span>)<span class="question-mark">?</span>;
+<span class="doccomment">/// Compares two pem-encoded ECDSA public keys. Instead of comparing the bytes, we parse the bytes
+/// and compare p256 keys. Keys are considered equal if they are the same on the elliptic curve.
+/// This means that the keys could have different bytes, but still be the same key.
+</span><span class="kw">fn </span>compare_keys(public_key_bytes_a: <span class="kw-2">&amp;</span>[u8], public_key_bytes_b: <span class="kw-2">&amp;</span>[u8]) -&gt; anyhow::Result&lt;Ordering&gt; {
+    <span class="kw">let </span>key_a = unmarshal_pem_to_p256_public_key(public_key_bytes_a)<span class="question-mark">?</span>;
+    <span class="kw">let </span>key_b = unmarshal_pem_to_p256_public_key(public_key_bytes_b)<span class="question-mark">?</span>;
 
-    <span class="prelude-val">Ok</span>(<span class="ident">key_a</span>.<span class="ident">cmp</span>(<span class="kw-2">&amp;</span><span class="ident">key_b</span>))
+    <span class="prelude-val">Ok</span>(key_a.cmp(<span class="kw-2">&amp;</span>key_b))
 }
 
-<span class="doccomment">/// Computes a SHA-256 digest of `input` and returns it in a form of raw bytes.</span>
-<span class="doccomment">/// Returns the hash as a 32-bytes array.</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_sha256</span>(<span class="ident">input</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) -&gt; [<span class="ident">u8</span>; <span class="number">32</span>] {
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">hasher</span> <span class="op">=</span> <span class="ident">Sha256::new</span>();
-    <span class="ident">hasher</span>.<span class="ident">update</span>(<span class="ident">input</span>);
-    <span class="ident">hasher</span>.<span class="ident">finalize</span>().<span class="ident">into</span>()
+<span class="doccomment">/// Computes a SHA-256 digest of `input` and returns it in a form of raw bytes.
+/// Returns the hash as a 32-bytes array.
+</span><span class="kw">pub fn </span>get_sha256(input: <span class="kw-2">&amp;</span>[u8]) -&gt; [u8; <span class="number">32</span>] {
+    <span class="kw">let </span><span class="kw-2">mut </span>hasher = Sha256::new();
+    hasher.update(input);
+    hasher.finalize().into()
 }
 </code></pre></div>
-</section><section id="search" class="content hidden"></section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="oak_functions_client" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.62.0-nightly (de1bc0008 2022-04-21)" ></div>
-</body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="oak_functions_client" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (81f391930 2022-10-09)" ></div></body></html>

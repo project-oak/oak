@@ -1,0 +1,4 @@
+(function() {var implementors = {
+"oak_channel":[],
+"oak_functions_linux_vsock_bin":[["impl&lt;T&gt; Write for <a class=\"struct\" href=\"oak_functions_linux_vsock_bin/channel/struct.Channel.html\" title=\"struct oak_functions_linux_vsock_bin::channel::Channel\">Channel</a>&lt;T&gt;<span class=\"where fmt-newline\">where<br>&nbsp;&nbsp;&nbsp;&nbsp;T: <a class=\"trait\" href=\"https://doc.rust-lang.org/nightly/std/io/trait.Read.html\" title=\"trait std::io::Read\">Read</a> + <a class=\"trait\" href=\"https://doc.rust-lang.org/nightly/std/io/trait.Write.html\" title=\"trait std::io::Write\">Write</a>,</span>"]]
+};if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

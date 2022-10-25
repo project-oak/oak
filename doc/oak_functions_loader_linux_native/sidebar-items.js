@@ -1,1 +1,0 @@
-initSidebarItems({"fn":[["main",""]],"static":[["LOGGER",""]],"struct":[["Logger",""],["Opt",""]]});

@@ -1,9 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `xtask/src/diffs.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>diffs.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../ayu.css" disabled><link rel="stylesheet" type="text/css" href="../../dark.css" disabled><link rel="stylesheet" type="text/css" href="../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../storage.js"></script><script src="../../crates.js"></script><script defer src="../../main.js"></script><script defer src="../../source-script.js"></script><script defer src="../../source-files.js"></script>
-    <noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../xtask/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div>
-        </a><h2 class="location"></h2>
-    </nav>
-    <nav class="sidebar"><a class="sidebar-logo" href="../../xtask/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div>
-        </a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../xtask/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><div class="theme-picker hidden"><button id="theme-picker" aria-label="Pick another theme!" aria-haspopup="menu" title="themes"><img width="22" height="22" alt="Pick another theme!" src="../../brush.svg"></button><div id="theme-choices" role="menu"></div></div><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><button type="button" id="help-button" title="help">?</button><a id="settings-menu" href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../wheel.svg"></a></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `xtask/src/diffs.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>diffs.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" href="../../normalize.css"><link rel="stylesheet" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" href="../../ayu.css" disabled><link rel="stylesheet" href="../../dark.css" disabled><link rel="stylesheet" href="../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../storage.js"></script><script defer src="../../source-script.js"></script><script defer src="../../source-files.js"></script><script defer src="../../main.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><a class="sidebar-logo" href="../../xtask/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../xtask/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="src-line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -325,328 +320,327 @@
 <span id="320">320</span>
 <span id="321">321</span>
 <span id="322">322</span>
-</pre><pre class="rust"><code><span class="comment">//</span>
-<span class="comment">// Copyright 2021 The Project Oak Authors</span>
-<span class="comment">//</span>
-<span class="comment">// Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
-<span class="comment">// you may not use this file except in compliance with the License.</span>
-<span class="comment">// You may obtain a copy of the License at</span>
-<span class="comment">//</span>
-<span class="comment">//     http://www.apache.org/licenses/LICENSE-2.0</span>
-<span class="comment">//</span>
-<span class="comment">// Unless required by applicable law or agreed to in writing, software</span>
-<span class="comment">// distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
-<span class="comment">// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
-<span class="comment">// See the License for the specific language governing permissions and</span>
-<span class="comment">// limitations under the License.</span>
-<span class="comment">//</span>
+</pre><pre class="rust"><code><span class="comment">//
+// Copyright 2021 The Project Oak Authors
+//
+// Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
-<span class="kw">use</span> <span class="ident">maplit::hashset</span>;
-<span class="kw">use</span> <span class="ident">std</span>::{
-    <span class="ident">collections</span>::{<span class="ident">HashMap</span>, <span class="ident">HashSet</span>},
-    <span class="ident">io</span>::{<span class="ident">BufRead</span>, <span class="ident">BufReader</span>},
-    <span class="ident">path</span>::{<span class="ident">Path</span>, <span class="ident">PathBuf</span>},
-    <span class="ident">process::Command</span>,
+</span><span class="kw">use </span>maplit::hashset;
+<span class="kw">use </span>std::{
+    collections::{HashMap, HashSet},
+    io::{BufRead, BufReader},
+    path::{Path, PathBuf},
+    process::Command,
 };
 
-<span class="kw">use</span> <span class="kw">crate</span>::{
-    <span class="ident">files</span>::<span class="kw-2">*</span>,
-    <span class="ident">internal</span>::{<span class="ident">CargoManifest</span>, <span class="ident">Scope</span>},
+<span class="kw">use crate</span>::{
+    files::<span class="kw-2">*</span>,
+    internal::{CargoManifest, Scope},
 };
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">ModifiedContent</span> {
-    <span class="doccomment">/// List of modified files.</span>
-    <span class="kw">pub</span> <span class="ident">files</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+<span class="attribute">#[derive(Debug)]
+</span><span class="kw">pub struct </span>ModifiedContent {
+    <span class="doccomment">/// List of modified files.
+    </span><span class="kw">pub </span>files: <span class="prelude-ty">Option</span>&lt;Vec&lt;String&gt;&gt;,
 }
 
-<span class="kw">impl</span> <span class="ident">ModifiedContent</span> {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">contains</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">file_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) -&gt; <span class="ident">bool</span> {
-        <span class="self">self</span>.<span class="ident">files</span>.<span class="ident">is_none</span>()
-            <span class="op">|</span><span class="op">|</span> <span class="self">self</span>
-                .<span class="ident">files</span>
-                .<span class="ident">as_ref</span>()
-                .<span class="ident">unwrap</span>()
-                .<span class="ident">contains</span>(<span class="kw-2">&amp;</span><span class="ident">file_name</span>.<span class="ident">to_string</span>())
+<span class="kw">impl </span>ModifiedContent {
+    <span class="kw">pub fn </span>contains(<span class="kw-2">&amp;</span><span class="self">self</span>, file_name: <span class="kw-2">&amp;</span>str) -&gt; bool {
+        <span class="self">self</span>.files.is_none()
+            || <span class="self">self
+                </span>.files
+                .as_ref()
+                .unwrap()
+                .contains(<span class="kw-2">&amp;</span>file_name.to_string())
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">contains_path</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">file_name</span>: <span class="kw-2">&amp;</span><span class="ident">Path</span>) -&gt; <span class="ident">bool</span> {
-        <span class="self">self</span>.<span class="ident">contains</span>(<span class="ident">file_name</span>.<span class="ident">to_str</span>().<span class="ident">unwrap</span>())
+    <span class="kw">pub fn </span>contains_path(<span class="kw-2">&amp;</span><span class="self">self</span>, file_name: <span class="kw-2">&amp;</span>Path) -&gt; bool {
+        <span class="self">self</span>.contains(file_name.to_str().unwrap())
     }
 }
 
-<span class="doccomment">/// Get all the files that have been modified in the given `scope`. If the scope is `Scope::All`</span>
-<span class="doccomment">/// returns `None` as the list of files in `ModifiedContent`. For `Scope::Commits` and</span>
-<span class="doccomment">/// `Scope::DiffToMain` the returned files include tracked files with unstaged changes, but do</span>
-<span class="doccomment">/// not include new files that are not tracked (i.e., not added to git yet). For</span>
-<span class="doccomment">/// `Scope::Commits(N)`, a positive number of commits must be given. In case of zero or</span>
-<span class="doccomment">/// a negative number, only the last commit will be considered for finding the modified files.</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">modified_files</span>(<span class="ident">scope</span>: <span class="kw-2">&amp;</span><span class="ident">Scope</span>) -&gt; <span class="ident">ModifiedContent</span> {
-    <span class="kw">let</span> <span class="ident">args</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">scope</span> {
-        <span class="ident">Scope::All</span> =&gt; <span class="prelude-val">None</span>,
-        <span class="ident">Scope::Commits</span>(<span class="ident">commits</span>) =&gt; <span class="prelude-val">Some</span>(<span class="macro">format!</span>(<span class="string">&quot;HEAD~{}&quot;</span>, <span class="ident">std::cmp::max</span>(<span class="number">1</span>, <span class="kw-2">*</span><span class="ident">commits</span>))),
-        <span class="comment">// TODO(#2491): Use `--merge-base` when we have a newer version of Git in the docker image.</span>
-        <span class="ident">Scope::DiffToMain</span> =&gt; <span class="prelude-val">Some</span>(<span class="string">&quot;main&quot;</span>.<span class="ident">to_owned</span>()),
+<span class="doccomment">/// Get all the files that have been modified in the given `scope`. If the scope is `Scope::All`
+/// returns `None` as the list of files in `ModifiedContent`. For `Scope::Commits` and
+/// `Scope::DiffToMain` the returned files include tracked files with unstaged changes, but do
+/// not include new files that are not tracked (i.e., not added to git yet). For
+/// `Scope::Commits(N)`, a positive number of commits must be given. In case of zero or
+/// a negative number, only the last commit will be considered for finding the modified files.
+</span><span class="kw">pub fn </span>modified_files(scope: <span class="kw-2">&amp;</span>Scope) -&gt; ModifiedContent {
+    <span class="kw">let </span>args = <span class="kw">match </span>scope {
+        Scope::All =&gt; <span class="prelude-val">None</span>,
+        Scope::Commits(commits) =&gt; <span class="prelude-val">Some</span>(<span class="macro">format!</span>(<span class="string">&quot;HEAD~{}&quot;</span>, std::cmp::max(<span class="number">1</span>, <span class="kw-2">*</span>commits))),
+        <span class="comment">// TODO(#2491): Use `--merge-base` when we have a newer version of Git in the docker image.
+        </span>Scope::DiffToMain =&gt; <span class="prelude-val">Some</span>(<span class="string">&quot;main&quot;</span>.to_owned()),
     };
 
-    <span class="kw">let</span> <span class="ident">files</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">args</span>
-        .<span class="ident">and_then</span>(<span class="op">|</span><span class="ident">args</span><span class="op">|</span> {
-            <span class="kw">let</span> <span class="ident">output</span> <span class="op">=</span> <span class="ident">Command::new</span>(<span class="string">&quot;git&quot;</span>)
-                .<span class="ident">args</span>(<span class="macro">spread!</span>[<span class="string">&quot;diff&quot;</span>.<span class="ident">to_owned</span>(), <span class="string">&quot;--name-only&quot;</span>.<span class="ident">to_owned</span>(), <span class="ident">args</span>,])
-                .<span class="ident">output</span>()
-                .<span class="ident">expect</span>(<span class="string">&quot;could not get modified files&quot;</span>);
+    <span class="kw">let </span>files: <span class="prelude-ty">Option</span>&lt;Vec&lt;String&gt;&gt; = args
+        .and_then(|args| {
+            <span class="kw">let </span>output = Command::new(<span class="string">&quot;git&quot;</span>)
+                .args(<span class="macro">spread!</span>[<span class="string">&quot;diff&quot;</span>.to_owned(), <span class="string">&quot;--name-only&quot;</span>.to_owned(), args,])
+                .output()
+                .expect(<span class="string">&quot;could not get modified files&quot;</span>);
 
-            <span class="kw">if</span> <span class="ident">output</span>.<span class="ident">status</span>.<span class="ident">success</span>() {
-                <span class="kw">let</span> <span class="ident">vec</span> <span class="op">=</span> <span class="ident">output</span>.<span class="ident">stdout</span>;
+            <span class="kw">if </span>output.status.success() {
+                <span class="kw">let </span>vec = output.stdout;
 
-                <span class="comment">// Extract the file names from the git output</span>
-                <span class="prelude-val">Some</span>(
-                    <span class="ident">String::from_utf8</span>(<span class="ident">vec</span>)
-                        .<span class="ident">expect</span>(<span class="string">&quot;could not convert to string&quot;</span>)
-                        .<span class="ident">split</span>(<span class="string">&#39;\n&#39;</span>)
-                        .<span class="ident">map</span>(<span class="op">|</span><span class="ident">s</span><span class="op">|</span> <span class="macro">format!</span>(<span class="string">&quot;./{}&quot;</span>, <span class="ident">s</span>))
-                        .<span class="ident">collect</span>(),
+                <span class="comment">// Extract the file names from the git output
+                </span><span class="prelude-val">Some</span>(
+                    String::from_utf8(vec)
+                        .expect(<span class="string">&quot;could not convert to string&quot;</span>)
+                        .split(<span class="string">&#39;\n&#39;</span>)
+                        .map(|s| <span class="macro">format!</span>(<span class="string">&quot;./{}&quot;</span>, s))
+                        .collect(),
                 )
-            } <span class="kw">else</span> {
+            } <span class="kw">else </span>{
                 <span class="macro">eprintln!</span>(
                     <span class="string">&quot;WARN: git diff failed with error ({}), running the command for the entire code base.&quot;</span>,
-                    <span class="ident">output</span>.<span class="ident">status</span>
+                    output.status
                 );
-                <span class="prelude-val">None</span>
-            }
+                <span class="prelude-val">None
+            </span>}
         });
 
-    <span class="comment">// If something is changed in a Dockerfile, we&#39;d want to run all CI steps, so set `files` to</span>
-    <span class="comment">// `None` in `ModifiedContent`.</span>
-    <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="kw-2">ref</span> <span class="ident">paths</span>) <span class="op">=</span> <span class="ident">files</span> {
-        <span class="kw">if</span> <span class="ident">paths</span>.<span class="ident">iter</span>().<span class="ident">any</span>(<span class="op">|</span><span class="ident">path</span><span class="op">|</span> <span class="ident">path</span>.<span class="ident">contains</span>(<span class="string">&quot;Dockerfile&quot;</span>)) {
-            <span class="kw">return</span> <span class="ident">ModifiedContent</span> { <span class="ident">files</span>: <span class="prelude-val">None</span> };
+    <span class="comment">// If something is changed in a Dockerfile, we&#39;d want to run all CI steps, so set `files` to
+    // `None` in `ModifiedContent`.
+    </span><span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>paths) = files {
+        <span class="kw">if </span>paths.iter().any(|path| path.contains(<span class="string">&quot;Dockerfile&quot;</span>)) {
+            <span class="kw">return </span>ModifiedContent { files: <span class="prelude-val">None </span>};
         }
     }
 
-    <span class="ident">ModifiedContent</span> { <span class="ident">files</span> }
+    ModifiedContent { files }
 }
 
-<span class="doccomment">/// Returns the list of paths to `Cargo.toml` files for all crates that include at least one of the</span>
-<span class="doccomment">/// given modified files.</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">directly_modified_crates</span>(<span class="ident">files</span>: <span class="kw-2">&amp;</span><span class="ident">ModifiedContent</span>) -&gt; <span class="ident">ModifiedContent</span> {
-    <span class="kw">let</span> <span class="ident">files</span> <span class="op">=</span> <span class="ident">files</span>.<span class="ident">files</span>.<span class="ident">as_ref</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">modified_files</span><span class="op">|</span> {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">crates</span> <span class="op">=</span> <span class="macro">hashset!</span>[];
-        <span class="kw">for</span> <span class="ident">str_path</span> <span class="kw">in</span> <span class="ident">modified_files</span> {
-            <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">crate_path</span>) <span class="op">=</span> <span class="ident">find_crate_toml_file</span>(<span class="ident">str_path</span>.<span class="ident">clone</span>()) {
-                <span class="ident">crates</span>.<span class="ident">insert</span>(<span class="ident">crate_path</span>);
+<span class="doccomment">/// Returns the list of paths to `Cargo.toml` files for all crates that include at least one of the
+/// given modified files.
+</span><span class="kw">pub fn </span>directly_modified_crates(files: <span class="kw-2">&amp;</span>ModifiedContent) -&gt; ModifiedContent {
+    <span class="kw">let </span>files = files.files.as_ref().map(|modified_files| {
+        <span class="kw">let </span><span class="kw-2">mut </span>crates = <span class="macro">hashset!</span>[];
+        <span class="kw">for </span>str_path <span class="kw">in </span>modified_files {
+            <span class="kw">if let </span><span class="prelude-val">Some</span>(crate_path) = find_crate_toml_file(str_path.clone()) {
+                crates.insert(crate_path);
             }
         }
-        <span class="ident">crates</span>.<span class="ident">iter</span>().<span class="ident">cloned</span>().<span class="ident">collect</span>()
+        crates.iter().cloned().collect()
     });
-    <span class="ident">ModifiedContent</span> { <span class="ident">files</span> }
+    ModifiedContent { files }
 }
 
-<span class="kw">fn</span> <span class="ident">find_crate_toml_file</span>(<span class="ident">str_path</span>: <span class="ident">String</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span> {
-    <span class="kw">if</span> <span class="ident">str_path</span>.<span class="ident">ends_with</span>(<span class="string">&quot;Cargo.toml&quot;</span>) {
-        <span class="kw">return</span> <span class="prelude-val">Some</span>(<span class="ident">str_path</span>);
-    } <span class="kw">else</span> <span class="kw">if</span> <span class="ident">str_path</span>.<span class="ident">ends_with</span>(<span class="string">&quot;.rs&quot;</span>) <span class="op">|</span><span class="op">|</span> <span class="ident">str_path</span>.<span class="ident">ends_with</span>(<span class="string">&quot;.lock&quot;</span>) {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">path</span> <span class="op">=</span> <span class="ident">PathBuf::from</span>(<span class="kw-2">&amp;</span><span class="ident">str_path</span>);
-        <span class="kw">while</span> <span class="ident">path</span>.<span class="ident">parent</span>().<span class="ident">is_some</span>() {
-            <span class="ident">path</span>.<span class="ident">pop</span>();
-            <span class="kw">let</span> <span class="ident">crate_path</span> <span class="op">=</span> <span class="ident">path</span>.<span class="ident">join</span>(<span class="string">&quot;Cargo.toml&quot;</span>);
-            <span class="kw">let</span> <span class="ident">crate_path</span> <span class="op">=</span> <span class="ident">crate_path</span>.<span class="ident">as_path</span>();
-            <span class="kw">if</span> <span class="ident">crate_path</span>.<span class="ident">exists</span>() {
-                <span class="kw">return</span> <span class="prelude-val">Some</span>(<span class="ident">crate_path</span>.<span class="ident">to_str</span>().<span class="ident">unwrap</span>().<span class="ident">to_string</span>());
+<span class="kw">fn </span>find_crate_toml_file(str_path: String) -&gt; <span class="prelude-ty">Option</span>&lt;String&gt; {
+    <span class="kw">if </span>str_path.ends_with(<span class="string">&quot;Cargo.toml&quot;</span>) {
+        <span class="kw">return </span><span class="prelude-val">Some</span>(str_path);
+    } <span class="kw">else if </span>str_path.ends_with(<span class="string">&quot;.rs&quot;</span>) || str_path.ends_with(<span class="string">&quot;.lock&quot;</span>) {
+        <span class="kw">let </span><span class="kw-2">mut </span>path = PathBuf::from(<span class="kw-2">&amp;</span>str_path);
+        <span class="kw">while </span>path.parent().is_some() {
+            path.pop();
+            <span class="kw">let </span>crate_path = path.join(<span class="string">&quot;Cargo.toml&quot;</span>);
+            <span class="kw">let </span>crate_path = crate_path.as_path();
+            <span class="kw">if </span>crate_path.exists() {
+                <span class="kw">return </span><span class="prelude-val">Some</span>(crate_path.to_str().unwrap().to_string());
             }
         }
     }
-    <span class="prelude-val">None</span>
-}
+    <span class="prelude-val">None
+</span>}
 
-<span class="doccomment">/// Returns the list of paths to all `.proto` files affected by the given list of modified files.</span>
-<span class="kw">fn</span> <span class="ident">affected_protos</span>(<span class="ident">files</span>: <span class="kw-2">&amp;</span><span class="ident">ModifiedContent</span>) -&gt; <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span> {
-    <span class="ident">files</span>
-        .<span class="ident">files</span>
-        .<span class="ident">as_ref</span>()
-        .<span class="ident">map</span>(<span class="op">|</span><span class="ident">modified_files</span><span class="op">|</span> {
-            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">affected_protos</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">modified_files</span>
-                .<span class="ident">iter</span>()
-                .<span class="ident">filter</span>(<span class="op">|</span><span class="ident">p</span><span class="op">|</span> <span class="ident">p</span>.<span class="ident">ends_with</span>(<span class="string">&quot;.proto&quot;</span>))
-                .<span class="ident">cloned</span>()
-                .<span class="ident">collect</span>();
+<span class="doccomment">/// Returns the list of paths to all `.proto` files affected by the given list of modified files.
+</span><span class="kw">fn </span>affected_protos(files: <span class="kw-2">&amp;</span>ModifiedContent) -&gt; Vec&lt;String&gt; {
+    files
+        .files
+        .as_ref()
+        .map(|modified_files| {
+            <span class="kw">let </span><span class="kw-2">mut </span>affected_protos: Vec&lt;String&gt; = modified_files
+                .iter()
+                .filter(|p| p.ends_with(<span class="string">&quot;.proto&quot;</span>))
+                .cloned()
+                .collect();
 
-            <span class="kw">if</span> <span class="op">!</span><span class="ident">affected_protos</span>.<span class="ident">is_empty</span>() {
-                <span class="kw">let</span> <span class="ident">all_protos</span> <span class="op">=</span> <span class="ident">source_files</span>()
-                    .<span class="ident">map</span>(<span class="ident">to_string</span>)
-                    .<span class="ident">map</span>(<span class="op">|</span><span class="ident">s</span><span class="op">|</span> <span class="ident">s</span>.<span class="ident">replace</span>(<span class="string">&quot;./&quot;</span>, <span class="string">&quot;&quot;</span>))
-                    .<span class="ident">filter</span>(<span class="op">|</span><span class="ident">p</span><span class="op">|</span> <span class="ident">p</span>.<span class="ident">ends_with</span>(<span class="string">&quot;.proto&quot;</span>));
+            <span class="kw">if </span>!affected_protos.is_empty() {
+                <span class="kw">let </span>all_protos = source_files()
+                    .map(to_string)
+                    .map(|s| s.replace(<span class="string">&quot;./&quot;</span>, <span class="string">&quot;&quot;</span>))
+                    .filter(|p| p.ends_with(<span class="string">&quot;.proto&quot;</span>));
 
-                <span class="kw">for</span> <span class="ident">proto</span> <span class="kw">in</span> <span class="ident">all_protos</span> {
-                    <span class="ident">add_affected_protos</span>(<span class="ident">proto</span>, <span class="kw-2">&amp;mut</span> <span class="ident">affected_protos</span>);
+                <span class="kw">for </span>proto <span class="kw">in </span>all_protos {
+                    add_affected_protos(proto, <span class="kw-2">&amp;mut </span>affected_protos);
                 }
             }
 
-            <span class="ident">affected_protos</span>
+            affected_protos
         })
-        .<span class="ident">unwrap_or_else</span>(<span class="ident">Vec::new</span>)
+        .unwrap_or_else(Vec::new)
 }
 
-<span class="doccomment">/// Adds `proto_path` to the list of `affected_protos` if `proto_path` or any of its imported protos</span>
-<span class="doccomment">/// imports any of the proto files in `affected_protos`.</span>
-<span class="kw">fn</span> <span class="ident">add_affected_protos</span>(<span class="ident">proto_path</span>: <span class="ident">String</span>, <span class="ident">affected_protos</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>) {
-    <span class="kw">if</span> <span class="ident">affected_protos</span>.<span class="ident">contains</span>(<span class="kw-2">&amp;</span><span class="ident">proto_path</span>) {
+<span class="doccomment">/// Adds `proto_path` to the list of `affected_protos` if `proto_path` or any of its imported protos
+/// imports any of the proto files in `affected_protos`.
+</span><span class="kw">fn </span>add_affected_protos(proto_path: String, affected_protos: <span class="kw-2">&amp;mut </span>Vec&lt;String&gt;) {
+    <span class="kw">if </span>affected_protos.contains(<span class="kw-2">&amp;</span>proto_path) {
         <span class="kw">return</span>;
     }
 
-    <span class="kw">let</span> <span class="ident">imported_proto_files</span> <span class="op">=</span> <span class="ident">imported_proto_files</span>(<span class="ident">proto_path</span>.<span class="ident">clone</span>());
-    <span class="kw">for</span> <span class="ident">imported_proto_file</span> <span class="kw">in</span> <span class="ident">imported_proto_files</span> {
-        <span class="kw">if</span> <span class="op">!</span><span class="ident">affected_protos</span>.<span class="ident">contains</span>(<span class="kw-2">&amp;</span><span class="ident">imported_proto_file</span>) {
-            <span class="ident">add_affected_protos</span>(<span class="ident">imported_proto_file</span>.<span class="ident">clone</span>(), <span class="ident">affected_protos</span>);
+    <span class="kw">let </span>imported_proto_files = imported_proto_files(proto_path.clone());
+    <span class="kw">for </span>imported_proto_file <span class="kw">in </span>imported_proto_files {
+        <span class="kw">if </span>!affected_protos.contains(<span class="kw-2">&amp;</span>imported_proto_file) {
+            add_affected_protos(imported_proto_file.clone(), affected_protos);
         }
 
-        <span class="kw">if</span> <span class="ident">affected_protos</span>.<span class="ident">contains</span>(<span class="kw-2">&amp;</span><span class="ident">imported_proto_file</span>) {
-            <span class="ident">affected_protos</span>.<span class="ident">push</span>(<span class="ident">proto_path</span>);
+        <span class="kw">if </span>affected_protos.contains(<span class="kw-2">&amp;</span>imported_proto_file) {
+            affected_protos.push(proto_path);
             <span class="kw">return</span>;
         }
     }
 }
 
-<span class="doccomment">/// Returns paths to all `.proto` files that `proto_file_path` imports.</span>
-<span class="kw">fn</span> <span class="ident">imported_proto_files</span>(<span class="ident">proto_file_path</span>: <span class="ident">String</span>) -&gt; <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span> {
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">imported_protos</span> <span class="op">=</span> <span class="macro">vec!</span>[];
-    <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Ok</span>(<span class="ident">file</span>) <span class="op">=</span> <span class="ident">std::fs::File::open</span>(<span class="ident">proto_file_path</span>) {
-        <span class="kw">let</span> <span class="ident">lines</span> <span class="op">=</span> <span class="ident">BufReader::new</span>(<span class="ident">file</span>).<span class="ident">lines</span>();
-        <span class="kw">let</span> <span class="ident">re</span> <span class="op">=</span> <span class="ident">regex::Regex::new</span>(<span class="string">r#&quot;import &quot;(.*)&quot;;&quot;#</span>).<span class="ident">unwrap</span>();
+<span class="doccomment">/// Returns paths to all `.proto` files that `proto_file_path` imports.
+</span><span class="kw">fn </span>imported_proto_files(proto_file_path: String) -&gt; Vec&lt;String&gt; {
+    <span class="kw">let </span><span class="kw-2">mut </span>imported_protos = <span class="macro">vec!</span>[];
+    <span class="kw">if let </span><span class="prelude-val">Ok</span>(file) = std::fs::File::open(proto_file_path) {
+        <span class="kw">let </span>lines = BufReader::new(file).lines();
+        <span class="kw">let </span>re = regex::Regex::new(<span class="string">r#&quot;import &quot;(.*)&quot;;&quot;#</span>).unwrap();
 
-        <span class="comment">// Scan the lines in the file line by line to find all the imports.</span>
-        <span class="kw">for</span> <span class="ident">line</span> <span class="kw">in</span> <span class="ident">lines</span> {
-            <span class="kw">let</span> <span class="ident">line</span> <span class="op">=</span> <span class="ident">line</span>.<span class="ident">expect</span>(<span class="string">&quot;could not read line&quot;</span>);
-            <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">imported</span>) <span class="op">=</span> <span class="ident">re</span>.<span class="ident">captures</span>(<span class="kw-2">&amp;</span><span class="ident">line</span>).<span class="ident">map</span>(<span class="op">|</span><span class="ident">c</span><span class="op">|</span> <span class="ident">c</span>[<span class="number">1</span>].<span class="ident">to_string</span>()) {
-                <span class="ident">imported_protos</span>.<span class="ident">push</span>(<span class="ident">imported</span>);
+        <span class="comment">// Scan the lines in the file line by line to find all the imports.
+        </span><span class="kw">for </span>line <span class="kw">in </span>lines {
+            <span class="kw">let </span>line = line.expect(<span class="string">&quot;could not read line&quot;</span>);
+            <span class="kw">if let </span><span class="prelude-val">Some</span>(imported) = re.captures(<span class="kw-2">&amp;</span>line).map(|c| c[<span class="number">1</span>].to_string()) {
+                imported_protos.push(imported);
             }
         }
     }
 
-    <span class="ident">imported_protos</span>
+    imported_protos
 }
 
-<span class="doccomment">/// Path to the `Cargo.toml` files for all crates that are either directly modified or have a</span>
-<span class="doccomment">/// dependency to a modified crate.</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">all_affected_crates</span>(<span class="ident">scope</span>: <span class="kw-2">&amp;</span><span class="ident">Scope</span>) -&gt; <span class="ident">ModifiedContent</span> {
-    <span class="ident">crates_affected_by_files</span>(<span class="kw-2">&amp;</span><span class="ident">modified_files</span>(<span class="ident">scope</span>))
+<span class="doccomment">/// Path to the `Cargo.toml` files for all crates that are either directly modified or have a
+/// dependency to a modified crate.
+</span><span class="kw">pub fn </span>all_affected_crates(scope: <span class="kw-2">&amp;</span>Scope) -&gt; ModifiedContent {
+    crates_affected_by_files(<span class="kw-2">&amp;</span>modified_files(scope))
 }
 
-<span class="kw">fn</span> <span class="ident">crates_affected_by_files</span>(<span class="ident">files</span>: <span class="kw-2">&amp;</span><span class="ident">ModifiedContent</span>) -&gt; <span class="ident">ModifiedContent</span> {
-    <span class="kw">let</span> <span class="ident">modified_crates</span> <span class="op">=</span> <span class="ident">directly_modified_crates</span>(<span class="ident">files</span>);
-    <span class="kw">let</span> <span class="ident">files</span> <span class="op">=</span> <span class="ident">modified_crates</span>.<span class="ident">files</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">modified_files</span><span class="op">|</span> {
-        <span class="kw">let</span> <span class="ident">crate_manifest_files</span> <span class="op">=</span> <span class="ident">crate_manifest_files</span>();
-        <span class="comment">// A map of `Cargo.toml` files visited by the algorithm. If the value associated with a</span>
-        <span class="comment">// key is `true`, the crate is affected by the changes and should be included in the</span>
-        <span class="comment">// result.</span>
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">affected_crates</span>: <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">bool</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">modified_files</span>
-            .<span class="ident">into_iter</span>()
-            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">path</span><span class="op">|</span> (<span class="ident">path</span>, <span class="bool-val">true</span>))
-            .<span class="ident">collect</span>();
+<span class="kw">fn </span>crates_affected_by_files(files: <span class="kw-2">&amp;</span>ModifiedContent) -&gt; ModifiedContent {
+    <span class="kw">let </span>modified_crates = directly_modified_crates(files);
+    <span class="kw">let </span>files = modified_crates.files.map(|modified_files| {
+        <span class="kw">let </span>crate_manifest_files = crate_manifest_files();
+        <span class="comment">// A map of `Cargo.toml` files visited by the algorithm. If the value associated with a
+        // key is `true`, the crate is affected by the changes and should be included in the
+        // result.
+        </span><span class="kw">let </span><span class="kw-2">mut </span>affected_crates: HashMap&lt;String, bool&gt; = modified_files
+            .into_iter()
+            .map(|path| (path, <span class="bool-val">true</span>))
+            .collect();
 
-        <span class="ident">crates_affected_by_protos</span>(<span class="kw-2">&amp;</span><span class="ident">affected_protos</span>(<span class="ident">files</span>))
-            .<span class="ident">iter</span>()
-            .<span class="ident">fold</span>(<span class="kw-2">&amp;mut</span> <span class="ident">affected_crates</span>, <span class="op">|</span><span class="ident">affected_crates</span>, <span class="ident">toml_path</span><span class="op">|</span> {
-                <span class="ident">affected_crates</span>.<span class="ident">insert</span>(<span class="ident">toml_path</span>.<span class="ident">clone</span>(), <span class="bool-val">true</span>);
-                <span class="ident">affected_crates</span>
+        crates_affected_by_protos(<span class="kw-2">&amp;</span>affected_protos(files))
+            .iter()
+            .fold(<span class="kw-2">&amp;mut </span>affected_crates, |affected_crates, toml_path| {
+                affected_crates.insert(toml_path.clone(), <span class="bool-val">true</span>);
+                affected_crates
             });
 
-        <span class="kw">for</span> <span class="ident">crate_path</span> <span class="kw">in</span> <span class="ident">crate_manifest_files</span> {
-            <span class="ident">add_affected_crates</span>(<span class="ident">crate_path</span>, <span class="kw-2">&amp;mut</span> <span class="ident">affected_crates</span>);
+        <span class="kw">for </span>crate_path <span class="kw">in </span>crate_manifest_files {
+            add_affected_crates(crate_path, <span class="kw-2">&amp;mut </span>affected_crates);
         }
 
-        <span class="comment">// Return `Cargo.toml` files of the crates that are affected by the changes</span>
-        <span class="ident">affected_crates</span>
-            .<span class="ident">iter</span>()
-            .<span class="ident">filter</span>(<span class="op">|</span>(<span class="ident">_key</span>, <span class="ident">value</span>)<span class="op">|</span> <span class="kw-2">*</span><span class="kw-2">*</span><span class="ident">value</span>)
-            .<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">key</span>, <span class="ident">_value</span>)<span class="op">|</span> <span class="ident">key</span>.<span class="ident">clone</span>())
-            .<span class="ident">collect</span>()
+        <span class="comment">// Return `Cargo.toml` files of the crates that are affected by the changes
+        </span>affected_crates
+            .iter()
+            .filter(|(_key, value)| <span class="kw-2">**</span>value)
+            .map(|(key, _value)| key.clone())
+            .collect()
     });
 
-    <span class="ident">ModifiedContent</span> { <span class="ident">files</span> }
+    ModifiedContent { files }
 }
 
-<span class="doccomment">/// Returns the paths to `Cargo.toml` files of crates affected by the changed proto files.</span>
-<span class="kw">fn</span> <span class="ident">crates_affected_by_protos</span>(<span class="ident">affected_protos</span>: <span class="kw-2">&amp;</span>[<span class="ident">String</span>]) -&gt; <span class="ident">HashSet</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span> {
-    <span class="ident">source_files</span>()
-        .<span class="ident">filter</span>(<span class="op">|</span><span class="ident">path</span><span class="op">|</span> <span class="ident">to_string</span>(<span class="ident">path</span>.<span class="ident">clone</span>()).<span class="ident">ends_with</span>(<span class="string">&quot;build.rs&quot;</span>))
-        .<span class="ident">filter</span>(<span class="op">|</span><span class="ident">path</span><span class="op">|</span> {
-            <span class="kw">for</span> <span class="ident">proto</span> <span class="kw">in</span> <span class="ident">affected_protos</span> {
-                <span class="kw">if</span> <span class="ident">file_contains</span>(<span class="ident">path</span>, <span class="kw-2">&amp;</span><span class="ident">proto</span>.<span class="ident">replace</span>(<span class="string">&quot;./&quot;</span>, <span class="string">&quot;&quot;</span>)) {
-                    <span class="kw">return</span> <span class="bool-val">true</span>;
+<span class="doccomment">/// Returns the paths to `Cargo.toml` files of crates affected by the changed proto files.
+</span><span class="kw">fn </span>crates_affected_by_protos(affected_protos: <span class="kw-2">&amp;</span>[String]) -&gt; HashSet&lt;String&gt; {
+    source_files()
+        .filter(|path| to_string(path.clone()).ends_with(<span class="string">&quot;build.rs&quot;</span>))
+        .filter(|path| {
+            <span class="kw">for </span>proto <span class="kw">in </span>affected_protos {
+                <span class="kw">if </span>file_contains(path, <span class="kw-2">&amp;</span>proto.replace(<span class="string">&quot;./&quot;</span>, <span class="string">&quot;&quot;</span>)) {
+                    <span class="kw">return </span><span class="bool-val">true</span>;
                 }
             }
-            <span class="bool-val">false</span>
-        })
-        .<span class="ident">map</span>(<span class="ident">to_string</span>)
-        .<span class="ident">map</span>(<span class="op">|</span><span class="ident">build_path</span><span class="op">|</span> <span class="ident">find_crate_toml_file</span>(<span class="ident">build_path</span>).<span class="ident">unwrap</span>())
-        .<span class="ident">collect</span>()
+            <span class="bool-val">false
+        </span>})
+        .map(to_string)
+        .map(|build_path| find_crate_toml_file(build_path).unwrap())
+        .collect()
 }
 
-<span class="doccomment">/// Checks if `crate_toml_path` has a direct or indirect dependency to any of the affected crates in</span>
-<span class="doccomment">/// `affected_crates_toml_path`. If so, adds `crate_toml_path` and any of its affected dependencies</span>
-<span class="doccomment">/// to `affected_crates_toml_path`.</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// Keys in `affected_crates_toml_path` are paths to visited `Cargo.toml` files. If the value</span>
-<span class="doccomment">/// associated with a key is `true`, then the corresponding crate is affected by the changes.</span>
-<span class="kw">fn</span> <span class="ident">add_affected_crates</span>(
-    <span class="ident">crate_toml_path</span>: <span class="ident">PathBuf</span>,
-    <span class="ident">affected_crates_toml_path</span>: <span class="kw-2">&amp;mut</span> <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">bool</span><span class="op">&gt;</span>,
+<span class="doccomment">/// Checks if `crate_toml_path` has a direct or indirect dependency to any of the affected crates in
+/// `affected_crates_toml_path`. If so, adds `crate_toml_path` and any of its affected dependencies
+/// to `affected_crates_toml_path`.
+///
+/// Keys in `affected_crates_toml_path` are paths to visited `Cargo.toml` files. If the value
+/// associated with a key is `true`, then the corresponding crate is affected by the changes.
+</span><span class="kw">fn </span>add_affected_crates(
+    crate_toml_path: PathBuf,
+    affected_crates_toml_path: <span class="kw-2">&amp;mut </span>HashMap&lt;String, bool&gt;,
 ) {
-    <span class="comment">// Return immediately, if the `crate_toml_path` is already visited.</span>
-    <span class="kw">if</span> <span class="ident">affected_crates_toml_path</span>.<span class="ident">contains_key</span>(<span class="kw-2">&amp;</span><span class="ident">to_string</span>(<span class="ident">crate_toml_path</span>.<span class="ident">clone</span>())) {
+    <span class="comment">// Return immediately, if the `crate_toml_path` is already visited.
+    </span><span class="kw">if </span>affected_crates_toml_path.contains_key(<span class="kw-2">&amp;</span>to_string(crate_toml_path.clone())) {
         <span class="kw">return</span>;
     }
-    <span class="ident">affected_crates_toml_path</span>.<span class="ident">insert</span>(<span class="ident">to_string</span>(<span class="ident">crate_toml_path</span>.<span class="ident">clone</span>()), <span class="bool-val">false</span>);
-    <span class="kw">let</span> <span class="ident">deps</span> <span class="op">=</span> <span class="ident">get_local_dependencies</span>(<span class="kw-2">&amp;</span><span class="ident">crate_toml_path</span>);
-    <span class="kw">for</span> <span class="ident">dep</span> <span class="kw">in</span> <span class="ident">deps</span> {
-        <span class="comment">// If the dependency is not visited, visit it and its dependencies</span>
-        <span class="kw">if</span> <span class="op">!</span><span class="ident">affected_crates_toml_path</span>.<span class="ident">contains_key</span>(<span class="kw-2">&amp;</span><span class="ident">dep</span>) {
-            <span class="kw">let</span> <span class="ident">dep_path</span> <span class="op">=</span> <span class="ident">PathBuf::from</span>(<span class="ident">dep</span>.<span class="ident">clone</span>());
-            <span class="ident">add_affected_crates</span>(<span class="ident">dep_path</span>.<span class="ident">clone</span>(), <span class="ident">affected_crates_toml_path</span>)
+    affected_crates_toml_path.insert(to_string(crate_toml_path.clone()), <span class="bool-val">false</span>);
+    <span class="kw">let </span>deps = get_local_dependencies(<span class="kw-2">&amp;</span>crate_toml_path);
+    <span class="kw">for </span>dep <span class="kw">in </span>deps {
+        <span class="comment">// If the dependency is not visited, visit it and its dependencies
+        </span><span class="kw">if </span>!affected_crates_toml_path.contains_key(<span class="kw-2">&amp;</span>dep) {
+            <span class="kw">let </span>dep_path = PathBuf::from(dep.clone());
+            add_affected_crates(dep_path.clone(), affected_crates_toml_path)
         }
-        <span class="kw">if</span> <span class="kw-2">*</span><span class="ident">affected_crates_toml_path</span>.<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">dep</span>).<span class="ident">unwrap_or</span>(<span class="kw-2">&amp;</span><span class="bool-val">false</span>) {
-            <span class="ident">affected_crates_toml_path</span>.<span class="ident">insert</span>(<span class="ident">to_string</span>(<span class="ident">crate_toml_path</span>), <span class="bool-val">true</span>);
+        <span class="kw">if </span><span class="kw-2">*</span>affected_crates_toml_path.get(<span class="kw-2">&amp;</span>dep).unwrap_or(<span class="kw-2">&amp;</span><span class="bool-val">false</span>) {
+            affected_crates_toml_path.insert(to_string(crate_toml_path), <span class="bool-val">true</span>);
             <span class="kw">return</span>;
         }
     }
 }
 
-<span class="doccomment">/// Returns paths to `Cargo.toml` files of local crates (crates belonging to the Oak repo) that the</span>
-<span class="doccomment">/// given crate has a dependency to. Converts the relative dependency paths in `Cargo.toml` into</span>
-<span class="doccomment">/// paths relative to the repo&#39;s root.</span>
-<span class="kw">fn</span> <span class="ident">get_local_dependencies</span>(<span class="ident">toml_path</span>: <span class="kw-2">&amp;</span><span class="ident">Path</span>) -&gt; <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span> {
-    <span class="kw">let</span> <span class="ident">cargo_manifest</span>: <span class="ident">CargoManifest</span> <span class="op">=</span>
-        <span class="ident">toml::from_str</span>(<span class="kw-2">&amp;</span><span class="ident">read_file</span>(<span class="ident">toml_path</span>)).<span class="ident">unwrap_or_else</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> {
+<span class="doccomment">/// Returns paths to `Cargo.toml` files of local crates (crates belonging to the Oak repo) that the
+/// given crate has a dependency to. Converts the relative dependency paths in `Cargo.toml` into
+/// paths relative to the repo&#39;s root.
+</span><span class="kw">fn </span>get_local_dependencies(toml_path: <span class="kw-2">&amp;</span>Path) -&gt; Vec&lt;String&gt; {
+    <span class="kw">let </span>cargo_manifest: CargoManifest =
+        toml::from_str(<span class="kw-2">&amp;</span>read_file(toml_path)).unwrap_or_else(|err| {
             <span class="macro">panic!</span>(
                 <span class="string">&quot;could not parse crate manifest file {:?}: {}&quot;</span>,
-                <span class="ident">toml_path</span>, <span class="ident">err</span>
+                toml_path, err
             )
         });
 
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">dependency_toml_paths</span> <span class="op">=</span> <span class="macro">vec!</span>[];
-    <span class="ident">cargo_manifest</span>
-        .<span class="ident">all_dependencies_with_toml_path</span>()
-        .<span class="ident">iter</span>()
-        .<span class="ident">fold</span>(<span class="kw-2">&amp;mut</span> <span class="ident">dependency_toml_paths</span>, <span class="op">|</span><span class="ident">paths</span>, <span class="ident">dep_path_str</span><span class="op">|</span> {
-            <span class="kw">let</span> <span class="ident">dep_path</span> <span class="op">=</span> <span class="ident">PathBuf::from</span>(<span class="ident">dep_path_str</span>);
-            <span class="kw">let</span> <span class="ident">dep_path</span> <span class="op">=</span> <span class="ident">dep_path</span>.<span class="ident">as_path</span>();
-            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">canonical_dep_toml_path</span> <span class="op">=</span> <span class="ident">toml_path</span>.<span class="ident">to_path_buf</span>();
-            <span class="ident">canonical_dep_toml_path</span>.<span class="ident">pop</span>();
-            <span class="comment">// Change the path to be relative to the repo&#39;s root.</span>
-            <span class="kw">for</span> <span class="ident">dir</span> <span class="kw">in</span> <span class="ident">dep_path</span>.<span class="ident">components</span>() {
-                <span class="kw">if</span> <span class="ident">dir</span> <span class="op">==</span> <span class="ident">std::path::Component::ParentDir</span> {
-                    <span class="ident">canonical_dep_toml_path</span>.<span class="ident">pop</span>();
-                } <span class="kw">else</span> {
-                    <span class="ident">canonical_dep_toml_path</span>.<span class="ident">push</span>(<span class="ident">dir</span>);
+    <span class="kw">let </span><span class="kw-2">mut </span>dependency_toml_paths = <span class="macro">vec!</span>[];
+    cargo_manifest
+        .all_dependencies_with_toml_path()
+        .iter()
+        .fold(<span class="kw-2">&amp;mut </span>dependency_toml_paths, |paths, dep_path_str| {
+            <span class="kw">let </span>dep_path = PathBuf::from(dep_path_str);
+            <span class="kw">let </span>dep_path = dep_path.as_path();
+            <span class="kw">let </span><span class="kw-2">mut </span>canonical_dep_toml_path = toml_path.to_path_buf();
+            canonical_dep_toml_path.pop();
+            <span class="comment">// Change the path to be relative to the repo&#39;s root.
+            </span><span class="kw">for </span>dir <span class="kw">in </span>dep_path.components() {
+                <span class="kw">if </span>dir == std::path::Component::ParentDir {
+                    canonical_dep_toml_path.pop();
+                } <span class="kw">else </span>{
+                    canonical_dep_toml_path.push(dir);
                 }
             }
-            <span class="ident">paths</span>.<span class="ident">push</span>(<span class="ident">to_string</span>(<span class="ident">canonical_dep_toml_path</span>));
-            <span class="ident">paths</span>
+            paths.push(to_string(canonical_dep_toml_path));
+            paths
         });
 
-    <span class="ident">dependency_toml_paths</span>
+    dependency_toml_paths
 }
 </code></pre></div>
-</section><section id="search" class="content hidden"></section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="xtask" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.62.0-nightly (de1bc0008 2022-04-21)" ></div>
-</body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="xtask" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (81f391930 2022-10-09)" ></div></body></html>

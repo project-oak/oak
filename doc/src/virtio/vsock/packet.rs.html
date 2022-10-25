@@ -1,9 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `experimental/virtio/src/vsock/packet.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>packet.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" type="text/css" href="../../../normalize.css"><link rel="stylesheet" type="text/css" href="../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../../ayu.css" disabled><link rel="stylesheet" type="text/css" href="../../../dark.css" disabled><link rel="stylesheet" type="text/css" href="../../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../../storage.js"></script><script src="../../../crates.js"></script><script defer src="../../../main.js"></script><script defer src="../../../source-script.js"></script><script defer src="../../../source-files.js"></script>
-    <noscript><link rel="stylesheet" href="../../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../virtio/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div>
-        </a><h2 class="location"></h2>
-    </nav>
-    <nav class="sidebar"><a class="sidebar-logo" href="../../../virtio/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div>
-        </a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../virtio/index.html"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></a><nav class="sub"><div class="theme-picker hidden"><button id="theme-picker" aria-label="Pick another theme!" aria-haspopup="menu" title="themes"><img width="22" height="22" alt="Pick another theme!" src="../../../brush.svg"></button><div id="theme-choices" role="menu"></div></div><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><button type="button" id="help-button" title="help">?</button><a id="settings-menu" href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../wheel.svg"></a></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `experimental/virtio/src/vsock/packet.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>packet.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" href="../../../normalize.css"><link rel="stylesheet" href="../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" href="../../../ayu.css" disabled><link rel="stylesheet" href="../../../dark.css" disabled><link rel="stylesheet" href="../../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../../storage.js"></script><script defer src="../../../source-script.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../main.js"></script><noscript><link rel="stylesheet" href="../../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><a class="sidebar-logo" href="../../../virtio/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../virtio/index.html"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="src-line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -430,299 +425,299 @@
 <span id="425">425</span>
 <span id="426">426</span>
 <span id="427">427</span>
-</pre><pre class="rust"><code><span class="comment">//</span>
-<span class="comment">// Copyright 2022 The Project Oak Authors</span>
-<span class="comment">//</span>
-<span class="comment">// Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
-<span class="comment">// you may not use this file except in compliance with the License.</span>
-<span class="comment">// You may obtain a copy of the License at</span>
-<span class="comment">//</span>
-<span class="comment">//     http://www.apache.org/licenses/LICENSE-2.0</span>
-<span class="comment">//</span>
-<span class="comment">// Unless required by applicable law or agreed to in writing, software</span>
-<span class="comment">// distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
-<span class="comment">// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
-<span class="comment">// See the License for the specific language governing permissions and</span>
-<span class="comment">// limitations under the License.</span>
-<span class="comment">//</span>
+</pre><pre class="rust"><code><span class="comment">//
+// Copyright 2022 The Project Oak Authors
+//
+// Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
-<span class="doccomment">//! Virtio vsock packet implementation.</span>
-<span class="doccomment">//!</span>
-<span class="doccomment">//! A packet consists of a header and an optional payload.</span>
-<span class="doccomment">//!</span>
-<span class="doccomment">//! See &lt;https://docs.oasis-open.org/virtio/virtio/v1.1/csprd01/virtio-v1.1-csprd01.html#x1-3960006&gt;.</span>
+</span><span class="doccomment">//! Virtio vsock packet implementation.
+//!
+//! A packet consists of a header and an optional payload.
+//!
+//! See &lt;https://docs.oasis-open.org/virtio/virtio/v1.1/csprd01/virtio-v1.1-csprd01.html#x1-3960006&gt;.
 
-<span class="kw">use</span> <span class="ident">alloc</span>::{<span class="ident">vec</span>, <span class="ident">vec::Vec</span>};
-<span class="kw">use</span> <span class="ident">bitflags::bitflags</span>;
-<span class="kw">use</span> <span class="ident">core</span>::{<span class="ident">fmt::Debug</span>, <span class="ident">mem::size_of</span>};
-<span class="kw">use</span> <span class="ident">strum</span>::{<span class="ident">Display</span>, <span class="ident">FromRepr</span>};
+</span><span class="kw">use </span>alloc::{vec, vec::Vec};
+<span class="kw">use </span>bitflags::bitflags;
+<span class="kw">use </span>core::{fmt::Debug, mem::size_of};
+<span class="kw">use </span>strum::{Display, FromRepr};
 
-<span class="doccomment">/// The size of the packet header in bytes.</span>
-<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">HEADER_SIZE</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">44</span>;
-<span class="doccomment">/// The offset to the src_cid field.</span>
-<span class="kw">const</span> <span class="ident">SRC_CID_OFFSET</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">0</span>;
-<span class="doccomment">/// The offset to the dst_cid field.</span>
-<span class="kw">const</span> <span class="ident">DST_CID_OFFSET</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">8</span>;
-<span class="doccomment">/// The offset to the src_port field.</span>
-<span class="kw">const</span> <span class="ident">SRC_PORT_OFFSET</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">16</span>;
-<span class="doccomment">/// The offset to the dst_port field.</span>
-<span class="kw">const</span> <span class="ident">DST_PORT_OFFSET</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">20</span>;
-<span class="doccomment">/// The offset to the len field.</span>
-<span class="kw">const</span> <span class="ident">LEN_OFFSET</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">24</span>;
-<span class="doccomment">/// The offset ot the type field.</span>
-<span class="kw">const</span> <span class="ident">TYPE_OFFSET</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">28</span>;
-<span class="doccomment">/// The offset ot the op field.</span>
-<span class="kw">const</span> <span class="ident">OP_OFFSET</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">30</span>;
-<span class="doccomment">/// The offset ot the flags field.</span>
-<span class="kw">const</span> <span class="ident">FLAGS_OFFSET</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">32</span>;
-<span class="doccomment">/// The offset ot the buf_alloc field.</span>
-<span class="kw">const</span> <span class="ident">BUF_ALLOC_OFFSET</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">36</span>;
-<span class="doccomment">/// The offset ot the fwd_cnt field.</span>
-<span class="kw">const</span> <span class="ident">FWD_CNT_OFFSET</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">40</span>;
+<span class="doccomment">/// The size of the packet header in bytes.
+</span><span class="kw">pub const </span>HEADER_SIZE: usize = <span class="number">44</span>;
+<span class="doccomment">/// The offset to the src_cid field.
+</span><span class="kw">const </span>SRC_CID_OFFSET: usize = <span class="number">0</span>;
+<span class="doccomment">/// The offset to the dst_cid field.
+</span><span class="kw">const </span>DST_CID_OFFSET: usize = <span class="number">8</span>;
+<span class="doccomment">/// The offset to the src_port field.
+</span><span class="kw">const </span>SRC_PORT_OFFSET: usize = <span class="number">16</span>;
+<span class="doccomment">/// The offset to the dst_port field.
+</span><span class="kw">const </span>DST_PORT_OFFSET: usize = <span class="number">20</span>;
+<span class="doccomment">/// The offset to the len field.
+</span><span class="kw">const </span>LEN_OFFSET: usize = <span class="number">24</span>;
+<span class="doccomment">/// The offset ot the type field.
+</span><span class="kw">const </span>TYPE_OFFSET: usize = <span class="number">28</span>;
+<span class="doccomment">/// The offset ot the op field.
+</span><span class="kw">const </span>OP_OFFSET: usize = <span class="number">30</span>;
+<span class="doccomment">/// The offset ot the flags field.
+</span><span class="kw">const </span>FLAGS_OFFSET: usize = <span class="number">32</span>;
+<span class="doccomment">/// The offset ot the buf_alloc field.
+</span><span class="kw">const </span>BUF_ALLOC_OFFSET: usize = <span class="number">36</span>;
+<span class="doccomment">/// The offset ot the fwd_cnt field.
+</span><span class="kw">const </span>FWD_CNT_OFFSET: usize = <span class="number">40</span>;
 
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Packet</span> {
-    <span class="ident">buffer</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
+<span class="kw">pub struct </span>Packet {
+    buffer: Vec&lt;u8&gt;,
 }
 
-<span class="kw">impl</span> <span class="ident">Packet</span> {
-    <span class="doccomment">/// Creates a new `Packet` from an existing buffer.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">buffer</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
-        <span class="kw">if</span> <span class="ident">buffer</span>.<span class="ident">len</span>() <span class="op">&lt;</span> <span class="ident">HEADER_SIZE</span> {
+<span class="kw">impl </span>Packet {
+    <span class="doccomment">/// Creates a new `Packet` from an existing buffer.
+    </span><span class="kw">pub fn </span>new(buffer: Vec&lt;u8&gt;) -&gt; anyhow::Result&lt;<span class="self">Self</span>&gt; {
+        <span class="kw">if </span>buffer.len() &lt; HEADER_SIZE {
             <span class="macro">anyhow::bail!</span>(<span class="string">&quot;vsock packet too short&quot;</span>);
         }
-        <span class="prelude-val">Ok</span>(<span class="self">Self</span> { <span class="ident">buffer</span> })
+        <span class="prelude-val">Ok</span>(<span class="self">Self </span>{ buffer })
     }
 
-    <span class="doccomment">/// Creates a new control `Packet` with only a header.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new_control</span>(<span class="ident">src_port</span>: <span class="ident">u32</span>, <span class="ident">dst_port</span>: <span class="ident">u32</span>, <span class="ident">op</span>: <span class="ident">VSockOp</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">result</span> <span class="op">=</span> <span class="ident"><span class="self">Self</span>::new_with_buffer_size</span>(<span class="ident">HEADER_SIZE</span>, <span class="ident">src_port</span>, <span class="ident">dst_port</span>)<span class="question-mark">?</span>;
-        <span class="ident">result</span>.<span class="ident">set_op</span>(<span class="ident">op</span>)<span class="question-mark">?</span>;
-        <span class="prelude-val">Ok</span>(<span class="ident">result</span>)
+    <span class="doccomment">/// Creates a new control `Packet` with only a header.
+    </span><span class="kw">pub fn </span>new_control(src_port: u32, dst_port: u32, op: VSockOp) -&gt; anyhow::Result&lt;<span class="self">Self</span>&gt; {
+        <span class="kw">let </span><span class="kw-2">mut </span>result = <span class="self">Self</span>::new_with_buffer_size(HEADER_SIZE, src_port, dst_port)<span class="question-mark">?</span>;
+        result.set_op(op)<span class="question-mark">?</span>;
+        <span class="prelude-val">Ok</span>(result)
     }
 
-    <span class="doccomment">/// Creates a new data `Packet` with the given payload length.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new_data</span>(<span class="ident">payload</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>], <span class="ident">src_port</span>: <span class="ident">u32</span>, <span class="ident">dst_port</span>: <span class="ident">u32</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">payload_len</span> <span class="op">=</span> <span class="ident">payload</span>.<span class="ident">len</span>();
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">result</span> <span class="op">=</span> <span class="ident"><span class="self">Self</span>::new_with_buffer_size</span>(<span class="ident">HEADER_SIZE</span> <span class="op">+</span> <span class="ident">payload_len</span>, <span class="ident">src_port</span>, <span class="ident">dst_port</span>)<span class="question-mark">?</span>;
-        <span class="ident">result</span>.<span class="ident">set_len</span>(<span class="ident">payload_len</span> <span class="kw">as</span> <span class="ident">u32</span>);
-        <span class="ident">result</span>.<span class="ident">set_op</span>(<span class="ident">VSockOp::Rw</span>)<span class="question-mark">?</span>;
-        <span class="ident">result</span>.<span class="ident">set_payload</span>(<span class="ident">payload</span>)<span class="question-mark">?</span>;
-        <span class="prelude-val">Ok</span>(<span class="ident">result</span>)
+    <span class="doccomment">/// Creates a new data `Packet` with the given payload length.
+    </span><span class="kw">pub fn </span>new_data(payload: <span class="kw-2">&amp;</span>[u8], src_port: u32, dst_port: u32) -&gt; anyhow::Result&lt;<span class="self">Self</span>&gt; {
+        <span class="kw">let </span>payload_len = payload.len();
+        <span class="kw">let </span><span class="kw-2">mut </span>result = <span class="self">Self</span>::new_with_buffer_size(HEADER_SIZE + payload_len, src_port, dst_port)<span class="question-mark">?</span>;
+        result.set_len(payload_len <span class="kw">as </span>u32);
+        result.set_op(VSockOp::Rw)<span class="question-mark">?</span>;
+        result.set_payload(payload)<span class="question-mark">?</span>;
+        <span class="prelude-val">Ok</span>(result)
     }
 
-    <span class="doccomment">/// Creates a new `Packet` with the specified buffer size.</span>
-    <span class="kw">fn</span> <span class="ident">new_with_buffer_size</span>(
-        <span class="ident">buffer_len</span>: <span class="ident">usize</span>,
-        <span class="ident">src_port</span>: <span class="ident">u32</span>,
-        <span class="ident">dst_port</span>: <span class="ident">u32</span>,
-    ) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
-        <span class="kw">if</span> <span class="ident">buffer_len</span> <span class="op">&gt;</span> <span class="ident"><span class="kw">super</span>::DATA_BUFFER_SIZE</span> {
+    <span class="doccomment">/// Creates a new `Packet` with the specified buffer size.
+    </span><span class="kw">fn </span>new_with_buffer_size(
+        buffer_len: usize,
+        src_port: u32,
+        dst_port: u32,
+    ) -&gt; anyhow::Result&lt;<span class="self">Self</span>&gt; {
+        <span class="kw">if </span>buffer_len &gt; <span class="kw">super</span>::DATA_BUFFER_SIZE {
             <span class="macro">anyhow::bail!</span>(
                 <span class="string">&quot;Total buffer length must be less than {}&quot;</span>,
-                <span class="ident"><span class="kw">super</span>::DATA_BUFFER_SIZE</span>
+                <span class="kw">super</span>::DATA_BUFFER_SIZE
             );
         }
-        <span class="kw">let</span> <span class="ident">buffer</span> <span class="op">=</span> <span class="macro">vec!</span>[<span class="number">0u8</span>; <span class="ident">buffer_len</span>];
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">result</span> <span class="op">=</span> <span class="self">Self</span> { <span class="ident">buffer</span> };
-        <span class="ident">result</span>.<span class="ident">set_type</span>(<span class="ident">VSockType::Stream</span>);
-        <span class="ident">result</span>.<span class="ident">set_src_port</span>(<span class="ident">src_port</span>);
-        <span class="ident">result</span>.<span class="ident">set_dst_port</span>(<span class="ident">dst_port</span>);
-        <span class="prelude-val">Ok</span>(<span class="ident">result</span>)
+        <span class="kw">let </span>buffer = <span class="macro">vec!</span>[<span class="number">0u8</span>; buffer_len];
+        <span class="kw">let </span><span class="kw-2">mut </span>result = <span class="self">Self </span>{ buffer };
+        result.set_type(VSockType::Stream);
+        result.set_src_port(src_port);
+        result.set_dst_port(dst_port);
+        <span class="prelude-val">Ok</span>(result)
     }
 
-    <span class="doccomment">/// Gets the source CID.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_src_cid</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">u64</span> {
-        <span class="self">self</span>.<span class="ident">read_u64</span>(<span class="ident">SRC_CID_OFFSET</span>)
+    <span class="doccomment">/// Gets the source CID.
+    </span><span class="kw">pub fn </span>get_src_cid(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; u64 {
+        <span class="self">self</span>.read_u64(SRC_CID_OFFSET)
     }
 
-    <span class="doccomment">/// Sets the source CID.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">set_src_cid</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">src_cid</span>: <span class="ident">u64</span>) {
-        <span class="self">self</span>.<span class="ident">write_u64</span>(<span class="ident">SRC_CID_OFFSET</span>, <span class="ident">src_cid</span>);
+    <span class="doccomment">/// Sets the source CID.
+    </span><span class="kw">pub fn </span>set_src_cid(<span class="kw-2">&amp;mut </span><span class="self">self</span>, src_cid: u64) {
+        <span class="self">self</span>.write_u64(SRC_CID_OFFSET, src_cid);
     }
 
-    <span class="doccomment">/// Gets the destination CID.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_dst_cid</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">u64</span> {
-        <span class="self">self</span>.<span class="ident">read_u64</span>(<span class="ident">DST_CID_OFFSET</span>)
+    <span class="doccomment">/// Gets the destination CID.
+    </span><span class="kw">pub fn </span>get_dst_cid(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; u64 {
+        <span class="self">self</span>.read_u64(DST_CID_OFFSET)
     }
 
-    <span class="doccomment">/// Sets the destination CID.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">set_dst_cid</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">dst_cid</span>: <span class="ident">u64</span>) {
-        <span class="self">self</span>.<span class="ident">write_u64</span>(<span class="ident">DST_CID_OFFSET</span>, <span class="ident">dst_cid</span>);
+    <span class="doccomment">/// Sets the destination CID.
+    </span><span class="kw">pub fn </span>set_dst_cid(<span class="kw-2">&amp;mut </span><span class="self">self</span>, dst_cid: u64) {
+        <span class="self">self</span>.write_u64(DST_CID_OFFSET, dst_cid);
     }
 
-    <span class="doccomment">/// Gets the source port.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_src_port</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">u32</span> {
-        <span class="self">self</span>.<span class="ident">read_u32</span>(<span class="ident">SRC_PORT_OFFSET</span>)
+    <span class="doccomment">/// Gets the source port.
+    </span><span class="kw">pub fn </span>get_src_port(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; u32 {
+        <span class="self">self</span>.read_u32(SRC_PORT_OFFSET)
     }
 
-    <span class="doccomment">/// Sets the source port.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">set_src_port</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">src_port</span>: <span class="ident">u32</span>) {
-        <span class="self">self</span>.<span class="ident">write_u32</span>(<span class="ident">SRC_PORT_OFFSET</span>, <span class="ident">src_port</span>);
+    <span class="doccomment">/// Sets the source port.
+    </span><span class="kw">pub fn </span>set_src_port(<span class="kw-2">&amp;mut </span><span class="self">self</span>, src_port: u32) {
+        <span class="self">self</span>.write_u32(SRC_PORT_OFFSET, src_port);
     }
 
-    <span class="doccomment">/// Gets the destination port.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_dst_port</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">u32</span> {
-        <span class="self">self</span>.<span class="ident">read_u32</span>(<span class="ident">DST_PORT_OFFSET</span>)
+    <span class="doccomment">/// Gets the destination port.
+    </span><span class="kw">pub fn </span>get_dst_port(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; u32 {
+        <span class="self">self</span>.read_u32(DST_PORT_OFFSET)
     }
 
-    <span class="doccomment">/// Sets the destination port.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">set_dst_port</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">dst_port</span>: <span class="ident">u32</span>) {
-        <span class="self">self</span>.<span class="ident">write_u32</span>(<span class="ident">DST_PORT_OFFSET</span>, <span class="ident">dst_port</span>);
+    <span class="doccomment">/// Sets the destination port.
+    </span><span class="kw">pub fn </span>set_dst_port(<span class="kw-2">&amp;mut </span><span class="self">self</span>, dst_port: u32) {
+        <span class="self">self</span>.write_u32(DST_PORT_OFFSET, dst_port);
     }
 
-    <span class="doccomment">/// Gets the payload length.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_len</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">u32</span> {
-        <span class="self">self</span>.<span class="ident">read_u32</span>(<span class="ident">LEN_OFFSET</span>)
+    <span class="doccomment">/// Gets the payload length.
+    </span><span class="kw">pub fn </span>get_len(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; u32 {
+        <span class="self">self</span>.read_u32(LEN_OFFSET)
     }
 
-    <span class="doccomment">/// Sets the payload length.</span>
-    <span class="kw">fn</span> <span class="ident">set_len</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">len</span>: <span class="ident">u32</span>) {
-        <span class="self">self</span>.<span class="ident">write_u32</span>(<span class="ident">LEN_OFFSET</span>, <span class="ident">len</span>);
+    <span class="doccomment">/// Sets the payload length.
+    </span><span class="kw">fn </span>set_len(<span class="kw-2">&amp;mut </span><span class="self">self</span>, len: u32) {
+        <span class="self">self</span>.write_u32(LEN_OFFSET, len);
     }
 
-    <span class="doccomment">/// Gets the type of socket the packet is intended for.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_type</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">VSockType</span><span class="op">&gt;</span> {
-        <span class="ident">VSockType::from_repr</span>(<span class="self">self</span>.<span class="ident">read_u16</span>(<span class="ident">TYPE_OFFSET</span>))
-            .<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;Invalid socket type.&quot;</span>))
+    <span class="doccomment">/// Gets the type of socket the packet is intended for.
+    </span><span class="kw">pub fn </span>get_type(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; anyhow::Result&lt;VSockType&gt; {
+        VSockType::from_repr(<span class="self">self</span>.read_u16(TYPE_OFFSET))
+            .ok_or_else(|| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;Invalid socket type.&quot;</span>))
     }
 
-    <span class="doccomment">/// Sets the type of socket the packet is intended for.</span>
-    <span class="kw">fn</span> <span class="ident">set_type</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">socket_type</span>: <span class="ident">VSockType</span>) {
-        <span class="self">self</span>.<span class="ident">write_u16</span>(<span class="ident">TYPE_OFFSET</span>, <span class="ident">socket_type</span> <span class="kw">as</span> <span class="ident">u16</span>)
+    <span class="doccomment">/// Sets the type of socket the packet is intended for.
+    </span><span class="kw">fn </span>set_type(<span class="kw-2">&amp;mut </span><span class="self">self</span>, socket_type: VSockType) {
+        <span class="self">self</span>.write_u16(TYPE_OFFSET, socket_type <span class="kw">as </span>u16)
     }
 
-    <span class="doccomment">/// Gets the op that the packet represents.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_op</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">VSockOp</span><span class="op">&gt;</span> {
-        <span class="ident">VSockOp::from_repr</span>(<span class="self">self</span>.<span class="ident">read_u16</span>(<span class="ident">OP_OFFSET</span>)).<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;Invalid op.&quot;</span>))
+    <span class="doccomment">/// Gets the op that the packet represents.
+    </span><span class="kw">pub fn </span>get_op(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; anyhow::Result&lt;VSockOp&gt; {
+        VSockOp::from_repr(<span class="self">self</span>.read_u16(OP_OFFSET)).ok_or_else(|| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;Invalid op.&quot;</span>))
     }
 
-    <span class="doccomment">/// Sets the op that the packet represents.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">set_op</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">op</span>: <span class="ident">VSockOp</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-        <span class="kw">if</span> <span class="self">self</span>.<span class="ident">get_len</span>() <span class="op">&gt;</span> <span class="number">0</span> <span class="op">&amp;&amp;</span> <span class="ident">op</span> <span class="op">!</span><span class="op">=</span> <span class="ident">VSockOp::Rw</span> {
+    <span class="doccomment">/// Sets the op that the packet represents.
+    </span><span class="kw">pub fn </span>set_op(<span class="kw-2">&amp;mut </span><span class="self">self</span>, op: VSockOp) -&gt; anyhow::Result&lt;()&gt; {
+        <span class="kw">if </span><span class="self">self</span>.get_len() &gt; <span class="number">0 </span>&amp;&amp; op != VSockOp::Rw {
             <span class="macro">anyhow::bail!</span>(<span class="string">&quot;Non-empty payloads are only allowed with data packets.&quot;</span>);
         }
-        <span class="kw">if</span> <span class="self">self</span>.<span class="ident">get_len</span>() <span class="op">==</span> <span class="number">0</span> <span class="op">&amp;&amp;</span> <span class="ident">op</span> <span class="op">==</span> <span class="ident">VSockOp::Rw</span> {
+        <span class="kw">if </span><span class="self">self</span>.get_len() == <span class="number">0 </span>&amp;&amp; op == VSockOp::Rw {
             <span class="macro">anyhow::bail!</span>(<span class="string">&quot;Empty payloads are not allowed with the RW op.&quot;</span>);
         }
-        <span class="self">self</span>.<span class="ident">write_u16</span>(<span class="ident">OP_OFFSET</span>, <span class="ident">op</span> <span class="kw">as</span> <span class="ident">u16</span>);
+        <span class="self">self</span>.write_u16(OP_OFFSET, op <span class="kw">as </span>u16);
         <span class="prelude-val">Ok</span>(())
     }
 
-    <span class="doccomment">/// Gets the flags.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// Only currently used for connection shutdown requests.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_flags</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">VSockFlags</span> {
-        <span class="ident">VSockFlags::from_bits_truncate</span>(<span class="self">self</span>.<span class="ident">read_u32</span>(<span class="ident">FLAGS_OFFSET</span>))
+    <span class="doccomment">/// Gets the flags.
+    ///
+    /// Only currently used for connection shutdown requests.
+    </span><span class="kw">pub fn </span>get_flags(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; VSockFlags {
+        VSockFlags::from_bits_truncate(<span class="self">self</span>.read_u32(FLAGS_OFFSET))
     }
 
-    <span class="doccomment">/// Sets the flags.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// Only currently used for connection shutdown requests.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">set_flags</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">flags</span>: <span class="ident">VSockFlags</span>) {
-        <span class="self">self</span>.<span class="ident">write_u32</span>(<span class="ident">FLAGS_OFFSET</span>, <span class="ident">flags</span>.<span class="ident">bits</span>());
+    <span class="doccomment">/// Sets the flags.
+    ///
+    /// Only currently used for connection shutdown requests.
+    </span><span class="kw">pub fn </span>set_flags(<span class="kw-2">&amp;mut </span><span class="self">self</span>, flags: VSockFlags) {
+        <span class="self">self</span>.write_u32(FLAGS_OFFSET, flags.bits());
     }
 
-    <span class="doccomment">/// Gets the size of the peer&#39;s stream buffer.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// Used to facilitate flow-control calculations.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_buf_alloc</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">u32</span> {
-        <span class="self">self</span>.<span class="ident">read_u32</span>(<span class="ident">BUF_ALLOC_OFFSET</span>)
+    <span class="doccomment">/// Gets the size of the peer&#39;s stream buffer.
+    ///
+    /// Used to facilitate flow-control calculations.
+    </span><span class="kw">pub fn </span>get_buf_alloc(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; u32 {
+        <span class="self">self</span>.read_u32(BUF_ALLOC_OFFSET)
     }
 
-    <span class="doccomment">/// Sets the size of the stream buffer.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">set_buf_alloc</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">buf_alloc</span>: <span class="ident">u32</span>) {
-        <span class="self">self</span>.<span class="ident">write_u32</span>(<span class="ident">BUF_ALLOC_OFFSET</span>, <span class="ident">buf_alloc</span>);
+    <span class="doccomment">/// Sets the size of the stream buffer.
+    </span><span class="kw">pub fn </span>set_buf_alloc(<span class="kw-2">&amp;mut </span><span class="self">self</span>, buf_alloc: u32) {
+        <span class="self">self</span>.write_u32(BUF_ALLOC_OFFSET, buf_alloc);
     }
 
-    <span class="doccomment">/// Gets the number of bytes that the peer has read out of the stream buffer (hence making space</span>
-    <span class="doccomment">/// in the buffer).</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// Used to facilitate flow-control calculations.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_fwd_cnt</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">u32</span> {
-        <span class="self">self</span>.<span class="ident">read_u32</span>(<span class="ident">FWD_CNT_OFFSET</span>)
+    <span class="doccomment">/// Gets the number of bytes that the peer has read out of the stream buffer (hence making space
+    /// in the buffer).
+    ///
+    /// Used to facilitate flow-control calculations.
+    </span><span class="kw">pub fn </span>get_fwd_cnt(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; u32 {
+        <span class="self">self</span>.read_u32(FWD_CNT_OFFSET)
     }
 
-    <span class="doccomment">/// Sets the number of bytes read from the stream buffer.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">set_fwd_cnt</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">fwd_cnt</span>: <span class="ident">u32</span>) {
-        <span class="self">self</span>.<span class="ident">write_u32</span>(<span class="ident">FWD_CNT_OFFSET</span>, <span class="ident">fwd_cnt</span>);
+    <span class="doccomment">/// Sets the number of bytes read from the stream buffer.
+    </span><span class="kw">pub fn </span>set_fwd_cnt(<span class="kw-2">&amp;mut </span><span class="self">self</span>, fwd_cnt: u32) {
+        <span class="self">self</span>.write_u32(FWD_CNT_OFFSET, fwd_cnt);
     }
 
-    <span class="doccomment">/// Gets the payload.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_payload</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>[<span class="ident">u8</span>] {
-        <span class="kw">let</span> <span class="ident">len</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">get_len</span>() <span class="kw">as</span> <span class="ident">usize</span>;
+    <span class="doccomment">/// Gets the payload.
+    </span><span class="kw">pub fn </span>get_payload(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>[u8] {
+        <span class="kw">let </span>len = <span class="self">self</span>.get_len() <span class="kw">as </span>usize;
         <span class="macro">assert_eq!</span>(
-            <span class="ident">len</span>,
-            <span class="self">self</span>.<span class="ident">get_payload_len</span>(),
-            <span class="string">&quot;Actual payload length does not match the packet&#39;s configured payload length.&quot;</span>
-        );
-        <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">buffer</span>[<span class="ident">HEADER_SIZE</span>..(<span class="ident">HEADER_SIZE</span> <span class="op">+</span> <span class="ident">len</span>)]
+            len,
+            <span class="self">self</span>.get_payload_len(),
+            <span class="string">&quot;Actual payload length does not match the packet&#39;s configured payload length.&quot;
+        </span>);
+        <span class="kw-2">&amp;</span><span class="self">self</span>.buffer[HEADER_SIZE..(HEADER_SIZE + len)]
     }
 
-    <span class="doccomment">/// Gets the actual length of the payload in the current packet.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_payload_len</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">usize</span> {
-        <span class="self">self</span>.<span class="ident">buffer</span>.<span class="ident">len</span>() <span class="op">-</span> <span class="ident">HEADER_SIZE</span>
+    <span class="doccomment">/// Gets the actual length of the payload in the current packet.
+    </span><span class="kw">pub fn </span>get_payload_len(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
+        <span class="self">self</span>.buffer.len() - HEADER_SIZE
     }
 
-    <span class="doccomment">/// Sets the payload of a data packet from a slice.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// The length of the slice must match the packets configures payload length. Only usable if the</span>
-    <span class="doccomment">/// packet&#39;s op is `VSockOp::Rw`.</span>
-    <span class="kw">fn</span> <span class="ident">set_payload</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">data</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-        <span class="kw">if</span> <span class="self">self</span>.<span class="ident">get_op</span>()<span class="question-mark">?</span> <span class="op">!</span><span class="op">=</span> <span class="ident">VSockOp::Rw</span> {
+    <span class="doccomment">/// Sets the payload of a data packet from a slice.
+    ///
+    /// The length of the slice must match the packets configures payload length. Only usable if the
+    /// packet&#39;s op is `VSockOp::Rw`.
+    </span><span class="kw">fn </span>set_payload(<span class="kw-2">&amp;mut </span><span class="self">self</span>, data: <span class="kw-2">&amp;</span>[u8]) -&gt; anyhow::Result&lt;()&gt; {
+        <span class="kw">if </span><span class="self">self</span>.get_op()<span class="question-mark">? </span>!= VSockOp::Rw {
             <span class="macro">anyhow::bail!</span>(<span class="string">&quot;Non-empty payloads are only allowed with data packets.&quot;</span>);
         }
-        <span class="kw">let</span> <span class="ident">len</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">get_len</span>();
-        <span class="kw">if</span> <span class="ident">len</span> <span class="kw">as</span> <span class="ident">usize</span> <span class="op">!</span><span class="op">=</span> <span class="ident">data</span>.<span class="ident">len</span>() {
+        <span class="kw">let </span>len = <span class="self">self</span>.get_len();
+        <span class="kw">if </span>len <span class="kw">as </span>usize != data.len() {
             <span class="macro">anyhow::bail!</span>(<span class="string">&quot;Data length does not match the packet&#39;s configured payload length.&quot;</span>);
         }
 
-        <span class="self">self</span>.<span class="ident">buffer</span>[<span class="ident">HEADER_SIZE</span>..(<span class="ident">HEADER_SIZE</span> <span class="op">+</span> <span class="ident">len</span> <span class="kw">as</span> <span class="ident">usize</span>)].<span class="ident">copy_from_slice</span>(<span class="ident">data</span>);
+        <span class="self">self</span>.buffer[HEADER_SIZE..(HEADER_SIZE + len <span class="kw">as </span>usize)].copy_from_slice(data);
         <span class="prelude-val">Ok</span>(())
     }
 
-    <span class="doccomment">/// Returns the entire buffer as a slice.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">as_slice</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>[<span class="ident">u8</span>] {
-        <span class="self">self</span>.<span class="ident">buffer</span>.<span class="ident">as_slice</span>()
+    <span class="doccomment">/// Returns the entire buffer as a slice.
+    </span><span class="kw">pub fn </span>as_slice(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>[u8] {
+        <span class="self">self</span>.buffer.as_slice()
     }
 
-    <span class="kw">fn</span> <span class="ident">read_u16</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">offset</span>: <span class="ident">usize</span>) -&gt; <span class="ident">u16</span> {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">data</span> <span class="op">=</span> [<span class="number">0</span>; <span class="ident">size_of</span>::<span class="op">&lt;</span><span class="ident">u16</span><span class="op">&gt;</span>()];
-        <span class="ident">data</span>.<span class="ident">copy_from_slice</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">buffer</span>[<span class="ident">offset</span>..(<span class="ident">offset</span> <span class="op">+</span> <span class="ident">size_of</span>::<span class="op">&lt;</span><span class="ident">u16</span><span class="op">&gt;</span>())]);
-        <span class="ident">u16::from_le_bytes</span>(<span class="ident">data</span>)
+    <span class="kw">fn </span>read_u16(<span class="kw-2">&amp;</span><span class="self">self</span>, offset: usize) -&gt; u16 {
+        <span class="kw">let </span><span class="kw-2">mut </span>data = [<span class="number">0</span>; size_of::&lt;u16&gt;()];
+        data.copy_from_slice(<span class="kw-2">&amp;</span><span class="self">self</span>.buffer[offset..(offset + size_of::&lt;u16&gt;())]);
+        u16::from_le_bytes(data)
     }
 
-    <span class="kw">fn</span> <span class="ident">read_u32</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">offset</span>: <span class="ident">usize</span>) -&gt; <span class="ident">u32</span> {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">data</span> <span class="op">=</span> [<span class="number">0</span>; <span class="ident">size_of</span>::<span class="op">&lt;</span><span class="ident">u32</span><span class="op">&gt;</span>()];
-        <span class="ident">data</span>.<span class="ident">copy_from_slice</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">buffer</span>[<span class="ident">offset</span>..(<span class="ident">offset</span> <span class="op">+</span> <span class="ident">size_of</span>::<span class="op">&lt;</span><span class="ident">u32</span><span class="op">&gt;</span>())]);
-        <span class="ident">u32::from_le_bytes</span>(<span class="ident">data</span>)
+    <span class="kw">fn </span>read_u32(<span class="kw-2">&amp;</span><span class="self">self</span>, offset: usize) -&gt; u32 {
+        <span class="kw">let </span><span class="kw-2">mut </span>data = [<span class="number">0</span>; size_of::&lt;u32&gt;()];
+        data.copy_from_slice(<span class="kw-2">&amp;</span><span class="self">self</span>.buffer[offset..(offset + size_of::&lt;u32&gt;())]);
+        u32::from_le_bytes(data)
     }
 
-    <span class="kw">fn</span> <span class="ident">read_u64</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">offset</span>: <span class="ident">usize</span>) -&gt; <span class="ident">u64</span> {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">data</span> <span class="op">=</span> [<span class="number">0</span>; <span class="ident">size_of</span>::<span class="op">&lt;</span><span class="ident">u64</span><span class="op">&gt;</span>()];
-        <span class="ident">data</span>.<span class="ident">copy_from_slice</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">buffer</span>[<span class="ident">offset</span>..(<span class="ident">offset</span> <span class="op">+</span> <span class="ident">size_of</span>::<span class="op">&lt;</span><span class="ident">u64</span><span class="op">&gt;</span>())]);
-        <span class="ident">u64::from_le_bytes</span>(<span class="ident">data</span>)
+    <span class="kw">fn </span>read_u64(<span class="kw-2">&amp;</span><span class="self">self</span>, offset: usize) -&gt; u64 {
+        <span class="kw">let </span><span class="kw-2">mut </span>data = [<span class="number">0</span>; size_of::&lt;u64&gt;()];
+        data.copy_from_slice(<span class="kw-2">&amp;</span><span class="self">self</span>.buffer[offset..(offset + size_of::&lt;u64&gt;())]);
+        u64::from_le_bytes(data)
     }
 
-    <span class="kw">fn</span> <span class="ident">write_u16</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">offset</span>: <span class="ident">usize</span>, <span class="ident">value</span>: <span class="ident">u16</span>) {
-        <span class="kw">let</span> <span class="ident">dest</span> <span class="op">=</span> <span class="kw-2">&amp;mut</span> <span class="self">self</span>.<span class="ident">buffer</span>[<span class="ident">offset</span>..(<span class="ident">offset</span> <span class="op">+</span> <span class="ident">size_of</span>::<span class="op">&lt;</span><span class="ident">u16</span><span class="op">&gt;</span>())];
-        <span class="ident">dest</span>.<span class="ident">copy_from_slice</span>(<span class="kw-2">&amp;</span><span class="ident">value</span>.<span class="ident">to_le_bytes</span>()[..]);
+    <span class="kw">fn </span>write_u16(<span class="kw-2">&amp;mut </span><span class="self">self</span>, offset: usize, value: u16) {
+        <span class="kw">let </span>dest = <span class="kw-2">&amp;mut </span><span class="self">self</span>.buffer[offset..(offset + size_of::&lt;u16&gt;())];
+        dest.copy_from_slice(<span class="kw-2">&amp;</span>value.to_le_bytes()[..]);
     }
 
-    <span class="kw">fn</span> <span class="ident">write_u32</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">offset</span>: <span class="ident">usize</span>, <span class="ident">value</span>: <span class="ident">u32</span>) {
-        <span class="kw">let</span> <span class="ident">dest</span> <span class="op">=</span> <span class="kw-2">&amp;mut</span> <span class="self">self</span>.<span class="ident">buffer</span>[<span class="ident">offset</span>..(<span class="ident">offset</span> <span class="op">+</span> <span class="ident">size_of</span>::<span class="op">&lt;</span><span class="ident">u32</span><span class="op">&gt;</span>())];
-        <span class="ident">dest</span>.<span class="ident">copy_from_slice</span>(<span class="kw-2">&amp;</span><span class="ident">value</span>.<span class="ident">to_le_bytes</span>()[..]);
+    <span class="kw">fn </span>write_u32(<span class="kw-2">&amp;mut </span><span class="self">self</span>, offset: usize, value: u32) {
+        <span class="kw">let </span>dest = <span class="kw-2">&amp;mut </span><span class="self">self</span>.buffer[offset..(offset + size_of::&lt;u32&gt;())];
+        dest.copy_from_slice(<span class="kw-2">&amp;</span>value.to_le_bytes()[..]);
     }
 
-    <span class="kw">fn</span> <span class="ident">write_u64</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">offset</span>: <span class="ident">usize</span>, <span class="ident">value</span>: <span class="ident">u64</span>) {
-        <span class="kw">let</span> <span class="ident">dest</span> <span class="op">=</span> <span class="kw-2">&amp;mut</span> <span class="self">self</span>.<span class="ident">buffer</span>[<span class="ident">offset</span>..(<span class="ident">offset</span> <span class="op">+</span> <span class="ident">size_of</span>::<span class="op">&lt;</span><span class="ident">u64</span><span class="op">&gt;</span>())];
-        <span class="ident">dest</span>.<span class="ident">copy_from_slice</span>(<span class="kw-2">&amp;</span><span class="ident">value</span>.<span class="ident">to_le_bytes</span>()[..]);
+    <span class="kw">fn </span>write_u64(<span class="kw-2">&amp;mut </span><span class="self">self</span>, offset: usize, value: u64) {
+        <span class="kw">let </span>dest = <span class="kw-2">&amp;mut </span><span class="self">self</span>.buffer[offset..(offset + size_of::&lt;u64&gt;())];
+        dest.copy_from_slice(<span class="kw-2">&amp;</span>value.to_le_bytes()[..]);
     }
 }
 
-<span class="kw">impl</span> <span class="ident">Debug</span> <span class="kw">for</span> <span class="ident">Packet</span> {
-    <span class="kw">fn</span> <span class="ident">fmt</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">f</span>: <span class="kw-2">&amp;mut</span> <span class="ident">::core::fmt::Formatter</span>) -&gt; <span class="ident">::core::fmt::Result</span> {
+<span class="kw">impl </span>Debug <span class="kw">for </span>Packet {
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>::core::fmt::Formatter) -&gt; ::core::fmt::Result {
         <span class="macro">write!</span>(
-            <span class="ident">f</span>,
+            f,
             <span class="string">&quot;Packet{{\n\
                     \tsrc_cid: {},\n\
                     \tdst_cid: {},\n\
@@ -736,127 +731,126 @@
                     \tfwd_cnt: {},\n\
                     \tpkt_len: {},\n\
                 }}&quot;</span>,
-            <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">get_src_cid</span>(),
-            <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">get_dst_cid</span>(),
-            <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">get_src_port</span>(),
-            <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">get_dst_port</span>(),
-            <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">get_len</span>(),
-            <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">get_type</span>(),
-            <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">get_op</span>(),
-            <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">get_flags</span>(),
-            <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">get_buf_alloc</span>(),
-            <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">get_fwd_cnt</span>(),
-            <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">buffer</span>.<span class="ident">len</span>(),
+            <span class="kw-2">&amp;</span><span class="self">self</span>.get_src_cid(),
+            <span class="kw-2">&amp;</span><span class="self">self</span>.get_dst_cid(),
+            <span class="kw-2">&amp;</span><span class="self">self</span>.get_src_port(),
+            <span class="kw-2">&amp;</span><span class="self">self</span>.get_dst_port(),
+            <span class="kw-2">&amp;</span><span class="self">self</span>.get_len(),
+            <span class="kw-2">&amp;</span><span class="self">self</span>.get_type(),
+            <span class="kw-2">&amp;</span><span class="self">self</span>.get_op(),
+            <span class="kw-2">&amp;</span><span class="self">self</span>.get_flags(),
+            <span class="kw-2">&amp;</span><span class="self">self</span>.get_buf_alloc(),
+            <span class="kw-2">&amp;</span><span class="self">self</span>.get_fwd_cnt(),
+            <span class="kw-2">&amp;</span><span class="self">self</span>.buffer.len(),
         )
     }
 }
 
-<span class="doccomment">/// Vsock Ops.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Display</span>, <span class="ident">Eq</span>, <span class="ident">PartialEq</span>, <span class="ident">FromRepr</span>)]</span>
-<span class="attribute">#[<span class="ident">repr</span>(<span class="ident">u16</span>)]</span>
-<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">VSockOp</span> {
-    <span class="doccomment">/// Connection request.</span>
-    <span class="ident">Request</span> <span class="op">=</span> <span class="number">1</span>,
-    <span class="doccomment">/// Connections accepted response.</span>
-    <span class="ident">Response</span> <span class="op">=</span> <span class="number">2</span>,
-    <span class="doccomment">/// Connection reset, either in reponse to a shutdown request or invalid packets received.</span>
-    <span class="ident">Rst</span> <span class="op">=</span> <span class="number">3</span>,
-    <span class="doccomment">/// Connection shutdown request.</span>
-    <span class="ident">Shutdown</span> <span class="op">=</span> <span class="number">4</span>,
-    <span class="doccomment">/// Represents a data packet.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// Used to send payload. Only data packets with this op can contain a payload.</span>
-    <span class="ident">Rw</span> <span class="op">=</span> <span class="number">5</span>,
-    <span class="doccomment">/// Give update on credit to support flow control, either in response to a credit request or at</span>
-    <span class="doccomment">/// any time it might be useful to inform the peer of the state of the stream buffer.</span>
-    <span class="ident">CreditUpdate</span> <span class="op">=</span> <span class="number">6</span>,
-    <span class="doccomment">/// Request for update on credit to calculate stream buffer availability.</span>
-    <span class="ident">CreditRequest</span> <span class="op">=</span> <span class="number">7</span>,
+<span class="doccomment">/// Vsock Ops.
+</span><span class="attribute">#[derive(Debug, Display, Eq, PartialEq, FromRepr)]
+#[repr(u16)]
+</span><span class="kw">pub enum </span>VSockOp {
+    <span class="doccomment">/// Connection request.
+    </span>Request = <span class="number">1</span>,
+    <span class="doccomment">/// Connections accepted response.
+    </span>Response = <span class="number">2</span>,
+    <span class="doccomment">/// Connection reset, either in reponse to a shutdown request or invalid packets received.
+    </span>Rst = <span class="number">3</span>,
+    <span class="doccomment">/// Connection shutdown request.
+    </span>Shutdown = <span class="number">4</span>,
+    <span class="doccomment">/// Represents a data packet.
+    ///
+    /// Used to send payload. Only data packets with this op can contain a payload.
+    </span>Rw = <span class="number">5</span>,
+    <span class="doccomment">/// Give update on credit to support flow control, either in response to a credit request or at
+    /// any time it might be useful to inform the peer of the state of the stream buffer.
+    </span>CreditUpdate = <span class="number">6</span>,
+    <span class="doccomment">/// Request for update on credit to calculate stream buffer availability.
+    </span>CreditRequest = <span class="number">7</span>,
 }
 
-<span class="macro">bitflags!</span> {
-    <span class="doccomment">/// Flags about a socket connection.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// Used in a connection shutdown request.</span>
-    <span class="doccomment">/// See &lt;https://docs.oasis-open.org/virtio/virtio/v1.1/csprd01/virtio-v1.1-csprd01.html#x1-4070005&gt;.</span>
-    <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">VSockFlags</span>: <span class="ident">u32</span> {
-        <span class="doccomment">/// Indicates that no more payload data will be received.</span>
-        <span class="kw">const</span> <span class="ident">NO_RECEIVE</span> <span class="op">=</span> <span class="number">1</span>;
-        <span class="doccomment">/// Indicates that no more payload data will be senn.</span>
-        <span class="kw">const</span> <span class="ident">NO_SEND</span> <span class="op">=</span> <span class="number">2</span>;
+<span class="macro">bitflags! </span>{
+    <span class="doccomment">/// Flags about a socket connection.
+    ///
+    /// Used in a connection shutdown request.
+    /// See &lt;https://docs.oasis-open.org/virtio/virtio/v1.1/csprd01/virtio-v1.1-csprd01.html#x1-4070005&gt;.
+    </span><span class="kw">pub struct </span>VSockFlags: u32 {
+        <span class="doccomment">/// Indicates that no more payload data will be received.
+        </span><span class="kw">const </span>NO_RECEIVE = <span class="number">1</span>;
+        <span class="doccomment">/// Indicates that no more payload data will be senn.
+        </span><span class="kw">const </span>NO_SEND = <span class="number">2</span>;
     }
 }
 
-<span class="doccomment">/// Socket Type.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Eq</span>, <span class="ident">PartialEq</span>, <span class="ident">Display</span>, <span class="ident">FromRepr</span>)]</span>
-<span class="attribute">#[<span class="ident">repr</span>(<span class="ident">u16</span>)]</span>
-<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">VSockType</span> {
-    <span class="doccomment">/// Only stream sockets are currently supported in the Virtio spec.</span>
-    <span class="ident">Stream</span> <span class="op">=</span> <span class="number">1</span>,
+<span class="doccomment">/// Socket Type.
+</span><span class="attribute">#[derive(Debug, Eq, PartialEq, Display, FromRepr)]
+#[repr(u16)]
+</span><span class="kw">pub enum </span>VSockType {
+    <span class="doccomment">/// Only stream sockets are currently supported in the Virtio spec.
+    </span>Stream = <span class="number">1</span>,
 }
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
-<span class="kw">mod</span> <span class="ident">tests</span> {
-    <span class="kw">use</span> <span class="kw">super</span>::<span class="kw-2">*</span>;
+<span class="attribute">#[cfg(test)]
+</span><span class="kw">mod </span>tests {
+    <span class="kw">use super</span>::<span class="kw-2">*</span>;
 
-    <span class="attribute">#[<span class="ident">test</span>]</span>
-    <span class="kw">fn</span> <span class="ident">test_set_and_get_all_header_fields</span>() {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">packet</span> <span class="op">=</span> <span class="ident">Packet::new_control</span>(<span class="number">1023</span>, <span class="number">8888</span>, <span class="ident">VSockOp::Shutdown</span>).<span class="ident">unwrap</span>();
-        <span class="ident">packet</span>.<span class="ident">set_src_cid</span>(<span class="number">1234</span>);
-        <span class="ident">packet</span>.<span class="ident">set_dst_cid</span>(<span class="number">2</span>);
-        <span class="ident">packet</span>.<span class="ident">set_flags</span>(<span class="ident">VSockFlags::all</span>());
-        <span class="ident">packet</span>.<span class="ident">set_buf_alloc</span>(<span class="number">4096</span>);
-        <span class="ident">packet</span>.<span class="ident">set_fwd_cnt</span>(<span class="number">12</span>);
+    <span class="attribute">#[test]
+    </span><span class="kw">fn </span>test_set_and_get_all_header_fields() {
+        <span class="kw">let </span><span class="kw-2">mut </span>packet = Packet::new_control(<span class="number">1023</span>, <span class="number">8888</span>, VSockOp::Shutdown).unwrap();
+        packet.set_src_cid(<span class="number">1234</span>);
+        packet.set_dst_cid(<span class="number">2</span>);
+        packet.set_flags(VSockFlags::all());
+        packet.set_buf_alloc(<span class="number">4096</span>);
+        packet.set_fwd_cnt(<span class="number">12</span>);
 
-        <span class="macro">assert_eq!</span>(<span class="ident">packet</span>.<span class="ident">get_src_cid</span>(), <span class="number">1234</span>);
-        <span class="macro">assert_eq!</span>(<span class="ident">packet</span>.<span class="ident">get_dst_cid</span>(), <span class="number">2</span>);
-        <span class="macro">assert_eq!</span>(<span class="ident">packet</span>.<span class="ident">get_src_port</span>(), <span class="number">1023</span>);
-        <span class="macro">assert_eq!</span>(<span class="ident">packet</span>.<span class="ident">get_dst_port</span>(), <span class="number">8888</span>);
-        <span class="macro">assert_eq!</span>(<span class="ident">packet</span>.<span class="ident">get_flags</span>(), <span class="ident">VSockFlags::all</span>());
-        <span class="macro">assert_eq!</span>(<span class="ident">packet</span>.<span class="ident">get_type</span>().<span class="ident">unwrap</span>(), <span class="ident">VSockType::Stream</span>);
-        <span class="macro">assert_eq!</span>(<span class="ident">packet</span>.<span class="ident">get_op</span>().<span class="ident">unwrap</span>(), <span class="ident">VSockOp::Shutdown</span>);
-        <span class="macro">assert_eq!</span>(<span class="ident">packet</span>.<span class="ident">get_len</span>(), <span class="number">0</span>);
-        <span class="macro">assert_eq!</span>(<span class="ident">packet</span>.<span class="ident">get_buf_alloc</span>(), <span class="number">4096</span>);
-        <span class="macro">assert_eq!</span>(<span class="ident">packet</span>.<span class="ident">get_fwd_cnt</span>(), <span class="number">12</span>);
+        <span class="macro">assert_eq!</span>(packet.get_src_cid(), <span class="number">1234</span>);
+        <span class="macro">assert_eq!</span>(packet.get_dst_cid(), <span class="number">2</span>);
+        <span class="macro">assert_eq!</span>(packet.get_src_port(), <span class="number">1023</span>);
+        <span class="macro">assert_eq!</span>(packet.get_dst_port(), <span class="number">8888</span>);
+        <span class="macro">assert_eq!</span>(packet.get_flags(), VSockFlags::all());
+        <span class="macro">assert_eq!</span>(packet.get_type().unwrap(), VSockType::Stream);
+        <span class="macro">assert_eq!</span>(packet.get_op().unwrap(), VSockOp::Shutdown);
+        <span class="macro">assert_eq!</span>(packet.get_len(), <span class="number">0</span>);
+        <span class="macro">assert_eq!</span>(packet.get_buf_alloc(), <span class="number">4096</span>);
+        <span class="macro">assert_eq!</span>(packet.get_fwd_cnt(), <span class="number">12</span>);
     }
 
-    <span class="attribute">#[<span class="ident">test</span>]</span>
-    <span class="kw">fn</span> <span class="ident">test_invalid_set_payload</span>() {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">packet</span> <span class="op">=</span> <span class="ident">Packet::new_data</span>(<span class="kw-2">&amp;</span>[<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>], <span class="number">0</span>, <span class="number">0</span>).<span class="ident">unwrap</span>();
-        <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="ident">packet</span>.<span class="ident">set_payload</span>(<span class="kw-2">&amp;</span>[<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>, <span class="number">4</span>]);
-        <span class="macro">assert!</span>(<span class="ident">result</span>.<span class="ident">is_err</span>());
+    <span class="attribute">#[test]
+    </span><span class="kw">fn </span>test_invalid_set_payload() {
+        <span class="kw">let </span><span class="kw-2">mut </span>packet = Packet::new_data(<span class="kw-2">&amp;</span>[<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>], <span class="number">0</span>, <span class="number">0</span>).unwrap();
+        <span class="kw">let </span>result = packet.set_payload(<span class="kw-2">&amp;</span>[<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>, <span class="number">4</span>]);
+        <span class="macro">assert!</span>(result.is_err());
     }
 
-    <span class="attribute">#[<span class="ident">test</span>]</span>
-    <span class="kw">fn</span> <span class="ident">test_valid_payload</span>() {
-        <span class="kw">let</span> <span class="ident">packet</span> <span class="op">=</span> <span class="ident">Packet::new_data</span>(<span class="kw-2">&amp;</span>[<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>, <span class="number">4</span>], <span class="number">0</span>, <span class="number">0</span>);
-        <span class="macro">assert!</span>(<span class="ident">packet</span>.<span class="ident">is_ok</span>());
+    <span class="attribute">#[test]
+    </span><span class="kw">fn </span>test_valid_payload() {
+        <span class="kw">let </span>packet = Packet::new_data(<span class="kw-2">&amp;</span>[<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>, <span class="number">4</span>], <span class="number">0</span>, <span class="number">0</span>);
+        <span class="macro">assert!</span>(packet.is_ok());
     }
 
-    <span class="attribute">#[<span class="ident">test</span>]</span>
-    <span class="kw">fn</span> <span class="ident">test_new_from_buffer</span>() {
-        <span class="kw">let</span> <span class="ident">packet</span> <span class="op">=</span> <span class="ident">Packet::new_data</span>(<span class="kw-2">&amp;</span>[<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>, <span class="number">4</span>], <span class="number">0</span>, <span class="number">0</span>).<span class="ident">unwrap</span>();
+    <span class="attribute">#[test]
+    </span><span class="kw">fn </span>test_new_from_buffer() {
+        <span class="kw">let </span>packet = Packet::new_data(<span class="kw-2">&amp;</span>[<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>, <span class="number">4</span>], <span class="number">0</span>, <span class="number">0</span>).unwrap();
 
-        <span class="kw">let</span> <span class="ident">packet</span> <span class="op">=</span> <span class="ident">Packet::new</span>(<span class="ident">packet</span>.<span class="ident">buffer</span>).<span class="ident">unwrap</span>();
-        <span class="macro">assert_eq!</span>(<span class="ident">packet</span>.<span class="ident">get_payload</span>(), <span class="kw-2">&amp;</span>[<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>, <span class="number">4</span>]);
-        <span class="macro">assert_eq!</span>(<span class="ident">packet</span>.<span class="ident">get_len</span>(), <span class="number">4</span>);
-        <span class="macro">assert_eq!</span>(<span class="ident">packet</span>.<span class="ident">get_type</span>().<span class="ident">unwrap</span>(), <span class="ident">VSockType::Stream</span>);
-        <span class="macro">assert_eq!</span>(<span class="ident">packet</span>.<span class="ident">get_op</span>().<span class="ident">unwrap</span>(), <span class="ident">VSockOp::Rw</span>);
-        <span class="macro">assert_eq!</span>(<span class="ident">packet</span>.<span class="ident">get_flags</span>(), <span class="ident">VSockFlags::empty</span>());
+        <span class="kw">let </span>packet = Packet::new(packet.buffer).unwrap();
+        <span class="macro">assert_eq!</span>(packet.get_payload(), <span class="kw-2">&amp;</span>[<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>, <span class="number">4</span>]);
+        <span class="macro">assert_eq!</span>(packet.get_len(), <span class="number">4</span>);
+        <span class="macro">assert_eq!</span>(packet.get_type().unwrap(), VSockType::Stream);
+        <span class="macro">assert_eq!</span>(packet.get_op().unwrap(), VSockOp::Rw);
+        <span class="macro">assert_eq!</span>(packet.get_flags(), VSockFlags::empty());
     }
 
-    <span class="attribute">#[<span class="ident">test</span>]</span>
-    <span class="kw">fn</span> <span class="ident">test_invalid_op</span>() {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">packet</span> <span class="op">=</span> <span class="ident">Packet::new_data</span>(<span class="kw-2">&amp;</span>[<span class="number">1</span>], <span class="number">0</span>, <span class="number">0</span>).<span class="ident">unwrap</span>();
-        <span class="macro">assert!</span>(<span class="ident">packet</span>.<span class="ident">set_op</span>(<span class="ident">VSockOp::Rst</span>).<span class="ident">is_err</span>())
+    <span class="attribute">#[test]
+    </span><span class="kw">fn </span>test_invalid_op() {
+        <span class="kw">let </span><span class="kw-2">mut </span>packet = Packet::new_data(<span class="kw-2">&amp;</span>[<span class="number">1</span>], <span class="number">0</span>, <span class="number">0</span>).unwrap();
+        <span class="macro">assert!</span>(packet.set_op(VSockOp::Rst).is_err())
     }
 
-    <span class="attribute">#[<span class="ident">test</span>]</span>
-    <span class="kw">fn</span> <span class="ident">test_empty_payload</span>() {
-        <span class="kw">let</span> <span class="ident">packet</span> <span class="op">=</span> <span class="ident">Packet::new_data</span>(<span class="kw-2">&amp;</span>[], <span class="number">0</span>, <span class="number">0</span>);
-        <span class="macro">assert!</span>(<span class="ident">packet</span>.<span class="ident">is_err</span>())
+    <span class="attribute">#[test]
+    </span><span class="kw">fn </span>test_empty_payload() {
+        <span class="kw">let </span>packet = Packet::new_data(<span class="kw-2">&amp;</span>[], <span class="number">0</span>, <span class="number">0</span>);
+        <span class="macro">assert!</span>(packet.is_err())
     }
 }
 </code></pre></div>
-</section><section id="search" class="content hidden"></section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="virtio" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.62.0-nightly (de1bc0008 2022-04-21)" ></div>
-</body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="virtio" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (81f391930 2022-10-09)" ></div></body></html>

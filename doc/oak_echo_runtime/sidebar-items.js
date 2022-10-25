@@ -1,1 +1,1 @@
-initSidebarItems({"mod":[["schema",""]],"struct":[["RuntimeImplementation",""]]});
+window.SIDEBAR_ITEMS = {"mod":[["schema",""]],"struct":[["RuntimeImplementation",""]]};

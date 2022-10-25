@@ -1,0 +1,1324 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `linux_boot_params/src/lib.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>lib.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" href="../../normalize.css"><link rel="stylesheet" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" href="../../ayu.css" disabled><link rel="stylesheet" href="../../dark.css" disabled><link rel="stylesheet" href="../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../storage.js"></script><script defer src="../../source-script.js"></script><script defer src="../../source-files.js"></script><script defer src="../../main.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><a class="sidebar-logo" href="../../oak_linux_boot_params/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../oak_linux_boot_params/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="src-line-numbers"><span id="1">1</span>
+<span id="2">2</span>
+<span id="3">3</span>
+<span id="4">4</span>
+<span id="5">5</span>
+<span id="6">6</span>
+<span id="7">7</span>
+<span id="8">8</span>
+<span id="9">9</span>
+<span id="10">10</span>
+<span id="11">11</span>
+<span id="12">12</span>
+<span id="13">13</span>
+<span id="14">14</span>
+<span id="15">15</span>
+<span id="16">16</span>
+<span id="17">17</span>
+<span id="18">18</span>
+<span id="19">19</span>
+<span id="20">20</span>
+<span id="21">21</span>
+<span id="22">22</span>
+<span id="23">23</span>
+<span id="24">24</span>
+<span id="25">25</span>
+<span id="26">26</span>
+<span id="27">27</span>
+<span id="28">28</span>
+<span id="29">29</span>
+<span id="30">30</span>
+<span id="31">31</span>
+<span id="32">32</span>
+<span id="33">33</span>
+<span id="34">34</span>
+<span id="35">35</span>
+<span id="36">36</span>
+<span id="37">37</span>
+<span id="38">38</span>
+<span id="39">39</span>
+<span id="40">40</span>
+<span id="41">41</span>
+<span id="42">42</span>
+<span id="43">43</span>
+<span id="44">44</span>
+<span id="45">45</span>
+<span id="46">46</span>
+<span id="47">47</span>
+<span id="48">48</span>
+<span id="49">49</span>
+<span id="50">50</span>
+<span id="51">51</span>
+<span id="52">52</span>
+<span id="53">53</span>
+<span id="54">54</span>
+<span id="55">55</span>
+<span id="56">56</span>
+<span id="57">57</span>
+<span id="58">58</span>
+<span id="59">59</span>
+<span id="60">60</span>
+<span id="61">61</span>
+<span id="62">62</span>
+<span id="63">63</span>
+<span id="64">64</span>
+<span id="65">65</span>
+<span id="66">66</span>
+<span id="67">67</span>
+<span id="68">68</span>
+<span id="69">69</span>
+<span id="70">70</span>
+<span id="71">71</span>
+<span id="72">72</span>
+<span id="73">73</span>
+<span id="74">74</span>
+<span id="75">75</span>
+<span id="76">76</span>
+<span id="77">77</span>
+<span id="78">78</span>
+<span id="79">79</span>
+<span id="80">80</span>
+<span id="81">81</span>
+<span id="82">82</span>
+<span id="83">83</span>
+<span id="84">84</span>
+<span id="85">85</span>
+<span id="86">86</span>
+<span id="87">87</span>
+<span id="88">88</span>
+<span id="89">89</span>
+<span id="90">90</span>
+<span id="91">91</span>
+<span id="92">92</span>
+<span id="93">93</span>
+<span id="94">94</span>
+<span id="95">95</span>
+<span id="96">96</span>
+<span id="97">97</span>
+<span id="98">98</span>
+<span id="99">99</span>
+<span id="100">100</span>
+<span id="101">101</span>
+<span id="102">102</span>
+<span id="103">103</span>
+<span id="104">104</span>
+<span id="105">105</span>
+<span id="106">106</span>
+<span id="107">107</span>
+<span id="108">108</span>
+<span id="109">109</span>
+<span id="110">110</span>
+<span id="111">111</span>
+<span id="112">112</span>
+<span id="113">113</span>
+<span id="114">114</span>
+<span id="115">115</span>
+<span id="116">116</span>
+<span id="117">117</span>
+<span id="118">118</span>
+<span id="119">119</span>
+<span id="120">120</span>
+<span id="121">121</span>
+<span id="122">122</span>
+<span id="123">123</span>
+<span id="124">124</span>
+<span id="125">125</span>
+<span id="126">126</span>
+<span id="127">127</span>
+<span id="128">128</span>
+<span id="129">129</span>
+<span id="130">130</span>
+<span id="131">131</span>
+<span id="132">132</span>
+<span id="133">133</span>
+<span id="134">134</span>
+<span id="135">135</span>
+<span id="136">136</span>
+<span id="137">137</span>
+<span id="138">138</span>
+<span id="139">139</span>
+<span id="140">140</span>
+<span id="141">141</span>
+<span id="142">142</span>
+<span id="143">143</span>
+<span id="144">144</span>
+<span id="145">145</span>
+<span id="146">146</span>
+<span id="147">147</span>
+<span id="148">148</span>
+<span id="149">149</span>
+<span id="150">150</span>
+<span id="151">151</span>
+<span id="152">152</span>
+<span id="153">153</span>
+<span id="154">154</span>
+<span id="155">155</span>
+<span id="156">156</span>
+<span id="157">157</span>
+<span id="158">158</span>
+<span id="159">159</span>
+<span id="160">160</span>
+<span id="161">161</span>
+<span id="162">162</span>
+<span id="163">163</span>
+<span id="164">164</span>
+<span id="165">165</span>
+<span id="166">166</span>
+<span id="167">167</span>
+<span id="168">168</span>
+<span id="169">169</span>
+<span id="170">170</span>
+<span id="171">171</span>
+<span id="172">172</span>
+<span id="173">173</span>
+<span id="174">174</span>
+<span id="175">175</span>
+<span id="176">176</span>
+<span id="177">177</span>
+<span id="178">178</span>
+<span id="179">179</span>
+<span id="180">180</span>
+<span id="181">181</span>
+<span id="182">182</span>
+<span id="183">183</span>
+<span id="184">184</span>
+<span id="185">185</span>
+<span id="186">186</span>
+<span id="187">187</span>
+<span id="188">188</span>
+<span id="189">189</span>
+<span id="190">190</span>
+<span id="191">191</span>
+<span id="192">192</span>
+<span id="193">193</span>
+<span id="194">194</span>
+<span id="195">195</span>
+<span id="196">196</span>
+<span id="197">197</span>
+<span id="198">198</span>
+<span id="199">199</span>
+<span id="200">200</span>
+<span id="201">201</span>
+<span id="202">202</span>
+<span id="203">203</span>
+<span id="204">204</span>
+<span id="205">205</span>
+<span id="206">206</span>
+<span id="207">207</span>
+<span id="208">208</span>
+<span id="209">209</span>
+<span id="210">210</span>
+<span id="211">211</span>
+<span id="212">212</span>
+<span id="213">213</span>
+<span id="214">214</span>
+<span id="215">215</span>
+<span id="216">216</span>
+<span id="217">217</span>
+<span id="218">218</span>
+<span id="219">219</span>
+<span id="220">220</span>
+<span id="221">221</span>
+<span id="222">222</span>
+<span id="223">223</span>
+<span id="224">224</span>
+<span id="225">225</span>
+<span id="226">226</span>
+<span id="227">227</span>
+<span id="228">228</span>
+<span id="229">229</span>
+<span id="230">230</span>
+<span id="231">231</span>
+<span id="232">232</span>
+<span id="233">233</span>
+<span id="234">234</span>
+<span id="235">235</span>
+<span id="236">236</span>
+<span id="237">237</span>
+<span id="238">238</span>
+<span id="239">239</span>
+<span id="240">240</span>
+<span id="241">241</span>
+<span id="242">242</span>
+<span id="243">243</span>
+<span id="244">244</span>
+<span id="245">245</span>
+<span id="246">246</span>
+<span id="247">247</span>
+<span id="248">248</span>
+<span id="249">249</span>
+<span id="250">250</span>
+<span id="251">251</span>
+<span id="252">252</span>
+<span id="253">253</span>
+<span id="254">254</span>
+<span id="255">255</span>
+<span id="256">256</span>
+<span id="257">257</span>
+<span id="258">258</span>
+<span id="259">259</span>
+<span id="260">260</span>
+<span id="261">261</span>
+<span id="262">262</span>
+<span id="263">263</span>
+<span id="264">264</span>
+<span id="265">265</span>
+<span id="266">266</span>
+<span id="267">267</span>
+<span id="268">268</span>
+<span id="269">269</span>
+<span id="270">270</span>
+<span id="271">271</span>
+<span id="272">272</span>
+<span id="273">273</span>
+<span id="274">274</span>
+<span id="275">275</span>
+<span id="276">276</span>
+<span id="277">277</span>
+<span id="278">278</span>
+<span id="279">279</span>
+<span id="280">280</span>
+<span id="281">281</span>
+<span id="282">282</span>
+<span id="283">283</span>
+<span id="284">284</span>
+<span id="285">285</span>
+<span id="286">286</span>
+<span id="287">287</span>
+<span id="288">288</span>
+<span id="289">289</span>
+<span id="290">290</span>
+<span id="291">291</span>
+<span id="292">292</span>
+<span id="293">293</span>
+<span id="294">294</span>
+<span id="295">295</span>
+<span id="296">296</span>
+<span id="297">297</span>
+<span id="298">298</span>
+<span id="299">299</span>
+<span id="300">300</span>
+<span id="301">301</span>
+<span id="302">302</span>
+<span id="303">303</span>
+<span id="304">304</span>
+<span id="305">305</span>
+<span id="306">306</span>
+<span id="307">307</span>
+<span id="308">308</span>
+<span id="309">309</span>
+<span id="310">310</span>
+<span id="311">311</span>
+<span id="312">312</span>
+<span id="313">313</span>
+<span id="314">314</span>
+<span id="315">315</span>
+<span id="316">316</span>
+<span id="317">317</span>
+<span id="318">318</span>
+<span id="319">319</span>
+<span id="320">320</span>
+<span id="321">321</span>
+<span id="322">322</span>
+<span id="323">323</span>
+<span id="324">324</span>
+<span id="325">325</span>
+<span id="326">326</span>
+<span id="327">327</span>
+<span id="328">328</span>
+<span id="329">329</span>
+<span id="330">330</span>
+<span id="331">331</span>
+<span id="332">332</span>
+<span id="333">333</span>
+<span id="334">334</span>
+<span id="335">335</span>
+<span id="336">336</span>
+<span id="337">337</span>
+<span id="338">338</span>
+<span id="339">339</span>
+<span id="340">340</span>
+<span id="341">341</span>
+<span id="342">342</span>
+<span id="343">343</span>
+<span id="344">344</span>
+<span id="345">345</span>
+<span id="346">346</span>
+<span id="347">347</span>
+<span id="348">348</span>
+<span id="349">349</span>
+<span id="350">350</span>
+<span id="351">351</span>
+<span id="352">352</span>
+<span id="353">353</span>
+<span id="354">354</span>
+<span id="355">355</span>
+<span id="356">356</span>
+<span id="357">357</span>
+<span id="358">358</span>
+<span id="359">359</span>
+<span id="360">360</span>
+<span id="361">361</span>
+<span id="362">362</span>
+<span id="363">363</span>
+<span id="364">364</span>
+<span id="365">365</span>
+<span id="366">366</span>
+<span id="367">367</span>
+<span id="368">368</span>
+<span id="369">369</span>
+<span id="370">370</span>
+<span id="371">371</span>
+<span id="372">372</span>
+<span id="373">373</span>
+<span id="374">374</span>
+<span id="375">375</span>
+<span id="376">376</span>
+<span id="377">377</span>
+<span id="378">378</span>
+<span id="379">379</span>
+<span id="380">380</span>
+<span id="381">381</span>
+<span id="382">382</span>
+<span id="383">383</span>
+<span id="384">384</span>
+<span id="385">385</span>
+<span id="386">386</span>
+<span id="387">387</span>
+<span id="388">388</span>
+<span id="389">389</span>
+<span id="390">390</span>
+<span id="391">391</span>
+<span id="392">392</span>
+<span id="393">393</span>
+<span id="394">394</span>
+<span id="395">395</span>
+<span id="396">396</span>
+<span id="397">397</span>
+<span id="398">398</span>
+<span id="399">399</span>
+<span id="400">400</span>
+<span id="401">401</span>
+<span id="402">402</span>
+<span id="403">403</span>
+<span id="404">404</span>
+<span id="405">405</span>
+<span id="406">406</span>
+<span id="407">407</span>
+<span id="408">408</span>
+<span id="409">409</span>
+<span id="410">410</span>
+<span id="411">411</span>
+<span id="412">412</span>
+<span id="413">413</span>
+<span id="414">414</span>
+<span id="415">415</span>
+<span id="416">416</span>
+<span id="417">417</span>
+<span id="418">418</span>
+<span id="419">419</span>
+<span id="420">420</span>
+<span id="421">421</span>
+<span id="422">422</span>
+<span id="423">423</span>
+<span id="424">424</span>
+<span id="425">425</span>
+<span id="426">426</span>
+<span id="427">427</span>
+<span id="428">428</span>
+<span id="429">429</span>
+<span id="430">430</span>
+<span id="431">431</span>
+<span id="432">432</span>
+<span id="433">433</span>
+<span id="434">434</span>
+<span id="435">435</span>
+<span id="436">436</span>
+<span id="437">437</span>
+<span id="438">438</span>
+<span id="439">439</span>
+<span id="440">440</span>
+<span id="441">441</span>
+<span id="442">442</span>
+<span id="443">443</span>
+<span id="444">444</span>
+<span id="445">445</span>
+<span id="446">446</span>
+<span id="447">447</span>
+<span id="448">448</span>
+<span id="449">449</span>
+<span id="450">450</span>
+<span id="451">451</span>
+<span id="452">452</span>
+<span id="453">453</span>
+<span id="454">454</span>
+<span id="455">455</span>
+<span id="456">456</span>
+<span id="457">457</span>
+<span id="458">458</span>
+<span id="459">459</span>
+<span id="460">460</span>
+<span id="461">461</span>
+<span id="462">462</span>
+<span id="463">463</span>
+<span id="464">464</span>
+<span id="465">465</span>
+<span id="466">466</span>
+<span id="467">467</span>
+<span id="468">468</span>
+<span id="469">469</span>
+<span id="470">470</span>
+<span id="471">471</span>
+<span id="472">472</span>
+<span id="473">473</span>
+<span id="474">474</span>
+<span id="475">475</span>
+<span id="476">476</span>
+<span id="477">477</span>
+<span id="478">478</span>
+<span id="479">479</span>
+<span id="480">480</span>
+<span id="481">481</span>
+<span id="482">482</span>
+<span id="483">483</span>
+<span id="484">484</span>
+<span id="485">485</span>
+<span id="486">486</span>
+<span id="487">487</span>
+<span id="488">488</span>
+<span id="489">489</span>
+<span id="490">490</span>
+<span id="491">491</span>
+<span id="492">492</span>
+<span id="493">493</span>
+<span id="494">494</span>
+<span id="495">495</span>
+<span id="496">496</span>
+<span id="497">497</span>
+<span id="498">498</span>
+<span id="499">499</span>
+<span id="500">500</span>
+<span id="501">501</span>
+<span id="502">502</span>
+<span id="503">503</span>
+<span id="504">504</span>
+<span id="505">505</span>
+<span id="506">506</span>
+<span id="507">507</span>
+<span id="508">508</span>
+<span id="509">509</span>
+<span id="510">510</span>
+<span id="511">511</span>
+<span id="512">512</span>
+<span id="513">513</span>
+<span id="514">514</span>
+<span id="515">515</span>
+<span id="516">516</span>
+<span id="517">517</span>
+<span id="518">518</span>
+<span id="519">519</span>
+<span id="520">520</span>
+<span id="521">521</span>
+<span id="522">522</span>
+<span id="523">523</span>
+<span id="524">524</span>
+<span id="525">525</span>
+<span id="526">526</span>
+<span id="527">527</span>
+<span id="528">528</span>
+<span id="529">529</span>
+<span id="530">530</span>
+<span id="531">531</span>
+<span id="532">532</span>
+<span id="533">533</span>
+<span id="534">534</span>
+<span id="535">535</span>
+<span id="536">536</span>
+<span id="537">537</span>
+<span id="538">538</span>
+<span id="539">539</span>
+<span id="540">540</span>
+<span id="541">541</span>
+<span id="542">542</span>
+<span id="543">543</span>
+<span id="544">544</span>
+<span id="545">545</span>
+<span id="546">546</span>
+<span id="547">547</span>
+<span id="548">548</span>
+<span id="549">549</span>
+<span id="550">550</span>
+<span id="551">551</span>
+<span id="552">552</span>
+<span id="553">553</span>
+<span id="554">554</span>
+<span id="555">555</span>
+<span id="556">556</span>
+<span id="557">557</span>
+<span id="558">558</span>
+<span id="559">559</span>
+<span id="560">560</span>
+<span id="561">561</span>
+<span id="562">562</span>
+<span id="563">563</span>
+<span id="564">564</span>
+<span id="565">565</span>
+<span id="566">566</span>
+<span id="567">567</span>
+<span id="568">568</span>
+<span id="569">569</span>
+<span id="570">570</span>
+<span id="571">571</span>
+<span id="572">572</span>
+<span id="573">573</span>
+<span id="574">574</span>
+<span id="575">575</span>
+<span id="576">576</span>
+<span id="577">577</span>
+<span id="578">578</span>
+<span id="579">579</span>
+<span id="580">580</span>
+<span id="581">581</span>
+<span id="582">582</span>
+<span id="583">583</span>
+<span id="584">584</span>
+<span id="585">585</span>
+<span id="586">586</span>
+<span id="587">587</span>
+<span id="588">588</span>
+<span id="589">589</span>
+<span id="590">590</span>
+<span id="591">591</span>
+<span id="592">592</span>
+<span id="593">593</span>
+<span id="594">594</span>
+<span id="595">595</span>
+<span id="596">596</span>
+<span id="597">597</span>
+<span id="598">598</span>
+<span id="599">599</span>
+<span id="600">600</span>
+<span id="601">601</span>
+<span id="602">602</span>
+<span id="603">603</span>
+<span id="604">604</span>
+<span id="605">605</span>
+<span id="606">606</span>
+<span id="607">607</span>
+<span id="608">608</span>
+<span id="609">609</span>
+<span id="610">610</span>
+<span id="611">611</span>
+<span id="612">612</span>
+<span id="613">613</span>
+<span id="614">614</span>
+<span id="615">615</span>
+<span id="616">616</span>
+<span id="617">617</span>
+<span id="618">618</span>
+<span id="619">619</span>
+<span id="620">620</span>
+<span id="621">621</span>
+<span id="622">622</span>
+<span id="623">623</span>
+<span id="624">624</span>
+<span id="625">625</span>
+<span id="626">626</span>
+<span id="627">627</span>
+<span id="628">628</span>
+<span id="629">629</span>
+<span id="630">630</span>
+<span id="631">631</span>
+<span id="632">632</span>
+<span id="633">633</span>
+<span id="634">634</span>
+<span id="635">635</span>
+<span id="636">636</span>
+<span id="637">637</span>
+<span id="638">638</span>
+<span id="639">639</span>
+<span id="640">640</span>
+<span id="641">641</span>
+<span id="642">642</span>
+<span id="643">643</span>
+<span id="644">644</span>
+<span id="645">645</span>
+<span id="646">646</span>
+<span id="647">647</span>
+<span id="648">648</span>
+<span id="649">649</span>
+<span id="650">650</span>
+<span id="651">651</span>
+<span id="652">652</span>
+<span id="653">653</span>
+<span id="654">654</span>
+<span id="655">655</span>
+<span id="656">656</span>
+<span id="657">657</span>
+<span id="658">658</span>
+<span id="659">659</span>
+<span id="660">660</span>
+<span id="661">661</span>
+</pre><pre class="rust"><code><span class="comment">//
+// Copyright 2022 The Project Oak Authors
+//
+// Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
+</span><span class="attribute">#![no_std]
+
+</span><span class="kw">use </span>bitflags::bitflags;
+<span class="kw">use </span>core::ffi::{c_char, CStr};
+<span class="kw">use </span>strum::{Display, FromRepr};
+
+<span class="attribute">#[derive(Copy, Clone, Debug, PartialEq, Eq, Display, FromRepr)]
+#[repr(u32)]
+</span><span class="doccomment">/// E820 address range types according to Chapter 15 of the ACPI Specification, Version 6.4.
+/// See &lt;https://uefi.org/specs/ACPI/6.4/15_System_Address_Map_Interfaces/Sys_Address_Map_Interfaces.html&gt; for more details.
+</span><span class="kw">pub enum </span>E820EntryType {
+    <span class="doccomment">/// Available RAM usable by the operating system.
+    </span>RAM = <span class="number">1</span>,
+    <span class="doccomment">/// In use or reserved by the system.
+    </span>RESERVED = <span class="number">2</span>,
+    <span class="doccomment">/// ACPI Reclaim Memory. Available after the OS reads the ACPI tables.
+    </span>ACPI = <span class="number">3</span>,
+    <span class="doccomment">/// ACPI NVS memory; in use or reserved by the system.
+    </span>NVS = <span class="number">4</span>,
+    <span class="doccomment">/// Memory in which errors have been detected.
+    </span>UNUSABLE = <span class="number">5</span>,
+    <span class="doccomment">/// Memory that is not enabled.
+    </span>DISABLED = <span class="number">6</span>,
+    <span class="doccomment">/// Persistent memory: must be handled distinct from conventional volatile memory.
+    </span>PMEM = <span class="number">7</span>,
+}
+
+<span class="macro">bitflags! </span>{
+    <span class="doccomment">/// Boot protocol option flags.
+    </span><span class="kw">pub struct </span>LoadFlags: u8 {
+        <span class="doccomment">/// - If `0`, the protected-mode code is loaded at `0x10000`.
+        /// - If `1`, the protected-mode code is loaded at `0x100000`.
+        </span><span class="kw">const </span>LOADED_HIGH = <span class="number">1 </span>&lt;&lt; <span class="number">0</span>;
+        <span class="doccomment">/// Used internally by the compressed kernel to communicate KASLR status to kernel proper.
+        ///
+        /// - If `1`, KASLR enabled.
+        /// - If `0`, KASLR disabled.
+        </span><span class="kw">const </span>KASLR_FLAG = <span class="number">1 </span>&lt;&lt; <span class="number">1</span>;
+        <span class="doccomment">/// Requests the kernel to not write early messages that require accessing the display hardware directly.
+        ///
+        ///  - If 0, print early messages.
+        ///  - If 1, suppress early messages.
+        </span><span class="kw">const </span>QUIET_FLAG = <span class="number">1 </span>&lt;&lt; <span class="number">5</span>;
+        <span class="attribute">#[deprecated]
+        </span><span class="kw">const </span>KEEP_SEGMENTS = <span class="number">1 </span>&lt;&lt; <span class="number">6</span>;
+        <span class="doccomment">/// Indicates that the value entered in [`SetupHeader::heap_end_ptr`] is valid.
+        ///
+        /// If this field is clear, some setup code functionality will be disabled.
+        </span><span class="kw">const </span>CAN_USE_HEAP = <span class="number">1 </span>&lt;&lt; <span class="number">7</span>;
+    }
+
+    <span class="doccomment">/// Extended Boot protocol option flags.
+    </span><span class="kw">pub struct </span>XLoadFlags: u16 {
+        <span class="doccomment">/// This kernel has the legacy 64-bit entry point at `0x200`.
+        </span><span class="kw">const </span>XLF_KERNEL_64 = <span class="number">1 </span>&lt;&lt; <span class="number">0</span>;
+        <span class="doccomment">/// The kernel/boot_params/cmdline/ramdisk can be above 4G.
+        </span><span class="kw">const </span>XLF_CAN_BE_LOADED_ABOVE_4G = <span class="number">1 </span>&lt;&lt; <span class="number">1</span>;
+        <span class="doccomment">/// The kernel supports the 32-bit EFI handoff entry point given at [`SetupHeader::handover_offset`].
+        </span><span class="kw">const </span>XLF_EFI_HANDOVER_32 = <span class="number">1 </span>&lt;&lt; <span class="number">2</span>;
+        <span class="doccomment">/// The kernel supports the 64-bit EFI handoff entry point given at [`SetupHeader::handover_offset`] + `0x200`.
+        </span><span class="kw">const </span>XLF_EFI_HANDOVER_64 = <span class="number">1 </span>&lt;&lt; <span class="number">3</span>;
+        <span class="doccomment">/// The kernel supports kexec EFI boot with EFI runtime support.
+        </span><span class="kw">const </span>XLF_EFI_KEXEC = <span class="number">1 </span>&lt;&lt; <span class="number">4</span>;
+    }
+}
+
+<span class="attribute">#[derive(Copy, Clone, Debug, PartialEq, Eq, Display, FromRepr)]
+#[repr(u32)]
+</span><span class="kw">pub enum </span>SetupDataType {
+    <span class="prelude-val">None </span>= <span class="number">0</span>,
+    E820Ext = <span class="number">1</span>,
+    DTB = <span class="number">2</span>,
+    PCI = <span class="number">3</span>,
+    EFI = <span class="number">4</span>,
+    AppleProperties = <span class="number">5</span>,
+    Jailhouse = <span class="number">6</span>,
+    CCBlob = <span class="number">7</span>,
+    IMA = <span class="number">8</span>,
+    RngSeed = <span class="number">9</span>,
+}
+
+<span class="attribute">#[repr(C, packed)]
+</span><span class="kw">pub struct </span>SetupData {
+    <span class="kw">pub </span>next: <span class="kw-2">*const </span>SetupData,
+    <span class="kw">pub </span>type_: SetupDataType,
+    <span class="kw">pub </span>len: u32,
+    <span class="comment">// We omit the data field here, as it can&#39;t be represented in safe Rust.
+</span>}
+
+<span class="attribute">#[repr(C, packed)]
+</span><span class="kw">pub struct </span>CCSetupData {
+    <span class="kw">pub </span>header: SetupData,
+    <span class="kw">pub </span>cc_blob_address: u32,
+}
+
+<span class="doccomment">/// Real-mode Kernel Header.
+///
+/// For each field, some are information from the kernel to the bootloader (&quot;read&quot;), some are
+/// expected to be filled out by the bootloader (&quot;write&quot;), and some are expected to be read and
+/// modified by the bootloader (&quot;modify&quot;).
+///
+/// All general purpose boot loaders should write the fields marked (obligatory). Boot loaders who
+/// want to load the kernel at a nonstandard address should fill in the fields marked (reloc); other
+/// boot loaders can ignore those fields.
+///
+/// The byte order of all fields is littleendian (this is x86, after all.)
+///
+/// For more details see the Linux kernel docs:
+/// &lt;https://www.kernel.org/doc/html/latest/x86/boot.html#the-real-mode-kernel-header&gt;
+</span><span class="attribute">#[repr(C, packed)]
+#[derive(Debug, Copy, Clone)]
+</span><span class="kw">pub struct </span>SetupHeader {
+    <span class="doccomment">/// The size of the setup code in 512-byte sectors.
+    ///
+    /// Type: read.
+    ///
+    /// If this field is 0, the real value is 4. The real-mode code consists of the boot sector
+    /// (always one 512-byte sector) plus the setup code.
+    </span><span class="kw">pub </span>setup_sects: u8,
+    <span class="doccomment">/// If this field is nonzero, the root defaults to readonly.
+    ///
+    /// Type: read.
+    ///
+    /// The use of this field is deprecated; use the “ro” or “rw” options on the command line
+    /// instead.
+    </span><span class="attribute">#[deprecated]
+    </span><span class="kw">pub </span>root_flags: u16,
+    <span class="doccomment">/// The size of the protected-mode code in units of 16-byte paragraphs.
+    ///
+    /// Type: read.
+    ///
+    /// For protocol versions older than 2.04 this field is only two bytes wide, and therefore
+    /// cannot be trusted for the size of a kernel if the LOAD_HIGH flag is set.
+    </span><span class="kw">pub </span>syssize: u32,
+    <span class="doccomment">/// DO NOT USE - for bootsect.S use only
+    ///
+    /// Type: kernel internal.
+    ///
+    /// This field is obsolete.
+    </span><span class="attribute">#[deprecated]
+    </span><span class="kw">pub </span>ram_size: u16,
+    <span class="doccomment">/// Video mode control
+    ///
+    /// Type: modify (obligatory)
+    ///
+    /// This value of `vga=&lt;mode&gt;` command line option should be entered into this field, as it is
+    /// used by the kernel before the command line is parsed.
+    </span><span class="kw">pub </span>vid_mode: u16,
+    <span class="doccomment">/// Default root device number
+    ///
+    /// Type: modify (optional)
+    ///
+    /// The default root device device number. The use of this field is deprecated, use the `root=`
+    /// option on the command line instead.
+    </span><span class="attribute">#[deprecated]
+    </span><span class="kw">pub </span>root_dev: u16,
+    <span class="doccomment">/// 0xAA55 magic number
+    ///
+    /// Type: read
+    ///
+    /// This is the closest thing old Linux kernels have to a magic number.
+    </span><span class="kw">pub </span>boot_flag: u16,
+    <span class="doccomment">/// Jump instruction
+    ///
+    /// Type: read
+    ///
+    /// Contains an x86 jump instruction, `0xEB` followed by a signed offset relative to byte
+    /// `0x202`. This can be used to determine the size of the header.
+    </span><span class="kw">pub </span>jump: u16,
+    <span class="doccomment">/// Magic signature &quot;HdrS&quot;
+    ///
+    /// Type: read
+    ///
+    /// Contains the magic number “HdrS” (`0x53726448`).
+    </span><span class="kw">pub </span>header: u32,
+    <span class="doccomment">/// Boot protocol version supported
+    ///
+    /// Type: read
+    ///
+    /// Contains the boot protocol version, in `(major &lt;&lt; 8)+minor` format, e.g. `0x0204` for
+    /// version 2.04, and `0x0a11` for a hypothetical version 10.17.
+    </span><span class="kw">pub </span>version: u16,
+    <span class="doccomment">/// Boot loader hook
+    ///
+    /// Type: modify (optional)
+    ///
+    /// See &lt;https://www.kernel.org/doc/html/latest/x86/boot.html#advanced-boot-loader-hooks&gt;
+    </span><span class="kw">pub </span>realmode_swtch: u32,
+    <span class="doccomment">/// The load-low segment (`0x1000`) (obsolete)
+    ///
+    /// Type: read
+    ///
+    /// The load low segment (`0x1000`). Obsolete.
+    </span><span class="attribute">#[deprecated]
+    </span><span class="kw">pub </span>start_sys_seg: u16,
+    <span class="doccomment">/// Pointer to kernel version string
+    ///
+    /// Type: read
+    ///
+    /// If set to a nonzero value, contains a pointer to a NUL-terminated human-readable kernel
+    /// version number string, less `0x200`. This can be used to display the kernel version to the
+    /// user. This value should be less than (`0x200*setup_sects`).
+    ///
+    /// For example, if this value is set to `0x1c00`, the kernel version number string can be
+    /// found at offset `0x1e00` in the kernel file.
+    </span><span class="kw">pub </span>kernel_version: u16,
+    <span class="doccomment">/// Boot loader identifier
+    ///
+    /// Type: write (obligatory)
+    ///
+    /// If your boot loader has an assigned id, enter `0xTV` here, where `T` is an identifier for
+    /// the boot loader and `V` is a version number. Otherwise, enter `0xFF` here.
+    ///
+    /// For boot loader IDs above `T` = `0xD`, write `T` = `0xE` to this field and write the
+    /// extended ID minus `0x10` to the [`SetupHeader::ext_loader_type`] field. Similarly, the
+    /// [`SetupHeader::ext_loader_ver`] field can be used to provide more than four bits for the
+    /// bootloader version.
+    </span><span class="kw">pub </span>type_of_loader: u8,
+    <span class="doccomment">/// Boot protocol option flags
+    ///
+    /// Type: modify (obligatory)
+    </span><span class="kw">pub </span>loadflags: LoadFlags,
+    <span class="doccomment">/// Move to high memory size (used with hooks)
+    ///
+    /// Type: modify (obligatory)
+    ///
+    /// When using protocol 2.00 or 2.01, if the real mode kernel is not loaded at `0x90000`, it
+    /// gets moved there later in the loading sequence. Fill in this field if you want
+    /// additional data (such as the kernel command line) moved in addition to the real-mode
+    /// kernel itself.
+    ///
+    /// The unit is bytes starting with the beginning of the boot sector.
+    ///
+    /// This field is can be ignored when the protocol is 2.02 or higher, or if the real-mode code
+    /// is loaded at `0x90000`.
+    </span><span class="kw">pub </span>setup_move_size: u16,
+    <span class="doccomment">/// Boot loader hook
+    ///
+    /// Type: optional, reloc
+    ///
+    /// The address to jump to in protected mode. This defaults to the load address of the kernel,
+    /// and can be used by the boot loader to determine the proper load address.
+    ///
+    /// This field can be modified for two purposes:
+    /// - as a boot loader hook
+    /// - if a bootloader which does not install a hook loads a relocatable kernel at a nonstandard
+    ///   address it will have to modify this field to point to the load address.
+    </span><span class="kw">pub </span>code32_start: u32,
+    <span class="doccomment">/// initrd load address (set by boot loader)
+    ///
+    /// Type: write (obligatory)
+    ///
+    /// The 32-bit linear address of the initial ramdisk or ramfs. Leave at zero if there is no
+    /// initial ramdisk/ramfs.
+    </span><span class="kw">pub </span>ramdisk_image: u32,
+    <span class="doccomment">/// initrd size (set by boot loader)
+    ///
+    /// Type: write (obligatory)
+    ///
+    /// Size of the initial ramdisk or ramfs. Leave at zero if there is no initial ramdisk/ramfs.
+    </span><span class="kw">pub </span>ramdisk_size: u32,
+    <span class="doccomment">/// DO NOT USE - for bootsect.S use only
+    ///
+    /// Type: obsolete
+    </span><span class="attribute">#[deprecated]
+    </span><span class="kw">pub </span>bootsect_kludge: u32,
+    <span class="doccomment">/// Free memory after setup end
+    ///
+    /// Type: write (optional)
+    ///
+    /// Set this field to the offset (from the beginning of the real-mode code) of the end of the
+    /// setup stack/heap, minus `0x0200`.
+    </span><span class="kw">pub </span>heap_end_ptr: u16,
+    <span class="doccomment">/// Extended boot loader version
+    ///
+    /// Type: write (optional)
+    ///
+    /// This field is used as an extension of the version number in the type_of_loader field. The
+    /// total version number is considered to be `(type_of_loader &amp; 0x0f) + (ext_loader_ver &lt;&lt; 4)`.
+    ///
+    /// The use of this field is boot loader specific. If not written, it is zero.
+    ///
+    /// Kernels prior to 2.6.31 did not recognize this field, but it is safe to write for protocol
+    /// version 2.02 or higher.
+    </span><span class="kw">pub </span>ext_loader_ver: u8,
+    <span class="doccomment">/// Extended boot laoder ID
+    ///
+    /// Type: write (obligatory if `(type_of_loader &amp; 0xf0) == 0xe0`)
+    ///
+    /// This field is used as an extension of the type number in type_of_loader field. If the type
+    /// in type_of_loader is `0xE`, then the actual type is `(ext_loader_type + 0x10)`.
+    ///
+    /// This field is ignored if the type in type_of_loader is not 0xE.
+    ///
+    /// Kernels prior to 2.6.31 did not recognize this field, but it is safe to write for protocol
+    /// version 2.02 or higher.
+    </span><span class="kw">pub </span>ext_loader_type: u8,
+    <span class="doccomment">/// 32-bit pointer to the kernel command line
+    ///
+    /// Type: write (obligatory)
+    ///
+    /// Set this field to the linear address of the kernel command line. The kernel command line
+    /// can be located anywhere between the end of the setup heap and `0xA0000`; it does not have
+    /// to be located in the same 64K segment as the real-mode code itself.
+    ///
+    /// Fill in this field even if your boot loader does not support a command line, in which case
+    /// you can point this to an empty string (or better yet, to the string “auto”.) If this field
+    /// is left at zero, the kernel will assume that your boot loader does not support the 2.02+
+    /// protocol.
+    </span><span class="kw">pub </span>cmd_line_ptr: u32,
+    <span class="doccomment">/// Highest legal initrd address
+    ///
+    /// Type: read
+    ///
+    /// The maximum address that may be occupied by the initial ramdisk/ramfs contents. For boot
+    /// protocols 2.02 or earlier, this field is not present, and the maximum address is
+    /// `0x37FFFFFF`. (This address is defined as the address of the highest safe byte, so if your
+    /// ramdisk is exactly 131072 bytes long and this field is `0x37FFFFFF`, you can start your
+    /// ramdisk at `0x37FE0000`.)
+    </span><span class="kw">pub </span>initrd_addr_max: u32,
+    <span class="doccomment">/// Physical addr alignment required for kernel
+    ///
+    /// Type: read/modify (reloc)
+    /// Alignment unit required by the kernel (if relocatable_kernel is true.) A relocatable kernel
+    /// that is loaded at an alignment incompatible with the value in this field will be realigned
+    /// during kernel initialization.
+    ///
+    /// Starting with protocol version 2.10, this reflects the kernel alignment preferred for
+    /// optimal performance; it is possible for the loader to modify this field to permit a lesser
+    /// alignment. See the [`SetupHeader::min_alignment`] and [`SetupHeader::pref_address`] fields.
+    </span><span class="kw">pub </span>kernel_alignment: u32,
+    <span class="doccomment">/// Whether kernel is relocatable or not
+    ///
+    /// Type: read (reloc)
+    ///
+    /// If this field is nonzero, the protected-mode part of the kernel can be loaded at any
+    /// address that satisfies the kernel_alignment field. After loading, the boot loader must set
+    /// the code32_start field to point to the loaded code, or to a boot loader hook.
+    </span><span class="kw">pub </span>relocatable_kernel: u8,
+    <span class="doccomment">/// Minimum alignment, as a power of two
+    ///
+    /// Type: read (reloc)
+    ///
+    /// This field, if nonzero, indicates as a power of two the minimum alignment required, as
+    /// opposed to preferred, by the kernel to boot. If a boot loader makes use of this field, it
+    /// should update the kernel_alignment field with the alignment unit desired; typically:
+    ///
+    /// ``` kernel_alignment = 1 &lt;&lt; min_alignment ```
+    /// 
+    /// There may be a considerable performance cost with an excessively misaligned kernel.
+    /// Therefore, a loader should typically try each power-of-two alignment from kernel_alignment
+    /// down to this alignment.
+    </span><span class="kw">pub </span>min_alignment: u8,
+    <span class="doccomment">/// Boot protocol option flags
+    ///
+    /// Type: read
+    </span><span class="kw">pub </span>xloadflags: XLoadFlags,
+    <span class="doccomment">/// Maximum size of the kernel command line
+    ///
+    /// Type: read
+    ///
+    /// The maximum size of the command line without the terminating zero. This means that the
+    /// command line can contain at most `cmdline_size` characters. With protocol version 2.05 and
+    /// earlier, the maximum size was 255.
+    </span><span class="kw">pub </span>cmdline_size: u32,
+    <span class="doccomment">/// Hardware subarchitecture
+    ///
+    /// Type: write, optional
+    ///
+    /// In a paravirtualized environment the hardware low level architectural pieces such as
+    /// interrupt handling, page table handling, and accessing process control registers needs to
+    /// be done differently.
+    ///
+    /// This field allows the bootloader to inform the kernel we are in one one of those
+    /// environments.
+    </span><span class="kw">pub </span>hardware_subarch: u32,
+    <span class="doccomment">/// Subarchitecture-specific data
+    ///
+    /// Type: write (subarch-dependent)
+    ///
+    /// A pointer to data that is specific to hardware subarch This field is currently unused for
+    /// the default x86/PC environment, do not modify.
+    </span><span class="kw">pub </span>hardware_subarch_data: u64,
+    <span class="doccomment">/// Offset of kernel payload
+    ///
+    /// Type: read
+    ///
+    /// If non-zero then this field contains the offset from the beginning of the protected-mode
+    /// code to the payload.
+    ///
+    /// The payload may be compressed. The format of both the compressed and uncompressed data
+    /// should be determined using the standard magic numbers. The currently supported compression
+    /// formats are gzip (magic numbers `1F 8B` or `1F 9E`), bzip2 (magic number `42 5A`), LZMA
+    /// (magic number `5D 00`), XZ (magic number `FD 37`), LZ4 (magic number `02 21`) and ZSTD
+    /// (magic number `28 B5`). The uncompressed payload is currently always ELF (magic number
+    /// `7F 45 4C 46`).
+    </span><span class="kw">pub </span>payload_offset: u32,
+    <span class="doccomment">/// Length of kernel payload
+    ///
+    /// Type: read
+    </span><span class="kw">pub </span>payload_length: u32,
+    <span class="doccomment">/// 64-bit physical pointer to linked list of struct setup_data
+    ///
+    /// Type: write (special)
+    ///
+    /// The 64-bit physical pointer to NULL terminated single linked list of struct setup_data.
+    /// This is used to define a more extensible boot parameters passing mechanism.
+    </span><span class="kw">pub </span>setup_data: <span class="kw-2">*const </span>SetupData,
+    <span class="doccomment">/// Preferred loading address
+    ///
+    /// Type: read (reloc)
+    ///
+    /// This field, if nonzero, represents a preferred load address for the kernel. A relocating
+    /// bootloader should attempt to load at this address if possible.
+    ///
+    /// A non-relocatable kernel will unconditionally move itself and to run at this address.
+    </span><span class="kw">pub </span>pref_address: u64,
+    <span class="doccomment">/// Linear memory required during initialization
+    ///
+    /// Type: read
+    ///
+    /// This field indicates the amount of linear contiguous memory starting at the kernel runtime
+    /// start address that the kernel needs before it is capable of examining its memory map. This
+    /// is not the same thing as the total amount of memory the kernel needs to boot, but it can be
+    /// used by a relocating boot loader to help select a safe load address for the kernel.
+    </span><span class="kw">pub </span>init_size: u32,
+    <span class="doccomment">/// Offset of handover entry point
+    ///
+    /// Type: read
+    ///
+    /// This field is the offset from the beginning of the kernel image to the EFI handover
+    /// protocol entry point. Boot loaders using the EFI handover protocol to boot the kernel
+    /// should jump to this offset.
+    </span><span class="kw">pub </span>handover_offset: u32,
+    <span class="doccomment">/// Offset of the kernel_info
+    ///
+    /// Type: read
+    ///
+    /// This field is the offset from the beginning of the kernel image to the kernel_info. The
+    /// kernel_info structure is embedded in the Linux image in the uncompressed protected mode
+    /// region.
+    </span><span class="kw">pub </span>kernel_info_offset: u32,
+}
+<span class="macro">static_assertions::assert_eq_size!</span>(SetupHeader, [u8; <span class="number">123usize</span>]);
+
+<span class="attribute">#[repr(C, packed)]
+#[derive(Debug, Copy, Clone)]
+</span><span class="kw">pub struct </span>BootE820Entry {
+    addr: usize,
+    size: usize,
+    type_: E820EntryType,
+}
+
+<span class="kw">impl </span>BootE820Entry {
+    <span class="kw">pub fn </span>entry_type(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; E820EntryType {
+        <span class="self">self</span>.type_
+    }
+
+    <span class="kw">pub fn </span>addr(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
+        <span class="self">self</span>.addr
+    }
+
+    <span class="kw">pub fn </span>size(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
+        <span class="self">self</span>.size
+    }
+}
+
+<span class="attribute">#[repr(C, packed)]
+#[derive(Debug, Copy, Clone)]
+</span><span class="kw">pub struct </span>ScreenInfo {
+    <span class="kw">pub </span>orig_x: u8,
+    <span class="kw">pub </span>orig_y: u8,
+    <span class="kw">pub </span>ext_mem_k: u16,
+    <span class="kw">pub </span>orig_video_page: u16,
+    <span class="kw">pub </span>orig_video_mode: u8,
+    <span class="kw">pub </span>orig_video_cols: u8,
+    <span class="kw">pub </span>flags: u8,
+    <span class="kw">pub </span>unused2: u8,
+    <span class="kw">pub </span>orig_video_ega_bx: u16,
+    <span class="kw">pub </span>unused3: u16,
+    <span class="kw">pub </span>orig_video_lines: u8,
+    <span class="kw">pub </span>orig_video_is_vga: u8,
+    <span class="kw">pub </span>orig_video_points: u16,
+    <span class="kw">pub </span>lfb_width: u16,
+    <span class="kw">pub </span>lfb_height: u16,
+    <span class="kw">pub </span>lfb_depth: u16,
+    <span class="kw">pub </span>lfb_base: u32,
+    <span class="kw">pub </span>lfb_size: u32,
+    <span class="kw">pub </span>cl_magic: u16,
+    <span class="kw">pub </span>cl_offset: u16,
+    <span class="kw">pub </span>lfb_linelength: u16,
+    <span class="kw">pub </span>red_size: u8,
+    <span class="kw">pub </span>red_pos: u8,
+    <span class="kw">pub </span>green_size: u8,
+    <span class="kw">pub </span>green_pos: u8,
+    <span class="kw">pub </span>blue_size: u8,
+    <span class="kw">pub </span>blue_pos: u8,
+    <span class="kw">pub </span>rsvd_size: u8,
+    <span class="kw">pub </span>rsvd_pos: u8,
+    <span class="kw">pub </span>vesapm_seg: u16,
+    <span class="kw">pub </span>vesapm_off: u16,
+    <span class="kw">pub </span>pages: u16,
+    <span class="kw">pub </span>vesa_attributes: u16,
+    <span class="kw">pub </span>capabilities: u32,
+    <span class="kw">pub </span>ext_lfb_base: u32,
+    <span class="kw">pub </span>_reserved: [u8; <span class="number">2usize</span>],
+}
+
+<span class="attribute">#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+</span><span class="kw">pub struct </span>APMBiosInfo {
+    <span class="kw">pub </span>version: u16,
+    <span class="kw">pub </span>cseg: u16,
+    <span class="kw">pub </span>offset: u32,
+    <span class="kw">pub </span>cseg_16: u16,
+    <span class="kw">pub </span>dseg: u16,
+    <span class="kw">pub </span>flags: u16,
+    <span class="kw">pub </span>cseg_len: u16,
+    <span class="kw">pub </span>cseg_16_len: u16,
+    <span class="kw">pub </span>dseg_len: u16,
+}
+
+<span class="attribute">#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+</span><span class="kw">pub struct </span>ISTInfo {
+    <span class="kw">pub </span>signature: u32,
+    <span class="kw">pub </span>command: u32,
+    <span class="kw">pub </span>event: u32,
+    <span class="kw">pub </span>perf_level: u32,
+}
+
+<span class="attribute">#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+</span><span class="kw">pub struct </span>SysDescTable {
+    <span class="kw">pub </span>length: u16,
+    <span class="kw">pub </span>table: [u8; <span class="number">14usize</span>],
+}
+
+<span class="attribute">#[repr(C, packed)]
+#[derive(Debug, Copy, Clone)]
+</span><span class="kw">pub struct </span>OLPCOfwHeader {
+    <span class="kw">pub </span>ofw_magic: u32,
+    <span class="kw">pub </span>ofw_version: u32,
+    <span class="kw">pub </span>cif_handler: u32,
+    <span class="kw">pub </span>irq_desc_table: u32,
+}
+
+<span class="attribute">#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+</span><span class="kw">pub struct </span>EFIInfo {
+    <span class="kw">pub </span>efi_loader_signature: u32,
+    <span class="kw">pub </span>efi_systab: u32,
+    <span class="kw">pub </span>efi_memdesc_size: u32,
+    <span class="kw">pub </span>efi_memdesc_version: u32,
+    <span class="kw">pub </span>efi_memmap: u32,
+    <span class="kw">pub </span>efi_memmap_size: u32,
+    <span class="kw">pub </span>efi_systab_hi: u32,
+    <span class="kw">pub </span>efi_memmap_hi: u32,
+}
+
+<span class="attribute">#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+</span><span class="kw">pub struct </span>EDIDInfo {
+    <span class="kw">pub </span>dummy: [u8; <span class="number">128usize</span>],
+}
+
+<span class="attribute">#[repr(C, packed)]
+#[derive(Copy, Clone)]
+</span><span class="kw">pub struct </span>BootParams {
+    <span class="kw">pub </span>screen_info: ScreenInfo,
+    <span class="kw">pub </span>apm_bios_info: APMBiosInfo,
+    <span class="kw">pub </span>_pad2: [u8; <span class="number">4usize</span>],
+    <span class="kw">pub </span>tboot_addr: u64,
+    <span class="kw">pub </span>ist_info: ISTInfo,
+    <span class="kw">pub </span>acpi_rsdp_addr: u64,
+    <span class="kw">pub </span>_pad3: [u8; <span class="number">8usize</span>],
+    <span class="attribute">#[deprecated]
+    </span><span class="kw">pub </span>hd0_info: [u8; <span class="number">16usize</span>],
+    <span class="attribute">#[deprecated]
+    </span><span class="kw">pub </span>hd1_info: [u8; <span class="number">16usize</span>],
+    <span class="attribute">#[deprecated]
+    </span><span class="kw">pub </span>sys_desc_table: SysDescTable,
+    <span class="kw">pub </span>olpc_ofw_header: OLPCOfwHeader,
+    <span class="kw">pub </span>ext_ramdisk_image: u32,
+    <span class="kw">pub </span>ext_ramdisk_size: u32,
+    <span class="kw">pub </span>ext_cmd_line_ptr: u32,
+    <span class="kw">pub </span>_pad4: [u8; <span class="number">112usize</span>],
+    <span class="kw">pub </span>cc_blob_address: u32,
+    <span class="kw">pub </span>edid_info: EDIDInfo,
+    <span class="kw">pub </span>efi_info: EFIInfo,
+    <span class="kw">pub </span>alt_mem_k: u32,
+    <span class="kw">pub </span>scratch: u32,
+    <span class="kw">pub </span>e820_entries: u8,
+    <span class="kw">pub </span>eddbuf_entries: u8,
+    <span class="kw">pub </span>edd_mbr_sig_buf_entries: u8,
+    <span class="kw">pub </span>kbd_status: u8,
+    <span class="kw">pub </span>secure_boot: u8,
+    <span class="kw">pub </span>_pad5: [u8; <span class="number">2usize</span>],
+    <span class="kw">pub </span>sentinel: u8,
+    <span class="kw">pub </span>_pad6: [u8; <span class="number">1usize</span>],
+    <span class="kw">pub </span>hdr: SetupHeader,
+    <span class="kw">pub </span>_pad7: [u8; <span class="number">36usize</span>],
+    <span class="kw">pub </span>edd_mbr_sig_buffer: [u32; <span class="number">16usize</span>],
+    <span class="kw">pub </span>e820_table: [BootE820Entry; <span class="number">128usize</span>],
+    <span class="kw">pub </span>_pad8: [u8; <span class="number">48usize</span>],
+    <span class="kw">pub </span>_eddbuf: [u8; <span class="number">492usize</span>],
+    <span class="kw">pub </span>_pad9: [u8; <span class="number">276usize</span>],
+}
+<span class="macro">static_assertions::assert_eq_size!</span>(BootParams, [u8; <span class="number">4096usize</span>]);
+
+<span class="kw">impl </span>BootParams {
+    <span class="kw">pub fn </span>protocol(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str {
+        <span class="string">&quot;Linux Boot Protocol&quot;
+    </span>}
+
+    <span class="kw">pub fn </span>e820_table(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>[BootE820Entry] {
+        <span class="kw-2">&amp;</span><span class="self">self</span>.e820_table[..<span class="self">self</span>.e820_entries <span class="kw">as </span>usize]
+    }
+
+    <span class="kw">pub fn </span>args(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>CStr {
+        <span class="kw">if </span><span class="self">self</span>.hdr.cmdline_size == <span class="number">0 </span>{
+            Default::default()
+        } <span class="kw">else </span>{
+            <span class="comment">// Safety: Linux boot protocol expects the pointer to be valid, even if there are no
+            // args.
+            </span><span class="kw">unsafe </span>{ CStr::from_ptr(<span class="self">self</span>.hdr.cmd_line_ptr <span class="kw">as </span><span class="kw-2">*const </span>c_char) }
+        }
+    }
+}
+
+<span class="kw">pub const </span>CC_BLOB_SEV_INFO_MAGIC: u32 = <span class="number">0x45444d41</span>; <span class="comment">// &#39;AMDE&#39;
+
+</span><span class="attribute">#[repr(C, packed)]
+#[derive(Copy, Clone)]
+</span><span class="kw">pub struct </span>CCBlobSevInfo {
+    <span class="kw">pub </span>magic: u32,
+    <span class="kw">pub </span>version: u16,
+    <span class="kw">pub </span>_reserved: u16,
+    <span class="kw">pub </span>secrets_phys: usize,
+    <span class="kw">pub </span>secrets_len: u32,
+    <span class="kw">pub </span>_rsvd1: u32,
+    <span class="kw">pub </span>cpuid_phys: usize,
+    <span class="kw">pub </span>cpuid_len: u32,
+    <span class="kw">pub </span>_rsvd2: u32,
+}
+</code></pre></div>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="oak_linux_boot_params" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (81f391930 2022-10-09)" ></div></body></html>

@@ -1,4 +1,4 @@
-(function() {var implementors = {};
-implementors["oak_functions_loader"] = [{"text":"impl <a class=\"trait\" href=\"oak_logger/trait.OakLogger.html\" title=\"trait oak_logger::OakLogger\">OakLogger</a> for <a class=\"struct\" href=\"oak_functions_loader/logger/struct.Logger.html\" title=\"struct oak_functions_loader::logger::Logger\">Logger</a>","synthetic":false,"types":["oak_functions_loader::logger::Logger"]}];
-implementors["oak_functions_testing_extension"] = [{"text":"impl <a class=\"trait\" href=\"oak_logger/trait.OakLogger.html\" title=\"trait oak_logger::OakLogger\">OakLogger</a> for <a class=\"struct\" href=\"oak_functions_testing_extension/struct.TestingLogger.html\" title=\"struct oak_functions_testing_extension::TestingLogger\">TestingLogger</a>","synthetic":false,"types":["oak_functions_testing_extension::TestingLogger"]}];
-if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()
+(function() {var implementors = {
+"oak_functions_freestanding":[["impl OakLogger for <a class=\"struct\" href=\"oak_functions_freestanding/struct.StandaloneLogger.html\" title=\"struct oak_functions_freestanding::StandaloneLogger\">StandaloneLogger</a>"]],
+"oak_functions_testing_extension":[["impl OakLogger for <a class=\"struct\" href=\"oak_functions_testing_extension/struct.TestingLogger.html\" title=\"struct oak_functions_testing_extension::TestingLogger\">TestingLogger</a>"]]
+};if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

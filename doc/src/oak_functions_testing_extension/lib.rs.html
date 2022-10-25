@@ -1,9 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `oak_functions/testing/src/lib.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>lib.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../ayu.css" disabled><link rel="stylesheet" type="text/css" href="../../dark.css" disabled><link rel="stylesheet" type="text/css" href="../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../storage.js"></script><script src="../../crates.js"></script><script defer src="../../main.js"></script><script defer src="../../source-script.js"></script><script defer src="../../source-files.js"></script>
-    <noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../oak_functions_testing_extension/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div>
-        </a><h2 class="location"></h2>
-    </nav>
-    <nav class="sidebar"><a class="sidebar-logo" href="../../oak_functions_testing_extension/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div>
-        </a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../oak_functions_testing_extension/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><div class="theme-picker hidden"><button id="theme-picker" aria-label="Pick another theme!" aria-haspopup="menu" title="themes"><img width="22" height="22" alt="Pick another theme!" src="../../brush.svg"></button><div id="theme-choices" role="menu"></div></div><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><button type="button" id="help-button" title="help">?</button><a id="settings-menu" href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../wheel.svg"></a></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `oak_functions/testing/src/lib.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>lib.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" href="../../normalize.css"><link rel="stylesheet" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" href="../../ayu.css" disabled><link rel="stylesheet" href="../../dark.css" disabled><link rel="stylesheet" href="../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../storage.js"></script><script defer src="../../source-script.js"></script><script defer src="../../source-files.js"></script><script defer src="../../main.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><a class="sidebar-logo" href="../../oak_functions_testing_extension/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../oak_functions_testing_extension/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="src-line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -119,122 +114,121 @@
 <span id="114">114</span>
 <span id="115">115</span>
 <span id="116">116</span>
-</pre><pre class="rust"><code><span class="comment">//</span>
-<span class="comment">// Copyright 2021 The Project Oak Authors</span>
-<span class="comment">//</span>
-<span class="comment">// Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
-<span class="comment">// you may not use this file except in compliance with the License.</span>
-<span class="comment">// You may obtain a copy of the License at</span>
-<span class="comment">//</span>
-<span class="comment">//     http://www.apache.org/licenses/LICENSE-2.0</span>
-<span class="comment">//</span>
-<span class="comment">// Unless required by applicable law or agreed to in writing, software</span>
-<span class="comment">// distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
-<span class="comment">// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
-<span class="comment">// See the License for the specific language governing permissions and</span>
-<span class="comment">// limitations under the License.</span>
-<span class="comment">//</span>
+</pre><pre class="rust"><code><span class="comment">//
+// Copyright 2021 The Project Oak Authors
+//
+// Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
-<span class="doccomment">//! Extension to support testing.</span>
+</span><span class="doccomment">//! Extension to support testing.
 
-<span class="kw">use</span> <span class="ident">chrono</span>::{<span class="ident">SecondsFormat</span>, <span class="ident">Utc</span>};
-<span class="kw">use</span> <span class="ident">oak_functions_abi</span>::{<span class="ident">proto::OakStatus</span>, <span class="ident">ExtensionHandle</span>, <span class="ident">TestingRequest</span>, <span class="ident">TestingResponse</span>};
-<span class="kw">use</span> <span class="ident">oak_functions_extension</span>::{<span class="ident">ExtensionFactory</span>, <span class="ident">OakApiNativeExtension</span>};
-<span class="kw">use</span> <span class="ident">oak_logger</span>::{<span class="ident">Level</span>, <span class="ident">OakLogger</span>};
+</span><span class="kw">use </span>chrono::{SecondsFormat, Utc};
+<span class="kw">use </span>oak_functions_abi::{proto::OakStatus, ExtensionHandle, TestingRequest, TestingResponse};
+<span class="kw">use </span>oak_functions_extension::{ExtensionFactory, OakApiNativeExtension};
+<span class="kw">use </span>oak_logger::{Level, OakLogger};
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">L</span><span class="op">&gt;</span> <span class="ident">OakApiNativeExtension</span> <span class="kw">for</span> <span class="ident">TestingExtension</span><span class="op">&lt;</span><span class="ident">L</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="ident">L</span>: <span class="ident">OakLogger</span>,
+<span class="kw">impl</span>&lt;L&gt; OakApiNativeExtension <span class="kw">for </span>TestingExtension&lt;L&gt;
+<span class="kw">where
+    </span>L: OakLogger,
 {
-    <span class="kw">fn</span> <span class="ident">invoke</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">request</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">request</span> <span class="op">=</span> <span class="ident">bincode::deserialize</span>(<span class="kw-2">&amp;</span><span class="ident">request</span>).<span class="ident">expect</span>(<span class="string">&quot;Fail to deserialize testing request.&quot;</span>);
+    <span class="kw">fn </span>invoke(<span class="kw-2">&amp;mut </span><span class="self">self</span>, request: Vec&lt;u8&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, OakStatus&gt; {
+        <span class="kw">let </span>request = bincode::deserialize(<span class="kw-2">&amp;</span>request).expect(<span class="string">&quot;Fail to deserialize testing request.&quot;</span>);
 
-        <span class="kw">let</span> <span class="ident">response</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">request</span> {
-            <span class="ident">TestingRequest::Echo</span>(<span class="ident">echo_message</span>) =&gt; {
-                <span class="kw">let</span> <span class="ident">echo_response</span> <span class="op">=</span> <span class="ident">TestingResponse::Echo</span>(<span class="ident">echo_message</span>);
-                <span class="ident">bincode::serialize</span>(<span class="kw-2">&amp;</span><span class="ident">echo_response</span>).<span class="ident">expect</span>(<span class="string">&quot;Fail to serialize testing request.&quot;</span>)
+        <span class="kw">let </span>response = <span class="kw">match </span>request {
+            TestingRequest::Echo(echo_message) =&gt; {
+                <span class="kw">let </span>echo_response = TestingResponse::Echo(echo_message);
+                bincode::serialize(<span class="kw-2">&amp;</span>echo_response).expect(<span class="string">&quot;Fail to serialize testing request.&quot;</span>)
             }
-            <span class="ident">TestingRequest::Blackhole</span>(<span class="ident">message</span>) =&gt; {
-                <span class="self">self</span>.<span class="ident">logger</span>.<span class="ident">log_sensitive</span>(<span class="ident">Level::Debug</span>, <span class="kw-2">&amp;</span><span class="ident">message</span>);
-                <span class="comment">// We don&#39;t expect the BlackholeRequest to give back a result.</span>
-                <span class="ident">Vec::new</span>()
+            TestingRequest::Blackhole(message) =&gt; {
+                <span class="self">self</span>.logger.log_sensitive(Level::Debug, <span class="kw-2">&amp;</span>message);
+                <span class="comment">// We don&#39;t expect the BlackholeRequest to give back a result.
+                </span>Vec::new()
             }
         };
-        <span class="prelude-val">Ok</span>(<span class="ident">response</span>)
+        <span class="prelude-val">Ok</span>(response)
     }
 
-    <span class="kw">fn</span> <span class="ident">terminate</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+    <span class="kw">fn </span>terminate(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; anyhow::Result&lt;()&gt; {
         <span class="prelude-val">Ok</span>(())
     }
 
-    <span class="kw">fn</span> <span class="ident">get_handle</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">ExtensionHandle</span> {
-        <span class="ident">ExtensionHandle::TestingHandle</span>
+    <span class="kw">fn </span>get_handle(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; ExtensionHandle {
+        ExtensionHandle::TestingHandle
     }
 }
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">TestingFactory</span><span class="op">&lt;</span><span class="ident">L</span>: <span class="ident">OakLogger</span><span class="op">&gt;</span> {
-    <span class="ident">logger</span>: <span class="ident">L</span>,
+<span class="kw">pub struct </span>TestingFactory&lt;L: OakLogger&gt; {
+    logger: L,
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">L</span><span class="op">&gt;</span> <span class="ident">TestingFactory</span><span class="op">&lt;</span><span class="ident">L</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="ident">L</span>: <span class="ident">OakLogger</span> <span class="op">+</span> <span class="lifetime">&#39;static</span>,
+<span class="kw">impl</span>&lt;L&gt; TestingFactory&lt;L&gt;
+<span class="kw">where
+    </span>L: OakLogger + <span class="lifetime">&#39;static</span>,
 {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new_boxed_extension_factory</span>(<span class="ident">logger</span>: <span class="ident">L</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">ExtensionFactory</span><span class="op">&lt;</span><span class="ident">L</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-        <span class="prelude-val">Ok</span>(<span class="ident">Box::new</span>(<span class="self">Self</span> { <span class="ident">logger</span> }))
+    <span class="kw">pub fn </span>new_boxed_extension_factory(logger: L) -&gt; anyhow::Result&lt;Box&lt;<span class="kw">dyn </span>ExtensionFactory&lt;L&gt;&gt;&gt; {
+        <span class="prelude-val">Ok</span>(Box::new(<span class="self">Self </span>{ logger }))
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">L</span><span class="op">&gt;</span> <span class="ident">ExtensionFactory</span><span class="op">&lt;</span><span class="ident">L</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">TestingFactory</span><span class="op">&lt;</span><span class="ident">L</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="ident">L</span>: <span class="ident">OakLogger</span> <span class="op">+</span> <span class="lifetime">&#39;static</span>,
+<span class="kw">impl</span>&lt;L&gt; ExtensionFactory&lt;L&gt; <span class="kw">for </span>TestingFactory&lt;L&gt;
+<span class="kw">where
+    </span>L: OakLogger + <span class="lifetime">&#39;static</span>,
 {
-    <span class="kw">fn</span> <span class="ident">create</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">OakApiNativeExtension</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">extension</span> <span class="op">=</span> <span class="ident">TestingExtension::new</span>(<span class="self">self</span>.<span class="ident">logger</span>.<span class="ident">clone</span>());
-        <span class="prelude-val">Ok</span>(<span class="ident">Box::new</span>(<span class="ident">extension</span>))
+    <span class="kw">fn </span>create(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; anyhow::Result&lt;Box&lt;<span class="kw">dyn </span>OakApiNativeExtension&gt;&gt; {
+        <span class="kw">let </span>extension = TestingExtension::new(<span class="self">self</span>.logger.clone());
+        <span class="prelude-val">Ok</span>(Box::new(extension))
     }
 }
-<span class="kw">struct</span> <span class="ident">TestingExtension</span><span class="op">&lt;</span><span class="ident">L</span>: <span class="ident">OakLogger</span><span class="op">&gt;</span> {
-    <span class="ident">logger</span>: <span class="ident">L</span>,
+<span class="kw">struct </span>TestingExtension&lt;L: OakLogger&gt; {
+    logger: L,
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">L</span><span class="op">&gt;</span> <span class="ident">TestingExtension</span><span class="op">&lt;</span><span class="ident">L</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="ident">L</span>: <span class="ident">OakLogger</span>,
+<span class="kw">impl</span>&lt;L&gt; TestingExtension&lt;L&gt;
+<span class="kw">where
+    </span>L: OakLogger,
 {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">logger</span>: <span class="ident">L</span>) -&gt; <span class="self">Self</span> {
-        <span class="self">Self</span> { <span class="ident">logger</span> }
+    <span class="kw">pub fn </span>new(logger: L) -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{ logger }
     }
 }
 
-<span class="doccomment">/// Implemenation of the `oak_loggger::OakLogger` trait to support testing with the `TestExtension`</span>
-<span class="doccomment">/// without needing a reference to the implementation in the Oak Functions Loader.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">TestingLogger</span> {}
+<span class="doccomment">/// Implemenation of the `oak_loggger::OakLogger` trait to support testing with the `TestExtension`
+/// without needing a reference to the implementation in the Oak Functions Loader.
+</span><span class="attribute">#[derive(Clone)]
+</span><span class="kw">pub struct </span>TestingLogger {}
 
-<span class="comment">// TODO(#2417): Implement a testing logger that collects all messages. See also #2783.</span>
-<span class="kw">impl</span> <span class="ident">TestingLogger</span> {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">for_test</span>() -&gt; <span class="self">Self</span> {
-        <span class="self">Self</span> {}
+<span class="comment">// TODO(#2417): Implement a testing logger that collects all messages. See also #2783.
+</span><span class="kw">impl </span>TestingLogger {
+    <span class="kw">pub fn </span>for_test() -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{}
     }
 
-    <span class="kw">fn</span> <span class="ident">log</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">message</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) {
+    <span class="kw">fn </span>log(<span class="kw-2">&amp;</span><span class="self">self</span>, message: <span class="kw-2">&amp;</span>str) {
         <span class="macro">eprintln!</span>(
             <span class="string">&quot;{} TEST - {}&quot;</span>,
-            <span class="ident">Utc::now</span>().<span class="ident">to_rfc3339_opts</span>(<span class="ident">SecondsFormat::Secs</span>, <span class="bool-val">true</span>),
-            <span class="ident">message</span>,
+            Utc::now().to_rfc3339_opts(SecondsFormat::Secs, <span class="bool-val">true</span>),
+            message,
         );
     }
 }
 
-<span class="kw">impl</span> <span class="ident">OakLogger</span> <span class="kw">for</span> <span class="ident">TestingLogger</span> {
-    <span class="kw">fn</span> <span class="ident">log_sensitive</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">_level</span>: <span class="ident">Level</span>, <span class="ident">message</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) {
-        <span class="self">self</span>.<span class="ident">log</span>(<span class="ident">message</span>);
+<span class="kw">impl </span>OakLogger <span class="kw">for </span>TestingLogger {
+    <span class="kw">fn </span>log_sensitive(<span class="kw-2">&amp;</span><span class="self">self</span>, _level: Level, message: <span class="kw-2">&amp;</span>str) {
+        <span class="self">self</span>.log(message);
     }
 
-    <span class="kw">fn</span> <span class="ident">log_public</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">_level</span>: <span class="ident">Level</span>, <span class="ident">message</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) {
-        <span class="self">self</span>.<span class="ident">log</span>(<span class="ident">message</span>);
+    <span class="kw">fn </span>log_public(<span class="kw-2">&amp;</span><span class="self">self</span>, _level: Level, message: <span class="kw-2">&amp;</span>str) {
+        <span class="self">self</span>.log(message);
     }
 }
 </code></pre></div>
-</section><section id="search" class="content hidden"></section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="oak_functions_testing_extension" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.62.0-nightly (de1bc0008 2022-04-21)" ></div>
-</body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="oak_functions_testing_extension" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (81f391930 2022-10-09)" ></div></body></html>

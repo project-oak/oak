@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"mod":[["unary_session_client","Generated client implementations."],["unary_session_server","Generated server implementations."]],"struct":[["PublicKeyInfo",""],["UnaryRequest",""],["UnaryResponse",""]]};

@@ -1,9 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `experimental/virtio/src/vsock/socket/mod.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>mod.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" type="text/css" href="../../../../normalize.css"><link rel="stylesheet" type="text/css" href="../../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../../../ayu.css" disabled><link rel="stylesheet" type="text/css" href="../../../../dark.css" disabled><link rel="stylesheet" type="text/css" href="../../../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../../../storage.js"></script><script src="../../../../crates.js"></script><script defer src="../../../../main.js"></script><script defer src="../../../../source-script.js"></script><script defer src="../../../../source-files.js"></script>
-    <noscript><link rel="stylesheet" href="../../../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../../virtio/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></div>
-        </a><h2 class="location"></h2>
-    </nav>
-    <nav class="sidebar"><a class="sidebar-logo" href="../../../../virtio/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></div>
-        </a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../../virtio/index.html"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></a><nav class="sub"><div class="theme-picker hidden"><button id="theme-picker" aria-label="Pick another theme!" aria-haspopup="menu" title="themes"><img width="22" height="22" alt="Pick another theme!" src="../../../../brush.svg"></button><div id="theme-choices" role="menu"></div></div><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><button type="button" id="help-button" title="help">?</button><a id="settings-menu" href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../wheel.svg"></a></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `experimental/virtio/src/vsock/socket/mod.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>mod.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" href="../../../../normalize.css"><link rel="stylesheet" href="../../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" href="../../../../ayu.css" disabled><link rel="stylesheet" href="../../../../dark.css" disabled><link rel="stylesheet" href="../../../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../../../storage.js"></script><script defer src="../../../../source-script.js"></script><script defer src="../../../../source-files.js"></script><script defer src="../../../../main.js"></script><noscript><link rel="stylesheet" href="../../../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><a class="sidebar-logo" href="../../../../virtio/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../../virtio/index.html"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="src-line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -417,420 +412,419 @@
 <span id="412">412</span>
 <span id="413">413</span>
 <span id="414">414</span>
-</pre><pre class="rust"><code><span class="comment">//</span>
-<span class="comment">// Copyright 2022 The Project Oak Authors</span>
-<span class="comment">//</span>
-<span class="comment">// Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
-<span class="comment">// you may not use this file except in compliance with the License.</span>
-<span class="comment">// You may obtain a copy of the License at</span>
-<span class="comment">//</span>
-<span class="comment">//     http://www.apache.org/licenses/LICENSE-2.0</span>
-<span class="comment">//</span>
-<span class="comment">// Unless required by applicable law or agreed to in writing, software</span>
-<span class="comment">// distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
-<span class="comment">// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
-<span class="comment">// See the License for the specific language governing permissions and</span>
-<span class="comment">// limitations under the License.</span>
-<span class="comment">//</span>
+</pre><pre class="rust"><code><span class="comment">//
+// Copyright 2022 The Project Oak Authors
+//
+// Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
-<span class="kw">use</span> <span class="kw">super</span>::{
-    <span class="ident">packet</span>::{<span class="ident">Packet</span>, <span class="ident">VSockFlags</span>, <span class="ident">VSockOp</span>, <span class="ident">HEADER_SIZE</span>},
-    <span class="ident">VSock</span>, <span class="ident">DATA_BUFFER_SIZE</span>,
+</span><span class="kw">use super</span>::{
+    packet::{Packet, VSockFlags, VSockOp, HEADER_SIZE},
+    VSock, DATA_BUFFER_SIZE,
 };
-<span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">Read</span>, <span class="ident">Write</span>};
-<span class="kw">use</span> <span class="ident">alloc::collections::VecDeque</span>;
-<span class="kw">use</span> <span class="ident">core::num::Wrapping</span>;
-<span class="kw">use</span> <span class="ident">rust_hypervisor_firmware_virtio::virtio::VirtioTransport</span>;
+<span class="kw">use crate</span>::{Read, Write};
+<span class="kw">use </span>alloc::collections::VecDeque;
+<span class="kw">use </span>core::{alloc::Allocator, num::Wrapping};
+<span class="kw">use </span>rust_hypervisor_firmware_virtio::virtio::VirtioTransport;
 
-<span class="doccomment">/// The maximum buffer size used by the socket.</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// This is used for flow-control calculations. Seeing that we don&#39;t use an actual streambuffer,</span>
-<span class="doccomment">/// this is currently an arbitrary value that seems to avoid stalling.</span>
-<span class="kw">const</span> <span class="ident">STREAM_BUFFER_LENGTH</span>: <span class="ident">Wrapping</span><span class="op">&lt;</span><span class="ident">u32</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Wrapping</span>(<span class="number">64</span> <span class="op">*</span> <span class="number">1024</span>);
+<span class="doccomment">/// The maximum buffer size used by the socket.
+///
+/// This is used for flow-control calculations. Seeing that we don&#39;t use an actual streambuffer,
+/// this is currently an arbitrary value that seems to avoid stalling.
+</span><span class="kw">const </span>STREAM_BUFFER_LENGTH: Wrapping&lt;u32&gt; = Wrapping(<span class="number">64 </span>* <span class="number">1024</span>);
 
-<span class="doccomment">/// The limit that triggers a voluntary credit update message to avoid stalling.</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// If the peer&#39;s calculation of our free buffer space falls below this point (e.g when we receive a</span>
-<span class="doccomment">/// lot of data without sending any packets back) we send a credit update packet to make sure the</span>
-<span class="doccomment">/// peer knows we have more space available.</span>
-<span class="kw">const</span> <span class="ident">CREDIT_UPDATE_LIMIT</span>: <span class="ident">Wrapping</span><span class="op">&lt;</span><span class="ident">u32</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Wrapping</span>(<span class="number">32</span> <span class="op">*</span> <span class="number">1024</span>);
+<span class="doccomment">/// The limit that triggers a voluntary credit update message to avoid stalling.
+///
+/// If the peer&#39;s calculation of our free buffer space falls below this point (e.g when we receive a
+/// lot of data without sending any packets back) we send a credit update packet to make sure the
+/// peer knows we have more space available.
+</span><span class="kw">const </span>CREDIT_UPDATE_LIMIT: Wrapping&lt;u32&gt; = Wrapping(<span class="number">32 </span>* <span class="number">1024</span>);
 
-<span class="doccomment">/// The maximum size of the payload of a single packet to ensure it fits into a single buffer in the</span>
-<span class="doccomment">/// queue.</span>
-<span class="kw">const</span> <span class="ident">MAX_PAYLOAD_SIZE</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="ident">DATA_BUFFER_SIZE</span> <span class="op">-</span> <span class="ident">HEADER_SIZE</span>;
+<span class="doccomment">/// The maximum size of the payload of a single packet to ensure it fits into a single buffer in the
+/// queue.
+</span><span class="kw">const </span>MAX_PAYLOAD_SIZE: usize = DATA_BUFFER_SIZE - HEADER_SIZE;
 
-<span class="doccomment">/// Connector to initiate a connection to a listener on the host.</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">SocketConnector</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">VirtioTransport</span><span class="op">&gt;</span> {
-    <span class="doccomment">/// The socket configuration.</span>
-    <span class="ident">config</span>: <span class="ident">SocketConfiguration</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>,
+<span class="doccomment">/// Connector to initiate a connection to a listener on the host.
+</span><span class="kw">pub struct </span>SocketConnector&lt;<span class="lifetime">&#39;a</span>, T: VirtioTransport, A: Allocator&gt; {
+    <span class="doccomment">/// The socket configuration.
+    </span>config: SocketConfiguration&lt;<span class="lifetime">&#39;a</span>, T, A&gt;,
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="ident">SocketConnector</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="ident">T</span>: <span class="ident">VirtioTransport</span>,
+<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, T, A: Allocator&gt; SocketConnector&lt;<span class="lifetime">&#39;a</span>, T, A&gt;
+<span class="kw">where
+    </span>T: VirtioTransport,
 {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">vsock</span>: <span class="ident">VSock</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>, <span class="ident">host_port</span>: <span class="ident">u32</span>, <span class="ident">local_port</span>: <span class="ident">u32</span>) -&gt; <span class="self">Self</span> {
-        <span class="self">Self</span> {
-            <span class="ident">config</span>: <span class="ident">SocketConfiguration::new</span>(<span class="ident">vsock</span>, <span class="ident">local_port</span>, <span class="ident">host_port</span>),
+    <span class="kw">pub fn </span>new(vsock: VSock&lt;<span class="lifetime">&#39;a</span>, T, A&gt;, host_port: u32, local_port: u32) -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{
+            config: SocketConfiguration::new(vsock, local_port, host_port),
         }
     }
 
-    <span class="doccomment">/// Tries to connect to a listener on the host.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// Since we don&#39;t yet support timeouts it will wait indefinitely for a respone. If the</span>
-    <span class="doccomment">/// connection is refused, or it receives an unexpected packet, it will return an error.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">connect</span>(<span class="kw-2">mut</span> <span class="self">self</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">Socket</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">packet</span> <span class="op">=</span> <span class="ident">Packet::new_control</span>(
-            <span class="self">self</span>.<span class="ident">config</span>.<span class="ident">local_port</span>,
-            <span class="self">self</span>.<span class="ident">config</span>.<span class="ident">host_port</span>,
-            <span class="ident">VSockOp::Request</span>,
+    <span class="doccomment">/// Tries to connect to a listener on the host.
+    ///
+    /// Since we don&#39;t yet support timeouts it will wait indefinitely for a respone. If the
+    /// connection is refused, or it receives an unexpected packet, it will return an error.
+    </span><span class="kw">pub fn </span>connect(<span class="kw-2">mut </span><span class="self">self</span>) -&gt; anyhow::Result&lt;Socket&lt;<span class="lifetime">&#39;a</span>, T, A&gt;&gt; {
+        <span class="kw">let </span><span class="kw-2">mut </span>packet = Packet::new_control(
+            <span class="self">self</span>.config.local_port,
+            <span class="self">self</span>.config.host_port,
+            VSockOp::Request,
         )<span class="question-mark">?</span>;
-        <span class="comment">// Set credit info.</span>
-        <span class="ident">packet</span>.<span class="ident">set_buf_alloc</span>(<span class="ident">STREAM_BUFFER_LENGTH</span>.<span class="number">0</span>);
-        <span class="ident">packet</span>.<span class="ident">set_fwd_cnt</span>(<span class="number">0</span>);
-        <span class="self">self</span>.<span class="ident">config</span>.<span class="ident">vsock</span>.<span class="ident">write_packet</span>(<span class="kw-2">&amp;mut</span> <span class="ident">packet</span>);
-        <span class="kw">let</span> <span class="ident">src_port</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">config</span>.<span class="ident">host_port</span>;
-        <span class="kw">let</span> <span class="ident">dst_port</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">config</span>.<span class="ident">local_port</span>;
-        <span class="kw">let</span> <span class="ident">peer_buffer_size</span>;
-        <span class="kw">loop</span> {
-            <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">packet</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">config</span>.<span class="ident">vsock</span>.<span class="ident">read_filtered_packet</span>(
-                <span class="op">|</span><span class="ident">packet</span><span class="op">|</span> <span class="ident">packet</span>.<span class="ident">get_dst_port</span>() <span class="op">==</span> <span class="ident">dst_port</span> <span class="op">&amp;&amp;</span> <span class="ident">packet</span>.<span class="ident">get_src_port</span>() <span class="op">==</span> <span class="ident">src_port</span>,
+        <span class="comment">// Set credit info.
+        </span>packet.set_buf_alloc(STREAM_BUFFER_LENGTH.<span class="number">0</span>);
+        packet.set_fwd_cnt(<span class="number">0</span>);
+        <span class="self">self</span>.config.vsock.write_packet(<span class="kw-2">&amp;mut </span>packet);
+        <span class="kw">let </span>src_port = <span class="self">self</span>.config.host_port;
+        <span class="kw">let </span>dst_port = <span class="self">self</span>.config.local_port;
+        <span class="kw">let </span>peer_buffer_size;
+        <span class="kw">loop </span>{
+            <span class="kw">if let </span><span class="prelude-val">Some</span>(packet) = <span class="self">self</span>.config.vsock.read_filtered_packet(
+                |packet| packet.get_dst_port() == dst_port &amp;&amp; packet.get_src_port() == src_port,
                 <span class="bool-val">true</span>,
             ) {
-                <span class="kw">if</span> <span class="ident">packet</span>.<span class="ident">get_op</span>()<span class="question-mark">?</span> <span class="op">==</span> <span class="ident">VSockOp::Response</span> {
-                    <span class="ident">peer_buffer_size</span> <span class="op">=</span> <span class="ident">packet</span>.<span class="ident">get_buf_alloc</span>();
+                <span class="kw">if </span>packet.get_op()<span class="question-mark">? </span>== VSockOp::Response {
+                    peer_buffer_size = packet.get_buf_alloc();
                     <span class="kw">break</span>;
-                } <span class="kw">else</span> {
+                } <span class="kw">else </span>{
                     <span class="macro">anyhow::bail!</span>(
                         <span class="string">&quot;Invalid response to connection request: {}&quot;</span>,
-                        <span class="ident">packet</span>.<span class="ident">get_op</span>()<span class="question-mark">?</span>
-                    );
+                        packet.get_op()<span class="question-mark">?
+                    </span>);
                 }
             }
         }
-        <span class="prelude-val">Ok</span>(<span class="ident">Socket::new</span>(<span class="self">self</span>.<span class="ident">config</span>, <span class="ident">peer_buffer_size</span>))
+        <span class="prelude-val">Ok</span>(Socket::new(<span class="self">self</span>.config, peer_buffer_size))
     }
 }
 
-<span class="doccomment">/// Listener that waits for a connection initiated from the host.</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">SocketListener</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">VirtioTransport</span><span class="op">&gt;</span> {
-    <span class="doccomment">/// The socket configuration.</span>
-    <span class="ident">config</span>: <span class="ident">SocketConfiguration</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>,
+<span class="doccomment">/// Listener that waits for a connection initiated from the host.
+</span><span class="kw">pub struct </span>SocketListener&lt;<span class="lifetime">&#39;a</span>, T: VirtioTransport, A: Allocator&gt; {
+    <span class="doccomment">/// The socket configuration.
+    </span>config: SocketConfiguration&lt;<span class="lifetime">&#39;a</span>, T, A&gt;,
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="ident">SocketListener</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="ident">T</span>: <span class="ident">VirtioTransport</span>,
+<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, T, A: Allocator&gt; SocketListener&lt;<span class="lifetime">&#39;a</span>, T, A&gt;
+<span class="kw">where
+    </span>T: VirtioTransport,
 {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">vsock</span>: <span class="ident">VSock</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>, <span class="ident">port</span>: <span class="ident">u32</span>) -&gt; <span class="self">Self</span> {
-        <span class="self">Self</span> {
-            <span class="ident">config</span>: <span class="ident">SocketConfiguration::new</span>(<span class="ident">vsock</span>, <span class="ident">port</span>, <span class="number">0</span>),
+    <span class="kw">pub fn </span>new(vsock: VSock&lt;<span class="lifetime">&#39;a</span>, T, A&gt;, port: u32) -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{
+            config: SocketConfiguration::new(vsock, port, <span class="number">0</span>),
         }
     }
 
-    <span class="doccomment">/// Listens for a connection from the host on the specified port.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// Since we don&#39;t yet support timeouts it will wait indefinitely for a connection request. If</span>
-    <span class="doccomment">/// it receives an unexpected packet (anything other than a connection request) it will return</span>
-    <span class="doccomment">/// an error.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">accept</span>(<span class="kw-2">mut</span> <span class="self">self</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">Socket</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">dst_port</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">config</span>.<span class="ident">local_port</span>;
-        <span class="kw">let</span> <span class="ident">peer_buffer_size</span>;
-        <span class="kw">loop</span> {
-            <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">packet</span>) <span class="op">=</span> <span class="self">self</span>
-                .<span class="ident">config</span>
-                .<span class="ident">vsock</span>
-                .<span class="ident">read_filtered_packet</span>(<span class="op">|</span><span class="ident">packet</span><span class="op">|</span> <span class="ident">packet</span>.<span class="ident">get_dst_port</span>() <span class="op">==</span> <span class="ident">dst_port</span>, <span class="bool-val">true</span>)
+    <span class="doccomment">/// Listens for a connection from the host on the specified port.
+    ///
+    /// Since we don&#39;t yet support timeouts it will wait indefinitely for a connection request. If
+    /// it receives an unexpected packet (anything other than a connection request) it will return
+    /// an error.
+    </span><span class="kw">pub fn </span>accept(<span class="kw-2">mut </span><span class="self">self</span>) -&gt; anyhow::Result&lt;Socket&lt;<span class="lifetime">&#39;a</span>, T, A&gt;&gt; {
+        <span class="kw">let </span>dst_port = <span class="self">self</span>.config.local_port;
+        <span class="kw">let </span>peer_buffer_size;
+        <span class="kw">loop </span>{
+            <span class="kw">if let </span><span class="prelude-val">Some</span>(packet) = <span class="self">self
+                </span>.config
+                .vsock
+                .read_filtered_packet(|packet| packet.get_dst_port() == dst_port, <span class="bool-val">true</span>)
             {
-                <span class="kw">if</span> <span class="ident">packet</span>.<span class="ident">get_op</span>()<span class="question-mark">?</span> <span class="op">==</span> <span class="ident">VSockOp::Request</span> {
-                    <span class="self">self</span>.<span class="ident">config</span>.<span class="ident">host_port</span> <span class="op">=</span> <span class="ident">packet</span>.<span class="ident">get_src_port</span>();
-                    <span class="ident">peer_buffer_size</span> <span class="op">=</span> <span class="ident">packet</span>.<span class="ident">get_buf_alloc</span>();
+                <span class="kw">if </span>packet.get_op()<span class="question-mark">? </span>== VSockOp::Request {
+                    <span class="self">self</span>.config.host_port = packet.get_src_port();
+                    peer_buffer_size = packet.get_buf_alloc();
                     <span class="kw">break</span>;
-                } <span class="kw">else</span> {
-                    <span class="macro">anyhow::bail!</span>(<span class="string">&quot;Invalid connection request: {}&quot;</span>, <span class="ident">packet</span>.<span class="ident">get_op</span>()<span class="question-mark">?</span>);
+                } <span class="kw">else </span>{
+                    <span class="macro">anyhow::bail!</span>(<span class="string">&quot;Invalid connection request: {}&quot;</span>, packet.get_op()<span class="question-mark">?</span>);
                 }
             }
         }
 
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">packet</span> <span class="op">=</span> <span class="ident">Packet::new_control</span>(
-            <span class="self">self</span>.<span class="ident">config</span>.<span class="ident">local_port</span>,
-            <span class="self">self</span>.<span class="ident">config</span>.<span class="ident">host_port</span>,
-            <span class="ident">VSockOp::Response</span>,
+        <span class="kw">let </span><span class="kw-2">mut </span>packet = Packet::new_control(
+            <span class="self">self</span>.config.local_port,
+            <span class="self">self</span>.config.host_port,
+            VSockOp::Response,
         )<span class="question-mark">?</span>;
-        <span class="comment">// Set credit info.</span>
-        <span class="ident">packet</span>.<span class="ident">set_buf_alloc</span>(<span class="ident">STREAM_BUFFER_LENGTH</span>.<span class="number">0</span>);
-        <span class="ident">packet</span>.<span class="ident">set_fwd_cnt</span>(<span class="number">0</span>);
-        <span class="self">self</span>.<span class="ident">config</span>.<span class="ident">vsock</span>.<span class="ident">write_packet</span>(<span class="kw-2">&amp;mut</span> <span class="ident">packet</span>);
+        <span class="comment">// Set credit info.
+        </span>packet.set_buf_alloc(STREAM_BUFFER_LENGTH.<span class="number">0</span>);
+        packet.set_fwd_cnt(<span class="number">0</span>);
+        <span class="self">self</span>.config.vsock.write_packet(<span class="kw-2">&amp;mut </span>packet);
 
-        <span class="prelude-val">Ok</span>(<span class="ident">Socket::new</span>(<span class="self">self</span>.<span class="ident">config</span>, <span class="ident">peer_buffer_size</span>))
+        <span class="prelude-val">Ok</span>(Socket::new(<span class="self">self</span>.config, peer_buffer_size))
     }
 }
 
-<span class="doccomment">/// A connection-oriented socket.</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Socket</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">VirtioTransport</span><span class="op">&gt;</span> {
-    <span class="doccomment">/// The socket configuration.</span>
-    <span class="ident">config</span>: <span class="ident">SocketConfiguration</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>,
-    <span class="doccomment">/// The current state of the connection.</span>
-    <span class="ident">connection_state</span>: <span class="ident">ConnectionState</span>,
-    <span class="doccomment">/// The number of payload bytes we have processed.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// This is a free-running counter that wraps around.</span>
-    <span class="ident">processed_bytes</span>: <span class="ident">Wrapping</span><span class="op">&lt;</span><span class="ident">u32</span><span class="op">&gt;</span>,
-    <span class="doccomment">/// The previous value of `processed_bytes` that was sent to the peer in the most recent packet</span>
-    <span class="doccomment">/// header.</span>
-    <span class="ident">previous_processed_bytes</span>: <span class="ident">Wrapping</span><span class="op">&lt;</span><span class="ident">u32</span><span class="op">&gt;</span>,
-    <span class="doccomment">/// The number of payload bytes we have sent.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// This is a free-running counter that wraps around.</span>
-    <span class="ident">sent_bytes</span>: <span class="ident">Wrapping</span><span class="op">&lt;</span><span class="ident">u32</span><span class="op">&gt;</span>,
-    <span class="doccomment">/// The number of payload bytes the peer has processed according to the received packet</span>
-    <span class="doccomment">/// headers.</span>
-    <span class="ident">peer_processed_bytes</span>: <span class="ident">Wrapping</span><span class="op">&lt;</span><span class="ident">u32</span><span class="op">&gt;</span>,
-    <span class="doccomment">/// The size of the peer&#39;s stream buffer.</span>
-    <span class="ident">peer_buffer_size</span>: <span class="ident">Wrapping</span><span class="op">&lt;</span><span class="ident">u32</span><span class="op">&gt;</span>,
-    <span class="doccomment">/// A temporary buffer to store extra data from a packet that was not fully read.</span>
-    <span class="ident">pending_data</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">VecDeque</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+<span class="doccomment">/// A connection-oriented socket.
+</span><span class="kw">pub struct </span>Socket&lt;<span class="lifetime">&#39;a</span>, T: VirtioTransport, A: Allocator&gt; {
+    <span class="doccomment">/// The socket configuration.
+    </span>config: SocketConfiguration&lt;<span class="lifetime">&#39;a</span>, T, A&gt;,
+    <span class="doccomment">/// The current state of the connection.
+    </span>connection_state: ConnectionState,
+    <span class="doccomment">/// The number of payload bytes we have processed.
+    ///
+    /// This is a free-running counter that wraps around.
+    </span>processed_bytes: Wrapping&lt;u32&gt;,
+    <span class="doccomment">/// The previous value of `processed_bytes` that was sent to the peer in the most recent packet
+    /// header.
+    </span>previous_processed_bytes: Wrapping&lt;u32&gt;,
+    <span class="doccomment">/// The number of payload bytes we have sent.
+    ///
+    /// This is a free-running counter that wraps around.
+    </span>sent_bytes: Wrapping&lt;u32&gt;,
+    <span class="doccomment">/// The number of payload bytes the peer has processed according to the received packet
+    /// headers.
+    </span>peer_processed_bytes: Wrapping&lt;u32&gt;,
+    <span class="doccomment">/// The size of the peer&#39;s stream buffer.
+    </span>peer_buffer_size: Wrapping&lt;u32&gt;,
+    <span class="doccomment">/// A temporary buffer to store extra data from a packet that was not fully read.
+    </span>pending_data: <span class="prelude-ty">Option</span>&lt;VecDeque&lt;u8&gt;&gt;,
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="ident">Socket</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="ident">T</span>: <span class="ident">VirtioTransport</span>,
+<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, T, A: Allocator&gt; Socket&lt;<span class="lifetime">&#39;a</span>, T, A&gt;
+<span class="kw">where
+    </span>T: VirtioTransport,
 {
-    <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">config</span>: <span class="ident">SocketConfiguration</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>, <span class="ident">peer_buffer_size</span>: <span class="ident">u32</span>) -&gt; <span class="self">Self</span> {
-        <span class="self">Self</span> {
-            <span class="ident">config</span>,
-            <span class="ident">connection_state</span>: <span class="ident">ConnectionState::Connected</span>,
-            <span class="ident">processed_bytes</span>: <span class="ident">Wrapping</span>(<span class="number">0</span>),
-            <span class="ident">previous_processed_bytes</span>: <span class="ident">Wrapping</span>(<span class="number">0</span>),
-            <span class="ident">sent_bytes</span>: <span class="ident">Wrapping</span>(<span class="number">0</span>),
-            <span class="ident">peer_processed_bytes</span>: <span class="ident">Wrapping</span>(<span class="number">0</span>),
-            <span class="ident">peer_buffer_size</span>: <span class="ident">Wrapping</span>(<span class="ident">peer_buffer_size</span>),
-            <span class="ident">pending_data</span>: <span class="prelude-val">None</span>,
+    <span class="kw">fn </span>new(config: SocketConfiguration&lt;<span class="lifetime">&#39;a</span>, T, A&gt;, peer_buffer_size: u32) -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{
+            config,
+            connection_state: ConnectionState::Connected,
+            processed_bytes: Wrapping(<span class="number">0</span>),
+            previous_processed_bytes: Wrapping(<span class="number">0</span>),
+            sent_bytes: Wrapping(<span class="number">0</span>),
+            peer_processed_bytes: Wrapping(<span class="number">0</span>),
+            peer_buffer_size: Wrapping(peer_buffer_size),
+            pending_data: <span class="prelude-val">None</span>,
         }
     }
 
-    <span class="doccomment">/// Shuts the connection down.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// At the moment this will cause the vsock driver to be dropped, which means that no future</span>
-    <span class="doccomment">/// connections will be possible. This should only be used if no further communications with the</span>
-    <span class="doccomment">/// host is expected.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">shutdown</span>(<span class="kw-2">mut</span> <span class="self">self</span>) {
-        <span class="kw">if</span> <span class="self">self</span>.<span class="ident">connection_state</span> <span class="op">==</span> <span class="ident">ConnectionState::Connected</span> {
-            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">packet</span> <span class="op">=</span> <span class="ident">Packet::new_control</span>(
-                <span class="self">self</span>.<span class="ident">config</span>.<span class="ident">local_port</span>,
-                <span class="self">self</span>.<span class="ident">config</span>.<span class="ident">host_port</span>,
-                <span class="ident">VSockOp::Shutdown</span>,
+    <span class="doccomment">/// Shuts the connection down.
+    ///
+    /// At the moment this will cause the vsock driver to be dropped, which means that no future
+    /// connections will be possible. This should only be used if no further communications with the
+    /// host is expected.
+    </span><span class="kw">pub fn </span>shutdown(<span class="kw-2">mut </span><span class="self">self</span>) {
+        <span class="kw">if </span><span class="self">self</span>.connection_state == ConnectionState::Connected {
+            <span class="kw">let </span><span class="kw-2">mut </span>packet = Packet::new_control(
+                <span class="self">self</span>.config.local_port,
+                <span class="self">self</span>.config.host_port,
+                VSockOp::Shutdown,
             )
-            .<span class="ident">expect</span>(<span class="string">&quot;Could not create control packet.&quot;</span>);
-            <span class="comment">// Notify the host that we will not send or receive any more data packets.</span>
-            <span class="ident">packet</span>.<span class="ident">set_flags</span>(<span class="ident">VSockFlags::all</span>());
-            <span class="self">self</span>.<span class="ident">config</span>.<span class="ident">vsock</span>.<span class="ident">write_packet</span>(<span class="kw-2">&amp;mut</span> <span class="ident">packet</span>);
+            .expect(<span class="string">&quot;Could not create control packet.&quot;</span>);
+            <span class="comment">// Notify the host that we will not send or receive any more data packets.
+            </span>packet.set_flags(VSockFlags::all());
+            <span class="self">self</span>.config.vsock.write_packet(<span class="kw-2">&amp;mut </span>packet);
         }
     }
 
-    <span class="doccomment">/// Whether we should send an unsolicited credit update.</span>
-    <span class="kw">fn</span> <span class="ident">must_send_credit_update</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">bool</span> {
-        <span class="ident">STREAM_BUFFER_LENGTH</span> <span class="op">-</span> (<span class="self">self</span>.<span class="ident">processed_bytes</span> <span class="op">-</span> <span class="self">self</span>.<span class="ident">previous_processed_bytes</span>)
-            <span class="op">&lt;</span> <span class="ident">CREDIT_UPDATE_LIMIT</span>
+    <span class="doccomment">/// Whether we should send an unsolicited credit update.
+    </span><span class="kw">fn </span>must_send_credit_update(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
+        STREAM_BUFFER_LENGTH - (<span class="self">self</span>.processed_bytes - <span class="self">self</span>.previous_processed_bytes)
+            &lt; CREDIT_UPDATE_LIMIT
     }
 
-    <span class="doccomment">/// Sends a control packet with the specified op to the host.</span>
-    <span class="kw">fn</span> <span class="ident">send_control_packet</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">op</span>: <span class="ident">VSockOp</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-        <span class="comment">// For now we panic if we are disconnected.</span>
-        <span class="macro">assert!</span>(<span class="self">self</span>.<span class="ident">connection_state</span> <span class="op">==</span> <span class="ident">ConnectionState::Connected</span>);
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">packet</span> <span class="op">=</span> <span class="ident">Packet::new_control</span>(<span class="self">self</span>.<span class="ident">config</span>.<span class="ident">local_port</span>, <span class="self">self</span>.<span class="ident">config</span>.<span class="ident">host_port</span>, <span class="ident">op</span>)<span class="question-mark">?</span>;
-        <span class="self">self</span>.<span class="ident">set_credit_info</span>(<span class="kw-2">&amp;mut</span> <span class="ident">packet</span>);
-        <span class="self">self</span>.<span class="ident">config</span>.<span class="ident">vsock</span>.<span class="ident">write_packet</span>(<span class="kw-2">&amp;mut</span> <span class="ident">packet</span>);
+    <span class="doccomment">/// Sends a control packet with the specified op to the host.
+    </span><span class="kw">fn </span>send_control_packet(<span class="kw-2">&amp;mut </span><span class="self">self</span>, op: VSockOp) -&gt; anyhow::Result&lt;()&gt; {
+        <span class="comment">// For now we panic if we are disconnected.
+        </span><span class="macro">assert!</span>(<span class="self">self</span>.connection_state == ConnectionState::Connected);
+        <span class="kw">let </span><span class="kw-2">mut </span>packet = Packet::new_control(<span class="self">self</span>.config.local_port, <span class="self">self</span>.config.host_port, op)<span class="question-mark">?</span>;
+        <span class="self">self</span>.set_credit_info(<span class="kw-2">&amp;mut </span>packet);
+        <span class="self">self</span>.config.vsock.write_packet(<span class="kw-2">&amp;mut </span>packet);
         <span class="prelude-val">Ok</span>(())
     }
 
-    <span class="doccomment">/// Sends a data packet to the host.</span>
-    <span class="kw">fn</span> <span class="ident">send_data_packet</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">data</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-        <span class="comment">// For now we panic if we are disconnected.</span>
+    <span class="doccomment">/// Sends a data packet to the host.
+    </span><span class="kw">fn </span>send_data_packet(<span class="kw-2">&amp;mut </span><span class="self">self</span>, data: <span class="kw-2">&amp;</span>[u8]) -&gt; anyhow::Result&lt;()&gt; {
+        <span class="comment">// For now we panic if we are disconnected.
+        </span><span class="macro">assert!</span>(
+            <span class="self">self</span>.connection_state == ConnectionState::Connected,
+            <span class="string">&quot;Stream disconnected.&quot;
+        </span>);
+        <span class="kw">let </span>data_len = data.len();
         <span class="macro">assert!</span>(
-            <span class="self">self</span>.<span class="ident">connection_state</span> <span class="op">==</span> <span class="ident">ConnectionState::Connected</span>,
-            <span class="string">&quot;Stream disconnected.&quot;</span>
-        );
-        <span class="kw">let</span> <span class="ident">data_len</span> <span class="op">=</span> <span class="ident">data</span>.<span class="ident">len</span>();
-        <span class="macro">assert!</span>(
-            <span class="ident">data_len</span> <span class="op">&lt;</span><span class="op">=</span> <span class="ident">MAX_PAYLOAD_SIZE</span>,
+            data_len &lt;= MAX_PAYLOAD_SIZE,
             <span class="string">&quot;The data is too large for a single packet. Len: {}, Max: {}&quot;</span>,
-            <span class="ident">data</span>.<span class="ident">len</span>(),
-            <span class="ident">MAX_PAYLOAD_SIZE</span>
+            data.len(),
+            MAX_PAYLOAD_SIZE
         );
 
-        <span class="kw">let</span> <span class="ident">data_len</span> <span class="op">=</span> <span class="ident">Wrapping</span>(<span class="ident">data_len</span> <span class="kw">as</span> <span class="ident">u32</span>);
-        <span class="kw">if</span> <span class="ident">data_len</span> <span class="op">&gt;</span> <span class="self">self</span>.<span class="ident">peer_buffer_size</span> <span class="op">-</span> (<span class="self">self</span>.<span class="ident">sent_bytes</span> <span class="op">-</span> <span class="self">self</span>.<span class="ident">peer_processed_bytes</span>) {
+        <span class="kw">let </span>data_len = Wrapping(data_len <span class="kw">as </span>u32);
+        <span class="kw">if </span>data_len &gt; <span class="self">self</span>.peer_buffer_size - (<span class="self">self</span>.sent_bytes - <span class="self">self</span>.peer_processed_bytes) {
             <span class="macro">anyhow::bail!</span>(<span class="string">&quot;Peer&#39;s stream buffer is full.&quot;</span>);
         }
 
-        <span class="self">self</span>.<span class="ident">sent_bytes</span> <span class="op">+</span><span class="op">=</span> <span class="ident">data_len</span>;
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">packet</span> <span class="op">=</span> <span class="ident">Packet::new_data</span>(<span class="ident">data</span>, <span class="self">self</span>.<span class="ident">config</span>.<span class="ident">local_port</span>, <span class="self">self</span>.<span class="ident">config</span>.<span class="ident">host_port</span>)<span class="question-mark">?</span>;
-        <span class="self">self</span>.<span class="ident">set_credit_info</span>(<span class="kw-2">&amp;mut</span> <span class="ident">packet</span>);
-        <span class="self">self</span>.<span class="ident">config</span>.<span class="ident">vsock</span>.<span class="ident">write_packet</span>(<span class="kw-2">&amp;mut</span> <span class="ident">packet</span>);
+        <span class="self">self</span>.sent_bytes += data_len;
+        <span class="kw">let </span><span class="kw-2">mut </span>packet = Packet::new_data(data, <span class="self">self</span>.config.local_port, <span class="self">self</span>.config.host_port)<span class="question-mark">?</span>;
+        <span class="self">self</span>.set_credit_info(<span class="kw-2">&amp;mut </span>packet);
+        <span class="self">self</span>.config.vsock.write_packet(<span class="kw-2">&amp;mut </span>packet);
         <span class="prelude-val">Ok</span>(())
     }
 
-    <span class="doccomment">/// Updates the credit info on a packet to facilitate flow-control.</span>
-    <span class="kw">fn</span> <span class="ident">set_credit_info</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">packet</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Packet</span>) {
-        <span class="ident">packet</span>.<span class="ident">set_buf_alloc</span>(<span class="ident">STREAM_BUFFER_LENGTH</span>.<span class="number">0</span>);
-        <span class="ident">packet</span>.<span class="ident">set_fwd_cnt</span>(<span class="self">self</span>.<span class="ident">processed_bytes</span>.<span class="number">0</span>);
-        <span class="self">self</span>.<span class="ident">previous_processed_bytes</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">processed_bytes</span>;
+    <span class="doccomment">/// Updates the credit info on a packet to facilitate flow-control.
+    </span><span class="kw">fn </span>set_credit_info(<span class="kw-2">&amp;mut </span><span class="self">self</span>, packet: <span class="kw-2">&amp;mut </span>Packet) {
+        packet.set_buf_alloc(STREAM_BUFFER_LENGTH.<span class="number">0</span>);
+        packet.set_fwd_cnt(<span class="self">self</span>.processed_bytes.<span class="number">0</span>);
+        <span class="self">self</span>.previous_processed_bytes = <span class="self">self</span>.processed_bytes;
     }
 
-    <span class="doccomment">/// Reads the payload of the next available data packet, if any are available.</span>
-    <span class="kw">fn</span> <span class="ident">read_data</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">VecDeque</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-        <span class="comment">// For now we panic if we are disconnected.</span>
-        <span class="macro">assert!</span>(
-            <span class="self">self</span>.<span class="ident">connection_state</span> <span class="op">==</span> <span class="ident">ConnectionState::Connected</span>,
-            <span class="string">&quot;Stream disconnected.&quot;</span>
-        );
-        <span class="kw">let</span> <span class="ident">src_port</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">config</span>.<span class="ident">host_port</span>;
-        <span class="kw">let</span> <span class="ident">dst_port</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">config</span>.<span class="ident">local_port</span>;
-        <span class="kw">loop</span> {
-            <span class="kw">let</span> <span class="ident">packet</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">config</span>.<span class="ident">vsock</span>.<span class="ident">read_filtered_packet</span>(
-                <span class="op">|</span><span class="ident">packet</span><span class="op">|</span> <span class="ident">packet</span>.<span class="ident">get_dst_port</span>() <span class="op">==</span> <span class="ident">dst_port</span> <span class="op">&amp;&amp;</span> <span class="ident">packet</span>.<span class="ident">get_src_port</span>() <span class="op">==</span> <span class="ident">src_port</span>,
+    <span class="doccomment">/// Reads the payload of the next available data packet, if any are available.
+    </span><span class="kw">fn </span>read_data(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;VecDeque&lt;u8&gt;&gt; {
+        <span class="comment">// For now we panic if we are disconnected.
+        </span><span class="macro">assert!</span>(
+            <span class="self">self</span>.connection_state == ConnectionState::Connected,
+            <span class="string">&quot;Stream disconnected.&quot;
+        </span>);
+        <span class="kw">let </span>src_port = <span class="self">self</span>.config.host_port;
+        <span class="kw">let </span>dst_port = <span class="self">self</span>.config.local_port;
+        <span class="kw">loop </span>{
+            <span class="kw">let </span>packet = <span class="self">self</span>.config.vsock.read_filtered_packet(
+                |packet| packet.get_dst_port() == dst_port &amp;&amp; packet.get_src_port() == src_port,
                 <span class="bool-val">true</span>,
             )<span class="question-mark">?</span>;
-            <span class="self">self</span>.<span class="ident">peer_buffer_size</span> <span class="op">=</span> <span class="ident">Wrapping</span>(<span class="ident">packet</span>.<span class="ident">get_buf_alloc</span>());
-            <span class="self">self</span>.<span class="ident">peer_processed_bytes</span> <span class="op">=</span> <span class="ident">Wrapping</span>(<span class="ident">packet</span>.<span class="ident">get_fwd_cnt</span>());
-            <span class="comment">// For now we panic if we receive an invalid op.</span>
-            <span class="kw">match</span> <span class="ident">packet</span>.<span class="ident">get_op</span>().<span class="ident">expect</span>(<span class="string">&quot;Invalid packet received on stream.&quot;</span>) {
-                <span class="ident">VSockOp::CreditRequest</span> =&gt; {
-                    <span class="self">self</span>.<span class="ident">send_control_packet</span>(<span class="ident">VSockOp::CreditUpdate</span>)
-                        .<span class="ident">expect</span>(<span class="string">&quot;Could not create control packet.&quot;</span>);
+            <span class="self">self</span>.peer_buffer_size = Wrapping(packet.get_buf_alloc());
+            <span class="self">self</span>.peer_processed_bytes = Wrapping(packet.get_fwd_cnt());
+            <span class="comment">// For now we panic if we receive an invalid op.
+            </span><span class="kw">match </span>packet.get_op().expect(<span class="string">&quot;Invalid packet received on stream.&quot;</span>) {
+                VSockOp::CreditRequest =&gt; {
+                    <span class="self">self</span>.send_control_packet(VSockOp::CreditUpdate)
+                        .expect(<span class="string">&quot;Could not create control packet.&quot;</span>);
                 }
-                <span class="ident">VSockOp::CreditUpdate</span> =&gt; {
-                    <span class="comment">// We already updated our flow-control tracking data, so do nothing.</span>
+                VSockOp::CreditUpdate =&gt; {
+                    <span class="comment">// We already updated our flow-control tracking data, so do nothing.
+                </span>}
+                VSockOp::Request | VSockOp::Response =&gt; {
+                    <span class="comment">// For now we panic if we receive an invalid op.
+                    </span><span class="macro">panic!</span>(<span class="string">&quot;Invalid packet received on stream.&quot;</span>);
                 }
-                <span class="ident">VSockOp::Request</span> <span class="op">|</span> <span class="ident">VSockOp::Response</span> =&gt; {
-                    <span class="comment">// For now we panic if we receive an invalid op.</span>
-                    <span class="macro">panic!</span>(<span class="string">&quot;Invalid packet received on stream.&quot;</span>);
+                VSockOp::Rst =&gt; {
+                    <span class="self">self</span>.connection_state = ConnectionState::Disconnected;
+                    <span class="kw">return </span><span class="prelude-val">None</span>;
                 }
-                <span class="ident">VSockOp::Rst</span> =&gt; {
-                    <span class="self">self</span>.<span class="ident">connection_state</span> <span class="op">=</span> <span class="ident">ConnectionState::Disconnected</span>;
-                    <span class="kw">return</span> <span class="prelude-val">None</span>;
+                VSockOp::Shutdown =&gt; {
+                    <span class="self">self</span>.send_control_packet(VSockOp::Rst)
+                        .expect(<span class="string">&quot;Could not create control packet.&quot;</span>);
+                    <span class="self">self</span>.connection_state = ConnectionState::Disconnected;
+                    <span class="kw">return </span><span class="prelude-val">None</span>;
                 }
-                <span class="ident">VSockOp::Shutdown</span> =&gt; {
-                    <span class="self">self</span>.<span class="ident">send_control_packet</span>(<span class="ident">VSockOp::Rst</span>)
-                        .<span class="ident">expect</span>(<span class="string">&quot;Could not create control packet.&quot;</span>);
-                    <span class="self">self</span>.<span class="ident">connection_state</span> <span class="op">=</span> <span class="ident">ConnectionState::Disconnected</span>;
-                    <span class="kw">return</span> <span class="prelude-val">None</span>;
-                }
-                <span class="ident">VSockOp::Rw</span> =&gt; {
-                    <span class="kw">let</span> <span class="ident">data</span> <span class="op">=</span> <span class="ident">packet</span>.<span class="ident">get_payload</span>();
-                    <span class="comment">// TODO(#2876): Avoid copying the buffer slice if possible.</span>
-                    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">result</span> <span class="op">=</span> <span class="ident">VecDeque::with_capacity</span>(<span class="ident">data</span>.<span class="ident">len</span>());
-                    <span class="ident">result</span>.<span class="ident">extend</span>(<span class="ident">data</span>);
-                    <span class="kw">return</span> <span class="prelude-val">Some</span>(<span class="ident">result</span>);
+                VSockOp::Rw =&gt; {
+                    <span class="kw">let </span>data = packet.get_payload();
+                    <span class="comment">// TODO(#2876): Avoid copying the buffer slice if possible.
+                    </span><span class="kw">let </span><span class="kw-2">mut </span>result = VecDeque::with_capacity(data.len());
+                    result.extend(data);
+                    <span class="kw">return </span><span class="prelude-val">Some</span>(result);
                 }
             }
         }
     }
 
-    <span class="doccomment">/// Tries once to fill the destination with as much data as is currently available, either in</span>
-    <span class="doccomment">/// the pending buffer or from the next available data packet.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// Returns the number of bytes read if any data was available to read.</span>
-    <span class="kw">fn</span> <span class="ident">read_partial</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">dest</span>: <span class="kw-2">&amp;mut</span> [<span class="ident">u8</span>]) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">source</span> <span class="op">=</span> <span class="kw">match</span> <span class="self">self</span>.<span class="ident">pending_data</span>.<span class="ident">take</span>() {
-            <span class="prelude-val">Some</span>(<span class="ident">data</span>) =&gt; <span class="ident">data</span>,
-            <span class="prelude-val">None</span> =&gt; <span class="self">self</span>.<span class="ident">read_data</span>()<span class="question-mark">?</span>,
+    <span class="doccomment">/// Tries once to fill the destination with as much data as is currently available, either in
+    /// the pending buffer or from the next available data packet.
+    ///
+    /// Returns the number of bytes read if any data was available to read.
+    </span><span class="kw">fn </span>read_partial(<span class="kw-2">&amp;mut </span><span class="self">self</span>, dest: <span class="kw-2">&amp;mut </span>[u8]) -&gt; <span class="prelude-ty">Option</span>&lt;usize&gt; {
+        <span class="kw">let </span><span class="kw-2">mut </span>source = <span class="kw">match </span><span class="self">self</span>.pending_data.take() {
+            <span class="prelude-val">Some</span>(data) =&gt; data,
+            <span class="prelude-val">None </span>=&gt; <span class="self">self</span>.read_data()<span class="question-mark">?</span>,
         };
 
-        <span class="kw">let</span> <span class="ident">len</span> <span class="op">=</span> <span class="ident">dest</span>.<span class="ident">len</span>();
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">position</span> <span class="op">=</span> <span class="number">0</span>;
-        <span class="kw">while</span> <span class="ident">position</span> <span class="op">&lt;</span> <span class="ident">len</span> <span class="op">&amp;&amp;</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">byte</span>) <span class="op">=</span> <span class="ident">source</span>.<span class="ident">pop_front</span>() {
-            <span class="ident">dest</span>[<span class="ident">position</span>] <span class="op">=</span> <span class="ident">byte</span>;
-            <span class="ident">position</span> <span class="op">+</span><span class="op">=</span> <span class="number">1</span>;
+        <span class="kw">let </span>len = dest.len();
+        <span class="kw">let </span><span class="kw-2">mut </span>position = <span class="number">0</span>;
+        <span class="kw">while </span>position &lt; len &amp;&amp; <span class="kw">let </span><span class="prelude-val">Some</span>(byte) = source.pop_front() {
+            dest[position] = byte;
+            position += <span class="number">1</span>;
         }
 
-        <span class="kw">if</span> <span class="op">!</span><span class="ident">source</span>.<span class="ident">is_empty</span>() {
-            <span class="self">self</span>.<span class="ident">pending_data</span>.<span class="ident">replace</span>(<span class="ident">source</span>);
+        <span class="kw">if </span>!source.is_empty() {
+            <span class="self">self</span>.pending_data.replace(source);
         }
-        <span class="prelude-val">Some</span>(<span class="ident">position</span>)
+        <span class="prelude-val">Some</span>(position)
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="ident">Read</span> <span class="kw">for</span> <span class="ident">Socket</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="ident">T</span>: <span class="ident">VirtioTransport</span>,
+<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, T, A: Allocator&gt; Read <span class="kw">for </span>Socket&lt;<span class="lifetime">&#39;a</span>, T, A&gt;
+<span class="kw">where
+    </span>T: VirtioTransport,
 {
-    <span class="kw">fn</span> <span class="ident">read</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">data</span>: <span class="kw-2">&amp;mut</span> [<span class="ident">u8</span>]) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">len</span> <span class="op">=</span> <span class="ident">data</span>.<span class="ident">len</span>();
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">count</span> <span class="op">=</span> <span class="number">0</span>;
-        <span class="kw">while</span> <span class="ident">count</span> <span class="op">&lt;</span> <span class="ident">len</span> {
-            <span class="ident">count</span> <span class="op">+</span><span class="op">=</span> <span class="self">self</span>.<span class="ident">read_partial</span>(<span class="kw-2">&amp;mut</span> <span class="ident">data</span>[<span class="ident">count</span>..]).<span class="ident">unwrap_or</span>(<span class="number">0</span>);
+    <span class="kw">fn </span>read(<span class="kw-2">&amp;mut </span><span class="self">self</span>, data: <span class="kw-2">&amp;mut </span>[u8]) -&gt; anyhow::Result&lt;()&gt; {
+        <span class="kw">let </span>len = data.len();
+        <span class="kw">let </span><span class="kw-2">mut </span>count = <span class="number">0</span>;
+        <span class="kw">while </span>count &lt; len {
+            count += <span class="self">self</span>.read_partial(<span class="kw-2">&amp;mut </span>data[count..]).unwrap_or(<span class="number">0</span>);
         }
 
-        <span class="self">self</span>.<span class="ident">processed_bytes</span> <span class="op">+</span><span class="op">=</span> <span class="ident">Wrapping</span>(<span class="ident">count</span> <span class="kw">as</span> <span class="ident">u32</span>);
+        <span class="self">self</span>.processed_bytes += Wrapping(count <span class="kw">as </span>u32);
 
-        <span class="kw">if</span> <span class="self">self</span>.<span class="ident">must_send_credit_update</span>() {
-            <span class="self">self</span>.<span class="ident">send_control_packet</span>(<span class="ident">VSockOp::CreditUpdate</span>)
-                .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">error</span><span class="op">|</span> <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;Could not create control packet: {:?}&quot;</span>, <span class="ident">error</span>))<span class="question-mark">?</span>;
+        <span class="kw">if </span><span class="self">self</span>.must_send_credit_update() {
+            <span class="self">self</span>.send_control_packet(VSockOp::CreditUpdate)
+                .map_err(|error| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;Could not create control packet: {:?}&quot;</span>, error))<span class="question-mark">?</span>;
         }
 
         <span class="prelude-val">Ok</span>(())
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="ident">Write</span> <span class="kw">for</span> <span class="ident">Socket</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="ident">T</span>: <span class="ident">VirtioTransport</span>,
+<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, T, A: Allocator&gt; Write <span class="kw">for </span>Socket&lt;<span class="lifetime">&#39;a</span>, T, A&gt;
+<span class="kw">where
+    </span>T: VirtioTransport,
 {
-    <span class="kw">fn</span> <span class="ident">write</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">data</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">start</span> <span class="op">=</span> <span class="number">0</span>;
-        <span class="kw">let</span> <span class="ident">data_len</span> <span class="op">=</span> <span class="ident">data</span>.<span class="ident">len</span>();
-        <span class="kw">while</span> <span class="ident">start</span> <span class="op">&lt;</span> <span class="ident">data_len</span> {
-            <span class="kw">let</span> <span class="ident">end</span> <span class="op">=</span> <span class="ident">core::cmp::min</span>(<span class="ident">data_len</span>, <span class="ident">start</span> <span class="op">+</span> <span class="ident">MAX_PAYLOAD_SIZE</span>);
-            <span class="self">self</span>.<span class="ident">send_data_packet</span>(<span class="kw-2">&amp;</span><span class="ident">data</span>[<span class="ident">start</span>..<span class="ident">end</span>])<span class="question-mark">?</span>;
-            <span class="ident">start</span> <span class="op">=</span> <span class="ident">end</span>;
+    <span class="kw">fn </span>write(<span class="kw-2">&amp;mut </span><span class="self">self</span>, data: <span class="kw-2">&amp;</span>[u8]) -&gt; anyhow::Result&lt;()&gt; {
+        <span class="kw">let </span><span class="kw-2">mut </span>start = <span class="number">0</span>;
+        <span class="kw">let </span>data_len = data.len();
+        <span class="kw">while </span>start &lt; data_len {
+            <span class="kw">let </span>end = core::cmp::min(data_len, start + MAX_PAYLOAD_SIZE);
+            <span class="self">self</span>.send_data_packet(<span class="kw-2">&amp;</span>data[start..end])<span class="question-mark">?</span>;
+            start = end;
         }
         <span class="prelude-val">Ok</span>(())
     }
 
-    <span class="kw">fn</span> <span class="ident">flush</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-        <span class="comment">// We always flush on write, so do nothing.</span>
-        <span class="comment">// TODO(#2876): We should use a buffered writer so that we don&#39;t always flush on write, and</span>
-        <span class="comment">// provide an actual flush implementation here.</span>
-        <span class="prelude-val">Ok</span>(())
+    <span class="kw">fn </span>flush(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; anyhow::Result&lt;()&gt; {
+        <span class="comment">// We always flush on write, so do nothing.
+        // TODO(#2876): We should use a buffered writer so that we don&#39;t always flush on write, and
+        // provide an actual flush implementation here.
+        </span><span class="prelude-val">Ok</span>(())
     }
 }
 
-<span class="doccomment">/// The state of the connection.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">PartialEq</span>, <span class="ident">Eq</span>)]</span>
-<span class="kw">enum</span> <span class="ident">ConnectionState</span> {
-    <span class="ident">Connected</span>,
-    <span class="ident">Disconnected</span>,
+<span class="doccomment">/// The state of the connection.
+</span><span class="attribute">#[derive(Debug, PartialEq, Eq)]
+</span><span class="kw">enum </span>ConnectionState {
+    Connected,
+    Disconnected,
 }
 
-<span class="doccomment">/// The configuration information for the socket.</span>
-<span class="kw">struct</span> <span class="ident">SocketConfiguration</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">VirtioTransport</span><span class="op">&gt;</span> {
-    <span class="doccomment">/// The vsock device driver.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// For now we only support one connection, so the driver is owned by this configuration.</span>
-    <span class="ident">vsock</span>: <span class="ident">VSock</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>,
-    <span class="doccomment">/// The local port for the connection.</span>
-    <span class="ident">local_port</span>: <span class="ident">u32</span>,
-    <span class="doccomment">/// The host port for the connection.</span>
-    <span class="ident">host_port</span>: <span class="ident">u32</span>,
+<span class="doccomment">/// The configuration information for the socket.
+</span><span class="kw">struct </span>SocketConfiguration&lt;<span class="lifetime">&#39;a</span>, T: VirtioTransport, A: Allocator&gt; {
+    <span class="doccomment">/// The vsock device driver.
+    ///
+    /// For now we only support one connection, so the driver is owned by this configuration.
+    </span>vsock: VSock&lt;<span class="lifetime">&#39;a</span>, T, A&gt;,
+    <span class="doccomment">/// The local port for the connection.
+    </span>local_port: u32,
+    <span class="doccomment">/// The host port for the connection.
+    </span>host_port: u32,
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="ident">SocketConfiguration</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="ident">T</span>: <span class="ident">VirtioTransport</span>,
+<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, T, A: Allocator&gt; SocketConfiguration&lt;<span class="lifetime">&#39;a</span>, T, A&gt;
+<span class="kw">where
+    </span>T: VirtioTransport,
 {
-    <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">vsock</span>: <span class="ident">VSock</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>, <span class="ident">local_port</span>: <span class="ident">u32</span>, <span class="ident">host_port</span>: <span class="ident">u32</span>) -&gt; <span class="self">Self</span> {
-        <span class="self">Self</span> {
-            <span class="ident">vsock</span>,
-            <span class="ident">local_port</span>,
-            <span class="ident">host_port</span>,
+    <span class="kw">fn </span>new(vsock: VSock&lt;<span class="lifetime">&#39;a</span>, T, A&gt;, local_port: u32, host_port: u32) -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{
+            vsock,
+            local_port,
+            host_port,
         }
     }
 }
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
-<span class="kw">mod</span> <span class="ident">tests</span>;
+<span class="attribute">#[cfg(test)]
+</span><span class="kw">mod </span>tests;
 </code></pre></div>
-</section><section id="search" class="content hidden"></section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="virtio" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.62.0-nightly (de1bc0008 2022-04-21)" ></div>
-</body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="virtio" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (81f391930 2022-10-09)" ></div></body></html>

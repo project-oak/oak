@@ -1,9 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `oak_functions/examples/weather_lookup/module/src/lib.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>lib.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../ayu.css" disabled><link rel="stylesheet" type="text/css" href="../../dark.css" disabled><link rel="stylesheet" type="text/css" href="../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../storage.js"></script><script src="../../crates.js"></script><script defer src="../../main.js"></script><script defer src="../../source-script.js"></script><script defer src="../../source-files.js"></script>
-    <noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../weather_lookup/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div>
-        </a><h2 class="location"></h2>
-    </nav>
-    <nav class="sidebar"><a class="sidebar-logo" href="../../weather_lookup/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div>
-        </a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../weather_lookup/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><div class="theme-picker hidden"><button id="theme-picker" aria-label="Pick another theme!" aria-haspopup="menu" title="themes"><img width="22" height="22" alt="Pick another theme!" src="../../brush.svg"></button><div id="theme-choices" role="menu"></div></div><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><button type="button" id="help-button" title="help">?</button><a id="settings-menu" href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../wheel.svg"></a></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `oak_functions/examples/weather_lookup/module/src/lib.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>lib.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" href="../../normalize.css"><link rel="stylesheet" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" href="../../ayu.css" disabled><link rel="stylesheet" href="../../dark.css" disabled><link rel="stylesheet" href="../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../storage.js"></script><script defer src="../../source-script.js"></script><script defer src="../../source-files.js"></script><script defer src="../../main.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><a class="sidebar-logo" href="../../weather_lookup/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../weather_lookup/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="src-line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -114,117 +109,118 @@
 <span id="109">109</span>
 <span id="110">110</span>
 <span id="111">111</span>
-</pre><pre class="rust"><code><span class="comment">//</span>
-<span class="comment">// Copyright 2021 The Project Oak Authors</span>
-<span class="comment">//</span>
-<span class="comment">// Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
-<span class="comment">// you may not use this file except in compliance with the License.</span>
-<span class="comment">// You may obtain a copy of the License at</span>
-<span class="comment">//</span>
-<span class="comment">//     http://www.apache.org/licenses/LICENSE-2.0</span>
-<span class="comment">//</span>
-<span class="comment">// Unless required by applicable law or agreed to in writing, software</span>
-<span class="comment">// distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
-<span class="comment">// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
-<span class="comment">// See the License for the specific language governing permissions and</span>
-<span class="comment">// limitations under the License.</span>
-<span class="comment">//</span>
+<span id="112">112</span>
+</pre><pre class="rust"><code><span class="comment">//
+// Copyright 2021 The Project Oak Authors
+//
+// Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
-<span class="doccomment">//! Oak Functions weather lookup example.</span>
+</span><span class="doccomment">//! Oak Functions weather lookup example.
 
-<span class="attribute">#![<span class="ident">feature</span>(<span class="ident">try_blocks</span>)]</span>
-<span class="comment">// Required for enabling benchmark tests.</span>
-<span class="attribute">#![<span class="ident">feature</span>(<span class="ident">test</span>)]</span>
+</span><span class="attribute">#![feature(try_blocks)]
+</span><span class="comment">// Required for enabling benchmark tests.
+</span><span class="attribute">#![feature(test)]
 
-<span class="kw">use</span> <span class="ident">location_utils</span>::{
-    <span class="ident">cell_id_to_bytes</span>, <span class="ident">find_cell</span>, <span class="ident">location_from_bytes</span>, <span class="ident">location_from_degrees</span>, <span class="ident">location_to_bytes</span>,
-    <span class="ident">Angle</span>, <span class="ident">LatLng</span>, <span class="ident">DEFAULT_CUTOFF_RADIUS_RADIANS</span>,
+</span><span class="kw">use </span>location_utils::{
+    cell_id_to_bytes, find_cell, location_from_bytes, location_from_degrees, location_to_bytes,
+    Angle, LatLng, DEFAULT_CUTOFF_RADIUS_RADIANS,
 };
-<span class="kw">use</span> <span class="ident">oak_functions::log</span>;
-<span class="kw">use</span> <span class="ident">serde::Deserialize</span>;
+<span class="kw">use </span>oak_functions_sdk::log;
+<span class="kw">use </span>serde::Deserialize;
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
-<span class="kw">mod</span> <span class="ident">tests</span>;
+<span class="attribute">#[cfg(test)]
+</span><span class="kw">mod </span>tests;
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Deserialize</span>, <span class="ident">Debug</span>)]</span>
-<span class="kw">struct</span> <span class="ident">Request</span> {
-    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">rename</span> <span class="op">=</span> <span class="string">&quot;lat&quot;</span>)]</span>
-    <span class="ident">latitude_degrees</span>: <span class="ident">f64</span>,
-    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">rename</span> <span class="op">=</span> <span class="string">&quot;lng&quot;</span>)]</span>
-    <span class="ident">longitude_degrees</span>: <span class="ident">f64</span>,
+<span class="attribute">#[derive(Deserialize, Debug)]
+</span><span class="kw">struct </span>Request {
+    <span class="attribute">#[serde(rename = <span class="string">&quot;lat&quot;</span>)]
+    </span>latitude_degrees: f64,
+    <span class="attribute">#[serde(rename = <span class="string">&quot;lng&quot;</span>)]
+    </span>longitude_degrees: f64,
 }
 
-<span class="attribute">#[<span class="ident">cfg_attr</span>(<span class="ident">not</span>(<span class="ident">test</span>), <span class="ident">no_mangle</span>)]</span>
-<span class="kw">pub</span> <span class="kw">extern</span> <span class="string">&quot;C&quot;</span> <span class="kw">fn</span> <span class="ident">main</span>() {
-    <span class="comment">// Produce a result which is either a successful response (as raw bytes), or an error message to</span>
-    <span class="comment">// return to the client (as a human-readable string).</span>
-    <span class="kw">let</span> <span class="ident">result</span>: <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>, <span class="ident">String</span><span class="op">&gt;</span> <span class="op">=</span> <span class="kw">try</span> {
-        <span class="comment">// Read the request.</span>
-        <span class="kw">let</span> <span class="ident">request_body</span> <span class="op">=</span> <span class="ident">oak_functions::read_request</span>()
-            .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> <span class="macro">format!</span>(<span class="string">&quot;could not read request body: {:?}&quot;</span>, <span class="ident">err</span>))<span class="question-mark">?</span>;
+<span class="attribute">#[cfg_attr(not(test), no_mangle)]
+</span><span class="kw">pub extern </span><span class="string">&quot;C&quot; </span><span class="kw">fn </span>main() {
+    <span class="comment">// Produce a result which is either a successful response (as raw bytes), or an error message to
+    // return to the client (as a human-readable string).
+    </span><span class="kw">let </span>result: <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, String&gt; = <span class="kw">try </span>{
+        <span class="comment">// Read the request.
+        </span><span class="kw">let </span>request_body = oak_functions_sdk::read_request()
+            .map_err(|err| <span class="macro">format!</span>(<span class="string">&quot;could not read request body: {:?}&quot;</span>, err))<span class="question-mark">?</span>;
 
-        <span class="comment">// Parse the request as JSON.</span>
-        <span class="kw">let</span> <span class="ident">request</span>: <span class="ident">Request</span> <span class="op">=</span> <span class="ident">serde_json::from_slice</span>(<span class="kw-2">&amp;</span><span class="ident">request_body</span>)
-            .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> <span class="macro">format!</span>(<span class="string">&quot;could not deserialize request as JSON: {:?}&quot;</span>, <span class="ident">err</span>))<span class="question-mark">?</span>;
-        <span class="macro">log!</span>(<span class="string">&quot;parsed request: {:?}\n&quot;</span>, <span class="ident">request</span>);
+        <span class="comment">// Parse the request as JSON.
+        </span><span class="kw">let </span>request: Request = serde_json::from_slice(<span class="kw-2">&amp;</span>request_body)
+            .map_err(|err| <span class="macro">format!</span>(<span class="string">&quot;could not deserialize request as JSON: {:?}&quot;</span>, err))<span class="question-mark">?</span>;
+        <span class="macro">log!</span>(<span class="string">&quot;parsed request: {:?}\n&quot;</span>, request);
 
-        <span class="comment">// Find the S2 cell (using the default level) that contains the current location.</span>
-        <span class="kw">let</span> <span class="ident">level</span> <span class="op">=</span> <span class="ident">location_utils::S2_DEFAULT_LEVEL</span>;
-        <span class="kw">let</span> <span class="ident">location</span> <span class="op">=</span> <span class="ident">location_from_degrees</span>(<span class="ident">request</span>.<span class="ident">latitude_degrees</span>, <span class="ident">request</span>.<span class="ident">longitude_degrees</span>);
-        <span class="kw">let</span> <span class="ident">cell</span> <span class="op">=</span>
-            <span class="ident">find_cell</span>(<span class="kw-2">&amp;</span><span class="ident">location</span>, <span class="ident">level</span>).<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> <span class="macro">format!</span>(<span class="string">&quot;could not find cell: {:?}&quot;</span>, <span class="ident">err</span>))<span class="question-mark">?</span>;
-        <span class="macro">log!</span>(<span class="string">&quot;current location cell token: {}\n&quot;</span>, <span class="ident">cell</span>.<span class="ident">to_token</span>());
+        <span class="comment">// Find the S2 cell (using the default level) that contains the current location.
+        </span><span class="kw">let </span>level = location_utils::S2_DEFAULT_LEVEL;
+        <span class="kw">let </span>location = location_from_degrees(request.latitude_degrees, request.longitude_degrees);
+        <span class="kw">let </span>cell =
+            find_cell(<span class="kw-2">&amp;</span>location, level).map_err(|err| <span class="macro">format!</span>(<span class="string">&quot;could not find cell: {:?}&quot;</span>, err))<span class="question-mark">?</span>;
+        <span class="macro">log!</span>(<span class="string">&quot;current location cell token: {}\n&quot;</span>, cell.to_token());
 
-        <span class="comment">// Look up the index values for the list of weather data points in the vicinity of the cell.</span>
-        <span class="kw">let</span> <span class="ident">index</span> <span class="op">=</span> <span class="ident">oak_functions::storage_get_item</span>(<span class="kw-2">&amp;</span><span class="ident">cell_id_to_bytes</span>(<span class="kw-2">&amp;</span><span class="ident">cell</span>))
-            .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> <span class="macro">format!</span>(<span class="string">&quot;could not get index item: {:?}&quot;</span>, <span class="ident">err</span>))<span class="question-mark">?</span>
-            .<span class="ident">ok_or</span>(<span class="string">&quot;could not find index item for cell&quot;</span>)<span class="question-mark">?</span>;
+        <span class="comment">// Look up the index values for the list of weather data points in the vicinity of the cell.
+        </span><span class="kw">let </span>index = oak_functions_sdk::storage_get_item(<span class="kw-2">&amp;</span>cell_id_to_bytes(<span class="kw-2">&amp;</span>cell))
+            .map_err(|err| <span class="macro">format!</span>(<span class="string">&quot;could not get index item: {:?}&quot;</span>, err))<span class="question-mark">?
+            </span>.ok_or(<span class="string">&quot;could not find index item for cell&quot;</span>)<span class="question-mark">?</span>;
 
-        <span class="comment">// Find the closest key by linearly scanning the nearby weather data points to find the</span>
-        <span class="comment">// closest one.</span>
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">best_distance</span> <span class="op">=</span> <span class="ident">Angle::from</span>(<span class="ident">DEFAULT_CUTOFF_RADIUS_RADIANS</span>);
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">best_location</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">LatLng</span><span class="op">&gt;</span> <span class="op">=</span> <span class="prelude-val">None</span>;
+        <span class="comment">// Find the closest key by linearly scanning the nearby weather data points to find the
+        // closest one.
+        </span><span class="kw">let </span><span class="kw-2">mut </span>best_distance = Angle::from(DEFAULT_CUTOFF_RADIUS_RADIANS);
+        <span class="kw">let </span><span class="kw-2">mut </span>best_location: <span class="prelude-ty">Option</span>&lt;LatLng&gt; = <span class="prelude-val">None</span>;
 
-        <span class="kw">for</span> <span class="ident">chunk</span> <span class="kw">in</span> <span class="ident">index</span>.<span class="ident">chunks</span>(<span class="number">8</span>) {
-            <span class="kw">let</span> <span class="ident">test</span> <span class="op">=</span> <span class="ident">location_from_bytes</span>(<span class="ident">chunk</span>)
-                .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> <span class="macro">format!</span>(<span class="string">&quot;could not convert chunk to location: {:?}&quot;</span>, <span class="ident">err</span>))<span class="question-mark">?</span>;
-            <span class="kw">let</span> <span class="ident">distance</span> <span class="op">=</span> <span class="ident">location</span>.<span class="ident">distance</span>(<span class="kw-2">&amp;</span><span class="ident">test</span>);
-            <span class="kw">if</span> <span class="ident">distance</span> <span class="op">&lt;</span> <span class="ident">best_distance</span> {
-                <span class="ident">best_distance</span> <span class="op">=</span> <span class="ident">distance</span>;
-                <span class="ident">best_location</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">test</span>);
+        <span class="kw">for </span>chunk <span class="kw">in </span>index.chunks(<span class="number">8</span>) {
+            <span class="kw">let </span>test = location_from_bytes(chunk)
+                .map_err(|err| <span class="macro">format!</span>(<span class="string">&quot;could not convert chunk to location: {:?}&quot;</span>, err))<span class="question-mark">?</span>;
+            <span class="kw">let </span>distance = location.distance(<span class="kw-2">&amp;</span>test);
+            <span class="kw">if </span>distance &lt; best_distance {
+                best_distance = distance;
+                best_location = <span class="prelude-val">Some</span>(test);
             }
         }
 
-        <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">best_location</span> {
-            <span class="prelude-val">Some</span>(<span class="ident">key_location</span>) =&gt; {
-                <span class="macro">log!</span>(<span class="string">&quot;nearest data point: {:?}\n&quot;</span>, <span class="ident">key_location</span>);
-                <span class="kw">let</span> <span class="ident">best_value</span> <span class="op">=</span> <span class="ident">oak_functions::storage_get_item</span>(<span class="kw-2">&amp;</span><span class="ident">location_to_bytes</span>(<span class="kw-2">&amp;</span><span class="ident">key_location</span>))
-                    .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> <span class="macro">format!</span>(<span class="string">&quot;could not get item: {:?}&quot;</span>, <span class="ident">err</span>))<span class="question-mark">?</span>
-                    .<span class="ident">ok_or</span>(<span class="string">&quot;could not find item with key&quot;</span>)<span class="question-mark">?</span>;
-                <span class="macro">log!</span>(<span class="string">&quot;nearest location value: {:?}\n&quot;</span>, <span class="ident">best_value</span>);
+        <span class="kw">let </span>result = <span class="kw">match </span>best_location {
+            <span class="prelude-val">Some</span>(key_location) =&gt; {
+                <span class="macro">log!</span>(<span class="string">&quot;nearest data point: {:?}\n&quot;</span>, key_location);
+                <span class="kw">let </span>best_value =
+                    oak_functions_sdk::storage_get_item(<span class="kw-2">&amp;</span>location_to_bytes(<span class="kw-2">&amp;</span>key_location))
+                        .map_err(|err| <span class="macro">format!</span>(<span class="string">&quot;could not get item: {:?}&quot;</span>, err))<span class="question-mark">?
+                        </span>.ok_or(<span class="string">&quot;could not find item with key&quot;</span>)<span class="question-mark">?</span>;
+                <span class="macro">log!</span>(<span class="string">&quot;nearest location value: {:?}\n&quot;</span>, best_value);
 
-                <span class="ident">best_value</span>
+                best_value
             }
-            <span class="prelude-val">None</span> =&gt; <span class="string">b&quot;could not find location within cutoff&quot;</span>.<span class="ident">to_vec</span>(),
+            <span class="prelude-val">None </span>=&gt; <span class="string">b&quot;could not find location within cutoff&quot;</span>.to_vec(),
         };
 
-        <span class="ident">result</span>
+        result
     };
 
-    <span class="kw">let</span> <span class="ident">response</span> <span class="op">=</span> <span class="ident">result</span>.<span class="ident">unwrap_or_else</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> <span class="ident">err</span>.<span class="ident">as_bytes</span>().<span class="ident">to_vec</span>());
+    <span class="kw">let </span>response = result.unwrap_or_else(|err| err.as_bytes().to_vec());
 
-    <span class="comment">// Write the response.</span>
-    <span class="ident">oak_functions::write_response</span>(<span class="kw-2">&amp;</span><span class="ident">response</span>).<span class="ident">expect</span>(<span class="string">&quot;Couldn&#39;t write the response body.&quot;</span>);
+    <span class="comment">// Write the response.
+    </span>oak_functions_sdk::write_response(<span class="kw-2">&amp;</span>response).expect(<span class="string">&quot;Couldn&#39;t write the response body.&quot;</span>);
 }
 
-<span class="attribute">#[<span class="ident">export_name</span> <span class="op">=</span> <span class="string">&quot;wizer.initialize&quot;</span>]</span>
-<span class="kw">pub</span> <span class="kw">extern</span> <span class="string">&quot;C&quot;</span> <span class="kw">fn</span> <span class="ident">init</span>() {
-    <span class="comment">// We perform a single S2 cell lookup to ensure that the lookup tables are initialised, as this</span>
-    <span class="comment">// initisalisation is quite expensive and we don&#39;t want to redo it for every request.</span>
-    <span class="kw">let</span> <span class="ident">level</span> <span class="op">=</span> <span class="ident">location_utils::S2_DEFAULT_LEVEL</span>;
-    <span class="kw">let</span> <span class="ident">location</span> <span class="op">=</span> <span class="ident">location_from_degrees</span>(<span class="number">90.</span>, <span class="number">45.</span>);
-    <span class="kw">let</span> <span class="kw">_</span> <span class="op">=</span> <span class="ident">find_cell</span>(<span class="kw-2">&amp;</span><span class="ident">location</span>, <span class="ident">level</span>);
+<span class="attribute">#[export_name = <span class="string">&quot;wizer.initialize&quot;</span>]
+</span><span class="kw">pub extern </span><span class="string">&quot;C&quot; </span><span class="kw">fn </span>init() {
+    <span class="comment">// We perform a single S2 cell lookup to ensure that the lookup tables are initialised, as this
+    // initisalisation is quite expensive and we don&#39;t want to redo it for every request.
+    </span><span class="kw">let </span>level = location_utils::S2_DEFAULT_LEVEL;
+    <span class="kw">let </span>location = location_from_degrees(<span class="number">90.</span>, <span class="number">45.</span>);
+    <span class="kw">let _ </span>= find_cell(<span class="kw-2">&amp;</span>location, level);
 }
 </code></pre></div>
-</section><section id="search" class="content hidden"></section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="weather_lookup" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.62.0-nightly (de1bc0008 2022-04-21)" ></div>
-</body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="weather_lookup" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (81f391930 2022-10-09)" ></div></body></html>

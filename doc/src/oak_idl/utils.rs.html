@@ -1,9 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `oak_idl/src/utils.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>utils.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../ayu.css" disabled><link rel="stylesheet" type="text/css" href="../../dark.css" disabled><link rel="stylesheet" type="text/css" href="../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../storage.js"></script><script src="../../crates.js"></script><script defer src="../../main.js"></script><script defer src="../../source-script.js"></script><script defer src="../../source-files.js"></script>
-    <noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../oak_idl/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div>
-        </a><h2 class="location"></h2>
-    </nav>
-    <nav class="sidebar"><a class="sidebar-logo" href="../../oak_idl/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div>
-        </a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../oak_idl/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><div class="theme-picker hidden"><button id="theme-picker" aria-label="Pick another theme!" aria-haspopup="menu" title="themes"><img width="22" height="22" alt="Pick another theme!" src="../../brush.svg"></button><div id="theme-choices" role="menu"></div></div><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><button type="button" id="help-button" title="help">?</button><a id="settings-menu" href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../wheel.svg"></a></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `oak_idl/src/utils.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>utils.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" href="../../normalize.css"><link rel="stylesheet" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" href="../../ayu.css" disabled><link rel="stylesheet" href="../../dark.css" disabled><link rel="stylesheet" href="../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../storage.js"></script><script defer src="../../source-script.js"></script><script defer src="../../source-files.js"></script><script defer src="../../main.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><a class="sidebar-logo" href="../../oak_idl/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../oak_idl/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="src-line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -156,159 +151,158 @@
 <span id="151">151</span>
 <span id="152">152</span>
 <span id="153">153</span>
-</pre><pre class="rust"><code><span class="comment">// Copyright 2022 The Project Oak Authors</span>
-<span class="comment">//</span>
-<span class="comment">// Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
-<span class="comment">// you may not use this file except in compliance with the License.</span>
-<span class="comment">// You may obtain a copy of the License at</span>
-<span class="comment">//</span>
-<span class="comment">//     http://www.apache.org/licenses/LICENSE-2.0</span>
-<span class="comment">//</span>
-<span class="comment">// Unless required by applicable law or agreed to in writing, software</span>
-<span class="comment">// distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
-<span class="comment">// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
-<span class="comment">// See the License for the specific language governing permissions and</span>
-<span class="comment">// limitations under the License.</span>
-<span class="comment">//</span>
+</pre><pre class="rust"><code><span class="comment">// Copyright 2022 The Project Oak Authors
+//
+// Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
-<span class="doccomment">//! Utilities for improving the ergonomics of FlatBuffers in Rust.</span>
+</span><span class="doccomment">//! Utilities for improving the ergonomics of FlatBuffers in Rust.
 
-<span class="kw">use</span> <span class="ident">alloc::vec::Vec</span>;
-<span class="kw">use</span> <span class="ident">core</span>::{
-    <span class="ident">marker::PhantomData</span>,
-    <span class="ident">ops</span>::{<span class="ident">Deref</span>, <span class="ident">DerefMut</span>},
+</span><span class="kw">use </span>alloc::vec::Vec;
+<span class="kw">use </span>core::{
+    marker::PhantomData,
+    ops::{Deref, DerefMut},
 };
 
-<span class="doccomment">/// A helper struct to facilitate building a [`OwnedFlatbuffer`].</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// [`OwnedFlatbufferBuilder`] delegates to the underlying [`flatbuffers::FlatBufferBuilder`]</span>
-<span class="doccomment">/// instance, and it adds a [`OwnedFlatbufferBuilder::finish`] method that returns a completed</span>
-<span class="doccomment">/// [`OwnedFlatbuffer`] instance which owns the underlying buffer.</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// We need to have an instance of [`PhantomData`] in the struct in order to use the type paramter</span>
-<span class="doccomment">/// `T`.</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// ```</span>
-<span class="doccomment">/// # struct Request&lt;&#39;a&gt; {</span>
-<span class="doccomment">/// #     pub _tab: flatbuffers::Table&lt;&#39;a&gt;,</span>
-<span class="doccomment">/// # };</span>
-<span class="doccomment">/// #</span>
-<span class="doccomment">/// # impl flatbuffers::Verifiable for Request&lt;&#39;_&gt; {</span>
-<span class="doccomment">/// #     fn run_verifier(</span>
-<span class="doccomment">/// #         v: &amp;mut flatbuffers::Verifier,</span>
-<span class="doccomment">/// #         pos: usize,</span>
-<span class="doccomment">/// #     ) -&gt; Result&lt;(), flatbuffers::InvalidFlatbuffer&gt; {</span>
-<span class="doccomment">/// #         Ok(())</span>
-<span class="doccomment">/// #     }</span>
-<span class="doccomment">/// # }</span>
-<span class="doccomment">/// #</span>
-<span class="doccomment">/// # impl&lt;&#39;a&gt; flatbuffers::Follow&lt;&#39;a&gt; for Request&lt;&#39;a&gt; {</span>
-<span class="doccomment">/// #     type Inner = Self;</span>
-<span class="doccomment">/// #     fn follow(buf: &amp;&#39;a [u8], loc: usize) -&gt; Self::Inner {</span>
-<span class="doccomment">/// #         Self {</span>
-<span class="doccomment">/// #             _tab: flatbuffers::Table { buf, loc },</span>
-<span class="doccomment">/// #         }</span>
-<span class="doccomment">/// #     }</span>
-<span class="doccomment">/// # }</span>
-<span class="doccomment">/// #</span>
-<span class="doccomment">/// # impl Request&lt;&#39;_&gt; {</span>
-<span class="doccomment">/// #     pub fn create&lt;&#39;bldr: &#39;args, &#39;args:&#39;mut_bldr, &#39;mut_bldr&gt;(b: &amp;&#39;mut_bldr mut flatbuffers::FlatBufferBuilder&lt;&#39;bldr&gt;,</span>
-<span class="doccomment">/// #      args: &amp;&#39;args RequestArgs&lt;&#39;args&gt;) -&gt; flatbuffers::WIPOffset&lt;Request&lt;&#39;bldr&gt;&gt; {</span>
-<span class="doccomment">/// #         flatbuffers::WIPOffset::new(0)</span>
-<span class="doccomment">/// #     }</span>
-<span class="doccomment">/// # }</span>
-<span class="doccomment">/// #</span>
-<span class="doccomment">/// # pub struct RequestArgs&lt;&#39;a&gt; {</span>
-<span class="doccomment">/// #     pub value: Option&lt;flatbuffers::WIPOffset&lt;flatbuffers::Vector&lt;&#39;a, u8&gt;&gt;&gt;,</span>
-<span class="doccomment">/// # }</span>
-<span class="doccomment">/// #</span>
-<span class="doccomment">/// let mut b = oak_idl::utils::OwnedFlatbufferBuilder::&lt;Request&gt;::default();</span>
-<span class="doccomment">/// let v = b.create_vector::&lt;u8&gt;(&amp;[14, 12]);</span>
-<span class="doccomment">/// let req = Request::create(&amp;mut b, &amp;RequestArgs {</span>
-<span class="doccomment">///     value: Some(v),</span>
-<span class="doccomment">/// });</span>
-<span class="doccomment">/// let m = b.finish(req);</span>
-<span class="doccomment">/// ```</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">OwnedFlatbufferBuilder</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">T</span><span class="op">&gt;</span> {
-    <span class="ident">buf</span>: <span class="ident">flatbuffers::FlatBufferBuilder</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span>,
-    <span class="ident">_phantom</span>: <span class="ident">PhantomData</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>,
+<span class="doccomment">/// A helper struct to facilitate building a [`OwnedFlatbuffer`].
+///
+/// [`OwnedFlatbufferBuilder`] delegates to the underlying [`flatbuffers::FlatBufferBuilder`]
+/// instance, and it adds a [`OwnedFlatbufferBuilder::finish`] method that returns a completed
+/// [`OwnedFlatbuffer`] instance which owns the underlying buffer.
+///
+/// We need to have an instance of [`PhantomData`] in the struct in order to use the type paramter
+/// `T`.
+///
+/// ```
+/// # struct Request&lt;&#39;a&gt; {
+/// #     pub _tab: flatbuffers::Table&lt;&#39;a&gt;,
+/// # };
+/// #
+/// # impl flatbuffers::Verifiable for Request&lt;&#39;_&gt; {
+/// #     fn run_verifier(
+/// #         v: &amp;mut flatbuffers::Verifier,
+/// #         pos: usize,
+/// #     ) -&gt; Result&lt;(), flatbuffers::InvalidFlatbuffer&gt; {
+/// #         Ok(())
+/// #     }
+/// # }
+/// #
+/// # impl&lt;&#39;a&gt; flatbuffers::Follow&lt;&#39;a&gt; for Request&lt;&#39;a&gt; {
+/// #     type Inner = Self;
+/// #     unsafe fn follow(buf: &amp;&#39;a [u8], loc: usize) -&gt; Self::Inner {
+/// #         Self {
+/// #             _tab: flatbuffers::Table::new(buf, loc),
+/// #         }
+/// #     }
+/// # }
+/// #
+/// # impl Request&lt;&#39;_&gt; {
+/// #     pub fn create&lt;&#39;bldr: &#39;args, &#39;args:&#39;mut_bldr, &#39;mut_bldr&gt;(b: &amp;&#39;mut_bldr mut flatbuffers::FlatBufferBuilder&lt;&#39;bldr&gt;,
+/// #      args: &amp;&#39;args RequestArgs&lt;&#39;args&gt;) -&gt; flatbuffers::WIPOffset&lt;Request&lt;&#39;bldr&gt;&gt; {
+/// #         flatbuffers::WIPOffset::new(0)
+/// #     }
+/// # }
+/// #
+/// # pub struct RequestArgs&lt;&#39;a&gt; {
+/// #     pub value: Option&lt;flatbuffers::WIPOffset&lt;flatbuffers::Vector&lt;&#39;a, u8&gt;&gt;&gt;,
+/// # }
+/// #
+/// let mut b = oak_idl::utils::OwnedFlatbufferBuilder::&lt;Request&gt;::default();
+/// let v = b.create_vector::&lt;u8&gt;(&amp;[14, 12]);
+/// let req = Request::create(&amp;mut b, &amp;RequestArgs {
+///     value: Some(v),
+/// });
+/// let m = b.finish(req);
+/// ```
+</span><span class="kw">pub struct </span>OwnedFlatbufferBuilder&lt;<span class="lifetime">&#39;a</span>, T&gt; {
+    buf: flatbuffers::FlatBufferBuilder&lt;<span class="lifetime">&#39;a</span>&gt;,
+    _phantom: PhantomData&lt;T&gt;,
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">T</span>: <span class="ident">flatbuffers::Verifiable</span> <span class="op">+</span> <span class="ident">flatbuffers::Follow</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="ident">Default</span>
-    <span class="kw">for</span> <span class="ident">OwnedFlatbufferBuilder</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">T</span><span class="op">&gt;</span>
+<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, T: flatbuffers::Verifiable + flatbuffers::Follow&lt;<span class="lifetime">&#39;a</span>&gt;&gt; Default
+    <span class="kw">for </span>OwnedFlatbufferBuilder&lt;<span class="lifetime">&#39;a</span>, T&gt;
 {
-    <span class="kw">fn</span> <span class="ident">default</span>() -&gt; <span class="self">Self</span> {
-        <span class="self">Self</span> {
-            <span class="ident">buf</span>: <span class="ident">flatbuffers::FlatBufferBuilder::default</span>(),
-            <span class="ident">_phantom</span>: <span class="ident">PhantomData</span>,
+    <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{
+            buf: flatbuffers::FlatBufferBuilder::default(),
+            _phantom: PhantomData,
         }
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">T</span>: <span class="ident">flatbuffers::Verifiable</span> <span class="op">+</span> <span class="ident">flatbuffers::Follow</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="ident">OwnedFlatbufferBuilder</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">T</span><span class="op">&gt;</span> {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">finish</span>(
+<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, T: flatbuffers::Verifiable + flatbuffers::Follow&lt;<span class="lifetime">&#39;a</span>&gt;&gt; OwnedFlatbufferBuilder&lt;<span class="lifetime">&#39;a</span>, T&gt; {
+    <span class="kw">pub fn </span>finish(
         <span class="self">self</span>,
-        <span class="ident">offset</span>: <span class="ident">flatbuffers::WIPOffset</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">OwnedFlatbuffer</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>, <span class="ident">flatbuffers::InvalidFlatbuffer</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">s</span> <span class="op">=</span> <span class="self">self</span>;
-        <span class="ident">s</span>.<span class="ident">buf</span>.<span class="ident">finish</span>(<span class="ident">offset</span>, <span class="prelude-val">None</span>);
-        <span class="ident">OwnedFlatbuffer::from_vec</span>(<span class="ident">s</span>.<span class="ident">buf</span>.<span class="ident">finished_data</span>().<span class="ident">to_vec</span>())
+        offset: flatbuffers::WIPOffset&lt;T&gt;,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;OwnedFlatbuffer&lt;T&gt;, flatbuffers::InvalidFlatbuffer&gt; {
+        <span class="kw">let </span><span class="kw-2">mut </span>s = <span class="self">self</span>;
+        s.buf.finish(offset, <span class="prelude-val">None</span>);
+        OwnedFlatbuffer::from_vec(s.buf.finished_data().to_vec())
     }
 }
 
-<span class="doccomment">/// Delegate to the underlying [`OwnedFlatbufferBuilder`].</span>
-<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">T</span><span class="op">&gt;</span> <span class="ident">Deref</span> <span class="kw">for</span> <span class="ident">OwnedFlatbufferBuilder</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">T</span><span class="op">&gt;</span> {
-    <span class="kw">type</span> <span class="ident">Target</span> <span class="op">=</span> <span class="ident">flatbuffers::FlatBufferBuilder</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span>;
+<span class="doccomment">/// Delegate to the underlying [`OwnedFlatbufferBuilder`].
+</span><span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, T&gt; Deref <span class="kw">for </span>OwnedFlatbufferBuilder&lt;<span class="lifetime">&#39;a</span>, T&gt; {
+    <span class="kw">type </span>Target = flatbuffers::FlatBufferBuilder&lt;<span class="lifetime">&#39;a</span>&gt;;
 
-    <span class="kw">fn</span> <span class="ident">deref</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::Target</span> {
-        <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">buf</span>
+    <span class="kw">fn </span>deref(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="self">Self</span>::Target {
+        <span class="kw-2">&amp;</span><span class="self">self</span>.buf
     }
 }
 
-<span class="doccomment">/// Delegate to the underlying [`OwnedFlatbufferBuilder`].</span>
-<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">T</span><span class="op">&gt;</span> <span class="ident">DerefMut</span> <span class="kw">for</span> <span class="ident">OwnedFlatbufferBuilder</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">T</span><span class="op">&gt;</span> {
-    <span class="kw">fn</span> <span class="ident">deref_mut</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut</span> <span class="ident"><span class="self">Self</span>::Target</span> {
-        <span class="kw-2">&amp;mut</span> <span class="self">self</span>.<span class="ident">buf</span>
+<span class="doccomment">/// Delegate to the underlying [`OwnedFlatbufferBuilder`].
+</span><span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, T&gt; DerefMut <span class="kw">for </span>OwnedFlatbufferBuilder&lt;<span class="lifetime">&#39;a</span>, T&gt; {
+    <span class="kw">fn </span>deref_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut </span><span class="self">Self</span>::Target {
+        <span class="kw-2">&amp;mut </span><span class="self">self</span>.buf
     }
 }
 
-<span class="doccomment">/// An owned flatbuffer message, which owns the underlying buffer.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">OwnedFlatbuffer</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
-    <span class="ident">buf</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
-    <span class="ident">_phantom</span>: <span class="ident">PhantomData</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>,
+<span class="doccomment">/// An owned flatbuffer message, which owns the underlying buffer.
+</span><span class="attribute">#[derive(Debug)]
+</span><span class="kw">pub struct </span>OwnedFlatbuffer&lt;T&gt; {
+    buf: Vec&lt;u8&gt;,
+    _phantom: PhantomData&lt;T&gt;,
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">flatbuffers::Verifiable</span><span class="op">&gt;</span> <span class="ident">OwnedFlatbuffer</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">from_vec</span>(<span class="ident">buf</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident">flatbuffers::InvalidFlatbuffer</span><span class="op">&gt;</span> {
-        <span class="kw">use</span> <span class="ident">flatbuffers::Verifiable</span>;
-        <span class="kw">let</span> <span class="ident">opts</span> <span class="op">=</span> <span class="ident">flatbuffers::VerifierOptions::default</span>();
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">v</span> <span class="op">=</span> <span class="ident">flatbuffers::Verifier::new</span>(<span class="kw-2">&amp;</span><span class="ident">opts</span>, <span class="kw-2">&amp;</span><span class="ident">buf</span>);
-        <span class="op">&lt;</span><span class="ident">flatbuffers::ForwardsUOffset</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::run_verifier</span>(<span class="kw-2">&amp;mut</span> <span class="ident">v</span>, <span class="number">0</span>)<span class="question-mark">?</span>;
-        <span class="prelude-val">Ok</span>(<span class="self">Self</span> {
-            <span class="ident">buf</span>,
-            <span class="ident">_phantom</span>: <span class="ident">PhantomData</span>,
+<span class="kw">impl</span>&lt;T: flatbuffers::Verifiable&gt; OwnedFlatbuffer&lt;T&gt; {
+    <span class="kw">pub fn </span>from_vec(buf: Vec&lt;u8&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, flatbuffers::InvalidFlatbuffer&gt; {
+        <span class="kw">use </span>flatbuffers::Verifiable;
+        <span class="kw">let </span>opts = flatbuffers::VerifierOptions::default();
+        <span class="kw">let </span><span class="kw-2">mut </span>v = flatbuffers::Verifier::new(<span class="kw-2">&amp;</span>opts, <span class="kw-2">&amp;</span>buf);
+        &lt;flatbuffers::ForwardsUOffset&lt;T&gt;&gt;::run_verifier(<span class="kw-2">&amp;mut </span>v, <span class="number">0</span>)<span class="question-mark">?</span>;
+        <span class="prelude-val">Ok</span>(<span class="self">Self </span>{
+            buf,
+            _phantom: PhantomData,
         })
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="ident">OwnedFlatbuffer</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
-    <span class="doccomment">/// Returns a reference to the underlying owned buffer.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">buf</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>[<span class="ident">u8</span>] {
-        <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">buf</span>
+<span class="kw">impl</span>&lt;T&gt; OwnedFlatbuffer&lt;T&gt; {
+    <span class="doccomment">/// Returns a reference to the underlying owned buffer.
+    </span><span class="kw">pub fn </span>buf(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>[u8] {
+        <span class="kw-2">&amp;</span><span class="self">self</span>.buf
     }
-    <span class="doccomment">/// Returns the underlying owned buffer.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">into_vec</span>(<span class="self">self</span>) -&gt; <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">buf</span>
+    <span class="doccomment">/// Returns the underlying owned buffer.
+    </span><span class="kw">pub fn </span>into_vec(<span class="self">self</span>) -&gt; Vec&lt;u8&gt; {
+        <span class="self">self</span>.buf
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">T</span>: <span class="ident">flatbuffers::Follow</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">flatbuffers::Verifiable</span><span class="op">&gt;</span> <span class="ident">OwnedFlatbuffer</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
-    <span class="doccomment">/// Returns a reference to the flatbuffer object, pointing within the underlying owned buffer.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="self">self</span>) -&gt; <span class="ident">T::Inner</span> {
-        <span class="ident">flatbuffers::root</span>::<span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">buf</span>).<span class="ident">unwrap</span>()
+<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, T: flatbuffers::Follow&lt;<span class="lifetime">&#39;a</span>&gt; + flatbuffers::Verifiable&gt; OwnedFlatbuffer&lt;T&gt; {
+    <span class="doccomment">/// Returns a reference to the flatbuffer object, pointing within the underlying owned buffer.
+    </span><span class="kw">pub fn </span>get(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="self">self</span>) -&gt; T::Inner {
+        flatbuffers::root::&lt;T&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>.buf).unwrap()
     }
 }
 </code></pre></div>
-</section><section id="search" class="content hidden"></section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="oak_idl" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.62.0-nightly (de1bc0008 2022-04-21)" ></div>
-</body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="oak_idl" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (81f391930 2022-10-09)" ></div></body></html>

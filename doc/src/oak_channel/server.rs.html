@@ -1,0 +1,172 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `oak_channel/src/server.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>server.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" href="../../normalize.css"><link rel="stylesheet" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" href="../../ayu.css" disabled><link rel="stylesheet" href="../../dark.css" disabled><link rel="stylesheet" href="../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../storage.js"></script><script defer src="../../source-script.js"></script><script defer src="../../source-files.js"></script><script defer src="../../main.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><a class="sidebar-logo" href="../../oak_channel/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../oak_channel/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="src-line-numbers"><span id="1">1</span>
+<span id="2">2</span>
+<span id="3">3</span>
+<span id="4">4</span>
+<span id="5">5</span>
+<span id="6">6</span>
+<span id="7">7</span>
+<span id="8">8</span>
+<span id="9">9</span>
+<span id="10">10</span>
+<span id="11">11</span>
+<span id="12">12</span>
+<span id="13">13</span>
+<span id="14">14</span>
+<span id="15">15</span>
+<span id="16">16</span>
+<span id="17">17</span>
+<span id="18">18</span>
+<span id="19">19</span>
+<span id="20">20</span>
+<span id="21">21</span>
+<span id="22">22</span>
+<span id="23">23</span>
+<span id="24">24</span>
+<span id="25">25</span>
+<span id="26">26</span>
+<span id="27">27</span>
+<span id="28">28</span>
+<span id="29">29</span>
+<span id="30">30</span>
+<span id="31">31</span>
+<span id="32">32</span>
+<span id="33">33</span>
+<span id="34">34</span>
+<span id="35">35</span>
+<span id="36">36</span>
+<span id="37">37</span>
+<span id="38">38</span>
+<span id="39">39</span>
+<span id="40">40</span>
+<span id="41">41</span>
+<span id="42">42</span>
+<span id="43">43</span>
+<span id="44">44</span>
+<span id="45">45</span>
+<span id="46">46</span>
+<span id="47">47</span>
+<span id="48">48</span>
+<span id="49">49</span>
+<span id="50">50</span>
+<span id="51">51</span>
+<span id="52">52</span>
+<span id="53">53</span>
+<span id="54">54</span>
+<span id="55">55</span>
+<span id="56">56</span>
+<span id="57">57</span>
+<span id="58">58</span>
+<span id="59">59</span>
+<span id="60">60</span>
+<span id="61">61</span>
+<span id="62">62</span>
+<span id="63">63</span>
+<span id="64">64</span>
+<span id="65">65</span>
+<span id="66">66</span>
+<span id="67">67</span>
+<span id="68">68</span>
+<span id="69">69</span>
+<span id="70">70</span>
+<span id="71">71</span>
+<span id="72">72</span>
+<span id="73">73</span>
+<span id="74">74</span>
+<span id="75">75</span>
+<span id="76">76</span>
+<span id="77">77</span>
+<span id="78">78</span>
+<span id="79">79</span>
+<span id="80">80</span>
+<span id="81">81</span>
+<span id="82">82</span>
+<span id="83">83</span>
+<span id="84">84</span>
+<span id="85">85</span>
+</pre><pre class="rust"><code><span class="comment">//
+// Copyright 2022 The Project Oak Authors
+//
+// Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
+</span><span class="kw">use crate</span>::{message, Channel, InvocationChannel, Vec};
+<span class="kw">use </span>alloc::boxed::Box;
+<span class="kw">use </span>anyhow::Context;
+
+<span class="doccomment">/// Starts a blocking server that listens for requests on the provided channel
+/// and responds to them using the provided [`oak_idl::Handler`].
+</span><span class="kw">pub fn </span>start_blocking_server&lt;H: oak_idl::Handler&gt;(
+    channel: Box&lt;<span class="kw">dyn </span>Channel&gt;,
+    <span class="kw-2">mut </span>idl_service: H,
+) -&gt; anyhow::Result&lt;!&gt; {
+    <span class="kw">let </span>channel_handle = <span class="kw-2">&amp;mut </span>ServerChannelHandle::new(channel);
+    <span class="kw">loop </span>{
+        <span class="kw">let </span>request_message = channel_handle
+            .read_request()
+            .context(<span class="string">&quot;couldn&#39;t receive message&quot;</span>)<span class="question-mark">?</span>;
+        <span class="kw">let </span>request_message_invocation_id = request_message.invocation_id;
+        <span class="kw">let </span>response = idl_service.invoke(request_message.into());
+        <span class="kw">let </span>response_message =
+            message_from_response_and_id(response, request_message_invocation_id);
+        channel_handle.write_response(response_message)<span class="question-mark">?
+    </span>}
+}
+
+<span class="kw">struct </span>ServerChannelHandle {
+    inner: InvocationChannel,
+}
+
+<span class="kw">impl </span>ServerChannelHandle {
+    <span class="kw">pub fn </span>new(socket: Box&lt;<span class="kw">dyn </span>Channel&gt;) -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{
+            inner: InvocationChannel::new(socket),
+        }
+    }
+    <span class="kw">pub fn </span>read_request(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; anyhow::Result&lt;message::RequestMessage&gt; {
+        <span class="kw">let </span>message = <span class="self">self</span>.inner.read_message()<span class="question-mark">?</span>;
+        <span class="prelude-val">Ok</span>(message)
+    }
+    <span class="kw">pub fn </span>write_response(<span class="kw-2">&amp;mut </span><span class="self">self</span>, response: message::ResponseMessage) -&gt; anyhow::Result&lt;()&gt; {
+        <span class="self">self</span>.inner.write_message(response)
+    }
+}
+
+<span class="doccomment">/// Construct a [`oak_idl::Request`] from a [`message::RequestMessage`].
+</span><span class="kw">impl </span>From&lt;message::RequestMessage&gt; <span class="kw">for </span>oak_idl::Request {
+    <span class="kw">fn </span>from(message: message::RequestMessage) -&gt; <span class="self">Self </span>{
+        oak_idl::Request {
+            method_id: message.method_id,
+            body: message.body,
+        }
+    }
+}
+
+<span class="kw">fn </span>message_from_response_and_id(
+    response: <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, oak_idl::Status&gt;,
+    invocation_id: message::InvocationId,
+) -&gt; message::ResponseMessage {
+    <span class="kw">match </span>response {
+        <span class="prelude-val">Ok</span>(response) =&gt; message::ResponseMessage {
+            invocation_id,
+            status_code: oak_idl::StatusCode::Ok.into(),
+            body: response,
+        },
+        <span class="prelude-val">Err</span>(error) =&gt; message::ResponseMessage {
+            invocation_id,
+            status_code: error.code.into(),
+            body: error.message.as_bytes().to_vec(),
+        },
+    }
+}
+</code></pre></div>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="oak_channel" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (81f391930 2022-10-09)" ></div></body></html>

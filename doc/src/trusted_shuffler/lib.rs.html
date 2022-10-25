@@ -1,9 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `trusted_shuffler/trusted_shuffler/src/lib.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>lib.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../ayu.css" disabled><link rel="stylesheet" type="text/css" href="../../dark.css" disabled><link rel="stylesheet" type="text/css" href="../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../storage.js"></script><script src="../../crates.js"></script><script defer src="../../main.js"></script><script defer src="../../source-script.js"></script><script defer src="../../source-files.js"></script>
-    <noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../trusted_shuffler/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div>
-        </a><h2 class="location"></h2>
-    </nav>
-    <nav class="sidebar"><a class="sidebar-logo" href="../../trusted_shuffler/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div>
-        </a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../trusted_shuffler/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><div class="theme-picker hidden"><button id="theme-picker" aria-label="Pick another theme!" aria-haspopup="menu" title="themes"><img width="22" height="22" alt="Pick another theme!" src="../../brush.svg"></button><div id="theme-choices" role="menu"></div></div><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><button type="button" id="help-button" title="help">?</button><a id="settings-menu" href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../wheel.svg"></a></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `trusted_shuffler/trusted_shuffler/src/lib.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>lib.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" href="../../normalize.css"><link rel="stylesheet" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" href="../../ayu.css" disabled><link rel="stylesheet" href="../../dark.css" disabled><link rel="stylesheet" href="../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../storage.js"></script><script defer src="../../source-script.js"></script><script defer src="../../source-files.js"></script><script defer src="../../main.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><a class="sidebar-logo" href="../../trusted_shuffler/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../trusted_shuffler/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="src-line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -244,247 +239,300 @@
 <span id="239">239</span>
 <span id="240">240</span>
 <span id="241">241</span>
-</pre><pre class="rust"><code><span class="comment">//</span>
-<span class="comment">// Copyright 2022 The Project Oak Authors</span>
-<span class="comment">//</span>
-<span class="comment">// Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
-<span class="comment">// you may not use this file except in compliance with the License.</span>
-<span class="comment">// You may obtain a copy of the License at</span>
-<span class="comment">//</span>
-<span class="comment">//     http://www.apache.org/licenses/LICENSE-2.0</span>
-<span class="comment">//</span>
-<span class="comment">// Unless required by applicable law or agreed to in writing, software</span>
-<span class="comment">// distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
-<span class="comment">// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
-<span class="comment">// See the License for the specific language governing permissions and</span>
-<span class="comment">// limitations under the License.</span>
-<span class="comment">//</span>
+<span id="242">242</span>
+<span id="243">243</span>
+<span id="244">244</span>
+<span id="245">245</span>
+<span id="246">246</span>
+<span id="247">247</span>
+<span id="248">248</span>
+<span id="249">249</span>
+<span id="250">250</span>
+<span id="251">251</span>
+<span id="252">252</span>
+<span id="253">253</span>
+<span id="254">254</span>
+<span id="255">255</span>
+<span id="256">256</span>
+<span id="257">257</span>
+<span id="258">258</span>
+<span id="259">259</span>
+<span id="260">260</span>
+<span id="261">261</span>
+<span id="262">262</span>
+<span id="263">263</span>
+<span id="264">264</span>
+<span id="265">265</span>
+<span id="266">266</span>
+<span id="267">267</span>
+<span id="268">268</span>
+</pre><pre class="rust"><code><span class="comment">//
+// Copyright 2022 The Project Oak Authors
+//
+// Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
-<span class="doccomment">//! Trusted Shuffler implementation.</span>
+</span><span class="doccomment">//! Trusted Shuffler implementation.
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
-<span class="kw">mod</span> <span class="ident">tests</span>;
+</span><span class="attribute">#[cfg(test)]
+</span><span class="kw">mod </span>tests;
 
-<span class="kw">use</span> <span class="ident">anyhow</span>::{<span class="ident">anyhow</span>, <span class="ident">Context</span>};
-<span class="kw">use</span> <span class="ident">async_trait::async_trait</span>;
-<span class="kw">use</span> <span class="ident">futures</span>::{<span class="ident">stream::FuturesOrdered</span>, <span class="ident">StreamExt</span>};
-<span class="kw">use</span> <span class="ident">hyper::Uri</span>;
-<span class="kw">use</span> <span class="ident">std</span>::{
-    <span class="ident">cmp::Ordering</span>,
-    <span class="ident">mem::take</span>,
-    <span class="ident">ops::DerefMut</span>,
-    <span class="ident">sync</span>::{<span class="ident">Arc</span>, <span class="ident">Mutex</span>},
-    <span class="ident">vec</span>,
+<span class="kw">use </span>anyhow::{anyhow, Context};
+<span class="kw">use </span>async_trait::async_trait;
+<span class="kw">use </span>futures::{stream::FuturesOrdered, StreamExt};
+<span class="kw">use </span>hyper::Uri;
+<span class="kw">use </span>std::{
+    cmp::Ordering,
+    mem::take,
+    ops::DerefMut,
+    sync::{Arc, Mutex},
+    vec,
 };
-<span class="kw">use</span> <span class="ident">tokio</span>::{<span class="ident">sync::oneshot</span>, <span class="ident">time::Duration</span>};
+<span class="kw">use </span>tokio::{sync::oneshot, time::Duration};
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">PartialEq</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">TrustedShufflerRequest</span> {
-    <span class="kw">pub</span> <span class="ident">body</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
-    <span class="kw">pub</span> <span class="ident">headers</span>: <span class="ident">hyper::HeaderMap</span>,
-    <span class="kw">pub</span> <span class="ident">uri</span>: <span class="ident">Uri</span>,
+<span class="attribute">#[derive(Debug, PartialEq)]
+</span><span class="kw">pub struct </span>EncryptedRequest {
+    <span class="kw">pub </span>body: hyper::body::Bytes,
+    <span class="kw">pub </span>headers: hyper::HeaderMap,
+    <span class="kw">pub </span>uri: Uri,
 }
 
-<span class="kw">impl</span> <span class="ident">TrustedShufflerRequest</span> {
-    <span class="comment">// We only compare the body, and we need revisit this and decide if this</span>
-    <span class="comment">// is how we want to sort our requests.</span>
-    <span class="kw">fn</span> <span class="ident">compare_body</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">r2</span>: <span class="kw-2">&amp;</span><span class="ident">TrustedShufflerRequest</span>) -&gt; <span class="ident">Ordering</span> {
-        <span class="self">self</span>.<span class="ident">body</span>.<span class="ident">cmp</span>(<span class="kw-2">&amp;</span><span class="ident">r2</span>.<span class="ident">body</span>)
-    }
-}
-
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">PartialEq</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">TrustedShufflerResponse</span> {
-    <span class="kw">pub</span> <span class="ident">headers</span>: <span class="ident">hyper::HeaderMap</span>,
-    <span class="kw">pub</span> <span class="ident">data</span>: <span class="ident">hyper::body::Bytes</span>,
-    <span class="kw">pub</span> <span class="ident">trailers</span>: <span class="ident">hyper::HeaderMap</span>,
-}
-
-<span class="kw">impl</span> <span class="ident">TrustedShufflerResponse</span> {
-    <span class="kw">fn</span> <span class="ident">empty</span>() -&gt; <span class="ident">TrustedShufflerResponse</span> {
-        <span class="ident">TrustedShufflerResponse</span> {
-            <span class="ident">headers</span>: <span class="ident">hyper::HeaderMap::new</span>(),
-            <span class="ident">data</span>: <span class="ident">hyper::body::Bytes::new</span>(),
-            <span class="ident">trailers</span>: <span class="ident">hyper::HeaderMap::new</span>(),
+<span class="comment">// TODO(#3281): Add decryption.
+</span><span class="kw">impl </span>EncryptedRequest {
+    <span class="kw">fn </span>decrypt(<span class="self">self</span>) -&gt; PlaintextRequest {
+        PlaintextRequest {
+            body: <span class="self">self</span>.body,
+            headers: <span class="self">self</span>.headers,
+            uri: <span class="self">self</span>.uri,
         }
     }
 }
 
-<span class="kw">struct</span> <span class="ident">RequestMessage</span> {
-    <span class="comment">// Determines the original order in which Trusted Shuffler Requests arrived.</span>
-    <span class="comment">// Index is used to send responses back to the client in the order of arrival.</span>
-    <span class="ident">index</span>: <span class="ident">usize</span>,
-    <span class="comment">// A TrustedShufflerRequest.</span>
-    <span class="ident">data</span>: <span class="ident">TrustedShufflerRequest</span>,
-    <span class="comment">// Channel for sending responses back to the client async tasks.</span>
-    <span class="ident">response_sender</span>: <span class="ident">oneshot::Sender</span><span class="op">&lt;</span><span class="ident">TrustedShufflerResponse</span><span class="op">&gt;</span>,
+<span class="kw">pub struct </span>PlaintextRequest {
+    <span class="kw">pub </span>body: hyper::body::Bytes,
+    <span class="kw">pub </span>headers: hyper::HeaderMap,
+    <span class="kw">pub </span>uri: Uri,
 }
 
-<span class="kw">struct</span> <span class="ident">ResponseMessage</span> {
-    <span class="comment">// Copied from the corresponding RequestMessage.</span>
-    <span class="comment">// Determines the original order in which the Trusted Shuffler Request for the Response</span>
-    <span class="comment">// arrived. Index is used to send responses back to the client in the order of arrival.</span>
-    <span class="ident">index</span>: <span class="ident">usize</span>,
-    <span class="comment">// The TrustedShufflerResponse to a TrustedShufflerRequest.</span>
-    <span class="ident">data</span>: <span class="ident">TrustedShufflerResponse</span>,
-    <span class="comment">// Copied from the corresponding RequestMessage.</span>
-    <span class="comment">// Channel for sending responses back to the client async tasks.</span>
-    <span class="ident">response_sender</span>: <span class="ident">oneshot::Sender</span><span class="op">&lt;</span><span class="ident">TrustedShufflerResponse</span><span class="op">&gt;</span>,
+<span class="kw">impl </span>PlaintextRequest {
+    <span class="comment">// We need to sort the plain requests.
+    </span><span class="kw">fn </span>compare_body(<span class="kw-2">&amp;</span><span class="self">self</span>, r2: <span class="kw-2">&amp;</span>PlaintextRequest) -&gt; Ordering {
+        <span class="self">self</span>.body.cmp(<span class="kw-2">&amp;</span>r2.body)
+    }
 }
 
-<span class="attribute">#[<span class="ident">async_trait</span>]</span>
-<span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">RequestHandler</span>: <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span> {
-    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">handle</span>(
-        <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">request</span>: <span class="ident">TrustedShufflerRequest</span>,
-    ) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">TrustedShufflerResponse</span><span class="op">&gt;</span>;
+<span class="attribute">#[derive(Debug, PartialEq)]
+</span><span class="kw">pub struct </span>EncryptedResponse {
+    <span class="kw">pub </span>headers: hyper::HeaderMap,
+    <span class="kw">pub </span>body: hyper::body::Bytes,
+    <span class="kw">pub </span>trailers: hyper::HeaderMap,
 }
 
-<span class="comment">// Trusted Shuffler implementation.</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">TrustedShuffler</span> {
-    <span class="comment">// The size of a batch.</span>
-    <span class="ident">batch_size</span>: <span class="ident">usize</span>,
-
-    <span class="comment">// When `batch_size` requests arrived we start a timeout. For any request were the</span>
-    <span class="comment">// Trusted Shuffler did not receive a response from the backend after the timeout, the Trusted</span>
-    <span class="comment">// Shuffler sends an empty response.</span>
-    <span class="ident">timeout</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Duration</span><span class="op">&gt;</span>,
-
-    <span class="comment">// Current batch of requests to be shuffled.</span>
-    <span class="comment">// Mutex is used because messages are collected in different async tasks.</span>
-    <span class="ident">requests_to_shuffle</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">Mutex</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">RequestMessage</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-
-    <span class="comment">// Async function that sends a request to the backend and returns a response.</span>
-    <span class="ident">request_handler</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">RequestHandler</span><span class="op">&gt;</span>,
+<span class="kw">pub struct </span>PlaintextResponse {
+    <span class="kw">pub </span>headers: hyper::HeaderMap,
+    <span class="kw">pub </span>body: hyper::body::Bytes,
+    <span class="kw">pub </span>trailers: hyper::HeaderMap,
 }
 
-<span class="kw">impl</span> <span class="ident">TrustedShuffler</span> {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(
-        <span class="ident">batch_size</span>: <span class="ident">usize</span>,
-        <span class="ident">timeout</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Duration</span><span class="op">&gt;</span>,
-        <span class="ident">request_handler</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">RequestHandler</span><span class="op">&gt;</span>,
-    ) -&gt; <span class="self">Self</span> {
-        <span class="self">Self</span> {
-            <span class="ident">batch_size</span>,
-            <span class="ident">timeout</span>,
-            <span class="ident">requests_to_shuffle</span>: <span class="ident">Arc::new</span>(<span class="ident">Mutex::new</span>(<span class="macro">vec!</span>[])),
-            <span class="ident">request_handler</span>,
+<span class="kw">impl </span>PlaintextResponse {
+    <span class="kw">fn </span>empty() -&gt; PlaintextResponse {
+        PlaintextResponse {
+            headers: hyper::HeaderMap::new(),
+            body: hyper::body::Bytes::new(),
+            trailers: hyper::HeaderMap::new(),
         }
     }
 
-    <span class="comment">// Asynchronously handles an incoming request.</span>
-    <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">invoke</span>(
-        <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">request</span>: <span class="ident">TrustedShufflerRequest</span>,
-    ) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">TrustedShufflerResponse</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> (<span class="ident">response_sender</span>, <span class="ident">response_receiver</span>) <span class="op">=</span> <span class="ident">oneshot::channel</span>();
+    <span class="comment">// TODO(#3281): Add encryption.
+    </span><span class="kw">fn </span>encrypt(<span class="self">self</span>) -&gt; EncryptedResponse {
+        EncryptedResponse {
+            headers: <span class="self">self</span>.headers,
+            body: <span class="self">self</span>.body,
+            trailers: <span class="self">self</span>.trailers,
+        }
+    }
+}
 
-        <span class="comment">// Check if the request batch is filled and create a separate task for shuffling requests.</span>
-        {
-            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">requests_to_shuffle</span> <span class="op">=</span> <span class="self">self</span>
-                .<span class="ident">requests_to_shuffle</span>
-                .<span class="ident">lock</span>()
-                .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">error</span><span class="op">|</span> <span class="macro">anyhow!</span>(<span class="string">&quot;Couldn&#39;t lock current messages mutex: {:?}&quot;</span>, <span class="ident">error</span>))<span class="question-mark">?</span>;
+<span class="kw">struct </span>RequestMessage {
+    <span class="comment">// Determines the original order in which Trusted Shuffler Requests arrived.
+    // Index is used to send responses back to the client in the order of arrival.
+    </span>index: usize,
+    <span class="comment">// A TrustedShufflerRequest.
+    </span>data: PlaintextRequest,
+    <span class="comment">// Channel for sending responses back to the client async tasks.
+    </span>response_sender: oneshot::Sender&lt;EncryptedResponse&gt;,
+}
 
-            <span class="kw">let</span> <span class="ident">request</span> <span class="op">=</span> <span class="ident">RequestMessage</span> {
-                <span class="ident">index</span>: <span class="ident">requests_to_shuffle</span>.<span class="ident">len</span>(),
-                <span class="ident">data</span>: <span class="ident">request</span>,
-                <span class="ident">response_sender</span>,
+<span class="kw">struct </span>ResponseMessage {
+    <span class="comment">// Copied from the corresponding RequestMessage.
+    // Determines the original order in which the Trusted Shuffler Request for the Response
+    // arrived. Index is used to send responses back to the client in the order of arrival.
+    </span>index: usize,
+    <span class="comment">// The TrustedShufflerResponse to a TrustedShufflerRequest.
+    </span>data: EncryptedResponse,
+    <span class="comment">// Copied from the corresponding RequestMessage.
+    // Channel for sending responses back to the client async tasks.
+    </span>response_sender: oneshot::Sender&lt;EncryptedResponse&gt;,
+}
+
+<span class="attribute">#[async_trait]
+</span><span class="kw">pub trait </span>RequestHandler: Send + Sync {
+    <span class="kw">async fn </span>handle(<span class="kw-2">&amp;</span><span class="self">self</span>, request: PlaintextRequest) -&gt; anyhow::Result&lt;PlaintextResponse&gt;;
+}
+
+<span class="comment">// Trusted Shuffler implementation.
+</span><span class="kw">pub struct </span>TrustedShuffler {
+    <span class="comment">// The size of a batch.
+    </span>batch_size: usize,
+
+    <span class="comment">// When `batch_size` requests arrived we start a timeout. For any request were the
+    // Trusted Shuffler did not receive a response from the backend after the timeout, the Trusted
+    // Shuffler sends an empty response.
+    </span>timeout: <span class="prelude-ty">Option</span>&lt;Duration&gt;,
+
+    <span class="comment">// Current batch of requests to be shuffled.
+    // Mutex is used because messages are collected in different async tasks.
+    </span>requests_to_shuffle: Arc&lt;Mutex&lt;Vec&lt;RequestMessage&gt;&gt;&gt;,
+
+    <span class="comment">// Async function that sends a request to the backend and returns a response.
+    </span>request_handler: Arc&lt;<span class="kw">dyn </span>RequestHandler&gt;,
+}
+
+<span class="kw">impl </span>TrustedShuffler {
+    <span class="kw">pub fn </span>new(
+        batch_size: usize,
+        timeout: <span class="prelude-ty">Option</span>&lt;Duration&gt;,
+        request_handler: Arc&lt;<span class="kw">dyn </span>RequestHandler&gt;,
+    ) -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{
+            batch_size,
+            timeout,
+            requests_to_shuffle: Arc::new(Mutex::new(<span class="macro">vec!</span>[])),
+            request_handler,
+        }
+    }
+
+    <span class="comment">// Asynchronously handles an incoming request.
+    </span><span class="kw">pub async fn </span>invoke(<span class="kw-2">&amp;</span><span class="self">self</span>, request: EncryptedRequest) -&gt; anyhow::Result&lt;EncryptedResponse&gt; {
+        <span class="kw">let </span>request = request.decrypt();
+
+        <span class="kw">let </span>(response_sender, response_receiver) = oneshot::channel();
+
+        <span class="comment">// Check if the request batch is filled and create a separate task for shuffling requests.
+        </span>{
+            <span class="kw">let </span><span class="kw-2">mut </span>requests_to_shuffle = <span class="self">self
+                </span>.requests_to_shuffle
+                .lock()
+                .map_err(|error| <span class="macro">anyhow!</span>(<span class="string">&quot;Couldn&#39;t lock current messages mutex: {:?}&quot;</span>, error))<span class="question-mark">?</span>;
+
+            <span class="kw">let </span>request = RequestMessage {
+                index: requests_to_shuffle.len(),
+                data: request,
+                response_sender,
             };
 
-            <span class="ident">requests_to_shuffle</span>.<span class="ident">push</span>(<span class="ident">request</span>);
+            requests_to_shuffle.push(request);
 
-            <span class="kw">if</span> <span class="ident">requests_to_shuffle</span>.<span class="ident">len</span>() <span class="op">&gt;</span><span class="op">=</span> <span class="self">self</span>.<span class="ident">batch_size</span> {
-                <span class="comment">// Replace current requests with an empty vector.</span>
-                <span class="kw">let</span> <span class="ident">requests</span> <span class="op">=</span> <span class="ident">take</span>(<span class="ident">requests_to_shuffle</span>.<span class="ident">deref_mut</span>());
+            <span class="kw">if </span>requests_to_shuffle.len() &gt;= <span class="self">self</span>.batch_size {
+                <span class="comment">// Replace current requests with an empty vector.
+                </span><span class="kw">let </span>requests = take(requests_to_shuffle.deref_mut());
 
-                <span class="comment">// Shuffle requests and spawn async tasks for sending them to the backend.</span>
-                <span class="kw">let</span> <span class="ident">request_handler</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">request_handler</span>.<span class="ident">clone</span>();
-                <span class="kw">let</span> <span class="ident">timeout</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">timeout</span>;
-                <span class="ident">tokio::spawn</span>(<span class="kw">async</span> <span class="kw">move</span> {
-                    <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">error</span>) <span class="op">=</span>
-                        <span class="ident">TrustedShuffler::shuffle_requests</span>(<span class="ident">requests</span>, <span class="ident">request_handler</span>, <span class="ident">timeout</span>).<span class="kw">await</span>
-                    {
-                        <span class="macro">log::error!</span>(<span class="string">&quot;Shuffling error: {:?}&quot;</span>, <span class="ident">error</span>);
+                <span class="comment">// Shuffle requests and spawn async tasks for sending them to the backend.
+                </span><span class="kw">let </span>request_handler = <span class="self">self</span>.request_handler.clone();
+                <span class="kw">let </span>timeout = <span class="self">self</span>.timeout;
+                tokio::spawn(<span class="kw">async move </span>{
+                    <span class="kw">if let </span><span class="prelude-val">Err</span>(error) =
+                        TrustedShuffler::shuffle_requests(requests, request_handler, timeout).<span class="kw">await
+                    </span>{
+                        <span class="macro">log::error!</span>(<span class="string">&quot;Shuffling error: {:?}&quot;</span>, error);
                     }
                 });
             }
         }
 
-        <span class="ident">response_receiver</span>.<span class="kw">await</span>.<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t receive response&quot;</span>)
+        response_receiver.<span class="kw">await</span>.context(<span class="string">&quot;Couldn&#39;t receive response&quot;</span>)
     }
 
-    <span class="comment">// Lexicographically sorts requests and sends them to the backend using the</span>
-    <span class="comment">// [`TrustedShuffler::request_handler`]. For every batch of requests it either waits until all</span>
-    <span class="comment">// responses are received, except if a timeout is set, then it sends a default response.</span>
-    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">shuffle_requests</span>(
-        <span class="kw-2">mut</span> <span class="ident">requests</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">RequestMessage</span><span class="op">&gt;</span>,
-        <span class="ident">request_handler</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">RequestHandler</span><span class="op">&gt;</span>,
-        <span class="ident">timeout</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Duration</span><span class="op">&gt;</span>,
-    ) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-        <span class="ident">requests</span>.<span class="ident">sort_by</span>(<span class="op">|</span><span class="ident">first</span>, <span class="ident">second</span><span class="op">|</span> <span class="ident">first</span>.<span class="ident">data</span>.<span class="ident">compare_body</span>(<span class="kw-2">&amp;</span><span class="ident">second</span>.<span class="ident">data</span>));
+    <span class="comment">// Lexicographically sorts requests and sends them to the backend using the
+    // [`TrustedShuffler::request_handler`]. For every batch of requests it either waits until all
+    // responses are received, except if a timeout is set, then it sends a default response.
+    </span><span class="kw">async fn </span>shuffle_requests(
+        <span class="kw-2">mut </span>requests: Vec&lt;RequestMessage&gt;,
+        request_handler: Arc&lt;<span class="kw">dyn </span>RequestHandler&gt;,
+        timeout: <span class="prelude-ty">Option</span>&lt;Duration&gt;,
+    ) -&gt; anyhow::Result&lt;()&gt; {
+        requests.sort_by(|first, second| first.data.compare_body(<span class="kw-2">&amp;</span>second.data));
 
-        <span class="kw">let</span> <span class="ident">response_futures</span>: <span class="ident">FuturesOrdered</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">requests</span>
-            .<span class="ident">into_iter</span>()
-            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">request_message</span><span class="op">|</span> {
-                <span class="comment">// Deconstruct the Message holding a request in data.</span>
-                <span class="kw">let</span> <span class="ident">request_handler_clone</span> <span class="op">=</span> <span class="ident">request_handler</span>.<span class="ident">clone</span>();
-                <span class="kw">let</span> <span class="ident">index</span> <span class="op">=</span> <span class="ident">request_message</span>.<span class="ident">index</span>;
-                <span class="kw">let</span> <span class="ident">response_sender</span> <span class="op">=</span> <span class="ident">request_message</span>.<span class="ident">response_sender</span>;
-                <span class="kw">let</span> <span class="ident">data</span> <span class="op">=</span> <span class="ident">request_message</span>.<span class="ident">data</span>;
-                <span class="kw">async</span> <span class="kw">move</span> {
-                    <span class="kw">let</span> <span class="ident">response</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">timeout</span> {
-                        <span class="prelude-val">None</span> =&gt; <span class="ident">request_handler_clone</span>.<span class="ident">handle</span>(<span class="ident">data</span>).<span class="kw">await</span>,
-                        <span class="prelude-val">Some</span>(<span class="ident">timeout</span>) =&gt; {
-                            <span class="kw">match</span> <span class="ident">tokio::time::timeout</span>(<span class="ident">timeout</span>, <span class="ident">request_handler_clone</span>.<span class="ident">handle</span>(<span class="ident">data</span>))
-                                .<span class="kw">await</span>
-                            {
-                                <span class="prelude-val">Err</span>(<span class="kw">_</span>) =&gt; <span class="prelude-val">Ok</span>(<span class="ident">TrustedShufflerResponse::empty</span>()),
-                                <span class="prelude-val">Ok</span>(<span class="ident">response</span>) =&gt; <span class="ident">response</span>,
+        <span class="kw">let </span>response_futures: FuturesOrdered&lt;<span class="kw">_</span>&gt; = requests
+            .into_iter()
+            .map(|request_message| {
+                <span class="comment">// Deconstruct the Message holding a request in data.
+                </span><span class="kw">let </span>request_handler_clone = request_handler.clone();
+                <span class="kw">let </span>index = request_message.index;
+                <span class="kw">let </span>response_sender = request_message.response_sender;
+                <span class="kw">let </span>data = request_message.data;
+                <span class="kw">async move </span>{
+                    <span class="kw">let </span>response = <span class="kw">match </span>timeout {
+                        <span class="prelude-val">None </span>=&gt; request_handler_clone.handle(data).<span class="kw">await</span>,
+                        <span class="prelude-val">Some</span>(timeout) =&gt; {
+                            <span class="kw">match </span>tokio::time::timeout(timeout, request_handler_clone.handle(data))
+                                .<span class="kw">await
+                            </span>{
+                                <span class="prelude-val">Err</span>(<span class="kw">_</span>) =&gt; <span class="prelude-val">Ok</span>(PlaintextResponse::empty()),
+                                <span class="prelude-val">Ok</span>(response) =&gt; response,
                             }
                         }
                     };
-                    <span class="comment">// Create a Message holding the response in data.</span>
-                    <span class="ident">response</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">response</span><span class="op">|</span> <span class="ident">ResponseMessage</span> {
-                        <span class="ident">index</span>,
-                        <span class="ident">data</span>: <span class="ident">response</span>,
-                        <span class="ident">response_sender</span>,
+                    <span class="comment">// Create a Message holding the response in data.
+                    </span>response.map(|response| ResponseMessage {
+                        index,
+                        data: response.encrypt(),
+                        response_sender,
                     })
                 }
             })
-            .<span class="ident">collect</span>();
-        <span class="kw">let</span> <span class="ident">responses</span> <span class="op">=</span> <span class="ident">response_futures</span>
-            .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="kw">_</span>, <span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>()
-            .<span class="kw">await</span>
-            .<span class="ident">into_iter</span>()
-            .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span>, <span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>()
-            .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t send responses&quot;</span>)<span class="question-mark">?</span>;
+            .collect();
+        <span class="kw">let </span>responses = response_futures
+            .collect::&lt;Vec&lt;<span class="prelude-ty">Result</span>&lt;<span class="kw">_</span>, <span class="kw">_</span>&gt;&gt;&gt;()
+            .<span class="kw">await
+            </span>.into_iter()
+            .collect::&lt;<span class="prelude-ty">Result</span>&lt;Vec&lt;<span class="kw">_</span>&gt;, <span class="kw">_</span>&gt;&gt;()
+            .context(<span class="string">&quot;Couldn&#39;t send responses&quot;</span>)<span class="question-mark">?</span>;
 
-        <span class="ident"><span class="self">Self</span>::shuffle_responses</span>(<span class="ident">responses</span>)
+        <span class="self">Self</span>::shuffle_responses(responses)
     }
 
-    <span class="comment">// Restores the original order in which messages arrived and sends them back to the client async</span>
-    <span class="comment">// tasks using corresponding channels defined in the [`Message::response_sender`].</span>
-    <span class="kw">fn</span> <span class="ident">shuffle_responses</span>(<span class="kw-2">mut</span> <span class="ident">responses</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">ResponseMessage</span><span class="op">&gt;</span>) -&gt; <span class="ident">anyhow::Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-        <span class="ident">responses</span>.<span class="ident">sort_by_key</span>(<span class="op">|</span><span class="ident">response</span><span class="op">|</span> <span class="ident">response</span>.<span class="ident">index</span>);
+    <span class="comment">// Restores the original order in which messages arrived and sends them back to the client async
+    // tasks using corresponding channels defined in the [`Message::response_sender`].
+    </span><span class="kw">fn </span>shuffle_responses(<span class="kw-2">mut </span>responses: Vec&lt;ResponseMessage&gt;) -&gt; anyhow::Result&lt;()&gt; {
+        responses.sort_by_key(|response| response.index);
 
-        <span class="ident">responses</span>
-            .<span class="ident">into_iter</span>()
-            .<span class="ident">map</span>(
-                <span class="op">|</span><span class="ident">ResponseMessage</span> {
-                     <span class="ident">index</span>: <span class="kw">_</span>,
-                     <span class="ident">data</span>,
-                     <span class="ident">response_sender</span>,
-                 }<span class="op">|</span> {
-                    <span class="ident">response_sender</span>
-                        .<span class="ident">send</span>(<span class="ident">data</span>)
-                        .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">_data</span><span class="op">|</span> <span class="macro">anyhow!</span>(<span class="string">&quot;Couldn&#39;t send response&quot;</span>))
+        responses
+            .into_iter()
+            .map(
+                |ResponseMessage {
+                     index: <span class="kw">_</span>,
+                     data,
+                     response_sender,
+                 }| {
+                    response_sender
+                        .send(data)
+                        .map_err(|_data| <span class="macro">anyhow!</span>(<span class="string">&quot;Couldn&#39;t send response&quot;</span>))
                 },
             )
-            .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span>, <span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>()
-            .<span class="ident">map</span>(<span class="op">|</span><span class="kw">_</span>: <span class="ident">Vec</span><span class="op">&lt;</span>()<span class="op">&gt;</span><span class="op">|</span> ())
+            .collect::&lt;<span class="prelude-ty">Result</span>&lt;Vec&lt;<span class="kw">_</span>&gt;, <span class="kw">_</span>&gt;&gt;()
+            .map(|<span class="kw">_</span>: Vec&lt;()&gt;| ())
     }
 }
 </code></pre></div>
-</section><section id="search" class="content hidden"></section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="trusted_shuffler" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.62.0-nightly (de1bc0008 2022-04-21)" ></div>
-</body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="trusted_shuffler" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (81f391930 2022-10-09)" ></div></body></html>

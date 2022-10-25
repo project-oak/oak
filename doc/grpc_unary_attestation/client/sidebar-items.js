@@ -1,1 +1,0 @@
-initSidebarItems({"struct":[["UnaryGrpcClient","gRPC implementation of [`AttestationTransport`] trait using unary gRPC messages."]]});

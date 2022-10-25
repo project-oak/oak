@@ -1,1 +1,1 @@
-initSidebarItems({"fn":[["main",""]],"mod":[["http",""]],"struct":[["Opt",""]]});
+window.SIDEBAR_ITEMS = {"fn":[["main",""]],"mod":[["http",""]],"struct":[["Opt",""]]};

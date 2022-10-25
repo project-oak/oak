@@ -1,1 +1,1 @@
-initSidebarItems({"struct":[["OwnedFlatbuffer","An owned flatbuffer message, which owns the underlying buffer."],["OwnedFlatbufferBuilder","A helper struct to facilitate building a [`OwnedFlatbuffer`]."]]});
+window.SIDEBAR_ITEMS = {"struct":[["OwnedFlatbuffer","An owned flatbuffer message, which owns the underlying buffer."],["OwnedFlatbufferBuilder","A helper struct to facilitate building a [`OwnedFlatbuffer`]."]]};

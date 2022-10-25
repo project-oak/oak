@@ -1,1 +1,1 @@
-initSidebarItems({"fn":[["handler",""],["main",""],["start_grpc_backend",""],["start_http_backend",""]],"mod":[["echo",""]],"struct":[["MyEcho",""],["Opt",""]]});
+window.SIDEBAR_ITEMS = {"fn":[["handler",""],["main",""],["start_grpc_backend",""],["start_http_backend",""]],"mod":[["echo",""]],"struct":[["MyEcho",""],["Opt",""]]};

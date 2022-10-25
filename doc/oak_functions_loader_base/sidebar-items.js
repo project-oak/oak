@@ -1,1 +1,0 @@
-initSidebarItems({"fn":[["main",""]],"struct":[["Config","Runtime Configuration of the Oak Functions Runtime for a Base Oak Functions Runtime with no experimental features."]]});

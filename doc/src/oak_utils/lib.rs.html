@@ -1,9 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `oak_utils/src/lib.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>lib.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../ayu.css" disabled><link rel="stylesheet" type="text/css" href="../../dark.css" disabled><link rel="stylesheet" type="text/css" href="../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../storage.js"></script><script src="../../crates.js"></script><script defer src="../../main.js"></script><script defer src="../../source-script.js"></script><script defer src="../../source-files.js"></script>
-    <noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../oak_utils/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div>
-        </a><h2 class="location"></h2>
-    </nav>
-    <nav class="sidebar"><a class="sidebar-logo" href="../../oak_utils/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div>
-        </a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../oak_utils/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><div class="theme-picker hidden"><button id="theme-picker" aria-label="Pick another theme!" aria-haspopup="menu" title="themes"><img width="22" height="22" alt="Pick another theme!" src="../../brush.svg"></button><div id="theme-choices" role="menu"></div></div><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><button type="button" id="help-button" title="help">?</button><a id="settings-menu" href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../wheel.svg"></a></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `oak_utils/src/lib.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>lib.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" href="../../normalize.css"><link rel="stylesheet" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" href="../../ayu.css" disabled><link rel="stylesheet" href="../../dark.css" disabled><link rel="stylesheet" href="../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../storage.js"></script><script defer src="../../source-script.js"></script><script defer src="../../source-files.js"></script><script defer src="../../main.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><a class="sidebar-logo" href="../../oak_utils/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../oak_utils/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="src-line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -94,97 +89,96 @@
 <span id="89">89</span>
 <span id="90">90</span>
 <span id="91">91</span>
-</pre><pre class="rust"><code><span class="comment">//</span>
-<span class="comment">// Copyright 2020 The Project Oak Authors</span>
-<span class="comment">//</span>
-<span class="comment">// Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
-<span class="comment">// you may not use this file except in compliance with the License.</span>
-<span class="comment">// You may obtain a copy of the License at</span>
-<span class="comment">//</span>
-<span class="comment">//     http://www.apache.org/licenses/LICENSE-2.0</span>
-<span class="comment">//</span>
-<span class="comment">// Unless required by applicable law or agreed to in writing, software</span>
-<span class="comment">// distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
-<span class="comment">// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
-<span class="comment">// See the License for the specific language governing permissions and</span>
-<span class="comment">// limitations under the License.</span>
-<span class="comment">//</span>
+</pre><pre class="rust"><code><span class="comment">//
+// Copyright 2020 The Project Oak Authors
+//
+// Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
-<span class="doccomment">/// Options for building gRPC code.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Default</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">CodegenOptions</span> {
-    <span class="doccomment">/// Specify whether to build client related code.</span>
-    <span class="kw">pub</span> <span class="ident">build_client</span>: <span class="ident">bool</span>,
-    <span class="doccomment">/// Specify whether to build server related code.</span>
-    <span class="kw">pub</span> <span class="ident">build_server</span>: <span class="ident">bool</span>,
-    <span class="doccomment">/// Specify externally provided Protobuf packages or types.</span>
-    <span class="kw">pub</span> <span class="ident">extern_paths</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">ExternPath</span><span class="op">&gt;</span>,
+</span><span class="doccomment">/// Options for building gRPC code.
+</span><span class="attribute">#[derive(Default)]
+</span><span class="kw">pub struct </span>CodegenOptions {
+    <span class="doccomment">/// Specify whether to build client related code.
+    </span><span class="kw">pub </span>build_client: bool,
+    <span class="doccomment">/// Specify whether to build server related code.
+    </span><span class="kw">pub </span>build_server: bool,
+    <span class="doccomment">/// Specify externally provided Protobuf packages or types.
+    </span><span class="kw">pub </span>extern_paths: Vec&lt;ExternPath&gt;,
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Default</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">ExternPath</span> {
-    <span class="ident">proto_path</span>: <span class="ident">String</span>,
-    <span class="ident">rust_path</span>: <span class="ident">String</span>,
+<span class="attribute">#[derive(Default)]
+</span><span class="kw">pub struct </span>ExternPath {
+    proto_path: String,
+    rust_path: String,
 }
 
-<span class="kw">impl</span> <span class="ident">ExternPath</span> {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">proto_path</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="ident">rust_path</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) -&gt; <span class="self">Self</span> {
-        <span class="ident">ExternPath</span> {
-            <span class="ident">proto_path</span>: <span class="ident">proto_path</span>.<span class="ident">to_string</span>(),
-            <span class="ident">rust_path</span>: <span class="ident">rust_path</span>.<span class="ident">to_string</span>(),
+<span class="kw">impl </span>ExternPath {
+    <span class="kw">pub fn </span>new(proto_path: <span class="kw-2">&amp;</span>str, rust_path: <span class="kw-2">&amp;</span>str) -&gt; <span class="self">Self </span>{
+        ExternPath {
+            proto_path: proto_path.to_string(),
+            rust_path: rust_path.to_string(),
         }
     }
 }
 
-<span class="doccomment">/// Generate gRPC code from Protobuf using `tonic` library.</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// The path to the root repository must be passed as `proto_path`. All paths to `.proto` files</span>
-<span class="doccomment">/// must be specified relative to this path. Likewise, all imported paths in `.proto` files must</span>
-<span class="doccomment">/// be specified relative to this path.</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">generate_grpc_code</span>(
-    <span class="ident">proto_path</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
-    <span class="ident">file_paths</span>: <span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span><span class="ident">str</span>],
-    <span class="ident">options</span>: <span class="ident">CodegenOptions</span>,
-) -&gt; <span class="ident">std::io::Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-    <span class="ident">set_protoc_env_if_unset</span>();
+<span class="doccomment">/// Generate gRPC code from Protobuf using `tonic` library.
+///
+/// The path to the root repository must be passed as `proto_path`. All paths to `.proto` files
+/// must be specified relative to this path. Likewise, all imported paths in `.proto` files must
+/// be specified relative to this path.
+</span><span class="kw">pub fn </span>generate_grpc_code(
+    proto_path: <span class="kw-2">&amp;</span>str,
+    file_paths: <span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span>str],
+    options: CodegenOptions,
+) -&gt; std::io::Result&lt;()&gt; {
+    set_protoc_env_if_unset();
 
-    <span class="comment">// TODO(#1093): Move all proto generation to a common crate.</span>
-    <span class="kw">let</span> <span class="ident">proto_path</span> <span class="op">=</span> <span class="ident">std::path::Path::new</span>(<span class="ident">proto_path</span>);
-    <span class="kw">let</span> <span class="ident">file_paths</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">std::path::PathBuf</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">file_paths</span>
-        .<span class="ident">iter</span>()
-        .<span class="ident">map</span>(<span class="op">|</span><span class="ident">file_path</span><span class="op">|</span> <span class="ident">proto_path</span>.<span class="ident">join</span>(<span class="ident">file_path</span>))
-        .<span class="ident">collect</span>();
+    <span class="comment">// TODO(#1093): Move all proto generation to a common crate.
+    </span><span class="kw">let </span>proto_path = std::path::Path::new(proto_path);
+    <span class="kw">let </span>file_paths: Vec&lt;std::path::PathBuf&gt; = file_paths
+        .iter()
+        .map(|file_path| proto_path.join(file_path))
+        .collect();
 
-    <span class="comment">// Tell cargo to rerun this build script if the proto file has changed.</span>
-    <span class="comment">// https://doc.rust-lang.org/cargo/reference/build-scripts.html#cargorerun-if-changedpath</span>
-    <span class="kw">for</span> <span class="ident">file_path</span> <span class="kw">in</span> <span class="ident">file_paths</span>.<span class="ident">iter</span>() {
-        <span class="macro">println!</span>(<span class="string">&quot;cargo:rerun-if-changed={}&quot;</span>, <span class="ident">file_path</span>.<span class="ident">display</span>());
+    <span class="comment">// Tell cargo to rerun this build script if the proto file has changed.
+    // https://doc.rust-lang.org/cargo/reference/build-scripts.html#cargorerun-if-changedpath
+    </span><span class="kw">for </span>file_path <span class="kw">in </span>file_paths.iter() {
+        <span class="macro">println!</span>(<span class="string">&quot;cargo:rerun-if-changed={}&quot;</span>, file_path.display());
     }
 
-    <span class="comment">// Generate the normal (non-Oak) server and client code for the gRPC service,</span>
-    <span class="comment">// along with the Rust types corresponding to the message definitions.</span>
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">config</span> <span class="op">=</span> <span class="ident">tonic_build::configure</span>()
-        .<span class="ident">build_client</span>(<span class="ident">options</span>.<span class="ident">build_client</span>)
-        .<span class="ident">build_server</span>(<span class="ident">options</span>.<span class="ident">build_server</span>);
+    <span class="comment">// Generate the normal (non-Oak) server and client code for the gRPC service,
+    // along with the Rust types corresponding to the message definitions.
+    </span><span class="kw">let </span><span class="kw-2">mut </span>config = tonic_build::configure()
+        .build_client(options.build_client)
+        .build_server(options.build_server);
 
-    <span class="kw">for</span> <span class="ident">extern_path</span> <span class="kw">in</span> <span class="ident">options</span>.<span class="ident">extern_paths</span> {
-        <span class="ident">config</span> <span class="op">=</span> <span class="ident">config</span>.<span class="ident">extern_path</span>(<span class="ident">extern_path</span>.<span class="ident">proto_path</span>, <span class="ident">extern_path</span>.<span class="ident">rust_path</span>);
+    <span class="kw">for </span>extern_path <span class="kw">in </span>options.extern_paths {
+        config = config.extern_path(extern_path.proto_path, extern_path.rust_path);
     }
-    <span class="ident">config</span>.<span class="ident">compile</span>(<span class="kw-2">&amp;</span><span class="ident">file_paths</span>, <span class="kw-2">&amp;</span>[<span class="ident">proto_path</span>.<span class="ident">to_path_buf</span>()])
+    config.compile(<span class="kw-2">&amp;</span>file_paths, <span class="kw-2">&amp;</span>[proto_path.to_path_buf()])
 }
 
-<span class="kw">fn</span> <span class="ident">set_protoc_env_if_unset</span>() {
-    <span class="kw">if</span> <span class="ident">std::env::var</span>(<span class="string">&quot;PROTOC&quot;</span>).<span class="ident">is_err</span>() {
-        <span class="comment">// Use the system protoc if no override is set, so prost-build does not try to use the</span>
-        <span class="comment">// bundled one that we remove as part of the vendoring process.</span>
-        <span class="ident">std::env::set_var</span>(<span class="string">&quot;PROTOC&quot;</span>, <span class="string">&quot;protoc&quot;</span>);
+<span class="kw">fn </span>set_protoc_env_if_unset() {
+    <span class="kw">if </span>std::env::var(<span class="string">&quot;PROTOC&quot;</span>).is_err() {
+        <span class="comment">// Use the system protoc if no override is set, so prost-build does not try to use the
+        // bundled one that we remove as part of the vendoring process.
+        </span>std::env::set_var(<span class="string">&quot;PROTOC&quot;</span>, <span class="string">&quot;protoc&quot;</span>);
     }
 }
 
-<span class="doccomment">/// Trait for logging error messages</span>
-<span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">LogError</span> {
-    <span class="kw">fn</span> <span class="ident">log_error</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">error</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>);
+<span class="doccomment">/// Trait for logging error messages
+</span><span class="kw">pub trait </span>LogError {
+    <span class="kw">fn </span>log_error(<span class="kw-2">&amp;</span><span class="self">self</span>, error: <span class="kw-2">&amp;</span>str);
 }
 </code></pre></div>
-</section><section id="search" class="content hidden"></section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="oak_utils" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.62.0-nightly (de1bc0008 2022-04-21)" ></div>
-</body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="oak_utils" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (81f391930 2022-10-09)" ></div></body></html>

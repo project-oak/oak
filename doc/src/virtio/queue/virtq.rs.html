@@ -1,9 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `experimental/virtio/src/queue/virtq.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>virtq.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" type="text/css" href="../../../normalize.css"><link rel="stylesheet" type="text/css" href="../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../../ayu.css" disabled><link rel="stylesheet" type="text/css" href="../../../dark.css" disabled><link rel="stylesheet" type="text/css" href="../../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../../storage.js"></script><script src="../../../crates.js"></script><script defer src="../../../main.js"></script><script defer src="../../../source-script.js"></script><script defer src="../../../source-files.js"></script>
-    <noscript><link rel="stylesheet" href="../../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../virtio/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div>
-        </a><h2 class="location"></h2>
-    </nav>
-    <nav class="sidebar"><a class="sidebar-logo" href="../../../virtio/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div>
-        </a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../virtio/index.html"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></a><nav class="sub"><div class="theme-picker hidden"><button id="theme-picker" aria-label="Pick another theme!" aria-haspopup="menu" title="themes"><img width="22" height="22" alt="Pick another theme!" src="../../../brush.svg"></button><div id="theme-choices" role="menu"></div></div><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><button type="button" id="help-button" title="help">?</button><a id="settings-menu" href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../wheel.svg"></a></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `experimental/virtio/src/queue/virtq.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>virtq.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" href="../../../normalize.css"><link rel="stylesheet" href="../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" href="../../../ayu.css" disabled><link rel="stylesheet" href="../../../dark.css" disabled><link rel="stylesheet" href="../../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../../storage.js"></script><script defer src="../../../source-script.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../main.js"></script><noscript><link rel="stylesheet" href="../../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><a class="sidebar-logo" href="../../../virtio/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../virtio/index.html"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="src-line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -175,180 +170,177 @@
 <span id="170">170</span>
 <span id="171">171</span>
 <span id="172">172</span>
-<span id="173">173</span>
-</pre><pre class="rust"><code><span class="comment">//</span>
-<span class="comment">// Copyright 2022 The Project Oak Authors</span>
-<span class="comment">//</span>
-<span class="comment">// Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
-<span class="comment">// you may not use this file except in compliance with the License.</span>
-<span class="comment">// You may obtain a copy of the License at</span>
-<span class="comment">//</span>
-<span class="comment">//     http://www.apache.org/licenses/LICENSE-2.0</span>
-<span class="comment">//</span>
-<span class="comment">// Unless required by applicable law or agreed to in writing, software</span>
-<span class="comment">// distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
-<span class="comment">// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
-<span class="comment">// See the License for the specific language governing permissions and</span>
-<span class="comment">// limitations under the License.</span>
-<span class="comment">//</span>
+</pre><pre class="rust"><code><span class="comment">//
+// Copyright 2022 The Project Oak Authors
+//
+// Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
-<span class="kw">use</span> <span class="ident">bitflags::bitflags</span>;
-<span class="kw">use</span> <span class="ident">core::num::Wrapping</span>;
+</span><span class="kw">use </span>bitflags::bitflags;
+<span class="kw">use </span>core::num::Wrapping;
+<span class="kw">use </span>x86_64::PhysAddr;
 
-<span class="macro">bitflags!</span> {
-    <span class="doccomment">/// Flags about a descriptor.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// See &lt;https://docs.oasis-open.org/virtio/virtio/v1.1/csprd01/virtio-v1.1-csprd01.html#x1-320005&gt;.</span>
-    <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">DescFlags</span>: <span class="ident">u16</span> {
-        <span class="doccomment">/// This marks a buffer as continuing via the next field to chain descriptors together.</span>
-        <span class="doccomment">///</span>
-        <span class="doccomment">/// Not supported for now.</span>
-        <span class="kw">const</span> <span class="ident">VIRTQ_DESC_F_NEXT</span> <span class="op">=</span> <span class="number">1</span>;
-        <span class="doccomment">/// This marks a buffer as device write-only (otherwise device read-only).</span>
-        <span class="kw">const</span> <span class="ident">VIRTQ_DESC_F_WRITE</span> <span class="op">=</span> <span class="number">2</span>;
-        <span class="doccomment">/// This means the buffer contains a list of buffer descriptors.</span>
-        <span class="doccomment">///</span>
-        <span class="doccomment">/// Not supported for now.</span>
-        <span class="kw">const</span> <span class="ident">VIRTQ_DESC_F_INDIRECT</span> <span class="op">=</span> <span class="number">4</span>;
+<span class="macro">bitflags! </span>{
+    <span class="doccomment">/// Flags about a descriptor.
+    ///
+    /// See &lt;https://docs.oasis-open.org/virtio/virtio/v1.1/csprd01/virtio-v1.1-csprd01.html#x1-320005&gt;.
+    </span><span class="kw">pub struct </span>DescFlags: u16 {
+        <span class="doccomment">/// This marks a buffer as continuing via the next field to chain descriptors together.
+        ///
+        /// Not supported for now.
+        </span><span class="kw">const </span>VIRTQ_DESC_F_NEXT = <span class="number">1</span>;
+        <span class="doccomment">/// This marks a buffer as device write-only (otherwise device read-only).
+        </span><span class="kw">const </span>VIRTQ_DESC_F_WRITE = <span class="number">2</span>;
+        <span class="doccomment">/// This means the buffer contains a list of buffer descriptors.
+        ///
+        /// Not supported for now.
+        </span><span class="kw">const </span>VIRTQ_DESC_F_INDIRECT = <span class="number">4</span>;
     }
 }
 
-<span class="doccomment">/// A descriptor for a byte buffer used in a virtio queue.</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// See &lt;https://docs.oasis-open.org/virtio/virtio/v1.1/csprd01/virtio-v1.1-csprd01.html#x1-320005&gt;.</span>
-<span class="attribute">#[<span class="ident">repr</span>(<span class="ident">C</span>, <span class="ident">align</span>(<span class="number">16</span>))]</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Desc</span> {
-    <span class="doccomment">/// The guest-physical address of the buffer.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// We use an identity mapping, so it is also the guest virtual address.</span>
-    <span class="kw">pub</span> <span class="ident">addr</span>: <span class="ident">u64</span>,
-    <span class="doccomment">/// The lengths of the buffer.</span>
-    <span class="kw">pub</span> <span class="ident">length</span>: <span class="ident">u32</span>,
-    <span class="doccomment">/// Flags providing more info about this descriptor.</span>
-    <span class="kw">pub</span> <span class="ident">flags</span>: <span class="ident">DescFlags</span>,
-    <span class="doccomment">/// The index of the next descriptor in the chain if this is not the end (i.e. flags contain</span>
-    <span class="doccomment">/// `DescFlags::VIRTQ_DESC_F_NEXT`), ignored otherwise.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// Not used for now, as we don&#39;t currently support chaining.</span>
-    <span class="kw">pub</span> <span class="ident">next</span>: <span class="ident">u16</span>,
+<span class="doccomment">/// A descriptor for a byte buffer used in a virtio queue.
+///
+/// See &lt;https://docs.oasis-open.org/virtio/virtio/v1.1/csprd01/virtio-v1.1-csprd01.html#x1-320005&gt;.
+</span><span class="attribute">#[repr(C, align(<span class="number">16</span>))]
+#[derive(Debug)]
+</span><span class="kw">pub struct </span>Desc {
+    <span class="doccomment">/// The guest-physical address of the buffer.
+    </span><span class="kw">pub </span>addr: PhysAddr,
+    <span class="doccomment">/// The lengths of the buffer.
+    </span><span class="kw">pub </span>length: u32,
+    <span class="doccomment">/// Flags providing more info about this descriptor.
+    </span><span class="kw">pub </span>flags: DescFlags,
+    <span class="doccomment">/// The index of the next descriptor in the chain if this is not the end (i.e. flags contain
+    /// `DescFlags::VIRTQ_DESC_F_NEXT`), ignored otherwise.
+    ///
+    /// Not used for now, as we don&#39;t currently support chaining.
+    </span><span class="kw">pub </span>next: u16,
 }
 
-<span class="kw">impl</span> <span class="ident">Desc</span> {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">flags</span>: <span class="ident">DescFlags</span>, <span class="ident">addr</span>: <span class="ident">u64</span>, <span class="ident">length</span>: <span class="ident">u32</span>) -&gt; <span class="self">Self</span> {
+<span class="kw">impl </span>Desc {
+    <span class="kw">pub fn </span>new(flags: DescFlags, addr: PhysAddr, length: u32) -&gt; <span class="self">Self </span>{
         <span class="macro">assert!</span>(
-            <span class="op">!</span><span class="ident">flags</span>.<span class="ident">contains</span>(<span class="ident">DescFlags::VIRTQ_DESC_F_INDIRECT</span>),
-            <span class="string">&quot;Indirect descriptors not supported.&quot;</span>
-        );
+            !flags.contains(DescFlags::VIRTQ_DESC_F_INDIRECT),
+            <span class="string">&quot;Indirect descriptors not supported.&quot;
+        </span>);
         <span class="macro">assert!</span>(
-            <span class="op">!</span><span class="ident">flags</span>.<span class="ident">contains</span>(<span class="ident">DescFlags::VIRTQ_DESC_F_NEXT</span>),
-            <span class="string">&quot;Chained descriptors not supported.&quot;</span>
-        );
-        <span class="self">Self</span> {
-            <span class="ident">addr</span>,
-            <span class="ident">length</span>,
-            <span class="ident">flags</span>,
-            <span class="comment">// For simplicity we don&#39;t set up descriptor chains.</span>
-            <span class="ident">next</span>: <span class="number">0</span>,
+            !flags.contains(DescFlags::VIRTQ_DESC_F_NEXT),
+            <span class="string">&quot;Chained descriptors not supported.&quot;
+        </span>);
+        <span class="self">Self </span>{
+            addr,
+            length,
+            flags,
+            <span class="comment">// For simplicity we don&#39;t set up descriptor chains.
+            </span>next: <span class="number">0</span>,
         }
     }
 }
 
-<span class="macro">bitflags!</span> {
-    <span class="doccomment">/// Flags about the available and used rings.</span>
-    <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">RingFlags</span>: <span class="ident">u16</span> {
-        <span class="doccomment">/// This indicates that the owner of the ring does not require queue notifications.</span>
-        <span class="kw">const</span> <span class="ident">NO_NOTIFY</span> <span class="op">=</span> <span class="number">1</span>;
+<span class="macro">bitflags! </span>{
+    <span class="doccomment">/// Flags about the available and used rings.
+    </span><span class="kw">pub struct </span>RingFlags: u16 {
+        <span class="doccomment">/// This indicates that the owner of the ring does not require queue notifications.
+        </span><span class="kw">const </span>NO_NOTIFY = <span class="number">1</span>;
     }
 }
 
-<span class="doccomment">/// The ring buffer that indicates which descriptors have been made available by the driver.</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// See &lt;https://docs.oasis-open.org/virtio/virtio/v1.1/csprd01/virtio-v1.1-csprd01.html#x1-380006&gt;.</span>
-<span class="attribute">#[<span class="ident">repr</span>(<span class="ident">C</span>, <span class="ident">align</span>(<span class="number">2</span>))]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">AvailRing</span><span class="op">&lt;</span><span class="kw">const</span> <span class="ident">QUEUE_SIZE</span>: <span class="ident">usize</span><span class="op">&gt;</span> {
-    <span class="doccomment">/// Driver-specific flags for the queue.</span>
-    <span class="kw">pub</span> <span class="ident">flags</span>: <span class="ident">RingFlags</span>,
-    <span class="doccomment">/// The next index that will be used in the ring (modulo `QUEUE_SIZE`).</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// Starts at 0 and always increments. Must never be decremented. Wraps naturally when at the</span>
-    <span class="doccomment">/// maximum `u16` value.</span>
-    <span class="kw">pub</span> <span class="ident">idx</span>: <span class="ident">Wrapping</span><span class="op">&lt;</span><span class="ident">u16</span><span class="op">&gt;</span>,
-    <span class="doccomment">/// The ring-buffer containing indices of the heads of available descriptor chains.</span>
-    <span class="kw">pub</span> <span class="ident">ring</span>: [<span class="ident">u16</span>; <span class="ident">QUEUE_SIZE</span>],
-    <span class="doccomment">/// Event details. Only used if VIRTIO_F_EVENT_IDX has been negotiated, which we don&#39;t</span>
-    <span class="doccomment">/// currently support. The field is only added to act as padding for now.</span>
-    <span class="kw">pub</span> <span class="ident">used_event</span>: <span class="ident">u16</span>,
+<span class="doccomment">/// The ring buffer that indicates which descriptors have been made available by the driver.
+///
+/// See &lt;https://docs.oasis-open.org/virtio/virtio/v1.1/csprd01/virtio-v1.1-csprd01.html#x1-380006&gt;.
+</span><span class="attribute">#[repr(C, align(<span class="number">2</span>))]
+</span><span class="kw">pub struct </span>AvailRing&lt;<span class="kw">const </span>QUEUE_SIZE: usize&gt; {
+    <span class="doccomment">/// Driver-specific flags for the queue.
+    </span><span class="kw">pub </span>flags: RingFlags,
+    <span class="doccomment">/// The next index that will be used in the ring (modulo `QUEUE_SIZE`).
+    ///
+    /// Starts at 0 and always increments. Must never be decremented. Wraps naturally when at the
+    /// maximum `u16` value.
+    </span><span class="kw">pub </span>idx: Wrapping&lt;u16&gt;,
+    <span class="doccomment">/// The ring-buffer containing indices of the heads of available descriptor chains.
+    </span><span class="kw">pub </span>ring: [u16; QUEUE_SIZE],
+    <span class="doccomment">/// Event details. Only used if VIRTIO_F_EVENT_IDX has been negotiated, which we don&#39;t
+    /// currently support. The field is only added to act as padding for now.
+    </span><span class="kw">pub </span>used_event: u16,
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="kw">const</span> <span class="ident">QUEUE_SIZE</span>: <span class="ident">usize</span><span class="op">&gt;</span> <span class="ident">Default</span> <span class="kw">for</span> <span class="ident">AvailRing</span><span class="op">&lt;</span><span class="ident">QUEUE_SIZE</span><span class="op">&gt;</span> {
-    <span class="kw">fn</span> <span class="ident">default</span>() -&gt; <span class="self">Self</span> {
-        <span class="self">Self</span> {
-            <span class="comment">// We implement all drivers via polling, so don&#39;t want notifications.</span>
-            <span class="ident">flags</span>: <span class="ident">RingFlags::NO_NOTIFY</span>,
-            <span class="ident">idx</span>: <span class="ident">Wrapping</span>(<span class="number">0</span>),
-            <span class="ident">ring</span>: [<span class="number">0</span>; <span class="ident">QUEUE_SIZE</span>],
-            <span class="ident">used_event</span>: <span class="number">0</span>,
+<span class="kw">impl</span>&lt;<span class="kw">const </span>QUEUE_SIZE: usize&gt; Default <span class="kw">for </span>AvailRing&lt;QUEUE_SIZE&gt; {
+    <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{
+            <span class="comment">// We implement all drivers via polling, so don&#39;t want notifications.
+            </span>flags: RingFlags::NO_NOTIFY,
+            idx: Wrapping(<span class="number">0</span>),
+            ring: [<span class="number">0</span>; QUEUE_SIZE],
+            used_event: <span class="number">0</span>,
         }
     }
 }
 
-<span class="doccomment">/// The ring buffer that indicates which available descriptors have been consumed by the device.</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// See &lt;https://docs.oasis-open.org/virtio/virtio/v1.1/csprd01/virtio-v1.1-csprd01.html#x1-430008&gt;.</span>
-<span class="attribute">#[<span class="ident">repr</span>(<span class="ident">C</span>, <span class="ident">align</span>(<span class="number">4</span>))]</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">UsedRing</span><span class="op">&lt;</span><span class="kw">const</span> <span class="ident">QUEUE_SIZE</span>: <span class="ident">usize</span><span class="op">&gt;</span> {
-    <span class="doccomment">/// Device-specific flags for the queue.</span>
-    <span class="kw">pub</span> <span class="ident">flags</span>: <span class="ident">RingFlags</span>,
-    <span class="doccomment">/// The next index that will be used in the ring (modulo `QUEUE_SIZE`).</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// Starts at 0 and always increments. Must never be decremented. Wraps naturally when at the</span>
-    <span class="doccomment">/// maximum `u16` value.</span>
-    <span class="kw">pub</span> <span class="ident">idx</span>: <span class="ident">Wrapping</span><span class="op">&lt;</span><span class="ident">u16</span><span class="op">&gt;</span>,
-    <span class="doccomment">/// The ring-buffer containing the used elements.</span>
-    <span class="kw">pub</span> <span class="ident">ring</span>: [<span class="ident">UsedElem</span>; <span class="ident">QUEUE_SIZE</span>],
-    <span class="doccomment">/// Event details. Only used if VIRTIO_F_EVENT_IDX has been negotiated, which we don&#39;t</span>
-    <span class="doccomment">/// currently support. The field is only added to act as padding for now.</span>
-    <span class="kw">pub</span> <span class="ident">avail_event</span>: <span class="ident">u16</span>,
+<span class="doccomment">/// The ring buffer that indicates which available descriptors have been consumed by the device.
+///
+/// See &lt;https://docs.oasis-open.org/virtio/virtio/v1.1/csprd01/virtio-v1.1-csprd01.html#x1-430008&gt;.
+</span><span class="attribute">#[repr(C, align(<span class="number">4</span>))]
+#[derive(Debug)]
+</span><span class="kw">pub struct </span>UsedRing&lt;<span class="kw">const </span>QUEUE_SIZE: usize&gt; {
+    <span class="doccomment">/// Device-specific flags for the queue.
+    </span><span class="kw">pub </span>flags: RingFlags,
+    <span class="doccomment">/// The next index that will be used in the ring (modulo `QUEUE_SIZE`).
+    ///
+    /// Starts at 0 and always increments. Must never be decremented. Wraps naturally when at the
+    /// maximum `u16` value.
+    </span><span class="kw">pub </span>idx: Wrapping&lt;u16&gt;,
+    <span class="doccomment">/// The ring-buffer containing the used elements.
+    </span><span class="kw">pub </span>ring: [UsedElem; QUEUE_SIZE],
+    <span class="doccomment">/// Event details. Only used if VIRTIO_F_EVENT_IDX has been negotiated, which we don&#39;t
+    /// currently support. The field is only added to act as padding for now.
+    </span><span class="kw">pub </span>avail_event: u16,
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="kw">const</span> <span class="ident">QUEUE_SIZE</span>: <span class="ident">usize</span><span class="op">&gt;</span> <span class="ident">Default</span> <span class="kw">for</span> <span class="ident">UsedRing</span><span class="op">&lt;</span><span class="ident">QUEUE_SIZE</span><span class="op">&gt;</span> {
-    <span class="kw">fn</span> <span class="ident">default</span>() -&gt; <span class="self">Self</span> {
-        <span class="self">Self</span> {
-            <span class="ident">flags</span>: <span class="ident">RingFlags::empty</span>(),
-            <span class="ident">idx</span>: <span class="ident">Wrapping</span>(<span class="number">0</span>),
-            <span class="ident">ring</span>: [(); <span class="ident">QUEUE_SIZE</span>].<span class="ident">map</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">UsedElem::default</span>()),
-            <span class="ident">avail_event</span>: <span class="number">0</span>,
+<span class="kw">impl</span>&lt;<span class="kw">const </span>QUEUE_SIZE: usize&gt; Default <span class="kw">for </span>UsedRing&lt;QUEUE_SIZE&gt; {
+    <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{
+            flags: RingFlags::empty(),
+            idx: Wrapping(<span class="number">0</span>),
+            ring: [(); QUEUE_SIZE].map(|<span class="kw">_</span>| UsedElem::default()),
+            avail_event: <span class="number">0</span>,
         }
     }
 }
 
-<span class="doccomment">/// An element indicating a used descriptor chain.</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// See &lt;https://docs.oasis-open.org/virtio/virtio/v1.1/csprd01/virtio-v1.1-csprd01.html#x1-430008&gt;.</span>
-<span class="attribute">#[<span class="ident">repr</span>(<span class="ident">C</span>)]</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Copy</span>, <span class="ident">Default</span>, <span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">UsedElem</span> {
-    <span class="doccomment">/// The index of the head of the used descriptor chain.</span>
-    <span class="kw">pub</span> <span class="ident">id</span>: <span class="ident">u32</span>,
-    <span class="doccomment">/// Total length of the bytes that was written to the used descriptor chain (only used for</span>
-    <span class="doccomment">/// device-write-only descriptors).</span>
-    <span class="kw">pub</span> <span class="ident">len</span>: <span class="ident">u32</span>,
+<span class="doccomment">/// An element indicating a used descriptor chain.
+///
+/// See &lt;https://docs.oasis-open.org/virtio/virtio/v1.1/csprd01/virtio-v1.1-csprd01.html#x1-430008&gt;.
+</span><span class="attribute">#[repr(C)]
+#[derive(Clone, Copy, Default, Debug)]
+</span><span class="kw">pub struct </span>UsedElem {
+    <span class="doccomment">/// The index of the head of the used descriptor chain.
+    </span><span class="kw">pub </span>id: u32,
+    <span class="doccomment">/// Total length of the bytes that was written to the used descriptor chain (only used for
+    /// device-write-only descriptors).
+    </span><span class="kw">pub </span>len: u32,
 }
 
-<span class="doccomment">/// A split virtqueue implementation.</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// See &lt;https://docs.oasis-open.org/virtio/virtio/v1.1/csprd01/virtio-v1.1-csprd01.html#x1-240006&gt;.</span>
-<span class="attribute">#[<span class="ident">repr</span>(<span class="ident">C</span>, <span class="ident">align</span>(<span class="number">64</span>))]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">VirtQueue</span><span class="op">&lt;</span><span class="kw">const</span> <span class="ident">QUEUE_SIZE</span>: <span class="ident">usize</span><span class="op">&gt;</span> {
-    <span class="doccomment">/// The descriptor table.</span>
-    <span class="kw">pub</span> <span class="ident">desc</span>: [<span class="ident">Desc</span>; <span class="ident">QUEUE_SIZE</span>],
-    <span class="doccomment">/// The available ring, which is controlled by the driver.</span>
-    <span class="kw">pub</span> <span class="ident">avail</span>: <span class="ident">AvailRing</span><span class="op">&lt;</span><span class="ident">QUEUE_SIZE</span><span class="op">&gt;</span>,
-    <span class="doccomment">/// The used ring, which is controlled by the device.</span>
-    <span class="kw">pub</span> <span class="ident">used</span>: <span class="ident">UsedRing</span><span class="op">&lt;</span><span class="ident">QUEUE_SIZE</span><span class="op">&gt;</span>,
+<span class="doccomment">/// A split virtqueue implementation.
+///
+/// See &lt;https://docs.oasis-open.org/virtio/virtio/v1.1/csprd01/virtio-v1.1-csprd01.html#x1-240006&gt;.
+</span><span class="attribute">#[repr(C, align(<span class="number">64</span>))]
+</span><span class="kw">pub struct </span>VirtQueue&lt;<span class="kw">const </span>QUEUE_SIZE: usize&gt; {
+    <span class="doccomment">/// The descriptor table.
+    </span><span class="kw">pub </span>desc: [Desc; QUEUE_SIZE],
+    <span class="doccomment">/// The available ring, which is controlled by the driver.
+    </span><span class="kw">pub </span>avail: AvailRing&lt;QUEUE_SIZE&gt;,
+    <span class="doccomment">/// The used ring, which is controlled by the device.
+    </span><span class="kw">pub </span>used: UsedRing&lt;QUEUE_SIZE&gt;,
 }
 </code></pre></div>
-</section><section id="search" class="content hidden"></section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="virtio" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.62.0-nightly (de1bc0008 2022-04-21)" ></div>
-</body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="virtio" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (81f391930 2022-10-09)" ></div></body></html>
