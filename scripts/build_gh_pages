@@ -37,9 +37,12 @@ rm --recursive --force "${TARGET_DIR}/debug"
 # Remove non-deterministic files.
 rm "${TARGET_DIR}/.rustc_info.json"
 
+# Remove unnecessary lock file, which is also owned by root and therefore problematic.
+rm "${TARGET_DIR}/doc/.lock"
+
 # The docs generated from the Cargo workspace do not include a workspace-level index, so we generate
 # one here and redirect to the appropriate documentation.
-readonly REDIRECT_CRATE_NAME=oak_functions
+readonly REDIRECT_CRATE_NAME=oak_functions_sdk
 cat <<-END > "${TARGET_DIR}/index.html"
   <!DOCTYPE html>
   <html>
