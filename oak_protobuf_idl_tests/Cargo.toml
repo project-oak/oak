@@ -1,0 +1,17 @@
+[package]
+name = "oak_protobuf_idl_tests"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+
+[dependencies]
+
+[dev-dependencies]
+async-trait = "*"
+maplit = "*"
+oak_idl = { path = "../oak_idl", features = ["async-clients"] }
+prost = "*"
+tokio = { version = "*", features = ["macros", "rt-multi-thread"] }
+
+[build-dependencies]
+oak_protobuf_idl_build = { path = "../oak_protobuf_idl_build" }
