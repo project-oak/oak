@@ -160,8 +160,16 @@ jobs:
       compile-generator: true
 
   dsse-upload:
-    if: github.event_name == 'push'
+    # if: github.event_name == 'push'
     needs: [provenance]
+    runs-on: ubuntu-20.04
+
+    permissions:
+      # Allow the job to update the repo with the latest provenances and index.
+      contents: write
+      # Allow the job to add a comment to the PR.
+      pull-requests: write
+
     steps:
       - name: Download DSSE document
         uses: actions/download-artifact@v3
@@ -189,6 +197,40 @@ jobs:
       # TODO(#3339): publish as a comment
       - name: Print SHA256 hash
         run: sha256sum oak_functions_freestanding_bin.intoto.jsonl
+
+    # Also post a reply on the PR thread with the sha256sum of the DSSE artifact.
+    - name: Post SHA256 Hash of the DSSE Artifact (post-merge only)
+      uses: actions/github-script@0.9.0
+      # if: github.event_name == 'push'
+      with:
+        github-token: ${{inputs.GITHUB_TOKEN}}
+        script: |
+          const execa = require('execa')
+          const { stdout } = await execa('sha256sum', ['oak_functions_freestanding_bin.intoto.jsonl'])
+          const opts = await github.repos.listPullRequestsAssociatedWithCommit({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            commit_sha: context.sha
+          });
+          // See:
+          // - https://octokit.github.io/rest.js/v17#previews
+          // - https://developer.github.com/v3/repos/commits/#list-pull-requests-associated-with-commit
+          opts.mediaType = {
+              previews: ['groot']
+          };
+
+          const issues = await github.paginate(opts);
+
+          await github.issues.createComment({
+            issue_number: issues[0].number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: `SHA256 hash of the signed provenance uploaded to Ent as a DSSE document:
+
+          \`\`\`
+          ${stdout}
+          \`\`\`
+          `});
 
       - name: Upload to Ent
         run: |
