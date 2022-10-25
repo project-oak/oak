@@ -24,7 +24,8 @@ void tflite_log_debug(const char* message) { oak_log_debug(message, strlen(messa
 
 // TODO(#3297): Implement TensorFlow Lite initialization logic.
 int tflite_init(const uint8_t* model_bytes, size_t model_bytes_len,
-                const uint8_t* tensor_arena_bytes, size_t tensor_arena_bytes_len) {
+                const uint8_t* tensor_arena_bytes, size_t tensor_arena_bytes_len,
+                size_t* output_buffer_len) {
   tflite_log_debug("Initializing TensorFlow Lite");
   return 0;
 }
