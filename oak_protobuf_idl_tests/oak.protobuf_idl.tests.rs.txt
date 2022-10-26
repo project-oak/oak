@@ -1,0 +1,122 @@
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct LookupDataRequest {
+    #[prost(bytes="vec", tag="1")]
+    pub key: ::prost::alloc::vec::Vec<u8>,
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct LookupDataResponse {
+    #[prost(bytes="vec", tag="1")]
+    pub value: ::prost::alloc::vec::Vec<u8>,
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct LogRequest {
+    #[prost(string, tag="1")]
+    pub entry: ::prost::alloc::string::String,
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct LogResponse {
+}
+
+pub struct TestServiceServer<S> {
+    service: S
+}
+
+impl <S: TestService> ::oak_idl::Handler for TestServiceServer<S> {
+    fn invoke(&mut self, request: ::oak_idl::Request) -> Result<::prost::alloc::vec::Vec<u8>, ::oak_idl::Status> {
+        match request.method_id {
+            15 => {
+                use ::prost::Message;
+                let request = LookupDataRequest::decode(request.body.as_ref())
+                    .map_err(|err| ::oak_idl::Status::new_with_message(::oak_idl::StatusCode::Internal, format!("Service failed to deserialize the request: {:?}", err)))?;
+                let response = self.service.lookup_data(&request)?;
+                let response_body = response.encode_to_vec();
+                Ok(response_body)
+            }
+            16 => {
+                use ::prost::Message;
+                let request = LogRequest::decode(request.body.as_ref())
+                    .map_err(|err| ::oak_idl::Status::new_with_message(::oak_idl::StatusCode::Internal, format!("Service failed to deserialize the request: {:?}", err)))?;
+                let response = self.service.log(&request)?;
+                let response_body = response.encode_to_vec();
+                Ok(response_body)
+            }
+            _ => Err(::oak_idl::Status::new(::oak_idl::StatusCode::Unimplemented))
+        }
+    }
+}
+
+pub trait TestService: Sized {
+    fn lookup_data(&mut self, request: &LookupDataRequest) -> Result<LookupDataResponse, ::oak_idl::Status>;
+    fn log(&mut self, request: &LogRequest) -> Result<LogResponse, ::oak_idl::Status>;
+    fn serve(self) -> TestServiceServer<Self> {
+        TestServiceServer { service : self }
+    }
+}
+
+pub struct TestServiceClient<T: ::oak_idl::Handler> {
+    handler: T
+}
+
+impl <T: ::oak_idl::Handler>TestServiceClient<T> {
+    pub fn new(handler: T) -> Self {
+        Self {
+            handler
+        }
+    }
+    pub fn lookup_data(&mut self, request: &LookupDataRequest) -> Result<LookupDataResponse, ::oak_idl::Status> {
+        use ::prost::Message;
+        let request_body = request.encode_to_vec();
+        let request = ::oak_idl::Request {
+            method_id: 15,
+            body: request_body,
+        };
+        let response_body = self.handler.invoke(request)?;
+        LookupDataResponse::decode(response_body.as_ref())
+            .map_err(|err| ::oak_idl::Status::new_with_message(::oak_idl::StatusCode::Internal, format!("Client failed to deserialize the response: {:?}", err)))
+    }
+    pub fn log(&mut self, request: &LogRequest) -> Result<LogResponse, ::oak_idl::Status> {
+        use ::prost::Message;
+        let request_body = request.encode_to_vec();
+        let request = ::oak_idl::Request {
+            method_id: 16,
+            body: request_body,
+        };
+        let response_body = self.handler.invoke(request)?;
+        LogResponse::decode(response_body.as_ref())
+            .map_err(|err| ::oak_idl::Status::new_with_message(::oak_idl::StatusCode::Internal, format!("Client failed to deserialize the response: {:?}", err)))
+    }
+}
+
+pub struct TestServiceAsyncClient<T: ::oak_idl::AsyncHandler> {
+    handler: T
+}
+
+impl <T: ::oak_idl::AsyncHandler>TestServiceAsyncClient<T> {
+    pub fn new(handler: T) -> Self {
+        Self {
+            handler
+        }
+    }
+    pub async fn lookup_data(&mut self, request: &LookupDataRequest) -> Result<LookupDataResponse, ::oak_idl::Status> {
+        use ::prost::Message;
+        let request_body = request.encode_to_vec();
+        let request = ::oak_idl::Request {
+            method_id: 15,
+            body: request_body,
+        };
+        let response_body = self.handler.invoke(request).await?;
+        LookupDataResponse::decode(response_body.as_ref())
+            .map_err(|err| ::oak_idl::Status::new_with_message(::oak_idl::StatusCode::Internal, format!("Client failed to deserialize the response: {:?}", err)))
+    }
+    pub async fn log(&mut self, request: &LogRequest) -> Result<LogResponse, ::oak_idl::Status> {
+        use ::prost::Message;
+        let request_body = request.encode_to_vec();
+        let request = ::oak_idl::Request {
+            method_id: 16,
+            body: request_body,
+        };
+        let response_body = self.handler.invoke(request).await?;
+        LogResponse::decode(response_body.as_ref())
+            .map_err(|err| ::oak_idl::Status::new_with_message(::oak_idl::StatusCode::Internal, format!("Client failed to deserialize the response: {:?}", err)))
+    }
+}

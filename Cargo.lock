@@ -2729,6 +2729,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "oak_protobuf_idl_build"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "prost 0.9.0",
+ "prost-build 0.9.0",
+]
+
+[[package]]
+name = "oak_protobuf_idl_tests"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "maplit",
+ "oak_idl",
+ "oak_protobuf_idl_build",
+ "prost 0.9.0",
+ "tokio",
+]
+
+[[package]]
 name = "oak_remote_attestation"
 version = "0.1.0"
 dependencies = [
