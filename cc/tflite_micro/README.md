@@ -68,7 +68,7 @@ cc/tflite_micro
 |   |-- generate_cc_arrays.py
 |   |   Convert a tflite model to a static C array and generate corresponding header and
 |   |   source files which can be specified in cc_binary/cc_library rules. Sourced and
-|   |   modified from tflm's <a href="https://github.com/tensorflow/tflite-micro/blob/main/tensorflow/lite/micro/tools/generate_cc_arrays.py">generate_cc_arrays.py</a>.
+|   |   modified from tflm's generate_cc_arrays.py.
 |
 |-- BUILD
 |   Provide a build target for generated tflm sources to avoid adding any changes to the
