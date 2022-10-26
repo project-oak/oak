@@ -17,6 +17,5 @@
 const SCHEMA: &str = "test_schema.proto";
 
 fn main() {
-    println!("cargo:rerun-if-changed={}", SCHEMA);
     oak_protobuf_idl_build::compile(SCHEMA);
 }

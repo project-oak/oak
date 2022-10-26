@@ -64,17 +64,15 @@ impl prost_build::ServiceGenerator for ServiceGenerator {
 /// Generate the Rust objects from the input [`Service`] instance, corresponding to a `service`
 /// entry.
 fn generate_service(service: &Service) -> anyhow::Result<String> {
+    let server_name = server_name(service);
+    let service_name = service_name(service);
     let mut lines = Vec::new();
     lines.extend(vec![
-        format!("pub struct {}<S> {{", server_name(service)),
+        format!("pub struct {server_name}<S> {{"),
         format!("    service: S"),
         format!("}}"),
         format!(""),
-        format!(
-            "impl <S: {}> ::oak_idl::Handler for {}<S> {{",
-            service_name(service),
-            server_name(service)
-        ),
+        format!("impl <S: {service_name}> ::oak_idl::Handler for {server_name}<S> {{"),
         format!("    fn invoke(&mut self, request: ::oak_idl::Request) -> Result<::prost::alloc::vec::Vec<u8>, ::oak_idl::Status> {{"),
         format!("        match request.method_id {{"),
     ]);
@@ -96,12 +94,12 @@ fn generate_service(service: &Service) -> anyhow::Result<String> {
         format!("    }}"),
         format!("}}"),
         format!(""),
-        format!("pub trait {}: Sized {{", service_name(service)),
+        format!("pub trait {service_name}: Sized {{"),
     ]);
     lines.extend(service.methods.iter().flat_map(generate_service_method));
     lines.extend(vec![
-        format!("    fn serve(self) -> {}<Self> {{", server_name(service)),
-        format!("        {} {{ service : self }}", server_name(service)),
+        format!("    fn serve(self) -> {server_name}<Self> {{"),
+        format!("        {server_name} {{ service : self }}"),
         format!("    }}"),
         format!("}}"),
         format!(""),
@@ -120,11 +118,11 @@ fn generate_service_client(service: &Service, asynchronous: bool) -> anyhow::Res
     };
     let mut lines = Vec::new();
     lines.extend(vec![
-        format!("pub struct {}<T: {}> {{", client_name, handler_trait),
+        format!("pub struct {client_name}<T: {handler_trait}> {{",),
         format!("    handler: T"),
         format!("}}"),
         format!(""),
-        format!("impl <T: {}>{}<T> {{", handler_trait, client_name),
+        format!("impl <T: {handler_trait}>{client_name}<T> {{"),
         format!("    pub fn new(handler: T) -> Self {{"),
         format!("        Self {{"),
         format!("            handler"),
@@ -146,33 +144,23 @@ fn generate_service_client(service: &Service, asynchronous: bool) -> anyhow::Res
 }
 
 fn generate_client_method(method: &Method, asynchronous: bool) -> anyhow::Result<Vec<String>> {
-    // For each method on the schema, generate a client method with the same name, accepting a
-    // buffer containing the serialized request as input. Unfortunately it does not seem easy to
-    // make this more type safe than this; ideally it would take a reference to a message of the
-    // correct type.
-    //
-    // The return value is wrapped in an `oak_idl::Message` since it is owned by the implementation
-    // of this method and needs to be passed to the caller; building a buffer within the generated
-    // method and returning an object that points to it would not work because of the mismatch in
-    // lifetimes. In principle it should be possible though if the caller passes in the buffer to
-    // fill in, which would remain owned by the caller, but that seems more complicated and for not
-    // much benefit.
+    let method_id = method_id(method)?;
+    let request_type = request_type(method);
+    let response_type = response_type(method);
+    let method_name = method_name(method);
+    let fn_modifier = if asynchronous { "async " } else { "" };
+    let await_operator = if asynchronous { ".await" } else { "" };
     Ok(vec![
-            format!(
-                "    pub {}fn {}(&mut self, request: &{}) -> Result<{}, ::oak_idl::Status> {{",
-                if asynchronous {"async "} else {""},
-                method_name(method),
-                request_type(method),
-                response_type(method)
-            ),
+            format!("    pub {fn_modifier}fn {method_name}(&mut self, request: &{request_type}) -> Result<{response_type}, ::oak_idl::Status> {{"),
             format!("        use ::prost::Message;"),
             format!("        let request_body = request.encode_to_vec();"),
             format!("        let request = ::oak_idl::Request {{"),
-            format!("            method_id: {},", method_id(method)?),
+            format!("            method_id: {method_id},"),
             format!("            body: request_body,"),
             format!("        }};"),
-            format!("        let response_body = self.handler.invoke(request){}?;", if asynchronous {".await"} else {""}),
-            format!("        {}::decode(response_body.as_ref()).map_err(|err| ::oak_idl::Status::new_with_message(::oak_idl::StatusCode::Internal, format!(\"Client failed to deserialize the response: {{:?}}\", err)))", response_type(method)),
+            format!("        let response_body = self.handler.invoke(request){await_operator}?;"),
+            format!("        {response_type}::decode(response_body.as_ref())"),
+            format!("            .map_err(|err| ::oak_idl::Status::new_with_message(::oak_idl::StatusCode::Internal, format!(\"Client failed to deserialize the response: {{:?}}\", err)))"),
             format!("    }}"),
         ])
 }
@@ -180,19 +168,17 @@ fn generate_client_method(method: &Method, asynchronous: bool) -> anyhow::Result
 fn generate_server_handler(method: &Method) -> anyhow::Result<Vec<String>> {
     // This handler appears inside a `match` block in the server implementation. Its purpose is to
     // parse the incoming request buffer as an object of the correct type, and dispatch a reference
-    // to that object to the underlying service implementation, provided by the developer, which
-    // deals with type safe generated objects instead of raw buffers.
+    // to that parsed object to the underlying service implementation, provided by the developer,
+    // which deals with type safe generated objects instead of raw byte buffers.
+    let method_id = method_id(method)?;
+    let request_type = request_type(method);
+    let method_name = method_name(method);
     Ok(vec![
-        format!("            {} => {{", method_id(method)?),
+        format!("            {method_id} => {{"),
         format!("                use ::prost::Message;"),
-        format!(
-            "                let request = {}::decode(request.body.as_ref()).map_err(|err| ::oak_idl::Status::new_with_message(::oak_idl::StatusCode::Internal, format!(\"Service failed to deserialize the request: {{:?}}\", err)))?;",
-            request_type(method),
-        ),
-        format!(
-            "                let response = self.service.{}(&request)?;",
-            method_name(method),
-        ),
+        format!("                let request = {request_type}::decode(request.body.as_ref())"),
+        format!("                    .map_err(|err| ::oak_idl::Status::new_with_message(::oak_idl::StatusCode::Internal, format!(\"Service failed to deserialize the request: {{:?}}\", err)))?;"),
+        format!("                let response = self.service.{method_name}(&request)?;"),
         format!("                let response_body = response.encode_to_vec();"),
         format!("                Ok(response_body)"),
         format!("            }}",),
@@ -200,15 +186,13 @@ fn generate_server_handler(method: &Method) -> anyhow::Result<Vec<String>> {
 }
 
 fn generate_service_method(method: &Method) -> Vec<String> {
-    vec![format!(
-        "    fn {}(&mut self, request: &{}) -> Result<{}, ::oak_idl::Status>;",
-        method_name(method),
-        request_type(method),
-        response_type(method)
-    )]
+    let method_name = method_name(method);
+    let request_type = request_type(method);
+    let response_type = response_type(method);
+    vec![format!("    fn {method_name}(&mut self, request: &{request_type}) -> Result<{response_type}, ::oak_idl::Status>;")]
 }
 
-/// Returns the value of the `method_id` commend on the method.
+/// Returns the value of the `method_id` comment on the method.
 fn method_id(method: &Method) -> anyhow::Result<u32> {
     let method_ids = method
         .comments
