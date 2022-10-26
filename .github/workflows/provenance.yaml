@@ -94,7 +94,7 @@ jobs:
                 previews: ['groot']
             };
 
-            const issues = await github.rest.paginate(opts);
+            const issues = await github.paginate(opts);
             console.log("test");
 
       # Download the Ent CLI and configure a remote with write access using a private API key, if
@@ -241,7 +241,7 @@ jobs:
                 previews: ['groot']
             };
 
-            const issues = await github.rest.paginate(opts);
+            const issues = await github.paginate(opts);
 
             await github.rest.issues.createComment({
               issue_number: issues[0].number,

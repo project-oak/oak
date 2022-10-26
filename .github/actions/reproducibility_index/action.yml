@@ -90,7 +90,7 @@ runs:
               previews: ['groot']
           };
 
-          const issues = await github.rest.paginate(opts);
+          const issues = await github.paginate(opts);
 
           await github.rest.issues.createComment({
             issue_number: issues[0].number,
