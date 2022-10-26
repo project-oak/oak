@@ -204,7 +204,7 @@ jobs:
       - name: Post SHA256 digest of the DSSE Artifact (post-merge only)
         uses: actions/github-script@v6
         with:
-          github-token: ${{inputs.GITHUB_TOKEN}}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const fs = require('fs').promises;
             const digest_line = await fs.readFile('./digest');
