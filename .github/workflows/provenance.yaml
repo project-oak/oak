@@ -80,7 +80,7 @@ jobs:
       - name: Test GitHub script
         uses: actions/github-script@v6
         with:
-          github-token: ${{inputs.GITHUB_TOKEN}}
+          # github-token: ${{inputs.GITHUB_TOKEN}}
           script: |
             const opts = await github.rest.repos.listPullRequestsAssociatedWithCommit({
               owner: context.repo.owner,
