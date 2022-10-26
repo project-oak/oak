@@ -77,6 +77,26 @@ jobs:
         if: github.event_name == 'push'
         run: git -C ./provenance-branch push --follow-tags
 
+      - name: Test GitHub script
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{inputs.GITHUB_TOKEN}}
+          script: |
+            const opts = await github.rest.repos.listPullRequestsAssociatedWithCommit({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              commit_sha: context.sha
+            });
+            // See:
+            // - https://octokit.github.io/rest.js/v17#previews
+            // - https://developer.github.com/v3/repos/commits/#list-pull-requests-associated-with-commit
+            opts.mediaType = {
+                previews: ['groot']
+            };
+
+            const issues = await github.rest.paginate(opts);
+            console.log("test");
+
       # Download the Ent CLI and configure a remote with write access using a private API key, if
       # available (GitHub secrets are not available on forks, see
       # https://docs.github.com/en/actions/security-guides/encrypted-secrets#using-encrypted-secrets-in-a-workflow).
@@ -209,7 +229,7 @@ jobs:
             const fs = require('fs').promises;
             const digest_line = await fs.readFile('./digest');
 
-            const opts = await github.repos.listPullRequestsAssociatedWithCommit({
+            const opts = await github.rest.repos.listPullRequestsAssociatedWithCommit({
               owner: context.repo.owner,
               repo: context.repo.repo,
               commit_sha: context.sha
@@ -221,9 +241,9 @@ jobs:
                 previews: ['groot']
             };
 
-            const issues = await github.paginate(opts);
+            const issues = await github.rest.paginate(opts);
 
-            await github.issues.createComment({
+            await github.rest.issues.createComment({
               issue_number: issues[0].number,
               owner: context.repo.owner,
               repo: context.repo.repo,
