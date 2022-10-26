@@ -32,6 +32,13 @@ int tflite_run(
     const uint8_t* input_bytes, size_t input_bytes_len,
     uint8_t** output_bytes, size_t* output_bytes_len);
 
+// Use weak reference to build both freestanding binaries that
+// can run on Oak server and local PC where Oak server does
+// implement oak_log_debug whereas local PC doesn't.
+void oak_log_debug(
+    const char* message, size_t message_len)
+    __attribute__((weak));
+
 #ifdef __cplusplus
 }
 #endif

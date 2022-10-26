@@ -30,6 +30,7 @@ cc_library(
         "debug_log.cc",
     ],
     copts = oak_copts(),
+    deps = [":hdrs"],
 )
 
 cc_library(
