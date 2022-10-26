@@ -19,8 +19,10 @@ cc/tflite_micro
 |   |   All tflite model apps are put under this folder.
 |   |   |-- hello_world
 |   |   |   hello_world tflite model app.
+|   |   |
 |   |   |-- BUILD
 |   |   |   Provide common dependencies shared by all tflite model apps.
+|   |   |
 |   |   |-- start.S
 |   |   |   Used by tflite model apps to generate freestanding and executable binary
 |   |   |   to run on PC.
@@ -36,6 +38,11 @@ cc/tflite_micro
 |   |   Other sources are sourced from Google nanolibc**, which currently misses bsearch,
 |   |   string-to-{float|double} and most apis are implemented in an non-optimized way for
 |   |   better portability.
+|   |
+|   |   Oak-specific modifications are enclosed by:
+|   |   /* Oak modification: START */
+|   |   ...
+|   |   /* Oak modification: END */
 |   |
 |   |-- libgcc
 |   |   A pico libgcc implements clrsb GCC builtin function required by tflm.
