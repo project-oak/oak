@@ -91,12 +91,12 @@ _start:
 	   which grow downwards).  */
 	pushq %rsp
 
-    /* Oak TF Runtime dones't have __libc_start_main, jump to model app's main(). */
+	/* Oak TF Runtime dones't have __libc_start_main, jump to model app's main(). */
 	call main
 
-    mov $SYS_exit,%eax
-    xor %edi,%edi
-    syscall
+	mov $SYS_exit,%eax
+	xor %edi,%edi
+	syscall
 
 /* Define a symbol for the first piece of initialized data.  */
 	.data
