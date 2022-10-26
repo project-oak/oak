@@ -55,7 +55,7 @@ cc_library(
         "//cc/tflite_micro/oak/libc",
         # Use Oak pico libgcc
         "//cc/tflite_micro/oak/libgcc",
-        # Pick up libm complements for Oak Restricted Kernel
+        # Use Oak pico libm that picks up complements of Oak Restricted Kernel libm.rs
         "//cc/tflite_micro/oak/libm:oak_kernel_complements",
     ],
 )

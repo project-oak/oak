@@ -38,10 +38,10 @@ cc/tflite_micro
 |   |   better portability.
 |   |
 |   |-- libgcc
-|   |   Implement clrsb GCC builtin function required by tflm.
+|   |   A pico libgcc implements clrsb GCC builtin function required by tflm.
 |   |
 |   |-- libm
-|   |   Implement a set of complementary math apis required by tflm.
+|   |   A pico libm implements a set of complementary math apis required by tflm.
 |   |   To build freestanding model app binary, compiler links static libm by default (-lm).
 |   |   To build Oak freestanding model app binary compiled and linked with Oak Restricted Kernel
 |   |   and Oak TensorFlow Service, this is a complement to libm.rs that Oak Restricted Kernel implements.
@@ -67,80 +67,96 @@ cc/tflite_micro
 |   Provide a build target for generated tflm sources to avoid adding any changes to the
 |   generated folder.
 ```
-\* [Android bionic libc](https://android.googlesource.com/platform/bionic/+/refs/heads/master)\
+
+\*
+[Android bionic libc](https://android.googlesource.com/platform/bionic/+/refs/heads/master)\
 \*\* [Google nanolibc](https://github.com/google/nanolibc)
 
 ## Build Model Binaries
 
-There are two sorts of freestanding binaries, using hello_world model app as example:
+There are two sorts of freestanding binaries, using hello_world model app as
+example:
 
 1. Build the binary that runs on PC
-    ```bash
-    bazel build //cc/tflite_micro/oak/apps/hello_world:hello_world_bin
-    ```
-    The binary is built with -nostdlib which removes dependencies of standard libraries
-    i.e. libc, libgcc, etc to ensure a freestanding binary is generated and can run on
-    PC. The binary is good for tflite model porting, debugging and tensor activation
-    validating. Its freestanding nature makes it a good fit of validating execution on
-    TEE.
+
+   ```bash
+   bazel build //cc/tflite_micro/oak/apps/hello_world:hello_world_bin
+   ```
+
+   The binary is built with -nostdlib which removes dependencies of standard
+   libraries i.e. libc, libgcc, etc to ensure a freestanding binary is generated
+   and can run on PC. The binary is good for tflite model porting, debugging and
+   tensor activation validating. Its freestanding nature makes it a good fit of
+   validating execution on TEE.
 
 1. Binaries that runs on Oak server
-    ```bash
-    cd oak_tensorflow_freestanding_bin
-    cargo build
-    ```
-    The binary is built with Oak Restricted Kernel and Oak TensorFlow Service, which can
-    be loaded into virtual machine for execution under TEE.
+   ```bash
+   cd oak_tensorflow_freestanding_bin
+   cargo build
+   ```
+   The binary is built with Oak Restricted Kernel and Oak TensorFlow Service,
+   which can be loaded into virtual machine for execution under TEE.
 
 ### Additional Build Options
 
 There are few optional build options provided:
 
-* `--define=no_opt=1`\
-    Disable compiler optimizations when building model app freestanding binaries.
+- `--define=no_opt=1`\
+   Disable compiler optimizations when building model app freestanding binaries.
 
-* `--define=no_sse=1`\
-    Disable using streaming SIMD instructions i.e. SSE2/SSSE3/SSE4/AVX2.
-    The option under the hook would use non-optimized nanolibc string apis i.e. str{len|cmp|cpy|...}, mem{cpy|cmp|move|set|...}, etc. Additinally, tflite is built without `-msse4.2`.
+- `--define=no_sse=1`\
+   Disable using streaming SIMD instructions i.e. SSE2/SSSE3/SSE4/AVX2. The
+  option under the hook would use non-optimized nanolibc string apis i.e.
+  str{len|cmp|cpy|...}, mem{cpy|cmp|move|set|...}, etc. Additinally, tflite is
+  built without `-msse4.2`.
 
-* `--define=use_custom_output=1`\
-    To build tflm without using Oak debug_log.cc; instead, using a custom debug_log.cc for multiple use cases i.e. testing, ported to other operating systems that implement proprietary debug logging, etc.
+- `--define=use_custom_output=1`\
+   To build tflm without using Oak debug_log.cc; instead, using a custom
+  debug_log.cc for multiple use cases i.e. testing, ported to other operating
+  systems that implement proprietary debug logging, etc.
 
 ## Debugging Model Binaries
 
-As what aforementioned, we are able to build freestanding libraries that can run on PC.
-In order for debugger i.e. gdb/lldb to correctly work on the binaries, we need to specify
-additional bulid parameters telling bazel to keep all debug symbols and optionally disabling
-optimizations so breakpoints can be precisely mapped to correct lines of source code.
+As what aforementioned, we are able to build freestanding libraries that can run
+on PC. In order for debugger i.e. gdb/lldb to correctly work on the binaries, we
+need to specify additional bulid parameters telling bazel to keep all debug
+symbols and optionally disabling optimizations so breakpoints can be precisely
+mapped to correct lines of source code.
 
 Use hell_world model app as example,
+
 ```bash
 bazel build --copt=-g --strip=never --define=no_opt=1 //cc/tflite_micro/oak/apps/hello_world:hello_world_bin
 ```
+
 `--define=no_opt=1` is optional if correct source mapping is not needed.
 
 Next, configure i.e. lldb for VS Code,\
 .vscode/launch.json
+
 ```json
 {
-    "version": "0.2.0",
-    "configurations": [
-        {
-            "type": "lldb",
-            "request": "launch",
-            "name": "Debug",
-            "program": "${workspaceFolder}/bazel-bin/cc/tflite_micro/oak/apps/hello_world/hello_world_freestanding_bin",
-            "args": [],
-            "cwd": "${workspaceFolder}",
-            "sourceMap": { 
-                "/proc/self/cwd": "${workspaceFolder}",
-            }
-        }
-    ]
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug",
+      "program": "${workspaceFolder}/bazel-bin/cc/tflite_micro/oak/apps/hello_world/hello_world_freestanding_bin",
+      "args": [],
+      "cwd": "${workspaceFolder}",
+      "sourceMap": {
+        "/proc/self/cwd": "${workspaceFolder}"
+      }
+    }
+  ]
 }
 ```
-As bazel replaces the actual source location with `/proc/self/cwd` to achieve repeatable
-builds, it is required to add the mapping `"/proc/self/cwd": "${workspaceFolder}"`.
 
-After applying the configuration, you are good to go to set breakpoints in sources, watch
-memroy contents, online memory/register manipulations and so forth.
+As bazel replaces the actual source location with `/proc/self/cwd` to achieve
+repeatable builds, it is required to add the mapping
+`"/proc/self/cwd": "${workspaceFolder}"`.
+
+After applying the configuration, you are good to go to set breakpoints in
+sources, watch memroy contents, online memory/register manipulations and so
+forth.
