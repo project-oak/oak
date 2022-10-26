@@ -78,7 +78,7 @@ runs:
           const reproducibility_index_content = await fs.readFile('./reproducibility_index');
           const reproducibility_index_diff_content = await fs.readFile('./reproducibility_index.diff');
 
-          const opts = await github.repos.listPullRequestsAssociatedWithCommit({
+          const opts = await github.rest.repos.listPullRequestsAssociatedWithCommit({
             owner: context.repo.owner,
             repo: context.repo.repo,
             commit_sha: context.sha
@@ -92,7 +92,7 @@ runs:
 
           const issues = await github.paginate(opts);
 
-          await github.issues.createComment({
+          await github.rest.issues.createComment({
             issue_number: issues[0].number,
             owner: context.repo.owner,
             repo: context.repo.repo,

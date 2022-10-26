@@ -209,7 +209,7 @@ jobs:
             const fs = require('fs').promises;
             const digest_line = await fs.readFile('./digest');
 
-            const opts = await github.repos.listPullRequestsAssociatedWithCommit({
+            const opts = await github.rest.repos.listPullRequestsAssociatedWithCommit({
               owner: context.repo.owner,
               repo: context.repo.repo,
               commit_sha: context.sha
@@ -223,7 +223,7 @@ jobs:
 
             const issues = await github.paginate(opts);
 
-            await github.issues.createComment({
+            await github.rest.issues.createComment({
               issue_number: issues[0].number,
               owner: context.repo.owner,
               repo: context.repo.repo,
