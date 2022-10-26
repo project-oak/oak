@@ -138,7 +138,7 @@ jobs:
           cd $(dirname ${{ env.OAK_FUNCTIONS_FREESTANDING_BIN_PATH }})
           # sha256sum generates sha256 hash for the target binary.
           # base64 --wrap=0 disables line wrapping, and encodes to base64 and outputs on a single line.
-          echo "::set-output name=hashes::$(sha256sum $(basename ${{ env.OAK_FUNCTIONS_FREESTANDING_BIN_PATH }}) | base64 --wrap=0)"
+          echo "hashes=$(sha256sum $(basename ${{ env.OAK_FUNCTIONS_FREESTANDING_BIN_PATH }}) | base64 --wrap=0)" >> $GITHUB_OUTPUT
 
   # This job calls the generic workflow to generate provenance.
   # See https://github.com/slsa-framework/slsa-github-generator/blob/main/internal/builders/generic/README.md
