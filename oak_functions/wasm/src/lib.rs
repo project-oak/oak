@@ -160,15 +160,17 @@ where
         buf_ptr: AbiPointer,
         buf_len: AbiPointerOffset,
     ) -> Result<Vec<u8>, OakStatus> {
+        let mut target = alloc::vec![0; buf_len as usize];
         self.get_memory()
-            .get(buf_ptr, buf_len as usize)
+            .get_into(buf_ptr, &mut target)
             .map_err(|err| {
                 self.logger.log_sensitive(
                     Level::Error,
                     &format!("Unable to read buffer from guest memory: {:?}", err),
                 );
                 OakStatus::ErrInvalidArgs
-            })
+            })?;
+        Ok(target)
     }
 
     /// Writes the buffer `source` at the address `dest` of the Wasm memory, if `source` fits in the
@@ -207,14 +209,14 @@ where
 
     //// Read the u32 value at the `address` from the Wasm memory.
     pub fn read_u32_from_wasm_memory(&self, address: AbiPointer) -> Result<u32, OakStatus> {
-        let address = self.get_memory().get(address, 4).map_err(|err| {
+        let address = self.get_memory().get_value(address).map_err(|err| {
             self.logger.log_sensitive(
                 Level::Error,
                 &format!("Unable to read u32 value from guest memory: {:?}", err),
             );
             OakStatus::ErrInvalidArgs
         })?;
-        Ok(LittleEndian::read_u32(&address))
+        Ok(address)
     }
 
     /// Writes the given `buffer` by allocating `buffer.len()` Wasm memory and writing the address
@@ -251,9 +253,10 @@ where
         buf_ptr: AbiPointer,
         buf_len: AbiPointerOffset,
     ) -> Result<(), OakStatus> {
-        let response = self
-            .get_memory()
-            .get(buf_ptr, buf_len as usize)
+        let mut target = alloc::vec![0; buf_len as usize];
+        // TODO(mschett): Does not write to target.
+        self.get_memory()
+            .get_into(buf_ptr, &mut target)
             .map_err(|err| {
                 self.logger.log_sensitive(
                     Level::Error,
@@ -264,7 +267,7 @@ where
                 );
                 OakStatus::ErrInvalidArgs
             })?;
-        self.response_bytes = response;
+        self.response_bytes = target;
         Ok(())
     }
 
