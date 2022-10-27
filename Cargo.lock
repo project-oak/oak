@@ -2431,6 +2431,7 @@ dependencies = [
  "log",
  "oak_functions_abi",
  "oak_functions_lookup",
+ "oak_functions_test_utils",
  "oak_functions_wasm",
  "oak_functions_workload_logging",
  "oak_idl",
