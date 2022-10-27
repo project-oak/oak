@@ -41,7 +41,7 @@ _start:
     movq %rax, 4088(%rbx)  # rbx[511] = rax
 
     # Map the last entry of PDP to the same location as the first.
-    movabsq $0x000FFFFFFFFFF000, %rax  # rax = $const
+    movabsq $0x0007FFFFFFFFF000, %rax  # rax = $const
     andq (%rbx), %rax                  # rax = *rbx & rax (mask out all but the address)
     movq (%rax), %rdx                  # rdx = *rax
     movq %rdx, 4080(%rax)              # rax[510] = rdx
