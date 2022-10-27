@@ -18,8 +18,8 @@ use oak_utils::{generate_grpc_code, CodegenOptions, ExternPath};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     generate_grpc_code(
-        env!("WORKSPACE_ROOT"),
-        &["oak_grpc_unary_attestation/proto/unary_server.proto"],
+        &format!("{}oak_grpc_unary_attestation/proto", env!("WORKSPACE_ROOT")),
+        &["unary_server.proto"],
         CodegenOptions {
             build_client: true,
             build_server: false,
