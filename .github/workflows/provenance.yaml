@@ -8,6 +8,8 @@ concurrency:
 on:
   push:
     branches: [main]
+  workflow_dispatch:
+    branches: [main]
   pull_request:
     branches: [main]
 
