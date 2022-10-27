@@ -8,6 +8,8 @@ concurrency:
 on:
   push:
     branches: [main]
+  workflow_dispatch:
+    branches: [main]
   pull_request:
     branches: [main]
 
@@ -143,13 +145,13 @@ jobs:
   # This job calls the generic workflow to generate provenance.
   # See https://github.com/slsa-framework/slsa-github-generator/blob/main/internal/builders/generic/README.md
   provenance:
-    if: github.event_name == 'push'
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     needs: [build_provenance]
     permissions:
       actions: read
       id-token: write
       contents: write
-    uses: slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@v1.2.0
+    uses: slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@v1.2.1
     with:
       base64-subjects: '${{ needs.build_provenance.outputs.hashes }}'
       # Set a custom name for the provenance attestation.
@@ -162,7 +164,7 @@ jobs:
   # This job uploads the signed provenance from the previous step to Ent, and
   # publishes a comment about it on the PR.
   dsse-upload:
-    if: github.event_name == 'push'
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     needs: [provenance]
     runs-on: ubuntu-20.04
 
