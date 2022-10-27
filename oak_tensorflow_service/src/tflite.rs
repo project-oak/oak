@@ -15,7 +15,7 @@
 //
 
 use alloc::{vec, vec::Vec};
-use anyhow::anyhow;
+use anyhow::{anyhow, Context};
 use log::{log, Level};
 
 // TODO(#3297): Don't use null terminated and use `string_view` instead.
@@ -43,20 +43,27 @@ extern "C" {
     ///
     /// Memory area that will be used by the TFLM memory manager is defined by `tensor_arena_bytes`:
     /// <https://github.com/tensorflow/tflite-micro/blob/main/tensorflow/lite/micro/docs/memory_management.md>
+    ///
+    /// This function returns a buffer size value in the `output_buffer_len_ptr`. This buffer should
+    /// be allocated before calling `tflite_run` to store inference results.
     fn tflite_init(
-        model_bytes: *const u8,
-        model_bytes_len: u64,
-        tensor_arena_bytes: *const u8,
-        tensor_arena_bytes_len: u64,
+        model_bytes_ptr: *const u8,
+        model_bytes_len: usize,
+        tensor_arena_bytes_ptr: *const u8,
+        tensor_arena_bytes_len: usize,
+        output_buffer_len_ptr: *mut usize,
     ) -> i32;
 
-    /// Performs inference on `input_bytes` and pass inference result to `output_bytes` and returns
-    /// an error code.
+    /// Performs inference on `input_bytes_ptr` and pass inference result to `output_bytes_ptr` and
+    /// returns an error code.
+    ///
+    /// The value in the `output_bytes_len_ptr` cannot be bigger than the value in
+    /// `output_buffer_len_ptr` from `tflite_init`.
     fn tflite_run(
-        input_bytes: *const u8,
-        input_bytes_len: u64,
-        output_bytes: *mut u8,
-        output_bytes_len: *mut u64,
+        input_bytes_ptr: *const u8,
+        input_bytes_len: usize,
+        output_bytes_ptr: *mut u8,
+        output_bytes_len_ptr: *mut usize,
     ) -> i32;
 }
 
@@ -66,51 +73,74 @@ const TENSOR_ARENA_SIZE: usize = 1024;
 #[derive(Default)]
 pub struct TfliteModel {
     tensor_arena: Vec<u8>,
+    /// Defines a output buffer length that should be preallocated before calling `tflite_run`.
+    /// This value is only initialized after `initialize` function because TFLite should return the
+    /// `output_buffer_len`.
+    /// If the value is `None` then `TfliteModel` hasn't been initialized yet.
+    output_buffer_len: Option<usize>,
 }
 
 impl TfliteModel {
     pub fn new() -> Self {
         let tensor_arena = vec![0; TENSOR_ARENA_SIZE];
-        Self { tensor_arena }
+        Self {
+            tensor_arena,
+            output_buffer_len: None,
+        }
     }
 
-    pub fn initialize(&self, model_bytes: &[u8]) -> anyhow::Result<()> {
-        let model_bytes_len = model_bytes
-            .len()
-            .try_into()
-            .map_err(|error| anyhow!("Failed to convert usize to u64: {}", error))?;
-        let tensor_arena_len = self
-            .tensor_arena
-            .len()
-            .try_into()
-            .map_err(|error| anyhow!("Failed to convert usize to u64: {}", error))?;
+    pub fn initialize(&mut self, model_bytes: &[u8]) -> anyhow::Result<()> {
+        log!(Level::Info, "Initializing the TFLite model");
+        if self.output_buffer_len.is_some() {
+            return Err(anyhow!("TFLite model has already been initialized"));
+        }
+
+        let model_bytes_len = model_bytes.len();
+        let tensor_arena_len = self.tensor_arena.len();
+        let mut output_buffer_len = 0usize;
         let _ = unsafe {
             tflite_init(
                 model_bytes.as_ptr(),
                 model_bytes_len,
                 self.tensor_arena.as_ptr(),
                 tensor_arena_len,
+                &mut output_buffer_len,
             )
         };
+        self.output_buffer_len = Some(output_buffer_len);
+
+        log!(
+            Level::Info,
+            "TFLite model has been successfully initialized"
+        );
         Ok(())
     }
 
-    pub fn run(&self, input_bytes: &[u8]) -> anyhow::Result<Vec<u8>> {
-        let input_bytes_len = input_bytes
-            .len()
-            .try_into()
-            .map_err(|error| anyhow!("Failed to convert usize to u64: {}", error))?;
-        // TODO(#3297): Allocate enough bytes for the TensorFlow Lite model.
-        let mut output_bytes = vec![0; input_bytes.len()];
-        let mut output_bytes_len = 0u64;
+    pub fn run(&mut self, input_bytes: &[u8]) -> anyhow::Result<Vec<u8>> {
+        log!(Level::Info, "Running TFLite inference");
+        let output_buffer_len = self
+            .output_buffer_len
+            .context("Running inference on a non-initialized TensorFlow model")?;
+
+        let input_bytes_len = input_bytes.len();
+        let mut output_buffer = vec![0; output_buffer_len];
+        let mut output_bytes_len = 0usize;
         let _ = unsafe {
             tflite_run(
                 input_bytes.as_ptr(),
                 input_bytes_len,
-                output_bytes.as_mut_ptr(),
-                &mut output_bytes_len as *mut u64,
+                output_buffer.as_mut_ptr(),
+                &mut output_bytes_len,
             )
         };
-        Ok(output_bytes)
+        if output_bytes_len <= output_buffer_len {
+            log!(Level::Info, "TFLite inference has run successfully");
+            Ok(output_buffer[..output_bytes_len].to_vec())
+        } else {
+            // Panicing since if the output bytes length is bigger than the output buffer length,
+            // then there is a potential for memory corruption and we can't rely on any of the Rust
+            // memory safety assumptions.
+            panic!("Output bytes length is bigger than the output buffer length");
+        }
     }
 }

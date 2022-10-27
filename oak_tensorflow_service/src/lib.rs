@@ -34,17 +34,15 @@ pub mod schema {
 }
 mod tflite;
 
-use alloc::sync::Arc;
-
 #[derive(Default)]
 pub struct TensorflowServiceImpl {
-    tflite_model: Arc<tflite::TfliteModel>,
+    tflite_model: tflite::TfliteModel,
 }
 
 impl TensorflowServiceImpl {
     pub fn new() -> Self {
         Self {
-            tflite_model: Arc::new(tflite::TfliteModel::new()),
+            tflite_model: tflite::TfliteModel::new(),
         }
     }
 }
