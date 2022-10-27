@@ -47,8 +47,6 @@ mod schema {
 
 const MOCK_SESSION_ID: &[u8; 8] = &[0, 0, 0, 0, 0, 0, 0, 0];
 const MOCK_CONSTANT_RESPONSE_SIZE: u32 = 1024;
-const ECHO_WASM_BYTES: &[u8] = include_bytes!("echo.wasm");
-const LOOKUP_WASM_BYTES: &[u8] = include_bytes!("key_value_lookup.wasm");
 const LOOKUP_TEST_KEY: &[u8] = b"test_key";
 const LOOKUP_TEST_VALUE: &[u8] = b"test_value";
 
@@ -152,7 +150,9 @@ fn it_should_handle_user_requests_after_initialization() {
 
     let owned_initialization_flatbuffer = {
         let mut builder = oak_idl::utils::OwnedFlatbufferBuilder::default();
-        let wasm_module = builder.create_vector::<u8>(ECHO_WASM_BYTES);
+        let wasm_path = oak_functions_test_utils::build_rust_crate_wasm("echo").unwrap();
+        let wasm_bytes = std::fs::read(wasm_path).unwrap();
+        let wasm_module = builder.create_vector::<u8>(&wasm_bytes);
         let initialization_flatbuffer = schema::Initialization::create(
             &mut builder,
             &schema::InitializationArgs {
@@ -208,7 +208,9 @@ fn it_should_only_initialize_once() {
 
     let owned_initialization_flatbuffer = {
         let mut builder = oak_idl::utils::OwnedFlatbufferBuilder::default();
-        let wasm_module = builder.create_vector::<u8>(ECHO_WASM_BYTES);
+        let wasm_path = oak_functions_test_utils::build_rust_crate_wasm("echo").unwrap();
+        let wasm_bytes = std::fs::read(wasm_path).unwrap();
+        let wasm_module = builder.create_vector::<u8>(&wasm_bytes);
         let initialization_flatbuffer = schema::Initialization::create(
             &mut builder,
             &schema::InitializationArgs {
@@ -246,7 +248,10 @@ async fn it_should_support_lookup_data() {
 
     let owned_initialization_flatbuffer = {
         let mut builder = oak_idl::utils::OwnedFlatbufferBuilder::default();
-        let wasm_module = builder.create_vector::<u8>(LOOKUP_WASM_BYTES);
+        let wasm_path =
+            oak_functions_test_utils::build_rust_crate_wasm("key_value_lookup").unwrap();
+        let wasm_bytes = std::fs::read(wasm_path).unwrap();
+        let wasm_module = builder.create_vector::<u8>(&wasm_bytes);
         let initialization_flatbuffer = schema::Initialization::create(
             &mut builder,
             &schema::InitializationArgs {
