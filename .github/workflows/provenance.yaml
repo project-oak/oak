@@ -143,7 +143,7 @@ jobs:
   # This job calls the generic workflow to generate provenance.
   # See https://github.com/slsa-framework/slsa-github-generator/blob/main/internal/builders/generic/README.md
   provenance:
-    if: github.event_name == 'push'
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     needs: [build_provenance]
     permissions:
       actions: read
@@ -162,7 +162,7 @@ jobs:
   # This job uploads the signed provenance from the previous step to Ent, and
   # publishes a comment about it on the PR.
   dsse-upload:
-    if: github.event_name == 'push'
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     needs: [provenance]
     runs-on: ubuntu-20.04
 
