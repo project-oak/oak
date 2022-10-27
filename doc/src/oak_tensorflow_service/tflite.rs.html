@@ -114,6 +114,36 @@
 <span id="114">114</span>
 <span id="115">115</span>
 <span id="116">116</span>
+<span id="117">117</span>
+<span id="118">118</span>
+<span id="119">119</span>
+<span id="120">120</span>
+<span id="121">121</span>
+<span id="122">122</span>
+<span id="123">123</span>
+<span id="124">124</span>
+<span id="125">125</span>
+<span id="126">126</span>
+<span id="127">127</span>
+<span id="128">128</span>
+<span id="129">129</span>
+<span id="130">130</span>
+<span id="131">131</span>
+<span id="132">132</span>
+<span id="133">133</span>
+<span id="134">134</span>
+<span id="135">135</span>
+<span id="136">136</span>
+<span id="137">137</span>
+<span id="138">138</span>
+<span id="139">139</span>
+<span id="140">140</span>
+<span id="141">141</span>
+<span id="142">142</span>
+<span id="143">143</span>
+<span id="144">144</span>
+<span id="145">145</span>
+<span id="146">146</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -131,7 +161,7 @@
 //
 
 </span><span class="kw">use </span>alloc::{vec, vec::Vec};
-<span class="kw">use </span>anyhow::anyhow;
+<span class="kw">use </span>anyhow::{anyhow, Context};
 <span class="kw">use </span>log::{log, Level};
 
 <span class="comment">// TODO(#3297): Don&#39;t use null terminated and use `string_view` instead.
@@ -159,20 +189,27 @@
     ///
     /// Memory area that will be used by the TFLM memory manager is defined by `tensor_arena_bytes`:
     /// &lt;https://github.com/tensorflow/tflite-micro/blob/main/tensorflow/lite/micro/docs/memory_management.md&gt;
+    ///
+    /// This function returns a buffer size value in the `output_buffer_len_ptr`. This buffer should
+    /// be allocated before calling `tflite_run` to store inference results.
     </span><span class="kw">fn </span>tflite_init(
-        model_bytes: <span class="kw-2">*const </span>u8,
-        model_bytes_len: u64,
-        tensor_arena_bytes: <span class="kw-2">*const </span>u8,
-        tensor_arena_bytes_len: u64,
+        model_bytes_ptr: <span class="kw-2">*const </span>u8,
+        model_bytes_len: usize,
+        tensor_arena_bytes_ptr: <span class="kw-2">*const </span>u8,
+        tensor_arena_bytes_len: usize,
+        output_buffer_len_ptr: <span class="kw-2">*mut </span>usize,
     ) -&gt; i32;
 
-    <span class="doccomment">/// Performs inference on `input_bytes` and pass inference result to `output_bytes` and returns
-    /// an error code.
+    <span class="doccomment">/// Performs inference on `input_bytes_ptr` and pass inference result to `output_bytes_ptr` and
+    /// returns an error code.
+    ///
+    /// The value in the `output_bytes_len_ptr` cannot be bigger than the value in
+    /// `output_buffer_len_ptr` from `tflite_init`.
     </span><span class="kw">fn </span>tflite_run(
-        input_bytes: <span class="kw-2">*const </span>u8,
-        input_bytes_len: u64,
-        output_bytes: <span class="kw-2">*mut </span>u8,
-        output_bytes_len: <span class="kw-2">*mut </span>u64,
+        input_bytes_ptr: <span class="kw-2">*const </span>u8,
+        input_bytes_len: usize,
+        output_bytes_ptr: <span class="kw-2">*mut </span>u8,
+        output_bytes_len_ptr: <span class="kw-2">*mut </span>usize,
     ) -&gt; i32;
 }
 
@@ -182,52 +219,75 @@
 <span class="attribute">#[derive(Default)]
 </span><span class="kw">pub struct </span>TfliteModel {
     tensor_arena: Vec&lt;u8&gt;,
+    <span class="doccomment">/// Defines a output buffer length that should be preallocated before calling `tflite_run`.
+    /// This value is only initialized after `initialize` function because TFLite should return the
+    /// `output_buffer_len`.
+    /// If the value is `None` then `TfliteModel` hasn&#39;t been initialized yet.
+    </span>output_buffer_len: <span class="prelude-ty">Option</span>&lt;usize&gt;,
 }
 
 <span class="kw">impl </span>TfliteModel {
     <span class="kw">pub fn </span>new() -&gt; <span class="self">Self </span>{
         <span class="kw">let </span>tensor_arena = <span class="macro">vec!</span>[<span class="number">0</span>; TENSOR_ARENA_SIZE];
-        <span class="self">Self </span>{ tensor_arena }
+        <span class="self">Self </span>{
+            tensor_arena,
+            output_buffer_len: <span class="prelude-val">None</span>,
+        }
     }
 
-    <span class="kw">pub fn </span>initialize(<span class="kw-2">&amp;</span><span class="self">self</span>, model_bytes: <span class="kw-2">&amp;</span>[u8]) -&gt; anyhow::Result&lt;()&gt; {
-        <span class="kw">let </span>model_bytes_len = model_bytes
-            .len()
-            .try_into()
-            .map_err(|error| <span class="macro">anyhow!</span>(<span class="string">&quot;Failed to convert usize to u64: {}&quot;</span>, error))<span class="question-mark">?</span>;
-        <span class="kw">let </span>tensor_arena_len = <span class="self">self
-            </span>.tensor_arena
-            .len()
-            .try_into()
-            .map_err(|error| <span class="macro">anyhow!</span>(<span class="string">&quot;Failed to convert usize to u64: {}&quot;</span>, error))<span class="question-mark">?</span>;
+    <span class="kw">pub fn </span>initialize(<span class="kw-2">&amp;mut </span><span class="self">self</span>, model_bytes: <span class="kw-2">&amp;</span>[u8]) -&gt; anyhow::Result&lt;()&gt; {
+        <span class="macro">log!</span>(Level::Info, <span class="string">&quot;Initializing the TFLite model&quot;</span>);
+        <span class="kw">if </span><span class="self">self</span>.output_buffer_len.is_some() {
+            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">&quot;TFLite model has already been initialized&quot;</span>));
+        }
+
+        <span class="kw">let </span>model_bytes_len = model_bytes.len();
+        <span class="kw">let </span>tensor_arena_len = <span class="self">self</span>.tensor_arena.len();
+        <span class="kw">let </span><span class="kw-2">mut </span>output_buffer_len = <span class="number">0usize</span>;
         <span class="kw">let _ </span>= <span class="kw">unsafe </span>{
             tflite_init(
                 model_bytes.as_ptr(),
                 model_bytes_len,
                 <span class="self">self</span>.tensor_arena.as_ptr(),
                 tensor_arena_len,
+                <span class="kw-2">&amp;mut </span>output_buffer_len,
             )
         };
+        <span class="self">self</span>.output_buffer_len = <span class="prelude-val">Some</span>(output_buffer_len);
+
+        <span class="macro">log!</span>(
+            Level::Info,
+            <span class="string">&quot;TFLite model has been successfully initialized&quot;
+        </span>);
         <span class="prelude-val">Ok</span>(())
     }
 
-    <span class="kw">pub fn </span>run(<span class="kw-2">&amp;</span><span class="self">self</span>, input_bytes: <span class="kw-2">&amp;</span>[u8]) -&gt; anyhow::Result&lt;Vec&lt;u8&gt;&gt; {
-        <span class="kw">let </span>input_bytes_len = input_bytes
-            .len()
-            .try_into()
-            .map_err(|error| <span class="macro">anyhow!</span>(<span class="string">&quot;Failed to convert usize to u64: {}&quot;</span>, error))<span class="question-mark">?</span>;
-        <span class="comment">// TODO(#3297): Allocate enough bytes for the TensorFlow Lite model.
-        </span><span class="kw">let </span><span class="kw-2">mut </span>output_bytes = <span class="macro">vec!</span>[<span class="number">0</span>; input_bytes.len()];
-        <span class="kw">let </span><span class="kw-2">mut </span>output_bytes_len = <span class="number">0u64</span>;
+    <span class="kw">pub fn </span>run(<span class="kw-2">&amp;mut </span><span class="self">self</span>, input_bytes: <span class="kw-2">&amp;</span>[u8]) -&gt; anyhow::Result&lt;Vec&lt;u8&gt;&gt; {
+        <span class="macro">log!</span>(Level::Info, <span class="string">&quot;Running TFLite inference&quot;</span>);
+        <span class="kw">let </span>output_buffer_len = <span class="self">self
+            </span>.output_buffer_len
+            .context(<span class="string">&quot;Running inference on a non-initialized TensorFlow model&quot;</span>)<span class="question-mark">?</span>;
+
+        <span class="kw">let </span>input_bytes_len = input_bytes.len();
+        <span class="kw">let </span><span class="kw-2">mut </span>output_buffer = <span class="macro">vec!</span>[<span class="number">0</span>; output_buffer_len];
+        <span class="kw">let </span><span class="kw-2">mut </span>output_bytes_len = <span class="number">0usize</span>;
         <span class="kw">let _ </span>= <span class="kw">unsafe </span>{
             tflite_run(
                 input_bytes.as_ptr(),
                 input_bytes_len,
-                output_bytes.as_mut_ptr(),
-                <span class="kw-2">&amp;mut </span>output_bytes_len <span class="kw">as </span><span class="kw-2">*mut </span>u64,
+                output_buffer.as_mut_ptr(),
+                <span class="kw-2">&amp;mut </span>output_bytes_len,
             )
         };
-        <span class="prelude-val">Ok</span>(output_bytes)
+        <span class="kw">if </span>output_bytes_len &lt;= output_buffer_len {
+            <span class="macro">log!</span>(Level::Info, <span class="string">&quot;TFLite inference has run successfully&quot;</span>);
+            <span class="prelude-val">Ok</span>(output_buffer[..output_bytes_len].to_vec())
+        } <span class="kw">else </span>{
+            <span class="comment">// Panicing since if the output bytes length is bigger than the output buffer length,
+            // then there is a potential for memory corruption and we can&#39;t rely on any of the Rust
+            // memory safety assumptions.
+            </span><span class="macro">panic!</span>(<span class="string">&quot;Output bytes length is bigger than the output buffer length&quot;</span>);
+        }
     }
 }
 </code></pre></div>

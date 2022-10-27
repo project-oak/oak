@@ -102,8 +102,6 @@
 <span id="102">102</span>
 <span id="103">103</span>
 <span id="104">104</span>
-<span id="105">105</span>
-<span id="106">106</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -140,17 +138,15 @@
 }
 <span class="kw">mod </span>tflite;
 
-<span class="kw">use </span>alloc::sync::Arc;
-
 <span class="attribute">#[derive(Default)]
 </span><span class="kw">pub struct </span>TensorflowServiceImpl {
-    tflite_model: Arc&lt;tflite::TfliteModel&gt;,
+    tflite_model: tflite::TfliteModel,
 }
 
 <span class="kw">impl </span>TensorflowServiceImpl {
     <span class="kw">pub fn </span>new() -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
-            tflite_model: Arc::new(tflite::TfliteModel::new()),
+            tflite_model: tflite::TfliteModel::new(),
         }
     }
 }
