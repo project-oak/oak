@@ -44,8 +44,8 @@ extern "C" {
     /// Memory area that will be used by the TFLM memory manager is defined by `tensor_arena_bytes`:
     /// <https://github.com/tensorflow/tflite-micro/blob/main/tensorflow/lite/micro/docs/memory_management.md>
     ///
-    /// This function returns a buffer size value in the `output_buffer_len`. This buffer should be
-    /// allocated before calling `tflite_run` to store inference results.
+    /// This function returns a buffer size value in the `output_buffer_len_ptr`. This buffer should
+    /// be allocated before calling `tflite_run` to store inference results.
     fn tflite_init(
         model_bytes_ptr: *const u8,
         model_bytes_len: usize,
@@ -54,8 +54,11 @@ extern "C" {
         output_buffer_len_ptr: *mut usize,
     ) -> i32;
 
-    /// Performs inference on `input_bytes` and pass inference result to `output_bytes` and returns
-    /// an error code.
+    /// Performs inference on `input_bytes_ptr` and pass inference result to `output_bytes_ptr` and
+    /// returns an error code.
+    ///
+    /// The value in the `output_bytes_len_ptr` cannot be bigger than the value in
+    /// `output_buffer_len_ptr` from `tflite_init`.
     fn tflite_run(
         input_bytes_ptr: *const u8,
         input_bytes_len: usize,
@@ -88,7 +91,7 @@ impl TfliteModel {
 
     pub fn initialize(&mut self, model_bytes: &[u8]) -> anyhow::Result<()> {
         log!(Level::Info, "Initializing the TFLite model");
-        if let Some(_) = self.output_buffer_len {
+        if self.output_buffer_len.is_some() {
             return Err(anyhow!("TFLite model has already been initialized"));
         }
 
@@ -115,29 +118,29 @@ impl TfliteModel {
 
     pub fn run(&mut self, input_bytes: &[u8]) -> anyhow::Result<Vec<u8>> {
         log!(Level::Info, "Running TFLite inference");
-        let buffer_len = self
+        let output_buffer_len = self
             .output_buffer_len
             .context("Running inference on a non-initialized TensorFlow model")?;
 
         let input_bytes_len = input_bytes.len();
-        let mut output_bytes = vec![0; buffer_len];
+        let mut output_buffer = vec![0; output_buffer_len];
         let mut output_bytes_len = 0usize;
         let _ = unsafe {
             tflite_run(
                 input_bytes.as_ptr(),
                 input_bytes_len,
-                output_bytes.as_mut_ptr(),
+                output_buffer.as_mut_ptr(),
                 &mut output_bytes_len,
             )
         };
-        if output_bytes_len <= buffer_len {
+        if output_bytes_len <= output_buffer_len {
             log!(Level::Info, "TFLite inference has run successfully");
-            Ok(output_bytes[..output_bytes_len].to_vec())
+            Ok(output_buffer[..output_bytes_len].to_vec())
         } else {
-            // Panicing since if the response size is larger than the allocated buffer, then there
-            // is a potential for memory corruption and we can't rely on any of the Rust memory
-            // safety assumptions.
-            panic!("Response size is larger than the allocated buffer");
+            // Panicing since if the output bytes length is bigger than the output buffer length,
+            // then there is a potential for memory corruption and we can't rely on any of the Rust
+            // memory safety assumptions.
+            panic!("Output bytes length is bigger than the output buffer length");
         }
     }
 }
