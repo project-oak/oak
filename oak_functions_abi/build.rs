@@ -28,6 +28,10 @@ fn main() {
     // https://doc.rust-lang.org/cargo/reference/build-scripts.html#cargorerun-if-changedpath
     for proto_path in file_paths.iter() {
         let file_path = std::path::Path::new(proto_path);
-        println!("cargo:rerun-if-changed=../../{}", file_path.display());
+        println!(
+            "cargo:rerun-if-changed={}{}",
+            env!("WORKSPACE_ROOT"),
+            file_path.display()
+        );
     }
 }
