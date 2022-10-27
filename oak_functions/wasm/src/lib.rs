@@ -361,7 +361,7 @@ where
                 // Here https://paritytech.github.io/wasmi/wasmi/trait.Externals.html#examples panics with
                 //  panic!("Unimplemented function at {}.", index)
                 // We prefer not to panic, and trap in an unreachable state instead.
-                Err(wasmi::Trap::new(wasmi::TrapKind::Unreachable))
+                Err(wasmi::Trap::from(wasmi::TrapCode::Unreachable))
             }
         }
     }
