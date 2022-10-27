@@ -15,5 +15,6 @@ pub mod mem;
 pub mod pci;
 pub mod virtio;
 
+// TODO(#3394): Move to a shared crate.
 pub trait InverseTranslator: Fn(PhysAddr) -> Option<VirtAddr> {}
 impl<X: Fn(PhysAddr) -> Option<VirtAddr>> InverseTranslator for X {}

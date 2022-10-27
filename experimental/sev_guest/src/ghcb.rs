@@ -17,11 +17,15 @@
 //! This module contains an implementation of the guest-hypervisor communications block (GHCB) page
 //! that can be used for communicating with the hypervisor.
 
-use crate::msr::{
-    register_ghcb_location, set_ghcb_address_and_exit, GhcbGpa, RegisterGhcbGpaError,
-    RegisterGhcbGpaRequest,
+use crate::{
+    msr::{
+        register_ghcb_location, set_ghcb_address_and_exit, GhcbGpa, RegisterGhcbGpaError,
+        RegisterGhcbGpaRequest,
+    },
+    Translator,
 };
 use bitflags::bitflags;
+use x86_64::{PhysAddr, VirtAddr};
 use zerocopy::FromBytes;
 
 /// The size of the GHCB page.
@@ -221,25 +225,31 @@ impl Ghcb {
 /// Implementation of the GHCB protocol using the wrapped GHCB data structure.
 pub struct GhcbProtocol<'a, G: AsMut<Ghcb> + ?Sized> {
     ghcb: &'a mut G,
+    gpa: PhysAddr,
 }
 
 impl<'a, G> GhcbProtocol<'a, G>
 where
     G: AsMut<Ghcb> + AsRef<Ghcb> + ?Sized,
 {
-    pub fn new(ghcb: &'a mut G) -> Self {
-        Self { ghcb }
+    pub fn new<VP: Translator>(ghcb: &'a mut G, translate: VP) -> Self {
+        let virtual_address = VirtAddr::from_ptr(ghcb.as_ref() as *const Ghcb);
+        // Crashing is OK if we cannot find the physical address for the GHCB.
+        let gpa = translate(virtual_address)
+            .expect("Could not translate the GHCB virtual address to a physical address.");
+        Self { ghcb, gpa }
     }
 
     /// Gets the guest-physical address for the guest-hypervisor communication block.
-    pub fn get_gpa(&self) -> usize {
-        // Assume identity mapping for now.
-        self.ghcb.as_ref() as *const Ghcb as usize
+    pub fn get_gpa(&self) -> PhysAddr {
+        self.gpa
     }
 
     /// Registers the address of the GHCB with the hypervisor.
     pub fn register_with_hypervisor(&self) -> Result<(), RegisterGhcbGpaError> {
-        register_ghcb_location(RegisterGhcbGpaRequest::new(self.get_gpa())?)
+        register_ghcb_location(RegisterGhcbGpaRequest::new(
+            self.get_gpa().as_u64() as usize
+        )?)
     }
 
     /// Writes an 8 bit number to an IO port via the IOIO protocol.
@@ -300,7 +310,7 @@ where
         self.ghcb.as_mut().protocol_version = GHCB_PROTOCOL_VERSION;
         // Use a memory fence to ensure all writes happen before we hand over to the VMM.
         core::sync::atomic::fence(core::sync::atomic::Ordering::Release);
-        set_ghcb_address_and_exit(GhcbGpa::new(self.get_gpa())?);
+        set_ghcb_address_and_exit(GhcbGpa::new(self.get_gpa().as_u64() as usize)?);
         // Use a memory fence to ensure that all earlier writes are commited before we read from the
         // GHCB.
         core::sync::atomic::fence(core::sync::atomic::Ordering::Acquire);

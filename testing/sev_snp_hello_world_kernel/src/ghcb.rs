@@ -48,7 +48,8 @@ pub fn init_ghcb(snp_enabled: bool) -> GhcbProtocol<'static, Ghcb> {
     let ghcb: &mut Ghcb = unsafe { GHCB.assume_init_mut() };
     share_ghcb_with_hypervisor(ghcb, snp_enabled);
     ghcb.reset();
-    GhcbProtocol::new(ghcb)
+    // We are using an identity mapping between virtual and physical addresses.
+    GhcbProtocol::new(ghcb, |vaddr: VirtAddr| Some(PhysAddr::new(vaddr.as_u64())))
 }
 
 /// Marks the page containing the GHCB data structure to be shared with the hypervisor.
