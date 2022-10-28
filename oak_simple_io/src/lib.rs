@@ -54,6 +54,7 @@ pub const OUTPUT_BUFFER_LENGTH: usize = 4096;
 /// The length of the buffer that will be used for input messages.
 pub const INPUT_BUFFER_LENGTH: usize = 4096;
 
+// TODO(#3394): Move to a shared crate.
 /// Memory address translation function.
 pub trait Translator: Fn(VirtAddr) -> Option<PhysAddr> {}
 impl<X: Fn(VirtAddr) -> Option<PhysAddr>> Translator for X {}

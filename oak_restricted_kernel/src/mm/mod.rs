@@ -38,6 +38,7 @@ mod encrypted_mapper;
 pub mod frame_allocator;
 pub mod page_tables;
 
+// TODO(#3394): Move to a shared crate.
 pub trait Translator {
     /// Translates the given virtual address to the physical address that it maps to.
     ///

@@ -19,6 +19,8 @@
 
 #![no_std]
 
+use x86_64::{PhysAddr, VirtAddr};
+
 pub mod cpuid;
 pub mod ghcb;
 pub mod instructions;
@@ -26,3 +28,8 @@ pub mod interrupts;
 pub mod io;
 pub mod msr;
 pub mod secrets;
+
+// TODO(#3394): Move to a shared crate.
+/// Memory address translation functions.
+pub trait Translator: Fn(VirtAddr) -> Option<PhysAddr> {}
+impl<X: Fn(VirtAddr) -> Option<PhysAddr>> Translator for X {}
