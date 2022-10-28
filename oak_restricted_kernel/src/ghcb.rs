@@ -18,6 +18,7 @@ use crate::mm::{
     encrypted_mapper::{EncryptedPageTable, MemoryEncryption, PhysOffset},
     Mapper, PageTableFlags, ENCRYPTED_BIT_POSITION, KERNEL_OFFSET,
 };
+use lazy_static::lazy_static;
 use sev_guest::{
     ghcb::{Ghcb, GhcbProtocol},
     io::{GhcbIoFactory, PortFactoryWrapper},
@@ -75,24 +76,17 @@ pub fn reshare_ghcb<M: Mapper<Size2MiB>>(mapper: &mut M) {
     // Safety: we only use the reference to calculate the address and never dereference it.
     let ghcb_address =
         unsafe { VirtAddr::new(&GHCB_WRAPPER as *const GhcbAlignmentWrapper as usize as u64) };
-    // Panicking is OK if we cannot find a valid 2MiB page starting with the GHCB wrapper, or cannot
-    // update the page table flags for it.
-    let page = Page::<Size2MiB>::from_start_address(ghcb_address)
-        .expect("Invalid start address for GHCB page.");
-
-    // Safety: we dont change the address of the page or any of the existing flags, except for
-    // removing the encrypted flag.
+    // Safety: we only change the encrypted flag, all other flags for the GHCB pages are as they
+    // were set during the kernel memory initialisation.
     unsafe {
-        match mapper.update_flags(
-            page,
-            OakPageTableFlags::PRESENT
-                | OakPageTableFlags::WRITABLE
-                | OakPageTableFlags::GLOBAL
-                | OakPageTableFlags::NO_EXECUTE,
-        ) {
-            Ok(mapper_flush) => mapper_flush.flush(),
-            Err(error) => panic!("Couldn't update page table flags for GHCB: {:?}", error),
-        };
+        set_single_2mib_page_flags(
+            ghcb_address,
+            mapper,
+            PageTableFlags::PRESENT
+                | PageTableFlags::WRITABLE
+                | PageTableFlags::GLOBAL
+                | PageTableFlags::NO_EXECUTE,
+        );
     }
 }
 
