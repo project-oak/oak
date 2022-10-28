@@ -108,7 +108,7 @@ fn set_encrypted_bit_for_page(address: &VirtAddr, encrypted: bool) {
     assert!(l3_table_address.as_u64() > 0);
     assert!(l3_table_address.as_u64() < Size1GiB::SIZE);
     // Safety: this is safe because we checked that the page table entry is marked as present and
-    // the physical address is non-zero and falls withing the first 1GB identity mapper region.
+    // the physical address is non-zero and falls withing the first 1GB identity-mapped region.
     let l3_table = unsafe { get_mut_page_table_ref(physical_to_virtual(l3_table_address)) };
 
     let l3_entry = &l3_table[address.p3_index()];
@@ -121,7 +121,7 @@ fn set_encrypted_bit_for_page(address: &VirtAddr, encrypted: bool) {
     assert!(l3_table_address.as_u64() < Size1GiB::SIZE);
     // Safety: this is safe because we checked that the page table entry is marked as present, not a
     // 1GiB huge page and the physical address is non-zero and falls withing the first 1GB identity
-    // mapper region.
+    // mapped-region.
     let l2_table = unsafe { get_mut_page_table_ref(physical_to_virtual(l2_table_address)) };
 
     let page_entry = &mut l2_table[address.p2_index()];
