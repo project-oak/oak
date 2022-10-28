@@ -67,6 +67,35 @@ lazy_static! {
     };
 }
 
+/// Shares the page containing the GHCB with the hypervisor again.
+///
+/// This should be called as soon as the kernel memory has been initialised, as that would have
+/// cause the page to be marked as encrypted.
+pub fn reshare_ghcb<M: Mapper<Size2MiB>>(mapper: &mut M) {
+    // Safety: we only use the reference to calculate the address and never dereference it.
+    let ghcb_address =
+        unsafe { VirtAddr::new(&GHCB_WRAPPER as *const GhcbAlignmentWrapper as usize as u64) };
+    // Panicking is OK if we cannot find a valid 2MiB page starting with the GHCB wrapper, or cannot
+    // update the page table flags for it..
+    let page = Page::<Size2MiB>::from_start_address(ghcb_address)
+        .expect("Invalid start address for GHCB page.");
+
+    // Safety: we dont change the address of the page or any of the existing flags, except for
+    // removing the encrypted flag.
+    unsafe {
+        mapper
+            .update_flags(
+                page,
+                OakPageTableFlags::PRESENT
+                    | OakPageTableFlags::WRITABLE
+                    | OakPageTableFlags::GLOBAL
+                    | OakPageTableFlags::NO_EXECUTE,
+            )
+            .expect("Couldn't update page table flags for GHCB.")
+            .flush();
+    }
+}
+
 /// Initializes the GHCB and shares it with the hypervisor during early boot.
 fn init_ghcb_early(snp_enabled: bool) -> GhcbProtocol<'static, Ghcb> {
     // Safety: This is called only during early boot, so there is only a single execution context.
