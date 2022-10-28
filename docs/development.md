@@ -321,11 +321,11 @@ Response: "{\"temperature_degrees_celsius\":29}"
 
 We currently have fuzz testing enabled for Oak Functions on
 [OSS-Fuzz](https://github.com/google/oss-fuzz/tree/master/projects/oak). In
-addition, `xtask` has a command for running fuzz targets `run-fuzz-targets`.
-This command runs `cargo-fuzz` with the `-O` option for optimization, and
-supports all `libFuzzer` options. These options must be provided as the last
-argument. For instance, the following command runs all fuzz targets with a 2
-seconds timeout for each target.
+addition, `xtask` has a command for running fuzz targets `run-cargo-fuzz`. This
+command runs `cargo-fuzz` with the `-O` option for optimization, and supports
+all `libFuzzer` options. These options must be provided as the last argument.
+For instance, the following command runs all fuzz targets with a 2 seconds
+timeout for each target.
 
 ```bash
 xtask run-cargo-fuzz -- -max_total_time=2
@@ -337,12 +337,10 @@ The following lists all the `libFuzzer` options:
 xtask --logs run-cargo-fuzz -- -help=1
 ```
 
-Moreover, `crate-name` alone or together with `target-name` could be specified
-to run all targets for a specific crate, or to run a specific target,
-respectively.
+Moreover, `target-name` could be specified to run a specific target.
 
 ```bash
-xtask --logs run-cargo-fuzz --crate-name=loader --target-name=wasm_invoke -- -max_total_time=20
+xtask --logs run-cargo-fuzz --target-name=apply_policy -- -max_total_time=20
 ```
 
 ## Build and Release
