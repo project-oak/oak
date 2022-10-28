@@ -8,13 +8,11 @@ concurrency:
 on:
   push:
     branches: [main]
-  workflow_dispatch:
-    branches: [main]
   pull_request:
     branches: [main]
 
 jobs:
-  build_provenance:
+  build_binary:
     outputs:
       hashes: ${{ steps.hash.outputs.hashes }}
     runs-on: ubuntu-20.04
@@ -22,7 +20,7 @@ jobs:
       OAK_FUNCTIONS_FREESTANDING_BIN_PATH: './oak_functions_freestanding_bin/target/x86_64-unknown-none/release/oak_functions_freestanding_bin'
 
     permissions:
-      # Allow the job to update the repo with the latest provenances and index.
+      # Allow the job to update the repo with the latest provenance info and index.
       contents: write
       # Allow the job to add a comment to the PR.
       pull-requests: write
@@ -30,12 +28,6 @@ jobs:
     steps:
       - name: Mount main branch
         uses: actions/checkout@v3
-
-      - name: Mount provenance branch
-        uses: actions/checkout@v3
-        with:
-          ref: provenance
-          path: provenance-branch
 
       - name: Git setup
         run: |
@@ -58,26 +50,9 @@ jobs:
           ./scripts/docker_pull
           df --human-readable
 
-      - name: Generate provenance for crosvm freestanding binary
+      - name: Build the crosvm freestanding binary
         run: |
-          ./scripts/generate_provenance -c buildconfigs/oak_functions_freestanding_bin.toml -s
-
-      - name: Move new provenance files to the provenance branch
-        if: github.event_name == 'push'
-        run: cp -r ./provenance/. ./provenance-branch/
-
-      - name: Commit new provenance files to the provenance branch
-        if: github.event_name == 'push'
-        run: |
-          git -C ./provenance-branch add .
-          git -C ./provenance-branch status
-          git -C ./provenance-branch diff --staged
-          git -C ./provenance-branch commit --allow-empty --message="Provenance files for ${GITHUB_SHA}"
-          git -C ./provenance-branch tag --annotate --message "record source commit" provenance-${GITHUB_SHA}
-
-      - name: Push provenance branch
-        if: github.event_name == 'push'
-        run: git -C ./provenance-branch push --follow-tags
+          ./scripts/build_binary -c buildconfigs/oak_functions_freestanding_bin.toml -s
 
       # Download the Ent CLI and configure a remote with write access using a private API key, if
       # available (GitHub secrets are not available on forks, see
@@ -128,7 +103,7 @@ jobs:
           OAK_FUNCTIONS_FREESTANDING_BIN_PATH:
             ${{ env.OAK_FUNCTIONS_FREESTANDING_BIN_PATH }}
 
-      # Experimental step using SLSA generic provenance generator
+      # Generate the input to the generate_provenance job.
       # See https://github.com/slsa-framework/slsa-github-generator/blob/main/internal/builders/generic/README.md
       - name: Generate oak_functions_freestanding_bin hash
         id: hash
@@ -142,30 +117,30 @@ jobs:
           # base64 --wrap=0 disables line wrapping, and encodes to base64 and outputs on a single line.
           echo "hashes=$(sha256sum $(basename ${{ env.OAK_FUNCTIONS_FREESTANDING_BIN_PATH }}) | base64 --wrap=0)" >> $GITHUB_OUTPUT
 
-  # This job calls the generic workflow to generate provenance.
+  # This job calls the generic SLSA workflow to generate provenance.
   # See https://github.com/slsa-framework/slsa-github-generator/blob/main/internal/builders/generic/README.md
-  provenance:
-    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
-    needs: [build_provenance]
+  generate_provenance:
+    if: github.event_name == 'push'
+    needs: [build_binary]
     permissions:
       actions: read
       id-token: write
       contents: write
     uses: slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@v1.2.1
     with:
-      base64-subjects: '${{ needs.build_provenance.outputs.hashes }}'
+      base64-subjects: '${{ needs.build_binary.outputs.hashes }}'
       # Set a custom name for the provenance attestation.
       attestation-name: 'oak_functions_freestanding_bin.intoto.jsonl'
-      # Upload provenance to a new release
+      # Upload the provenance.
       upload-assets: true
       # Build the generator from source.
       compile-generator: true
 
   # This job uploads the signed provenance from the previous step to Ent, and
   # publishes a comment about it on the PR.
-  dsse-upload:
-    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
-    needs: [provenance]
+  upload_provenance:
+    if: github.event_name == 'push'
+    needs: [generate_provenance]
     runs-on: ubuntu-20.04
 
     permissions:
@@ -175,7 +150,7 @@ jobs:
       pull-requests: write
 
     steps:
-      - name: Download DSSE document
+      - name: Download the DSSE document
         uses: actions/download-artifact@v3
         with:
           name: oak_functions_freestanding_bin.intoto.jsonl
@@ -229,7 +204,7 @@ jobs:
               issue_number: issues[0].number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: `SHA256 hash of the signed provenance uploaded to Ent as a DSSE document:
+              body: `SHA256 digest of the signed provenance uploaded to Ent as a DSSE document:
 
             \`\`\`
             ${digest_line}

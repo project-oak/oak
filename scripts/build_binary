@@ -86,14 +86,3 @@ fi
 # Reenable failing early.
 set -e
 
-# Copy the provenance file in `./provenance/<BINARY_HASH>/COMMIT_HASH.json`
-# if the `-s` argument is passed in.
-if $STORE ; then
-  readonly BINARY_SHA_256_HASH=$(jq -r '.subject[0].digest.sha256' ./"${PROV_FILE_NAME}")
-
-  # Move the generated provenances to the correct directory, first creating
-  # any required directories.
-  mkdir -p "./provenance"
-  mkdir -p "./provenance/${BINARY_SHA_256_HASH}"
-  cp "./${PROV_FILE_NAME}" "./provenance/${BINARY_SHA_256_HASH}/${COMMIT_HASH}.json"
-fi
