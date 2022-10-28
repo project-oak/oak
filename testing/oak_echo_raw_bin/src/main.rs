@@ -20,13 +20,15 @@
 
 extern crate alloc;
 
-use alloc::boxed::Box;
+use alloc::{boxed::Box, vec, vec::Vec};
 use core::panic::PanicInfo;
 use log::info;
 use oak_channel::Channel;
 use oak_linux_boot_params::BootParams;
 
 mod asm;
+
+const MESSAGE_SIZE: usize = 1;
 
 #[no_mangle]
 pub extern "C" fn rust64_start(_rdi: u64, rsi: &BootParams) -> ! {
@@ -35,13 +37,17 @@ pub extern "C" fn rust64_start(_rdi: u64, rsi: &BootParams) -> ! {
     start_echo_server(channel)
 }
 
-// Starts an echo server that uses the Oak communication channel:
-// https://github.com/project-oak/oak/blob/main/oak_channel/SPEC.md
-fn start_echo_server(channel: Box<dyn Channel>) -> ! {
-    let runtime = oak_echo_runtime::RuntimeImplementation::new();
-    let service = oak_echo_runtime::schema::EchoRuntime::serve(runtime);
-    oak_channel::server::start_blocking_server(channel, service)
-        .expect("Runtime encountered an unrecoverable error");
+// Starts an echo server that reads single bytes from the channel and writes
+// them back.
+fn start_echo_server(mut channel: Box<dyn Channel>) -> ! {
+    loop {
+        let bytes = {
+            let mut bytes: Vec<u8> = vec![0; MESSAGE_SIZE];
+            channel.read(&mut bytes).expect("Couldn't read bytes");
+            bytes
+        };
+        channel.write(&bytes).expect("Couldn't write bytes");
+    }
 }
 
 #[alloc_error_handler]
