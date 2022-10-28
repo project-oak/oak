@@ -655,16 +655,12 @@ _xtask() {
             return 0
             ;;
         xtask__run__cargo__fuzz)
-            opts="-h --crate-name --target-name --help [ARGS]..."
+            opts="-h --target-name --help [ARGS]..."
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
             fi
             case "${prev}" in
-                --crate-name)
-                    COMPREPLY=($(compgen -f "${cur}"))
-                    return 0
-                    ;;
                 --target-name)
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0

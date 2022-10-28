@@ -204,17 +204,15 @@ pub fn run_cargo_fuzz(opt: &RunCargoFuzz) -> Step {
 }
 
 pub fn run_fuzz_targets_in_crate(path: &Path, opt: &RunCargoFuzz) -> Step {
-    // `cargo-fuzz` can only run in the crate that contains the `fuzz` crate. So we need to use
-    // `Cmd::new_in_dir` to execute the command inside the crate's directory. Pop one component
-    // (i.e., `./Cargo.toml`) to get to the crate path.
-    let mut crate_path = path.to_path_buf();
-    crate_path.pop();
+    // Pop one component to get to the `fuzz` crate.
+    let mut fuzz_path = path.to_path_buf();
+    fuzz_path.pop();
 
     let cargo_manifest: CargoManifest = toml::from_str(&read_file(path))
         .unwrap_or_else(|err| panic!("could not parse cargo manifest file {:?}: {}", path, err));
 
     Step::Multiple {
-        name: format!("fuzzing {:?}", &crate_path.file_name().unwrap()),
+        name: "run cargo-fuzz".to_owned(),
         steps: cargo_manifest
             .bin
             .iter()
@@ -233,7 +231,7 @@ pub fn run_fuzz_targets_in_crate(path: &Path, opt: &RunCargoFuzz) -> Step {
                         "--".to_string(),
                         ...opt.args
                     ],
-                    &crate_path,
+                    &fuzz_path,
                 ),
             })
             .collect(),

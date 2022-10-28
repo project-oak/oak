@@ -245,13 +245,7 @@ pub struct RunTestsOpt {
 pub struct RunCargoFuzz {
     #[arg(
         long,
-        help = "name of a specific crate with fuzz-target. If not specified, runs all fuzz targets for all crates."
-    )]
-    pub crate_name: Option<String>,
-    #[arg(
-        long,
-        help = "name of a specific fuzz-target. If not specified, runs all fuzz targets.",
-        requires("crate_name")
+        help = "name of a specific fuzz-target. If not specified, runs all fuzz targets."
     )]
     pub target_name: Option<String>,
     /// Additional `libFuzzer` arguments passed through to the binary
