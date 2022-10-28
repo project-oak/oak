@@ -24,7 +24,6 @@ pub struct TestServiceServer<S> {
 
 impl <S: TestService> ::oak_protobuf_idl::Transport for TestServiceServer<S> {
     fn invoke(&mut self, request_bytes: &[u8]) -> Result<::prost::alloc::vec::Vec<u8>, !> {
-        use ::prost::Message;
         let response_bytes = self
             .invoke_inner(request_bytes)
             .map_or_else(
@@ -38,20 +37,18 @@ impl <S: TestService> ::oak_protobuf_idl::Transport for TestServiceServer<S> {
 
 impl <S: TestService> TestServiceServer<S> {
     fn invoke_inner(&mut self, request_bytes: &[u8]) -> Result<::prost::alloc::vec::Vec<u8>, ::oak_protobuf_idl::Status> {
-        use ::prost::Message;
         let request = ::oak_protobuf_idl::Request::decode(request_bytes).map_err(|err| {
             ::oak_protobuf_idl::Status::new_with_message(
                 ::oak_protobuf_idl::StatusCode::Internal,
-                format!("Client failed to deserialize the response: {:?}", err),
+                ::oak_protobuf_idl::format!("Client failed to deserialize the response: {:?}", err),
             )
         })?;
         match request.method_id {
             15 => {
-                use ::prost::Message;
                 let request = LookupDataRequest::decode(request.body.as_ref()).map_err(|err| {
                     ::oak_protobuf_idl::Status::new_with_message(
                         ::oak_protobuf_idl::StatusCode::Internal,
-                        format!("Service failed to deserialize the request: {:?}", err)
+                        ::oak_protobuf_idl::format!("Service failed to deserialize the request: {:?}", err)
                     )
                 })?;
                 let response = self.service.lookup_data(&request)?;
@@ -59,11 +56,10 @@ impl <S: TestService> TestServiceServer<S> {
                 Ok(response_body)
             }
             16 => {
-                use ::prost::Message;
                 let request = LogRequest::decode(request.body.as_ref()).map_err(|err| {
                     ::oak_protobuf_idl::Status::new_with_message(
                         ::oak_protobuf_idl::StatusCode::Internal,
-                        format!("Service failed to deserialize the request: {:?}", err)
+                        ::oak_protobuf_idl::format!("Service failed to deserialize the request: {:?}", err)
                     )
                 })?;
                 let response = self.service.log(&request)?;

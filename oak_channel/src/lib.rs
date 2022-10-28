@@ -16,6 +16,7 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 #![feature(never_type)]
+#![feature(unwrap_infallible)]
 #![allow(rustdoc::private_intra_doc_links)]
 
 #[cfg(feature = "client")]

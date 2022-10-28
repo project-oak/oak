@@ -37,6 +37,26 @@ pub fn start_blocking_server<H: oak_idl::Handler>(
     }
 }
 
+// Similar to [`start_blocking_server`], but using the protobuf IDL for serialization. In
+// particular, this means that the `method_id` field from the request message is not used, since the
+// protobuf IDL serializes its own method id on the wire through the transport.
+pub fn start_blocking_server_protobuf<T: oak_protobuf_idl::Transport<Error = !>>(
+    channel: Box<dyn Channel>,
+    mut server: T,
+) -> anyhow::Result<!> {
+    let channel_handle = &mut ServerChannelHandle::new(channel);
+    loop {
+        let request_message = channel_handle
+            .read_request()
+            .context("couldn't receive message")?;
+        let request_message_invocation_id = request_message.invocation_id;
+        let response = server.invoke(request_message.body.as_ref()).into_ok();
+        let response_message =
+            message_from_response_and_id(Ok(response), request_message_invocation_id);
+        channel_handle.write_response(response_message)?
+    }
+}
+
 struct ServerChannelHandle {
     inner: InvocationChannel,
 }

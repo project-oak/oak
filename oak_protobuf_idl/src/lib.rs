@@ -14,19 +14,27 @@
 // limitations under the License.
 //
 
+#![no_std]
 #![feature(associated_type_defaults)]
 #![feature(never_type)]
 #![feature(try_blocks)]
+
+extern crate alloc;
 
 mod proto {
     #![allow(dead_code)]
     include!(concat!(env!("OUT_DIR"), "/oak.protobuf_idl.rs"));
 }
 
+use alloc::boxed::Box;
+pub use alloc::{format, vec::Vec};
+pub use core::result::{
+    Result,
+    Result::{Err, Ok},
+};
 pub use oak_idl::{Status, StatusCode};
-pub use proto::{response, Request, Response};
-
 use prost::Message;
+pub use proto::{response, Request, Response};
 
 /// A message-oriented transport that allows performing invocations.
 ///

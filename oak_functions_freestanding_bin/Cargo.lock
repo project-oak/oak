@@ -61,6 +61,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8da52d66c7071e2e3fa2a1e5c6d088fec47b593032b254f5e980de8ea54454d6"
 
 [[package]]
+name = "async-trait"
+version = "0.1.58"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1e805d94e6b5001b651426cf4cd446b1ab5f319d27bab5c644f61de0a804360c"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "atomic_refcell"
 version = "0.1.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -589,6 +600,7 @@ dependencies = [
  "bitflags",
  "flatbuffers",
  "oak_idl",
+ "oak_protobuf_idl",
  "static_assertions",
 ]
 
@@ -728,6 +740,25 @@ name = "oak_logger"
 version = "0.1.0"
 dependencies = [
  "log",
+]
+
+[[package]]
+name = "oak_protobuf_idl"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "oak_idl",
+ "oak_protobuf_idl_build",
+ "prost",
+]
+
+[[package]]
+name = "oak_protobuf_idl_build"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "prost",
+ "prost-build",
 ]
 
 [[package]]

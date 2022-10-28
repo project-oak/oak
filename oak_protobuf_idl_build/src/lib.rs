@@ -81,7 +81,6 @@ fn generate_service(service: &Service) -> anyhow::Result<String> {
         format!(""),
         format!("impl <S: {service_name}> ::oak_protobuf_idl::Transport for {server_name}<S> {{"),
         format!("    fn invoke(&mut self, request_bytes: &[u8]) -> Result<::prost::alloc::vec::Vec<u8>, !> {{"),
-        format!("        use ::prost::Message;"),
         format!("        let response_bytes = self"),
         format!("            .invoke_inner(request_bytes)"),
         format!("            .map_or_else("),
@@ -96,11 +95,10 @@ fn generate_service(service: &Service) -> anyhow::Result<String> {
         format!("impl <S: {service_name}> {server_name}<S> {{"),
         // invoke_inner returns either a successful response body, or an error represented as Status.
         format!("    fn invoke_inner(&mut self, request_bytes: &[u8]) -> Result<::prost::alloc::vec::Vec<u8>, ::oak_protobuf_idl::Status> {{"),
-        format!("        use ::prost::Message;"),
         format!("        let request = ::oak_protobuf_idl::Request::decode(request_bytes).map_err(|err| {{"),
         format!("            ::oak_protobuf_idl::Status::new_with_message("),
         format!("                ::oak_protobuf_idl::StatusCode::Internal,"),
-        format!("                format!(\"Client failed to deserialize the response: {{:?}}\", err),"),
+        format!("                ::oak_protobuf_idl::format!(\"Client failed to deserialize the response: {{:?}}\", err),"),
         format!("            )"),
         format!("        }})?;"),
         format!("        match request.method_id {{"),
@@ -199,11 +197,10 @@ fn generate_server_handler(method: &Method) -> anyhow::Result<Vec<String>> {
     let method_name = method_name(method);
     Ok(vec![
         format!("            {method_id} => {{"),
-        format!("                use ::prost::Message;"),
         format!("                let request = {request_type}::decode(request.body.as_ref()).map_err(|err| {{"),
         format!("                    ::oak_protobuf_idl::Status::new_with_message("),
         format!("                        ::oak_protobuf_idl::StatusCode::Internal,"),
-        format!("                        format!(\"Service failed to deserialize the request: {{:?}}\", err)"),
+        format!("                        ::oak_protobuf_idl::format!(\"Service failed to deserialize the request: {{:?}}\", err)"),
         format!("                    )"),
         format!("                }})?;"),
         format!("                let response = self.service.{method_name}(&request)?;"),

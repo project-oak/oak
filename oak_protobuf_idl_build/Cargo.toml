@@ -6,5 +6,5 @@ license = "Apache-2.0"
 
 [dependencies]
 anyhow = "*"
-prost = "*"
+prost = { version = "*", default-features = false }
 prost-build = "*"

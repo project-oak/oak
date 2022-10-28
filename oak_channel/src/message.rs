@@ -53,6 +53,8 @@ pub trait Message {
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct RequestMessage {
     pub invocation_id: InvocationId,
+    // TODO(#3385): Remove this field when the protobuf IDL is used everywhere, since the method id
+    // will then be part of the request body from the point of view of this struct.
     pub method_id: MethodId,
     pub body: Vec<u8>,
 }
