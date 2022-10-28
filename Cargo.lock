@@ -2730,6 +2730,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "oak_protobuf_idl"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "oak_idl",
+ "oak_protobuf_idl_build",
+ "prost 0.9.0",
+]
+
+[[package]]
 name = "oak_protobuf_idl_build"
 version = "0.1.0"
 dependencies = [
@@ -2744,7 +2754,7 @@ version = "0.1.0"
 dependencies = [
  "async-trait",
  "maplit",
- "oak_idl",
+ "oak_protobuf_idl",
  "oak_protobuf_idl_build",
  "prost 0.11.0",
  "tokio",

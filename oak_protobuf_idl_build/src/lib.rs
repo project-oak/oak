@@ -79,8 +79,30 @@ fn generate_service(service: &Service) -> anyhow::Result<String> {
         format!("    service: S"),
         format!("}}"),
         format!(""),
-        format!("impl <S: {service_name}> ::oak_idl::Handler for {server_name}<S> {{"),
-        format!("    fn invoke(&mut self, request: ::oak_idl::Request) -> Result<::prost::alloc::vec::Vec<u8>, ::oak_idl::Status> {{"),
+        format!("impl <S: {service_name}> ::oak_protobuf_idl::Transport for {server_name}<S> {{"),
+        format!("    fn invoke(&mut self, request_bytes: &[u8]) -> Result<::prost::alloc::vec::Vec<u8>, !> {{"),
+        format!("        use ::prost::Message;"),
+        format!("        let response_bytes = self"),
+        format!("            .invoke_inner(request_bytes)"),
+        format!("            .map_or_else("),
+        format!("                ::oak_protobuf_idl::error_response,"),
+        format!("                ::oak_protobuf_idl::success_response,"),
+        format!("            )"),
+        format!("            .encode_to_vec();"),
+        format!("        Ok(response_bytes)"),
+        format!("    }}"),
+        format!("}}"),
+        format!(""),
+        format!("impl <S: {service_name}> {server_name}<S> {{"),
+        // invoke_inner returns either a successful response body, or an error represented as Status.
+        format!("    fn invoke_inner(&mut self, request_bytes: &[u8]) -> Result<::prost::alloc::vec::Vec<u8>, ::oak_protobuf_idl::Status> {{"),
+        format!("        use ::prost::Message;"),
+        format!("        let request = ::oak_protobuf_idl::Request::decode(request_bytes).map_err(|err| {{"),
+        format!("            ::oak_protobuf_idl::Status::new_with_message("),
+        format!("                ::oak_protobuf_idl::StatusCode::Internal,"),
+        format!("                format!(\"Client failed to deserialize the response: {{:?}}\", err),"),
+        format!("            )"),
+        format!("        }})?;"),
         format!("        match request.method_id {{"),
     ]);
     lines.extend(
@@ -94,9 +116,9 @@ fn generate_service(service: &Service) -> anyhow::Result<String> {
             .flatten(),
     );
     lines.extend(vec![
-        format!(
-            "            _ => Err(::oak_idl::Status::new(::oak_idl::StatusCode::Unimplemented))"
-        ),
+        format!("            _ => Err(::oak_protobuf_idl::Status::new("),
+        format!("                ::oak_protobuf_idl::StatusCode::Unimplemented,"),
+        format!("            ))"),
         format!("        }}"),
         format!("    }}"),
         format!("}}"),
@@ -118,21 +140,21 @@ fn generate_service(service: &Service) -> anyhow::Result<String> {
 /// an `rpc` entry.
 fn generate_service_client(service: &Service, asynchronous: bool) -> anyhow::Result<String> {
     let client_name = client_name(service, asynchronous);
-    let handler_trait = if asynchronous {
-        "::oak_idl::AsyncHandler"
+    let transport_trait = if asynchronous {
+        "::oak_protobuf_idl::AsyncTransport"
     } else {
-        "::oak_idl::Handler"
+        "::oak_protobuf_idl::Transport"
     };
     let mut lines = Vec::new();
     lines.extend(vec![
-        format!("pub struct {client_name}<T: {handler_trait}> {{",),
-        format!("    handler: T"),
+        format!("pub struct {client_name}<T: {transport_trait}> {{",),
+        format!("    transport: T"),
         format!("}}"),
         format!(""),
-        format!("impl <T: {handler_trait}>{client_name}<T> {{"),
-        format!("    pub fn new(handler: T) -> Self {{"),
+        format!("impl <T: {transport_trait}> {client_name}<T> {{"),
+        format!("    pub fn new(transport: T) -> Self {{"),
         format!("        Self {{"),
-        format!("            handler"),
+        format!("            transport"),
         format!("        }}"),
         format!("    }}"),
     ]);
@@ -156,20 +178,15 @@ fn generate_client_method(method: &Method, asynchronous: bool) -> anyhow::Result
     let response_type = response_type(method);
     let method_name = method_name(method);
     let fn_modifier = if asynchronous { "async " } else { "" };
-    let await_operator = if asynchronous { ".await" } else { "" };
     Ok(vec![
-            format!("    pub {fn_modifier}fn {method_name}(&mut self, request: &{request_type}) -> Result<{response_type}, ::oak_idl::Status> {{"),
-            format!("        use ::prost::Message;"),
-            format!("        let request_body = request.encode_to_vec();"),
-            format!("        let request = ::oak_idl::Request {{"),
-            format!("            method_id: {method_id},"),
-            format!("            body: request_body,"),
-            format!("        }};"),
-            format!("        let response_body = self.handler.invoke(request){await_operator}?;"),
-            format!("        {response_type}::decode(response_body.as_ref())"),
-            format!("            .map_err(|err| ::oak_idl::Status::new_with_message(::oak_idl::StatusCode::Internal, ::alloc::format!(\"Client failed to deserialize the response: {{:?}}\", err)))"),
-            format!("    }}"),
-        ])
+        format!("    pub {fn_modifier}fn {method_name}(&mut self, request: &{request_type}) -> Result<Result<{response_type}, ::oak_protobuf_idl::Status>, T::Error> {{"),
+        if asynchronous {
+            format!("        ::oak_protobuf_idl::async_client_invoke(&mut self.transport, {method_id}, request).await")
+        } else {
+            format!("        ::oak_protobuf_idl::client_invoke(&mut self.transport, {method_id}, request)")
+        },
+        format!("    }}"),
+    ])
 }
 
 fn generate_server_handler(method: &Method) -> anyhow::Result<Vec<String>> {
@@ -183,8 +200,12 @@ fn generate_server_handler(method: &Method) -> anyhow::Result<Vec<String>> {
     Ok(vec![
         format!("            {method_id} => {{"),
         format!("                use ::prost::Message;"),
-        format!("                let request = {request_type}::decode(request.body.as_ref())"),
-        format!("                    .map_err(|err| ::oak_idl::Status::new_with_message(::oak_idl::StatusCode::Internal, ::alloc::format!(\"Service failed to deserialize the request: {{:?}}\", err)))?;"),
+        format!("                let request = {request_type}::decode(request.body.as_ref()).map_err(|err| {{"),
+        format!("                    ::oak_protobuf_idl::Status::new_with_message("),
+        format!("                        ::oak_protobuf_idl::StatusCode::Internal,"),
+        format!("                        format!(\"Service failed to deserialize the request: {{:?}}\", err)"),
+        format!("                    )"),
+        format!("                }})?;"),
         format!("                let response = self.service.{method_name}(&request)?;"),
         format!("                let response_body = response.encode_to_vec();"),
         format!("                Ok(response_body)"),
@@ -196,7 +217,7 @@ fn generate_service_method(method: &Method) -> Vec<String> {
     let method_name = method_name(method);
     let request_type = request_type(method);
     let response_type = response_type(method);
-    vec![format!("    fn {method_name}(&mut self, request: &{request_type}) -> Result<{response_type}, ::oak_idl::Status>;")]
+    vec![format!("    fn {method_name}(&mut self, request: &{request_type}) -> Result<{response_type}, ::oak_protobuf_idl::Status>;")]
 }
 
 /// Returns the value of the `method_id` comment on the method.
