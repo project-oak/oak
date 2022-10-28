@@ -34,9 +34,19 @@ use x86_64::{
 };
 
 mod bitmap_frame_allocator;
-mod encrypted_mapper;
+pub mod encrypted_mapper;
 pub mod frame_allocator;
 pub mod page_tables;
+
+/// The start of kernel memory.
+pub const KERNEL_OFFSET: u64 = 0xFFFF_FFFF_8000_0000;
+
+/// The offset used for the direct mapping of all physical memory.
+const DIRECT_MAPPING_OFFSET: VirtAddr = VirtAddr::new_truncate(0xFFFF_8800_0000_0000);
+
+/// For now we use a fixed position for the encrypted bit. For now we assume that we will be running
+/// on AMD Arcadia-Milan CPUs, which use bit 51.
+pub const ENCRYPTED_BIT_POSITION: u8 = 51;
 
 // TODO(#3394): Move to a shared crate.
 pub trait Translator {
@@ -153,8 +163,6 @@ pub trait Mapper<S: PageSize> {
         flags: PageTableFlags,
     ) -> Result<MapperFlush<S>, FlagUpdateError>;
 }
-
-const DIRECT_MAPPING_OFFSET: VirtAddr = VirtAddr::new_truncate(0xFFFF_8800_0000_0000);
 
 pub fn init<const N: usize>(
     memory_map: &[BootE820Entry],
@@ -273,7 +281,7 @@ pub fn init_paging<A: FrameAllocator<Size4KiB>>(
         .unwrap_or(SevStatus::empty())
         .contains(SevStatus::SEV_ENABLED)
     {
-        MemoryEncryption::Encrypted(51)
+        MemoryEncryption::Encrypted(ENCRYPTED_BIT_POSITION)
     } else {
         MemoryEncryption::NoEncryption
     };

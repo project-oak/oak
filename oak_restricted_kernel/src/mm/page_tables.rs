@@ -24,7 +24,7 @@ use x86_64::{
     PhysAddr, VirtAddr,
 };
 
-use super::{Mapper, PageTableFlags};
+use super::{Mapper, PageTableFlags, KERNEL_OFFSET};
 
 /// Map a region of physical memory to a virtual address using 2 MiB pages.
 ///
@@ -90,7 +90,7 @@ pub unsafe fn create_kernel_map<
 ) -> Result<(), MapToError<Size4KiB>> {
     program_headers
         .iter()
-        .filter(|phdr| phdr.p_type == PT_LOAD && phdr.p_vaddr >= 0xFFFF_FFFF_8000_0000)
+        .filter(|phdr| phdr.p_type == PT_LOAD && phdr.p_vaddr >= KERNEL_OFFSET)
         .map(|phdr| {
             (
                 PhysFrame::<Size4KiB>::range(
