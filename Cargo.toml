@@ -65,6 +65,7 @@ exclude = [
   "oak_tensorflow_freestanding_bin",
   "stage0",
   "testing/oak_echo_bin",
+  "testing/oak_echo_raw_bin",
   "testing/sev_snp_hello_world_kernel",
   "third_party/curve25519-dalek",
   "third_party/rust-hypervisor-firmware-virtio",
