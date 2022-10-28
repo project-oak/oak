@@ -323,6 +323,16 @@
 <span id="323">323</span>
 <span id="324">324</span>
 <span id="325">325</span>
+<span id="326">326</span>
+<span id="327">327</span>
+<span id="328">328</span>
+<span id="329">329</span>
+<span id="330">330</span>
+<span id="331">331</span>
+<span id="332">332</span>
+<span id="333">333</span>
+<span id="334">334</span>
+<span id="335">335</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -342,11 +352,15 @@
 </span><span class="doccomment">//! This module contains an implementation of the guest-hypervisor communications block (GHCB) page
 //! that can be used for communicating with the hypervisor.
 
-</span><span class="kw">use </span><span class="kw">crate</span>::msr::{
-    register_ghcb_location, set_ghcb_address_and_exit, GhcbGpa, RegisterGhcbGpaError,
-    RegisterGhcbGpaRequest,
+</span><span class="kw">use crate</span>::{
+    msr::{
+        register_ghcb_location, set_ghcb_address_and_exit, GhcbGpa, RegisterGhcbGpaError,
+        RegisterGhcbGpaRequest,
+    },
+    Translator,
 };
 <span class="kw">use </span>bitflags::bitflags;
+<span class="kw">use </span>x86_64::{PhysAddr, VirtAddr};
 <span class="kw">use </span>zerocopy::FromBytes;
 
 <span class="doccomment">/// The size of the GHCB page.
@@ -546,25 +560,31 @@
 <span class="doccomment">/// Implementation of the GHCB protocol using the wrapped GHCB data structure.
 </span><span class="kw">pub struct </span>GhcbProtocol&lt;<span class="lifetime">&#39;a</span>, G: AsMut&lt;Ghcb&gt; + <span class="question-mark">?</span>Sized&gt; {
     ghcb: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>G,
+    gpa: PhysAddr,
 }
 
 <span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, G&gt; GhcbProtocol&lt;<span class="lifetime">&#39;a</span>, G&gt;
 <span class="kw">where
     </span>G: AsMut&lt;Ghcb&gt; + AsRef&lt;Ghcb&gt; + <span class="question-mark">?</span>Sized,
 {
-    <span class="kw">pub fn </span>new(ghcb: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>G) -&gt; <span class="self">Self </span>{
-        <span class="self">Self </span>{ ghcb }
+    <span class="kw">pub fn </span>new&lt;VP: Translator&gt;(ghcb: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>G, translate: VP) -&gt; <span class="self">Self </span>{
+        <span class="kw">let </span>virtual_address = VirtAddr::from_ptr(ghcb.as_ref() <span class="kw">as </span><span class="kw-2">*const </span>Ghcb);
+        <span class="comment">// Crashing is OK if we cannot find the physical address for the GHCB.
+        </span><span class="kw">let </span>gpa = translate(virtual_address)
+            .expect(<span class="string">&quot;Could not translate the GHCB virtual address to a physical address.&quot;</span>);
+        <span class="self">Self </span>{ ghcb, gpa }
     }
 
     <span class="doccomment">/// Gets the guest-physical address for the guest-hypervisor communication block.
-    </span><span class="kw">pub fn </span>get_gpa(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
-        <span class="comment">// Assume identity mapping for now.
-        </span><span class="self">self</span>.ghcb.as_ref() <span class="kw">as </span><span class="kw-2">*const </span>Ghcb <span class="kw">as </span>usize
+    </span><span class="kw">pub fn </span>get_gpa(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; PhysAddr {
+        <span class="self">self</span>.gpa
     }
 
     <span class="doccomment">/// Registers the address of the GHCB with the hypervisor.
     </span><span class="kw">pub fn </span>register_with_hypervisor(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;(), RegisterGhcbGpaError&gt; {
-        register_ghcb_location(RegisterGhcbGpaRequest::new(<span class="self">self</span>.get_gpa())<span class="question-mark">?</span>)
+        register_ghcb_location(RegisterGhcbGpaRequest::new(
+            <span class="self">self</span>.get_gpa().as_u64() <span class="kw">as </span>usize
+        )<span class="question-mark">?</span>)
     }
 
     <span class="doccomment">/// Writes an 8 bit number to an IO port via the IOIO protocol.
@@ -625,7 +645,7 @@
         <span class="self">self</span>.ghcb.as_mut().protocol_version = GHCB_PROTOCOL_VERSION;
         <span class="comment">// Use a memory fence to ensure all writes happen before we hand over to the VMM.
         </span>core::sync::atomic::fence(core::sync::atomic::Ordering::Release);
-        set_ghcb_address_and_exit(GhcbGpa::new(<span class="self">self</span>.get_gpa())<span class="question-mark">?</span>);
+        set_ghcb_address_and_exit(GhcbGpa::new(<span class="self">self</span>.get_gpa().as_u64() <span class="kw">as </span>usize)<span class="question-mark">?</span>);
         <span class="comment">// Use a memory fence to ensure that all earlier writes are commited before we read from the
         // GHCB.
         </span>core::sync::atomic::fence(core::sync::atomic::Ordering::Acquire);

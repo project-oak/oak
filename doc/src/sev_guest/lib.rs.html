@@ -26,6 +26,13 @@
 <span id="26">26</span>
 <span id="27">27</span>
 <span id="28">28</span>
+<span id="29">29</span>
+<span id="30">30</span>
+<span id="31">31</span>
+<span id="32">32</span>
+<span id="33">33</span>
+<span id="34">34</span>
+<span id="35">35</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -47,12 +54,19 @@
 
 </span><span class="attribute">#![no_std]
 
-</span><span class="kw">pub mod </span>cpuid;
+</span><span class="kw">use </span>x86_64::{PhysAddr, VirtAddr};
+
+<span class="kw">pub mod </span>cpuid;
 <span class="kw">pub mod </span>ghcb;
 <span class="kw">pub mod </span>instructions;
 <span class="kw">pub mod </span>interrupts;
 <span class="kw">pub mod </span>io;
 <span class="kw">pub mod </span>msr;
 <span class="kw">pub mod </span>secrets;
+
+<span class="comment">// TODO(#3394): Move to a shared crate.
+</span><span class="doccomment">/// Memory address translation functions.
+</span><span class="kw">pub trait </span>Translator: Fn(VirtAddr) -&gt; <span class="prelude-ty">Option</span>&lt;PhysAddr&gt; {}
+<span class="kw">impl</span>&lt;X: Fn(VirtAddr) -&gt; <span class="prelude-ty">Option</span>&lt;PhysAddr&gt;&gt; Translator <span class="kw">for </span>X {}
 </code></pre></div>
 </section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="sev_guest" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (81f391930 2022-10-09)" ></div></body></html>

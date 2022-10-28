@@ -185,6 +185,7 @@
 <span id="185">185</span>
 <span id="186">186</span>
 <span id="187">187</span>
+<span id="188">188</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -241,7 +242,8 @@
 <span class="doccomment">/// The length of the buffer that will be used for input messages.
 </span><span class="kw">pub const </span>INPUT_BUFFER_LENGTH: usize = <span class="number">4096</span>;
 
-<span class="doccomment">/// Memory address translation function.
+<span class="comment">// TODO(#3394): Move to a shared crate.
+</span><span class="doccomment">/// Memory address translation function.
 </span><span class="kw">pub trait </span>Translator: Fn(VirtAddr) -&gt; <span class="prelude-ty">Option</span>&lt;PhysAddr&gt; {}
 <span class="kw">impl</span>&lt;X: Fn(VirtAddr) -&gt; <span class="prelude-ty">Option</span>&lt;PhysAddr&gt;&gt; Translator <span class="kw">for </span>X {}
 
