@@ -20,10 +20,7 @@
 
 extern crate alloc;
 
-use alloc::{
-    boxed::Box,
-    {vec, vec::Vec},
-};
+use alloc::{boxed::Box, vec, vec::Vec};
 use core::panic::PanicInfo;
 use log::info;
 use oak_channel::Channel;
