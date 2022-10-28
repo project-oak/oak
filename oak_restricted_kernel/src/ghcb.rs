@@ -37,7 +37,7 @@ use x86_64::{
 /// The mask for the encrypted bit
 const ENCRYPTED_BIT: u64 = 1 << ENCRYPTED_BIT_POSITION;
 
-/// A wrapper to ensure that the GHCB is alone in alone in a 2MiB page.
+/// A wrapper to ensure that the GHCB is alone in a 2MiB page.
 ///
 /// We use 2MiB pages during early boot, so we must make sure there are no other kernel data
 /// structures located in the page so that we can safely share the page with the hypervisor without
@@ -75,9 +75,9 @@ pub fn init_ghcb_early(snp_enabled: bool) -> GhcbProtocol<'static, Ghcb> {
 fn share_ghcb_with_hypervisor<VP: Translator>(ghcb: &Ghcb, snp_enabled: bool, translate: VP) {
     let ghcb_address = VirtAddr::new(ghcb as *const Ghcb as usize as u64);
     // On SEV-SNP we need to additionally update the RMP and register the GHCB location with the
-    // hypervisor. We assume an identity mapping between virtual and physical addresses for now.
+    // hypervisor.
     if snp_enabled {
-        // It is OK to crash if we cannot find a valid physica address for the GHCB.
+        // It is OK to crash if we cannot find a valid physical address for the GHCB.
         let ghcb_physical_address = translate(ghcb_address).unwrap();
         mark_2mib_page_shared_in_rmp(ghcb_physical_address);
         let ghcb_location_request =
@@ -92,7 +92,7 @@ fn share_ghcb_with_hypervisor<VP: Translator>(ghcb: &Ghcb, snp_enabled: bool, tr
 
 /// Sets the encrypted bit for the page that contains the address.
 ///
-/// Since this is called during early boot, before the frame allocator of page mapper is initialised
+/// Since this is called during early boot, before the frame allocator or page mapper is initialised
 /// we have to manually traverse the existing page tables. We use only 2MiB huge pages during early
 /// boot.
 fn set_encrypted_bit_for_page(address: &VirtAddr, encrypted: bool) {
