@@ -177,6 +177,12 @@
 <span id="177">177</span>
 <span id="178">178</span>
 <span id="179">179</span>
+<span id="180">180</span>
+<span id="181">181</span>
+<span id="182">182</span>
+<span id="183">183</span>
+<span id="184">184</span>
+<span id="185">185</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -218,6 +224,7 @@
 <span class="kw">mod </span>avx;
 <span class="kw">mod </span>descriptors;
 <span class="kw">mod </span>elf;
+<span class="kw">mod </span>ghcb;
 <span class="kw">pub mod </span>i8042;
 <span class="attribute">#[cfg(feature = <span class="string">&quot;c_interface&quot;</span>)]
 </span><span class="kw">mod </span>interface;
@@ -242,6 +249,7 @@
 <span class="kw">use </span>log::{error, info};
 <span class="kw">use </span>oak_channel::Channel;
 <span class="kw">use </span>oak_linux_boot_params::BootParams;
+<span class="kw">use </span>sev_guest::msr::{get_sev_status, SevStatus};
 <span class="kw">use </span>strum::{EnumIter, EnumString, IntoEnumIterator};
 <span class="kw">use </span>x86_64::{
     structures::paging::{Page, Size2MiB},
@@ -253,9 +261,13 @@
 <span class="doccomment">/// Main entry point for the kernel, to be called from bootloader.
 </span><span class="kw">pub fn </span>start_kernel(info: <span class="kw-2">&amp;</span>BootParams) -&gt; Box&lt;<span class="kw">dyn </span>Channel&gt; {
     avx::enable_avx();
-    logging::init_logging();
     descriptors::init_gdt();
     interrupts::init_idt();
+    <span class="kw">let </span>sev_status = get_sev_status().unwrap_or(SevStatus::empty());
+    <span class="kw">if </span>sev_status.contains(SevStatus::SEV_ES_ENABLED) {
+        <span class="kw">let _ </span>= ghcb::init_ghcb_early(sev_status.contains(SevStatus::SNP_ACTIVE));
+    }
+    logging::init_logging();
 
     <span class="comment">// We need to be done with the boot info struct before intializing memory. For example, the
     // multiboot protocol explicitly states data can be placed anywhere in memory; therefore, it&#39;s

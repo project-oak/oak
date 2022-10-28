@@ -152,7 +152,7 @@
     PhysAddr, VirtAddr,
 };
 
-<span class="kw">use super</span>::{Mapper, PageTableFlags};
+<span class="kw">use super</span>::{Mapper, PageTableFlags, KERNEL_OFFSET};
 
 <span class="doccomment">/// Map a region of physical memory to a virtual address using 2 MiB pages.
 ///
@@ -218,7 +218,7 @@
 ) -&gt; <span class="prelude-ty">Result</span>&lt;(), MapToError&lt;Size4KiB&gt;&gt; {
     program_headers
         .iter()
-        .filter(|phdr| phdr.p_type == PT_LOAD &amp;&amp; phdr.p_vaddr &gt;= <span class="number">0xFFFF_FFFF_8000_0000</span>)
+        .filter(|phdr| phdr.p_type == PT_LOAD &amp;&amp; phdr.p_vaddr &gt;= KERNEL_OFFSET)
         .map(|phdr| {
             (
                 PhysFrame::&lt;Size4KiB&gt;::range(

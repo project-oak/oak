@@ -327,6 +327,14 @@
 <span id="327">327</span>
 <span id="328">328</span>
 <span id="329">329</span>
+<span id="330">330</span>
+<span id="331">331</span>
+<span id="332">332</span>
+<span id="333">333</span>
+<span id="334">334</span>
+<span id="335">335</span>
+<span id="336">336</span>
+<span id="337">337</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -363,9 +371,19 @@
 };
 
 <span class="kw">mod </span>bitmap_frame_allocator;
-<span class="kw">mod </span>encrypted_mapper;
+<span class="kw">pub mod </span>encrypted_mapper;
 <span class="kw">pub mod </span>frame_allocator;
 <span class="kw">pub mod </span>page_tables;
+
+<span class="doccomment">/// The start of kernel memory.
+</span><span class="kw">pub const </span>KERNEL_OFFSET: u64 = <span class="number">0xFFFF_FFFF_8000_0000</span>;
+
+<span class="doccomment">/// The offset used for the direct mapping of all physical memory.
+</span><span class="kw">const </span>DIRECT_MAPPING_OFFSET: VirtAddr = VirtAddr::new_truncate(<span class="number">0xFFFF_8800_0000_0000</span>);
+
+<span class="doccomment">/// For now we use a fixed position for the encrypted bit. For now we assume that we will be running
+/// on AMD Arcadia-Milan CPUs, which use bit 51.
+</span><span class="kw">pub const </span>ENCRYPTED_BIT_POSITION: u8 = <span class="number">51</span>;
 
 <span class="comment">// TODO(#3394): Move to a shared crate.
 </span><span class="kw">pub trait </span>Translator {
@@ -482,8 +500,6 @@
         flags: PageTableFlags,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;MapperFlush&lt;S&gt;, FlagUpdateError&gt;;
 }
-
-<span class="kw">const </span>DIRECT_MAPPING_OFFSET: VirtAddr = VirtAddr::new_truncate(<span class="number">0xFFFF_8800_0000_0000</span>);
 
 <span class="kw">pub fn </span>init&lt;<span class="kw">const </span>N: usize&gt;(
     memory_map: <span class="kw-2">&amp;</span>[BootE820Entry],
@@ -602,7 +618,7 @@
         .unwrap_or(SevStatus::empty())
         .contains(SevStatus::SEV_ENABLED)
     {
-        MemoryEncryption::Encrypted(<span class="number">51</span>)
+        MemoryEncryption::Encrypted(ENCRYPTED_BIT_POSITION)
     } <span class="kw">else </span>{
         MemoryEncryption::NoEncryption
     };
