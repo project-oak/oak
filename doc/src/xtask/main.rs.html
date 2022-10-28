@@ -753,8 +753,6 @@
 <span id="753">753</span>
 <span id="754">754</span>
 <span id="755">755</span>
-<span id="756">756</span>
-<span id="757">757</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2020 The Project Oak Authors
 //
@@ -961,17 +959,15 @@
 }
 
 <span class="kw">pub fn </span>run_fuzz_targets_in_crate(path: <span class="kw-2">&amp;</span>Path, opt: <span class="kw-2">&amp;</span>RunCargoFuzz) -&gt; Step {
-    <span class="comment">// `cargo-fuzz` can only run in the crate that contains the `fuzz` crate. So we need to use
-    // `Cmd::new_in_dir` to execute the command inside the crate&#39;s directory. Pop one component
-    // (i.e., `./Cargo.toml`) to get to the crate path.
-    </span><span class="kw">let </span><span class="kw-2">mut </span>crate_path = path.to_path_buf();
-    crate_path.pop();
+    <span class="comment">// Pop one component to get to the `fuzz` crate.
+    </span><span class="kw">let </span><span class="kw-2">mut </span>fuzz_path = path.to_path_buf();
+    fuzz_path.pop();
 
     <span class="kw">let </span>cargo_manifest: CargoManifest = toml::from_str(<span class="kw-2">&amp;</span>read_file(path))
         .unwrap_or_else(|err| <span class="macro">panic!</span>(<span class="string">&quot;could not parse cargo manifest file {:?}: {}&quot;</span>, path, err));
 
     Step::Multiple {
-        name: <span class="macro">format!</span>(<span class="string">&quot;fuzzing {:?}&quot;</span>, <span class="kw-2">&amp;</span>crate_path.file_name().unwrap()),
+        name: <span class="string">&quot;run cargo-fuzz&quot;</span>.to_owned(),
         steps: cargo_manifest
             .bin
             .iter()
@@ -990,7 +986,7 @@
                         <span class="string">&quot;--&quot;</span>.to_string(),
                         ...opt.args
                     ],
-                    <span class="kw-2">&amp;</span>crate_path,
+                    <span class="kw-2">&amp;</span>fuzz_path,
                 ),
             })
             .collect(),

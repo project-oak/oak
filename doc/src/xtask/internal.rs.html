@@ -1012,12 +1012,6 @@
 <span id="1012">1012</span>
 <span id="1013">1013</span>
 <span id="1014">1014</span>
-<span id="1015">1015</span>
-<span id="1016">1016</span>
-<span id="1017">1017</span>
-<span id="1018">1018</span>
-<span id="1019">1019</span>
-<span id="1020">1020</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2020 The Project Oak Authors
 //
@@ -1265,14 +1259,8 @@
 </span><span class="kw">pub struct </span>RunCargoFuzz {
     <span class="attribute">#[arg(
         long,
-        help = <span class="string">&quot;name of a specific crate with fuzz-target. If not specified, runs all fuzz targets for all crates.&quot;
+        help = <span class="string">&quot;name of a specific fuzz-target. If not specified, runs all fuzz targets.&quot;
     </span>)]
-    </span><span class="kw">pub </span>crate_name: <span class="prelude-ty">Option</span>&lt;String&gt;,
-    <span class="attribute">#[arg(
-        long,
-        help = <span class="string">&quot;name of a specific fuzz-target. If not specified, runs all fuzz targets.&quot;</span>,
-        requires(<span class="string">&quot;crate_name&quot;</span>)
-    )]
     </span><span class="kw">pub </span>target_name: <span class="prelude-ty">Option</span>&lt;String&gt;,
     <span class="doccomment">/// Additional `libFuzzer` arguments passed through to the binary
     </span><span class="attribute">#[arg(last(<span class="bool-val">true</span>))]
