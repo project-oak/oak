@@ -249,6 +249,13 @@
 <span id="249">249</span>
 <span id="250">250</span>
 <span id="251">251</span>
+<span id="252">252</span>
+<span id="253">253</span>
+<span id="254">254</span>
+<span id="255">255</span>
+<span id="256">256</span>
+<span id="257">257</span>
+<span id="258">258</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -271,6 +278,7 @@
 
 </span><span class="kw">use </span>anyhow::Context;
 <span class="kw">use </span>prost_build::{Method, Service};
+<span class="kw">use </span>std::path::Path;
 
 <span class="doccomment">/// Compile Rust server code from the services in the provided protobuf file.
 ///
@@ -290,12 +298,17 @@
 ///   service. This may be used to directly invoke the underlying handler in order to indirectly
 ///   invoke methods on the corresponding `Server` object on the other side of the handler.
 /// - a struct named `TestNameAsyncClient`, similar to `TestNameClient` but with async support.
-</span><span class="kw">pub fn </span>compile(filename: <span class="kw-2">&amp;</span>str) {
-    <span class="macro">println!</span>(<span class="string">&quot;cargo:rerun-if-changed={}&quot;</span>, filename);
+</span><span class="kw">pub fn </span>compile(protos: <span class="kw-2">&amp;</span>[<span class="kw">impl </span>AsRef&lt;Path&gt;], includes: <span class="kw-2">&amp;</span>[<span class="kw">impl </span>AsRef&lt;Path&gt;]) {
+    protos.iter().for_each(|filename| {
+        <span class="macro">println!</span>(
+            <span class="string">&quot;cargo:rerun-if-changed={}&quot;</span>,
+            filename.as_ref().as_os_str().to_string_lossy()
+        )
+    });
     <span class="kw">let </span><span class="kw-2">mut </span>config = prost_build::Config::new();
     config.service_generator(Box::new(ServiceGenerator {}));
     config
-        .compile_protos(<span class="kw-2">&amp;</span>[filename], <span class="kw-2">&amp;</span>[<span class="string">&quot;.&quot;</span>])
+        .compile_protos(protos, includes)
         .expect(<span class="string">&quot;could not compile protobuffer schema&quot;</span>);
 }
 
@@ -319,6 +332,7 @@
     <span class="kw">let </span>service_name = service_name(service);
     <span class="kw">let </span><span class="kw-2">mut </span>lines = Vec::new();
     lines.extend(<span class="macro">vec!</span>[
+        <span class="macro">format!</span>(<span class="string">&quot;#[derive(Clone)]&quot;</span>),
         <span class="macro">format!</span>(<span class="string">&quot;pub struct {server_name}&lt;S&gt; {{&quot;</span>),
         <span class="macro">format!</span>(<span class="string">&quot;    service: S&quot;</span>),
         <span class="macro">format!</span>(<span class="string">&quot;}}&quot;</span>),
@@ -411,7 +425,7 @@
             <span class="macro">format!</span>(<span class="string">&quot;        }};&quot;</span>),
             <span class="macro">format!</span>(<span class="string">&quot;        let response_body = self.handler.invoke(request){await_operator}?;&quot;</span>),
             <span class="macro">format!</span>(<span class="string">&quot;        {response_type}::decode(response_body.as_ref())&quot;</span>),
-            <span class="macro">format!</span>(<span class="string">&quot;            .map_err(|err| ::oak_idl::Status::new_with_message(::oak_idl::StatusCode::Internal, format!(\&quot;Client failed to deserialize the response: {{:?}}\&quot;, err)))&quot;</span>),
+            <span class="macro">format!</span>(<span class="string">&quot;            .map_err(|err| ::oak_idl::Status::new_with_message(::oak_idl::StatusCode::Internal, ::alloc::format!(\&quot;Client failed to deserialize the response: {{:?}}\&quot;, err)))&quot;</span>),
             <span class="macro">format!</span>(<span class="string">&quot;    }}&quot;</span>),
         ])
 }
@@ -428,7 +442,7 @@
         <span class="macro">format!</span>(<span class="string">&quot;            {method_id} =&gt; {{&quot;</span>),
         <span class="macro">format!</span>(<span class="string">&quot;                use ::prost::Message;&quot;</span>),
         <span class="macro">format!</span>(<span class="string">&quot;                let request = {request_type}::decode(request.body.as_ref())&quot;</span>),
-        <span class="macro">format!</span>(<span class="string">&quot;                    .map_err(|err| ::oak_idl::Status::new_with_message(::oak_idl::StatusCode::Internal, format!(\&quot;Service failed to deserialize the request: {{:?}}\&quot;, err)))?;&quot;</span>),
+        <span class="macro">format!</span>(<span class="string">&quot;                    .map_err(|err| ::oak_idl::Status::new_with_message(::oak_idl::StatusCode::Internal, ::alloc::format!(\&quot;Service failed to deserialize the request: {{:?}}\&quot;, err)))?;&quot;</span>),
         <span class="macro">format!</span>(<span class="string">&quot;                let response = self.service.{method_name}(&amp;request)?;&quot;</span>),
         <span class="macro">format!</span>(<span class="string">&quot;                let response_body = response.encode_to_vec();&quot;</span>),
         <span class="macro">format!</span>(<span class="string">&quot;                Ok(response_body)&quot;</span>),
