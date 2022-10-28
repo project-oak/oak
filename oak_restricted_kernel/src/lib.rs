@@ -101,7 +101,9 @@ pub fn start_kernel(info: &BootParams) -> Box<dyn Channel> {
     let mut mapper = mm::init_paging(&mut frame_allocator, program_headers).unwrap();
 
     // Now that the page tables have been updated, we have to re-share the GHCB with the hypervisor.
-    ghcb::reshare_ghcb(&mut mapper);
+    if sev_status.contains(SevStatus::SEV_ES_ENABLED) {
+        ghcb::reshare_ghcb(&mut mapper);
+    }
 
     // Allocate a section for guest-host communication (without the `ENCRYPTED` bit set)
     // We'll allocate 2*2MiB, as virtio needs more than 2 MiB for its data structures.
