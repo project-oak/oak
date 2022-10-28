@@ -39,6 +39,7 @@ mod args;
 mod avx;
 mod descriptors;
 mod elf;
+mod ghcb;
 pub mod i8042;
 #[cfg(feature = "c_interface")]
 mod interface;
@@ -63,6 +64,7 @@ use linked_list_allocator::LockedHeap;
 use log::{error, info};
 use oak_channel::Channel;
 use oak_linux_boot_params::BootParams;
+use sev_guest::msr::{get_sev_status, SevStatus};
 use strum::{EnumIter, EnumString, IntoEnumIterator};
 use x86_64::{
     structures::paging::{Page, Size2MiB},
@@ -74,6 +76,10 @@ static mut GUEST_HOST_HEAP: OnceCell<LockedHeap> = OnceCell::new();
 /// Main entry point for the kernel, to be called from bootloader.
 pub fn start_kernel(info: &BootParams) -> Box<dyn Channel> {
     avx::enable_avx();
+    let sev_status = get_sev_status().unwrap_or(SevStatus::empty());
+    if sev_status.contains(SevStatus::SEV_ES_ENABLED) {
+        let _ = ghcb::init_ghcb_early(sev_status.contains(SevStatus::SNP_ACTIVE));
+    }
     logging::init_logging();
     descriptors::init_gdt();
     interrupts::init_idt();

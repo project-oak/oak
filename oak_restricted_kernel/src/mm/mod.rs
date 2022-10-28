@@ -38,6 +38,13 @@ mod encrypted_mapper;
 pub mod frame_allocator;
 pub mod page_tables;
 
+/// The start of kernel memory.
+pub const KERNEL_OFFSET: u64 = 0xFFFF_FFFF_8000_0000;
+
+/// For now we use a fixed position for the encrypted bit. For now we assume that we will be running
+/// on AMD Arcadia-Milan CPUs, which use bit 51.
+pub const ENCRYPTED_BIT_POSITION: u8 = 51;
+
 // TODO(#3394): Move to a shared crate.
 pub trait Translator {
     /// Translates the given virtual address to the physical address that it maps to.
@@ -273,7 +280,7 @@ pub fn init_paging<A: FrameAllocator<Size4KiB>>(
         .unwrap_or(SevStatus::empty())
         .contains(SevStatus::SEV_ENABLED)
     {
-        MemoryEncryption::Encrypted(51)
+        MemoryEncryption::Encrypted(ENCRYPTED_BIT_POSITION)
     } else {
         MemoryEncryption::NoEncryption
     };

@@ -131,7 +131,7 @@ pub struct Ghcb {
 
 impl Default for Ghcb {
     fn default() -> Self {
-        Self::new_zeroed()
+        Self::new()
     }
 }
 
@@ -191,6 +191,37 @@ bitflags! {
 }
 
 impl Ghcb {
+    pub const fn new() -> Self {
+        Ghcb {
+            _reserved_0: [0; 203],
+            cpl: 0,
+            _reserved_1: [0; 116],
+            xss: 0,
+            _reserved_2: [0; 24],
+            dr7: 0,
+            _reserved_3: [0; 144],
+            rax: 0,
+            _reserved_4: [0; 264],
+            rbx: 0,
+            rcx: 0,
+            rdx: 0,
+            _reserved_5: [0; 112],
+            sw_exit_code: 0,
+            sw_exit_info_1: 0,
+            sw_exit_info_2: 0,
+            sw_scratch: 0,
+            _reserved_6: [0; 56],
+            xcr0: 0,
+            valid_bitmap: ValidBitmap::empty(),
+            x87_state_gpa: 0,
+            _reserved_7: [0; 1016],
+            shared_buffer: [0; 2032],
+            _reserved_8: [0; 10],
+            protocol_version: 0,
+            ghcb_usage: 0,
+        }
+    }
+
     /// Zeroes the entire GHCB.
     pub fn reset(&mut self) {
         reset_slice(&mut self._reserved_0[..]);
