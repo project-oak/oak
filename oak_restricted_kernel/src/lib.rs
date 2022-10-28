@@ -76,13 +76,13 @@ static mut GUEST_HOST_HEAP: OnceCell<LockedHeap> = OnceCell::new();
 /// Main entry point for the kernel, to be called from bootloader.
 pub fn start_kernel(info: &BootParams) -> Box<dyn Channel> {
     avx::enable_avx();
+    descriptors::init_gdt();
+    interrupts::init_idt();
     let sev_status = get_sev_status().unwrap_or(SevStatus::empty());
     if sev_status.contains(SevStatus::SEV_ES_ENABLED) {
         let _ = ghcb::init_ghcb_early(sev_status.contains(SevStatus::SNP_ACTIVE));
     }
     logging::init_logging();
-    descriptors::init_gdt();
-    interrupts::init_idt();
 
     // We need to be done with the boot info struct before intializing memory. For example, the
     // multiboot protocol explicitly states data can be placed anywhere in memory; therefore, it's
