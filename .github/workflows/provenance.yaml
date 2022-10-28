@@ -52,7 +52,7 @@ jobs:
 
       - name: Build the crosvm freestanding binary
         run: |
-          ./scripts/build_binary -c buildconfigs/oak_functions_freestanding_bin.toml -s
+          ./scripts/build_binary -c buildconfigs/oak_functions_freestanding_bin.toml
 
       # Download the Ent CLI and configure a remote with write access using a private API key, if
       # available (GitHub secrets are not available on forks, see

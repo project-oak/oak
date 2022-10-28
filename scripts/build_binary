@@ -14,26 +14,19 @@ source "$SCRIPTS_DIR/common"
 # Get git commit hash
 readonly COMMIT_HASH=$(git rev-parse --verify HEAD)
 
-# Store the provenance file in `./provenance/<BINARY_HASH>/<COMMIT_HASH>.json`
-STORE=false
-
-while getopts "c:sh" opt; do
+while getopts "c:h" opt; do
   case "${opt}" in
     h)
-      echo -e "Usage: ${0} [-h] [-s] -c CONFIG_PATH
+      echo -e "Usage: ${0} [-h] -c CONFIG_PATH
 
 Save example modules in Google Cloud Storage.
 
 Options:
   -c    Path to the build-config file (required)
-  -s    Store the generated provenance in ./provenance/<BINARY_HASH>/COMMIT_HASH.json (optional)
   -h    Print Help (this message) and exit"
       exit 0;;
     c)
       readonly CONFIG_PATH="${OPTARG}";;
-    s)
-      STORE=true
-      ;;
     *)
       echo "Invalid argument: ${OPTARG}"
       exit 1;;
