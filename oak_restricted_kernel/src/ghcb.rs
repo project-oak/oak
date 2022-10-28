@@ -20,12 +20,14 @@ use crate::mm::{
 };
 use sev_guest::{
     ghcb::{Ghcb, GhcbProtocol},
+    io::{GhcbIoFactory, PortFactoryWrapper},
     msr::{
-        change_snp_page_state, register_ghcb_location, PageAssignment, RegisterGhcbGpaRequest,
-        SnpPageStateChangeRequest,
+        change_snp_page_state, get_sev_status, register_ghcb_location, PageAssignment,
+        RegisterGhcbGpaRequest, SevStatus, SnpPageStateChangeRequest,
     },
     Translator,
 };
+use spinning_top::Spinlock;
 use x86_64::{
     addr::{PhysAddr, VirtAddr},
     align_down,
@@ -35,7 +37,7 @@ use x86_64::{
     },
 };
 
-/// The mask for the encrypted bit
+/// The mask for the encrypted bit.
 const ENCRYPTED_BIT: u64 = 1 << ENCRYPTED_BIT_POSITION;
 
 /// A wrapper to ensure that the GHCB is alone in a 2MiB page.
@@ -53,8 +55,20 @@ static_assertions::assert_eq_size!(GhcbAlignmentWrapper, [u8; Size2MiB::SIZE as 
 
 static mut GHCB_WRAPPER: GhcbAlignmentWrapper = GhcbAlignmentWrapper { ghcb: Ghcb::new() };
 
+pub fn get_ghcb_port_factory() -> PortFactoryWrapper {
+    PortFactoryWrapper::Ghcb(GhcbIoFactory::new(&GHCB_PROTOCOL))
+}
+
+// TODO(#3403): Stop initializing lazily once we have an equivalent to `std::sync::OnceLock`.
+lazy_static! {
+    static ref GHCB_PROTOCOL: Spinlock<GhcbProtocol<'static, Ghcb>> = {
+        let sev_status = get_sev_status().unwrap_or(SevStatus::empty());
+        Spinlock::new(init_ghcb_early(sev_status.contains(SevStatus::SNP_ACTIVE)))
+    };
+}
+
 /// Initializes the GHCB and shares it with the hypervisor during early boot.
-pub fn init_ghcb_early(snp_enabled: bool) -> GhcbProtocol<'static, Ghcb> {
+fn init_ghcb_early(snp_enabled: bool) -> GhcbProtocol<'static, Ghcb> {
     // Safety: This is called only during early boot, so there is only a single execution context.
     let ghcb = unsafe { &mut GHCB_WRAPPER.ghcb };
     let translate = |vaddr: VirtAddr| {

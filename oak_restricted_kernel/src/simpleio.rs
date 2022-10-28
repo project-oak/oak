@@ -18,7 +18,7 @@ use crate::mm::Translator;
 use alloc::collections::VecDeque;
 use core::alloc::Allocator;
 use oak_simple_io::SimpleIo;
-use sev_guest::io::PortFactoryWrapper;
+use sev_guest::{io::PortFactoryWrapper, msr::SevStatus};
 use x86_64::VirtAddr;
 
 /// A communications channel using a simple IO device.
@@ -32,8 +32,12 @@ pub struct SimpleIoChannel<'a, A: Allocator> {
 }
 
 impl<'a, A: Allocator> SimpleIoChannel<'a, A> {
-    pub fn new<X: Translator>(translator: &X, alloc: &'a A) -> Self {
-        let io_port_factory = PortFactoryWrapper::new_raw();
+    pub fn new<X: Translator>(translator: &X, alloc: &'a A, sev_status: SevStatus) -> Self {
+        let io_port_factory = if sev_status.contains(SevStatus::SEV_ES_ENABLED) {
+            crate::ghcb::get_ghcb_port_factory()
+        } else {
+            PortFactoryWrapper::new_raw()
+        };
         let device = SimpleIo::new_with_defaults(
             io_port_factory,
             |vaddr: VirtAddr| translator.translate_virtual(vaddr),

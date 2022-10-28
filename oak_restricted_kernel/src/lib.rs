@@ -79,9 +79,6 @@ pub fn start_kernel(info: &BootParams) -> Box<dyn Channel> {
     descriptors::init_gdt();
     interrupts::init_idt();
     let sev_status = get_sev_status().unwrap_or(SevStatus::empty());
-    if sev_status.contains(SevStatus::SEV_ES_ENABLED) {
-        let _ = ghcb::init_ghcb_early(sev_status.contains(SevStatus::SNP_ACTIVE));
-    }
     logging::init_logging();
 
     // We need to be done with the boot info struct before intializing memory. For example, the
@@ -135,7 +132,7 @@ pub fn start_kernel(info: &BootParams) -> Box<dyn Channel> {
     ))
     .unwrap();
 
-    get_channel(&kernel_args, &mapper, guest_host_heap)
+    get_channel(&kernel_args, &mapper, guest_host_heap, sev_status)
 }
 
 #[derive(EnumIter, EnumString)]
@@ -156,6 +153,7 @@ fn get_channel<'a, X: Translator, A: Allocator + Sync>(
     kernel_args: &args::Args,
     mapper: &X,
     alloc: &'a A,
+    sev_status: SevStatus,
 ) -> Box<dyn Channel + 'a> {
     // If we weren't told which channel to use, arbitrarily pick the first one in the `ChannelType`
     // enum. Depending on features that are enabled, this means that the enum acts as kind of a
@@ -173,7 +171,9 @@ fn get_channel<'a, X: Translator, A: Allocator + Sync>(
         #[cfg(feature = "serial_channel")]
         ChannelType::Serial => Box::new(serial::Serial::new()),
         #[cfg(feature = "simple_io_channel")]
-        ChannelType::SimpleIo => Box::new(simpleio::SimpleIoChannel::new(mapper, alloc)),
+        ChannelType::SimpleIo => {
+            Box::new(simpleio::SimpleIoChannel::new(mapper, alloc, sev_status))
+        }
     }
 }
 
