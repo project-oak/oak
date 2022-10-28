@@ -14,8 +14,6 @@
 // limitations under the License.
 //
 
-const SCHEMA: &str = "test_schema.proto";
-
 fn main() {
-    oak_protobuf_idl_build::compile(SCHEMA);
+    oak_protobuf_idl_build::compile(&["test_schema.proto"], &["."]);
 }

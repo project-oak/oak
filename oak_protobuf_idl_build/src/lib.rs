@@ -20,6 +20,7 @@
 
 use anyhow::Context;
 use prost_build::{Method, Service};
+use std::path::Path;
 
 /// Compile Rust server code from the services in the provided protobuf file.
 ///
@@ -39,12 +40,17 @@ use prost_build::{Method, Service};
 ///   service. This may be used to directly invoke the underlying handler in order to indirectly
 ///   invoke methods on the corresponding `Server` object on the other side of the handler.
 /// - a struct named `TestNameAsyncClient`, similar to `TestNameClient` but with async support.
-pub fn compile(filename: &str) {
-    println!("cargo:rerun-if-changed={}", filename);
+pub fn compile(protos: &[impl AsRef<Path>], includes: &[impl AsRef<Path>]) {
+    protos.iter().for_each(|filename| {
+        println!(
+            "cargo:rerun-if-changed={}",
+            filename.as_ref().as_os_str().to_string_lossy()
+        )
+    });
     let mut config = prost_build::Config::new();
     config.service_generator(Box::new(ServiceGenerator {}));
     config
-        .compile_protos(&[filename], &["."])
+        .compile_protos(protos, includes)
         .expect("could not compile protobuffer schema");
 }
 
@@ -68,6 +74,7 @@ fn generate_service(service: &Service) -> anyhow::Result<String> {
     let service_name = service_name(service);
     let mut lines = Vec::new();
     lines.extend(vec![
+        format!("#[derive(Clone)]"),
         format!("pub struct {server_name}<S> {{"),
         format!("    service: S"),
         format!("}}"),
@@ -160,7 +167,7 @@ fn generate_client_method(method: &Method, asynchronous: bool) -> anyhow::Result
             format!("        }};"),
             format!("        let response_body = self.handler.invoke(request){await_operator}?;"),
             format!("        {response_type}::decode(response_body.as_ref())"),
-            format!("            .map_err(|err| ::oak_idl::Status::new_with_message(::oak_idl::StatusCode::Internal, format!(\"Client failed to deserialize the response: {{:?}}\", err)))"),
+            format!("            .map_err(|err| ::oak_idl::Status::new_with_message(::oak_idl::StatusCode::Internal, ::alloc::format!(\"Client failed to deserialize the response: {{:?}}\", err)))"),
             format!("    }}"),
         ])
 }
@@ -177,7 +184,7 @@ fn generate_server_handler(method: &Method) -> anyhow::Result<Vec<String>> {
         format!("            {method_id} => {{"),
         format!("                use ::prost::Message;"),
         format!("                let request = {request_type}::decode(request.body.as_ref())"),
-        format!("                    .map_err(|err| ::oak_idl::Status::new_with_message(::oak_idl::StatusCode::Internal, format!(\"Service failed to deserialize the request: {{:?}}\", err)))?;"),
+        format!("                    .map_err(|err| ::oak_idl::Status::new_with_message(::oak_idl::StatusCode::Internal, ::alloc::format!(\"Service failed to deserialize the request: {{:?}}\", err)))?;"),
         format!("                let response = self.service.{method_name}(&request)?;"),
         format!("                let response_body = response.encode_to_vec();"),
         format!("                Ok(response_body)"),
