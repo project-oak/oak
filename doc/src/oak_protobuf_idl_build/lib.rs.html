@@ -256,6 +256,27 @@
 <span id="256">256</span>
 <span id="257">257</span>
 <span id="258">258</span>
+<span id="259">259</span>
+<span id="260">260</span>
+<span id="261">261</span>
+<span id="262">262</span>
+<span id="263">263</span>
+<span id="264">264</span>
+<span id="265">265</span>
+<span id="266">266</span>
+<span id="267">267</span>
+<span id="268">268</span>
+<span id="269">269</span>
+<span id="270">270</span>
+<span id="271">271</span>
+<span id="272">272</span>
+<span id="273">273</span>
+<span id="274">274</span>
+<span id="275">275</span>
+<span id="276">276</span>
+<span id="277">277</span>
+<span id="278">278</span>
+<span id="279">279</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -337,8 +358,30 @@
         <span class="macro">format!</span>(<span class="string">&quot;    service: S&quot;</span>),
         <span class="macro">format!</span>(<span class="string">&quot;}}&quot;</span>),
         <span class="macro">format!</span>(<span class="string">&quot;&quot;</span>),
-        <span class="macro">format!</span>(<span class="string">&quot;impl &lt;S: {service_name}&gt; ::oak_idl::Handler for {server_name}&lt;S&gt; {{&quot;</span>),
-        <span class="macro">format!</span>(<span class="string">&quot;    fn invoke(&amp;mut self, request: ::oak_idl::Request) -&gt; Result&lt;::prost::alloc::vec::Vec&lt;u8&gt;, ::oak_idl::Status&gt; {{&quot;</span>),
+        <span class="macro">format!</span>(<span class="string">&quot;impl &lt;S: {service_name}&gt; ::oak_protobuf_idl::Transport for {server_name}&lt;S&gt; {{&quot;</span>),
+        <span class="macro">format!</span>(<span class="string">&quot;    fn invoke(&amp;mut self, request_bytes: &amp;[u8]) -&gt; Result&lt;::prost::alloc::vec::Vec&lt;u8&gt;, !&gt; {{&quot;</span>),
+        <span class="macro">format!</span>(<span class="string">&quot;        use ::prost::Message;&quot;</span>),
+        <span class="macro">format!</span>(<span class="string">&quot;        let response_bytes = self&quot;</span>),
+        <span class="macro">format!</span>(<span class="string">&quot;            .invoke_inner(request_bytes)&quot;</span>),
+        <span class="macro">format!</span>(<span class="string">&quot;            .map_or_else(&quot;</span>),
+        <span class="macro">format!</span>(<span class="string">&quot;                ::oak_protobuf_idl::error_response,&quot;</span>),
+        <span class="macro">format!</span>(<span class="string">&quot;                ::oak_protobuf_idl::success_response,&quot;</span>),
+        <span class="macro">format!</span>(<span class="string">&quot;            )&quot;</span>),
+        <span class="macro">format!</span>(<span class="string">&quot;            .encode_to_vec();&quot;</span>),
+        <span class="macro">format!</span>(<span class="string">&quot;        Ok(response_bytes)&quot;</span>),
+        <span class="macro">format!</span>(<span class="string">&quot;    }}&quot;</span>),
+        <span class="macro">format!</span>(<span class="string">&quot;}}&quot;</span>),
+        <span class="macro">format!</span>(<span class="string">&quot;&quot;</span>),
+        <span class="macro">format!</span>(<span class="string">&quot;impl &lt;S: {service_name}&gt; {server_name}&lt;S&gt; {{&quot;</span>),
+        <span class="comment">// invoke_inner returns either a successful response body, or an error represented as Status.
+        </span><span class="macro">format!</span>(<span class="string">&quot;    fn invoke_inner(&amp;mut self, request_bytes: &amp;[u8]) -&gt; Result&lt;::prost::alloc::vec::Vec&lt;u8&gt;, ::oak_protobuf_idl::Status&gt; {{&quot;</span>),
+        <span class="macro">format!</span>(<span class="string">&quot;        use ::prost::Message;&quot;</span>),
+        <span class="macro">format!</span>(<span class="string">&quot;        let request = ::oak_protobuf_idl::Request::decode(request_bytes).map_err(|err| {{&quot;</span>),
+        <span class="macro">format!</span>(<span class="string">&quot;            ::oak_protobuf_idl::Status::new_with_message(&quot;</span>),
+        <span class="macro">format!</span>(<span class="string">&quot;                ::oak_protobuf_idl::StatusCode::Internal,&quot;</span>),
+        <span class="macro">format!</span>(<span class="string">&quot;                format!(\&quot;Client failed to deserialize the response: {{:?}}\&quot;, err),&quot;</span>),
+        <span class="macro">format!</span>(<span class="string">&quot;            )&quot;</span>),
+        <span class="macro">format!</span>(<span class="string">&quot;        }})?;&quot;</span>),
         <span class="macro">format!</span>(<span class="string">&quot;        match request.method_id {{&quot;</span>),
     ]);
     lines.extend(
@@ -352,9 +395,9 @@
             .flatten(),
     );
     lines.extend(<span class="macro">vec!</span>[
-        <span class="macro">format!</span>(
-            <span class="string">&quot;            _ =&gt; Err(::oak_idl::Status::new(::oak_idl::StatusCode::Unimplemented))&quot;
-        </span>),
+        <span class="macro">format!</span>(<span class="string">&quot;            _ =&gt; Err(::oak_protobuf_idl::Status::new(&quot;</span>),
+        <span class="macro">format!</span>(<span class="string">&quot;                ::oak_protobuf_idl::StatusCode::Unimplemented,&quot;</span>),
+        <span class="macro">format!</span>(<span class="string">&quot;            ))&quot;</span>),
         <span class="macro">format!</span>(<span class="string">&quot;        }}&quot;</span>),
         <span class="macro">format!</span>(<span class="string">&quot;    }}&quot;</span>),
         <span class="macro">format!</span>(<span class="string">&quot;}}&quot;</span>),
@@ -376,21 +419,21 @@
 /// an `rpc` entry.
 </span><span class="kw">fn </span>generate_service_client(service: <span class="kw-2">&amp;</span>Service, asynchronous: bool) -&gt; anyhow::Result&lt;String&gt; {
     <span class="kw">let </span>client_name = client_name(service, asynchronous);
-    <span class="kw">let </span>handler_trait = <span class="kw">if </span>asynchronous {
-        <span class="string">&quot;::oak_idl::AsyncHandler&quot;
+    <span class="kw">let </span>transport_trait = <span class="kw">if </span>asynchronous {
+        <span class="string">&quot;::oak_protobuf_idl::AsyncTransport&quot;
     </span>} <span class="kw">else </span>{
-        <span class="string">&quot;::oak_idl::Handler&quot;
+        <span class="string">&quot;::oak_protobuf_idl::Transport&quot;
     </span>};
     <span class="kw">let </span><span class="kw-2">mut </span>lines = Vec::new();
     lines.extend(<span class="macro">vec!</span>[
-        <span class="macro">format!</span>(<span class="string">&quot;pub struct {client_name}&lt;T: {handler_trait}&gt; {{&quot;</span>,),
-        <span class="macro">format!</span>(<span class="string">&quot;    handler: T&quot;</span>),
+        <span class="macro">format!</span>(<span class="string">&quot;pub struct {client_name}&lt;T: {transport_trait}&gt; {{&quot;</span>,),
+        <span class="macro">format!</span>(<span class="string">&quot;    transport: T&quot;</span>),
         <span class="macro">format!</span>(<span class="string">&quot;}}&quot;</span>),
         <span class="macro">format!</span>(<span class="string">&quot;&quot;</span>),
-        <span class="macro">format!</span>(<span class="string">&quot;impl &lt;T: {handler_trait}&gt;{client_name}&lt;T&gt; {{&quot;</span>),
-        <span class="macro">format!</span>(<span class="string">&quot;    pub fn new(handler: T) -&gt; Self {{&quot;</span>),
+        <span class="macro">format!</span>(<span class="string">&quot;impl &lt;T: {transport_trait}&gt; {client_name}&lt;T&gt; {{&quot;</span>),
+        <span class="macro">format!</span>(<span class="string">&quot;    pub fn new(transport: T) -&gt; Self {{&quot;</span>),
         <span class="macro">format!</span>(<span class="string">&quot;        Self {{&quot;</span>),
-        <span class="macro">format!</span>(<span class="string">&quot;            handler&quot;</span>),
+        <span class="macro">format!</span>(<span class="string">&quot;            transport&quot;</span>),
         <span class="macro">format!</span>(<span class="string">&quot;        }}&quot;</span>),
         <span class="macro">format!</span>(<span class="string">&quot;    }}&quot;</span>),
     ]);
@@ -414,20 +457,15 @@
     <span class="kw">let </span>response_type = response_type(method);
     <span class="kw">let </span>method_name = method_name(method);
     <span class="kw">let </span>fn_modifier = <span class="kw">if </span>asynchronous { <span class="string">&quot;async &quot; </span>} <span class="kw">else </span>{ <span class="string">&quot;&quot; </span>};
-    <span class="kw">let </span>await_operator = <span class="kw">if </span>asynchronous { <span class="string">&quot;.await&quot; </span>} <span class="kw">else </span>{ <span class="string">&quot;&quot; </span>};
     <span class="prelude-val">Ok</span>(<span class="macro">vec!</span>[
-            <span class="macro">format!</span>(<span class="string">&quot;    pub {fn_modifier}fn {method_name}(&amp;mut self, request: &amp;{request_type}) -&gt; Result&lt;{response_type}, ::oak_idl::Status&gt; {{&quot;</span>),
-            <span class="macro">format!</span>(<span class="string">&quot;        use ::prost::Message;&quot;</span>),
-            <span class="macro">format!</span>(<span class="string">&quot;        let request_body = request.encode_to_vec();&quot;</span>),
-            <span class="macro">format!</span>(<span class="string">&quot;        let request = ::oak_idl::Request {{&quot;</span>),
-            <span class="macro">format!</span>(<span class="string">&quot;            method_id: {method_id},&quot;</span>),
-            <span class="macro">format!</span>(<span class="string">&quot;            body: request_body,&quot;</span>),
-            <span class="macro">format!</span>(<span class="string">&quot;        }};&quot;</span>),
-            <span class="macro">format!</span>(<span class="string">&quot;        let response_body = self.handler.invoke(request){await_operator}?;&quot;</span>),
-            <span class="macro">format!</span>(<span class="string">&quot;        {response_type}::decode(response_body.as_ref())&quot;</span>),
-            <span class="macro">format!</span>(<span class="string">&quot;            .map_err(|err| ::oak_idl::Status::new_with_message(::oak_idl::StatusCode::Internal, ::alloc::format!(\&quot;Client failed to deserialize the response: {{:?}}\&quot;, err)))&quot;</span>),
-            <span class="macro">format!</span>(<span class="string">&quot;    }}&quot;</span>),
-        ])
+        <span class="macro">format!</span>(<span class="string">&quot;    pub {fn_modifier}fn {method_name}(&amp;mut self, request: &amp;{request_type}) -&gt; Result&lt;Result&lt;{response_type}, ::oak_protobuf_idl::Status&gt;, T::Error&gt; {{&quot;</span>),
+        <span class="kw">if </span>asynchronous {
+            <span class="macro">format!</span>(<span class="string">&quot;        ::oak_protobuf_idl::async_client_invoke(&amp;mut self.transport, {method_id}, request).await&quot;</span>)
+        } <span class="kw">else </span>{
+            <span class="macro">format!</span>(<span class="string">&quot;        ::oak_protobuf_idl::client_invoke(&amp;mut self.transport, {method_id}, request)&quot;</span>)
+        },
+        <span class="macro">format!</span>(<span class="string">&quot;    }}&quot;</span>),
+    ])
 }
 
 <span class="kw">fn </span>generate_server_handler(method: <span class="kw-2">&amp;</span>Method) -&gt; anyhow::Result&lt;Vec&lt;String&gt;&gt; {
@@ -441,8 +479,12 @@
     <span class="prelude-val">Ok</span>(<span class="macro">vec!</span>[
         <span class="macro">format!</span>(<span class="string">&quot;            {method_id} =&gt; {{&quot;</span>),
         <span class="macro">format!</span>(<span class="string">&quot;                use ::prost::Message;&quot;</span>),
-        <span class="macro">format!</span>(<span class="string">&quot;                let request = {request_type}::decode(request.body.as_ref())&quot;</span>),
-        <span class="macro">format!</span>(<span class="string">&quot;                    .map_err(|err| ::oak_idl::Status::new_with_message(::oak_idl::StatusCode::Internal, ::alloc::format!(\&quot;Service failed to deserialize the request: {{:?}}\&quot;, err)))?;&quot;</span>),
+        <span class="macro">format!</span>(<span class="string">&quot;                let request = {request_type}::decode(request.body.as_ref()).map_err(|err| {{&quot;</span>),
+        <span class="macro">format!</span>(<span class="string">&quot;                    ::oak_protobuf_idl::Status::new_with_message(&quot;</span>),
+        <span class="macro">format!</span>(<span class="string">&quot;                        ::oak_protobuf_idl::StatusCode::Internal,&quot;</span>),
+        <span class="macro">format!</span>(<span class="string">&quot;                        format!(\&quot;Service failed to deserialize the request: {{:?}}\&quot;, err)&quot;</span>),
+        <span class="macro">format!</span>(<span class="string">&quot;                    )&quot;</span>),
+        <span class="macro">format!</span>(<span class="string">&quot;                }})?;&quot;</span>),
         <span class="macro">format!</span>(<span class="string">&quot;                let response = self.service.{method_name}(&amp;request)?;&quot;</span>),
         <span class="macro">format!</span>(<span class="string">&quot;                let response_body = response.encode_to_vec();&quot;</span>),
         <span class="macro">format!</span>(<span class="string">&quot;                Ok(response_body)&quot;</span>),
@@ -454,7 +496,7 @@
     <span class="kw">let </span>method_name = method_name(method);
     <span class="kw">let </span>request_type = request_type(method);
     <span class="kw">let </span>response_type = response_type(method);
-    <span class="macro">vec!</span>[<span class="macro">format!</span>(<span class="string">&quot;    fn {method_name}(&amp;mut self, request: &amp;{request_type}) -&gt; Result&lt;{response_type}, ::oak_idl::Status&gt;;&quot;</span>)]
+    <span class="macro">vec!</span>[<span class="macro">format!</span>(<span class="string">&quot;    fn {method_name}(&amp;mut self, request: &amp;{request_type}) -&gt; Result&lt;{response_type}, ::oak_protobuf_idl::Status&gt;;&quot;</span>)]
 }
 
 <span class="doccomment">/// Returns the value of the `method_id` comment on the method.
