@@ -70,7 +70,7 @@ lazy_static! {
 /// Shares the page containing the GHCB with the hypervisor again.
 ///
 /// This should be called as soon as the kernel memory has been initialised, as that would have
-/// cause the page to be marked as encrypted.
+/// caused the page to be marked as encrypted.
 pub fn reshare_ghcb<M: Mapper<Size2MiB>>(mapper: &mut M) {
     // Safety: we only use the reference to calculate the address and never dereference it.
     let ghcb_address =
