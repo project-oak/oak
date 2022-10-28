@@ -74,8 +74,7 @@ lazy_static! {
 /// caused the page to be marked as encrypted.
 pub fn reshare_ghcb<M: Mapper<Size2MiB>>(mapper: &mut M) {
     // Safety: we only use the reference to calculate the address and never dereference it.
-    let ghcb_address =
-        unsafe { VirtAddr::new(&GHCB_WRAPPER as *const GhcbAlignmentWrapper as usize as u64) };
+    let ghcb_address = unsafe { VirtAddr::from_ptr(&GHCB_WRAPPER as *const GhcbAlignmentWrapper) };
     // Safety: we only change the encrypted flag, all other flags for the GHCB pages are as they
     // were set during the kernel memory initialisation.
     unsafe {
