@@ -59,12 +59,6 @@ pub fn generate_grpc_code(
         .map(|file_path| proto_path.join(file_path))
         .collect();
 
-    // Tell cargo to rerun this build script if the proto file has changed.
-    // https://doc.rust-lang.org/cargo/reference/build-scripts.html#cargorerun-if-changedpath
-    for file_path in file_paths.iter() {
-        println!("cargo:rerun-if-changed={}", file_path.display());
-    }
-
     // Generate the normal (non-Oak) server and client code for the gRPC service,
     // along with the Rust types corresponding to the message definitions.
     let mut config = tonic_build::configure()

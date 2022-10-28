@@ -20,8 +20,8 @@ const RUNTIME_INTERFACE_SCHEMA: &str = "../oak_functions_freestanding/schema.fbs
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     generate_grpc_code(
-        "../",
-        &["oak_grpc_unary_attestation/proto/unary_server.proto"],
+        &format!("{}oak_grpc_unary_attestation/proto", env!("WORKSPACE_ROOT")),
+        &["unary_server.proto"],
         CodegenOptions {
             build_client: false,
             build_server: true,
