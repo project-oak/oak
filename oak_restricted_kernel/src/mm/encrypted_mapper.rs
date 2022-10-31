@@ -59,6 +59,12 @@ pub struct PhysOffset {
     encryption: MemoryEncryption,
 }
 
+impl PhysOffset {
+    pub fn new(offset: VirtAddr, encryption: MemoryEncryption) -> Self {
+        PhysOffset { offset, encryption }
+    }
+}
+
 unsafe impl PageTableFrameMapping for PhysOffset {
     fn frame_to_pointer(&self, frame: PhysFrame) -> *mut PageTable {
         let virt = self.offset
