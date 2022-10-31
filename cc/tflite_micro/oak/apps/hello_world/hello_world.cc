@@ -51,8 +51,9 @@ uint8_t tensor_arena[kTensorArenaSize];
 }
 
 int tflite_init(
-    const uint8_t* model_bytes, size_t model_bytes_len,
-    const uint8_t* tensor_arena_bytes, size_t tensor_arena_bytes_len) {
+    const uint8_t* model_bytes_ptr, size_t model_bytes_len,
+    const uint8_t* tensor_arena_bytes_ptr, size_t tensor_arena_bytes_len,
+    size_t* output_buffer_len_ptr) {
   // Map the model into a usable data structure. This doesn't involve any
   // copying or parsing, it's a very lightweight operation.
   model = tflite::GetModel(g_hello_world_model_data);
@@ -84,8 +85,8 @@ int tflite_init(
 }
 
 int tflite_run(
-  const uint8_t* input_bytes, size_t input_bytes_len,
-  uint8_t** output_bytes, size_t* output_bytes_len) {
+    const uint8_t* input_bytes_ptr, size_t input_bytes_len,
+    uint8_t* output_bytes_ptr, size_t* output_bytes_len_ptr) {
   // Calculate an x value to feed into the model. We compare the current
   // inference_count to the number of inferences per cycle to determine
   // our position within the range of possible x values the model was
