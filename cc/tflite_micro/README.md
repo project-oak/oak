@@ -25,7 +25,7 @@ cc/tflite_micro
 |   |   |
 |   |   |-- start.S
 |   |   |   Used by tflite model apps to generate freestanding and executable binary
-|   |   |   to run on PC.
+|   |   |   to run on Linux.
 |   |
 |   |-- include
 |   |   Provide Oak-specific declarations to tflite model apps.
@@ -84,7 +84,7 @@ cc/tflite_micro
 There are two sorts of freestanding binaries, using hello_world model app as
 example:
 
-1. Build the binary that runs on PC
+1. Build the binary that runs on Linux
 
    ```bash
    bazel build //cc/tflite_micro/oak/apps/hello_world:hello_world_bin
@@ -92,9 +92,9 @@ example:
 
    The binary is built with -nostdlib which removes dependencies of standard
    libraries i.e. libc, libgcc, etc to ensure a freestanding binary is generated
-   and can run on PC. The binary is good for tflite model porting, debugging and
-   tensor activation validating. Its freestanding nature makes it a good fit of
-   validating execution on TEE.
+   and can run on Linux. The binary is good for tflite model porting, debugging
+   and tensor activation validating. Its freestanding nature makes it a good fit
+   of validating execution on TEE.
 
 1. Binaries that runs on Oak server
    ```bash
@@ -108,29 +108,32 @@ example:
 
 There are few optional build options provided:
 
-- `--define=no_opt=1`\
-   Disable compiler optimizations when building model app freestanding binaries.
+- `--define=no_opt=1`
 
-- `--define=no_sse=1`\
-   Disable using streaming SIMD instructions i.e. SSE2/SSSE3/SSE4/AVX2. The
+  Disable compiler optimizations when building model app freestanding binaries.
+
+- `--define=no_sse=1`
+
+  Disable using streaming SIMD instructions i.e. SSE2/SSSE3/SSE4/AVX2. The
   option under the hook would use non-optimized nanolibc string apis i.e.
   str{len|cmp|cpy|...}, mem{cpy|cmp|move|set|...}, etc. Additinally, tflite is
   built without `-msse4.2`.
 
-- `--define=use_custom_output=1`\
-   To build tflm without using Oak debug_log.cc; instead, using a custom
+- `--define=use_custom_output=1`
+
+  To build tflm without using Oak debug_log.cc; instead, using a custom
   debug_log.cc for multiple use cases i.e. testing, ported to other operating
   systems that implement proprietary debug logging, etc.
 
 ## Debugging Model Binaries
 
 As what aforementioned, we are able to build freestanding libraries that can run
-on PC. In order for debugger i.e. gdb/lldb to correctly work on the binaries, we
-need to specify additional bulid parameters telling bazel to keep all debug
+on Linux. In order for debugger i.e. gdb/lldb to correctly work on the binaries,
+we need to specify additional bulid parameters telling bazel to keep all debug
 symbols and optionally disabling optimizations so breakpoints can be precisely
 mapped to correct lines of source code.
 
-Use hell_world model app as example,
+Use hello_world model app as example,
 
 ```bash
 bazel build --copt=-g --strip=never --define=no_opt=1 //cc/tflite_micro/oak/apps/hello_world:hello_world_bin
@@ -138,7 +141,8 @@ bazel build --copt=-g --strip=never --define=no_opt=1 //cc/tflite_micro/oak/apps
 
 `--define=no_opt=1` is optional if correct source mapping is not needed.
 
-Next, configure i.e. lldb for VS Code,\
+Next, configure i.e. lldb for VS Code,
+
 .vscode/launch.json
 
 ```json
@@ -165,5 +169,5 @@ repeatable builds, it is required to add the mapping
 `"/proc/self/cwd": "${workspaceFolder}"`.
 
 After applying the configuration, you are good to go to set breakpoints in
-sources, watch memroy contents, online memory/register manipulations and so
+sources, watch memory contents, online memory/register manipulations and so
 forth.
