@@ -64,6 +64,18 @@
 <span id="64">64</span>
 <span id="65">65</span>
 <span id="66">66</span>
+<span id="67">67</span>
+<span id="68">68</span>
+<span id="69">69</span>
+<span id="70">70</span>
+<span id="71">71</span>
+<span id="72">72</span>
+<span id="73">73</span>
+<span id="74">74</span>
+<span id="75">75</span>
+<span id="76">76</span>
+<span id="77">77</span>
+<span id="78">78</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -83,7 +95,11 @@
 </span><span class="kw">use </span>atomic_refcell::AtomicRefCell;
 <span class="kw">use </span>core::fmt::Write;
 <span class="kw">use </span>lazy_static::lazy_static;
-<span class="kw">use </span>sev_guest::io::PortFactoryWrapper;
+<span class="kw">use </span>log::info;
+<span class="kw">use </span>sev_guest::{
+    io::PortFactoryWrapper,
+    msr::{get_sev_status, SevStatus},
+};
 <span class="kw">use </span>sev_serial::SerialPort;
 
 <span class="kw">extern crate </span>log;
@@ -91,9 +107,15 @@
 <span class="comment">// Base I/O port for the first serial port in the system (colloquially known as COM1)
 </span><span class="kw">static </span>COM1_BASE: u16 = <span class="number">0x3f8</span>;
 
-<span class="macro">lazy_static! </span>{
+<span class="comment">// TODO(#3403): Stop initializing lazily once we have an equivalent to `std::sync::OnceLock`.
+</span><span class="macro">lazy_static! </span>{
     <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">static </span><span class="kw-2">ref </span>SERIAL1: AtomicRefCell&lt;SerialPort&gt; = {
-        <span class="kw">let </span>port_factory = PortFactoryWrapper::new_raw();
+        <span class="kw">let </span>sev_status = get_sev_status().unwrap_or(SevStatus::empty());
+        <span class="kw">let </span>port_factory = <span class="kw">if </span>sev_status.contains(SevStatus::SEV_ES_ENABLED) {
+            <span class="kw">crate</span>::ghcb::get_ghcb_port_factory()
+        } <span class="kw">else </span>{
+            PortFactoryWrapper::new_raw()
+        };
         <span class="comment">// Our contract with the launcher requires the first serial port to be
         // available, so assuming the loader adheres to it, this is safe.
         </span><span class="kw">let </span><span class="kw-2">mut </span>port = <span class="kw">unsafe </span>{ SerialPort::new(COM1_BASE, port_factory) };
@@ -129,6 +151,8 @@
 <span class="kw">pub fn </span>init_logging() {
     log::set_logger(<span class="kw-2">&amp;</span>LOGGER).unwrap();
     log::set_max_level(log::LevelFilter::Debug);
+    <span class="comment">// Log a message to ensure the serial logging channel is intialized.
+    </span><span class="macro">info!</span>(<span class="string">&quot;Logging initialised.&quot;</span>);
 }
 </code></pre></div>
 </section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="oak_restricted_kernel" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (81f391930 2022-10-09)" ></div></body></html>

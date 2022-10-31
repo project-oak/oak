@@ -183,6 +183,11 @@
 <span id="183">183</span>
 <span id="184">184</span>
 <span id="185">185</span>
+<span id="186">186</span>
+<span id="187">187</span>
+<span id="188">188</span>
+<span id="189">189</span>
+<span id="190">190</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -264,9 +269,6 @@
     descriptors::init_gdt();
     interrupts::init_idt();
     <span class="kw">let </span>sev_status = get_sev_status().unwrap_or(SevStatus::empty());
-    <span class="kw">if </span>sev_status.contains(SevStatus::SEV_ES_ENABLED) {
-        <span class="kw">let _ </span>= ghcb::init_ghcb_early(sev_status.contains(SevStatus::SNP_ACTIVE));
-    }
     logging::init_logging();
 
     <span class="comment">// We need to be done with the boot info struct before intializing memory. For example, the
@@ -287,6 +289,11 @@
     </span><span class="kw">let </span><span class="kw-2">mut </span>frame_allocator = mm::init::&lt;<span class="number">1024</span>&gt;(info.e820_table(), program_headers);
 
     <span class="kw">let </span><span class="kw-2">mut </span>mapper = mm::init_paging(<span class="kw-2">&amp;mut </span>frame_allocator, program_headers).unwrap();
+
+    <span class="comment">// Now that the page tables have been updated, we have to re-share the GHCB with the hypervisor.
+    </span><span class="kw">if </span>sev_status.contains(SevStatus::SEV_ES_ENABLED) {
+        ghcb::reshare_ghcb(<span class="kw-2">&amp;mut </span>mapper);
+    }
 
     <span class="comment">// Allocate a section for guest-host communication (without the `ENCRYPTED` bit set)
     // We&#39;ll allocate 2*2MiB, as virtio needs more than 2 MiB for its data structures.
@@ -320,7 +327,7 @@
     ))
     .unwrap();
 
-    get_channel(<span class="kw-2">&amp;</span>kernel_args, <span class="kw-2">&amp;</span>mapper, guest_host_heap)
+    get_channel(<span class="kw-2">&amp;</span>kernel_args, <span class="kw-2">&amp;</span>mapper, guest_host_heap, sev_status)
 }
 
 <span class="attribute">#[derive(EnumIter, EnumString)]
@@ -341,6 +348,7 @@
     kernel_args: <span class="kw-2">&amp;</span>args::Args,
     mapper: <span class="kw-2">&amp;</span>X,
     alloc: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>A,
+    sev_status: SevStatus,
 ) -&gt; Box&lt;<span class="kw">dyn </span>Channel + <span class="lifetime">&#39;a</span>&gt; {
     <span class="comment">// If we weren&#39;t told which channel to use, arbitrarily pick the first one in the `ChannelType`
     // enum. Depending on features that are enabled, this means that the enum acts as kind of a
@@ -358,7 +366,9 @@
         <span class="attribute">#[cfg(feature = <span class="string">&quot;serial_channel&quot;</span>)]
         </span>ChannelType::Serial =&gt; Box::new(serial::Serial::new()),
         <span class="attribute">#[cfg(feature = <span class="string">&quot;simple_io_channel&quot;</span>)]
-        </span>ChannelType::SimpleIo =&gt; Box::new(simpleio::SimpleIoChannel::new(mapper, alloc)),
+        </span>ChannelType::SimpleIo =&gt; {
+            Box::new(simpleio::SimpleIoChannel::new(mapper, alloc, sev_status))
+        }
     }
 }
 
