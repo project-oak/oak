@@ -68,13 +68,15 @@ lazy_static! {
 ///
 /// This should be called as soon as the kernel memory has been initialised, as that would have
 /// caused the page to be marked as encrypted.
-pub fn reshare_ghcb<M: Mapper<Size2MiB>>(mapper: &mut M) {
+pub fn reshare_ghcb<M: Mapper<Size4KiB>>(mapper: &mut M) {
     let ghcb_page = get_ghcb_page();
     // Safety: we only change the encrypted flag, all other flags for the GHCB pages are as they
     // were set during the kernel memory initialisation.
     unsafe {
         match mapper.update_flags(
-            ghcb_page,
+            // Turn the 2M page into a 4K page. This unwrap will not fail, as 2M pages are
+            // 4K-aligned by definition.
+            Page::from_start_address(ghcb_page.start_address()).unwrap(),
             PageTableFlags::PRESENT
                 | PageTableFlags::WRITABLE
                 | PageTableFlags::GLOBAL
