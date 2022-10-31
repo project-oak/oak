@@ -24,28 +24,17 @@ package(
     licenses = ["notice"],
 )
 
-#
-# The `generated` directory is generated from the tflite-micro git:
-# https://github.com/tensorflow/tflite-micro by:
-# `python3 tensorflow/lite/micro/tools/project_generation/create_tflm_tree.py generated`
-#
-# The build target residing outside of the generated directory allows us to
-# upgrade/downgrade (delete old then copy new) the generated directory cleanly.
-#
 cc_library(
-    name = "tflm-generated",
-    srcs = glob(
-        ["generated/tensorflow/lite/**/*.cc"],
-        exclude = [
-            "generated/tensorflow/lite/micro/debug_log.cc",
-        ],
-    ),
-    hdrs = glob([
-        "generated/tensorflow/lite/**/*.h",
-        "generated/third_party/flatbuffers/**/*.h",
-        "generated/third_party/gemmlowp/**/*.h",
-        "generated/third_party/ruy/**/*.h",
-    ]),
+    name = "tflite_micro",
+    srcs = [
+        "//third_party/tflite-micro:srcs",
+    ],
+    hdrs = [
+        "//third_party/flatbuffers:hdrs",
+        "//third_party/gemmlowp:hdrs",
+        "//third_party/ruy:hdrs",
+        "//third_party/tflite-micro:hdrs",
+    ],
     copts = oak_copts(),
     linkstatic = 1,
     deps = [

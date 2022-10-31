@@ -78,6 +78,35 @@ cc/tflite_micro
 [Android bionic libc](https://android.googlesource.com/platform/bionic/+/refs/heads/master)\
 \*\* [Google nanolibc](https://github.com/google/nanolibc)
 
+## Upgrade/Downgrade Tensorflow Lite for Microcontrollers
+
+We generate a clean set of tflm source tree via its tool [create_tflm_tree.py](https://github.com/tensorflow/tflite-micro/blob/main/tensorflow/lite/micro/tools/project_generation/create_tflm_tree.py) that cuts ~50% sources to be compiled, which also implies less external dependency errors to fix in a bare-metal and freestanding binary development environment.
+
+The generated source tree consists of tflm sources and required third-party headers. As we want generated tflm sources residing in the third_party/tflite-micro directory and its third-party dependencies also residing in respective directories under the third_party, corresponding BUILD files consolidating file groups of sources and headers are needed for each of them to be dependent in the tflite_micro target at cc/tflite_micro/BUILD.
+
+A tlfm upgrade/downgrade process would be:
+```bash
+# At tflm source root, sync to a specific commit for downgrade/upgrade. Then:
+python3 tensorflow/lite/micro/tools/project_generation/create_tflm_tree.py /tmp/generated
+
+# At Oak source root, prune old tflm sources cleanly.
+rm -rf third_party/tflite-micro/tensorflow
+rm -rf third_party/tflite-micro/LICENSE
+rm -rf third_party/flatbuffers/include
+rm -rf third_party/flatbuffers/LICENSE.txt
+rm -rf third_party/gemmlowp/fixedpoint
+rm -rf third_party/gemmlowp/internal
+rm -rf third_party/gemmlowp/LICENSE
+rm -rf third_party/ruy/ruy
+
+# At Oak source root, copy generated sources to corresponding directories:
+cp -rf /tmp/generated/tensorflow third_party/tflite-micro/
+cp -rf /tmp/generated/LICENSE third_party/tflite-micro/
+cp -rf /tmp/generated/third_party/flatbuffers third_party/
+cp -rf /tmp/generated/third_party/ruy third_party/
+cp -rf /tmp/generated/third_party/gemmlowp third_party/
+```
+
 ## Build Model Binaries
 
 There are two sorts of freestanding binaries, using hello_world model app as
