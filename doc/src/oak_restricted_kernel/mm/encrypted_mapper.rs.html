@@ -698,6 +698,12 @@
 <span id="698">698</span>
 <span id="699">699</span>
 <span id="700">700</span>
+<span id="701">701</span>
+<span id="702">702</span>
+<span id="703">703</span>
+<span id="704">704</span>
+<span id="705">705</span>
+<span id="706">706</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -757,6 +763,12 @@
 </span><span class="kw">pub struct </span>PhysOffset {
     offset: VirtAddr,
     encryption: MemoryEncryption,
+}
+
+<span class="kw">impl </span>PhysOffset {
+    <span class="kw">pub fn </span>new(offset: VirtAddr, encryption: MemoryEncryption) -&gt; <span class="self">Self </span>{
+        PhysOffset { offset, encryption }
+    }
 }
 
 <span class="kw">unsafe impl </span>PageTableFrameMapping <span class="kw">for </span>PhysOffset {

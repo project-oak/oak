@@ -172,41 +172,6 @@
 <span id="172">172</span>
 <span id="173">173</span>
 <span id="174">174</span>
-<span id="175">175</span>
-<span id="176">176</span>
-<span id="177">177</span>
-<span id="178">178</span>
-<span id="179">179</span>
-<span id="180">180</span>
-<span id="181">181</span>
-<span id="182">182</span>
-<span id="183">183</span>
-<span id="184">184</span>
-<span id="185">185</span>
-<span id="186">186</span>
-<span id="187">187</span>
-<span id="188">188</span>
-<span id="189">189</span>
-<span id="190">190</span>
-<span id="191">191</span>
-<span id="192">192</span>
-<span id="193">193</span>
-<span id="194">194</span>
-<span id="195">195</span>
-<span id="196">196</span>
-<span id="197">197</span>
-<span id="198">198</span>
-<span id="199">199</span>
-<span id="200">200</span>
-<span id="201">201</span>
-<span id="202">202</span>
-<span id="203">203</span>
-<span id="204">204</span>
-<span id="205">205</span>
-<span id="206">206</span>
-<span id="207">207</span>
-<span id="208">208</span>
-<span id="209">209</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -225,7 +190,7 @@
 
 </span><span class="kw">use </span><span class="kw">crate</span>::mm::{
     encrypted_mapper::{EncryptedPageTable, MemoryEncryption, PhysOffset},
-    Mapper, PageTableFlags, ENCRYPTED_BIT_POSITION, KERNEL_OFFSET,
+    Mapper, PageTableFlags, Translator, ENCRYPTED_BIT_POSITION,
 };
 <span class="kw">use </span>lazy_static::lazy_static;
 <span class="kw">use </span>sev_guest::{
@@ -235,20 +200,16 @@
         change_snp_page_state, get_sev_status, register_ghcb_location, PageAssignment,
         RegisterGhcbGpaRequest, SevStatus, SnpPageStateChangeRequest,
     },
-    Translator,
 };
 <span class="kw">use </span>spinning_top::Spinlock;
 <span class="kw">use </span>x86_64::{
-    addr::{PhysAddr, VirtAddr},
-    align_down,
+    addr::VirtAddr,
     registers::control::Cr3,
     structures::paging::{
-        page_table::PageTable, MappedPageTable, Page, PageSize, Size2MiB, Size4KiB,
+        mapper::PageTableFrameMapping, MappedPageTable, Page, PageSize, PhysFrame, Size2MiB,
+        Size4KiB,
     },
 };
-
-<span class="doccomment">/// The mask for the encrypted bit.
-</span><span class="kw">const </span>ENCRYPTED_BIT: u64 = <span class="number">1 </span>&lt;&lt; ENCRYPTED_BIT_POSITION;
 
 <span class="doccomment">/// A wrapper to ensure that the GHCB is alone in a 2MiB page.
 ///
@@ -282,19 +243,20 @@
 /// This should be called as soon as the kernel memory has been initialised, as that would have
 /// caused the page to be marked as encrypted.
 </span><span class="kw">pub fn </span>reshare_ghcb&lt;M: Mapper&lt;Size2MiB&gt;&gt;(mapper: <span class="kw-2">&amp;mut </span>M) {
-    <span class="comment">// Safety: we only use the reference to calculate the address and never dereference it.
-    </span><span class="kw">let </span>ghcb_address = <span class="kw">unsafe </span>{ VirtAddr::from_ptr(<span class="kw-2">&amp;</span>GHCB_WRAPPER <span class="kw">as </span><span class="kw-2">*const </span>GhcbAlignmentWrapper) };
+    <span class="kw">let </span>ghcb_page = get_ghcb_page();
     <span class="comment">// Safety: we only change the encrypted flag, all other flags for the GHCB pages are as they
     // were set during the kernel memory initialisation.
     </span><span class="kw">unsafe </span>{
-        set_single_2mib_page_flags(
-            ghcb_address,
-            mapper,
+        <span class="kw">match </span>mapper.update_flags(
+            ghcb_page,
             PageTableFlags::PRESENT
                 | PageTableFlags::WRITABLE
                 | PageTableFlags::GLOBAL
                 | PageTableFlags::NO_EXECUTE,
-        );
+        ) {
+            <span class="prelude-val">Ok</span>(mapper_flush) =&gt; mapper_flush.flush(),
+            <span class="prelude-val">Err</span>(error) =&gt; <span class="macro">panic!</span>(<span class="string">&quot;Couldn&#39;t update page table flags for GHCB: {:?}&quot;</span>, error),
+        };
     }
 }
 
@@ -302,109 +264,67 @@
 </span><span class="kw">fn </span>init_ghcb_early(snp_enabled: bool) -&gt; GhcbProtocol&lt;<span class="lifetime">&#39;static</span>, Ghcb&gt; {
     <span class="comment">// Safety: This is called only during early boot, so there is only a single execution context.
     </span><span class="kw">let </span>ghcb = <span class="kw">unsafe </span>{ <span class="kw-2">&amp;mut </span>GHCB_WRAPPER.ghcb };
-    <span class="kw">let </span>translate = |vaddr: VirtAddr| {
-        <span class="kw">let </span>address = vaddr.as_u64();
-        <span class="comment">// We assume a fixed offset mapping for kernel pages.
-        </span><span class="kw">if </span>address &lt; KERNEL_OFFSET {
-            <span class="prelude-val">None
-        </span>} <span class="kw">else </span>{
-            <span class="prelude-val">Some</span>(PhysAddr::new(address - KERNEL_OFFSET))
-        }
-    };
-    share_ghcb_with_hypervisor(ghcb, snp_enabled, translate);
     ghcb.reset();
 
-    GhcbProtocol::new(ghcb, translate)
-}
+    <span class="kw">let </span>ghcb_page = get_ghcb_page();
+    <span class="kw">let </span><span class="kw-2">mut </span>mapper = get_identity_mapped_encrypted_page_table();
+    <span class="kw">if </span>snp_enabled {
+        <span class="comment">// It is OK to crash if we cannot find the physical frame that contains the GHCB.
+        </span><span class="kw">let </span>ghcb_frame = PhysFrame::&lt;Size2MiB&gt;::from_start_address(
+            mapper
+                .translate_virtual(ghcb_page.start_address())
+                .expect(<span class="string">&quot;Couldn&#39;t find the physical address for the GHCB&quot;</span>),
+        )
+        .expect(<span class="string">&quot;The GHCB physical address is not correctly aligned&quot;</span>);
 
-<span class="doccomment">/// Marks the page containing the GHCB data structure to be shared with the hypervisor.
-</span><span class="kw">fn </span>share_ghcb_with_hypervisor&lt;VP: Translator&gt;(ghcb: <span class="kw-2">&amp;</span>Ghcb, snp_enabled: bool, translate: VP) {
-    <span class="kw">let </span>ghcb_address = VirtAddr::from_ptr(ghcb <span class="kw">as </span><span class="kw-2">*const </span>Ghcb);
-    <span class="comment">// On SEV-SNP we need to additionally update the RMP and register the GHCB location with the
-    // hypervisor.
-    </span><span class="kw">if </span>snp_enabled {
-        <span class="comment">// It is OK to crash if we cannot find a valid physical address for the GHCB.
-        </span><span class="kw">let </span>ghcb_physical_address = translate(ghcb_address).unwrap();
-        mark_2mib_page_shared_in_rmp(ghcb_physical_address);
+        mark_frame_shared_in_rmp(<span class="kw-2">&amp;</span>ghcb_frame);
+
         <span class="kw">let </span>ghcb_location_request =
-            RegisterGhcbGpaRequest::new(ghcb_physical_address.as_u64() <span class="kw">as </span>usize)
+            RegisterGhcbGpaRequest::new(ghcb_frame.start_address().as_u64() <span class="kw">as </span>usize)
                 .expect(<span class="string">&quot;Invalid address for GHCB location&quot;</span>);
         register_ghcb_location(ghcb_location_request)
             .expect(<span class="string">&quot;Couldn&#39;t register the GHCB address with the hypervisor&quot;</span>);
     }
-    <span class="kw">let </span><span class="kw-2">mut </span>mapper = get_identity_mapper();
-    <span class="comment">// Make sure the encrypted bit is not set in the page table.
-    // Safety: we only remove the encrypted bit as the initial pages created by the stage 0 firmware
+
+    <span class="comment">// Safety: we only remove the encrypted bit as the initial pages created by the stage 0 firmware
     // are only marked as present and writable, and possibly encrypted.
     </span><span class="kw">unsafe </span>{
-        set_single_2mib_page_flags(
-            ghcb_address,
-            <span class="kw-2">&amp;mut </span>mapper,
+        <span class="kw">match </span>mapper.update_flags(
+            ghcb_page,
             PageTableFlags::PRESENT | PageTableFlags::WRITABLE,
-        );
+        ) {
+            <span class="prelude-val">Ok</span>(mapper_flush) =&gt; mapper_flush.flush(),
+            <span class="prelude-val">Err</span>(error) =&gt; <span class="macro">panic!</span>(<span class="string">&quot;Couldn&#39;t update page table flags for GHCB: {:?}&quot;</span>, error),
+        };
     }
+
+    GhcbProtocol::new(ghcb, |virt_addr: VirtAddr| {
+        mapper.translate_virtual(virt_addr)
+    })
 }
 
 <span class="doccomment">/// Gets a mapper that understands encrypted pages and assumes an identity mapping.
 ///
 /// This must only be used during early boot when the identity-mapped page tables created by the
-/// stage 0 firmware is still active.
-</span><span class="kw">fn </span>get_identity_mapper&lt;<span class="lifetime">&#39;a</span>&gt;() -&gt; EncryptedPageTable&lt;MappedPageTable&lt;<span class="lifetime">&#39;a</span>, PhysOffset&gt;&gt; {
+/// stage 0 firmware is still active, and only if SEV, SEV-ES or SEV-SNP is active.
+</span><span class="kw">fn </span>get_identity_mapped_encrypted_page_table&lt;<span class="lifetime">&#39;a</span>&gt;(
+) -&gt; EncryptedPageTable&lt;MappedPageTable&lt;<span class="lifetime">&#39;a</span>, PhysOffset&gt;&gt; {
+    <span class="comment">// We assume an identity mapping, so the offset is zero.
+    </span><span class="kw">let </span>offset = VirtAddr::new(<span class="number">0</span>);
+    <span class="comment">// We assume that this will only be used if memory encryption is enabled.
+    </span><span class="kw">let </span>encryption = MemoryEncryption::Encrypted(ENCRYPTED_BIT_POSITION);
+    <span class="kw">let </span>offset_mapper = PhysOffset::new(offset, encryption);
     <span class="comment">// Find the level 4 page table that is currently in use.
     </span><span class="kw">let </span>(l4_frame, <span class="kw">_</span>) = Cr3::read();
-    <span class="comment">// Safety: this is safe because we use the address of the current page table as configured in
-    // the CR3 register.
-    </span><span class="kw">let </span>l4_table: <span class="kw-2">&amp;mut </span>PageTable =
-        <span class="kw">unsafe </span>{ <span class="kw-2">&amp;mut *</span>physical_to_virtual(l4_frame.start_address()).as_mut_ptr() };
-    <span class="comment">// For an identity mapping the offset is 0;
-    </span><span class="kw">let </span>offset = VirtAddr::new(<span class="number">0</span>);
-    <span class="kw">let </span>encryption = MemoryEncryption::Encrypted(ENCRYPTED_BIT_POSITION);
-    EncryptedPageTable::new(l4_table, offset, encryption)
+    <span class="comment">// Safety: we have fetched the address of the currently used PML4 table from CR3, so this is a
+    // valid address pointing to a valid page table.
+    </span><span class="kw">let </span>pml4 = <span class="kw">unsafe </span>{ <span class="kw-2">&amp;mut *</span>offset_mapper.frame_to_pointer(l4_frame) };
+    EncryptedPageTable::new(pml4, offset, encryption)
 }
 
-<span class="doccomment">/// Sets the specified flags for the 2MiB page that starts at the provided address.
-///
-/// # Safety
-///
-/// The caller must make sure that the changed flags does not cause undefined behaviour, such as
-/// marking code pages as not executable.
-</span><span class="kw">unsafe fn </span>set_single_2mib_page_flags&lt;M: Mapper&lt;Size2MiB&gt;&gt;(
-    address: VirtAddr,
-    mapper: <span class="kw-2">&amp;mut </span>M,
-    flags: PageTableFlags,
-) {
-    <span class="comment">// Panicking is OK if we cannot find a valid 2MiB page starting with the GHCB, or cannot update
-    // the page table flags for it.
-    </span><span class="kw">let </span>page = Page::&lt;Size2MiB&gt;::from_start_address(address)
-        .expect(<span class="string">&quot;Invalid start address for GHCB page.&quot;</span>);
-
-    <span class="kw">match </span>mapper.update_flags(page, flags) {
-        <span class="prelude-val">Ok</span>(mapper_flush) =&gt; mapper_flush.flush(),
-        <span class="prelude-val">Err</span>(error) =&gt; <span class="macro">panic!</span>(<span class="string">&quot;Couldn&#39;t update page table flags for GHCB: {:?}&quot;</span>, error),
-    };
-}
-
-<span class="doccomment">/// Converts a physical address to a virtual address.
-///
-/// This must only be used during early boot when the page tables are still located in an identity
-/// mapped region.
-///
-/// # Safety
-///
-/// This function requires that the page tables are in an identity mapped region of memory, which is
-/// only the case during early boot before the kernel&#39;s memory initialisation.
-</span><span class="kw">unsafe fn </span>physical_to_virtual(physical: PhysAddr) -&gt; VirtAddr {
-    <span class="kw">let </span>normalized = physical.as_u64() &amp; !ENCRYPTED_BIT;
-    VirtAddr::new(normalized)
-}
-
-<span class="doccomment">/// Marks a 2MiB page as shared in the SEV-SNP reverse-map table (RMP).
-///
-/// Panics if the physical address is not the start of a 2MiB page or if the page sharing request
-/// fails.
-</span><span class="kw">fn </span>mark_2mib_page_shared_in_rmp(physical_address: PhysAddr) {
-    <span class="kw">let </span>raw_address = physical_address.as_u64();
-    <span class="macro">assert_eq!</span>(align_down(raw_address, Size2MiB::SIZE), raw_address);
+<span class="doccomment">/// Marks a 2MiB physical frame as shared in the SEV-SNP reverse-map table (RMP).
+</span><span class="kw">fn </span>mark_frame_shared_in_rmp(frame: <span class="kw-2">&amp;</span>PhysFrame&lt;Size2MiB&gt;) {
+    <span class="kw">let </span>raw_address = frame.start_address().as_u64();
     <span class="comment">// Since we don&#39;t have the GHCB set up already we need to use the MSR protocol to mark every
     // individual 4KiB area in the 2MiB page as shared.
     </span><span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..<span class="number">512 </span>{
@@ -415,6 +335,16 @@
         .expect(<span class="string">&quot;Invalid page address&quot;</span>);
         change_snp_page_state(request).expect(<span class="string">&quot;Couldn&#39;t change page state&quot;</span>);
     }
+}
+
+<span class="doccomment">/// Gets the 2MiB memory page that contains the GHCB.
+</span><span class="kw">fn </span>get_ghcb_page() -&gt; Page&lt;Size2MiB&gt; {
+    <span class="comment">// Safety: the reference to a mutable static is safe, as we only use it to calculate a virtual
+    // address and don&#39;t dereference it.
+    </span><span class="kw">let </span>ghcb_pointer = <span class="kw">unsafe </span>{ <span class="kw-2">&amp;</span>GHCB_WRAPPER <span class="kw">as </span><span class="kw-2">*const </span>GhcbAlignmentWrapper };
+    <span class="kw">let </span>ghcb_address = VirtAddr::from_ptr(ghcb_pointer);
+    Page::&lt;Size2MiB&gt;::from_start_address(ghcb_address)
+        .expect(<span class="string">&quot;Invalid start address for GHCB page.&quot;</span>)
 }
 </code></pre></div>
 </section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="oak_restricted_kernel" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (81f391930 2022-10-09)" ></div></body></html>
