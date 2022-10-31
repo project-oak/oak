@@ -15,7 +15,7 @@
 #
 
 load(
-    "//cc/tflite_micro/oak:build_defs.bzl",
+    "//cc/tflite_micro:build_defs.bzl",
     "oak_copts",
 )
 
@@ -50,12 +50,44 @@ cc_library(
     linkstatic = 1,
     deps = [
         # Use Oak DebugLog implementation
-        "//cc/tflite_micro/oak:debug_log",
+        "//cc/tflite_micro:debug_log",
         # Use Oak pico libc
-        "//cc/tflite_micro/oak/libc",
+        "//cc/tflite_micro/libc",
         # Use Oak pico libgcc
-        "//cc/tflite_micro/oak/libgcc",
+        "//cc/tflite_micro/libgcc",
         # Use Oak pico libm that picks up complements of Oak Restricted Kernel libm.rs
-        "//cc/tflite_micro/oak/libm:oak_kernel_complements",
+        "//cc/tflite_micro/libm:oak_kernel_complements",
     ],
+)
+
+cc_library(
+    name = "debug_log",
+    srcs = [
+        "debug_log.cc",
+    ],
+    copts = oak_copts(),
+    deps = [":hdrs"],
+)
+
+cc_library(
+    name = "hdrs",
+    hdrs = ["include/tflite_micro.h"],
+)
+
+# --define no_sse=1 to build tflite w/o streaming SIMD instructions.
+# It would also use non-optimized Oak pico libc {str|mem}xxx functions.
+config_setting(
+    name = "no_sse",
+    values = {
+        "define": "no_sse=1",
+    },
+)
+
+# --define no_opt=1 to disable compiler optimizations (-O0)
+# rather than taking the default full optimizaiton (-O3)
+config_setting(
+    name = "no_opt",
+    values = {
+        "define": "no_opt=1",
+    },
 )

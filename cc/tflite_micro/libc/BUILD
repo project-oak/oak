@@ -28,14 +28,14 @@ cc_library(
         "misc.cc",
         "stdlib.c",
     ] + select({
-        "//cc/tflite_micro/oak:no_sse": ["string.c"],
+        "//cc/tflite_micro:no_sse": ["string.c"],
         "//conditions:default": glob(["string/*.S"]) + ["string/memset.cc"],
     }),
     hdrs = glob(["**/*.h"]) + [
         "strtox.c",
     ] + select({
-        "//cc/tflite_micro/oak:no_sse": [],
+        "//cc/tflite_micro:no_sse": [],
         "//conditions:default": glob(["string/*.S"]),
     }),
-    copts = ["-Icc/tflite_micro/oak/libc/include"],
+    copts = ["-Icc/tflite_micro/libc/include"],
 )

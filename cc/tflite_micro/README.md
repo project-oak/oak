@@ -14,53 +14,52 @@ cc/tflite_micro
 |   To upgrade/downgrade tflm, simply regenerate its sources and replace the `generated`
 |   folder completely.
 |
-|-- oak
-|   |-- apps
-|   |   All tflite model apps are put under this folder.
-|   |   |-- hello_world
-|   |   |   hello_world tflite model app.
-|   |   |
-|   |   |-- BUILD
-|   |   |   Provide common dependencies shared by all tflite model apps.
-|   |   |
-|   |   |-- start.S
-|   |   |   Used by tflite model apps to generate freestanding and executable binary
-|   |   |   to run on Linux.
-|   |
-|   |-- include
-|   |   Provide Oak-specific declarations to tflite model apps.
-|   |
-|   |-- libc
-|   |   A pico libc linked by tflm and only required apis are implemented.
-|   |   bsearch and optimized (by SIMD instruction set i.e. SSE2/SSSE3/SSE4/AVX2) string apis
-|   |   are sourced and modified from Android bionic libc*.
-|   |   misc.cc implements apis required by tflm and releated/specific to Oak trusted execution environment.
-|   |   Other sources are sourced from Google nanolibc**, which currently misses bsearch,
-|   |   string-to-{float|double} and most apis are implemented in an non-optimized way for
-|   |   better portability.
-|   |
-|   |   Oak-specific modifications are enclosed by:
-|   |   /* Oak modification: START */
-|   |   ...
-|   |   /* Oak modification: END */
-|   |
-|   |-- libgcc
-|   |   A pico libgcc implements clrsb GCC builtin function required by tflm.
-|   |
-|   |-- libm
-|   |   A pico libm implements a set of complementary math apis required by tflm.
-|   |   To build freestanding model app binary, compiler links static libm by default (-lm).
-|   |   To build Oak freestanding model app binary compiled and linked with Oak Restricted Kernel
-|   |   and Oak TensorFlow Service, this is a complement to libm.rs that Oak Restricted Kernel implements.
+|-- apps
+|   All tflite model apps are put under this folder.
+|   |-- hello_world
+|   |   hello_world tflite model app.
 |   |
 |   |-- BUILD
-|   |   Provide Oak-specific build options and shared header/source targets.
+|   |   Provide common dependencies shared by all tflite model apps.
 |   |
-|   |-- build_defs.bzl
-|   |   Provide Oak-specific compiler options, linker options and tool macros.
-|   |
-|   |-- debug_log.cc
-|   |   Implement Oak-specific debug logging required by tflm micro-printf.
+|   |-- start.S
+|   |   Used by tflite model apps to generate freestanding and executable binary
+|   |   to run on Linux.
+|
+|-- include
+|   Provide Oak-specific declarations to tflite model apps.
+|
+|-- libc
+|   A pico libc linked by tflm and only required apis are implemented.
+|   bsearch and optimized (by SIMD instruction set i.e. SSE2/SSSE3/SSE4/AVX2) string apis
+|   are sourced and modified from Android bionic libc*.
+|   misc.cc implements apis required by tflm and releated/specific to Oak trusted execution environment.
+|   Other sources are sourced from Google nanolibc**, which currently misses bsearch,
+|   string-to-{float|double} and most apis are implemented in an non-optimized way for
+|   better portability.
+|
+|   Oak-specific modifications are enclosed by:
+|   /* Oak modification: START */
+|   ...
+|   /* Oak modification: END */
+|
+|-- libgcc
+|   A pico libgcc implements clrsb GCC builtin function required by tflm.
+|
+|-- libm
+|   A pico libm implements a set of complementary math apis required by tflm.
+|   To build freestanding model app binary, compiler links static libm by default (-lm).
+|   To build Oak freestanding model app binary compiled and linked with Oak Restricted Kernel
+|   and Oak TensorFlow Service, this is a complement to libm.rs that Oak Restricted Kernel implements.
+|
+|-- BUILD
+|   Provide Oak-specific build options and shared header/source targets.
+|
+|-- build_defs.bzl
+|   Provide Oak-specific compiler options, linker options and tool macros.
+|
+|-- debug_log.cc
+|   Implement Oak-specific debug logging required by tflm micro-printf.
 |
 |-- tools
 |   |-- BUILD
@@ -87,7 +86,7 @@ example:
 1. Build the binary that runs on Linux
 
    ```bash
-   bazel build //cc/tflite_micro/oak/apps/hello_world:hello_world_bin
+   bazel build //cc/tflite_micro/apps/hello_world:hello_world_bin
    ```
 
    The binary is built with -nostdlib which removes dependencies of standard
@@ -136,7 +135,7 @@ mapped to correct lines of source code.
 Use hello_world model app as example,
 
 ```bash
-bazel build --copt=-g --strip=never --define=no_opt=1 //cc/tflite_micro/oak/apps/hello_world:hello_world_bin
+bazel build --copt=-g --strip=never --define=no_opt=1 //cc/tflite_micro/apps/hello_world:hello_world_bin
 ```
 
 `--define=no_opt=1` is optional if correct source mapping is not needed.
@@ -153,7 +152,7 @@ Next, configure i.e. lldb for VS Code,
       "type": "lldb",
       "request": "launch",
       "name": "Debug",
-      "program": "${workspaceFolder}/bazel-bin/cc/tflite_micro/oak/apps/hello_world/hello_world_freestanding_bin",
+      "program": "${workspaceFolder}/bazel-bin/cc/tflite_micro/apps/hello_world/hello_world_freestanding_bin",
       "args": [],
       "cwd": "${workspaceFolder}",
       "sourceMap": {

@@ -21,7 +21,7 @@ use std::{
 };
 
 const SCHEMA: &str = "schema.fbs";
-const TFLITE_APP_DIR: &str = "cc/tflite_micro/oak/apps/hello_world";
+const TFLITE_APP_DIR: &str = "cc/tflite_micro/apps/hello_world";
 const TFLITE_APP_LIBRARY_NAME: &str = "hello_world_app";
 const TFLITE_SOURCES_PATTERN: &str = "cc/tflite_micro/**/*";
 

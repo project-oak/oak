@@ -17,7 +17,7 @@
 #include "output_handler.h"
 #include "tflite_micro.h"
 
-#include "cc/tflite_micro/oak/apps/hello_world/hello_world_model_data.h"
+#include "cc/tflite_micro/apps/hello_world/hello_world_model_data.h"
 #include "tensorflow/lite/micro/all_ops_resolver.h"
 #include "tensorflow/lite/micro/micro_error_reporter.h"
 #include "tensorflow/lite/micro/micro_allocator.h"

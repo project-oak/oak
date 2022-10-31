@@ -15,7 +15,7 @@
 #
 
 load(
-    "//cc/tflite_micro/oak:build_defs.bzl",
+    "//cc/tflite_micro:build_defs.bzl",
     "generate_cc_arrays",
     "oak_copts",
 )
@@ -68,13 +68,13 @@ cc_library(
     }),
     hdrs = ["output_handler.h"],
     copts = oak_copts() + [
-        "-Icc/tflite_micro/oak/apps/hello_world",
+        "-Icc/tflite_micro/apps/hello_world",
     ],
     linkstatic = 1,
     deps = [
         ":hello_world_model",
         "//cc/tflite_micro:tflm-generated",
-        "//cc/tflite_micro/oak:hdrs",
+        "//cc/tflite_micro:hdrs",
     ],
 )
 
@@ -93,7 +93,7 @@ cc_binary(
     linkopts = ["-nostdlib"],
     deps = [
         ":hello_world",
-        "//cc/tflite_micro/oak:hdrs",
-        "//cc/tflite_micro/oak/apps:start_file",
+        "//cc/tflite_micro:hdrs",
+        "//cc/tflite_micro/apps:start_file",
     ],
 )

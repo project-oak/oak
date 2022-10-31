@@ -45,16 +45,16 @@ def oak_copts():
         "-Wnon-virtual-dtor",
         "-DFARMHASH_NO_CXX_STRING",
         "-DTF_LITE_STATIC_MEMORY",
-        "-Icc/tflite_micro/oak/include",
+        "-Icc/tflite_micro/include",
         "-Icc/tflite_micro/generated",
         "-Icc/tflite_micro/generated/third_party/flatbuffers/include",
         "-Icc/tflite_micro/generated/third_party/gemmlowp",
         "-Icc/tflite_micro/generated/third_party/ruy",
     ] + select({
-        "//cc/tflite_micro/oak:no_sse": [],
+        "//cc/tflite_micro:no_sse": [],
         "//conditions:default": ["-msse4.2"],
     }) + select({
-        "//cc/tflite_micro/oak:no_opt": ["-O0"],
+        "//cc/tflite_micro:no_opt": ["-O0"],
         "//conditions:default": ["-O2", "-DNDEBUG"],
     })
 
