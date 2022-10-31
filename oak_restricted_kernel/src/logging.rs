@@ -17,7 +17,11 @@
 use atomic_refcell::AtomicRefCell;
 use core::fmt::Write;
 use lazy_static::lazy_static;
-use sev_guest::io::PortFactoryWrapper;
+use log::info;
+use sev_guest::{
+    io::PortFactoryWrapper,
+    msr::{get_sev_status, SevStatus},
+};
 use sev_serial::SerialPort;
 
 extern crate log;
@@ -25,9 +29,15 @@ extern crate log;
 // Base I/O port for the first serial port in the system (colloquially known as COM1)
 static COM1_BASE: u16 = 0x3f8;
 
+// TODO(#3403): Stop initializing lazily once we have an equivalent to `std::sync::OnceLock`.
 lazy_static! {
     pub(crate) static ref SERIAL1: AtomicRefCell<SerialPort> = {
-        let port_factory = PortFactoryWrapper::new_raw();
+        let sev_status = get_sev_status().unwrap_or(SevStatus::empty());
+        let port_factory = if sev_status.contains(SevStatus::SEV_ES_ENABLED) {
+            crate::ghcb::get_ghcb_port_factory()
+        } else {
+            PortFactoryWrapper::new_raw()
+        };
         // Our contract with the launcher requires the first serial port to be
         // available, so assuming the loader adheres to it, this is safe.
         let mut port = unsafe { SerialPort::new(COM1_BASE, port_factory) };
@@ -63,4 +73,6 @@ static LOGGER: Logger = Logger {};
 pub fn init_logging() {
     log::set_logger(&LOGGER).unwrap();
     log::set_max_level(log::LevelFilter::Debug);
+    // Log a message to ensure the serial logging channel is intialized.
+    info!("Logging initialised.");
 }

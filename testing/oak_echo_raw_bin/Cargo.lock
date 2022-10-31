@@ -202,6 +202,8 @@ dependencies = [
  "rust-hypervisor-firmware-virtio",
  "sev_guest",
  "sev_serial",
+ "spinning_top",
+ "static_assertions",
  "strum",
  "virtio",
  "x86_64",

@@ -18,14 +18,17 @@ use crate::mm::{
     encrypted_mapper::{EncryptedPageTable, MemoryEncryption, PhysOffset},
     Mapper, PageTableFlags, ENCRYPTED_BIT_POSITION, KERNEL_OFFSET,
 };
+use lazy_static::lazy_static;
 use sev_guest::{
     ghcb::{Ghcb, GhcbProtocol},
+    io::{GhcbIoFactory, PortFactoryWrapper},
     msr::{
-        change_snp_page_state, register_ghcb_location, PageAssignment, RegisterGhcbGpaRequest,
-        SnpPageStateChangeRequest,
+        change_snp_page_state, get_sev_status, register_ghcb_location, PageAssignment,
+        RegisterGhcbGpaRequest, SevStatus, SnpPageStateChangeRequest,
     },
     Translator,
 };
+use spinning_top::Spinlock;
 use x86_64::{
     addr::{PhysAddr, VirtAddr},
     align_down,
@@ -35,7 +38,7 @@ use x86_64::{
     },
 };
 
-/// The mask for the encrypted bit
+/// The mask for the encrypted bit.
 const ENCRYPTED_BIT: u64 = 1 << ENCRYPTED_BIT_POSITION;
 
 /// A wrapper to ensure that the GHCB is alone in a 2MiB page.
@@ -53,8 +56,41 @@ static_assertions::assert_eq_size!(GhcbAlignmentWrapper, [u8; Size2MiB::SIZE as 
 
 static mut GHCB_WRAPPER: GhcbAlignmentWrapper = GhcbAlignmentWrapper { ghcb: Ghcb::new() };
 
+pub fn get_ghcb_port_factory() -> PortFactoryWrapper {
+    PortFactoryWrapper::Ghcb(GhcbIoFactory::new(&GHCB_PROTOCOL))
+}
+
+// TODO(#3403): Stop initializing lazily once we have an equivalent to `std::sync::OnceLock`.
+lazy_static! {
+    static ref GHCB_PROTOCOL: Spinlock<GhcbProtocol<'static, Ghcb>> = {
+        let sev_status = get_sev_status().unwrap_or(SevStatus::empty());
+        Spinlock::new(init_ghcb_early(sev_status.contains(SevStatus::SNP_ACTIVE)))
+    };
+}
+
+/// Shares the page containing the GHCB with the hypervisor again.
+///
+/// This should be called as soon as the kernel memory has been initialised, as that would have
+/// caused the page to be marked as encrypted.
+pub fn reshare_ghcb<M: Mapper<Size2MiB>>(mapper: &mut M) {
+    // Safety: we only use the reference to calculate the address and never dereference it.
+    let ghcb_address = unsafe { VirtAddr::from_ptr(&GHCB_WRAPPER as *const GhcbAlignmentWrapper) };
+    // Safety: we only change the encrypted flag, all other flags for the GHCB pages are as they
+    // were set during the kernel memory initialisation.
+    unsafe {
+        set_single_2mib_page_flags(
+            ghcb_address,
+            mapper,
+            PageTableFlags::PRESENT
+                | PageTableFlags::WRITABLE
+                | PageTableFlags::GLOBAL
+                | PageTableFlags::NO_EXECUTE,
+        );
+    }
+}
+
 /// Initializes the GHCB and shares it with the hypervisor during early boot.
-pub fn init_ghcb_early(snp_enabled: bool) -> GhcbProtocol<'static, Ghcb> {
+fn init_ghcb_early(snp_enabled: bool) -> GhcbProtocol<'static, Ghcb> {
     // Safety: This is called only during early boot, so there is only a single execution context.
     let ghcb = unsafe { &mut GHCB_WRAPPER.ghcb };
     let translate = |vaddr: VirtAddr| {
