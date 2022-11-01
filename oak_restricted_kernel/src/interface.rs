@@ -16,7 +16,7 @@
 
 //! Exported interface for interacting with the kernel from C.
 
-use crate::{i8042::shutdown, logging::SERIAL1};
+use crate::{logging::SERIAL1, shutdown::shutdown};
 use alloc::alloc::{alloc, dealloc, Layout};
 use core::{
     cell::{LazyCell, RefCell},

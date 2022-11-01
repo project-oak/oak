@@ -40,7 +40,6 @@ mod avx;
 mod descriptors;
 mod elf;
 mod ghcb;
-pub mod i8042;
 #[cfg(feature = "c_interface")]
 mod interface;
 mod interrupts;
@@ -50,6 +49,7 @@ mod memory;
 mod mm;
 #[cfg(feature = "serial_channel")]
 mod serial;
+pub mod shutdown;
 #[cfg(feature = "simple_io_channel")]
 mod simpleio;
 #[cfg(any(feature = "virtio_console_channel", feature = "vsock_channel"))]
@@ -196,5 +196,5 @@ fn get_channel<'a, X: Translator, A: Allocator + Sync>(
 /// panic_handler function in individual bootloader crates.
 pub fn panic(info: &PanicInfo) -> ! {
     error!("PANIC: {}", info);
-    i8042::shutdown();
+    shutdown::shutdown();
 }
