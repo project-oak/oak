@@ -6,7 +6,7 @@ var sourcesIndex = JSON.parse('{\
 "lookup_data_checker":["",[],["main.rs"]],\
 "lookup_data_generator":["",[],["data.rs","lib.rs"]],\
 "oak_channel":["",[],["client.rs","frame.rs","lib.rs","message.rs","server.rs"]],\
-"oak_echo_runtime":["",[],["lib.rs"]],\
+"oak_echo_service":["",[],["lib.rs"]],\
 "oak_functions_abi":["",[],["lib.rs"]],\
 "oak_functions_client":["",[],["lib.rs","rekor.rs"]],\
 "oak_functions_extension":["",[],["lib.rs"]],\

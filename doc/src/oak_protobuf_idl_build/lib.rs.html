@@ -274,9 +274,6 @@
 <span id="274">274</span>
 <span id="275">275</span>
 <span id="276">276</span>
-<span id="277">277</span>
-<span id="278">278</span>
-<span id="279">279</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -360,7 +357,6 @@
         <span class="macro">format!</span>(<span class="string">&quot;&quot;</span>),
         <span class="macro">format!</span>(<span class="string">&quot;impl &lt;S: {service_name}&gt; ::oak_protobuf_idl::Transport for {server_name}&lt;S&gt; {{&quot;</span>),
         <span class="macro">format!</span>(<span class="string">&quot;    fn invoke(&amp;mut self, request_bytes: &amp;[u8]) -&gt; Result&lt;::prost::alloc::vec::Vec&lt;u8&gt;, !&gt; {{&quot;</span>),
-        <span class="macro">format!</span>(<span class="string">&quot;        use ::prost::Message;&quot;</span>),
         <span class="macro">format!</span>(<span class="string">&quot;        let response_bytes = self&quot;</span>),
         <span class="macro">format!</span>(<span class="string">&quot;            .invoke_inner(request_bytes)&quot;</span>),
         <span class="macro">format!</span>(<span class="string">&quot;            .map_or_else(&quot;</span>),
@@ -375,11 +371,10 @@
         <span class="macro">format!</span>(<span class="string">&quot;impl &lt;S: {service_name}&gt; {server_name}&lt;S&gt; {{&quot;</span>),
         <span class="comment">// invoke_inner returns either a successful response body, or an error represented as Status.
         </span><span class="macro">format!</span>(<span class="string">&quot;    fn invoke_inner(&amp;mut self, request_bytes: &amp;[u8]) -&gt; Result&lt;::prost::alloc::vec::Vec&lt;u8&gt;, ::oak_protobuf_idl::Status&gt; {{&quot;</span>),
-        <span class="macro">format!</span>(<span class="string">&quot;        use ::prost::Message;&quot;</span>),
         <span class="macro">format!</span>(<span class="string">&quot;        let request = ::oak_protobuf_idl::Request::decode(request_bytes).map_err(|err| {{&quot;</span>),
         <span class="macro">format!</span>(<span class="string">&quot;            ::oak_protobuf_idl::Status::new_with_message(&quot;</span>),
         <span class="macro">format!</span>(<span class="string">&quot;                ::oak_protobuf_idl::StatusCode::Internal,&quot;</span>),
-        <span class="macro">format!</span>(<span class="string">&quot;                format!(\&quot;Client failed to deserialize the response: {{:?}}\&quot;, err),&quot;</span>),
+        <span class="macro">format!</span>(<span class="string">&quot;                ::oak_protobuf_idl::format!(\&quot;Client failed to deserialize the response: {{:?}}\&quot;, err),&quot;</span>),
         <span class="macro">format!</span>(<span class="string">&quot;            )&quot;</span>),
         <span class="macro">format!</span>(<span class="string">&quot;        }})?;&quot;</span>),
         <span class="macro">format!</span>(<span class="string">&quot;        match request.method_id {{&quot;</span>),
@@ -478,11 +473,10 @@
     <span class="kw">let </span>method_name = method_name(method);
     <span class="prelude-val">Ok</span>(<span class="macro">vec!</span>[
         <span class="macro">format!</span>(<span class="string">&quot;            {method_id} =&gt; {{&quot;</span>),
-        <span class="macro">format!</span>(<span class="string">&quot;                use ::prost::Message;&quot;</span>),
         <span class="macro">format!</span>(<span class="string">&quot;                let request = {request_type}::decode(request.body.as_ref()).map_err(|err| {{&quot;</span>),
         <span class="macro">format!</span>(<span class="string">&quot;                    ::oak_protobuf_idl::Status::new_with_message(&quot;</span>),
         <span class="macro">format!</span>(<span class="string">&quot;                        ::oak_protobuf_idl::StatusCode::Internal,&quot;</span>),
-        <span class="macro">format!</span>(<span class="string">&quot;                        format!(\&quot;Service failed to deserialize the request: {{:?}}\&quot;, err)&quot;</span>),
+        <span class="macro">format!</span>(<span class="string">&quot;                        ::oak_protobuf_idl::format!(\&quot;Service failed to deserialize the request: {{:?}}\&quot;, err)&quot;</span>),
         <span class="macro">format!</span>(<span class="string">&quot;                    )&quot;</span>),
         <span class="macro">format!</span>(<span class="string">&quot;                }})?;&quot;</span>),
         <span class="macro">format!</span>(<span class="string">&quot;                let response = self.service.{method_name}(&amp;request)?;&quot;</span>),

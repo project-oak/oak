@@ -163,6 +163,8 @@
 <span id="163">163</span>
 <span id="164">164</span>
 <span id="165">165</span>
+<span id="166">166</span>
+<span id="167">167</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -218,7 +220,9 @@
 </span><span class="attribute">#[derive(Debug, PartialEq, Eq, Clone)]
 </span><span class="kw">pub struct </span>RequestMessage {
     <span class="kw">pub </span>invocation_id: InvocationId,
-    <span class="kw">pub </span>method_id: MethodId,
+    <span class="comment">// TODO(#3385): Remove this field when the protobuf IDL is used everywhere, since the method id
+    // will then be part of the request body from the point of view of this struct.
+    </span><span class="kw">pub </span>method_id: MethodId,
     <span class="kw">pub </span>body: Vec&lt;u8&gt;,
 }
 

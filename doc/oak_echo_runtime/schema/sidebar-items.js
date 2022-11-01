@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"enum":[["EchoRequestOffset",""],["EchoResponseOffset",""]],"struct":[["EchoRequest",""],["EchoRequestArgs",""],["EchoRequestBuilder",""],["EchoResponse",""],["EchoResponseArgs",""],["EchoResponseBuilder",""],["EchoRuntimeServer",""]],"trait":[["EchoRuntime",""]]};
