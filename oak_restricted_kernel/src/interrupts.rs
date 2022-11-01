@@ -18,8 +18,9 @@ use crate::i8042;
 use core::{arch::asm, ops::Deref};
 use lazy_static::lazy_static;
 use log::error;
-use sev_guest::interrupts::{
-    mutable_interrupt_handler_with_error_code, MutableInterruptStackFrame,
+use sev_guest::{
+    interrupts::{mutable_interrupt_handler_with_error_code, MutableInterruptStackFrame},
+    msr::get_cpuid_for_vc_exception,
 };
 use x86_64::{
     registers::control::Cr2,
@@ -131,10 +132,25 @@ mutable_interrupt_handler_with_error_code!(
         stack_frame: &mut MutableInterruptStackFrame,
         error_code: u64,
     ) {
-        error!("KERNEL PANIC: UNHANDLED #VC EXCEPTION");
-        error!("Instruction pointer: {:#016x}", stack_frame.rip.as_u64());
-        error!("Error code: {:?}", error_code);
-        i8042::shutdown();
+        match error_code {
+            0x72 => {
+                if stack_frame.rcx != 0 {
+                    error!("KERNEL PANIC: CPUID SUB-LEAF REQUESTED");
+                    error!("Instruction pointer: {:#016x}", stack_frame.rip.as_u64());
+                    error!("RAX: {:#016x}", stack_frame.rax);
+                    error!("RCX: {:#016x}", stack_frame.rcx);
+                    i8042::shutdown();
+                }
+                let leaf = stack_frame.rax as u32;
+                get_cpuid_for_vc_exception(leaf, stack_frame).expect("Error reading CPUID");
+            }
+            _ => {
+                error!("KERNEL PANIC: UNHANDLED #VC EXCEPTION");
+                error!("Instruction pointer: {:#016x}", stack_frame.rip.as_u64());
+                error!("Error code: {:#x}", error_code);
+                i8042::shutdown();
+            }
+        }
     }
 );
 

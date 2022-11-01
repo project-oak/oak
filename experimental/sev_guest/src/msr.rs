@@ -34,7 +34,7 @@
 //! SEV-SNP AP creation NAE should be used instead. See section 4.3.2 of
 //! <https://developer.amd.com/wp-content/resources/56421.pdf>.
 
-use crate::instructions::vmgexit;
+use crate::{instructions::vmgexit, interrupts::MutableInterruptStackFrame};
 //use anyhow::{anyhow, bail, Result};
 use bitflags::bitflags;
 use snafu::prelude::*;
@@ -151,7 +151,7 @@ pub enum CpuidRegister {
 
 /// A request to execute CPUID for a specific leaf and return one of the result registers.
 pub struct CpuidRequest {
-    /// The CPUID leaf to request. Sub-leafs are not supported byt this protocol.
+    /// The CPUID leaf to request. Sub-leafs are not supported by this protocol.
     pub leaf: u32,
     /// The register to return from the result. This protocol only supports a single register at a
     /// time.
@@ -194,6 +194,38 @@ impl TryFrom<u64> for CpuidResponse {
 pub fn get_cpuid(request: CpuidRequest) -> Result<CpuidResponse, &'static str> {
     write_protocol_msr_and_exit(request.into());
     read_protocol_msr().try_into()
+}
+
+/// Gets the CPUID values for EAX, EBX, ECX and EDX and updates the interrupt stackframe with these.
+pub fn get_cpuid_for_vc_exception(
+    leaf: u32,
+    stack_frame: &mut MutableInterruptStackFrame,
+) -> Result<(), &'static str> {
+    stack_frame.rax = get_cpuid(CpuidRequest {
+        leaf,
+        register: CpuidRegister::Eax,
+    })?
+    .value as u64;
+
+    stack_frame.rbx = get_cpuid(CpuidRequest {
+        leaf,
+        register: CpuidRegister::Ebx,
+    })?
+    .value as u64;
+
+    stack_frame.rcx = get_cpuid(CpuidRequest {
+        leaf,
+        register: CpuidRegister::Ecx,
+    })?
+    .value as u64;
+
+    stack_frame.rdx = get_cpuid(CpuidRequest {
+        leaf,
+        register: CpuidRegister::Edx,
+    })?
+    .value as u64;
+
+    Ok(())
 }
 
 /// A request for the hypervisor's preferred location for the GHCB page.
