@@ -49,11 +49,11 @@ pub struct CpuidInput {
     pub ecx: u32,
     /// The input value of the XCR0 extended control register.
     ///
-    /// Only required when a request for CPUID 0000_000D is made. Must be zero otherwise.
+    /// Only required when a request for CPUID 0x0000_000D is made. Must be zero otherwise.
     pub xcr0: u64,
     /// The value of the IA32_XSS model-specific register.
     ///
-    /// Only required when a request for CPUID 0000_000D is made and the guest supports the XSS
+    /// Only required when a request for CPUID 0x0000_000D is made and the guest supports the XSS
     /// MSR. Must be zero otherwise.
     pub xss: u64,
 }
