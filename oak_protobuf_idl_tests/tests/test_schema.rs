@@ -25,6 +25,7 @@ use oak_protobuf_idl::Transport;
 
 mod test_schema {
     #![allow(dead_code)]
+    use prost::Message;
     include!(concat!(env!("OUT_DIR"), "/oak.protobuf_idl.tests.rs"));
 }
 

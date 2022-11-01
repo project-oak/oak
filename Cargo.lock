@@ -2351,20 +2351,20 @@ dependencies = [
  "bitflags",
  "flatbuffers",
  "oak_idl",
+ "oak_protobuf_idl",
  "static_assertions",
 ]
 
 [[package]]
-name = "oak_echo_runtime"
+name = "oak_echo_service"
 version = "0.1.0"
 dependencies = [
  "async-trait",
- "flatbuffers",
  "hashbrown",
  "log",
- "oak_idl",
- "oak_idl_gen_services",
- "oak_idl_gen_structs",
+ "oak_protobuf_idl",
+ "oak_protobuf_idl_build",
+ "prost 0.11.0",
 ]
 
 [[package]]

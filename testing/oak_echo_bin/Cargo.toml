@@ -15,7 +15,7 @@ vsock_channel = ["oak_restricted_kernel/vsock_channel"]
 simple_io_channel = ["oak_restricted_kernel/simple_io_channel"]
 
 [dependencies]
-oak_echo_runtime = { path = "../oak_echo_runtime" }
+oak_echo_service = { path = "../oak_echo_service" }
 log = "*"
 oak_channel = { path = "../../oak_channel" }
 oak_restricted_kernel = { path = "../../oak_restricted_kernel", default-features = false }

@@ -15,14 +15,5 @@
 //
 
 fn main() {
-    oak_protobuf_idl_build::compile(
-        &[format!(
-            "{}oak_protobuf_idl_tests/proto/test_schema.proto",
-            env!("WORKSPACE_ROOT")
-        )],
-        &[format!(
-            "{}oak_protobuf_idl_tests/proto",
-            env!("WORKSPACE_ROOT")
-        )],
-    );
+    oak_protobuf_idl_build::compile(&["proto/oak_echo_service.proto"], &["."]);
 }

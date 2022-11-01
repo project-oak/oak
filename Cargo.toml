@@ -51,7 +51,7 @@ members = [
   "oak_tensorflow_service",
   "sev_serial",
   "oak_simple_io",
-  "testing/oak_echo_runtime",
+  "testing/oak_echo_service",
   "trusted_shuffler/backend",
   "trusted_shuffler/client",
   "trusted_shuffler/common",

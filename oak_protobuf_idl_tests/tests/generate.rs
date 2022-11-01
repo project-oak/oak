@@ -31,7 +31,7 @@ fn generate() {
     for output in OUTPUTS.into_iter() {
         std::fs::copy(
             format!("{}/{}", env!("OUT_DIR"), output),
-            format!("{}.txt", output),
+            format!("out/{}.txt", output),
         )
         .unwrap();
     }
