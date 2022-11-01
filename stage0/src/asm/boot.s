@@ -23,20 +23,19 @@ _start :
 
 .align 16
 .code32
-.global vc_handler
-vc_handler:
-    # For now, let's assume that the #VC interrupt is triggered when we call the CPUID instruction
-    # in the SEV detection code, below, while running under SEV-{ES, SNP}. Thus, the fact that we're
-    # in this handler altogether will suffice as evidence that we support the SEV_STATUS MSR.
-    # It's probably not worth implementing a proper interrupt handler here (that knows how to use the
-    # GHCB protocol) as it's only used in the bootstrap code.
-    pop %eax        # ignore the error code for now
-    pop %eax        # pop the return address
-    add $2, %eax    # increment it by 2 (size of the CPUID instruction)
-    push %eax       # push it back on stack for iret
-    mov $0xA, %eax  # return value for cpuid saying memory encryption is enabled
-                    # This sets bits for SEV-ES (bit 4) and SEV (bit 1) in the response.
-    iret            # go back
+.global gp_handler
+gp_handler:
+    pop %eax              # ignore the error code for now
+    pop %eax              # pop the return address
+    cmpw $0x320F, (%eax)  # are we trying to execute RDMSR?
+    jne 2f                # if not, skip ahead
+    add $2, %eax          # increment it by 2 (size of the CPUID instruction)
+    push %eax             # push it back on stack for iret
+    xor %eax, %eax        # zero out RAX
+    xor %edx, %edx        # zero out RDX
+    iret                  # go back
+    2:                    # this wasn't because RDMSR
+    int $8                # trigger a double fault and crash
 
 _protected_mode_start:
     # Switch to a flat 32-bit data segment, giving us access to all 4G of memory.
@@ -49,15 +48,6 @@ _protected_mode_start:
 
     # Determine if we're running under SEV. Keep track of which bit is the encrypted bit in %rsi.
     mov $0, %esi              # by default, no encryption
-    mov $0x8000001F, %eax     # CPUID page 8000_001Fh -- Encrypted Memory Capabilities.
-                              # See Section E.4.17 in AMD64 Architecture Programmer's Manual, Volume 3
-                              # for more details.
-    cpuid
-    and $3, %eax              # Bit 0 - Secure Memory Encryption supported
-                              # Bit 1 - Secure Encrypted Virtualization supported
-    test %eax, %eax
-    je no_encryption          # skip reading SEV_STATUS if memory encryption is not supported
-    # We're running under something capable of SEV, so it's safe to read the SEV_STATUS MSR.
     mov $0xc0010131, %ecx     # SEV_STATUS MSR. See Section 15.34.10 in AMD64 Architecture Programmer's
                               # Manual, Volume 2 for more details.
     rdmsr                     # EDX:EAX <- MSR[ECX]
