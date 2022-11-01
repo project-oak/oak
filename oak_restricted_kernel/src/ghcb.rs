@@ -23,8 +23,8 @@ use sev_guest::{
     ghcb::{Ghcb, GhcbProtocol},
     io::{GhcbIoFactory, PortFactoryWrapper},
     msr::{
-        change_snp_page_state, get_sev_status, register_ghcb_location, PageAssignment,
-        RegisterGhcbGpaRequest, SevStatus, SnpPageStateChangeRequest,
+        change_snp_state_for_frame, get_sev_status, register_ghcb_location, PageAssignment,
+        RegisterGhcbGpaRequest, SevStatus,
     },
 };
 use spinning_top::Spinlock;
@@ -33,7 +33,6 @@ use x86_64::{
     registers::control::Cr3,
     structures::paging::{
         mapper::PageTableFrameMapping, MappedPageTable, Page, PageSize, PhysFrame, Size2MiB,
-        Size4KiB,
     },
 };
 
@@ -105,7 +104,11 @@ fn init_ghcb_early(snp_enabled: bool) -> GhcbProtocol<'static, Ghcb> {
         )
         .expect("The GHCB physical address is not correctly aligned");
 
-        mark_frame_shared_in_rmp(&ghcb_frame);
+        // Since we don't have the GHCB set up already we need to use the MSR protocol to mark every
+        // individual 4KiB area in the 2MiB page as shared in the RMP. It is OK to crash if we
+        // cannot share the GHCB with the hypervisor.
+        change_snp_state_for_frame(&ghcb_frame, PageAssignment::Shared)
+            .expect("Could not change SNP state for frame.");
 
         let ghcb_location_request =
             RegisterGhcbGpaRequest::new(ghcb_frame.start_address().as_u64() as usize)
@@ -148,21 +151,6 @@ fn get_identity_mapped_encrypted_page_table<'a>(
     // valid address pointing to a valid page table.
     let pml4 = unsafe { &mut *offset_mapper.frame_to_pointer(l4_frame) };
     EncryptedPageTable::new(pml4, offset, encryption)
-}
-
-/// Marks a 2MiB physical frame as shared in the SEV-SNP reverse-map table (RMP).
-fn mark_frame_shared_in_rmp(frame: &PhysFrame<Size2MiB>) {
-    let raw_address = frame.start_address().as_u64();
-    // Since we don't have the GHCB set up already we need to use the MSR protocol to mark every
-    // individual 4KiB area in the 2MiB page as shared.
-    for i in 0..512 {
-        let request = SnpPageStateChangeRequest::new(
-            (raw_address + i * Size4KiB::SIZE) as usize,
-            PageAssignment::Shared,
-        )
-        .expect("Invalid page address");
-        change_snp_page_state(request).expect("Couldn't change page state");
-    }
 }
 
 /// Gets the 2MiB memory page that contains the GHCB.

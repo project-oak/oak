@@ -39,7 +39,10 @@ use crate::instructions::vmgexit;
 use bitflags::bitflags;
 use snafu::prelude::*;
 use strum::FromRepr;
-use x86_64::registers::model_specific::Msr;
+use x86_64::{
+    registers::model_specific::Msr,
+    structures::paging::{PageSize, PhysFrame, Size2MiB, Size4KiB},
+};
 
 /// The version of the GHCB MSR protocol supported by this library. This represents the version
 /// specific to AMD SEV-SNP.
@@ -376,6 +379,22 @@ pub fn change_snp_page_state(request: SnpPageStateChangeRequest) -> Result<(), &
     // Ensure that the page state change was successful.
     if response.error_code != 0 {
         return Err("Page state change failed");
+    }
+    Ok(())
+}
+
+/// Changes the SNP page state assignments in the RMP for a 2MiB physical frame.
+pub fn change_snp_state_for_frame(
+    frame: &PhysFrame<Size2MiB>,
+    assignment: PageAssignment,
+) -> Result<(), &'static str> {
+    let raw_address = frame.start_address().as_u64();
+    for i in 0..512 {
+        let request = SnpPageStateChangeRequest::new(
+            (raw_address + i * Size4KiB::SIZE) as usize,
+            assignment,
+        )?;
+        change_snp_page_state(request)?;
     }
     Ok(())
 }

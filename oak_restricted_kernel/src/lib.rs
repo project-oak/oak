@@ -64,7 +64,7 @@ use linked_list_allocator::LockedHeap;
 use log::{error, info};
 use oak_channel::Channel;
 use oak_linux_boot_params::BootParams;
-use sev_guest::msr::{get_sev_status, SevStatus};
+use sev_guest::msr::{change_snp_state_for_frame, get_sev_status, PageAssignment, SevStatus};
 use strum::{EnumIter, EnumString, IntoEnumIterator};
 use x86_64::{
     structures::paging::{Page, Size2MiB},
@@ -116,6 +116,16 @@ pub fn start_kernel(info: &BootParams) -> Box<dyn Channel> {
             .translate_physical_frame(guest_host_frames.end)
             .unwrap(),
     );
+
+    // If we are running on SNP we have to mark the frames as shared in the RMP. It is OK to crash
+    // if we cannot mark the pages as shared in the RMP.
+    if sev_status.contains(SevStatus::SNP_ACTIVE) {
+        // TODO(#3414): Use the GHCB protocol when it is available.
+        for frame in guest_host_frames {
+            change_snp_state_for_frame(&frame, PageAssignment::Shared)
+                .expect("Could not change SNP state for frame.");
+        }
+    }
 
     // Safety: initializing the new heap is safe as the frame allocator guarantees we're not
     // overwriting any other memory; writing to the static mut is safe as we're in the
