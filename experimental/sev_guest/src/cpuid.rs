@@ -30,15 +30,38 @@ pub const CPUID_PAGE_SIZE: usize = 4096;
 #[repr(C)]
 #[derive(Debug, FromBytes)]
 pub struct CpuidFunction {
-    /// The input value of the EAX register when CPUID was called. This represents the CPUID leaf.
-    pub eax_in: u32,
-    /// The input value of the ECX register when CPUID was called. This represents the CPUID
-    /// sub-leaf.
-    pub ecx_in: u32,
-    /// The value of the XCR0 extended control register when CPUID was called.
-    pub xcr0_in: u64,
-    /// The value of the IA32_XSS model-specific register when CPUID was called.
-    pub xss_in: u64,
+    /// The input values when CPUID was invoked.
+    input: CpuidInput,
+    /// The resulting register values when CPUID was invoked.
+    output: CpuidOutput,
+    _reserved: u64,
+}
+
+static_assertions::assert_eq_size!(CpuidFunction, [u8; 48]);
+
+/// The required input valus for invoking CPUID.
+#[repr(C)]
+#[derive(Debug, FromBytes)]
+pub struct CpuidInput {
+    /// The input value of the EAX register, which represents the CPUID leaf.
+    pub eax: u32,
+    /// The input value of the ECX register, which represents the CPUID sub-leaf.
+    pub ecx: u32,
+    /// The input value of the XCR0 extended control register.
+    ///
+    /// Only required when a request for CPUID 0000_000D is made. Must be zero otherwise.
+    pub xcr0: u64,
+    /// The value of the IA32_XSS model-specific register.
+    ///
+    /// Only required when a request for CPUID 0000_000D is made and the guest supports the XSS
+    /// MSR. Must be zero otherwise.
+    pub xss: u64,
+}
+
+/// The resulting register values after invoking CPUID.
+#[repr(C)]
+#[derive(Debug, FromBytes)]
+pub struct CpuidOutput {
     /// The EAX register output from calling CPUID.
     pub eax: u32,
     /// The EBX register output from calling CPUID.
@@ -47,7 +70,6 @@ pub struct CpuidFunction {
     pub ecx: u32,
     /// The EDX register output from calling CPUID.
     pub edx: u32,
-    _reserved: u64,
 }
 
 /// Representation of the CPUID page.
