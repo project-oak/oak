@@ -80,11 +80,24 @@ cc/tflite_micro
 
 ## Upgrade/Downgrade Tensorflow Lite for Microcontrollers
 
-We generate a clean set of tflm source tree via its built-in tool [create_tflm_tree.py](https://github.com/tensorflow/tflite-micro/blob/main/tensorflow/lite/micro/tools/project_generation/create_tflm_tree.py) that cuts ~50% sources to be compiled, which also implies less external dependency errors to fix in a bare-metal and freestanding binary development environment.
+We generate a clean set of tflm source tree via its built-in tool
+[create_tflm_tree.py](https://github.com/tensorflow/tflite-micro/blob/main/tensorflow/lite/micro/tools/project_generation/create_tflm_tree.py)
+that cuts ~50% sources to be compiled, which also implies less external
+dependency errors to fix in a bare-metal and freestanding binary development
+environment.
 
-The generated source tree consists of tflm sources and required third-party headers. As we want generated tflm sources residing in the third_party/tflite-micro directory and its third-party dependencies also residing in respective directories under the third_party, corresponding BUILD files consolidating file groups of sources and headers are needed for each of them to be properly depended by the tflite_micro terminal target at cc/tflite_micro/BUILD.
+The generated source tree consists of tflm sources and required third-party
+headers. As we want generated tflm sources residing in the
+third_party/tflite-micro directory and its third-party dependencies also
+residing in respective directories under the third_party, corresponding BUILD
+files consolidating file groups of sources and headers are needed for each of
+them to be properly depended by the tflite_micro terminal target at
+cc/tflite_micro/BUILD.
 
-Given its complexity of cleanly upgrading/downgrading sources, in the meanwhile, keeping our own BUILD files intact, a handy tool script is provided to simplify tflm upgrade/downgrade process:
+Given its complexity of cleanly upgrading/downgrading sources, in the meanwhile,
+keeping our own BUILD files intact, a handy tool script is provided to simplify
+tflm upgrade/downgrade process:
+
 ```bash
 # Step 1: sync tflm to tot or a specific commit for upgrade/downgrade
 
