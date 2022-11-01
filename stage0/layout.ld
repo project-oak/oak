@@ -238,7 +238,12 @@ SECTIONS {
         QUAD(0) /* 10 - #TS */
         QUAD(0) /* 11 - #NP */
         QUAD(0) /* 12 - #SS */
-        QUAD(0) /* 13 - #GP */
+        QUAD(   /* 13 - #GP */
+            (gp_handler & 0xFFFF0000) << 32 | /* target offset [31:16] */
+            DESCRIPTOR_PRESENT |
+            DESCRIPTOR_INTERRUPT_GATE |
+            cs32 << 16 |                      /* code segment selector */
+            gp_handler & 0xFFFF)              /* target offset [15:0] */
         QUAD(0) /* 14 - #PF */
         QUAD(0) /* 15 - reserved */
         QUAD(0) /* 16 - #MF */
@@ -254,12 +259,7 @@ SECTIONS {
         QUAD(0) /* 26 - reserved */
         QUAD(0) /* 27 - reserved */
         QUAD(0) /* 28 - #HV */
-        QUAD(   /* 29 - #VC */
-            (vc_handler & 0xFFFF0000) << 32 | /* target offset [31:16] */
-            DESCRIPTOR_PRESENT |
-            DESCRIPTOR_INTERRUPT_GATE |
-            cs32 << 16 |                      /* code segment selector */
-            vc_handler & 0xFFFF)              /* target offset [15:0] */
+        QUAD(0) /* 29 - #VC */
         QUAD(0) /* 30 - #SX */
         QUAD(0) /* 31 - reserved */
     } > bios
