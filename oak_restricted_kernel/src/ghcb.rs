@@ -33,6 +33,7 @@ use x86_64::{
     registers::control::Cr3,
     structures::paging::{
         mapper::PageTableFrameMapping, MappedPageTable, Page, PageSize, PhysFrame, Size2MiB,
+        Size4KiB,
     },
 };
 
