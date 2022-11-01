@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-use crate::i8042;
+use crate::shutdown;
 use core::{arch::asm, ops::Deref};
 use lazy_static::lazy_static;
 use log::error;
@@ -81,7 +81,7 @@ extern "x86-interrupt" fn general_protection_fault_handler_inner(
         stack_frame.deref().instruction_pointer.as_u64()
     );
     error!("Error code: {:?}", error_code);
-    i8042::shutdown();
+    shutdown::shutdown();
 }
 
 extern "x86-interrupt" fn breakpoint_handler(stack_frame: InterruptStackFrame) {
@@ -99,7 +99,7 @@ extern "x86-interrupt" fn page_fault_handler(
     );
     error!("Faulting virtual address: {:#018x}", Cr2::read());
     error!("Error code: {:?}", error_code);
-    i8042::shutdown();
+    shutdown::shutdown();
 }
 
 extern "x86-interrupt" fn double_fault_handler(
@@ -124,7 +124,7 @@ extern "x86-interrupt" fn double_fault_handler(
     );
     error!("Stack segment: {:#x}", stack_frame.deref().stack_segment);
     error!("CPU flags: {:#x}", stack_frame.deref().cpu_flags);
-    i8042::shutdown();
+    shutdown::shutdown();
 }
 
 mutable_interrupt_handler_with_error_code!(
@@ -139,7 +139,7 @@ mutable_interrupt_handler_with_error_code!(
                     error!("Instruction pointer: {:#016x}", stack_frame.rip.as_u64());
                     error!("RAX: {:#016x}", stack_frame.rax);
                     error!("RCX: {:#016x}", stack_frame.rcx);
-                    i8042::shutdown();
+                    shutdown::shutdown();
                 }
                 let leaf = stack_frame.rax as u32;
                 get_cpuid_for_vc_exception(leaf, stack_frame).expect("Error reading CPUID");
@@ -148,7 +148,7 @@ mutable_interrupt_handler_with_error_code!(
                 error!("KERNEL PANIC: UNHANDLED #VC EXCEPTION");
                 error!("Instruction pointer: {:#016x}", stack_frame.rip.as_u64());
                 error!("Error code: {:#x}", error_code);
-                i8042::shutdown();
+                shutdown::shutdown();
             }
         }
     }
