@@ -173,7 +173,7 @@
 // limitations under the License.
 //
 
-</span><span class="kw">use </span><span class="kw">crate</span>::i8042;
+</span><span class="kw">use </span><span class="kw">crate</span>::shutdown;
 <span class="kw">use </span>core::{arch::asm, ops::Deref};
 <span class="kw">use </span>lazy_static::lazy_static;
 <span class="kw">use </span>log::error;
@@ -240,7 +240,7 @@
         stack_frame.deref().instruction_pointer.as_u64()
     );
     <span class="macro">error!</span>(<span class="string">&quot;Error code: {:?}&quot;</span>, error_code);
-    i8042::shutdown();
+    shutdown::shutdown();
 }
 
 <span class="kw">extern </span><span class="string">&quot;x86-interrupt&quot; </span><span class="kw">fn </span>breakpoint_handler(stack_frame: InterruptStackFrame) {
@@ -258,7 +258,7 @@
     );
     <span class="macro">error!</span>(<span class="string">&quot;Faulting virtual address: {:#018x}&quot;</span>, Cr2::read());
     <span class="macro">error!</span>(<span class="string">&quot;Error code: {:?}&quot;</span>, error_code);
-    i8042::shutdown();
+    shutdown::shutdown();
 }
 
 <span class="kw">extern </span><span class="string">&quot;x86-interrupt&quot; </span><span class="kw">fn </span>double_fault_handler(
@@ -283,7 +283,7 @@
     );
     <span class="macro">error!</span>(<span class="string">&quot;Stack segment: {:#x}&quot;</span>, stack_frame.deref().stack_segment);
     <span class="macro">error!</span>(<span class="string">&quot;CPU flags: {:#x}&quot;</span>, stack_frame.deref().cpu_flags);
-    i8042::shutdown();
+    shutdown::shutdown();
 }
 
 <span class="macro">mutable_interrupt_handler_with_error_code!</span>(
@@ -298,7 +298,7 @@
                     <span class="macro">error!</span>(<span class="string">&quot;Instruction pointer: {:#016x}&quot;</span>, stack_frame.rip.as_u64());
                     <span class="macro">error!</span>(<span class="string">&quot;RAX: {:#016x}&quot;</span>, stack_frame.rax);
                     <span class="macro">error!</span>(<span class="string">&quot;RCX: {:#016x}&quot;</span>, stack_frame.rcx);
-                    i8042::shutdown();
+                    shutdown::shutdown();
                 }
                 <span class="kw">let </span>leaf = stack_frame.rax <span class="kw">as </span>u32;
                 get_cpuid_for_vc_exception(leaf, stack_frame).expect(<span class="string">&quot;Error reading CPUID&quot;</span>);
@@ -307,7 +307,7 @@
                 <span class="macro">error!</span>(<span class="string">&quot;KERNEL PANIC: UNHANDLED #VC EXCEPTION&quot;</span>);
                 <span class="macro">error!</span>(<span class="string">&quot;Instruction pointer: {:#016x}&quot;</span>, stack_frame.rip.as_u64());
                 <span class="macro">error!</span>(<span class="string">&quot;Error code: {:#x}&quot;</span>, error_code);
-                i8042::shutdown();
+                shutdown::shutdown();
             }
         }
     }

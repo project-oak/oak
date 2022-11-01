@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":[["panic","Common panic routine for the kernel. This needs to be wrapped in a panic_handler function in individual bootloader crates."],["start_kernel","Main entry point for the kernel, to be called from bootloader."]],"mod":[["i8042",""]]};
+window.SIDEBAR_ITEMS = {"fn":[["panic","Common panic routine for the kernel. This needs to be wrapped in a panic_handler function in individual bootloader crates."],["start_kernel","Main entry point for the kernel, to be called from bootloader."]],"mod":[["shutdown",""]]};

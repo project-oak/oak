@@ -240,7 +240,6 @@
 <span class="kw">mod </span>descriptors;
 <span class="kw">mod </span>elf;
 <span class="kw">mod </span>ghcb;
-<span class="kw">pub mod </span>i8042;
 <span class="attribute">#[cfg(feature = <span class="string">&quot;c_interface&quot;</span>)]
 </span><span class="kw">mod </span>interface;
 <span class="kw">mod </span>interrupts;
@@ -250,6 +249,7 @@
 <span class="kw">mod </span>mm;
 <span class="attribute">#[cfg(feature = <span class="string">&quot;serial_channel&quot;</span>)]
 </span><span class="kw">mod </span>serial;
+<span class="kw">pub mod </span>shutdown;
 <span class="attribute">#[cfg(feature = <span class="string">&quot;simple_io_channel&quot;</span>)]
 </span><span class="kw">mod </span>simpleio;
 <span class="attribute">#[cfg(any(feature = <span class="string">&quot;virtio_console_channel&quot;</span>, feature = <span class="string">&quot;vsock_channel&quot;</span>))]
@@ -396,7 +396,7 @@
 /// panic_handler function in individual bootloader crates.
 </span><span class="kw">pub fn </span>panic(info: <span class="kw-2">&amp;</span>PanicInfo) -&gt; ! {
     <span class="macro">error!</span>(<span class="string">&quot;PANIC: {}&quot;</span>, info);
-    i8042::shutdown();
+    shutdown::shutdown();
 }
 </code></pre></div>
 </section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="oak_restricted_kernel" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (81f391930 2022-10-09)" ></div></body></html>
