@@ -80,31 +80,22 @@ cc/tflite_micro
 
 ## Upgrade/Downgrade Tensorflow Lite for Microcontrollers
 
-We generate a clean set of tflm source tree via its tool [create_tflm_tree.py](https://github.com/tensorflow/tflite-micro/blob/main/tensorflow/lite/micro/tools/project_generation/create_tflm_tree.py) that cuts ~50% sources to be compiled, which also implies less external dependency errors to fix in a bare-metal and freestanding binary development environment.
+We generate a clean set of tflm source tree via its built-in tool [create_tflm_tree.py](https://github.com/tensorflow/tflite-micro/blob/main/tensorflow/lite/micro/tools/project_generation/create_tflm_tree.py) that cuts ~50% sources to be compiled, which also implies less external dependency errors to fix in a bare-metal and freestanding binary development environment.
 
-The generated source tree consists of tflm sources and required third-party headers. As we want generated tflm sources residing in the third_party/tflite-micro directory and its third-party dependencies also residing in respective directories under the third_party, corresponding BUILD files consolidating file groups of sources and headers are needed for each of them to be dependent in the tflite_micro target at cc/tflite_micro/BUILD.
+The generated source tree consists of tflm sources and required third-party headers. As we want generated tflm sources residing in the third_party/tflite-micro directory and its third-party dependencies also residing in respective directories under the third_party, corresponding BUILD files consolidating file groups of sources and headers are needed for each of them to be properly depended by the tflite_micro terminal target at cc/tflite_micro/BUILD.
 
-A tlfm upgrade/downgrade process would be:
+Given its complexity of cleanly upgrading/downgrading sources, in the meanwhile, keeping our own BUILD files intact, a handy tool script is provided to simplify tflm upgrade/downgrade process:
 ```bash
-# At tflm source root, sync to a specific commit for downgrade/upgrade. Then:
-python3 tensorflow/lite/micro/tools/project_generation/create_tflm_tree.py /tmp/generated
+# Step 1: sync tflm to tot or a specific commit for upgrade/downgrade
 
-# At Oak source root, prune old tflm sources cleanly.
-rm -rf third_party/tflite-micro/tensorflow
-rm -rf third_party/tflite-micro/LICENSE
-rm -rf third_party/flatbuffers/include
-rm -rf third_party/flatbuffers/LICENSE.txt
-rm -rf third_party/gemmlowp/fixedpoint
-rm -rf third_party/gemmlowp/internal
-rm -rf third_party/gemmlowp/LICENSE
-rm -rf third_party/ruy/ruy
+# Step 2: use update_tflm.sh to upgrade/downgrade tflm sources cleanly
+# TFLM_SOURCE_ROOT_PATH is the root path of cloned https://github.com/tensorflow/tflite-micro
+# Both absolute path and relative path are supported.
+cc/tflite_micro/tools/update_tflm.sh TFLM_SOURCE_ROOT_PATH
 
-# At Oak source root, copy generated sources to corresponding directories:
-cp -rf /tmp/generated/tensorflow third_party/tflite-micro/
-cp -rf /tmp/generated/LICENSE third_party/tflite-micro/
-cp -rf /tmp/generated/third_party/flatbuffers third_party/
-cp -rf /tmp/generated/third_party/ruy third_party/
-cp -rf /tmp/generated/third_party/gemmlowp third_party/
+# Step 3: commit updates by git commit; git push
+
+# Step 4: send the PR for review
 ```
 
 ## Build Model Binaries
