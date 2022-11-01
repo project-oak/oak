@@ -172,6 +172,8 @@
 <span id="172">172</span>
 <span id="173">173</span>
 <span id="174">174</span>
+<span id="175">175</span>
+<span id="176">176</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -242,13 +244,15 @@
 ///
 /// This should be called as soon as the kernel memory has been initialised, as that would have
 /// caused the page to be marked as encrypted.
-</span><span class="kw">pub fn </span>reshare_ghcb&lt;M: Mapper&lt;Size2MiB&gt;&gt;(mapper: <span class="kw-2">&amp;mut </span>M) {
+</span><span class="kw">pub fn </span>reshare_ghcb&lt;M: Mapper&lt;Size4KiB&gt;&gt;(mapper: <span class="kw-2">&amp;mut </span>M) {
     <span class="kw">let </span>ghcb_page = get_ghcb_page();
     <span class="comment">// Safety: we only change the encrypted flag, all other flags for the GHCB pages are as they
     // were set during the kernel memory initialisation.
     </span><span class="kw">unsafe </span>{
         <span class="kw">match </span>mapper.update_flags(
-            ghcb_page,
+            <span class="comment">// Turn the 2M page into a 4K page. This unwrap will not fail, as 2M pages are
+            // 4K-aligned by definition.
+            </span>Page::from_start_address(ghcb_page.start_address()).unwrap(),
             PageTableFlags::PRESENT
                 | PageTableFlags::WRITABLE
                 | PageTableFlags::GLOBAL
