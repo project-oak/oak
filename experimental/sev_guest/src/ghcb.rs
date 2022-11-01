@@ -18,6 +18,7 @@
 //! that can be used for communicating with the hypervisor.
 
 use crate::{
+    cpuid::{CpuidInput, CpuidOutput},
     msr::{
         register_ghcb_location, set_ghcb_address_and_exit, GhcbGpa, RegisterGhcbGpaError,
         RegisterGhcbGpaRequest,
@@ -38,6 +39,11 @@ pub const GHCB_PROTOCOL_VERSION: u16 = 2;
 ///
 /// See section 4.1.2 in <https://developer.amd.com/wp-content/resources/56421.pdf>.
 const SW_EXIT_CODE_IOIO_PROT: u64 = 0x7B;
+
+/// The value of the sw_exit_code field when doing a CPUID request.
+///
+/// See section 4 in <https://developer.amd.com/wp-content/resources/56421.pdf>.
+const SW_EXIT_CODE_CPUID: u64 = 0x72;
 
 /// Indicator bit that the address is a 16 bit number.
 ///
@@ -333,6 +339,32 @@ where
         self.ghcb.as_mut().valid_bitmap = BASE_VALID_BITMAP;
         self.do_vmg_exit()?;
         Ok(self.ghcb.as_mut().rax as u32)
+    }
+
+    /// Calls a CPUID function for the given input using the GHCB protocol.
+    pub fn get_cpuid(&mut self, request: CpuidInput) -> Result<CpuidOutput, &'static str> {
+        let mut ghcb = self.ghcb.as_mut();
+        ghcb.sw_exit_code = SW_EXIT_CODE_CPUID;
+        ghcb.sw_exit_info_1 = 0;
+        ghcb.sw_exit_info_2 = 0;
+        ghcb.rax = request.eax as u64;
+        ghcb.rcx = request.ecx as u64;
+        ghcb.xcr0 = request.xcr0;
+        // We don't set the value for XSS , as it is not supported for SEV-ES (v1 of the GHCB
+        // protocol). We can use the CPUID page when SEV-SNP is enabled so this function will only
+        // be used with SEV-ES.
+        ghcb.valid_bitmap = BASE_VALID_BITMAP
+            .union(ValidBitmap::RAX)
+            .union(ValidBitmap::RCX)
+            .union(ValidBitmap::XCR0);
+        self.do_vmg_exit()?;
+        let ghcb = self.ghcb.as_mut();
+        Ok(CpuidOutput {
+            eax: ghcb.rax as u32,
+            ebx: ghcb.rbx as u32,
+            ecx: ghcb.rcx as u32,
+            edx: ghcb.rdx as u32,
+        })
     }
 
     /// Sets the address of the GHCB, exits to the hypervisor, and checks the return value when
