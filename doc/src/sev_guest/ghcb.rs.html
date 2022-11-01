@@ -364,6 +364,38 @@
 <span id="364">364</span>
 <span id="365">365</span>
 <span id="366">366</span>
+<span id="367">367</span>
+<span id="368">368</span>
+<span id="369">369</span>
+<span id="370">370</span>
+<span id="371">371</span>
+<span id="372">372</span>
+<span id="373">373</span>
+<span id="374">374</span>
+<span id="375">375</span>
+<span id="376">376</span>
+<span id="377">377</span>
+<span id="378">378</span>
+<span id="379">379</span>
+<span id="380">380</span>
+<span id="381">381</span>
+<span id="382">382</span>
+<span id="383">383</span>
+<span id="384">384</span>
+<span id="385">385</span>
+<span id="386">386</span>
+<span id="387">387</span>
+<span id="388">388</span>
+<span id="389">389</span>
+<span id="390">390</span>
+<span id="391">391</span>
+<span id="392">392</span>
+<span id="393">393</span>
+<span id="394">394</span>
+<span id="395">395</span>
+<span id="396">396</span>
+<span id="397">397</span>
+<span id="398">398</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -384,6 +416,7 @@
 //! that can be used for communicating with the hypervisor.
 
 </span><span class="kw">use crate</span>::{
+    cpuid::{CpuidInput, CpuidOutput},
     msr::{
         register_ghcb_location, set_ghcb_address_and_exit, GhcbGpa, RegisterGhcbGpaError,
         RegisterGhcbGpaRequest,
@@ -404,6 +437,11 @@
 ///
 /// See section 4.1.2 in &lt;https://developer.amd.com/wp-content/resources/56421.pdf&gt;.
 </span><span class="kw">const </span>SW_EXIT_CODE_IOIO_PROT: u64 = <span class="number">0x7B</span>;
+
+<span class="doccomment">/// The value of the sw_exit_code field when doing a CPUID request.
+///
+/// See section 4 in &lt;https://developer.amd.com/wp-content/resources/56421.pdf&gt;.
+</span><span class="kw">const </span>SW_EXIT_CODE_CPUID: u64 = <span class="number">0x72</span>;
 
 <span class="doccomment">/// Indicator bit that the address is a 16 bit number.
 ///
@@ -699,6 +737,32 @@
         <span class="self">self</span>.ghcb.as_mut().valid_bitmap = BASE_VALID_BITMAP;
         <span class="self">self</span>.do_vmg_exit()<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(<span class="self">self</span>.ghcb.as_mut().rax <span class="kw">as </span>u32)
+    }
+
+    <span class="doccomment">/// Calls a CPUID function for the given input using the GHCB protocol.
+    </span><span class="kw">pub fn </span>get_cpuid(<span class="kw-2">&amp;mut </span><span class="self">self</span>, request: CpuidInput) -&gt; <span class="prelude-ty">Result</span>&lt;CpuidOutput, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+        <span class="kw">let </span><span class="kw-2">mut </span>ghcb = <span class="self">self</span>.ghcb.as_mut();
+        ghcb.sw_exit_code = SW_EXIT_CODE_CPUID;
+        ghcb.sw_exit_info_1 = <span class="number">0</span>;
+        ghcb.sw_exit_info_2 = <span class="number">0</span>;
+        ghcb.rax = request.eax <span class="kw">as </span>u64;
+        ghcb.rcx = request.ecx <span class="kw">as </span>u64;
+        ghcb.xcr0 = request.xcr0;
+        <span class="comment">// We don&#39;t set the value for XSS , as it is not supported for SEV-ES (v1 of the GHCB
+        // protocol). We can use the CPUID page when SEV-SNP is enabled so this function will only
+        // be used with SEV-ES.
+        </span>ghcb.valid_bitmap = BASE_VALID_BITMAP
+            .union(ValidBitmap::RAX)
+            .union(ValidBitmap::RCX)
+            .union(ValidBitmap::XCR0);
+        <span class="self">self</span>.do_vmg_exit()<span class="question-mark">?</span>;
+        <span class="kw">let </span>ghcb = <span class="self">self</span>.ghcb.as_mut();
+        <span class="prelude-val">Ok</span>(CpuidOutput {
+            eax: ghcb.rax <span class="kw">as </span>u32,
+            ebx: ghcb.rbx <span class="kw">as </span>u32,
+            ecx: ghcb.rcx <span class="kw">as </span>u32,
+            edx: ghcb.rdx <span class="kw">as </span>u32,
+        })
     }
 
     <span class="doccomment">/// Sets the address of the GHCB, exits to the hypervisor, and checks the return value when

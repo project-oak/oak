@@ -188,6 +188,16 @@
 <span id="188">188</span>
 <span id="189">189</span>
 <span id="190">190</span>
+<span id="191">191</span>
+<span id="192">192</span>
+<span id="193">193</span>
+<span id="194">194</span>
+<span id="195">195</span>
+<span id="196">196</span>
+<span id="197">197</span>
+<span id="198">198</span>
+<span id="199">199</span>
+<span id="200">200</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -254,7 +264,7 @@
 <span class="kw">use </span>log::{error, info};
 <span class="kw">use </span>oak_channel::Channel;
 <span class="kw">use </span>oak_linux_boot_params::BootParams;
-<span class="kw">use </span>sev_guest::msr::{get_sev_status, SevStatus};
+<span class="kw">use </span>sev_guest::msr::{change_snp_state_for_frame, get_sev_status, PageAssignment, SevStatus};
 <span class="kw">use </span>strum::{EnumIter, EnumString, IntoEnumIterator};
 <span class="kw">use </span>x86_64::{
     structures::paging::{Page, Size2MiB},
@@ -306,6 +316,16 @@
             .translate_physical_frame(guest_host_frames.end)
             .unwrap(),
     );
+
+    <span class="comment">// If we are running on SNP we have to mark the frames as shared in the RMP. It is OK to crash
+    // if we cannot mark the pages as shared in the RMP.
+    </span><span class="kw">if </span>sev_status.contains(SevStatus::SNP_ACTIVE) {
+        <span class="comment">// TODO(#3414): Use the GHCB protocol when it is available.
+        </span><span class="kw">for </span>frame <span class="kw">in </span>guest_host_frames {
+            change_snp_state_for_frame(<span class="kw-2">&amp;</span>frame, PageAssignment::Shared)
+                .expect(<span class="string">&quot;Could not change SNP state for frame.&quot;</span>);
+        }
+    }
 
     <span class="comment">// Safety: initializing the new heap is safe as the frame allocator guarantees we&#39;re not
     // overwriting any other memory; writing to the static mut is safe as we&#39;re in the

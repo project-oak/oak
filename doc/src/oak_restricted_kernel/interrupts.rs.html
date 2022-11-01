@@ -141,6 +141,22 @@
 <span id="141">141</span>
 <span id="142">142</span>
 <span id="143">143</span>
+<span id="144">144</span>
+<span id="145">145</span>
+<span id="146">146</span>
+<span id="147">147</span>
+<span id="148">148</span>
+<span id="149">149</span>
+<span id="150">150</span>
+<span id="151">151</span>
+<span id="152">152</span>
+<span id="153">153</span>
+<span id="154">154</span>
+<span id="155">155</span>
+<span id="156">156</span>
+<span id="157">157</span>
+<span id="158">158</span>
+<span id="159">159</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -161,8 +177,9 @@
 <span class="kw">use </span>core::{arch::asm, ops::Deref};
 <span class="kw">use </span>lazy_static::lazy_static;
 <span class="kw">use </span>log::error;
-<span class="kw">use </span>sev_guest::interrupts::{
-    mutable_interrupt_handler_with_error_code, MutableInterruptStackFrame,
+<span class="kw">use </span>sev_guest::{
+    interrupts::{mutable_interrupt_handler_with_error_code, MutableInterruptStackFrame},
+    msr::get_cpuid_for_vc_exception,
 };
 <span class="kw">use </span>x86_64::{
     registers::control::Cr2,
@@ -274,10 +291,25 @@
         stack_frame: <span class="kw-2">&amp;mut </span>MutableInterruptStackFrame,
         error_code: u64,
     ) {
-        <span class="macro">error!</span>(<span class="string">&quot;KERNEL PANIC: UNHANDLED #VC EXCEPTION&quot;</span>);
-        <span class="macro">error!</span>(<span class="string">&quot;Instruction pointer: {:#016x}&quot;</span>, stack_frame.rip.as_u64());
-        <span class="macro">error!</span>(<span class="string">&quot;Error code: {:?}&quot;</span>, error_code);
-        i8042::shutdown();
+        <span class="kw">match </span>error_code {
+            <span class="number">0x72 </span>=&gt; {
+                <span class="kw">if </span>stack_frame.rcx != <span class="number">0 </span>{
+                    <span class="macro">error!</span>(<span class="string">&quot;KERNEL PANIC: CPUID SUB-LEAF REQUESTED&quot;</span>);
+                    <span class="macro">error!</span>(<span class="string">&quot;Instruction pointer: {:#016x}&quot;</span>, stack_frame.rip.as_u64());
+                    <span class="macro">error!</span>(<span class="string">&quot;RAX: {:#016x}&quot;</span>, stack_frame.rax);
+                    <span class="macro">error!</span>(<span class="string">&quot;RCX: {:#016x}&quot;</span>, stack_frame.rcx);
+                    i8042::shutdown();
+                }
+                <span class="kw">let </span>leaf = stack_frame.rax <span class="kw">as </span>u32;
+                get_cpuid_for_vc_exception(leaf, stack_frame).expect(<span class="string">&quot;Error reading CPUID&quot;</span>);
+            }
+            <span class="kw">_ </span>=&gt; {
+                <span class="macro">error!</span>(<span class="string">&quot;KERNEL PANIC: UNHANDLED #VC EXCEPTION&quot;</span>);
+                <span class="macro">error!</span>(<span class="string">&quot;Instruction pointer: {:#016x}&quot;</span>, stack_frame.rip.as_u64());
+                <span class="macro">error!</span>(<span class="string">&quot;Error code: {:#x}&quot;</span>, error_code);
+                i8042::shutdown();
+            }
+        }
     }
 );
 

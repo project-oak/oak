@@ -163,17 +163,6 @@
 <span id="163">163</span>
 <span id="164">164</span>
 <span id="165">165</span>
-<span id="166">166</span>
-<span id="167">167</span>
-<span id="168">168</span>
-<span id="169">169</span>
-<span id="170">170</span>
-<span id="171">171</span>
-<span id="172">172</span>
-<span id="173">173</span>
-<span id="174">174</span>
-<span id="175">175</span>
-<span id="176">176</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -199,8 +188,8 @@
     ghcb::{Ghcb, GhcbProtocol},
     io::{GhcbIoFactory, PortFactoryWrapper},
     msr::{
-        change_snp_page_state, get_sev_status, register_ghcb_location, PageAssignment,
-        RegisterGhcbGpaRequest, SevStatus, SnpPageStateChangeRequest,
+        change_snp_state_for_frame, get_sev_status, register_ghcb_location, PageAssignment,
+        RegisterGhcbGpaRequest, SevStatus,
     },
 };
 <span class="kw">use </span>spinning_top::Spinlock;
@@ -281,7 +270,11 @@
         )
         .expect(<span class="string">&quot;The GHCB physical address is not correctly aligned&quot;</span>);
 
-        mark_frame_shared_in_rmp(<span class="kw-2">&amp;</span>ghcb_frame);
+        <span class="comment">// Since we don&#39;t have the GHCB set up already we need to use the MSR protocol to mark every
+        // individual 4KiB area in the 2MiB page as shared in the RMP. It is OK to crash if we
+        // cannot share the GHCB with the hypervisor.
+        </span>change_snp_state_for_frame(<span class="kw-2">&amp;</span>ghcb_frame, PageAssignment::Shared)
+            .expect(<span class="string">&quot;Could not change SNP state for frame.&quot;</span>);
 
         <span class="kw">let </span>ghcb_location_request =
             RegisterGhcbGpaRequest::new(ghcb_frame.start_address().as_u64() <span class="kw">as </span>usize)
@@ -324,21 +317,6 @@
     // valid address pointing to a valid page table.
     </span><span class="kw">let </span>pml4 = <span class="kw">unsafe </span>{ <span class="kw-2">&amp;mut *</span>offset_mapper.frame_to_pointer(l4_frame) };
     EncryptedPageTable::new(pml4, offset, encryption)
-}
-
-<span class="doccomment">/// Marks a 2MiB physical frame as shared in the SEV-SNP reverse-map table (RMP).
-</span><span class="kw">fn </span>mark_frame_shared_in_rmp(frame: <span class="kw-2">&amp;</span>PhysFrame&lt;Size2MiB&gt;) {
-    <span class="kw">let </span>raw_address = frame.start_address().as_u64();
-    <span class="comment">// Since we don&#39;t have the GHCB set up already we need to use the MSR protocol to mark every
-    // individual 4KiB area in the 2MiB page as shared.
-    </span><span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..<span class="number">512 </span>{
-        <span class="kw">let </span>request = SnpPageStateChangeRequest::new(
-            (raw_address + i * Size4KiB::SIZE) <span class="kw">as </span>usize,
-            PageAssignment::Shared,
-        )
-        .expect(<span class="string">&quot;Invalid page address&quot;</span>);
-        change_snp_page_state(request).expect(<span class="string">&quot;Couldn&#39;t change page state&quot;</span>);
-    }
 }
 
 <span class="doccomment">/// Gets the 2MiB memory page that contains the GHCB.
