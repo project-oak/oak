@@ -1,4 +1,5 @@
 # Copyright 2021 The TensorFlow Authors. All Rights Reserved.
+# Copyright 2022 The Project Oak Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,9 +15,11 @@
 # ==============================================================================
 """Library for converting .tflite and .wav files to cc arrays.
 
-Source: https://github.com/tensorflow/tflite-micro/blob/main/tensorflow/lite/micro/tools/generate_cc_arrays.py.
-Modifed to remove support of converting .bmp to C arrays which requires python PIL package and we don't need.
-Other file formats except for .tflite might be removed completelly in the future.
+Modified from https://github.com/tensorflow/tflite-micro/blob/main/tensorflow/lite/micro/tools/generate_cc_arrays.py.
+Remove support of converting .bmp to C arrays which requires python PIL package and we don't need.
+
+The tool will be also extended to convert more formats into input cc arrays in various data types
+i.e. floats, int8_t, etc with quantization.
 """
 
 from __future__ import absolute_import
