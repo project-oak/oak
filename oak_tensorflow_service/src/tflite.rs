@@ -49,7 +49,7 @@ extern "C" {
     fn tflite_init(
         model_bytes_ptr: *const u8,
         model_bytes_len: usize,
-        tensor_arena_bytes_ptr: *const u8,
+        tensor_arena_bytes_ptr: *mut u8,
         tensor_arena_bytes_len: usize,
         output_buffer_len_ptr: *mut usize,
     ) -> i32;
@@ -68,7 +68,7 @@ extern "C" {
 }
 
 // TODO(#3297): Use 8GiB or 10GiB arena sizes.
-const TENSOR_ARENA_SIZE: usize = 1024;
+const TENSOR_ARENA_SIZE: usize = 2048;
 
 #[derive(Default)]
 pub struct TfliteModel {
@@ -102,7 +102,7 @@ impl TfliteModel {
             tflite_init(
                 model_bytes.as_ptr(),
                 model_bytes_len,
-                self.tensor_arena.as_ptr(),
+                self.tensor_arena.as_mut_ptr(),
                 tensor_arena_len,
                 &mut output_buffer_len,
             )

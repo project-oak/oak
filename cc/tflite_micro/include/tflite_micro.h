@@ -26,7 +26,7 @@ extern "C" {
 
 int tflite_init(
     const uint8_t* model_bytes_ptr, size_t model_bytes_len,
-    const uint8_t* tensor_arena_bytes_ptr, size_t tensor_arena_bytes_len,
+    uint8_t* tensor_arena_bytes_ptr, size_t tensor_arena_bytes_len,
     size_t* output_buffer_len_ptr);
 
 int tflite_run(
