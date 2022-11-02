@@ -20,6 +20,11 @@ rm -rf "${TFLM_GENERATED_DIR}" >/dev/null 2>&1
 # Generate clean set of tflm source tree.
 python3 "${TFLM_SOURCE_DIR}/tensorflow/lite/micro/tools/project_generation/create_tflm_tree.py" "${TFLM_GENERATED_DIR}"
 
+# Backup Oak-modified generate_cc_arrays.py to generated source tree.
+mkdir -p "${TFLM_GENERATED_DIR}/tensorflow/lite/micro/tools"
+cp "${WORKSPACE_ROOT_DIR}/third_party/tflite-micro/tensorflow/lite/micro/tools/generate_cc_arrays.py" \
+"${TFLM_GENERATED_DIR}/tensorflow/lite/micro/tools/"
+
 # Prune old tflm sources cleanly.
 rm -rf "${WORKSPACE_ROOT_DIR}/third_party/tflite-micro/tensorflow"
 rm -rf "${WORKSPACE_ROOT_DIR}/third_party/tflite-micro/LICENSE"
