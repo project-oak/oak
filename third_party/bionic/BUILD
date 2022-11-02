@@ -19,28 +19,22 @@ package(
     licenses = ["notice"],
 )
 
-# Pico libc for TFLM on Oak Restricted Kernel.
-cc_library(
-    name = "libc",
+filegroup(
+    name = "libc_common_srcs",
     srcs = [
-        "misc.cc",
-        "//third_party/bionic:libc_common_srcs",
-        "//third_party/nanolibc:libc_common_srcs", 
-    ] + select({
-        "//cc/tflite_micro:no_sse": [
-            "//third_party/nanolibc:libc_string_srcs",
-        ],
-        "//conditions:default": [
-            "memset.cc",
-            "//third_party/bionic:libc_string_srcs",
-        ],
-    }),
-    hdrs = [
-        "//third_party/bionic:libc_hdrs",
-        "//third_party/nanolibc:libc_hdrs",
+        "libc/upstream-netbsd/lib/libc/stdlib/bsearch.c",
     ],
-    copts = [
-        "-Ithird_party/bionic/libc",
-        "-Ithird_party/nanolibc/c/include",
-    ],
+)
+
+filegroup(
+    name = "libc_string_srcs",
+    srcs = glob(["libc/arch-x86_64/string/*.S"]),
+)
+
+filegroup(
+    name = "libc_hdrs",
+    srcs = glob([
+        "libc/**/*.h",
+        "libc/arch-x86_64/string/*.S",
+    ]),
 )

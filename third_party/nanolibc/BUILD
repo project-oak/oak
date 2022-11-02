@@ -20,7 +20,7 @@ package(
 )
 
 filegroup(
-    name = "common_srcs",
+    name = "libc_common_srcs",
     srcs = [
         "c/ctype.c",
         "c/stdlib.c",
@@ -28,11 +28,11 @@ filegroup(
 )
 
 filegroup(
-    name = "string_srcs",
+    name = "libc_string_srcs",
     srcs = ["c/string.c"],
 )
 
 filegroup(
-    name = "hdrs",
-    srcs = glob(["**/*.h"]) + ["c/strtox.c"],
+    name = "libc_hdrs",
+    srcs = glob(["c/**/*.h"]) + ["c/strtox.c"],
 )
