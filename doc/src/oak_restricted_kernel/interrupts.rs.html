@@ -157,6 +157,8 @@
 <span id="157">157</span>
 <span id="158">158</span>
 <span id="159">159</span>
+<span id="160">160</span>
+<span id="161">161</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -302,6 +304,8 @@
                 }
                 <span class="kw">let </span>leaf = stack_frame.rax <span class="kw">as </span>u32;
                 get_cpuid_for_vc_exception(leaf, stack_frame).expect(<span class="string">&quot;Error reading CPUID&quot;</span>);
+                <span class="comment">// CPUID instruction is 2 bytes long, so we advance the instruction pointer by 2.
+                </span>stack_frame.rip += <span class="number">2u64</span>;
             }
             <span class="kw">_ </span>=&gt; {
                 <span class="macro">error!</span>(<span class="string">&quot;KERNEL PANIC: UNHANDLED #VC EXCEPTION&quot;</span>);

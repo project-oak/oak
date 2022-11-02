@@ -190,6 +190,7 @@
 <span id="190">190</span>
 <span id="191">191</span>
 <span id="192">192</span>
+<span id="193">193</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -252,6 +253,7 @@
 /// It will point to the backed-up values of registers on the stack. This makes it possible to
 /// modify the register values that will be restored when the outer handler returns.
 </span><span class="attribute">#[repr(C)]
+#[derive(Debug)]
 </span><span class="kw">pub struct </span>MutableInterruptStackFrame {
     <span class="doccomment">/// The backed-up value of the RAX register.
     </span><span class="kw">pub </span>rax: u64,
