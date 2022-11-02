@@ -25,7 +25,6 @@ use core::{
 };
 use goblin::elf::header;
 use oak_linux_boot_params::BootParams;
-use sev_guest::instructions::{pvalidate, InstructionError, PageSize as SevPageSize, Validation};
 use x86_64::{
     instructions::{hlt, interrupts::int3, segmentation::Segment},
     registers::{
@@ -36,14 +35,15 @@ use x86_64::{
         gdt::{Descriptor, GlobalDescriptorTable, SegmentSelector},
         idt::InterruptDescriptorTable,
         paging::{
-            frame::PhysFrameRange,
             page_table::{PageTable, PageTableFlags},
-            PageSize, PhysFrame, Size2MiB, Size4KiB,
+            PageSize, PhysFrame, Size2MiB,
         },
     },
     PhysAddr, VirtAddr,
 };
+
 mod asm;
+mod sev;
 
 #[link_section = ".boot.gdt"]
 static mut BOOT_GDT: MaybeUninit<GlobalDescriptorTable> = MaybeUninit::uninit();
@@ -131,64 +131,6 @@ pub unsafe fn jump_to_kernel(entry_point: VirtAddr) -> ! {
     );
 }
 
-/// Trait for abstracting the call to `PVALIDATE` over different page sizes and ranges.
-trait Validator {
-    fn pvalidate(self, validated: Validation) -> Result<(), InstructionError>;
-}
-
-impl Validator for PhysFrame<Size2MiB> {
-    fn pvalidate(self, validated: Validation) -> Result<(), InstructionError> {
-        match pvalidate(
-            self.start_address().as_u64() as usize,
-            SevPageSize::Page2MiB,
-            validated,
-        ) {
-            // Safety: These unwraps are safe as this PhysFrame is aligned to 2 MiB, which is always
-            // also aligned to 4 KiB.
-            Err(InstructionError::FailSizeMismatch) => PhysFrame::<Size4KiB>::range(
-                PhysFrame::from_start_address(self.start_address()).unwrap(),
-                PhysFrame::from_start_address((self + 1).start_address()).unwrap(),
-            )
-            .pvalidate(validated),
-            other => other,
-        }
-    }
-}
-
-impl Validator for PhysFrame<Size4KiB> {
-    fn pvalidate(self, validated: Validation) -> Result<(), InstructionError> {
-        pvalidate(
-            self.start_address().as_u64() as usize,
-            SevPageSize::Page4KiB,
-            validated,
-        )
-    }
-}
-
-impl Validator for PhysFrameRange<Size4KiB> {
-    fn pvalidate(self, validated: Validation) -> Result<(), InstructionError> {
-        for frame in self {
-            match frame.pvalidate(validated) {
-                Err(InstructionError::ValidationStatusNotUpdated) => Ok(()),
-                other => other,
-            }?;
-        }
-        Ok(())
-    }
-}
-
-impl Validator for PhysFrameRange<Size2MiB> {
-    fn pvalidate(self, validated: Validation) -> Result<(), InstructionError> {
-        for frame in self {
-            match frame.pvalidate(validated) {
-                Err(InstructionError::ValidationStatusNotUpdated) => Ok(()),
-                other => other,
-            }?;
-        }
-        Ok(())
-    }
-}
-
 /// Entry point for the Rust code in the stage0 BIOS.
 ///
 /// # Arguments
@@ -205,22 +147,23 @@ pub extern "C" fn rust64_start(encrypted: u64) -> ! {
         false
     };
 
+    // We assume 0-th bit is never the encrypted bit.
+    let encrypted = if encrypted > 0 { 1 << encrypted } else { 0 };
+
+    // Safety: We assume the VMM has filled in the basic zero page for us. This is not true with
+    // qemu. In the future, construction of the full zero page should be in here, and instead of
+    // `assume_init_mut` we will use the safe `write` to zero it out and get a mutable reference.
+    /* TODO(#3198): interrogate qemu for memory areas and set up the zero page. */
+    let zero_page = unsafe { BOOT_ZERO_PAGE.assume_init_mut() };
+
+    if snp {
+        sev::validate_memory(zero_page, encrypted);
+    }
+
     /* Set up the machine according to the 64-bit Linux boot protocol.
      * See https://www.kernel.org/doc/html/latest/x86/boot.html#id1 for the particular requirements.
      */
 
-    // Before we access any memory, we need to ensure we've called `PVALIDATE` on the page.
-    // Safety: as all of these are static mut-s, we need to wrap all access to them in `unsafe {}`.
-    // This is safe, as (a) the linker script places them in memory in a way that's not overlapping,
-    // and (b) we do not have threads in stage0 so we're not in danger of concurrent access.
-    if snp {
-        pvalidate(
-            x86_64::addr::align_down(unsafe { BOOT_GDT.as_ptr() } as u64, 0x1000) as usize,
-            SevPageSize::Page4KiB,
-            Validation::Validated,
-        )
-        .unwrap();
-    }
     let gdt = unsafe { BOOT_GDT.write(GlobalDescriptorTable::new()) };
 
     let (cs, ds) = create_gdt(gdt);
@@ -235,42 +178,11 @@ pub extern "C" fn rust64_start(encrypted: u64) -> ! {
         SS::set_reg(ds);
     }
 
-    if snp {
-        pvalidate(
-            unsafe { BOOT_IDT.as_ptr() } as usize,
-            SevPageSize::Page4KiB,
-            Validation::Validated,
-        )
-        .unwrap();
-    }
     let idt = unsafe { BOOT_IDT.write(InterruptDescriptorTable::new()) };
 
     create_idt(idt);
     idt.load();
 
-    // We assume 0-th bit is never the encrypted bit.
-    let encrypted = if encrypted > 0 { 1 << encrypted } else { 0 };
-
-    if snp {
-        pvalidate(
-            unsafe { BOOT_PML4.as_ptr() } as usize,
-            SevPageSize::Page4KiB,
-            Validation::Validated,
-        )
-        .unwrap();
-        pvalidate(
-            unsafe { BOOT_PDPT.as_ptr() } as usize,
-            SevPageSize::Page4KiB,
-            Validation::Validated,
-        )
-        .unwrap();
-        pvalidate(
-            unsafe { BOOT_PD.as_ptr() } as usize,
-            SevPageSize::Page4KiB,
-            Validation::Validated,
-        )
-        .unwrap();
-    }
     let pml4 = unsafe { BOOT_PML4.write(PageTable::new()) };
     let pdpt = unsafe { BOOT_PDPT.write(PageTable::new()) };
     let pd = unsafe { BOOT_PD.write(PageTable::new()) };
@@ -293,12 +205,6 @@ pub extern "C" fn rust64_start(encrypted: u64) -> ! {
             Cr3Flags::empty(),
         );
     }
-    /* TODO(#3198): interrogate qemu for memory areas and set up the zero page. */
-
-    // Safety: We assume the VMM has filled in the basic zero page for us. This is not true with
-    // qemu. In the future, construction of the full zero page should be in here, and instead of
-    // `assume_init_mut` we will use the safe `write` to zero it out and get a mutable reference.
-    let zero_page = unsafe { BOOT_ZERO_PAGE.assume_init_mut() };
 
     if snp {
         let setup_data = unsafe { CC_SETUP_DATA.write(zeroed()) };
@@ -319,18 +225,6 @@ pub extern "C" fn rust64_start(encrypted: u64) -> ! {
         // Put our header as the first element in the linked list.
         setup_data.header.next = zero_page.hdr.setup_data;
         zero_page.hdr.setup_data = &setup_data.header as *const oak_linux_boot_params::SetupData;
-    }
-
-    // Temporary hack: PVALIDATE [2..32] MiB of physical memory, ignoring any failures to update
-    // the status for now. In the future, after we have determined the physical memory
-    // layout, we should call PVALIDATE on all of it.
-    if snp {
-        PhysFrame::<Size2MiB>::range(
-            PhysFrame::from_start_address(PhysAddr::new(0x0200000)).unwrap(),
-            PhysFrame::from_start_address(PhysAddr::new(0x2200000)).unwrap(),
-        )
-        .pvalidate(Validation::Validated)
-        .unwrap();
     }
 
     // Attempt to parse 64 bytes at 0x200000 (2MiB) as an ELF header. If it works, extract the entry
