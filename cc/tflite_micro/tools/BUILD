@@ -21,5 +21,5 @@ package(
 
 py_binary(
     name = "generate_cc_arrays",
-    srcs = ["generate_cc_arrays.py"],
+    srcs = ["//third_party/tflite-micro:generate_cc_arrays"],
 )

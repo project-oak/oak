@@ -33,3 +33,8 @@ filegroup(
     name = "hdrs",
     srcs = glob(["tensorflow/lite/**/*.h"]),
 )
+
+filegroup(
+    name = "generate_cc_arrays",
+    srcs = ["tensorflow/lite/micro/tools/generate_cc_arrays.py"],
+)

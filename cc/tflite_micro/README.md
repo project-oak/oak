@@ -187,7 +187,7 @@ Next, configure i.e. lldb for VS Code,
 ```
 
 As bazel replaces the actual source location with `/proc/self/cwd` to achieve
-repeatable builds, it is required to add the mapping
+reproducible builds, it is required to add the mapping
 `"/proc/self/cwd": "${workspaceFolder}"`.
 
 After applying the configuration, you are good to go to set breakpoints in
