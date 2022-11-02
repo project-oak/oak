@@ -28,7 +28,7 @@ cc
 |   |   Provide Oak-specific compiler options, linker options and tool macros.
 |   |
 |   |-- debug_log.cc
-|   |   Implement Oak-specific debug logging required by tflm micro-printf.
+|   |   Implement Oak-specific debug logging required by TFLM micro-printf.
 |   |
 |   |-- tools
 |   |   |-- BUILD
@@ -37,25 +37,25 @@ cc
 |   |   |-- generate_cc_arrays.py
 |   |   |   Convert a tflite model to a static C array and generate corresponding header and
 |   |   |   source files which can be specified in cc_binary/cc_library rules. Sourced and
-|   |   |   modified from tflm's generate_cc_arrays.py.
+|   |   |   modified from TFLM's generate_cc_arrays.py.
 |   |   |
 |   |   |-- update_tflm.sh
-|   |   |   Tool for upgrading/downgrading tflm sources and dependencies.
+|   |   |   Tool for upgrading/downgrading TFLM sources and dependencies.
 |
 |-- libc
-|   A pico libc linked by tflm and only required apis are implemented.
+|   A pico libc linked by TFLM and only required apis are implemented.
 |   bsearch and optimized (by SIMD instruction set i.e. SSE2/SSSE3/SSE4/AVX2) string apis
 |   are sourced and modified from Android bionic libc*.
-|   misc.cc implements apis required by tflm and releated/specific to Oak trusted execution environment.
+|   misc.cc implements apis required by TFLM and releated/specific to Oak trusted execution environment.
 |   Other sources are sourced from Google nanolibc**, which currently misses bsearch,
 |   string-to-{float|double} and most apis are implemented in a highly non-optimized
 |   way for better portability.
 |
 |-- libgcc
-|   A pico libgcc implements clrsb GCC builtin function required by tflm.
+|   A pico libgcc implements clrsb GCC builtin function required by TFLM.
 |
 |-- libm
-|   A pico libm implements a set of complementary math apis required by tflm.
+|   A pico libm implements a set of complementary math apis required by TFLM.
 |
 |   For freestanding model app binaries running on Linux, compiler links static libm by default (-lm)
 |   to pull in required math apis in addition to the math apis supplemented by this libm.
@@ -69,16 +69,15 @@ cc
 [Android bionic libc](https://android.googlesource.com/platform/bionic/+/refs/heads/master)\
 \*\* [Google nanolibc](https://github.com/google/nanolibc)
 
-## Upgrade/Downgrade Tensorflow Lite for Microcontrollers
+## Upgrade/Downgrade TFLM
 
-We generate a clean set of tflm source tree via its built-in tool
+We generate a clean set of TFLM source tree via its built-in tool
 [create_tflm_tree.py](https://github.com/tensorflow/tflite-micro/blob/main/tensorflow/lite/micro/tools/project_generation/create_tflm_tree.py)
-that cuts ~50% sources to be compiled, which also implies less external
-dependency errors to fix in a bare-metal and freestanding binary development
-environment.
+that cuts ~50% sources to be compiled, which also implies fewer external
+dependency errors to fix in a freestanding binary development environment.
 
-The generated source tree consists of tflm sources and required third-party
-headers. As we want generated tflm sources residing in the
+The generated source tree consists of TFLM sources and required third-party
+headers. As we want generated TFLM sources residing in the
 third_party/tflite-micro directory and its third-party dependencies also
 residing in respective directories under the third_party, corresponding BUILD
 files consolidating file groups of sources and headers are needed for each of
@@ -87,12 +86,12 @@ cc/tflite_micro/BUILD.
 
 Given its complexity of cleanly upgrading/downgrading sources, in the meanwhile,
 keeping our own BUILD files intact, a handy tool script is provided to simplify
-tflm upgrade/downgrade process:
+TFLM upgrade/downgrade process:
 
 ```bash
-# Step 1: sync tflm to tot or a specific commit for upgrade/downgrade
+# Step 1: sync TFLM to tot or a specific commit for upgrade/downgrade
 
-# Step 2: use update_tflm.sh to upgrade/downgrade tflm sources cleanly
+# Step 2: use update_tflm.sh to upgrade/downgrade TFLM sources cleanly
 # TFLM_SOURCE_ROOT_PATH is the root path of cloned https://github.com/tensorflow/tflite-micro
 # Both absolute path and relative path are supported.
 cc/tflite_micro/tools/update_tflm.sh TFLM_SOURCE_ROOT_PATH
@@ -139,20 +138,20 @@ There are few optional build options provided:
 
   Disable using streaming SIMD instructions i.e. SSE2/SSSE3/SSE4/AVX2. The
   option under the hook would use non-optimized nanolibc string apis i.e.
-  str{len|cmp|cpy|...}, mem{cpy|cmp|move|set|...}, etc. Additinally, tflite is
+  str{len|cmp|cpy|...}, mem{cpy|cmp|move|set|...}, etc. Additionally, tflite is
   built without `-msse4.2`.
 
 - `--define=use_custom_output=1`
 
-  To build tflm without using Oak debug_log.cc; instead, using a custom
+  To build TFLM without using Oak debug_log.cc; instead, using a custom
   debug_log.cc for multiple use cases i.e. testing, ported to other operating
   systems that implement proprietary debug logging, etc.
 
 ## Debugging Model Binaries
 
-As what aforementioned, we are able to build freestanding libraries that can run
-on Linux. In order for debugger i.e. gdb/lldb to correctly work on the binaries,
-we need to specify additional bulid parameters telling bazel to keep all debug
+As aforementioned, we are able to build freestanding libraries that can run on
+Linux. In order for debugger i.e. gdb/lldb to correctly work on the binaries, we
+need to specify additional build parameters telling bazel to keep all debug
 symbols and optionally disabling optimizations so breakpoints can be precisely
 mapped to correct lines of source code.
 
