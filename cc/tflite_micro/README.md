@@ -91,7 +91,7 @@ TFLM upgrade/downgrade process:
 # Both absolute path and relative path are supported.
 cc/tflite_micro/tools/update_tflm.sh TFLM_SOURCE_ROOT_PATH
 
-# Step 3: commit updates by git commit; git push
+# Step 3: commit updates by git add third_party/tflite-micro; git commit; git push
 
 # Step 4: send the PR for review
 ```
