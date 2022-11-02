@@ -25,7 +25,7 @@ cc_library(
     srcs = [
         "misc.cc",
         "//third_party/bionic:libc_common_srcs",
-        "//third_party/nanolibc:libc_common_srcs", 
+        "//third_party/nanolibc:libc_common_srcs",
     ] + select({
         "//cc/tflite_micro:no_sse": [
             "//third_party/nanolibc:libc_string_srcs",

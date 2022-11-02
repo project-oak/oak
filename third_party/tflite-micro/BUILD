@@ -26,10 +26,10 @@ filegroup(
         exclude = [
             "tensorflow/lite/micro/debug_log.cc",
         ],
-    )
+    ),
 )
 
 filegroup(
     name = "hdrs",
-    srcs = glob(["tensorflow/lite/**/*.h"])
+    srcs = glob(["tensorflow/lite/**/*.h"]),
 )

@@ -21,5 +21,5 @@ package(
 
 filegroup(
     name = "hdrs",
-    srcs = glob(["include/**/*.h"])
+    srcs = glob(["include/**/*.h"]),
 )

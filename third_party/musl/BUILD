@@ -21,5 +21,5 @@ package(
 
 filegroup(
     name = "math_srcs",
-    srcs = glob(["src/math/**/*.c"])
+    srcs = glob(["src/math/**/*.c"]),
 )

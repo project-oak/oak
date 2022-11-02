@@ -35,6 +35,6 @@ cc_library(
         #  frexp:
         #   Rust frexp: pub fn frexp(x: f64) -> (f64, i32)
         #   has different signature from C/C++.
-        "//third_party/musl:math_srcs"
+        "//third_party/musl:math_srcs",
     ],
 )
