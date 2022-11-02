@@ -34,11 +34,6 @@ cc
 |   |   |-- BUILD
 |   |   |   Tool dep to convert tflite model to cc arrays in bazel build process.
 |   |   |
-|   |   |-- generate_cc_arrays.py
-|   |   |   Convert a tflite model to a static C array and generate corresponding header and
-|   |   |   source files which can be specified in cc_binary/cc_library rules. Sourced and
-|   |   |   modified from TFLM's generate_cc_arrays.py.
-|   |   |
 |   |   |-- update_tflm.sh
 |   |   |   Tool for upgrading/downgrading TFLM sources and dependencies.
 |
