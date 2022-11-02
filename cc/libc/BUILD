@@ -37,5 +37,5 @@ cc_library(
         "//cc/tflite_micro:no_sse": [],
         "//conditions:default": glob(["string/*.S"]),
     }),
-    copts = ["-Icc/tflite_micro/libc/include"],
+    copts = ["-Icc/libc/include"],
 )

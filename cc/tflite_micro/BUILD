@@ -41,11 +41,11 @@ cc_library(
         # Use Oak DebugLog implementation
         "//cc/tflite_micro:debug_log",
         # Use Oak pico libc
-        "//cc/tflite_micro/libc",
+        "//cc/libc",
         # Use Oak pico libgcc
-        "//cc/tflite_micro/libgcc",
+        "//cc/libgcc",
         # Use Oak pico libm that picks up complements of Oak Restricted Kernel libm.rs
-        "//cc/tflite_micro/libm:oak_kernel_complements",
+        "//cc/libm:oak_kernel_complements",
     ],
 )
 
