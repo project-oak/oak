@@ -3,21 +3,44 @@
 ## File and Directory Structure
 
 ```text
-cc/tflite_micro
-|-- apps
-|   All tflite model apps are put under this folder.
-|   |-- hello_world
-|   |   hello_world tflite model app.
+cc
+|-- tflite_micro
+|   |-- apps
+|   |   All tflite model apps are put under this folder.
+|   |   |-- hello_world
+|   |   |   hello_world tflite model app.
+|   |   |
+|   |   |-- BUILD
+|   |   |   Provide common dependencies shared by all tflite model apps.
+|   |   |
+|   |   |-- start.S
+|   |   |   Used by tflite model apps to generate freestanding and executable binary
+|   |   |   to run on Linux.
+|   |
+|   |-- include
+|   |   Provide Oak-specific declarations to tflite model apps.
 |   |
 |   |-- BUILD
-|   |   Provide common dependencies shared by all tflite model apps.
+|   |   Provide Oak-specific build options and shared headers/sources/deps
+|   |   i.e. Oak DebugLog and TFLM-on-Oak library.
 |   |
-|   |-- start.S
-|   |   Used by tflite model apps to generate freestanding and executable binary
-|   |   to run on Linux.
-|
-|-- include
-|   Provide Oak-specific declarations to tflite model apps.
+|   |-- build_defs.bzl
+|   |   Provide Oak-specific compiler options, linker options and tool macros.
+|   |
+|   |-- debug_log.cc
+|   |   Implement Oak-specific debug logging required by tflm micro-printf.
+|   |
+|   |-- tools
+|   |   |-- BUILD
+|   |   |   Tool dep to convert tflite model to cc arrays in bazel build process.
+|   |   |
+|   |   |-- generate_cc_arrays.py
+|   |   |   Convert a tflite model to a static C array and generate corresponding header and
+|   |   |   source files which can be specified in cc_binary/cc_library rules. Sourced and
+|   |   |   modified from tflm's generate_cc_arrays.py.
+|   |   |
+|   |   |-- update_tflm.sh
+|   |   |   Tool for upgrading/downgrading tflm sources and dependencies.
 |
 |-- libc
 |   A pico libc linked by tflm and only required apis are implemented.
@@ -25,44 +48,21 @@ cc/tflite_micro
 |   are sourced and modified from Android bionic libc*.
 |   misc.cc implements apis required by tflm and releated/specific to Oak trusted execution environment.
 |   Other sources are sourced from Google nanolibc**, which currently misses bsearch,
-|   string-to-{float|double} and most apis are implemented in an non-optimized way for
-|   better portability.
-|
-|   Oak-specific modifications are enclosed by:
-|   /* Oak modification: START */
-|   ...
-|   /* Oak modification: END */
+|   string-to-{float|double} and most apis are implemented in a highly non-optimized
+|   way for better portability.
 |
 |-- libgcc
 |   A pico libgcc implements clrsb GCC builtin function required by tflm.
 |
 |-- libm
 |   A pico libm implements a set of complementary math apis required by tflm.
-|   To build freestanding model app binary, compiler links static libm by default (-lm).
-|   To build Oak freestanding model app binary compiled and linked with Oak Restricted Kernel
-|   and Oak TensorFlow Service, this is a complement to libm.rs that Oak Restricted Kernel implements.
 |
-|-- BUILD
-|   Provide Oak-specific build options and shared header/source/dep targets i.e.
-|   Oak DebugLog and TFLM-on-Oak library.
+|   For freestanding model app binaries running on Linux, compiler links static libm by default (-lm)
+|   to pull in required math apis in addition to the math apis supplemented by this libm.
 |
-|-- build_defs.bzl
-|   Provide Oak-specific compiler options, linker options and tool macros.
+|   For freestanding model app binaries running in Oak server, rustc compiler would pull in required
+|   math apis from Oak libm.rs in addition to the math apis supplemented by this libm.
 |
-|-- debug_log.cc
-|   Implement Oak-specific debug logging required by tflm micro-printf.
-|
-|-- tools
-|   |-- BUILD
-|   |   Tool dep to convert tflite model to cc arrays in bazel build process.
-|   |
-|   |-- generate_cc_arrays.py
-|   |   Convert a tflite model to a static C array and generate corresponding header and
-|   |   source files which can be specified in cc_binary/cc_library rules. Sourced and
-|   |   modified from tflm's generate_cc_arrays.py.
-|   |
-|   |-- update_tflm.sh
-|   |   Tool for upgrading/downgrading tflm sources and dependencies.
 ```
 
 \*
@@ -110,7 +110,7 @@ example:
 1. Build the binary that runs on Linux
 
    ```bash
-   bazel build //cc/tflite_micro/apps/hello_world:hello_world_bin
+   bazel build //cc/tflite_micro/apps/hello_world:hello_world_freestanding_bin
    ```
 
    The binary is built with -nostdlib which removes dependencies of standard
@@ -159,7 +159,7 @@ mapped to correct lines of source code.
 Use hello_world model app as example,
 
 ```bash
-bazel build --copt=-g --strip=never --define=no_opt=1 //cc/tflite_micro/apps/hello_world:hello_world_bin
+bazel build --copt=-g --strip=never --define=no_opt=1 //cc/tflite_micro/apps/hello_world:hello_world_freestanding_bin
 ```
 
 `--define=no_opt=1` is optional if correct source mapping is not needed.
