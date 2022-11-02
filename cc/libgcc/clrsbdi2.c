@@ -17,14 +17,8 @@
 // Count the number of leading redundant sign bits.
 // Used by CountLeadingSignBits in TFLM kernels.
 int __clrsbdi2(long long x) {
-  int ret;
-
-  if (x < 0LL)
-    x = ~x;
-
   if (x == 0LL)
-    return 8 * sizeof(x) - 1;
+    return (sizeof(x) << 3) - 1;
 
-  ret = __builtin_clzll((unsigned long long)x);
-  return ret - 1;
+  return __builtin_clzll(x < 0LL ? ~x : x) - 1;
 }
