@@ -25,34 +25,17 @@
 #include "tensorflow/lite/schema/schema_generated.h"
 
 namespace {
-// This constant represents the range of x values our model was trained on,
-// which is from 0 to (2 * Pi). We approximate Pi to avoid requiring additional
-// libraries.
-const float kXrange = 2.f * 3.14159265359f;
 
-// This constant determines the number of inferences to perform across the range
-// of x values defined above. Since each inference takes time, the higher this
-// number, the more time it will take to run through the entire range. The value
-// of this constant can be tuned so that one full cycle takes a desired amount
-// of time. Since different devices take different amounts of time to perform
-// inference, this value should be defined per-device.
-//
-// This is a small number so that it's easy to read the logs
-const int kInferencesPerCycle = 20;
 
 const tflite::Model* model = nullptr;
 tflite::MicroInterpreter* interpreter = nullptr;
 TfLiteTensor* input = nullptr;
 TfLiteTensor* output = nullptr;
-int inference_count = 0;
-
-constexpr int kTensorArenaSize = 2000;
-uint8_t tensor_arena[kTensorArenaSize];
 }
 
 int tflite_init(
     const uint8_t* model_bytes_ptr, size_t model_bytes_len,
-    const uint8_t* tensor_arena_bytes_ptr, size_t tensor_arena_bytes_len,
+    uint8_t* tensor_arena_bytes_ptr, size_t tensor_arena_bytes_len,
     size_t* output_buffer_len_ptr) {
   // Map the model into a usable data structure. This doesn't involve any
   // copying or parsing, it's a very lightweight operation.
@@ -64,7 +47,7 @@ int tflite_init(
 
   // Build an interpreter to run the model with.
   static tflite::MicroInterpreter static_interpreter(
-      model, resolver, tensor_arena, kTensorArenaSize);
+      model, resolver, tensor_arena_bytes_ptr, tensor_arena_bytes_len);
   interpreter = &static_interpreter;
 
   // Allocate memory from the tensor_arena for the model's tensors.
@@ -78,22 +61,28 @@ int tflite_init(
   input = interpreter->input(0);
   output = interpreter->output(0);
 
-  // Keep track of how many inferences we have performed.
-  inference_count = 0;
+  // Request a fixed-size output buffer from Oak kernel and TF runtime,
+  // which will be passed in at tflite_run(..., output_bytes_ptr, ...).
+  *output_buffer_len_ptr = sizeof(float);
 
   return 0;
 }
 
 int tflite_run(
     const uint8_t* input_bytes_ptr, size_t input_bytes_len,
-    uint8_t* output_bytes_ptr, size_t* output_bytes_len_ptr) {
-  // Calculate an x value to feed into the model. We compare the current
-  // inference_count to the number of inferences per cycle to determine
-  // our position within the range of possible x values the model was
-  // trained on, and use this to calculate a value.
-  float position = static_cast<float>(inference_count) /
-                   static_cast<float>(kInferencesPerCycle);
-  float x = position * kXrange;
+    uint8_t* output_bytes_ptr, size_t* output_bytes_len_ptr) { 
+  if (!input_bytes_ptr || !output_bytes_ptr || !output_bytes_len_ptr) {
+    MicroPrintf("Invalid parameters\n");
+    return -1;
+  }
+
+  if (input_bytes_len != sizeof(float)) {
+    MicroPrintf("Expected input len: %d bytes but got %d bytes\n",
+                sizeof(float),
+                input_bytes_len);
+    return -1;
+  }
+  auto x = *reinterpret_cast<const float*>(input_bytes_ptr);
 
   // Quantize the input from floating-point to integer
   int8_t x_quantized = x / input->params.scale + input->params.zero_point;
@@ -116,10 +105,9 @@ int tflite_run(
   // for each supported hardware target.
   HandleOutput(x, y);
 
-  // Increment the inference_counter, and reset it if we have reached
-  // the total number per cycle
-  inference_count += 1;
-  if (inference_count >= kInferencesPerCycle) inference_count = 0;
+  // Send output back through Oak kenrel and TF runtime.
+  *reinterpret_cast<float*>(output_bytes_ptr) = y;
+  *output_bytes_len_ptr = sizeof(y);
 
   return 0;
 }
