@@ -41,7 +41,7 @@ pub extern "C" fn rust64_start(_rdi: u64, rsi: &BootParams) -> ! {
 fn start_echo_server(channel: Box<dyn Channel>) -> ! {
     let service = oak_echo_service::EchoServiceImpl::default();
     let server = service.serve();
-    oak_channel::server::start_blocking_server_protobuf(channel, server)
+    oak_channel::server::start_blocking_server(channel, server)
         .expect("Runtime encountered an unrecoverable error");
 }
 

@@ -31,7 +31,7 @@ impl Connector {
         // untrusted launcher to send requests to the task that handles communicating
         // with the runtime and receive responses.
         let (request_dispatcher, mut request_receiver) =
-            bmrng::unbounded_channel::<oak_idl::Request, Result<Vec<u8>, oak_idl::Status>>();
+            bmrng::unbounded_channel::<Vec<u8>, Result<Vec<u8>, oak_idl::Status>>();
 
         // Spawn task to handle communicating with the runtime and receiving responses.
         tokio::spawn(async move {
@@ -43,7 +43,7 @@ impl Connector {
                 // At the moment requests are sent sequentially, and in FIFO order. The next request
                 // is sent only once a response to the previous message has been implemented.
                 // TODO(#2848): Implement message prioritization, and non sequential invocations.
-                let response = connector.invoke(request);
+                let response = connector.invoke(request.as_ref());
                 response_dispatcher.respond(response).unwrap();
             }
         });
@@ -51,7 +51,7 @@ impl Connector {
         ConnectorHandle { request_dispatcher }
     }
 
-    fn invoke(&mut self, request: oak_idl::Request) -> Result<Vec<u8>, oak_idl::Status> {
+    fn invoke(&mut self, request: &[u8]) -> Result<Vec<u8>, oak_idl::Status> {
         let request_message = self.request_encoder.encode_request(request);
         let request_message_invocation_id = request_message.invocation_id;
         self.inner
@@ -71,26 +71,25 @@ impl Connector {
             response_message.invocation_id
         );
 
-        response_message.into()
+        Ok(response_message.body)
     }
 }
 
-/// Implementation of an [`oak_idl::AsyncHandler`] that enables client generated
+/// Implementation of an [`oak_protobuf_idl::AsyncTransport`] that enables client generated
 /// by the oak_idl to communicate with the [`Connector`] instance via an MPSC request-response
 /// channel.
 #[derive(Clone)]
 pub struct ConnectorHandle {
-    request_dispatcher: bmrng::unbounded::UnboundedRequestSender<
-        oak_idl::Request,
-        Result<Vec<u8>, oak_idl::Status>,
-    >,
+    request_dispatcher:
+        bmrng::unbounded::UnboundedRequestSender<Vec<u8>, Result<Vec<u8>, oak_idl::Status>>,
 }
 
 #[async_trait::async_trait]
-impl oak_idl::AsyncHandler for ConnectorHandle {
-    async fn invoke(&mut self, request: oak_idl::Request) -> Result<Vec<u8>, oak_idl::Status> {
+impl oak_protobuf_idl::AsyncTransport for ConnectorHandle {
+    type Error = oak_idl::Status;
+    async fn invoke(&mut self, request_bytes: &[u8]) -> Result<Vec<u8>, Self::Error> {
         self.request_dispatcher
-            .send_receive(request)
+            .send_receive(request_bytes.to_vec())
             .await
             .map_err(|err| {
                 oak_idl::Status::new_with_message(

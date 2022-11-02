@@ -258,7 +258,6 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "bitflags",
- "flatbuffers",
  "oak_idl",
  "oak_protobuf_idl",
  "static_assertions",

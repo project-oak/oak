@@ -20,17 +20,9 @@
 extern crate alloc;
 
 pub mod schema {
-    #![allow(
-        clippy::derivable_impls,
-        clippy::extra_unused_lifetimes,
-        clippy::missing_safety_doc,
-        clippy::needless_borrow,
-        dead_code,
-        unused_imports
-    )]
-
-    include!(concat!(env!("OUT_DIR"), "/schema_generated.rs"));
-    include!(concat!(env!("OUT_DIR"), "/schema_services_servers.rs"));
+    #![allow(dead_code)]
+    use prost::Message;
+    include!(concat!(env!("OUT_DIR"), "/oak.tensorflow.rs"));
 }
 mod tflite;
 
@@ -51,54 +43,21 @@ impl schema::TensorflowService for TensorflowServiceImpl {
     fn initialize(
         &mut self,
         initialization: &schema::InitializeRequest,
-    ) -> Result<oak_idl::utils::OwnedFlatbuffer<crate::schema::InitializeResponse>, oak_idl::Status>
-    {
-        let tensorflow_model: &[u8] = initialization
-            .tensorflow_model()
-            .ok_or_else(|| oak_idl::Status::new(oak_idl::StatusCode::InvalidArgument))?
-            .bytes();
+    ) -> Result<schema::InitializeResponse, oak_idl::Status> {
         self.tflite_model
-            .initialize(tensorflow_model)
+            .initialize(&initialization.tensorflow_model)
             .map_err(|_err| oak_idl::Status::new(oak_idl::StatusCode::Internal))?;
-
-        let response_message = {
-            let mut builder = oak_idl::utils::OwnedFlatbufferBuilder::default();
-            let initialize_response = schema::InitializeResponse::create(
-                &mut builder,
-                &schema::InitializeResponseArgs {},
-            );
-            builder
-                .finish(initialize_response)
-                .map_err(|_err| oak_idl::Status::new(oak_idl::StatusCode::Internal))?
-        };
-        Ok(response_message)
+        Ok(schema::InitializeResponse {})
     }
 
     fn invoke(
         &mut self,
         request_message: &schema::InvokeRequest,
-    ) -> Result<oak_idl::utils::OwnedFlatbuffer<schema::InvokeResponse>, oak_idl::Status> {
-        let request_body: &[u8] = request_message
-            .body()
-            .ok_or_else(|| oak_idl::Status::new(oak_idl::StatusCode::InvalidArgument))?
-            .bytes();
-
+    ) -> Result<schema::InvokeResponse, oak_idl::Status> {
         let response = self
             .tflite_model
-            .run(request_body)
+            .run(&request_message.body)
             .map_err(|_err| oak_idl::Status::new(oak_idl::StatusCode::Internal))?;
-
-        let response_message = {
-            let mut builder = oak_idl::utils::OwnedFlatbufferBuilder::default();
-            let body = builder.create_vector::<u8>(&response);
-            let invoke_response = schema::InvokeResponse::create(
-                &mut builder,
-                &schema::InvokeResponseArgs { body: Some(body) },
-            );
-            builder
-                .finish(invoke_response)
-                .map_err(|_err| oak_idl::Status::new(oak_idl::StatusCode::Internal))?
-        };
-        Ok(response_message)
+        Ok(schema::InvokeResponse { body: response })
     }
 }

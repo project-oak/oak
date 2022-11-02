@@ -2355,7 +2355,6 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "bitflags",
- "flatbuffers",
  "oak_idl",
  "oak_protobuf_idl",
  "static_assertions",
@@ -2432,7 +2431,6 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-trait",
- "flatbuffers",
  "hashbrown",
  "log",
  "oak_functions_abi",
@@ -2441,13 +2439,14 @@ dependencies = [
  "oak_functions_wasm",
  "oak_functions_workload_logging",
  "oak_idl",
- "oak_idl_gen_services",
- "oak_idl_gen_structs",
  "oak_logger",
+ "oak_protobuf_idl",
+ "oak_protobuf_idl_build",
  "oak_remote_attestation",
  "oak_remote_attestation_amd",
  "oak_remote_attestation_sessions",
  "oak_remote_attestation_sessions_client",
+ "prost 0.11.0",
  "tokio",
 ]
 
@@ -2461,15 +2460,14 @@ dependencies = [
  "clap",
  "command-fds",
  "env_logger 0.9.1",
- "flatbuffers",
  "futures",
  "hashbrown",
  "log",
  "oak_channel",
  "oak_functions_abi",
  "oak_idl",
- "oak_idl_gen_services",
- "oak_idl_gen_structs",
+ "oak_protobuf_idl",
+ "oak_protobuf_idl_build",
  "oak_remote_attestation_sessions",
  "oak_utils",
  "prost 0.11.0",
@@ -2862,13 +2860,13 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-trait",
- "flatbuffers",
  "glob",
  "hashbrown",
  "log",
  "oak_idl",
- "oak_idl_gen_services",
- "oak_idl_gen_structs",
+ "oak_protobuf_idl",
+ "oak_protobuf_idl_build",
+ "prost 0.11.0",
 ]
 
 [[package]]

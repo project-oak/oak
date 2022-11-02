@@ -14,15 +14,32 @@
 // limitations under the License.
 //
 
-fn main() {
-    oak_protobuf_idl_build::compile(
-        &[format!(
-            "{}oak_functions_freestanding/proto/oak_functions.proto",
-            env!("WORKSPACE_ROOT")
-        )],
-        &[format!(
-            "{}oak_functions_freestanding/proto",
-            env!("WORKSPACE_ROOT")
-        )],
-    );
+syntax = "proto3";
+
+package oak.tensorflow;
+
+service TensorflowService {
+    // method_id: 0
+    rpc Initialize(InitializeRequest) returns (InitializeResponse);
+    // method_id: 1
+    rpc Invoke(InvokeRequest) returns (InvokeResponse);
+}
+
+message InitializeRequest {
+    bytes tensorflow_model = 1;
+}
+
+message InitializeResponse {}
+
+message SessionId {
+    bytes value = 1;
+}
+
+message InvokeRequest {
+    SessionId session_id = 1;
+    bytes body = 2;
+}
+
+message InvokeResponse {
+    bytes body = 1;
 }

@@ -29,7 +29,7 @@ use proto::{
     PublicKeyInfo, UnaryRequest, UnaryResponse,
 };
 
-fn encode_request(unary_request: UnaryRequest) -> Result<Vec<u8>, oak_idl::Status> {
+fn encode_request(unary_request: UnaryRequest) -> Result<schema::UserRequest, oak_idl::Status> {
     let mut session_id: SessionId = [0; SESSION_ID_LENGTH];
     if unary_request.session_id.len() != SESSION_ID_LENGTH {
         return Err(oak_idl::Status::new_with_message(
@@ -43,39 +43,12 @@ fn encode_request(unary_request: UnaryRequest) -> Result<Vec<u8>, oak_idl::Statu
     }
     session_id.copy_from_slice(&unary_request.session_id);
 
-    // Create the flatbuffer (containing an implicit lifetime)
-    let owned_request_flatbuffer = {
-        let mut builder = oak_idl::utils::OwnedFlatbufferBuilder::default();
-        let session_id = &schema::SessionId::new(&session_id);
-        let body = builder.create_vector::<u8>(&unary_request.body);
-        let flatbuffer = schema::UserRequest::create(
-            &mut builder,
-            &schema::UserRequestArgs {
-                session_id: Some(session_id),
-                body: Some(body),
-            },
-        );
-        builder.finish(flatbuffer).map_err(|err| {
-            oak_idl::Status::new_with_message(oak_idl::StatusCode::Internal, err.to_string())
-        })?
-    };
-
     // Return the underlying owned buffer
-    Ok(owned_request_flatbuffer.into_vec())
-}
-
-fn decode_response(encoded_response: Vec<u8>) -> Result<UnaryResponse, tonic::Status> {
-    let response =
-        oak_idl::utils::OwnedFlatbuffer::<schema::UserRequestResponse>::from_vec(encoded_response)
-            .map_err(|err| tonic::Status::internal(err.to_string()))?;
-
-    let response_body = response
-        .get()
-        .body()
-        .ok_or_else(|| tonic::Status::internal(""))?;
-
-    Ok(UnaryResponse {
-        body: response_body.bytes().to_vec(),
+    Ok(schema::UserRequest {
+        session_id: Some(schema::SessionId {
+            value: session_id.to_vec(),
+        }),
+        body: unary_request.body,
     })
 }
 
@@ -91,19 +64,24 @@ impl UnarySession for SessionProxy {
         &self,
         request: Request<UnaryRequest>,
     ) -> Result<Response<UnaryResponse>, tonic::Status> {
+        log::debug!("handling client request");
         let request = request.into_inner();
         let encoded_request = encode_request(request)
             .map_err(|err| tonic::Status::invalid_argument(format!("{:?}", err)))?;
 
         let mut client = schema::TrustedRuntimeAsyncClient::new(self.connector_handle.clone());
 
-        let encoded_response = client
-            .handle_user_request(encoded_request)
+        let response = client
+            .handle_user_request(&encoded_request)
             .await
-            .map_err(|err| tonic::Status::internal(format!("{:?}", err)))?;
-        let response = decode_response(encoded_response.into_vec())?;
+            .flatten()
+            .map_err(|err| {
+                tonic::Status::internal(format!("error handling client request: {:?}", err))
+            })?;
 
-        Ok(Response::new(response))
+        Ok(Response::new(UnaryResponse {
+            body: response.body,
+        }))
     }
 
     async fn get_public_key_info(
