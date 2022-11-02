@@ -19,22 +19,7 @@ package(
     licenses = ["notice"],
 )
 
-#
-# Complements of libm.rs for Oak Restricted Kernel.
-#
-# Target those math functions that cannot be easily implemented in Oak
-# Restricted Kernel under no_std constrain.
-#
-# Remove unnessary srcs from //third_party/musl:math_srcs once
-# there are proper Rust impl. in place.
-#
-cc_library(
-    name = "oak_kernel_complements",
-    srcs = [
-        # Provide supplemental apis:
-        #  frexp:
-        #   Rust frexp: pub fn frexp(x: f64) -> (f64, i32)
-        #   has different signature from C/C++.
-        "//third_party/musl:math_srcs"
-    ],
+filegroup(
+    name = "math_srcs",
+    srcs = glob(["src/math/**/*.c"])
 )
