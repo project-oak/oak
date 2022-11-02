@@ -2,6 +2,7 @@
    Copyright (C) 2001, 2002, 2003, 2005 Free Software Foundation, Inc.
    This file is part of the GNU C Library.
    Contributed by Andreas Jaeger <aj@suse.de>, 2001.
+   Copyright (C) 2022 The Project Oak Authors.
 
    The GNU C Library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Lesser General Public
@@ -94,6 +95,7 @@ _start:
 	/* Oak TF Runtime dones't have __libc_start_main, jump to model app's main(). */
 	call main
 
+	/* Gracefully shut process down in Oak TF Runtime on Linux. */
 	mov $SYS_exit,%eax
 	xor %edi,%edi
 	syscall
