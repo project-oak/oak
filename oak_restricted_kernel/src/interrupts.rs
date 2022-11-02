@@ -144,7 +144,7 @@ mutable_interrupt_handler_with_error_code!(
                 let leaf = stack_frame.rax as u32;
                 get_cpuid_for_vc_exception(leaf, stack_frame).expect("Error reading CPUID");
                 // CPUID instruction is 2 bytes long, so we advance the instruction pointer by 2.
-                stack_frame.rip = VirtAddr::new(stack_frame.rip.as_u64() + 2);
+                stack_frame.rip += 2u64;
             }
             _ => {
                 error!("KERNEL PANIC: UNHANDLED #VC EXCEPTION");
