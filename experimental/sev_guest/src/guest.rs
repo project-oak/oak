@@ -60,7 +60,7 @@ pub struct GuestMessageHeader {
     /// The algorithm used to encrypt the payload.
     algorithm: AeadAlgorithm,
     /// The header version. Currently only version 1 is supported.
-    header_verion: u8,
+    header_version: u8,
     /// The size of the header in bytes.
     header_size: u16,
     /// The type of message that the payload represents.
