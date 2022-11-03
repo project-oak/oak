@@ -16,6 +16,7 @@ flatbuffers = { git = "https://github.com/google/flatbuffers.git", rev = "579262
 [build-dependencies]
 oak_idl_gen_services = { path = "../oak_idl_gen_services" }
 oak_idl_gen_structs = { path = "../oak_idl_gen_structs" }
+glob = "*"
 
 [dev-dependencies]
 async-trait = "*"

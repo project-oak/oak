@@ -14,17 +14,69 @@
 # limitations under the License.
 #
 
+load(
+    "//cc/tflite_micro:build_defs.bzl",
+    "oak_copts",
+)
+
 package(
     default_visibility = ["//visibility:public"],
     licenses = ["notice"],
 )
 
 cc_library(
-    name = "tflite-micro",
-    srcs = ["tflite_micro.cc"],
-    hdrs = ["tflite_micro.h"],
+    name = "tflite_micro",
+    srcs = [
+        "//third_party/tflite-micro:srcs",
+    ],
+    hdrs = [
+        "//third_party/flatbuffers:hdrs",
+        "//third_party/gemmlowp:hdrs",
+        "//third_party/ruy:hdrs",
+        "//third_party/tflite-micro:hdrs",
+    ],
+    copts = oak_copts(),
     linkstatic = 1,
     deps = [
-        "@com_github_tensorflow_tflite_micro//tensorflow/lite/micro:micro_framework",
+        # Use Oak DebugLog implementation
+        "//cc/tflite_micro:debug_log",
+        # Use Oak pico libc
+        "//cc/libc",
+        # Use Oak pico libgcc
+        "//cc/libgcc",
+        # Use Oak pico libm that picks up complements of Oak Restricted Kernel libm.rs
+        "//cc/libm:oak_kernel_complements",
     ],
+)
+
+cc_library(
+    name = "debug_log",
+    srcs = [
+        "debug_log.cc",
+    ],
+    copts = oak_copts(),
+    deps = [":hdrs"],
+)
+
+cc_library(
+    name = "hdrs",
+    hdrs = ["include/tflite_micro.h"],
+)
+
+# --define no_sse=1 to build tflite w/o streaming SIMD instructions.
+# It would also use non-optimized Oak pico libc {str|mem}xxx functions.
+config_setting(
+    name = "no_sse",
+    values = {
+        "define": "no_sse=1",
+    },
+)
+
+# --define no_opt=1 to disable compiler optimizations (-O0)
+# rather than taking the default full optimizaiton (-O3)
+config_setting(
+    name = "no_opt",
+    values = {
+        "define": "no_opt=1",
+    },
 )
