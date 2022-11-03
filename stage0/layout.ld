@@ -15,7 +15,7 @@
 */
 
 HIDDEN(TOP = 4096M);
-HIDDEN(BIOS_SIZE = 512K);
+/* We assume BIOS_SIZE will be provided externally. */
 
 MEMORY {
     ram_low : ORIGIN = 0, LENGTH = 1M
@@ -152,7 +152,7 @@ SECTIONS {
         *(.data .data.*)
     } > bios
 
-    .bss :  {
+    .bss (NOLOAD) : {
         bss_start = .;
         *(.bss .bss.*)
         bss_size = . - bss_start;
