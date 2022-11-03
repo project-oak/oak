@@ -148,11 +148,11 @@ pub enum MessageType {
 #[derive(Debug)]
 pub struct AttestationRequest {
     /// The custom data to be included in the attestation report.
-    report_data: [u8; 64],
+    pub report_data: [u8; 64],
     /// The VM Protection Level (VMPL) to be used in the attestation report.
     ///
     /// Must be greater or equal to the current VMPL and at most 3.
-    vmpl: u32,
+    pub vmpl: u32,
     /// Reserved, must be zero.
     _reserved: [u8; 28],
 }
