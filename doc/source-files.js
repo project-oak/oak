@@ -44,7 +44,7 @@ var sourcesIndex = JSON.parse('{\
 "offline_attestation_client":["",[],["main.rs"]],\
 "offline_attestation_server":["",[],["main.rs"]],\
 "offline_attestation_shared":["",[],["lib.rs"]],\
-"sev_guest":["",[],["cpuid.rs","ghcb.rs","instructions.rs","interrupts.rs","io.rs","lib.rs","msr.rs","secrets.rs"]],\
+"sev_guest":["",[],["cpuid.rs","ghcb.rs","guest.rs","instructions.rs","interrupts.rs","io.rs","lib.rs","msr.rs","secrets.rs"]],\
 "sev_serial":["",[],["lib.rs"]],\
 "trusted_shuffler":["",[],["lib.rs"]],\
 "trusted_shuffler_backend":["",[],["main.rs"]],\

@@ -804,7 +804,7 @@
 
 <span class="doccomment">/// The version of the GHCB MSR protocol supported by this library. This represents the version
 /// specific to AMD SEV-SNP.
-</span><span class="kw">pub const </span>SUPPORTED_PROTOCOL_VERION: u16 = <span class="number">2</span>;
+</span><span class="kw">pub const </span>SUPPORTED_PROTOCOL_VERSION: u16 = <span class="number">2</span>;
 
 <span class="doccomment">/// Value indicating that the hypervisor does not have a preferred location for the GHCB.
 </span><span class="kw">pub const </span>NO_PREFERRED_GHCB_LOCATION: u64 = <span class="number">0xFFFFFFFFFFFFF000</span>;
@@ -889,7 +889,7 @@
     </span>}
 }
 
-<span class="doccomment">/// Gets information about the supported GHCB MSR protocol verions and the location of the
+<span class="doccomment">/// Gets information about the supported GHCB MSR protocol versions and the location of the
 /// encryption bit.
 </span><span class="kw">pub fn </span>get_sev_info() -&gt; <span class="prelude-ty">Result</span>&lt;SevInfoResponse, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
     <span class="kw">let </span>request = SevInfoRequest;
