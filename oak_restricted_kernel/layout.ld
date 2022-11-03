@@ -14,7 +14,7 @@
  * limitations under the License.
 */
 
-ENTRY(_start)
+ENTRY(_oak_start)
 
 PHDRS
 {
@@ -33,9 +33,6 @@ PHDRS
     data    PT_LOAD FLAGS(4 + 2); /* PF_R + PF_W */
     /* Uninitialized read-write data. */
     bss     PT_LOAD FLAGS(4 + 2); /* PF_R + PF_W */
-    /* Special sections for SEV-SNP. */
-    cpuid   PT_LOAD FLAGS(1 << 23);
-    secrets PT_LOAD FLAGS(1 << 24);
 }
 
 /* To set kernel VMA to low memory, set this to 0x0. */
@@ -45,6 +42,7 @@ SECTIONS {
     /* Don't touch the lower 2M of memory; there be dragons there. */
     . = 2M;
 
+    /* The kernel code expects FILEHDR and PHDRS to be located at 0x20_0000. */
     hdrs = .;
     . += SIZEOF_HEADERS;
     .hdrs : {
@@ -96,14 +94,6 @@ SECTIONS {
         . += 512K;
     } : bss
     stack_start = .;
-
-    .cpuid (NOLOAD) : ALIGN(2M) {
-        . += 4K;
-    } : cpuid
-
-    .secrets (NOLOAD) : ALIGN(2M) {
-        . += 4K;
-    } : secrets
 
     /DISCARD/ : {
         *(.eh_frame*)

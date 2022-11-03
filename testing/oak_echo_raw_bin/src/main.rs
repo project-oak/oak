@@ -26,8 +26,6 @@ use log::info;
 use oak_channel::Channel;
 use oak_linux_boot_params::BootParams;
 
-mod asm;
-
 const MESSAGE_SIZE: usize = 1;
 
 #[no_mangle]

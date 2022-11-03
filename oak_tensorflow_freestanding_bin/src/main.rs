@@ -26,8 +26,6 @@ use log::info;
 use oak_channel::Channel;
 use oak_linux_boot_params::BootParams;
 
-mod asm;
-
 #[no_mangle]
 pub extern "C" fn rust64_start(_rdi: u64, rsi: &BootParams) -> ! {
     let channel = oak_restricted_kernel::start_kernel(rsi);
