@@ -14,7 +14,15 @@
 // limitations under the License.
 //
 
+use std::env;
+
 fn main() {
     println!("cargo:rerun-if-changed=layout.ld");
     println!("cargo:rustc-link-arg=--script=layout.ld");
+
+    if env::var("PROFILE").unwrap() == "release" {
+        println!("cargo:rustc-link-arg=--defsym=BIOS_SIZE=64K");
+    } else {
+        println!("cargo:rustc-link-arg=--defsym=BIOS_SIZE=256K");
+    }
 }
