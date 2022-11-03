@@ -37,6 +37,7 @@
 
 mod args;
 mod avx;
+mod boot;
 mod descriptors;
 mod elf;
 mod ghcb;

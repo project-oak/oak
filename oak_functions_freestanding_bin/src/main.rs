@@ -28,8 +28,6 @@ use oak_linux_boot_params::BootParams;
 use oak_remote_attestation::handshaker::{AttestationBehavior, EmptyAttestationVerifier};
 use oak_remote_attestation_amd::PlaceholderAmdAttestationGenerator;
 
-mod asm;
-
 #[no_mangle]
 pub extern "C" fn rust64_start(_rdi: u64, rsi: &BootParams) -> ! {
     let channel = oak_restricted_kernel::start_kernel(rsi);

@@ -15,7 +15,12 @@
 //
 
 fn main() {
-    println!("cargo:rerun-if-changed=target.json");
-    println!("cargo:rerun-if-changed=layout.ld");
-    println!("cargo:rustc-link-arg=--script=layout.ld");
+    println!(
+        "cargo:rerun-if-changed={}/oak_restricted_kernel/layout.ld",
+        env!("WORKSPACE_ROOT")
+    );
+    println!(
+        "cargo:rustc-link-arg=--script={}/oak_restricted_kernel/layout.ld",
+        env!("WORKSPACE_ROOT")
+    );
 }

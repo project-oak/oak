@@ -15,10 +15,10 @@
  */
 
 .section .boot, "ax"
-.global _start
+.global _oak_start
 .code64
 
-_start:
+_oak_start:
     # At this point we expect to have a valid page table identity mapping (at least) the lowest 1G
     # of physical memory; that means that the first PML4 entry must point to a valid PDP, and the
     # first entry of that PDP must point to a valid PD.
@@ -41,6 +41,7 @@ _start:
     movq %rax, 4088(%rbx)  # rbx[511] = rax
 
     # Map the last entry of PDP to the same location as the first.
+    # We're ignoring bit 51 (as that's commonly the encrypted bit).
     movabsq $0x0007FFFFFFFFF000, %rax  # rax = $const
     andq (%rbx), %rax                  # rax = *rbx & rax (mask out all but the address)
     movq (%rax), %rdx                  # rdx = *rax
