@@ -46,7 +46,7 @@ use x86_64::{
 
 /// The version of the GHCB MSR protocol supported by this library. This represents the version
 /// specific to AMD SEV-SNP.
-pub const SUPPORTED_PROTOCOL_VERION: u16 = 2;
+pub const SUPPORTED_PROTOCOL_VERSION: u16 = 2;
 
 /// Value indicating that the hypervisor does not have a preferred location for the GHCB.
 pub const NO_PREFERRED_GHCB_LOCATION: u64 = 0xFFFFFFFFFFFFF000;
@@ -131,7 +131,7 @@ impl From<SevInfoRequest> for u64 {
     }
 }
 
-/// Gets information about the supported GHCB MSR protocol verions and the location of the
+/// Gets information about the supported GHCB MSR protocol versions and the location of the
 /// encryption bit.
 pub fn get_sev_info() -> Result<SevInfoResponse, &'static str> {
     let request = SevInfoRequest;
