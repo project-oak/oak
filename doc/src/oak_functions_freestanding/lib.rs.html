@@ -207,33 +207,6 @@
 <span id="207">207</span>
 <span id="208">208</span>
 <span id="209">209</span>
-<span id="210">210</span>
-<span id="211">211</span>
-<span id="212">212</span>
-<span id="213">213</span>
-<span id="214">214</span>
-<span id="215">215</span>
-<span id="216">216</span>
-<span id="217">217</span>
-<span id="218">218</span>
-<span id="219">219</span>
-<span id="220">220</span>
-<span id="221">221</span>
-<span id="222">222</span>
-<span id="223">223</span>
-<span id="224">224</span>
-<span id="225">225</span>
-<span id="226">226</span>
-<span id="227">227</span>
-<span id="228">228</span>
-<span id="229">229</span>
-<span id="230">230</span>
-<span id="231">231</span>
-<span id="232">232</span>
-<span id="233">233</span>
-<span id="234">234</span>
-<span id="235">235</span>
-<span id="236">236</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -256,24 +229,16 @@
 </span><span class="kw">extern crate </span>alloc;
 
 <span class="kw">pub mod </span>schema {
-    <span class="attribute">#![allow(
-        clippy::derivable_impls,
-        clippy::extra_unused_lifetimes,
-        clippy::missing_safety_doc,
-        clippy::needless_borrow,
-        dead_code,
-        unused_imports
-    )]
-
-    </span><span class="macro">include!</span>(<span class="macro">concat!</span>(<span class="macro">env!</span>(<span class="string">&quot;OUT_DIR&quot;</span>), <span class="string">&quot;/schema_generated.rs&quot;</span>));
-    <span class="macro">include!</span>(<span class="macro">concat!</span>(<span class="macro">env!</span>(<span class="string">&quot;OUT_DIR&quot;</span>), <span class="string">&quot;/schema_services_servers.rs&quot;</span>));
+    <span class="attribute">#![allow(dead_code)]
+    </span><span class="kw">use </span>prost::Message;
+    <span class="macro">include!</span>(<span class="macro">concat!</span>(<span class="macro">env!</span>(<span class="string">&quot;OUT_DIR&quot;</span>), <span class="string">&quot;/oak.functions.rs&quot;</span>));
 }
 <span class="kw">mod </span>logger;
 <span class="kw">mod </span>remote_attestation;
 <span class="kw">mod </span>wasm;
 
 <span class="kw">use </span><span class="kw">crate</span>::remote_attestation::{AttestationHandler, AttestationSessionHandler};
-<span class="kw">use </span>alloc::{boxed::Box, sync::Arc};
+<span class="kw">use </span>alloc::{boxed::Box, format, sync::Arc};
 <span class="kw">use </span>anyhow::Context;
 <span class="kw">use </span>oak_functions_abi::Request;
 <span class="kw">use </span>oak_functions_lookup::LookupDataManager;
@@ -328,25 +293,34 @@
     <span class="kw">fn </span>initialize(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
         initialization: <span class="kw-2">&amp;</span>schema::Initialization,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;oak_idl::utils::OwnedFlatbuffer&lt;<span class="kw">crate</span>::schema::InitializeResponse&gt;, oak_idl::Status&gt;
-    {
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;schema::InitializeResponse, oak_idl::Status&gt; {
         <span class="kw">match </span><span class="kw-2">&amp;mut </span><span class="self">self</span>.initialization_state {
-            InitializationState::Initialized(_attestation_handler) =&gt; <span class="prelude-val">Err</span>(oak_idl::Status::new(
-                oak_idl::StatusCode::FailedPrecondition,
-            )),
+            InitializationState::Initialized(_attestation_handler) =&gt; {
+                <span class="prelude-val">Err</span>(oak_idl::Status::new_with_message(
+                    oak_idl::StatusCode::FailedPrecondition,
+                    <span class="string">&quot;already initialized&quot;</span>,
+                ))
+            }
             InitializationState::Uninitialized(attestation_behavior) =&gt; {
-                <span class="kw">let </span>attestation_behavior = attestation_behavior
-                    .take()
-                    .expect(<span class="string">&quot;The attestation_behavior should always be present. It is wrapped in an option purely so it can be taken without cloning.&quot;</span>);
-                <span class="kw">let </span>constant_response_size = initialization.constant_response_size();
-                <span class="kw">let </span>wasm_module_bytes: <span class="kw-2">&amp;</span>[u8] = initialization
-                    .wasm_module()
-                    .ok_or_else(|| oak_idl::Status::new(oak_idl::StatusCode::InvalidArgument))<span class="question-mark">?
-                    </span>.bytes();
-
-                <span class="kw">let </span>wasm_handler =
-                    wasm::new_wasm_handler(wasm_module_bytes, <span class="self">self</span>.lookup_data_manager.clone())
-                        .map_err(|_err| oak_idl::Status::new(oak_idl::StatusCode::Internal))<span class="question-mark">?</span>;
+                <span class="comment">// attestation_behavior must always be present; it is wrapped in an Option purely so
+                // that it can be taken without cloning.
+                </span><span class="kw">let </span>attestation_behavior = attestation_behavior.take().ok_or_else(|| {
+                    oak_idl::Status::new_with_message(
+                        oak_idl::StatusCode::Internal,
+                        <span class="string">&quot;missing attestation_behavior&quot;</span>,
+                    )
+                })<span class="question-mark">?</span>;
+                <span class="kw">let </span>constant_response_size = initialization.constant_response_size;
+                <span class="kw">let </span>wasm_handler = wasm::new_wasm_handler(
+                    <span class="kw-2">&amp;</span>initialization.wasm_module,
+                    <span class="self">self</span>.lookup_data_manager.clone(),
+                )
+                .map_err(|err| {
+                    oak_idl::Status::new_with_message(
+                        oak_idl::StatusCode::Internal,
+                        <span class="macro">format!</span>(<span class="string">&quot;could not initialize Wasm handler: {:?}&quot;</span>, err),
+                    )
+                })<span class="question-mark">?</span>;
                 <span class="kw">let </span>attestation_handler = Box::new(
                     AttestationSessionHandler::create(
                         <span class="kw">move </span>|decrypted_request| {
@@ -365,33 +339,21 @@
                         },
                         attestation_behavior,
                     )
-                    .map_err(|_err| oak_idl::Status::new(oak_idl::StatusCode::Internal))<span class="question-mark">?</span>,
+                    .map_err(|err| {
+                        oak_idl::Status::new_with_message(
+                            oak_idl::StatusCode::Internal,
+                            <span class="macro">format!</span>(<span class="string">&quot;could not create attestation handler: {:?}&quot;</span>, err),
+                        )
+                    })<span class="question-mark">?</span>,
                 );
                 <span class="kw">let </span>public_key_info = attestation_handler.get_public_key_info();
                 <span class="self">self</span>.initialization_state = InitializationState::Initialized(attestation_handler);
-                <span class="kw">let </span>response_message = {
-                    <span class="kw">let </span><span class="kw-2">mut </span>builder = oak_idl::utils::OwnedFlatbufferBuilder::default();
-                    <span class="kw">let </span>public_key = builder.create_vector::&lt;u8&gt;(<span class="kw-2">&amp;</span>public_key_info.public_key);
-                    <span class="kw">let </span>attestation = builder.create_vector::&lt;u8&gt;(<span class="kw-2">&amp;</span>public_key_info.attestation);
-                    <span class="kw">let </span>public_key_info = schema::PublicKeyInfo::create(
-                        <span class="kw-2">&amp;mut </span>builder,
-                        <span class="kw-2">&amp;</span>schema::PublicKeyInfoArgs {
-                            public_key: <span class="prelude-val">Some</span>(public_key),
-                            attestation: <span class="prelude-val">Some</span>(attestation),
-                        },
-                    );
-
-                    <span class="kw">let </span>initialize_response = schema::InitializeResponse::create(
-                        <span class="kw-2">&amp;mut </span>builder,
-                        <span class="kw-2">&amp;</span>schema::InitializeResponseArgs {
-                            public_key_info: <span class="prelude-val">Some</span>(public_key_info),
-                        },
-                    );
-                    builder
-                        .finish(initialize_response)
-                        .map_err(|_err| oak_idl::Status::new(oak_idl::StatusCode::Internal))<span class="question-mark">?
-                </span>};
-                <span class="prelude-val">Ok</span>(response_message)
+                <span class="prelude-val">Ok</span>(schema::InitializeResponse {
+                    public_key_info: <span class="prelude-val">Some</span>(schema::PublicKeyInfo {
+                        public_key: public_key_info.public_key,
+                        attestation: public_key_info.attestation,
+                    }),
+                })
             }
         }
     }
@@ -399,38 +361,43 @@
     <span class="kw">fn </span>handle_user_request(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
         request_message: <span class="kw-2">&amp;</span>schema::UserRequest,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;oak_idl::utils::OwnedFlatbuffer&lt;schema::UserRequestResponse&gt;, oak_idl::Status&gt; {
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;schema::UserRequestResponse, oak_idl::Status&gt; {
         <span class="kw">match </span><span class="kw-2">&amp;mut </span><span class="self">self</span>.initialization_state {
-            InitializationState::Uninitialized(_attestation_behavior) =&gt; <span class="prelude-val">Err</span>(oak_idl::Status::new(
-                oak_idl::StatusCode::FailedPrecondition,
-            )),
+            InitializationState::Uninitialized(_attestation_behavior) =&gt; {
+                <span class="prelude-val">Err</span>(oak_idl::Status::new_with_message(
+                    oak_idl::StatusCode::FailedPrecondition,
+                    <span class="string">&quot;not initialized&quot;</span>,
+                ))
+            }
             InitializationState::Initialized(attestation_handler) =&gt; {
                 <span class="kw">let </span>session_id: SessionId = request_message
-                    .session_id()
-                    .ok_or_else(|| oak_idl::Status::new(oak_idl::StatusCode::InvalidArgument))<span class="question-mark">?
-                    </span>.value()
-                    .into();
-                <span class="kw">let </span>request_body: <span class="kw-2">&amp;</span>[u8] = request_message
-                    .body()
-                    .ok_or_else(|| oak_idl::Status::new(oak_idl::StatusCode::InvalidArgument))<span class="question-mark">?
-                    </span>.bytes();
+                    .session_id
+                    .clone()
+                    .ok_or_else(|| {
+                        oak_idl::Status::new_with_message(
+                            oak_idl::StatusCode::InvalidArgument,
+                            <span class="string">&quot;missing session_id&quot;</span>,
+                        )
+                    })<span class="question-mark">?
+                    </span>.value
+                    .try_into()
+                    .map_err(|err| {
+                        oak_idl::Status::new_with_message(
+                            oak_idl::StatusCode::InvalidArgument,
+                            <span class="macro">format!</span>(<span class="string">&quot;could not parse session_id: {:?}&quot;</span>, err),
+                        )
+                    })<span class="question-mark">?</span>;
 
                 <span class="kw">let </span>response = attestation_handler
-                    .message(session_id, request_body)
-                    .map_err(|_err| oak_idl::Status::new(oak_idl::StatusCode::Internal))<span class="question-mark">?</span>;
+                    .message(session_id, <span class="kw-2">&amp;</span>request_message.body)
+                    .map_err(|err| {
+                        oak_idl::Status::new_with_message(
+                            oak_idl::StatusCode::Internal,
+                            <span class="macro">format!</span>(<span class="string">&quot;{:?}&quot;</span>, err),
+                        )
+                    })<span class="question-mark">?</span>;
 
-                <span class="kw">let </span>response_message = {
-                    <span class="kw">let </span><span class="kw-2">mut </span>builder = oak_idl::utils::OwnedFlatbufferBuilder::default();
-                    <span class="kw">let </span>body = builder.create_vector::&lt;u8&gt;(<span class="kw-2">&amp;</span>response);
-                    <span class="kw">let </span>user_request_response = schema::UserRequestResponse::create(
-                        <span class="kw-2">&amp;mut </span>builder,
-                        <span class="kw-2">&amp;</span>schema::UserRequestResponseArgs { body: <span class="prelude-val">Some</span>(body) },
-                    );
-                    builder
-                        .finish(user_request_response)
-                        .map_err(|_err| oak_idl::Status::new(oak_idl::StatusCode::Internal))<span class="question-mark">?
-                </span>};
-                <span class="prelude-val">Ok</span>(response_message)
+                <span class="prelude-val">Ok</span>(schema::UserRequestResponse { body: response })
             }
         }
     }
@@ -438,36 +405,15 @@
     <span class="kw">fn </span>update_lookup_data(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
         lookup_data: <span class="kw-2">&amp;</span>schema::LookupData,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;oak_idl::utils::OwnedFlatbuffer&lt;<span class="kw">crate</span>::schema::Empty&gt;, oak_idl::Status&gt; {
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;schema::Empty, oak_idl::Status&gt; {
         <span class="kw">let </span>data = lookup_data
-            .items()
-            .ok_or_else(|| oak_idl::Status::new(oak_idl::StatusCode::InvalidArgument))<span class="question-mark">?
-            </span>.iter()
-            .map(|entry| {
-                <span class="prelude-val">Ok</span>((
-                    entry
-                        .key()
-                        .ok_or_else(|| oak_idl::Status::new(oak_idl::StatusCode::InvalidArgument))<span class="question-mark">?
-                        </span>.bytes()
-                        .to_vec(),
-                    entry
-                        .value()
-                        .ok_or_else(|| oak_idl::Status::new(oak_idl::StatusCode::InvalidArgument))<span class="question-mark">?
-                        </span>.bytes()
-                        .to_vec(),
-                ))
-            })
+            .items
+            .iter()
+            .map(|entry| <span class="prelude-val">Ok</span>((entry.key.clone(), entry.value.clone())))
             .collect::&lt;<span class="prelude-ty">Result</span>&lt;<span class="kw">_</span>, oak_idl::Status&gt;&gt;()<span class="question-mark">?</span>;
 
         <span class="self">self</span>.lookup_data_manager.update_data(data);
-        <span class="kw">let </span>response_message = {
-            <span class="kw">let </span><span class="kw-2">mut </span>builder = oak_idl::utils::OwnedFlatbufferBuilder::default();
-            <span class="kw">let </span>user_request_response = schema::Empty::create(<span class="kw-2">&amp;mut </span>builder, <span class="kw-2">&amp;</span>schema::EmptyArgs {});
-            builder
-                .finish(user_request_response)
-                .map_err(|_err| oak_idl::Status::new(oak_idl::StatusCode::Internal))<span class="question-mark">?
-        </span>};
-        <span class="prelude-val">Ok</span>(response_message)
+        <span class="prelude-val">Ok</span>(schema::Empty {})
     }
 }
 </code></pre></div>

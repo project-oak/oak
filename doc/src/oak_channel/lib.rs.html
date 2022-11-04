@@ -134,6 +134,8 @@
 <span id="134">134</span>
 <span id="135">135</span>
 <span id="136">136</span>
+<span id="137">137</span>
+<span id="138">138</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -224,7 +226,7 @@
                     <span class="kw">let </span>message_length: usize = {
                         <span class="kw">let </span><span class="kw-2">mut </span>message_length_bytes: [u8; message::LENGTH_SIZE] =
                             [<span class="number">0</span>; message::LENGTH_SIZE];
-                        <span class="kw">let </span>message_length_offset = frame::BODY_OFFSET + message::LENGTH_OFFSET;
+                        <span class="kw">let </span>message_length_offset = message::LENGTH_OFFSET;
                         <span class="kw">let </span>message_length_range =
                             message_length_offset..(message_length_offset + message::LENGTH_SIZE);
                         message_length_bytes
@@ -232,7 +234,9 @@
                         usize::try_from(message::Length::from_le_bytes(message_length_bytes))
                             .expect(<span class="string">&quot;couldn&#39;t convert message lemgth to usize&quot;</span>)
                     };
-                    message_length - encoded_message.capacity()
+                    message_length
+                        .checked_sub(encoded_message.capacity())
+                        .expect(<span class="string">&quot;message length underflow&quot;</span>)
                 };
                 <span class="kw">if </span>required_additional_capacity_to_hold_message &gt; <span class="number">0 </span>{
                     encoded_message.reserve_exact(required_additional_capacity_to_hold_message);

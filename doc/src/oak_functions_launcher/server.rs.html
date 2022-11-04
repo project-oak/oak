@@ -117,28 +117,6 @@
 <span id="117">117</span>
 <span id="118">118</span>
 <span id="119">119</span>
-<span id="120">120</span>
-<span id="121">121</span>
-<span id="122">122</span>
-<span id="123">123</span>
-<span id="124">124</span>
-<span id="125">125</span>
-<span id="126">126</span>
-<span id="127">127</span>
-<span id="128">128</span>
-<span id="129">129</span>
-<span id="130">130</span>
-<span id="131">131</span>
-<span id="132">132</span>
-<span id="133">133</span>
-<span id="134">134</span>
-<span id="135">135</span>
-<span id="136">136</span>
-<span id="137">137</span>
-<span id="138">138</span>
-<span id="139">139</span>
-<span id="140">140</span>
-<span id="141">141</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -170,7 +148,7 @@
     PublicKeyInfo, UnaryRequest, UnaryResponse,
 };
 
-<span class="kw">fn </span>encode_request(unary_request: UnaryRequest) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, oak_idl::Status&gt; {
+<span class="kw">fn </span>encode_request(unary_request: UnaryRequest) -&gt; <span class="prelude-ty">Result</span>&lt;schema::UserRequest, oak_idl::Status&gt; {
     <span class="kw">let </span><span class="kw-2">mut </span>session_id: SessionId = [<span class="number">0</span>; SESSION_ID_LENGTH];
     <span class="kw">if </span>unary_request.session_id.len() != SESSION_ID_LENGTH {
         <span class="kw">return </span><span class="prelude-val">Err</span>(oak_idl::Status::new_with_message(
@@ -184,39 +162,12 @@
     }
     session_id.copy_from_slice(<span class="kw-2">&amp;</span>unary_request.session_id);
 
-    <span class="comment">// Create the flatbuffer (containing an implicit lifetime)
-    </span><span class="kw">let </span>owned_request_flatbuffer = {
-        <span class="kw">let </span><span class="kw-2">mut </span>builder = oak_idl::utils::OwnedFlatbufferBuilder::default();
-        <span class="kw">let </span>session_id = <span class="kw-2">&amp;</span>schema::SessionId::new(<span class="kw-2">&amp;</span>session_id);
-        <span class="kw">let </span>body = builder.create_vector::&lt;u8&gt;(<span class="kw-2">&amp;</span>unary_request.body);
-        <span class="kw">let </span>flatbuffer = schema::UserRequest::create(
-            <span class="kw-2">&amp;mut </span>builder,
-            <span class="kw-2">&amp;</span>schema::UserRequestArgs {
-                session_id: <span class="prelude-val">Some</span>(session_id),
-                body: <span class="prelude-val">Some</span>(body),
-            },
-        );
-        builder.finish(flatbuffer).map_err(|err| {
-            oak_idl::Status::new_with_message(oak_idl::StatusCode::Internal, err.to_string())
-        })<span class="question-mark">?
-    </span>};
-
     <span class="comment">// Return the underlying owned buffer
-    </span><span class="prelude-val">Ok</span>(owned_request_flatbuffer.into_vec())
-}
-
-<span class="kw">fn </span>decode_response(encoded_response: Vec&lt;u8&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;UnaryResponse, tonic::Status&gt; {
-    <span class="kw">let </span>response =
-        oak_idl::utils::OwnedFlatbuffer::&lt;schema::UserRequestResponse&gt;::from_vec(encoded_response)
-            .map_err(|err| tonic::Status::internal(err.to_string()))<span class="question-mark">?</span>;
-
-    <span class="kw">let </span>response_body = response
-        .get()
-        .body()
-        .ok_or_else(|| tonic::Status::internal(<span class="string">&quot;&quot;</span>))<span class="question-mark">?</span>;
-
-    <span class="prelude-val">Ok</span>(UnaryResponse {
-        body: response_body.bytes().to_vec(),
+    </span><span class="prelude-val">Ok</span>(schema::UserRequest {
+        session_id: <span class="prelude-val">Some</span>(schema::SessionId {
+            value: session_id.to_vec(),
+        }),
+        body: unary_request.body,
     })
 }
 
@@ -232,19 +183,24 @@
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         request: Request&lt;UnaryRequest&gt;,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;Response&lt;UnaryResponse&gt;, tonic::Status&gt; {
+        <span class="macro">log::debug!</span>(<span class="string">&quot;handling client request&quot;</span>);
         <span class="kw">let </span>request = request.into_inner();
         <span class="kw">let </span>encoded_request = encode_request(request)
             .map_err(|err| tonic::Status::invalid_argument(<span class="macro">format!</span>(<span class="string">&quot;{:?}&quot;</span>, err)))<span class="question-mark">?</span>;
 
         <span class="kw">let </span><span class="kw-2">mut </span>client = schema::TrustedRuntimeAsyncClient::new(<span class="self">self</span>.connector_handle.clone());
 
-        <span class="kw">let </span>encoded_response = client
-            .handle_user_request(encoded_request)
+        <span class="kw">let </span>response = client
+            .handle_user_request(<span class="kw-2">&amp;</span>encoded_request)
             .<span class="kw">await
-            </span>.map_err(|err| tonic::Status::internal(<span class="macro">format!</span>(<span class="string">&quot;{:?}&quot;</span>, err)))<span class="question-mark">?</span>;
-        <span class="kw">let </span>response = decode_response(encoded_response.into_vec())<span class="question-mark">?</span>;
+            </span>.flatten()
+            .map_err(|err| {
+                tonic::Status::internal(<span class="macro">format!</span>(<span class="string">&quot;error handling client request: {:?}&quot;</span>, err))
+            })<span class="question-mark">?</span>;
 
-        <span class="prelude-val">Ok</span>(Response::new(response))
+        <span class="prelude-val">Ok</span>(Response::new(UnaryResponse {
+            body: response.body,
+        }))
     }
 
     <span class="kw">async fn </span>get_public_key_info(

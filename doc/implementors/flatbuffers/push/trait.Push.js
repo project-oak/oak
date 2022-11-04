@@ -1,5 +1,0 @@
-(function() {var implementors = {
-"oak_functions_freestanding":[["impl&lt;'b&gt; Push for <a class=\"struct\" href=\"oak_functions_freestanding/schema/struct.SessionId.html\" title=\"struct oak_functions_freestanding::schema::SessionId\">SessionId</a>"]],
-"oak_functions_launcher":[["impl&lt;'b&gt; Push for <a class=\"struct\" href=\"oak_functions_launcher/schema/struct.SessionId.html\" title=\"struct oak_functions_launcher::schema::SessionId\">SessionId</a>"]],
-"oak_tensorflow_service":[["impl&lt;'b&gt; Push for <a class=\"struct\" href=\"oak_tensorflow_service/schema/struct.SessionId.html\" title=\"struct oak_tensorflow_service::schema::SessionId\">SessionId</a>"]]
-};if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

@@ -99,7 +99,6 @@
 <span id="99">99</span>
 <span id="100">100</span>
 <span id="101">101</span>
-<span id="102">102</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -133,7 +132,7 @@
         // untrusted launcher to send requests to the task that handles communicating
         // with the runtime and receive responses.
         </span><span class="kw">let </span>(request_dispatcher, <span class="kw-2">mut </span>request_receiver) =
-            bmrng::unbounded_channel::&lt;oak_idl::Request, <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, oak_idl::Status&gt;&gt;();
+            bmrng::unbounded_channel::&lt;Vec&lt;u8&gt;, <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, oak_idl::Status&gt;&gt;();
 
         <span class="comment">// Spawn task to handle communicating with the runtime and receiving responses.
         </span>tokio::spawn(<span class="kw">async move </span>{
@@ -145,7 +144,7 @@
                 <span class="comment">// At the moment requests are sent sequentially, and in FIFO order. The next request
                 // is sent only once a response to the previous message has been implemented.
                 // TODO(#2848): Implement message prioritization, and non sequential invocations.
-                </span><span class="kw">let </span>response = connector.invoke(request);
+                </span><span class="kw">let </span>response = connector.invoke(request.as_ref());
                 response_dispatcher.respond(response).unwrap();
             }
         });
@@ -153,7 +152,7 @@
         ConnectorHandle { request_dispatcher }
     }
 
-    <span class="kw">fn </span>invoke(<span class="kw-2">&amp;mut </span><span class="self">self</span>, request: oak_idl::Request) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, oak_idl::Status&gt; {
+    <span class="kw">fn </span>invoke(<span class="kw-2">&amp;mut </span><span class="self">self</span>, request: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, oak_idl::Status&gt; {
         <span class="kw">let </span>request_message = <span class="self">self</span>.request_encoder.encode_request(request);
         <span class="kw">let </span>request_message_invocation_id = request_message.invocation_id;
         <span class="self">self</span>.inner
@@ -173,26 +172,25 @@
             response_message.invocation_id
         );
 
-        response_message.into()
+        <span class="prelude-val">Ok</span>(response_message.body)
     }
 }
 
-<span class="doccomment">/// Implementation of an [`oak_idl::AsyncHandler`] that enables client generated
+<span class="doccomment">/// Implementation of an [`oak_protobuf_idl::AsyncTransport`] that enables client generated
 /// by the oak_idl to communicate with the [`Connector`] instance via an MPSC request-response
 /// channel.
 </span><span class="attribute">#[derive(Clone)]
 </span><span class="kw">pub struct </span>ConnectorHandle {
-    request_dispatcher: bmrng::unbounded::UnboundedRequestSender&lt;
-        oak_idl::Request,
-        <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, oak_idl::Status&gt;,
-    &gt;,
+    request_dispatcher:
+        bmrng::unbounded::UnboundedRequestSender&lt;Vec&lt;u8&gt;, <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, oak_idl::Status&gt;&gt;,
 }
 
 <span class="attribute">#[async_trait::async_trait]
-</span><span class="kw">impl </span>oak_idl::AsyncHandler <span class="kw">for </span>ConnectorHandle {
-    <span class="kw">async fn </span>invoke(<span class="kw-2">&amp;mut </span><span class="self">self</span>, request: oak_idl::Request) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, oak_idl::Status&gt; {
+</span><span class="kw">impl </span>oak_protobuf_idl::AsyncTransport <span class="kw">for </span>ConnectorHandle {
+    <span class="kw">type </span>Error = oak_idl::Status;
+    <span class="kw">async fn </span>invoke(<span class="kw-2">&amp;mut </span><span class="self">self</span>, request_bytes: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, <span class="self">Self</span>::Error&gt; {
         <span class="self">self</span>.request_dispatcher
-            .send_receive(request)
+            .send_receive(request_bytes.to_vec())
             .<span class="kw">await
             </span>.map_err(|err| {
                 oak_idl::Status::new_with_message(

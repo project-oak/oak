@@ -57,52 +57,6 @@
 <span id="57">57</span>
 <span id="58">58</span>
 <span id="59">59</span>
-<span id="60">60</span>
-<span id="61">61</span>
-<span id="62">62</span>
-<span id="63">63</span>
-<span id="64">64</span>
-<span id="65">65</span>
-<span id="66">66</span>
-<span id="67">67</span>
-<span id="68">68</span>
-<span id="69">69</span>
-<span id="70">70</span>
-<span id="71">71</span>
-<span id="72">72</span>
-<span id="73">73</span>
-<span id="74">74</span>
-<span id="75">75</span>
-<span id="76">76</span>
-<span id="77">77</span>
-<span id="78">78</span>
-<span id="79">79</span>
-<span id="80">80</span>
-<span id="81">81</span>
-<span id="82">82</span>
-<span id="83">83</span>
-<span id="84">84</span>
-<span id="85">85</span>
-<span id="86">86</span>
-<span id="87">87</span>
-<span id="88">88</span>
-<span id="89">89</span>
-<span id="90">90</span>
-<span id="91">91</span>
-<span id="92">92</span>
-<span id="93">93</span>
-<span id="94">94</span>
-<span id="95">95</span>
-<span id="96">96</span>
-<span id="97">97</span>
-<span id="98">98</span>
-<span id="99">99</span>
-<span id="100">100</span>
-<span id="101">101</span>
-<span id="102">102</span>
-<span id="103">103</span>
-<span id="104">104</span>
-<span id="105">105</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -119,33 +73,13 @@
 // limitations under the License.
 //
 
-</span><span class="kw">use crate</span>::{message, Channel, InvocationChannel, Vec};
+</span><span class="kw">use crate</span>::{message, Channel, InvocationChannel};
 <span class="kw">use </span>alloc::boxed::Box;
 <span class="kw">use </span>anyhow::Context;
 
 <span class="doccomment">/// Starts a blocking server that listens for requests on the provided channel
-/// and responds to them using the provided [`oak_idl::Handler`].
-</span><span class="kw">pub fn </span>start_blocking_server&lt;H: oak_idl::Handler&gt;(
-    channel: Box&lt;<span class="kw">dyn </span>Channel&gt;,
-    <span class="kw-2">mut </span>idl_service: H,
-) -&gt; anyhow::Result&lt;!&gt; {
-    <span class="kw">let </span>channel_handle = <span class="kw-2">&amp;mut </span>ServerChannelHandle::new(channel);
-    <span class="kw">loop </span>{
-        <span class="kw">let </span>request_message = channel_handle
-            .read_request()
-            .context(<span class="string">&quot;couldn&#39;t receive message&quot;</span>)<span class="question-mark">?</span>;
-        <span class="kw">let </span>request_message_invocation_id = request_message.invocation_id;
-        <span class="kw">let </span>response = idl_service.invoke(request_message.into());
-        <span class="kw">let </span>response_message =
-            message_from_response_and_id(response, request_message_invocation_id);
-        channel_handle.write_response(response_message)<span class="question-mark">?
-    </span>}
-}
-
-<span class="comment">// Similar to [`start_blocking_server`], but using the protobuf IDL for serialization. In
-// particular, this means that the `method_id` field from the request message is not used, since the
-// protobuf IDL serializes its own method id on the wire through the transport.
-</span><span class="kw">pub fn </span>start_blocking_server_protobuf&lt;T: oak_protobuf_idl::Transport&lt;Error = !&gt;&gt;(
+/// and responds to them using the provided [`oak_protobuf_idl::Transport`].
+</span><span class="kw">pub fn </span>start_blocking_server&lt;T: oak_protobuf_idl::Transport&lt;Error = !&gt;&gt;(
     channel: Box&lt;<span class="kw">dyn </span>Channel&gt;,
     <span class="kw-2">mut </span>server: T,
 ) -&gt; anyhow::Result&lt;!&gt; {
@@ -156,8 +90,10 @@
             .context(<span class="string">&quot;couldn&#39;t receive message&quot;</span>)<span class="question-mark">?</span>;
         <span class="kw">let </span>request_message_invocation_id = request_message.invocation_id;
         <span class="kw">let </span>response = server.invoke(request_message.body.as_ref()).into_ok();
-        <span class="kw">let </span>response_message =
-            message_from_response_and_id(<span class="prelude-val">Ok</span>(response), request_message_invocation_id);
+        <span class="kw">let </span>response_message = message::ResponseMessage {
+            invocation_id: request_message_invocation_id,
+            body: response,
+        };
         channel_handle.write_response(response_message)<span class="question-mark">?
     </span>}
 }
@@ -178,34 +114,6 @@
     }
     <span class="kw">pub fn </span>write_response(<span class="kw-2">&amp;mut </span><span class="self">self</span>, response: message::ResponseMessage) -&gt; anyhow::Result&lt;()&gt; {
         <span class="self">self</span>.inner.write_message(response)
-    }
-}
-
-<span class="doccomment">/// Construct a [`oak_idl::Request`] from a [`message::RequestMessage`].
-</span><span class="kw">impl </span>From&lt;message::RequestMessage&gt; <span class="kw">for </span>oak_idl::Request {
-    <span class="kw">fn </span>from(message: message::RequestMessage) -&gt; <span class="self">Self </span>{
-        oak_idl::Request {
-            method_id: message.method_id,
-            body: message.body,
-        }
-    }
-}
-
-<span class="kw">fn </span>message_from_response_and_id(
-    response: <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, oak_idl::Status&gt;,
-    invocation_id: message::InvocationId,
-) -&gt; message::ResponseMessage {
-    <span class="kw">match </span>response {
-        <span class="prelude-val">Ok</span>(response) =&gt; message::ResponseMessage {
-            invocation_id,
-            status_code: oak_idl::StatusCode::Ok.into(),
-            body: response,
-        },
-        <span class="prelude-val">Err</span>(error) =&gt; message::ResponseMessage {
-            invocation_id,
-            status_code: error.code.into(),
-            body: error.message.as_bytes().to_vec(),
-        },
     }
 }
 </code></pre></div>

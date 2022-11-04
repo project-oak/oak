@@ -192,26 +192,6 @@
 <span id="192">192</span>
 <span id="193">193</span>
 <span id="194">194</span>
-<span id="195">195</span>
-<span id="196">196</span>
-<span id="197">197</span>
-<span id="198">198</span>
-<span id="199">199</span>
-<span id="200">200</span>
-<span id="201">201</span>
-<span id="202">202</span>
-<span id="203">203</span>
-<span id="204">204</span>
-<span id="205">205</span>
-<span id="206">206</span>
-<span id="207">207</span>
-<span id="208">208</span>
-<span id="209">209</span>
-<span id="210">210</span>
-<span id="211">211</span>
-<span id="212">212</span>
-<span id="213">213</span>
-<span id="214">214</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -228,6 +208,9 @@
 // limitations under the License.
 //
 
+</span><span class="attribute">#![feature(never_type)]
+#![feature(result_flattening)]
+
 </span><span class="kw">use </span>anyhow::Context;
 <span class="kw">use </span>clap::Parser;
 <span class="kw">use </span>instance::{crosvm, native, LaunchedInstance};
@@ -241,21 +224,9 @@
 <span class="kw">use </span>tokio::signal;
 
 <span class="kw">pub mod </span>schema {
-    <span class="attribute">#![allow(
-        clippy::derivable_impls,
-        clippy::extra_unused_lifetimes,
-        clippy::missing_safety_doc,
-        clippy::needless_borrow,
-        dead_code,
-        unused_imports
-    )]
-
-    </span><span class="macro">include!</span>(<span class="macro">concat!</span>(<span class="macro">env!</span>(<span class="string">&quot;OUT_DIR&quot;</span>), <span class="string">&quot;/schema_generated.rs&quot;</span>));
-    <span class="macro">include!</span>(<span class="macro">concat!</span>(<span class="macro">env!</span>(<span class="string">&quot;OUT_DIR&quot;</span>), <span class="string">&quot;/schema_services_servers.rs&quot;</span>));
-    <span class="macro">include!</span>(<span class="macro">concat!</span>(
-        <span class="macro">env!</span>(<span class="string">&quot;OUT_DIR&quot;</span>),
-        <span class="string">&quot;/schema_services_async_clients.rs&quot;
-    </span>));
+    <span class="attribute">#![allow(dead_code)]
+    </span><span class="kw">use </span>prost::Message;
+    <span class="macro">include!</span>(<span class="macro">concat!</span>(<span class="macro">env!</span>(<span class="string">&quot;OUT_DIR&quot;</span>), <span class="string">&quot;/oak.functions.rs&quot;</span>));
 }
 
 <span class="kw">mod </span>channel;
@@ -355,7 +326,7 @@
                     lookup::encode_lookup_data(lookup_data).expect(<span class="string">&quot;failed to encode lookup data&quot;</span>);
 
                 <span class="kw">if let </span><span class="prelude-val">Err</span>(err) = runtime_client
-                    .update_lookup_data(encoded_lookup_data.into_vec())
+                    .update_lookup_data(<span class="kw-2">&amp;</span>encoded_lookup_data)
                     .<span class="kw">await
                 </span>{
                     <span class="macro">panic!</span>(<span class="string">&quot;failed to send lookup data: {:?}&quot;</span>, err)
@@ -369,46 +340,35 @@
     <span class="kw">let </span>wasm_bytes = fs::read(<span class="kw-2">&amp;</span>cli.wasm)
         .with_context(|| <span class="macro">format!</span>(<span class="string">&quot;Couldn&#39;t read Wasm file {}&quot;</span>, <span class="kw-2">&amp;</span>cli.wasm.display()))
         .unwrap();
-    <span class="kw">let </span>owned_initialization_flatbuffer = {
-        <span class="kw">let </span><span class="kw-2">mut </span>builder = oak_idl::utils::OwnedFlatbufferBuilder::default();
-        <span class="kw">let </span>wasm_module = builder.create_vector::&lt;u8&gt;(<span class="kw-2">&amp;</span>wasm_bytes);
-        <span class="kw">let </span>initialization_flatbuffer = schema::Initialization::create(
-            <span class="kw-2">&amp;mut </span>builder,
-            <span class="kw-2">&amp;</span>schema::InitializationArgs {
-                wasm_module: <span class="prelude-val">Some</span>(wasm_module),
-                constant_response_size: cli.constant_response_size,
-            },
-        );
+    <span class="macro">log::info!</span>(
+        <span class="string">&quot;read Wasm file from disk {} ({} bytes)&quot;</span>,
+        <span class="kw-2">&amp;</span>cli.wasm.display(),
+        wasm_bytes.len()
+    );
 
-        builder
-            .finish(initialization_flatbuffer)
-            .expect(<span class="string">&quot;errored when creating initialization message&quot;</span>)
+    <span class="kw">let </span>request = schema::Initialization {
+        wasm_module: wasm_bytes,
+        constant_response_size: cli.constant_response_size,
     };
 
     <span class="kw">let </span><span class="kw-2">mut </span>client = schema::TrustedRuntimeAsyncClient::new(connector_handle.clone());
     <span class="kw">let </span>result = client
-        .initialize(owned_initialization_flatbuffer.into_vec())
+        .initialize(<span class="kw-2">&amp;</span>request)
         .<span class="kw">await
-        </span>.expect(<span class="string">&quot;failed to initialize the runtime&quot;</span>);
+        </span>.flatten()
+        .expect(<span class="string">&quot;failed to initialize the runtime&quot;</span>);
 
-    <span class="kw">let </span>public_key_info = result
-        .get()
-        .public_key_info()
-        .expect(<span class="string">&quot;no public key info returned&quot;</span>);
+    <span class="kw">let </span>public_key_info = result.public_key_info.expect(<span class="string">&quot;no public key info returned&quot;</span>);
+    <span class="macro">log::info!</span>(
+        <span class="string">&quot;obtained public key ({} bytes)&quot;</span>,
+        public_key_info.public_key.len()
+    );
 
     <span class="kw">let </span>server_future = server::server(
         SocketAddr::from((Ipv6Addr::UNSPECIFIED, cli.port)),
         connector_handle,
-        public_key_info
-            .public_key()
-            .expect(<span class="string">&quot;missing public key&quot;</span>)
-            .bytes()
-            .to_vec(),
-        public_key_info
-            .attestation()
-            .unwrap_or_default()
-            .bytes()
-            .to_vec(),
+        public_key_info.public_key,
+        public_key_info.attestation,
     );
 
     <span class="comment">// Wait until something dies or we get a signal to terminate.
