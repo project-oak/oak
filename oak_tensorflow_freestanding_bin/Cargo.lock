@@ -118,15 +118,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0ce7134b9999ecaf8bcd65542e436736ef32ddca1b3e06094cb6ec5755203b80"
 
 [[package]]
-name = "flatbuffers"
-version = "22.9.29"
-source = "git+https://github.com/google/flatbuffers.git?rev=5792623df42e6165a376907bbb8e6090d0946db5#5792623df42e6165a376907bbb8e6090d0946db5"
-dependencies = [
- "bitflags",
- "rustc_version",
-]
-
-[[package]]
 name = "funty"
 version = "2.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -265,7 +256,6 @@ dependencies = [
  "anyhow",
  "bitflags",
  "oak_idl",
- "oak_protobuf_idl",
  "static_assertions",
 ]
 
@@ -273,7 +263,17 @@ dependencies = [
 name = "oak_idl"
 version = "0.1.0"
 dependencies = [
- "flatbuffers",
+ "async-trait",
+ "oak_idl_build",
+ "prost",
+]
+
+[[package]]
+name = "oak_idl_build"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "prost-build",
 ]
 
 [[package]]
@@ -283,25 +283,6 @@ dependencies = [
  "bitflags",
  "static_assertions",
  "strum",
-]
-
-[[package]]
-name = "oak_protobuf_idl"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "oak_idl",
- "oak_protobuf_idl_build",
- "prost",
-]
-
-[[package]]
-name = "oak_protobuf_idl_build"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "prost",
- "prost-build",
 ]
 
 [[package]]
@@ -362,8 +343,7 @@ dependencies = [
  "hashbrown",
  "log",
  "oak_idl",
- "oak_protobuf_idl",
- "oak_protobuf_idl_build",
+ "oak_idl_build",
  "prost",
 ]
 
@@ -510,15 +490,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "rustc_version"
-version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bfa0f585226d2e68097d4f95d113b15b83a82e819ab25717ec0590d9584ef366"
-dependencies = [
- "semver",
-]
-
-[[package]]
 name = "rustversion"
 version = "1.0.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -549,12 +520,6 @@ dependencies = [
  "quote",
  "syn",
 ]
-
-[[package]]
-name = "semver"
-version = "1.0.14"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e25dfac463d778e353db5be2449d1cce89bd6fd23c9f1ea21310ce6e5a1b29c4"
 
 [[package]]
 name = "sev_guest"

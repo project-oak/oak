@@ -16,27 +16,28 @@
 //! This crate contains tests for the `oak_idl_gen_structs` and `oak_idl_gen_services` crates. It
 //! needs to be separate from them in order to be able to invoke them at build time.
 
+#![feature(never_type)]
+#![feature(unwrap_infallible)]
+
 extern crate alloc;
 
-use oak_idl::Handler;
+use oak_idl::Transport;
 
 mod test_schema {
-    #![allow(
-        clippy::derivable_impls,
-        clippy::extra_unused_lifetimes,
-        clippy::missing_safety_doc,
-        clippy::needless_borrow,
-        dead_code,
-        unused_imports
-    )]
+    #![allow(dead_code)]
+    use prost::Message;
+    include!(concat!(env!("OUT_DIR"), "/oak.protobuf_idl.tests.rs"));
+}
 
-    include!(concat!(env!("OUT_DIR"), "/test_schema_generated.rs"));
-    include!(concat!(env!("OUT_DIR"), "/test_schema_services_servers.rs"));
-    include!(concat!(env!("OUT_DIR"), "/test_schema_services_clients.rs"));
-    include!(concat!(
-        env!("OUT_DIR"),
-        "/test_schema_services_async_clients.rs"
-    ));
+/// Test implementation of a fallible transport that always returns the same error.
+struct FailingTransport;
+
+impl Transport for FailingTransport {
+    type Error = u32;
+
+    fn invoke(&mut self, _request_bytes: &[u8]) -> Result<Vec<u8>, Self::Error> {
+        Err(42)
+    }
 }
 
 struct TestServiceImpl;
@@ -46,97 +47,75 @@ impl test_schema::TestService for TestServiceImpl {
     fn lookup_data(
         &mut self,
         request: &test_schema::LookupDataRequest,
-    ) -> Result<oak_idl::utils::OwnedFlatbuffer<test_schema::LookupDataResponse>, oak_idl::Status>
-    {
+    ) -> Result<test_schema::LookupDataResponse, oak_idl::Status> {
         let h = maplit::hashmap! {
             vec![14, 12] => vec![19, 88]
         };
-        let mut b = oak_idl::utils::OwnedFlatbufferBuilder::default();
-        let value = h
-            .get(request.key().unwrap().bytes())
-            .map(|v| b.create_vector::<u8>(v));
-        let flatbuffer = test_schema::LookupDataResponse::create(
-            &mut b,
-            &test_schema::LookupDataResponseArgs { value },
-        );
-        let owned_flatbuffer = b.finish(flatbuffer).map_err(|err| {
-            oak_idl::Status::new_with_message(
-                oak_idl::StatusCode::Internal,
-                format!("failed to build response: {:?}", err),
-            )
-        })?;
-        Ok(owned_flatbuffer)
+        h.get(&request.key)
+            .map(|v| test_schema::LookupDataResponse { value: v.clone() })
+            .ok_or_else(|| {
+                oak_idl::Status::new_with_message(oak_idl::StatusCode::NotFound, "not found")
+            })
     }
 
     fn log(
         &mut self,
         request: &test_schema::LogRequest,
-    ) -> Result<oak_idl::utils::OwnedFlatbuffer<test_schema::LogResponse>, oak_idl::Status> {
-        eprintln!("log: {}", request.entry().unwrap());
-        let mut b = oak_idl::utils::OwnedFlatbufferBuilder::default();
-        let flatbuffer = test_schema::LogResponse::create(&mut b, &test_schema::LogResponseArgs {});
-        let owned_flatbuffer = b.finish(flatbuffer).map_err(|err| {
-            oak_idl::Status::new_with_message(
-                oak_idl::StatusCode::Internal,
-                format!("failed to build response: {:?}", err),
-            )
-        })?;
-        Ok(owned_flatbuffer)
+    ) -> Result<test_schema::LogResponse, oak_idl::Status> {
+        eprintln!("log: {}", request.entry);
+        Ok(test_schema::LogResponse {})
     }
+}
+
+#[test]
+fn test_failing_transport() {
+    let mut client = test_schema::TestServiceClient::new(FailingTransport);
+    let request = test_schema::LookupDataRequest { key: vec![14, 12] };
+    let transport_response = client.lookup_data(&request);
+    assert_eq!(Err(42), transport_response);
 }
 
 #[test]
 fn test_lookup_data() {
     let service = TestServiceImpl;
     use test_schema::TestService;
-    let handler = service.serve();
-    let mut client = test_schema::TestServiceClient::new(handler);
+    let transport = service.serve();
+    let mut client = test_schema::TestServiceClient::new(transport);
     {
-        let mut builder = oak_idl::utils::OwnedFlatbufferBuilder::default();
-        let key = builder.create_vector::<u8>(&[14, 12]);
-        let flatbuffer = test_schema::LookupDataRequest::create(
-            &mut builder,
-            &test_schema::LookupDataRequestArgs { key: Some(key) },
-        );
-        let owned_flatbuffer = builder.finish(flatbuffer).unwrap();
-        let response = client.lookup_data(owned_flatbuffer.into_vec()).unwrap();
+        let request = test_schema::LookupDataRequest { key: vec![14, 12] };
+        let response = client.lookup_data(&request).into_ok();
         assert_eq!(
-            Some([19, 88].as_ref()),
+            Ok(test_schema::LookupDataResponse {
+                value: vec![19, 88]
+            }),
             response
-                .get()
-                .value()
-                .as_ref()
-                .map(flatbuffers::Vector::bytes)
         );
     }
     {
-        let mut builder = oak_idl::utils::OwnedFlatbufferBuilder::default();
-        let key = builder.create_vector::<u8>(&[10, 00]);
-        let flatbuffer = test_schema::LookupDataRequest::create(
-            &mut builder,
-            &test_schema::LookupDataRequestArgs { key: Some(key) },
+        let request = test_schema::LookupDataRequest { key: vec![10, 00] };
+        let response = client.lookup_data(&request).into_ok();
+        assert_eq!(
+            Err(oak_idl::Status::new_with_message(
+                oak_idl::StatusCode::NotFound,
+                "not found"
+            )),
+            response
         );
-        let owned_flatbuffer = builder.finish(flatbuffer).unwrap();
-        let response = client.lookup_data(owned_flatbuffer.into_vec()).unwrap();
-        assert!(response.get().value().is_none());
     }
 }
 
 /// Simple async wrapper around the synchronous server.
-/// Used to test async clients that expect an async handler.
+/// Used to test async clients that expect an async transport.
 pub struct AsyncTestServiceServer<S: test_schema::TestService> {
     inner: test_schema::TestServiceServer<S>,
 }
 
 #[async_trait::async_trait]
-impl<S: test_schema::TestService + std::marker::Send + std::marker::Sync> oak_idl::AsyncHandler
+impl<S: test_schema::TestService + std::marker::Send + std::marker::Sync> oak_idl::AsyncTransport
     for AsyncTestServiceServer<S>
 {
-    async fn invoke(
-        &mut self,
-        request: oak_idl::Request,
-    ) -> Result<alloc::vec::Vec<u8>, oak_idl::Status> {
-        self.inner.invoke(request)
+    async fn invoke(&mut self, request_bytes: &[u8]) -> Result<alloc::vec::Vec<u8>, !> {
+        self.inner.invoke(request_bytes)
     }
 }
 
@@ -145,43 +124,29 @@ async fn test_async_lookup_data() {
     let service = TestServiceImpl;
     use test_schema::TestService;
     let service_impl = service.serve();
-    let async_handler = AsyncTestServiceServer {
+    let async_transport = AsyncTestServiceServer {
         inner: service_impl,
     };
-    let mut client = test_schema::TestServiceAsyncClient::new(async_handler);
+    let mut client = test_schema::TestServiceAsyncClient::new(async_transport);
     {
-        let mut builder = oak_idl::utils::OwnedFlatbufferBuilder::default();
-        let key = builder.create_vector::<u8>(&[14, 12]);
-        let flatbuffer = test_schema::LookupDataRequest::create(
-            &mut builder,
-            &test_schema::LookupDataRequestArgs { key: Some(key) },
-        );
-        let owned_flatbuffer = builder.finish(flatbuffer).unwrap();
-        let response = client
-            .lookup_data(owned_flatbuffer.into_vec())
-            .await
-            .unwrap();
+        let request = test_schema::LookupDataRequest { key: vec![14, 12] };
+        let response = client.lookup_data(&request).await.into_ok();
         assert_eq!(
-            Some([19, 88].as_ref()),
+            Ok(test_schema::LookupDataResponse {
+                value: vec![19, 88]
+            }),
             response
-                .get()
-                .value()
-                .as_ref()
-                .map(flatbuffers::Vector::bytes)
         );
     }
     {
-        let mut builder = oak_idl::utils::OwnedFlatbufferBuilder::default();
-        let key = builder.create_vector::<u8>(&[10, 00]);
-        let flatbuffer = test_schema::LookupDataRequest::create(
-            &mut builder,
-            &test_schema::LookupDataRequestArgs { key: Some(key) },
+        let request = test_schema::LookupDataRequest { key: vec![10, 00] };
+        let response = client.lookup_data(&request).await.into_ok();
+        assert_eq!(
+            Err(oak_idl::Status::new_with_message(
+                oak_idl::StatusCode::NotFound,
+                "not found"
+            )),
+            response
         );
-        let owned_flatbuffer = builder.finish(flatbuffer).unwrap();
-        let response = client
-            .lookup_data(owned_flatbuffer.into_vec())
-            .await
-            .unwrap();
-        assert!(response.get().value().is_none());
     }
 }

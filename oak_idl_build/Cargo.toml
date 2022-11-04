@@ -1,7 +1,9 @@
 [package]
-name = "oak_idl_gen_structs"
+name = "oak_idl_build"
 version = "0.1.0"
 edition = "2021"
 license = "Apache-2.0"
 
 [dependencies]
+anyhow = "*"
+prost-build = "*"

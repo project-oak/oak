@@ -27,7 +27,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         },
     )?;
 
-    oak_protobuf_idl_build::compile(
+    oak_idl_build::compile(
         &[format!(
             "{}oak_functions_freestanding/proto/oak_functions.proto",
             env!("WORKSPACE_ROOT")

@@ -15,14 +15,11 @@
 //
 
 fn main() {
-    oak_protobuf_idl_build::compile(
+    oak_idl_build::compile(
         &[format!(
-            "{}oak_protobuf_idl_tests/proto/test_schema.proto",
+            "{}oak_idl/proto/messages.proto",
             env!("WORKSPACE_ROOT")
         )],
-        &[format!(
-            "{}oak_protobuf_idl_tests/proto",
-            env!("WORKSPACE_ROOT")
-        )],
+        &[format!("{}oak_idl/proto", env!("WORKSPACE_ROOT"))],
     );
 }

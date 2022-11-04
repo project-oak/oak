@@ -756,15 +756,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e4c78c047431fee22c1a7bb92e00ad095a02a983affe4d8a72e2a2c62c1b94f3"
 
 [[package]]
-name = "convert_case"
-version = "0.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ec182b0ca2f35d8fc196cf3404988fd8b8c739a4d270ff118a398feb0cbec1ca"
-dependencies = [
- "unicode-segmentation",
-]
-
-[[package]]
 name = "core-foundation"
 version = "0.9.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1347,15 +1338,6 @@ name = "fixedbitset"
 version = "0.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0ce7134b9999ecaf8bcd65542e436736ef32ddca1b3e06094cb6ec5755203b80"
-
-[[package]]
-name = "flatbuffers"
-version = "22.9.29"
-source = "git+https://github.com/google/flatbuffers.git?rev=5792623df42e6165a376907bbb8e6090d0946db5#5792623df42e6165a376907bbb8e6090d0946db5"
-dependencies = [
- "bitflags",
- "rustc_version",
-]
 
 [[package]]
 name = "fnv"
@@ -2356,7 +2338,6 @@ dependencies = [
  "anyhow",
  "bitflags",
  "oak_idl",
- "oak_protobuf_idl",
  "static_assertions",
 ]
 
@@ -2367,8 +2348,8 @@ dependencies = [
  "async-trait",
  "hashbrown",
  "log",
- "oak_protobuf_idl",
- "oak_protobuf_idl_build",
+ "oak_idl",
+ "oak_idl_build",
  "prost 0.11.0",
 ]
 
@@ -2439,9 +2420,8 @@ dependencies = [
  "oak_functions_wasm",
  "oak_functions_workload_logging",
  "oak_idl",
+ "oak_idl_build",
  "oak_logger",
- "oak_protobuf_idl",
- "oak_protobuf_idl_build",
  "oak_remote_attestation",
  "oak_remote_attestation_amd",
  "oak_remote_attestation_sessions",
@@ -2466,8 +2446,7 @@ dependencies = [
  "oak_channel",
  "oak_functions_abi",
  "oak_idl",
- "oak_protobuf_idl",
- "oak_protobuf_idl_build",
+ "oak_idl_build",
  "oak_remote_attestation_sessions",
  "oak_utils",
  "prost 0.11.0",
@@ -2687,33 +2666,27 @@ name = "oak_idl"
 version = "0.1.0"
 dependencies = [
  "async-trait",
- "flatbuffers",
+ "oak_idl_build",
+ "prost 0.11.0",
 ]
 
 [[package]]
-name = "oak_idl_gen_services"
+name = "oak_idl_build"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "convert_case",
- "flatbuffers",
- "oak_idl_gen_structs",
+ "prost-build 0.9.0",
 ]
-
-[[package]]
-name = "oak_idl_gen_structs"
-version = "0.1.0"
 
 [[package]]
 name = "oak_idl_tests"
 version = "0.1.0"
 dependencies = [
  "async-trait",
- "flatbuffers",
  "maplit",
  "oak_idl",
- "oak_idl_gen_services",
- "oak_idl_gen_structs",
+ "oak_idl_build",
+ "prost 0.11.0",
  "tokio",
 ]
 
@@ -2731,37 +2704,6 @@ name = "oak_logger"
 version = "0.1.0"
 dependencies = [
  "log",
-]
-
-[[package]]
-name = "oak_protobuf_idl"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "oak_idl",
- "oak_protobuf_idl_build",
- "prost 0.11.0",
-]
-
-[[package]]
-name = "oak_protobuf_idl_build"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "prost 0.11.0",
- "prost-build 0.11.1",
-]
-
-[[package]]
-name = "oak_protobuf_idl_tests"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "maplit",
- "oak_protobuf_idl",
- "oak_protobuf_idl_build",
- "prost 0.11.0",
- "tokio",
 ]
 
 [[package]]
@@ -2864,8 +2806,7 @@ dependencies = [
  "hashbrown",
  "log",
  "oak_idl",
- "oak_protobuf_idl",
- "oak_protobuf_idl_build",
+ "oak_idl_build",
  "prost 0.11.0",
 ]
 
@@ -3753,15 +3694,6 @@ name = "rustc-hash"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "08d43f7aa6b08d49f382cde6a7982047c3426db949b1424bc4b7ec9ae12c6ce2"
-
-[[package]]
-name = "rustc_version"
-version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bfa0f585226d2e68097d4f95d113b15b83a82e819ab25717ec0590d9584ef366"
-dependencies = [
- "semver",
-]
 
 [[package]]
 name = "rustix"
