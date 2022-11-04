@@ -14,6 +14,9 @@
 // limitations under the License.
 //
 
+#![feature(never_type)]
+#![feature(result_flattening)]
+
 use anyhow::Context;
 use clap::Parser;
 use instance::{crosvm, native, LaunchedInstance};
@@ -27,21 +30,9 @@ use std::{
 use tokio::signal;
 
 pub mod schema {
-    #![allow(
-        clippy::derivable_impls,
-        clippy::extra_unused_lifetimes,
-        clippy::missing_safety_doc,
-        clippy::needless_borrow,
-        dead_code,
-        unused_imports
-    )]
-
-    include!(concat!(env!("OUT_DIR"), "/schema_generated.rs"));
-    include!(concat!(env!("OUT_DIR"), "/schema_services_servers.rs"));
-    include!(concat!(
-        env!("OUT_DIR"),
-        "/schema_services_async_clients.rs"
-    ));
+    #![allow(dead_code)]
+    use prost::Message;
+    include!(concat!(env!("OUT_DIR"), "/oak.functions.rs"));
 }
 
 mod channel;
@@ -141,7 +132,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     lookup::encode_lookup_data(lookup_data).expect("failed to encode lookup data");
 
                 if let Err(err) = runtime_client
-                    .update_lookup_data(encoded_lookup_data.into_vec())
+                    .update_lookup_data(&encoded_lookup_data)
                     .await
                 {
                     panic!("failed to send lookup data: {:?}", err)
@@ -155,46 +146,35 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let wasm_bytes = fs::read(&cli.wasm)
         .with_context(|| format!("Couldn't read Wasm file {}", &cli.wasm.display()))
         .unwrap();
-    let owned_initialization_flatbuffer = {
-        let mut builder = oak_idl::utils::OwnedFlatbufferBuilder::default();
-        let wasm_module = builder.create_vector::<u8>(&wasm_bytes);
-        let initialization_flatbuffer = schema::Initialization::create(
-            &mut builder,
-            &schema::InitializationArgs {
-                wasm_module: Some(wasm_module),
-                constant_response_size: cli.constant_response_size,
-            },
-        );
+    log::info!(
+        "read Wasm file from disk {} ({} bytes)",
+        &cli.wasm.display(),
+        wasm_bytes.len()
+    );
 
-        builder
-            .finish(initialization_flatbuffer)
-            .expect("errored when creating initialization message")
+    let request = schema::Initialization {
+        wasm_module: wasm_bytes,
+        constant_response_size: cli.constant_response_size,
     };
 
     let mut client = schema::TrustedRuntimeAsyncClient::new(connector_handle.clone());
     let result = client
-        .initialize(owned_initialization_flatbuffer.into_vec())
+        .initialize(&request)
         .await
+        .flatten()
         .expect("failed to initialize the runtime");
 
-    let public_key_info = result
-        .get()
-        .public_key_info()
-        .expect("no public key info returned");
+    let public_key_info = result.public_key_info.expect("no public key info returned");
+    log::info!(
+        "obtained public key ({} bytes)",
+        public_key_info.public_key.len()
+    );
 
     let server_future = server::server(
         SocketAddr::from((Ipv6Addr::UNSPECIFIED, cli.port)),
         connector_handle,
-        public_key_info
-            .public_key()
-            .expect("missing public key")
-            .bytes()
-            .to_vec(),
-        public_key_info
-            .attestation()
-            .unwrap_or_default()
-            .bytes()
-            .to_vec(),
+        public_key_info.public_key,
+        public_key_info.attestation,
     );
 
     // Wait until something dies or we get a signal to terminate.

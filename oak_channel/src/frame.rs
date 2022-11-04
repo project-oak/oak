@@ -58,7 +58,9 @@ pub struct Frame {
 impl TryFrom<Frame> for Vec<u8> {
     type Error = anyhow::Error;
     fn try_from(frame: Frame) -> Result<Self, Self::Error> {
-        let length = BODY_OFFSET + frame.body.len();
+        let length = BODY_OFFSET
+            .checked_add(frame.body.len())
+            .expect("body length overflow");
         let mut frame_bytes: Vec<u8> = Vec::with_capacity(length);
 
         frame_bytes.extend_from_slice(&[0; PADDING_SIZE]);
@@ -111,7 +113,9 @@ impl Framed {
         };
 
         let body = {
-            let body_length: usize = length - BODY_OFFSET;
+            let body_length: usize = length
+                .checked_sub(BODY_OFFSET)
+                .expect("body length underflow");
             let mut body: Vec<u8> = vec![0; body_length];
             self.inner.read(&mut body)?;
             body

@@ -16,8 +16,7 @@ anyhow = { version = "*", default-features = false }
 hashbrown = "*"
 log = "*"
 oak_idl = { path = "../oak_idl" }
-# Ensure no_std compatibility. TODO(#2920): remove once https://github.com/google/flatbuffers/pull/7338 is merged.
-flatbuffers = { git = "https://github.com/google/flatbuffers.git", rev = "5792623df42e6165a376907bbb8e6090d0946db5", default-features = false }
+oak_protobuf_idl = { path = "../oak_protobuf_idl" }
 oak_functions_wasm = { path = "../oak_functions/wasm" }
 oak_functions_abi = { path = "../oak_functions_abi" }
 oak_functions_lookup = { path = "../oak_functions/lookup" }
@@ -25,10 +24,10 @@ oak_functions_workload_logging = { path = "../oak_functions/workload_logging" }
 oak_remote_attestation = { path = "../oak_remote_attestation", default-features = false }
 oak_remote_attestation_sessions = { path = "../oak_remote_attestation_sessions", default-features = false }
 oak_logger = { path = "../oak_functions/logger" }
+prost = { version = "*", default-features = false, features = ["prost-derive"] }
 
 [build-dependencies]
-oak_idl_gen_services = { path = "../oak_idl_gen_services" }
-oak_idl_gen_structs = { path = "../oak_idl_gen_structs" }
+oak_protobuf_idl_build = { path = "../oak_protobuf_idl_build" }
 
 [dev-dependencies]
 oak_functions_test_utils = { path = "../oak_functions_test_utils" }

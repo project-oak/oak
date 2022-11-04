@@ -55,7 +55,6 @@ fn test_fragmenting_bytes_into_frames() {
 #[test]
 fn test_request_message_encoding() {
     let message = message::RequestMessage {
-        method_id: 0,
         invocation_id: 0,
         body: mock_payload(),
     };
@@ -66,7 +65,6 @@ fn test_request_message_encoding() {
 #[test]
 fn test_response_message_encoding() {
     let message = message::ResponseMessage {
-        status_code: 0,
         invocation_id: 0,
         body: mock_payload(),
     };
@@ -103,7 +101,6 @@ fn test_invocation_channel() {
     let mut invocation_channel = InvocationChannel::new(Box::new(MessageStore::default()));
 
     let message = message::RequestMessage {
-        method_id: 0,
         invocation_id: 4,
         body: mock_payload(),
     };
@@ -118,7 +115,6 @@ fn test_invocation_channel() {
 fn test_invocation_channel_double_start_frame() {
     let mut invocation_channel = {
         let message = message::RequestMessage {
-            method_id: 0,
             invocation_id: 0,
             body: mock_payload(),
         };
@@ -142,7 +138,6 @@ fn test_invocation_channel_double_start_frame() {
 fn test_invocation_channel_expected_start_frame() {
     let mut invocation_channel = {
         let message = message::RequestMessage {
-            method_id: 0,
             invocation_id: 0,
             body: mock_payload(),
         };

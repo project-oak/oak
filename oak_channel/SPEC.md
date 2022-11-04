@@ -69,10 +69,6 @@ A byte encoded request message MUST consist of the following fields:
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 |                         invocation_id                         |
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|                           method_id                           |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|                            padding                            |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 |                                                               |
 +                         body bytes...                         +
 |                                                               |
@@ -80,7 +76,7 @@ A byte encoded request message MUST consist of the following fields:
 ```
 
 <!-- Diagram generated with https://www.luismg.com/protocol/, using the schema
-"length:32,invocation_id:32,method_id:32,padding:32,body bytes...:64"  -->
+"length:32,invocation_id:32,body bytes...:64"  -->
 
 - `length`, u32, little endian
 
@@ -89,14 +85,6 @@ A byte encoded request message MUST consist of the following fields:
 - `invocation_id`, u32, little endian
 
   Identifies the invocation the request initiates.
-
-- `method_id`, u32, little endian
-
-  Identifies the method that is being invoked.
-
-- `padding`, 4 bytes
-
-  Reserved to maintain 8 byte alignment. MUST be unset and ignored.
 
 - `body`, variable length byte array
 
@@ -114,10 +102,6 @@ A byte encoded response message MUST consist of the following fields:
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 |                         invocation_id                         |
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|                          status_code                          |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|                            padding                            |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 |                                                               |
 +                         body bytes...                         +
 |                                                               |
@@ -125,7 +109,7 @@ A byte encoded response message MUST consist of the following fields:
 ```
 
 <!-- Diagram generated with https://www.luismg.com/protocol/, using the schema
-"length:32,invocation_id:32,status_code:32,padding:32,body bytes...:64" -->
+"length:32,invocation_id:32,body bytes...:64" -->
 
 - `length`, u32, little endian
 
@@ -134,15 +118,6 @@ A byte encoded response message MUST consist of the following fields:
 - `invocation_id`, u32, little endian
 
   MUST match the invocation_id of the relevant request message.
-
-- `status_code`, u32, little endian
-
-  Response status as a
-  [gRPC status code](https://grpc.github.io/grpc/core/md_doc_statuscodes.html).
-
-- `padding`, 4 bytes
-
-  Reserved to maintain 8 byte alignment. MUST be unset and ignored.
 
 - `body`, variable length byte array
 

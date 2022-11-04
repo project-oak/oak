@@ -15,11 +15,13 @@
 //
 
 #![feature(assert_matches)]
+#![feature(unwrap_infallible)]
 
 extern crate alloc;
 
 use core::assert_matches::assert_matches;
 use oak_functions_freestanding::{
+    schema,
     schema::{TrustedRuntime, TrustedRuntimeServer},
     RuntimeImplementation,
 };
@@ -30,20 +32,6 @@ use oak_remote_attestation_amd::{
     PlaceholderAmdAttestationGenerator, PlaceholderAmdAttestationVerifier,
 };
 use oak_remote_attestation_sessions_client::{AttestationTransport, GenericAttestationClient};
-
-mod schema {
-    #![allow(
-        clippy::derivable_impls,
-        clippy::extra_unused_lifetimes,
-        clippy::missing_safety_doc,
-        clippy::needless_borrow,
-        dead_code,
-        unused_imports
-    )]
-
-    include!(concat!(env!("OUT_DIR"), "/schema_generated.rs"));
-    include!(concat!(env!("OUT_DIR"), "/schema_services_clients.rs"));
-}
 
 const MOCK_SESSION_ID: &[u8; 8] = &[0, 0, 0, 0, 0, 0, 0, 0];
 const MOCK_CONSTANT_RESPONSE_SIZE: u32 = 1024;
@@ -67,35 +55,18 @@ impl AttestationTransport for TestUserClient {
         session_id: oak_remote_attestation_sessions::SessionId,
         body: Vec<u8>,
     ) -> anyhow::Result<Vec<u8>> {
-        let owned_request_flatbuffer = {
-            let mut builder = oak_idl::utils::OwnedFlatbufferBuilder::default();
-            let session_id = &schema::SessionId::new(&session_id);
-            let body = builder.create_vector::<u8>(&body);
-            let flatbuffer = schema::UserRequest::create(
-                &mut builder,
-                &schema::UserRequestArgs {
-                    session_id: Some(session_id),
-                    body: Some(body),
-                },
-            );
-            builder
-                .finish(flatbuffer)
-                .map_err(|err| {
-                    oak_idl::Status::new_with_message(
-                        oak_idl::StatusCode::Internal,
-                        err.to_string(),
-                    )
-                })
-                .unwrap()
+        let request = schema::UserRequest {
+            session_id: Some(schema::SessionId {
+                value: session_id.to_vec(),
+            }),
+            body,
         };
-        let response_flatbuffer = self
+        let response = self
             .inner
-            .handle_user_request(owned_request_flatbuffer.into_vec())
-            .unwrap();
-
-        let decoded_response = response_flatbuffer.get().body().unwrap();
-
-        Ok(decoded_response.bytes().to_vec())
+            .handle_user_request(&request)
+            .unwrap()
+            .map_err(|err| anyhow::anyhow!("could not handle user request: {:?}", err))?;
+        Ok(response.body)
     }
 }
 
@@ -111,26 +82,13 @@ fn it_should_not_handle_user_requests_before_initialization() {
     let client_hello = handshaker
         .create_client_hello()
         .expect("Couldn't create client hello message");
-
-    let owned_request_flatbuffer = {
-        let mut builder = oak_idl::utils::OwnedFlatbufferBuilder::default();
-        let session_id = &schema::SessionId::new(MOCK_SESSION_ID);
-        let body = builder.create_vector::<u8>(&client_hello);
-        let flatbuffer = schema::UserRequest::create(
-            &mut builder,
-            &schema::UserRequestArgs {
-                session_id: Some(session_id),
-                body: Some(body),
-            },
-        );
-        builder
-            .finish(flatbuffer)
-            .map_err(|err| {
-                oak_idl::Status::new_with_message(oak_idl::StatusCode::Internal, err.to_string())
-            })
-            .unwrap()
+    let request = schema::UserRequest {
+        session_id: Some(schema::SessionId {
+            value: MOCK_SESSION_ID.to_vec(),
+        }),
+        body: client_hello,
     };
-    let result = client.handle_user_request(owned_request_flatbuffer.into_vec());
+    let result = client.handle_user_request(&request).into_ok();
 
     assert_matches!(
         result,
@@ -148,27 +106,14 @@ fn it_should_handle_user_requests_after_initialization() {
     let runtime = RuntimeImplementation::new(attestation_behavior.clone());
     let mut client = schema::TrustedRuntimeClient::new(TrustedRuntime::serve(runtime));
 
-    let owned_initialization_flatbuffer = {
-        let mut builder = oak_idl::utils::OwnedFlatbufferBuilder::default();
-        let wasm_path = oak_functions_test_utils::build_rust_crate_wasm("echo").unwrap();
-        let wasm_bytes = std::fs::read(wasm_path).unwrap();
-        let wasm_module = builder.create_vector::<u8>(&wasm_bytes);
-        let initialization_flatbuffer = schema::Initialization::create(
-            &mut builder,
-            &schema::InitializationArgs {
-                wasm_module: Some(wasm_module),
-                constant_response_size: MOCK_CONSTANT_RESPONSE_SIZE,
-            },
-        );
-
-        builder
-            .finish(initialization_flatbuffer)
-            .expect("errored when creating initialization message")
+    let wasm_path = oak_functions_test_utils::build_rust_crate_wasm("echo").unwrap();
+    let wasm_bytes = std::fs::read(wasm_path).unwrap();
+    let request = schema::Initialization {
+        wasm_module: wasm_bytes,
+        constant_response_size: MOCK_CONSTANT_RESPONSE_SIZE,
     };
 
-    client
-        .initialize(owned_initialization_flatbuffer.into_vec())
-        .unwrap();
+    client.initialize(&request).into_ok().unwrap();
 
     let mut handshaker =
         ClientHandshaker::new(attestation_behavior).expect("could not create client handshaker");
@@ -176,27 +121,15 @@ fn it_should_handle_user_requests_after_initialization() {
         .create_client_hello()
         .expect("Couldn't create client hello message");
 
-    let owned_request_flatbuffer = {
-        let mut builder = oak_idl::utils::OwnedFlatbufferBuilder::default();
-        let session_id = &schema::SessionId::new(MOCK_SESSION_ID);
-        let body = builder.create_vector::<u8>(&client_hello);
-        let flatbuffer = schema::UserRequest::create(
-            &mut builder,
-            &schema::UserRequestArgs {
-                session_id: Some(session_id),
-                body: Some(body),
-            },
-        );
-        builder
-            .finish(flatbuffer)
-            .map_err(|err| {
-                oak_idl::Status::new_with_message(oak_idl::StatusCode::Internal, err.to_string())
-            })
-            .unwrap()
+    let request = schema::UserRequest {
+        session_id: Some(schema::SessionId {
+            value: MOCK_SESSION_ID.to_vec(),
+        }),
+        body: client_hello,
     };
-    let result = client.handle_user_request(owned_request_flatbuffer.into_vec());
+    let result = client.handle_user_request(&request).into_ok();
 
-    assert_matches!(result, Ok(_));
+    assert!(result.is_ok());
 }
 
 #[test]
@@ -206,29 +139,15 @@ fn it_should_only_initialize_once() {
     let runtime = RuntimeImplementation::new(attestation_behavior);
     let mut client = schema::TrustedRuntimeClient::new(TrustedRuntime::serve(runtime));
 
-    let owned_initialization_flatbuffer = {
-        let mut builder = oak_idl::utils::OwnedFlatbufferBuilder::default();
-        let wasm_path = oak_functions_test_utils::build_rust_crate_wasm("echo").unwrap();
-        let wasm_bytes = std::fs::read(wasm_path).unwrap();
-        let wasm_module = builder.create_vector::<u8>(&wasm_bytes);
-        let initialization_flatbuffer = schema::Initialization::create(
-            &mut builder,
-            &schema::InitializationArgs {
-                wasm_module: Some(wasm_module),
-                constant_response_size: MOCK_CONSTANT_RESPONSE_SIZE,
-            },
-        );
-
-        builder
-            .finish(initialization_flatbuffer)
-            .expect("errored when creating initialization message")
+    let wasm_path = oak_functions_test_utils::build_rust_crate_wasm("echo").unwrap();
+    let wasm_bytes = std::fs::read(wasm_path).unwrap();
+    let request = schema::Initialization {
+        wasm_module: wasm_bytes,
+        constant_response_size: MOCK_CONSTANT_RESPONSE_SIZE,
     };
+    client.initialize(&request).into_ok().unwrap();
 
-    let init_args = owned_initialization_flatbuffer.into_vec();
-
-    client.initialize(init_args.clone()).unwrap();
-
-    let result = client.initialize(init_args);
+    let result = client.initialize(&request).into_ok();
 
     assert_matches!(
         result,
@@ -246,52 +165,22 @@ async fn it_should_support_lookup_data() {
     let runtime = RuntimeImplementation::new(attestation_behavior);
     let mut client = schema::TrustedRuntimeClient::new(TrustedRuntime::serve(runtime));
 
-    let owned_initialization_flatbuffer = {
-        let mut builder = oak_idl::utils::OwnedFlatbufferBuilder::default();
-        let wasm_path =
-            oak_functions_test_utils::build_rust_crate_wasm("key_value_lookup").unwrap();
-        let wasm_bytes = std::fs::read(wasm_path).unwrap();
-        let wasm_module = builder.create_vector::<u8>(&wasm_bytes);
-        let initialization_flatbuffer = schema::Initialization::create(
-            &mut builder,
-            &schema::InitializationArgs {
-                wasm_module: Some(wasm_module),
-                constant_response_size: MOCK_CONSTANT_RESPONSE_SIZE,
-            },
-        );
-
-        builder
-            .finish(initialization_flatbuffer)
-            .expect("errored when creating initialization message")
+    let wasm_path = oak_functions_test_utils::build_rust_crate_wasm("key_value_lookup").unwrap();
+    let wasm_bytes = std::fs::read(wasm_path).unwrap();
+    let request = schema::Initialization {
+        wasm_module: wasm_bytes,
+        constant_response_size: MOCK_CONSTANT_RESPONSE_SIZE,
     };
 
-    let lookup_data = {
-        let mut builder = oak_idl::utils::OwnedFlatbufferBuilder::default();
-        let key = builder.create_vector::<u8>(LOOKUP_TEST_KEY);
-        let value = builder.create_vector::<u8>(LOOKUP_TEST_VALUE);
-        let entry = schema::LookupDataEntry::create(
-            &mut builder,
-            &schema::LookupDataEntryArgs {
-                key: Some(key),
-                value: Some(value),
-            },
-        );
+    client.initialize(&request).into_ok().unwrap();
 
-        let items = builder.create_vector(&[entry]);
-        let message = schema::LookupData::create(
-            &mut builder,
-            &schema::LookupDataArgs { items: Some(items) },
-        );
-        builder
-            .finish(message)
-            .expect("errored when creating lookup data update message")
+    let request = schema::LookupData {
+        items: vec![schema::LookupDataEntry {
+            key: LOOKUP_TEST_KEY.to_vec(),
+            value: LOOKUP_TEST_VALUE.to_vec(),
+        }],
     };
-
-    client.update_lookup_data(lookup_data.into_vec()).unwrap();
-
-    client
-        .initialize(owned_initialization_flatbuffer.into_vec())
-        .unwrap();
+    client.update_lookup_data(&request).into_ok().unwrap();
 
     let mut user_client = GenericAttestationClient::create(
         TestUserClient { inner: client },

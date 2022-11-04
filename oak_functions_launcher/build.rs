@@ -16,8 +16,6 @@
 
 use oak_utils::{generate_grpc_code, CodegenOptions};
 
-const RUNTIME_INTERFACE_SCHEMA: &str = "../oak_functions_freestanding/schema.fbs";
-
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     generate_grpc_code(
         &format!("{}oak_grpc_unary_attestation/proto", env!("WORKSPACE_ROOT")),
@@ -29,9 +27,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         },
     )?;
 
-    oak_idl_gen_structs::compile_structs(RUNTIME_INTERFACE_SCHEMA);
-    oak_idl_gen_services::compile_services_servers(RUNTIME_INTERFACE_SCHEMA);
-    oak_idl_gen_services::compile_services_async_clients(RUNTIME_INTERFACE_SCHEMA);
+    oak_protobuf_idl_build::compile(
+        &[format!(
+            "{}oak_functions_freestanding/proto/oak_functions.proto",
+            env!("WORKSPACE_ROOT")
+        )],
+        &[format!(
+            "{}oak_functions_freestanding/proto",
+            env!("WORKSPACE_ROOT")
+        )],
+    );
 
     Ok(())
 }

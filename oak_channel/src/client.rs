@@ -20,7 +20,7 @@ use crate::{
     message::{InvocationId, RequestMessage, ResponseMessage},
     Channel, InvocationChannel,
 };
-use alloc::{boxed::Box, string::String, vec::Vec};
+use alloc::boxed::Box;
 
 pub struct ClientChannelHandle {
     inner: InvocationChannel,
@@ -47,12 +47,11 @@ pub struct RequestEncoder {
 }
 
 impl RequestEncoder {
-    pub fn encode_request(&mut self, request: oak_idl::Request) -> RequestMessage {
+    pub fn encode_request(&mut self, request_body: &[u8]) -> RequestMessage {
         let invocation_id = self.invocation_id_counter.next_invocation_id();
         RequestMessage {
             invocation_id,
-            method_id: request.method_id,
-            body: request.body.to_vec(),
+            body: request_body.to_vec(),
         }
     }
 }
@@ -67,24 +66,5 @@ impl InvocationIdCounter {
         let next_invocation_id = self.next_invocation_id;
         self.next_invocation_id = next_invocation_id.wrapping_add(1);
         next_invocation_id
-    }
-}
-
-/// Construct the response to a [`oak_idl::Request`] from a [`ResponseMessage`].
-impl From<ResponseMessage> for Result<Vec<u8>, oak_idl::Status> {
-    fn from(message: ResponseMessage) -> Self {
-        if message.status_code == oak_idl::StatusCode::Ok.into() {
-            Ok(message.body)
-        } else {
-            Err(oak_idl::Status {
-                code: message.status_code.into(),
-                message: String::from_utf8(message.body.to_vec()).unwrap_or_else(|err| {
-                    alloc::format!(
-                        "Could not parse response error message bytes as utf8: {:?}",
-                        err
-                    )
-                }),
-            })
-        }
     }
 }

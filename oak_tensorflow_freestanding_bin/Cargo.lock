@@ -91,15 +91,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
 
 [[package]]
-name = "convert_case"
-version = "0.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ec182b0ca2f35d8fc196cf3404988fd8b8c739a4d270ff118a398feb0cbec1ca"
-dependencies = [
- "unicode-segmentation",
-]
-
-[[package]]
 name = "doc-comment"
 version = "0.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -273,7 +264,6 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "bitflags",
- "flatbuffers",
  "oak_idl",
  "oak_protobuf_idl",
  "static_assertions",
@@ -285,20 +275,6 @@ version = "0.1.0"
 dependencies = [
  "flatbuffers",
 ]
-
-[[package]]
-name = "oak_idl_gen_services"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "convert_case",
- "flatbuffers",
- "oak_idl_gen_structs",
-]
-
-[[package]]
-name = "oak_idl_gen_structs"
-version = "0.1.0"
 
 [[package]]
 name = "oak_linux_boot_params"
@@ -382,13 +358,13 @@ name = "oak_tensorflow_service"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "flatbuffers",
  "glob",
  "hashbrown",
  "log",
  "oak_idl",
- "oak_idl_gen_services",
- "oak_idl_gen_structs",
+ "oak_protobuf_idl",
+ "oak_protobuf_idl_build",
+ "prost",
 ]
 
 [[package]]
@@ -703,12 +679,6 @@ name = "unicode-ident"
 version = "1.0.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6ceab39d59e4c9499d4e5a8ee0e2735b891bb7308ac83dfb4e80cad195c9f6f3"
-
-[[package]]
-name = "unicode-segmentation"
-version = "1.10.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0fdbf052a0783de01e944a6ce7a8cb939e295b1e7be835a1112c3b9a7f047a5a"
 
 [[package]]
 name = "version_check"

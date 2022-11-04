@@ -10,12 +10,11 @@ anyhow = { version = "*", default-features = false }
 log = "*"
 hashbrown = "*"
 oak_idl = { path = "../oak_idl" }
-# Ensure no_std compatibility. TODO(#2920): remove once https://github.com/google/flatbuffers/pull/7338 is merged.
-flatbuffers = { git = "https://github.com/google/flatbuffers.git", rev = "5792623df42e6165a376907bbb8e6090d0946db5", default-features = false }
+oak_protobuf_idl = { path = "../oak_protobuf_idl" }
+prost = { version = "*", default-features = false, features = ["prost-derive"] }
 
 [build-dependencies]
-oak_idl_gen_services = { path = "../oak_idl_gen_services" }
-oak_idl_gen_structs = { path = "../oak_idl_gen_structs" }
+oak_protobuf_idl_build = { path = "../oak_protobuf_idl_build" }
 glob = "*"
 
 [dev-dependencies]

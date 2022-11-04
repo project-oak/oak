@@ -20,33 +20,12 @@ use hashbrown::HashMap;
 use prost::Message;
 use std::fs;
 
-pub fn encode_lookup_data<'a>(
-    mut data: HashMap<Vec<u8>, Vec<u8>>,
-) -> anyhow::Result<oak_idl::utils::OwnedFlatbuffer<schema::LookupData<'a>>> {
-    let mut builder = oak_idl::utils::OwnedFlatbufferBuilder::default();
-    let entries: Vec<flatbuffers::WIPOffset<schema::LookupDataEntry>> = data
-        .drain()
-        .map(|(key, value)| {
-            let key = builder.create_vector::<u8>(&key);
-            let value = builder.create_vector::<u8>(&value);
-            schema::LookupDataEntry::create(
-                &mut builder,
-                &schema::LookupDataEntryArgs {
-                    key: Some(key),
-                    value: Some(value),
-                },
-            )
-        })
+pub fn encode_lookup_data(data: HashMap<Vec<u8>, Vec<u8>>) -> anyhow::Result<schema::LookupData> {
+    let entries: Vec<schema::LookupDataEntry> = data
+        .into_iter()
+        .map(|(key, value)| schema::LookupDataEntry { key, value })
         .collect();
-    let items = builder.create_vector(&entries);
-    let flatbuffer =
-        schema::LookupData::create(&mut builder, &schema::LookupDataArgs { items: Some(items) });
-    builder.finish(flatbuffer).map_err(|error| {
-        anyhow!(
-            "errored when encoding the lookup data as a flatbuffer: {}",
-            error
-        )
-    })
+    Ok(schema::LookupData { items: entries })
 }
 
 pub fn load_lookup_data(

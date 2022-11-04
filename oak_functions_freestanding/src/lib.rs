@@ -20,24 +20,16 @@
 extern crate alloc;
 
 pub mod schema {
-    #![allow(
-        clippy::derivable_impls,
-        clippy::extra_unused_lifetimes,
-        clippy::missing_safety_doc,
-        clippy::needless_borrow,
-        dead_code,
-        unused_imports
-    )]
-
-    include!(concat!(env!("OUT_DIR"), "/schema_generated.rs"));
-    include!(concat!(env!("OUT_DIR"), "/schema_services_servers.rs"));
+    #![allow(dead_code)]
+    use prost::Message;
+    include!(concat!(env!("OUT_DIR"), "/oak.functions.rs"));
 }
 mod logger;
 mod remote_attestation;
 mod wasm;
 
 use crate::remote_attestation::{AttestationHandler, AttestationSessionHandler};
-use alloc::{boxed::Box, sync::Arc};
+use alloc::{boxed::Box, format, sync::Arc};
 use anyhow::Context;
 use oak_functions_abi::Request;
 use oak_functions_lookup::LookupDataManager;
@@ -92,25 +84,34 @@ where
     fn initialize(
         &mut self,
         initialization: &schema::Initialization,
-    ) -> Result<oak_idl::utils::OwnedFlatbuffer<crate::schema::InitializeResponse>, oak_idl::Status>
-    {
+    ) -> Result<schema::InitializeResponse, oak_idl::Status> {
         match &mut self.initialization_state {
-            InitializationState::Initialized(_attestation_handler) => Err(oak_idl::Status::new(
-                oak_idl::StatusCode::FailedPrecondition,
-            )),
+            InitializationState::Initialized(_attestation_handler) => {
+                Err(oak_idl::Status::new_with_message(
+                    oak_idl::StatusCode::FailedPrecondition,
+                    "already initialized",
+                ))
+            }
             InitializationState::Uninitialized(attestation_behavior) => {
-                let attestation_behavior = attestation_behavior
-                    .take()
-                    .expect("The attestation_behavior should always be present. It is wrapped in an option purely so it can be taken without cloning.");
-                let constant_response_size = initialization.constant_response_size();
-                let wasm_module_bytes: &[u8] = initialization
-                    .wasm_module()
-                    .ok_or_else(|| oak_idl::Status::new(oak_idl::StatusCode::InvalidArgument))?
-                    .bytes();
-
-                let wasm_handler =
-                    wasm::new_wasm_handler(wasm_module_bytes, self.lookup_data_manager.clone())
-                        .map_err(|_err| oak_idl::Status::new(oak_idl::StatusCode::Internal))?;
+                // attestation_behavior must always be present; it is wrapped in an Option purely so
+                // that it can be taken without cloning.
+                let attestation_behavior = attestation_behavior.take().ok_or_else(|| {
+                    oak_idl::Status::new_with_message(
+                        oak_idl::StatusCode::Internal,
+                        "missing attestation_behavior",
+                    )
+                })?;
+                let constant_response_size = initialization.constant_response_size;
+                let wasm_handler = wasm::new_wasm_handler(
+                    &initialization.wasm_module,
+                    self.lookup_data_manager.clone(),
+                )
+                .map_err(|err| {
+                    oak_idl::Status::new_with_message(
+                        oak_idl::StatusCode::Internal,
+                        format!("could not initialize Wasm handler: {:?}", err),
+                    )
+                })?;
                 let attestation_handler = Box::new(
                     AttestationSessionHandler::create(
                         move |decrypted_request| {
@@ -129,33 +130,21 @@ where
                         },
                         attestation_behavior,
                     )
-                    .map_err(|_err| oak_idl::Status::new(oak_idl::StatusCode::Internal))?,
+                    .map_err(|err| {
+                        oak_idl::Status::new_with_message(
+                            oak_idl::StatusCode::Internal,
+                            format!("could not create attestation handler: {:?}", err),
+                        )
+                    })?,
                 );
                 let public_key_info = attestation_handler.get_public_key_info();
                 self.initialization_state = InitializationState::Initialized(attestation_handler);
-                let response_message = {
-                    let mut builder = oak_idl::utils::OwnedFlatbufferBuilder::default();
-                    let public_key = builder.create_vector::<u8>(&public_key_info.public_key);
-                    let attestation = builder.create_vector::<u8>(&public_key_info.attestation);
-                    let public_key_info = schema::PublicKeyInfo::create(
-                        &mut builder,
-                        &schema::PublicKeyInfoArgs {
-                            public_key: Some(public_key),
-                            attestation: Some(attestation),
-                        },
-                    );
-
-                    let initialize_response = schema::InitializeResponse::create(
-                        &mut builder,
-                        &schema::InitializeResponseArgs {
-                            public_key_info: Some(public_key_info),
-                        },
-                    );
-                    builder
-                        .finish(initialize_response)
-                        .map_err(|_err| oak_idl::Status::new(oak_idl::StatusCode::Internal))?
-                };
-                Ok(response_message)
+                Ok(schema::InitializeResponse {
+                    public_key_info: Some(schema::PublicKeyInfo {
+                        public_key: public_key_info.public_key,
+                        attestation: public_key_info.attestation,
+                    }),
+                })
             }
         }
     }
@@ -163,38 +152,43 @@ where
     fn handle_user_request(
         &mut self,
         request_message: &schema::UserRequest,
-    ) -> Result<oak_idl::utils::OwnedFlatbuffer<schema::UserRequestResponse>, oak_idl::Status> {
+    ) -> Result<schema::UserRequestResponse, oak_idl::Status> {
         match &mut self.initialization_state {
-            InitializationState::Uninitialized(_attestation_behavior) => Err(oak_idl::Status::new(
-                oak_idl::StatusCode::FailedPrecondition,
-            )),
+            InitializationState::Uninitialized(_attestation_behavior) => {
+                Err(oak_idl::Status::new_with_message(
+                    oak_idl::StatusCode::FailedPrecondition,
+                    "not initialized",
+                ))
+            }
             InitializationState::Initialized(attestation_handler) => {
                 let session_id: SessionId = request_message
-                    .session_id()
-                    .ok_or_else(|| oak_idl::Status::new(oak_idl::StatusCode::InvalidArgument))?
-                    .value()
-                    .into();
-                let request_body: &[u8] = request_message
-                    .body()
-                    .ok_or_else(|| oak_idl::Status::new(oak_idl::StatusCode::InvalidArgument))?
-                    .bytes();
+                    .session_id
+                    .clone()
+                    .ok_or_else(|| {
+                        oak_idl::Status::new_with_message(
+                            oak_idl::StatusCode::InvalidArgument,
+                            "missing session_id",
+                        )
+                    })?
+                    .value
+                    .try_into()
+                    .map_err(|err| {
+                        oak_idl::Status::new_with_message(
+                            oak_idl::StatusCode::InvalidArgument,
+                            format!("could not parse session_id: {:?}", err),
+                        )
+                    })?;
 
                 let response = attestation_handler
-                    .message(session_id, request_body)
-                    .map_err(|_err| oak_idl::Status::new(oak_idl::StatusCode::Internal))?;
+                    .message(session_id, &request_message.body)
+                    .map_err(|err| {
+                        oak_idl::Status::new_with_message(
+                            oak_idl::StatusCode::Internal,
+                            format!("{:?}", err),
+                        )
+                    })?;
 
-                let response_message = {
-                    let mut builder = oak_idl::utils::OwnedFlatbufferBuilder::default();
-                    let body = builder.create_vector::<u8>(&response);
-                    let user_request_response = schema::UserRequestResponse::create(
-                        &mut builder,
-                        &schema::UserRequestResponseArgs { body: Some(body) },
-                    );
-                    builder
-                        .finish(user_request_response)
-                        .map_err(|_err| oak_idl::Status::new(oak_idl::StatusCode::Internal))?
-                };
-                Ok(response_message)
+                Ok(schema::UserRequestResponse { body: response })
             }
         }
     }
@@ -202,35 +196,14 @@ where
     fn update_lookup_data(
         &mut self,
         lookup_data: &schema::LookupData,
-    ) -> Result<oak_idl::utils::OwnedFlatbuffer<crate::schema::Empty>, oak_idl::Status> {
+    ) -> Result<schema::Empty, oak_idl::Status> {
         let data = lookup_data
-            .items()
-            .ok_or_else(|| oak_idl::Status::new(oak_idl::StatusCode::InvalidArgument))?
+            .items
             .iter()
-            .map(|entry| {
-                Ok((
-                    entry
-                        .key()
-                        .ok_or_else(|| oak_idl::Status::new(oak_idl::StatusCode::InvalidArgument))?
-                        .bytes()
-                        .to_vec(),
-                    entry
-                        .value()
-                        .ok_or_else(|| oak_idl::Status::new(oak_idl::StatusCode::InvalidArgument))?
-                        .bytes()
-                        .to_vec(),
-                ))
-            })
+            .map(|entry| Ok((entry.key.clone(), entry.value.clone())))
             .collect::<Result<_, oak_idl::Status>>()?;
 
         self.lookup_data_manager.update_data(data);
-        let response_message = {
-            let mut builder = oak_idl::utils::OwnedFlatbufferBuilder::default();
-            let user_request_response = schema::Empty::create(&mut builder, &schema::EmptyArgs {});
-            builder
-                .finish(user_request_response)
-                .map_err(|_err| oak_idl::Status::new(oak_idl::StatusCode::Internal))?
-        };
-        Ok(response_message)
+        Ok(schema::Empty {})
     }
 }

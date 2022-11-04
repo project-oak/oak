@@ -20,21 +20,21 @@ use std::{
     process::Command,
 };
 
-const SCHEMA: &str = "schema.fbs";
 const TFLITE_APP_DIR: &str = "cc/tflite_micro/apps/hello_world";
 const TFLITE_APP_LIBRARY_NAME: &str = "hello_world_app";
 const TFLITE_SOURCES_PATTERN: &str = "cc/tflite_micro/**/*";
 
 fn main() {
-    println!("cargo:rerun-if-changed={}", SCHEMA);
-    oak_idl_gen_structs::compile_structs(SCHEMA);
-    oak_idl_gen_services::compile_services_servers(SCHEMA);
-    // Generate client code for integration tests. These are always built, since
-    // we cannot check in this file whether cargo is building for testing or
-    // other cases. Ref: https://github.com/rust-lang/cargo/issues/4001
-    // As long the generated client code is only used in tests it won't be
-    // included in any binaries.
-    oak_idl_gen_services::compile_services_clients(SCHEMA);
+    oak_protobuf_idl_build::compile(
+        &[format!(
+            "{}oak_tensorflow_service/proto/oak_tensorflow.proto",
+            env!("WORKSPACE_ROOT")
+        )],
+        &[format!(
+            "{}oak_tensorflow_service/proto",
+            env!("WORKSPACE_ROOT")
+        )],
+    );
 
     build_tflite();
 }
