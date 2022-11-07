@@ -22,11 +22,13 @@ use crate::{
 use alloc::{borrow::ToOwned, vec};
 use oak_functions_abi::{proto::OakStatus, ExtensionHandle, TestingRequest, TestingResponse};
 use oak_functions_testing_extension::{TestingFactory, TestingLogger};
+use wasmi::Caller;
 
 #[test]
 fn test_invoke_extension_with_invalid_handle() {
-    let (mut store, instance) = create_test_caller();
-    let mut caller = wasmi::Caller::new(&mut store, Some(instance));
+    let store = &mut create_test_store();
+    let mut caller = Caller::from(store);
+
     // Assumes there is no negative ExtensionHandle. The remaining arguments don't matter, hence
     // they are 0.
     let extension = invoke_extension(&mut caller, -1, 0, 0, 0, 0);
@@ -36,8 +38,9 @@ fn test_invoke_extension_with_invalid_handle() {
 
 #[test]
 fn test_find_extension_not_available() {
-    let (mut store, instance) = create_test_caller();
-    let mut caller = wasmi::Caller::new(&mut store, Some(instance));
+    let store = &mut create_test_store();
+    let mut caller = Caller::from(store);
+
     // Assumes we have no TF extension in our test caller. The remaining arguments don't
     // matter, hence they are 0.
     let extension = invoke_extension(&mut caller, ExtensionHandle::TfHandle as i32, 0, 0, 0, 0);
@@ -47,8 +50,9 @@ fn test_find_extension_not_available() {
 
 #[test]
 fn test_read_write_u32_in_wasm_memory() {
-    let (mut store, instance) = create_test_caller();
-    let mut caller = wasmi::Caller::new(&mut store, Some(instance));
+    let store = &mut create_test_store();
+    let mut caller = Caller::from(store);
+
     // Guess some memory address in linear Wasm memory to write to.
     let address: AbiPointer = 100;
     let value: u32 = 32;
@@ -60,8 +64,9 @@ fn test_read_write_u32_in_wasm_memory() {
 
 #[test]
 fn test_alloc_and_write_empty() {
-    let (mut store, instance) = create_test_caller();
-    let mut caller = wasmi::Caller::new(&mut store, Some(instance));
+    let store = &mut create_test_store();
+    let mut caller = Caller::from(store);
+
     // Guess some memory addresses in linear Wasm memory to write to.
     let dest_ptr_ptr: AbiPointer = 100;
     let dest_len_ptr: AbiPointer = 150;
@@ -89,8 +94,9 @@ fn test_alloc_and_write_empty() {
 
 #[test]
 fn test_alloc_and_write() {
-    let (mut store, instance) = create_test_caller();
-    let mut caller = wasmi::Caller::new(&mut store, Some(instance));
+    let store = &mut create_test_store();
+    let mut caller = Caller::from(store);
+
     let bfr = vec![42];
     // Guess some memory addresses in linear Wasm memory to write to.
     let dest_ptr_ptr: AbiPointer = 100;
@@ -116,8 +122,9 @@ fn test_alloc_and_write() {
 
 #[test]
 fn test_write_read_buffer_in_wasm_memory() {
-    let (mut store, instance) = create_test_caller();
-    let mut caller = wasmi::Caller::new(&mut store, Some(instance));
+    let store = &mut create_test_store();
+    let mut caller = Caller::from(store);
+
     // Guess some memory addresses in linear Wasm memory to write to.
     let dest_ptr_ptr: AbiPointer = 100;
     let dest_len_ptr: AbiPointer = 150;
@@ -141,8 +148,8 @@ fn test_write_read_buffer_in_wasm_memory() {
 
 #[test]
 fn test_read_empty_buffer_in_wasm_memory() {
-    let (mut store, instance) = create_test_caller();
-    let mut caller = wasmi::Caller::new(&mut store, Some(instance));
+    let store = &mut create_test_store();
+    let mut caller = Caller::from(store);
 
     // Guess some memory addresses in linear Wasm memory to write to.
     let dest_len_ptr: AbiPointer = 150;
@@ -161,8 +168,8 @@ fn test_read_empty_buffer_in_wasm_memory() {
 
 #[test]
 fn test_invoke_extension() {
-    let (mut store, instance) = create_test_caller();
-    let mut caller = wasmi::Caller::new(&mut store, Some(instance));
+    let store = &mut create_test_store();
+    let mut caller = Caller::from(store);
 
     // Assumes we have a Testing extension in our test caller.
     let message = "Hello!".to_owned();
@@ -209,7 +216,7 @@ fn test_invoke_extension() {
     );
 }
 
-fn create_test_caller() -> (wasmi::Store<UserState>, wasmi::Instance) {
+fn create_test_store() -> wasmi::Store<UserState> {
     let logger = TestingLogger::for_test();
 
     let testing_factory = TestingFactory::new_boxed_extension_factory(logger.clone())
@@ -224,7 +231,5 @@ fn create_test_caller() -> (wasmi::Store<UserState>, wasmi::Instance) {
         .init_wasm_state(b"".to_vec())
         .expect("Could not create WasmState.");
 
-    let store = wasm_state.store;
-    let instance = wasm_state.instance;
-    (store, instance)
+    wasm_state.store
 }
