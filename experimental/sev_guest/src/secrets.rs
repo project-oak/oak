@@ -36,6 +36,8 @@ pub struct SecretsPage {
     pub version: u32,
     /// The least significant bit indicates whether an initial migration image is enabled in the
     /// guest context. All other bits are reserved and must be zero.
+    ///
+    /// Use `get_imi_en` to try to get this as an `Imi` enum.
     pub imi_en: u32,
     /// The family, model and stepping of the CPU as reported in CPUID Fn0000_0001_EAX.
     /// See <https://en.wikipedia.org/wiki/CPUID#EAX=1:_Processor_Info_and_Feature_Bits>.
