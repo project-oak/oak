@@ -60,7 +60,11 @@ cc_library(
 
 cc_library(
     name = "hdrs",
-    hdrs = ["include/tflite_micro.h"],
+    hdrs = [
+        "include/tflite_micro.h",
+        "//third_party/tflite-micro:hdrs",
+    ],
+    copts = oak_copts(),
 )
 
 # --define no_sse=1 to build tflite w/o streaming SIMD instructions.
