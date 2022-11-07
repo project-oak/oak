@@ -176,7 +176,7 @@
     }
 }
 
-<span class="doccomment">/// Implementation of an [`oak_protobuf_idl::AsyncTransport`] that enables client generated
+<span class="doccomment">/// Implementation of an [`oak_idl::AsyncTransport`] that enables client generated
 /// by the oak_idl to communicate with the [`Connector`] instance via an MPSC request-response
 /// channel.
 </span><span class="attribute">#[derive(Clone)]
@@ -186,7 +186,7 @@
 }
 
 <span class="attribute">#[async_trait::async_trait]
-</span><span class="kw">impl </span>oak_protobuf_idl::AsyncTransport <span class="kw">for </span>ConnectorHandle {
+</span><span class="kw">impl </span>oak_idl::AsyncTransport <span class="kw">for </span>ConnectorHandle {
     <span class="kw">type </span>Error = oak_idl::Status;
     <span class="kw">async fn </span>invoke(<span class="kw-2">&amp;mut </span><span class="self">self</span>, request_bytes: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, <span class="self">Self</span>::Error&gt; {
         <span class="self">self</span>.request_dispatcher

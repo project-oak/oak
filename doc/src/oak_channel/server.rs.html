@@ -78,8 +78,8 @@
 <span class="kw">use </span>anyhow::Context;
 
 <span class="doccomment">/// Starts a blocking server that listens for requests on the provided channel
-/// and responds to them using the provided [`oak_protobuf_idl::Transport`].
-</span><span class="kw">pub fn </span>start_blocking_server&lt;T: oak_protobuf_idl::Transport&lt;Error = !&gt;&gt;(
+/// and responds to them using the provided [`oak_idl::Transport`].
+</span><span class="kw">pub fn </span>start_blocking_server&lt;T: oak_idl::Transport&lt;Error = !&gt;&gt;(
     channel: Box&lt;<span class="kw">dyn </span>Channel&gt;,
     <span class="kw-2">mut </span>server: T,
 ) -&gt; anyhow::Result&lt;!&gt; {

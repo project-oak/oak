@@ -26,13 +26,10 @@ var sourcesIndex = JSON.parse('{\
 "oak_functions_web_client":["",[],["grpc_web.rs","lib.rs"]],\
 "oak_functions_workload_logging":["",[],["lib.rs"]],\
 "oak_grpc_unary_attestation":["",[],["client.rs","lib.rs","server.rs"]],\
-"oak_idl":["",[],["lib.rs","utils.rs"]],\
-"oak_idl_gen_services":["",[],["lib.rs"]],\
-"oak_idl_gen_structs":["",[],["lib.rs"]],\
+"oak_idl":["",[],["lib.rs","status.rs"]],\
+"oak_idl_build":["",[],["lib.rs"]],\
 "oak_linux_boot_params":["",[],["lib.rs"]],\
 "oak_logger":["",[],["lib.rs"]],\
-"oak_protobuf_idl":["",[],["lib.rs"]],\
-"oak_protobuf_idl_build":["",[],["lib.rs"]],\
 "oak_remote_attestation":["",[["crypto",[],["mod.rs","ring_crypto.rs"]]],["handshaker.rs","lib.rs","message.rs"]],\
 "oak_remote_attestation_amd":["",[],["lib.rs"]],\
 "oak_remote_attestation_sessions":["",[],["lib.rs"]],\

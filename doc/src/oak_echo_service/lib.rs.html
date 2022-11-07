@@ -84,7 +84,7 @@
     <span class="kw">fn </span>echo(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
         request: <span class="kw-2">&amp;</span>proto::EchoRequest,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;proto::EchoResponse, oak_protobuf_idl::Status&gt; {
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;proto::EchoResponse, oak_idl::Status&gt; {
         <span class="kw">let </span>request_body: <span class="kw-2">&amp;</span>[u8] = request.body.as_ref();
         <span class="macro">info!</span>(<span class="string">&quot;Received a request: {:?}&quot;</span>, request_body);
         <span class="kw">let </span>response_body = request_body;
