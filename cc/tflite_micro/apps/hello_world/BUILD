@@ -60,40 +60,25 @@ config_setting(
     },
 )
 
-cc_library(
-    name = "hello_world",
-    srcs = ["hello_world.cc"] + select({
-        ":use_custom_output": [],
-        "//conditions:default": ["output_handler.cc"],
-    }),
-    hdrs = ["output_handler.h"],
-    copts = oak_copts() + [
-        "-Icc/tflite_micro/apps/hello_world",
-    ],
-    linkstatic = 1,
-    deps = [
-        ":hello_world_model",
-        "//cc/tflite_micro",
-        "//cc/tflite_micro:hdrs",
-    ],
-)
-
-# Fully static library linked by oak_tensorflow_service.
-cc_static_library(
-    name = "hello_world_app",
-    deps = [":hello_world"],
-)
-
 # Freestanding executable running on host for debugging
 # i.e. model input, output, ops and pipeline via gdb/lldb.
 cc_binary(
     name = "hello_world_freestanding_bin",
-    srcs = ["main.cc"],
-    copts = oak_copts(),
+    srcs = ["main.cc"] + select({
+        ":use_custom_output": [],
+        "//conditions:default": [
+            "output_handler.cc",
+            "output_handler.h",
+        ],
+    }),
+    copts = oak_copts() + [
+        "-Icc/tflite_micro/apps/hello_world",
+    ],
     linkopts = ["-nostdlib"],
     deps = [
-        ":hello_world",
-        "//cc/tflite_micro:hdrs",
+        ":hello_world_model",
+        "//cc/tflite_micro/apps:core",
         "//cc/tflite_micro/apps:start_file",
+        "//cc/tflite_micro:hdrs",
     ],
 )
