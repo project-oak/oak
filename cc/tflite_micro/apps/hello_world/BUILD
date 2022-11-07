@@ -19,10 +19,6 @@ load(
     "generate_cc_arrays",
     "oak_copts",
 )
-load(
-    "//cc:build_defs.bzl",
-    "cc_static_library",
-)
 
 package(
     default_visibility = ["//visibility:public"],
@@ -77,8 +73,8 @@ cc_binary(
     linkopts = ["-nostdlib"],
     deps = [
         ":hello_world_model",
+        "//cc/tflite_micro:hdrs",
         "//cc/tflite_micro/apps:core",
         "//cc/tflite_micro/apps:start_file",
-        "//cc/tflite_micro:hdrs",
     ],
 )
