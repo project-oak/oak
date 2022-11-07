@@ -30,8 +30,6 @@ enum ExtensionHandle {
   TESTING_HANDLE = 1;
   LOOKUP_HANDLE = 2;
   LOGGING_HANDLE = 3;
-  METRICS_HANDLE = 4;
-  TF_HANDLE = 5;
 }
 
 // Status values exchanged as i32 values across the Node Wasm interface.
@@ -47,13 +45,6 @@ enum OakStatus {
   ERR_INVALID_HANDLE = 4;
   // Error when serializing the request or deserializing the response fails in the Wasm module.
   ERR_SERIALIZING = 5;
-}
-
-// The inference from a TensorFlow model, containing an inference vector of floats, and a shape
-// vector specifying the dimensions of the inference vector.
-message Inference {
-  repeated uint64 shape = 1;
-  repeated float inference_vec = 2;
 }
 
 // The client can check the configuration report for the configuration of the Oak Functions runtime.
@@ -86,12 +77,4 @@ message ServerPolicy {
   // sends a response to the client containing an error message indicating the failure. The size
   // of this response is equal to the size specified by the previous parameter.
   uint32 constant_processing_time_ms = 2;
-}
-
-// Configuration for differentially private metrics.
-message PrivateMetricsConfig {
-  // The privacy budget.
-  double epsilon = 1;
-  // The number of requests that will be aggregated into each batch.
-  uint32 batch_size = 2;
 }

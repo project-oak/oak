@@ -32,9 +32,9 @@ fn test_invoke_extension_with_invalid_handle() {
 #[test]
 fn test_find_extension_not_available() {
     let mut wasm_state = create_test_wasm_state();
-    // Assumes we have no TF extension in our test wasm_state. The remaining arguments don't
-    // matter, hence they are 0.
-    let extension = wasm_state.invoke_extension(ExtensionHandle::TfHandle as i32, 0, 0, 0, 0);
+    // Assumes we have no extension with a handle value of 5 in our test wasm_state. The remaining
+    // arguments don't matter, hence they are 0.
+    let extension = wasm_state.invoke_extension(5, 0, 0, 0, 0);
     assert!(extension.is_err());
     assert_eq!(OakStatus::ErrInvalidHandle, extension.unwrap_err())
 }

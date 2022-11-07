@@ -3,7 +3,7 @@
 The objective of Oak Functions is to design and implement a general-purpose
 computing platform that allows developing stateless applications in a privacy
 preserving way. Oak Functions leverages TEEs and remote attestation, Wasm
-sandboxing, and allows exposing metrics in a Differentially Private way.
+sandboxing.
 
 At its core, Oak Functions consists of a **trusted runtime** compiled into a
 server binary ([`oak_functions_loader`](loader/)) that, for each incoming client
@@ -76,7 +76,3 @@ compared to Oak, but those use cases are the most commonly occurring ones. One
 apparent restriction is the use of a read-only in-memory storage. With a
 distributed runtime, however, it should be possible to use Oak Functions for
 applications that require a larger storage.
-
-We have an experimental support for ML-inference using TensorFlow models in Oak
-Functions. The benefit of this, compared to running ML-inference on-device, is
-that the model will remain protected and secure.

@@ -209,36 +209,6 @@ impl TryFrom<&[u8]> for StorageGetItemResponse {
     }
 }
 
-/// Holds the `label` and the `value` to report a metric.
-#[derive(Serialize, Deserialize)]
-pub struct ReportMetricRequest {
-    pub label: String,
-    pub value: i64,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub enum ReportMetricError {
-    ProxyAlreadyConsumed,
-}
-
-#[derive(Serialize, Deserialize)]
-pub struct ReportMetricResponse {
-    pub result: Result<(), ReportMetricError>,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub enum TfModelInferError {
-    // Error when running the TensorFlow model, due to bad input tensor.
-    BadTensorFlowModelInput,
-    // Error when decoding the inference bytes.
-    ErrorDecodingInference,
-}
-
-#[derive(Serialize, Deserialize)]
-pub struct TfModelInferResponse {
-    pub result: Result<Vec<u8>, TfModelInferError>,
-}
-
 #[derive(Serialize, Deserialize)]
 pub enum TestingRequest {
     Echo(String),
