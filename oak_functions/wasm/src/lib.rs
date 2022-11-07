@@ -102,6 +102,7 @@ where
     ) -> anyhow::Result<Self> {
         let user_state = UserState::init(request_bytes, extensions);
 
+        // For isolated requests we need to create a new store for every request.
         let mut store = wasmi::Store::new(&module.engine(), user_state);
 
         let mut linker: wasmi::Linker<UserState> = wasmi::Linker::new();
@@ -112,8 +113,9 @@ where
         // Add memory to linker.
         // TODO(mschett): Check what is a sensible initial value.
         let initial_memory_size = 10;
-        let memory =
-            wasmi::Memory::new(&mut store, MemoryType::new(initial_memory_size, None)).unwrap();
+        // TODO(mschett): Fix unwrap.
+        let memory_type = MemoryType::new(initial_memory_size, None).unwrap();
+        let memory = wasmi::Memory::new(&mut store, memory_type).unwrap();
         // TODO(mschett): Fix to .context("Failed to initialize Wasm memory.");
         linker
             .define(host, "memory", wasmi::Extern::Memory(memory))
@@ -251,6 +253,8 @@ where
 
     /// Validates whether a given address range (inclusive) falls within the currently allocated
     /// range of guest memory.
+    /* TODO(mschett): Check if we still need this.
+
     fn validate_range(&self, addr: AbiPointer, offset: AbiPointerOffset) -> Result<(), OakStatus> {
         let memory = self
             .instance
@@ -270,6 +274,7 @@ where
             Err(OakStatus::ErrInvalidArgs)
         }
     }
+     */
 
     fn log_error(&self, message: &str) {
         self.logger.log_sensitive(Level::Error, message)
@@ -603,10 +608,7 @@ where
         extension_factories: Vec<Box<dyn ExtensionFactory<L>>>,
         logger: L,
     ) -> anyhow::Result<Self> {
-        // Use the default engine.
-        // TODO(mschett): Check if we want the engine to be shared amongst modules.
         let engine = wasmi::Engine::default();
-
         let module = wasmi::Module::new(&engine, wasm_module_bytes)
             .map_err(|err| anyhow::anyhow!("could not load module from buffer: {:?}", err))?;
 
