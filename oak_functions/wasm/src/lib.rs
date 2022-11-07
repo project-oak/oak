@@ -110,6 +110,11 @@ where
         // TODO(mschett): Check what we need this variable for.
         let host = "oak_functions";
 
+        // TODO(mschett): It would be nice to define the linker in WasmHandler to reuse it for
+        // different WasmStates, but the externals Func and Memory defined in the linker depend on
+        // store, which needs to be new for every WasmState. In contrast, in wasmtime `func_wrap`
+        // does not depend on store (https://docs.rs/wasmtime/latest/wasmtime/struct.Linker.html#method.func_wrap).
+
         // Add memory to linker.
         // TODO(mschett): Check what is a sensible initial value.
         let initial_memory_size = 10;
