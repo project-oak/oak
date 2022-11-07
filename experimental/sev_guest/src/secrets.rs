@@ -17,6 +17,7 @@
 //! This module contains structs that can be used to interpret the contents of the secrets page that
 //! is provisioned into the VM guest memory during SEV-SNP startup.
 
+use strum::FromRepr;
 use zerocopy::FromBytes;
 
 /// The size of the secrets page.
@@ -33,7 +34,7 @@ pub const SECRETS_PAGE_VERSION: u32 = 3;
 pub struct SecretsPage {
     /// The version of the secrets page.
     pub version: u32,
-    /// The least significant bit indicates where an initial imigration image is enabled in the
+    /// The least significant bit indicates whether an initial migration image is enabled in the
     /// guest context. All other bits are reserved and must be zero.
     pub imi_en: u32,
     /// The family, model and stepping of the CPU as reported in CPUID Fn0000_0001_EAX.
@@ -63,4 +64,21 @@ pub struct SecretsPage {
     pub tsc_factor: u32,
 }
 
+impl SecretsPage {
+    /// Gets the IMI enabled field as and `Imi` enum if possible.
+    pub fn get_imi_en(&self) -> Option<Imi> {
+        Imi::from_repr(self.imi_en)
+    }
+}
+
 static_assertions::assert_eq_size!(SecretsPage, [u8; SECRETS_PAGE_SIZE]);
+
+/// Whether an initial migration image is enabled.
+#[derive(Debug, FromRepr)]
+#[repr(u32)]
+pub enum Imi {
+    /// The initial migration image is not enabled.
+    No = 0,
+    /// The initial migration image is enabled.
+    Yes = 1,
+}

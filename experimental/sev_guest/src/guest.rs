@@ -17,7 +17,9 @@
 //! Utilities for creating and processing SNP Guest Request protocol messages.
 
 use bitflags::bitflags;
+use core::mem::size_of;
 use strum::FromRepr;
+use zerocopy::{AsBytes, FromBytes};
 
 /// The size of a guest message, including the header and maximum payload size.
 pub const GUEST_MESSAGE_SIZE: usize = 4096;
@@ -37,7 +39,7 @@ pub const CURRENT_ATTESTATION_VERSION: u8 = 2;
 ///
 /// See section 8.26 in <https://www.amd.com/system/files/TechDocs/56860.pdf>.
 #[repr(C, align(4096))]
-#[derive(Debug)]
+#[derive(Debug, AsBytes, FromBytes)]
 pub struct GuestMessage {
     /// The message header.
     pub header: GuestMessageHeader,
@@ -47,11 +49,20 @@ pub struct GuestMessage {
 
 static_assertions::assert_eq_size!(GuestMessage, [u8; GUEST_MESSAGE_SIZE]);
 
+impl GuestMessage {
+    pub const fn new() -> Self {
+        GuestMessage {
+            header: GuestMessageHeader::new(),
+            payload: [0; 4000],
+        }
+    }
+}
+
 /// The header for an encrypted guest request message.
 ///
 /// See Table 97 in <https://www.amd.com/system/files/TechDocs/56860.pdf>.
 #[repr(C)]
-#[derive(Debug)]
+#[derive(Debug, AsBytes, FromBytes)]
 pub struct GuestMessageHeader {
     /// The authentication tag for the payload and additional data.
     pub auth_tag: [u8; 32],
@@ -62,13 +73,13 @@ pub struct GuestMessageHeader {
     /// Reserved. Must be zero.
     _reserved_0: u64,
     /// The algorithm used to encrypt the payload.
-    pub algorithm: AeadAlgorithm,
+    pub algorithm: u8,
     /// The header version. Currently only version 1 is supported.
     pub header_version: u8,
     /// The size of the header in bytes.
     pub header_size: u16,
     /// The type of message that the payload represents.
-    pub message_type: MessageType,
+    pub message_type: u8,
     /// The version of the message. Currently only version 1 is supported for all message types.
     pub message_version: u8,
     /// The size of the encrypted message payload in bytes.
@@ -82,6 +93,35 @@ pub struct GuestMessageHeader {
 }
 
 static_assertions::assert_eq_size!(GuestMessageHeader, [u8; 96]);
+
+impl GuestMessageHeader {
+    pub const fn new() -> Self {
+        GuestMessageHeader {
+            auth_tag: [0; 32],
+            sequence_number: 0,
+            _reserved_0: 0,
+            algorithm: AeadAlgorithm::Aes256Gcm as u8,
+            header_version: CURRENT_HEADER_VERSION,
+            header_size: size_of::<Self>() as u16,
+            message_type: MessageType::Invalid as u8,
+            message_version: CURRENT_MESSAGE_VERSION,
+            message_size: 0,
+            _reserved_1: 0,
+            message_vmpck: 0,
+            _reserved_2: [0; 35],
+        }
+    }
+
+    /// Gets the algorithm field as an `AeadAlgorithm` enum if possible.
+    pub fn get_algorithm(&self) -> Option<AeadAlgorithm> {
+        AeadAlgorithm::from_repr(self.algorithm)
+    }
+
+    /// Gets the message type field as a `MessageType` enum if possible.
+    pub fn get_message_type(&self) -> Option<MessageType> {
+        MessageType::from_repr(self.algorithm)
+    }
+}
 
 /// The AEAD algorithm used for encryption.
 ///
@@ -145,7 +185,7 @@ pub enum MessageType {
 ///
 /// See Table 20 in <https://www.amd.com/system/files/TechDocs/56860.pdf>.
 #[repr(C)]
-#[derive(Debug)]
+#[derive(Debug, AsBytes)]
 pub struct AttestationRequest {
     /// The custom data to be included in the attestation report.
     pub report_data: [u8; 64],
@@ -159,14 +199,24 @@ pub struct AttestationRequest {
 
 static_assertions::assert_eq_size!(AttestationRequest, [u8; 96]);
 
+impl AttestationRequest {
+    pub const fn new() -> Self {
+        AttestationRequest {
+            report_data: [0; 64],
+            vmpl: 0,
+            _reserved: [0; 28],
+        }
+    }
+}
+
 /// Response containing the attestation report.
 ///
 /// See Table 23 in <https://www.amd.com/system/files/TechDocs/56860.pdf>.
 #[repr(C)]
-#[derive(Debug)]
+#[derive(Debug, FromBytes)]
 pub struct AttestationResponse {
     /// The status of the operation.
-    pub status: ReportStatus,
+    pub status: u32,
     /// The size of the report.
     pub report_size: u32,
     /// Reserved, must be zero.
@@ -177,11 +227,18 @@ pub struct AttestationResponse {
 
 static_assertions::assert_eq_size!(AttestationResponse, [u8; 1216]);
 
+impl AttestationResponse {
+    /// Gets the status field as a `ReportStatus` enum if possible.
+    pub fn get_status(&self) -> Option<ReportStatus> {
+        ReportStatus::from_repr(self.status)
+    }
+}
+
 /// A signed attestation report.
 ///
 /// See Table 21 in <https://www.amd.com/system/files/TechDocs/56860.pdf>.
 #[repr(C)]
-#[derive(Debug)]
+#[derive(Debug, FromBytes)]
 pub struct AttestationReport {
     /// The data contained in the report.
     pub data: AttestationReportData,
@@ -195,7 +252,7 @@ static_assertions::assert_eq_size!(AttestationReport, [u8; 1184]);
 ///
 /// See Table 21 in <https://www.amd.com/system/files/TechDocs/56860.pdf>.
 #[repr(C)]
-#[derive(Debug)]
+#[derive(Debug, FromBytes)]
 pub struct AttestationReportData {
     /// The version of the attestation report format.
     ///
@@ -212,15 +269,16 @@ pub struct AttestationReportData {
     /// The VMPL value that was passed in the request.
     pub vmpl: u32,
     /// The algorithm used to sign the report.
-    pub signature_algo: SigningAlgorithm,
+    pub signature_algo: u32,
     /// The current version of each of the components in the Trusted Computing Base (TCB). This
     /// could be different from the committed value during provisional execution when firmware
     /// is being updated.
     pub current_tcb: TcbVersion,
     /// Information about the platform.
-    pub platform_info: PlatformInfo,
-    /// Whether the digest of the author key is included in the report.
-    pub author_key_en: AuthorKey,
+    pub platform_info: u64,
+    /// The least significant bit indicates Whether the digest of the author key is included in the
+    /// report, all other bits are reserved and must be zero.
+    pub author_key_en: u64,
     /// The custom data provided in the attestation request.
     pub report_data: [u8; 64],
     /// The measurement of the VM memory calculated at launch.
@@ -230,8 +288,8 @@ pub struct AttestationReportData {
     /// The SHA-384 digest of the ID public key used to sign the ID block that was provided in
     /// SNP_LAUNCH_FINISH.
     pub id_key_digest: [u8; 48],
-    /// The SHA-384 digest of the author public key used to certify the ID key, if `author_key_en`
-    /// is `AuthorKey::Yes`, or all zeroes otherwise.
+    /// The SHA-384 digest of the author public key used to certify the ID key, if the least
+    /// significant bit of `author_key_en` is 1, or all zeroes otherwise.
     pub author_key_digest: [u8; 48],
     /// The report ID of this guest.
     pub report_id: [u8; 32],
@@ -271,6 +329,23 @@ pub struct AttestationReportData {
 
 static_assertions::assert_eq_size!(AttestationReportData, [u8; 672]);
 
+impl AttestationReportData {
+    /// Gets the platform info field as a `PlatformInfo` representation if possible.
+    pub fn get_platform_info(&self) -> Option<PlatformInfo> {
+        PlatformInfo::from_bits(self.platform_info)
+    }
+
+    /// Gets the signing algorithm field as a `SigningAlgorithm` enum if possible.
+    pub fn get_signing_algo(&self) -> Option<SigningAlgorithm> {
+        SigningAlgorithm::from_repr(self.signature_algo)
+    }
+
+    /// Gets the author key enabled field as an `AuthorKey` enum if possible.
+    pub fn get_author_key_en(&self) -> Option<AuthorKey> {
+        AuthorKey::from_repr(self.author_key_en)
+    }
+}
+
 bitflags! {
     /// Information on the platform configuration.
     #[derive(Default)]
@@ -286,16 +361,23 @@ bitflags! {
 ///
 /// See Table 8 in <https://www.amd.com/system/files/TechDocs/56860.pdf>.
 #[repr(C)]
-#[derive(Debug)]
+#[derive(Debug, FromBytes)]
 pub struct GuestPolicy {
     /// The minimum ABI minor version required to launch the guest.
     pub abi_minor: u8,
     /// The minimum ABI major version required to launch the guest.
     pub abi_major: u8,
     /// The allowed settings for the guest.
-    pub flags: PolicyFlags,
+    pub flags: u16,
     /// Reserved, must be zero.
     _reserved: u32,
+}
+
+impl GuestPolicy {
+    /// Gets the flags field as a `PolicyFlags` representation if possible.
+    pub fn get_flags(&self) -> Option<PolicyFlags> {
+        PolicyFlags::from_bits(self.flags)
+    }
 }
 
 static_assertions::assert_eq_size!(GuestPolicy, u64);
@@ -304,7 +386,7 @@ static_assertions::assert_eq_size!(GuestPolicy, u64);
 ///
 /// See Table 3 in <https://www.amd.com/system/files/TechDocs/56860.pdf>.
 #[repr(C)]
-#[derive(Debug)]
+#[derive(Debug, FromBytes)]
 pub struct TcbVersion {
     /// The current security version number (SVN) of the secure processor (PSP) bootloader.
     pub boot_loader: u8,
@@ -361,7 +443,7 @@ pub enum ReportStatus {
 ///
 /// See Table 107 in <https://www.amd.com/system/files/TechDocs/56860.pdf>.
 #[repr(C)]
-#[derive(Debug)]
+#[derive(Debug, FromBytes)]
 pub struct EcdsaSignature {
     /// The R component of this signature. The value is zero-extended and little-endian encoded.
     pub r: [u8; 72],
