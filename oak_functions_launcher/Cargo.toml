@@ -33,10 +33,9 @@ vsock = "*"
 oak_functions_abi = { path = "../oak_functions_abi" }
 oak_remote_attestation_sessions = { path = "../oak_remote_attestation_sessions" }
 oak_idl = { path = "../oak_idl" }
-oak_protobuf_idl = { path = "../oak_protobuf_idl" }
 oak_channel = { path = "../oak_channel", features = ["client"] }
 hashbrown = "*"
 
 [build-dependencies]
 oak_utils = { path = "../oak_utils" }
-oak_protobuf_idl_build = { path = "../oak_protobuf_idl_build" }
+oak_idl_build = { path = "../oak_idl_build" }

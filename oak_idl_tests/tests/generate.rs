@@ -13,11 +13,7 @@
 // limitations under the License.
 //
 
-const OUTPUTS: [&str; 3] = [
-    "test_schema_services_servers.rs",
-    "test_schema_services_clients.rs",
-    "test_schema_services_async_clients.rs",
-];
+const OUTPUTS: [&str; 1] = ["oak.protobuf_idl.tests.rs"];
 
 #[test]
 fn generate() {
@@ -35,7 +31,7 @@ fn generate() {
     for output in OUTPUTS.into_iter() {
         std::fs::copy(
             format!("{}/{}", env!("OUT_DIR"), output),
-            format!("{}.txt", output),
+            format!("out/{}.txt", output),
         )
         .unwrap();
     }

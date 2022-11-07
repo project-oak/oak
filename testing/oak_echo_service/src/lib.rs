@@ -36,7 +36,7 @@ impl proto::EchoService for EchoServiceImpl {
     fn echo(
         &mut self,
         request: &proto::EchoRequest,
-    ) -> Result<proto::EchoResponse, oak_protobuf_idl::Status> {
+    ) -> Result<proto::EchoResponse, oak_idl::Status> {
         let request_body: &[u8] = request.body.as_ref();
         info!("Received a request: {:?}", request_body);
         let response_body = request_body;

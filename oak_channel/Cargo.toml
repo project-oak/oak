@@ -8,11 +8,10 @@ license = "Apache-2.0"
 [features]
 default = []
 std = []
-client = ["std", "oak_idl/async-clients"]
+client = ["std"]
 
 [dependencies]
 anyhow = { version = "*", default-features = false }
 oak_idl = { path = "../oak_idl" }
-oak_protobuf_idl = { path = "../oak_protobuf_idl" }
 static_assertions = "*"
 bitflags = "*"

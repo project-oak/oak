@@ -14,160 +14,162 @@
 // limitations under the License.
 //
 
-#![cfg_attr(not(feature = "std"), no_std)]
+#![no_std]
+#![feature(associated_type_defaults)]
+#![feature(never_type)]
+#![feature(try_blocks)]
 
 extern crate alloc;
 
-use crate::alloc::string::ToString;
-use alloc::{string::String, vec::Vec};
-use core::fmt::Debug;
-
-pub mod utils;
-
-#[derive(Debug, PartialEq)]
-pub struct Status {
-    pub code: StatusCode,
-    /// English message that helps developers understand and resolve the error.
-    pub message: String,
+mod proto {
+    #![allow(dead_code)]
+    include!(concat!(env!("OUT_DIR"), "/oak.protobuf_idl.rs"));
 }
 
-impl Status {
-    pub fn new(code: StatusCode) -> Self {
-        Self {
-            code,
-            message: "".to_string(),
-        }
-    }
+mod status;
 
-    pub fn new_with_message(code: StatusCode, message: impl Into<String>) -> Self {
-        Self {
-            code,
-            message: message.into(),
-        }
-    }
-}
+use alloc::boxed::Box;
+pub use alloc::{format, vec::Vec};
+pub use core::result::{
+    Result,
+    Result::{Err, Ok},
+};
+use prost::Message;
+pub use proto::{response, Request, Response};
+pub use status::{Status, StatusCode};
 
-/// gRPC status codes used by [`Status`].
+/// A message-oriented transport that allows performing invocations.
 ///
-/// These variants match the [gRPC status codes].
-///
-/// [gRPC status codes]: https://github.com/grpc/grpc/blob/master/doc/statuscodes.md#status-codes-and-their-use-in-grpc
-// Based on tonic's status code struct: https://github.com/hyperium/tonic/blob/91b73f9fc3c1bc281e85177808721b3efe37ece0/tonic/src/status.rs
-#[derive(Debug, PartialEq)]
-pub enum StatusCode {
-    /// The operation completed successfully.
-    Ok = 0,
-
-    /// The operation was cancelled.
-    Cancelled = 1,
-
-    /// Unknown error.
-    Unknown = 2,
-
-    /// Client specified an invalid argument.
-    InvalidArgument = 3,
-
-    /// Deadline expired before operation could complete.
-    DeadlineExceeded = 4,
-
-    /// Some requested entity was not found.
-    NotFound = 5,
-
-    /// Some entity that we attempted to create already exists.
-    AlreadyExists = 6,
-
-    /// The caller does not have permission to execute the specified operation.
-    PermissionDenied = 7,
-
-    /// Some resource has been exhausted.
-    ResourceExhausted = 8,
-
-    /// The system is not in a state required for the operation's execution.
-    FailedPrecondition = 9,
-
-    /// The operation was aborted.
-    Aborted = 10,
-
-    /// Operation was attempted past the valid range.
-    OutOfRange = 11,
-
-    /// Operation is not implemented or not supported.
-    Unimplemented = 12,
-
-    /// Internal error.
-    Internal = 13,
-
-    /// The service is currently unavailable.
-    Unavailable = 14,
-
-    /// Unrecoverable data loss or corruption.
-    DataLoss = 15,
-
-    /// The request does not have valid authentication credentials
-    Unauthenticated = 16,
+/// Each invocation consists of atomically sending opaque bytes and receiving opaque bytes.
+pub trait Transport {
+    /// Type representing any transport-specific errors. By default, the transport is assumed to be
+    /// infallible.
+    type Error = !;
+    fn invoke(&mut self, request_bytes: &[u8]) -> Result<Vec<u8>, Self::Error>;
 }
 
-impl From<u32> for StatusCode {
-    fn from(i: u32) -> Self {
-        match i {
-            0 => StatusCode::Ok,
-            1 => StatusCode::Cancelled,
-            2 => StatusCode::Unknown,
-            3 => StatusCode::InvalidArgument,
-            4 => StatusCode::DeadlineExceeded,
-            5 => StatusCode::NotFound,
-            6 => StatusCode::AlreadyExists,
-            7 => StatusCode::PermissionDenied,
-            8 => StatusCode::ResourceExhausted,
-            9 => StatusCode::FailedPrecondition,
-            10 => StatusCode::Aborted,
-            11 => StatusCode::OutOfRange,
-            12 => StatusCode::Unimplemented,
-            13 => StatusCode::Internal,
-            14 => StatusCode::Unavailable,
-            15 => StatusCode::DataLoss,
-            16 => StatusCode::Unauthenticated,
-
-            _ => StatusCode::Unknown,
-        }
-    }
-}
-
-impl From<StatusCode> for u32 {
-    fn from(code: StatusCode) -> u32 {
-        code as u32
-    }
-}
-
-/// Unique identifier of a method within a service.
-type MethodId = u32;
-
-/// A request message representing an invocation of the method identified by `method_id` with the
-/// argument serialized as `body`.
-pub struct Request {
-    /// Identifies the method to be invoked, as defined by the IDL.
-    pub method_id: MethodId,
-    /// The serialized request payload, corresponding to the argument of the method identified by
-    /// `method_id`.
-    pub body: Vec<u8>,
-}
-
-/// A message-oriented handler that allows performing invocations.
-///
-/// The asymmetry between the request and response types is due to the fact that a [`Request`]
-/// instance contains a reference to the request body buffer, and also contains the method id of the
-/// invocation, while the return value is a `Vec<u8>` since it is allocated and owned by the
-/// invocation handler.
-///
-/// This is conceptually similar to a method that takes `&[u8]` as input but returns `Vec<u8>` as
-/// output.
-pub trait Handler {
-    fn invoke(&mut self, request: Request) -> Result<Vec<u8>, Status>;
-}
-
-/// Async version of [`Handler`] to support async clients.
-#[cfg(feature = "async-clients")]
+/// Same as [`Transport`], but for async use cases.
 #[async_trait::async_trait]
-pub trait AsyncHandler {
-    async fn invoke(&mut self, request: Request) -> Result<Vec<u8>, Status>;
+pub trait AsyncTransport {
+    /// See [`Transport::Error`].
+    type Error = !;
+    /// See [`Transport::invoke`].
+    async fn invoke(&mut self, request_bytes: &[u8]) -> Result<Vec<u8>, Self::Error>;
+}
+
+impl From<Status> for proto::Status {
+    fn from(value: Status) -> Self {
+        proto::Status {
+            code: value.code as i32,
+            message: value.message,
+        }
+    }
+}
+
+impl From<proto::Status> for Status {
+    fn from(value: proto::Status) -> Self {
+        Status::new_with_message((value.code as u32).into(), value.message)
+    }
+}
+
+/// Creates a [`Response`] representing an error.
+pub fn error_response(error: Status) -> Response {
+    Response {
+        response: Some(proto::response::Response::Error(proto::Status {
+            code: error.code as i32,
+            message: error.message,
+        })),
+    }
+}
+
+/// Creates a [`Response`] representing success.
+pub fn success_response(body: Vec<u8>) -> Response {
+    Response {
+        response: Some(proto::response::Response::Body(body)),
+    }
+}
+
+/// Invokes the method identified by `method_id` via the provided [`Transport`], taking care of the
+/// serialization and deserialization over the transport.
+///
+/// The return value has two layers of [`Result`]:
+///
+/// - the outer layer represents failure of the underlying tansport; if that transport is infallible
+///   (i.e. the error variant is `!`), callers of this function can just safely `unwrap` that layer;
+///   otherwise, callers may want to handle tranport errors differently from invocation errors.
+/// - the inner layer represents errors related to the invocation, usually generated at the
+///   application level on the server side of the invocation.
+///
+/// This function is intended to be used by code generated by the `oak_idl_build` crate.
+pub fn client_invoke<T: Transport, Req: prost::Message, Res: prost::Message + Default>(
+    transport: &mut T,
+    method_id: u32,
+    request: &Req,
+) -> Result<Result<Res, Status>, T::Error> {
+    let request_body = request.encode_to_vec();
+    let request = Request {
+        method_id,
+        body: request_body,
+    };
+    let request_bytes = request.encode_to_vec();
+    // This may result in tranport errors, corresponding to the outer Result layer.
+    let response_bytes = transport.invoke(&request_bytes)?;
+    let result: Result<Res, Status> = try {
+        let response = Response::decode(response_bytes.as_ref()).map_err(|err| {
+            Status::new_with_message(
+                StatusCode::Internal,
+                format!("Client failed to deserialize response wrapper: {}", err),
+            )
+        })?;
+        match response.response {
+            Some(response::Response::Error(err)) => Err(err.into()),
+            Some(response::Response::Body(body)) => Res::decode(body.as_ref()).map_err(|err| {
+                Status::new_with_message(
+                    StatusCode::Internal,
+                    format!("Client failed to deserialize response body: {}", err),
+                )
+            }),
+            None => Err(Status::new(StatusCode::Internal)),
+        }?
+    };
+    Ok(result)
+}
+
+/// Same as [`client_invoke`], but via an [`AsyncTransport`].
+pub async fn async_client_invoke<
+    T: AsyncTransport,
+    Req: prost::Message,
+    Res: prost::Message + Default,
+>(
+    transport: &mut T,
+    method_id: u32,
+    request: &Req,
+) -> Result<Result<Res, Status>, T::Error> {
+    let request_body = request.encode_to_vec();
+    let request = Request {
+        method_id,
+        body: request_body,
+    };
+    let request_bytes = request.encode_to_vec();
+    // This may result in tranport errors, corresponding to the outer Result layer.
+    let response_bytes = transport.invoke(&request_bytes).await?;
+    let result: Result<Res, Status> = try {
+        let response = Response::decode(response_bytes.as_ref()).map_err(|err| {
+            Status::new_with_message(
+                StatusCode::Internal,
+                format!("Client failed to deserialize response wrapper: {}", err),
+            )
+        })?;
+        match response.response {
+            Some(response::Response::Error(err)) => Err(err.into()),
+            Some(response::Response::Body(body)) => Res::decode(body.as_ref()).map_err(|err| {
+                Status::new_with_message(
+                    StatusCode::Internal,
+                    format!("Client failed to deserialize response body: {}", err),
+                )
+            }),
+            None => Err(Status::new(StatusCode::Internal)),
+        }?
+    };
+    Ok(result)
 }

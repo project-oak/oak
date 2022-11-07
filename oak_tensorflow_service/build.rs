@@ -25,7 +25,7 @@ const TFLITE_APP_LIBRARY_NAME: &str = "hello_world_app";
 const TFLITE_SOURCES_PATTERN: &str = "cc/tflite_micro/**/*";
 
 fn main() {
-    oak_protobuf_idl_build::compile(
+    oak_idl_build::compile(
         &[format!(
             "{}oak_tensorflow_service/proto/oak_tensorflow.proto",
             env!("WORKSPACE_ROOT")
