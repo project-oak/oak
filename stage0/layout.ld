@@ -132,13 +132,23 @@ SECTIONS {
     pdpt_addr = ADDR(.rodata.pdpt);
 
     .rodata.pd ALIGN(4K) : {
-        QUAD(0 | PAGE_PRESENT | PAGE_WRITABLE | PAGE_SIZE) /* 0 .. 2 MiB */
+        QUAD(ADDR(.rodata.pt) | PAGE_PRESENT | PAGE_WRITABLE) /* 0 .. 2 MiB */
         FILL(0x00)
         . += 510 * 8;
         QUAD((TOP - 2M) | PAGE_PRESENT | PAGE_WRITABLE | PAGE_SIZE) /* (4GiB - 2MiB) .. 4 GiB */
     } > bios
 
     pd_addr = ADDR(.rodata.pd);
+
+    .rodata.pt ALIGN(4K) : {
+        /* This will be filled in the bootstrap assembly code. We do this as having 512 lines
+         * here would be unwieldy.
+         */
+        FILL(0x00)
+        . += 4K;
+    } > bios
+
+    pt_addr = ADDR(.rodata.pt);
 
     .rodata : {
         KEEP(*(.rodata .rodata.*))
