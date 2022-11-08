@@ -46,6 +46,20 @@ _protected_mode_start:
     # Set up a basic stack, as we may get interrupts.
     mov $stack_start, %esp
 
+    # Set up the 4K page table for the lowest 2 MiB of memory. We set up an individual page table
+    # instead of using a 2MiB hugepage because we may need to change the encrypted bit and the
+    # RMP state on individual 4K pages.
+    mov $pt_addr, %ecx      # base for page table
+    xor %eax, %eax          # loop counter
+    1:
+    mov %eax, %edx          # edx = eax
+    sal $12, %edx           # edx = edx << 12 (2^12 == 4K)
+    orl $3, %edx            # edx |= 3 (PRESENT and WRITABLE)
+    mov %edx, (%ecx,%eax,8) # PT[eax] = edx (memory address is ecx+8*eax)
+    inc %eax                # eax = eax + 1
+    cmp $512, %eax          # are we done with all 512 entries?
+    jne 1b                  # no, we were not
+
     # Determine if we're running under SEV. Keep track of which bit is the encrypted bit in %rsi.
     mov $0, %esi              # by default, no encryption
     mov $0xc0010131, %ecx     # SEV_STATUS MSR. See Section 15.34.10 in AMD64 Architecture Programmer's
@@ -59,15 +73,24 @@ _protected_mode_start:
 
     # Memory encryption enabled: set encrypted bits in the page tables.
     # We assume the encrypted bit is bit 51, for now.
-    mov $51, %esi
-    mov $pml4_addr, %eax
-    orl $0x80000, 4(%eax)     # PML4[0] |= (1 << 51)
-    mov $pdpt_addr, %eax
-    orl $0x80000, 4(%eax)     # PDPT[0] |= (1 << 51)
-    orl $0x80000, 4092(%eax)  # PDPT[511] |= (1 << 51)
-    mov $pd_addr, %eax
-    orl $0x80000, 4(%eax)     # PD[0] |= (1 << 51)
-    orl $0x80000, 4092(%eax)  # PD[511] |= (1 << 51)
+    # Note that this sets the encrypted bit for _all_ entries in the page tables, even
+    # if they are unused. This is fine, as those entries will still not have the PRESENT
+    # bit set and thus will be ignored by the CPU.
+    mov $pml4_addr, %eax      # Base values for all page tables.
+    mov $pdpt_addr, %ebx
+    mov $pd_addr, %ecx
+    mov $pt_addr, %edx
+    xor %esi, %esi            # zero out esi for use as the loop counter
+    1:
+    # Page tables are 8 bytes, so these offsets boil down to base + (ESI * 8) + 4
+    orl $0x80000, 4(%eax,%esi,8) # PML4[esi] |= (1 << 51)
+    orl $0x80000, 4(%ebx,%esi,8) # PDPT[esi] |= (1 << 51)
+    orl $0x80000, 4(%ecx,%esi,8) # PD[esi] |= (1 << 51)
+    orl $0x80000, 4(%edx,%esi,8) # PT[esi] |= (1 << 51)
+    inc %esi                  # esi = esi + 1
+    cmp $512, %esi            # have we changed all 512 entries?
+    jne 1b                    # esi < 512, go back to square 1
+    mov $51, %esi             # keep track of the encrypted bit for main
 no_encryption:
 
     # Load PML4

@@ -35,7 +35,7 @@ pub fn validate_memory(zero_page: &BootParams, encrypted: u64) {
         unsafe { &*((pml4_frame.start_address().as_u64() & !encrypted) as *const PageTable) };
     let pdpt = unsafe { &*((pml4[0].addr().as_u64() & !encrypted) as *const PageTable) };
     let pd = unsafe { &mut *((pdpt[0].addr().as_u64() & !encrypted) as *mut PageTable) };
-    if !pd[1].is_unused() {
+    if pd[1].flags().contains(PageTableFlags::PRESENT) {
         panic!("PD[1] is in use");
     }
     pd[1].set_addr(
