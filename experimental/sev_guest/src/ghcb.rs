@@ -297,6 +297,7 @@ where
 
         self.ghcb.as_mut().sw_exit_code = SW_EXIT_CODE_IOIO_PROT;
         self.ghcb.as_mut().sw_exit_info_1 = io_port;
+        self.ghcb.as_mut().sw_exit_info_2 = 0;
         self.ghcb.as_mut().rax = data as u64;
         self.ghcb.as_mut().valid_bitmap = BASE_VALID_BITMAP.union(ValidBitmap::RAX);
         self.do_vmg_exit()
@@ -310,6 +311,7 @@ where
 
         self.ghcb.as_mut().sw_exit_code = SW_EXIT_CODE_IOIO_PROT;
         self.ghcb.as_mut().sw_exit_info_1 = io_port;
+        self.ghcb.as_mut().sw_exit_info_2 = 0;
         self.ghcb.as_mut().valid_bitmap = BASE_VALID_BITMAP;
         self.do_vmg_exit()?;
         Ok(self.ghcb.as_mut().rax as u8)
@@ -323,6 +325,7 @@ where
 
         self.ghcb.as_mut().sw_exit_code = SW_EXIT_CODE_IOIO_PROT;
         self.ghcb.as_mut().sw_exit_info_1 = io_port;
+        self.ghcb.as_mut().sw_exit_info_2 = 0;
         self.ghcb.as_mut().rax = data as u64;
         self.ghcb.as_mut().valid_bitmap = BASE_VALID_BITMAP.union(ValidBitmap::RAX);
         self.do_vmg_exit()
@@ -336,6 +339,7 @@ where
 
         self.ghcb.as_mut().sw_exit_code = SW_EXIT_CODE_IOIO_PROT;
         self.ghcb.as_mut().sw_exit_info_1 = io_port;
+        self.ghcb.as_mut().sw_exit_info_2 = 0;
         self.ghcb.as_mut().valid_bitmap = BASE_VALID_BITMAP;
         self.do_vmg_exit()?;
         Ok(self.ghcb.as_mut().rax as u32)
