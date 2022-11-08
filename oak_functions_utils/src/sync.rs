@@ -21,7 +21,7 @@ use core::{
     sync::atomic::{AtomicBool, Ordering},
 };
 use lock_api::{GuardSend, RawMutex};
-use spinning_top::RawSpinlock;
+use spinning_top::{const_spinlock, Spinlock};
 
 /// A synchronised implementation of a cell that can be initialized only once.
 ///
@@ -29,7 +29,7 @@ use spinning_top::RawSpinlock;
 /// `no_std`.
 pub struct OnceCell<T> {
     initialized: AtomicBool,
-    lock: RawSpinlock,
+    lock: Spinlock<()>,
     value: UnsafeCell<MaybeUninit<T>>,
 }
 
@@ -37,7 +37,7 @@ impl<T> OnceCell<T> {
     pub const fn new() -> Self {
         Self {
             initialized: AtomicBool::new(false),
-            lock: RawSpinlock::INIT,
+            lock: const_spinlock(()),
             value: UnsafeCell::new(MaybeUninit::uninit()),
         }
     }
@@ -53,11 +53,10 @@ impl<T> OnceCell<T> {
     }
 
     pub fn set(&self, value: T) -> Result<(), T> {
-        let mut result = Ok(());
         // Do an initial check to see whether the value has been initialized.
         if !self.initialized.load(Ordering::Acquire) {
             // Lock to make sure we have exclusive access.
-            self.lock.lock();
+            let _lock = self.lock.lock();
             // Double check that someone else didn't initialize while we were waiting to get the
             // lock. Relaxed ordering is sufficient since the lock acts as a memory barrier and also
             // ensures no concurrent access to the code that stores the value.
@@ -67,16 +66,10 @@ impl<T> OnceCell<T> {
                 // reference to it is safe.
                 unsafe { &mut *self.value.get() }.write(value);
                 self.initialized.store(true, Ordering::Release);
-            } else {
-                result = Err(value);
+                return Ok(());
             }
-            // Safety: we acquired the lock in the same context, so unlocking here is safe.
-            unsafe { self.lock.unlock() };
-        } else {
-            result = Err(value);
         }
-
-        result
+        Err(value)
     }
 }
 
