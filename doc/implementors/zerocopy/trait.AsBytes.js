@@ -1,0 +1,3 @@
+(function() {var implementors = {
+"sev_guest":[["impl AsBytes for <a class=\"struct\" href=\"sev_guest/guest/struct.GuestMessage.html\" title=\"struct sev_guest::guest::GuestMessage\">GuestMessage</a>"],["impl AsBytes for <a class=\"struct\" href=\"sev_guest/guest/struct.GuestMessageHeader.html\" title=\"struct sev_guest::guest::GuestMessageHeader\">GuestMessageHeader</a>"],["impl AsBytes for <a class=\"struct\" href=\"sev_guest/guest/struct.AttestationRequest.html\" title=\"struct sev_guest::guest::AttestationRequest\">AttestationRequest</a>"]]
+};if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

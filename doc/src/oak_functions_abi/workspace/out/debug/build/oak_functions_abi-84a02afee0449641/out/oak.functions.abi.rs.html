@@ -92,39 +92,7 @@
 <span id="92">92</span>
 <span id="93">93</span>
 <span id="94">94</span>
-<span id="95">95</span>
-<span id="96">96</span>
-<span id="97">97</span>
-<span id="98">98</span>
-<span id="99">99</span>
-<span id="100">100</span>
-<span id="101">101</span>
-<span id="102">102</span>
-<span id="103">103</span>
-<span id="104">104</span>
-<span id="105">105</span>
-<span id="106">106</span>
-<span id="107">107</span>
-<span id="108">108</span>
-<span id="109">109</span>
-<span id="110">110</span>
-<span id="111">111</span>
-<span id="112">112</span>
-<span id="113">113</span>
-<span id="114">114</span>
-<span id="115">115</span>
-<span id="116">116</span>
-<span id="117">117</span>
-</pre><pre class="rust"><code><span class="doccomment">/// The inference from a TensorFlow model, containing an inference vector of floats, and a shape
-/// vector specifying the dimensions of the inference vector.
-</span><span class="attribute">#[derive(Clone, PartialEq, ::prost::Message)]
-</span><span class="kw">pub struct </span>Inference {
-    <span class="attribute">#[prost(uint64, repeated, tag=<span class="string">&quot;1&quot;</span>)]
-    </span><span class="kw">pub </span>shape: ::prost::alloc::vec::Vec&lt;u64&gt;,
-    <span class="attribute">#[prost(float, repeated, tag=<span class="string">&quot;2&quot;</span>)]
-    </span><span class="kw">pub </span>inference_vec: ::prost::alloc::vec::Vec&lt;f32&gt;,
-}
-<span class="doccomment">/// The client can check the configuration report for the configuration of the Oak Functions runtime.
+</pre><pre class="rust"><code><span class="doccomment">/// The client can check the configuration report for the configuration of the Oak Functions runtime.
 </span><span class="attribute">#[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>ConfigurationReport {
     <span class="doccomment">/// Hash of the loaded Wasm module.
@@ -160,16 +128,6 @@
     </span><span class="attribute">#[prost(uint32, tag=<span class="string">&quot;2&quot;</span>)]
     </span><span class="kw">pub </span>constant_processing_time_ms: u32,
 }
-<span class="doccomment">/// Configuration for differentially private metrics.
-</span><span class="attribute">#[derive(Clone, PartialEq, ::prost::Message)]
-</span><span class="kw">pub struct </span>PrivateMetricsConfig {
-    <span class="doccomment">/// The privacy budget.
-    </span><span class="attribute">#[prost(double, tag=<span class="string">&quot;1&quot;</span>)]
-    </span><span class="kw">pub </span>epsilon: f64,
-    <span class="doccomment">/// The number of requests that will be aggregated into each batch.
-    </span><span class="attribute">#[prost(uint32, tag=<span class="string">&quot;2&quot;</span>)]
-    </span><span class="kw">pub </span>batch_size: u32,
-}
 <span class="doccomment">/// The `ExtensionHandle` indicates which extension to invoke in the Oak Functions runtime.
 /// We assume every extension exposes exactly one method to invoke.
 /// `ExtensionHandle`s are exchanged as `i32` values.
@@ -181,8 +139,6 @@
     </span>TestingHandle = <span class="number">1</span>,
     LookupHandle = <span class="number">2</span>,
     LoggingHandle = <span class="number">3</span>,
-    MetricsHandle = <span class="number">4</span>,
-    TfHandle = <span class="number">5</span>,
 }
 <span class="kw">impl </span>ExtensionHandle {
     <span class="doccomment">/// String value of the enum field names used in the ProtoBuf definition.
@@ -195,8 +151,6 @@
             ExtensionHandle::TestingHandle =&gt; <span class="string">&quot;TESTING_HANDLE&quot;</span>,
             ExtensionHandle::LookupHandle =&gt; <span class="string">&quot;LOOKUP_HANDLE&quot;</span>,
             ExtensionHandle::LoggingHandle =&gt; <span class="string">&quot;LOGGING_HANDLE&quot;</span>,
-            ExtensionHandle::MetricsHandle =&gt; <span class="string">&quot;METRICS_HANDLE&quot;</span>,
-            ExtensionHandle::TfHandle =&gt; <span class="string">&quot;TF_HANDLE&quot;</span>,
         }
     }
 }

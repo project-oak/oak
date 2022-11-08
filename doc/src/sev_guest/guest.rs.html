@@ -414,6 +414,105 @@
 <span id="414">414</span>
 <span id="415">415</span>
 <span id="416">416</span>
+<span id="417">417</span>
+<span id="418">418</span>
+<span id="419">419</span>
+<span id="420">420</span>
+<span id="421">421</span>
+<span id="422">422</span>
+<span id="423">423</span>
+<span id="424">424</span>
+<span id="425">425</span>
+<span id="426">426</span>
+<span id="427">427</span>
+<span id="428">428</span>
+<span id="429">429</span>
+<span id="430">430</span>
+<span id="431">431</span>
+<span id="432">432</span>
+<span id="433">433</span>
+<span id="434">434</span>
+<span id="435">435</span>
+<span id="436">436</span>
+<span id="437">437</span>
+<span id="438">438</span>
+<span id="439">439</span>
+<span id="440">440</span>
+<span id="441">441</span>
+<span id="442">442</span>
+<span id="443">443</span>
+<span id="444">444</span>
+<span id="445">445</span>
+<span id="446">446</span>
+<span id="447">447</span>
+<span id="448">448</span>
+<span id="449">449</span>
+<span id="450">450</span>
+<span id="451">451</span>
+<span id="452">452</span>
+<span id="453">453</span>
+<span id="454">454</span>
+<span id="455">455</span>
+<span id="456">456</span>
+<span id="457">457</span>
+<span id="458">458</span>
+<span id="459">459</span>
+<span id="460">460</span>
+<span id="461">461</span>
+<span id="462">462</span>
+<span id="463">463</span>
+<span id="464">464</span>
+<span id="465">465</span>
+<span id="466">466</span>
+<span id="467">467</span>
+<span id="468">468</span>
+<span id="469">469</span>
+<span id="470">470</span>
+<span id="471">471</span>
+<span id="472">472</span>
+<span id="473">473</span>
+<span id="474">474</span>
+<span id="475">475</span>
+<span id="476">476</span>
+<span id="477">477</span>
+<span id="478">478</span>
+<span id="479">479</span>
+<span id="480">480</span>
+<span id="481">481</span>
+<span id="482">482</span>
+<span id="483">483</span>
+<span id="484">484</span>
+<span id="485">485</span>
+<span id="486">486</span>
+<span id="487">487</span>
+<span id="488">488</span>
+<span id="489">489</span>
+<span id="490">490</span>
+<span id="491">491</span>
+<span id="492">492</span>
+<span id="493">493</span>
+<span id="494">494</span>
+<span id="495">495</span>
+<span id="496">496</span>
+<span id="497">497</span>
+<span id="498">498</span>
+<span id="499">499</span>
+<span id="500">500</span>
+<span id="501">501</span>
+<span id="502">502</span>
+<span id="503">503</span>
+<span id="504">504</span>
+<span id="505">505</span>
+<span id="506">506</span>
+<span id="507">507</span>
+<span id="508">508</span>
+<span id="509">509</span>
+<span id="510">510</span>
+<span id="511">511</span>
+<span id="512">512</span>
+<span id="513">513</span>
+<span id="514">514</span>
+<span id="515">515</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -433,7 +532,9 @@
 </span><span class="doccomment">//! Utilities for creating and processing SNP Guest Request protocol messages.
 
 </span><span class="kw">use </span>bitflags::bitflags;
+<span class="kw">use </span>core::mem::size_of;
 <span class="kw">use </span>strum::FromRepr;
+<span class="kw">use </span>zerocopy::{AsBytes, FromBytes};
 
 <span class="doccomment">/// The size of a guest message, including the header and maximum payload size.
 </span><span class="kw">pub const </span>GUEST_MESSAGE_SIZE: usize = <span class="number">4096</span>;
@@ -453,7 +554,7 @@
 ///
 /// See section 8.26 in &lt;https://www.amd.com/system/files/TechDocs/56860.pdf&gt;.
 </span><span class="attribute">#[repr(C, align(<span class="number">4096</span>))]
-#[derive(Debug)]
+#[derive(Debug, AsBytes, FromBytes)]
 </span><span class="kw">pub struct </span>GuestMessage {
     <span class="doccomment">/// The message header.
     </span><span class="kw">pub </span>header: GuestMessageHeader,
@@ -463,11 +564,20 @@
 
 <span class="macro">static_assertions::assert_eq_size!</span>(GuestMessage, [u8; GUEST_MESSAGE_SIZE]);
 
+<span class="kw">impl </span>GuestMessage {
+    <span class="kw">pub const fn </span>new() -&gt; <span class="self">Self </span>{
+        GuestMessage {
+            header: GuestMessageHeader::new(),
+            payload: [<span class="number">0</span>; <span class="number">4000</span>],
+        }
+    }
+}
+
 <span class="doccomment">/// The header for an encrypted guest request message.
 ///
 /// See Table 97 in &lt;https://www.amd.com/system/files/TechDocs/56860.pdf&gt;.
 </span><span class="attribute">#[repr(C)]
-#[derive(Debug)]
+#[derive(Debug, AsBytes, FromBytes)]
 </span><span class="kw">pub struct </span>GuestMessageHeader {
     <span class="doccomment">/// The authentication tag for the payload and additional data.
     </span><span class="kw">pub </span>auth_tag: [u8; <span class="number">32</span>],
@@ -478,13 +588,17 @@
     <span class="doccomment">/// Reserved. Must be zero.
     </span>_reserved_0: u64,
     <span class="doccomment">/// The algorithm used to encrypt the payload.
-    </span><span class="kw">pub </span>algorithm: AeadAlgorithm,
+    ///
+    /// Use `GuestMessageHeader::get_algorithm` to try to convert this to an `AeadAlgorithm` enum.
+    </span><span class="kw">pub </span>algorithm: u8,
     <span class="doccomment">/// The header version. Currently only version 1 is supported.
     </span><span class="kw">pub </span>header_version: u8,
     <span class="doccomment">/// The size of the header in bytes.
     </span><span class="kw">pub </span>header_size: u16,
     <span class="doccomment">/// The type of message that the payload represents.
-    </span><span class="kw">pub </span>message_type: MessageType,
+    ///
+    /// Use `GuestMessageHeader::get_message_type` to try to convert this to a `MessageType` enum.
+    </span><span class="kw">pub </span>message_type: u8,
     <span class="doccomment">/// The version of the message. Currently only version 1 is supported for all message types.
     </span><span class="kw">pub </span>message_version: u8,
     <span class="doccomment">/// The size of the encrypted message payload in bytes.
@@ -498,6 +612,35 @@
 }
 
 <span class="macro">static_assertions::assert_eq_size!</span>(GuestMessageHeader, [u8; <span class="number">96</span>]);
+
+<span class="kw">impl </span>GuestMessageHeader {
+    <span class="kw">pub const fn </span>new() -&gt; <span class="self">Self </span>{
+        GuestMessageHeader {
+            auth_tag: [<span class="number">0</span>; <span class="number">32</span>],
+            sequence_number: <span class="number">0</span>,
+            _reserved_0: <span class="number">0</span>,
+            algorithm: AeadAlgorithm::Aes256Gcm <span class="kw">as </span>u8,
+            header_version: CURRENT_HEADER_VERSION,
+            header_size: size_of::&lt;<span class="self">Self</span>&gt;() <span class="kw">as </span>u16,
+            message_type: MessageType::Invalid <span class="kw">as </span>u8,
+            message_version: CURRENT_MESSAGE_VERSION,
+            message_size: <span class="number">0</span>,
+            _reserved_1: <span class="number">0</span>,
+            message_vmpck: <span class="number">0</span>,
+            _reserved_2: [<span class="number">0</span>; <span class="number">35</span>],
+        }
+    }
+
+    <span class="doccomment">/// Gets the algorithm field as an `AeadAlgorithm` enum if possible.
+    </span><span class="kw">pub fn </span>get_algorithm(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;AeadAlgorithm&gt; {
+        AeadAlgorithm::from_repr(<span class="self">self</span>.algorithm)
+    }
+
+    <span class="doccomment">/// Gets the message type field as a `MessageType` enum if possible.
+    </span><span class="kw">pub fn </span>get_message_type(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;MessageType&gt; {
+        MessageType::from_repr(<span class="self">self</span>.algorithm)
+    }
+}
 
 <span class="doccomment">/// The AEAD algorithm used for encryption.
 ///
@@ -561,7 +704,7 @@
 ///
 /// See Table 20 in &lt;https://www.amd.com/system/files/TechDocs/56860.pdf&gt;.
 </span><span class="attribute">#[repr(C)]
-#[derive(Debug)]
+#[derive(Debug, AsBytes)]
 </span><span class="kw">pub struct </span>AttestationRequest {
     <span class="doccomment">/// The custom data to be included in the attestation report.
     </span><span class="kw">pub </span>report_data: [u8; <span class="number">64</span>],
@@ -575,14 +718,26 @@
 
 <span class="macro">static_assertions::assert_eq_size!</span>(AttestationRequest, [u8; <span class="number">96</span>]);
 
+<span class="kw">impl </span>AttestationRequest {
+    <span class="kw">pub const fn </span>new() -&gt; <span class="self">Self </span>{
+        AttestationRequest {
+            report_data: [<span class="number">0</span>; <span class="number">64</span>],
+            vmpl: <span class="number">0</span>,
+            _reserved: [<span class="number">0</span>; <span class="number">28</span>],
+        }
+    }
+}
+
 <span class="doccomment">/// Response containing the attestation report.
 ///
 /// See Table 23 in &lt;https://www.amd.com/system/files/TechDocs/56860.pdf&gt;.
 </span><span class="attribute">#[repr(C)]
-#[derive(Debug)]
+#[derive(Debug, FromBytes)]
 </span><span class="kw">pub struct </span>AttestationResponse {
     <span class="doccomment">/// The status of the operation.
-    </span><span class="kw">pub </span>status: ReportStatus,
+    ///
+    /// Use `AttestationResponse::get_status` to try to convert this to a `ReportStatus` enum.
+    </span><span class="kw">pub </span>status: u32,
     <span class="doccomment">/// The size of the report.
     </span><span class="kw">pub </span>report_size: u32,
     <span class="doccomment">/// Reserved, must be zero.
@@ -593,11 +748,18 @@
 
 <span class="macro">static_assertions::assert_eq_size!</span>(AttestationResponse, [u8; <span class="number">1216</span>]);
 
+<span class="kw">impl </span>AttestationResponse {
+    <span class="doccomment">/// Gets the status field as a `ReportStatus` enum if possible.
+    </span><span class="kw">pub fn </span>get_status(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;ReportStatus&gt; {
+        ReportStatus::from_repr(<span class="self">self</span>.status)
+    }
+}
+
 <span class="doccomment">/// A signed attestation report.
 ///
 /// See Table 21 in &lt;https://www.amd.com/system/files/TechDocs/56860.pdf&gt;.
 </span><span class="attribute">#[repr(C)]
-#[derive(Debug)]
+#[derive(Debug, FromBytes)]
 </span><span class="kw">pub struct </span>AttestationReport {
     <span class="doccomment">/// The data contained in the report.
     </span><span class="kw">pub </span>data: AttestationReportData,
@@ -611,7 +773,7 @@
 ///
 /// See Table 21 in &lt;https://www.amd.com/system/files/TechDocs/56860.pdf&gt;.
 </span><span class="attribute">#[repr(C)]
-#[derive(Debug)]
+#[derive(Debug, FromBytes)]
 </span><span class="kw">pub struct </span>AttestationReportData {
     <span class="doccomment">/// The version of the attestation report format.
     ///
@@ -628,15 +790,25 @@
     <span class="doccomment">/// The VMPL value that was passed in the request.
     </span><span class="kw">pub </span>vmpl: u32,
     <span class="doccomment">/// The algorithm used to sign the report.
-    </span><span class="kw">pub </span>signature_algo: SigningAlgorithm,
+    ///
+    /// Use `AttestationReportData::get_signature_algo` to try to convert this to a
+    /// `SigningAlgorithm` enum.
+    </span><span class="kw">pub </span>signature_algo: u32,
     <span class="doccomment">/// The current version of each of the components in the Trusted Computing Base (TCB). This
     /// could be different from the committed value during provisional execution when firmware
     /// is being updated.
     </span><span class="kw">pub </span>current_tcb: TcbVersion,
     <span class="doccomment">/// Information about the platform.
-    </span><span class="kw">pub </span>platform_info: PlatformInfo,
-    <span class="doccomment">/// Whether the digest of the author key is included in the report.
-    </span><span class="kw">pub </span>author_key_en: AuthorKey,
+    ///
+    /// Use `AttestationReportData::get_platform_info` to try to convert this to a `PlatformInfo`
+    /// biflag representation.
+    </span><span class="kw">pub </span>platform_info: u64,
+    <span class="doccomment">/// The least significant bit indicates Whether the digest of the author key is included in the
+    /// report, all other bits are reserved and must be zero.
+    ///
+    /// Use `AttestationReportData::get_author_key_en` to try to convert this to an `AuthorKey`
+    /// enum.
+    </span><span class="kw">pub </span>author_key_en: u64,
     <span class="doccomment">/// The custom data provided in the attestation request.
     </span><span class="kw">pub </span>report_data: [u8; <span class="number">64</span>],
     <span class="doccomment">/// The measurement of the VM memory calculated at launch.
@@ -646,8 +818,8 @@
     <span class="doccomment">/// The SHA-384 digest of the ID public key used to sign the ID block that was provided in
     /// SNP_LAUNCH_FINISH.
     </span><span class="kw">pub </span>id_key_digest: [u8; <span class="number">48</span>],
-    <span class="doccomment">/// The SHA-384 digest of the author public key used to certify the ID key, if `author_key_en`
-    /// is `AuthorKey::Yes`, or all zeroes otherwise.
+    <span class="doccomment">/// The SHA-384 digest of the author public key used to certify the ID key, if the least
+    /// significant bit of `author_key_en` is 1, or all zeroes otherwise.
     </span><span class="kw">pub </span>author_key_digest: [u8; <span class="number">48</span>],
     <span class="doccomment">/// The report ID of this guest.
     </span><span class="kw">pub </span>report_id: [u8; <span class="number">32</span>],
@@ -687,6 +859,23 @@
 
 <span class="macro">static_assertions::assert_eq_size!</span>(AttestationReportData, [u8; <span class="number">672</span>]);
 
+<span class="kw">impl </span>AttestationReportData {
+    <span class="doccomment">/// Gets the platform info field as a `PlatformInfo` representation if possible.
+    </span><span class="kw">pub fn </span>get_platform_info(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;PlatformInfo&gt; {
+        PlatformInfo::from_bits(<span class="self">self</span>.platform_info)
+    }
+
+    <span class="doccomment">/// Gets the author key enabled field as an `AuthorKey` enum if possible.
+    </span><span class="kw">pub fn </span>get_author_key_en(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;AuthorKey&gt; {
+        AuthorKey::from_repr(<span class="self">self</span>.author_key_en)
+    }
+
+    <span class="doccomment">/// Gets the signing algorithm field as a `SigningAlgorithm` enum if possible.
+    </span><span class="kw">pub fn </span>get_signature_algo(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;SigningAlgorithm&gt; {
+        SigningAlgorithm::from_repr(<span class="self">self</span>.signature_algo)
+    }
+}
+
 <span class="macro">bitflags! </span>{
     <span class="doccomment">/// Information on the platform configuration.
     </span><span class="attribute">#[derive(Default)]
@@ -702,16 +891,25 @@
 ///
 /// See Table 8 in &lt;https://www.amd.com/system/files/TechDocs/56860.pdf&gt;.
 </span><span class="attribute">#[repr(C)]
-#[derive(Debug)]
+#[derive(Debug, FromBytes)]
 </span><span class="kw">pub struct </span>GuestPolicy {
     <span class="doccomment">/// The minimum ABI minor version required to launch the guest.
     </span><span class="kw">pub </span>abi_minor: u8,
     <span class="doccomment">/// The minimum ABI major version required to launch the guest.
     </span><span class="kw">pub </span>abi_major: u8,
     <span class="doccomment">/// The allowed settings for the guest.
-    </span><span class="kw">pub </span>flags: PolicyFlags,
+    ///
+    /// Use `GuestPolicy::get_flags` to try to convert this to a `PolicyFlags` enum.
+    </span><span class="kw">pub </span>flags: u16,
     <span class="doccomment">/// Reserved, must be zero.
     </span>_reserved: u32,
+}
+
+<span class="kw">impl </span>GuestPolicy {
+    <span class="doccomment">/// Gets the flags field as a `PolicyFlags` representation if possible.
+    </span><span class="kw">pub fn </span>get_flags(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;PolicyFlags&gt; {
+        PolicyFlags::from_bits(<span class="self">self</span>.flags)
+    }
 }
 
 <span class="macro">static_assertions::assert_eq_size!</span>(GuestPolicy, u64);
@@ -720,7 +918,7 @@
 ///
 /// See Table 3 in &lt;https://www.amd.com/system/files/TechDocs/56860.pdf&gt;.
 </span><span class="attribute">#[repr(C)]
-#[derive(Debug)]
+#[derive(Debug, FromBytes)]
 </span><span class="kw">pub struct </span>TcbVersion {
     <span class="doccomment">/// The current security version number (SVN) of the secure processor (PSP) bootloader.
     </span><span class="kw">pub </span>boot_loader: u8,
@@ -777,7 +975,7 @@
 ///
 /// See Table 107 in &lt;https://www.amd.com/system/files/TechDocs/56860.pdf&gt;.
 </span><span class="attribute">#[repr(C)]
-#[derive(Debug)]
+#[derive(Debug, FromBytes)]
 </span><span class="kw">pub struct </span>EcdsaSignature {
     <span class="doccomment">/// The R component of this signature. The value is zero-extended and little-endian encoded.
     </span><span class="kw">pub </span>r: [u8; <span class="number">72</span>],
