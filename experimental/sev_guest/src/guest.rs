@@ -74,7 +74,7 @@ pub struct GuestMessageHeader {
     _reserved_0: u64,
     /// The algorithm used to encrypt the payload.
     ///
-    /// Use `get_algorithm` to try to convert this to an `AeadAlgorithm` enum.
+    /// Use `GuestMessageHeader::get_algorithm` to try to convert this to an `AeadAlgorithm` enum.
     pub algorithm: u8,
     /// The header version. Currently only version 1 is supported.
     pub header_version: u8,
@@ -82,7 +82,7 @@ pub struct GuestMessageHeader {
     pub header_size: u16,
     /// The type of message that the payload represents.
     ///
-    /// Use `get_message_type` to try to convert this to a `MessageType` enum.
+    /// Use `GuestMessageHeader::get_message_type` to try to convert this to a `MessageType` enum.
     pub message_type: u8,
     /// The version of the message. Currently only version 1 is supported for all message types.
     pub message_version: u8,
@@ -221,7 +221,7 @@ impl AttestationRequest {
 pub struct AttestationResponse {
     /// The status of the operation.
     ///
-    /// Use `get_status` to try to convert this to a `ReportStatus` enum.
+    /// Use `AttestationResponse::get_status` to try to convert this to a `ReportStatus` enum.
     pub status: u32,
     /// The size of the report.
     pub report_size: u32,
@@ -276,7 +276,8 @@ pub struct AttestationReportData {
     pub vmpl: u32,
     /// The algorithm used to sign the report.
     ///
-    /// Use `get_signature_algo` to try to convert this to a `SigningAlgorithm` enum.
+    /// Use `AttestationReportData::get_signature_algo` to try to convert this to a
+    /// `SigningAlgorithm` enum.
     pub signature_algo: u32,
     /// The current version of each of the components in the Trusted Computing Base (TCB). This
     /// could be different from the committed value during provisional execution when firmware
@@ -284,12 +285,14 @@ pub struct AttestationReportData {
     pub current_tcb: TcbVersion,
     /// Information about the platform.
     ///
-    /// Use `get_platform_info` to try to convert this to a `PlatformInfo` biflag representation.
+    /// Use `AttestationReportData::get_platform_info` to try to convert this to a `PlatformInfo`
+    /// biflag representation.
     pub platform_info: u64,
     /// The least significant bit indicates Whether the digest of the author key is included in the
     /// report, all other bits are reserved and must be zero.
     ///
-    /// Use `get_author_key_en` to try to convert this to an `AuthorKey` enum.
+    /// Use `AttestationReportData::get_author_key_en` to try to convert this to an `AuthorKey`
+    /// enum.
     pub author_key_en: u64,
     /// The custom data provided in the attestation request.
     pub report_data: [u8; 64],
@@ -381,7 +384,7 @@ pub struct GuestPolicy {
     pub abi_major: u8,
     /// The allowed settings for the guest.
     ///
-    /// Use `get_flags` to try to convert this to a `PolicyFlags` enum.
+    /// Use `GuestPolicy::get_flags` to try to convert this to a `PolicyFlags` enum.
     pub flags: u16,
     /// Reserved, must be zero.
     _reserved: u32,
