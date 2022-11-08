@@ -2590,6 +2590,7 @@ name = "oak_functions_utils"
 version = "0.1.0"
 dependencies = [
  "lock_api",
+ "spinning_top",
 ]
 
 [[package]]
