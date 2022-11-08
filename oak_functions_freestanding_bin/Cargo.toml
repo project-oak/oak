@@ -36,6 +36,3 @@ static_assertions = "*"
 name = "oak_functions_freestanding_bin"
 test = false
 bench = false
-
-[profile.release]
-lto = true
