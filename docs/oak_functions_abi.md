@@ -128,29 +128,6 @@ The following
 [`ExtensionHandles`](https://github.com/project-oak/oak/blob/main/oak_functions/proto/abi.proto)
 are currently supported:
 
-- `TfHandle`: The Oak Functions runtime runs the TensorFlow model specified in
-  the Oak Functions runtime configuration on the given input vector. The
-  extesion returns an error if either the input vector was malformed or the
-  decoding of the resulting inference failed. This is experimental, and only
-  available with the unsafe version of the Oak Functions runtime.
-- `MetricsHandle`: The Oak Functions WebAssembly module reports the metric value
-  `value` for a sum-based metric bucket identified by a `label` from the
-  `ReportMetricsRequest`. The Oak Functions runtime attempts to interpret the
-  bytes in the label buffer as a UTF-8 encoded string. If the decoding is
-  successful, the string is used as a label to identify the bucket. If the bytes
-  are not a valid UTF-8 string or the string does not match the label of a
-  configured bucket the metric value will be ignored.
-
-  If differentially-private metrics are enabled in the configuration the
-  aggregated bucket totals per label will be logged in batches after the
-  required amount of noise has been added. Only buckets that are explicitly
-  allowed in the configuration will be tracked and included in the results.
-
-  If metrics are reported for the same bucket multiple times in a single request
-  only the last reported value will be used for that request. If values are not
-  reported for some buckets during a request it will be treated as if values of
-  0 were reported for those buckets.
-
 - `LookupHandle`: The Oak Functions runtime retrieves a single (optional) item
   for the given key from the lookup data in-memory store of the Oak Functions
   runtime. If no item with the given key is found, it returns `None`.
