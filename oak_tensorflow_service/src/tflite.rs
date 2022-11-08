@@ -37,7 +37,7 @@ pub unsafe extern "C" fn oak_log_debug(message_ptr: *const core::ffi::c_char, me
 }
 
 // TODO(#3297): Decide the TensorFlow model format to be passed as `model_bytes`.
-#[link(name = "core_full_static", kind = "static")]
+#[link(name = "tflite_micro", kind = "static")]
 extern "C" {
     /// Initializes the TensorFlow model and returns a corresponding error code.
     ///
