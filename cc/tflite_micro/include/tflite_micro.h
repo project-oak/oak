@@ -17,6 +17,8 @@
 #ifndef CC_TFLITE_MICRO_OAK_INCLUDE_TFLITE_MICRO_H_
 #define CC_TFLITE_MICRO_OAK_INCLUDE_TFLITE_MICRO_H_
 
+#include "tensorflow/lite/c/common.h"
+
 #include <stddef.h>
 #include <stdint.h>
 
@@ -32,6 +34,9 @@ int tflite_init(
 int tflite_run(
     const uint8_t* input_bytes_ptr, size_t input_bytes_len,
     uint8_t* output_bytes_ptr, size_t* output_bytes_len_ptr);
+
+const TfLiteTensor* tflite_get_input_tensor();
+const TfLiteTensor* tflite_get_output_tensor();
 
 // Use weak reference to build both freestanding binaries that
 // can run on Oak server and local PC where Oak server does

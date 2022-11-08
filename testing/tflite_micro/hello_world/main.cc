@@ -14,7 +14,10 @@
  * limitations under the License.
  */
 
+#include "output_handler.h"
 #include "tflite_micro.h"
+
+#include "testing/tflite_micro/hello_world/hello_world_model_data.h"
 
 #include <stdint.h>
 
@@ -42,15 +45,12 @@ int inference_count = 0;
 
 int main(int argc, char* argv[]) {
   size_t output_buffer_len = 0;
-
-  // We don't use model_bytes_ptr and model_bytes_len for hello_world
-  // tflite model as the model is built in as a static cc array.
-  if (tflite_init(nullptr /*model_bytes_ptr*/,
-                  0 /*model_bytes_len*/,
+  if (tflite_init(g_hello_world_model_data,
+                  g_hello_world_model_data_size,
                   tensor_arena,
                   kTensorArenaSize,
                   &output_buffer_len) == 0) {
-    float output = 0.f;
+    int8_t output = 0;
     size_t output_len = 0;
     while (sizeof(output) == output_buffer_len) {
       // Calculate an x value to feed into the model. We compare the current
@@ -60,12 +60,26 @@ int main(int argc, char* argv[]) {
       float position = static_cast<float>(inference_count) /
                        static_cast<float>(kInferencesPerCycle);
       float x = position * kXrange;
-      if (tflite_run(reinterpret_cast<const uint8_t*>(&x),
-                     sizeof(x),
+
+      // Quantize the input from floating-point to integer
+      auto input_tensor = tflite_get_input_tensor();
+      int8_t x_quantized =
+          x / input_tensor->params.scale + input_tensor->params.zero_point;
+
+      if (tflite_run(reinterpret_cast<const uint8_t*>(&x_quantized),
+                     sizeof(x_quantized),
                      reinterpret_cast<uint8_t*>(&output),
                      &output_len) != 0) {
         break;
       }
+
+      // Dequantize the output from integer to floating-point
+      auto output_tensor = tflite_get_output_tensor();
+      float y =
+          (output - output_tensor->params.zero_point)
+          * output_tensor->params.scale;
+
+      HandleOutput(x, y);
 
       // Increment the inference_counter, and reset it if we have reached
       // the total number per cycle.

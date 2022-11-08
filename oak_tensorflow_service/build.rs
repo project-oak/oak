@@ -20,8 +20,8 @@ use std::{
     process::Command,
 };
 
-const TFLITE_APP_DIR: &str = "cc/tflite_micro/apps/hello_world";
-const TFLITE_APP_LIBRARY_NAME: &str = "hello_world_app";
+const TFLITE_DIR: &str = "cc/tflite_micro";
+const TFLITE_LIBRARY_NAME: &str = "tflite_micro";
 const TFLITE_SOURCES_PATTERN: &str = "cc/tflite_micro/**/*";
 
 fn main() {
@@ -56,7 +56,7 @@ fn build_tflite() {
         }
     }
 
-    let build_target = format!("//{}:{}", TFLITE_APP_DIR, TFLITE_APP_LIBRARY_NAME);
+    let build_target = format!("//{}:{}", TFLITE_DIR, TFLITE_LIBRARY_NAME);
     let status = Command::new("bazel")
         .arg("build")
         .arg(build_target)
@@ -68,7 +68,7 @@ fn build_tflite() {
 
     // Add TensorFlow Lite build directory to the library search path.
     let build_dir: PathBuf = {
-        [env!("WORKSPACE_ROOT"), "bazel-bin", TFLITE_APP_DIR]
+        [env!("WORKSPACE_ROOT"), "bazel-bin", TFLITE_DIR]
             .iter()
             .collect()
     };

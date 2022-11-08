@@ -14,32 +14,46 @@
  * limitations under the License.
  */
 
-#include "output_handler.h"
 #include "tflite_micro.h"
 
-#include "cc/tflite_micro/apps/hello_world/hello_world_model_data.h"
 #include "tensorflow/lite/micro/all_ops_resolver.h"
 #include "tensorflow/lite/micro/micro_error_reporter.h"
 #include "tensorflow/lite/micro/micro_allocator.h"
 #include "tensorflow/lite/micro/micro_interpreter.h"
 #include "tensorflow/lite/schema/schema_generated.h"
 
-namespace {
-
-
-const tflite::Model* model = nullptr;
-tflite::MicroInterpreter* interpreter = nullptr;
 TfLiteTensor* input = nullptr;
 TfLiteTensor* output = nullptr;
+
+namespace {
+const tflite::Model* model = nullptr;
+tflite::MicroInterpreter* interpreter = nullptr;
+}
+
+const TfLiteTensor* tflite_get_input_tensor() {
+    return input;
+}
+
+const TfLiteTensor* tflite_get_output_tensor() {
+    return output;
 }
 
 int tflite_init(
     const uint8_t* model_bytes_ptr, size_t model_bytes_len,
     uint8_t* tensor_arena_bytes_ptr, size_t tensor_arena_bytes_len,
     size_t* output_buffer_len_ptr) {
+  if (!model_bytes_ptr
+    || !model_bytes_len
+    || !tensor_arena_bytes_ptr
+    || !tensor_arena_bytes_len
+    || !output_buffer_len_ptr) {
+    MicroPrintf("tflite_init: Invalid parameters\n");
+    return -1;
+  }
+
   // Map the model into a usable data structure. This doesn't involve any
   // copying or parsing, it's a very lightweight operation.
-  model = tflite::GetModel(g_hello_world_model_data);
+  model = tflite::GetModel(model_bytes_ptr);
 
   // This pulls in all the operation implementations we need.
   // NOLINTNEXTLINE(runtime-global-variables)
@@ -63,7 +77,7 @@ int tflite_init(
 
   // Request a fixed-size output buffer from Oak kernel and TF runtime,
   // which will be passed in at tflite_run(..., output_bytes_ptr, ...).
-  *output_buffer_len_ptr = sizeof(float);
+  *output_buffer_len_ptr = output->bytes;
 
   return 0;
 }
@@ -71,43 +85,34 @@ int tflite_init(
 int tflite_run(
     const uint8_t* input_bytes_ptr, size_t input_bytes_len,
     uint8_t* output_bytes_ptr, size_t* output_bytes_len_ptr) { 
-  if (!input_bytes_ptr || !output_bytes_ptr || !output_bytes_len_ptr) {
-    MicroPrintf("Invalid parameters\n");
+  if (!input_bytes_ptr
+    || !input_bytes_len
+    || !output_bytes_ptr
+    || !output_bytes_len_ptr) {
+    MicroPrintf("tflite_run: Invalid parameters\n");
     return -1;
   }
 
-  if (input_bytes_len != sizeof(float)) {
+  if (input_bytes_len != input->bytes) {
     MicroPrintf("Expected input len: %d bytes but got %d bytes\n",
-                sizeof(float),
+                input->bytes,
                 input_bytes_len);
     return -1;
   }
-  auto x = *reinterpret_cast<const float*>(input_bytes_ptr);
 
-  // Quantize the input from floating-point to integer
-  int8_t x_quantized = x / input->params.scale + input->params.zero_point;
-  // Place the quantized input in the model's input tensor
-  input->data.int8[0] = x_quantized;
+  // Place input in the model's input tensors
+  memcpy(input->data.uint8, input_bytes_ptr, input_bytes_len);
 
   // Run inference, and report any error
   TfLiteStatus invoke_status = interpreter->Invoke();
   if (invoke_status != kTfLiteOk) {
-    MicroPrintf("Invoke failed on x: %f\n", static_cast<double>(x));
+    MicroPrintf("Invoke failed, err: %d\n", invoke_status);
     return -1;
   }
 
-  // Obtain the quantized output from model's output tensor
-  int8_t y_quantized = output->data.int8[0];
-  // Dequantize the output from integer to floating-point
-  float y = (y_quantized - output->params.zero_point) * output->params.scale;
-
-  // Output the results. A custom HandleOutput function can be implemented
-  // for each supported hardware target.
-  HandleOutput(x, y);
-
-  // Send output back through Oak kenrel and TF runtime.
-  *reinterpret_cast<float*>(output_bytes_ptr) = y;
-  *output_bytes_len_ptr = sizeof(y);
+  // Send output tensors back through Oak TF runtime
+  memcpy(output_bytes_ptr, output->data.uint8, output->bytes);
+  *output_bytes_len_ptr = output->bytes;
 
   return 0;
 }
