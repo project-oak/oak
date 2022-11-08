@@ -141,10 +141,10 @@ There are few optional build options provided:
 
 - `--define=use_custom_output=1`
 
-  The option is specific to hello_world Linux freestanding binary.
-  It builds hello_world Linux freestanding binary without using Oak debug_log.cc;
-  instead, using a custom debug_log.cc for use cases i.e. testing, ported to other operating
-  systems that implement proprietary debug logging, etc.
+  The option is specific to hello_world Linux freestanding binary. It builds
+  hello_world Linux freestanding binary without using Oak debug_log.cc; instead,
+  using a custom debug_log.cc for use cases i.e. testing, ported to other
+  operating systems that implement proprietary debug logging, etc.
 
 ## Debugging Model Binaries
 
