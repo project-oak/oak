@@ -95,11 +95,15 @@ where
     L: OakLogger,
 {
     pub fn new(
-        module: &wasmi::Module,
+        wasm_module_bytes: Vec<u8>,
         request_bytes: Vec<u8>,
         logger: L,
         extensions: HashMap<ExtensionHandle, Box<dyn OakApiNativeExtension>>,
     ) -> anyhow::Result<Self> {
+        let engine = wasmi::Engine::default();
+        let module = wasmi::Module::new(&engine, &wasm_module_bytes[..])
+            .map_err(|err| anyhow::anyhow!("could not load module from buffer: {:?}", err))?;
+
         let user_state = UserState::init(request_bytes, extensions);
 
         // For isolated requests we need to create a new store for every request.
@@ -596,9 +600,9 @@ fn check_export_func_type(
 // An ephemeral request handler with a Wasm module for handling the requests.
 #[derive(Clone)]
 pub struct WasmHandler<L: OakLogger> {
-    // Wasm module to be served on each invocation. `Arc` is needed to make `WasmHandler`
-    // cloneable.
-    module: Arc<wasmi::Module>,
+    // TODO(mschett): Check how we can avoid copying wasm_module_bytes.
+    // We cannot move wasmi::Module any more, it does not implement Send.
+    wasm_module_bytes: Arc<Vec<u8>>,
     extension_factories: Arc<Vec<Box<dyn ExtensionFactory<L>>>>,
     logger: L,
 }
@@ -613,12 +617,8 @@ where
         extension_factories: Vec<Box<dyn ExtensionFactory<L>>>,
         logger: L,
     ) -> anyhow::Result<Self> {
-        let engine = wasmi::Engine::default();
-        let module = wasmi::Module::new(&engine, wasm_module_bytes)
-            .map_err(|err| anyhow::anyhow!("could not load module from buffer: {:?}", err))?;
-
         Ok(WasmHandler {
-            module: Arc::new(module),
+            wasm_module_bytes: Arc::new(wasm_module_bytes.to_vec()),
             extension_factories: Arc::new(extension_factories),
             logger,
         })
@@ -633,8 +633,12 @@ where
             extensions.insert(extension.get_handle(), extension);
         }
 
-        let wasm_state =
-            WasmState::new(&self.module, request_bytes, self.logger.clone(), extensions)?;
+        let wasm_state = WasmState::new(
+            self.wasm_module_bytes.to_vec(),
+            request_bytes,
+            self.logger.clone(),
+            extensions,
+        )?;
 
         Ok(wasm_state)
     }
