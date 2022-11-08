@@ -17,7 +17,7 @@
 #include "output_handler.h"
 #include "tflite_micro.h"
 
-#include "cc/tflite_micro/apps/hello_world/hello_world_model_data.h"
+#include "testing/tflite_micro/hello_world/hello_world_model_data.h"
 
 #include <stdint.h>
 
@@ -62,8 +62,9 @@ int main(int argc, char* argv[]) {
       float x = position * kXrange;
 
       // Quantize the input from floating-point to integer
-      auto it = tflite_get_input_tensor();
-      int8_t x_quantized = x / it->params.scale + it->params.zero_point;
+      auto input_tensor = tflite_get_input_tensor();
+      int8_t x_quantized =
+          x / input_tensor->params.scale + input_tensor->params.zero_point;
 
       if (tflite_run(reinterpret_cast<const uint8_t*>(&x_quantized),
                      sizeof(x_quantized),
@@ -73,8 +74,10 @@ int main(int argc, char* argv[]) {
       }
 
       // Dequantize the output from integer to floating-point
-      auto ot = tflite_get_output_tensor();
-      float y = (output - ot->params.zero_point) * ot->params.scale;
+      auto output_tensor = tflite_get_output_tensor();
+      float y =
+          (output - output_tensor->params.zero_point)
+          * output_tensor->params.scale;
 
       HandleOutput(x, y);
 

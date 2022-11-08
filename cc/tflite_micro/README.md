@@ -5,20 +5,8 @@
 ```text
 cc
 |-- tflite_micro
-|   |-- apps
-|   |   All tflite model apps are put under this folder.
-|   |   |-- hello_world
-|   |   |   hello_world tflite model app.
-|   |   |
-|   |   |-- BUILD
-|   |   |   Provide common dependencies shared by all tflite model apps.
-|   |   |
-|   |   |-- start.S
-|   |   |   Used by tflite model apps to generate freestanding and executable binary
-|   |   |   to run on Linux.
-|   |
 |   |-- include
-|   |   Provide Oak-specific declarations to tflite model apps.
+|   |   Declare Oak tflite apis used by freestanding app binaries and Oak TensorFlow runtime.
 |   |
 |   |-- BUILD
 |   |   Provide Oak-specific build options and shared headers/sources/deps
@@ -29,6 +17,9 @@ cc
 |   |
 |   |-- debug_log.cc
 |   |   Implement Oak-specific debug logging required by TFLM micro-printf.
+|   |
+|   |-- tflite_micro.cc
+|   |   Implement generic tflite model runner.
 |   |
 |   |-- tools
 |   |   |-- BUILD
@@ -57,7 +48,19 @@ cc
 |
 |   For freestanding model app binaries running in Oak server, rustc compiler would pull in required
 |   math apis from Oak libm.rs in addition to the math apis supplemented by this libm.
-|
+
+testing
+|-- tflite_micro
+|   All tflite model apps are put under this folder.
+|   |-- hello_world
+|   |   hello_world tflite model app.
+|   |
+|   |-- BUILD
+|   |   Provide common dependencies shared by all tflite model apps.
+|   |
+|   |-- start.S
+|   |   Used by tflite model apps to generate freestanding and executable binary
+|   |   to run on Linux.
 ```
 
 \*
@@ -104,7 +107,7 @@ example:
 1. Build the binary that runs on Linux
 
    ```bash
-   bazel build //cc/tflite_micro/apps/hello_world:hello_world_freestanding_bin
+   bazel build //testing/tflite_micro/hello_world:hello_world_freestanding_bin
    ```
 
    The binary is built with -nostdlib which removes dependencies of standard
@@ -138,8 +141,9 @@ There are few optional build options provided:
 
 - `--define=use_custom_output=1`
 
-  To build TFLM without using Oak debug_log.cc; instead, using a custom
-  debug_log.cc for multiple use cases i.e. testing, ported to other operating
+  The option is specific to hello_world Linux freestanding binary.
+  It builds hello_world Linux freestanding binary without using Oak debug_log.cc;
+  instead, using a custom debug_log.cc for use cases i.e. testing, ported to other operating
   systems that implement proprietary debug logging, etc.
 
 ## Debugging Model Binaries
@@ -153,7 +157,7 @@ mapped to correct lines of source code.
 Use hello_world model app as example,
 
 ```bash
-bazel build --copt=-g --strip=never --define=no_opt=1 //cc/tflite_micro/apps/hello_world:hello_world_freestanding_bin
+bazel build --copt=-g --strip=never --define=no_opt=1 //testing/tflite_micro/hello_world:hello_world_freestanding_bin
 ```
 
 `--define=no_opt=1` is optional if correct source mapping is not needed.
@@ -170,7 +174,7 @@ Next, configure i.e. lldb for VS Code,
       "type": "lldb",
       "request": "launch",
       "name": "Debug",
-      "program": "${workspaceFolder}/bazel-bin/cc/tflite_micro/apps/hello_world/hello_world_freestanding_bin",
+      "program": "${workspaceFolder}/bazel-bin/testing/tflite_micro/hello_world/hello_world_freestanding_bin",
       "args": [],
       "cwd": "${workspaceFolder}",
       "sourceMap": {

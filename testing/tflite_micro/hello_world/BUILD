@@ -68,13 +68,13 @@ cc_binary(
         ],
     }),
     copts = oak_copts() + [
-        "-Icc/tflite_micro/apps/hello_world",
+        "-Itesting/tflite_micro/hello_world",
     ],
     linkopts = ["-nostdlib"],
     deps = [
         ":hello_world_model",
         "//cc/tflite_micro:hdrs",
-        "//cc/tflite_micro/apps:core",
-        "//cc/tflite_micro/apps:start_file",
+        "//cc/tflite_micro:tflite_micro_generic",
+        "//testing/tflite_micro:start_file",
     ],
 )

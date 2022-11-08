@@ -18,6 +18,10 @@ load(
     "//cc/tflite_micro:build_defs.bzl",
     "oak_copts",
 )
+load(
+    "//cc:build_defs.bzl",
+    "cc_static_library",
+)
 
 package(
     default_visibility = ["//visibility:public"],
@@ -25,7 +29,7 @@ package(
 )
 
 cc_library(
-    name = "tflite_micro",
+    name = "tflite_micro_core",
     srcs = [
         "//third_party/tflite-micro:srcs",
     ],
@@ -39,7 +43,7 @@ cc_library(
     linkstatic = 1,
     deps = [
         # Use Oak DebugLog implementation
-        "//cc/tflite_micro:debug_log",
+        ":debug_log",
         # Use Oak pico libc
         "//cc/libc",
         # Use Oak pico libgcc
@@ -47,6 +51,25 @@ cc_library(
         # Use Oak pico libm that picks up complements of Oak Restricted Kernel libm.rs
         "//cc/libm:oak_kernel_complements",
     ],
+)
+
+# Shared target used by both Linux freestanding binary
+# and Oak TensorFlow runtime to run generic tflite models.
+cc_library(
+    name = "tflite_micro_generic",
+    srcs = ["tflite_micro.cc"],
+    copts = oak_copts(),
+    linkstatic = 1,
+    deps = [
+        ":hdrs",
+        ":tflite_micro_core",
+    ],
+)
+
+# Fully static library linked by oak_tensorflow_service.
+cc_static_library(
+    name = "tflite_micro",
+    deps = [":tflite_micro_generic"],
 )
 
 cc_library(
