@@ -15,7 +15,7 @@ hyper = { version = "*", features = ["client", "http1", "runtime", "server"] }
 nix = "*"
 oak_functions_abi = { path = "../oak_functions_abi" }
 oak_functions_client = { path = "../oak_functions_client" }
-oak_remote_attestation = { path = "../oak_remote_attestation" }
+oak_remote_attestation_noninteractive = { path = "../oak_remote_attestation_noninteractive" }
 port_check = "*"
 prost = "*"
 tempfile = "*"

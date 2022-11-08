@@ -33,10 +33,11 @@ mod tests;
 use crate::channel::Channel;
 use anyhow::anyhow;
 use clap::Parser;
-use oak_remote_attestation::handshaker::{
-    AttestationBehavior, EmptyAttestationGenerator, EmptyAttestationVerifier,
+use oak_remote_attestation::handshaker::EmptyAttestationGenerator;
+use std::{
+    os::unix::{io::FromRawFd, prelude::RawFd},
+    sync::Arc,
 };
-use std::os::unix::{io::FromRawFd, prelude::RawFd};
 use vsock::VsockStream;
 
 #[derive(Parser, Clone, Debug)]
@@ -69,10 +70,9 @@ fn main() -> ! {
         stream.peer_addr().expect("Couldn't get peer address")
     );
 
-    let attestation_behavior =
-        AttestationBehavior::create(EmptyAttestationGenerator, EmptyAttestationVerifier);
     let channel = Box::new(Channel::new(stream));
-    let runtime = oak_functions_freestanding::RuntimeImplementation::new(attestation_behavior);
+    let runtime =
+        oak_functions_freestanding::RuntimeImplementation::new(Arc::new(EmptyAttestationGenerator));
     oak_channel::server::start_blocking_server(
         channel,
         oak_functions_freestanding::schema::TrustedRuntime::serve(runtime),

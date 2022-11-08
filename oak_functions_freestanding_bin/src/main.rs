@@ -20,12 +20,11 @@
 
 extern crate alloc;
 
-use alloc::boxed::Box;
+use alloc::{boxed::Box, sync::Arc};
 use core::panic::PanicInfo;
 use log::info;
 use oak_channel::Channel;
 use oak_linux_boot_params::BootParams;
-use oak_remote_attestation::handshaker::{AttestationBehavior, EmptyAttestationVerifier};
 use oak_remote_attestation_amd::PlaceholderAmdAttestationGenerator;
 
 #[no_mangle]
@@ -36,9 +35,9 @@ pub extern "C" fn rust64_start(_rdi: u64, rsi: &BootParams) -> ! {
 
 fn main(channel: Box<dyn Channel>) -> ! {
     info!("In main!");
-    let attestation_behavior =
-        AttestationBehavior::create(PlaceholderAmdAttestationGenerator, EmptyAttestationVerifier);
-    let runtime = oak_functions_freestanding::RuntimeImplementation::new(attestation_behavior);
+    let runtime = oak_functions_freestanding::RuntimeImplementation::new(Arc::new(
+        PlaceholderAmdAttestationGenerator,
+    ));
     let service = oak_functions_freestanding::schema::TrustedRuntime::serve(runtime);
     oak_channel::server::start_blocking_server(channel, service)
         .expect("Runtime encountered an unrecoverable error");

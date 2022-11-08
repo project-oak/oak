@@ -38,7 +38,7 @@ pub struct GenericAttestationClient<T: AttestationTransport> {
 }
 
 impl<T: AttestationTransport> GenericAttestationClient<T> {
-    pub async fn create<G: AttestationGenerator, V: AttestationVerifier>(
+    pub async fn create<G: AttestationGenerator + Clone, V: AttestationVerifier>(
         mut client: T,
         attestation_behavior: AttestationBehavior<G, V>,
     ) -> anyhow::Result<Self> {

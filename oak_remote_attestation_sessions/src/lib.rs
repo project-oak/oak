@@ -33,20 +33,20 @@ use oak_remote_attestation::{
 pub const SESSION_ID_LENGTH: usize = 8;
 pub type SessionId = [u8; SESSION_ID_LENGTH];
 
-pub enum SessionState<G: AttestationGenerator, V: AttestationVerifier> {
+pub enum SessionState<G: AttestationGenerator + Clone, V: AttestationVerifier> {
     // Boxed due to large size difference, ref: https://rust-lang.github.io/rust-clippy/master/index.html#large_enum_variant
     HandshakeInProgress(Box<ServerHandshaker<G, V>>),
     EncryptedMessageExchange(Encryptor),
 }
 
 /// Maintains remote attestation state for a number of sessions
-pub struct SessionTracker<G: AttestationGenerator, V: AttestationVerifier> {
+pub struct SessionTracker<G: AttestationGenerator + Clone, V: AttestationVerifier> {
     attestation_behavior: AttestationBehavior<G, V>,
     transcript_signer: Arc<Signer>,
     known_sessions: LruCache<SessionId, SessionState<G, V>>,
 }
 
-impl<G: AttestationGenerator, V: AttestationVerifier> SessionTracker<G, V> {
+impl<G: AttestationGenerator + Clone, V: AttestationVerifier> SessionTracker<G, V> {
     pub fn create(
         cache_size: usize,
         attestation_behavior: AttestationBehavior<G, V>,

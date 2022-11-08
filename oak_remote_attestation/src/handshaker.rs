@@ -94,7 +94,7 @@ impl core::fmt::Debug for ServerHandshakerState {
 }
 
 /// Client of the remote attestation protocol handshake.
-pub struct ClientHandshaker<G: AttestationGenerator, V: AttestationVerifier> {
+pub struct ClientHandshaker<G: AttestationGenerator + Clone, V: AttestationVerifier> {
     /// Behavior of the remote attestation protocol.
     behavior: AttestationBehavior<G, V>,
     /// Current state of the remote attestation protocol handshake.
@@ -107,7 +107,7 @@ pub struct ClientHandshaker<G: AttestationGenerator, V: AttestationVerifier> {
     transcript_signer: Signer,
 }
 
-impl<G: AttestationGenerator, V: AttestationVerifier> ClientHandshaker<G, V> {
+impl<G: AttestationGenerator + Clone, V: AttestationVerifier> ClientHandshaker<G, V> {
     /// Creates [`ClientHandshaker`] with `Initializing` state.
     pub fn new(behavior: AttestationBehavior<G, V>) -> anyhow::Result<Self> {
         Ok(Self {
@@ -304,7 +304,7 @@ impl<G: AttestationGenerator, V: AttestationVerifier> ClientHandshaker<G, V> {
 }
 
 /// Server of the remote attestation protocol handshake.
-pub struct ServerHandshaker<G: AttestationGenerator, V: AttestationVerifier> {
+pub struct ServerHandshaker<G: AttestationGenerator + Clone, V: AttestationVerifier> {
     /// Behavior of the remote attestation protocol.
     behavior: AttestationBehavior<G, V>,
     /// Current state of the remote attestation protocol handshake.
@@ -317,7 +317,7 @@ pub struct ServerHandshaker<G: AttestationGenerator, V: AttestationVerifier> {
     transcript_signer: Arc<Signer>,
 }
 
-impl<G: AttestationGenerator, V: AttestationVerifier> ServerHandshaker<G, V> {
+impl<G: AttestationGenerator + Clone, V: AttestationVerifier> ServerHandshaker<G, V> {
     /// Creates [`ServerHandshaker`] with `ServerHandshakerState::ExpectingClientIdentity`
     /// state.
     pub fn new(
@@ -569,7 +569,7 @@ impl Encryptor {
 ///   - Represents an attestation process, where current machine and a remote peer remotely attest
 ///     each other.
 #[derive(Debug, Clone)]
-pub struct AttestationBehavior<G: AttestationGenerator, V: AttestationVerifier> {
+pub struct AttestationBehavior<G: AttestationGenerator + Clone, V: AttestationVerifier> {
     pub generator: G,
     pub verifier: V,
 }
@@ -577,7 +577,7 @@ pub struct AttestationBehavior<G: AttestationGenerator, V: AttestationVerifier> 
 /// A trait implementing the functionality of generating a remote attestation report.
 ///
 /// An implementation of this trait is expected to run in a TEE (i.e. it is usually in the server).
-pub trait AttestationGenerator: Clone + Send + Sync {
+pub trait AttestationGenerator: Send + Sync {
     /// Generate a remote attestation report, ensuring that `attested_data` is cryptographically
     /// bound to the result (e.g. via a signature).
     ///
@@ -641,7 +641,7 @@ impl AttestationVerifier for EmptyAttestationVerifier {
     }
 }
 
-impl<G: AttestationGenerator, V: AttestationVerifier> AttestationBehavior<G, V> {
+impl<G: AttestationGenerator + Clone, V: AttestationVerifier> AttestationBehavior<G, V> {
     pub fn create(generator: G, verifier: V) -> Self {
         Self {
             generator,

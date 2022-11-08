@@ -25,15 +25,10 @@ use oak_functions_freestanding::{
     schema::{TrustedRuntime, TrustedRuntimeServer},
     RuntimeImplementation,
 };
-use oak_remote_attestation::handshaker::{
-    AttestationBehavior, ClientHandshaker, EmptyAttestationGenerator, EmptyAttestationVerifier,
-};
-use oak_remote_attestation_amd::{
-    PlaceholderAmdAttestationGenerator, PlaceholderAmdAttestationVerifier,
-};
-use oak_remote_attestation_sessions_client::{AttestationTransport, GenericAttestationClient};
+use oak_remote_attestation_amd::PlaceholderAmdAttestationGenerator;
+use oak_remote_attestation_sessions_client::AttestationTransport;
+use std::sync::Arc;
 
-const MOCK_SESSION_ID: &[u8; 8] = &[0, 0, 0, 0, 0, 0, 0, 0];
 const MOCK_CONSTANT_RESPONSE_SIZE: u32 = 1024;
 const LOOKUP_TEST_KEY: &[u8] = b"test_key";
 const LOOKUP_TEST_VALUE: &[u8] = b"test_value";
@@ -41,26 +36,17 @@ const LOOKUP_TEST_VALUE: &[u8] = b"test_value";
 /// Simple remote attestation client to perform handshakes with the runtime, which is a prerequisite
 /// for interacting with the business logic running in the runtime.
 struct TestUserClient {
-    inner: schema::TrustedRuntimeClient<
-        TrustedRuntimeServer<
-            RuntimeImplementation<PlaceholderAmdAttestationGenerator, EmptyAttestationVerifier>,
-        >,
-    >,
+    inner: schema::TrustedRuntimeClient<TrustedRuntimeServer<RuntimeImplementation>>,
 }
 
 #[async_trait::async_trait(?Send)]
 impl AttestationTransport for TestUserClient {
     async fn message(
         &mut self,
-        session_id: oak_remote_attestation_sessions::SessionId,
+        _session_id: oak_remote_attestation_sessions::SessionId,
         body: Vec<u8>,
     ) -> anyhow::Result<Vec<u8>> {
-        let request = schema::UserRequest {
-            session_id: Some(schema::SessionId {
-                value: session_id.to_vec(),
-            }),
-            body,
-        };
+        let request = schema::UserRequest { body };
         let response = self
             .inner
             .handle_user_request(&request)
@@ -72,21 +58,11 @@ impl AttestationTransport for TestUserClient {
 
 #[test]
 fn it_should_not_handle_user_requests_before_initialization() {
-    let attestation_behavior =
-        AttestationBehavior::create(PlaceholderAmdAttestationGenerator, EmptyAttestationVerifier);
-    let runtime = RuntimeImplementation::new(attestation_behavior.clone());
+    let runtime = RuntimeImplementation::new(Arc::new(PlaceholderAmdAttestationGenerator));
     let mut client = schema::TrustedRuntimeClient::new(TrustedRuntime::serve(runtime));
 
-    let mut handshaker =
-        ClientHandshaker::new(attestation_behavior).expect("could not create client handshaker");
-    let client_hello = handshaker
-        .create_client_hello()
-        .expect("Couldn't create client hello message");
     let request = schema::UserRequest {
-        session_id: Some(schema::SessionId {
-            value: MOCK_SESSION_ID.to_vec(),
-        }),
-        body: client_hello,
+        body: vec![1, 2, 3],
     };
     let result = client.handle_user_request(&request).into_ok();
 
@@ -101,9 +77,7 @@ fn it_should_not_handle_user_requests_before_initialization() {
 
 #[test]
 fn it_should_handle_user_requests_after_initialization() {
-    let attestation_behavior =
-        AttestationBehavior::create(PlaceholderAmdAttestationGenerator, EmptyAttestationVerifier);
-    let runtime = RuntimeImplementation::new(attestation_behavior.clone());
+    let runtime = RuntimeImplementation::new(Arc::new(PlaceholderAmdAttestationGenerator));
     let mut client = schema::TrustedRuntimeClient::new(TrustedRuntime::serve(runtime));
 
     let wasm_path = oak_functions_test_utils::build_rust_crate_wasm("echo").unwrap();
@@ -115,17 +89,8 @@ fn it_should_handle_user_requests_after_initialization() {
 
     client.initialize(&request).into_ok().unwrap();
 
-    let mut handshaker =
-        ClientHandshaker::new(attestation_behavior).expect("could not create client handshaker");
-    let client_hello = handshaker
-        .create_client_hello()
-        .expect("Couldn't create client hello message");
-
     let request = schema::UserRequest {
-        session_id: Some(schema::SessionId {
-            value: MOCK_SESSION_ID.to_vec(),
-        }),
-        body: client_hello,
+        body: vec![1, 2, 3],
     };
     let result = client.handle_user_request(&request).into_ok();
 
@@ -134,9 +99,7 @@ fn it_should_handle_user_requests_after_initialization() {
 
 #[test]
 fn it_should_only_initialize_once() {
-    let attestation_behavior =
-        AttestationBehavior::create(PlaceholderAmdAttestationGenerator, EmptyAttestationVerifier);
-    let runtime = RuntimeImplementation::new(attestation_behavior);
+    let runtime = RuntimeImplementation::new(Arc::new(PlaceholderAmdAttestationGenerator));
     let mut client = schema::TrustedRuntimeClient::new(TrustedRuntime::serve(runtime));
 
     let wasm_path = oak_functions_test_utils::build_rust_crate_wasm("echo").unwrap();
@@ -160,9 +123,7 @@ fn it_should_only_initialize_once() {
 
 #[tokio::test]
 async fn it_should_support_lookup_data() {
-    let attestation_behavior =
-        AttestationBehavior::create(PlaceholderAmdAttestationGenerator, EmptyAttestationVerifier);
-    let runtime = RuntimeImplementation::new(attestation_behavior);
+    let runtime = RuntimeImplementation::new(Arc::new(PlaceholderAmdAttestationGenerator));
     let mut client = schema::TrustedRuntimeClient::new(TrustedRuntime::serve(runtime));
 
     let wasm_path = oak_functions_test_utils::build_rust_crate_wasm("key_value_lookup").unwrap();
@@ -182,29 +143,12 @@ async fn it_should_support_lookup_data() {
     };
     client.update_lookup_data(&request).into_ok().unwrap();
 
-    let mut user_client = GenericAttestationClient::create(
-        TestUserClient { inner: client },
-        AttestationBehavior::create(EmptyAttestationGenerator, PlaceholderAmdAttestationVerifier),
-    )
-    .await
-    .expect("failed to perform handshake");
+    let lookup_response = client
+        .handle_user_request(&schema::UserRequest {
+            body: LOOKUP_TEST_KEY.to_vec(),
+        })
+        .into_ok()
+        .unwrap();
 
-    let lookup_response = {
-        // Get the response from the runtime, and assert that no errors occured have occured on the
-        // Oak IDL layer.
-        let lookup_result = user_client.message(LOOKUP_TEST_KEY).await;
-        assert_matches!(lookup_result, Ok(_));
-        // Now parse the result with the Oak ABI response proto
-        let decoded_response = oak_functions_abi::Response::decode(&lookup_result.unwrap());
-        assert_matches!(
-            decoded_response,
-            Ok(oak_functions_abi::Response {
-                status: oak_functions_abi::StatusCode::Success,
-                ..
-            })
-        );
-        decoded_response.unwrap()
-    };
-
-    assert_matches!(lookup_response.body(), Ok(body) if body == LOOKUP_TEST_VALUE);
+    assert_eq!(LOOKUP_TEST_VALUE, lookup_response.body);
 }

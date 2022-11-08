@@ -13,51 +13,34 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-pub mod proto {
-    #![allow(clippy::return_self_not_must_use)]
-    tonic::include_proto!("oak.session.unary.v1");
-}
-
 pub mod rekor;
 
 use anyhow::Context;
-use oak_functions_abi::{Request, Response};
-use oak_grpc_unary_attestation::client::UnaryGrpcClient;
-use oak_remote_attestation::handshaker::{AttestationBehavior, EmptyAttestationGenerator};
-use oak_remote_attestation_amd::PlaceholderAmdAttestationVerifier;
-use oak_remote_attestation_sessions_client::GenericAttestationClient;
 
 #[cfg(test)]
 mod tests;
 
 pub struct Client {
-    inner: GenericAttestationClient<UnaryGrpcClient>,
+    inner: oak_remote_attestation_noninteractive::client::OakClient,
 }
 
 impl Client {
     pub async fn new(uri: &str) -> anyhow::Result<Self> {
-        let grpc_client = UnaryGrpcClient::create(uri)
+        let inner = oak_remote_attestation_noninteractive::client::OakClient::create(uri)
             .await
             .context("Could not create Oak Functions client")?;
-        let inner = GenericAttestationClient::create(
-            grpc_client,
-            AttestationBehavior::create(
-                EmptyAttestationGenerator,
-                PlaceholderAmdAttestationVerifier,
-            ),
-        )
-        .await
-        .context("Could not create Oak Functions client")?;
         Ok(Client { inner })
     }
 
-    pub async fn invoke(&mut self, request: Request) -> anyhow::Result<Response> {
-        let encoded_response = self
+    pub async fn invoke(&mut self, request: &[u8]) -> anyhow::Result<Vec<u8>> {
+        // TODO(#3442): Fetch enclave public key.
+        // TODO(#3442): Encrypt request.
+        let response = self
             .inner
-            .message(&request.body)
+            .message(request)
             .await
             .context("Error invoking Oak Functions instance")?;
-
-        Response::decode(encoded_response.as_ref()).context("Could not decode the response")
+        // TODO(#3442): Decrypt response.
+        Ok(response)
     }
 }

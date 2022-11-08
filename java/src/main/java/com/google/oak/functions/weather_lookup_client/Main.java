@@ -19,6 +19,7 @@ package com.google.oak.functions.weather_lookup_client;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 import com.google.oak.functions.client.AttestationClient;
+import com.google.oak.functions.client.AttestationClientNoninteractive;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import java.net.URL;
@@ -43,14 +44,12 @@ public class Main {
     ManagedChannel channel = builder.build();
 
     // Attest a gRPC channel.
-    AttestationClient client = new AttestationClient();
-    client.attest(channel);
+    AttestationClientNoninteractive client = new AttestationClientNoninteractive(channel);
 
     // Test request coordinates are defined in `oak_functions/lookup_data_generator/src/data.rs`.
     byte[] requestBody = "{\"lat\":0,\"lng\":0}".getBytes(UTF_8);
-    AttestationClient.Response response = client.send(requestBody);
-    byte[] responseBody = Arrays.copyOfRange(response.getBody(), 0, (int) response.getLength());
-    String decodedResponse = new String(responseBody, StandardCharsets.UTF_8);
+    byte[] response = client.send(requestBody);
+    String decodedResponse = new String(response, StandardCharsets.UTF_8);
 
     if (decodedResponse.matches(EXPECTED_RESPONSE_PATTERN)) {
       logger.log(Level.INFO, "Client received the expected response: " + decodedResponse);

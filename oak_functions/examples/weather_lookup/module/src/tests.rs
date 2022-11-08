@@ -21,7 +21,6 @@ use location_utils::{
 };
 use lookup_data_generator::data::generate_and_serialize_sparse_weather_entries;
 use maplit::hashmap;
-use oak_functions_abi::StatusCode;
 use oak_functions_test_utils::make_request;
 use rand::{prelude::StdRng, SeedableRng};
 use std::time::Duration;
@@ -63,66 +62,50 @@ async fn test_server() {
     // Test request coordinates are defined in `oak_functions/lookup_data_generator/src/data.rs`.
     {
         // Exact key_0.
-        let response = make_request(server_port, br#"{"lat":52.0,"lng":-0.01}"#)
-            .await
-            .response;
-        assert_eq!(StatusCode::Success, response.status);
+        let response = make_request(server_port, br#"{"lat":52.0,"lng":-0.01}"#).await;
         assert_eq!(
             r#"{"temperature_degrees_celsius":10}"#,
-            std::str::from_utf8(response.body().unwrap()).unwrap()
+            std::str::from_utf8(&response).unwrap()
         );
     }
     {
         // Close to key_0.
-        let response = make_request(server_port, br#"{"lat":51.9,"lng":-0.1}"#)
-            .await
-            .response;
-        assert_eq!(StatusCode::Success, response.status);
+        let response = make_request(server_port, br#"{"lat":51.9,"lng":-0.1}"#).await;
         assert_eq!(
             r#"{"temperature_degrees_celsius":10}"#,
-            std::str::from_utf8(response.body().unwrap()).unwrap()
+            std::str::from_utf8(&response).unwrap()
         );
     }
     {
         // A bit further from key_0.
-        let response = make_request(server_port, br#"{"lat":51.4,"lng":-0.6}"#)
-            .await
-            .response;
-        assert_eq!(StatusCode::Success, response.status);
+        let response = make_request(server_port, br#"{"lat":51.4,"lng":-0.6}"#).await;
         assert_eq!(
             r#"could not find location within cutoff"#,
-            std::str::from_utf8(response.body().unwrap()).unwrap()
+            std::str::from_utf8(&response).unwrap()
         );
     }
     {
         // Close to key_1.
-        let response = make_request(server_port, br#"{"lat":14.1,"lng":-11.9}"#)
-            .await
-            .response;
-        assert_eq!(StatusCode::Success, response.status);
+        let response = make_request(server_port, br#"{"lat":14.1,"lng":-11.9}"#).await;
         assert_eq!(
             r#"{"temperature_degrees_celsius":42}"#,
-            std::str::from_utf8(response.body().unwrap()).unwrap()
+            std::str::from_utf8(&response).unwrap()
         );
     }
     {
         // Far from both keys.
-        let response = make_request(server_port, br#"{"lat":-10.0,"lng":10.0}"#)
-            .await
-            .response;
-        assert_eq!(StatusCode::Success, response.status);
+        let response = make_request(server_port, br#"{"lat":-10.0,"lng":10.0}"#).await;
         assert_eq!(
             r#"could not find index item for cell"#,
-            std::str::from_utf8(response.body().unwrap()).unwrap()
+            std::str::from_utf8(&response).unwrap()
         );
     }
     {
         // Malformed request.
-        let response = make_request(server_port, b"invalid - JSON").await.response;
-        assert_eq!(StatusCode::Success, response.status);
+        let response = make_request(server_port, b"invalid - JSON").await;
         assert_eq!(
             "could not deserialize request as JSON: Error(\"expected value\", line: 1, column: 1)",
-            std::str::from_utf8(response.body().unwrap()).unwrap()
+            std::str::from_utf8(&response).unwrap()
         );
     }
 
@@ -179,10 +162,9 @@ fn bench_wasm_handler(bencher: &mut Bencher, warmup: bool) {
 
     let summary = bencher.bench(|bencher| {
         bencher.iter(|| {
-            let response = runtime
-                .block_on(make_request(server_port, br#"{"lat":-60.1,"lng":120.1}"#))
-                .response;
-            assert_eq!(response.status, StatusCode::Success);
+            let response =
+                runtime.block_on(make_request(server_port, br#"{"lat":-60.1,"lng":120.1}"#));
+            assert!(!response.is_empty());
         });
         Ok(())
     });

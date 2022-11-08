@@ -30,45 +30,30 @@ mod wasm;
 
 use crate::remote_attestation::{AttestationHandler, AttestationSessionHandler};
 use alloc::{boxed::Box, format, sync::Arc};
-use anyhow::Context;
 use oak_functions_abi::Request;
 use oak_functions_lookup::LookupDataManager;
-use oak_remote_attestation::handshaker::{
-    AttestationBehavior, AttestationGenerator, AttestationVerifier,
-};
-use oak_remote_attestation_sessions::SessionId;
+use oak_functions_wasm::WasmHandler;
+use oak_remote_attestation::handshaker::AttestationGenerator;
+use remote_attestation::Handler;
 
 pub use crate::logger::StandaloneLogger;
 
-enum InitializationState<G, V>
-where
-    G: 'static + AttestationGenerator,
-    V: 'static + AttestationVerifier,
-{
-    Uninitialized(Option<AttestationBehavior<G, V>>),
-    // dyn is used as our attestation implementation uses a closure, which is
-    // created only at initialization time. We cannot know the closure
-    // type in advance, since Rust closures have unique, anonymous types.
+enum InitializationState {
+    Uninitialized,
     Initialized(Box<dyn AttestationHandler>),
 }
 
-pub struct RuntimeImplementation<G, V>
-where
-    G: 'static + AttestationGenerator,
-    V: 'static + AttestationVerifier,
-{
-    initialization_state: InitializationState<G, V>,
+pub struct RuntimeImplementation {
+    attestation_generator: Arc<dyn AttestationGenerator>,
+    initialization_state: InitializationState,
     lookup_data_manager: Arc<LookupDataManager<logger::StandaloneLogger>>,
 }
 
-impl<G, V> RuntimeImplementation<G, V>
-where
-    G: 'static + AttestationGenerator,
-    V: 'static + AttestationVerifier,
-{
-    pub fn new(attestation_behavior: AttestationBehavior<G, V>) -> Self {
+impl RuntimeImplementation {
+    pub fn new(attestation_generator: Arc<dyn AttestationGenerator>) -> Self {
         Self {
-            initialization_state: InitializationState::Uninitialized(Some(attestation_behavior)),
+            attestation_generator,
+            initialization_state: InitializationState::Uninitialized,
             lookup_data_manager: Arc::new(
                 LookupDataManager::new_empty(StandaloneLogger::default()),
             ),
@@ -76,11 +61,17 @@ where
     }
 }
 
-impl<G, V> schema::TrustedRuntime for RuntimeImplementation<G, V>
-where
-    G: 'static + AttestationGenerator,
-    V: 'static + AttestationVerifier,
-{
+impl<L: oak_logger::OakLogger> Handler for WasmHandler<L> {
+    fn handle(&mut self, request: &[u8]) -> anyhow::Result<oak_idl::Vec<u8>> {
+        let request = Request {
+            body: request.to_vec(),
+        };
+        let response = self.handle_invoke(request)?;
+        Ok(response.body)
+    }
+}
+
+impl schema::TrustedRuntime for RuntimeImplementation {
     fn initialize(
         &mut self,
         initialization: &schema::Initialization,
@@ -92,16 +83,8 @@ where
                     "already initialized",
                 ))
             }
-            InitializationState::Uninitialized(attestation_behavior) => {
-                // attestation_behavior must always be present; it is wrapped in an Option purely so
-                // that it can be taken without cloning.
-                let attestation_behavior = attestation_behavior.take().ok_or_else(|| {
-                    oak_idl::Status::new_with_message(
-                        oak_idl::StatusCode::Internal,
-                        "missing attestation_behavior",
-                    )
-                })?;
-                let constant_response_size = initialization.constant_response_size;
+            InitializationState::Uninitialized => {
+                // TODO(#3442): Implement constant response size policy.
                 let wasm_handler = wasm::new_wasm_handler(
                     &initialization.wasm_module,
                     self.lookup_data_manager.clone(),
@@ -114,21 +97,8 @@ where
                 })?;
                 let attestation_handler = Box::new(
                     AttestationSessionHandler::create(
-                        move |decrypted_request| {
-                            let decrypted_response = wasm_handler.handle_invoke(Request {
-                                body: decrypted_request,
-                            })?;
-
-                            let padded_decrypted_response =
-                                decrypted_response
-                                    .pad(constant_response_size.try_into().expect(
-                                        "failed to convert constant_response_size to usize",
-                                    ))
-                                    .context("could not pad the response")?;
-
-                            Ok(padded_decrypted_response.encode_to_vec())
-                        },
-                        attestation_behavior,
+                        self.attestation_generator.clone(),
+                        wasm_handler,
                     )
                     .map_err(|err| {
                         oak_idl::Status::new_with_message(
@@ -154,40 +124,20 @@ where
         request_message: &schema::UserRequest,
     ) -> Result<schema::UserRequestResponse, oak_idl::Status> {
         match &mut self.initialization_state {
-            InitializationState::Uninitialized(_attestation_behavior) => {
-                Err(oak_idl::Status::new_with_message(
-                    oak_idl::StatusCode::FailedPrecondition,
-                    "not initialized",
-                ))
-            }
+            InitializationState::Uninitialized => Err(oak_idl::Status::new_with_message(
+                oak_idl::StatusCode::FailedPrecondition,
+                "not initialized",
+            )),
             InitializationState::Initialized(attestation_handler) => {
-                let session_id: SessionId = request_message
-                    .session_id
-                    .clone()
-                    .ok_or_else(|| {
-                        oak_idl::Status::new_with_message(
-                            oak_idl::StatusCode::InvalidArgument,
-                            "missing session_id",
-                        )
-                    })?
-                    .value
-                    .try_into()
-                    .map_err(|err| {
-                        oak_idl::Status::new_with_message(
-                            oak_idl::StatusCode::InvalidArgument,
-                            format!("could not parse session_id: {:?}", err),
-                        )
-                    })?;
-
-                let response = attestation_handler
-                    .message(session_id, &request_message.body)
-                    .map_err(|err| {
-                        oak_idl::Status::new_with_message(
-                            oak_idl::StatusCode::Internal,
-                            format!("{:?}", err),
-                        )
-                    })?;
-
+                let response =
+                    attestation_handler
+                        .message(&request_message.body)
+                        .map_err(|err| {
+                            oak_idl::Status::new_with_message(
+                                oak_idl::StatusCode::Internal,
+                                format!("{:?}", err),
+                            )
+                        })?;
                 Ok(schema::UserRequestResponse { body: response })
             }
         }
