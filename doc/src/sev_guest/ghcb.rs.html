@@ -396,6 +396,10 @@
 <span id="396">396</span>
 <span id="397">397</span>
 <span id="398">398</span>
+<span id="399">399</span>
+<span id="400">400</span>
+<span id="401">401</span>
+<span id="402">402</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -695,6 +699,7 @@
 
         <span class="self">self</span>.ghcb.as_mut().sw_exit_code = SW_EXIT_CODE_IOIO_PROT;
         <span class="self">self</span>.ghcb.as_mut().sw_exit_info_1 = io_port;
+        <span class="self">self</span>.ghcb.as_mut().sw_exit_info_2 = <span class="number">0</span>;
         <span class="self">self</span>.ghcb.as_mut().rax = data <span class="kw">as </span>u64;
         <span class="self">self</span>.ghcb.as_mut().valid_bitmap = BASE_VALID_BITMAP.union(ValidBitmap::RAX);
         <span class="self">self</span>.do_vmg_exit()
@@ -708,6 +713,7 @@
 
         <span class="self">self</span>.ghcb.as_mut().sw_exit_code = SW_EXIT_CODE_IOIO_PROT;
         <span class="self">self</span>.ghcb.as_mut().sw_exit_info_1 = io_port;
+        <span class="self">self</span>.ghcb.as_mut().sw_exit_info_2 = <span class="number">0</span>;
         <span class="self">self</span>.ghcb.as_mut().valid_bitmap = BASE_VALID_BITMAP;
         <span class="self">self</span>.do_vmg_exit()<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(<span class="self">self</span>.ghcb.as_mut().rax <span class="kw">as </span>u8)
@@ -721,6 +727,7 @@
 
         <span class="self">self</span>.ghcb.as_mut().sw_exit_code = SW_EXIT_CODE_IOIO_PROT;
         <span class="self">self</span>.ghcb.as_mut().sw_exit_info_1 = io_port;
+        <span class="self">self</span>.ghcb.as_mut().sw_exit_info_2 = <span class="number">0</span>;
         <span class="self">self</span>.ghcb.as_mut().rax = data <span class="kw">as </span>u64;
         <span class="self">self</span>.ghcb.as_mut().valid_bitmap = BASE_VALID_BITMAP.union(ValidBitmap::RAX);
         <span class="self">self</span>.do_vmg_exit()
@@ -734,6 +741,7 @@
 
         <span class="self">self</span>.ghcb.as_mut().sw_exit_code = SW_EXIT_CODE_IOIO_PROT;
         <span class="self">self</span>.ghcb.as_mut().sw_exit_info_1 = io_port;
+        <span class="self">self</span>.ghcb.as_mut().sw_exit_info_2 = <span class="number">0</span>;
         <span class="self">self</span>.ghcb.as_mut().valid_bitmap = BASE_VALID_BITMAP;
         <span class="self">self</span>.do_vmg_exit()<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(<span class="self">self</span>.ghcb.as_mut().rax <span class="kw">as </span>u32)
