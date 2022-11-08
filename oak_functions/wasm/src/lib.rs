@@ -135,9 +135,8 @@ where
             &mut store,
             // TODO(mschett): Check types of params with oak_functions_resolve_funcs.
             |mut caller: wasmi::Caller<'_, UserState>, buf_ptr_ptr: u32, buf_len_ptr: u32| {
-                // TODO(mschett): Fix unwrap().
-                read_request(&mut caller, buf_ptr_ptr, buf_len_ptr).unwrap();
-                Ok(())
+                let oak_status = read_request(&mut caller, buf_ptr_ptr, buf_len_ptr);
+                from_oak_status_result(oak_status)
             },
         );
         // TODO(mschett): Handle error.
@@ -149,9 +148,8 @@ where
             &mut store,
             // TODO(mschett): Check types of params with oak_functions_resolve_funcs.
             |mut caller: wasmi::Caller<'_, UserState>, buf_ptr: u32, buf_len: u32| {
-                // TODO(mschett): Fix unwrap().
-                write_response(&mut caller, buf_ptr, buf_len).unwrap();
-                Ok(())
+                let result = write_response(&mut caller, buf_ptr, buf_len);
+                from_oak_status_result(result)
             },
         );
         // TODO(mschett): Handle error.
@@ -168,17 +166,15 @@ where
              request_len: u32,
              response_ptr_ptr: u32,
              response_len_ptr: u32| {
-                // TODO(mschett): Fix unwrap().
-                invoke_extension(
+                let result = invoke_extension(
                     &mut caller,
                     handle,
                     request_ptr,
                     request_len,
                     response_ptr_ptr,
                     response_len_ptr,
-                )
-                .unwrap();
-                Ok(())
+                );
+                from_oak_status_result(result)
             },
         );
         // TODO(mschett): Handle error.
@@ -711,13 +707,12 @@ fn oak_functions_resolve_func(field_name: &str) -> Option<(usize, wasmi::FuncTyp
 }
 
 /// A helper function to move between our specific result type `Result<(), OakStatus>` and the
-/// `wasmi` specific result type `Result<Option<wasmi::RuntimeValue>, wasmi::Trap>`, mapping:
-/// - `Ok(())` to `Ok(Some(OakStatus::Ok))`
-/// - `Err(x)` to `Ok(Some(x))`
-fn from_oak_status_result(
-    result: Result<(), OakStatus>,
-) -> Result<Option<wasmi::core::Value>, wasmi::core::Trap> {
-    let oak_status_from_result = result.map_or_else(|x: OakStatus| x, |()| OakStatus::Ok);
-    let wasmi_value = wasmi::core::Value::I32(oak_status_from_result as i32);
-    Ok(Some(wasmi_value))
+/// `wasmi` specific result type `Result<i32, wasmi::Trap>`.
+// TODO(mschett): Changed result time from Option<i32> to i32. Check implications.
+fn from_oak_status_result(result: Result<(), OakStatus>) -> Result<i32, wasmi::core::Trap> {
+    let oak_status = match result {
+        Ok(()) => OakStatus::Ok,
+        Err(oak_status) => oak_status,
+    };
+    Ok(oak_status as i32)
 }

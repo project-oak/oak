@@ -29,6 +29,13 @@ fn test_invoke_extension_with_invalid_handle() {
     let store = &mut create_test_store();
     let mut caller = Caller::from(store);
 
+    let _memory = caller
+        .get_export("memory")
+        // TODO(mschett): Fix unwrap.
+        .unwrap()
+        .into_memory()
+        .expect("WasmState memory not attached!?");
+
     // Assumes there is no negative ExtensionHandle. The remaining arguments don't matter, hence
     // they are 0.
     let extension = invoke_extension(&mut caller, -1, 0, 0, 0, 0);
