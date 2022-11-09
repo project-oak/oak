@@ -25,7 +25,8 @@ var sourcesIndex = JSON.parse('{\
 "oak_functions_wasm":["",[],["lib.rs"]],\
 "oak_functions_web_client":["",[],["grpc_web.rs","lib.rs"]],\
 "oak_functions_workload_logging":["",[],["lib.rs"]],\
-"oak_grpc_unary_attestation":["",[],["client.rs","lib.rs","server.rs"]],\
+"oak_grpc_unary_attestation":["",[],["client.rs","lib.rs"]],\
+"oak_grpc_utils":["",[],["lib.rs"]],\
 "oak_idl":["",[],["lib.rs","status.rs"]],\
 "oak_idl_build":["",[],["lib.rs"]],\
 "oak_linux_boot_params":["",[],["lib.rs"]],\
@@ -37,7 +38,6 @@ var sourcesIndex = JSON.parse('{\
 "oak_restricted_kernel":["",[["boot",[],["mod.rs"]],["mm",[],["bitmap_frame_allocator.rs","encrypted_mapper.rs","frame_allocator.rs","mod.rs","page_tables.rs"]]],["args.rs","avx.rs","descriptors.rs","elf.rs","ghcb.rs","interrupts.rs","lib.rs","libm.rs","logging.rs","memory.rs","shutdown.rs","virtio.rs"]],\
 "oak_simple_io":["",[],["lib.rs"]],\
 "oak_tensorflow_service":["",[],["lib.rs","tflite.rs"]],\
-"oak_utils":["",[],["lib.rs"]],\
 "offline_attestation_client":["",[],["main.rs"]],\
 "offline_attestation_server":["",[],["main.rs"]],\
 "offline_attestation_shared":["",[],["lib.rs"]],\
