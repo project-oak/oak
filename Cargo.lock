@@ -2389,10 +2389,10 @@ dependencies = [
  "log",
  "oak_functions_abi",
  "oak_grpc_unary_attestation",
+ "oak_grpc_utils",
  "oak_remote_attestation",
  "oak_remote_attestation_amd",
  "oak_remote_attestation_sessions_client",
- "oak_utils",
  "p256 0.10.1",
  "prost 0.11.0",
  "regex",
@@ -2453,10 +2453,10 @@ dependencies = [
  "log",
  "oak_channel",
  "oak_functions_abi",
+ "oak_grpc_utils",
  "oak_idl",
  "oak_idl_build",
  "oak_remote_attestation_sessions",
- "oak_utils",
  "prost 0.11.0",
  "serde",
  "tokio",
@@ -2651,15 +2651,25 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-trait",
+ "oak_grpc_utils",
  "oak_remote_attestation",
  "oak_remote_attestation_sessions",
  "oak_remote_attestation_sessions_client",
- "oak_utils",
  "prost 0.11.0",
  "serde",
  "tokio",
  "tonic 0.8.2",
  "tower",
+]
+
+[[package]]
+name = "oak_grpc_utils"
+version = "0.1.0"
+dependencies = [
+ "prost 0.11.0",
+ "prost-build 0.11.1",
+ "tempfile",
+ "tonic-build 0.8.2",
 ]
 
 [[package]]
@@ -2809,16 +2819,6 @@ dependencies = [
  "oak_idl",
  "oak_idl_build",
  "prost 0.11.0",
-]
-
-[[package]]
-name = "oak_utils"
-version = "0.1.0"
-dependencies = [
- "prost 0.11.0",
- "prost-build 0.11.1",
- "tempfile",
- "tonic-build 0.8.2",
 ]
 
 [[package]]

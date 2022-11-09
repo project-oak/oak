@@ -21,4 +21,3 @@ pub mod proto {
     tonic::include_proto!("oak.session.unary.v1");
 }
 pub mod client;
-pub mod server;

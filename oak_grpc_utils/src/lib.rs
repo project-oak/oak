@@ -78,8 +78,3 @@ fn set_protoc_env_if_unset() {
         std::env::set_var("PROTOC", "protoc");
     }
 }
-
-/// Trait for logging error messages
-pub trait LogError {
-    fn log_error(&self, error: &str);
-}
