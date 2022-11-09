@@ -14,8 +14,16 @@
 // limitations under the License.
 //
 
+use core::mem::MaybeUninit;
 use oak_linux_boot_params::{BootParams, E820EntryType};
-use sev_guest::instructions::{pvalidate, InstructionError, PageSize as SevPageSize, Validation};
+use sev_guest::{
+    ghcb::Ghcb,
+    instructions::{pvalidate, InstructionError, PageSize as SevPageSize, Validation},
+    msr::{
+        change_snp_page_state, register_ghcb_location, PageAssignment, RegisterGhcbGpaRequest,
+        SnpPageStateChangeRequest,
+    },
+};
 use x86_64::{
     align_down, align_up,
     instructions::tlb,
@@ -24,17 +32,71 @@ use x86_64::{
     PhysAddr,
 };
 
+#[link_section = ".boot.ghcb"]
+static mut GHCB: MaybeUninit<Ghcb> = MaybeUninit::uninit();
+
+fn get_pd(encrypted: u64) -> &'static mut PageTable {
+    let (pml4_frame, _) = Cr3::read();
+    let pml4 =
+        unsafe { &*((pml4_frame.start_address().as_u64() & !encrypted) as *const PageTable) };
+    let pdpt = unsafe { &*((pml4[0].addr().as_u64() & !encrypted) as *const PageTable) };
+    unsafe { &mut *((pdpt[0].addr().as_u64() & !encrypted) as *mut PageTable) }
+}
+
+pub fn init_ghcb(snp: bool, encrypted: u64) -> &'static mut Ghcb {
+    let ghcb_addr = unsafe { GHCB.as_ptr() } as u64;
+
+    // Remove the ENCRYPTED bit from the entry that maps the GHCB.
+    let pd = get_pd(encrypted);
+    let pt = unsafe { &mut *((pd[0].addr().as_u64() & !encrypted) as *mut PageTable) };
+    let idx = (ghcb_addr / Size4KiB::SIZE) as usize;
+    pt[idx].set_addr(
+        PhysAddr::new(ghcb_addr),
+        PageTableFlags::PRESENT | PageTableFlags::WRITABLE,
+    );
+    tlb::flush_all();
+
+    // SNP requires extra handling beyond just removing the encrypted bit.
+    if snp {
+        let request = SnpPageStateChangeRequest::new(ghcb_addr as usize, PageAssignment::Shared)
+            .expect("Invalid address for GHCB location");
+        change_snp_page_state(request).expect("Could not change SNP state for GHCB");
+
+        let ghcb_location_request = RegisterGhcbGpaRequest::new(ghcb_addr as usize)
+            .expect("Invalid address for GHCB location");
+        register_ghcb_location(ghcb_location_request)
+            .expect("Couldn't register the GHCB address with the hypervisor");
+    }
+
+    unsafe { GHCB.write(Ghcb::new()) }
+}
+
+pub fn deinit_ghcb(snp: bool, encrypted: u64) {
+    let ghcb_addr = unsafe { GHCB.as_ptr() } as u64;
+
+    if snp {
+        let request = SnpPageStateChangeRequest::new(ghcb_addr as usize, PageAssignment::Private)
+            .expect("Invalid address for GHCB location");
+        change_snp_page_state(request).expect("Could not change SNP state for GHCB");
+    }
+
+    let pd = get_pd(encrypted);
+    let pt = unsafe { &mut *((pd[0].addr().as_u64() & !encrypted) as *mut PageTable) };
+    let idx = (ghcb_addr / Size4KiB::SIZE) as usize;
+    pt[idx].set_addr(
+        PhysAddr::new(ghcb_addr | encrypted),
+        PageTableFlags::PRESENT | PageTableFlags::WRITABLE,
+    );
+    tlb::flush_all();
+}
+
 /// Calls `PVALIDATE` on all memory ranges specified in the E820 table with type `RAM`.
 pub fn validate_memory(zero_page: &BootParams, encrypted: u64) {
     let mut page_table = PageTable::new();
 
     // Find a location for our (temporary) page table. The initial page tables map [0..2MiB), so it
     // should be safe to put our temporary mappings at [2..4MiB).
-    let (pml4_frame, _) = Cr3::read();
-    let pml4 =
-        unsafe { &*((pml4_frame.start_address().as_u64() & !encrypted) as *const PageTable) };
-    let pdpt = unsafe { &*((pml4[0].addr().as_u64() & !encrypted) as *const PageTable) };
-    let pd = unsafe { &mut *((pdpt[0].addr().as_u64() & !encrypted) as *mut PageTable) };
+    let pd = get_pd(encrypted);
     if pd[1].flags().contains(PageTableFlags::PRESENT) {
         panic!("PD[1] is in use");
     }

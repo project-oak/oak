@@ -107,6 +107,11 @@ SECTIONS {
     } > ram_low
     ASSERT(SIZEOF(.boot.cpuid) == 4K, "CPUID section has to be exactly one page in size")
 
+    .boot.ghcb ALIGN(4K) (NOLOAD) : {
+        KEEP(*(.boot.ghcb))
+    } > ram_low
+    ASSERT(SIZEOF(.boot.ghcb) == 4K, "GHCB has to be exactly one page in size")
+
     .boot ALIGN(4K) (NOLOAD) : {
         KEEP(*(.boot))
         . = ALIGN(4K);
@@ -316,8 +321,8 @@ SECTIONS {
          * Thankfully none of these clashed with existing data structures that we're setting up.
          */
         /* Unmeasured page location */
-        LONG(ADDR(.boot))
-        LONG(SIZEOF(.boot))
+        LONG(ADDR(.boot.ghcb))
+        LONG(SIZEOF(.boot.ghcb))
         LONG(SEV_SECTION_UNMEASURED)
         /* Secrets page location */
         LONG(ADDR(.boot.secrets))
