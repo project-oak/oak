@@ -38,4 +38,4 @@ tonic = { version = "*", features = ["tls", "tls-roots"] }
 async-trait = "*"
 
 [build-dependencies]
-oak_utils = { path = "../oak_utils" }
+oak_grpc_utils = { path = "../oak_grpc_utils" }

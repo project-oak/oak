@@ -37,5 +37,5 @@ oak_channel = { path = "../oak_channel", features = ["client"] }
 hashbrown = "*"
 
 [build-dependencies]
-oak_utils = { path = "../oak_utils" }
+oak_grpc_utils = { path = "../oak_grpc_utils" }
 oak_idl_build = { path = "../oak_idl_build" }

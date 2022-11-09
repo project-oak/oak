@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-use oak_utils::{generate_grpc_code, CodegenOptions, ExternPath};
+use oak_grpc_utils::{generate_grpc_code, CodegenOptions, ExternPath};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     generate_grpc_code(
