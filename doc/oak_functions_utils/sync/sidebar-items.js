@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"struct":[["OnceCell","A synchronised implementation of a cell that can be initialized only once."],["SpinLock",""]],"type":[["Mutex",""],["MutexGuard",""]]};

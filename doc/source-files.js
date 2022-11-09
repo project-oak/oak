@@ -6,6 +6,7 @@ var sourcesIndex = JSON.parse('{\
 "lookup_data_checker":["",[],["main.rs"]],\
 "lookup_data_generator":["",[],["data.rs","lib.rs"]],\
 "oak_channel":["",[],["client.rs","frame.rs","lib.rs","message.rs","server.rs"]],\
+"oak_core":["",[],["lib.rs","sync.rs"]],\
 "oak_echo_service":["",[],["lib.rs"]],\
 "oak_functions_abi":["",[],["lib.rs"]],\
 "oak_functions_client":["",[],["lib.rs","rekor.rs"]],\
@@ -21,7 +22,6 @@ var sourcesIndex = JSON.parse('{\
 "oak_functions_sdk_abi_test_invoke_testing":["",[],["lib.rs"]],\
 "oak_functions_test_utils":["",[],["lib.rs"]],\
 "oak_functions_testing_extension":["",[],["lib.rs"]],\
-"oak_functions_utils":["",[],["lib.rs","sync.rs"]],\
 "oak_functions_wasm":["",[],["lib.rs"]],\
 "oak_functions_web_client":["",[],["grpc_web.rs","lib.rs"]],\
 "oak_functions_workload_logging":["",[],["lib.rs"]],\

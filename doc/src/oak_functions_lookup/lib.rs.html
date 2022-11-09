@@ -267,8 +267,8 @@
 <span class="kw">use </span>log::Level;
 <span class="kw">use </span>oak_functions_abi::{proto::OakStatus, ExtensionHandle, StorageGetItemResponse};
 <span class="kw">use </span>oak_functions_extension::{ExtensionFactory, OakApiNativeExtension};
-<span class="kw">use </span>oak_functions_utils::sync::Mutex;
 <span class="kw">use </span>oak_logger::OakLogger;
+<span class="kw">use </span>spinning_top::Spinlock;
 
 <span class="kw">pub struct </span>LookupFactory&lt;L: OakLogger&gt; {
     manager: Arc&lt;LookupDataManager&lt;L&gt;&gt;,
@@ -339,11 +339,11 @@
 /// use the new data, but earlier instances will still used the earlier data.
 ///
 /// Note that the data is never mutated in-place, but only ever replaced. So instead of the Rust
-/// idiom `Arc&lt;Mutex&lt;T&gt;&gt;` we have `Mutex&lt;Arc&lt;T&gt;&gt;`.
+/// idiom `Arc&lt;Spinlock&lt;T&gt;&gt;` we have `Spinlock&lt;Arc&lt;T&gt;&gt;`.
 ///
 /// In the future we may replace both the mutex and the hash map with something like RCU.
 </span><span class="kw">pub struct </span>LookupDataManager&lt;L: OakLogger + Clone&gt; {
-    data: Mutex&lt;Arc&lt;Data&gt;&gt;,
+    data: Spinlock&lt;Arc&lt;Data&gt;&gt;,
     logger: L,
 }
 
@@ -354,14 +354,14 @@
     <span class="doccomment">/// Creates a new instance with empty backing data.
     </span><span class="kw">pub fn </span>new_empty(logger: L) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
-            data: Mutex::new(Arc::new(HashMap::new())),
+            data: Spinlock::new(Arc::new(HashMap::new())),
             logger,
         }
     }
 
     <span class="doccomment">/// Creates an instance of LookupData populated with the given entries.
     </span><span class="kw">pub fn </span>for_test(entries: Data, logger: L) -&gt; <span class="self">Self </span>{
-        <span class="kw">let </span>data = Mutex::new(Arc::new(entries));
+        <span class="kw">let </span>data = Spinlock::new(Arc::new(entries));
         <span class="self">Self </span>{ data, logger }
     }
 
