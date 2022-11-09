@@ -28,8 +28,8 @@ use hashbrown::HashMap;
 use log::Level;
 use oak_functions_abi::{proto::OakStatus, ExtensionHandle, StorageGetItemResponse};
 use oak_functions_extension::{ExtensionFactory, OakApiNativeExtension};
-use oak_functions_utils::sync::Mutex;
 use oak_logger::OakLogger;
+use spinning_top::Spinlock;
 
 pub struct LookupFactory<L: OakLogger> {
     manager: Arc<LookupDataManager<L>>,
@@ -100,11 +100,11 @@ pub type Data = HashMap<Vec<u8>, Vec<u8>>;
 /// use the new data, but earlier instances will still used the earlier data.
 ///
 /// Note that the data is never mutated in-place, but only ever replaced. So instead of the Rust
-/// idiom `Arc<Mutex<T>>` we have `Mutex<Arc<T>>`.
+/// idiom `Arc<Spinlock<T>>` we have `Spinlock<Arc<T>>`.
 ///
 /// In the future we may replace both the mutex and the hash map with something like RCU.
 pub struct LookupDataManager<L: OakLogger + Clone> {
-    data: Mutex<Arc<Data>>,
+    data: Spinlock<Arc<Data>>,
     logger: L,
 }
 
@@ -115,14 +115,14 @@ where
     /// Creates a new instance with empty backing data.
     pub fn new_empty(logger: L) -> Self {
         Self {
-            data: Mutex::new(Arc::new(HashMap::new())),
+            data: Spinlock::new(Arc::new(HashMap::new())),
             logger,
         }
     }
 
     /// Creates an instance of LookupData populated with the given entries.
     pub fn for_test(entries: Data, logger: L) -> Self {
-        let data = Mutex::new(Arc::new(entries));
+        let data = Spinlock::new(Arc::new(entries));
         Self { data, logger }
     }
 

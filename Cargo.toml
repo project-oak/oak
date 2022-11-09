@@ -34,7 +34,7 @@ members = [
   "oak_functions_sdk/tests/lookup_module",
   "oak_functions_sdk/tests/testing_module",
   "oak_functions_test_utils",
-  "oak_functions_utils",
+  "oak_core",
   "oak_grpc_unary_attestation",
   "oak_idl",
   "oak_idl_build",
