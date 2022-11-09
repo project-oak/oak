@@ -648,15 +648,7 @@ dependencies = [
  "log",
  "oak_functions_abi",
  "oak_functions_extension",
- "oak_functions_utils",
  "oak_logger",
-]
-
-[[package]]
-name = "oak_functions_utils"
-version = "0.1.0"
-dependencies = [
- "lock_api",
  "spinning_top",
 ]
 
