@@ -26,7 +26,7 @@ use core::{
 use goblin::elf::header;
 use oak_linux_boot_params::BootParams;
 use x86_64::{
-    instructions::{hlt, interrupts::int3, segmentation::Segment},
+    instructions::{hlt, interrupts::int3, segmentation::Segment, tlb},
     registers::{
         control::{Cr3, Cr3Flags},
         segmentation::*,
@@ -71,6 +71,9 @@ static mut CC_SETUP_DATA: MaybeUninit<oak_linux_boot_params::CCSetupData> = Mayb
 extern "C" {
     #[link_name = "pd_addr"]
     static BIOS_PD: c_void;
+
+    #[link_name = "pt_addr"]
+    static BIOS_PT: c_void;
 
     #[link_name = "boot_stack_pointer"]
     static BOOT_STACK_POINTER: c_void;
@@ -138,17 +141,26 @@ pub unsafe fn jump_to_kernel(entry_point: VirtAddr) -> ! {
 /// * `encrypted` - If not zero, the `encrypted`-th bit will be set in the page tables.
 #[no_mangle]
 pub extern "C" fn rust64_start(encrypted: u64) -> ! {
-    let snp = if encrypted > 0 {
+    let (es, snp) = if encrypted > 0 {
         // We're under some form of memory encryption, thus it's safe to access the SEV_STATUS MSR.
-        sev_guest::msr::get_sev_status()
-            .unwrap_or(sev_guest::msr::SevStatus::empty())
-            .contains(sev_guest::msr::SevStatus::SNP_ACTIVE)
+        let status = sev_guest::msr::get_sev_status().unwrap_or(sev_guest::msr::SevStatus::empty());
+        (
+            status.contains(sev_guest::msr::SevStatus::SEV_ES_ENABLED),
+            status.contains(sev_guest::msr::SevStatus::SNP_ACTIVE),
+        )
     } else {
-        false
+        (false, false)
     };
 
     // We assume 0-th bit is never the encrypted bit.
     let encrypted = if encrypted > 0 { 1 << encrypted } else { 0 };
+
+    // If we're under SEV-ES or SNP, we need a GHCB block for communication.
+    let ghcb = if es {
+        Some(sev::init_ghcb(snp, encrypted))
+    } else {
+        None
+    };
 
     // Safety: We assume the VMM has filled in the basic zero page for us. This is not true with
     // qemu. In the future, construction of the full zero page should be in here, and instead of
@@ -190,8 +202,13 @@ pub extern "C" fn rust64_start(encrypted: u64) -> ! {
     /* We need to do some trickery here. All of the stage0 code is somewhere within [4G-2M; 4G).
      * Thus, let's keep our own last PD, so that we can continue executing after reloading the
      * page tables.
+     * Same for the first 2M of memory; we're using 4K pages there, so keep that around.
      */
     // Safety: dereferencing the raw pointer is safe as that's the currently in-use page directory.
+    pd[0].set_addr(
+        PhysAddr::new(unsafe { &BIOS_PT } as *const _ as u64 | encrypted),
+        PageTableFlags::PRESENT | PageTableFlags::WRITABLE,
+    );
     pdpt[3].set_addr(
         PhysAddr::new(unsafe { &BIOS_PD } as *const _ as u64 | encrypted),
         PageTableFlags::PRESENT | PageTableFlags::WRITABLE,
@@ -247,6 +264,21 @@ pub extern "C" fn rust64_start(encrypted: u64) -> ! {
         // Looks like we have a valid ELF header at 0x200000. Trust its entry point.
         entry = VirtAddr::new(header.e_entry);
     }
+
+    // Clean-ups we need to do just before we jump to the kernel proper: clean up the early GHCB we
+    // used and switch back to a hugepage for the first 2M of memory.
+    if ghcb.is_some() {
+        sev::deinit_ghcb(snp, encrypted);
+    }
+
+    // Allow identity-op to keep the fact that the address we're talking about here is 0x00.
+    #[allow(clippy::identity_op)]
+    pd[0].set_addr(
+        PhysAddr::new(0x00 | encrypted),
+        PageTableFlags::PRESENT | PageTableFlags::WRITABLE | PageTableFlags::HUGE_PAGE,
+    );
+    tlb::flush_all();
+
     unsafe {
         jump_to_kernel(entry);
     }
