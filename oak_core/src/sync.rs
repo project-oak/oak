@@ -71,6 +71,12 @@ impl<T> OnceCell<T> {
     }
 }
 
+// Safety: It is safe to share references across threads since the inner value will only be set
+// while an exclusive lock is held and only once. Until it is set there can be no shared references
+// to it, and once it is set, and there are potential shared references to it, it will never be
+// modified again.
+unsafe impl<T> Sync for OnceCell<T> where T: Send + Sync {}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -2785,6 +2785,7 @@ dependencies = [
  "linked_list_allocator",
  "log",
  "oak_channel",
+ "oak_core",
  "oak_linux_boot_params",
  "oak_simple_io",
  "rust-hypervisor-firmware-virtio",
@@ -2796,6 +2797,7 @@ dependencies = [
  "uart_16550",
  "virtio",
  "x86_64",
+ "zerocopy",
 ]
 
 [[package]]

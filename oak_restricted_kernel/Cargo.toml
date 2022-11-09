@@ -31,6 +31,7 @@ log = "*"
 libc = { version = "*", optional = true }
 libm = "*"
 oak_channel = { path = "../oak_channel" }
+oak_core = { path = "../oak_core" }
 oak_simple_io = { path = "../oak_simple_io", optional = true }
 oak_linux_boot_params = { path = "../linux_boot_params" }
 rust-hypervisor-firmware-virtio = { path = "../third_party/rust-hypervisor-firmware-virtio" }
@@ -42,6 +43,7 @@ strum = { version = "*", default-features = false, features = ["derive"] }
 uart_16550 = { version = "*", optional = true }
 virtio = { path = "../experimental/virtio", optional = true }
 x86_64 = "*"
+zerocopy = "*"
 
 [dev-dependencies]
 assertables = "*"
