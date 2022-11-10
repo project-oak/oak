@@ -20,16 +20,17 @@ use oak_core::sync::OnceCell;
 use oak_linux_boot_params::{BootParams, CCBlobSevInfo, CCSetupData, SetupDataType};
 use sev_guest::{cpuid::CpuidPage, secrets::SecretsPage};
 use x86_64::{
-    structures::paging::{PageSize, Size2MiB, Size4KiB},
+    structures::paging::{PageSize, Size4KiB},
     PhysAddr, VirtAddr,
 };
 use zerocopy::FromBytes;
 
 /// The exclusive upper limit of the address range where we expect the SNP-specific pages to reside.
 ///
-/// We expect the boot paramteres and the CPUID and secrets pages to all be placed in the first 1MiB
-/// of physical memory by the Stage 0 Firmware, so we can use this range to help with validation.
-const MAX_ADDRESS: PhysAddr = PhysAddr::new_truncate(Size2MiB::SIZE / 2);
+/// We expect the boot parameters and the CPUID and secrets pages to all be placed in the first
+/// 640KiB of physical memory by the Stage 0 Firmware, so we can use this range to help with
+/// validation.
+const MAX_ADDRESS: PhysAddr = PhysAddr::new_truncate(640 * 1024);
 
 /// The SEV-SNP secrets page.
 pub static SECRETS_PAGE: OnceCell<SecretsPage> = OnceCell::new();
@@ -50,18 +51,19 @@ pub struct SnpPageAddresses {
 ///
 /// This function will panic if the boot paramter page is not valid.
 pub fn get_snp_page_addresses(info: &BootParams) -> SnpPageAddresses {
+    // Check that the address of the boot parameter page looks OK.
     let base_address = VirtAddr::from_ptr(info as *const BootParams);
     // We assume an identity mapping from virtual to physical address.
     let phys = PhysAddr::new(base_address.as_u64());
-    // Check that the physical address is page-aligned and in the expected range below 1MiB.
-    assert_page_under_max_address(phys);
+    // Check that the physical address is page-aligned and in the expected range.
+    assert_page_in_valid_range(phys);
     // The setup data is stored in a null-terminated linked list, so we step through the list until
-    // we find and entry with the right type or reach the end.
+    // we find an entry with the right type or reach the end.
     let mut setup_data_ptr = info.hdr.setup_data;
     while !setup_data_ptr.is_null() {
-        assert_pointer_in_4kib_page(setup_data_ptr, base_address);
-        // Safety: we have checked that the pointer is not null and at least points to memory
-        // within the boot paramter page.
+        assert_pointer_in_valid_range(setup_data_ptr);
+        // Safety: we have checked that the pointer is not null and at least points to memory within
+        // the expected valid range.
         let setup_data = unsafe { &*setup_data_ptr };
         let type_ = setup_data.type_;
         if type_ == SetupDataType::CCBlob {
@@ -74,14 +76,14 @@ pub fn get_snp_page_addresses(info: &BootParams) -> SnpPageAddresses {
         panic!("Couldn't find setup data of type CCBlob.");
     }
 
-    // Safety: we have checked that the pointer is not null, at least points to memory within the
-    // boot paramter page and has the appropriate value for the type field set.
+    // Safety: we have checked that the pointer is not null and at least points to memory within the
+    // expected valid range.
     let cc_blob_address =
         unsafe { &*(setup_data_ptr as *const CCSetupData) }.cc_blob_address as *const CCBlobSevInfo;
 
-    assert_pointer_in_4kib_page(cc_blob_address, base_address);
+    assert_pointer_in_valid_range(cc_blob_address);
     // Safety: we have checked that the pointer is not null and at least points to memory within the
-    // boot paramter page. We also validate the magic number as an additional check.
+    // expected valid range. We also validate the magic number as an additional check.
     let cc_blob = unsafe { &*cc_blob_address };
     let magic = cc_blob.magic;
     if magic != oak_linux_boot_params::CC_BLOB_SEV_INFO_MAGIC {
@@ -104,16 +106,10 @@ pub fn get_snp_page_addresses(info: &BootParams) -> SnpPageAddresses {
 /// Panicking throughout this functions is OK, because if any of these values are invalid it means
 /// the environment was not set up correctly and we don't know how to recover from that.
 pub fn init_snp_pages<T: Translator>(snp_pages: SnpPageAddresses, mapper: &T) {
-    // First make sure the addresses look OK: they are not null, point to the start of a 4KiB page,
-    // and within the expected area.
-    if snp_pages.cpuid_page_address.is_null() {
-        panic!("CPUID page address is null.")
-    }
-    assert_page_under_max_address(snp_pages.cpuid_page_address);
-    if snp_pages.secrets_page_address.is_null() {
-        panic!("Secrets page address is null.")
-    }
-    assert_page_under_max_address(snp_pages.secrets_page_address);
+    // First make sure the addresses look OK: they are not null, each point to the start of a 4KiB
+    // page, and within the expected memory range.
+    assert_page_in_valid_range(snp_pages.cpuid_page_address);
+    assert_page_in_valid_range(snp_pages.secrets_page_address);
 
     let cpuid_page_address = mapper
         .translate_physical(snp_pages.cpuid_page_address)
@@ -138,28 +134,32 @@ pub fn init_snp_pages<T: Translator>(snp_pages: SnpPageAddresses, mapper: &T) {
         .expect("Couldn't set secrets page.");
 }
 
-/// Panics is the physical address is not the start of a 4KiB page or not below the maximum expected
-/// address.
-fn assert_page_under_max_address(page: PhysAddr) {
-    if page.align_down(Size4KiB::SIZE) != page {
-        panic!("Address {:#018x} is not the start of a 4KiB page.", page);
-    }
-    if page >= MAX_ADDRESS {
-        panic!(
-            "Address {:#018x} is not below the expected maximum address {:#018x}",
-            page, MAX_ADDRESS
-        )
-    }
+/// Panics is the physical address is not the start of a 4KiB page, null, or not below the maximum
+/// expected address.
+fn assert_page_in_valid_range(page: PhysAddr) {
+    assert!(!page.is_null(), "Address is null");
+    assert_eq!(
+        page.align_down(Size4KiB::SIZE),
+        page,
+        "Address {:#018x} is not the start of a 4KiB page.",
+        page
+    );
+    assert!(
+        page < MAX_ADDRESS,
+        "Address {:#018x} is not below the expected maximum address {:#018x}",
+        page,
+        MAX_ADDRESS
+    );
 }
 
-/// Panics if the pointer points to an address that falls outside the 4KiB page starting at
-/// `page_start`.
-fn assert_pointer_in_4kib_page<T>(pointer: *const T, page_start: VirtAddr) {
+/// Panics if the pointer is null or points to an address that falls outside the expected range.
+fn assert_pointer_in_valid_range<T>(pointer: *const T) {
+    assert!(!pointer.is_null(), "Pointer is null");
     let address = VirtAddr::from_ptr(pointer);
-    if address < page_start || address >= page_start + Size4KiB::SIZE {
-        panic!(
-            "Pointer {:#018x} is not in the 4KiB page starting at {:#018x}",
-            address, page_start
-        )
-    }
+    assert!(
+        address.as_u64() < MAX_ADDRESS.as_u64(),
+        "Pointer {:#018x} is not below the expected maximum address {:#018x}",
+        address,
+        MAX_ADDRESS
+    );
 }
