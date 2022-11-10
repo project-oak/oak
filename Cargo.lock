@@ -2748,6 +2748,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "oak_remote_attestation_noninteractive"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "futures-util",
+ "oak_grpc_utils",
+ "prost 0.11.0",
+ "tonic 0.8.2",
+]
+
+[[package]]
 name = "oak_remote_attestation_sessions"
 version = "0.1.0"
 dependencies = [
