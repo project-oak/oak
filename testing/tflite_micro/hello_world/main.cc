@@ -62,7 +62,7 @@ int main(int argc, char* argv[]) {
       float x = position * kXrange;
 
       // Quantize the input from floating-point to integer
-      auto input_tensor = tflite_get_input_tensor();
+      auto input_tensor = tflite_get_input_tensor(0);
       int8_t x_quantized =
           x / input_tensor->params.scale + input_tensor->params.zero_point;
 
@@ -74,7 +74,7 @@ int main(int argc, char* argv[]) {
       }
 
       // Dequantize the output from integer to floating-point
-      auto output_tensor = tflite_get_output_tensor();
+      auto output_tensor = tflite_get_output_tensor(0);
       float y =
           (output - output_tensor->params.zero_point)
           * output_tensor->params.scale;
