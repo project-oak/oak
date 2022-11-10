@@ -61,7 +61,7 @@ extern crate alloc;
 
 use crate::{
     mm::Translator,
-    snp::{init_snp_pages, try_get_snp_page_addresses},
+    snp::{get_snp_page_addresses, init_snp_pages},
 };
 use alloc::{alloc::Allocator, boxed::Box};
 use core::{cell::OnceCell, marker::Sync, panic::PanicInfo, str::FromStr};
@@ -100,7 +100,7 @@ pub fn start_kernel(info: &BootParams) -> Box<dyn Channel> {
         // We have get the physical addresses of the CPUID pages now while the identity mapping is
         // still in place, but we can only initialize the instances after the new page mappings
         // have been set up.
-        Some(try_get_snp_page_addresses(info).expect("Could not find valid SEV-SNP pages."))
+        Some(get_snp_page_addresses(info))
     } else {
         None
     };

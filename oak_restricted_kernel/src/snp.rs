@@ -15,8 +15,7 @@
 //
 
 use crate::mm::Translator;
-use anyhow::Context;
-use core::slice::from_raw_parts;
+use core::{panic, slice::from_raw_parts};
 use oak_core::sync::OnceCell;
 use oak_linux_boot_params::{BootParams, CCBlobSevInfo, CCSetupData, SetupDataType};
 use sev_guest::{cpuid::CpuidPage, secrets::SecretsPage};
@@ -48,17 +47,19 @@ pub struct SnpPageAddresses {
 ///
 /// This function must only be used while the identity mapping is still in place, since the pointers
 /// in the boot paramter page was constructed by the Stage 0 firmware with an identity mapping.
-pub fn try_get_snp_page_addresses(info: &BootParams) -> anyhow::Result<SnpPageAddresses> {
+///
+/// This function will panic if the boot paramter page is not valid.
+pub fn get_snp_page_addresses(info: &BootParams) -> SnpPageAddresses {
     let base_address = VirtAddr::from_ptr(info as *const BootParams);
     // We assume an identity mapping from virtual to physical address.
     let phys = PhysAddr::new(base_address.as_u64());
     // Check that the physical address is page-aligned and in the expected range below 1MiB.
-    check_page_under_max_address(phys).context("Invalid boot parameter page")?;
+    assert_page_under_max_address(phys);
     // The setup data is stored in a null-terminated linked list, so we step through the list until
     // we find and entry with the right type or reach the end.
     let mut setup_data_ptr = info.hdr.setup_data;
     while !setup_data_ptr.is_null() {
-        check_pointer_in_4kib_page(setup_data_ptr, base_address)?;
+        assert_pointer_in_4kib_page(setup_data_ptr, base_address);
         // Safety: we have checked that the pointer is not null and at least points to memory
         // within the boot paramter page.
         let setup_data = unsafe { &*setup_data_ptr };
@@ -70,7 +71,7 @@ pub fn try_get_snp_page_addresses(info: &BootParams) -> anyhow::Result<SnpPageAd
     }
 
     if setup_data_ptr.is_null() {
-        anyhow::bail!("Couldn't find setup data of type CCBlob.");
+        panic!("Couldn't find setup data of type CCBlob.");
     }
 
     // Safety: we have checked that the pointer is not null, at least points to memory within the
@@ -78,23 +79,21 @@ pub fn try_get_snp_page_addresses(info: &BootParams) -> anyhow::Result<SnpPageAd
     let cc_blob_address =
         unsafe { &*(setup_data_ptr as *const CCSetupData) }.cc_blob_address as *const CCBlobSevInfo;
 
-    check_pointer_in_4kib_page(cc_blob_address, base_address)?;
+    assert_pointer_in_4kib_page(cc_blob_address, base_address);
     // Safety: we have checked that the pointer is not null and at least points to memory within the
     // boot paramter page. We also validate the magic number as an additional check.
     let cc_blob = unsafe { &*cc_blob_address };
     let magic = cc_blob.magic;
     if magic != oak_linux_boot_params::CC_BLOB_SEV_INFO_MAGIC {
-        anyhow::bail!("CCBlobSevInfo data structure has invalid magic: {}", magic);
+        panic!("CCBlobSevInfo data structure has invalid magic: {}", magic);
     }
 
-    let cpuid_page_address = PhysAddr::try_new(cc_blob.cpuid_phys as u64)
-        .map_err(|_| anyhow::anyhow!("Invalid CPUID page physical address."))?;
-    let secrets_page_address = PhysAddr::try_new(cc_blob.secrets_phys as u64)
-        .map_err(|_| anyhow::anyhow!("Invalid secrets page physical address."))?;
-    Ok(SnpPageAddresses {
+    let cpuid_page_address = PhysAddr::new(cc_blob.cpuid_phys as u64);
+    let secrets_page_address = PhysAddr::new(cc_blob.secrets_phys as u64);
+    SnpPageAddresses {
         secrets_page_address,
         cpuid_page_address,
-    })
+    }
 }
 
 /// Iinitializes the references to the SEV-SNP CPUID and secrets pages.
@@ -110,13 +109,11 @@ pub fn init_snp_pages<T: Translator>(snp_pages: SnpPageAddresses, mapper: &T) {
     if snp_pages.cpuid_page_address.is_null() {
         panic!("CPUID page address is null.")
     }
-    check_page_under_max_address(snp_pages.cpuid_page_address)
-        .expect("Invalid CPUID page address.");
+    assert_page_under_max_address(snp_pages.cpuid_page_address);
     if snp_pages.secrets_page_address.is_null() {
         panic!("Secrets page address is null.")
     }
-    check_page_under_max_address(snp_pages.secrets_page_address)
-        .expect("Invalid secrets page address.");
+    assert_page_under_max_address(snp_pages.secrets_page_address);
 
     let cpuid_page_address = mapper
         .translate_physical(snp_pages.cpuid_page_address)
@@ -141,35 +138,28 @@ pub fn init_snp_pages<T: Translator>(snp_pages: SnpPageAddresses, mapper: &T) {
         .expect("Couldn't set secrets page.");
 }
 
-/// Checks that the physical address is the start of a 4KiB page that is below the maximum expected
+/// Panics is the physical address is not the start of a 4KiB page or not below the maximum expected
 /// address.
-fn check_page_under_max_address(page: PhysAddr) -> anyhow::Result<()> {
+fn assert_page_under_max_address(page: PhysAddr) {
     if page.align_down(Size4KiB::SIZE) != page {
-        anyhow::bail!(
-            "The address {:#018x} is not the start of a 4KiB page.",
-            page
-        );
+        panic!("Address {:#018x} is not the start of a 4KiB page.", page);
     }
     if page >= MAX_ADDRESS {
-        anyhow::bail!(
+        panic!(
             "Address {:#018x} is not below the expected maximum address {:#018x}",
-            page,
-            MAX_ADDRESS
+            page, MAX_ADDRESS
         )
     }
-    Ok(())
 }
 
-/// Checks that the pointer points to an address that falls in the 4KiB page starting at
+/// Panics if the pointer points to an address that falls outside the 4KiB page starting at
 /// `page_start`.
-fn check_pointer_in_4kib_page<T>(pointer: *const T, page_start: VirtAddr) -> anyhow::Result<()> {
+fn assert_pointer_in_4kib_page<T>(pointer: *const T, page_start: VirtAddr) {
     let address = VirtAddr::from_ptr(pointer);
     if address < page_start || address >= page_start + Size4KiB::SIZE {
-        anyhow::bail!(
+        panic!(
             "Pointer {:#018x} is not in the 4KiB page starting at {:#018x}",
-            address,
-            page_start
+            address, page_start
         )
     }
-    Ok(())
 }
