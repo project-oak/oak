@@ -35,8 +35,8 @@ int tflite_run(
     const uint8_t* input_bytes_ptr, size_t input_bytes_len,
     uint8_t* output_bytes_ptr, size_t* output_bytes_len_ptr);
 
-const TfLiteTensor* tflite_get_input_tensor();
-const TfLiteTensor* tflite_get_output_tensor();
+const TfLiteTensor* tflite_get_input_tensor(int id);
+const TfLiteTensor* tflite_get_output_tensor(int id);
 
 // Use weak reference to build both freestanding binaries that
 // can run on Oak server and local PC where Oak server does

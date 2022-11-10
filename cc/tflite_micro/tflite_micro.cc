@@ -22,20 +22,24 @@
 #include "tensorflow/lite/micro/micro_interpreter.h"
 #include "tensorflow/lite/schema/schema_generated.h"
 
-TfLiteTensor* input = nullptr;
-TfLiteTensor* output = nullptr;
+// Max number of input/output tensors
+#define MAX_TENSORS 100
 
 namespace {
 const tflite::Model* model = nullptr;
 tflite::MicroInterpreter* interpreter = nullptr;
+TfLiteTensor* inputs[MAX_TENSORS] = {nullptr};
+TfLiteTensor* outputs[MAX_TENSORS] = {nullptr};
+size_t input_size = 0;
+size_t output_size = 0;
 }
 
-const TfLiteTensor* tflite_get_input_tensor() {
-    return input;
+const TfLiteTensor* tflite_get_input_tensor(int id) {
+    return inputs[id];
 }
 
-const TfLiteTensor* tflite_get_output_tensor() {
-    return output;
+const TfLiteTensor* tflite_get_output_tensor(int id) {
+    return outputs[id];
 }
 
 int tflite_init(
@@ -71,13 +75,29 @@ int tflite_init(
     return -1;
   }
 
-  // Obtain pointers to the model's input and output tensors.
-  input = interpreter->input(0);
-  output = interpreter->output(0);
+  if (interpreter->inputs_size() > MAX_TENSORS
+    || interpreter->outputs_size() > MAX_TENSORS) {
+    MicroPrintf(
+      "input_tensors: %d, output_tensors: %d, max input/output tensors: %d",
+      interpreter->inputs_size(), interpreter->outputs_size(), MAX_TENSORS);
+    return -1;
+  }
+
+  // Obtain pointers and total size (bytes) of the model's input tensors.
+  for (size_t i = 0; i < interpreter->inputs_size(); i++) {
+    inputs[i] = interpreter->input(i);
+    input_size += inputs[i]->bytes;
+  }
+
+  // Obtain pointers and total size (bytes) of the model's output tensors.
+  for (size_t i = 0; i < interpreter->outputs_size(); i++) {
+    outputs[i] = interpreter->output(i);
+    output_size += outputs[i]->bytes;
+  }
 
   // Request a fixed-size output buffer from Oak kernel and TF runtime,
   // which will be passed in at tflite_run(..., output_bytes_ptr, ...).
-  *output_buffer_len_ptr = output->bytes;
+  *output_buffer_len_ptr = output_size;
 
   return 0;
 }
@@ -93,15 +113,18 @@ int tflite_run(
     return -1;
   }
 
-  if (input_bytes_len != input->bytes) {
+  if (input_bytes_len != input_size) {
     MicroPrintf("Expected input len: %d bytes but got %d bytes\n",
-                input->bytes,
+                input_size,
                 input_bytes_len);
     return -1;
   }
 
   // Place input in the model's input tensors
-  memcpy(input->data.uint8, input_bytes_ptr, input_bytes_len);
+  for (size_t i = 0, offset = 0; i < interpreter->inputs_size(); i++) {
+    memcpy(inputs[i]->data.uint8, input_bytes_ptr + offset, inputs[i]->bytes);
+    offset += inputs[i]->bytes;
+  }
 
   // Run inference, and report any error
   TfLiteStatus invoke_status = interpreter->Invoke();
@@ -111,8 +134,12 @@ int tflite_run(
   }
 
   // Send output tensors back through Oak TF runtime
-  memcpy(output_bytes_ptr, output->data.uint8, output->bytes);
-  *output_bytes_len_ptr = output->bytes;
+  for (size_t i = 0, offset = 0; i < interpreter->outputs_size(); i++) {
+    memcpy(output_bytes_ptr + offset, outputs[i]->data.uint8, outputs[i]->bytes);
+    offset += outputs[i]->bytes;
+  }
+
+  *output_bytes_len_ptr = output_size;
 
   return 0;
 }
