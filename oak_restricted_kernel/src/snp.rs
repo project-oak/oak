@@ -47,9 +47,9 @@ pub struct SnpPageAddresses {
 /// Tries to extract the guest-physical addresses of the SEV-SNP secrets page and CPUID page.
 ///
 /// This function must only be used while the identity mapping is still in place, since the pointers
-/// in the boot paramter page was constructed by the Stage 0 firmware with an identity mapping.
+/// in the boot parameter page was constructed by the Stage 0 firmware with an identity mapping.
 ///
-/// This function will panic if the boot paramter page is not valid.
+/// This function will panic if the boot parameter page is not valid.
 pub fn get_snp_page_addresses(info: &BootParams) -> SnpPageAddresses {
     // Check that the address of the boot parameter page looks OK.
     let base_address = VirtAddr::from_ptr(info as *const BootParams);
@@ -134,7 +134,7 @@ pub fn init_snp_pages<T: Translator>(snp_pages: SnpPageAddresses, mapper: &T) {
         .expect("Couldn't set secrets page.");
 }
 
-/// Panics is the physical address is not the start of a 4KiB page, null, or not below the maximum
+/// Panics if the physical address is not the start of a 4KiB page, null, or not below the maximum
 /// expected address.
 fn assert_page_in_valid_range(page: PhysAddr) {
     assert!(!page.is_null(), "Address is null");

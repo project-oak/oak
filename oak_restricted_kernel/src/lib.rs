@@ -97,9 +97,9 @@ pub fn start_kernel(info: &BootParams) -> Box<dyn Channel> {
     let protocol = info.protocol();
     info!("Boot protocol:  {}", protocol);
     let snp_pages = if sev_status.contains(SevStatus::SNP_ACTIVE) {
-        // We have get the physical addresses of the CPUID pages now while the identity mapping is
-        // still in place, but we can only initialize the instances after the new page mappings
-        // have been set up.
+        // We have to get the physical addresses of the CPUID pages now while the identity mapping
+        // is still in place, but we can only initialize the instances after the new page
+        // mappings have been set up.
         Some(get_snp_page_addresses(info))
     } else {
         None
