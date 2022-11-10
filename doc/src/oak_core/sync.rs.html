@@ -97,6 +97,12 @@
 <span id="97">97</span>
 <span id="98">98</span>
 <span id="99">99</span>
+<span id="100">100</span>
+<span id="101">101</span>
+<span id="102">102</span>
+<span id="103">103</span>
+<span id="104">104</span>
+<span id="105">105</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -169,6 +175,12 @@
         <span class="prelude-val">Err</span>(value)
     }
 }
+
+<span class="comment">// Safety: It is safe to share references across threads since the inner value will only be set
+// while an exclusive lock is held and only once. Until it is set there can be no shared references
+// to it, and once it is set, and there are potential shared references to it, it will never be
+// modified again.
+</span><span class="kw">unsafe impl</span>&lt;T&gt; Sync <span class="kw">for </span>OnceCell&lt;T&gt; <span class="kw">where </span>T: Send + Sync {}
 
 <span class="attribute">#[cfg(test)]
 </span><span class="kw">mod </span>tests {
