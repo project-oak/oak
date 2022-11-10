@@ -404,6 +404,7 @@ TfLiteStatus EvalReduceHelper(TfLiteContext* context, TfLiteNode* node,
                                   resolved_axis, init_value, reducer));
       break;
     }
+    case kTfLiteBool:
     case kTfLiteInt8: {
       int8_t init_value;
       TF_LITE_ENSURE_EQ(context, GetReducerInitValue(reduce_type, init_value),
