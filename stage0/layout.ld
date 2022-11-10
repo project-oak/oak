@@ -174,7 +174,7 @@ SECTIONS {
     } > bios
 
     .stack ALIGN(4K) (NOLOAD) : {
-        . += 16K;
+        . += 32K;
         stack_start = .;
     } > bios
 

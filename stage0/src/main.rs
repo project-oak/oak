@@ -25,6 +25,7 @@ use core::{
 };
 use goblin::elf::header;
 use oak_linux_boot_params::BootParams;
+use sev_guest::io::PortFactoryWrapper;
 use x86_64::{
     instructions::{hlt, interrupts::int3, segmentation::Segment, tlb},
     registers::{
@@ -43,6 +44,7 @@ use x86_64::{
 };
 
 mod asm;
+mod logging;
 mod sev;
 
 #[link_section = ".boot.gdt"]
@@ -156,11 +158,19 @@ pub extern "C" fn rust64_start(encrypted: u64) -> ! {
     let encrypted = if encrypted > 0 { 1 << encrypted } else { 0 };
 
     // If we're under SEV-ES or SNP, we need a GHCB block for communication.
-    let ghcb = if es {
+    let ghcb_protocol = if es {
         Some(sev::init_ghcb(snp, encrypted))
     } else {
         None
     };
+
+    let io_factory = match ghcb_protocol {
+        Some(protocol) => PortFactoryWrapper::new_ghcb(protocol),
+        None => PortFactoryWrapper::new_raw(),
+    };
+
+    logging::init_logging(io_factory);
+    log::info!("starting...");
 
     // Safety: We assume the VMM has filled in the basic zero page for us. This is not true with
     // qemu. In the future, construction of the full zero page should be in here, and instead of
@@ -265,9 +275,11 @@ pub extern "C" fn rust64_start(encrypted: u64) -> ! {
         entry = VirtAddr::new(header.e_entry);
     }
 
+    log::info!("jumping to kernel at {:#018x}", entry.as_u64());
+
     // Clean-ups we need to do just before we jump to the kernel proper: clean up the early GHCB we
     // used and switch back to a hugepage for the first 2M of memory.
-    if ghcb.is_some() {
+    if ghcb_protocol.is_some() {
         sev::deinit_ghcb(snp, encrypted);
     }
 
@@ -285,7 +297,9 @@ pub extern "C" fn rust64_start(encrypted: u64) -> ! {
 }
 
 #[panic_handler]
-fn panic(_info: &PanicInfo) -> ! {
+fn panic(info: &PanicInfo) -> ! {
+    log::error!("{}", info);
+
     // Trigger a breakpoint exception. As we don't have a #BP handler, this will triple fault and
     // terminate the program.
     int3();

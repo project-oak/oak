@@ -173,6 +173,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "log"
+version = "0.4.17"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "abb12e687cfb44aa40f41fc3978ef76448f9b6038cad6aef4259d3c095a2382e"
+dependencies = [
+ "cfg-if",
+]
+
+[[package]]
+name = "oak_core"
+version = "0.1.0"
+dependencies = [
+ "spinning_top",
+]
+
+[[package]]
 name = "oak_linux_boot_params"
 version = "0.1.0"
 dependencies = [
@@ -186,8 +202,12 @@ name = "oak_stage0"
 version = "0.1.0"
 dependencies = [
  "goblin",
+ "log",
+ "oak_core",
  "oak_linux_boot_params",
  "sev_guest",
+ "sev_serial",
+ "spinning_top",
  "x86_64",
 ]
 
@@ -264,6 +284,14 @@ dependencies = [
  "strum",
  "x86_64",
  "zerocopy",
+]
+
+[[package]]
+name = "sev_serial"
+version = "0.1.0"
+dependencies = [
+ "sev_guest",
+ "x86_64",
 ]
 
 [[package]]

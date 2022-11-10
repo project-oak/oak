@@ -15,25 +15,29 @@
 //
 
 use core::mem::MaybeUninit;
+use oak_core::sync::OnceCell;
 use oak_linux_boot_params::{BootParams, E820EntryType};
 use sev_guest::{
-    ghcb::Ghcb,
+    ghcb::{Ghcb, GhcbProtocol},
     instructions::{pvalidate, InstructionError, PageSize as SevPageSize, Validation},
     msr::{
         change_snp_page_state, register_ghcb_location, PageAssignment, RegisterGhcbGpaRequest,
         SnpPageStateChangeRequest,
     },
 };
+use spinning_top::Spinlock;
 use x86_64::{
     align_down, align_up,
     instructions::tlb,
     registers::control::Cr3,
     structures::paging::{PageSize, PageTable, PageTableFlags, PhysFrame, Size2MiB, Size4KiB},
-    PhysAddr,
+    PhysAddr, VirtAddr,
 };
 
 #[link_section = ".boot.ghcb"]
 static mut GHCB: MaybeUninit<Ghcb> = MaybeUninit::uninit();
+
+static GHCB_WRAPPER: OnceCell<Spinlock<GhcbProtocol<'static, Ghcb>>> = OnceCell::new();
 
 fn get_pd(encrypted: u64) -> &'static mut PageTable {
     let (pml4_frame, _) = Cr3::read();
@@ -43,7 +47,7 @@ fn get_pd(encrypted: u64) -> &'static mut PageTable {
     unsafe { &mut *((pdpt[0].addr().as_u64() & !encrypted) as *mut PageTable) }
 }
 
-pub fn init_ghcb(snp: bool, encrypted: u64) -> &'static mut Ghcb {
+pub fn init_ghcb(snp: bool, encrypted: u64) -> &'static Spinlock<GhcbProtocol<'static, Ghcb>> {
     let ghcb_addr = unsafe { GHCB.as_ptr() } as u64;
 
     // Remove the ENCRYPTED bit from the entry that maps the GHCB.
@@ -68,7 +72,18 @@ pub fn init_ghcb(snp: bool, encrypted: u64) -> &'static mut Ghcb {
             .expect("Couldn't register the GHCB address with the hypervisor");
     }
 
-    unsafe { GHCB.write(Ghcb::new()) }
+    let ghcb = unsafe { GHCB.write(Ghcb::new()) };
+
+    // We can't use `.expect()` here as Spinlock doesn't implement `fmt::Debug`.
+    if GHCB_WRAPPER
+        .set(Spinlock::new(GhcbProtocol::new(ghcb, |vaddr: VirtAddr| {
+            Some(PhysAddr::new(vaddr.as_u64()))
+        })))
+        .is_err()
+    {
+        panic!("Failed to initialize GHCB wrapper");
+    }
+    GHCB_WRAPPER.get().unwrap()
 }
 
 pub fn deinit_ghcb(snp: bool, encrypted: u64) {

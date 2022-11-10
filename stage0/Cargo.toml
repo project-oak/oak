@@ -11,8 +11,12 @@ members = ["."]
 
 [dependencies]
 goblin = { version = "*", default-features = false, features = ["elf64"] }
+log = "*"
+oak_core = { path = "../oak_core", default-features = false }
 oak_linux_boot_params = { path = "../linux_boot_params" }
 sev_guest = { path = "../experimental/sev_guest" }
+sev_serial = { path = "../sev_serial" }
+spinning_top = "*"
 x86_64 = "*"
 
 [profile.dev]
