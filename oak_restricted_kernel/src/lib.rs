@@ -53,12 +53,16 @@ mod serial;
 pub mod shutdown;
 #[cfg(feature = "simple_io_channel")]
 mod simpleio;
+mod snp;
 #[cfg(any(feature = "virtio_console_channel", feature = "vsock_channel"))]
 mod virtio;
 
 extern crate alloc;
 
-use crate::mm::Translator;
+use crate::{
+    mm::Translator,
+    snp::{get_snp_page_addresses, init_snp_pages},
+};
 use alloc::{alloc::Allocator, boxed::Box};
 use core::{cell::OnceCell, marker::Sync, panic::PanicInfo, str::FromStr};
 use linked_list_allocator::LockedHeap;
@@ -92,6 +96,14 @@ pub fn start_kernel(info: &BootParams) -> Box<dyn Channel> {
 
     let protocol = info.protocol();
     info!("Boot protocol:  {}", protocol);
+    let snp_pages = if sev_status.contains(SevStatus::SNP_ACTIVE) {
+        // We have to get the physical addresses of the CPUID pages now while the identity mapping
+        // is still in place, but we can only initialize the instances after the new page
+        // mappings have been set up.
+        Some(get_snp_page_addresses(info))
+    } else {
+        None
+    };
 
     // Safety: in the linker script we specify that the ELF header should be placed at 0x200000.
     let program_headers = unsafe { elf::get_phdrs(VirtAddr::new(0x20_0000)) };
@@ -101,9 +113,19 @@ pub fn start_kernel(info: &BootParams) -> Box<dyn Channel> {
 
     let mut mapper = mm::init_paging(&mut frame_allocator, program_headers).unwrap();
 
-    // Now that the page tables have been updated, we have to re-share the GHCB with the hypervisor.
     if sev_status.contains(SevStatus::SEV_ES_ENABLED) {
+        // Now that the page tables have been updated, we have to re-share the GHCB with the
+        // hypervisor.
         ghcb::reshare_ghcb(&mut mapper);
+        if sev_status.contains(SevStatus::SNP_ACTIVE) {
+            // We must also initialise the CPUID and secrets pages when SEV-SNP is active. Panicking
+            // is OK at this point, because these pages are required to support the full features
+            // and we don't want to run without them.
+            init_snp_pages(
+                snp_pages.expect("Missing SNP CPUID and secrets pages."),
+                &mapper,
+            );
+        }
     }
 
     // Allocate a section for guest-host communication (without the `ENCRYPTED` bit set)

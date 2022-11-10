@@ -585,6 +585,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "oak_core"
+version = "0.1.0"
+dependencies = [
+ "lock_api",
+ "spinning_top",
+]
+
+[[package]]
 name = "oak_functions_abi"
 version = "0.1.0"
 dependencies = [
@@ -760,6 +768,7 @@ dependencies = [
  "linked_list_allocator",
  "log",
  "oak_channel",
+ "oak_core",
  "oak_linux_boot_params",
  "oak_simple_io",
  "rust-hypervisor-firmware-virtio",
@@ -771,6 +780,7 @@ dependencies = [
  "uart_16550",
  "virtio",
  "x86_64",
+ "zerocopy",
 ]
 
 [[package]]
