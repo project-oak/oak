@@ -58,20 +58,12 @@ impl GuestMessage {
     }
 }
 
-/// The header for an encrypted guest request message.
+/// The authenticated subsection of the header used for an encrypted guest request message.
 ///
 /// See Table 97 in <https://www.amd.com/system/files/TechDocs/56860.pdf>.
 #[repr(C)]
 #[derive(Debug, AsBytes, FromBytes)]
-pub struct GuestMessageHeader {
-    /// The authentication tag for the payload and additional data.
-    pub auth_tag: [u8; 32],
-    /// The message sequence number. This is used as the IV for the AEAD.
-    ///
-    /// The same sequence number must never be reused with the same key.
-    pub sequence_number: u64,
-    /// Reserved. Must be zero.
-    _reserved_0: u64,
+pub struct AuthenticatedHeader {
     /// The algorithm used to encrypt the payload.
     ///
     /// Use `GuestMessageHeader::get_algorithm` to try to convert this to an `AeadAlgorithm` enum.
@@ -96,6 +88,26 @@ pub struct GuestMessageHeader {
     _reserved_2: [u8; 35],
 }
 
+static_assertions::assert_eq_size!(AuthenticatedHeader, [u8; 48]);
+
+/// The header for an encrypted guest request message.
+///
+/// See Table 97 in <https://www.amd.com/system/files/TechDocs/56860.pdf>.
+#[repr(C)]
+#[derive(Debug, AsBytes, FromBytes)]
+pub struct GuestMessageHeader {
+    /// The authentication tag for the payload and additional data.
+    pub auth_tag: [u8; 32],
+    /// The message sequence number. This is used as the IV for the AEAD.
+    ///
+    /// The same sequence number must never be reused with the same key.
+    pub sequence_number: u64,
+    /// Reserved. Must be zero.
+    _reserved_0: u64,
+    /// The the sub-section of the header that is treated as additional data in the AEAD.
+    pub auth_header: AuthenticatedHeader,
+}
+
 static_assertions::assert_eq_size!(GuestMessageHeader, [u8; 96]);
 
 impl GuestMessageHeader {
@@ -104,26 +116,28 @@ impl GuestMessageHeader {
             auth_tag: [0; 32],
             sequence_number: 0,
             _reserved_0: 0,
-            algorithm: AeadAlgorithm::Aes256Gcm as u8,
-            header_version: CURRENT_HEADER_VERSION,
-            header_size: size_of::<Self>() as u16,
-            message_type: MessageType::Invalid as u8,
-            message_version: CURRENT_MESSAGE_VERSION,
-            message_size: 0,
-            _reserved_1: 0,
-            message_vmpck: 0,
-            _reserved_2: [0; 35],
+            auth_header: AuthenticatedHeader {
+                algorithm: AeadAlgorithm::Aes256Gcm as u8,
+                header_version: CURRENT_HEADER_VERSION,
+                header_size: size_of::<Self>() as u16,
+                message_type: MessageType::Invalid as u8,
+                message_version: CURRENT_MESSAGE_VERSION,
+                message_size: 0,
+                _reserved_1: 0,
+                message_vmpck: 0,
+                _reserved_2: [0; 35],
+            },
         }
     }
 
     /// Gets the algorithm field as an `AeadAlgorithm` enum if possible.
     pub fn get_algorithm(&self) -> Option<AeadAlgorithm> {
-        AeadAlgorithm::from_repr(self.algorithm)
+        AeadAlgorithm::from_repr(self.auth_header.algorithm)
     }
 
     /// Gets the message type field as a `MessageType` enum if possible.
     pub fn get_message_type(&self) -> Option<MessageType> {
-        MessageType::from_repr(self.algorithm)
+        MessageType::from_repr(self.auth_header.algorithm)
     }
 }
 
@@ -213,6 +227,12 @@ impl AttestationRequest {
     }
 }
 
+impl Message for AttestationRequest {
+    fn get_message_type() -> MessageType {
+        MessageType::ReportRequest
+    }
+}
+
 /// Response containing the attestation report.
 ///
 /// See Table 23 in <https://www.amd.com/system/files/TechDocs/56860.pdf>.
@@ -233,6 +253,12 @@ pub struct AttestationResponse {
 
 static_assertions::assert_eq_size!(AttestationResponse, [u8; 1216]);
 
+impl Message for AttestationResponse {
+    fn get_message_type() -> MessageType {
+        MessageType::ReportResponse
+    }
+}
+
 impl AttestationResponse {
     /// Gets the status field as a `ReportStatus` enum if possible.
     pub fn get_status(&self) -> Option<ReportStatus> {
@@ -244,7 +270,7 @@ impl AttestationResponse {
 ///
 /// See Table 21 in <https://www.amd.com/system/files/TechDocs/56860.pdf>.
 #[repr(C)]
-#[derive(Debug, FromBytes)]
+#[derive(Debug, AsBytes, FromBytes)]
 pub struct AttestationReport {
     /// The data contained in the report.
     pub data: AttestationReportData,
@@ -258,7 +284,7 @@ static_assertions::assert_eq_size!(AttestationReport, [u8; 1184]);
 ///
 /// See Table 21 in <https://www.amd.com/system/files/TechDocs/56860.pdf>.
 #[repr(C)]
-#[derive(Debug, FromBytes)]
+#[derive(Debug, AsBytes, FromBytes)]
 pub struct AttestationReportData {
     /// The version of the attestation report format.
     ///
@@ -376,7 +402,7 @@ bitflags! {
 ///
 /// See Table 8 in <https://www.amd.com/system/files/TechDocs/56860.pdf>.
 #[repr(C)]
-#[derive(Debug, FromBytes)]
+#[derive(Debug, AsBytes, FromBytes)]
 pub struct GuestPolicy {
     /// The minimum ABI minor version required to launch the guest.
     pub abi_minor: u8,
@@ -403,7 +429,7 @@ static_assertions::assert_eq_size!(GuestPolicy, u64);
 ///
 /// See Table 3 in <https://www.amd.com/system/files/TechDocs/56860.pdf>.
 #[repr(C)]
-#[derive(Debug, FromBytes)]
+#[derive(Debug, AsBytes, FromBytes)]
 pub struct TcbVersion {
     /// The current security version number (SVN) of the secure processor (PSP) bootloader.
     pub boot_loader: u8,
@@ -460,7 +486,7 @@ pub enum ReportStatus {
 ///
 /// See Table 107 in <https://www.amd.com/system/files/TechDocs/56860.pdf>.
 #[repr(C)]
-#[derive(Debug, FromBytes)]
+#[derive(Debug, AsBytes, FromBytes)]
 pub struct EcdsaSignature {
     /// The R component of this signature. The value is zero-extended and little-endian encoded.
     pub r: [u8; 72],
@@ -512,4 +538,8 @@ pub enum EccCurve {
     Invalid = 0,
     /// Curve P-384.
     P384 = 2,
+}
+
+pub trait Message {
+    fn get_message_type() -> MessageType;
 }

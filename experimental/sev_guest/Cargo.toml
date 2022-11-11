@@ -5,7 +5,14 @@ authors = ["Conrad Grobler <grobler@google.com>"]
 edition = "2021"
 license = "Apache-2.0"
 
+[features]
+default = ["rust-crypto"]
+rust-crypto = ["aes-gcm"]
+
 [dependencies]
+aes-gcm = { version = "*", optional = true, default-features = false, features = [
+    "aes"
+] }
 bitflags = "*"
 lock_api = "*"
 spinning_top = "*"
