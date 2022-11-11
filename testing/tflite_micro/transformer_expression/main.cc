@@ -28,7 +28,8 @@ uint8_t tensor_arena[kTensorArenaSize];
 
 int main(int argc, char* argv[]) {
   // input tensor[0]: int * 10
-  int input[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+  // {"I", "love", "you"} => {1, 18, 6071, 2777, 0, 0, 0, 0, 0, 0}
+  int input[] = {1, 18, 6071, 2777, 0, 0, 0, 0, 0, 0};
 
   // output tensor[0]: float * 3
   // output tensor[1]: float * 105
