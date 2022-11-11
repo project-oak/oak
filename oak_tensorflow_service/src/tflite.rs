@@ -68,7 +68,7 @@ extern "C" {
 }
 
 // TODO(#3297): Use 8GiB or 10GiB arena sizes.
-const TENSOR_ARENA_SIZE: usize = 2048;
+const TENSOR_ARENA_SIZE: usize = 1024 * 1024 * 1024;
 
 #[derive(Default)]
 pub struct TfliteModel {
