@@ -513,6 +513,36 @@
 <span id="513">513</span>
 <span id="514">514</span>
 <span id="515">515</span>
+<span id="516">516</span>
+<span id="517">517</span>
+<span id="518">518</span>
+<span id="519">519</span>
+<span id="520">520</span>
+<span id="521">521</span>
+<span id="522">522</span>
+<span id="523">523</span>
+<span id="524">524</span>
+<span id="525">525</span>
+<span id="526">526</span>
+<span id="527">527</span>
+<span id="528">528</span>
+<span id="529">529</span>
+<span id="530">530</span>
+<span id="531">531</span>
+<span id="532">532</span>
+<span id="533">533</span>
+<span id="534">534</span>
+<span id="535">535</span>
+<span id="536">536</span>
+<span id="537">537</span>
+<span id="538">538</span>
+<span id="539">539</span>
+<span id="540">540</span>
+<span id="541">541</span>
+<span id="542">542</span>
+<span id="543">543</span>
+<span id="544">544</span>
+<span id="545">545</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -573,20 +603,12 @@
     }
 }
 
-<span class="doccomment">/// The header for an encrypted guest request message.
+<span class="doccomment">/// The authenticated subsection of the header used for an encrypted guest request message.
 ///
 /// See Table 97 in &lt;https://www.amd.com/system/files/TechDocs/56860.pdf&gt;.
 </span><span class="attribute">#[repr(C)]
 #[derive(Debug, AsBytes, FromBytes)]
-</span><span class="kw">pub struct </span>GuestMessageHeader {
-    <span class="doccomment">/// The authentication tag for the payload and additional data.
-    </span><span class="kw">pub </span>auth_tag: [u8; <span class="number">32</span>],
-    <span class="doccomment">/// The message sequence number. This is used as the IV for the AEAD.
-    ///
-    /// The same sequence number must never be reused with the same key.
-    </span><span class="kw">pub </span>sequence_number: u64,
-    <span class="doccomment">/// Reserved. Must be zero.
-    </span>_reserved_0: u64,
+</span><span class="kw">pub struct </span>AuthenticatedHeader {
     <span class="doccomment">/// The algorithm used to encrypt the payload.
     ///
     /// Use `GuestMessageHeader::get_algorithm` to try to convert this to an `AeadAlgorithm` enum.
@@ -611,6 +633,26 @@
     </span>_reserved_2: [u8; <span class="number">35</span>],
 }
 
+<span class="macro">static_assertions::assert_eq_size!</span>(AuthenticatedHeader, [u8; <span class="number">48</span>]);
+
+<span class="doccomment">/// The header for an encrypted guest request message.
+///
+/// See Table 97 in &lt;https://www.amd.com/system/files/TechDocs/56860.pdf&gt;.
+</span><span class="attribute">#[repr(C)]
+#[derive(Debug, AsBytes, FromBytes)]
+</span><span class="kw">pub struct </span>GuestMessageHeader {
+    <span class="doccomment">/// The authentication tag for the payload and additional data.
+    </span><span class="kw">pub </span>auth_tag: [u8; <span class="number">32</span>],
+    <span class="doccomment">/// The message sequence number. This is used as the IV for the AEAD.
+    ///
+    /// The same sequence number must never be reused with the same key.
+    </span><span class="kw">pub </span>sequence_number: u64,
+    <span class="doccomment">/// Reserved. Must be zero.
+    </span>_reserved_0: u64,
+    <span class="doccomment">/// The the sub-section of the header that is treated as additional data in the AEAD.
+    </span><span class="kw">pub </span>auth_header: AuthenticatedHeader,
+}
+
 <span class="macro">static_assertions::assert_eq_size!</span>(GuestMessageHeader, [u8; <span class="number">96</span>]);
 
 <span class="kw">impl </span>GuestMessageHeader {
@@ -619,26 +661,28 @@
             auth_tag: [<span class="number">0</span>; <span class="number">32</span>],
             sequence_number: <span class="number">0</span>,
             _reserved_0: <span class="number">0</span>,
-            algorithm: AeadAlgorithm::Aes256Gcm <span class="kw">as </span>u8,
-            header_version: CURRENT_HEADER_VERSION,
-            header_size: size_of::&lt;<span class="self">Self</span>&gt;() <span class="kw">as </span>u16,
-            message_type: MessageType::Invalid <span class="kw">as </span>u8,
-            message_version: CURRENT_MESSAGE_VERSION,
-            message_size: <span class="number">0</span>,
-            _reserved_1: <span class="number">0</span>,
-            message_vmpck: <span class="number">0</span>,
-            _reserved_2: [<span class="number">0</span>; <span class="number">35</span>],
+            auth_header: AuthenticatedHeader {
+                algorithm: AeadAlgorithm::Aes256Gcm <span class="kw">as </span>u8,
+                header_version: CURRENT_HEADER_VERSION,
+                header_size: size_of::&lt;<span class="self">Self</span>&gt;() <span class="kw">as </span>u16,
+                message_type: MessageType::Invalid <span class="kw">as </span>u8,
+                message_version: CURRENT_MESSAGE_VERSION,
+                message_size: <span class="number">0</span>,
+                _reserved_1: <span class="number">0</span>,
+                message_vmpck: <span class="number">0</span>,
+                _reserved_2: [<span class="number">0</span>; <span class="number">35</span>],
+            },
         }
     }
 
     <span class="doccomment">/// Gets the algorithm field as an `AeadAlgorithm` enum if possible.
     </span><span class="kw">pub fn </span>get_algorithm(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;AeadAlgorithm&gt; {
-        AeadAlgorithm::from_repr(<span class="self">self</span>.algorithm)
+        AeadAlgorithm::from_repr(<span class="self">self</span>.auth_header.algorithm)
     }
 
     <span class="doccomment">/// Gets the message type field as a `MessageType` enum if possible.
     </span><span class="kw">pub fn </span>get_message_type(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;MessageType&gt; {
-        MessageType::from_repr(<span class="self">self</span>.algorithm)
+        MessageType::from_repr(<span class="self">self</span>.auth_header.algorithm)
     }
 }
 
@@ -728,6 +772,12 @@
     }
 }
 
+<span class="kw">impl </span>Message <span class="kw">for </span>AttestationRequest {
+    <span class="kw">fn </span>get_message_type() -&gt; MessageType {
+        MessageType::ReportRequest
+    }
+}
+
 <span class="doccomment">/// Response containing the attestation report.
 ///
 /// See Table 23 in &lt;https://www.amd.com/system/files/TechDocs/56860.pdf&gt;.
@@ -748,6 +798,12 @@
 
 <span class="macro">static_assertions::assert_eq_size!</span>(AttestationResponse, [u8; <span class="number">1216</span>]);
 
+<span class="kw">impl </span>Message <span class="kw">for </span>AttestationResponse {
+    <span class="kw">fn </span>get_message_type() -&gt; MessageType {
+        MessageType::ReportResponse
+    }
+}
+
 <span class="kw">impl </span>AttestationResponse {
     <span class="doccomment">/// Gets the status field as a `ReportStatus` enum if possible.
     </span><span class="kw">pub fn </span>get_status(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;ReportStatus&gt; {
@@ -759,7 +815,7 @@
 ///
 /// See Table 21 in &lt;https://www.amd.com/system/files/TechDocs/56860.pdf&gt;.
 </span><span class="attribute">#[repr(C)]
-#[derive(Debug, FromBytes)]
+#[derive(Debug, AsBytes, FromBytes)]
 </span><span class="kw">pub struct </span>AttestationReport {
     <span class="doccomment">/// The data contained in the report.
     </span><span class="kw">pub </span>data: AttestationReportData,
@@ -773,7 +829,7 @@
 ///
 /// See Table 21 in &lt;https://www.amd.com/system/files/TechDocs/56860.pdf&gt;.
 </span><span class="attribute">#[repr(C)]
-#[derive(Debug, FromBytes)]
+#[derive(Debug, AsBytes, FromBytes)]
 </span><span class="kw">pub struct </span>AttestationReportData {
     <span class="doccomment">/// The version of the attestation report format.
     ///
@@ -891,7 +947,7 @@
 ///
 /// See Table 8 in &lt;https://www.amd.com/system/files/TechDocs/56860.pdf&gt;.
 </span><span class="attribute">#[repr(C)]
-#[derive(Debug, FromBytes)]
+#[derive(Debug, AsBytes, FromBytes)]
 </span><span class="kw">pub struct </span>GuestPolicy {
     <span class="doccomment">/// The minimum ABI minor version required to launch the guest.
     </span><span class="kw">pub </span>abi_minor: u8,
@@ -918,7 +974,7 @@
 ///
 /// See Table 3 in &lt;https://www.amd.com/system/files/TechDocs/56860.pdf&gt;.
 </span><span class="attribute">#[repr(C)]
-#[derive(Debug, FromBytes)]
+#[derive(Debug, AsBytes, FromBytes)]
 </span><span class="kw">pub struct </span>TcbVersion {
     <span class="doccomment">/// The current security version number (SVN) of the secure processor (PSP) bootloader.
     </span><span class="kw">pub </span>boot_loader: u8,
@@ -975,7 +1031,7 @@
 ///
 /// See Table 107 in &lt;https://www.amd.com/system/files/TechDocs/56860.pdf&gt;.
 </span><span class="attribute">#[repr(C)]
-#[derive(Debug, FromBytes)]
+#[derive(Debug, AsBytes, FromBytes)]
 </span><span class="kw">pub struct </span>EcdsaSignature {
     <span class="doccomment">/// The R component of this signature. The value is zero-extended and little-endian encoded.
     </span><span class="kw">pub </span>r: [u8; <span class="number">72</span>],
@@ -1027,6 +1083,10 @@
     </span>Invalid = <span class="number">0</span>,
     <span class="doccomment">/// Curve P-384.
     </span>P384 = <span class="number">2</span>,
+}
+
+<span class="kw">pub trait </span>Message {
+    <span class="kw">fn </span>get_message_type() -&gt; MessageType;
 }
 </code></pre></div>
 </section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="sev_guest" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (81f391930 2022-10-09)" ></div></body></html>

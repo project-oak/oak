@@ -34,6 +34,8 @@
 <span id="34">34</span>
 <span id="35">35</span>
 <span id="36">36</span>
+<span id="37">37</span>
+<span id="38">38</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -58,6 +60,8 @@
 </span><span class="kw">use </span>x86_64::{PhysAddr, VirtAddr};
 
 <span class="kw">pub mod </span>cpuid;
+<span class="attribute">#[cfg(feature = <span class="string">&quot;rust-crypto&quot;</span>)]
+</span><span class="kw">pub mod </span>crypto;
 <span class="kw">pub mod </span>ghcb;
 <span class="kw">pub mod </span>guest;
 <span class="kw">pub mod </span>instructions;
