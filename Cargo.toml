@@ -41,6 +41,7 @@ members = [
   "oak_idl_tests",
   "oak_remote_attestation",
   "oak_remote_attestation_amd",
+  "oak_remote_attestation_noninteractive",
   "oak_remote_attestation_sessions",
   "oak_remote_attestation_sessions_client",
   "oak_restricted_kernel",
