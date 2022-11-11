@@ -63,9 +63,9 @@ impl GuestMessageEncryptor {
 
     /// Creates a new instance with a specific sequence number.
     ///
-    /// This functions should only be used if the sequence number was incremented previously to a
-    /// known value and but can not be incremented further outside of this struct, e.g. use this in
-    /// the kernel if the firmware used the same key to encrypt and decrypt guest messages.
+    /// This function should only be used if the sequence number was incremented previously to a
+    /// known value but can not be incremented further outside of this struct, e.g. use this in the
+    /// kernel if the firmware used the same key to encrypt and decrypt guest messages.
     pub fn new_with_sequence_number(
         key: &[u8],
         initial_sequence_number: u64,
