@@ -23,8 +23,11 @@ use zerocopy::FromBytes;
 /// The size of the secrets page.
 pub const SECRETS_PAGE_SIZE: usize = 4096;
 
-/// The version of the secrets pages that we expect to receive.
-pub const SECRETS_PAGE_VERSION: u32 = 3;
+/// The minimum version of the secrets pages that we expect to receive.
+pub const SECRETS_PAGE_MIN_VERSION: u32 = 2;
+
+/// The mmaximum version of the secrets pages that we expect to receive.
+pub const SECRETS_PAGE_MAX_VERSION: u32 = 3;
 
 /// Representation of the secrets page.
 ///
@@ -89,7 +92,7 @@ impl SecretsPage {
     /// Checks that version is the expected value, `SecretsPage::imi_en` has a valid value, and that
     /// the reserved bytes are all zero.
     pub fn validate(&self) -> Result<(), &'static str> {
-        if self.version != SECRETS_PAGE_VERSION {
+        if !(SECRETS_PAGE_MIN_VERSION..=SECRETS_PAGE_MAX_VERSION).contains(&self.version) {
             return Err("Invalid version");
         }
         if self.get_imi_en().is_none() {
