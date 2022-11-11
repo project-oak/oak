@@ -64,19 +64,26 @@ use crate::{
     snp::{get_snp_page_addresses, init_snp_pages},
 };
 use alloc::{alloc::Allocator, boxed::Box};
-use core::{cell::OnceCell, marker::Sync, panic::PanicInfo, str::FromStr};
+use core::{marker::Sync, panic::PanicInfo, str::FromStr};
 use linked_list_allocator::LockedHeap;
 use log::{error, info};
+use mm::encrypted_mapper::{EncryptedPageTable, PhysOffset};
 use oak_channel::Channel;
+use oak_core::sync::OnceCell;
 use oak_linux_boot_params::BootParams;
 use sev_guest::msr::{change_snp_state_for_frame, get_sev_status, PageAssignment, SevStatus};
 use strum::{EnumIter, EnumString, IntoEnumIterator};
 use x86_64::{
-    structures::paging::{Page, Size2MiB},
+    structures::paging::{MappedPageTable, Page, Size2MiB},
     VirtAddr,
 };
 
-static mut GUEST_HOST_HEAP: OnceCell<LockedHeap> = OnceCell::new();
+/// The allocator for allocating space in the memory area that is shared with the hypervisor.
+pub static GUEST_HOST_HEAP: OnceCell<LockedHeap> = OnceCell::new();
+
+/// Translator that can convert between physical and virtuall address.
+pub static ADDRESS_TRANSLATOR: OnceCell<EncryptedPageTable<MappedPageTable<'static, PhysOffset>>> =
+    OnceCell::new();
 
 /// Main entry point for the kernel, to be called from bootloader.
 pub fn start_kernel(info: &BootParams) -> Box<dyn Channel> {
@@ -153,10 +160,17 @@ pub fn start_kernel(info: &BootParams) -> Box<dyn Channel> {
     // Safety: initializing the new heap is safe as the frame allocator guarantees we're not
     // overwriting any other memory; writing to the static mut is safe as we're in the
     // initialization code and thus there can be no concurrent access.
-    let guest_host_heap = unsafe {
-        GUEST_HOST_HEAP
-            .get_or_init(|| memory::init_guest_host_heap(guest_host_pages, &mut mapper).unwrap())
-    };
+    if GUEST_HOST_HEAP
+        .set(unsafe { memory::init_guest_host_heap(guest_host_pages, &mut mapper) }.unwrap())
+        .is_err()
+    {
+        panic!("Could not initialize the guest-host heap.");
+    }
+
+    if ADDRESS_TRANSLATOR.set(mapper).is_err() {
+        panic!("Could not initialize the address translator.");
+    }
+    let mapper = ADDRESS_TRANSLATOR.get().unwrap();
 
     // If we don't find memory for heap, it's ok to panic.
     let heap_phys_frames = frame_allocator.largest_available().unwrap();
@@ -170,7 +184,12 @@ pub fn start_kernel(info: &BootParams) -> Box<dyn Channel> {
     ))
     .unwrap();
 
-    get_channel(&kernel_args, &mapper, guest_host_heap, sev_status)
+    get_channel(
+        &kernel_args,
+        mapper,
+        GUEST_HOST_HEAP.get().unwrap(),
+        sev_status,
+    )
 }
 
 #[derive(EnumIter, EnumString)]
