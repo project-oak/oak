@@ -18,6 +18,7 @@
 <span id="18">18</span>
 <span id="19">19</span>
 <span id="20">20</span>
+<span id="21">21</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -35,6 +36,7 @@
 //
 </span><span class="attribute">#![no_std]
 
+#[cfg(feature = <span class="string">&quot;alloc&quot;</span>)]
 </span><span class="kw">extern crate </span>alloc;
 
 <span class="kw">pub mod </span>sync;
