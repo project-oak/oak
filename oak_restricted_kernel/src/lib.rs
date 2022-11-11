@@ -81,7 +81,7 @@ use x86_64::{
 /// The allocator for allocating space in the memory area that is shared with the hypervisor.
 pub static GUEST_HOST_HEAP: OnceCell<LockedHeap> = OnceCell::new();
 
-/// Translator that can convert between physical and virtuall address.
+/// Translator that can convert between physical and virtual addresses.
 pub static ADDRESS_TRANSLATOR: OnceCell<EncryptedPageTable<MappedPageTable<'static, PhysOffset>>> =
     OnceCell::new();
 
