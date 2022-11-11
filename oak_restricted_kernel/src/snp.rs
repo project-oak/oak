@@ -18,7 +18,8 @@ use crate::mm::Translator;
 use core::{panic, slice::from_raw_parts};
 use oak_core::sync::OnceCell;
 use oak_linux_boot_params::{BootParams, CCBlobSevInfo, CCSetupData, SetupDataType};
-use sev_guest::{cpuid::CpuidPage, secrets::SecretsPage};
+use sev_guest::{cpuid::CpuidPage, crypto::GuestMessageEncryptor, secrets::SecretsPage};
+use spinning_top::{const_spinlock, Spinlock};
 use x86_64::{
     structures::paging::{PageSize, Size4KiB},
     PhysAddr, VirtAddr,
@@ -37,6 +38,9 @@ pub static SECRETS_PAGE: OnceCell<SecretsPage> = OnceCell::new();
 
 /// The SEV-SNP CPUID page.
 pub static CPUID_PAGE: OnceCell<CpuidPage> = OnceCell::new();
+
+/// Cryptographic helper to encrypt and decrypt messages for the GHCB guest message protocol.
+pub static GUEST_MESSAGE_ENCRYPTOR: Spinlock<Option<GuestMessageEncryptor>> = const_spinlock(None);
 
 /// Wrapper for the guest-physical addresses of the secrets page and the CPUID page.
 pub struct SnpPageAddresses {
@@ -142,6 +146,20 @@ pub fn init_snp_pages<T: Translator>(snp_pages: SnpPageAddresses, mapper: &T) {
         .unwrap()
         .validate()
         .expect("Invalid secrets page.");
+}
+
+/// Initializes the guest message encryptor.
+///
+/// This functions will panic if the secrets page has not yet been initialized.
+pub fn init_guest_message_encryptor() {
+    // For now we always use VMPCK_0 from the secrets pages as the key.
+    let key = &SECRETS_PAGE
+        .get()
+        .expect("Secrets page is not initialized.")
+        .vmpck_0[..];
+    GUEST_MESSAGE_ENCRYPTOR.lock().replace(
+        GuestMessageEncryptor::new(key).expect("Couldn't create guest message encryptor."),
+    );
 }
 
 /// Panics if the physical address is not the start of a 4KiB page, null, or not below the maximum

@@ -2434,6 +2434,7 @@ dependencies = [
  "oak_remote_attestation_amd",
  "oak_remote_attestation_sessions",
  "oak_remote_attestation_sessions_client",
+ "oak_restricted_kernel",
  "prost 0.11.0",
  "tokio",
 ]
@@ -2754,8 +2755,8 @@ dependencies = [
  "anyhow",
  "futures-util",
  "oak_grpc_utils",
- "prost 0.11.0",
- "tonic 0.8.2",
+ "prost 0.9.0",
+ "tonic 0.7.2",
 ]
 
 [[package]]

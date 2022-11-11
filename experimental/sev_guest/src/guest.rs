@@ -252,7 +252,7 @@ pub enum MessageType {
 ///
 /// See Table 20 in <https://www.amd.com/system/files/TechDocs/56860.pdf>.
 #[repr(C)]
-#[derive(Debug, AsBytes)]
+#[derive(Debug, AsBytes, FromBytes)]
 pub struct AttestationRequest {
     /// The custom data to be included in the attestation report.
     pub report_data: [u8; 64],
@@ -286,7 +286,7 @@ impl Message for AttestationRequest {
 ///
 /// See Table 23 in <https://www.amd.com/system/files/TechDocs/56860.pdf>.
 #[repr(C)]
-#[derive(Debug, FromBytes)]
+#[derive(Debug, FromBytes, AsBytes)]
 pub struct AttestationResponse {
     /// The status of the operation.
     ///
@@ -597,7 +597,7 @@ pub enum AuthorKey {
 }
 
 /// The status of the report response.
-#[derive(Debug, FromRepr)]
+#[derive(Debug, FromRepr, PartialEq)]
 #[repr(u32)]
 pub enum ReportStatus {
     /// Report was successfully generated.

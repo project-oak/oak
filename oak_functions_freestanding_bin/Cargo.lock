@@ -629,6 +629,7 @@ dependencies = [
  "oak_logger",
  "oak_remote_attestation",
  "oak_remote_attestation_sessions",
+ "oak_restricted_kernel",
  "prost",
 ]
 

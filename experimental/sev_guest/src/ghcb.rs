@@ -45,6 +45,11 @@ const SW_EXIT_CODE_IOIO_PROT: u64 = 0x7B;
 /// See section 4 in <https://developer.amd.com/wp-content/resources/56421.pdf>.
 const SW_EXIT_CODE_CPUID: u64 = 0x72;
 
+/// The value of the sw_exit_code field when doing a Guest Message request.
+///
+/// See table 6 in <https://developer.amd.com/wp-content/resources/56421.pdf>.
+const SW_EXIT_CODE_GUEST_REQUEST: u64 = 0x8000_0011;
+
 /// Indicator bit that the address is a 16 bit number.
 ///
 /// See section 15.10.2 of <https://www.amd.com/system/files/TechDocs/24593.pdf> for more details.
@@ -369,6 +374,30 @@ where
             ecx: ghcb.rcx as u32,
             edx: ghcb.rdx as u32,
         })
+    }
+
+    /// Sends a guest request message to the Platform Secure Processor via the Guest Message
+    /// Protocol.
+    ///
+    /// The memory containing the request and response data must already be shared with the
+    /// hypervisor.
+    pub fn do_guest_message_request(
+        &mut self,
+        request_address: PhysAddr,
+        response_address: PhysAddr,
+    ) -> Result<(), &'static str> {
+        let mut ghcb = self.ghcb.as_mut();
+        ghcb.sw_exit_code = SW_EXIT_CODE_GUEST_REQUEST;
+        ghcb.sw_exit_info_1 = request_address.as_u64();
+        ghcb.sw_exit_info_2 = response_address.as_u64();
+        ghcb.valid_bitmap = BASE_VALID_BITMAP;
+        self.do_vmg_exit()?;
+        if self.ghcb.as_mut().sw_exit_info_2 == 0 {
+            Ok(())
+        } else {
+            // For now we treat all non-zero return values as unrecoverable errors.
+            Err("Guest message response indicates an error.")
+        }
     }
 
     /// Sets the address of the GHCB, exits to the hypervisor, and checks the return value when

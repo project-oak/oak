@@ -71,33 +71,39 @@ impl GuestMessageEncryptor {
         })
     }
 
-    /// Creates an encrypted `GuestMessage` from the provided message.
+    /// Creates an encrypted payload from the provided message writes that to the targets payload
+    /// field. It also upates the target's header with the appropriate information: message type,
+    /// message size and sequence number.
     ///
     /// The sequence number is incremented automatically if the operation is successful.
-    pub fn encrypt_message<M: AsBytes + Message>(
+    ///
+    /// We consume the input message because we encrypt its memory in place before copying it to the
+    /// buffer that is shared with the hypervisor.
+    pub fn encrypt_message<M: AsBytes + FromBytes + Message>(
         &mut self,
-        message: &M,
-    ) -> Result<GuestMessage, &'static str> {
-        let mut result = GuestMessage::new();
-        let bytes = message.as_bytes();
-        result.header.auth_header.message_type = M::get_message_type() as u8;
-        let message_size = bytes.len();
-        result.header.auth_header.message_size = message_size as u16;
-        result.header.sequence_number = self.sequence_number + 1;
+        mut message: M,
+        destination: &mut GuestMessage,
+    ) -> Result<(), &'static str> {
+        let buffer = message.as_bytes_mut();
+        destination.header.auth_header.message_type = M::get_message_type() as u8;
+        let message_size = buffer.len();
+        destination.header.auth_header.message_size = message_size as u16;
+        destination.header.sequence_number = self.sequence_number + 1;
         let mut iv_bytes = [0u8; <Aes256 as BlockSizeUser>::BlockSize::USIZE];
-        iv_bytes[0..size_of::<u64>()].copy_from_slice(result.header.sequence_number.as_bytes());
+        iv_bytes[0..size_of::<u64>()]
+            .copy_from_slice(destination.header.sequence_number.as_bytes());
         let nonce = Nonce::from_slice(&iv_bytes[..]);
-        let associated_data = result.header.auth_header.as_bytes();
-        result.payload[0..message_size].copy_from_slice(bytes);
-        let buffer = &mut result.payload[0..message_size];
+        let associated_data = destination.header.auth_header.as_bytes();
         let auth_tag = self
             .cipher
             .encrypt_in_place_detached(nonce, associated_data, buffer)
             .map_err(|_| "Message encryption failed")?;
-        result.header.auth_tag[0..auth_tag.len()].copy_from_slice(auth_tag.as_slice());
+        // Only write the payload once we are sure the encryption succeeded.
+        destination.payload[0..message_size].copy_from_slice(buffer);
+        destination.header.auth_tag[0..auth_tag.len()].copy_from_slice(auth_tag.as_slice());
 
         self.sequence_number += 1;
-        Ok(result)
+        Ok(())
     }
 
     /// Extracts a decrypted message from an encrypted `GuestMessage`.
@@ -105,27 +111,30 @@ impl GuestMessageEncryptor {
     /// The sequence number is incremented automatically if the operation is successful.
     pub fn decrypt_message<M: AsBytes + FromBytes + Message>(
         &mut self,
-        message: &GuestMessage,
+        source: &GuestMessage,
     ) -> Result<M, &'static str> {
         let mut result = M::new_zeroed();
-        message.validate()?;
-        if M::get_message_type() as u8 != message.header.auth_header.message_type {
+        source.validate()?;
+        if M::get_message_type() as u8 != source.header.auth_header.message_type {
             return Err("Invalid message type");
         }
-        let sequence_number = message.header.sequence_number;
+        let sequence_number = source.header.sequence_number;
         if sequence_number != self.sequence_number + 1 {
             return Err("Unexpected sequence numer");
         }
         let mut iv_bytes = [0u8; <Aes256 as BlockSizeUser>::BlockSize::USIZE];
         iv_bytes[0..size_of::<u64>()].copy_from_slice(sequence_number.as_bytes());
         let nonce = Nonce::from_slice(&iv_bytes[..]);
-        let associated_data = message.header.auth_header.as_bytes();
+        let associated_data = source.header.auth_header.as_bytes();
         let buffer = result.as_bytes_mut();
-        if buffer.len() != message.header.auth_header.message_size as usize {
+        if buffer.len() != source.header.auth_header.message_size as usize {
             return Err("Invalid message length");
         }
-        buffer.copy_from_slice(&message.payload[0..buffer.len()]);
-        let tag = Tag::from_slice(&message.header.auth_tag[0..size_of::<Tag>()]);
+        // The source message is in memory that is shared with the hypervisor, so we must not
+        // decrypt the payload in place. Copy the encrypted payload into the buffer and
+        // decrypt it there.
+        buffer.copy_from_slice(&source.payload[0..buffer.len()]);
+        let tag = Tag::from_slice(&source.header.auth_tag[0..size_of::<Tag>()]);
         self.cipher
             .decrypt_in_place_detached(nonce, associated_data, buffer, tag)
             .map_err(|_| "Couldn't decrypt message")?;
