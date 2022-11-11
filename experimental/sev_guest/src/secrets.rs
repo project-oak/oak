@@ -84,3 +84,20 @@ pub enum Imi {
     /// The initial migration image is enabled.
     Enabled = 1,
 }
+
+impl SecretsPage {
+    /// Checks that version is the expected value, `SecretsPage::imi_en` has a valid value, and that
+    /// the reserved bytes are all zero.
+    pub fn validate(&self) -> Result<(), &'static str> {
+        if self.version != SECRETS_PAGE_VERSION {
+            return Err("Invalid version");
+        }
+        if self.get_imi_en().is_none() {
+            return Err("Invalid value for imi_en");
+        }
+        if self._reserved != 0 {
+            return Err("Nonzero value in _reserved");
+        }
+        Ok(())
+    }
+}

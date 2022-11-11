@@ -88,3 +88,17 @@ pub struct CpuidPage {
 }
 
 static_assertions::assert_eq_size!(CpuidPage, [u8; CPUID_PAGE_SIZE]);
+
+impl CpuidPage {
+    /// Checks that the count is less than the maximum allowed count and that the reserved bytes are
+    /// all zero.
+    pub fn validate(&self) -> Result<(), &'static str> {
+        if self.count as usize > CPUID_COUNT_MAX {
+            return Err("Invalid count");
+        }
+        if self._reserved.iter().any(|&value| value != 0) {
+            return Err("Nonzero value in _reserved");
+        }
+        Ok(())
+    }
+}
