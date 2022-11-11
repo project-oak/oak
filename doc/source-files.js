@@ -33,6 +33,7 @@ var sourcesIndex = JSON.parse('{\
 "oak_logger":["",[],["lib.rs"]],\
 "oak_remote_attestation":["",[["crypto",[],["mod.rs","ring_crypto.rs"]]],["handshaker.rs","lib.rs","message.rs"]],\
 "oak_remote_attestation_amd":["",[],["lib.rs"]],\
+"oak_remote_attestation_noninteractive":["",[],["client.rs","lib.rs"]],\
 "oak_remote_attestation_sessions":["",[],["lib.rs"]],\
 "oak_remote_attestation_sessions_client":["",[],["lib.rs"]],\
 "oak_restricted_kernel":["",[["boot",[],["mod.rs"]],["mm",[],["bitmap_frame_allocator.rs","encrypted_mapper.rs","frame_allocator.rs","mod.rs","page_tables.rs"]]],["args.rs","avx.rs","descriptors.rs","elf.rs","ghcb.rs","interrupts.rs","lib.rs","libm.rs","logging.rs","memory.rs","shutdown.rs","snp.rs","virtio.rs"]],\
