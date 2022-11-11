@@ -121,7 +121,7 @@ pub fn validate_memory(zero_page: &BootParams, encrypted: u64) {
     );
 
     for entry in zero_page.e820_table() {
-        if entry.entry_type() != E820EntryType::RAM {
+        if entry.entry_type() != Some(E820EntryType::RAM) {
             continue;
         }
 

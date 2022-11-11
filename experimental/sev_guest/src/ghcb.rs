@@ -60,6 +60,11 @@ const IOIO_READ: u64 = 1;
 /// See section 15.10.2 of <https://www.amd.com/system/files/TechDocs/24593.pdf> for more details.
 const IOIO_DATA_SIZE_8: u64 = 1 << 4;
 
+/// Indicator bit that the IO data is an 16 bit number.
+///
+/// See section 15.10.2 of <https://www.amd.com/system/files/TechDocs/24593.pdf> for more details.
+const IOIO_DATA_SIZE_16: u64 = 1 << 5;
+
 /// Indicator bit that the IO data is a 32 bit number.
 ///
 /// See section 15.10.2 of <https://www.amd.com/system/files/TechDocs/24593.pdf> for more details.
@@ -315,6 +320,34 @@ where
         self.ghcb.as_mut().valid_bitmap = BASE_VALID_BITMAP;
         self.do_vmg_exit()?;
         Ok(self.ghcb.as_mut().rax as u8)
+    }
+
+    /// Writes a 16 bit number to an IO port via the IOIO protocol.
+    ///
+    /// See section 4.1.2 in <https://developer.amd.com/wp-content/resources/56421.pdf>.
+    pub fn io_write_u16(&mut self, port: u16, data: u16) -> Result<(), &'static str> {
+        let io_port = IOIO_ADDRESS_SIZE_16 | IOIO_DATA_SIZE_16 | ((port as u64) << 16);
+
+        self.ghcb.as_mut().sw_exit_code = SW_EXIT_CODE_IOIO_PROT;
+        self.ghcb.as_mut().sw_exit_info_1 = io_port;
+        self.ghcb.as_mut().sw_exit_info_2 = 0;
+        self.ghcb.as_mut().rax = data as u64;
+        self.ghcb.as_mut().valid_bitmap = BASE_VALID_BITMAP.union(ValidBitmap::RAX);
+        self.do_vmg_exit()
+    }
+
+    /// Read a 16 bit number from an IO port via the IOIO protocol.
+    ///
+    /// See section 4.1.2 in <https://developer.amd.com/wp-content/resources/56421.pdf>.
+    pub fn io_read_u16(&mut self, port: u16) -> Result<u16, &'static str> {
+        let io_port = IOIO_ADDRESS_SIZE_16 | IOIO_DATA_SIZE_16 | IOIO_READ | ((port as u64) << 16);
+
+        self.ghcb.as_mut().sw_exit_code = SW_EXIT_CODE_IOIO_PROT;
+        self.ghcb.as_mut().sw_exit_info_1 = io_port;
+        self.ghcb.as_mut().sw_exit_info_2 = 0;
+        self.ghcb.as_mut().valid_bitmap = BASE_VALID_BITMAP;
+        self.do_vmg_exit()?;
+        Ok(self.ghcb.as_mut().rax as u16)
     }
 
     /// Writes a 32 bit number to an IO port via the IOIO protocol.

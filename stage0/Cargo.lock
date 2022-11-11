@@ -195,6 +195,7 @@ dependencies = [
  "bitflags",
  "static_assertions",
  "strum",
+ "zerocopy",
 ]
 
 [[package]]
@@ -208,7 +209,9 @@ dependencies = [
  "sev_guest",
  "sev_serial",
  "spinning_top",
+ "static_assertions",
  "x86_64",
+ "zerocopy",
 ]
 
 [[package]]

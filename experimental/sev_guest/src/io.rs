@@ -18,7 +18,10 @@ use crate::ghcb::{Ghcb, GhcbProtocol};
 use core::marker::PhantomData;
 use lock_api::{Mutex, RawMutex};
 use spinning_top::{RawSpinlock, Spinlock};
-use x86_64::instructions::port::Port;
+use x86_64::{
+    instructions::port::Port,
+    structures::port::{PortRead, PortWrite},
+};
 
 /// Factory for instantiating IO port readers and writers.
 ///
@@ -124,6 +127,17 @@ where
     }
 }
 
+impl<'a, R, P, G> PortReader<u16> for GhcbIoPort<'a, R, P, G>
+where
+    R: RawMutex + 'a,
+    P: AsMut<GhcbProtocol<'a, G>> + 'a + ?Sized,
+    G: AsMut<Ghcb> + AsRef<Ghcb> + ?Sized + 'a,
+{
+    unsafe fn try_read(&mut self) -> Result<u16, &'static str> {
+        self.ghcb_protocol.lock().as_mut().io_read_u16(self.port)
+    }
+}
+
 impl<'a, R, P, G> PortReader<u32> for GhcbIoPort<'a, R, P, G>
 where
     R: RawMutex + 'a,
@@ -146,6 +160,20 @@ where
             .lock()
             .as_mut()
             .io_write_u8(self.port, value)
+    }
+}
+
+impl<'a, R, P, G> PortWriter<u16> for GhcbIoPort<'a, R, P, G>
+where
+    R: RawMutex + 'a,
+    P: AsMut<GhcbProtocol<'a, G>> + 'a + ?Sized,
+    G: AsMut<Ghcb> + AsRef<Ghcb> + ?Sized + 'a,
+{
+    unsafe fn try_write(&mut self, value: u16) -> Result<(), &'static str> {
+        self.ghcb_protocol
+            .lock()
+            .as_mut()
+            .io_write_u16(self.port, value)
     }
 }
 
@@ -181,27 +209,20 @@ where
     }
 }
 
-impl PortReader<u8> for Port<u8> {
-    unsafe fn try_read(&mut self) -> Result<u8, &'static str> {
+impl<T> PortReader<T> for Port<T>
+where
+    T: PortRead,
+{
+    unsafe fn try_read(&mut self) -> Result<T, &'static str> {
         Ok(self.read())
     }
 }
 
-impl PortReader<u32> for Port<u32> {
-    unsafe fn try_read(&mut self) -> Result<u32, &'static str> {
-        Ok(self.read())
-    }
-}
-
-impl PortWriter<u8> for Port<u8> {
-    unsafe fn try_write(&mut self, value: u8) -> Result<(), &'static str> {
-        self.write(value);
-        Ok(())
-    }
-}
-
-impl PortWriter<u32> for Port<u32> {
-    unsafe fn try_write(&mut self, value: u32) -> Result<(), &'static str> {
+impl<T> PortWriter<T> for Port<T>
+where
+    T: PortWrite,
+{
+    unsafe fn try_write(&mut self, value: T) -> Result<(), &'static str> {
         self.write(value);
         Ok(())
     }

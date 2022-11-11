@@ -184,10 +184,10 @@ pub fn init<const N: usize>(
                 e.addr(),
                 e.addr() + e.size(),
                 e.size(),
-                e.entry_type()
+                e.entry_type().unwrap()
             );
         })
-        .filter(|e| e.entry_type() == E820EntryType::RAM)
+        .filter(|e| e.entry_type() == Some(E820EntryType::RAM))
         .map(|e| {
             // Clip both ends, if necessary, to make sure that we are aligned with 2 MiB pages.
             (
