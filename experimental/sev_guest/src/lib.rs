@@ -22,6 +22,8 @@
 use x86_64::{PhysAddr, VirtAddr};
 
 pub mod cpuid;
+#[cfg(feature = "rust-crypto")]
+pub mod crypto;
 pub mod ghcb;
 pub mod guest;
 pub mod instructions;

@@ -1075,6 +1075,7 @@ dependencies = [
 name = "sev_guest"
 version = "0.1.0"
 dependencies = [
+ "aes-gcm",
  "bitflags",
  "lock_api",
  "snafu",
