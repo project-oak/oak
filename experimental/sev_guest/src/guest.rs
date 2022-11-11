@@ -345,7 +345,7 @@ pub struct AttestationReport {
 static_assertions::assert_eq_size!(AttestationReport, [u8; 1184]);
 
 impl AttestationReport {
-    /// Checks that the report data is valid and the signature has the epxted format.
+    /// Checks that the report data is valid and the signature has the expected format.
     pub fn validate(&self) -> Result<(), &'static str> {
         self.data.validate()?;
         self.signature.validate_format()
@@ -458,7 +458,7 @@ impl AttestationReportData {
         SigningAlgorithm::from_repr(self.signature_algo)
     }
 
-    /// Checks that fields with specific expected values or ranges are valid and  the reserved bytes
+    /// Checks that fields with specific expected values or ranges are valid and the reserved bytes
     /// are all zero.
     pub fn validate(&self) -> Result<(), &'static str> {
         self.policy.validate()?;
