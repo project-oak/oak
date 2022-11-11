@@ -214,7 +214,7 @@
 }
 
 <span class="comment">// TODO(#3297): Use 8GiB or 10GiB arena sizes.
-</span><span class="kw">const </span>TENSOR_ARENA_SIZE: usize = <span class="number">2048</span>;
+</span><span class="kw">const </span>TENSOR_ARENA_SIZE: usize = <span class="number">1024 </span>* <span class="number">1024 </span>* <span class="number">1024</span>;
 
 <span class="attribute">#[derive(Default)]
 </span><span class="kw">pub struct </span>TfliteModel {
