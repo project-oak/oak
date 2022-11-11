@@ -17,7 +17,9 @@ oak_linux_boot_params = { path = "../linux_boot_params" }
 sev_guest = { path = "../experimental/sev_guest" }
 sev_serial = { path = "../sev_serial" }
 spinning_top = "*"
+static_assertions = "*"
 x86_64 = "*"
+zerocopy = "*"
 
 [profile.dev]
 opt-level = "z"

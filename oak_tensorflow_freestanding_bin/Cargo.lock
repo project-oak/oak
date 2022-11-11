@@ -393,6 +393,7 @@ dependencies = [
  "bitflags",
  "static_assertions",
  "strum",
+ "zerocopy",
 ]
 
 [[package]]

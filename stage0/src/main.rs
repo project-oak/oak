@@ -16,6 +16,7 @@
 
 #![no_std]
 #![no_main]
+#![feature(cstr_from_bytes_until_nul)]
 
 use core::{
     arch::asm,
@@ -24,7 +25,6 @@ use core::{
     panic::PanicInfo,
 };
 use goblin::elf::header;
-use oak_linux_boot_params::BootParams;
 use sev_guest::io::PortFactoryWrapper;
 use x86_64::{
     instructions::{hlt, interrupts::int3, segmentation::Segment, tlb},
@@ -44,15 +44,15 @@ use x86_64::{
 };
 
 mod asm;
+mod fw_cfg;
 mod logging;
 mod sev;
+mod zero_page;
 
 #[link_section = ".boot.gdt"]
 static mut BOOT_GDT: MaybeUninit<GlobalDescriptorTable> = MaybeUninit::uninit();
 #[link_section = ".boot.idt"]
 static mut BOOT_IDT: MaybeUninit<InterruptDescriptorTable> = MaybeUninit::uninit();
-#[link_section = ".boot.zero_page"]
-static mut BOOT_ZERO_PAGE: MaybeUninit<BootParams> = MaybeUninit::uninit();
 #[link_section = ".boot.pml4"]
 static mut BOOT_PML4: MaybeUninit<PageTable> = MaybeUninit::uninit();
 #[link_section = ".boot.pdpt"]
@@ -121,7 +121,7 @@ pub fn create_idt(_idt: &mut InterruptDescriptorTable) {}
 /// # Safety
 ///
 /// This assumes that the kernel entry point is valid.
-pub unsafe fn jump_to_kernel(entry_point: VirtAddr) -> ! {
+pub unsafe fn jump_to_kernel(entry_point: VirtAddr, zero_page: usize) -> ! {
     asm!(
         // Boot stack pointer
         "mov {1}, %rsp",
@@ -131,7 +131,7 @@ pub unsafe fn jump_to_kernel(entry_point: VirtAddr) -> ! {
         "jmp *{0}",
         in(reg) entry_point.as_u64(),
         in(reg) &BOOT_STACK_POINTER as *const _ as u64,
-        in(reg) BOOT_ZERO_PAGE.as_ptr() as u64,
+        in(reg) zero_page as u64,
         options(noreturn, att_syntax)
     );
 }
@@ -164,19 +164,27 @@ pub extern "C" fn rust64_start(encrypted: u64) -> ! {
         None
     };
 
-    let io_factory = match ghcb_protocol {
+    logging::init_logging(match ghcb_protocol {
         Some(protocol) => PortFactoryWrapper::new_ghcb(protocol),
         None => PortFactoryWrapper::new_raw(),
-    };
-
-    logging::init_logging(io_factory);
+    });
     log::info!("starting...");
 
-    // Safety: We assume the VMM has filled in the basic zero page for us. This is not true with
-    // qemu. In the future, construction of the full zero page should be in here, and instead of
-    // `assume_init_mut` we will use the safe `write` to zero it out and get a mutable reference.
-    /* TODO(#3198): interrogate qemu for memory areas and set up the zero page. */
-    let zero_page = unsafe { BOOT_ZERO_PAGE.assume_init_mut() };
+    // Safety: we assume there won't be any other hardware devices using the fw_cfg IO ports.
+    let fwcfg = unsafe {
+        fw_cfg::FwCfg::new(match ghcb_protocol {
+            Some(protocol) => PortFactoryWrapper::new_ghcb(protocol),
+            None => PortFactoryWrapper::new_raw(),
+        })
+    };
+
+    // Safety: If we don't have a fw_cfg device available, we assume the VMM has filled in the zero
+    // page for us. If the device is available, we zero out the page and fill it in ourselves.
+    let zero_page = if let Ok(mut fwcfg) = fwcfg {
+        zero_page::init_zero_page(&mut fwcfg)
+    } else {
+        unsafe { zero_page::get_zero_page() }
+    };
 
     if snp {
         sev::validate_memory(zero_page, encrypted);
@@ -292,7 +300,7 @@ pub extern "C" fn rust64_start(encrypted: u64) -> ! {
     tlb::flush_all();
 
     unsafe {
-        jump_to_kernel(entry);
+        jump_to_kernel(entry, zero_page as *const _ as usize);
     }
 }
 

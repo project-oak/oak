@@ -19,6 +19,7 @@
 use bitflags::bitflags;
 use core::ffi::{c_char, CStr};
 use strum::{Display, FromRepr};
+use zerocopy::{AsBytes, FromBytes};
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Display, FromRepr)]
 #[repr(u32)]
@@ -460,16 +461,16 @@ pub struct SetupHeader {
 static_assertions::assert_eq_size!(SetupHeader, [u8; 123usize]);
 
 #[repr(C, packed)]
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, FromBytes, AsBytes)]
 pub struct BootE820Entry {
     addr: usize,
     size: usize,
-    type_: E820EntryType,
+    type_: u32,
 }
 
 impl BootE820Entry {
-    pub fn entry_type(&self) -> E820EntryType {
-        self.type_
+    pub fn entry_type(&self) -> Option<E820EntryType> {
+        E820EntryType::from_repr(self.type_)
     }
 
     pub fn addr(&self) -> usize {
