@@ -18,15 +18,12 @@
 //! using the RustCrypto `aes-gcm` crate.
 
 use crate::guest::{GuestMessage, Message};
-use aes_gcm::{
-    aes::{
-        cipher::{BlockSizeUser, Unsigned},
-        Aes256,
-    },
-    AeadInPlace, Aes256Gcm, KeyInit, Nonce, Tag,
-};
+use aes_gcm::{AeadInPlace, Aes256Gcm, KeyInit, Nonce, Tag};
 use core::mem::size_of;
 use zerocopy::{AsBytes, FromBytes};
+
+/// The size of initialization vector/nonce for AES-GCM
+const IV_SIZE: usize = 12;
 
 /// Wrapper for encrypting and decrypting guest messages.
 ///
@@ -89,7 +86,7 @@ impl GuestMessageEncryptor {
         let message_size = buffer.len();
         destination.header.auth_header.message_size = message_size as u16;
         destination.header.sequence_number = self.sequence_number + 1;
-        let mut iv_bytes = [0u8; <Aes256 as BlockSizeUser>::BlockSize::USIZE];
+        let mut iv_bytes = [0u8; IV_SIZE];
         iv_bytes[0..size_of::<u64>()]
             .copy_from_slice(destination.header.sequence_number.as_bytes());
         let nonce = Nonce::from_slice(&iv_bytes[..]);
@@ -122,7 +119,7 @@ impl GuestMessageEncryptor {
         if sequence_number != self.sequence_number + 1 {
             return Err("Unexpected sequence numer");
         }
-        let mut iv_bytes = [0u8; <Aes256 as BlockSizeUser>::BlockSize::USIZE];
+        let mut iv_bytes = [0u8; IV_SIZE];
         iv_bytes[0..size_of::<u64>()].copy_from_slice(sequence_number.as_bytes());
         let nonce = Nonce::from_slice(&iv_bytes[..]);
         let associated_data = source.header.auth_header.as_bytes();
