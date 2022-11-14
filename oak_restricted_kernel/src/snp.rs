@@ -152,7 +152,7 @@ pub fn init_snp_pages<T: Translator>(snp_pages: SnpPageAddresses, mapper: &T) {
 ///
 /// This functions will panic if the secrets page has not yet been initialized.
 pub fn init_guest_message_encryptor() {
-    // For now we always use VMPCK_0 from the secrets pages as the key.
+    // For now we always use VMPCK_0 from the secrets page as the key.
     let key = &SECRETS_PAGE
         .get()
         .expect("Secrets page is not initialized.")
