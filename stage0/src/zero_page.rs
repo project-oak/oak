@@ -45,11 +45,12 @@ pub fn init_zero_page(fw_cfg: &mut FwCfg) -> &'static mut BootParams {
     }
     .unwrap();
     zero_page.e820_entries = (len_bytes / size_of::<BootE820Entry>()) as u8;
-
+    zero_page.e820_table[..(zero_page.e820_entries as usize)].sort_unstable_by_key(|x| x.addr());
     for entry in zero_page.e820_table() {
         log::debug!(
-            "early E820 entry: start {:#018x}, len {}, type {}",
+            "early E820 entry: [{:#018x}-{:#018x}), len {}, type {}",
             entry.addr(),
+            entry.addr() + entry.size(),
             entry.size(),
             entry.entry_type().unwrap()
         );
