@@ -2755,8 +2755,8 @@ dependencies = [
  "anyhow",
  "futures-util",
  "oak_grpc_utils",
- "prost 0.9.0",
- "tonic 0.7.2",
+ "prost 0.11.0",
+ "tonic 0.8.2",
 ]
 
 [[package]]
