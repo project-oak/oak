@@ -17,8 +17,7 @@
 //! This module provides an optional implementation for encrypting and decrypting guest requests
 //! using the RustCrypto `aes-gcm` crate.
 
-use core::mem::size_of;
-
+use crate::guest::{GuestMessage, Message};
 use aes_gcm::{
     aes::{
         cipher::{BlockSizeUser, Unsigned},
@@ -26,12 +25,8 @@ use aes_gcm::{
     },
     AeadInPlace, Aes256Gcm, KeyInit, Nonce, Tag,
 };
+use core::mem::size_of;
 use zerocopy::{AsBytes, FromBytes};
-
-use crate::guest::{
-    AeadAlgorithm, GuestMessage, GuestMessageHeader, Message, CURRENT_HEADER_VERSION,
-    CURRENT_MESSAGE_VERSION,
-};
 
 /// Wrapper for encrypting and decrypting guest messages.
 ///
@@ -78,7 +73,7 @@ impl GuestMessageEncryptor {
 
     /// Creates an encrypted `GuestMessage` from the provided message.
     ///
-    /// The sequence number is increremented automatically if the operation is successful.
+    /// The sequence number is incremented automatically if the operation is successful.
     pub fn encrypt_message<M: AsBytes + Message>(
         &mut self,
         message: &M,
@@ -107,30 +102,15 @@ impl GuestMessageEncryptor {
 
     /// Extracts a decrypted message from an encrypted `GuestMessage`.
     ///
-    /// The sequence number is increremented automatically if the operation is successful.
+    /// The sequence number is incremented automatically if the operation is successful.
     pub fn decrypt_message<M: AsBytes + FromBytes + Message>(
         &mut self,
         message: &GuestMessage,
     ) -> Result<M, &'static str> {
         let mut result = M::new_zeroed();
+        message.validate()?;
         if M::get_message_type() as u8 != message.header.auth_header.message_type {
             return Err("Invalid message type");
-        }
-        if AeadAlgorithm::Aes256Gcm as u8 != message.header.auth_header.algorithm {
-            return Err("Invalid AEAD algorithm");
-        }
-        if CURRENT_HEADER_VERSION != message.header.auth_header.header_version {
-            return Err("Invalid header version");
-        }
-        if size_of::<GuestMessageHeader>() != message.header.auth_header.header_size as usize {
-            return Err("Invalid header size");
-        }
-        if CURRENT_MESSAGE_VERSION != message.header.auth_header.message_version {
-            return Err("Invalid message version");
-        }
-        // For now we always assume we are using VMPCK_0.
-        if 0 != message.header.auth_header.message_vmpck {
-            return Err("Invalid VMPCK used for encrypting message");
         }
         let sequence_number = message.header.sequence_number;
         if sequence_number != self.sequence_number + 1 {

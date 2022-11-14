@@ -121,6 +121,11 @@ pub fn init_snp_pages<T: Translator>(snp_pages: SnpPageAddresses, mapper: &T) {
     CPUID_PAGE
         .set(CpuidPage::read_from(cpuid_slice).expect("CPUID page byte slice was invalid."))
         .expect("Couldn't set CPUID page.");
+    CPUID_PAGE
+        .get()
+        .unwrap()
+        .validate()
+        .expect("Invalid CPUID page.");
 
     let secrets_page_address = mapper
         .translate_physical(snp_pages.secrets_page_address)
@@ -132,6 +137,11 @@ pub fn init_snp_pages<T: Translator>(snp_pages: SnpPageAddresses, mapper: &T) {
     SECRETS_PAGE
         .set(SecretsPage::read_from(secrets_slice).expect("Secrets page byte slice was invalid."))
         .expect("Couldn't set secrets page.");
+    SECRETS_PAGE
+        .get()
+        .unwrap()
+        .validate()
+        .expect("Invalid secrets page.");
 }
 
 /// Panics if the physical address is not the start of a 4KiB page, null, or not below the maximum

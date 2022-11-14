@@ -24,6 +24,9 @@ use zerocopy::{AsBytes, FromBytes};
 /// The size of a guest message, including the header and maximum payload size.
 pub const GUEST_MESSAGE_SIZE: usize = 4096;
 
+/// The maximum payload size.
+pub const MAX_PAYLOAD_SIZE: usize = 4000;
+
 /// The currently supported header version number.
 pub const CURRENT_HEADER_VERSION: u8 = 1;
 
@@ -44,7 +47,7 @@ pub struct GuestMessage {
     /// The message header.
     pub header: GuestMessageHeader,
     /// The encrypted payload.
-    pub payload: [u8; 4000],
+    pub payload: [u8; MAX_PAYLOAD_SIZE],
 }
 
 static_assertions::assert_eq_size!(GuestMessage, [u8; GUEST_MESSAGE_SIZE]);
@@ -53,8 +56,13 @@ impl GuestMessage {
     pub const fn new() -> Self {
         GuestMessage {
             header: GuestMessageHeader::new(),
-            payload: [0; 4000],
+            payload: [0; MAX_PAYLOAD_SIZE],
         }
+    }
+
+    /// Checks that header is valid.
+    pub fn validate(&self) -> Result<(), &'static str> {
+        self.header.validate()
     }
 }
 
@@ -138,6 +146,47 @@ impl GuestMessageHeader {
     /// Gets the message type field as a `MessageType` enum if possible.
     pub fn get_message_type(&self) -> Option<MessageType> {
         MessageType::from_repr(self.auth_header.algorithm)
+    }
+
+    /// Checks that the reserved bytes are zero and that the authenticated header subsection is
+    /// valid.
+    pub fn validate(&self) -> Result<(), &'static str> {
+        if self._reserved_0 != 0 {
+            return Err("Nonzero value in _reserved_0");
+        }
+        if self.auth_header._reserved_1 != 0 {
+            return Err("Nonzero value in _reserved_1");
+        }
+        if self.auth_header._reserved_2.iter().any(|&value| value != 0) {
+            return Err("Nonzero value in _reserved_2");
+        }
+        if self.get_algorithm().is_none()
+            || self.auth_header.algorithm == AeadAlgorithm::Invalid as u8
+        {
+            return Err("Invalid AEAD algorithm");
+        }
+        if self.get_message_type().is_none()
+            || self.auth_header.message_type != MessageType::Invalid as u8
+        {
+            return Err("Invalid message type");
+        }
+        if self.auth_header.header_version != CURRENT_HEADER_VERSION {
+            return Err("Invalid header version");
+        }
+        if self.auth_header.message_version != CURRENT_MESSAGE_VERSION {
+            return Err("Invalid message version");
+        }
+        // For now we always assume we use VMPCK_0 to encrypt all messages.
+        if self.auth_header.message_vmpck != 0 {
+            return Err("Invalid message VMPCK");
+        }
+        if self.auth_header.header_size != size_of::<Self>() as u16 {
+            return Err("Invalid header size");
+        }
+        if self.auth_header.message_size as usize > MAX_PAYLOAD_SIZE {
+            return Err("Invalid message size");
+        }
+        Ok(())
     }
 }
 
@@ -264,6 +313,21 @@ impl AttestationResponse {
     pub fn get_status(&self) -> Option<ReportStatus> {
         ReportStatus::from_repr(self.status)
     }
+
+    /// Checks that all reserved bytes are zero and that the status field, the report size and the
+    /// report format are all valid.
+    pub fn validate(&self) -> Result<(), &'static str> {
+        if self._reserved.iter().any(|&value| value != 0) {
+            return Err("Nonzero value in _reserved");
+        }
+        if self.get_status().is_none() {
+            return Err("Invalid status");
+        }
+        if self.report_size != size_of::<AttestationReport>() as u32 {
+            return Err("Invalid report size");
+        }
+        self.report.validate()
+    }
 }
 
 /// A signed attestation report.
@@ -279,6 +343,14 @@ pub struct AttestationReport {
 }
 
 static_assertions::assert_eq_size!(AttestationReport, [u8; 1184]);
+
+impl AttestationReport {
+    /// Checks that the report data is valid and the signature has the expected format.
+    pub fn validate(&self) -> Result<(), &'static str> {
+        self.data.validate()?;
+        self.signature.validate_format()
+    }
+}
 
 /// The data contained in an attestation report.
 ///
@@ -385,6 +457,37 @@ impl AttestationReportData {
     pub fn get_signature_algo(&self) -> Option<SigningAlgorithm> {
         SigningAlgorithm::from_repr(self.signature_algo)
     }
+
+    /// Checks that fields with specific expected values or ranges are valid and the reserved bytes
+    /// are all zero.
+    pub fn validate(&self) -> Result<(), &'static str> {
+        self.policy.validate()?;
+        self.current_tcb.validate()?;
+        self.reported_tcb.validate()?;
+        self.committed_tcb.validate()?;
+        if self._reserved_0.iter().any(|&value| value != 0) {
+            return Err("Nonzero value in _reserved_0");
+        }
+        if self._reserved_1 != 0 {
+            return Err("Nonzero value in _reserved_1");
+        }
+        if self._reserved_2 != 0 {
+            return Err("Nonzero value in _reserved_2");
+        }
+        if self._reserved_3.iter().any(|&value| value != 0) {
+            return Err("Nonzero value in _reserved_3");
+        }
+        if self.signature_algo != SigningAlgorithm::EcdsaP384Sha384 as u32 {
+            return Err("Invalid signature algorithm");
+        }
+        if self.get_platform_info().is_none() {
+            return Err("Invalid platform info");
+        }
+        if self.get_author_key_en().is_none() {
+            return Err("Invalid value for author_key_en");
+        }
+        Ok(())
+    }
 }
 
 bitflags! {
@@ -416,14 +519,25 @@ pub struct GuestPolicy {
     _reserved: u32,
 }
 
+static_assertions::assert_eq_size!(GuestPolicy, u64);
+
 impl GuestPolicy {
     /// Gets the flags field as a `PolicyFlags` representation if possible.
     pub fn get_flags(&self) -> Option<PolicyFlags> {
         PolicyFlags::from_bits(self.flags)
     }
-}
 
-static_assertions::assert_eq_size!(GuestPolicy, u64);
+    /// Checks that the flags are valid and the reserved bytes are all zero.
+    pub fn validate(&self) -> Result<(), &'static str> {
+        if self._reserved != 0 {
+            return Err("Nonzero value in _reserved");
+        }
+        if self.get_flags().is_none() {
+            return Err("Invalid flags");
+        }
+        Ok(())
+    }
+}
 
 /// The version of all the components in the Trusted Computing Base (TCB).
 ///
@@ -444,6 +558,16 @@ pub struct TcbVersion {
 }
 
 static_assertions::assert_eq_size!(TcbVersion, u64);
+
+impl TcbVersion {
+    /// Checks that the reserved bytes are all zero.
+    pub fn validate(&self) -> Result<(), &'static str> {
+        if self._reserved.iter().any(|&value| value != 0) {
+            return Err("Nonzero value in _reserved");
+        }
+        Ok(())
+    }
+}
 
 bitflags! {
     /// Flags indicating allowed policy options.
@@ -497,6 +621,16 @@ pub struct EcdsaSignature {
 }
 
 static_assertions::assert_eq_size!(EcdsaSignature, [u8; 512]);
+
+impl EcdsaSignature {
+    /// Checks that the reserved bytes are all zero.
+    pub fn validate_format(&self) -> Result<(), &'static str> {
+        if self._reserved.iter().any(|&value| value != 0) {
+            return Err("Nonzero value in _reserved");
+        }
+        Ok(())
+    }
+}
 
 /// An ECDSA public key.
 ///
