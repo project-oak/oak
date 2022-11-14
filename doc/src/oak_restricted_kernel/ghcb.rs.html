@@ -223,7 +223,7 @@
 
 <span class="comment">// TODO(#3403): Stop initializing lazily once we have an equivalent to `std::sync::OnceLock`.
 </span><span class="macro">lazy_static! </span>{
-    <span class="kw">static </span><span class="kw-2">ref </span>GHCB_PROTOCOL: Spinlock&lt;GhcbProtocol&lt;<span class="lifetime">&#39;static</span>, Ghcb&gt;&gt; = {
+    <span class="kw">pub static </span><span class="kw-2">ref </span>GHCB_PROTOCOL: Spinlock&lt;GhcbProtocol&lt;<span class="lifetime">&#39;static</span>, Ghcb&gt;&gt; = {
         <span class="kw">let </span>sev_status = get_sev_status().unwrap_or(SevStatus::empty());
         Spinlock::new(init_ghcb_early(sev_status.contains(SevStatus::SNP_ACTIVE)))
     };

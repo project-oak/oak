@@ -433,6 +433,35 @@
 <span id="433">433</span>
 <span id="434">434</span>
 <span id="435">435</span>
+<span id="436">436</span>
+<span id="437">437</span>
+<span id="438">438</span>
+<span id="439">439</span>
+<span id="440">440</span>
+<span id="441">441</span>
+<span id="442">442</span>
+<span id="443">443</span>
+<span id="444">444</span>
+<span id="445">445</span>
+<span id="446">446</span>
+<span id="447">447</span>
+<span id="448">448</span>
+<span id="449">449</span>
+<span id="450">450</span>
+<span id="451">451</span>
+<span id="452">452</span>
+<span id="453">453</span>
+<span id="454">454</span>
+<span id="455">455</span>
+<span id="456">456</span>
+<span id="457">457</span>
+<span id="458">458</span>
+<span id="459">459</span>
+<span id="460">460</span>
+<span id="461">461</span>
+<span id="462">462</span>
+<span id="463">463</span>
+<span id="464">464</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -479,6 +508,11 @@
 ///
 /// See section 4 in &lt;https://developer.amd.com/wp-content/resources/56421.pdf&gt;.
 </span><span class="kw">const </span>SW_EXIT_CODE_CPUID: u64 = <span class="number">0x72</span>;
+
+<span class="doccomment">/// The value of the sw_exit_code field when doing a Guest Message request.
+///
+/// See table 6 in &lt;https://developer.amd.com/wp-content/resources/56421.pdf&gt;.
+</span><span class="kw">const </span>SW_EXIT_CODE_GUEST_REQUEST: u64 = <span class="number">0x8000_0011</span>;
 
 <span class="doccomment">/// Indicator bit that the address is a 16 bit number.
 ///
@@ -837,6 +871,30 @@
             ecx: ghcb.rcx <span class="kw">as </span>u32,
             edx: ghcb.rdx <span class="kw">as </span>u32,
         })
+    }
+
+    <span class="doccomment">/// Sends a guest request message to the Platform Secure Processor via the Guest Message
+    /// Protocol.
+    ///
+    /// The memory containing the request and response data must already be shared with the
+    /// hypervisor.
+    </span><span class="kw">pub fn </span>do_guest_message_request(
+        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+        request_address: PhysAddr,
+        response_address: PhysAddr,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+        <span class="kw">let </span><span class="kw-2">mut </span>ghcb = <span class="self">self</span>.ghcb.as_mut();
+        ghcb.sw_exit_code = SW_EXIT_CODE_GUEST_REQUEST;
+        ghcb.sw_exit_info_1 = request_address.as_u64();
+        ghcb.sw_exit_info_2 = response_address.as_u64();
+        ghcb.valid_bitmap = BASE_VALID_BITMAP;
+        <span class="self">self</span>.do_vmg_exit()<span class="question-mark">?</span>;
+        <span class="kw">if </span><span class="self">self</span>.ghcb.as_mut().sw_exit_info_2 == <span class="number">0 </span>{
+            <span class="prelude-val">Ok</span>(())
+        } <span class="kw">else </span>{
+            <span class="comment">// For now we treat all non-zero return values as unrecoverable errors.
+            </span><span class="prelude-val">Err</span>(<span class="string">&quot;Guest message response indicates an error.&quot;</span>)
+        }
     }
 
     <span class="doccomment">/// Sets the address of the GHCB, exits to the hypervisor, and checks the return value when

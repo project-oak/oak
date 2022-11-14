@@ -133,6 +133,12 @@
 <span id="133">133</span>
 <span id="134">134</span>
 <span id="135">135</span>
+<span id="136">136</span>
+<span id="137">137</span>
+<span id="138">138</span>
+<span id="139">139</span>
+<span id="140">140</span>
+<span id="141">141</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -153,15 +159,12 @@
 //! using the RustCrypto `aes-gcm` crate.
 
 </span><span class="kw">use </span><span class="kw">crate</span>::guest::{GuestMessage, Message};
-<span class="kw">use </span>aes_gcm::{
-    aes::{
-        cipher::{BlockSizeUser, Unsigned},
-        Aes256,
-    },
-    AeadInPlace, Aes256Gcm, KeyInit, Nonce, Tag,
-};
+<span class="kw">use </span>aes_gcm::{AeadInPlace, Aes256Gcm, KeyInit, Nonce, Tag};
 <span class="kw">use </span>core::mem::size_of;
 <span class="kw">use </span>zerocopy::{AsBytes, FromBytes};
+
+<span class="doccomment">/// The size of initialization vector/nonce for AES-GCM
+</span><span class="kw">const </span>IV_SIZE: usize = <span class="number">12</span>;
 
 <span class="doccomment">/// Wrapper for encrypting and decrypting guest messages.
 ///
@@ -206,33 +209,39 @@
         })
     }
 
-    <span class="doccomment">/// Creates an encrypted `GuestMessage` from the provided message.
+    <span class="doccomment">/// Creates an encrypted payload from the provided message and writes that to the target&#39;s
+    /// payload field. It also updates the target&#39;s header with the appropriate information:
+    /// message type, message size and sequence number.
     ///
     /// The sequence number is incremented automatically if the operation is successful.
-    </span><span class="kw">pub fn </span>encrypt_message&lt;M: AsBytes + Message&gt;(
+    ///
+    /// We consume the input message because we encrypt its memory in place before copying it to the
+    /// payload buffer that is shared with the hypervisor.
+    </span><span class="kw">pub fn </span>encrypt_message&lt;M: AsBytes + FromBytes + Message&gt;(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
-        message: <span class="kw-2">&amp;</span>M,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;GuestMessage, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
-        <span class="kw">let </span><span class="kw-2">mut </span>result = GuestMessage::new();
-        <span class="kw">let </span>bytes = message.as_bytes();
-        result.header.auth_header.message_type = M::get_message_type() <span class="kw">as </span>u8;
-        <span class="kw">let </span>message_size = bytes.len();
-        result.header.auth_header.message_size = message_size <span class="kw">as </span>u16;
-        result.header.sequence_number = <span class="self">self</span>.sequence_number + <span class="number">1</span>;
-        <span class="kw">let </span><span class="kw-2">mut </span>iv_bytes = [<span class="number">0u8</span>; &lt;Aes256 <span class="kw">as </span>BlockSizeUser&gt;::BlockSize::USIZE];
-        iv_bytes[<span class="number">0</span>..size_of::&lt;u64&gt;()].copy_from_slice(result.header.sequence_number.as_bytes());
+        <span class="kw-2">mut </span>message: M,
+        destination: <span class="kw-2">&amp;mut </span>GuestMessage,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+        <span class="kw">let </span>buffer = message.as_bytes_mut();
+        destination.header.auth_header.message_type = M::get_message_type() <span class="kw">as </span>u8;
+        <span class="kw">let </span>message_size = buffer.len();
+        destination.header.auth_header.message_size = message_size <span class="kw">as </span>u16;
+        destination.header.sequence_number = <span class="self">self</span>.sequence_number + <span class="number">1</span>;
+        <span class="kw">let </span><span class="kw-2">mut </span>iv_bytes = [<span class="number">0u8</span>; IV_SIZE];
+        iv_bytes[<span class="number">0</span>..size_of::&lt;u64&gt;()]
+            .copy_from_slice(destination.header.sequence_number.as_bytes());
         <span class="kw">let </span>nonce = Nonce::from_slice(<span class="kw-2">&amp;</span>iv_bytes[..]);
-        <span class="kw">let </span>associated_data = result.header.auth_header.as_bytes();
-        result.payload[<span class="number">0</span>..message_size].copy_from_slice(bytes);
-        <span class="kw">let </span>buffer = <span class="kw-2">&amp;mut </span>result.payload[<span class="number">0</span>..message_size];
+        <span class="kw">let </span>associated_data = destination.header.auth_header.as_bytes();
         <span class="kw">let </span>auth_tag = <span class="self">self
             </span>.cipher
             .encrypt_in_place_detached(nonce, associated_data, buffer)
             .map_err(|<span class="kw">_</span>| <span class="string">&quot;Message encryption failed&quot;</span>)<span class="question-mark">?</span>;
-        result.header.auth_tag[<span class="number">0</span>..auth_tag.len()].copy_from_slice(auth_tag.as_slice());
+        <span class="comment">// Only write the payload once we are sure the encryption succeeded.
+        </span>destination.payload[<span class="number">0</span>..message_size].copy_from_slice(buffer);
+        destination.header.auth_tag[<span class="number">0</span>..auth_tag.len()].copy_from_slice(auth_tag.as_slice());
 
         <span class="self">self</span>.sequence_number += <span class="number">1</span>;
-        <span class="prelude-val">Ok</span>(result)
+        <span class="prelude-val">Ok</span>(())
     }
 
     <span class="doccomment">/// Extracts a decrypted message from an encrypted `GuestMessage`.
@@ -240,27 +249,30 @@
     /// The sequence number is incremented automatically if the operation is successful.
     </span><span class="kw">pub fn </span>decrypt_message&lt;M: AsBytes + FromBytes + Message&gt;(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
-        message: <span class="kw-2">&amp;</span>GuestMessage,
+        source: <span class="kw-2">&amp;</span>GuestMessage,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;M, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
         <span class="kw">let </span><span class="kw-2">mut </span>result = M::new_zeroed();
-        message.validate()<span class="question-mark">?</span>;
-        <span class="kw">if </span>M::get_message_type() <span class="kw">as </span>u8 != message.header.auth_header.message_type {
+        source.validate()<span class="question-mark">?</span>;
+        <span class="kw">if </span>M::get_message_type() <span class="kw">as </span>u8 != source.header.auth_header.message_type {
             <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;Invalid message type&quot;</span>);
         }
-        <span class="kw">let </span>sequence_number = message.header.sequence_number;
+        <span class="kw">let </span>sequence_number = source.header.sequence_number;
         <span class="kw">if </span>sequence_number != <span class="self">self</span>.sequence_number + <span class="number">1 </span>{
             <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;Unexpected sequence numer&quot;</span>);
         }
-        <span class="kw">let </span><span class="kw-2">mut </span>iv_bytes = [<span class="number">0u8</span>; &lt;Aes256 <span class="kw">as </span>BlockSizeUser&gt;::BlockSize::USIZE];
+        <span class="kw">let </span><span class="kw-2">mut </span>iv_bytes = [<span class="number">0u8</span>; IV_SIZE];
         iv_bytes[<span class="number">0</span>..size_of::&lt;u64&gt;()].copy_from_slice(sequence_number.as_bytes());
         <span class="kw">let </span>nonce = Nonce::from_slice(<span class="kw-2">&amp;</span>iv_bytes[..]);
-        <span class="kw">let </span>associated_data = message.header.auth_header.as_bytes();
+        <span class="kw">let </span>associated_data = source.header.auth_header.as_bytes();
         <span class="kw">let </span>buffer = result.as_bytes_mut();
-        <span class="kw">if </span>buffer.len() != message.header.auth_header.message_size <span class="kw">as </span>usize {
+        <span class="kw">if </span>buffer.len() != source.header.auth_header.message_size <span class="kw">as </span>usize {
             <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;Invalid message length&quot;</span>);
         }
-        buffer.copy_from_slice(<span class="kw-2">&amp;</span>message.payload[<span class="number">0</span>..buffer.len()]);
-        <span class="kw">let </span>tag = Tag::from_slice(<span class="kw-2">&amp;</span>message.header.auth_tag[<span class="number">0</span>..size_of::&lt;Tag&gt;()]);
+        <span class="comment">// The source message is in memory that is shared with the hypervisor, so we must not
+        // decrypt the payload in place. Copy the encrypted payload into the buffer and
+        // decrypt it there.
+        </span>buffer.copy_from_slice(<span class="kw-2">&amp;</span>source.payload[<span class="number">0</span>..buffer.len()]);
+        <span class="kw">let </span>tag = Tag::from_slice(<span class="kw-2">&amp;</span>source.header.auth_tag[<span class="number">0</span>..size_of::&lt;Tag&gt;()]);
         <span class="self">self</span>.cipher
             .decrypt_in_place_detached(nonce, associated_data, buffer, tag)
             .map_err(|<span class="kw">_</span>| <span class="string">&quot;Couldn&#39;t decrypt message&quot;</span>)<span class="question-mark">?</span>;

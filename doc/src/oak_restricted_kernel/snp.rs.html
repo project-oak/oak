@@ -173,6 +173,24 @@
 <span id="173">173</span>
 <span id="174">174</span>
 <span id="175">175</span>
+<span id="176">176</span>
+<span id="177">177</span>
+<span id="178">178</span>
+<span id="179">179</span>
+<span id="180">180</span>
+<span id="181">181</span>
+<span id="182">182</span>
+<span id="183">183</span>
+<span id="184">184</span>
+<span id="185">185</span>
+<span id="186">186</span>
+<span id="187">187</span>
+<span id="188">188</span>
+<span id="189">189</span>
+<span id="190">190</span>
+<span id="191">191</span>
+<span id="192">192</span>
+<span id="193">193</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -193,7 +211,8 @@
 <span class="kw">use </span>core::{panic, slice::from_raw_parts};
 <span class="kw">use </span>oak_core::sync::OnceCell;
 <span class="kw">use </span>oak_linux_boot_params::{BootParams, CCBlobSevInfo, CCSetupData, SetupDataType};
-<span class="kw">use </span>sev_guest::{cpuid::CpuidPage, secrets::SecretsPage};
+<span class="kw">use </span>sev_guest::{cpuid::CpuidPage, crypto::GuestMessageEncryptor, secrets::SecretsPage};
+<span class="kw">use </span>spinning_top::{const_spinlock, Spinlock};
 <span class="kw">use </span>x86_64::{
     structures::paging::{PageSize, Size4KiB},
     PhysAddr, VirtAddr,
@@ -212,6 +231,9 @@
 
 <span class="doccomment">/// The SEV-SNP CPUID page.
 </span><span class="kw">pub static </span>CPUID_PAGE: OnceCell&lt;CpuidPage&gt; = OnceCell::new();
+
+<span class="doccomment">/// Cryptographic helper to encrypt and decrypt messages for the GHCB guest message protocol.
+</span><span class="kw">pub static </span>GUEST_MESSAGE_ENCRYPTOR: Spinlock&lt;<span class="prelude-ty">Option</span>&lt;GuestMessageEncryptor&gt;&gt; = const_spinlock(<span class="prelude-val">None</span>);
 
 <span class="doccomment">/// Wrapper for the guest-physical addresses of the secrets page and the CPUID page.
 </span><span class="kw">pub struct </span>SnpPageAddresses {
@@ -317,6 +339,20 @@
         .unwrap()
         .validate()
         .expect(<span class="string">&quot;Invalid secrets page.&quot;</span>);
+}
+
+<span class="doccomment">/// Initializes the guest message encryptor.
+///
+/// This functions will panic if the secrets page has not yet been initialized.
+</span><span class="kw">pub fn </span>init_guest_message_encryptor() {
+    <span class="comment">// For now we always use VMPCK_0 from the secrets page as the key.
+    </span><span class="kw">let </span>key = <span class="kw-2">&amp;</span>SECRETS_PAGE
+        .get()
+        .expect(<span class="string">&quot;Secrets page is not initialized.&quot;</span>)
+        .vmpck_0[..];
+    GUEST_MESSAGE_ENCRYPTOR.lock().replace(
+        GuestMessageEncryptor::new(key).expect(<span class="string">&quot;Couldn&#39;t create guest message encryptor.&quot;</span>),
+    );
 }
 
 <span class="doccomment">/// Panics if the physical address is not the start of a 4KiB page, null, or not below the maximum
