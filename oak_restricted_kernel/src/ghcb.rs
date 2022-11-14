@@ -58,7 +58,7 @@ pub fn get_ghcb_port_factory() -> PortFactoryWrapper {
 
 // TODO(#3403): Stop initializing lazily once we have an equivalent to `std::sync::OnceLock`.
 lazy_static! {
-    static ref GHCB_PROTOCOL: Spinlock<GhcbProtocol<'static, Ghcb>> = {
+    pub static ref GHCB_PROTOCOL: Spinlock<GhcbProtocol<'static, Ghcb>> = {
         let sev_status = get_sev_status().unwrap_or(SevStatus::empty());
         Spinlock::new(init_ghcb_early(sev_status.contains(SevStatus::SNP_ACTIVE)))
     };

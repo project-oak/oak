@@ -145,28 +145,21 @@ impl GuestMessageHeader {
 
     /// Gets the message type field as a `MessageType` enum if possible.
     pub fn get_message_type(&self) -> Option<MessageType> {
-        MessageType::from_repr(self.auth_header.algorithm)
+        MessageType::from_repr(self.auth_header.message_type)
     }
 
-    /// Checks that the reserved bytes are zero and that the authenticated header subsection is
-    /// valid.
+    /// Checks that the authenticated header subsection is valid.
+    ///
+    /// The reserved fields do not have zero values in the guest messages returned from the Platform
+    /// Secure Processor, so we don't validate these.
     pub fn validate(&self) -> Result<(), &'static str> {
-        if self._reserved_0 != 0 {
-            return Err("Nonzero value in _reserved_0");
-        }
-        if self.auth_header._reserved_1 != 0 {
-            return Err("Nonzero value in _reserved_1");
-        }
-        if self.auth_header._reserved_2.iter().any(|&value| value != 0) {
-            return Err("Nonzero value in _reserved_2");
-        }
         if self.get_algorithm().is_none()
             || self.auth_header.algorithm == AeadAlgorithm::Invalid as u8
         {
             return Err("Invalid AEAD algorithm");
         }
         if self.get_message_type().is_none()
-            || self.auth_header.message_type != MessageType::Invalid as u8
+            || self.auth_header.message_type == MessageType::Invalid as u8
         {
             return Err("Invalid message type");
         }
@@ -252,7 +245,7 @@ pub enum MessageType {
 ///
 /// See Table 20 in <https://www.amd.com/system/files/TechDocs/56860.pdf>.
 #[repr(C)]
-#[derive(Debug, AsBytes)]
+#[derive(Debug, AsBytes, FromBytes)]
 pub struct AttestationRequest {
     /// The custom data to be included in the attestation report.
     pub report_data: [u8; 64],
@@ -286,7 +279,7 @@ impl Message for AttestationRequest {
 ///
 /// See Table 23 in <https://www.amd.com/system/files/TechDocs/56860.pdf>.
 #[repr(C)]
-#[derive(Debug, FromBytes)]
+#[derive(Debug, FromBytes, AsBytes)]
 pub struct AttestationResponse {
     /// The status of the operation.
     ///
@@ -597,7 +590,7 @@ pub enum AuthorKey {
 }
 
 /// The status of the report response.
-#[derive(Debug, FromRepr)]
+#[derive(Debug, FromRepr, PartialEq)]
 #[repr(u32)]
 pub enum ReportStatus {
     /// Report was successfully generated.

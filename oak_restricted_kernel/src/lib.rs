@@ -36,6 +36,7 @@
 #![feature(once_cell)]
 
 mod args;
+pub mod attestation;
 mod avx;
 mod boot;
 mod descriptors;
@@ -125,13 +126,14 @@ pub fn start_kernel(info: &BootParams) -> Box<dyn Channel> {
         // hypervisor.
         ghcb::reshare_ghcb(&mut mapper);
         if sev_status.contains(SevStatus::SNP_ACTIVE) {
-            // We must also initialise the CPUID and secrets pages when SEV-SNP is active. Panicking
-            // is OK at this point, because these pages are required to support the full features
-            // and we don't want to run without them.
+            // We must also initialise the CPUID and secrets pages and the guest message encryptor
+            // when SEV-SNP is active. Panicking is OK at this point, because these pages are
+            // required to support the full features and we don't want to run without them.
             init_snp_pages(
                 snp_pages.expect("Missing SNP CPUID and secrets pages."),
                 &mapper,
             );
+            snp::init_guest_message_encryptor();
         }
     }
 
@@ -183,6 +185,15 @@ pub fn start_kernel(info: &BootParams) -> Box<dyn Channel> {
             .unwrap(),
     ))
     .unwrap();
+
+    if sev_status.contains(SevStatus::SNP_ACTIVE) {
+        // For now we just generate a sample attestation report and log the value.
+        // TODO(#2842): Use attestation report in attestation behaviour.
+        let report =
+            attestation::get_attestation([42; 64]).expect("Couldn't generate attestation report.");
+        info!("Attestation: {:?}", report);
+        report.validate().expect("Attestation report is invalid");
+    }
 
     get_channel(
         &kernel_args,
