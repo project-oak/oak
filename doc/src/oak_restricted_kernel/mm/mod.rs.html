@@ -521,10 +521,10 @@
                 e.addr(),
                 e.addr() + e.size(),
                 e.size(),
-                e.entry_type()
+                e.entry_type().unwrap()
             );
         })
-        .filter(|e| e.entry_type() == E820EntryType::RAM)
+        .filter(|e| e.entry_type() == <span class="prelude-val">Some</span>(E820EntryType::RAM))
         .map(|e| {
             <span class="comment">// Clip both ends, if necessary, to make sure that we are aligned with 2 MiB pages.
             </span>(

@@ -659,6 +659,7 @@
 <span id="659">659</span>
 <span id="660">660</span>
 <span id="661">661</span>
+<span id="662">662</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -680,6 +681,7 @@
 </span><span class="kw">use </span>bitflags::bitflags;
 <span class="kw">use </span>core::ffi::{c_char, CStr};
 <span class="kw">use </span>strum::{Display, FromRepr};
+<span class="kw">use </span>zerocopy::{AsBytes, FromBytes};
 
 <span class="attribute">#[derive(Copy, Clone, Debug, PartialEq, Eq, Display, FromRepr)]
 #[repr(u32)]
@@ -1121,16 +1123,16 @@
 <span class="macro">static_assertions::assert_eq_size!</span>(SetupHeader, [u8; <span class="number">123usize</span>]);
 
 <span class="attribute">#[repr(C, packed)]
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, FromBytes, AsBytes)]
 </span><span class="kw">pub struct </span>BootE820Entry {
     addr: usize,
     size: usize,
-    type_: E820EntryType,
+    type_: u32,
 }
 
 <span class="kw">impl </span>BootE820Entry {
-    <span class="kw">pub fn </span>entry_type(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; E820EntryType {
-        <span class="self">self</span>.type_
+    <span class="kw">pub fn </span>entry_type(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;E820EntryType&gt; {
+        E820EntryType::from_repr(<span class="self">self</span>.type_)
     }
 
     <span class="kw">pub fn </span>addr(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {

@@ -400,6 +400,39 @@
 <span id="400">400</span>
 <span id="401">401</span>
 <span id="402">402</span>
+<span id="403">403</span>
+<span id="404">404</span>
+<span id="405">405</span>
+<span id="406">406</span>
+<span id="407">407</span>
+<span id="408">408</span>
+<span id="409">409</span>
+<span id="410">410</span>
+<span id="411">411</span>
+<span id="412">412</span>
+<span id="413">413</span>
+<span id="414">414</span>
+<span id="415">415</span>
+<span id="416">416</span>
+<span id="417">417</span>
+<span id="418">418</span>
+<span id="419">419</span>
+<span id="420">420</span>
+<span id="421">421</span>
+<span id="422">422</span>
+<span id="423">423</span>
+<span id="424">424</span>
+<span id="425">425</span>
+<span id="426">426</span>
+<span id="427">427</span>
+<span id="428">428</span>
+<span id="429">429</span>
+<span id="430">430</span>
+<span id="431">431</span>
+<span id="432">432</span>
+<span id="433">433</span>
+<span id="434">434</span>
+<span id="435">435</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -461,6 +494,11 @@
 ///
 /// See section 15.10.2 of &lt;https://www.amd.com/system/files/TechDocs/24593.pdf&gt; for more details.
 </span><span class="kw">const </span>IOIO_DATA_SIZE_8: u64 = <span class="number">1 </span>&lt;&lt; <span class="number">4</span>;
+
+<span class="doccomment">/// Indicator bit that the IO data is an 16 bit number.
+///
+/// See section 15.10.2 of &lt;https://www.amd.com/system/files/TechDocs/24593.pdf&gt; for more details.
+</span><span class="kw">const </span>IOIO_DATA_SIZE_16: u64 = <span class="number">1 </span>&lt;&lt; <span class="number">5</span>;
 
 <span class="doccomment">/// Indicator bit that the IO data is a 32 bit number.
 ///
@@ -717,6 +755,34 @@
         <span class="self">self</span>.ghcb.as_mut().valid_bitmap = BASE_VALID_BITMAP;
         <span class="self">self</span>.do_vmg_exit()<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(<span class="self">self</span>.ghcb.as_mut().rax <span class="kw">as </span>u8)
+    }
+
+    <span class="doccomment">/// Writes a 16 bit number to an IO port via the IOIO protocol.
+    ///
+    /// See section 4.1.2 in &lt;https://developer.amd.com/wp-content/resources/56421.pdf&gt;.
+    </span><span class="kw">pub fn </span>io_write_u16(<span class="kw-2">&amp;mut </span><span class="self">self</span>, port: u16, data: u16) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+        <span class="kw">let </span>io_port = IOIO_ADDRESS_SIZE_16 | IOIO_DATA_SIZE_16 | ((port <span class="kw">as </span>u64) &lt;&lt; <span class="number">16</span>);
+
+        <span class="self">self</span>.ghcb.as_mut().sw_exit_code = SW_EXIT_CODE_IOIO_PROT;
+        <span class="self">self</span>.ghcb.as_mut().sw_exit_info_1 = io_port;
+        <span class="self">self</span>.ghcb.as_mut().sw_exit_info_2 = <span class="number">0</span>;
+        <span class="self">self</span>.ghcb.as_mut().rax = data <span class="kw">as </span>u64;
+        <span class="self">self</span>.ghcb.as_mut().valid_bitmap = BASE_VALID_BITMAP.union(ValidBitmap::RAX);
+        <span class="self">self</span>.do_vmg_exit()
+    }
+
+    <span class="doccomment">/// Read a 16 bit number from an IO port via the IOIO protocol.
+    ///
+    /// See section 4.1.2 in &lt;https://developer.amd.com/wp-content/resources/56421.pdf&gt;.
+    </span><span class="kw">pub fn </span>io_read_u16(<span class="kw-2">&amp;mut </span><span class="self">self</span>, port: u16) -&gt; <span class="prelude-ty">Result</span>&lt;u16, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+        <span class="kw">let </span>io_port = IOIO_ADDRESS_SIZE_16 | IOIO_DATA_SIZE_16 | IOIO_READ | ((port <span class="kw">as </span>u64) &lt;&lt; <span class="number">16</span>);
+
+        <span class="self">self</span>.ghcb.as_mut().sw_exit_code = SW_EXIT_CODE_IOIO_PROT;
+        <span class="self">self</span>.ghcb.as_mut().sw_exit_info_1 = io_port;
+        <span class="self">self</span>.ghcb.as_mut().sw_exit_info_2 = <span class="number">0</span>;
+        <span class="self">self</span>.ghcb.as_mut().valid_bitmap = BASE_VALID_BITMAP;
+        <span class="self">self</span>.do_vmg_exit()<span class="question-mark">?</span>;
+        <span class="prelude-val">Ok</span>(<span class="self">self</span>.ghcb.as_mut().rax <span class="kw">as </span>u16)
     }
 
     <span class="doccomment">/// Writes a 32 bit number to an IO port via the IOIO protocol.
