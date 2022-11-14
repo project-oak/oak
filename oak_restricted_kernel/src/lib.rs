@@ -190,7 +190,7 @@ pub fn start_kernel(info: &BootParams) -> Box<dyn Channel> {
         // For now we just generate a sample attestation report and log the value.
         // TODO(#2842): Use attestation report in attestation behaviour.
         let report =
-            attestation::get_attestation(&[42]).expect("Couldn't generate attestation report.");
+            attestation::get_attestation([42; 64]).expect("Couldn't generate attestation report.");
         info!("Attestation: {:?}", report);
         report.validate().expect("Attestation report is invalid");
     }

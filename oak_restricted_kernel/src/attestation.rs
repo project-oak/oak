@@ -25,30 +25,23 @@ pub use sev_guest::guest::{
 use sev_guest::guest::{AttestationRequest, AttestationResponse, GuestMessage, ReportStatus};
 use x86_64::VirtAddr;
 
-// The maximum number of custom bytes that can be included in the attestation report.
-const REPORT_DATA_MAX_SIZE: usize = 64;
+// The number of custom bytes that can be included in the attestation report.
+const REPORT_DATA_SIZE: usize = 64;
 
 /// Requests an attestation rerport.
 ///
 /// # Arguments
 ///
 /// * `report_data` - The custom data that must be included in the report. This is typically used to
-///   bind information (such as the hash of a public key) to the report. A maximum of 64 bytes is
-///   supported.
-pub fn get_attestation(report_data: &[u8]) -> anyhow::Result<AttestationReport> {
+///   bind information (such as the hash of a public key) to the report.
+pub fn get_attestation(report_data: [u8; REPORT_DATA_SIZE]) -> anyhow::Result<AttestationReport> {
     let mut guard = GUEST_MESSAGE_ENCRYPTOR.lock();
     let encryptor = guard
         .as_mut()
         .ok_or_else(|| anyhow::anyhow!("Guest message encryptor is not initialized."))?;
-    if report_data.len() > REPORT_DATA_MAX_SIZE {
-        anyhow::bail!(
-            "Report data must be at most {} bytes.",
-            REPORT_DATA_MAX_SIZE
-        );
-    }
 
     let mut report_request = AttestationRequest::new();
-    report_request.report_data[0..report_data.len()].copy_from_slice(report_data);
+    report_request.report_data = report_data;
 
     let alloc = GUEST_HOST_HEAP
         .get()

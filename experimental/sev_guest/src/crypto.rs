@@ -69,7 +69,7 @@ impl GuestMessageEncryptor {
     }
 
     /// Creates an encrypted payload from the provided message and writes that to the target's
-    /// payload field. It also upates the target's header with the appropriate information:
+    /// payload field. It also updates the target's header with the appropriate information:
     /// message type, message size and sequence number.
     ///
     /// The sequence number is incremented automatically if the operation is successful.
