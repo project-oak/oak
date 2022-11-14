@@ -55,23 +55,19 @@ pub fn get_attestation(report_data: &[u8]) -> anyhow::Result<AttestationReport> 
         .ok_or_else(|| anyhow::anyhow!("Guest-host heap is not initialized."))?;
 
     let mut request_message = Box::new_in(GuestMessage::new(), alloc);
-
     encryptor
         .encrypt_message(report_request, request_message.as_mut())
         .map_err(anyhow::Error::msg)?;
+    let response_message = Box::new_in(GuestMessage::new(), alloc);
 
     let translator = ADDRESS_TRANSLATOR
         .get()
         .ok_or_else(|| anyhow::anyhow!("Address translator is not initialized."))?;
-
     let request_address = translator
         .translate_virtual(VirtAddr::from_ptr(
             request_message.as_ref() as *const GuestMessage
         ))
         .ok_or_else(|| anyhow::anyhow!("Couldn't translate request address."))?;
-
-    let response_message = Box::new_in(GuestMessage::new(), alloc);
-
     let response_address = translator
         .translate_virtual(VirtAddr::from_ptr(
             response_message.as_ref() as *const GuestMessage
@@ -84,18 +80,14 @@ pub fn get_attestation(report_data: &[u8]) -> anyhow::Result<AttestationReport> 
         .map_err(anyhow::Error::msg)?;
 
     response_message.validate().map_err(anyhow::Error::msg)?;
-
     let attestation_response = encryptor
         .decrypt_message::<AttestationResponse>(&response_message)
         .map_err(anyhow::Error::msg)?;
-
     attestation_response
         .validate()
         .map_err(anyhow::Error::msg)?;
-
     if attestation_response.status != ReportStatus::Success as u32 {
         anyhow::bail!("Report request failed due to invalid parameters.");
     }
-
     Ok(attestation_response.report)
 }

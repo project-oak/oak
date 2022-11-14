@@ -68,14 +68,14 @@ impl GuestMessageEncryptor {
         })
     }
 
-    /// Creates an encrypted payload from the provided message writes that to the targets payload
-    /// field. It also upates the target's header with the appropriate information: message type,
-    /// message size and sequence number.
+    /// Creates an encrypted payload from the provided message and writes that to the target's
+    /// payload field. It also upates the target's header with the appropriate information:
+    /// message type, message size and sequence number.
     ///
     /// The sequence number is incremented automatically if the operation is successful.
     ///
     /// We consume the input message because we encrypt its memory in place before copying it to the
-    /// buffer that is shared with the hypervisor.
+    /// payload buffer that is shared with the hypervisor.
     pub fn encrypt_message<M: AsBytes + FromBytes + Message>(
         &mut self,
         mut message: M,

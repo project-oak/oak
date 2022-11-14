@@ -127,9 +127,8 @@ pub fn start_kernel(info: &BootParams) -> Box<dyn Channel> {
         ghcb::reshare_ghcb(&mut mapper);
         if sev_status.contains(SevStatus::SNP_ACTIVE) {
             // We must also initialise the CPUID and secrets pages and the guest message encryptor
-            // when SEV-SNP is active. Panicking is OK at this point, because these
-            // pages are required to support the full features and we don't want to run
-            // without them.
+            // when SEV-SNP is active. Panicking is OK at this point, because these pages are
+            // required to support the full features and we don't want to run without them.
             init_snp_pages(
                 snp_pages.expect("Missing SNP CPUID and secrets pages."),
                 &mapper,
