@@ -2434,7 +2434,6 @@ dependencies = [
  "oak_remote_attestation_amd",
  "oak_remote_attestation_sessions",
  "oak_remote_attestation_sessions_client",
- "oak_restricted_kernel",
  "prost 0.11.0",
  "tokio",
 ]

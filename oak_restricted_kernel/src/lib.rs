@@ -193,6 +193,7 @@ pub fn start_kernel(info: &BootParams) -> Box<dyn Channel> {
         let report =
             attestation::get_attestation(&[42]).expect("Couldn't generate attestation report.");
         info!("Attestation: {:?}", report);
+        report.validate().expect("Attestation report is invalid");
     }
 
     get_channel(
