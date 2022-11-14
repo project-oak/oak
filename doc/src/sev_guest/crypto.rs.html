@@ -133,26 +133,6 @@
 <span id="133">133</span>
 <span id="134">134</span>
 <span id="135">135</span>
-<span id="136">136</span>
-<span id="137">137</span>
-<span id="138">138</span>
-<span id="139">139</span>
-<span id="140">140</span>
-<span id="141">141</span>
-<span id="142">142</span>
-<span id="143">143</span>
-<span id="144">144</span>
-<span id="145">145</span>
-<span id="146">146</span>
-<span id="147">147</span>
-<span id="148">148</span>
-<span id="149">149</span>
-<span id="150">150</span>
-<span id="151">151</span>
-<span id="152">152</span>
-<span id="153">153</span>
-<span id="154">154</span>
-<span id="155">155</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -172,8 +152,7 @@
 </span><span class="doccomment">//! This module provides an optional implementation for encrypting and decrypting guest requests
 //! using the RustCrypto `aes-gcm` crate.
 
-</span><span class="kw">use </span>core::mem::size_of;
-
+</span><span class="kw">use </span><span class="kw">crate</span>::guest::{GuestMessage, Message};
 <span class="kw">use </span>aes_gcm::{
     aes::{
         cipher::{BlockSizeUser, Unsigned},
@@ -181,12 +160,8 @@
     },
     AeadInPlace, Aes256Gcm, KeyInit, Nonce, Tag,
 };
+<span class="kw">use </span>core::mem::size_of;
 <span class="kw">use </span>zerocopy::{AsBytes, FromBytes};
-
-<span class="kw">use </span><span class="kw">crate</span>::guest::{
-    AeadAlgorithm, GuestMessage, GuestMessageHeader, Message, CURRENT_HEADER_VERSION,
-    CURRENT_MESSAGE_VERSION,
-};
 
 <span class="doccomment">/// Wrapper for encrypting and decrypting guest messages.
 ///
@@ -233,7 +208,7 @@
 
     <span class="doccomment">/// Creates an encrypted `GuestMessage` from the provided message.
     ///
-    /// The sequence number is increremented automatically if the operation is successful.
+    /// The sequence number is incremented automatically if the operation is successful.
     </span><span class="kw">pub fn </span>encrypt_message&lt;M: AsBytes + Message&gt;(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
         message: <span class="kw-2">&amp;</span>M,
@@ -262,30 +237,15 @@
 
     <span class="doccomment">/// Extracts a decrypted message from an encrypted `GuestMessage`.
     ///
-    /// The sequence number is increremented automatically if the operation is successful.
+    /// The sequence number is incremented automatically if the operation is successful.
     </span><span class="kw">pub fn </span>decrypt_message&lt;M: AsBytes + FromBytes + Message&gt;(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
         message: <span class="kw-2">&amp;</span>GuestMessage,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;M, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
         <span class="kw">let </span><span class="kw-2">mut </span>result = M::new_zeroed();
+        message.validate()<span class="question-mark">?</span>;
         <span class="kw">if </span>M::get_message_type() <span class="kw">as </span>u8 != message.header.auth_header.message_type {
             <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;Invalid message type&quot;</span>);
-        }
-        <span class="kw">if </span>AeadAlgorithm::Aes256Gcm <span class="kw">as </span>u8 != message.header.auth_header.algorithm {
-            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;Invalid AEAD algorithm&quot;</span>);
-        }
-        <span class="kw">if </span>CURRENT_HEADER_VERSION != message.header.auth_header.header_version {
-            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;Invalid header version&quot;</span>);
-        }
-        <span class="kw">if </span>size_of::&lt;GuestMessageHeader&gt;() != message.header.auth_header.header_size <span class="kw">as </span>usize {
-            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;Invalid header size&quot;</span>);
-        }
-        <span class="kw">if </span>CURRENT_MESSAGE_VERSION != message.header.auth_header.message_version {
-            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;Invalid message version&quot;</span>);
-        }
-        <span class="comment">// For now we always assume we are using VMPCK_0.
-        </span><span class="kw">if </span><span class="number">0 </span>!= message.header.auth_header.message_vmpck {
-            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;Invalid VMPCK used for encrypting message&quot;</span>);
         }
         <span class="kw">let </span>sequence_number = message.header.sequence_number;
         <span class="kw">if </span>sequence_number != <span class="self">self</span>.sequence_number + <span class="number">1 </span>{

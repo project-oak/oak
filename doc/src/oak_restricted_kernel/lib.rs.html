@@ -221,6 +221,25 @@
 <span id="221">221</span>
 <span id="222">222</span>
 <span id="223">223</span>
+<span id="224">224</span>
+<span id="225">225</span>
+<span id="226">226</span>
+<span id="227">227</span>
+<span id="228">228</span>
+<span id="229">229</span>
+<span id="230">230</span>
+<span id="231">231</span>
+<span id="232">232</span>
+<span id="233">233</span>
+<span id="234">234</span>
+<span id="235">235</span>
+<span id="236">236</span>
+<span id="237">237</span>
+<span id="238">238</span>
+<span id="239">239</span>
+<span id="240">240</span>
+<span id="241">241</span>
+<span id="242">242</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -287,19 +306,26 @@
     snp::{get_snp_page_addresses, init_snp_pages},
 };
 <span class="kw">use </span>alloc::{alloc::Allocator, boxed::Box};
-<span class="kw">use </span>core::{cell::OnceCell, marker::Sync, panic::PanicInfo, str::FromStr};
+<span class="kw">use </span>core::{marker::Sync, panic::PanicInfo, str::FromStr};
 <span class="kw">use </span>linked_list_allocator::LockedHeap;
 <span class="kw">use </span>log::{error, info};
+<span class="kw">use </span>mm::encrypted_mapper::{EncryptedPageTable, PhysOffset};
 <span class="kw">use </span>oak_channel::Channel;
+<span class="kw">use </span>oak_core::sync::OnceCell;
 <span class="kw">use </span>oak_linux_boot_params::BootParams;
 <span class="kw">use </span>sev_guest::msr::{change_snp_state_for_frame, get_sev_status, PageAssignment, SevStatus};
 <span class="kw">use </span>strum::{EnumIter, EnumString, IntoEnumIterator};
 <span class="kw">use </span>x86_64::{
-    structures::paging::{Page, Size2MiB},
+    structures::paging::{MappedPageTable, Page, Size2MiB},
     VirtAddr,
 };
 
-<span class="kw">static </span><span class="kw-2">mut </span>GUEST_HOST_HEAP: OnceCell&lt;LockedHeap&gt; = OnceCell::new();
+<span class="doccomment">/// The allocator for allocating space in the memory area that is shared with the hypervisor.
+</span><span class="kw">pub static </span>GUEST_HOST_HEAP: OnceCell&lt;LockedHeap&gt; = OnceCell::new();
+
+<span class="doccomment">/// Translator that can convert between physical and virtual addresses.
+</span><span class="kw">pub static </span>ADDRESS_TRANSLATOR: OnceCell&lt;EncryptedPageTable&lt;MappedPageTable&lt;<span class="lifetime">&#39;static</span>, PhysOffset&gt;&gt;&gt; =
+    OnceCell::new();
 
 <span class="doccomment">/// Main entry point for the kernel, to be called from bootloader.
 </span><span class="kw">pub fn </span>start_kernel(info: <span class="kw-2">&amp;</span>BootParams) -&gt; Box&lt;<span class="kw">dyn </span>Channel&gt; {
@@ -376,10 +402,17 @@
     <span class="comment">// Safety: initializing the new heap is safe as the frame allocator guarantees we&#39;re not
     // overwriting any other memory; writing to the static mut is safe as we&#39;re in the
     // initialization code and thus there can be no concurrent access.
-    </span><span class="kw">let </span>guest_host_heap = <span class="kw">unsafe </span>{
-        GUEST_HOST_HEAP
-            .get_or_init(|| memory::init_guest_host_heap(guest_host_pages, <span class="kw-2">&amp;mut </span>mapper).unwrap())
-    };
+    </span><span class="kw">if </span>GUEST_HOST_HEAP
+        .set(<span class="kw">unsafe </span>{ memory::init_guest_host_heap(guest_host_pages, <span class="kw-2">&amp;mut </span>mapper) }.unwrap())
+        .is_err()
+    {
+        <span class="macro">panic!</span>(<span class="string">&quot;Could not initialize the guest-host heap.&quot;</span>);
+    }
+
+    <span class="kw">if </span>ADDRESS_TRANSLATOR.set(mapper).is_err() {
+        <span class="macro">panic!</span>(<span class="string">&quot;Could not initialize the address translator.&quot;</span>);
+    }
+    <span class="kw">let </span>mapper = ADDRESS_TRANSLATOR.get().unwrap();
 
     <span class="comment">// If we don&#39;t find memory for heap, it&#39;s ok to panic.
     </span><span class="kw">let </span>heap_phys_frames = frame_allocator.largest_available().unwrap();
@@ -393,7 +426,12 @@
     ))
     .unwrap();
 
-    get_channel(<span class="kw-2">&amp;</span>kernel_args, <span class="kw-2">&amp;</span>mapper, guest_host_heap, sev_status)
+    get_channel(
+        <span class="kw-2">&amp;</span>kernel_args,
+        mapper,
+        GUEST_HOST_HEAP.get().unwrap(),
+        sev_status,
+    )
 }
 
 <span class="attribute">#[derive(EnumIter, EnumString)]
