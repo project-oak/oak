@@ -188,7 +188,7 @@ impl TryFrom<&[u8]> for StorageGetItemResponse {
             return Ok(StorageGetItemResponse { value: None });
         }
         if buffer.len() < LENGTH_SIZE {
-            anyhow::bail!("Invalid buffer: buffer too small.")
+            anyhow::bail!("invalid buffer: buffer too small")
         }
 
         let mut len_buffer = [0; LENGTH_SIZE];
@@ -197,7 +197,7 @@ impl TryFrom<&[u8]> for StorageGetItemResponse {
 
         if buffer.len() != len as usize + LENGTH_SIZE {
             anyhow::bail!(
-                "Invalid buffer: expected buffer size of {}, but found {}",
+                "invalid buffer: expected buffer size of {}, but found {}",
                 len as usize + LENGTH_SIZE,
                 buffer.len()
             )

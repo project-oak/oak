@@ -51,7 +51,7 @@ impl AttestationTransport for TestUserClient {
             .inner
             .handle_user_request(&request)
             .unwrap()
-            .map_err(|err| anyhow::anyhow!("could not handle user request: {:?}", err))?;
+            .map_err(|err| anyhow::anyhow!("couldn't handle user request: {:?}", err))?;
         Ok(response.body)
     }
 }

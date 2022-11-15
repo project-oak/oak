@@ -43,12 +43,12 @@ impl TestManager<'static> {
 
     fn run_test(&self) -> anyhow::Result<()> {
         let request = oak_functions_sdk::read_request()
-            .map_err(|error| anyhow!("Couldn't read request: {:?}", error))?;
-        let test_name = String::from_utf8(request).context("Couldn't parse request")?;
+            .map_err(|error| anyhow!("couldn't read request: {:?}", error))?;
+        let test_name = String::from_utf8(request).context("couldn't parse request")?;
         let test = self
             .tests
             .get(&test_name as &str)
-            .ok_or_else(|| anyhow!("Couldn't find test: {}", &test_name))?;
+            .ok_or_else(|| anyhow!("couldn't find test: {}", &test_name))?;
         test(&test_name);
         Ok(())
     }
@@ -61,10 +61,10 @@ impl TestManager<'static> {
     /// Tests that a second call to [`oak_functions_abi::read_request`] returns the same value.
     fn test_double_read(first_request_body: &str) {
         let second_read_request =
-            oak_functions_sdk::read_request().expect("Failed to read second request.");
+            oak_functions_sdk::read_request().expect("failed to read second request");
         assert_eq!(second_read_request, first_request_body.as_bytes());
         // If assert_eq fails then run_test will return with an empty response body.
-        oak_functions_sdk::write_response(b"DoubleReadResponse").expect("Failed to write response.")
+        oak_functions_sdk::write_response(b"DoubleReadResponse").expect("failed to write response")
     }
 
     /// Tests that multiple calls to [`oak_functions_abi::write_response`] will replace the earlier
@@ -72,9 +72,9 @@ impl TestManager<'static> {
     fn test_double_write(_request: &str) {
         // First response contains a different value.
         oak_functions_sdk::write_response(b"FirstResponseInDoubleWrite")
-            .expect("Failed to write first response.");
+            .expect("failed to write first response");
         oak_functions_sdk::write_response(b"DoubleWriteResponse")
-            .expect("Failed to write second response.");
+            .expect("failed to write second response");
     }
 
     // TODO(#2417): Test logging of `write_log_message`
@@ -94,7 +94,7 @@ impl TestManager<'static> {
         let value = value.unwrap();
         assert_matches!(value, Some(_));
 
-        oak_functions_sdk::write_response(&value.unwrap()).expect("Failed to write response.");
+        oak_functions_sdk::write_response(&value.unwrap()).expect("failed to write response");
     }
 
     /// Tests `storage_get_item` when the key is not in the lookup data. The lookup data is set in
@@ -111,12 +111,12 @@ impl TestManager<'static> {
             }
             Err(_) => b"Unexpected error".to_vec(),
         };
-        oak_functions_sdk::write_response(&response_msg).expect("Failed to write response.")
+        oak_functions_sdk::write_response(&response_msg).expect("failed to write response")
     }
 }
 
 #[cfg_attr(not(test), no_mangle)]
 pub extern "C" fn main() {
     let test_manager = TestManager::new();
-    test_manager.run_test().expect("Couldn't run test");
+    test_manager.run_test().expect("couldn't run test");
 }

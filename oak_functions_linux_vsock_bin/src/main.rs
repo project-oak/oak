@@ -57,17 +57,17 @@ pub fn create_vsock_stream(file_descriptor: RawFd) -> anyhow::Result<VsockStream
     // Blocking is set in order to not return an error when the host hasn't written anything yet.
     stream
         .set_nonblocking(false)
-        .map_err(|error| anyhow!("Couldn't set socket into blocking mode: {}", error))?;
+        .map_err(|error| anyhow!("couldn't set socket into blocking mode: {}", error))?;
     Ok(stream)
 }
 
 fn main() -> ! {
     let opt = Opt::parse();
 
-    let stream = create_vsock_stream(opt.file_descriptor).expect("Couldn't create channel");
+    let stream = create_vsock_stream(opt.file_descriptor).expect("couldn't create channel");
     println!(
         "Connected to the {}",
-        stream.peer_addr().expect("Couldn't get peer address")
+        stream.peer_addr().expect("couldn't get peer address")
     );
 
     let channel = Box::new(Channel::new(stream));
@@ -77,5 +77,5 @@ fn main() -> ! {
         channel,
         oak_functions_freestanding::schema::TrustedRuntime::serve(runtime),
     )
-    .expect("Runtime encountered an unrecoverable error");
+    .expect("runtime encountered an unrecoverable error");
 }

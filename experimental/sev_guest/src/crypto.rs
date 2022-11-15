@@ -94,7 +94,7 @@ impl GuestMessageEncryptor {
         let auth_tag = self
             .cipher
             .encrypt_in_place_detached(nonce, associated_data, buffer)
-            .map_err(|_| "Message encryption failed")?;
+            .map_err(|aes_gcm::Error| "Message encryption failed")?;
         // Only write the payload once we are sure the encryption succeeded.
         destination.payload[0..message_size].copy_from_slice(buffer);
         destination.header.auth_tag[0..auth_tag.len()].copy_from_slice(auth_tag.as_slice());
@@ -113,11 +113,11 @@ impl GuestMessageEncryptor {
         let mut result = M::new_zeroed();
         source.validate()?;
         if M::get_message_type() as u8 != source.header.auth_header.message_type {
-            return Err("Invalid message type");
+            return Err("invalid message type");
         }
         let sequence_number = source.header.sequence_number;
         if sequence_number != self.sequence_number + 1 {
-            return Err("Unexpected sequence numer");
+            return Err("unexpected sequence numer");
         }
         let mut iv_bytes = [0u8; IV_SIZE];
         iv_bytes[0..size_of::<u64>()].copy_from_slice(sequence_number.as_bytes());
@@ -125,7 +125,7 @@ impl GuestMessageEncryptor {
         let associated_data = source.header.auth_header.as_bytes();
         let buffer = result.as_bytes_mut();
         if buffer.len() != source.header.auth_header.message_size as usize {
-            return Err("Invalid message length");
+            return Err("invalid message length");
         }
         // The source message is in memory that is shared with the hypervisor, so we must not
         // decrypt the payload in place. Copy the encrypted payload into the buffer and
@@ -134,7 +134,7 @@ impl GuestMessageEncryptor {
         let tag = Tag::from_slice(&source.header.auth_tag[0..size_of::<Tag>()]);
         self.cipher
             .decrypt_in_place_detached(nonce, associated_data, buffer, tag)
-            .map_err(|_| "Couldn't decrypt message")?;
+            .map_err(|aes_gcm::Error| "Couldn't decrypt message")?;
         self.sequence_number += 1;
         Ok(result)
     }

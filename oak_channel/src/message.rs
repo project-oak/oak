@@ -55,7 +55,7 @@ impl Message for RequestMessage {
 
         let length: Length = len
             .try_into()
-            .expect("could not convert the message length usize to u32");
+            .expect("couldn't convert the message length usize to u32");
 
         message_bytes.extend_from_slice(&length.to_le_bytes());
         message_bytes.extend_from_slice(&self.invocation_id.to_le_bytes());
@@ -102,7 +102,7 @@ impl Message for ResponseMessage {
 
         let length: Length = len
             .try_into()
-            .expect("could not convert the message length usize to u32");
+            .expect("couldn't convert the message length usize to u32");
 
         message_bytes.extend_from_slice(&length.to_le_bytes());
         message_bytes.extend_from_slice(&self.invocation_id.to_le_bytes());

@@ -28,7 +28,7 @@ impl Client {
     pub async fn new(uri: &str) -> anyhow::Result<Self> {
         let inner = oak_remote_attestation_noninteractive::client::OakClient::create(uri)
             .await
-            .context("Could not create Oak Functions client")?;
+            .context("couldn't create Oak Functions client")?;
         Ok(Client { inner })
     }
 
@@ -39,7 +39,7 @@ impl Client {
             .inner
             .message(request)
             .await
-            .context("Error invoking Oak Functions instance")?;
+            .context("error invoking Oak Functions instance")?;
         // TODO(#3442): Decrypt response.
         Ok(response)
     }

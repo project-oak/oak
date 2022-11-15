@@ -67,7 +67,7 @@ pub fn modified_files(scope: &Scope) -> ModifiedContent {
             let output = Command::new("git")
                 .args(spread!["diff".to_owned(), "--name-only".to_owned(), args,])
                 .output()
-                .expect("could not get modified files");
+                .expect("couldn't get modified files");
 
             if output.status.success() {
                 let vec = output.stdout;
@@ -75,14 +75,14 @@ pub fn modified_files(scope: &Scope) -> ModifiedContent {
                 // Extract the file names from the git output
                 Some(
                     String::from_utf8(vec)
-                        .expect("could not convert to string")
+                        .expect("couldn't convert to string")
                         .split('\n')
                         .map(|s| format!("./{}", s))
                         .collect(),
                 )
             } else {
                 eprintln!(
-                    "WARN: git diff failed with error ({}), running the command for the entire code base.",
+                    "WARN: git diff failed with error ({}), running the command for the entire code base",
                     output.status
                 );
                 None
@@ -189,7 +189,7 @@ fn imported_proto_files(proto_file_path: String) -> Vec<String> {
 
         // Scan the lines in the file line by line to find all the imports.
         for line in lines {
-            let line = line.expect("could not read line");
+            let line = line.expect("couldn't read line");
             if let Some(imported) = re.captures(&line).map(|c| c[1].to_string()) {
                 imported_protos.push(imported);
             }
@@ -292,7 +292,7 @@ fn get_local_dependencies(toml_path: &Path) -> Vec<String> {
     let cargo_manifest: CargoManifest =
         toml::from_str(&read_file(toml_path)).unwrap_or_else(|err| {
             panic!(
-                "could not parse crate manifest file {:?}: {}",
+                "couldn't parse crate manifest file {:?}: {}",
                 toml_path, err
             )
         });

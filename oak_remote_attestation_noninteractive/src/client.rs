@@ -37,7 +37,7 @@ pub struct OakClient {
 impl OakClient {
     pub async fn create(uri: &str) -> anyhow::Result<Self> {
         let channel = Channel::from_shared(uri.to_string())
-            .context("Couldn't create gRPC channel")?
+            .context("couldn't create gRPC channel")?
             .connect()
             .await?;
         let inner = StreamingSessionClient::new(channel);
@@ -58,7 +58,7 @@ impl OakClient {
                 request: Some(request_wrapper::Request::InvokeRequest(invoke_request)),
             }]))
             .await
-            .context("could not send message")?
+            .context("couldn't send message")?
             .into_inner();
         // Read the next (and only) message from the response stream.
         let response_wrapper = response_stream

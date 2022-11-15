@@ -26,12 +26,13 @@ where
     L: OakLogger,
 {
     fn invoke(&mut self, request: Vec<u8>) -> Result<Vec<u8>, OakStatus> {
-        let request = bincode::deserialize(&request).expect("Fail to deserialize testing request.");
+        let request =
+            bincode::deserialize(&request).expect("failed to deserialize testing request");
 
         let response = match request {
             TestingRequest::Echo(echo_message) => {
                 let echo_response = TestingResponse::Echo(echo_message);
-                bincode::serialize(&echo_response).expect("Fail to serialize testing request.")
+                bincode::serialize(&echo_response).expect("failed to serialize testing request")
             }
             TestingRequest::Blackhole(message) => {
                 self.logger.log_sensitive(Level::Debug, &message);

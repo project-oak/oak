@@ -80,7 +80,7 @@ struct Args {
 fn path_exists(s: &str) -> Result<PathBuf, String> {
     let path = PathBuf::from(s);
     if !fs::metadata(s).map_err(|err| err.to_string())?.is_file() {
-        Err(String::from("Path does not represent a file"))
+        Err(String::from("path does not represent a file"))
     } else {
         Ok(path)
     }
@@ -144,7 +144,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     let wasm_bytes = fs::read(&cli.wasm)
-        .with_context(|| format!("Couldn't read Wasm file {}", &cli.wasm.display()))
+        .with_context(|| format!("couldn't read Wasm file {}", &cli.wasm.display()))
         .unwrap();
     log::info!(
         "read Wasm file from disk {} ({} bytes)",

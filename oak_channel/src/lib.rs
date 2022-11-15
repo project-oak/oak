@@ -78,7 +78,7 @@ impl InvocationChannel {
 
     pub fn read_message<M: message::Message>(&mut self) -> anyhow::Result<M> {
         let mut encoded_message: Vec<u8> = Vec::new();
-        let mut first_frame = self.inner.read_frame().context("failed to read frame.")?;
+        let mut first_frame = self.inner.read_frame().context("failed to read frame")?;
 
         if first_frame.flags.contains(frame::Flags::START) {
             if first_frame.flags.contains(frame::Flags::END) {
@@ -107,14 +107,14 @@ impl InvocationChannel {
                 encoded_message.append(&mut first_frame.body);
             }
         } else {
-            anyhow::bail!("expected a frame with the START flag set.");
+            anyhow::bail!("expected a frame with the START flag set");
         }
 
         loop {
-            let mut frame = self.inner.read_frame().context("failed to read frame.")?;
+            let mut frame = self.inner.read_frame().context("failed to read frame")?;
 
             if frame.flags.contains(frame::Flags::START) {
-                anyhow::bail!("received two frames with the START flag set.");
+                anyhow::bail!("received two frames with the START flag set");
             } else {
                 encoded_message.append(&mut frame.body);
                 if frame.flags.contains(frame::Flags::END) {
@@ -131,7 +131,7 @@ impl InvocationChannel {
         for frame in frames.into_iter() {
             self.inner
                 .write_frame(frame)
-                .context("failed to write frame.")?
+                .context("failed to write frame")?
         }
         Ok(())
     }

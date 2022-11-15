@@ -49,7 +49,7 @@ fn build_tflite() {
     // WORKSPACE_ROOT is set in .cargo/config.toml.
     // Rerun `build.rs` next time if TensorFlow Lite library sources have been changed.
     let path_pattern = format!("{}/{}", env!("WORKSPACE_ROOT"), TFLITE_SOURCES_PATTERN);
-    for entry in glob(&path_pattern).expect("Failed to read tflite source pattern") {
+    for entry in glob(&path_pattern).expect("failed to read tflite source pattern") {
         match entry {
             Ok(path) => rerun_if_changed(&path),
             Err(e) => println!("{:?}", e),
@@ -61,9 +61,9 @@ fn build_tflite() {
         .arg("build")
         .arg(build_target)
         .status()
-        .expect("Failed to run bazel build");
+        .expect("failed to run bazel build");
     if !status.success() {
-        panic!("Failed to run bazel build: exit status is {}", status);
+        panic!("failed to run bazel build: exit status is {}", status);
     }
 
     // Add TensorFlow Lite build directory to the library search path.

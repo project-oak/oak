@@ -34,7 +34,7 @@ impl Runnable for CheckBuildLicenses {
     }
 
     fn run(self: Box<Self>, _opt: &Opt) -> Box<dyn Running> {
-        let file_content = std::fs::read_to_string(&self.path).expect("could not read file");
+        let file_content = std::fs::read_to_string(&self.path).expect("couldn't read file");
         let result_value = if file_content.contains("licenses = [\"notice\"]") {
             StatusResultValue::Ok
         } else {

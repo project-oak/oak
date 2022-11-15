@@ -147,7 +147,7 @@ impl<'a, const QUEUE_SIZE: usize, const BUFFER_SIZE: usize, A: Allocator>
     fn new<VP: Translator>(flags: DescFlags, translate: VP, alloc: &'a A) -> Self {
         assert!(
             QUEUE_SIZE.is_power_of_two(),
-            "Queue size must be a power of 2."
+            "queue size must be a power of 2"
         );
 
         let mut buffer = Vec::with_capacity_in(BUFFER_SIZE * QUEUE_SIZE, alloc);

@@ -62,9 +62,9 @@ fn share_ghcb_with_hypervisor(ghcb: &Ghcb, snp_enabled: bool) {
         mark_2mib_page_shared_in_rmp(ghcb_physical_address);
         let ghcb_location_request =
             RegisterGhcbGpaRequest::new(ghcb_physical_address.as_u64() as usize)
-                .expect("Invalid address for GHCB location");
+                .expect("invalid address for GHCB location");
         register_ghcb_location(ghcb_location_request)
-            .expect("Couldn't register the GHCB address with the hypervisor");
+            .expect("couldn't register the GHCB address with the hypervisor");
     }
     // Mark the page as not encrypted in the page tables.
     set_encrypted_bit_for_page(&ghcb_address, false);
@@ -150,7 +150,7 @@ fn mark_2mib_page_shared_in_rmp(physical_address: PhysAddr) {
             (raw_address + i * Size4KiB::SIZE) as usize,
             PageAssignment::Shared,
         )
-        .expect("Invalid page address");
-        change_snp_page_state(request).expect("Couldn't change page state");
+        .expect("invalid page address");
+        change_snp_page_state(request).expect("couldn't change page state");
     }
 }

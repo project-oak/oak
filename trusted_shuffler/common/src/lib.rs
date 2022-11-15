@@ -26,9 +26,9 @@ pub async fn send_with_request(request: Request<Body>) -> anyhow::Result<Respons
     let response = client
         .request(request)
         .await
-        .context("Couldn't send request")?;
+        .context("couldn't send request")?;
     if response.status() != http::StatusCode::OK {
-        return Err(anyhow!("Non-OK status: {:?}", response.status()));
+        return Err(anyhow!("non-OK status: {:?}", response.status()));
     }
 
     Ok(response)
@@ -39,13 +39,13 @@ pub async fn send_http_request(uri: &str, method: Method, body: &[u8]) -> anyhow
         .method(method)
         .uri(uri)
         .body(Body::from(body.to_vec()))
-        .context("Couldn't create request")?;
+        .context("couldn't create request")?;
 
     let response = send_with_request(request).await?;
 
     let response_body = hyper::body::to_bytes(response.into_body())
         .await
-        .context("Couldn't read response body")?
+        .context("couldn't read response body")?
         .to_vec();
     Ok(response_body)
 }

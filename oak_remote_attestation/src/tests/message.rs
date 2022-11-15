@@ -54,7 +54,7 @@ where
         Ok(result)
     } else {
         Err(anyhow!(
-            "Maximum input length exceeded, maximum {}, found {}",
+            "maximum input length exceeded, maximum {}, found {}",
             L,
             input.len()
         ))
@@ -64,9 +64,9 @@ where
 fn test_serialize_template<M: Serializable + Deserializable + PartialEq>(
     message: &M,
 ) -> anyhow::Result<bool> {
-    let serialized_message = message.serialize().context("Couldn't serialize message")?;
+    let serialized_message = message.serialize().context("couldn't serialize message")?;
     let deserialized_message =
-        M::deserialize(&serialized_message).context("Couldn't deserialize message")?;
+        M::deserialize(&serialized_message).context("couldn't deserialize message")?;
     Ok(*message == deserialized_message)
 }
 

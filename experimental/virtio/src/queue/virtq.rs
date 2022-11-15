@@ -59,11 +59,11 @@ impl Desc {
     pub fn new(flags: DescFlags, addr: PhysAddr, length: u32) -> Self {
         assert!(
             !flags.contains(DescFlags::VIRTQ_DESC_F_INDIRECT),
-            "Indirect descriptors not supported."
+            "indirect descriptors not supported"
         );
         assert!(
             !flags.contains(DescFlags::VIRTQ_DESC_F_NEXT),
-            "Chained descriptors not supported."
+            "chained descriptors not supported"
         );
         Self {
             addr,

@@ -37,12 +37,12 @@ fn start_server(channel: Box<dyn Channel>) -> ! {
     let service_impl = oak_tensorflow_service::TensorflowServiceImpl::new();
     let server = oak_tensorflow_service::schema::TensorflowService::serve(service_impl);
     oak_channel::server::start_blocking_server(channel, server)
-        .expect("Server encountered an unrecoverable error")
+        .expect("server encountered an unrecoverable error")
 }
 
 #[alloc_error_handler]
 fn out_of_memory(layout: ::core::alloc::Layout) -> ! {
-    panic!("Error allocating memory: {:#?}", layout);
+    panic!("error allocating memory: {:#?}", layout);
 }
 
 #[panic_handler]

@@ -51,7 +51,7 @@ pub fn compile(protos: &[impl AsRef<Path>], includes: &[impl AsRef<Path>]) {
     config.service_generator(Box::new(ServiceGenerator {}));
     config
         .compile_protos(protos, includes)
-        .expect("could not compile protobuffer schema");
+        .expect("couldn't compile protobuffer schema");
 }
 
 struct ServiceGenerator {}
@@ -59,11 +59,11 @@ struct ServiceGenerator {}
 impl prost_build::ServiceGenerator for ServiceGenerator {
     fn generate(&mut self, service: Service, buf: &mut String) {
         *buf += "\n";
-        *buf += &generate_service(&service).expect("could not generate services");
+        *buf += &generate_service(&service).expect("couldn't generate services");
         *buf += "\n";
-        *buf += &generate_service_client(&service, false).expect("could not generate clients");
+        *buf += &generate_service_client(&service, false).expect("couldn't generate clients");
         *buf += "\n";
-        *buf += &generate_service_client(&service, true).expect("could not generate async clients");
+        *buf += &generate_service_client(&service, true).expect("couldn't generate async clients");
     }
 }
 
@@ -109,7 +109,7 @@ fn generate_service(service: &Service) -> anyhow::Result<String> {
             .iter()
             .map(generate_server_handler)
             .collect::<Result<Vec<_>, _>>()
-            .context("could not generate server handler")?
+            .context("couldn't generate server handler")?
             .into_iter()
             .flatten(),
     );
@@ -162,7 +162,7 @@ fn generate_service_client(service: &Service, asynchronous: bool) -> anyhow::Res
             .iter()
             .map(|c| generate_client_method(c, asynchronous))
             .collect::<Result<Vec<_>, _>>()
-            .context("could not generate client method")?
+            .context("couldn't generate client method")?
             .into_iter()
             .flatten(),
     );

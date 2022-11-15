@@ -93,7 +93,7 @@ impl WebClient {
             ),
         )
         .await
-        .context("Could not create Oak Functions client")
+        .context("couldn't create Oak Functions client")
         .map_err(|error| error.to_string())?;
         let inner = Rc::new(wasm_mutex::Mutex::new(inner));
         Ok(WebClient { inner })
@@ -116,7 +116,7 @@ impl WebClient {
             let length = response
                 .length
                 .try_into()
-                .map_err(|_| "Could not fit the response length into usize")?;
+                .map_err(|_| "couldn't fit the response length into usize")?;
             let body = &response.body[0..length];
 
             // Construct a JavaScript object that contains the response status
@@ -142,11 +142,11 @@ impl WebClient {
             .await
             .message(&request)
             .await
-            .context("Error invoking Oak Functions instance")?;
+            .context("error invoking Oak Functions instance")?;
 
         Response::decode(encoded_response.as_ref())
             .map_err(anyhow::Error::msg)
-            .context("Couldn't decode response")
+            .context("couldn't decode response")
     }
 }
 

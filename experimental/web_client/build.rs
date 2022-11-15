@@ -19,5 +19,5 @@ fn main() {
         &["oak_grpc_unary_attestation/proto/unary_server.proto"],
         &["../.."],
     )
-    .expect("Proto compilation failed");
+    .expect("proto compilation failed");
 }

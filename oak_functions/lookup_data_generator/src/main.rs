@@ -67,15 +67,15 @@ fn main() -> anyhow::Result<()> {
             value_size_bytes,
             entries,
         )
-        .context("could not generate random entries")?,
+        .context("couldn't generate random entries")?,
         Command::Weather {} => generate_and_serialize_weather_entries(&mut rng)
-            .context("could not generate weather entries")?,
+            .context("couldn't generate weather entries")?,
         Command::WeatherSparse { entries } => {
             generate_and_serialize_sparse_weather_entries(&mut rng, entries)
-                .context("could not generate sparse weather entries")?
+                .context("couldn't generate sparse weather entries")?
         }
     };
-    let mut file = File::create(opt.out_file_path).context("could not create out file")?;
-    file.write_all(&buf).context("could not write to file")?;
+    let mut file = File::create(opt.out_file_path).context("couldn't create out file")?;
+    file.write_all(&buf).context("couldn't write to file")?;
     Ok(())
 }

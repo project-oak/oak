@@ -142,7 +142,7 @@ mutable_interrupt_handler_with_error_code!(
                     shutdown::shutdown();
                 }
                 let leaf = stack_frame.rax as u32;
-                get_cpuid_for_vc_exception(leaf, stack_frame).expect("Error reading CPUID");
+                get_cpuid_for_vc_exception(leaf, stack_frame).expect("error reading CPUID");
                 // CPUID instruction is 2 bytes long, so we advance the instruction pointer by 2.
                 stack_frame.rip += 2u64;
             }

@@ -147,7 +147,7 @@ pub fn cell_id_to_bytes(cell: &CellID) -> Vec<u8> {
 /// vector of bytes.
 pub fn cell_id_from_bytes(bytes: &[u8]) -> Result<CellID> {
     let cell_id = CellID::from_token(
-        std::str::from_utf8(bytes).context("could not parse cell id bytes to UTF8 string")?,
+        std::str::from_utf8(bytes).context("couldn't parse cell id bytes from UTF8 string")?,
     );
     Ok(cell_id)
 }

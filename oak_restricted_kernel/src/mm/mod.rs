@@ -272,7 +272,7 @@ pub fn init_paging<A: FrameAllocator<Size4KiB>>(
     // This reference will no longer be valid after we reload the page tables!
     let pml4_frame = frame_allocator
         .allocate_frame()
-        .ok_or("Could not allocate a frame for PML4")?;
+        .ok_or("couldn't allocate a frame for PML4")?;
     let pml4 = unsafe { &mut *(pml4_frame.start_address().as_u64() as *mut PageTable) };
     pml4.zero();
 

@@ -80,9 +80,14 @@ async fn test_server() {
         // A bit further from key_0.
         let response = make_request(server_port, br#"{"lat":51.4,"lng":-0.6}"#).await;
         assert_eq!(
-            r#"could not find location within cutoff"#,
-            std::str::from_utf8(&response).unwrap()
-        );
+        <<<<<<< HEAD
+                    r#"could not find location within cutoff"#,
+                    std::str::from_utf8(&response).unwrap()
+        =======
+                    r#"couldn't find location within cutoff"#,
+                    std::str::from_utf8(response.body().unwrap()).unwrap()
+        >>>>>>> e16cb33c (Make errors more consistent)
+                );
     }
     {
         // Close to key_1.
@@ -96,7 +101,7 @@ async fn test_server() {
         // Far from both keys.
         let response = make_request(server_port, br#"{"lat":-10.0,"lng":10.0}"#).await;
         assert_eq!(
-            r#"could not find index item for cell"#,
+            r#"couldn't find index item for cell"#,
             std::str::from_utf8(&response).unwrap()
         );
     }
@@ -104,7 +109,7 @@ async fn test_server() {
         // Malformed request.
         let response = make_request(server_port, b"invalid - JSON").await;
         assert_eq!(
-            "could not deserialize request as JSON: Error(\"expected value\", line: 1, column: 1)",
+            "couldn't deserialize request as JSON: Error(\"expected value\", line: 1, column: 1)",
             std::str::from_utf8(&response).unwrap()
         );
     }
@@ -128,11 +133,11 @@ fn bench_wasm_handler(bencher: &mut Bencher, warmup: bool) {
     let elapsed_limit_millis = 20;
 
     let wasm_path = oak_functions_test_utils::build_rust_crate_wasm("weather_lookup").unwrap();
-    let wasm_module_bytes = std::fs::read(&wasm_path).expect("could not read Wasm file");
+    let wasm_module_bytes = std::fs::read(&wasm_path).expect("couldn't read Wasm file");
     let wasm_module_bytes = if warmup {
         wizer::Wizer::new()
             .run(&wasm_module_bytes)
-            .expect("Couldn't initialise Wasm module via Wizer")
+            .expect("couldn't initialise Wasm module via Wizer")
     } else {
         wasm_module_bytes
     };

@@ -72,7 +72,7 @@ fn create_handshakers() -> (
 
     let server_handshaker = ServerHandshaker::new(
         bidirectional_attestation,
-        Arc::new(Signer::create().expect("Couldn't create signer")),
+        Arc::new(Signer::create().expect("couldn't create signer")),
     )
     .unwrap();
 
@@ -85,46 +85,46 @@ fn test_handshake() {
 
     let client_hello = client_handshaker
         .create_client_hello()
-        .expect("Couldn't create client hello message");
+        .expect("couldn't create client hello message");
 
     let server_identity = server_handshaker
         .next_step(&client_hello)
-        .expect("Couldn't process client hello message")
-        .expect("Empty server identity message");
+        .expect("couldn't process client hello message")
+        .expect("empty server identity message");
 
     let client_identity = client_handshaker
         .next_step(&server_identity)
-        .expect("Couldn't process server identity message")
-        .expect("Empty client identity message");
+        .expect("couldn't process server identity message")
+        .expect("empty client identity message");
     assert!(client_handshaker.is_completed());
 
     let result = server_handshaker
         .next_step(&client_identity)
-        .expect("Couldn't process client identity message");
+        .expect("couldn't process client identity message");
     assert_matches!(result, None);
     assert!(server_handshaker.is_completed());
 
     let mut client_encryptor = client_handshaker
         .get_encryptor()
-        .expect("Couldn't get client encryptor");
+        .expect("couldn't get client encryptor");
     let mut server_encryptor = server_handshaker
         .get_encryptor()
-        .expect("Couldn't get server encryptor");
+        .expect("couldn't get server encryptor");
 
     let encrypted_client_data = client_encryptor
         .encrypt(&DATA)
-        .expect("Couldn't encrypt client data");
+        .expect("couldn't encrypt client data");
     let decrypted_client_data = server_encryptor
         .decrypt(&encrypted_client_data)
-        .expect("Couldn't decrypt client data");
+        .expect("couldn't decrypt client data");
     assert_eq!(decrypted_client_data, DATA);
 
     let encrypted_server_data = server_encryptor
         .encrypt(&DATA)
-        .expect("Couldn't encrypt server data");
+        .expect("couldn't encrypt server data");
     let decrypted_server_data = client_encryptor
         .decrypt(&encrypted_server_data)
-        .expect("Couldn't decrypt server data");
+        .expect("couldn't decrypt server data");
     assert_eq!(decrypted_server_data, DATA);
 }
 

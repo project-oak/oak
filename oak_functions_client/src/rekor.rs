@@ -184,14 +184,14 @@ pub fn verify_rekor_log_entry(
 
     let parsed: std::collections::HashMap<String, LogEntry> =
         serde_json::from_slice(log_entry_bytes)
-            .context("couldn't parse bytes into a LogEntry object.")?;
+            .context("couldn't parse bytes into a LogEntry object")?;
     let entry = parsed.values().next().context("no entry in the map")?;
 
     // Parse base64-encoded entry.body into an instance of Body.
     let body_bytes =
         base64::decode(entry.body.clone()).context("couldn't decode Base64 signature")?;
     let body: Body =
-        serde_json::from_slice(&body_bytes).context("couldn't parse bytes into a Body object.")?;
+        serde_json::from_slice(&body_bytes).context("couldn't parse bytes into a Body object")?;
 
     // Verify the body in the Rekor LogEntry
     verify_rekor_body(&body, endorsement_bytes, oak_public_key_bytes)?;
@@ -306,7 +306,7 @@ pub fn unmarshal_pem_to_p256_public_key(
 fn rekor_signature_bundle(log_entry_bytes: &[u8]) -> anyhow::Result<RekorSignatureBundle> {
     let parsed: std::collections::HashMap<String, LogEntry> =
         serde_json::from_slice(log_entry_bytes)
-            .context("couldn't parse bytes into a LogEntry object.")?;
+            .context("couldn't parse bytes into a LogEntry object")?;
     let entry = parsed.values().next().context("no entry in the map")?;
 
     RekorSignatureBundle::try_from(entry)

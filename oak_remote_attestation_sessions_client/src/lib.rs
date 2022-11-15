@@ -47,29 +47,29 @@ impl<T: AttestationTransport> GenericAttestationClient<T> {
         let mut handshaker = ClientHandshaker::new(attestation_behavior)?;
         let client_hello = handshaker
             .create_client_hello()
-            .context("Couldn't create client hello message")?;
+            .context("couldn't create client hello message")?;
 
         let mut response = client
             .message(session_id, client_hello)
             .await
-            .context("Couldn't message client hello message")?;
+            .context("couldn't message client hello message")?;
 
         while !handshaker.is_completed() {
             let request = handshaker
                 .next_step(&response)
-                .context("Couldn't process handshake message")?;
+                .context("couldn't process handshake message")?;
 
             if let Some(request) = request {
                 response = client
                     .message(session_id, request)
                     .await
-                    .context("Couldn't message client hello message")?;
+                    .context("couldn't message client hello message")?;
             }
         }
 
         let encryptor = handshaker
             .get_encryptor()
-            .context("Couldn't get encryptor")?;
+            .context("couldn't get encryptor")?;
 
         Ok(Self {
             session_id,
@@ -83,13 +83,13 @@ impl<T: AttestationTransport> GenericAttestationClient<T> {
         let encrypted_request = self
             .encryptor
             .encrypt(request_as_plaintext_bytes)
-            .context("Couldn't encrypt request")?;
+            .context("couldn't encrypt request")?;
 
         let encrypted_response = self
             .client
             .message(self.session_id, encrypted_request)
             .await
-            .context("Couldn't message encrypted data request")?;
+            .context("couldn't message encrypted data request")?;
 
         // The runtime responds with an encrypted response that contains an
         // encoded proto containing the plaintext response and status code.
@@ -97,7 +97,7 @@ impl<T: AttestationTransport> GenericAttestationClient<T> {
         let encoded_response = self
             .encryptor
             .decrypt(&encrypted_response)
-            .context("Couldn't decrypt response")?;
+            .context("couldn't decrypt response")?;
 
         Ok(encoded_response)
     }

@@ -180,14 +180,14 @@ impl Deserializable for ClientHello {
     fn deserialize(input: &[u8]) -> anyhow::Result<Self> {
         if input.len() != ClientHello::len() {
             bail!(
-                "Invalid client hello message length: expected {}, found {}",
+                "invalid client hello message length: expected {}, found {}",
                 ClientHello::len(),
                 input.len(),
             );
         }
         let mut input = input;
         if input.get_u8() != CLIENT_HELLO_HEADER {
-            bail!("Invalid client hello message header");
+            bail!("invalid client hello message header");
         }
         let mut random = [0u8; REPLAY_PROTECTION_ARRAY_LENGTH];
         input.copy_to_slice(&mut random);
@@ -250,21 +250,21 @@ impl Deserializable for ServerIdentity {
     fn deserialize(input: &[u8]) -> anyhow::Result<Self> {
         if input.len() < ServerIdentity::min_len() {
             bail!(
-                "Server identity message too short: expected at least {} bytes, found {}",
+                "server identity message too short: expected at least {} bytes, found {}",
                 ServerIdentity::min_len(),
                 input.len(),
             );
         }
         if input.len() > MAXIMUM_MESSAGE_SIZE {
             bail!(
-                "Maximum handshake message size of {} exceeded, found {}",
+                "maximum handshake message size of {} exceeded, found {}",
                 MAXIMUM_MESSAGE_SIZE,
                 input.len(),
             );
         }
         let mut input = input;
         if input.get_u8() != SERVER_IDENTITY_HEADER {
-            bail!("Invalid server identity message header");
+            bail!("invalid server identity message header");
         }
 
         let version = input.get_u8();
@@ -280,7 +280,7 @@ impl Deserializable for ServerIdentity {
 
         if input.has_remaining() {
             bail!(
-                "Invalid server identity message: {} unused bytes detected",
+                "invalid server identity message: {} unused bytes detected",
                 input.remaining()
             );
         }
@@ -344,21 +344,21 @@ impl Deserializable for ClientIdentity {
     fn deserialize(input: &[u8]) -> anyhow::Result<Self> {
         if input.len() < ClientIdentity::min_len() {
             bail!(
-                "Client identity message too short: expected at least {} bytes, found {}",
+                "client identity message too short: expected at least {} bytes, found {}",
                 ClientIdentity::min_len(),
                 input.len(),
             );
         }
         if input.len() > MAXIMUM_MESSAGE_SIZE {
             bail!(
-                "Maximum handshake message size of {} exceeded, found {}",
+                "maximum handshake message size of {} exceeded, found {}",
                 MAXIMUM_MESSAGE_SIZE,
                 input.len(),
             );
         }
         let mut input = input;
         if input.get_u8() != CLIENT_IDENTITY_HEADER {
-            bail!("Invalid client identity message header");
+            bail!("invalid client identity message header");
         }
 
         let mut ephemeral_public_key = [0u8; KEY_AGREEMENT_ALGORITHM_KEY_LENGTH];
@@ -371,7 +371,7 @@ impl Deserializable for ClientIdentity {
 
         if input.has_remaining() {
             bail!(
-                "Invalid client identity message: {} unused bytes detected",
+                "invalid client identity message: {} unused bytes detected",
                 input.remaining()
             );
         }
@@ -409,14 +409,14 @@ impl Deserializable for EncryptedData {
     fn deserialize(input: &[u8]) -> anyhow::Result<Self> {
         if input.len() < EncryptedData::min_len() {
             bail!(
-                "Encrypted data message too short: expected at least {} bytes, found {}",
+                "encrypted data message too short: expected at least {} bytes, found {}",
                 EncryptedData::min_len(),
                 input.len(),
             );
         }
         let mut input = input;
         if input.get_u8() != ENCRYPTED_DATA_HEADER {
-            bail!("Invalid encrypted data message header");
+            bail!("invalid encrypted data message header");
         }
 
         let mut nonce = [0u8; NONCE_LENGTH];
@@ -425,7 +425,7 @@ impl Deserializable for EncryptedData {
 
         if input.has_remaining() {
             bail!(
-                "Invalid encrypted data message: {} unused bytes detected",
+                "invalid encrypted data message: {} unused bytes detected",
                 input.remaining()
             );
         }
@@ -438,30 +438,30 @@ impl Deserializable for EncryptedData {
 /// [`MessageWrapper`].
 pub fn deserialize_message(input: &[u8]) -> anyhow::Result<MessageWrapper> {
     if input.is_empty() {
-        return Err(anyhow!("Empty input"));
+        return Err(anyhow!("empty input"));
     }
     match input[0] {
         CLIENT_HELLO_HEADER => {
             let message: ClientHello = Deserializable::deserialize(input)
-                .context("Couldn't deserialize client hello message")?;
+                .context("couldn't deserialize client hello message")?;
             Ok(MessageWrapper::ClientHello(message))
         }
         SERVER_IDENTITY_HEADER => {
             let message: ServerIdentity = Deserializable::deserialize(input)
-                .context("Couldn't deserialize server identity message")?;
+                .context("couldn't deserialize server identity message")?;
             Ok(MessageWrapper::ServerIdentity(message))
         }
         CLIENT_IDENTITY_HEADER => {
             let message: ClientIdentity = Deserializable::deserialize(input)
-                .context("Couldn't deserialize client identity message")?;
+                .context("couldn't deserialize client identity message")?;
             Ok(MessageWrapper::ClientIdentity(message))
         }
         ENCRYPTED_DATA_HEADER => {
             let message: EncryptedData = Deserializable::deserialize(input)
-                .context("Couldn't deserialize encrypted data message")?;
+                .context("couldn't deserialize encrypted data message")?;
             Ok(MessageWrapper::EncryptedData(message))
         }
-        header => Err(anyhow!("Unknown message header: {:#02x}", header)),
+        header => Err(anyhow!("unknown message header: {:#02x}", header)),
     }
 }
 
@@ -474,7 +474,7 @@ fn get_vec(source: &mut &[u8]) -> anyhow::Result<Vec<u8>> {
     let length = source.get_u64_le();
     if length > source.remaining() as u64 {
         bail!(
-            "Invalid vector serialization: required length is {} but only {} bytes provided",
+            "nvalid vector serialization: required length is {} but only {} bytes provided",
             length,
             source.remaining()
         )

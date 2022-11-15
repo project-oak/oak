@@ -24,18 +24,18 @@ use proto::{benchmark_request::Action, BenchmarkRequest, LookupTest};
 
 #[cfg_attr(not(test), no_mangle)]
 pub extern "C" fn main() {
-    let request = oak_functions_sdk::read_request().expect("Couldn't read request body.");
-    let request = BenchmarkRequest::decode(&*request).expect("Couldn't decode request.");
+    let request = oak_functions_sdk::read_request().expect("couldn't read request body");
+    let request = BenchmarkRequest::decode(&*request).expect("couldn't decode request");
 
     match request.action.unwrap() {
         Action::Lookup(LookupTest { key }) => {
             let mut response = Vec::new();
             for _ in 0..request.iterations {
                 response = oak_functions_sdk::storage_get_item(&key)
-                    .expect("Couldn't look up entry")
+                    .expect("couldn't look up entry")
                     .unwrap_or_default();
             }
-            oak_functions_sdk::write_response(&response).expect("Couldn't write response body.");
+            oak_functions_sdk::write_response(&response).expect("couldn't write response body");
         }
     };
 }

@@ -208,7 +208,7 @@ pub fn run_oak_functions_examples(opt: &RunOakExamplesOpt, scope: &Scope) -> Ste
     let examples: Vec<OakExample> = example_toml_files(scope)
         .map(|path| {
             toml::from_str(&read_file(&path)).unwrap_or_else(|err| {
-                panic!("could not parse example manifest file {:?}: {}", path, err)
+                panic!("couldn't parse example manifest file {:?}: {}", path, err)
             })
         })
         .filter(|example: &OakExample| example.has_oak_functions_application())
@@ -315,12 +315,12 @@ pub fn build_oak_functions_example(opt: &RunOakExamplesOpt, scope: &Scope) -> St
     let example: OakExample = example_toml_files(scope)
         .map(|path| {
             toml::from_str(&read_file(&path)).unwrap_or_else(|err| {
-                panic!("could not parse example manifest file {:?}: {}", path, err)
+                panic!("couldn't parse example manifest file {:?}: {}", path, err)
             })
         })
         .find(|example: &OakExample| &example.name == example_name)
         .filter(|example| example.has_oak_functions_application())
-        .expect("could not find the specified functions example, try with `--scope=all`");
+        .expect("couldn't find the specified functions example, try with `--scope=all`");
 
     // Build steps for building clients
     let build_client = Step::Multiple {

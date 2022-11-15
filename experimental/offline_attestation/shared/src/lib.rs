@@ -110,10 +110,10 @@ impl PublicKeyInfo {
 /// public key.
 pub fn encrypt(public_key_handle: &Handle, data: &[u8]) -> anyhow::Result<Vec<u8>> {
     let encryptor = tink_hybrid::new_encrypt(public_key_handle)
-        .map_err(|error| anyhow!("Couldn't create hybrid encryptor: {}", error))?;
+        .map_err(|error| anyhow!("couldn't create hybrid encryptor: {}", error))?;
     encryptor
         .encrypt(data, ENCRYPTION_CONTEXT)
-        .map_err(|error| anyhow!("Couldn't encrypt data: {}", error))
+        .map_err(|error| anyhow!("couldn't encrypt data: {}", error))
 }
 
 /// Decrypts the provides `cyphertext` using the private key.
@@ -122,17 +122,17 @@ pub fn encrypt(public_key_handle: &Handle, data: &[u8]) -> anyhow::Result<Vec<u8
 /// decryption will only succeed if the ciphertext was created using the corresponding public key.
 pub fn decrypt(private_key_handle: &Handle, ciphertext: &[u8]) -> anyhow::Result<Vec<u8>> {
     let decryptor = tink_hybrid::new_decrypt(private_key_handle)
-        .map_err(|error| anyhow!("Couldn't create hybrid decryptor: {}", error))?;
+        .map_err(|error| anyhow!("couldn't create hybrid decryptor: {}", error))?;
     decryptor
         .decrypt(ciphertext, ENCRYPTION_CONTEXT)
-        .map_err(|error| anyhow!("Couldn't decrypt ciphertext: {}", error))
+        .map_err(|error| anyhow!("couldn't decrypt ciphertext: {}", error))
 }
 
 /// Generates a new private key suitable for hybrid encryption and returns a handle to the
 /// containing keyset.
 pub fn generate_private_key() -> anyhow::Result<Handle> {
     tink_core::keyset::Handle::new(&tink_hybrid::ecies_hkdf_aes128_gcm_key_template())
-        .map_err(|error| anyhow!("Couldn't create private key: {}", error))
+        .map_err(|error| anyhow!("couldn't create private key: {}", error))
 }
 
 /// Serialises the handle's underlying keyset containing the public key to a binary representation.
@@ -143,7 +143,7 @@ pub fn serialize_public_key(public_key_handle: &Handle) -> anyhow::Result<Vec<u8
     let mut writer = tink_core::keyset::BinaryWriter::new(&mut result);
     public_key_handle
         .write_with_no_secrets(&mut writer)
-        .map_err(|error| anyhow!("Couldn't deserialise public key: {}", error))?;
+        .map_err(|error| anyhow!("couldn't deserialise public key: {}", error))?;
     Ok(result)
 }
 
@@ -152,7 +152,7 @@ pub fn serialize_public_key(public_key_handle: &Handle) -> anyhow::Result<Vec<u8
 pub fn deserialize_public_key(data: &[u8]) -> anyhow::Result<Handle> {
     let mut reader = tink_core::keyset::BinaryReader::new(data);
     Handle::read_with_no_secrets(&mut reader)
-        .map_err(|error| anyhow!("Couldn't deserialise public key: {}", error))
+        .map_err(|error| anyhow!("couldn't deserialise public key: {}", error))
 }
 
 /// Serialises the attestation report to a binary representation.

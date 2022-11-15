@@ -40,12 +40,12 @@ fn start_echo_server(channel: Box<dyn Channel>) -> ! {
     let service = oak_echo_service::EchoServiceImpl::default();
     let server = service.serve();
     oak_channel::server::start_blocking_server(channel, server)
-        .expect("Runtime encountered an unrecoverable error");
+        .expect("runtime encountered an unrecoverable error");
 }
 
 #[alloc_error_handler]
 fn out_of_memory(layout: ::core::alloc::Layout) -> ! {
-    panic!("Error allocating memory: {:#?}", layout);
+    panic!("error allocating memory: {:#?}", layout);
 }
 
 #[panic_handler]

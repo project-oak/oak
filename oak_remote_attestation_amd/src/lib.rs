@@ -55,7 +55,7 @@ impl AttestationVerifier for PlaceholderAmdAttestationVerifier {
     ) -> anyhow::Result<()> {
         let attestation_report = PlaceholderAmdReport::from_string(
             core::str::from_utf8(attestation)
-                .map_err(|_err| anyhow::anyhow!("could not parse remote attestation report"))?,
+                .map_err(|_err| anyhow::anyhow!("couldn't parse remote attestation report"))?,
         )?;
         let actual_attested_data = attestation_report.data;
         if actual_attested_data == expected_attested_data {
@@ -108,12 +108,12 @@ impl PlaceholderAmdReport {
     // TODO(#2842): Use raw report instead of JSON.
     pub fn from_string(input: &str) -> anyhow::Result<Self> {
         serde_json::from_str(input)
-            .map_err(|_err| anyhow::anyhow!("Couldn't deserialize attestation report"))
+            .map_err(|_err| anyhow::anyhow!("couldn't deserialize attestation report"))
     }
 
     // TODO(#2842): Use raw report instead of JSON.
     pub fn to_string(&self) -> anyhow::Result<String> {
         serde_json::to_string(&self)
-            .map_err(|_err| anyhow::anyhow!("Couldn't serialize attestation report"))
+            .map_err(|_err| anyhow::anyhow!("couldn't serialize attestation report"))
     }
 }

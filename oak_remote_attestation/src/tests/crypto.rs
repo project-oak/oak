@@ -113,19 +113,19 @@ fn test_encrypt(data: Vec<u8>) -> bool {
 
     let encrypted_data = server_encryptor
         .encrypt(&data)
-        .expect("Couldn't encrypt data");
+        .expect("couldn't encrypt data");
     let decrypted_data = client_encryptor
         .decrypt(&encrypted_data)
-        .expect("Couldn't decrypt data");
+        .expect("couldn't decrypt data");
     data == decrypted_data
 }
 
 #[test]
 fn test_create_key_negotiator() {
     let server_key_negotiator = KeyNegotiator::create(KeyNegotiatorType::Server)
-        .expect("Couldn't create server key negotiator");
+        .expect("couldn't create server key negotiator");
     let client_key_negotiator = KeyNegotiator::create(KeyNegotiatorType::Client)
-        .expect("Couldn't create client key negotiator");
+        .expect("couldn't create client key negotiator");
 
     let server_ephemeral_public_key = server_key_negotiator.public_key();
     assert!(server_ephemeral_public_key.is_ok());
@@ -184,10 +184,10 @@ fn test_create_encryptor() {
 
     let mut server_encryptor = server_key_negotiator
         .create_encryptor(&client_ephemeral_public_key)
-        .expect("Couldn't create server encryptor");
+        .expect("couldn't create server encryptor");
     let mut client_encryptor = client_key_negotiator
         .create_encryptor(&server_ephemeral_public_key)
-        .expect("Couldn't create client encryptor");
+        .expect("couldn't create client encryptor");
 
     let encrypted_server_data = server_encryptor.encrypt(&DATA).unwrap();
     let decrypted_server_data = client_encryptor.decrypt(&encrypted_server_data).unwrap();
@@ -200,7 +200,7 @@ fn test_create_encryptor() {
 
 #[test]
 fn test_create_signer() {
-    let signer = Signer::create().expect("Couldn't create signer");
+    let signer = Signer::create().expect("couldn't create signer");
     let result = signer.public_key();
     assert!(result.is_ok());
 }
@@ -216,11 +216,11 @@ fn test_verify() {
 
 #[quickcheck]
 fn test_sign(data: Vec<u8>) -> bool {
-    let signer = Signer::create().expect("Couldn't create signer");
+    let signer = Signer::create().expect("couldn't create signer");
     let public_key = signer
         .public_key()
-        .expect("Couldn't get signing public key");
-    let signature = signer.sign(&data).expect("Couldn't sign data");
+        .expect("couldn't get signing public key");
+    let signature = signer.sign(&data).expect("couldn't sign data");
 
     let verifier = SignatureVerifier::new(&public_key).unwrap();
     let result = verifier.verify(&data, &signature);

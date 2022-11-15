@@ -52,7 +52,7 @@ pub fn init_logging(port_factory: PortFactoryWrapper) {
     // available, so assuming the loader adheres to it, this is safe.
     let mut port = unsafe { SerialPort::new(SERIAL_BASE, port_factory) };
     port.init()
-        .expect("Couldn't initialize logging serial port.");
+        .expect("couldn't initialize logging serial port");
     {
         let mut lock = SERIAL_PORT.lock();
         *lock.deref_mut() = Some(port);

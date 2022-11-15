@@ -33,7 +33,7 @@ pub fn load_lookup_data(
 ) -> anyhow::Result<HashMap<Vec<u8>, Vec<u8>>> {
     let bytes = fs::read(file_path).map_err(|error| {
         anyhow!(
-            "Couldn't read the lookup data file {}: {}",
+            "couldn't read the lookup data file {}: {}",
             file_path.display(),
             error
         )
@@ -49,7 +49,7 @@ fn parse_lookup_entries<B: prost::bytes::Buf>(
     while lookup_data_buffer.has_remaining() {
         let entry =
             oak_functions_abi::proto::Entry::decode_length_delimited(&mut lookup_data_buffer)
-                .context("could not decode entry")?;
+                .context("couldn't decode entry")?;
         entries.insert(entry.key, entry.value);
     }
     Ok(entries)

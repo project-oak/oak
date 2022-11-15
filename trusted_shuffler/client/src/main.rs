@@ -87,12 +87,12 @@ async fn main() -> anyhow::Result<()> {
                 let url = format!("{}/request", server_url);
                 send_http_request(&url, Method::POST, request.as_bytes()).await
             }
-            .context("Couldn't receive response");
+            .context("couldn't receive response");
             let response_received = start_time.elapsed();
 
             // Parse and check the response.
             let parsed_response =
-                String::from_utf8(response.unwrap()).context("Couldn't decode response body");
+                String::from_utf8(response.unwrap()).context("couldn't decode response body");
             log::info!(
                 "Client Response {} at {:?}",
                 prime_to_send,

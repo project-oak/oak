@@ -63,7 +63,7 @@ async fn main() -> anyhow::Result<()> {
     let listen_address = opt
         .listen_address
         .parse()
-        .context("Couldn't parse address")?;
+        .context("couldn't parse address")?;
     let timeout = opt.timeout_ms.map(Duration::from_millis);
 
     info!(
@@ -78,7 +78,7 @@ async fn main() -> anyhow::Result<()> {
     ));
     tokio::select!(
         result = server => {
-            result.context("Couldn't run server")?;
+            result.context("couldn't run server")?;
         },
         () = tokio::signal::ctrl_c().map(|r| r.unwrap()) => {
             info!("Stopping the Trusted Shuffler server");

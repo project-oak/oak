@@ -283,7 +283,7 @@ where
         let virtual_address = VirtAddr::from_ptr(ghcb.as_ref() as *const Ghcb);
         // Crashing is OK if we cannot find the physical address for the GHCB.
         let gpa = translate(virtual_address)
-            .expect("Could not translate the GHCB virtual address to a physical address.");
+            .expect("couldn't translate the GHCB virtual address to a physical address");
         Self { ghcb, gpa }
     }
 
@@ -429,7 +429,7 @@ where
             Ok(())
         } else {
             // For now we treat all non-zero return values as unrecoverable errors.
-            Err("Guest message response indicates an error.")
+            Err("guest message response indicates an error")
         }
     }
 
@@ -451,7 +451,7 @@ where
             Ok(())
         } else {
             // For now we treat all non-zero return values as unrecoverable errors.
-            Err("VMGEXIT call returned an error.")
+            Err("VMGEXIT call returned an error")
         }
     }
 }

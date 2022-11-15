@@ -83,7 +83,7 @@ pub fn reshare_ghcb<M: Mapper<Size4KiB>>(mapper: &mut M) {
                 | PageTableFlags::NO_EXECUTE,
         ) {
             Ok(mapper_flush) => mapper_flush.flush(),
-            Err(error) => panic!("Couldn't update page table flags for GHCB: {:?}", error),
+            Err(error) => panic!("couldn't update page table flags for GHCB: {:?}", error),
         };
     }
 }
@@ -101,21 +101,21 @@ fn init_ghcb_early(snp_enabled: bool) -> GhcbProtocol<'static, Ghcb> {
         let ghcb_frame = PhysFrame::<Size2MiB>::from_start_address(
             mapper
                 .translate_virtual(ghcb_page.start_address())
-                .expect("Couldn't find the physical address for the GHCB"),
+                .expect("couldn't find the physical address for the GHCB"),
         )
-        .expect("The GHCB physical address is not correctly aligned");
+        .expect("the GHCB physical address is not correctly aligned");
 
         // Since we don't have the GHCB set up already we need to use the MSR protocol to mark every
         // individual 4KiB area in the 2MiB page as shared in the RMP. It is OK to crash if we
         // cannot share the GHCB with the hypervisor.
         change_snp_state_for_frame(&ghcb_frame, PageAssignment::Shared)
-            .expect("Could not change SNP state for frame.");
+            .expect("couldn't change SNP state for frame");
 
         let ghcb_location_request =
             RegisterGhcbGpaRequest::new(ghcb_frame.start_address().as_u64() as usize)
-                .expect("Invalid address for GHCB location");
+                .expect("invalid address for GHCB location");
         register_ghcb_location(ghcb_location_request)
-            .expect("Couldn't register the GHCB address with the hypervisor");
+            .expect("couldn't register the GHCB address with the hypervisor");
     }
 
     // Safety: we only remove the encrypted bit as the initial pages created by the stage 0 firmware
@@ -126,7 +126,7 @@ fn init_ghcb_early(snp_enabled: bool) -> GhcbProtocol<'static, Ghcb> {
             PageTableFlags::PRESENT | PageTableFlags::WRITABLE,
         ) {
             Ok(mapper_flush) => mapper_flush.flush(),
-            Err(error) => panic!("Couldn't update page table flags for GHCB: {:?}", error),
+            Err(error) => panic!("couldn't update page table flags for GHCB: {:?}", error),
         };
     }
 
@@ -160,6 +160,5 @@ fn get_ghcb_page() -> Page<Size2MiB> {
     // address and don't dereference it.
     let ghcb_pointer = unsafe { &GHCB_WRAPPER as *const GhcbAlignmentWrapper };
     let ghcb_address = VirtAddr::from_ptr(ghcb_pointer);
-    Page::<Size2MiB>::from_start_address(ghcb_address)
-        .expect("Invalid start address for GHCB page.")
+    Page::<Size2MiB>::from_start_address(ghcb_address).expect("invalid start address for GHCB page")
 }

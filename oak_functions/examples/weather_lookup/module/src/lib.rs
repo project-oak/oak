@@ -45,24 +45,24 @@ pub extern "C" fn main() {
     let result: Result<Vec<u8>, String> = try {
         // Read the request.
         let request_body = oak_functions_sdk::read_request()
-            .map_err(|err| format!("could not read request body: {:?}", err))?;
+            .map_err(|err| format!("couldn't read request body: {:?}", err))?;
 
         // Parse the request as JSON.
         let request: Request = serde_json::from_slice(&request_body)
-            .map_err(|err| format!("could not deserialize request as JSON: {:?}", err))?;
+            .map_err(|err| format!("couldn't deserialize request as JSON: {:?}", err))?;
         log!("parsed request: {:?}\n", request);
 
         // Find the S2 cell (using the default level) that contains the current location.
         let level = location_utils::S2_DEFAULT_LEVEL;
         let location = location_from_degrees(request.latitude_degrees, request.longitude_degrees);
         let cell =
-            find_cell(&location, level).map_err(|err| format!("could not find cell: {:?}", err))?;
+            find_cell(&location, level).map_err(|err| format!("couldn't find cell: {:?}", err))?;
         log!("current location cell token: {}\n", cell.to_token());
 
         // Look up the index values for the list of weather data points in the vicinity of the cell.
         let index = oak_functions_sdk::storage_get_item(&cell_id_to_bytes(&cell))
-            .map_err(|err| format!("could not get index item: {:?}", err))?
-            .ok_or("could not find index item for cell")?;
+            .map_err(|err| format!("couldn't get index item: {:?}", err))?
+            .ok_or("couldn't find index item for cell")?;
 
         // Find the closest key by linearly scanning the nearby weather data points to find the
         // closest one.
@@ -71,7 +71,7 @@ pub extern "C" fn main() {
 
         for chunk in index.chunks(8) {
             let test = location_from_bytes(chunk)
-                .map_err(|err| format!("could not convert chunk to location: {:?}", err))?;
+                .map_err(|err| format!("couldn't convert chunk to location: {:?}", err))?;
             let distance = location.distance(&test);
             if distance < best_distance {
                 best_distance = distance;
@@ -84,13 +84,13 @@ pub extern "C" fn main() {
                 log!("nearest data point: {:?}\n", key_location);
                 let best_value =
                     oak_functions_sdk::storage_get_item(&location_to_bytes(&key_location))
-                        .map_err(|err| format!("could not get item: {:?}", err))?
-                        .ok_or("could not find item with key")?;
+                        .map_err(|err| format!("couldn't get item: {:?}", err))?
+                        .ok_or("couldn't find item with key")?;
                 log!("nearest location value: {:?}\n", best_value);
 
                 best_value
             }
-            None => b"could not find location within cutoff".to_vec(),
+            None => b"couldn't find location within cutoff".to_vec(),
         };
 
         result
@@ -99,7 +99,7 @@ pub extern "C" fn main() {
     let response = result.unwrap_or_else(|err| err.as_bytes().to_vec());
 
     // Write the response.
-    oak_functions_sdk::write_response(&response).expect("Couldn't write the response body.");
+    oak_functions_sdk::write_response(&response).expect("couldn't write the response body");
 }
 
 #[export_name = "wizer.initialize"]

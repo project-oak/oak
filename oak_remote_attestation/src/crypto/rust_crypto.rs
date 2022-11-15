@@ -71,7 +71,7 @@ impl AeadEncryptor {
     /// Encrypts `data` using `AeadEncryptor::encryption_key`.
     pub fn encrypt(&mut self, data: &[u8]) -> anyhow::Result<EncryptedData> {
         // Generate a random nonce.
-        let nonce = Self::generate_nonce().context("Couldn't generate nonce")?;
+        let nonce = Self::generate_nonce().context("couldn't generate nonce")?;
         let cipher = Aes256Gcm::new(Key::<Aes256Gcm>::from_slice(&self.encryption_key.0));
 
         let mut encrypted_data = data.to_vec();
@@ -86,7 +86,7 @@ impl AeadEncryptor {
                 EMPTY_ADITIONAL_DATA,
                 &mut encrypted_data,
             )
-            .map_err(|error| anyhow!("Couldn't encrypt data: {:?}", error))?;
+            .map_err(|error| anyhow!("couldn't encrypt data: {:?}", error))?;
 
         Ok(EncryptedData::new(nonce, encrypted_data))
     }
@@ -108,7 +108,7 @@ impl AeadEncryptor {
                 EMPTY_ADITIONAL_DATA,
                 &mut decrypted_data,
             )
-            .map_err(|error| anyhow!("Couldn't decrypt data: {:?}", error))?;
+            .map_err(|error| anyhow!("couldn't decrypt data: {:?}", error))?;
         Ok(decrypted_data.to_vec())
     }
 
@@ -153,7 +153,7 @@ impl KeyNegotiator {
     ) -> anyhow::Result<AeadEncryptor> {
         let (encryption_key, decryption_key) = self
             .derive_session_keys(peer_public_key)
-            .context("Couldn't derive session keys")?;
+            .context("couldn't derive session keys")?;
         let encryptor = AeadEncryptor::new(encryption_key, decryption_key);
         Ok(encryptor)
     }
@@ -164,7 +164,7 @@ impl KeyNegotiator {
         self,
         peer_public_key: &[u8; KEY_AGREEMENT_ALGORITHM_KEY_LENGTH],
     ) -> anyhow::Result<(EncryptionKey, DecryptionKey)> {
-        let self_public_key = self.public_key().context("Couldn't get self public key")?;
+        let self_public_key = self.public_key().context("couldn't get self public key")?;
         let parsed_public_key = PublicKey::from(*peer_public_key);
         let key_material = self.private_key.diffie_hellman(&parsed_public_key);
 
@@ -178,7 +178,7 @@ impl KeyNegotiator {
                         &self_public_key,
                         peer_public_key,
                     )
-                    .context("Couldn't derive decryption key")?,
+                    .context("couldn't derive decryption key")?,
                 );
                 let decryption_key = DecryptionKey(
                     Self::key_derivation_function(
@@ -187,7 +187,7 @@ impl KeyNegotiator {
                         &self_public_key,
                         peer_public_key,
                     )
-                    .context("Couldn't derive encryption key")?,
+                    .context("couldn't derive encryption key")?,
                 );
                 Ok((encryption_key, decryption_key))
             }
@@ -200,7 +200,7 @@ impl KeyNegotiator {
                         peer_public_key,
                         &self_public_key,
                     )
-                    .context("Couldn't derive decryption key")?,
+                    .context("couldn't derive decryption key")?,
                 );
                 let decryption_key = DecryptionKey(
                     Self::key_derivation_function(
@@ -209,7 +209,7 @@ impl KeyNegotiator {
                         peer_public_key,
                         &self_public_key,
                     )
-                    .context("Couldn't derive encryption key")?,
+                    .context("couldn't derive encryption key")?,
                 );
                 Ok((encryption_key, decryption_key))
             }
@@ -276,17 +276,17 @@ impl Signer {
             .as_bytes()
             .try_into()
             .map_err(anyhow::Error::msg)
-            .context("Incorrect public key length")
+            .context("incorrect public key length")
     }
 
     pub fn sign(&self, input: &[u8]) -> anyhow::Result<[u8; SIGNATURE_LENGTH]> {
         self.signing_key
             .try_sign(input)
-            .map_err(|error| anyhow!("Couldn't sign input: {:?}", error))?
+            .map_err(|error| anyhow!("couldn't sign input: {:?}", error))?
             .as_ref()
             .try_into()
             .map_err(anyhow::Error::msg)
-            .context("Incorrect signature length")
+            .context("incorrect signature length")
     }
 }
 
@@ -308,7 +308,7 @@ impl SignatureVerifier {
         let signature = signature[..].try_into().map_err(anyhow::Error::msg)?;
         self.verifying_key
             .verify(input, &signature)
-            .map_err(|error| anyhow!("Signature verification failed: {:?}", error))
+            .map_err(|error| anyhow!("signature verification failed: {:?}", error))
     }
 }
 
@@ -324,6 +324,6 @@ pub fn get_random<const L: usize>() -> anyhow::Result<[u8; L]> {
     let mut result: [u8; L] = [Default::default(); L];
     OsRng
         .try_fill_bytes(&mut result[..])
-        .map_err(|error| anyhow!("Couldn't create random value: {:?}", error))?;
+        .map_err(|error| anyhow!("couldn't create random value: {:?}", error))?;
     Ok(result)
 }

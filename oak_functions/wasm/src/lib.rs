@@ -101,13 +101,13 @@ where
             MAIN_FUNCTION_NAME,
             &wasmi::Signature::new(&[][..], None),
         )
-        .context("could not validate `main` export")?;
+        .context("couldn't validate `main` export")?;
         check_export_function_signature(
             &instance,
             ALLOC_FUNCTION_NAME,
             &wasmi::Signature::new(&[ValueType::I32][..], Some(ValueType::I32)),
         )
-        .context(" could not validate `alloc` export")?;
+        .context("couldn't validate `alloc` export")?;
 
         abi.instance = Some(instance.clone());
         // Make sure that non-empty `memory` is attached to the WasmState. Fail early if
@@ -115,10 +115,10 @@ where
         abi.memory = Some(
             instance
                 .export_by_name("memory")
-                .context("could not find Wasm `memory` export")?
+                .context("couldn't find Wasm `memory` export")?
                 .as_memory()
                 .cloned()
-                .context("could not interpret Wasm `memory` export as memory")?,
+                .context("couldn't interpret Wasm `memory` export as memory")?,
         );
 
         Ok(abi)
@@ -129,7 +129,7 @@ where
         let result = instance.invoke_export(MAIN_FUNCTION_NAME, &[], self);
         self.logger.log_sensitive(
             Level::Info,
-            &format!("Running Wasm module completed with result: {:?}", result),
+            &format!("running Wasm module completed with result: {:?}", result),
         );
     }
 
@@ -139,9 +139,7 @@ where
 
     /// Helper function to get memory.
     pub fn get_memory(&self) -> &wasmi::MemoryRef {
-        self.memory
-            .as_ref()
-            .expect("WasmState memory not attached!?")
+        self.memory.as_ref().expect("WasmState memory not attached")
     }
 
     /// Validates whether a given address range (inclusive) falls within the currently allocated
@@ -279,7 +277,7 @@ where
         response_len_ptr: AbiPointer,
     ) -> Result<(), OakStatus> {
         let handle: ExtensionHandle = ExtensionHandle::from_i32(handle).ok_or_else(|| {
-            self.log_error(&format!("Fail to convert handle {:?} from i32.", handle));
+            self.log_error(&format!("failed to convert handle {:?} from i32", handle));
             OakStatus::ErrInvalidHandle
         })?;
 
@@ -287,7 +285,7 @@ where
             .read_buffer_from_wasm_memory(request_ptr, request_len)
             .map_err(|err| {
                 self.log_error(&format!(
-                    "Handle {:?}: Unable to read input from guest memory: {:?}",
+                    "handle {:?}: unable to read input from guest memory: {:?}",
                     handle, err
                 ));
                 OakStatus::ErrInvalidArgs
@@ -297,7 +295,7 @@ where
             // Can't convince the borrow checker to use `ok_or_else` to `self.log_error`.
             Some(extension) => Ok(extension),
             None => {
-                self.log_error(&format!("Cannot find extension with handle {:?}.", handle));
+                self.log_error(&format!("cannot find extension with handle {:?}", handle));
                 Err(OakStatus::ErrInvalidHandle)
             }
         }?;
@@ -378,14 +376,14 @@ where
         // Look for the function (i.e., `field_name`) in the statically registered functions.
         let (index, expected_signature) =
             oak_functions_resolve_func(field_name).ok_or_else(|| {
-                wasmi::Error::Instantiation(format!("Export {} not found", field_name))
+                wasmi::Error::Instantiation(format!("export {} not found", field_name))
             })?;
 
         if signature == &expected_signature {
             Ok(wasmi::FuncInstance::alloc_host(expected_signature, index))
         } else {
             Err(wasmi::Error::Instantiation(format!(
-                "Export `{}` doesn't match expected signature; got: {:?}, expected: {:?}",
+                "export `{}` doesn't match expected signature; got: {:?}, expected: {:?}",
                 field_name, signature, expected_signature
             )))
         }
@@ -399,10 +397,10 @@ fn check_export_function_signature(
 ) -> anyhow::Result<()> {
     let export_function = instance
         .export_by_name(export_name)
-        .context("could not find Wasm export")?
+        .context("couldn't find Wasm export")?
         .as_func()
         .cloned()
-        .context("could not interpret Wasm export as function")?;
+        .context("couldn't interpret Wasm export as function")?;
     if export_function.signature() != expected_signature {
         anyhow::bail!(
             "invalid signature for export: {:?}, expected: {:?}",
@@ -434,7 +432,7 @@ where
         logger: L,
     ) -> anyhow::Result<Self> {
         let module = wasmi::Module::from_buffer(wasm_module_bytes)
-            .map_err(|err| anyhow::anyhow!("could not load module from buffer: {:?}", err))?;
+            .map_err(|err| anyhow::anyhow!("couldn't load module from buffer: {:?}", err))?;
 
         Ok(WasmHandler {
             module: Arc::new(module),

@@ -61,14 +61,14 @@ pub fn compile_rust_wasm(manifest_path: &str, release: bool) -> anyhow::Result<V
         .args(args)
         .env_remove("RUSTFLAGS")
         .spawn()
-        .context("Couldn't spawn cargo build")?
+        .context("couldn't spawn cargo build")?
         .wait()
-        .context("Couldn't wait for cargo build to finish")?;
+        .context("couldn't wait for cargo build to finish")?;
 
     let module_path = build_wasm_module_path(&metadata);
     info!("Compiled Wasm module path: {:?}", module_path);
 
-    std::fs::read(module_path).context("Couldn't read compiled module")
+    std::fs::read(module_path).context("couldn't read compiled module")
 }
 
 /// Serializes the provided map as a contiguous buffer of length-delimited protobuf messages of type
@@ -79,20 +79,20 @@ pub fn serialize_entries(entries: HashMap<Vec<u8>, Vec<u8>>) -> Vec<u8> {
         let entry_proto = oak_functions_abi::proto::Entry { key, value };
         entry_proto
             .encode_length_delimited(&mut buf)
-            .expect("could not encode entry as length delimited");
+            .expect("couldn't encode entry as length delimited");
     }
     buf
 }
 
 pub fn write_to_temp_file(content: &[u8]) -> tempfile::NamedTempFile {
-    let mut file = tempfile::NamedTempFile::new().expect("could not create temp file");
+    let mut file = tempfile::NamedTempFile::new().expect("couldn't create temp file");
     file.write_all(content)
-        .expect("could not write content to temp file");
+        .expect("couldn't write content to temp file");
     file
 }
 
 pub fn free_port() -> u16 {
-    port_check::free_local_port().expect("could not pick free local port")
+    port_check::free_local_port().expect("couldn't pick free local port")
 }
 
 /// Wrapper around a termination signal [`oneshot::Sender`] and the [`JoinHandle`] of the associated
@@ -111,10 +111,10 @@ impl<T> Background<T> {
     pub async fn terminate_and_join(self) -> T {
         self.term_tx
             .send(())
-            .expect("could not send signal on termination channel");
+            .expect("couldn't send signal on termination channel");
         self.join_handle
             .await
-            .expect("could not wait for background task to terminate")
+            .expect("couldn' wait for background task to terminate")
     }
 }
 
@@ -148,7 +148,7 @@ fn build_rust_crate_linux(crate_name: &str) -> anyhow::Result<String> {
     )
     .dir(env!("WORKSPACE_ROOT"))
     .run()
-    .context(format!("could not compile {crate_name}"))?;
+    .context(format!("couldn't compile {crate_name}"))?;
     Ok(format!(
         "{}target/x86_64-unknown-linux-musl/release/{crate_name}",
         env!("WORKSPACE_ROOT")
@@ -168,7 +168,7 @@ pub fn build_rust_crate_wasm(crate_name: &str) -> anyhow::Result<String> {
     )
     .dir(env!("WORKSPACE_ROOT"))
     .run()
-    .context(format!("could not compile {crate_name}"))?;
+    .context(format!("couldn't compile {crate_name}"))?;
     Ok(format!(
         "{}target/wasm32-unknown-unknown/release/{crate_name}.wasm",
         env!("WORKSPACE_ROOT"),
@@ -198,7 +198,7 @@ pub fn create_and_start_oak_functions_server(
     )
     .dir(env!("WORKSPACE_ROOT"))
     .reader()
-    .context("could not run oak_functions_launcher")?;
+    .context("couldn't run oak_functions_launcher")?;
     Ok(handle)
 }
 
@@ -242,19 +242,19 @@ pub async fn make_request(port: u16, request_body: &[u8]) -> Vec<u8> {
     let uri = format!("http://localhost:{port}/");
 
     // Create client
-    let mut client = Client::new(&uri).await.expect("Could not create client");
+    let mut client = Client::new(&uri).await.expect("couldn't create client");
 
     client
         .invoke(request_body)
         .await
-        .expect("Error while awaiting response")
+        .expect("error while awaiting response")
 }
 
 // Assert that string value of the body of the given response matches the expected string.
 pub fn assert_response_body(response: Response, expected: &str) {
     let body = response.body().unwrap();
     assert_eq!(
-        std::str::from_utf8(body).expect("could not convert response body from utf8"),
+        std::str::from_utf8(body).expect("couldn't convert response body from utf8"),
         expected
     )
 }

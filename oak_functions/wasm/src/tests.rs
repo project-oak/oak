@@ -160,7 +160,7 @@ fn test_invoke_extension() {
     // Assumes we have a Testing extension in our test wasm_state.
     let message = "Hello!".to_owned();
     let request = bincode::serialize(&TestingRequest::Echo(message.clone()))
-        .expect("Failed to serialize request.");
+        .expect("failed to serialize request");
 
     // Guess some memory addresses in linear Wasm memory to write the request to.
     let request_ptr: AbiPointer = 100;
@@ -181,7 +181,7 @@ fn test_invoke_extension() {
     assert!(result.is_ok());
 
     let expected_response =
-        bincode::serialize(&TestingResponse::Echo(message)).expect("Failed to serialize response.");
+        bincode::serialize(&TestingResponse::Echo(message)).expect("failed to serialize response");
 
     // Get response_len from response_len_ptr.
     let response_len: AbiPointerOffset = wasm_state
@@ -209,14 +209,14 @@ fn create_test_wasm_state() -> WasmState<TestingLogger> {
     let logger = TestingLogger::for_test();
 
     let testing_factory = TestingFactory::new_boxed_extension_factory(logger.clone())
-        .expect("Could not create TestingFactory.");
+        .expect("couldn't create TestingFactory");
 
     let wasm_module_path = oak_functions_test_utils::build_rust_crate_wasm("echo").unwrap();
     let wasm_module_bytes = std::fs::read(&wasm_module_path).unwrap();
 
     let wasm_handler = WasmHandler::create(&wasm_module_bytes, vec![testing_factory], logger)
-        .expect("Could not create WasmHandler.");
+        .expect("couldn't create WasmHandler");
     wasm_handler
         .init_wasm_state(b"".to_vec())
-        .expect("Could not create WasmState.")
+        .expect("couldn't create WasmState")
 }

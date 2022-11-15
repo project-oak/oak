@@ -25,9 +25,9 @@ mod tests;
 
 #[cfg_attr(not(test), no_mangle)]
 pub extern "C" fn main() {
-    let request = oak_functions_sdk::read_request().expect("Couldn't read request body.");
+    let request = oak_functions_sdk::read_request().expect("couldn't read request body");
     let response = oak_functions_sdk::storage_get_item(&request)
-        .expect("Couldn't look up entry")
+        .expect("couldn't look up entry")
         .unwrap_or_default();
-    oak_functions_sdk::write_response(&response).expect("Couldn't write response body.");
+    oak_functions_sdk::write_response(&response).expect("couldn't write response body");
 }

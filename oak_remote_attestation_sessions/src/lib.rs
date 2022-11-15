@@ -88,7 +88,7 @@ impl<G: AttestationGenerator + Clone, V: AttestationVerifier> SessionTracker<G, 
                     false => Ok(SessionState::HandshakeInProgress(handshaker)),
                     true => match handshaker.get_encryptor() {
                         Ok(encryptor) => Ok(SessionState::EncryptedMessageExchange(encryptor)),
-                        Err(error) => Err(error.context("Couldn't get encryptor")),
+                        Err(error) => Err(error.context("couldn't get encryptor")),
                     },
                 }
             }

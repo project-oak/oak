@@ -48,7 +48,7 @@ impl RequestHandler for HttpRequestHandler {
         // And extend the URL to the backend.
         let new_uri = format!("{}{}", self.backend_url, path)
             .parse::<Uri>()
-            .map_err(|error| anyhow!("Couldn't parse URI for backend: {:?}", error))?;
+            .map_err(|error| anyhow!("couldn't parse URI for backend: {:?}", error))?;
         let uri = request.uri_mut();
         *uri = new_uri;
 
@@ -59,7 +59,7 @@ impl RequestHandler for HttpRequestHandler {
         let scheme = request
             .uri()
             .scheme()
-            .context("Could not get scheme from backend_url.")?;
+            .context("couldn't get scheme from backend_url")?;
 
         let response = if scheme == &http::uri::Scheme::HTTPS {
             Client::builder()
@@ -75,7 +75,7 @@ impl RequestHandler for HttpRequestHandler {
 
         match response.await {
             Err(error) => Err(anyhow!(
-                "Couldn't receive response from the backend: {:?}",
+                "couldn't receive response from the backend: {:?}",
                 error
             )),
             Ok(response) => Ok(HyperResponseWrapper(response).strip().await?),
@@ -92,7 +92,7 @@ impl HyperRequestWrapper {
         let (parts, body) = self.0.into_parts();
         let body = hyper::body::to_bytes(body)
             .await
-            .context("Failed to read request body.")?;
+            .context("failed to read request body")?;
         log::debug!("Body {:?}", body);
 
         let uri = parts.uri.clone();
@@ -125,9 +125,7 @@ impl HyperRequestWrapper {
             .method(Method::POST)
             .version(http::Version::HTTP_2)
             .body(body)
-            .context(
-                "Failed to convert a plaintext Trusted Shuffler request to a hyper request.",
-            )?;
+            .context("failed to convert a plaintext Trusted Shuffler request to a hyper request")?;
 
         let headers = hyper_request.headers_mut();
 
@@ -157,12 +155,12 @@ impl HyperResponseWrapper {
 
         let body = hyper::body::to_bytes(&mut hyper_body)
             .await
-            .context("Could not read body.")?;
+            .context("couldn't read body")?;
 
         let trailers = hyper_body
             .trailers()
             .await
-            .context("Could not read trailers.")?
+            .context("couldn't read trailers")?
             .unwrap_or_default();
 
         let trusted_shuffler_response = PlaintextResponse {
@@ -181,18 +179,18 @@ impl HyperResponseWrapper {
         sender
             .send_data(encrypted_response.body)
             .await
-            .context("Failed to build body from data of encrypted Trusted Shuffler response.")?;
+            .context("failed to build body from data of encrypted Trusted Shuffler response")?;
         sender
             .send_trailers(encrypted_response.trailers)
             .await
             .context(
-                "Failed to build build body from trailers of encrypted Trusted Shuffler response.",
+                "failed to build build body from trailers of encrypted Trusted Shuffler response",
             )?;
 
         let mut hyper_response = Response::builder()
             .version(http::Version::HTTP_2)
             .body(body)
-            .context("Failed to convert encrypted Trusted Shuffler response to hyper response.")?;
+            .context("failed to convert encrypted Trusted Shuffler response to hyper response")?;
 
         let headers = hyper_response.headers_mut();
 

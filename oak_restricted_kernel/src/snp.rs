@@ -77,7 +77,7 @@ pub fn get_snp_page_addresses(info: &BootParams) -> SnpPageAddresses {
     }
 
     if setup_data_ptr.is_null() {
-        panic!("Couldn't find setup data of type CCBlob.");
+        panic!("couldn't find setup data of type CCBlob");
     }
 
     // Safety: we have checked that the pointer is not null and at least points to memory within the
@@ -117,35 +117,35 @@ pub fn init_snp_pages<T: Translator>(snp_pages: SnpPageAddresses, mapper: &T) {
 
     let cpuid_page_address = mapper
         .translate_physical(snp_pages.cpuid_page_address)
-        .expect("Couldn't find a valid virtual address for the CPUID page.");
+        .expect("couldn't find a valid virtual address for the CPUID page");
     // Safety: we have checked that the pointer is in the expected valid memory range, not null, and
     // 4KiB page-aligned.
     let cpuid_slice: &[u8] =
         unsafe { from_raw_parts(cpuid_page_address.as_ptr(), Size4KiB::SIZE as usize) };
     CPUID_PAGE
-        .set(CpuidPage::read_from(cpuid_slice).expect("CPUID page byte slice was invalid."))
-        .expect("Couldn't set CPUID page.");
+        .set(CpuidPage::read_from(cpuid_slice).expect("CPUID page byte slice was invalid"))
+        .expect("couldn't set CPUID page");
     CPUID_PAGE
         .get()
         .unwrap()
         .validate()
-        .expect("Invalid CPUID page.");
+        .expect("invalid CPUID page");
 
     let secrets_page_address = mapper
         .translate_physical(snp_pages.secrets_page_address)
-        .expect("Couldn't find a valid virtual address for the secrets page.");
+        .expect("couldn't find a valid virtual address for the secrets page");
     // Safety: we have checked that the pointer is in the expected valid memory range, not null, and
     // 4KiB page-aligned.
     let secrets_slice: &[u8] =
         unsafe { from_raw_parts(secrets_page_address.as_ptr(), Size4KiB::SIZE as usize) };
     SECRETS_PAGE
-        .set(SecretsPage::read_from(secrets_slice).expect("Secrets page byte slice was invalid."))
-        .expect("Couldn't set secrets page.");
+        .set(SecretsPage::read_from(secrets_slice).expect("secrets page byte slice was invalid"))
+        .expect("couldn't set secrets page");
     SECRETS_PAGE
         .get()
         .unwrap()
         .validate()
-        .expect("Invalid secrets page.");
+        .expect("invalid secrets page");
 }
 
 /// Initializes the guest message encryptor.
@@ -155,26 +155,26 @@ pub fn init_guest_message_encryptor() {
     // For now we always use VMPCK_0 from the secrets page as the key.
     let key = &SECRETS_PAGE
         .get()
-        .expect("Secrets page is not initialized.")
+        .expect("secrets page is not initialized")
         .vmpck_0[..];
-    GUEST_MESSAGE_ENCRYPTOR.lock().replace(
-        GuestMessageEncryptor::new(key).expect("Couldn't create guest message encryptor."),
-    );
+    GUEST_MESSAGE_ENCRYPTOR
+        .lock()
+        .replace(GuestMessageEncryptor::new(key).expect("couldn't create guest message encryptor"));
 }
 
 /// Panics if the physical address is not the start of a 4KiB page, null, or not below the maximum
 /// expected address.
 fn assert_page_in_valid_range(page: PhysAddr) {
-    assert!(!page.is_null(), "Address is null");
+    assert!(!page.is_null(), "address is null");
     assert_eq!(
         page.align_down(Size4KiB::SIZE),
         page,
-        "Address {:#018x} is not the start of a 4KiB page.",
+        "address {:#018x} is not the start of a 4KiB page",
         page
     );
     assert!(
         page < MAX_ADDRESS,
-        "Address {:#018x} is not below the expected maximum address {:#018x}",
+        "address {:#018x} is not below the expected maximum address {:#018x}",
         page,
         MAX_ADDRESS
     );
@@ -182,11 +182,11 @@ fn assert_page_in_valid_range(page: PhysAddr) {
 
 /// Panics if the pointer is null or points to an address that falls outside the expected range.
 fn assert_pointer_in_valid_range<T>(pointer: *const T) {
-    assert!(!pointer.is_null(), "Pointer is null");
+    assert!(!pointer.is_null(), "pointer is null");
     let address = VirtAddr::from_ptr(pointer);
     assert!(
         address.as_u64() < MAX_ADDRESS.as_u64(),
-        "Pointer {:#018x} is not below the expected maximum address {:#018x}",
+        "pointer {:#018x} is not below the expected maximum address {:#018x}",
         address,
         MAX_ADDRESS
     );
