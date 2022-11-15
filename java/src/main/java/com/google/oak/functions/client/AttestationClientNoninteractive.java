@@ -26,26 +26,29 @@ import io.grpc.stub.StreamObserver;
 import java.nio.ByteBuffer;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
+import java.util.function.Function;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import oak.session.noninteractive.v1.InvokeRequest;
 import oak.session.noninteractive.v1.InvokeResponse;
 import oak.session.noninteractive.v1.RequestWrapper;
 import oak.session.noninteractive.v1.ResponseWrapper;
-import oak.session.noninteractive.v1.StreamingSessionGrpc;
 
 /** Client with remote attestation support for sending requests to an Oak Functions application. */
 public class AttestationClientNoninteractive {
   private static final Logger logger =
       Logger.getLogger(AttestationClientNoninteractive.class.getName());
-  private ManagedChannel channel;
 
-  public AttestationClientNoninteractive(ManagedChannel channel) {
-    this.channel = channel;
-  }
-
-  public byte[] send(byte[] body) throws InterruptedException {
-    StreamingSessionGrpc.StreamingSessionStub stub = StreamingSessionGrpc.newStub(this.channel);
+  // Invoke the provided method by fetching and verifying the attested enclave public key, and then
+  // using it to encrypt the request body.
+  //
+  // The `stream` argument must be a method reference to a gRPC client streaming method with the
+  // appropriate request and response types.
+  //
+  // TODO(#3466): Actually implement attestation and encryption.
+  public static byte[] invoke(
+      Function<StreamObserver<ResponseWrapper>, StreamObserver<RequestWrapper>> stream,
+      byte[] requestBody) throws InterruptedException {
     // We expect to receive a single response message.
     BlockingQueue<ResponseWrapper> messageQueue = new ArrayBlockingQueue<>(1);
     StreamObserver<ResponseWrapper> responseObserver = new StreamObserver<ResponseWrapper>() {
@@ -72,12 +75,12 @@ public class AttestationClientNoninteractive {
         logger.log(Level.FINE, "response message queue completed");
       }
     };
-    StreamObserver<RequestWrapper> requestObserver = stub.stream(responseObserver);
+    StreamObserver<RequestWrapper> requestObserver = stream.apply(responseObserver);
 
     RequestWrapper requestWrapper =
         RequestWrapper.newBuilder()
             .setInvokeRequest(
-                InvokeRequest.newBuilder().setEncryptedBody(ByteString.copyFrom(body)))
+                InvokeRequest.newBuilder().setEncryptedBody(ByteString.copyFrom(requestBody)))
             .build();
     logger.log(Level.INFO, "request wrapper: " + requestWrapper);
     requestObserver.onNext(requestWrapper);

@@ -41,7 +41,6 @@ java_library(
     name = "client_noninteractive",
     srcs = ["AttestationClientNoninteractive.java"],
     deps = [
-        "//oak_remote_attestation_noninteractive/proto:oak_session_noninteractive_v1_java_grpc",
         "//oak_remote_attestation_noninteractive/proto:oak_session_noninteractive_v1_java_proto",
         "@com_google_protobuf//:protobuf_javalite",
         "@io_grpc_grpc_java//api",
