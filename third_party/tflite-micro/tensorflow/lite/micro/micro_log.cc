@@ -33,7 +33,6 @@ void Log(const char* format, va_list args) {
   char log_buffer[kMaxLogLen];
   MicroVsnprintf(log_buffer, kMaxLogLen, format, args);
   DebugLog(log_buffer);
-  DebugLog("\r\n");
 #endif
 }
 

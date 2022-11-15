@@ -14,15 +14,14 @@
 // limitations under the License.
 //
 
-use glob::glob;
 use std::{
     path::{Path, PathBuf},
     process::Command,
+    str::from_utf8,
 };
 
 const TFLITE_DIR: &str = "cc/tflite_micro";
 const TFLITE_LIBRARY_NAME: &str = "tflite_micro";
-const TFLITE_SOURCES_PATTERN: &str = "cc/tflite_micro/**/*";
 
 fn main() {
     oak_idl_build::compile(
@@ -39,24 +38,43 @@ fn main() {
     build_tflite();
 }
 
-fn rerun_if_changed<P: AsRef<Path>>(path: P) {
-    println!("cargo:rerun-if-changed={}", path.as_ref().display());
-}
-
 /// Builds TensorFlow Lite static library and adds the corresponding build
 /// directory to the library search path.
 fn build_tflite() {
-    // WORKSPACE_ROOT is set in .cargo/config.toml.
-    // Rerun `build.rs` next time if TensorFlow Lite library sources have been changed.
-    let path_pattern = format!("{}/{}", env!("WORKSPACE_ROOT"), TFLITE_SOURCES_PATTERN);
-    for entry in glob(&path_pattern).expect("couldn't read tflite source pattern") {
-        match entry {
-            Ok(path) => rerun_if_changed(&path),
-            Err(e) => println!("{:?}", e),
-        }
+    // Build TensorFlow Lite library.
+    let build_dir = build_bazel_target(TFLITE_DIR, TFLITE_LIBRARY_NAME);
+
+    // Add TensorFlow Lite build directory to the library search path.
+    println!("cargo:rustc-link-search={}", build_dir.display());
+}
+
+/// Builds Bazel `target` and makes `build.rs` rerun next time if one of the dependencies have been
+/// updated.
+fn build_bazel_target(target_dir: &str, target: &str) -> PathBuf {
+    // Get dependency file paths.
+    let build_target = format!("//{}:{}", target_dir, target);
+    let bazel_query = format!("kind('source file', deps({}))", build_target);
+    let output = Command::new("bazel")
+        .arg("query")
+        .arg(bazel_query)
+        .output()
+        .expect("couldn't run bazel query");
+    if !output.status.success() {
+        panic!("couldn't run bazel query: exit status is {}", output.status);
+    }
+    let dependency_paths = from_utf8(&output.stdout)
+        .expect("couldn't parse bazel query output")
+        .split("\n")
+        .into_iter()
+        .map(|build_target| build_target_to_path(build_target))
+        .collect::<Vec<_>>();
+
+    // Rerun `build.rs` next time one of the dependencies has been updated.
+    for path in dependency_paths {
+        rerun_if_changed(&path);
     }
 
-    let build_target = format!("//{}:{}", TFLITE_DIR, TFLITE_LIBRARY_NAME);
+    // Build Bazel target.
     let status = Command::new("bazel")
         .arg("build")
         .arg(build_target)
@@ -66,11 +84,22 @@ fn build_tflite() {
         panic!("couldn't run bazel build: exit status is {}", status);
     }
 
-    // Add TensorFlow Lite build directory to the library search path.
-    let build_dir: PathBuf = {
-        [env!("WORKSPACE_ROOT"), "bazel-bin", TFLITE_DIR]
-            .iter()
-            .collect()
-    };
-    println!("cargo:rustc-link-search={}", build_dir.display());
+    // WORKSPACE_ROOT is set in .cargo/config.toml.
+    return [env!("WORKSPACE_ROOT"), "bazel-bin", target_dir]
+        .iter()
+        .collect();
+}
+
+fn build_target_to_path(target: &str) -> PathBuf {
+    let file_path = target
+        .split("//")
+        .into_iter()
+        .last()
+        .expect("couldn't remove bazel build target prefix")
+        .replace(":", "");
+    return [env!("WORKSPACE_ROOT"), &file_path].iter().collect();
+}
+
+fn rerun_if_changed<P: AsRef<Path>>(path: P) {
+    println!("cargo:rerun-if-changed={}", path.as_ref().display());
 }
