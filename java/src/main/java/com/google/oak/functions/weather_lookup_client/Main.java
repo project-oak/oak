@@ -18,7 +18,7 @@ package com.google.oak.functions.weather_lookup_client;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 
-import com.google.oak.functions.client.AttestationClient;
+import com.google.oak.functions.client.ApiKeyInterceptor;
 import com.google.oak.functions.client.AttestationClientNoninteractive;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
@@ -41,7 +41,7 @@ public class Main {
     URL parsedUrl = new URL(OAK_URL);
     ManagedChannelBuilder builder =
         ManagedChannelBuilder.forAddress(parsedUrl.getHost(), parsedUrl.getPort()).usePlaintext();
-    builder = AttestationClient.addApiKey(builder, EMPTY_API_KEY);
+    builder.intercept(new ApiKeyInterceptor(EMPTY_API_KEY));
     ManagedChannel channel = builder.build();
 
     // Create gRPC client stub.

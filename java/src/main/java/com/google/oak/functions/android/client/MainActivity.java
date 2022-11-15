@@ -26,12 +26,14 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
 import com.google.common.base.VerifyException;
-import com.google.oak.functions.client.AttestationClient;
+import com.google.oak.functions.client.ApiKeyInterceptor;
+import com.google.oak.functions.client.AttestationClientNoninteractive;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
+import oak.session.noninteractive.v1.StreamingSessionGrpc;
 
 /** Main class for the Oak Functions Client application. */
 public class MainActivity extends Activity {
@@ -72,25 +74,13 @@ public class MainActivity extends Activity {
       URL parsedUrl = new URL(uri);
       ManagedChannelBuilder builder =
           ManagedChannelBuilder.forAddress(parsedUrl.getHost(), parsedUrl.getPort()).usePlaintext();
-      builder = AttestationClient.addApiKey(builder, getString(R.string.api_key));
+      builder.intercept(new ApiKeyInterceptor(getString(R.string.api_key)));
       ManagedChannel channel = builder.build();
 
-      // Attest a gRPC channel.
-      AttestationClient client = new AttestationClient();
-      client.attest(channel);
-
-      // Send a request.
-      AttestationClient.Response response = client.send(request);
-
-      // Receive a response.
-      AttestationClient.StatusCode responseStatus = response.getStatus();
-      if (responseStatus != AttestationClient.StatusCode.SUCCESS) {
-        throw new VerifyException(
-            String.format("Couldn't receive response: %s", responseStatus.name()));
-      }
-
-      byte[] responseBody = Arrays.copyOfRange(response.getBody(), 0, (int) response.getLength());
-      String decodedResponse = new String(responseBody, StandardCharsets.UTF_8);
+      // Create gRPC client stub.
+      StreamingSessionGrpc.StreamingSessionStub client = StreamingSessionGrpc.newStub(channel);
+      byte[] response = AttestationClientNoninteractive.invoke(client::stream, request);
+      String decodedResponse = new String(response, StandardCharsets.UTF_8);
 
       Log.v("Oak", "Received response: " + decodedResponse);
       resultTextView.setTextColor(Color.GREEN);
