@@ -43,9 +43,9 @@ pub struct Params {
     #[arg(long, value_parser = path_exists)]
     pub vmm_binary: PathBuf,
 
-    /// Path to the binary to load into the VM.
+    /// Path to the enclave binary to load into the VM.
     #[arg(long, value_parser = path_exists)]
-    pub app_binary: PathBuf,
+    pub enclave_binary: PathBuf,
 
     /// Port to use for debugging with gdb
     #[arg(long = "gdb")]
@@ -87,7 +87,7 @@ impl Instance {
             cmd.args(["--gdb", format!("{}", gdb_port).as_str()]);
         }
 
-        cmd.arg(params.app_binary);
+        cmd.arg(params.enclave_binary);
 
         info!("Executing: {:?}", cmd);
 

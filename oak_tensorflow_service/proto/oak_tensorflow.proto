@@ -18,7 +18,7 @@ syntax = "proto3";
 
 package oak.tensorflow;
 
-service TensorflowService {
+service Tensorflow {
   // method_id: 0
   rpc Initialize(InitializeRequest) returns (InitializeResponse);
   // method_id: 1

@@ -57,12 +57,12 @@ fn main() -> ! {
     // enforce this. This should be safe however, since we only call this once.
     let socket = unsafe { std::os::unix::net::UnixStream::from_raw_fd(opt.comms_fd) };
     let channel = Box::new(socket);
-    let runtime = oak_functions_freestanding::RuntimeImplementation::new(Arc::new(
+    let service = oak_functions_freestanding::OakFunctionsService::new(Arc::new(
         PlaceholderAmdAttestationGenerator,
     ));
     oak_channel::server::start_blocking_server(
         channel,
-        oak_functions_freestanding::schema::TrustedRuntime::serve(runtime),
+        oak_functions_freestanding::schema::OakFunctions::serve(service),
     )
-    .expect("runtime encountered an unrecoverable error");
+    .expect("server encountered an unrecoverable error");
 }

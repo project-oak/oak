@@ -35,12 +35,12 @@ pub extern "C" fn rust64_start(_rdi: u64, rsi: &BootParams) -> ! {
 
 fn main(channel: Box<dyn Channel>) -> ! {
     info!("In main!");
-    let runtime = oak_functions_freestanding::RuntimeImplementation::new(Arc::new(
+    let service = oak_functions_freestanding::OakFunctionsService::new(Arc::new(
         PlaceholderAmdAttestationGenerator,
     ));
-    let service = oak_functions_freestanding::schema::TrustedRuntime::serve(runtime);
-    oak_channel::server::start_blocking_server(channel, service)
-        .expect("runtime encountered an unrecoverable error");
+    let server = oak_functions_freestanding::schema::OakFunctions::serve(service);
+    oak_channel::server::start_blocking_server(channel, server)
+        .expect("server encountered an unrecoverable error");
 }
 
 #[alloc_error_handler]

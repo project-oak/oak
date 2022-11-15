@@ -194,7 +194,7 @@ pub fn create_and_start_oak_functions_server(
         format!("--port={server_port}"),
         format!("--lookup-data={lookup_data_path}"),
         "native",
-        format!("--app-binary={oak_functions_linux_fd_bin_path}"),
+        format!("--enclave-binary={oak_functions_linux_fd_bin_path}"),
     )
     .dir(env!("WORKSPACE_ROOT"))
     .reader()

@@ -42,9 +42,9 @@ mod server;
 
 #[derive(clap::Subcommand, Clone, Debug, PartialEq)]
 enum Mode {
-    /// Launch runtime in crosvm
+    /// Launch enclave in crosvm
     Crosvm(crosvm::Params),
-    /// Launch a runtime binary directly as a child process
+    /// Launch an enclave binary directly as a child process
     Native(native::Params),
 }
 
@@ -54,15 +54,14 @@ struct Args {
     #[command(subcommand)]
     mode: Mode,
 
-    /// Consistent response size that the runtime should apply
+    /// Consistent response size that the enclave should apply
     #[arg(long, default_value = "1024")]
     constant_response_size: u32,
 
     #[arg(long, default_value = "8080")]
     port: u16,
 
-    /// Path to a Wasm file to be loaded into the trusted runtime and executed by it per
-    /// invocation. See the documentation for details on its ABI. Ref: <https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md>
+    /// Path to a Wasm file to be loaded into the enclave and executed by it per invocation. See the documentation for details on its ABI. Ref: <https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md>
     #[arg(
         long,
         value_parser = path_exists,
@@ -121,7 +120,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Spawn task to load & periodically refresh lookup data.
     {
-        let mut runtime_client = schema::TrustedRuntimeAsyncClient::new(connector_handle.clone());
+        let mut client = schema::OakFunctionsAsyncClient::new(connector_handle.clone());
         tokio::spawn(async move {
             let mut interval =
                 tokio::time::interval(std::time::Duration::from_millis(1000 * 60 * 10));
@@ -131,10 +130,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let encoded_lookup_data =
                     lookup::encode_lookup_data(lookup_data).expect("couldn't encode lookup data");
 
-                if let Err(err) = runtime_client
-                    .update_lookup_data(&encoded_lookup_data)
-                    .await
-                {
+                if let Err(err) = client.update_lookup_data(&encoded_lookup_data).await {
                     panic!("couldn't send lookup data: {:?}", err)
                 }
 
@@ -152,17 +148,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         wasm_bytes.len()
     );
 
-    let request = schema::Initialization {
+    let request = schema::InitializeRequest {
         wasm_module: wasm_bytes,
         constant_response_size: cli.constant_response_size,
     };
 
-    let mut client = schema::TrustedRuntimeAsyncClient::new(connector_handle.clone());
+    let mut client = schema::OakFunctionsAsyncClient::new(connector_handle.clone());
     let result = client
         .initialize(&request)
         .await
         .flatten()
-        .expect("couldn't initialize the runtime");
+        .expect("couldn't initialize the service");
 
     let public_key_info = result.public_key_info.expect("no public key info returned");
     log::info!(

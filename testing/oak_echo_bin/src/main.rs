@@ -24,7 +24,7 @@ use alloc::boxed::Box;
 use core::panic::PanicInfo;
 use log::info;
 use oak_channel::Channel;
-use oak_echo_service::EchoService;
+use oak_echo_service::proto::Echo;
 use oak_linux_boot_params::BootParams;
 
 #[no_mangle]
@@ -37,10 +37,10 @@ pub extern "C" fn rust64_start(_rdi: u64, rsi: &BootParams) -> ! {
 // Starts an echo server that uses the Oak communication channel:
 // https://github.com/project-oak/oak/blob/main/oak_channel/SPEC.md
 fn start_echo_server(channel: Box<dyn Channel>) -> ! {
-    let service = oak_echo_service::EchoServiceImpl::default();
+    let service = oak_echo_service::EchoService::default();
     let server = service.serve();
     oak_channel::server::start_blocking_server(channel, server)
-        .expect("runtime encountered an unrecoverable error");
+        .expect("server encountered an unrecoverable error");
 }
 
 #[alloc_error_handler]

@@ -71,11 +71,11 @@ fn main() -> ! {
     );
 
     let channel = Box::new(Channel::new(stream));
-    let runtime =
-        oak_functions_freestanding::RuntimeImplementation::new(Arc::new(EmptyAttestationGenerator));
+    let service =
+        oak_functions_freestanding::OakFunctionsService::new(Arc::new(EmptyAttestationGenerator));
     oak_channel::server::start_blocking_server(
         channel,
-        oak_functions_freestanding::schema::TrustedRuntime::serve(runtime),
+        oak_functions_freestanding::schema::OakFunctions::serve(service),
     )
-    .expect("runtime encountered an unrecoverable error");
+    .expect("server encountered an unrecoverable error");
 }
