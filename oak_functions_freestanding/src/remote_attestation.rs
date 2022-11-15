@@ -24,15 +24,7 @@
 extern crate alloc;
 
 use alloc::{sync::Arc, vec::Vec};
-use anyhow::Context;
-use oak_remote_attestation::{
-    crypto::Signer,
-    handshaker::{AttestationBehavior, AttestationGenerator, AttestationVerifier},
-};
-use oak_remote_attestation_sessions::{SessionId, SessionState, SessionTracker};
-
-/// Number of sessions that will be kept in memory.
-const SESSIONS_CACHE_SIZE: usize = 10000;
+use oak_remote_attestation::handshaker::AttestationGenerator;
 
 /// Information about a public key.
 #[derive(Debug, Clone)]
@@ -44,95 +36,48 @@ pub struct PublicKeyInfo {
     pub attestation: Vec<u8>,
 }
 
+pub trait Handler {
+    fn handle(&mut self, request: &[u8]) -> anyhow::Result<Vec<u8>>;
+}
+
 pub trait AttestationHandler {
-    fn message(&mut self, session_id: SessionId, body: &[u8]) -> anyhow::Result<Vec<u8>>;
+    fn message(&mut self, body: &[u8]) -> anyhow::Result<Vec<u8>>;
     fn get_public_key_info(&self) -> PublicKeyInfo;
 }
 
-pub struct AttestationSessionHandler<F, G: AttestationGenerator, V: AttestationVerifier> {
-    session_tracker: SessionTracker<G, V>,
-    request_handler: F,
-    public_key_info: PublicKeyInfo,
+pub struct AttestationSessionHandler<H: Handler> {
+    // TODO(#3442): Use attestation generator to attest to the public key.
+    _attestation_generator: Arc<dyn AttestationGenerator>,
+    request_handler: H,
 }
 
-impl<F, G: AttestationGenerator, V: AttestationVerifier> AttestationSessionHandler<F, G, V>
-where
-    F: Send + Sync + Clone + FnOnce(Vec<u8>) -> anyhow::Result<Vec<u8>>,
-{
+impl<H: Handler> AttestationSessionHandler<H> {
     pub fn create(
-        request_handler: F,
-        attestation_behavior: AttestationBehavior<G, V>,
+        attestation_generator: Arc<dyn AttestationGenerator>,
+        request_handler: H,
     ) -> anyhow::Result<Self> {
-        let signer = Arc::new(Signer::create().context("Couldn't create signer")?);
-        let public_key = signer
-            .public_key()
-            .context("Couldn't get public key")?
-            .to_vec();
-        let attestation = attestation_behavior
-            .generator
-            .generate_attestation(&public_key)
-            .context("Couldn't generate attestation")?;
-        let public_key_info = PublicKeyInfo {
-            public_key,
-            attestation,
-        };
-        let session_tracker =
-            SessionTracker::create(SESSIONS_CACHE_SIZE, attestation_behavior, signer);
-
         Ok(Self {
-            session_tracker,
+            _attestation_generator: attestation_generator,
             request_handler,
-            public_key_info,
         })
     }
 }
 
-impl<F, G: AttestationGenerator, V: AttestationVerifier> AttestationHandler
-    for AttestationSessionHandler<F, G, V>
-where
-    F: Send + Sync + Clone + FnOnce(Vec<u8>) -> anyhow::Result<Vec<u8>>,
-    G: AttestationGenerator,
-    V: AttestationVerifier,
-{
-    fn message(&mut self, session_id: SessionId, body: &[u8]) -> anyhow::Result<Vec<u8>> {
-        let mut session_state = {
-            self.session_tracker
-                .pop_or_create_session_state(session_id)
-                .expect("Couldn't pop session state")
-        };
-        let response_body = match session_state {
-            SessionState::HandshakeInProgress(ref mut handshaker) => {
-                handshaker
-                    .next_step(body)
-                    .context("Couldn't process handshake message")?
-                    // After receiving a valid `ClientIdentity` message
-                    // (the last step of the key exchange)
-                    // ServerHandshaker.next_step returns `None`. For unary
-                    // request we do want to send an explicit confirmation in
-                    // the form of a status message. Hence in case of `None`
-                    // fallback to a default (empty) response.
-                    .unwrap_or_default()
-            }
-            SessionState::EncryptedMessageExchange(ref mut encryptor) => {
-                let decrypted_request = encryptor
-                    .decrypt(body)
-                    .context("Couldn't decrypt response")?;
-
-                let response = (self.request_handler.clone())(decrypted_request)?;
-
-                encryptor
-                    .encrypt(&response)
-                    .context("Couldn't encrypt response")?
-            }
-        };
-
-        self.session_tracker
-            .put_session_state(session_id, session_state);
-
-        Ok(response_body)
+impl<H: Handler> AttestationHandler for AttestationSessionHandler<H> {
+    fn message(&mut self, body: &[u8]) -> anyhow::Result<Vec<u8>> {
+        // TODO(#3442): Decrypt request (currently not encrypted).
+        let decrypted_request = body;
+        let response = self.request_handler.handle(decrypted_request)?;
+        // TODO(#3442): Encrypt response.
+        let encrypted_response = response;
+        Ok(encrypted_response)
     }
 
     fn get_public_key_info(&self) -> PublicKeyInfo {
-        self.public_key_info.clone()
+        // TODO(#3442): Generate and return public key.
+        PublicKeyInfo {
+            public_key: Vec::new(),
+            attestation: Vec::new(),
+        }
     }
 }

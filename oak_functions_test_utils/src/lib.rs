@@ -19,7 +19,7 @@
 use anyhow::Context;
 use log::info;
 use nix::unistd::Pid;
-use oak_functions_abi::{Request, Response};
+use oak_functions_abi::Response;
 use oak_functions_client::Client;
 use prost::Message;
 use std::{
@@ -238,30 +238,16 @@ impl Future for Term {
     }
 }
 
-pub struct TestResult {
-    pub elapsed: Duration,
-    pub response: Response,
-}
-
-pub async fn make_request(port: u16, request_body: &[u8]) -> TestResult {
+pub async fn make_request(port: u16, request_body: &[u8]) -> Vec<u8> {
     let uri = format!("http://localhost:{port}/");
 
     // Create client
     let mut client = Client::new(&uri).await.expect("Could not create client");
 
-    let request = Request {
-        body: request_body.to_vec(),
-    };
-
-    // Send the request and measure time
-    let start = std::time::Instant::now();
-    let response = client
-        .invoke(request)
+    client
+        .invoke(request_body)
         .await
-        .expect("Error while awaiting response");
-    let elapsed = start.elapsed();
-
-    TestResult { elapsed, response }
+        .expect("Error while awaiting response")
 }
 
 // Assert that string value of the body of the given response matches the expected string.

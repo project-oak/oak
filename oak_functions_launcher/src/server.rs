@@ -15,59 +15,46 @@
 //
 
 use crate::{channel::ConnectorHandle, schema};
-use futures::Future;
-use oak_remote_attestation_sessions::{SessionId, SESSION_ID_LENGTH};
-use std::net::SocketAddr;
-use tonic::{transport::Server, Request, Response};
-
-pub mod proto {
-    tonic::include_proto!("oak.session.unary.v1");
-}
-
-use proto::{
-    unary_session_server::{UnarySession, UnarySessionServer},
-    PublicKeyInfo, UnaryRequest, UnaryResponse,
+use futures::{Future, Stream, StreamExt};
+use oak_remote_attestation_noninteractive::proto::{
+    request_wrapper, response_wrapper, streaming_session_server::StreamingSessionServer,
+    InvokeResponse, RequestWrapper, ResponseWrapper,
 };
-
-fn encode_request(unary_request: UnaryRequest) -> Result<schema::UserRequest, oak_idl::Status> {
-    let mut session_id: SessionId = [0; SESSION_ID_LENGTH];
-    if unary_request.session_id.len() != SESSION_ID_LENGTH {
-        return Err(oak_idl::Status::new_with_message(
-            oak_idl::StatusCode::Internal,
-            format!(
-                "session_id must be {} bytes in length, found a length of {} bytes instead",
-                SESSION_ID_LENGTH,
-                unary_request.session_id.len()
-            ),
-        ));
-    }
-    session_id.copy_from_slice(&unary_request.session_id);
-
-    // Return the underlying owned buffer
-    Ok(schema::UserRequest {
-        session_id: Some(schema::SessionId {
-            value: session_id.to_vec(),
-        }),
-        body: unary_request.body,
-    })
-}
+use std::{net::SocketAddr, pin::Pin};
+use tonic::{transport::Server, Request, Response, Status, Streaming};
 
 pub struct SessionProxy {
     connector_handle: ConnectorHandle,
-    signing_public_key: Vec<u8>,
-    attestation: Vec<u8>,
+    // TODO(#3442): Return cached key and attestation when clients ask for it.
+    _signing_public_key: Vec<u8>,
+    _attestation: Vec<u8>,
 }
 
 #[tonic::async_trait]
-impl UnarySession for SessionProxy {
-    async fn message(
+impl oak_remote_attestation_noninteractive::proto::streaming_session_server::StreamingSession
+    for SessionProxy
+{
+    type StreamStream = Pin<Box<dyn Stream<Item = Result<ResponseWrapper, Status>> + Send>>;
+
+    async fn stream(
         &self,
-        request: Request<UnaryRequest>,
-    ) -> Result<Response<UnaryResponse>, tonic::Status> {
+        request: Request<Streaming<RequestWrapper>>,
+    ) -> Result<Response<Self::StreamStream>, tonic::Status> {
         log::debug!("handling client request");
-        let request = request.into_inner();
-        let encoded_request = encode_request(request)
-            .map_err(|err| tonic::Status::invalid_argument(format!("{:?}", err)))?;
+        let mut request_stream = request.into_inner();
+        let request = request_stream
+            .next()
+            .await
+            .ok_or_else(|| tonic::Status::invalid_argument("empty request stream"))?
+            .map_err(|err| {
+                tonic::Status::internal(format!("error reading message from request stream: {err}"))
+            })?;
+        let Some(request_wrapper::Request::InvokeRequest(invoke_request)) = request.request else {
+            return Err(tonic::Status::invalid_argument("request wrapper must have invoke_request field set"));
+        };
+        let encoded_request = schema::UserRequest {
+            body: invoke_request.encrypted_body,
+        };
 
         let mut client = schema::TrustedRuntimeAsyncClient::new(self.connector_handle.clone());
 
@@ -79,19 +66,13 @@ impl UnarySession for SessionProxy {
                 tonic::Status::internal(format!("error handling client request: {:?}", err))
             })?;
 
-        Ok(Response::new(UnaryResponse {
-            body: response.body,
-        }))
-    }
-
-    async fn get_public_key_info(
-        &self,
-        _request: Request<()>,
-    ) -> Result<Response<PublicKeyInfo>, tonic::Status> {
-        Ok(Response::new(PublicKeyInfo {
-            public_key: self.signing_public_key.clone(),
-            attestation: self.attestation.clone(),
-        }))
+        Ok(Response::new(Box::pin(futures::stream::iter(vec![Ok(
+            ResponseWrapper {
+                response: Some(response_wrapper::Response::InvokeResponse(InvokeResponse {
+                    encrypted_body: response.body,
+                })),
+            },
+        )]))))
     }
 }
 
@@ -103,17 +84,17 @@ pub fn server(
 ) -> impl Future<Output = Result<(), tonic::transport::Error>> {
     let server_impl = SessionProxy {
         connector_handle,
-        signing_public_key,
-        attestation,
+        _signing_public_key: signing_public_key,
+        _attestation: attestation,
     };
 
     #[cfg(feature = "grpc-web")]
     return Server::builder()
-        .add_service(tonic_web::enable(UnarySessionServer::new(server_impl)))
+        .add_service(tonic_web::enable(StreamingSessionServer::new(server_impl)))
         .serve(addr);
 
     #[cfg(not(feature = "grpc-web"))]
     return Server::builder()
-        .add_service(UnarySessionServer::new(server_impl))
+        .add_service(StreamingSessionServer::new(server_impl))
         .serve(addr);
 }

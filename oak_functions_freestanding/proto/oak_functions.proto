@@ -28,13 +28,8 @@ service TrustedRuntime {
     rpc UpdateLookupData(LookupData) returns (Empty);
 }
 
-message SessionId {
-    bytes value = 1;
-}
-
 message UserRequest {
-    SessionId session_id = 1;
-    bytes body = 2;
+    bytes body = 1;
 }
 
 message UserRequestResponse {

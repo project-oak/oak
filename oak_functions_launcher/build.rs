@@ -14,19 +14,7 @@
 // limitations under the License.
 //
 
-use oak_grpc_utils::{generate_grpc_code, CodegenOptions};
-
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    generate_grpc_code(
-        &format!("{}oak_grpc_unary_attestation/proto", env!("WORKSPACE_ROOT")),
-        &["unary_server.proto"],
-        CodegenOptions {
-            build_client: false,
-            build_server: true,
-            extern_paths: vec![],
-        },
-    )?;
-
     oak_idl_build::compile(
         &[format!(
             "{}oak_functions_freestanding/proto/oak_functions.proto",

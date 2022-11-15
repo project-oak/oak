@@ -15,9 +15,8 @@
 //
 
 use clap::Parser;
-use oak_remote_attestation::handshaker::{AttestationBehavior, EmptyAttestationVerifier};
 use oak_remote_attestation_amd::PlaceholderAmdAttestationGenerator;
-use std::os::unix::io::FromRawFd;
+use std::{os::unix::io::FromRawFd, sync::Arc};
 
 #[derive(Parser, Clone, Debug)]
 #[command(about = "Oak Functions Loader Linux UDS")]
@@ -57,10 +56,10 @@ fn main() -> ! {
     // Unsafe as each file descriptor must only have one owner, and Rust cannot
     // enforce this. This should be safe however, since we only call this once.
     let socket = unsafe { std::os::unix::net::UnixStream::from_raw_fd(opt.comms_fd) };
-    let attestation_behavior =
-        AttestationBehavior::create(PlaceholderAmdAttestationGenerator, EmptyAttestationVerifier);
     let channel = Box::new(socket);
-    let runtime = oak_functions_freestanding::RuntimeImplementation::new(attestation_behavior);
+    let runtime = oak_functions_freestanding::RuntimeImplementation::new(Arc::new(
+        PlaceholderAmdAttestationGenerator,
+    ));
     oak_channel::server::start_blocking_server(
         channel,
         oak_functions_freestanding::schema::TrustedRuntime::serve(runtime),

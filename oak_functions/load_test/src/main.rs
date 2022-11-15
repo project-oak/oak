@@ -16,7 +16,6 @@
 
 use anyhow::Context;
 use bencher::stats::Stats;
-use oak_functions_abi::Request;
 use oak_functions_client::Client;
 use std::time::Instant;
 
@@ -35,9 +34,7 @@ async fn main() -> anyhow::Result<()> {
     for i in 0..TOTAL_REQUESTS {
         let start = Instant::now();
         let response = client
-            .invoke(Request {
-                body: REQUEST.to_vec(),
-            })
+            .invoke(REQUEST)
             .await
             .context("Could not invoke Oak Functions instance")?;
         let elapsed_millis = start.elapsed().as_millis();
@@ -47,7 +44,7 @@ async fn main() -> anyhow::Result<()> {
             i,
             TOTAL_REQUESTS,
             elapsed_millis,
-            std::str::from_utf8(response.body().unwrap()).unwrap()
+            std::str::from_utf8(&response).unwrap()
         );
     }
     println!("-------- total --------");

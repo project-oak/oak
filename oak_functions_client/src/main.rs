@@ -69,9 +69,7 @@ async fn main() -> anyhow::Result<()> {
         // The client should be a able to send a large message without
         // crashing or hanging.
         let response = client
-            .invoke(Request {
-                body: LARGE_MESSAGE.to_vec(),
-            })
+            .invoke(&LARGE_MESSAGE)
             .await
             .context("Error invoking Oak Functions instance");
         assert!(response.is_ok());
@@ -91,14 +89,12 @@ async fn main() -> anyhow::Result<()> {
 
     for _ in 0..iterations {
         let response = client
-            .invoke(Request {
-                body: request.as_bytes().to_vec(),
-            })
+            .invoke(request.as_bytes())
             .await
             .context("Could not invoke Oak Functions")?;
 
         println!("Response: {:?}", response);
-        let response_body = std::str::from_utf8(response.body().unwrap()).unwrap();
+        let response_body = std::str::from_utf8(&response).unwrap();
         println!("Response: {:?}", response_body);
         if let Some(ref expected) = opt.expected_response_pattern {
             let re = Regex::new(expected).unwrap();

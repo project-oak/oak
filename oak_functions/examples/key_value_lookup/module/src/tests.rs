@@ -16,7 +16,6 @@
 extern crate test;
 
 use maplit::hashmap;
-use oak_functions_abi::StatusCode;
 use oak_functions_test_utils::make_request;
 use std::time::Duration;
 use test::Bencher;
@@ -47,21 +46,18 @@ async fn test_server() {
 
     {
         // Lookup match.
-        let response = make_request(server_port, b"key_1").await.response;
-        assert_eq!(StatusCode::Success, response.status);
-        assert_eq!(b"value_1", response.body().unwrap());
+        let response = make_request(server_port, b"key_1").await;
+        assert_eq!(b"value_1", &response.as_ref());
     }
     {
         // Lookup fail.
-        let response = make_request(server_port, b"key_42").await.response;
-        assert_eq!(StatusCode::Success, response.status);
-        assert_eq!(Vec::<u8>::new(), response.body().unwrap());
+        let response = make_request(server_port, b"key_42").await;
+        assert_eq!(Vec::<u8>::new(), response);
     }
     {
         // Lookup match but empty value.
-        let response = make_request(server_port, b"empty").await.response;
-        assert_eq!(StatusCode::Success, response.status);
-        assert_eq!(Vec::<u8>::new(), response.body().unwrap());
+        let response = make_request(server_port, b"empty").await;
+        assert_eq!(Vec::<u8>::new(), response);
     }
 
     oak_functions_test_utils::kill_process(server_background);
@@ -99,11 +95,8 @@ fn bench_wasm_handler(bencher: &mut Bencher) {
 
     let summary = bencher.bench(|bencher| {
         bencher.iter(|| {
-            let response = runtime
-                .block_on(make_request(server_port, b"key_1"))
-                .response;
-            assert_eq!(StatusCode::Success, response.status);
-            assert_eq!(b"value_1", response.body().unwrap());
+            let response = runtime.block_on(make_request(server_port, b"key_1"));
+            assert_eq!(b"value_1", &response.as_ref());
         });
         Ok(())
     });
