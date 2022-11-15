@@ -14,17 +14,16 @@
  * limitations under the License.
  */
 
-#include "tflite_micro.h"
+#include <stdint.h>
 
 #include "testing/tflite_micro/transformer_expression/transformer_expression_model_data.h"
-
-#include <stdint.h>
+#include "tflite_micro.h"
 
 namespace {
 // Allow the model to use up to 1GB memory.
 constexpr int kTensorArenaSize = 1024 * 1024 * 1024;
 uint8_t tensor_arena[kTensorArenaSize];
-}
+}  // namespace
 
 int main(int argc, char* argv[]) {
   // input tensor[0]: int * 10
@@ -38,16 +37,11 @@ int main(int argc, char* argv[]) {
   float output[4630] = {.0f};
 
   size_t output_buffer_len = 0;
-  if (tflite_init(g_transformer_expression_model_data,
-                  g_transformer_expression_model_data_size,
-                  tensor_arena,
-                  kTensorArenaSize,
-                  &output_buffer_len) == 0) {
+  if (tflite_init(g_transformer_expression_model_data, g_transformer_expression_model_data_size,
+                  tensor_arena, kTensorArenaSize, &output_buffer_len) == 0) {
     size_t output_len = 0;
-    tflite_run(reinterpret_cast<const uint8_t*>(&input[0]),
-               sizeof(input),
-               reinterpret_cast<uint8_t*>(&output[0]),
-               &output_len);
+    tflite_run(reinterpret_cast<const uint8_t*>(&input[0]), sizeof(input),
+               reinterpret_cast<uint8_t*>(&output[0]), &output_len);
   }
 
   return 0;

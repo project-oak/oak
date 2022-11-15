@@ -19,27 +19,27 @@ syntax = "proto3";
 package oak.tensorflow;
 
 service TensorflowService {
-    // method_id: 0
-    rpc Initialize(InitializeRequest) returns (InitializeResponse);
-    // method_id: 1
-    rpc Invoke(InvokeRequest) returns (InvokeResponse);
+  // method_id: 0
+  rpc Initialize(InitializeRequest) returns (InitializeResponse);
+  // method_id: 1
+  rpc Invoke(InvokeRequest) returns (InvokeResponse);
 }
 
 message InitializeRequest {
-    bytes tensorflow_model = 1;
+  bytes tensorflow_model = 1;
 }
 
 message InitializeResponse {}
 
 message SessionId {
-    bytes value = 1;
+  bytes value = 1;
 }
 
 message InvokeRequest {
-    SessionId session_id = 1;
-    bytes body = 2;
+  SessionId session_id = 1;
+  bytes body = 2;
 }
 
 message InvokeResponse {
-    bytes body = 1;
+  bytes body = 1;
 }

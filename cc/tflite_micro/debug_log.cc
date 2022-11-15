@@ -14,16 +14,16 @@
  * limitations under the License.
  */
 
-#include "tflite_micro.h"
-
 #include <cstdio>
 #include <cstring>
 
+#include "tflite_micro.h"
+
 extern "C" void DebugLog(const char* s) {
-    // oak_log_debug is an explicitly defined symbol (T)
-    // in Oak tensorflow freestanding binary, while it's
-    // an undefined symbol (w) in Linux freestanding binary.
-    if (oak_log_debug) {
-        oak_log_debug(s, strlen(s));
-    }
+  // oak_log_debug is an explicitly defined symbol (T)
+  // in Oak tensorflow freestanding binary, while it's
+  // an undefined symbol (w) in Linux freestanding binary.
+  if (oak_log_debug) {
+    oak_log_debug(s, strlen(s));
+  }
 }

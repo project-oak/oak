@@ -17,18 +17,16 @@
 #include <stddef.h>
 
 extern "C" {
-void *memset_avx2(void *str, int c, size_t n);
-void *memset_generic(void *str, int c, size_t n);
+void* memset_avx2(void* str, int c, size_t n);
+void* memset_generic(void* str, int c, size_t n);
 
-void *memset(void *str, int c, size_t n) {
+void* memset(void* str, int c, size_t n) {
   // Use more performnat memset_avx2 over sse2 memset_generic.
   return memset_avx2(str, c, n);
 }
 
 // Placeholder for __memset_chk_avx2 and __memset_chk_generic.
-void* __memset_chk_fail(
-    void* /*dst*/, int /*byte*/,
-    size_t /*count*/, size_t /*dst_len*/) {
+void* __memset_chk_fail(void* /*dst*/, int /*byte*/, size_t /*count*/, size_t /*dst_len*/) {
   return nullptr;
 }
 }
