@@ -1,0 +1,183 @@
+# Builds an artifact from the input build config, and uploads it to Ent. Then generates the SLSA provenance for it and uploads that to Ent too.
+# Returns (1) the name and digest of the generated artifact as a based64-encoded string, and (2) the digest of the provenance.
+name: Build Provenance
+
+on:
+  workflow_call:
+    inputs:
+      build-config-path:
+        required: true
+        type: string
+    # Map the workflow outputs to job outputs
+    outputs:
+      artifact_digest:
+        description:
+          'Base64-encoded digest of the artifact, including its name.'
+        value: ${{ jobs.build_binary.outputs.hashes }}
+      provenance_digest:
+        description: 'SHA256 digest of the provenance.'
+        value: ${{ jobs.upload_provenance.outputs.provenance_digest }}
+    # usage: secrets: inherit
+    secrets:
+      ENT_API_KEY:
+        required: true
+
+jobs:
+  build_binary:
+    outputs:
+      hashes: ${{ steps.hash.outputs.hashes }}
+      filename: ${{ steps.filename.outputs.filename }}
+    runs-on: ubuntu-20.04
+
+    permissions:
+      # Allow the job to update the repo with the latest provenance info and index.
+      contents: write
+      # Allow the job to add a comment to the PR.
+      pull-requests: write
+
+    steps:
+      - name: Mount main branch
+        uses: actions/checkout@v3
+
+      - name: Git setup
+        run: |
+          git config --global user.email "actions@github.com"
+          git config --global user.name "GitHub Actions"
+
+      # Copied from https://github.com/jens-maus/RaspberryMatic/blob/ea6b8ce0dd2d53ea88b2766ba8d7f8e1d667281f/.github/workflows/ci.yml#L34-L40
+      - name: free disk space
+        run: |
+          df --human-readable
+          sudo swapoff --all
+          sudo rm --force /swapfile
+          sudo apt clean
+          docker rmi $(docker image ls --all --quiet)
+          df --human-readable
+
+      - name: Docker pull
+        timeout-minutes: 10
+        run: |
+          ./scripts/docker_pull
+          df --human-readable
+
+      - name: Get artifact path
+        id: artifact_path
+        run: |
+          echo "artifact_path=$(tail -1 ${{ inputs.build-config-path }} | grep -oP 'output_path = \K(.*)')" >> $GITHUB_OUTPUT
+
+      - name: Get artifact filename
+        id: filename
+        run: |
+          echo "filename=$(basename ${{ steps.artifact_path.outputs.artifact_path }})" >> $GITHUB_OUTPUT
+
+      - name: Build the artifact
+        run: |
+          ./scripts/build_binary -c ${{ inputs.build-config-path }}
+
+      # Download the Ent CLI and configure a remote with write access using a private API key, if
+      # available (GitHub secrets are not available on forks, see
+      # https://docs.github.com/en/actions/security-guides/encrypted-secrets#using-encrypted-secrets-in-a-workflow).
+      # If this step is run from a fork, the API key will be empty, and Ent will work in read-only
+      # mode.
+      # See https://github.com/google/ent
+      - name: Download Ent CLI
+        if: steps.cache-ent.outputs.cache-hit != 'true'
+        env:
+          ENT_URL: https://ent-server-62sa4xcfia-ew.a.run.app
+          ENT_DIGEST: sha256:944a34854a2bf9c5d32f3bffa93885ee1c7ef8ab0f4fcc30898a981050ae4233
+        run: |
+          curl --fail ${ENT_URL}/raw/${ENT_DIGEST} > /usr/local/bin/ent
+          chmod +x /usr/local/bin/ent
+          ent
+          cat <<EOF > ~/.config/ent.toml
+          [[remotes]]
+          name = 'ent-store'
+          url = '${ENT_URL}'
+          write = true
+          api_key = '${{ secrets.ENT_API_KEY }}'
+          EOF
+
+      # Upload artifacts to Ent, where they will be retained and publicly accessible by their hash.
+      # This only applies to `push` events, since it needs access to a valid Ent API key (which is
+      # not available on forks / PRs).
+      - name: Upload to Ent
+        if: github.event_name == 'push'
+        run: |
+          ent put ${{ steps.artifact_path.outputs.artifact_path }}
+
+      # Generate the input to the generate_provenance job.
+      # See https://github.com/slsa-framework/slsa-github-generator/blob/main/internal/builders/generic/README.md
+      - name: Generate artifact's base64-encoded hash
+        id: hash
+        run: |
+          # first cd to the directory containing the target binary. This allows us calling sha256
+          # on the target binary instead of having to provide the full path. This is fine for this
+          # experimental version, but has to be cleaned-up once we switch completely to SLSA
+          # provenance generation.
+          cd $(dirname ${{ steps.artifact_path.outputs.artifact_path }})
+          # sha256sum generates sha256 hash for the target binary.
+          # base64 --wrap=0 disables line wrapping, and encodes to base64 and outputs on a single line.
+          echo "hashes=$(sha256sum $(basename ${{ steps.artifact_path.outputs.artifact_path }}) | base64 --wrap=0)" >> $GITHUB_OUTPUT
+
+  # This job calls the generic SLSA workflow to generate provenance.
+  # See https://github.com/slsa-framework/slsa-github-generator/blob/main/internal/builders/generic/README.md
+  generate_provenance:
+    if: github.event_name == 'push'
+    needs: [build_binary]
+    permissions:
+      actions: read
+      id-token: write
+      contents: write
+    uses: slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@v1.2.1
+    with:
+      base64-subjects: '${{ needs.build_binary.outputs.hashes }}'
+      # Set a custom name for the provenance attestation.
+      attestation-name: '${{ needs.filename.outputs.filename }}.intoto.jsonl'
+      # Upload the provenance.
+      upload-assets: true
+      # Build the generator from source.
+      compile-generator: true
+
+  # This job uploads the signed provenance from the previous step to Ent, and
+  # publishes a comment about it on the PR.
+  upload_provenance:
+    if: github.event_name == 'push'
+    needs: [generate_provenance]
+    outputs:
+      provenance_digest: ${{ steps.ent_upload.outputs.provenance_digest }}
+    runs-on: ubuntu-20.04
+
+    permissions:
+      # Allow the job to update the repo with the latest provenances and index.
+      contents: write
+      # Allow the job to add a comment to the PR.
+      pull-requests: write
+
+    steps:
+      - name: Download the DSSE document
+        uses: actions/download-artifact@v3
+        with:
+          name: ${{ needs.filename.outputs.filename }}.intoto.jsonl
+
+      # See https://github.com/google/ent
+      - name: Download Ent CLI
+        if: steps.cache-ent.outputs.cache-hit != 'true'
+        env:
+          ENT_URL: https://ent-server-62sa4xcfia-ew.a.run.app
+          ENT_DIGEST: sha256:944a34854a2bf9c5d32f3bffa93885ee1c7ef8ab0f4fcc30898a981050ae4233
+        run: |
+          curl --fail ${ENT_URL}/raw/${ENT_DIGEST} > /usr/local/bin/ent
+          chmod +x /usr/local/bin/ent
+          ent
+          cat <<EOF > ~/.config/ent.toml
+          [[remotes]]
+          name = 'ent-store'
+          url = '${ENT_URL}'
+          write = true
+          api_key = '${{ secrets.ENT_API_KEY }}'
+          EOF
+
+      - name: Upload to Ent
+        id: ent_upload
+        run: |
+          echo "provenance_digest=$(ent put ${{ needs.filename.outputs.filename }}.intoto.jsonl)" >> $GITHUB_OUTPUT

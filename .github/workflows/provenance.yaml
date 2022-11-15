@@ -1,4 +1,4 @@
-name: Build Provenance
+name: Build All Provenances
 
 # See https://docs.github.com/en/actions/learn-github-actions/workflow-syntax-for-github-actions#example-using-concurrency-to-cancel-any-in-progress-job-or-run
 concurrency:
@@ -13,11 +13,22 @@ on:
 
 jobs:
   build_binary:
-    outputs:
-      hashes: ${{ steps.hash.outputs.hashes }}
+    permissions:
+      actions: read
+      id-token: write
+      contents: write
+    uses: ./.github/workflows/reusable_provenance.yaml
+    with:
+      build-config-path: './buildconfigs/oak_functions_freestanding_bin.toml'
+    secrets: inherit
+
+  # TODO(#3428): To make it work with the matrix strategy, we most likely need
+  # the reusable workflow to write its output to some file that we can then
+  # load here, extract all the digests and merge them to files that can be
+  # written as comments on the PR.
+  publish_comments:
     runs-on: ubuntu-20.04
-    env:
-      OAK_FUNCTIONS_FREESTANDING_BIN_PATH: './oak_functions_freestanding_bin/target/x86_64-unknown-none/release/oak_functions_freestanding_bin'
+    needs: [build_binary]
 
     permissions:
       # Allow the job to update the repo with the latest provenance info and index.
@@ -26,72 +37,13 @@ jobs:
       pull-requests: write
 
     steps:
-      - name: Mount main branch
-        uses: actions/checkout@v3
-
-      - name: Git setup
-        run: |
-          git config --global user.email "actions@github.com"
-          git config --global user.name "GitHub Actions"
-
-      # Copied from https://github.com/jens-maus/RaspberryMatic/blob/ea6b8ce0dd2d53ea88b2766ba8d7f8e1d667281f/.github/workflows/ci.yml#L34-L40
-      - name: free disk space
-        run: |
-          df --human-readable
-          sudo swapoff --all
-          sudo rm --force /swapfile
-          sudo apt clean
-          docker rmi $(docker image ls --all --quiet)
-          df --human-readable
-
-      - name: Docker pull
-        timeout-minutes: 10
-        run: |
-          ./scripts/docker_pull
-          df --human-readable
-
-      - name: Build the crosvm freestanding binary
-        run: |
-          ./scripts/build_binary -c buildconfigs/oak_functions_freestanding_bin.toml
-
-      # Download the Ent CLI and configure a remote with write access using a private API key, if
-      # available (GitHub secrets are not available on forks, see
-      # https://docs.github.com/en/actions/security-guides/encrypted-secrets#using-encrypted-secrets-in-a-workflow).
-      # If this step is run from a fork, the API key will be empty, and Ent will work in read-only
-      # mode.
-      # See https://github.com/google/ent
-      - name: Download Ent CLI
-        if: steps.cache-ent.outputs.cache-hit != 'true'
-        env:
-          ENT_URL: https://ent-server-62sa4xcfia-ew.a.run.app
-          ENT_DIGEST: sha256:944a34854a2bf9c5d32f3bffa93885ee1c7ef8ab0f4fcc30898a981050ae4233
-        run: |
-          curl --fail ${ENT_URL}/raw/${ENT_DIGEST} > /usr/local/bin/ent
-          chmod +x /usr/local/bin/ent
-          ent
-          cat <<EOF > ~/.config/ent.toml
-          [[remotes]]
-          name = 'ent-store'
-          url = '${ENT_URL}'
-          write = true
-          api_key = '${{ secrets.ENT_API_KEY }}'
-          EOF
-
-      # Upload artifacts to Ent, where they will be retained and publicly accessible by their hash.
-      # This only applies to `push` events, since it needs access to a valid Ent API key (which is
-      # not available on forks / PRs).
-      - name: Upload to Ent
-        if: github.event_name == 'push'
-        run: |
-          ent put ${{ env.OAK_FUNCTIONS_FREESTANDING_BIN_PATH }}
-
       # Build reproducibility index on `push` events.
       - name: Build reproducibility index
         if: github.event_name == 'push'
         uses: ./.github/actions/reproducibility_index
         with:
           OAK_FUNCTIONS_FREESTANDING_BIN_PATH:
-            ${{ env.OAK_FUNCTIONS_FREESTANDING_BIN_PATH }}
+            ${{ needs.build_binary.outputs.artifact_digest }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       # Build reproducibility index on non-`push` events. This is similar to the previous step,
@@ -101,81 +53,13 @@ jobs:
         uses: ./.github/actions/reproducibility_index
         with:
           OAK_FUNCTIONS_FREESTANDING_BIN_PATH:
-            ${{ env.OAK_FUNCTIONS_FREESTANDING_BIN_PATH }}
+            ${{ needs.build_binary.outputs.artifact_digest }}
 
-      # Generate the input to the generate_provenance job.
-      # See https://github.com/slsa-framework/slsa-github-generator/blob/main/internal/builders/generic/README.md
-      - name: Generate oak_functions_freestanding_bin hash
-        id: hash
+      # TODO(#3428): For the parameterized workflow we cannot use the output
+      # from the previous workflow, but must read the digests from an uploaded artifact.
+      - name: Write digest to file
         run: |
-          # first cd to the directory containing the target binary. This allows us calling sha256
-          # on the target binary instead of having to provide the full path. This is fine for this
-          # experimental version, but has to be cleaned-up once we switch completely to SLSA
-          # provenance generation.
-          cd $(dirname ${{ env.OAK_FUNCTIONS_FREESTANDING_BIN_PATH }})
-          # sha256sum generates sha256 hash for the target binary.
-          # base64 --wrap=0 disables line wrapping, and encodes to base64 and outputs on a single line.
-          echo "hashes=$(sha256sum $(basename ${{ env.OAK_FUNCTIONS_FREESTANDING_BIN_PATH }}) | base64 --wrap=0)" >> $GITHUB_OUTPUT
-
-  # This job calls the generic SLSA workflow to generate provenance.
-  # See https://github.com/slsa-framework/slsa-github-generator/blob/main/internal/builders/generic/README.md
-  generate_provenance:
-    if: github.event_name == 'push'
-    needs: [build_binary]
-    permissions:
-      actions: read
-      id-token: write
-      contents: write
-    uses: slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@v1.2.1
-    with:
-      base64-subjects: '${{ needs.build_binary.outputs.hashes }}'
-      # Set a custom name for the provenance attestation.
-      attestation-name: 'oak_functions_freestanding_bin.intoto.jsonl'
-      # Upload the provenance.
-      upload-assets: true
-      # Build the generator from source.
-      compile-generator: true
-
-  # This job uploads the signed provenance from the previous step to Ent, and
-  # publishes a comment about it on the PR.
-  upload_provenance:
-    if: github.event_name == 'push'
-    needs: [generate_provenance]
-    runs-on: ubuntu-20.04
-
-    permissions:
-      # Allow the job to update the repo with the latest provenances and index.
-      contents: write
-      # Allow the job to add a comment to the PR.
-      pull-requests: write
-
-    steps:
-      - name: Download the DSSE document
-        uses: actions/download-artifact@v3
-        with:
-          name: oak_functions_freestanding_bin.intoto.jsonl
-
-      # See https://github.com/google/ent
-      - name: Download Ent CLI
-        if: steps.cache-ent.outputs.cache-hit != 'true'
-        env:
-          ENT_URL: https://ent-server-62sa4xcfia-ew.a.run.app
-          ENT_DIGEST: sha256:944a34854a2bf9c5d32f3bffa93885ee1c7ef8ab0f4fcc30898a981050ae4233
-        run: |
-          curl --fail ${ENT_URL}/raw/${ENT_DIGEST} > /usr/local/bin/ent
-          chmod +x /usr/local/bin/ent
-          ent
-          cat <<EOF > ~/.config/ent.toml
-          [[remotes]]
-          name = 'ent-store'
-          url = '${ENT_URL}'
-          write = true
-          api_key = '${{ secrets.ENT_API_KEY }}'
-          EOF
-
-      - name: Upload to Ent
-        run: |
-          ent put oak_functions_freestanding_bin.intoto.jsonl | tee ./digest
+          echo ${{ needs.build_binary.outputs.provenance_digest }} | tee -a ./digest
 
       # Also post a reply on the PR thread with the sha256sum of the DSSE artifact.
       - name: Post SHA256 digest of the DSSE Artifact (post-merge only)
