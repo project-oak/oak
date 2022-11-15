@@ -144,6 +144,21 @@
 <span id="144">144</span>
 <span id="145">145</span>
 <span id="146">146</span>
+<span id="147">147</span>
+<span id="148">148</span>
+<span id="149">149</span>
+<span id="150">150</span>
+<span id="151">151</span>
+<span id="152">152</span>
+<span id="153">153</span>
+<span id="154">154</span>
+<span id="155">155</span>
+<span id="156">156</span>
+<span id="157">157</span>
+<span id="158">158</span>
+<span id="159">159</span>
+<span id="160">160</span>
+<span id="161">161</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -172,11 +187,11 @@
     <span class="kw">let </span>message_bytes =
         <span class="kw">unsafe </span>{ alloc::slice::from_raw_parts(message_ptr <span class="kw">as </span><span class="kw-2">*const </span>u8, message_len) };
     <span class="kw">if let </span><span class="prelude-val">Ok</span>(message_string) = core::str::from_utf8(message_bytes) {
-        <span class="macro">log!</span>(Level::Debug, <span class="string">&quot;{}&quot;</span>, message_string);
+        <span class="macro">log!</span>(Level::Debug, <span class="string">&quot;tflite_micro: {}&quot;</span>, message_string);
     } <span class="kw">else </span>{
         <span class="macro">log!</span>(
             Level::Debug,
-            <span class="string">&quot;Couldn&#39;t parse a UTF-8 string: {:?}&quot;</span>,
+            <span class="string">&quot;tflite_micro: Couldn&#39;t parse a UTF-8 string: {:?}&quot;</span>,
             message_bytes
         );
     }
@@ -244,7 +259,8 @@
         <span class="kw">let </span>model_bytes_len = model_bytes.len();
         <span class="kw">let </span>tensor_arena_len = <span class="self">self</span>.tensor_arena.len();
         <span class="kw">let </span><span class="kw-2">mut </span>output_buffer_len = <span class="number">0usize</span>;
-        <span class="kw">let _ </span>= <span class="kw">unsafe </span>{
+
+        <span class="kw">let </span>result_code = <span class="kw">unsafe </span>{
             tflite_init(
                 model_bytes.as_ptr(),
                 model_bytes_len,
@@ -253,13 +269,19 @@
                 <span class="kw-2">&amp;mut </span>output_buffer_len,
             )
         };
-        <span class="self">self</span>.output_buffer_len = <span class="prelude-val">Some</span>(output_buffer_len);
-
-        <span class="macro">log!</span>(
-            Level::Info,
-            <span class="string">&quot;TFLite model has been successfully initialized&quot;
-        </span>);
-        <span class="prelude-val">Ok</span>(())
+        <span class="kw">if </span>result_code == <span class="number">0 </span>{
+            <span class="self">self</span>.output_buffer_len = <span class="prelude-val">Some</span>(output_buffer_len);
+            <span class="macro">log!</span>(
+                Level::Info,
+                <span class="string">&quot;TFLite model has been successfully initialized&quot;
+            </span>);
+            <span class="prelude-val">Ok</span>(())
+        } <span class="kw">else </span>{
+            <span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(
+                <span class="string">&quot;couldn&#39;t initialize TFLite model, code: {}&quot;</span>,
+                result_code
+            ))
+        }
     }
 
     <span class="kw">pub fn </span>run(<span class="kw-2">&amp;mut </span><span class="self">self</span>, input_bytes: <span class="kw-2">&amp;</span>[u8]) -&gt; anyhow::Result&lt;Vec&lt;u8&gt;&gt; {
@@ -271,7 +293,8 @@
         <span class="kw">let </span>input_bytes_len = input_bytes.len();
         <span class="kw">let </span><span class="kw-2">mut </span>output_buffer = <span class="macro">vec!</span>[<span class="number">0</span>; output_buffer_len];
         <span class="kw">let </span><span class="kw-2">mut </span>output_bytes_len = <span class="number">0usize</span>;
-        <span class="kw">let _ </span>= <span class="kw">unsafe </span>{
+
+        <span class="kw">let </span>result_code = <span class="kw">unsafe </span>{
             tflite_run(
                 input_bytes.as_ptr(),
                 input_bytes_len,
@@ -279,14 +302,21 @@
                 <span class="kw-2">&amp;mut </span>output_bytes_len,
             )
         };
-        <span class="kw">if </span>output_bytes_len &lt;= output_buffer_len {
-            <span class="macro">log!</span>(Level::Info, <span class="string">&quot;TFLite inference has run successfully&quot;</span>);
-            <span class="prelude-val">Ok</span>(output_buffer[..output_bytes_len].to_vec())
+        <span class="kw">if </span>result_code == <span class="number">0 </span>{
+            <span class="kw">if </span>output_bytes_len &lt;= output_buffer_len {
+                <span class="macro">log!</span>(Level::Info, <span class="string">&quot;TFLite inference has run successfully&quot;</span>);
+                <span class="prelude-val">Ok</span>(output_buffer[..output_bytes_len].to_vec())
+            } <span class="kw">else </span>{
+                <span class="comment">// Panicking since if the output bytes length is bigger than the output buffer
+                // length, then there is a potential for memory corruption and we can&#39;t rely on any
+                // of the Rust memory safety assumptions.
+                </span><span class="macro">panic!</span>(<span class="string">&quot;output bytes length is bigger than the output buffer length&quot;</span>);
+            }
         } <span class="kw">else </span>{
-            <span class="comment">// Panicing since if the output bytes length is bigger than the output buffer length,
-            // then there is a potential for memory corruption and we can&#39;t rely on any of the Rust
-            // memory safety assumptions.
-            </span><span class="macro">panic!</span>(<span class="string">&quot;output bytes length is bigger than the output buffer length&quot;</span>);
+            <span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(
+                <span class="string">&quot;couldn&#39;t run TFLite inference, code: {}&quot;</span>,
+                result_code
+            ))
         }
     }
 }
