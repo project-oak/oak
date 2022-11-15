@@ -24,9 +24,6 @@ docker_run_flags=(
   '--volume=/dev/log:/dev/log'
   '--workdir=/workspace'
   '--network=host'
-  # We need to use Docker from inside the container, but only for build.
-  # To do that, we map the socket from the host.
-  "--volume=$XDG_RUNTIME_DIR/docker.sock:/var/run/docker.sock"
 )
 
 # If the host supports KVM, allow the docker image to use it.
