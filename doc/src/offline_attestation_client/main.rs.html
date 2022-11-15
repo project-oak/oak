@@ -274,7 +274,7 @@
         </span><span class="kw">let </span>response_public_key_handle = <span class="self">self
             </span>.private_key_handle
             .public()
-            .map_err(|error| <span class="macro">anyhow!</span>(<span class="string">&quot;Couldn&#39;t get public key: {}&quot;</span>, error))<span class="question-mark">?</span>;
+            .map_err(|error| <span class="macro">anyhow!</span>(<span class="string">&quot;couldn&#39;t get public key: {}&quot;</span>, error))<span class="question-mark">?</span>;
         <span class="kw">let </span>response_public_key = serialize_public_key(<span class="kw-2">&amp;</span>response_public_key_handle)<span class="question-mark">?</span>;
 
         <span class="prelude-val">Ok</span>(EncryptedRequest {

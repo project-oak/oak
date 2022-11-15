@@ -867,7 +867,7 @@
     <span class="kw">fn </span>try_from(msr_value: u64) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
         <span class="kw">const </span>SEV_INFO_RESPONSE_INFO: u64 = <span class="number">0x001</span>;
         <span class="kw">if </span>msr_value &amp; GHCB_INFO_MASK != SEV_INFO_RESPONSE_INFO {
-            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;Value is not a valid SEV information response&quot;</span>);
+            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;value is not a valid SEV information response&quot;</span>);
         }
         <span class="kw">let </span>max_protocol_version = (msr_value &gt;&gt; <span class="number">48</span>) <span class="kw">as </span>u16;
         <span class="kw">let </span>min_protocol_version = (msr_value &gt;&gt; <span class="number">32</span>) <span class="kw">as </span>u16;
@@ -937,12 +937,12 @@
         <span class="kw">const </span>SEV_INFO_RESPONSE_INFO: u64 = <span class="number">0x005</span>;
         <span class="kw">const </span>RESERVED_MASK: u64 = <span class="number">0x3FFFF000</span>;
         <span class="kw">if </span>msr_value &amp; GHCB_INFO_MASK != SEV_INFO_RESPONSE_INFO || msr_value &amp; RESERVED_MASK != <span class="number">0 </span>{
-            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;Value is not a valid CPUID response&quot;</span>);
+            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;value is not a valid CPUID response&quot;</span>);
         }
         <span class="kw">let </span>value = (msr_value &gt;&gt; <span class="number">32</span>) <span class="kw">as </span>u32;
         <span class="kw">const </span>REGISTER_MASK: u64 = <span class="number">0xC0000000</span>;
         <span class="kw">let </span>register = CpuidRegister::from_repr(((msr_value &amp; REGISTER_MASK) &gt;&gt; <span class="number">30</span>) <span class="kw">as </span>u8)
-            .ok_or(<span class="string">&quot;Invalid register&quot;</span>)<span class="question-mark">?</span>;
+            .ok_or(<span class="string">&quot;invalid register&quot;</span>)<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(<span class="self">Self </span>{ value, register })
     }
 }
@@ -1006,7 +1006,7 @@
     <span class="kw">fn </span>try_from(msr_value: u64) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
         <span class="kw">const </span>PREFERRED_GPA_RESPONSE_INFO: u64 = <span class="number">0x011</span>;
         <span class="kw">if </span>msr_value &amp; GHCB_INFO_MASK != PREFERRED_GPA_RESPONSE_INFO {
-            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;Value is not a valid preferred GHCP GPA response&quot;</span>);
+            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;value is not a valid preferred GHCP GPA response&quot;</span>);
         }
         <span class="kw">let </span>ghcb_gpa = (msr_value &amp; GCHP_DATA_MASK) <span class="kw">as </span>usize;
         <span class="prelude-val">Ok</span>(<span class="self">Self </span>{ ghcb_gpa })
@@ -1113,12 +1113,12 @@
     <span class="kw">pub fn </span>new(page_gpa: usize, assignment: PageAssignment) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
         <span class="kw">let </span>page_gpa = page_gpa <span class="kw">as </span>u64;
         <span class="kw">if </span>page_gpa &amp; GHCB_INFO_MASK != <span class="number">0 </span>{
-            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;Page must be 4KiB-aligned&quot;</span>);
+            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;page must be 4KiB-aligned&quot;</span>);
         }
         <span class="comment">// Only 52 bits can be use for an address.
         </span><span class="kw">const </span>ADDRESS_MAX: u64 = (<span class="number">1 </span>&lt;&lt; <span class="number">52</span>) - <span class="number">1</span>;
         <span class="kw">if </span>page_gpa &gt; ADDRESS_MAX {
-            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;Page address is too high&quot;</span>);
+            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;page address is too high&quot;</span>);
         }
         <span class="prelude-val">Ok</span>(<span class="self">Self </span>{
             page_gpa,
@@ -1151,7 +1151,7 @@
         <span class="kw">if </span>msr_value &amp; GHCB_INFO_MASK != SNP_PAGE_STATE_CHANGE_RESPONSE_INFO
             || msr_value &amp; RESERVED_MASK != <span class="number">0
         </span>{
-            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;Value is not a valid SNP Page State Change response&quot;</span>);
+            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;value is not a valid SNP Page State Change response&quot;</span>);
         }
         <span class="kw">let </span>error_code = (msr_value &gt;&gt; <span class="number">32</span>) <span class="kw">as </span>u32;
         <span class="prelude-val">Ok</span>(<span class="self">Self </span>{ error_code })
@@ -1168,7 +1168,7 @@
     <span class="kw">let </span>response: SnpPageStateChangeResponse = read_protocol_msr().try_into()<span class="question-mark">?</span>;
     <span class="comment">// Ensure that the page state change was successful.
     </span><span class="kw">if </span>response.error_code != <span class="number">0 </span>{
-        <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;Page state change failed&quot;</span>);
+        <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;page state change failed&quot;</span>);
     }
     <span class="prelude-val">Ok</span>(())
 }
@@ -1218,10 +1218,10 @@
     <span class="kw">fn </span>try_from(msr_value: u64) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
         <span class="kw">const </span>HYPERVISOR_FEATURE_SUPPORT_RESPONSE_INFO: u64 = <span class="number">0x081</span>;
         <span class="kw">if </span>msr_value &amp; GHCB_INFO_MASK != HYPERVISOR_FEATURE_SUPPORT_RESPONSE_INFO {
-            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;Value is not a valid Hypervisor Feature Support response&quot;</span>);
+            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;value is not a valid Hypervisor Feature Support response&quot;</span>);
         }
         HypervisorFeatureSupportResponse::from_bits(msr_value &gt;&gt; <span class="number">12</span>)
-            .ok_or(<span class="string">&quot;Invalid Hypervisor Feature Support bitmap&quot;</span>)
+            .ok_or(<span class="string">&quot;invalid Hypervisor Feature Support bitmap&quot;</span>)
     }
 }
 

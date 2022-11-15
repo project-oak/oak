@@ -225,7 +225,7 @@
         <span class="kw">let </span>entry = create_random_entry(rng, key_size_bytes, value_size_bytes);
         entry
             .encode_length_delimited(<span class="kw-2">&amp;mut </span>buf)
-            .context(<span class="string">&quot;could not encode entry&quot;</span>)<span class="question-mark">?</span>;
+            .context(<span class="string">&quot;couldn&#39;t encode entry&quot;</span>)<span class="question-mark">?</span>;
     }
     <span class="prelude-val">Ok</span>(buf)
 }
@@ -260,7 +260,7 @@
             <span class="kw">let </span>entry = create_weather_entry(rng, lat, lng);
             entry
                 .encode_length_delimited(<span class="kw-2">&amp;mut </span>buf)
-                .context(<span class="string">&quot;could not encode entry&quot;</span>)<span class="question-mark">?</span>;
+                .context(<span class="string">&quot;couldn&#39;t encode entry&quot;</span>)<span class="question-mark">?</span>;
         }
     }
     <span class="prelude-val">Ok</span>(buf)
@@ -322,7 +322,7 @@
         };
         entry
             .encode_length_delimited(<span class="kw-2">&amp;mut </span>buf)
-            .context(<span class="string">&quot;could not encode entry&quot;</span>)<span class="question-mark">?</span>;
+            .context(<span class="string">&quot;couldn&#39;t encode entry&quot;</span>)<span class="question-mark">?</span>;
     }
     <span class="comment">// Add the cell-based index entries.
     </span><span class="kw">for </span>(key, values) <span class="kw">in </span>cell_map.iter_all() {
@@ -332,7 +332,7 @@
         };
         cell_entry
             .encode_length_delimited(<span class="kw-2">&amp;mut </span>buf)
-            .context(<span class="string">&quot;could not encode cell index&quot;</span>)<span class="question-mark">?</span>;
+            .context(<span class="string">&quot;couldn&#39;t encode cell index&quot;</span>)<span class="question-mark">?</span>;
     }
     <span class="prelude-val">Ok</span>(buf)
 }

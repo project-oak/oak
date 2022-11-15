@@ -609,7 +609,7 @@
     // This reference will no longer be valid after we reload the page tables!
     </span><span class="kw">let </span>pml4_frame = frame_allocator
         .allocate_frame()
-        .ok_or(<span class="string">&quot;Could not allocate a frame for PML4&quot;</span>)<span class="question-mark">?</span>;
+        .ok_or(<span class="string">&quot;couldn&#39;t allocate a frame for PML4&quot;</span>)<span class="question-mark">?</span>;
     <span class="kw">let </span>pml4 = <span class="kw">unsafe </span>{ <span class="kw-2">&amp;mut *</span>(pml4_frame.start_address().as_u64() <span class="kw">as </span><span class="kw-2">*mut </span>PageTable) };
     pml4.zero();
 
@@ -643,12 +643,12 @@
             <span class="kw-2">&amp;mut </span>page_table,
             frame_allocator,
         )
-        .map_err(|<span class="kw">_</span>| <span class="string">&quot;Failed to set up paging for physical memory&quot;</span>)<span class="question-mark">?</span>;
+        .map_err(|<span class="kw">_</span>| <span class="string">&quot;couldn&#39;t set up paging for physical memory&quot;</span>)<span class="question-mark">?</span>;
 
         <span class="comment">// Mapping for the kernel itself in the upper -2G of memory, based on the mappings (and
         // permissions) in the program header.
         </span>page_tables::create_kernel_map(program_headers, <span class="kw-2">&amp;mut </span>page_table, frame_allocator)
-            .map_err(|<span class="kw">_</span>| <span class="string">&quot;Failed to set up paging for the kernel&quot;</span>)<span class="question-mark">?</span>;
+            .map_err(|<span class="kw">_</span>| <span class="string">&quot;couldn&#39;t set up paging for the kernel&quot;</span>)<span class="question-mark">?</span>;
     }
 
     <span class="comment">// Safety: the new page tables keep the identity mapping at -2GB intact, so it&#39;s safe to load

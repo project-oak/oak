@@ -284,7 +284,7 @@
         }
     } <span class="kw">else </span>{
         <span class="prelude-val">Err</span>(InstructionError::from_repr(result)
-            .expect(<span class="string">&quot;Invalid return value from PVALIDATE instruction.&quot;</span>))
+            .expect(<span class="string">&quot;invalid return value from PVALIDATE instruction&quot;</span>))
     }
 }
 
@@ -368,7 +368,7 @@
         <span class="prelude-val">Ok</span>(())
     } <span class="kw">else </span>{
         <span class="prelude-val">Err</span>(InstructionError::from_repr(result <span class="kw">as </span>u32)
-            .expect(<span class="string">&quot;Invalid return value from RMPADJUST instruction.&quot;</span>))
+            .expect(<span class="string">&quot;invalid return value from RMPADJUST instruction&quot;</span>))
     }
 }
 

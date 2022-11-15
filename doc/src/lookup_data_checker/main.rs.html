@@ -156,7 +156,7 @@
     <span class="kw">while </span>lookup_data_buffer.has_remaining() {
         <span class="kw">let </span>entry =
             oak_functions_abi::proto::Entry::decode_length_delimited(<span class="kw-2">&amp;mut </span>lookup_data_buffer)
-                .context(<span class="string">&quot;could not decode entry&quot;</span>)<span class="question-mark">?</span>;
+                .context(<span class="string">&quot;couldn&#39;t decode entry&quot;</span>)<span class="question-mark">?</span>;
         entries.insert(entry.key, entry.value);
     }
     <span class="prelude-val">Ok</span>(entries)
@@ -168,12 +168,12 @@
 
     <span class="comment">// Read lookup data file.
     </span><span class="macro">info!</span>(<span class="string">&quot;Checking lookup data file format: {}&quot;</span>, opt.file_path);
-    <span class="kw">let </span>file = File::open(opt.file_path).context(<span class="string">&quot;could not open file&quot;</span>)<span class="question-mark">?</span>;
+    <span class="kw">let </span>file = File::open(opt.file_path).context(<span class="string">&quot;couldn&#39;t open file&quot;</span>)<span class="question-mark">?</span>;
     <span class="kw">let </span><span class="kw-2">mut </span>reader = BufReader::new(file);
     <span class="kw">let </span><span class="kw-2">mut </span>buffer = Vec::new();
     reader.read_to_end(<span class="kw-2">&amp;mut </span>buffer)<span class="question-mark">?</span>;
     <span class="kw">let </span>entries =
-        parse_lookup_entries(<span class="kw-2">&amp;mut </span>buffer.as_ref()).context(<span class="string">&quot;could not parse lookup data&quot;</span>)<span class="question-mark">?</span>;
+        parse_lookup_entries(<span class="kw-2">&amp;mut </span>buffer.as_ref()).context(<span class="string">&quot;couldn&#39;t parse lookup data&quot;</span>)<span class="question-mark">?</span>;
 
     <span class="comment">// Parse lookup data entries.
     </span><span class="macro">debug!</span>(<span class="string">&quot;Parsed entries:&quot;</span>);
@@ -182,20 +182,20 @@
     <span class="kw">for </span>entry <span class="kw">in </span>entries {
         <span class="kw">if </span>entry.<span class="number">0</span>.len() == LOCATION_SIZE {
             <span class="kw">let </span>location = location_from_bytes(<span class="kw-2">&amp;</span>entry.<span class="number">0</span>)
-                .with_context(|| <span class="macro">format!</span>(<span class="string">&quot;could not parse location {:?}&quot;</span>, <span class="kw-2">&amp;</span>entry.<span class="number">0</span>))<span class="question-mark">?</span>;
+                .with_context(|| <span class="macro">format!</span>(<span class="string">&quot;couldn&#39;t parse location {:?}&quot;</span>, <span class="kw-2">&amp;</span>entry.<span class="number">0</span>))<span class="question-mark">?</span>;
             weather_locations.insert(entry.<span class="number">0</span>);
 
             <span class="macro">debug!</span>(<span class="string">&quot;- {{{:?}: {:?}}} # Location&quot;</span>, location, entry.<span class="number">1</span>.to_vec());
         } <span class="kw">else </span>{
             <span class="kw">let </span>cell_id = cell_id_from_bytes(<span class="kw-2">&amp;</span>entry.<span class="number">0</span>)
-                .with_context(|| <span class="macro">format!</span>(<span class="string">&quot;could not parse cell ID {:?}&quot;</span>, <span class="kw-2">&amp;</span>entry.<span class="number">0</span>))<span class="question-mark">?</span>;
+                .with_context(|| <span class="macro">format!</span>(<span class="string">&quot;couldn&#39;t parse cell ID {:?}&quot;</span>, <span class="kw-2">&amp;</span>entry.<span class="number">0</span>))<span class="question-mark">?</span>;
             <span class="macro">assert_eq!</span>(cell_id.level(), S2_DEFAULT_LEVEL <span class="kw">as </span>u64);
 
             <span class="kw">let </span><span class="kw-2">mut </span>locations = <span class="macro">vec!</span>[];
             <span class="kw">for </span>chunk <span class="kw">in </span>entry.<span class="number">1</span>.chunks(LOCATION_SIZE) {
                 <span class="kw">let </span>location = location_from_bytes(chunk).with_context(|| {
                     <span class="macro">format!</span>(
-                        <span class="string">&quot;could not parse location {:?} corresponding to the cell ID {:?}&quot;</span>,
+                        <span class="string">&quot;couldn&#39;t parse location {:?} corresponding to the cell ID {:?}&quot;</span>,
                         chunk, cell_id
                     )
                 })<span class="question-mark">?</span>;
@@ -212,7 +212,7 @@
         <span class="kw">let </span>extra_locations: HashSet&lt;<span class="kw">_</span>&gt; = weather_locations.difference(<span class="kw-2">&amp;</span>cell_locations).collect();
         <span class="kw">if </span>!extra_locations.is_empty() {
             <span class="macro">anyhow::bail!</span>(<span class="macro">format!</span>(
-                <span class="string">&quot;Locations are not presented in Cell IDs: {:?}&quot;</span>,
+                <span class="string">&quot;locations are not presented in Cell IDs: {:?}&quot;</span>,
                 extra_locations
             ));
         }
@@ -221,7 +221,7 @@
             cell_locations.difference(<span class="kw-2">&amp;</span>weather_locations).collect();
         <span class="kw">if </span>!extra_locations_in_cells.is_empty() {
             <span class="macro">anyhow::bail!</span>(<span class="macro">format!</span>(
-                <span class="string">&quot;Locations from Cell IDs do not have individual data entries: {:?}&quot;</span>,
+                <span class="string">&quot;locations from Cell IDs do not have individual data entries: {:?}&quot;</span>,
                 extra_locations
             ));
         }

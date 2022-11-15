@@ -266,7 +266,7 @@
         <span class="macro">log!</span>(Level::Info, <span class="string">&quot;Running TFLite inference&quot;</span>);
         <span class="kw">let </span>output_buffer_len = <span class="self">self
             </span>.output_buffer_len
-            .context(<span class="string">&quot;Running inference on a non-initialized TensorFlow model&quot;</span>)<span class="question-mark">?</span>;
+            .context(<span class="string">&quot;running inference on a non-initialized TensorFlow model&quot;</span>)<span class="question-mark">?</span>;
 
         <span class="kw">let </span>input_bytes_len = input_bytes.len();
         <span class="kw">let </span><span class="kw-2">mut </span>output_buffer = <span class="macro">vec!</span>[<span class="number">0</span>; output_buffer_len];
@@ -286,7 +286,7 @@
             <span class="comment">// Panicing since if the output bytes length is bigger than the output buffer length,
             // then there is a potential for memory corruption and we can&#39;t rely on any of the Rust
             // memory safety assumptions.
-            </span><span class="macro">panic!</span>(<span class="string">&quot;Output bytes length is bigger than the output buffer length&quot;</span>);
+            </span><span class="macro">panic!</span>(<span class="string">&quot;output bytes length is bigger than the output buffer length&quot;</span>);
         }
     }
 }

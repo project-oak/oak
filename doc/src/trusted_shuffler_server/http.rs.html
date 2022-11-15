@@ -296,8 +296,6 @@
 <span id="296">296</span>
 <span id="297">297</span>
 <span id="298">298</span>
-<span id="299">299</span>
-<span id="300">300</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -343,12 +341,12 @@
         // The following does not work, because &amp;self would need &#39;static life time.
         // let parts = request.uri().into_parts();
         // parts.authority = Some(Authority::from_static(&amp;self.backend_url));
-        // let new_uri = Uri::from_parts(parts).expect(&quot;Failed to create new URI&quot;);
+        // let new_uri = Uri::from_parts(parts).expect(&quot;couldn&#39;t create new URI&quot;);
         </span><span class="kw">let </span>path = request.uri().path();
         <span class="comment">// And extend the URL to the backend.
         </span><span class="kw">let </span>new_uri = <span class="macro">format!</span>(<span class="string">&quot;{}{}&quot;</span>, <span class="self">self</span>.backend_url, path)
             .parse::&lt;Uri&gt;()
-            .map_err(|error| <span class="macro">anyhow!</span>(<span class="string">&quot;Couldn&#39;t parse URI for backend: {:?}&quot;</span>, error))<span class="question-mark">?</span>;
+            .map_err(|error| <span class="macro">anyhow!</span>(<span class="string">&quot;couldn&#39;t parse URI for backend: {:?}&quot;</span>, error))<span class="question-mark">?</span>;
         <span class="kw">let </span>uri = request.uri_mut();
         <span class="kw-2">*</span>uri = new_uri;
 
@@ -359,7 +357,7 @@
         </span><span class="kw">let </span>scheme = request
             .uri()
             .scheme()
-            .context(<span class="string">&quot;Could not get scheme from backend_url.&quot;</span>)<span class="question-mark">?</span>;
+            .context(<span class="string">&quot;couldn&#39;t get scheme from backend_url&quot;</span>)<span class="question-mark">?</span>;
 
         <span class="kw">let </span>response = <span class="kw">if </span>scheme == <span class="kw-2">&amp;</span>http::uri::Scheme::HTTPS {
             Client::builder()
@@ -375,7 +373,7 @@
 
         <span class="kw">match </span>response.<span class="kw">await </span>{
             <span class="prelude-val">Err</span>(error) =&gt; <span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(
-                <span class="string">&quot;Couldn&#39;t receive response from the backend: {:?}&quot;</span>,
+                <span class="string">&quot;couldn&#39;t receive response from the backend: {:?}&quot;</span>,
                 error
             )),
             <span class="prelude-val">Ok</span>(response) =&gt; <span class="prelude-val">Ok</span>(HyperResponseWrapper(response).strip().<span class="kw">await</span><span class="question-mark">?</span>),
@@ -392,7 +390,7 @@
         </span><span class="kw">let </span>(parts, body) = <span class="self">self</span>.<span class="number">0</span>.into_parts();
         <span class="kw">let </span>body = hyper::body::to_bytes(body)
             .<span class="kw">await
-            </span>.context(<span class="string">&quot;Failed to read request body.&quot;</span>)<span class="question-mark">?</span>;
+            </span>.context(<span class="string">&quot;couldn&#39;t read request body&quot;</span>)<span class="question-mark">?</span>;
         <span class="macro">log::debug!</span>(<span class="string">&quot;Body {:?}&quot;</span>, body);
 
         <span class="kw">let </span>uri = parts.uri.clone();
@@ -425,9 +423,7 @@
             .method(Method::POST)
             .version(http::Version::HTTP_2)
             .body(body)
-            .context(
-                <span class="string">&quot;Failed to convert a plaintext Trusted Shuffler request to a hyper request.&quot;</span>,
-            )<span class="question-mark">?</span>;
+            .context(<span class="string">&quot;couldn&#39;t convert a plaintext Trusted Shuffler request to a hyper request&quot;</span>)<span class="question-mark">?</span>;
 
         <span class="kw">let </span>headers = hyper_request.headers_mut();
 
@@ -457,12 +453,12 @@
 
         <span class="kw">let </span>body = hyper::body::to_bytes(<span class="kw-2">&amp;mut </span>hyper_body)
             .<span class="kw">await
-            </span>.context(<span class="string">&quot;Could not read body.&quot;</span>)<span class="question-mark">?</span>;
+            </span>.context(<span class="string">&quot;couldn&#39;t read body&quot;</span>)<span class="question-mark">?</span>;
 
         <span class="kw">let </span>trailers = hyper_body
             .trailers()
             .<span class="kw">await
-            </span>.context(<span class="string">&quot;Could not read trailers.&quot;</span>)<span class="question-mark">?
+            </span>.context(<span class="string">&quot;couldn&#39;t read trailers&quot;</span>)<span class="question-mark">?
             </span>.unwrap_or_default();
 
         <span class="kw">let </span>trusted_shuffler_response = PlaintextResponse {
@@ -481,18 +477,18 @@
         sender
             .send_data(encrypted_response.body)
             .<span class="kw">await
-            </span>.context(<span class="string">&quot;Failed to build body from data of encrypted Trusted Shuffler response.&quot;</span>)<span class="question-mark">?</span>;
+            </span>.context(<span class="string">&quot;couldn&#39;t build body from data of encrypted Trusted Shuffler response&quot;</span>)<span class="question-mark">?</span>;
         sender
             .send_trailers(encrypted_response.trailers)
             .<span class="kw">await
             </span>.context(
-                <span class="string">&quot;Failed to build build body from trailers of encrypted Trusted Shuffler response.&quot;</span>,
+                <span class="string">&quot;couldn&#39;t build build body from trailers of encrypted Trusted Shuffler response&quot;</span>,
             )<span class="question-mark">?</span>;
 
         <span class="kw">let </span><span class="kw-2">mut </span>hyper_response = Response::builder()
             .version(http::Version::HTTP_2)
             .body(body)
-            .context(<span class="string">&quot;Failed to convert encrypted Trusted Shuffler response to hyper response.&quot;</span>)<span class="question-mark">?</span>;
+            .context(<span class="string">&quot;couldn&#39;t convert encrypted Trusted Shuffler response to hyper response&quot;</span>)<span class="question-mark">?</span>;
 
         <span class="kw">let </span>headers = hyper_response.headers_mut();
 

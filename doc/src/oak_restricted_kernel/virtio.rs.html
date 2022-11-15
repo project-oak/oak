@@ -144,7 +144,7 @@
         |paddr: PhysAddr| translator.translate_physical(paddr),
         alloc,
     )
-    .expect(<span class="string">&quot;Couldn&#39;t configure PCI virtio console device.&quot;</span>);
+    .expect(<span class="string">&quot;couldn&#39;t configure PCI virtio console device&quot;</span>);
     <span class="macro">info!</span>(<span class="string">&quot;Console device status: {}&quot;</span>, console.get_status());
     Channel { inner: console }
 }
@@ -159,11 +159,11 @@
         |paddr: PhysAddr| translator.translate_physical(paddr),
         alloc,
     )
-    .expect(<span class="string">&quot;Couldn&#39;t configure PCI virtio vsock device.&quot;</span>);
+    .expect(<span class="string">&quot;couldn&#39;t configure PCI virtio vsock device&quot;</span>);
     <span class="macro">info!</span>(<span class="string">&quot;Socket device status: {}&quot;</span>, vsock.get_status());
     <span class="kw">let </span>listener = virtio::vsock::socket::SocketListener::new(vsock, VSOCK_PORT);
     Channel {
-        inner: listener.accept().expect(<span class="string">&quot;Couldn&#39;t accept connection.&quot;</span>),
+        inner: listener.accept().expect(<span class="string">&quot;couldn&#39;t accept connection&quot;</span>),
     }
 }
 </code></pre></div>

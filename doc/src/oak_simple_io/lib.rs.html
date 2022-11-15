@@ -273,14 +273,14 @@
         write_address(
             <span class="kw-2">&amp;</span>io_port_factory,
             translate(VirtAddr::from_ptr(output_buffer.as_ptr()))
-                .ok_or(<span class="string">&quot;Failed to translate VirtAddr to PhysAddr&quot;</span>)<span class="question-mark">?</span>,
+                .ok_or(<span class="string">&quot;couldn&#39;t translate VirtAddr to PhysAddr&quot;</span>)<span class="question-mark">?</span>,
             output.buffer_msb_port,
             output.buffer_lsb_port,
         )<span class="question-mark">?</span>;
         write_address(
             <span class="kw-2">&amp;</span>io_port_factory,
             translate(VirtAddr::from_ptr(input_buffer.as_ptr()))
-                .ok_or(<span class="string">&quot;Failed to translate VirtAddr to PhysAddr&quot;</span>)<span class="question-mark">?</span>,
+                .ok_or(<span class="string">&quot;couldn&#39;t translate VirtAddr to PhysAddr&quot;</span>)<span class="question-mark">?</span>,
             input.buffer_msb_port,
             input.buffer_lsb_port,
         )<span class="question-mark">?</span>;
@@ -324,7 +324,7 @@
         // implementation. This is probably not recoverable, so panic.
         </span><span class="macro">assert!</span>(
             length &lt;= INPUT_BUFFER_LENGTH,
-            <span class="string">&quot;Invalid simple IO input message length.&quot;
+            <span class="string">&quot;invalid simple IO input message length.&quot;
         </span>);
         <span class="kw">let </span><span class="kw-2">mut </span>result = VecDeque::with_capacity(length);
         result.extend(<span class="kw-2">&amp;</span><span class="self">self</span>.input_buffer[..length]);

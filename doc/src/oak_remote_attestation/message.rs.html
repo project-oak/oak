@@ -663,14 +663,14 @@
     <span class="kw">fn </span>deserialize(input: <span class="kw-2">&amp;</span>[u8]) -&gt; anyhow::Result&lt;<span class="self">Self</span>&gt; {
         <span class="kw">if </span>input.len() != ClientHello::len() {
             <span class="macro">bail!</span>(
-                <span class="string">&quot;Invalid client hello message length: expected {}, found {}&quot;</span>,
+                <span class="string">&quot;invalid client hello message length: expected {}, found {}&quot;</span>,
                 ClientHello::len(),
                 input.len(),
             );
         }
         <span class="kw">let </span><span class="kw-2">mut </span>input = input;
         <span class="kw">if </span>input.get_u8() != CLIENT_HELLO_HEADER {
-            <span class="macro">bail!</span>(<span class="string">&quot;Invalid client hello message header&quot;</span>);
+            <span class="macro">bail!</span>(<span class="string">&quot;invalid client hello message header&quot;</span>);
         }
         <span class="kw">let </span><span class="kw-2">mut </span>random = [<span class="number">0u8</span>; REPLAY_PROTECTION_ARRAY_LENGTH];
         input.copy_to_slice(<span class="kw-2">&amp;mut </span>random);
@@ -733,21 +733,21 @@
     <span class="kw">fn </span>deserialize(input: <span class="kw-2">&amp;</span>[u8]) -&gt; anyhow::Result&lt;<span class="self">Self</span>&gt; {
         <span class="kw">if </span>input.len() &lt; ServerIdentity::min_len() {
             <span class="macro">bail!</span>(
-                <span class="string">&quot;Server identity message too short: expected at least {} bytes, found {}&quot;</span>,
+                <span class="string">&quot;server identity message too short: expected at least {} bytes, found {}&quot;</span>,
                 ServerIdentity::min_len(),
                 input.len(),
             );
         }
         <span class="kw">if </span>input.len() &gt; MAXIMUM_MESSAGE_SIZE {
             <span class="macro">bail!</span>(
-                <span class="string">&quot;Maximum handshake message size of {} exceeded, found {}&quot;</span>,
+                <span class="string">&quot;maximum handshake message size of {} exceeded, found {}&quot;</span>,
                 MAXIMUM_MESSAGE_SIZE,
                 input.len(),
             );
         }
         <span class="kw">let </span><span class="kw-2">mut </span>input = input;
         <span class="kw">if </span>input.get_u8() != SERVER_IDENTITY_HEADER {
-            <span class="macro">bail!</span>(<span class="string">&quot;Invalid server identity message header&quot;</span>);
+            <span class="macro">bail!</span>(<span class="string">&quot;invalid server identity message header&quot;</span>);
         }
 
         <span class="kw">let </span>version = input.get_u8();
@@ -763,7 +763,7 @@
 
         <span class="kw">if </span>input.has_remaining() {
             <span class="macro">bail!</span>(
-                <span class="string">&quot;Invalid server identity message: {} unused bytes detected&quot;</span>,
+                <span class="string">&quot;invalid server identity message: {} unused bytes detected&quot;</span>,
                 input.remaining()
             );
         }
@@ -827,21 +827,21 @@
     <span class="kw">fn </span>deserialize(input: <span class="kw-2">&amp;</span>[u8]) -&gt; anyhow::Result&lt;<span class="self">Self</span>&gt; {
         <span class="kw">if </span>input.len() &lt; ClientIdentity::min_len() {
             <span class="macro">bail!</span>(
-                <span class="string">&quot;Client identity message too short: expected at least {} bytes, found {}&quot;</span>,
+                <span class="string">&quot;client identity message too short: expected at least {} bytes, found {}&quot;</span>,
                 ClientIdentity::min_len(),
                 input.len(),
             );
         }
         <span class="kw">if </span>input.len() &gt; MAXIMUM_MESSAGE_SIZE {
             <span class="macro">bail!</span>(
-                <span class="string">&quot;Maximum handshake message size of {} exceeded, found {}&quot;</span>,
+                <span class="string">&quot;maximum handshake message size of {} exceeded, found {}&quot;</span>,
                 MAXIMUM_MESSAGE_SIZE,
                 input.len(),
             );
         }
         <span class="kw">let </span><span class="kw-2">mut </span>input = input;
         <span class="kw">if </span>input.get_u8() != CLIENT_IDENTITY_HEADER {
-            <span class="macro">bail!</span>(<span class="string">&quot;Invalid client identity message header&quot;</span>);
+            <span class="macro">bail!</span>(<span class="string">&quot;invalid client identity message header&quot;</span>);
         }
 
         <span class="kw">let </span><span class="kw-2">mut </span>ephemeral_public_key = [<span class="number">0u8</span>; KEY_AGREEMENT_ALGORITHM_KEY_LENGTH];
@@ -854,7 +854,7 @@
 
         <span class="kw">if </span>input.has_remaining() {
             <span class="macro">bail!</span>(
-                <span class="string">&quot;Invalid client identity message: {} unused bytes detected&quot;</span>,
+                <span class="string">&quot;invalid client identity message: {} unused bytes detected&quot;</span>,
                 input.remaining()
             );
         }
@@ -892,14 +892,14 @@
     <span class="kw">fn </span>deserialize(input: <span class="kw-2">&amp;</span>[u8]) -&gt; anyhow::Result&lt;<span class="self">Self</span>&gt; {
         <span class="kw">if </span>input.len() &lt; EncryptedData::min_len() {
             <span class="macro">bail!</span>(
-                <span class="string">&quot;Encrypted data message too short: expected at least {} bytes, found {}&quot;</span>,
+                <span class="string">&quot;encrypted data message too short: expected at least {} bytes, found {}&quot;</span>,
                 EncryptedData::min_len(),
                 input.len(),
             );
         }
         <span class="kw">let </span><span class="kw-2">mut </span>input = input;
         <span class="kw">if </span>input.get_u8() != ENCRYPTED_DATA_HEADER {
-            <span class="macro">bail!</span>(<span class="string">&quot;Invalid encrypted data message header&quot;</span>);
+            <span class="macro">bail!</span>(<span class="string">&quot;invalid encrypted data message header&quot;</span>);
         }
 
         <span class="kw">let </span><span class="kw-2">mut </span>nonce = [<span class="number">0u8</span>; NONCE_LENGTH];
@@ -908,7 +908,7 @@
 
         <span class="kw">if </span>input.has_remaining() {
             <span class="macro">bail!</span>(
-                <span class="string">&quot;Invalid encrypted data message: {} unused bytes detected&quot;</span>,
+                <span class="string">&quot;invalid encrypted data message: {} unused bytes detected&quot;</span>,
                 input.remaining()
             );
         }
@@ -921,30 +921,30 @@
 /// [`MessageWrapper`].
 </span><span class="kw">pub fn </span>deserialize_message(input: <span class="kw-2">&amp;</span>[u8]) -&gt; anyhow::Result&lt;MessageWrapper&gt; {
     <span class="kw">if </span>input.is_empty() {
-        <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">&quot;Empty input&quot;</span>));
+        <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">&quot;empty input&quot;</span>));
     }
     <span class="kw">match </span>input[<span class="number">0</span>] {
         CLIENT_HELLO_HEADER =&gt; {
             <span class="kw">let </span>message: ClientHello = Deserializable::deserialize(input)
-                .context(<span class="string">&quot;Couldn&#39;t deserialize client hello message&quot;</span>)<span class="question-mark">?</span>;
+                .context(<span class="string">&quot;couldn&#39;t deserialize client hello message&quot;</span>)<span class="question-mark">?</span>;
             <span class="prelude-val">Ok</span>(MessageWrapper::ClientHello(message))
         }
         SERVER_IDENTITY_HEADER =&gt; {
             <span class="kw">let </span>message: ServerIdentity = Deserializable::deserialize(input)
-                .context(<span class="string">&quot;Couldn&#39;t deserialize server identity message&quot;</span>)<span class="question-mark">?</span>;
+                .context(<span class="string">&quot;couldn&#39;t deserialize server identity message&quot;</span>)<span class="question-mark">?</span>;
             <span class="prelude-val">Ok</span>(MessageWrapper::ServerIdentity(message))
         }
         CLIENT_IDENTITY_HEADER =&gt; {
             <span class="kw">let </span>message: ClientIdentity = Deserializable::deserialize(input)
-                .context(<span class="string">&quot;Couldn&#39;t deserialize client identity message&quot;</span>)<span class="question-mark">?</span>;
+                .context(<span class="string">&quot;couldn&#39;t deserialize client identity message&quot;</span>)<span class="question-mark">?</span>;
             <span class="prelude-val">Ok</span>(MessageWrapper::ClientIdentity(message))
         }
         ENCRYPTED_DATA_HEADER =&gt; {
             <span class="kw">let </span>message: EncryptedData = Deserializable::deserialize(input)
-                .context(<span class="string">&quot;Couldn&#39;t deserialize encrypted data message&quot;</span>)<span class="question-mark">?</span>;
+                .context(<span class="string">&quot;couldn&#39;t deserialize encrypted data message&quot;</span>)<span class="question-mark">?</span>;
             <span class="prelude-val">Ok</span>(MessageWrapper::EncryptedData(message))
         }
-        header =&gt; <span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">&quot;Unknown message header: {:#02x}&quot;</span>, header)),
+        header =&gt; <span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">&quot;unknown message header: {:#02x}&quot;</span>, header)),
     }
 }
 
@@ -957,7 +957,7 @@
     <span class="kw">let </span>length = source.get_u64_le();
     <span class="kw">if </span>length &gt; source.remaining() <span class="kw">as </span>u64 {
         <span class="macro">bail!</span>(
-            <span class="string">&quot;Invalid vector serialization: required length is {} but only {} bytes provided&quot;</span>,
+            <span class="string">&quot;invalid vector serialization: required length is {} but only {} bytes provided&quot;</span>,
             length,
             source.remaining()
         )

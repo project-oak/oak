@@ -42,9 +42,9 @@
 
 </span><span class="attribute">#[cfg_attr(not(test), no_mangle)]
 </span><span class="kw">pub extern </span><span class="string">&quot;C&quot; </span><span class="kw">fn </span>main() {
-    <span class="kw">let </span>request = oak_functions_sdk::read_request().expect(<span class="string">&quot;Couldn&#39;t read request body.&quot;</span>);
+    <span class="kw">let </span>request = oak_functions_sdk::read_request().expect(<span class="string">&quot;couldn&#39;t read request body&quot;</span>);
     <span class="kw">let </span>response = request;
-    oak_functions_sdk::write_response(<span class="kw-2">&amp;</span>response).expect(<span class="string">&quot;Couldn&#39;t write response body.&quot;</span>);
+    oak_functions_sdk::write_response(<span class="kw-2">&amp;</span>response).expect(<span class="string">&quot;couldn&#39;t write response body&quot;</span>);
 }
 </code></pre></div>
 </section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="echo" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (81f391930 2022-10-09)" ></div></body></html>

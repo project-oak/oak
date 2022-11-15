@@ -162,7 +162,6 @@
 <span id="162">162</span>
 <span id="163">163</span>
 <span id="164">164</span>
-<span id="165">165</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -248,7 +247,7 @@
                 | PageTableFlags::NO_EXECUTE,
         ) {
             <span class="prelude-val">Ok</span>(mapper_flush) =&gt; mapper_flush.flush(),
-            <span class="prelude-val">Err</span>(error) =&gt; <span class="macro">panic!</span>(<span class="string">&quot;Couldn&#39;t update page table flags for GHCB: {:?}&quot;</span>, error),
+            <span class="prelude-val">Err</span>(error) =&gt; <span class="macro">panic!</span>(<span class="string">&quot;couldn&#39;t update page table flags for GHCB: {:?}&quot;</span>, error),
         };
     }
 }
@@ -266,21 +265,21 @@
         </span><span class="kw">let </span>ghcb_frame = PhysFrame::&lt;Size2MiB&gt;::from_start_address(
             mapper
                 .translate_virtual(ghcb_page.start_address())
-                .expect(<span class="string">&quot;Couldn&#39;t find the physical address for the GHCB&quot;</span>),
+                .expect(<span class="string">&quot;couldn&#39;t find the physical address for the GHCB&quot;</span>),
         )
-        .expect(<span class="string">&quot;The GHCB physical address is not correctly aligned&quot;</span>);
+        .expect(<span class="string">&quot;the GHCB physical address is not correctly aligned&quot;</span>);
 
         <span class="comment">// Since we don&#39;t have the GHCB set up already we need to use the MSR protocol to mark every
         // individual 4KiB area in the 2MiB page as shared in the RMP. It is OK to crash if we
         // cannot share the GHCB with the hypervisor.
         </span>change_snp_state_for_frame(<span class="kw-2">&amp;</span>ghcb_frame, PageAssignment::Shared)
-            .expect(<span class="string">&quot;Could not change SNP state for frame.&quot;</span>);
+            .expect(<span class="string">&quot;couldn&#39;t change SNP state for frame&quot;</span>);
 
         <span class="kw">let </span>ghcb_location_request =
             RegisterGhcbGpaRequest::new(ghcb_frame.start_address().as_u64() <span class="kw">as </span>usize)
-                .expect(<span class="string">&quot;Invalid address for GHCB location&quot;</span>);
+                .expect(<span class="string">&quot;invalid address for GHCB location&quot;</span>);
         register_ghcb_location(ghcb_location_request)
-            .expect(<span class="string">&quot;Couldn&#39;t register the GHCB address with the hypervisor&quot;</span>);
+            .expect(<span class="string">&quot;couldn&#39;t register the GHCB address with the hypervisor&quot;</span>);
     }
 
     <span class="comment">// Safety: we only remove the encrypted bit as the initial pages created by the stage 0 firmware
@@ -291,7 +290,7 @@
             PageTableFlags::PRESENT | PageTableFlags::WRITABLE,
         ) {
             <span class="prelude-val">Ok</span>(mapper_flush) =&gt; mapper_flush.flush(),
-            <span class="prelude-val">Err</span>(error) =&gt; <span class="macro">panic!</span>(<span class="string">&quot;Couldn&#39;t update page table flags for GHCB: {:?}&quot;</span>, error),
+            <span class="prelude-val">Err</span>(error) =&gt; <span class="macro">panic!</span>(<span class="string">&quot;couldn&#39;t update page table flags for GHCB: {:?}&quot;</span>, error),
         };
     }
 
@@ -325,8 +324,7 @@
     // address and don&#39;t dereference it.
     </span><span class="kw">let </span>ghcb_pointer = <span class="kw">unsafe </span>{ <span class="kw-2">&amp;</span>GHCB_WRAPPER <span class="kw">as </span><span class="kw-2">*const </span>GhcbAlignmentWrapper };
     <span class="kw">let </span>ghcb_address = VirtAddr::from_ptr(ghcb_pointer);
-    Page::&lt;Size2MiB&gt;::from_start_address(ghcb_address)
-        .expect(<span class="string">&quot;Invalid start address for GHCB page.&quot;</span>)
+    Page::&lt;Size2MiB&gt;::from_start_address(ghcb_address).expect(<span class="string">&quot;invalid start address for GHCB page&quot;</span>)
 }
 </code></pre></div>
 </section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="oak_restricted_kernel" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (81f391930 2022-10-09)" ></div></body></html>

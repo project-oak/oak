@@ -185,7 +185,7 @@
             </span><span class="kw">let </span><span class="kw-2">mut </span>size_buffer: [u8; size_of::&lt;u64&gt;()] = [<span class="number">0</span>; size_of::&lt;u64&gt;()];
             <span class="self">self</span>.stream.read(<span class="kw-2">&amp;mut </span>size_buffer).map_err(|error| {
                 <span class="macro">anyhow!</span>(
-                    <span class="string">&quot;Couldn&#39;t read Protobuf message size from stream: {:?}&quot;</span>,
+                    <span class="string">&quot;couldn&#39;t read Protobuf message size from stream: {:?}&quot;</span>,
                     error
                 )
             })<span class="question-mark">?</span>;
@@ -195,20 +195,20 @@
                 <span class="comment">// Read Protobuf message.
                 </span><span class="kw">let </span><span class="kw-2">mut </span>message_buffer: Vec&lt;u8&gt; = <span class="macro">vec!</span>[<span class="number">0</span>; size];
                 <span class="self">self</span>.stream.read(<span class="kw-2">&amp;mut </span>message_buffer).map_err(|error| {
-                    <span class="macro">anyhow!</span>(<span class="string">&quot;Couldn&#39;t read Protobuf message from stream: {:?}&quot;</span>, error)
+                    <span class="macro">anyhow!</span>(<span class="string">&quot;couldn&#39;t read Protobuf message from stream: {:?}&quot;</span>, error)
                 })<span class="question-mark">?</span>;
 
                 <span class="kw">let </span>message = Request::decode(<span class="kw-2">&amp;*</span>message_buffer)
-                    .map_err(|error| <span class="macro">anyhow!</span>(<span class="string">&quot;Couldn&#39;t decode Protobuf message: {:?}&quot;</span>, error))<span class="question-mark">?</span>;
+                    .map_err(|error| <span class="macro">anyhow!</span>(<span class="string">&quot;couldn&#39;t decode Protobuf message: {:?}&quot;</span>, error))<span class="question-mark">?</span>;
                 <span class="self">self</span>.read_buffer_producer.push_slice(<span class="kw-2">&amp;</span>message.data);
             } <span class="kw">else </span>{
-                <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">&quot;Message size is 0&quot;</span>));
+                <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">&quot;message size is 0&quot;</span>));
             }
         }
 
         <span class="self">self</span>.read_buffer_consumer
             .read_exact(data)
-            .map_err(|error| <span class="macro">anyhow!</span>(<span class="string">&quot;Couldn&#39;t read from buffer: {:?}&quot;</span>, error))
+            .map_err(|error| <span class="macro">anyhow!</span>(<span class="string">&quot;couldn&#39;t read from buffer: {:?}&quot;</span>, error))
     }
 }
 
@@ -224,24 +224,24 @@
         <span class="kw">let </span><span class="kw-2">mut </span>message_buffer = <span class="macro">vec!</span>[];
         message
             .encode(<span class="kw-2">&amp;mut </span>message_buffer)
-            .map_err(|error| <span class="macro">anyhow!</span>(<span class="string">&quot;Couldn&#39;t encode proto message: {:?}&quot;</span>, error))<span class="question-mark">?</span>;
+            .map_err(|error| <span class="macro">anyhow!</span>(<span class="string">&quot;couldn&#39;t encode proto message: {:?}&quot;</span>, error))<span class="question-mark">?</span>;
 
         <span class="comment">// Write Protobuf message size.
         </span><span class="kw">let </span>size_buffer: [u8; size_of::&lt;u64&gt;()] = (message_buffer.len() <span class="kw">as </span>u64).to_ne_bytes();
         <span class="self">self</span>.stream
             .write_all(<span class="kw-2">&amp;</span>size_buffer)
-            .map_err(|error| <span class="macro">anyhow!</span>(<span class="string">&quot;Couldn&#39;t write into stream: {:?}&quot;</span>, error))<span class="question-mark">?</span>;
+            .map_err(|error| <span class="macro">anyhow!</span>(<span class="string">&quot;couldn&#39;t write into stream: {:?}&quot;</span>, error))<span class="question-mark">?</span>;
 
         <span class="comment">// Write Protobuf message.
         </span><span class="self">self</span>.stream
             .write_all(<span class="kw-2">&amp;</span>message_buffer)
-            .map_err(|error| <span class="macro">anyhow!</span>(<span class="string">&quot;Couldn&#39;t write into stream: {:?}&quot;</span>, error))
+            .map_err(|error| <span class="macro">anyhow!</span>(<span class="string">&quot;couldn&#39;t write into stream: {:?}&quot;</span>, error))
     }
 
     <span class="kw">fn </span>flush(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; anyhow::Result&lt;()&gt; {
         <span class="self">self</span>.stream
             .flush()
-            .map_err(|error| <span class="macro">anyhow!</span>(<span class="string">&quot;Couldn&#39;t flush stream: {:?}&quot;</span>, error))
+            .map_err(|error| <span class="macro">anyhow!</span>(<span class="string">&quot;couldn&#39;t flush stream: {:?}&quot;</span>, error))
     }
 }
 </code></pre></div>

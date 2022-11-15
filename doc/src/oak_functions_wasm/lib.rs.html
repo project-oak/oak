@@ -532,8 +532,6 @@
 <span id="532">532</span>
 <span id="533">533</span>
 <span id="534">534</span>
-<span id="535">535</span>
-<span id="536">536</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -629,7 +627,7 @@
             module,
             <span class="kw-2">&amp;</span>wasmi::ImportsBuilder::new().with_resolver(<span class="string">&quot;oak_functions&quot;</span>, <span class="kw-2">&amp;</span>abi),
         )
-        .map_err(|err| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;failed to instantiate Wasm module: {:?}&quot;</span>, err))<span class="question-mark">?
+        .map_err(|err| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;couldn&#39;t instantiate Wasm module: {:?}&quot;</span>, err))<span class="question-mark">?
         </span>.assert_no_start();
 
         check_export_function_signature(
@@ -637,13 +635,13 @@
             MAIN_FUNCTION_NAME,
             <span class="kw-2">&amp;</span>wasmi::Signature::new(<span class="kw-2">&amp;</span>[][..], <span class="prelude-val">None</span>),
         )
-        .context(<span class="string">&quot;could not validate `main` export&quot;</span>)<span class="question-mark">?</span>;
+        .context(<span class="string">&quot;couldn&#39;t validate `main` export&quot;</span>)<span class="question-mark">?</span>;
         check_export_function_signature(
             <span class="kw-2">&amp;</span>instance,
             ALLOC_FUNCTION_NAME,
             <span class="kw-2">&amp;</span>wasmi::Signature::new(<span class="kw-2">&amp;</span>[ValueType::I32][..], <span class="prelude-val">Some</span>(ValueType::I32)),
         )
-        .context(<span class="string">&quot; could not validate `alloc` export&quot;</span>)<span class="question-mark">?</span>;
+        .context(<span class="string">&quot;couldn&#39;t validate `alloc` export&quot;</span>)<span class="question-mark">?</span>;
 
         abi.instance = <span class="prelude-val">Some</span>(instance.clone());
         <span class="comment">// Make sure that non-empty `memory` is attached to the WasmState. Fail early if
@@ -651,10 +649,10 @@
         </span>abi.memory = <span class="prelude-val">Some</span>(
             instance
                 .export_by_name(<span class="string">&quot;memory&quot;</span>)
-                .context(<span class="string">&quot;could not find Wasm `memory` export&quot;</span>)<span class="question-mark">?
+                .context(<span class="string">&quot;couldn&#39;t find Wasm `memory` export&quot;</span>)<span class="question-mark">?
                 </span>.as_memory()
                 .cloned()
-                .context(<span class="string">&quot;could not interpret Wasm `memory` export as memory&quot;</span>)<span class="question-mark">?</span>,
+                .context(<span class="string">&quot;couldn&#39;t interpret Wasm `memory` export as memory&quot;</span>)<span class="question-mark">?</span>,
         );
 
         <span class="prelude-val">Ok</span>(abi)
@@ -665,7 +663,7 @@
         <span class="kw">let </span>result = instance.invoke_export(MAIN_FUNCTION_NAME, <span class="kw-2">&amp;</span>[], <span class="self">self</span>);
         <span class="self">self</span>.logger.log_sensitive(
             Level::Info,
-            <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;Running Wasm module completed with result: {:?}&quot;</span>, result),
+            <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;running Wasm module completed with result: {:?}&quot;</span>, result),
         );
     }
 
@@ -675,9 +673,7 @@
 
     <span class="doccomment">/// Helper function to get memory.
     </span><span class="kw">pub fn </span>get_memory(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>wasmi::MemoryRef {
-        <span class="self">self</span>.memory
-            .as_ref()
-            .expect(<span class="string">&quot;WasmState memory not attached!?&quot;</span>)
+        <span class="self">self</span>.memory.as_ref().expect(<span class="string">&quot;WasmState memory not attached&quot;</span>)
     }
 
     <span class="doccomment">/// Validates whether a given address range (inclusive) falls within the currently allocated
@@ -815,7 +811,7 @@
         response_len_ptr: AbiPointer,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;(), OakStatus&gt; {
         <span class="kw">let </span>handle: ExtensionHandle = ExtensionHandle::from_i32(handle).ok_or_else(|| {
-            <span class="self">self</span>.log_error(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;Fail to convert handle {:?} from i32.&quot;</span>, handle));
+            <span class="self">self</span>.log_error(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;couldn&#39;t convert handle {:?} from i32&quot;</span>, handle));
             OakStatus::ErrInvalidHandle
         })<span class="question-mark">?</span>;
 
@@ -823,7 +819,7 @@
             </span>.read_buffer_from_wasm_memory(request_ptr, request_len)
             .map_err(|err| {
                 <span class="self">self</span>.log_error(<span class="kw-2">&amp;</span><span class="macro">format!</span>(
-                    <span class="string">&quot;Handle {:?}: Unable to read input from guest memory: {:?}&quot;</span>,
+                    <span class="string">&quot;handle {:?}: unable to read input from guest memory: {:?}&quot;</span>,
                     handle, err
                 ));
                 OakStatus::ErrInvalidArgs
@@ -833,7 +829,7 @@
             <span class="comment">// Can&#39;t convince the borrow checker to use `ok_or_else` to `self.log_error`.
             </span><span class="prelude-val">Some</span>(extension) =&gt; <span class="prelude-val">Ok</span>(extension),
             <span class="prelude-val">None </span>=&gt; {
-                <span class="self">self</span>.log_error(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;Cannot find extension with handle {:?}.&quot;</span>, handle));
+                <span class="self">self</span>.log_error(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;cannot find extension with handle {:?}&quot;</span>, handle));
                 <span class="prelude-val">Err</span>(OakStatus::ErrInvalidHandle)
             }
         }<span class="question-mark">?</span>;
@@ -914,14 +910,14 @@
         <span class="comment">// Look for the function (i.e., `field_name`) in the statically registered functions.
         </span><span class="kw">let </span>(index, expected_signature) =
             oak_functions_resolve_func(field_name).ok_or_else(|| {
-                wasmi::Error::Instantiation(<span class="macro">format!</span>(<span class="string">&quot;Export {} not found&quot;</span>, field_name))
+                wasmi::Error::Instantiation(<span class="macro">format!</span>(<span class="string">&quot;export {} not found&quot;</span>, field_name))
             })<span class="question-mark">?</span>;
 
         <span class="kw">if </span>signature == <span class="kw-2">&amp;</span>expected_signature {
             <span class="prelude-val">Ok</span>(wasmi::FuncInstance::alloc_host(expected_signature, index))
         } <span class="kw">else </span>{
             <span class="prelude-val">Err</span>(wasmi::Error::Instantiation(<span class="macro">format!</span>(
-                <span class="string">&quot;Export `{}` doesn&#39;t match expected signature; got: {:?}, expected: {:?}&quot;</span>,
+                <span class="string">&quot;export `{}` doesn&#39;t match expected signature; got: {:?}, expected: {:?}&quot;</span>,
                 field_name, signature, expected_signature
             )))
         }
@@ -935,10 +931,10 @@
 ) -&gt; anyhow::Result&lt;()&gt; {
     <span class="kw">let </span>export_function = instance
         .export_by_name(export_name)
-        .context(<span class="string">&quot;could not find Wasm export&quot;</span>)<span class="question-mark">?
+        .context(<span class="string">&quot;couldn&#39;t find Wasm export&quot;</span>)<span class="question-mark">?
         </span>.as_func()
         .cloned()
-        .context(<span class="string">&quot;could not interpret Wasm export as function&quot;</span>)<span class="question-mark">?</span>;
+        .context(<span class="string">&quot;couldn&#39;t interpret Wasm export as function&quot;</span>)<span class="question-mark">?</span>;
     <span class="kw">if </span>export_function.signature() != expected_signature {
         <span class="macro">anyhow::bail!</span>(
             <span class="string">&quot;invalid signature for export: {:?}, expected: {:?}&quot;</span>,
@@ -970,7 +966,7 @@
         logger: L,
     ) -&gt; anyhow::Result&lt;<span class="self">Self</span>&gt; {
         <span class="kw">let </span>module = wasmi::Module::from_buffer(wasm_module_bytes)
-            .map_err(|err| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;could not load module from buffer: {:?}&quot;</span>, err))<span class="question-mark">?</span>;
+            .map_err(|err| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;couldn&#39;t load module from buffer: {:?}&quot;</span>, err))<span class="question-mark">?</span>;
 
         <span class="prelude-val">Ok</span>(WasmHandler {
             module: Arc::new(module),

@@ -571,15 +571,15 @@
     <span class="kw">unsafe fn </span>deallocate_frame(<span class="kw-2">&amp;mut </span><span class="self">self</span>, frame: PhysFrame&lt;S&gt;) {
         <span class="kw">if let </span><span class="prelude-val">Some</span>(frame_idx) = <span class="self">self</span>.frame_idx(frame) {
             <span class="kw">if </span>!<span class="self">self</span>.valid[frame_idx] {
-                <span class="macro">panic!</span>(<span class="string">&quot;Frame {:?} is not valid in this allocator&quot;</span>, frame);
+                <span class="macro">panic!</span>(<span class="string">&quot;frame {:?} is not valid in this allocator&quot;</span>, frame);
             }
             <span class="kw">if </span>!<span class="self">self</span>.allocated[frame_idx] {
-                <span class="macro">panic!</span>(<span class="string">&quot;Frame {:?} was not allocated in this allocator&quot;</span>, frame);
+                <span class="macro">panic!</span>(<span class="string">&quot;frame {:?} was not allocated in this allocator&quot;</span>, frame);
             }
             <span class="self">self</span>.allocated.set(frame_idx, <span class="bool-val">false</span>);
         } <span class="kw">else </span>{
             <span class="macro">panic!</span>(
-                <span class="string">&quot;Can&#39;t deallocate frame that&#39;s outside our range; our range: {:?}, frame: {:?}&quot;</span>,
+                <span class="string">&quot;can&#39;t deallocate frame that&#39;s outside our range; our range: {:?}, frame: {:?}&quot;</span>,
                 <span class="self">self</span>.range, frame
             );
         }

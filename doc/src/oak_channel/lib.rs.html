@@ -216,7 +216,7 @@
 
     <span class="kw">pub fn </span>read_message&lt;M: message::Message&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; anyhow::Result&lt;M&gt; {
         <span class="kw">let </span><span class="kw-2">mut </span>encoded_message: Vec&lt;u8&gt; = Vec::new();
-        <span class="kw">let </span><span class="kw-2">mut </span>first_frame = <span class="self">self</span>.inner.read_frame().context(<span class="string">&quot;failed to read frame.&quot;</span>)<span class="question-mark">?</span>;
+        <span class="kw">let </span><span class="kw-2">mut </span>first_frame = <span class="self">self</span>.inner.read_frame().context(<span class="string">&quot;couldn&#39;t read frame&quot;</span>)<span class="question-mark">?</span>;
 
         <span class="kw">if </span>first_frame.flags.contains(frame::Flags::START) {
             <span class="kw">if </span>first_frame.flags.contains(frame::Flags::END) {
@@ -245,14 +245,14 @@
                 encoded_message.append(<span class="kw-2">&amp;mut </span>first_frame.body);
             }
         } <span class="kw">else </span>{
-            <span class="macro">anyhow::bail!</span>(<span class="string">&quot;expected a frame with the START flag set.&quot;</span>);
+            <span class="macro">anyhow::bail!</span>(<span class="string">&quot;expected a frame with the START flag set&quot;</span>);
         }
 
         <span class="kw">loop </span>{
-            <span class="kw">let </span><span class="kw-2">mut </span>frame = <span class="self">self</span>.inner.read_frame().context(<span class="string">&quot;failed to read frame.&quot;</span>)<span class="question-mark">?</span>;
+            <span class="kw">let </span><span class="kw-2">mut </span>frame = <span class="self">self</span>.inner.read_frame().context(<span class="string">&quot;couldn&#39;t read frame&quot;</span>)<span class="question-mark">?</span>;
 
             <span class="kw">if </span>frame.flags.contains(frame::Flags::START) {
-                <span class="macro">anyhow::bail!</span>(<span class="string">&quot;received two frames with the START flag set.&quot;</span>);
+                <span class="macro">anyhow::bail!</span>(<span class="string">&quot;received two frames with the START flag set&quot;</span>);
             } <span class="kw">else </span>{
                 encoded_message.append(<span class="kw-2">&amp;mut </span>frame.body);
                 <span class="kw">if </span>frame.flags.contains(frame::Flags::END) {
@@ -269,7 +269,7 @@
         <span class="kw">for </span>frame <span class="kw">in </span>frames.into_iter() {
             <span class="self">self</span>.inner
                 .write_frame(frame)
-                .context(<span class="string">&quot;failed to write frame.&quot;</span>)<span class="question-mark">?
+                .context(<span class="string">&quot;couldn&#39;t write frame&quot;</span>)<span class="question-mark">?
         </span>}
         <span class="prelude-val">Ok</span>(())
     }

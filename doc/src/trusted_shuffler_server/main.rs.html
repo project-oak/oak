@@ -152,7 +152,7 @@
     <span class="kw">let </span>listen_address = opt
         .listen_address
         .parse()
-        .context(<span class="string">&quot;Couldn&#39;t parse address&quot;</span>)<span class="question-mark">?</span>;
+        .context(<span class="string">&quot;couldn&#39;t parse address&quot;</span>)<span class="question-mark">?</span>;
     <span class="kw">let </span>timeout = opt.timeout_ms.map(Duration::from_millis);
 
     <span class="macro">info!</span>(
@@ -167,7 +167,7 @@
     ));
     <span class="macro">tokio::select!</span>(
         result = server =&gt; {
-            result.context(<span class="string">&quot;Couldn&#39;t run server&quot;</span>)<span class="question-mark">?</span>;
+            result.context(<span class="string">&quot;couldn&#39;t run server&quot;</span>)<span class="question-mark">?</span>;
         },
         () = tokio::signal::ctrl_c().map(|r| r.unwrap()) =&gt; {
             <span class="macro">info!</span>(<span class="string">&quot;Stopping the Trusted Shuffler server&quot;</span>);

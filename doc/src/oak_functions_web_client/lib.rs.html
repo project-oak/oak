@@ -253,7 +253,7 @@
             ),
         )
         .<span class="kw">await
-        </span>.context(<span class="string">&quot;Could not create Oak Functions client&quot;</span>)
+        </span>.context(<span class="string">&quot;couldn&#39;t create Oak Functions client&quot;</span>)
         .map_err(|error| error.to_string())<span class="question-mark">?</span>;
         <span class="kw">let </span>inner = Rc::new(wasm_mutex::Mutex::new(inner));
         <span class="prelude-val">Ok</span>(WebClient { inner })
@@ -276,7 +276,7 @@
             </span><span class="kw">let </span>length = response
                 .length
                 .try_into()
-                .map_err(|<span class="kw">_</span>| <span class="string">&quot;Could not fit the response length into usize&quot;</span>)<span class="question-mark">?</span>;
+                .map_err(|<span class="kw">_</span>| <span class="string">&quot;couldn&#39;t fit the response length into usize&quot;</span>)<span class="question-mark">?</span>;
             <span class="kw">let </span>body = <span class="kw-2">&amp;</span>response.body[<span class="number">0</span>..length];
 
             <span class="comment">// Construct a JavaScript object that contains the response status
@@ -302,11 +302,11 @@
             .<span class="kw">await
             </span>.message(<span class="kw-2">&amp;</span>request)
             .<span class="kw">await
-            </span>.context(<span class="string">&quot;Error invoking Oak Functions instance&quot;</span>)<span class="question-mark">?</span>;
+            </span>.context(<span class="string">&quot;error invoking Oak Functions instance&quot;</span>)<span class="question-mark">?</span>;
 
         Response::decode(encoded_response.as_ref())
             .map_err(anyhow::Error::msg)
-            .context(<span class="string">&quot;Couldn&#39;t decode response&quot;</span>)
+            .context(<span class="string">&quot;couldn&#39;t decode response&quot;</span>)
     }
 }
 

@@ -204,7 +204,7 @@
         initial_sequence_number: u64,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
         <span class="prelude-val">Ok</span>(<span class="self">Self </span>{
-            cipher: Aes256Gcm::new_from_slice(key).map_err(|<span class="kw">_</span>| <span class="string">&quot;Invalid key length&quot;</span>)<span class="question-mark">?</span>,
+            cipher: Aes256Gcm::new_from_slice(key).map_err(|<span class="kw">_</span>| <span class="string">&quot;invalid key length&quot;</span>)<span class="question-mark">?</span>,
             sequence_number: initial_sequence_number,
         })
     }
@@ -235,7 +235,7 @@
         <span class="kw">let </span>auth_tag = <span class="self">self
             </span>.cipher
             .encrypt_in_place_detached(nonce, associated_data, buffer)
-            .map_err(|<span class="kw">_</span>| <span class="string">&quot;Message encryption failed&quot;</span>)<span class="question-mark">?</span>;
+            .map_err(|aes_gcm::Error| <span class="string">&quot;message encryption failed&quot;</span>)<span class="question-mark">?</span>;
         <span class="comment">// Only write the payload once we are sure the encryption succeeded.
         </span>destination.payload[<span class="number">0</span>..message_size].copy_from_slice(buffer);
         destination.header.auth_tag[<span class="number">0</span>..auth_tag.len()].copy_from_slice(auth_tag.as_slice());
@@ -254,11 +254,11 @@
         <span class="kw">let </span><span class="kw-2">mut </span>result = M::new_zeroed();
         source.validate()<span class="question-mark">?</span>;
         <span class="kw">if </span>M::get_message_type() <span class="kw">as </span>u8 != source.header.auth_header.message_type {
-            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;Invalid message type&quot;</span>);
+            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;invalid message type&quot;</span>);
         }
         <span class="kw">let </span>sequence_number = source.header.sequence_number;
         <span class="kw">if </span>sequence_number != <span class="self">self</span>.sequence_number + <span class="number">1 </span>{
-            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;Unexpected sequence numer&quot;</span>);
+            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;unexpected sequence numer&quot;</span>);
         }
         <span class="kw">let </span><span class="kw-2">mut </span>iv_bytes = [<span class="number">0u8</span>; IV_SIZE];
         iv_bytes[<span class="number">0</span>..size_of::&lt;u64&gt;()].copy_from_slice(sequence_number.as_bytes());
@@ -266,7 +266,7 @@
         <span class="kw">let </span>associated_data = source.header.auth_header.as_bytes();
         <span class="kw">let </span>buffer = result.as_bytes_mut();
         <span class="kw">if </span>buffer.len() != source.header.auth_header.message_size <span class="kw">as </span>usize {
-            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;Invalid message length&quot;</span>);
+            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;invalid message length&quot;</span>);
         }
         <span class="comment">// The source message is in memory that is shared with the hypervisor, so we must not
         // decrypt the payload in place. Copy the encrypted payload into the buffer and
@@ -275,7 +275,7 @@
         <span class="kw">let </span>tag = Tag::from_slice(<span class="kw-2">&amp;</span>source.header.auth_tag[<span class="number">0</span>..size_of::&lt;Tag&gt;()]);
         <span class="self">self</span>.cipher
             .decrypt_in_place_detached(nonce, associated_data, buffer, tag)
-            .map_err(|<span class="kw">_</span>| <span class="string">&quot;Couldn&#39;t decrypt message&quot;</span>)<span class="question-mark">?</span>;
+            .map_err(|aes_gcm::Error| <span class="string">&quot;couldn&#39;t decrypt message&quot;</span>)<span class="question-mark">?</span>;
         <span class="self">self</span>.sequence_number += <span class="number">1</span>;
         <span class="prelude-val">Ok</span>(result)
     }

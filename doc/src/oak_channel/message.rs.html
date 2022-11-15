@@ -186,7 +186,7 @@
 
         <span class="kw">let </span>length: Length = len
             .try_into()
-            .expect(<span class="string">&quot;could not convert the message length usize to u32&quot;</span>);
+            .expect(<span class="string">&quot;couldn&#39;t convert the message length usize to u32&quot;</span>);
 
         message_bytes.extend_from_slice(<span class="kw-2">&amp;</span>length.to_le_bytes());
         message_bytes.extend_from_slice(<span class="kw-2">&amp;</span><span class="self">self</span>.invocation_id.to_le_bytes());
@@ -233,7 +233,7 @@
 
         <span class="kw">let </span>length: Length = len
             .try_into()
-            .expect(<span class="string">&quot;could not convert the message length usize to u32&quot;</span>);
+            .expect(<span class="string">&quot;couldn&#39;t convert the message length usize to u32&quot;</span>);
 
         message_bytes.extend_from_slice(<span class="kw-2">&amp;</span>length.to_le_bytes());
         message_bytes.extend_from_slice(<span class="kw-2">&amp;</span><span class="self">self</span>.invocation_id.to_le_bytes());

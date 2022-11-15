@@ -157,24 +157,24 @@
     </span><span class="kw">let </span>result: <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, String&gt; = <span class="kw">try </span>{
         <span class="comment">// Read the request.
         </span><span class="kw">let </span>request_body = oak_functions_sdk::read_request()
-            .map_err(|err| <span class="macro">format!</span>(<span class="string">&quot;could not read request body: {:?}&quot;</span>, err))<span class="question-mark">?</span>;
+            .map_err(|err| <span class="macro">format!</span>(<span class="string">&quot;couldn&#39;t read request body: {:?}&quot;</span>, err))<span class="question-mark">?</span>;
 
         <span class="comment">// Parse the request as JSON.
         </span><span class="kw">let </span>request: Request = serde_json::from_slice(<span class="kw-2">&amp;</span>request_body)
-            .map_err(|err| <span class="macro">format!</span>(<span class="string">&quot;could not deserialize request as JSON: {:?}&quot;</span>, err))<span class="question-mark">?</span>;
+            .map_err(|err| <span class="macro">format!</span>(<span class="string">&quot;couldn&#39;t deserialize request as JSON: {:?}&quot;</span>, err))<span class="question-mark">?</span>;
         <span class="macro">log!</span>(<span class="string">&quot;parsed request: {:?}\n&quot;</span>, request);
 
         <span class="comment">// Find the S2 cell (using the default level) that contains the current location.
         </span><span class="kw">let </span>level = location_utils::S2_DEFAULT_LEVEL;
         <span class="kw">let </span>location = location_from_degrees(request.latitude_degrees, request.longitude_degrees);
         <span class="kw">let </span>cell =
-            find_cell(<span class="kw-2">&amp;</span>location, level).map_err(|err| <span class="macro">format!</span>(<span class="string">&quot;could not find cell: {:?}&quot;</span>, err))<span class="question-mark">?</span>;
+            find_cell(<span class="kw-2">&amp;</span>location, level).map_err(|err| <span class="macro">format!</span>(<span class="string">&quot;couldn&#39;t find cell: {:?}&quot;</span>, err))<span class="question-mark">?</span>;
         <span class="macro">log!</span>(<span class="string">&quot;current location cell token: {}\n&quot;</span>, cell.to_token());
 
         <span class="comment">// Look up the index values for the list of weather data points in the vicinity of the cell.
         </span><span class="kw">let </span>index = oak_functions_sdk::storage_get_item(<span class="kw-2">&amp;</span>cell_id_to_bytes(<span class="kw-2">&amp;</span>cell))
-            .map_err(|err| <span class="macro">format!</span>(<span class="string">&quot;could not get index item: {:?}&quot;</span>, err))<span class="question-mark">?
-            </span>.ok_or(<span class="string">&quot;could not find index item for cell&quot;</span>)<span class="question-mark">?</span>;
+            .map_err(|err| <span class="macro">format!</span>(<span class="string">&quot;couldn&#39;t get index item: {:?}&quot;</span>, err))<span class="question-mark">?
+            </span>.ok_or(<span class="string">&quot;couldn&#39;t find index item for cell&quot;</span>)<span class="question-mark">?</span>;
 
         <span class="comment">// Find the closest key by linearly scanning the nearby weather data points to find the
         // closest one.
@@ -183,7 +183,7 @@
 
         <span class="kw">for </span>chunk <span class="kw">in </span>index.chunks(<span class="number">8</span>) {
             <span class="kw">let </span>test = location_from_bytes(chunk)
-                .map_err(|err| <span class="macro">format!</span>(<span class="string">&quot;could not convert chunk to location: {:?}&quot;</span>, err))<span class="question-mark">?</span>;
+                .map_err(|err| <span class="macro">format!</span>(<span class="string">&quot;couldn&#39;t convert chunk to location: {:?}&quot;</span>, err))<span class="question-mark">?</span>;
             <span class="kw">let </span>distance = location.distance(<span class="kw-2">&amp;</span>test);
             <span class="kw">if </span>distance &lt; best_distance {
                 best_distance = distance;
@@ -196,13 +196,13 @@
                 <span class="macro">log!</span>(<span class="string">&quot;nearest data point: {:?}\n&quot;</span>, key_location);
                 <span class="kw">let </span>best_value =
                     oak_functions_sdk::storage_get_item(<span class="kw-2">&amp;</span>location_to_bytes(<span class="kw-2">&amp;</span>key_location))
-                        .map_err(|err| <span class="macro">format!</span>(<span class="string">&quot;could not get item: {:?}&quot;</span>, err))<span class="question-mark">?
-                        </span>.ok_or(<span class="string">&quot;could not find item with key&quot;</span>)<span class="question-mark">?</span>;
+                        .map_err(|err| <span class="macro">format!</span>(<span class="string">&quot;couldn&#39;t get item: {:?}&quot;</span>, err))<span class="question-mark">?
+                        </span>.ok_or(<span class="string">&quot;couldn&#39;t find item with key&quot;</span>)<span class="question-mark">?</span>;
                 <span class="macro">log!</span>(<span class="string">&quot;nearest location value: {:?}\n&quot;</span>, best_value);
 
                 best_value
             }
-            <span class="prelude-val">None </span>=&gt; <span class="string">b&quot;could not find location within cutoff&quot;</span>.to_vec(),
+            <span class="prelude-val">None </span>=&gt; <span class="string">b&quot;couldn&#39;t find location within cutoff&quot;</span>.to_vec(),
         };
 
         result
@@ -211,7 +211,7 @@
     <span class="kw">let </span>response = result.unwrap_or_else(|err| err.as_bytes().to_vec());
 
     <span class="comment">// Write the response.
-    </span>oak_functions_sdk::write_response(<span class="kw-2">&amp;</span>response).expect(<span class="string">&quot;Couldn&#39;t write the response body.&quot;</span>);
+    </span>oak_functions_sdk::write_response(<span class="kw-2">&amp;</span>response).expect(<span class="string">&quot;couldn&#39;t write the response body&quot;</span>);
 }
 
 <span class="attribute">#[export_name = <span class="string">&quot;wizer.initialize&quot;</span>]

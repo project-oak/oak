@@ -74,7 +74,7 @@
     <span class="kw">pub async fn </span>new(uri: <span class="kw-2">&amp;</span>str) -&gt; anyhow::Result&lt;<span class="self">Self</span>&gt; {
         <span class="kw">let </span>inner = oak_remote_attestation_noninteractive::client::OakClient::create(uri)
             .<span class="kw">await
-            </span>.context(<span class="string">&quot;Could not create Oak Functions client&quot;</span>)<span class="question-mark">?</span>;
+            </span>.context(<span class="string">&quot;couldn&#39;t create Oak Functions client&quot;</span>)<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(Client { inner })
     }
 
@@ -85,7 +85,7 @@
             </span>.inner
             .message(request)
             .<span class="kw">await
-            </span>.context(<span class="string">&quot;Error invoking Oak Functions instance&quot;</span>)<span class="question-mark">?</span>;
+            </span>.context(<span class="string">&quot;error invoking Oak Functions instance&quot;</span>)<span class="question-mark">?</span>;
         <span class="comment">// TODO(#3442): Decrypt response.
         </span><span class="prelude-val">Ok</span>(response)
     }

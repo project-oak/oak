@@ -820,7 +820,7 @@
             behavior,
             state: ClientHandshakerState::Initializing,
             transcript: Transcript::new(),
-            transcript_signer: Signer::create().context(<span class="string">&quot;Couldn&#39;t create signer&quot;</span>)<span class="question-mark">?</span>,
+            transcript_signer: Signer::create().context(<span class="string">&quot;couldn&#39;t create signer&quot;</span>)<span class="question-mark">?</span>,
         })
     }
 
@@ -835,33 +835,33 @@
 
     <span class="kw">fn </span>next_step_util(<span class="kw-2">&amp;mut </span><span class="self">self</span>, message: <span class="kw-2">&amp;</span>[u8]) -&gt; anyhow::Result&lt;<span class="prelude-ty">Option</span>&lt;Vec&lt;u8&gt;&gt;&gt; {
         <span class="kw">let </span>deserialized_message =
-            deserialize_message(message).context(<span class="string">&quot;Couldn&#39;t deserialize message&quot;</span>)<span class="question-mark">?</span>;
+            deserialize_message(message).context(<span class="string">&quot;couldn&#39;t deserialize message&quot;</span>)<span class="question-mark">?</span>;
         <span class="kw">match </span>deserialized_message {
             MessageWrapper::ServerIdentity(server_identity) =&gt; {
                 <span class="kw">match </span>core::mem::take(<span class="kw-2">&amp;mut </span><span class="self">self</span>.state) {
                     ClientHandshakerState::ExpectingServerIdentity(key_negotiator) =&gt; {
                         <span class="kw">let </span>client_identity = <span class="self">self
                             </span>.process_server_identity(server_identity, key_negotiator)
-                            .context(<span class="string">&quot;Couldn&#39;t process server identity message&quot;</span>)<span class="question-mark">?</span>;
+                            .context(<span class="string">&quot;couldn&#39;t process server identity message&quot;</span>)<span class="question-mark">?</span>;
                         <span class="kw">let </span>serialized_client_identity = client_identity
                             .serialize()
-                            .context(<span class="string">&quot;Couldn&#39;t serialize client identity message&quot;</span>)<span class="question-mark">?</span>;
+                            .context(<span class="string">&quot;couldn&#39;t serialize client identity message&quot;</span>)<span class="question-mark">?</span>;
                         <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(serialized_client_identity))
                     }
                     ClientHandshakerState::Aborted =&gt; {
-                        <span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">&quot;Remote attestation handshake is aborted&quot;</span>,))
+                        <span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">&quot;remote attestation handshake is aborted&quot;</span>,))
                     }
                     ClientHandshakerState::MessageProcessing =&gt; <span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(
-                        <span class="string">&quot;Cannot process new messages while in the MessageProcessing state&quot;</span>,
+                        <span class="string">&quot;cannot process new messages while in the MessageProcessing state&quot;</span>,
                     )),
                     <span class="kw">_ </span>=&gt; <span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(
-                        <span class="string">&quot;Incorrect handshake message received, in state {:?}, found ServerIdentity&quot;</span>,
+                        <span class="string">&quot;incorrect handshake message received, in state {:?}, found ServerIdentity&quot;</span>,
                         <span class="self">self</span>.state
                     )),
                 }
             }
             unsupported_message =&gt; <span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(
-                <span class="string">&quot;Receiving {:?} is not supported by the client handshaker&quot;</span>,
+                <span class="string">&quot;receiving {:?} is not supported by the client handshaker&quot;</span>,
                 unsupported_message
             )),
         }
@@ -878,7 +878,7 @@
     <span class="kw">pub fn </span>get_encryptor(<span class="self">self</span>) -&gt; anyhow::Result&lt;Encryptor&gt; {
         <span class="kw">match </span><span class="self">self</span>.state {
             ClientHandshakerState::Completed(encryptor) =&gt; <span class="prelude-val">Ok</span>(Encryptor { encryptor }),
-            <span class="kw">_ </span>=&gt; <span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">&quot;Handshake is not complete&quot;</span>)),
+            <span class="kw">_ </span>=&gt; <span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">&quot;handshake is not complete&quot;</span>)),
         }
     }
 
@@ -898,26 +898,26 @@
         <span class="kw">match </span><span class="self">self</span>.state {
             ClientHandshakerState::Initializing =&gt; {
                 <span class="kw">let </span>key_negotiator = KeyNegotiator::create(KeyNegotiatorType::Client)
-                    .context(<span class="string">&quot;Couldn&#39;t create key negotiator&quot;</span>)<span class="question-mark">?</span>;
+                    .context(<span class="string">&quot;couldn&#39;t create key negotiator&quot;</span>)<span class="question-mark">?</span>;
 
                 <span class="comment">// Create client hello message.
                 </span><span class="kw">let </span>client_hello =
-                    ClientHello::new(get_random().context(<span class="string">&quot;Couldn&#39;t generate random array&quot;</span>)<span class="question-mark">?</span>);
+                    ClientHello::new(get_random().context(<span class="string">&quot;couldn&#39;t generate random array&quot;</span>)<span class="question-mark">?</span>);
 
                 <span class="comment">// Update current transcript.
                 </span><span class="self">self</span>.transcript
                     .append(<span class="kw-2">&amp;</span>client_hello)
-                    .context(<span class="string">&quot;Couldn&#39;t append client hello to the transcript&quot;</span>)<span class="question-mark">?</span>;
+                    .context(<span class="string">&quot;couldn&#39;t append client hello to the transcript&quot;</span>)<span class="question-mark">?</span>;
 
                 <span class="kw">let </span>serialized_client_hello = client_hello
                     .serialize()
-                    .context(<span class="string">&quot;Couldn&#39;t serialize client hello message&quot;</span>)<span class="question-mark">?</span>;
+                    .context(<span class="string">&quot;couldn&#39;t serialize client hello message&quot;</span>)<span class="question-mark">?</span>;
 
                 <span class="self">self</span>.state = ClientHandshakerState::ExpectingServerIdentity(key_negotiator);
                 <span class="prelude-val">Ok</span>(serialized_client_hello)
             }
             <span class="kw">_ </span>=&gt; <span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(
-                <span class="string">&quot;Client hello message can&#39;t be created in {:?} state, needed Initializing&quot;</span>,
+                <span class="string">&quot;client hello message can&#39;t be created in {:?} state, needed Initializing&quot;</span>,
                 <span class="self">self</span>.state
             )),
         }
@@ -944,7 +944,7 @@
         server_identity_no_signature.clear_transcript_signature();
         <span class="self">self</span>.transcript
             .append(<span class="kw-2">&amp;</span>server_identity_no_signature)
-            .context(<span class="string">&quot;Couldn&#39;t append server identity to the transcript&quot;</span>)<span class="question-mark">?</span>;
+            .context(<span class="string">&quot;couldn&#39;t append server identity to the transcript&quot;</span>)<span class="question-mark">?</span>;
         <span class="kw">let </span>server_signing_public_key = <span class="kw-2">&amp;</span>server_identity.signing_public_key;
         <span class="kw">let </span>transcript_signature_verifier = SignatureVerifier::new(server_signing_public_key)<span class="question-mark">?</span>;
         transcript_signature_verifier
@@ -952,7 +952,7 @@
                 <span class="kw-2">&amp;</span><span class="self">self</span>.transcript.get_sha256(),
                 <span class="kw-2">&amp;</span>server_identity.transcript_signature,
             )
-            .context(<span class="string">&quot;Couldn&#39;t verify server transcript&quot;</span>)<span class="question-mark">?</span>;
+            .context(<span class="string">&quot;couldn&#39;t verify server transcript&quot;</span>)<span class="question-mark">?</span>;
 
         <span class="kw">let </span>expected_attested_data = attestation_data(
             <span class="kw-2">&amp;</span>server_identity.ephemeral_public_key,
@@ -968,7 +968,7 @@
         <span class="comment">// Create client identity message.
         </span><span class="kw">let </span>ephemeral_public_key = key_negotiator
             .public_key()
-            .context(<span class="string">&quot;Couldn&#39;t get ephemeral public key&quot;</span>)<span class="question-mark">?</span>;
+            .context(<span class="string">&quot;couldn&#39;t get ephemeral public key&quot;</span>)<span class="question-mark">?</span>;
 
         <span class="kw">let </span>attested_data =
             attestation_data(<span class="kw-2">&amp;</span>ephemeral_public_key, <span class="kw-2">&amp;</span><span class="self">self</span>.transcript_signer.public_key()<span class="question-mark">?</span>);
@@ -976,13 +976,13 @@
             </span>.behavior
             .generator
             .generate_attestation(<span class="kw-2">&amp;</span>attested_data)
-            .context(<span class="string">&quot;Couldnt&#39; create attestation report&quot;</span>)<span class="question-mark">?</span>;
+            .context(<span class="string">&quot;couldnt&#39; create attestation report&quot;</span>)<span class="question-mark">?</span>;
 
         <span class="kw">let </span><span class="kw-2">mut </span>client_identity = ClientIdentity::new(
             ephemeral_public_key,
             <span class="self">self</span>.transcript_signer
                 .public_key()
-                .context(<span class="string">&quot;Couldn&#39;t get signing public key&quot;</span>)<span class="question-mark">?</span>,
+                .context(<span class="string">&quot;couldn&#39;t get signing public key&quot;</span>)<span class="question-mark">?</span>,
             attestation_report,
         );
 
@@ -990,19 +990,19 @@
         // Transcript doesn&#39;t include transcript signature from the client identity message.
         </span><span class="self">self</span>.transcript
             .append(<span class="kw-2">&amp;</span>client_identity)
-            .context(<span class="string">&quot;Couldn&#39;t append client identity to transcript&quot;</span>)<span class="question-mark">?</span>;
+            .context(<span class="string">&quot;couldn&#39;t append client identity to transcript&quot;</span>)<span class="question-mark">?</span>;
 
         <span class="comment">// Add transcript signature to the client identity message.
         </span><span class="kw">let </span>transcript_signature = <span class="self">self
             </span>.transcript_signer
             .sign(<span class="kw-2">&amp;</span><span class="self">self</span>.transcript.get_sha256())
-            .context(<span class="string">&quot;Couldn&#39;t create transcript signature&quot;</span>)<span class="question-mark">?</span>;
+            .context(<span class="string">&quot;couldn&#39;t create transcript signature&quot;</span>)<span class="question-mark">?</span>;
         client_identity.set_transcript_signature(<span class="kw-2">&amp;</span>transcript_signature);
 
         <span class="comment">// Agree on session keys and create an encryptor.
         </span><span class="kw">let </span>encryptor = key_negotiator
             .create_encryptor(<span class="kw-2">&amp;</span>server_identity.ephemeral_public_key)
-            .context(<span class="string">&quot;Couldn&#39;t derive session key&quot;</span>)<span class="question-mark">?</span>;
+            .context(<span class="string">&quot;couldn&#39;t derive session key&quot;</span>)<span class="question-mark">?</span>;
         <span class="self">self</span>.state = ClientHandshakerState::Completed(encryptor);
 
         <span class="prelude-val">Ok</span>(client_identity)
@@ -1049,26 +1049,26 @@
 
     <span class="kw">fn </span>next_step_util(<span class="kw-2">&amp;mut </span><span class="self">self</span>, message: <span class="kw-2">&amp;</span>[u8]) -&gt; anyhow::Result&lt;<span class="prelude-ty">Option</span>&lt;Vec&lt;u8&gt;&gt;&gt; {
         <span class="kw">let </span>deserialized_message =
-            deserialize_message(message).context(<span class="string">&quot;Couldn&#39;t deserialize message&quot;</span>)<span class="question-mark">?</span>;
+            deserialize_message(message).context(<span class="string">&quot;couldn&#39;t deserialize message&quot;</span>)<span class="question-mark">?</span>;
         <span class="kw">match </span>deserialized_message {
             MessageWrapper::ClientHello(client_hello) =&gt; <span class="kw">match </span><span class="kw-2">&amp;</span><span class="self">self</span>.state {
                 ServerHandshakerState::ExpectingClientHello =&gt; {
                     <span class="kw">let </span>server_identity = <span class="self">self
                         </span>.process_client_hello(client_hello)
-                        .context(<span class="string">&quot;Couldn&#39;t process client hello message&quot;</span>)<span class="question-mark">?</span>;
+                        .context(<span class="string">&quot;couldn&#39;t process client hello message&quot;</span>)<span class="question-mark">?</span>;
                     <span class="kw">let </span>serialized_server_identity = server_identity
                         .serialize()
-                        .context(<span class="string">&quot;Couldn&#39;t serialize server identity message&quot;</span>)<span class="question-mark">?</span>;
+                        .context(<span class="string">&quot;couldn&#39;t serialize server identity message&quot;</span>)<span class="question-mark">?</span>;
                     <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(serialized_server_identity))
                 }
                 ServerHandshakerState::Aborted =&gt; {
-                    <span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">&quot;Remote attestation handshake is aborted&quot;</span>,))
+                    <span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">&quot;remote attestation handshake is aborted&quot;</span>,))
                 }
                 ServerHandshakerState::MessageProcessing =&gt; <span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(
-                    <span class="string">&quot;Cannot process new messages while in the MessageProcessing state&quot;</span>,
+                    <span class="string">&quot;cannot process new messages while in the MessageProcessing state&quot;</span>,
                 )),
                 <span class="kw">_ </span>=&gt; <span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(
-                    <span class="string">&quot;Incorrect handshake message received, in state {:?}, found ClientHello&quot;</span>,
+                    <span class="string">&quot;incorrect handshake message received, in state {:?}, found ClientHello&quot;</span>,
                     <span class="self">self</span>.state
                 )),
             },
@@ -1076,20 +1076,20 @@
                 <span class="kw">match </span>core::mem::take(<span class="kw-2">&amp;mut </span><span class="self">self</span>.state) {
                     ServerHandshakerState::ExpectingClientIdentity(key_negotiator) =&gt; {
                         <span class="self">self</span>.process_client_identity(client_identity, key_negotiator)
-                            .context(<span class="string">&quot;Couldn&#39;t process client identity message&quot;</span>)<span class="question-mark">?</span>;
+                            .context(<span class="string">&quot;couldn&#39;t process client identity message&quot;</span>)<span class="question-mark">?</span>;
                         <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>)
                     }
                     ServerHandshakerState::MessageProcessing =&gt; <span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(
-                        <span class="string">&quot;Cannot process new messages while in the MessageProcessing state&quot;</span>,
+                        <span class="string">&quot;cannot process new messages while in the MessageProcessing state&quot;</span>,
                     )),
                     <span class="kw">_ </span>=&gt; <span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(
-                        <span class="string">&quot;Incorrect handshake message received, in state {:?}, found ClientIdentity&quot;</span>,
+                        <span class="string">&quot;incorrect handshake message received, in state {:?}, found ClientIdentity&quot;</span>,
                         <span class="self">self</span>.state
                     )),
                 }
             }
             unsupported_message =&gt; <span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(
-                <span class="string">&quot;Receiving {:?} is not supported by the server handshaker&quot;</span>,
+                <span class="string">&quot;receiving {:?} is not supported by the server handshaker&quot;</span>,
                 unsupported_message
             )),
         }
@@ -1106,7 +1106,7 @@
     <span class="kw">pub fn </span>get_encryptor(<span class="self">self</span>) -&gt; anyhow::Result&lt;Encryptor&gt; {
         <span class="kw">match </span><span class="self">self</span>.state {
             ServerHandshakerState::Completed(encryptor) =&gt; <span class="prelude-val">Ok</span>(Encryptor { encryptor }),
-            <span class="kw">_ </span>=&gt; <span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">&quot;Handshake is not complete&quot;</span>)),
+            <span class="kw">_ </span>=&gt; <span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">&quot;handshake is not complete&quot;</span>)),
         }
     }
 
@@ -1124,10 +1124,10 @@
     ) -&gt; anyhow::Result&lt;ServerIdentity&gt; {
         <span class="comment">// Create server identity message.
         </span><span class="kw">let </span>key_negotiator = KeyNegotiator::create(KeyNegotiatorType::Server)
-            .context(<span class="string">&quot;Couldn&#39;t create key negotiator&quot;</span>)<span class="question-mark">?</span>;
+            .context(<span class="string">&quot;couldn&#39;t create key negotiator&quot;</span>)<span class="question-mark">?</span>;
         <span class="kw">let </span>ephemeral_public_key = key_negotiator
             .public_key()
-            .context(<span class="string">&quot;Couldn&#39;t get ephemeral public key&quot;</span>)<span class="question-mark">?</span>;
+            .context(<span class="string">&quot;couldn&#39;t get ephemeral public key&quot;</span>)<span class="question-mark">?</span>;
 
         <span class="kw">let </span>attestation_data =
             attestation_data(<span class="kw-2">&amp;</span>ephemeral_public_key, <span class="kw-2">&amp;</span><span class="self">self</span>.transcript_signer.public_key()<span class="question-mark">?</span>);
@@ -1138,10 +1138,10 @@
 
         <span class="kw">let </span><span class="kw-2">mut </span>server_identity = ServerIdentity::new(
             ephemeral_public_key,
-            get_random().context(<span class="string">&quot;Couldn&#39;t generate random array&quot;</span>)<span class="question-mark">?</span>,
+            get_random().context(<span class="string">&quot;couldn&#39;t generate random array&quot;</span>)<span class="question-mark">?</span>,
             <span class="self">self</span>.transcript_signer
                 .public_key()
-                .context(<span class="string">&quot;Couldn&#39;t get singing public key&quot;</span>)<span class="question-mark">?</span>,
+                .context(<span class="string">&quot;couldn&#39;t get singing public key&quot;</span>)<span class="question-mark">?</span>,
             attestation_report,
         );
 
@@ -1149,16 +1149,16 @@
         // Transcript doesn&#39;t include transcript signature from the server identity message.
         </span><span class="self">self</span>.transcript
             .append(<span class="kw-2">&amp;</span>client_hello)
-            .context(<span class="string">&quot;Couldn&#39;t append client hello to the transcript&quot;</span>)<span class="question-mark">?</span>;
+            .context(<span class="string">&quot;couldn&#39;t append client hello to the transcript&quot;</span>)<span class="question-mark">?</span>;
         <span class="self">self</span>.transcript
             .append(<span class="kw-2">&amp;</span>server_identity)
-            .context(<span class="string">&quot;Couldn&#39;t append server identity to the transcript&quot;</span>)<span class="question-mark">?</span>;
+            .context(<span class="string">&quot;couldn&#39;t append server identity to the transcript&quot;</span>)<span class="question-mark">?</span>;
 
         <span class="comment">// Add transcript signature to the server identity message.
         </span><span class="kw">let </span>transcript_signature = <span class="self">self
             </span>.transcript_signer
             .sign(<span class="kw-2">&amp;</span><span class="self">self</span>.transcript.get_sha256())
-            .context(<span class="string">&quot;Couldn&#39;t create transcript signature&quot;</span>)<span class="question-mark">?</span>;
+            .context(<span class="string">&quot;couldn&#39;t create transcript signature&quot;</span>)<span class="question-mark">?</span>;
         server_identity.set_transcript_signature(<span class="kw-2">&amp;</span>transcript_signature);
 
         <span class="self">self</span>.state = ServerHandshakerState::ExpectingClientIdentity(key_negotiator);
@@ -1182,7 +1182,7 @@
         client_identity_no_signature.clear_transcript_signature();
         <span class="self">self</span>.transcript
             .append(<span class="kw-2">&amp;</span>client_identity_no_signature)
-            .context(<span class="string">&quot;Couldn&#39;t append client identity to the transcript&quot;</span>)<span class="question-mark">?</span>;
+            .context(<span class="string">&quot;couldn&#39;t append client identity to the transcript&quot;</span>)<span class="question-mark">?</span>;
         <span class="kw">let </span>client_signing_public_key = <span class="kw-2">&amp;</span>client_identity.signing_public_key;
 
         <span class="comment">// TODO(#2918): Remove this check when the Java client generates a non-empty signature, and
@@ -1198,7 +1198,7 @@
                     <span class="kw-2">&amp;</span><span class="self">self</span>.transcript.get_sha256(),
                     <span class="kw-2">&amp;</span>client_identity.transcript_signature,
                 )
-                .context(<span class="string">&quot;Couldn&#39;t verify client transcript&quot;</span>)<span class="question-mark">?</span>;
+                .context(<span class="string">&quot;couldn&#39;t verify client transcript&quot;</span>)<span class="question-mark">?</span>;
         }
 
         <span class="kw">let </span>expected_attested_data = attestation_data(
@@ -1215,7 +1215,7 @@
         <span class="comment">// Agree on session keys and create an encryptor.
         </span><span class="kw">let </span>encryptor = key_negotiator
             .create_encryptor(<span class="kw-2">&amp;</span>client_identity.ephemeral_public_key)
-            .context(<span class="string">&quot;Couldn&#39;t derive session key&quot;</span>)<span class="question-mark">?</span>;
+            .context(<span class="string">&quot;couldn&#39;t derive session key&quot;</span>)<span class="question-mark">?</span>;
         <span class="self">self</span>.state = ServerHandshakerState::Completed(encryptor);
 
         <span class="prelude-val">Ok</span>(())
@@ -1235,14 +1235,14 @@
 
     <span class="kw">pub fn </span>decrypt(<span class="kw-2">&amp;mut </span><span class="self">self</span>, message: <span class="kw-2">&amp;</span>[u8]) -&gt; anyhow::Result&lt;Vec&lt;u8&gt;&gt; {
         <span class="kw">let </span>deserialized_message =
-            deserialize_message(message).context(<span class="string">&quot;Couldn&#39;t deserialize message&quot;</span>)<span class="question-mark">?</span>;
+            deserialize_message(message).context(<span class="string">&quot;couldn&#39;t deserialize message&quot;</span>)<span class="question-mark">?</span>;
         <span class="kw">match </span>deserialized_message {
             MessageWrapper::EncryptedData(data) =&gt; <span class="self">self
                 </span>.encryptor
                 .decrypt(<span class="kw-2">&amp;</span>data)
-                .context(<span class="string">&quot;Couldn&#39;t decrypt message&quot;</span>),
+                .context(<span class="string">&quot;couldn&#39;t decrypt message&quot;</span>),
             incorrect_message =&gt; <span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(
-                <span class="string">&quot;Incorrect protocol message received, in state EncryptedData, found {:?}&quot;</span>,
+                <span class="string">&quot;incorrect protocol message received, in state EncryptedData, found {:?}&quot;</span>,
                 incorrect_message
             )),
         }
@@ -1252,10 +1252,10 @@
         <span class="kw">let </span>encrypted_message = <span class="self">self
             </span>.encryptor
             .encrypt(message)
-            .context(<span class="string">&quot;Couldn&#39;t encrypt message&quot;</span>)<span class="question-mark">?</span>;
+            .context(<span class="string">&quot;couldn&#39;t encrypt message&quot;</span>)<span class="question-mark">?</span>;
         <span class="kw">let </span>serialized_message = encrypted_message
             .serialize()
-            .context(<span class="string">&quot;Couldn&#39;t serialize encrypted data message&quot;</span>)<span class="question-mark">?</span>;
+            .context(<span class="string">&quot;couldn&#39;t serialize encrypted data message&quot;</span>)<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(serialized_message)
     }
 }
@@ -1371,7 +1371,7 @@
 
     <span class="doccomment">/// Appends a serialized `message` to the end of [`Transcript::value`].
     </span><span class="kw">pub fn </span>append&lt;M: Serializable&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, message: <span class="kw-2">&amp;</span>M) -&gt; anyhow::Result&lt;()&gt; {
-        <span class="kw">let </span>bytes = message.serialize().context(<span class="string">&quot;Couldn&#39;t serialize message&quot;</span>)<span class="question-mark">?</span>;
+        <span class="kw">let </span>bytes = message.serialize().context(<span class="string">&quot;couldn&#39;t serialize message&quot;</span>)<span class="question-mark">?</span>;
         <span class="self">self</span>.value.extend(bytes);
         <span class="prelude-val">Ok</span>(())
     }

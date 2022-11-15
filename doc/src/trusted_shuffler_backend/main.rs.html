@@ -218,7 +218,7 @@
     <span class="kw">let </span>address = opt
         .listen_address
         .parse()
-        .context(<span class="string">&quot;Couldn&#39;t parse address&quot;</span>)<span class="question-mark">?</span>;
+        .context(<span class="string">&quot;couldn&#39;t parse address&quot;</span>)<span class="question-mark">?</span>;
 
     <span class="kw">if </span>opt.use_grpc {
         start_grpc_backend(address).<span class="kw">await
@@ -234,7 +234,7 @@
 
     <span class="macro">tokio::select!</span>(
         result = server =&gt; {
-            result.context(<span class="string">&quot;Couldn&#39;t run server&quot;</span>)<span class="question-mark">?</span>;
+            result.context(<span class="string">&quot;couldn&#39;t run server&quot;</span>)<span class="question-mark">?</span>;
         },
         () = tokio::signal::ctrl_c().map(|r| r.unwrap()) =&gt; {
             <span class="macro">info!</span>(<span class="string">&quot;Stopping the backend server&quot;</span>);
@@ -284,7 +284,7 @@
 
     <span class="macro">tokio::select!</span>(
         result = server =&gt; {
-            result.context(<span class="string">&quot;Couldn&#39;t run server&quot;</span>)<span class="question-mark">?</span>;
+            result.context(<span class="string">&quot;couldn&#39;t run server&quot;</span>)<span class="question-mark">?</span>;
         },
         () = tokio::signal::ctrl_c().map(|r| r.unwrap()) =&gt; {
             <span class="macro">info!</span>(<span class="string">&quot;Stopping the backend server&quot;</span>);

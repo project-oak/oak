@@ -96,7 +96,7 @@
 
 <span class="kw">static </span>PATTERN: Lazy&lt;Regex&gt; =
     <span class="comment">// Break up &quot;TO&quot; and &quot;DO&quot; to avoid false positives on this code.
-    </span>Lazy::new(|| Regex::new(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">r&quot;{}DO\(#\d+\)&quot;</span>, <span class="string">&quot;TO&quot;</span>)).expect(<span class="string">&quot;Could not parse regex&quot;</span>));
+    </span>Lazy::new(|| Regex::new(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">r&quot;{}DO\(#\d+\)&quot;</span>, <span class="string">&quot;TO&quot;</span>)).expect(<span class="string">&quot;couldn&#39;t parse regex&quot;</span>));
 
 <span class="doccomment">/// A [`Runnable`] command that checks for the existence of todos in the codebase with no associated
 /// GitHub issue number.
@@ -121,7 +121,7 @@
     }
 
     <span class="kw">fn </span>run(<span class="self">self</span>: Box&lt;<span class="self">Self</span>&gt;, _opt: <span class="kw-2">&amp;</span>Opt) -&gt; Box&lt;<span class="kw">dyn </span>Running&gt; {
-        <span class="kw">let </span>file_content = std::fs::read_to_string(<span class="kw-2">&amp;</span><span class="self">self</span>.path).expect(<span class="string">&quot;could not read file&quot;</span>);
+        <span class="kw">let </span>file_content = std::fs::read_to_string(<span class="kw-2">&amp;</span><span class="self">self</span>.path).expect(<span class="string">&quot;couldn&#39;t read file&quot;</span>);
         <span class="kw">let </span>invalid_todo_words = file_content
             .split_whitespace()
             .filter(|word| CheckTodo::is_invalid_todo(word))

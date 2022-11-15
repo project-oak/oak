@@ -747,7 +747,7 @@
         <span class="kw">let </span>virtual_address = VirtAddr::from_ptr(ghcb.as_ref() <span class="kw">as </span><span class="kw-2">*const </span>Ghcb);
         <span class="comment">// Crashing is OK if we cannot find the physical address for the GHCB.
         </span><span class="kw">let </span>gpa = translate(virtual_address)
-            .expect(<span class="string">&quot;Could not translate the GHCB virtual address to a physical address.&quot;</span>);
+            .expect(<span class="string">&quot;couldn&#39;t translate the GHCB virtual address to a physical address&quot;</span>);
         <span class="self">Self </span>{ ghcb, gpa }
     }
 
@@ -893,7 +893,7 @@
             <span class="prelude-val">Ok</span>(())
         } <span class="kw">else </span>{
             <span class="comment">// For now we treat all non-zero return values as unrecoverable errors.
-            </span><span class="prelude-val">Err</span>(<span class="string">&quot;Guest message response indicates an error.&quot;</span>)
+            </span><span class="prelude-val">Err</span>(<span class="string">&quot;guest message response indicates an error&quot;</span>)
         }
     }
 
@@ -915,7 +915,7 @@
             <span class="prelude-val">Ok</span>(())
         } <span class="kw">else </span>{
             <span class="comment">// For now we treat all non-zero return values as unrecoverable errors.
-            </span><span class="prelude-val">Err</span>(<span class="string">&quot;VMGEXIT call returned an error.&quot;</span>)
+            </span><span class="prelude-val">Err</span>(<span class="string">&quot;VMGEXIT call returned an error&quot;</span>)
         }
     }
 }

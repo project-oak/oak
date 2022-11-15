@@ -253,12 +253,12 @@
                 <span class="kw">let </span>url = <span class="macro">format!</span>(<span class="string">&quot;{}/request&quot;</span>, server_url);
                 send_http_request(<span class="kw-2">&amp;</span>url, Method::POST, request.as_bytes()).<span class="kw">await
             </span>}
-            .context(<span class="string">&quot;Couldn&#39;t receive response&quot;</span>);
+            .context(<span class="string">&quot;couldn&#39;t receive response&quot;</span>);
             <span class="kw">let </span>response_received = start_time.elapsed();
 
             <span class="comment">// Parse and check the response.
             </span><span class="kw">let </span>parsed_response =
-                String::from_utf8(response.unwrap()).context(<span class="string">&quot;Couldn&#39;t decode response body&quot;</span>);
+                String::from_utf8(response.unwrap()).context(<span class="string">&quot;couldn&#39;t decode response body&quot;</span>);
             <span class="macro">log::info!</span>(
                 <span class="string">&quot;Client Response {} at {:?}&quot;</span>,
                 prime_to_send,

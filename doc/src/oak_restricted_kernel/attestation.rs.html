@@ -124,14 +124,14 @@
     <span class="kw">let </span><span class="kw-2">mut </span>guard = GUEST_MESSAGE_ENCRYPTOR.lock();
     <span class="kw">let </span>encryptor = guard
         .as_mut()
-        .ok_or_else(|| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;Guest message encryptor is not initialized.&quot;</span>))<span class="question-mark">?</span>;
+        .ok_or_else(|| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;guest message encryptor is not initialized&quot;</span>))<span class="question-mark">?</span>;
 
     <span class="kw">let </span><span class="kw-2">mut </span>report_request = AttestationRequest::new();
     report_request.report_data = report_data;
 
     <span class="kw">let </span>alloc = GUEST_HOST_HEAP
         .get()
-        .ok_or_else(|| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;Guest-host heap is not initialized.&quot;</span>))<span class="question-mark">?</span>;
+        .ok_or_else(|| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;guest-host heap is not initialized&quot;</span>))<span class="question-mark">?</span>;
 
     <span class="kw">let </span><span class="kw-2">mut </span>request_message = Box::new_in(GuestMessage::new(), alloc);
     encryptor
@@ -141,17 +141,17 @@
 
     <span class="kw">let </span>translator = ADDRESS_TRANSLATOR
         .get()
-        .ok_or_else(|| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;Address translator is not initialized.&quot;</span>))<span class="question-mark">?</span>;
+        .ok_or_else(|| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;address translator is not initialized&quot;</span>))<span class="question-mark">?</span>;
     <span class="kw">let </span>request_address = translator
         .translate_virtual(VirtAddr::from_ptr(
             request_message.as_ref() <span class="kw">as </span><span class="kw-2">*const </span>GuestMessage
         ))
-        .ok_or_else(|| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;Couldn&#39;t translate request address.&quot;</span>))<span class="question-mark">?</span>;
+        .ok_or_else(|| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;couldn&#39;t translate request address&quot;</span>))<span class="question-mark">?</span>;
     <span class="kw">let </span>response_address = translator
         .translate_virtual(VirtAddr::from_ptr(
             response_message.as_ref() <span class="kw">as </span><span class="kw-2">*const </span>GuestMessage
         ))
-        .ok_or_else(|| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;Couldn&#39;t translate response address.&quot;</span>))<span class="question-mark">?</span>;
+        .ok_or_else(|| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;couldn&#39;t translate response address&quot;</span>))<span class="question-mark">?</span>;
 
     GHCB_PROTOCOL
         .lock()
@@ -166,7 +166,7 @@
         .validate()
         .map_err(anyhow::Error::msg)<span class="question-mark">?</span>;
     <span class="kw">if </span>attestation_response.status != ReportStatus::Success <span class="kw">as </span>u32 {
-        <span class="macro">anyhow::bail!</span>(<span class="string">&quot;Report request failed due to invalid parameters.&quot;</span>);
+        <span class="macro">anyhow::bail!</span>(<span class="string">&quot;report request failed due to invalid parameters&quot;</span>);
     }
     <span class="prelude-val">Ok</span>(attestation_response.report)
 }

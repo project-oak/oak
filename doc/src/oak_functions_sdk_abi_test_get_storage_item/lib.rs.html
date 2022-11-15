@@ -165,12 +165,12 @@
 
     <span class="kw">fn </span>run_test(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; anyhow::Result&lt;()&gt; {
         <span class="kw">let </span>request = oak_functions_sdk::read_request()
-            .map_err(|error| <span class="macro">anyhow!</span>(<span class="string">&quot;Couldn&#39;t read request: {:?}&quot;</span>, error))<span class="question-mark">?</span>;
-        <span class="kw">let </span>test_name = String::from_utf8(request).context(<span class="string">&quot;Couldn&#39;t parse request&quot;</span>)<span class="question-mark">?</span>;
+            .map_err(|error| <span class="macro">anyhow!</span>(<span class="string">&quot;couldn&#39;t read request: {:?}&quot;</span>, error))<span class="question-mark">?</span>;
+        <span class="kw">let </span>test_name = String::from_utf8(request).context(<span class="string">&quot;couldn&#39;t parse request&quot;</span>)<span class="question-mark">?</span>;
         <span class="kw">let </span>test = <span class="self">self
             </span>.tests
             .get(<span class="kw-2">&amp;</span>test_name <span class="kw">as </span><span class="kw-2">&amp;</span>str)
-            .ok_or_else(|| <span class="macro">anyhow!</span>(<span class="string">&quot;Couldn&#39;t find test: {}&quot;</span>, <span class="kw-2">&amp;</span>test_name))<span class="question-mark">?</span>;
+            .ok_or_else(|| <span class="macro">anyhow!</span>(<span class="string">&quot;couldn&#39;t find test: {}&quot;</span>, <span class="kw-2">&amp;</span>test_name))<span class="question-mark">?</span>;
         test(<span class="kw-2">&amp;</span>test_name);
         <span class="prelude-val">Ok</span>(())
     }
@@ -183,10 +183,10 @@
     <span class="doccomment">/// Tests that a second call to [`oak_functions_abi::read_request`] returns the same value.
     </span><span class="kw">fn </span>test_double_read(first_request_body: <span class="kw-2">&amp;</span>str) {
         <span class="kw">let </span>second_read_request =
-            oak_functions_sdk::read_request().expect(<span class="string">&quot;Failed to read second request.&quot;</span>);
+            oak_functions_sdk::read_request().expect(<span class="string">&quot;couldn&#39;t read second request&quot;</span>);
         <span class="macro">assert_eq!</span>(second_read_request, first_request_body.as_bytes());
         <span class="comment">// If assert_eq fails then run_test will return with an empty response body.
-        </span>oak_functions_sdk::write_response(<span class="string">b&quot;DoubleReadResponse&quot;</span>).expect(<span class="string">&quot;Failed to write response.&quot;</span>)
+        </span>oak_functions_sdk::write_response(<span class="string">b&quot;DoubleReadResponse&quot;</span>).expect(<span class="string">&quot;couldn&#39;t write response&quot;</span>)
     }
 
     <span class="doccomment">/// Tests that multiple calls to [`oak_functions_abi::write_response`] will replace the earlier
@@ -194,9 +194,9 @@
     </span><span class="kw">fn </span>test_double_write(_request: <span class="kw-2">&amp;</span>str) {
         <span class="comment">// First response contains a different value.
         </span>oak_functions_sdk::write_response(<span class="string">b&quot;FirstResponseInDoubleWrite&quot;</span>)
-            .expect(<span class="string">&quot;Failed to write first response.&quot;</span>);
+            .expect(<span class="string">&quot;couldn&#39;t write first response&quot;</span>);
         oak_functions_sdk::write_response(<span class="string">b&quot;DoubleWriteResponse&quot;</span>)
-            .expect(<span class="string">&quot;Failed to write second response.&quot;</span>);
+            .expect(<span class="string">&quot;couldn&#39;t write second response&quot;</span>);
     }
 
     <span class="comment">// TODO(#2417): Test logging of `write_log_message`
@@ -216,7 +216,7 @@
         <span class="kw">let </span>value = value.unwrap();
         <span class="macro">assert_matches!</span>(value, <span class="prelude-val">Some</span>(<span class="kw">_</span>));
 
-        oak_functions_sdk::write_response(<span class="kw-2">&amp;</span>value.unwrap()).expect(<span class="string">&quot;Failed to write response.&quot;</span>);
+        oak_functions_sdk::write_response(<span class="kw-2">&amp;</span>value.unwrap()).expect(<span class="string">&quot;couldn&#39;t write response&quot;</span>);
     }
 
     <span class="doccomment">/// Tests `storage_get_item` when the key is not in the lookup data. The lookup data is set in
@@ -233,14 +233,14 @@
             }
             <span class="prelude-val">Err</span>(<span class="kw">_</span>) =&gt; <span class="string">b&quot;Unexpected error&quot;</span>.to_vec(),
         };
-        oak_functions_sdk::write_response(<span class="kw-2">&amp;</span>response_msg).expect(<span class="string">&quot;Failed to write response.&quot;</span>)
+        oak_functions_sdk::write_response(<span class="kw-2">&amp;</span>response_msg).expect(<span class="string">&quot;couldn&#39;t write response&quot;</span>)
     }
 }
 
 <span class="attribute">#[cfg_attr(not(test), no_mangle)]
 </span><span class="kw">pub extern </span><span class="string">&quot;C&quot; </span><span class="kw">fn </span>main() {
     <span class="kw">let </span>test_manager = TestManager::new();
-    test_manager.run_test().expect(<span class="string">&quot;Couldn&#39;t run test&quot;</span>);
+    test_manager.run_test().expect(<span class="string">&quot;couldn&#39;t run test&quot;</span>);
 }
 </code></pre></div>
 </section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="oak_functions_sdk_abi_test_get_storage_item" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (81f391930 2022-10-09)" ></div></body></html>

@@ -151,29 +151,29 @@
         <span class="kw">let </span><span class="kw-2">mut </span>handshaker = ClientHandshaker::new(attestation_behavior)<span class="question-mark">?</span>;
         <span class="kw">let </span>client_hello = handshaker
             .create_client_hello()
-            .context(<span class="string">&quot;Couldn&#39;t create client hello message&quot;</span>)<span class="question-mark">?</span>;
+            .context(<span class="string">&quot;couldn&#39;t create client hello message&quot;</span>)<span class="question-mark">?</span>;
 
         <span class="kw">let </span><span class="kw-2">mut </span>response = client
             .message(session_id, client_hello)
             .<span class="kw">await
-            </span>.context(<span class="string">&quot;Couldn&#39;t message client hello message&quot;</span>)<span class="question-mark">?</span>;
+            </span>.context(<span class="string">&quot;couldn&#39;t message client hello message&quot;</span>)<span class="question-mark">?</span>;
 
         <span class="kw">while </span>!handshaker.is_completed() {
             <span class="kw">let </span>request = handshaker
                 .next_step(<span class="kw-2">&amp;</span>response)
-                .context(<span class="string">&quot;Couldn&#39;t process handshake message&quot;</span>)<span class="question-mark">?</span>;
+                .context(<span class="string">&quot;couldn&#39;t process handshake message&quot;</span>)<span class="question-mark">?</span>;
 
             <span class="kw">if let </span><span class="prelude-val">Some</span>(request) = request {
                 response = client
                     .message(session_id, request)
                     .<span class="kw">await
-                    </span>.context(<span class="string">&quot;Couldn&#39;t message client hello message&quot;</span>)<span class="question-mark">?</span>;
+                    </span>.context(<span class="string">&quot;couldn&#39;t message client hello message&quot;</span>)<span class="question-mark">?</span>;
             }
         }
 
         <span class="kw">let </span>encryptor = handshaker
             .get_encryptor()
-            .context(<span class="string">&quot;Couldn&#39;t get encryptor&quot;</span>)<span class="question-mark">?</span>;
+            .context(<span class="string">&quot;couldn&#39;t get encryptor&quot;</span>)<span class="question-mark">?</span>;
 
         <span class="prelude-val">Ok</span>(<span class="self">Self </span>{
             session_id,
@@ -187,13 +187,13 @@
         <span class="kw">let </span>encrypted_request = <span class="self">self
             </span>.encryptor
             .encrypt(request_as_plaintext_bytes)
-            .context(<span class="string">&quot;Couldn&#39;t encrypt request&quot;</span>)<span class="question-mark">?</span>;
+            .context(<span class="string">&quot;couldn&#39;t encrypt request&quot;</span>)<span class="question-mark">?</span>;
 
         <span class="kw">let </span>encrypted_response = <span class="self">self
             </span>.client
             .message(<span class="self">self</span>.session_id, encrypted_request)
             .<span class="kw">await
-            </span>.context(<span class="string">&quot;Couldn&#39;t message encrypted data request&quot;</span>)<span class="question-mark">?</span>;
+            </span>.context(<span class="string">&quot;couldn&#39;t message encrypted data request&quot;</span>)<span class="question-mark">?</span>;
 
         <span class="comment">// The runtime responds with an encrypted response that contains an
         // encoded proto containing the plaintext response and status code.
@@ -201,7 +201,7 @@
         </span><span class="kw">let </span>encoded_response = <span class="self">self
             </span>.encryptor
             .decrypt(<span class="kw-2">&amp;</span>encrypted_response)
-            .context(<span class="string">&quot;Couldn&#39;t decrypt response&quot;</span>)<span class="question-mark">?</span>;
+            .context(<span class="string">&quot;couldn&#39;t decrypt response&quot;</span>)<span class="question-mark">?</span>;
 
         <span class="prelude-val">Ok</span>(encoded_response)
     }

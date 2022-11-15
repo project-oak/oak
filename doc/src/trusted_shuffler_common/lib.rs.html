@@ -90,9 +90,9 @@
     <span class="kw">let </span>response = client
         .request(request)
         .<span class="kw">await
-        </span>.context(<span class="string">&quot;Couldn&#39;t send request&quot;</span>)<span class="question-mark">?</span>;
+        </span>.context(<span class="string">&quot;couldn&#39;t send request&quot;</span>)<span class="question-mark">?</span>;
     <span class="kw">if </span>response.status() != http::StatusCode::OK {
-        <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">&quot;Non-OK status: {:?}&quot;</span>, response.status()));
+        <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">&quot;non-OK status: {:?}&quot;</span>, response.status()));
     }
 
     <span class="prelude-val">Ok</span>(response)
@@ -103,13 +103,13 @@
         .method(method)
         .uri(uri)
         .body(Body::from(body.to_vec()))
-        .context(<span class="string">&quot;Couldn&#39;t create request&quot;</span>)<span class="question-mark">?</span>;
+        .context(<span class="string">&quot;couldn&#39;t create request&quot;</span>)<span class="question-mark">?</span>;
 
     <span class="kw">let </span>response = send_with_request(request).<span class="kw">await</span><span class="question-mark">?</span>;
 
     <span class="kw">let </span>response_body = hyper::body::to_bytes(response.into_body())
         .<span class="kw">await
-        </span>.context(<span class="string">&quot;Couldn&#39;t read response body&quot;</span>)<span class="question-mark">?
+        </span>.context(<span class="string">&quot;couldn&#39;t read response body&quot;</span>)<span class="question-mark">?
         </span>.to_vec();
     <span class="prelude-val">Ok</span>(response_body)
 }

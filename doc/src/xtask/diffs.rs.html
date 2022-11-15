@@ -389,7 +389,7 @@
             <span class="kw">let </span>output = Command::new(<span class="string">&quot;git&quot;</span>)
                 .args(<span class="macro">spread!</span>[<span class="string">&quot;diff&quot;</span>.to_owned(), <span class="string">&quot;--name-only&quot;</span>.to_owned(), args,])
                 .output()
-                .expect(<span class="string">&quot;could not get modified files&quot;</span>);
+                .expect(<span class="string">&quot;couldn&#39;t get modified files&quot;</span>);
 
             <span class="kw">if </span>output.status.success() {
                 <span class="kw">let </span>vec = output.stdout;
@@ -397,14 +397,14 @@
                 <span class="comment">// Extract the file names from the git output
                 </span><span class="prelude-val">Some</span>(
                     String::from_utf8(vec)
-                        .expect(<span class="string">&quot;could not convert to string&quot;</span>)
+                        .expect(<span class="string">&quot;couldn&#39;t convert to string&quot;</span>)
                         .split(<span class="string">&#39;\n&#39;</span>)
                         .map(|s| <span class="macro">format!</span>(<span class="string">&quot;./{}&quot;</span>, s))
                         .collect(),
                 )
             } <span class="kw">else </span>{
                 <span class="macro">eprintln!</span>(
-                    <span class="string">&quot;WARN: git diff failed with error ({}), running the command for the entire code base.&quot;</span>,
+                    <span class="string">&quot;WARN: git diff failed with error ({}), running the command for the entire code base&quot;</span>,
                     output.status
                 );
                 <span class="prelude-val">None
@@ -511,7 +511,7 @@
 
         <span class="comment">// Scan the lines in the file line by line to find all the imports.
         </span><span class="kw">for </span>line <span class="kw">in </span>lines {
-            <span class="kw">let </span>line = line.expect(<span class="string">&quot;could not read line&quot;</span>);
+            <span class="kw">let </span>line = line.expect(<span class="string">&quot;couldn&#39;t read line&quot;</span>);
             <span class="kw">if let </span><span class="prelude-val">Some</span>(imported) = re.captures(<span class="kw-2">&amp;</span>line).map(|c| c[<span class="number">1</span>].to_string()) {
                 imported_protos.push(imported);
             }
@@ -614,7 +614,7 @@
     <span class="kw">let </span>cargo_manifest: CargoManifest =
         toml::from_str(<span class="kw-2">&amp;</span>read_file(toml_path)).unwrap_or_else(|err| {
             <span class="macro">panic!</span>(
-                <span class="string">&quot;could not parse crate manifest file {:?}: {}&quot;</span>,
+                <span class="string">&quot;couldn&#39;t parse crate manifest file {:?}: {}&quot;</span>,
                 toml_path, err
             )
         });

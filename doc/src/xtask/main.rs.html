@@ -846,7 +846,7 @@
     </span>tokio::spawn(<span class="kw">async </span>{
         tokio::signal::ctrl_c()
             .<span class="kw">await
-            </span>.expect(<span class="string">&quot;could not wait for signal&quot;</span>);
+            </span>.expect(<span class="string">&quot;couldn&#39;t wait for signal&quot;</span>);
         cleanup();
         std::process::exit(-<span class="number">1</span>);
     });
@@ -907,7 +907,7 @@
     );
     <span class="kw">for </span>pid <span class="kw">in </span>PROCESSES
         .lock()
-        .expect(<span class="string">&quot;could not acquire processes lock&quot;</span>)
+        .expect(<span class="string">&quot;couldn&#39;t acquire processes lock&quot;</span>)
         .iter()
     {
         <span class="comment">// We intentionally don&#39;t print anything here as it may obscure more interesting
@@ -964,7 +964,7 @@
     fuzz_path.pop();
 
     <span class="kw">let </span>cargo_manifest: CargoManifest = toml::from_str(<span class="kw-2">&amp;</span>read_file(path))
-        .unwrap_or_else(|err| <span class="macro">panic!</span>(<span class="string">&quot;could not parse cargo manifest file {:?}: {}&quot;</span>, path, err));
+        .unwrap_or_else(|err| <span class="macro">panic!</span>(<span class="string">&quot;couldn&#39;t parse cargo manifest file {:?}: {}&quot;</span>, path, err));
 
     Step::Multiple {
         name: <span class="string">&quot;run cargo-fuzz&quot;</span>.to_owned(),
@@ -1052,9 +1052,9 @@
 <span class="kw">fn </span>run_ci() -&gt; Step {
     <span class="comment">// parse cmds for ./scripts/xtask from ci.yaml to keep them in sync
     </span><span class="kw">let </span>path_to_ci_yaml = <span class="string">&quot;.github/workflows/ci.yaml&quot;</span>;
-    <span class="kw">let </span>file = std::fs::File::open(path_to_ci_yaml).expect(<span class="string">&quot;could not open file&quot;</span>);
+    <span class="kw">let </span>file = std::fs::File::open(path_to_ci_yaml).expect(<span class="string">&quot;couldn&#39;t open file&quot;</span>);
     <span class="kw">let </span>contents: serde_yaml::Value =
-        serde_yaml::from_reader(file).expect(<span class="string">&quot;could not read file contents&quot;</span>);
+        serde_yaml::from_reader(file).expect(<span class="string">&quot;couldn&#39;t read file contents&quot;</span>);
     <span class="kw">let </span><span class="kw-2">mut </span>ci_cmds = contents[<span class="string">&quot;jobs&quot;</span>][<span class="string">&quot;xtask&quot;</span>][<span class="string">&quot;strategy&quot;</span>][<span class="string">&quot;matrix&quot;</span>][<span class="string">&quot;cmd&quot;</span>]
         .as_sequence()
         .unwrap()

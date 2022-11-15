@@ -497,7 +497,7 @@
                     <span class="kw">break</span>;
                 } <span class="kw">else </span>{
                     <span class="macro">anyhow::bail!</span>(
-                        <span class="string">&quot;Invalid response to connection request: {}&quot;</span>,
+                        <span class="string">&quot;invalid response to connection request: {}&quot;</span>,
                         packet.get_op()<span class="question-mark">?
                     </span>);
                 }
@@ -542,7 +542,7 @@
                     peer_buffer_size = packet.get_buf_alloc();
                     <span class="kw">break</span>;
                 } <span class="kw">else </span>{
-                    <span class="macro">anyhow::bail!</span>(<span class="string">&quot;Invalid connection request: {}&quot;</span>, packet.get_op()<span class="question-mark">?</span>);
+                    <span class="macro">anyhow::bail!</span>(<span class="string">&quot;invalid connection request: {}&quot;</span>, packet.get_op()<span class="question-mark">?</span>);
                 }
             }
         }
@@ -616,7 +616,7 @@
                 <span class="self">self</span>.config.host_port,
                 VSockOp::Shutdown,
             )
-            .expect(<span class="string">&quot;Could not create control packet.&quot;</span>);
+            .expect(<span class="string">&quot;couldn&#39;t create control packet&quot;</span>);
             <span class="comment">// Notify the host that we will not send or receive any more data packets.
             </span>packet.set_flags(VSockFlags::all());
             <span class="self">self</span>.config.vsock.write_packet(<span class="kw-2">&amp;mut </span>packet);
@@ -644,19 +644,19 @@
         <span class="comment">// For now we panic if we are disconnected.
         </span><span class="macro">assert!</span>(
             <span class="self">self</span>.connection_state == ConnectionState::Connected,
-            <span class="string">&quot;Stream disconnected.&quot;
+            <span class="string">&quot;stream disconnected&quot;
         </span>);
         <span class="kw">let </span>data_len = data.len();
         <span class="macro">assert!</span>(
             data_len &lt;= MAX_PAYLOAD_SIZE,
-            <span class="string">&quot;The data is too large for a single packet. Len: {}, Max: {}&quot;</span>,
+            <span class="string">&quot;the data is too large for a single packet - len: {}, max: {}&quot;</span>,
             data.len(),
             MAX_PAYLOAD_SIZE
         );
 
         <span class="kw">let </span>data_len = Wrapping(data_len <span class="kw">as </span>u32);
         <span class="kw">if </span>data_len &gt; <span class="self">self</span>.peer_buffer_size - (<span class="self">self</span>.sent_bytes - <span class="self">self</span>.peer_processed_bytes) {
-            <span class="macro">anyhow::bail!</span>(<span class="string">&quot;Peer&#39;s stream buffer is full.&quot;</span>);
+            <span class="macro">anyhow::bail!</span>(<span class="string">&quot;peer&#39;s stream buffer is full&quot;</span>);
         }
 
         <span class="self">self</span>.sent_bytes += data_len;
@@ -678,7 +678,7 @@
         <span class="comment">// For now we panic if we are disconnected.
         </span><span class="macro">assert!</span>(
             <span class="self">self</span>.connection_state == ConnectionState::Connected,
-            <span class="string">&quot;Stream disconnected.&quot;
+            <span class="string">&quot;stream disconnected&quot;
         </span>);
         <span class="kw">let </span>src_port = <span class="self">self</span>.config.host_port;
         <span class="kw">let </span>dst_port = <span class="self">self</span>.config.local_port;
@@ -690,17 +690,17 @@
             <span class="self">self</span>.peer_buffer_size = Wrapping(packet.get_buf_alloc());
             <span class="self">self</span>.peer_processed_bytes = Wrapping(packet.get_fwd_cnt());
             <span class="comment">// For now we panic if we receive an invalid op.
-            </span><span class="kw">match </span>packet.get_op().expect(<span class="string">&quot;Invalid packet received on stream.&quot;</span>) {
+            </span><span class="kw">match </span>packet.get_op().expect(<span class="string">&quot;invalid packet received on stream&quot;</span>) {
                 VSockOp::CreditRequest =&gt; {
                     <span class="self">self</span>.send_control_packet(VSockOp::CreditUpdate)
-                        .expect(<span class="string">&quot;Could not create control packet.&quot;</span>);
+                        .expect(<span class="string">&quot;couldn&#39;t create control packet&quot;</span>);
                 }
                 VSockOp::CreditUpdate =&gt; {
                     <span class="comment">// We already updated our flow-control tracking data, so do nothing.
                 </span>}
                 VSockOp::Request | VSockOp::Response =&gt; {
                     <span class="comment">// For now we panic if we receive an invalid op.
-                    </span><span class="macro">panic!</span>(<span class="string">&quot;Invalid packet received on stream.&quot;</span>);
+                    </span><span class="macro">panic!</span>(<span class="string">&quot;invalid packet received on stream&quot;</span>);
                 }
                 VSockOp::Rst =&gt; {
                     <span class="self">self</span>.connection_state = ConnectionState::Disconnected;
@@ -708,7 +708,7 @@
                 }
                 VSockOp::Shutdown =&gt; {
                     <span class="self">self</span>.send_control_packet(VSockOp::Rst)
-                        .expect(<span class="string">&quot;Could not create control packet.&quot;</span>);
+                        .expect(<span class="string">&quot;couldn&#39;t create control packet&quot;</span>);
                     <span class="self">self</span>.connection_state = ConnectionState::Disconnected;
                     <span class="kw">return </span><span class="prelude-val">None</span>;
                 }
@@ -762,7 +762,7 @@
 
         <span class="kw">if </span><span class="self">self</span>.must_send_credit_update() {
             <span class="self">self</span>.send_control_packet(VSockOp::CreditUpdate)
-                .map_err(|error| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;Could not create control packet: {:?}&quot;</span>, error))<span class="question-mark">?</span>;
+                .map_err(|error| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;couldn&#39;t create control packet: {:?}&quot;</span>, error))<span class="question-mark">?</span>;
         }
 
         <span class="prelude-val">Ok</span>(())

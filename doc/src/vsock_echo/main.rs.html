@@ -80,12 +80,12 @@
     <span class="kw">let </span><span class="kw-2">mut </span>stream = <span class="kw">unsafe </span>{ VsockStream::from_raw_fd(FILE_DESCRIPTOR) };
     <span class="macro">println!</span>(
         <span class="string">&quot;Connected to the {}&quot;</span>,
-        stream.peer_addr().expect(<span class="string">&quot;Couldn&#39;t get peer address&quot;</span>)
+        stream.peer_addr().expect(<span class="string">&quot;couldn&#39;t get peer address&quot;</span>)
     );
 
     <span class="kw">let </span><span class="kw-2">mut </span>buffer = <span class="macro">vec!</span>[<span class="number">0</span>; BUFFER_SIZE];
     <span class="kw">loop </span>{
-        <span class="kw">let </span>read_bytes = stream.read(<span class="kw-2">&amp;mut </span>buffer).expect(<span class="string">&quot;Couldn&#39;t read bytes&quot;</span>);
+        <span class="kw">let </span>read_bytes = stream.read(<span class="kw-2">&amp;mut </span>buffer).expect(<span class="string">&quot;couldn&#39;t read bytes&quot;</span>);
         <span class="kw">if </span>read_bytes == <span class="number">0 </span>{
             <span class="kw">break</span>; <span class="comment">// Stream has finished.
         </span>}
@@ -93,12 +93,12 @@
 
         stream
             .write_all(<span class="kw-2">&amp;</span>buffer[..read_bytes])
-            .expect(<span class="string">&quot;Couldn&#39;t write bytes&quot;</span>);
+            .expect(<span class="string">&quot;couldn&#39;t write bytes&quot;</span>);
     }
 
     stream
         .shutdown(Shutdown::Both)
-        .expect(<span class="string">&quot;Couldn&#39;t shutdown stream&quot;</span>);
+        .expect(<span class="string">&quot;couldn&#39;t shutdown stream&quot;</span>);
 }
 </code></pre></div>
 </section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="vsock_echo" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (81f391930 2022-10-09)" ></div></body></html>

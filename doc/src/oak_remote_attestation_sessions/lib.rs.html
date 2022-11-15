@@ -195,7 +195,7 @@
                     <span class="bool-val">false </span>=&gt; <span class="prelude-val">Ok</span>(SessionState::HandshakeInProgress(handshaker)),
                     <span class="bool-val">true </span>=&gt; <span class="kw">match </span>handshaker.get_encryptor() {
                         <span class="prelude-val">Ok</span>(encryptor) =&gt; <span class="prelude-val">Ok</span>(SessionState::EncryptedMessageExchange(encryptor)),
-                        <span class="prelude-val">Err</span>(error) =&gt; <span class="prelude-val">Err</span>(error.context(<span class="string">&quot;Couldn&#39;t get encryptor&quot;</span>)),
+                        <span class="prelude-val">Err</span>(error) =&gt; <span class="prelude-val">Err</span>(error.context(<span class="string">&quot;couldn&#39;t get encryptor&quot;</span>)),
                     },
                 }
             }

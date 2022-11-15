@@ -433,7 +433,7 @@
             <span class="kw">let </span><span class="kw-2">mut </span>requests_to_shuffle = <span class="self">self
                 </span>.requests_to_shuffle
                 .lock()
-                .map_err(|error| <span class="macro">anyhow!</span>(<span class="string">&quot;Couldn&#39;t lock current messages mutex: {:?}&quot;</span>, error))<span class="question-mark">?</span>;
+                .map_err(|error| <span class="macro">anyhow!</span>(<span class="string">&quot;couldn&#39;t lock current messages mutex: {:?}&quot;</span>, error))<span class="question-mark">?</span>;
 
             <span class="kw">let </span>request = RequestMessage {
                 index: requests_to_shuffle.len(),
@@ -460,7 +460,7 @@
             }
         }
 
-        response_receiver.<span class="kw">await</span>.context(<span class="string">&quot;Couldn&#39;t receive response&quot;</span>)
+        response_receiver.<span class="kw">await</span>.context(<span class="string">&quot;couldn&#39;t receive response&quot;</span>)
     }
 
     <span class="comment">// Lexicographically sorts requests and sends them to the backend using the
@@ -507,7 +507,7 @@
             .<span class="kw">await
             </span>.into_iter()
             .collect::&lt;<span class="prelude-ty">Result</span>&lt;Vec&lt;<span class="kw">_</span>&gt;, <span class="kw">_</span>&gt;&gt;()
-            .context(<span class="string">&quot;Couldn&#39;t send responses&quot;</span>)<span class="question-mark">?</span>;
+            .context(<span class="string">&quot;couldn&#39;t send responses&quot;</span>)<span class="question-mark">?</span>;
 
         <span class="self">Self</span>::shuffle_responses(responses)
     }
@@ -527,7 +527,7 @@
                  }| {
                     response_sender
                         .send(data)
-                        .map_err(|_data| <span class="macro">anyhow!</span>(<span class="string">&quot;Couldn&#39;t send response&quot;</span>))
+                        .map_err(|_data| <span class="macro">anyhow!</span>(<span class="string">&quot;couldn&#39;t send response&quot;</span>))
                 },
             )
             .collect::&lt;<span class="prelude-ty">Result</span>&lt;Vec&lt;<span class="kw">_</span>&gt;, <span class="kw">_</span>&gt;&gt;()

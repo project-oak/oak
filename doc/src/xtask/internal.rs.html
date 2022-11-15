@@ -1153,15 +1153,15 @@
                 <span class="prelude-val">Some</span>(groups) =&gt; {
                     <span class="kw">let </span>commits_count = groups
                         .get(<span class="number">1</span>)
-                        .ok_or(<span class="macro">format!</span>(<span class="string">&quot;Failed to parse commits {}&quot;</span>, scope))<span class="question-mark">?
+                        .ok_or(<span class="macro">format!</span>(<span class="string">&quot;couldn&#39;t parse commits {}&quot;</span>, scope))<span class="question-mark">?
                         </span>.as_str()
                         .to_string();
                     <span class="kw">let </span>count = commits_count
                         .parse::&lt;u8&gt;()
-                        .map_err(|err| <span class="macro">format!</span>(<span class="string">&quot;Could not parse to u8 {:?}&quot;</span>, err))<span class="question-mark">?</span>;
+                        .map_err(|err| <span class="macro">format!</span>(<span class="string">&quot;couldn&#39;t parse to u8 {:?}&quot;</span>, err))<span class="question-mark">?</span>;
                     <span class="prelude-val">Ok</span>(<span class="self">Self</span>::Commits(count))
                 }
-                <span class="prelude-val">None </span>=&gt; <span class="prelude-val">Err</span>(<span class="macro">format!</span>(<span class="string">&quot;Failed to parse scope {}&quot;</span>, scope)),
+                <span class="prelude-val">None </span>=&gt; <span class="prelude-val">Err</span>(<span class="macro">format!</span>(<span class="string">&quot;couldn&#39;t parse scope {}&quot;</span>, scope)),
             },
         }
     }
@@ -1205,7 +1205,7 @@
         <span class="kw">match </span>variant {
             <span class="string">&quot;base&quot; </span>=&gt; <span class="prelude-val">Ok</span>(ServerVariant::Base),
             <span class="kw">_ </span>=&gt; <span class="prelude-val">Err</span>(<span class="macro">format!</span>(
-                <span class="string">&quot;Failed to parse functions server variant {}&quot;</span>,
+                <span class="string">&quot;couldn&#39;t parse functions server variant {}&quot;</span>,
                 variant
             )),
         }
@@ -1672,7 +1672,7 @@
                 <span class="kw">let </span><span class="kw-2">mut </span>buf = Vec::new();
                 io.read_to_end(<span class="kw-2">&amp;mut </span>buf)
                     .<span class="kw">await
-                    </span>.expect(<span class="string">&quot;could not read from future&quot;</span>);
+                    </span>.expect(<span class="string">&quot;couldn&#39;t read from future&quot;</span>);
                 buf
             }
 
@@ -1687,10 +1687,10 @@
 
             <span class="kw">let </span>stdout = background_stdout_future
                 .<span class="kw">await
-                </span>.expect(<span class="string">&quot;could not read stdout&quot;</span>);
+                </span>.expect(<span class="string">&quot;couldn&#39;t read stdout&quot;</span>);
             <span class="kw">let </span>stderr = background_stderr_future
                 .<span class="kw">await
-                </span>.expect(<span class="string">&quot;could not read stderr&quot;</span>);
+                </span>.expect(<span class="string">&quot;couldn&#39;t read stderr&quot;</span>);
 
             <span class="kw">let </span>logs = format_logs(<span class="kw-2">&amp;</span>stdout, <span class="kw-2">&amp;</span>stderr);
 
@@ -1823,12 +1823,12 @@
                 .stdout(stdout)
                 .stderr(stderr)
                 .spawn()
-                .unwrap_or_else(|err| <span class="macro">panic!</span>(<span class="string">&quot;could not spawn command: {:?}: {}&quot;</span>, cmd, err));
+                .unwrap_or_else(|err| <span class="macro">panic!</span>(<span class="string">&quot;couldn&#39;t spawn command: {:?}: {}&quot;</span>, cmd, err));
 
             <span class="kw">if let </span><span class="prelude-val">Some</span>(pid) = child.id() {
                 <span class="kw">crate</span>::PROCESSES
                     .lock()
-                    .expect(<span class="string">&quot;could not acquire processes lock&quot;</span>)
+                    .expect(<span class="string">&quot;couldn&#39;t acquire processes lock&quot;</span>)
                     .push(pid <span class="kw">as </span>i32);
             }
 
@@ -1846,8 +1846,8 @@
         .stdout(std::process::Stdio::null())
         .stderr(std::process::Stdio::null())
         .spawn()
-        .unwrap_or_else(|err| <span class="macro">panic!</span>(<span class="string">&quot;could not spawn command: {:?}: {}&quot;</span>, cmd, err));
-    <span class="kw">let </span>output = child.wait().expect(<span class="string">&quot;could not get exit status&quot;</span>);
+        .unwrap_or_else(|err| <span class="macro">panic!</span>(<span class="string">&quot;couldn&#39;t spawn command: {:?}: {}&quot;</span>, cmd, err));
+    <span class="kw">let </span>output = child.wait().expect(<span class="string">&quot;couldn&#39;t get exit status&quot;</span>);
     <span class="comment">// ps -p has success exit code if the pid exists.
     </span>!output.success()
 }
@@ -1897,7 +1897,7 @@
             </span>.child
             .wait_with_output()
             .<span class="kw">await
-            </span>.expect(<span class="string">&quot;could not get exit status&quot;</span>);
+            </span>.expect(<span class="string">&quot;couldn&#39;t get exit status&quot;</span>);
         <span class="kw">let </span>logs = format_logs(<span class="kw-2">&amp;</span>output.stdout, <span class="kw-2">&amp;</span>output.stderr);
         <span class="kw">if </span>output.status.success() {
             SingleStatusResult {
@@ -1918,13 +1918,13 @@
     <span class="kw">if </span>!stdout.is_empty() {
         logs += <span class="kw-2">&amp;</span><span class="macro">format!</span>(
             <span class="string">&quot;════╡ stdout ╞════\n{}&quot;</span>,
-            std::str::from_utf8(stdout).expect(<span class="string">&quot;could not parse stdout as UTF8&quot;</span>)
+            std::str::from_utf8(stdout).expect(<span class="string">&quot;couldn&#39;t parse stdout as UTF8&quot;</span>)
         );
     }
     <span class="kw">if </span>!stderr.is_empty() {
         logs += <span class="kw-2">&amp;</span><span class="macro">format!</span>(
             <span class="string">&quot;════╡ stderr ╞════\n{}&quot;</span>,
-            std::str::from_utf8(stderr).expect(<span class="string">&quot;could not parse stderr as UTF8&quot;</span>)
+            std::str::from_utf8(stderr).expect(<span class="string">&quot;couldn&#39;t parse stderr as UTF8&quot;</span>)
         );
     }
     logs

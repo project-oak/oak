@@ -954,7 +954,7 @@
     <span class="kw">let </span>examples: Vec&lt;OakExample&gt; = example_toml_files(scope)
         .map(|path| {
             toml::from_str(<span class="kw-2">&amp;</span>read_file(<span class="kw-2">&amp;</span>path)).unwrap_or_else(|err| {
-                <span class="macro">panic!</span>(<span class="string">&quot;could not parse example manifest file {:?}: {}&quot;</span>, path, err)
+                <span class="macro">panic!</span>(<span class="string">&quot;couldn&#39;t parse example manifest file {:?}: {}&quot;</span>, path, err)
             })
         })
         .filter(|example: <span class="kw-2">&amp;</span>OakExample| example.has_oak_functions_application())
@@ -1061,12 +1061,12 @@
     <span class="kw">let </span>example: OakExample = example_toml_files(scope)
         .map(|path| {
             toml::from_str(<span class="kw-2">&amp;</span>read_file(<span class="kw-2">&amp;</span>path)).unwrap_or_else(|err| {
-                <span class="macro">panic!</span>(<span class="string">&quot;could not parse example manifest file {:?}: {}&quot;</span>, path, err)
+                <span class="macro">panic!</span>(<span class="string">&quot;couldn&#39;t parse example manifest file {:?}: {}&quot;</span>, path, err)
             })
         })
         .find(|example: <span class="kw-2">&amp;</span>OakExample| <span class="kw-2">&amp;</span>example.name == example_name)
         .filter(|example| example.has_oak_functions_application())
-        .expect(<span class="string">&quot;could not find the specified functions example, try with `--scope=all`&quot;</span>);
+        .expect(<span class="string">&quot;couldn&#39;t find the specified functions example, try with `--scope=all`&quot;</span>);
 
     <span class="comment">// Build steps for building clients
     </span><span class="kw">let </span>build_client = Step::Multiple {

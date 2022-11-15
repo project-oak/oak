@@ -333,7 +333,7 @@
         <span class="comment">// For now we just scan the first 32 devices on PCI bus 0 to find the first one that matches
         // the vendor ID and device ID.
         </span><span class="kw">let </span>pci_device = find_device(<span class="kw">super</span>::PCI_VENDOR_ID, PCI_DEVICE_ID)
-            .ok_or_else(|| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;Couldn&#39;t find a virtio console device.&quot;</span>))<span class="question-mark">?</span>;
+            .ok_or_else(|| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;couldn&#39;t find a virtio console device&quot;</span>))<span class="question-mark">?</span>;
         <span class="kw">let </span>transport = VirtioPciTransport::new(pci_device);
         <span class="kw">let </span>device = VirtioBaseDevice::new(transport);
         <span class="kw">let </span><span class="kw-2">mut </span>result = <span class="self">Self</span>::new(device, <span class="kw-2">&amp;</span>translate, alloc);
@@ -404,38 +404,38 @@
     ) -&gt; anyhow::Result&lt;()&gt; {
         <span class="self">self</span>.device
             .start_init(DEVICE_ID <span class="kw">as </span>u32, inverse)
-            .map_err(|error| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;Virtio error: {:?}&quot;</span>, error))
-            .context(<span class="string">&quot;Couldn&#39;t initialize the PCI device.&quot;</span>)<span class="question-mark">?</span>;
+            .map_err(|error| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;virtio error: {:?}&quot;</span>, error))
+            .context(<span class="string">&quot;couldn&#39;t initialize the PCI device&quot;</span>)<span class="question-mark">?</span>;
         <span class="self">self</span>.device
             .configure_queue(
                 RX_QUEUE_ID,
                 QUEUE_SIZE <span class="kw">as </span>u16,
                 translate(<span class="self">self</span>.rx_queue.inner.get_desc_addr())
-                    .context(<span class="string">&quot;Failed to translate VirtAddr to PhysAddr&quot;</span>)<span class="question-mark">?</span>,
+                    .context(<span class="string">&quot;couldn&#39;t translate VirtAddr to PhysAddr&quot;</span>)<span class="question-mark">?</span>,
                 translate(<span class="self">self</span>.rx_queue.inner.get_avail_addr())
-                    .context(<span class="string">&quot;Failed to translate VirtAddr to PhysAddr&quot;</span>)<span class="question-mark">?</span>,
+                    .context(<span class="string">&quot;couldn&#39;t translate VirtAddr to PhysAddr&quot;</span>)<span class="question-mark">?</span>,
                 translate(<span class="self">self</span>.rx_queue.inner.get_used_addr())
-                    .context(<span class="string">&quot;Failed to translate VirtAddr to PhysAddr&quot;</span>)<span class="question-mark">?</span>,
+                    .context(<span class="string">&quot;couldn&#39;t translate VirtAddr to PhysAddr&quot;</span>)<span class="question-mark">?</span>,
             )
-            .map_err(|error| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;Queue configuration error: {:?}&quot;</span>, error))
-            .context(<span class="string">&quot;Couldn&#39;t configure the receive queue.&quot;</span>)<span class="question-mark">?</span>;
+            .map_err(|error| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;queue configuration error: {:?}&quot;</span>, error))
+            .context(<span class="string">&quot;couldn&#39;t configure the receive queue&quot;</span>)<span class="question-mark">?</span>;
         <span class="self">self</span>.device
             .configure_queue(
                 TX_QUEUE_ID,
                 QUEUE_SIZE <span class="kw">as </span>u16,
                 translate(<span class="self">self</span>.tx_queue.inner.get_desc_addr())
-                    .context(<span class="string">&quot;Failed to translate VirtAddr to PhysAddr&quot;</span>)<span class="question-mark">?</span>,
+                    .context(<span class="string">&quot;couldn&#39;t translate VirtAddr to PhysAddr&quot;</span>)<span class="question-mark">?</span>,
                 translate(<span class="self">self</span>.tx_queue.inner.get_avail_addr())
-                    .context(<span class="string">&quot;Failed to translate VirtAddr to PhysAddr&quot;</span>)<span class="question-mark">?</span>,
+                    .context(<span class="string">&quot;couldn&#39;t translate VirtAddr to PhysAddr&quot;</span>)<span class="question-mark">?</span>,
                 translate(<span class="self">self</span>.tx_queue.inner.get_used_addr())
-                    .context(<span class="string">&quot;Failed to translate VirtAddr to PhysAddr&quot;</span>)<span class="question-mark">?</span>,
+                    .context(<span class="string">&quot;couldn&#39;t translate VirtAddr to PhysAddr&quot;</span>)<span class="question-mark">?</span>,
             )
-            .map_err(|error| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;Queue configuration error: {:?}&quot;</span>, error))
-            .context(<span class="string">&quot;Couldn&#39;t configure the transmit queue.&quot;</span>)<span class="question-mark">?</span>;
+            .map_err(|error| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;queue configuration error: {:?}&quot;</span>, error))
+            .context(<span class="string">&quot;couldn&#39;t configure the transmit queue&quot;</span>)<span class="question-mark">?</span>;
         <span class="self">self</span>.device
             .complete_init()
-            .map_err(|error| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;Device activation error: {:?}&quot;</span>, error))
-            .context(<span class="string">&quot;Couldn&#39;t activate the PCI device.&quot;</span>)<span class="question-mark">?</span>;
+            .map_err(|error| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;device activation error: {:?}&quot;</span>, error))
+            .context(<span class="string">&quot;couldn&#39;t activate the PCI device&quot;</span>)<span class="question-mark">?</span>;
 
         <span class="comment">// Let the device know there are available buffers in the receiver queue.
         </span><span class="self">self</span>.device.notify_queue(RX_QUEUE_ID);

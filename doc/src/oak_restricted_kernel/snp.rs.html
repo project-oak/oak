@@ -270,7 +270,7 @@
     }
 
     <span class="kw">if </span>setup_data_ptr.is_null() {
-        <span class="macro">panic!</span>(<span class="string">&quot;Couldn&#39;t find setup data of type CCBlob.&quot;</span>);
+        <span class="macro">panic!</span>(<span class="string">&quot;couldn&#39;t find setup data of type CCBlob&quot;</span>);
     }
 
     <span class="comment">// Safety: we have checked that the pointer is not null and at least points to memory within the
@@ -310,35 +310,35 @@
 
     <span class="kw">let </span>cpuid_page_address = mapper
         .translate_physical(snp_pages.cpuid_page_address)
-        .expect(<span class="string">&quot;Couldn&#39;t find a valid virtual address for the CPUID page.&quot;</span>);
+        .expect(<span class="string">&quot;couldn&#39;t find a valid virtual address for the CPUID page&quot;</span>);
     <span class="comment">// Safety: we have checked that the pointer is in the expected valid memory range, not null, and
     // 4KiB page-aligned.
     </span><span class="kw">let </span>cpuid_slice: <span class="kw-2">&amp;</span>[u8] =
         <span class="kw">unsafe </span>{ from_raw_parts(cpuid_page_address.as_ptr(), Size4KiB::SIZE <span class="kw">as </span>usize) };
     CPUID_PAGE
-        .set(CpuidPage::read_from(cpuid_slice).expect(<span class="string">&quot;CPUID page byte slice was invalid.&quot;</span>))
-        .expect(<span class="string">&quot;Couldn&#39;t set CPUID page.&quot;</span>);
+        .set(CpuidPage::read_from(cpuid_slice).expect(<span class="string">&quot;CPUID page byte slice was invalid&quot;</span>))
+        .expect(<span class="string">&quot;couldn&#39;t set CPUID page&quot;</span>);
     CPUID_PAGE
         .get()
         .unwrap()
         .validate()
-        .expect(<span class="string">&quot;Invalid CPUID page.&quot;</span>);
+        .expect(<span class="string">&quot;invalid CPUID page&quot;</span>);
 
     <span class="kw">let </span>secrets_page_address = mapper
         .translate_physical(snp_pages.secrets_page_address)
-        .expect(<span class="string">&quot;Couldn&#39;t find a valid virtual address for the secrets page.&quot;</span>);
+        .expect(<span class="string">&quot;couldn&#39;t find a valid virtual address for the secrets page&quot;</span>);
     <span class="comment">// Safety: we have checked that the pointer is in the expected valid memory range, not null, and
     // 4KiB page-aligned.
     </span><span class="kw">let </span>secrets_slice: <span class="kw-2">&amp;</span>[u8] =
         <span class="kw">unsafe </span>{ from_raw_parts(secrets_page_address.as_ptr(), Size4KiB::SIZE <span class="kw">as </span>usize) };
     SECRETS_PAGE
-        .set(SecretsPage::read_from(secrets_slice).expect(<span class="string">&quot;Secrets page byte slice was invalid.&quot;</span>))
-        .expect(<span class="string">&quot;Couldn&#39;t set secrets page.&quot;</span>);
+        .set(SecretsPage::read_from(secrets_slice).expect(<span class="string">&quot;secrets page byte slice was invalid&quot;</span>))
+        .expect(<span class="string">&quot;couldn&#39;t set secrets page&quot;</span>);
     SECRETS_PAGE
         .get()
         .unwrap()
         .validate()
-        .expect(<span class="string">&quot;Invalid secrets page.&quot;</span>);
+        .expect(<span class="string">&quot;invalid secrets page&quot;</span>);
 }
 
 <span class="doccomment">/// Initializes the guest message encryptor.
@@ -348,26 +348,26 @@
     <span class="comment">// For now we always use VMPCK_0 from the secrets page as the key.
     </span><span class="kw">let </span>key = <span class="kw-2">&amp;</span>SECRETS_PAGE
         .get()
-        .expect(<span class="string">&quot;Secrets page is not initialized.&quot;</span>)
+        .expect(<span class="string">&quot;secrets page is not initialized&quot;</span>)
         .vmpck_0[..];
-    GUEST_MESSAGE_ENCRYPTOR.lock().replace(
-        GuestMessageEncryptor::new(key).expect(<span class="string">&quot;Couldn&#39;t create guest message encryptor.&quot;</span>),
-    );
+    GUEST_MESSAGE_ENCRYPTOR
+        .lock()
+        .replace(GuestMessageEncryptor::new(key).expect(<span class="string">&quot;couldn&#39;t create guest message encryptor&quot;</span>));
 }
 
 <span class="doccomment">/// Panics if the physical address is not the start of a 4KiB page, null, or not below the maximum
 /// expected address.
 </span><span class="kw">fn </span>assert_page_in_valid_range(page: PhysAddr) {
-    <span class="macro">assert!</span>(!page.is_null(), <span class="string">&quot;Address is null&quot;</span>);
+    <span class="macro">assert!</span>(!page.is_null(), <span class="string">&quot;address is null&quot;</span>);
     <span class="macro">assert_eq!</span>(
         page.align_down(Size4KiB::SIZE),
         page,
-        <span class="string">&quot;Address {:#018x} is not the start of a 4KiB page.&quot;</span>,
+        <span class="string">&quot;address {:#018x} is not the start of a 4KiB page&quot;</span>,
         page
     );
     <span class="macro">assert!</span>(
         page &lt; MAX_ADDRESS,
-        <span class="string">&quot;Address {:#018x} is not below the expected maximum address {:#018x}&quot;</span>,
+        <span class="string">&quot;address {:#018x} is not below the expected maximum address {:#018x}&quot;</span>,
         page,
         MAX_ADDRESS
     );
@@ -375,11 +375,11 @@
 
 <span class="doccomment">/// Panics if the pointer is null or points to an address that falls outside the expected range.
 </span><span class="kw">fn </span>assert_pointer_in_valid_range&lt;T&gt;(pointer: <span class="kw-2">*const </span>T) {
-    <span class="macro">assert!</span>(!pointer.is_null(), <span class="string">&quot;Pointer is null&quot;</span>);
+    <span class="macro">assert!</span>(!pointer.is_null(), <span class="string">&quot;pointer is null&quot;</span>);
     <span class="kw">let </span>address = VirtAddr::from_ptr(pointer);
     <span class="macro">assert!</span>(
         address.as_u64() &lt; MAX_ADDRESS.as_u64(),
-        <span class="string">&quot;Pointer {:#018x} is not below the expected maximum address {:#018x}&quot;</span>,
+        <span class="string">&quot;pointer {:#018x} is not below the expected maximum address {:#018x}&quot;</span>,
         address,
         MAX_ADDRESS
     );

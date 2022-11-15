@@ -300,7 +300,7 @@
 /// vector of bytes.
 </span><span class="kw">pub fn </span>cell_id_from_bytes(bytes: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;CellID&gt; {
     <span class="kw">let </span>cell_id = CellID::from_token(
-        std::str::from_utf8(bytes).context(<span class="string">&quot;could not parse cell id bytes to UTF8 string&quot;</span>)<span class="question-mark">?</span>,
+        std::str::from_utf8(bytes).context(<span class="string">&quot;couldn&#39;t parse cell id bytes from UTF8 string&quot;</span>)<span class="question-mark">?</span>,
     );
     <span class="prelude-val">Ok</span>(cell_id)
 }

@@ -155,11 +155,11 @@
 </span><span class="kw">pub fn </span>init_args(args: <span class="kw-2">&amp;</span>CStr) -&gt; core::result::Result&lt;Args, <span class="kw-2">&amp;</span>str&gt; {
     <span class="kw">let </span>args = args
         .to_str()
-        .map_err(|core::str::Utf8Error { .. }| <span class="string">&quot;Kernel arguments are not valid UTF-8&quot;</span>)<span class="question-mark">?</span>;
+        .map_err(|core::str::Utf8Error { .. }| <span class="string">&quot;kernel arguments are not valid UTF-8&quot;</span>)<span class="question-mark">?</span>;
     <span class="comment">// Safety: this is called once early in the initialization process from a single thread, so
     // there will not be any concurrent writes.
     </span><span class="kw">unsafe </span>{ ARGS.try_push_str(args) }
-        .map_err(|arrayvec::CapacityError { .. }| <span class="string">&quot;Kernel arguments too long&quot;</span>)<span class="question-mark">?</span>;
+        .map_err(|arrayvec::CapacityError { .. }| <span class="string">&quot;kernel arguments too long&quot;</span>)<span class="question-mark">?</span>;
     <span class="comment">// Safety: we&#39;ve just populated ARGS, successfully, in the line just above.
     </span><span class="prelude-val">Ok</span>(Args {
         args: LazyCell::new(|| split_args(<span class="kw">unsafe </span>{ ARGS.as_str() })),

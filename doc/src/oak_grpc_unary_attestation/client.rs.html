@@ -87,7 +87,7 @@
 <span class="kw">impl </span>UnaryGrpcClient {
     <span class="kw">pub async fn </span>create(uri: <span class="kw-2">&amp;</span>str) -&gt; anyhow::Result&lt;<span class="self">Self</span>&gt; {
         <span class="kw">let </span>channel = Channel::from_shared(uri.to_string())
-            .context(<span class="string">&quot;Couldn&#39;t create gRPC channel&quot;</span>)<span class="question-mark">?
+            .context(<span class="string">&quot;couldn&#39;t create gRPC channel&quot;</span>)<span class="question-mark">?
             </span>.connect()
             .<span class="kw">await</span><span class="question-mark">?</span>;
         <span class="kw">let </span>inner = UnarySessionClient::new(channel);
@@ -107,7 +107,7 @@
                 session_id: session_id.to_vec(),
             })
             .<span class="kw">await
-            </span>.context(<span class="string">&quot;Couldn&#39;t send message&quot;</span>)<span class="question-mark">?
+            </span>.context(<span class="string">&quot;couldn&#39;t send message&quot;</span>)<span class="question-mark">?
             </span>.into_inner()
             .body;
 

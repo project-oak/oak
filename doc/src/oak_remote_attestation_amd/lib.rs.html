@@ -174,7 +174,7 @@
     ) -&gt; anyhow::Result&lt;()&gt; {
         <span class="kw">let </span>attestation_report = PlaceholderAmdReport::from_string(
             core::str::from_utf8(attestation)
-                .map_err(|_err| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;could not parse remote attestation report&quot;</span>))<span class="question-mark">?</span>,
+                .map_err(|_err| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;couldn&#39;t parse remote attestation report&quot;</span>))<span class="question-mark">?</span>,
         )<span class="question-mark">?</span>;
         <span class="kw">let </span>actual_attested_data = attestation_report.data;
         <span class="kw">if </span>actual_attested_data == expected_attested_data {
@@ -227,13 +227,13 @@
     <span class="comment">// TODO(#2842): Use raw report instead of JSON.
     </span><span class="kw">pub fn </span>from_string(input: <span class="kw-2">&amp;</span>str) -&gt; anyhow::Result&lt;<span class="self">Self</span>&gt; {
         serde_json::from_str(input)
-            .map_err(|_err| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;Couldn&#39;t deserialize attestation report&quot;</span>))
+            .map_err(|_err| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;couldn&#39;t deserialize attestation report&quot;</span>))
     }
 
     <span class="comment">// TODO(#2842): Use raw report instead of JSON.
     </span><span class="kw">pub fn </span>to_string(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; anyhow::Result&lt;String&gt; {
         serde_json::to_string(<span class="kw-2">&amp;</span><span class="self">self</span>)
-            .map_err(|_err| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;Couldn&#39;t serialize attestation report&quot;</span>))
+            .map_err(|_err| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;couldn&#39;t serialize attestation report&quot;</span>))
     }
 }
 </code></pre></div>

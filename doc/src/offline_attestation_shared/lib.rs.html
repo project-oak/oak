@@ -282,10 +282,10 @@
 /// public key.
 </span><span class="kw">pub fn </span>encrypt(public_key_handle: <span class="kw-2">&amp;</span>Handle, data: <span class="kw-2">&amp;</span>[u8]) -&gt; anyhow::Result&lt;Vec&lt;u8&gt;&gt; {
     <span class="kw">let </span>encryptor = tink_hybrid::new_encrypt(public_key_handle)
-        .map_err(|error| <span class="macro">anyhow!</span>(<span class="string">&quot;Couldn&#39;t create hybrid encryptor: {}&quot;</span>, error))<span class="question-mark">?</span>;
+        .map_err(|error| <span class="macro">anyhow!</span>(<span class="string">&quot;couldn&#39;t create hybrid encryptor: {}&quot;</span>, error))<span class="question-mark">?</span>;
     encryptor
         .encrypt(data, ENCRYPTION_CONTEXT)
-        .map_err(|error| <span class="macro">anyhow!</span>(<span class="string">&quot;Couldn&#39;t encrypt data: {}&quot;</span>, error))
+        .map_err(|error| <span class="macro">anyhow!</span>(<span class="string">&quot;couldn&#39;t encrypt data: {}&quot;</span>, error))
 }
 
 <span class="doccomment">/// Decrypts the provides `cyphertext` using the private key.
@@ -294,17 +294,17 @@
 /// decryption will only succeed if the ciphertext was created using the corresponding public key.
 </span><span class="kw">pub fn </span>decrypt(private_key_handle: <span class="kw-2">&amp;</span>Handle, ciphertext: <span class="kw-2">&amp;</span>[u8]) -&gt; anyhow::Result&lt;Vec&lt;u8&gt;&gt; {
     <span class="kw">let </span>decryptor = tink_hybrid::new_decrypt(private_key_handle)
-        .map_err(|error| <span class="macro">anyhow!</span>(<span class="string">&quot;Couldn&#39;t create hybrid decryptor: {}&quot;</span>, error))<span class="question-mark">?</span>;
+        .map_err(|error| <span class="macro">anyhow!</span>(<span class="string">&quot;couldn&#39;t create hybrid decryptor: {}&quot;</span>, error))<span class="question-mark">?</span>;
     decryptor
         .decrypt(ciphertext, ENCRYPTION_CONTEXT)
-        .map_err(|error| <span class="macro">anyhow!</span>(<span class="string">&quot;Couldn&#39;t decrypt ciphertext: {}&quot;</span>, error))
+        .map_err(|error| <span class="macro">anyhow!</span>(<span class="string">&quot;couldn&#39;t decrypt ciphertext: {}&quot;</span>, error))
 }
 
 <span class="doccomment">/// Generates a new private key suitable for hybrid encryption and returns a handle to the
 /// containing keyset.
 </span><span class="kw">pub fn </span>generate_private_key() -&gt; anyhow::Result&lt;Handle&gt; {
     tink_core::keyset::Handle::new(<span class="kw-2">&amp;</span>tink_hybrid::ecies_hkdf_aes128_gcm_key_template())
-        .map_err(|error| <span class="macro">anyhow!</span>(<span class="string">&quot;Couldn&#39;t create private key: {}&quot;</span>, error))
+        .map_err(|error| <span class="macro">anyhow!</span>(<span class="string">&quot;couldn&#39;t create private key: {}&quot;</span>, error))
 }
 
 <span class="doccomment">/// Serialises the handle&#39;s underlying keyset containing the public key to a binary representation.
@@ -315,7 +315,7 @@
     <span class="kw">let </span><span class="kw-2">mut </span>writer = tink_core::keyset::BinaryWriter::new(<span class="kw-2">&amp;mut </span>result);
     public_key_handle
         .write_with_no_secrets(<span class="kw-2">&amp;mut </span>writer)
-        .map_err(|error| <span class="macro">anyhow!</span>(<span class="string">&quot;Couldn&#39;t deserialise public key: {}&quot;</span>, error))<span class="question-mark">?</span>;
+        .map_err(|error| <span class="macro">anyhow!</span>(<span class="string">&quot;couldn&#39;t deserialise public key: {}&quot;</span>, error))<span class="question-mark">?</span>;
     <span class="prelude-val">Ok</span>(result)
 }
 
@@ -324,7 +324,7 @@
 </span><span class="kw">pub fn </span>deserialize_public_key(data: <span class="kw-2">&amp;</span>[u8]) -&gt; anyhow::Result&lt;Handle&gt; {
     <span class="kw">let </span><span class="kw-2">mut </span>reader = tink_core::keyset::BinaryReader::new(data);
     Handle::read_with_no_secrets(<span class="kw-2">&amp;mut </span>reader)
-        .map_err(|error| <span class="macro">anyhow!</span>(<span class="string">&quot;Couldn&#39;t deserialise public key: {}&quot;</span>, error))
+        .map_err(|error| <span class="macro">anyhow!</span>(<span class="string">&quot;couldn&#39;t deserialise public key: {}&quot;</span>, error))
 }
 
 <span class="doccomment">/// Serialises the attestation report to a binary representation.

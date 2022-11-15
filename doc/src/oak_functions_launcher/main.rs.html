@@ -274,7 +274,7 @@
 <span class="kw">fn </span>path_exists(s: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;PathBuf, String&gt; {
     <span class="kw">let </span>path = PathBuf::from(s);
     <span class="kw">if </span>!fs::metadata(s).map_err(|err| err.to_string())<span class="question-mark">?</span>.is_file() {
-        <span class="prelude-val">Err</span>(String::from(<span class="string">&quot;Path does not represent a file&quot;</span>))
+        <span class="prelude-val">Err</span>(String::from(<span class="string">&quot;path does not represent a file&quot;</span>))
     } <span class="kw">else </span>{
         <span class="prelude-val">Ok</span>(path)
     }
@@ -296,7 +296,7 @@
             <span class="kw">let </span><span class="kw-2">mut </span>reader = BufReader::new(console_receiver);
 
             <span class="kw">let </span><span class="kw-2">mut </span>line = String::new();
-            <span class="kw">while </span>reader.read_line(<span class="kw-2">&amp;mut </span>line).expect(<span class="string">&quot;failed to read line&quot;</span>) &gt; <span class="number">0 </span>{
+            <span class="kw">while </span>reader.read_line(<span class="kw-2">&amp;mut </span>line).expect(<span class="string">&quot;couldn&#39;t read line&quot;</span>) &gt; <span class="number">0 </span>{
                 <span class="macro">log::info!</span>(<span class="string">&quot;console: {:?}&quot;</span>, line);
                 line.clear();
             }
@@ -321,15 +321,15 @@
                 tokio::time::interval(std::time::Duration::from_millis(<span class="number">1000 </span>* <span class="number">60 </span>* <span class="number">10</span>));
             <span class="kw">loop </span>{
                 <span class="kw">let </span>lookup_data =
-                    lookup::load_lookup_data(<span class="kw-2">&amp;</span>cli.lookup_data).expect(<span class="string">&quot;failed to load lookup data&quot;</span>);
+                    lookup::load_lookup_data(<span class="kw-2">&amp;</span>cli.lookup_data).expect(<span class="string">&quot;couldn&#39;t load lookup data&quot;</span>);
                 <span class="kw">let </span>encoded_lookup_data =
-                    lookup::encode_lookup_data(lookup_data).expect(<span class="string">&quot;failed to encode lookup data&quot;</span>);
+                    lookup::encode_lookup_data(lookup_data).expect(<span class="string">&quot;couldn&#39;t encode lookup data&quot;</span>);
 
                 <span class="kw">if let </span><span class="prelude-val">Err</span>(err) = runtime_client
                     .update_lookup_data(<span class="kw-2">&amp;</span>encoded_lookup_data)
                     .<span class="kw">await
                 </span>{
-                    <span class="macro">panic!</span>(<span class="string">&quot;failed to send lookup data: {:?}&quot;</span>, err)
+                    <span class="macro">panic!</span>(<span class="string">&quot;couldn&#39;t send lookup data: {:?}&quot;</span>, err)
                 }
 
                 interval.tick().<span class="kw">await</span>;
@@ -338,7 +338,7 @@
     }
 
     <span class="kw">let </span>wasm_bytes = fs::read(<span class="kw-2">&amp;</span>cli.wasm)
-        .with_context(|| <span class="macro">format!</span>(<span class="string">&quot;Couldn&#39;t read Wasm file {}&quot;</span>, <span class="kw-2">&amp;</span>cli.wasm.display()))
+        .with_context(|| <span class="macro">format!</span>(<span class="string">&quot;couldn&#39;t read Wasm file {}&quot;</span>, <span class="kw-2">&amp;</span>cli.wasm.display()))
         .unwrap();
     <span class="macro">log::info!</span>(
         <span class="string">&quot;read Wasm file from disk {} ({} bytes)&quot;</span>,
@@ -356,7 +356,7 @@
         .initialize(<span class="kw-2">&amp;</span>request)
         .<span class="kw">await
         </span>.flatten()
-        .expect(<span class="string">&quot;failed to initialize the runtime&quot;</span>);
+        .expect(<span class="string">&quot;couldn&#39;t initialize the runtime&quot;</span>);
 
     <span class="kw">let </span>public_key_info = result.public_key_info.expect(<span class="string">&quot;no public key info returned&quot;</span>);
     <span class="macro">log::info!</span>(

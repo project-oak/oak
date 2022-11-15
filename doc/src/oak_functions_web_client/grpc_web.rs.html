@@ -134,13 +134,13 @@
     uri: <span class="kw-2">&amp;</span>str,
     message: A,
 ) -&gt; anyhow::Result&lt;B&gt; {
-    <span class="kw">let </span>request_bytes = encode_body(message).context(<span class="string">&quot;failed to encode message&quot;</span>)<span class="question-mark">?</span>;
+    <span class="kw">let </span>request_bytes = encode_body(message).context(<span class="string">&quot;couldn&#39;t encode message&quot;</span>)<span class="question-mark">?</span>;
     <span class="kw">let </span>response_bytes = send(uri, request_bytes)
         .<span class="kw">await
-        </span>.context(<span class="string">&quot;failed to send message&quot;</span>)<span class="question-mark">?</span>;
+        </span>.context(<span class="string">&quot;couldn&#39;t send message&quot;</span>)<span class="question-mark">?</span>;
     <span class="kw">let </span>reply = decode_body::&lt;B&gt;(response_bytes)
         .<span class="kw">await
-        </span>.context(<span class="string">&quot;failed to decode message&quot;</span>)<span class="question-mark">?</span>;
+        </span>.context(<span class="string">&quot;couldn&#39;t decode message&quot;</span>)<span class="question-mark">?</span>;
     <span class="prelude-val">Ok</span>(reply)
 }
 
@@ -157,10 +157,10 @@
         .body(request_bytes)
         .send()
         .<span class="kw">await
-        </span>.map_err(|error| <span class="macro">anyhow!</span>(<span class="string">&quot;Couldn&#39;t get response {:?}&quot;</span>, error))<span class="question-mark">?
+        </span>.map_err(|error| <span class="macro">anyhow!</span>(<span class="string">&quot;couldn&#39;t get response {:?}&quot;</span>, error))<span class="question-mark">?
         </span>.bytes()
         .<span class="kw">await
-        </span>.map_err(|error| <span class="macro">anyhow!</span>(<span class="string">&quot;Couldn&#39;t get response bytes {:?}&quot;</span>, error))<span class="question-mark">?</span>;
+        </span>.map_err(|error| <span class="macro">anyhow!</span>(<span class="string">&quot;couldn&#39;t get response bytes {:?}&quot;</span>, error))<span class="question-mark">?</span>;
     <span class="prelude-val">Ok</span>(response)
 }
 
@@ -181,7 +181,7 @@
 
     <span class="comment">// write the message
     </span>msg.encode(<span class="kw-2">&amp;mut </span>buf)
-        .map_err(|error| <span class="macro">anyhow!</span>(<span class="string">&quot;Couldn&#39;t encode message {:?}&quot;</span>, error))<span class="question-mark">?</span>;
+        .map_err(|error| <span class="macro">anyhow!</span>(<span class="string">&quot;couldn&#39;t encode message {:?}&quot;</span>, error))<span class="question-mark">?</span>;
 
     <span class="comment">// now we know the size of encoded message and can write the
     // header
@@ -208,7 +208,7 @@
 
     <span class="kw">let </span>len = body.get_u32();
     <span class="kw">let </span>msg = T::decode(<span class="kw-2">&amp;mut </span>body.split_to(len <span class="kw">as </span>usize))
-        .map_err(|error| <span class="macro">anyhow!</span>(<span class="string">&quot;Couldn&#39;t decode message {:?}&quot;</span>, error))<span class="question-mark">?</span>;
+        .map_err(|error| <span class="macro">anyhow!</span>(<span class="string">&quot;couldn&#39;t decode message {:?}&quot;</span>, error))<span class="question-mark">?</span>;
 
     <span class="prelude-val">Ok</span>(msg)
 }

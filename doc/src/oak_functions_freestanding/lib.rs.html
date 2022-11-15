@@ -251,7 +251,7 @@
                 .map_err(|err| {
                     oak_idl::Status::new_with_message(
                         oak_idl::StatusCode::Internal,
-                        <span class="macro">format!</span>(<span class="string">&quot;could not initialize Wasm handler: {:?}&quot;</span>, err),
+                        <span class="macro">format!</span>(<span class="string">&quot;couldn&#39;t initialize Wasm handler: {:?}&quot;</span>, err),
                     )
                 })<span class="question-mark">?</span>;
                 <span class="kw">let </span>attestation_handler = Box::new(
@@ -262,7 +262,7 @@
                     .map_err(|err| {
                         oak_idl::Status::new_with_message(
                             oak_idl::StatusCode::Internal,
-                            <span class="macro">format!</span>(<span class="string">&quot;could not create attestation handler: {:?}&quot;</span>, err),
+                            <span class="macro">format!</span>(<span class="string">&quot;couldn&#39;t create attestation handler: {:?}&quot;</span>, err),
                         )
                     })<span class="question-mark">?</span>,
                 );

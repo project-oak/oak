@@ -274,10 +274,10 @@
 };
 
 <span class="kw">pub fn </span>read_file(path: <span class="kw-2">&amp;</span>Path) -&gt; String {
-    <span class="kw">let </span><span class="kw-2">mut </span>file = std::fs::File::open(path).expect(<span class="string">&quot;could not open file&quot;</span>);
+    <span class="kw">let </span><span class="kw-2">mut </span>file = std::fs::File::open(path).expect(<span class="string">&quot;couldn&#39;t open file&quot;</span>);
     <span class="kw">let </span><span class="kw-2">mut </span>contents = String::new();
     file.read_to_string(<span class="kw-2">&amp;mut </span>contents)
-        .expect(<span class="string">&quot;could not read file contents&quot;</span>);
+        .expect(<span class="string">&quot;couldn&#39;t read file contents&quot;</span>);
     contents
 }
 
@@ -293,7 +293,7 @@
 
 <span class="kw">pub fn </span>file_contains(path: <span class="kw-2">&amp;</span>Path, pattern: <span class="kw-2">&amp;</span>str) -&gt; bool {
     <span class="kw">if </span>path.is_file() {
-        <span class="kw">let </span><span class="kw-2">mut </span>file = std::fs::File::open(path).expect(<span class="string">&quot;could not open file&quot;</span>);
+        <span class="kw">let </span><span class="kw-2">mut </span>file = std::fs::File::open(path).expect(<span class="string">&quot;couldn&#39;t open file&quot;</span>);
         <span class="kw">let </span><span class="kw-2">mut </span>contents = String::new();
         <span class="comment">// Content may be non-UTF-8, in which case we just return false.
         </span><span class="kw">if </span>file.read_to_string(<span class="kw-2">&amp;mut </span>contents).is_ok() {
@@ -419,7 +419,7 @@
 
 <span class="kw">pub fn </span>is_shell_script(path: <span class="kw-2">&amp;</span>Path) -&gt; bool {
     <span class="kw">if </span>path.is_file() {
-        <span class="kw">let </span><span class="kw-2">mut </span>file = std::fs::File::open(path).expect(<span class="string">&quot;could not open file&quot;</span>);
+        <span class="kw">let </span><span class="kw-2">mut </span>file = std::fs::File::open(path).expect(<span class="string">&quot;couldn&#39;t open file&quot;</span>);
         <span class="kw">let </span><span class="kw-2">mut </span>contents = String::new();
         <span class="kw">match </span>file.read_to_string(<span class="kw-2">&amp;mut </span>contents) {
             <span class="prelude-val">Ok</span>(_size) =&gt; contents.starts_with(<span class="string">&quot;#!&quot;</span>),

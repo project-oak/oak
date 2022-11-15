@@ -138,17 +138,17 @@
     <span class="comment">// Blocking is set in order to not return an error when the host hasn&#39;t written anything yet.
     </span>stream
         .set_nonblocking(<span class="bool-val">false</span>)
-        .map_err(|error| <span class="macro">anyhow!</span>(<span class="string">&quot;Couldn&#39;t set socket into blocking mode: {}&quot;</span>, error))<span class="question-mark">?</span>;
+        .map_err(|error| <span class="macro">anyhow!</span>(<span class="string">&quot;couldn&#39;t set socket into blocking mode: {}&quot;</span>, error))<span class="question-mark">?</span>;
     <span class="prelude-val">Ok</span>(stream)
 }
 
 <span class="kw">fn </span>main() -&gt; ! {
     <span class="kw">let </span>opt = Opt::parse();
 
-    <span class="kw">let </span>stream = create_vsock_stream(opt.file_descriptor).expect(<span class="string">&quot;Couldn&#39;t create channel&quot;</span>);
+    <span class="kw">let </span>stream = create_vsock_stream(opt.file_descriptor).expect(<span class="string">&quot;couldn&#39;t create channel&quot;</span>);
     <span class="macro">println!</span>(
         <span class="string">&quot;Connected to the {}&quot;</span>,
-        stream.peer_addr().expect(<span class="string">&quot;Couldn&#39;t get peer address&quot;</span>)
+        stream.peer_addr().expect(<span class="string">&quot;couldn&#39;t get peer address&quot;</span>)
     );
 
     <span class="kw">let </span>channel = Box::new(Channel::new(stream));
@@ -158,7 +158,7 @@
         channel,
         oak_functions_freestanding::schema::TrustedRuntime::serve(runtime),
     )
-    .expect(<span class="string">&quot;Runtime encountered an unrecoverable error&quot;</span>);
+    .expect(<span class="string">&quot;runtime encountered an unrecoverable error&quot;</span>);
 }
 </code></pre></div>
 </section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="oak_functions_linux_vsock_bin" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (81f391930 2022-10-09)" ></div></body></html>

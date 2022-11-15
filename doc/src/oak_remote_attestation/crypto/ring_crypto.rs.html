@@ -482,11 +482,11 @@
     <span class="doccomment">/// Encrypts `data` using `AeadEncryptor::encryption_key`.
     </span><span class="kw">pub fn </span>encrypt(<span class="kw-2">&amp;mut </span><span class="self">self</span>, data: <span class="kw-2">&amp;</span>[u8]) -&gt; anyhow::Result&lt;EncryptedData&gt; {
         <span class="comment">// Generate a random nonce.
-        </span><span class="kw">let </span>nonce = <span class="self">Self</span>::generate_nonce().context(<span class="string">&quot;Couldn&#39;t generate nonce&quot;</span>)<span class="question-mark">?</span>;
+        </span><span class="kw">let </span>nonce = <span class="self">Self</span>::generate_nonce().context(<span class="string">&quot;couldn&#39;t generate nonce&quot;</span>)<span class="question-mark">?</span>;
 
         <span class="comment">// Bind [`AeadEncryptor::key`] to a `nonce`.
         </span><span class="kw">let </span>unbound_sealing_key = aead::UnboundKey::new(AEAD_ALGORITHM, <span class="kw-2">&amp;</span><span class="self">self</span>.encryption_key.<span class="number">0</span>)
-            .map_err(|error| <span class="macro">anyhow!</span>(<span class="string">&quot;Couldn&#39;t create sealing key: {:?}&quot;</span>, error))<span class="question-mark">?</span>;
+            .map_err(|error| <span class="macro">anyhow!</span>(<span class="string">&quot;couldn&#39;t create sealing key: {:?}&quot;</span>, error))<span class="question-mark">?</span>;
         <span class="kw">let </span><span class="kw-2">mut </span>sealing_key =
             ring::aead::SealingKey::new(unbound_sealing_key, OneNonceSequence::new(nonce));
 
@@ -498,7 +498,7 @@
             // And the nonce is authenticated by the AEAD algorithm itself.
             // https://datatracker.ietf.org/doc/html/rfc5116#section-2.1
             </span>.seal_in_place_append_tag(aead::Aad::empty(), <span class="kw-2">&amp;mut </span>encrypted_data)
-            .map_err(|error| <span class="macro">anyhow!</span>(<span class="string">&quot;Couldn&#39;t encrypt data: {:?}&quot;</span>, error))<span class="question-mark">?</span>;
+            .map_err(|error| <span class="macro">anyhow!</span>(<span class="string">&quot;couldn&#39;t encrypt data: {:?}&quot;</span>, error))<span class="question-mark">?</span>;
 
         <span class="prelude-val">Ok</span>(EncryptedData::new(nonce, encrypted_data))
     }
@@ -521,7 +521,7 @@
             // And the nonce is authenticated by the AEAD algorithm itself.
             // https://datatracker.ietf.org/doc/html/rfc5116#section-2.1
             </span>.open_in_place(aead::Aad::empty(), <span class="kw-2">&amp;mut </span>decrypted_data)
-            .map_err(|error| <span class="macro">anyhow!</span>(<span class="string">&quot;Couldn&#39;t decrypt data: {:?}&quot;</span>, error))<span class="question-mark">?</span>;
+            .map_err(|error| <span class="macro">anyhow!</span>(<span class="string">&quot;couldn&#39;t decrypt data: {:?}&quot;</span>, error))<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(decrypted_data.to_vec())
     }
 
@@ -560,7 +560,7 @@
     <span class="kw">pub fn </span>create(type_: KeyNegotiatorType) -&gt; anyhow::Result&lt;<span class="self">Self</span>&gt; {
         <span class="kw">let </span>rng = ring::rand::SystemRandom::new();
         <span class="kw">let </span>private_key = agreement::EphemeralPrivateKey::generate(KEY_AGREEMENT_ALGORITHM, <span class="kw-2">&amp;</span>rng)
-            .map_err(|error| <span class="macro">anyhow!</span>(<span class="string">&quot;Couldn&#39;t generate private key: {:?}&quot;</span>, error))<span class="question-mark">?</span>;
+            .map_err(|error| <span class="macro">anyhow!</span>(<span class="string">&quot;couldn&#39;t generate private key: {:?}&quot;</span>, error))<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(<span class="self">Self </span>{ type_, private_key })
     }
 
@@ -568,7 +568,7 @@
         <span class="kw">let </span>public_key = <span class="self">self
             </span>.private_key
             .compute_public_key()
-            .map_err(|error| <span class="macro">anyhow!</span>(<span class="string">&quot;Couldn&#39;t get public key: {:?}&quot;</span>, error))<span class="question-mark">?
+            .map_err(|error| <span class="macro">anyhow!</span>(<span class="string">&quot;couldn&#39;t get public key: {:?}&quot;</span>, error))<span class="question-mark">?
             </span>.as_ref()
             .to_vec();
         public_key
@@ -576,7 +576,7 @@
             .try_into()
             .map_err(anyhow::Error::msg)
             .context(<span class="macro">format!</span>(
-                <span class="string">&quot;Incorrect public key length, expected {}, found {}&quot;</span>,
+                <span class="string">&quot;incorrect public key length, expected {}, found {}&quot;</span>,
                 KEY_AGREEMENT_ALGORITHM_KEY_LENGTH,
                 public_key.len()
             ))
@@ -598,7 +598,7 @@
     ) -&gt; anyhow::Result&lt;AeadEncryptor&gt; {
         <span class="kw">let </span>(encryption_key, decryption_key) = <span class="self">self
             </span>.derive_session_keys(peer_public_key)
-            .context(<span class="string">&quot;Couldn&#39;t derive session keys&quot;</span>)<span class="question-mark">?</span>;
+            .context(<span class="string">&quot;couldn&#39;t derive session keys&quot;</span>)<span class="question-mark">?</span>;
         <span class="kw">let </span>encryptor = AeadEncryptor::new(encryption_key, decryption_key);
         <span class="prelude-val">Ok</span>(encryptor)
     }
@@ -610,17 +610,17 @@
         peer_public_key: <span class="kw-2">&amp;</span>[u8; KEY_AGREEMENT_ALGORITHM_KEY_LENGTH],
     ) -&gt; anyhow::Result&lt;(EncryptionKey, DecryptionKey)&gt; {
         <span class="kw">let </span>type_ = <span class="self">self</span>.type_.clone();
-        <span class="kw">let </span>self_public_key = <span class="self">self</span>.public_key().context(<span class="string">&quot;Couldn&#39;t get self public key&quot;</span>)<span class="question-mark">?</span>;
+        <span class="kw">let </span>self_public_key = <span class="self">self</span>.public_key().context(<span class="string">&quot;couldn&#39;t get self public key&quot;</span>)<span class="question-mark">?</span>;
         agreement::agree_ephemeral(
             <span class="self">self</span>.private_key,
             <span class="kw-2">&amp;</span>agreement::UnparsedPublicKey::new(KEY_AGREEMENT_ALGORITHM, peer_public_key),
-            <span class="macro">anyhow!</span>(<span class="string">&quot;Couldn&#39;t derive session keys&quot;</span>),
+            <span class="macro">anyhow!</span>(<span class="string">&quot;couldn&#39;t derive session keys&quot;</span>),
             |key_material| -&gt; anyhow::Result&lt;(EncryptionKey, DecryptionKey)&gt; {
                 <span class="kw">let </span>key_material = key_material
                     .try_into()
                     .map_err(anyhow::Error::msg)
                     .context(<span class="macro">format!</span>(
-                        <span class="string">&quot;Incorrect key material length, expected {}, found {}&quot;</span>,
+                        <span class="string">&quot;incorrect key material length, expected {}, found {}&quot;</span>,
                         KEY_AGREEMENT_ALGORITHM_KEY_LENGTH,
                         key_material.len()
                     ))<span class="question-mark">?</span>;
@@ -635,7 +635,7 @@
                                 <span class="kw-2">&amp;</span>self_public_key,
                                 <span class="kw-2">&amp;</span>peer_public_key,
                             )
-                            .context(<span class="string">&quot;Couldn&#39;t derive decryption key&quot;</span>)<span class="question-mark">?</span>,
+                            .context(<span class="string">&quot;couldn&#39;t derive decryption key&quot;</span>)<span class="question-mark">?</span>,
                         );
                         <span class="kw">let </span>decryption_key = DecryptionKey(
                             <span class="self">Self</span>::key_derivation_function(
@@ -644,7 +644,7 @@
                                 <span class="kw-2">&amp;</span>self_public_key,
                                 <span class="kw-2">&amp;</span>peer_public_key,
                             )
-                            .context(<span class="string">&quot;Couldn&#39;t derive encryption key&quot;</span>)<span class="question-mark">?</span>,
+                            .context(<span class="string">&quot;couldn&#39;t derive encryption key&quot;</span>)<span class="question-mark">?</span>,
                         );
                         <span class="prelude-val">Ok</span>((encryption_key, decryption_key))
                     }
@@ -657,7 +657,7 @@
                                 <span class="kw-2">&amp;</span>peer_public_key,
                                 <span class="kw-2">&amp;</span>self_public_key,
                             )
-                            .context(<span class="string">&quot;Couldn&#39;t derive decryption key&quot;</span>)<span class="question-mark">?</span>,
+                            .context(<span class="string">&quot;couldn&#39;t derive decryption key&quot;</span>)<span class="question-mark">?</span>,
                         );
                         <span class="kw">let </span>decryption_key = DecryptionKey(
                             <span class="self">Self</span>::key_derivation_function(
@@ -666,7 +666,7 @@
                                 <span class="kw-2">&amp;</span>peer_public_key,
                                 <span class="kw-2">&amp;</span>self_public_key,
                             )
-                            .context(<span class="string">&quot;Couldn&#39;t derive encryption key&quot;</span>)<span class="question-mark">?</span>,
+                            .context(<span class="string">&quot;couldn&#39;t derive encryption key&quot;</span>)<span class="question-mark">?</span>,
                         );
                         <span class="prelude-val">Ok</span>((encryption_key, decryption_key))
                     }
@@ -674,7 +674,7 @@
             },
         )
         .map_err(anyhow::Error::msg)
-        .context(<span class="string">&quot;Couldn&#39;t derive session keys&quot;</span>)
+        .context(<span class="string">&quot;couldn&#39;t derive session keys&quot;</span>)
     }
 
     <span class="doccomment">/// Derives a session key from `key_material` using HKDF.
@@ -702,12 +702,12 @@
         </span><span class="kw">let </span><span class="kw-2">mut </span>session_key: [u8; AEAD_ALGORITHM_KEY_LENGTH] = Default::default();
         <span class="kw">let </span>output_key_material = kdf
             .expand(<span class="kw-2">&amp;</span>info, AEAD_ALGORITHM)
-            .map_err(|error| <span class="macro">anyhow!</span>(<span class="string">&quot;Couldn&#39;t run HKDF-Expand operation : {:?}&quot;</span>, error))<span class="question-mark">?</span>;
+            .map_err(|error| <span class="macro">anyhow!</span>(<span class="string">&quot;couldn&#39;t run HKDF-Expand operation : {:?}&quot;</span>, error))<span class="question-mark">?</span>;
         output_key_material
             .fill(<span class="kw-2">&amp;mut </span>session_key)
             .map_err(|error| {
                 <span class="macro">anyhow!</span>(
-                    <span class="string">&quot;Couldn&#39;t get the output of the HKDF-Expand operation: {:?}&quot;</span>,
+                    <span class="string">&quot;couldn&#39;t get the output of the HKDF-Expand operation: {:?}&quot;</span>,
                     error
                 )
             })<span class="question-mark">?</span>;
@@ -724,9 +724,9 @@
     <span class="kw">pub fn </span>create() -&gt; anyhow::Result&lt;<span class="self">Self</span>&gt; {
         <span class="kw">let </span>rng = ring::rand::SystemRandom::new();
         <span class="kw">let </span>key_pair_pkcs8 = EcdsaKeyPair::generate_pkcs8(SIGNING_ALGORITHM, <span class="kw-2">&amp;</span>rng)
-            .map_err(|error| <span class="macro">anyhow!</span>(<span class="string">&quot;Couldn&#39;t generate PKCS#8 key pair: {:?}&quot;</span>, error))<span class="question-mark">?</span>;
+            .map_err(|error| <span class="macro">anyhow!</span>(<span class="string">&quot;couldn&#39;t generate PKCS#8 key pair: {:?}&quot;</span>, error))<span class="question-mark">?</span>;
         <span class="kw">let </span>key_pair = EcdsaKeyPair::from_pkcs8(SIGNING_ALGORITHM, key_pair_pkcs8.as_ref())
-            .map_err(|error| <span class="macro">anyhow!</span>(<span class="string">&quot;Couldn&#39;t parse generated key pair: {:?}&quot;</span>, error))<span class="question-mark">?</span>;
+            .map_err(|error| <span class="macro">anyhow!</span>(<span class="string">&quot;couldn&#39;t parse generated key pair: {:?}&quot;</span>, error))<span class="question-mark">?</span>;
 
         <span class="prelude-val">Ok</span>(<span class="self">Self </span>{ key_pair })
     }
@@ -738,7 +738,7 @@
             .try_into()
             .map_err(anyhow::Error::msg)
             .context(<span class="macro">format!</span>(
-                <span class="string">&quot;Incorrect public key length, expected {}, found {}&quot;</span>,
+                <span class="string">&quot;incorrect public key length, expected {}, found {}&quot;</span>,
                 SIGNING_ALGORITHM_KEY_LENGTH,
                 public_key.len()
             ))
@@ -749,7 +749,7 @@
         <span class="kw">let </span>signature = <span class="self">self
             </span>.key_pair
             .sign(<span class="kw-2">&amp;</span>rng, input)
-            .map_err(|error| <span class="macro">anyhow!</span>(<span class="string">&quot;Couldn&#39;t sign input: {:?}&quot;</span>, error))<span class="question-mark">?
+            .map_err(|error| <span class="macro">anyhow!</span>(<span class="string">&quot;couldn&#39;t sign input: {:?}&quot;</span>, error))<span class="question-mark">?
             </span>.as_ref()
             .to_vec();
         signature
@@ -757,7 +757,7 @@
             .try_into()
             .map_err(anyhow::Error::msg)
             .context(<span class="macro">format!</span>(
-                <span class="string">&quot;Incorrect signature length, expected {}, found {}&quot;</span>,
+                <span class="string">&quot;incorrect signature length, expected {}, found {}&quot;</span>,
                 SIGNATURE_LENGTH,
                 signature.len()
             ))
@@ -781,7 +781,7 @@
             ring::signature::UnparsedPublicKey::new(VERIFICATION_ALGORITHM, <span class="kw-2">&amp;</span><span class="self">self</span>.public_key_bytes);
         public_key
             .verify(input, signature)
-            .map_err(|error| <span class="macro">anyhow!</span>(<span class="string">&quot;Signature verification failed: {:?}&quot;</span>, error))<span class="question-mark">?</span>;
+            .map_err(|error| <span class="macro">anyhow!</span>(<span class="string">&quot;signature verification failed: {:?}&quot;</span>, error))<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(())
     }
 }
@@ -791,7 +791,7 @@
     digest(<span class="kw-2">&amp;</span>SHA256, input)
         .as_ref()
         .try_into()
-        .expect(<span class="string">&quot;Incorrect SHA-256 hash length&quot;</span>)
+        .expect(<span class="string">&quot;incorrect SHA-256 hash length&quot;</span>)
 }
 
 <span class="doccomment">/// Generates a random vector of `size` bytes.
@@ -799,7 +799,7 @@
     <span class="kw">let </span><span class="kw-2">mut </span>result: [u8; L] = [Default::default(); L];
     <span class="kw">let </span>rng = SystemRandom::new();
     rng.fill(<span class="kw-2">&amp;mut </span>result[..])
-        .map_err(|error| <span class="macro">anyhow!</span>(<span class="string">&quot;Couldn&#39;t create random value: {:?}&quot;</span>, error))<span class="question-mark">?</span>;
+        .map_err(|error| <span class="macro">anyhow!</span>(<span class="string">&quot;couldn&#39;t create random value: {:?}&quot;</span>, error))<span class="question-mark">?</span>;
     <span class="prelude-val">Ok</span>(result)
 }
 </code></pre></div>

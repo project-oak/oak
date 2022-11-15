@@ -321,14 +321,14 @@
         .args(args)
         .env_remove(<span class="string">&quot;RUSTFLAGS&quot;</span>)
         .spawn()
-        .context(<span class="string">&quot;Couldn&#39;t spawn cargo build&quot;</span>)<span class="question-mark">?
+        .context(<span class="string">&quot;couldn&#39;t spawn cargo build&quot;</span>)<span class="question-mark">?
         </span>.wait()
-        .context(<span class="string">&quot;Couldn&#39;t wait for cargo build to finish&quot;</span>)<span class="question-mark">?</span>;
+        .context(<span class="string">&quot;couldn&#39;t wait for cargo build to finish&quot;</span>)<span class="question-mark">?</span>;
 
     <span class="kw">let </span>module_path = build_wasm_module_path(<span class="kw-2">&amp;</span>metadata);
     <span class="macro">info!</span>(<span class="string">&quot;Compiled Wasm module path: {:?}&quot;</span>, module_path);
 
-    std::fs::read(module_path).context(<span class="string">&quot;Couldn&#39;t read compiled module&quot;</span>)
+    std::fs::read(module_path).context(<span class="string">&quot;couldn&#39;t read compiled module&quot;</span>)
 }
 
 <span class="doccomment">/// Serializes the provided map as a contiguous buffer of length-delimited protobuf messages of type
@@ -339,20 +339,20 @@
         <span class="kw">let </span>entry_proto = oak_functions_abi::proto::Entry { key, value };
         entry_proto
             .encode_length_delimited(<span class="kw-2">&amp;mut </span>buf)
-            .expect(<span class="string">&quot;could not encode entry as length delimited&quot;</span>);
+            .expect(<span class="string">&quot;couldn&#39;t encode entry as length delimited&quot;</span>);
     }
     buf
 }
 
 <span class="kw">pub fn </span>write_to_temp_file(content: <span class="kw-2">&amp;</span>[u8]) -&gt; tempfile::NamedTempFile {
-    <span class="kw">let </span><span class="kw-2">mut </span>file = tempfile::NamedTempFile::new().expect(<span class="string">&quot;could not create temp file&quot;</span>);
+    <span class="kw">let </span><span class="kw-2">mut </span>file = tempfile::NamedTempFile::new().expect(<span class="string">&quot;couldn&#39;t create temp file&quot;</span>);
     file.write_all(content)
-        .expect(<span class="string">&quot;could not write content to temp file&quot;</span>);
+        .expect(<span class="string">&quot;couldn&#39;t write content to temp file&quot;</span>);
     file
 }
 
 <span class="kw">pub fn </span>free_port() -&gt; u16 {
-    port_check::free_local_port().expect(<span class="string">&quot;could not pick free local port&quot;</span>)
+    port_check::free_local_port().expect(<span class="string">&quot;couldn&#39;t pick free local port&quot;</span>)
 }
 
 <span class="doccomment">/// Wrapper around a termination signal [`oneshot::Sender`] and the [`JoinHandle`] of the associated
@@ -371,10 +371,10 @@
     </span><span class="kw">pub async fn </span>terminate_and_join(<span class="self">self</span>) -&gt; T {
         <span class="self">self</span>.term_tx
             .send(())
-            .expect(<span class="string">&quot;could not send signal on termination channel&quot;</span>);
+            .expect(<span class="string">&quot;couldn&#39;t send signal on termination channel&quot;</span>);
         <span class="self">self</span>.join_handle
             .<span class="kw">await
-            </span>.expect(<span class="string">&quot;could not wait for background task to terminate&quot;</span>)
+            </span>.expect(<span class="string">&quot;couldn&#39; wait for background task to terminate&quot;</span>)
     }
 }
 
@@ -408,7 +408,7 @@
     )
     .dir(<span class="macro">env!</span>(<span class="string">&quot;WORKSPACE_ROOT&quot;</span>))
     .run()
-    .context(<span class="macro">format!</span>(<span class="string">&quot;could not compile {crate_name}&quot;</span>))<span class="question-mark">?</span>;
+    .context(<span class="macro">format!</span>(<span class="string">&quot;couldn&#39;t compile {crate_name}&quot;</span>))<span class="question-mark">?</span>;
     <span class="prelude-val">Ok</span>(<span class="macro">format!</span>(
         <span class="string">&quot;{}target/x86_64-unknown-linux-musl/release/{crate_name}&quot;</span>,
         <span class="macro">env!</span>(<span class="string">&quot;WORKSPACE_ROOT&quot;</span>)
@@ -428,7 +428,7 @@
     )
     .dir(<span class="macro">env!</span>(<span class="string">&quot;WORKSPACE_ROOT&quot;</span>))
     .run()
-    .context(<span class="macro">format!</span>(<span class="string">&quot;could not compile {crate_name}&quot;</span>))<span class="question-mark">?</span>;
+    .context(<span class="macro">format!</span>(<span class="string">&quot;couldn&#39;t compile {crate_name}&quot;</span>))<span class="question-mark">?</span>;
     <span class="prelude-val">Ok</span>(<span class="macro">format!</span>(
         <span class="string">&quot;{}target/wasm32-unknown-unknown/release/{crate_name}.wasm&quot;</span>,
         <span class="macro">env!</span>(<span class="string">&quot;WORKSPACE_ROOT&quot;</span>),
@@ -458,7 +458,7 @@
     )
     .dir(<span class="macro">env!</span>(<span class="string">&quot;WORKSPACE_ROOT&quot;</span>))
     .reader()
-    .context(<span class="string">&quot;could not run oak_functions_launcher&quot;</span>)<span class="question-mark">?</span>;
+    .context(<span class="string">&quot;couldn&#39;t run oak_functions_launcher&quot;</span>)<span class="question-mark">?</span>;
     <span class="prelude-val">Ok</span>(handle)
 }
 
@@ -502,19 +502,19 @@
     <span class="kw">let </span>uri = <span class="macro">format!</span>(<span class="string">&quot;http://localhost:{port}/&quot;</span>);
 
     <span class="comment">// Create client
-    </span><span class="kw">let </span><span class="kw-2">mut </span>client = Client::new(<span class="kw-2">&amp;</span>uri).<span class="kw">await</span>.expect(<span class="string">&quot;Could not create client&quot;</span>);
+    </span><span class="kw">let </span><span class="kw-2">mut </span>client = Client::new(<span class="kw-2">&amp;</span>uri).<span class="kw">await</span>.expect(<span class="string">&quot;couldn&#39;t create client&quot;</span>);
 
     client
         .invoke(request_body)
         .<span class="kw">await
-        </span>.expect(<span class="string">&quot;Error while awaiting response&quot;</span>)
+        </span>.expect(<span class="string">&quot;error while awaiting response&quot;</span>)
 }
 
 <span class="comment">// Assert that string value of the body of the given response matches the expected string.
 </span><span class="kw">pub fn </span>assert_response_body(response: Response, expected: <span class="kw-2">&amp;</span>str) {
     <span class="kw">let </span>body = response.body().unwrap();
     <span class="macro">assert_eq!</span>(
-        std::str::from_utf8(body).expect(<span class="string">&quot;could not convert response body from utf8&quot;</span>),
+        std::str::from_utf8(body).expect(<span class="string">&quot;couldn&#39;t convert response body from utf8&quot;</span>),
         expected
     )
 }

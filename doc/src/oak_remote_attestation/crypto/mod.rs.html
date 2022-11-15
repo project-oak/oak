@@ -109,7 +109,7 @@
 // Ideally we would also have a check that enforces that at most one feature is enabled, but that
 // currently does not work because we run tests with the --all-features flag, which breaks this.
 </span><span class="attribute">#[cfg(not(any(feature = <span class="string">&quot;ring-crypto&quot;</span>, feature = <span class="string">&quot;rust-crypto&quot;</span>)))]
-</span><span class="macro">compile_error!</span>(<span class="string">&quot;Exactly one cryptographic implementation must be specified.&quot;</span>);
+</span><span class="macro">compile_error!</span>(<span class="string">&quot;exactly one cryptographic implementation must be specified&quot;</span>);
 
 <span class="comment">// When both implementations are selected (e.g. when testing with all features) we use the `ring`
 // implementation.
