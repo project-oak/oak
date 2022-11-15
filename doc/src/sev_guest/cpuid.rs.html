@@ -102,6 +102,32 @@
 <span id="102">102</span>
 <span id="103">103</span>
 <span id="104">104</span>
+<span id="105">105</span>
+<span id="106">106</span>
+<span id="107">107</span>
+<span id="108">108</span>
+<span id="109">109</span>
+<span id="110">110</span>
+<span id="111">111</span>
+<span id="112">112</span>
+<span id="113">113</span>
+<span id="114">114</span>
+<span id="115">115</span>
+<span id="116">116</span>
+<span id="117">117</span>
+<span id="118">118</span>
+<span id="119">119</span>
+<span id="120">120</span>
+<span id="121">121</span>
+<span id="122">122</span>
+<span id="123">123</span>
+<span id="124">124</span>
+<span id="125">125</span>
+<span id="126">126</span>
+<span id="127">127</span>
+<span id="128">128</span>
+<span id="129">129</span>
+<span id="130">130</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -121,7 +147,8 @@
 </span><span class="doccomment">//! This module contains structs that can be used to interpret the contents of the CPUID page that
 //! is provisioned into the VM guest memory during SEV-SNP startup.
 
-</span><span class="kw">use </span>zerocopy::FromBytes;
+</span><span class="kw">use </span><span class="kw">crate</span>::interrupts::MutableInterruptStackFrame;
+<span class="kw">use </span>zerocopy::FromBytes;
 
 <span class="doccomment">/// The maximum number of CPUID functions that can be included in the page.
 </span><span class="kw">pub const </span>CPUID_COUNT_MAX: usize = <span class="number">64</span>;
@@ -135,9 +162,9 @@
 #[derive(Debug, FromBytes)]
 </span><span class="kw">pub struct </span>CpuidFunction {
     <span class="doccomment">/// The input values when CPUID was invoked.
-    </span>input: CpuidInput,
+    </span><span class="kw">pub </span>input: CpuidInput,
     <span class="doccomment">/// The resulting register values when CPUID was invoked.
-    </span>output: CpuidOutput,
+    </span><span class="kw">pub </span>output: CpuidOutput,
     _reserved: u64,
 }
 
@@ -145,7 +172,7 @@
 
 <span class="doccomment">/// The required input valus for invoking CPUID.
 </span><span class="attribute">#[repr(C)]
-#[derive(Debug, FromBytes)]
+#[derive(Debug, FromBytes, PartialEq, Eq)]
 </span><span class="kw">pub struct </span>CpuidInput {
     <span class="doccomment">/// The input value of the EAX register, which represents the CPUID leaf.
     </span><span class="kw">pub </span>eax: u32,
@@ -160,6 +187,31 @@
     /// Only required when a request for CPUID 0x0000_000D is made and the guest supports the XSS
     /// MSR. Must be zero otherwise.
     </span><span class="kw">pub </span>xss: u64,
+}
+
+<span class="kw">impl </span>From&lt;<span class="kw-2">&amp;mut </span>MutableInterruptStackFrame&gt; <span class="kw">for </span>CpuidInput {
+    <span class="kw">fn </span>from(value: <span class="kw-2">&amp;mut </span>MutableInterruptStackFrame) -&gt; <span class="self">Self </span>{
+        <span class="kw">let </span>eax = value.rax <span class="kw">as </span>u32;
+        <span class="kw">let </span>ecx = value.rcx <span class="kw">as </span>u32;
+        <span class="comment">// We only set the value of XCR0 for CPUID 0x0000_000D.
+        // See table 6 in &lt;https://developer.amd.com/wp-content/resources/56421.pdf&gt;.
+        </span><span class="kw">let </span>xcr0 = <span class="kw">if </span>eax == <span class="number">0xD </span>{
+            x86_64::registers::xcontrol::XCr0::read_raw()
+        } <span class="kw">else </span>{
+            <span class="number">0
+        </span>};
+        <span class="comment">// We ignore XSS for now and always set it to 0, as it is only relevant for CPUID
+        // 0x0000_000D, if the guest supports the IA32_XSS MSR and the guest uses XSAVES and
+        // XRSTORS.
+        </span><span class="kw">let </span>xss = <span class="number">0</span>;
+
+        <span class="self">Self </span>{
+            eax,
+            ecx,
+            xcr0,
+            xss,
+        }
+    }
 }
 
 <span class="doccomment">/// The resulting register values after invoking CPUID.

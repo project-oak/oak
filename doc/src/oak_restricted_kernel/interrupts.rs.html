@@ -159,6 +159,31 @@
 <span id="159">159</span>
 <span id="160">160</span>
 <span id="161">161</span>
+<span id="162">162</span>
+<span id="163">163</span>
+<span id="164">164</span>
+<span id="165">165</span>
+<span id="166">166</span>
+<span id="167">167</span>
+<span id="168">168</span>
+<span id="169">169</span>
+<span id="170">170</span>
+<span id="171">171</span>
+<span id="172">172</span>
+<span id="173">173</span>
+<span id="174">174</span>
+<span id="175">175</span>
+<span id="176">176</span>
+<span id="177">177</span>
+<span id="178">178</span>
+<span id="179">179</span>
+<span id="180">180</span>
+<span id="181">181</span>
+<span id="182">182</span>
+<span id="183">183</span>
+<span id="184">184</span>
+<span id="185">185</span>
+<span id="186">186</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -175,7 +200,7 @@
 // limitations under the License.
 //
 
-</span><span class="kw">use </span><span class="kw">crate</span>::shutdown;
+</span><span class="kw">use crate</span>::{shutdown, snp::CPUID_PAGE};
 <span class="kw">use </span>core::{arch::asm, ops::Deref};
 <span class="kw">use </span>lazy_static::lazy_static;
 <span class="kw">use </span>log::error;
@@ -295,15 +320,40 @@
     ) {
         <span class="kw">match </span>error_code {
             <span class="number">0x72 </span>=&gt; {
-                <span class="kw">if </span>stack_frame.rcx != <span class="number">0 </span>{
-                    <span class="macro">error!</span>(<span class="string">&quot;KERNEL PANIC: CPUID SUB-LEAF REQUESTED&quot;</span>);
-                    <span class="macro">error!</span>(<span class="string">&quot;Instruction pointer: {:#016x}&quot;</span>, stack_frame.rip.as_u64());
-                    <span class="macro">error!</span>(<span class="string">&quot;RAX: {:#016x}&quot;</span>, stack_frame.rax);
-                    <span class="macro">error!</span>(<span class="string">&quot;RCX: {:#016x}&quot;</span>, stack_frame.rcx);
-                    shutdown::shutdown();
+                <span class="kw">if let </span><span class="prelude-val">Some</span>(cpuid_page) = CPUID_PAGE.get() {
+                    <span class="kw">let </span>target = stack_frame.into();
+                    <span class="kw">let </span>count = cpuid_page.count <span class="kw">as </span>usize;
+                    <span class="kw">if let </span><span class="prelude-val">Some</span>(found) = cpuid_page.cpuid_data[<span class="number">0</span>..count]
+                        .iter()
+                        .find(|item| item.input == target)
+                    {
+                        stack_frame.rax = found.output.eax <span class="kw">as </span>u64;
+                        stack_frame.rbx = found.output.ebx <span class="kw">as </span>u64;
+                        stack_frame.rcx = found.output.ecx <span class="kw">as </span>u64;
+                        stack_frame.rdx = found.output.edx <span class="kw">as </span>u64;
+                    } <span class="kw">else </span>{
+                        <span class="comment">// For now we just log the error so that we can see when this happens.
+                        // TODO(#3470): Improve handling of incorrect/missing CPUID requests.
+                        </span><span class="macro">error!</span>(<span class="string">&quot;KERNEL PANIC: REQUESTED CPUID NOT PRESENT IN CPUID PAGE&quot;</span>);
+                        <span class="macro">error!</span>(<span class="string">&quot;Instruction pointer: {:#016x}&quot;</span>, stack_frame.rip.as_u64());
+                        <span class="macro">error!</span>(<span class="string">&quot;RAX: {:#016x}&quot;</span>, stack_frame.rax);
+                        <span class="macro">error!</span>(<span class="string">&quot;RCX: {:#016x}&quot;</span>, stack_frame.rcx);
+                        shutdown::shutdown();
+                    }
+                } <span class="kw">else </span>{
+                    <span class="kw">let </span>leaf = stack_frame.rax <span class="kw">as </span>u32;
+                    <span class="comment">// The MSR protocol does not support sub-leaf requests or leaf 0x0000_000D.
+                    // See section 2.3.1 in &lt;https://developer.amd.com/wp-content/resources/56421.pdf&gt;
+                    // TODO(#3470): Improve handling of incorrect/missing CPUID requests.
+                    </span><span class="kw">if </span>stack_frame.rcx != <span class="number">0 </span>|| leaf == <span class="number">0x0000_000D </span>{
+                        <span class="macro">error!</span>(<span class="string">&quot;KERNEL PANIC: CPUID SUB-LEAF OR INVALID LEAD REQUESTED&quot;</span>);
+                        <span class="macro">error!</span>(<span class="string">&quot;Instruction pointer: {:#016x}&quot;</span>, stack_frame.rip.as_u64());
+                        <span class="macro">error!</span>(<span class="string">&quot;RAX: {:#016x}&quot;</span>, stack_frame.rax);
+                        <span class="macro">error!</span>(<span class="string">&quot;RCX: {:#016x}&quot;</span>, stack_frame.rcx);
+                        shutdown::shutdown();
+                    }
+                    get_cpuid_for_vc_exception(leaf, stack_frame).expect(<span class="string">&quot;error reading CPUID&quot;</span>);
                 }
-                <span class="kw">let </span>leaf = stack_frame.rax <span class="kw">as </span>u32;
-                get_cpuid_for_vc_exception(leaf, stack_frame).expect(<span class="string">&quot;error reading CPUID&quot;</span>);
                 <span class="comment">// CPUID instruction is 2 bytes long, so we advance the instruction pointer by 2.
                 </span>stack_frame.rip += <span class="number">2u64</span>;
             }
