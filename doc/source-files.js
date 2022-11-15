@@ -25,7 +25,6 @@ var sourcesIndex = JSON.parse('{\
 "oak_functions_wasm":["",[],["lib.rs"]],\
 "oak_functions_web_client":["",[],["grpc_web.rs","lib.rs"]],\
 "oak_functions_workload_logging":["",[],["lib.rs"]],\
-"oak_grpc_unary_attestation":["",[],["client.rs","lib.rs"]],\
 "oak_grpc_utils":["",[],["lib.rs"]],\
 "oak_idl":["",[],["lib.rs","status.rs"]],\
 "oak_idl_build":["",[],["lib.rs"]],\

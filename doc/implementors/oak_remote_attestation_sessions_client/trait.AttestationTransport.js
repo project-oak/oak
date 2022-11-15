@@ -1,3 +1,0 @@
-(function() {var implementors = {
-"oak_grpc_unary_attestation":[["impl AttestationTransport for <a class=\"struct\" href=\"oak_grpc_unary_attestation/client/struct.UnaryGrpcClient.html\" title=\"struct oak_grpc_unary_attestation::client::UnaryGrpcClient\">UnaryGrpcClient</a>"]]
-};if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()
