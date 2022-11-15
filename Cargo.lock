@@ -2640,23 +2640,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "oak_grpc_unary_attestation"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "async-trait",
- "oak_grpc_utils",
- "oak_remote_attestation",
- "oak_remote_attestation_sessions",
- "oak_remote_attestation_sessions_client",
- "prost 0.11.0",
- "serde",
- "tokio",
- "tonic 0.8.2",
- "tower",
-]
-
-[[package]]
 name = "oak_grpc_utils"
 version = "0.1.0"
 dependencies = [
