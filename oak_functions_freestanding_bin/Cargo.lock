@@ -524,15 +524,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "lru"
-version = "0.8.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b6e8aaa3f231bb4bd57b84b2d5dc3ae7f350265df8aa96492e0bc394a1571909"
-dependencies = [
- "hashbrown",
-]
-
-[[package]]
 name = "memory_units"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -628,7 +619,6 @@ dependencies = [
  "oak_idl_build",
  "oak_logger",
  "oak_remote_attestation",
- "oak_remote_attestation_sessions",
  "prost",
 ]
 
@@ -743,15 +733,6 @@ dependencies = [
  "oak_remote_attestation",
  "serde",
  "serde_json",
-]
-
-[[package]]
-name = "oak_remote_attestation_sessions"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "lru",
- "oak_remote_attestation",
 ]
 
 [[package]]
