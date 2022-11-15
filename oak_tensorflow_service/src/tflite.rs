@@ -116,7 +116,10 @@ impl TfliteModel {
             );
             Ok(())
         } else {
-            Err(anyhow!("Failed to initialize TFLite model, code: {}", result_code))
+            Err(anyhow!(
+                "couldn't initialize TFLite model, code: {}",
+                result_code
+            ))
         }
     }
 
@@ -146,10 +149,13 @@ impl TfliteModel {
                 // Panicking since if the output bytes length is bigger than the output buffer
                 // length, then there is a potential for memory corruption and we can't rely on any
                 // of the Rust memory safety assumptions.
-                panic!("Output bytes length is bigger than the output buffer length");
+                panic!("output bytes length is bigger than the output buffer length");
             }
         } else {
-            Err(anyhow!("Failed to run TFLite inference, code: {}", result_code))
+            Err(anyhow!(
+                "couldn't run TFLite inference, code: {}",
+                result_code
+            ))
         }
     }
 }
