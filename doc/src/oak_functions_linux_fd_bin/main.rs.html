@@ -66,7 +66,6 @@
 <span id="66">66</span>
 <span id="67">67</span>
 <span id="68">68</span>
-<span id="69">69</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -84,9 +83,8 @@
 //
 
 </span><span class="kw">use </span>clap::Parser;
-<span class="kw">use </span>oak_remote_attestation::handshaker::{AttestationBehavior, EmptyAttestationVerifier};
 <span class="kw">use </span>oak_remote_attestation_amd::PlaceholderAmdAttestationGenerator;
-<span class="kw">use </span>std::os::unix::io::FromRawFd;
+<span class="kw">use </span>std::{os::unix::io::FromRawFd, sync::Arc};
 
 <span class="attribute">#[derive(Parser, Clone, Debug)]
 #[command(about = <span class="string">&quot;Oak Functions Loader Linux UDS&quot;</span>)]
@@ -126,10 +124,10 @@
     <span class="comment">// Unsafe as each file descriptor must only have one owner, and Rust cannot
     // enforce this. This should be safe however, since we only call this once.
     </span><span class="kw">let </span>socket = <span class="kw">unsafe </span>{ std::os::unix::net::UnixStream::from_raw_fd(opt.comms_fd) };
-    <span class="kw">let </span>attestation_behavior =
-        AttestationBehavior::create(PlaceholderAmdAttestationGenerator, EmptyAttestationVerifier);
     <span class="kw">let </span>channel = Box::new(socket);
-    <span class="kw">let </span>runtime = oak_functions_freestanding::RuntimeImplementation::new(attestation_behavior);
+    <span class="kw">let </span>runtime = oak_functions_freestanding::RuntimeImplementation::new(Arc::new(
+        PlaceholderAmdAttestationGenerator,
+    ));
     oak_channel::server::start_blocking_server(
         channel,
         oak_functions_freestanding::schema::TrustedRuntime::serve(runtime),

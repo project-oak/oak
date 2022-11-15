@@ -800,7 +800,7 @@
 }
 
 <span class="doccomment">/// Client of the remote attestation protocol handshake.
-</span><span class="kw">pub struct </span>ClientHandshaker&lt;G: AttestationGenerator, V: AttestationVerifier&gt; {
+</span><span class="kw">pub struct </span>ClientHandshaker&lt;G: AttestationGenerator + Clone, V: AttestationVerifier&gt; {
     <span class="doccomment">/// Behavior of the remote attestation protocol.
     </span>behavior: AttestationBehavior&lt;G, V&gt;,
     <span class="doccomment">/// Current state of the remote attestation protocol handshake.
@@ -813,7 +813,7 @@
     </span>transcript_signer: Signer,
 }
 
-<span class="kw">impl</span>&lt;G: AttestationGenerator, V: AttestationVerifier&gt; ClientHandshaker&lt;G, V&gt; {
+<span class="kw">impl</span>&lt;G: AttestationGenerator + Clone, V: AttestationVerifier&gt; ClientHandshaker&lt;G, V&gt; {
     <span class="doccomment">/// Creates [`ClientHandshaker`] with `Initializing` state.
     </span><span class="kw">pub fn </span>new(behavior: AttestationBehavior&lt;G, V&gt;) -&gt; anyhow::Result&lt;<span class="self">Self</span>&gt; {
         <span class="prelude-val">Ok</span>(<span class="self">Self </span>{
@@ -1010,7 +1010,7 @@
 }
 
 <span class="doccomment">/// Server of the remote attestation protocol handshake.
-</span><span class="kw">pub struct </span>ServerHandshaker&lt;G: AttestationGenerator, V: AttestationVerifier&gt; {
+</span><span class="kw">pub struct </span>ServerHandshaker&lt;G: AttestationGenerator + Clone, V: AttestationVerifier&gt; {
     <span class="doccomment">/// Behavior of the remote attestation protocol.
     </span>behavior: AttestationBehavior&lt;G, V&gt;,
     <span class="doccomment">/// Current state of the remote attestation protocol handshake.
@@ -1023,7 +1023,7 @@
     </span>transcript_signer: Arc&lt;Signer&gt;,
 }
 
-<span class="kw">impl</span>&lt;G: AttestationGenerator, V: AttestationVerifier&gt; ServerHandshaker&lt;G, V&gt; {
+<span class="kw">impl</span>&lt;G: AttestationGenerator + Clone, V: AttestationVerifier&gt; ServerHandshaker&lt;G, V&gt; {
     <span class="doccomment">/// Creates [`ServerHandshaker`] with `ServerHandshakerState::ExpectingClientIdentity`
     /// state.
     </span><span class="kw">pub fn </span>new(
@@ -1275,7 +1275,7 @@
 ///   - Represents an attestation process, where current machine and a remote peer remotely attest
 ///     each other.
 </span><span class="attribute">#[derive(Debug, Clone)]
-</span><span class="kw">pub struct </span>AttestationBehavior&lt;G: AttestationGenerator, V: AttestationVerifier&gt; {
+</span><span class="kw">pub struct </span>AttestationBehavior&lt;G: AttestationGenerator + Clone, V: AttestationVerifier&gt; {
     <span class="kw">pub </span>generator: G,
     <span class="kw">pub </span>verifier: V,
 }
@@ -1283,7 +1283,7 @@
 <span class="doccomment">/// A trait implementing the functionality of generating a remote attestation report.
 ///
 /// An implementation of this trait is expected to run in a TEE (i.e. it is usually in the server).
-</span><span class="kw">pub trait </span>AttestationGenerator: Clone + Send + Sync {
+</span><span class="kw">pub trait </span>AttestationGenerator: Send + Sync {
     <span class="doccomment">/// Generate a remote attestation report, ensuring that `attested_data` is cryptographically
     /// bound to the result (e.g. via a signature).
     ///
@@ -1347,7 +1347,7 @@
     }
 }
 
-<span class="kw">impl</span>&lt;G: AttestationGenerator, V: AttestationVerifier&gt; AttestationBehavior&lt;G, V&gt; {
+<span class="kw">impl</span>&lt;G: AttestationGenerator + Clone, V: AttestationVerifier&gt; AttestationBehavior&lt;G, V&gt; {
     <span class="kw">pub fn </span>create(generator: G, verifier: V) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
             generator,

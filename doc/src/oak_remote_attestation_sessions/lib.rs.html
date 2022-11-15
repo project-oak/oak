@@ -140,20 +140,20 @@
 <span class="kw">pub const </span>SESSION_ID_LENGTH: usize = <span class="number">8</span>;
 <span class="kw">pub type </span>SessionId = [u8; SESSION_ID_LENGTH];
 
-<span class="kw">pub enum </span>SessionState&lt;G: AttestationGenerator, V: AttestationVerifier&gt; {
+<span class="kw">pub enum </span>SessionState&lt;G: AttestationGenerator + Clone, V: AttestationVerifier&gt; {
     <span class="comment">// Boxed due to large size difference, ref: https://rust-lang.github.io/rust-clippy/master/index.html#large_enum_variant
     </span>HandshakeInProgress(Box&lt;ServerHandshaker&lt;G, V&gt;&gt;),
     EncryptedMessageExchange(Encryptor),
 }
 
 <span class="doccomment">/// Maintains remote attestation state for a number of sessions
-</span><span class="kw">pub struct </span>SessionTracker&lt;G: AttestationGenerator, V: AttestationVerifier&gt; {
+</span><span class="kw">pub struct </span>SessionTracker&lt;G: AttestationGenerator + Clone, V: AttestationVerifier&gt; {
     attestation_behavior: AttestationBehavior&lt;G, V&gt;,
     transcript_signer: Arc&lt;Signer&gt;,
     known_sessions: LruCache&lt;SessionId, SessionState&lt;G, V&gt;&gt;,
 }
 
-<span class="kw">impl</span>&lt;G: AttestationGenerator, V: AttestationVerifier&gt; SessionTracker&lt;G, V&gt; {
+<span class="kw">impl</span>&lt;G: AttestationGenerator + Clone, V: AttestationVerifier&gt; SessionTracker&lt;G, V&gt; {
     <span class="kw">pub fn </span>create(
         cache_size: usize,
         attestation_behavior: AttestationBehavior&lt;G, V&gt;,

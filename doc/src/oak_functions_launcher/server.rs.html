@@ -98,25 +98,6 @@
 <span id="98">98</span>
 <span id="99">99</span>
 <span id="100">100</span>
-<span id="101">101</span>
-<span id="102">102</span>
-<span id="103">103</span>
-<span id="104">104</span>
-<span id="105">105</span>
-<span id="106">106</span>
-<span id="107">107</span>
-<span id="108">108</span>
-<span id="109">109</span>
-<span id="110">110</span>
-<span id="111">111</span>
-<span id="112">112</span>
-<span id="113">113</span>
-<span id="114">114</span>
-<span id="115">115</span>
-<span id="116">116</span>
-<span id="117">117</span>
-<span id="118">118</span>
-<span id="119">119</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -134,59 +115,46 @@
 //
 
 </span><span class="kw">use crate</span>::{channel::ConnectorHandle, schema};
-<span class="kw">use </span>futures::Future;
-<span class="kw">use </span>oak_remote_attestation_sessions::{SessionId, SESSION_ID_LENGTH};
-<span class="kw">use </span>std::net::SocketAddr;
-<span class="kw">use </span>tonic::{transport::Server, Request, Response};
-
-<span class="kw">pub mod </span>proto {
-    <span class="macro">tonic::include_proto!</span>(<span class="string">&quot;oak.session.unary.v1&quot;</span>);
-}
-
-<span class="kw">use </span>proto::{
-    unary_session_server::{UnarySession, UnarySessionServer},
-    PublicKeyInfo, UnaryRequest, UnaryResponse,
+<span class="kw">use </span>futures::{Future, Stream, StreamExt};
+<span class="kw">use </span>oak_remote_attestation_noninteractive::proto::{
+    request_wrapper, response_wrapper, streaming_session_server::StreamingSessionServer,
+    InvokeResponse, RequestWrapper, ResponseWrapper,
 };
-
-<span class="kw">fn </span>encode_request(unary_request: UnaryRequest) -&gt; <span class="prelude-ty">Result</span>&lt;schema::UserRequest, oak_idl::Status&gt; {
-    <span class="kw">let </span><span class="kw-2">mut </span>session_id: SessionId = [<span class="number">0</span>; SESSION_ID_LENGTH];
-    <span class="kw">if </span>unary_request.session_id.len() != SESSION_ID_LENGTH {
-        <span class="kw">return </span><span class="prelude-val">Err</span>(oak_idl::Status::new_with_message(
-            oak_idl::StatusCode::Internal,
-            <span class="macro">format!</span>(
-                <span class="string">&quot;session_id must be {} bytes in length, found a length of {} bytes instead&quot;</span>,
-                SESSION_ID_LENGTH,
-                unary_request.session_id.len()
-            ),
-        ));
-    }
-    session_id.copy_from_slice(<span class="kw-2">&amp;</span>unary_request.session_id);
-
-    <span class="comment">// Return the underlying owned buffer
-    </span><span class="prelude-val">Ok</span>(schema::UserRequest {
-        session_id: <span class="prelude-val">Some</span>(schema::SessionId {
-            value: session_id.to_vec(),
-        }),
-        body: unary_request.body,
-    })
-}
+<span class="kw">use </span>std::{net::SocketAddr, pin::Pin};
+<span class="kw">use </span>tonic::{transport::Server, Request, Response, Status, Streaming};
 
 <span class="kw">pub struct </span>SessionProxy {
     connector_handle: ConnectorHandle,
-    signing_public_key: Vec&lt;u8&gt;,
-    attestation: Vec&lt;u8&gt;,
+    <span class="comment">// TODO(#3442): Return cached key and attestation when clients ask for it.
+    </span>_signing_public_key: Vec&lt;u8&gt;,
+    _attestation: Vec&lt;u8&gt;,
 }
 
 <span class="attribute">#[tonic::async_trait]
-</span><span class="kw">impl </span>UnarySession <span class="kw">for </span>SessionProxy {
-    <span class="kw">async fn </span>message(
+</span><span class="kw">impl </span>oak_remote_attestation_noninteractive::proto::streaming_session_server::StreamingSession
+    <span class="kw">for </span>SessionProxy
+{
+    <span class="kw">type </span>StreamStream = Pin&lt;Box&lt;<span class="kw">dyn </span>Stream&lt;Item = <span class="prelude-ty">Result</span>&lt;ResponseWrapper, Status&gt;&gt; + Send&gt;&gt;;
+
+    <span class="kw">async fn </span>stream(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        request: Request&lt;UnaryRequest&gt;,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;Response&lt;UnaryResponse&gt;, tonic::Status&gt; {
+        request: Request&lt;Streaming&lt;RequestWrapper&gt;&gt;,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;Response&lt;<span class="self">Self</span>::StreamStream&gt;, tonic::Status&gt; {
         <span class="macro">log::debug!</span>(<span class="string">&quot;handling client request&quot;</span>);
-        <span class="kw">let </span>request = request.into_inner();
-        <span class="kw">let </span>encoded_request = encode_request(request)
-            .map_err(|err| tonic::Status::invalid_argument(<span class="macro">format!</span>(<span class="string">&quot;{:?}&quot;</span>, err)))<span class="question-mark">?</span>;
+        <span class="kw">let </span><span class="kw-2">mut </span>request_stream = request.into_inner();
+        <span class="kw">let </span>request = request_stream
+            .next()
+            .<span class="kw">await
+            </span>.ok_or_else(|| tonic::Status::invalid_argument(<span class="string">&quot;empty request stream&quot;</span>))<span class="question-mark">?
+            </span>.map_err(|err| {
+                tonic::Status::internal(<span class="macro">format!</span>(<span class="string">&quot;error reading message from request stream: {err}&quot;</span>))
+            })<span class="question-mark">?</span>;
+        <span class="kw">let </span><span class="prelude-val">Some</span>(request_wrapper::Request::InvokeRequest(invoke_request)) = request.request <span class="kw">else </span>{
+            <span class="kw">return </span><span class="prelude-val">Err</span>(tonic::Status::invalid_argument(<span class="string">&quot;request wrapper must have invoke_request field set&quot;</span>));
+        };
+        <span class="kw">let </span>encoded_request = schema::UserRequest {
+            body: invoke_request.encrypted_body,
+        };
 
         <span class="kw">let </span><span class="kw-2">mut </span>client = schema::TrustedRuntimeAsyncClient::new(<span class="self">self</span>.connector_handle.clone());
 
@@ -198,19 +166,13 @@
                 tonic::Status::internal(<span class="macro">format!</span>(<span class="string">&quot;error handling client request: {:?}&quot;</span>, err))
             })<span class="question-mark">?</span>;
 
-        <span class="prelude-val">Ok</span>(Response::new(UnaryResponse {
-            body: response.body,
-        }))
-    }
-
-    <span class="kw">async fn </span>get_public_key_info(
-        <span class="kw-2">&amp;</span><span class="self">self</span>,
-        _request: Request&lt;()&gt;,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;Response&lt;PublicKeyInfo&gt;, tonic::Status&gt; {
-        <span class="prelude-val">Ok</span>(Response::new(PublicKeyInfo {
-            public_key: <span class="self">self</span>.signing_public_key.clone(),
-            attestation: <span class="self">self</span>.attestation.clone(),
-        }))
+        <span class="prelude-val">Ok</span>(Response::new(Box::pin(futures::stream::iter(<span class="macro">vec!</span>[<span class="prelude-val">Ok</span>(
+            ResponseWrapper {
+                response: <span class="prelude-val">Some</span>(response_wrapper::Response::InvokeResponse(InvokeResponse {
+                    encrypted_body: response.body,
+                })),
+            },
+        )]))))
     }
 }
 
@@ -222,18 +184,18 @@
 ) -&gt; <span class="kw">impl </span>Future&lt;Output = <span class="prelude-ty">Result</span>&lt;(), tonic::transport::Error&gt;&gt; {
     <span class="kw">let </span>server_impl = SessionProxy {
         connector_handle,
-        signing_public_key,
-        attestation,
+        _signing_public_key: signing_public_key,
+        _attestation: attestation,
     };
 
     <span class="attribute">#[cfg(feature = <span class="string">&quot;grpc-web&quot;</span>)]
     </span><span class="kw">return </span>Server::builder()
-        .add_service(tonic_web::enable(UnarySessionServer::new(server_impl)))
+        .add_service(tonic_web::enable(StreamingSessionServer::new(server_impl)))
         .serve(addr);
 
     <span class="attribute">#[cfg(not(feature = <span class="string">&quot;grpc-web&quot;</span>))]
     </span><span class="kw">return </span>Server::builder()
-        .add_service(UnarySessionServer::new(server_impl))
+        .add_service(StreamingSessionServer::new(server_impl))
         .serve(addr);
 }
 </code></pre></div>

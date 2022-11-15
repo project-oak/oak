@@ -114,10 +114,11 @@
 <span class="kw">use </span><span class="kw">crate</span>::channel::Channel;
 <span class="kw">use </span>anyhow::anyhow;
 <span class="kw">use </span>clap::Parser;
-<span class="kw">use </span>oak_remote_attestation::handshaker::{
-    AttestationBehavior, EmptyAttestationGenerator, EmptyAttestationVerifier,
+<span class="kw">use </span>oak_remote_attestation::handshaker::EmptyAttestationGenerator;
+<span class="kw">use </span>std::{
+    os::unix::{io::FromRawFd, prelude::RawFd},
+    sync::Arc,
 };
-<span class="kw">use </span>std::os::unix::{io::FromRawFd, prelude::RawFd};
 <span class="kw">use </span>vsock::VsockStream;
 
 <span class="attribute">#[derive(Parser, Clone, Debug)]
@@ -150,10 +151,9 @@
         stream.peer_addr().expect(<span class="string">&quot;Couldn&#39;t get peer address&quot;</span>)
     );
 
-    <span class="kw">let </span>attestation_behavior =
-        AttestationBehavior::create(EmptyAttestationGenerator, EmptyAttestationVerifier);
     <span class="kw">let </span>channel = Box::new(Channel::new(stream));
-    <span class="kw">let </span>runtime = oak_functions_freestanding::RuntimeImplementation::new(attestation_behavior);
+    <span class="kw">let </span>runtime =
+        oak_functions_freestanding::RuntimeImplementation::new(Arc::new(EmptyAttestationGenerator));
     oak_channel::server::start_blocking_server(
         channel,
         oak_functions_freestanding::schema::TrustedRuntime::serve(runtime),

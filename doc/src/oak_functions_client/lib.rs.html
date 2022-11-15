@@ -44,23 +44,6 @@
 <span id="44">44</span>
 <span id="45">45</span>
 <span id="46">46</span>
-<span id="47">47</span>
-<span id="48">48</span>
-<span id="49">49</span>
-<span id="50">50</span>
-<span id="51">51</span>
-<span id="52">52</span>
-<span id="53">53</span>
-<span id="54">54</span>
-<span id="55">55</span>
-<span id="56">56</span>
-<span id="57">57</span>
-<span id="58">58</span>
-<span id="59">59</span>
-<span id="60">60</span>
-<span id="61">61</span>
-<span id="62">62</span>
-<span id="63">63</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2021 The Project Oak Authors
 //
@@ -76,52 +59,35 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-</span><span class="kw">pub mod </span>proto {
-    <span class="attribute">#![allow(clippy::return_self_not_must_use)]
-    </span><span class="macro">tonic::include_proto!</span>(<span class="string">&quot;oak.session.unary.v1&quot;</span>);
-}
-
-<span class="kw">pub mod </span>rekor;
+</span><span class="kw">pub mod </span>rekor;
 
 <span class="kw">use </span>anyhow::Context;
-<span class="kw">use </span>oak_functions_abi::{Request, Response};
-<span class="kw">use </span>oak_grpc_unary_attestation::client::UnaryGrpcClient;
-<span class="kw">use </span>oak_remote_attestation::handshaker::{AttestationBehavior, EmptyAttestationGenerator};
-<span class="kw">use </span>oak_remote_attestation_amd::PlaceholderAmdAttestationVerifier;
-<span class="kw">use </span>oak_remote_attestation_sessions_client::GenericAttestationClient;
 
 <span class="attribute">#[cfg(test)]
 </span><span class="kw">mod </span>tests;
 
 <span class="kw">pub struct </span>Client {
-    inner: GenericAttestationClient&lt;UnaryGrpcClient&gt;,
+    inner: oak_remote_attestation_noninteractive::client::OakClient,
 }
 
 <span class="kw">impl </span>Client {
     <span class="kw">pub async fn </span>new(uri: <span class="kw-2">&amp;</span>str) -&gt; anyhow::Result&lt;<span class="self">Self</span>&gt; {
-        <span class="kw">let </span>grpc_client = UnaryGrpcClient::create(uri)
+        <span class="kw">let </span>inner = oak_remote_attestation_noninteractive::client::OakClient::create(uri)
             .<span class="kw">await
             </span>.context(<span class="string">&quot;Could not create Oak Functions client&quot;</span>)<span class="question-mark">?</span>;
-        <span class="kw">let </span>inner = GenericAttestationClient::create(
-            grpc_client,
-            AttestationBehavior::create(
-                EmptyAttestationGenerator,
-                PlaceholderAmdAttestationVerifier,
-            ),
-        )
-        .<span class="kw">await
-        </span>.context(<span class="string">&quot;Could not create Oak Functions client&quot;</span>)<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(Client { inner })
     }
 
-    <span class="kw">pub async fn </span>invoke(<span class="kw-2">&amp;mut </span><span class="self">self</span>, request: Request) -&gt; anyhow::Result&lt;Response&gt; {
-        <span class="kw">let </span>encoded_response = <span class="self">self
+    <span class="kw">pub async fn </span>invoke(<span class="kw-2">&amp;mut </span><span class="self">self</span>, request: <span class="kw-2">&amp;</span>[u8]) -&gt; anyhow::Result&lt;Vec&lt;u8&gt;&gt; {
+        <span class="comment">// TODO(#3442): Fetch enclave public key.
+        // TODO(#3442): Encrypt request.
+        </span><span class="kw">let </span>response = <span class="self">self
             </span>.inner
-            .message(<span class="kw-2">&amp;</span>request.body)
+            .message(request)
             .<span class="kw">await
             </span>.context(<span class="string">&quot;Error invoking Oak Functions instance&quot;</span>)<span class="question-mark">?</span>;
-
-        Response::decode(encoded_response.as_ref()).context(<span class="string">&quot;Could not decode the response&quot;</span>)
+        <span class="comment">// TODO(#3442): Decrypt response.
+        </span><span class="prelude-val">Ok</span>(response)
     }
 }
 </code></pre></div>

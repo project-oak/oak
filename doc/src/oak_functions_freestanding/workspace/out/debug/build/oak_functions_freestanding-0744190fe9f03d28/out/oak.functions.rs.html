@@ -160,23 +160,9 @@
 <span id="160">160</span>
 <span id="161">161</span>
 <span id="162">162</span>
-<span id="163">163</span>
-<span id="164">164</span>
-<span id="165">165</span>
-<span id="166">166</span>
-<span id="167">167</span>
-<span id="168">168</span>
-<span id="169">169</span>
 </pre><pre class="rust"><code><span class="attribute">#[derive(Clone, PartialEq, ::prost::Message)]
-</span><span class="kw">pub struct </span>SessionId {
-    <span class="attribute">#[prost(bytes=<span class="string">&quot;vec&quot;</span>, tag=<span class="string">&quot;1&quot;</span>)]
-    </span><span class="kw">pub </span>value: ::prost::alloc::vec::Vec&lt;u8&gt;,
-}
-<span class="attribute">#[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>UserRequest {
-    <span class="attribute">#[prost(message, optional, tag=<span class="string">&quot;1&quot;</span>)]
-    </span><span class="kw">pub </span>session_id: ::core::option::Option&lt;SessionId&gt;,
-    <span class="attribute">#[prost(bytes=<span class="string">&quot;vec&quot;</span>, tag=<span class="string">&quot;2&quot;</span>)]
+    <span class="attribute">#[prost(bytes=<span class="string">&quot;vec&quot;</span>, tag=<span class="string">&quot;1&quot;</span>)]
     </span><span class="kw">pub </span>body: ::prost::alloc::vec::Vec&lt;u8&gt;,
 }
 <span class="attribute">#[derive(Clone, PartialEq, ::prost::Message)]

@@ -142,7 +142,7 @@
 }
 
 <span class="kw">impl</span>&lt;T: AttestationTransport&gt; GenericAttestationClient&lt;T&gt; {
-    <span class="kw">pub async fn </span>create&lt;G: AttestationGenerator, V: AttestationVerifier&gt;(
+    <span class="kw">pub async fn </span>create&lt;G: AttestationGenerator + Clone, V: AttestationVerifier&gt;(
         <span class="kw-2">mut </span>client: T,
         attestation_behavior: AttestationBehavior&lt;G, V&gt;,
     ) -&gt; anyhow::Result&lt;<span class="self">Self</span>&gt; {
