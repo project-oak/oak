@@ -29,12 +29,12 @@ fn main() {
     let mut stream = unsafe { VsockStream::from_raw_fd(FILE_DESCRIPTOR) };
     println!(
         "Connected to the {}",
-        stream.peer_addr().expect("Couldn't get peer address")
+        stream.peer_addr().expect("couldn't get peer address")
     );
 
     let mut buffer = vec![0; BUFFER_SIZE];
     loop {
-        let read_bytes = stream.read(&mut buffer).expect("Couldn't read bytes");
+        let read_bytes = stream.read(&mut buffer).expect("couldn't read bytes");
         if read_bytes == 0 {
             break; // Stream has finished.
         }
@@ -42,10 +42,10 @@ fn main() {
 
         stream
             .write_all(&buffer[..read_bytes])
-            .expect("Couldn't write bytes");
+            .expect("couldn't write bytes");
     }
 
     stream
         .shutdown(Shutdown::Both)
-        .expect("Couldn't shutdown stream");
+        .expect("couldn't shutdown stream");
 }

@@ -63,7 +63,7 @@ async fn main() -> anyhow::Result<()> {
 
     let mut client = Client::new(&opt.uri)
         .await
-        .context("Could not create Oak Functions client")?;
+        .context("couldn't create Oak Functions client")?;
 
     if opt.test_large_message {
         // The client should be a able to send a large message without
@@ -71,7 +71,7 @@ async fn main() -> anyhow::Result<()> {
         let response = client
             .invoke(&LARGE_MESSAGE)
             .await
-            .context("Error invoking Oak Functions instance");
+            .context("error invoking Oak Functions instance");
         assert!(response.is_ok());
         return Ok(());
     }
@@ -91,7 +91,7 @@ async fn main() -> anyhow::Result<()> {
         let response = client
             .invoke(request.as_bytes())
             .await
-            .context("Could not invoke Oak Functions")?;
+            .context("couldn't invoke Oak Functions")?;
 
         println!("Response: {:?}", response);
         let response_body = std::str::from_utf8(&response).unwrap();

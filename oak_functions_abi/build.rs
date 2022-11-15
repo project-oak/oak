@@ -22,7 +22,7 @@ fn main() {
         "oak_functions/proto/lookup_data.proto",
     ];
     prost_build::compile_protos(&file_paths, &[env!("WORKSPACE_ROOT")])
-        .expect("Proto compilation failed");
+        .expect("proto compilation failed");
 
     // Tell cargo to rerun this build script if the proto file has changed.
     // https://doc.rust-lang.org/cargo/reference/build-scripts.html#cargorerun-if-changedpath

@@ -86,7 +86,7 @@ impl Packet {
     ) -> anyhow::Result<Self> {
         if buffer_len > super::DATA_BUFFER_SIZE {
             anyhow::bail!(
-                "Total buffer length must be less than {}",
+                "total buffer length must be less than {}",
                 super::DATA_BUFFER_SIZE
             );
         }
@@ -151,7 +151,7 @@ impl Packet {
     /// Gets the type of socket the packet is intended for.
     pub fn get_type(&self) -> anyhow::Result<VSockType> {
         VSockType::from_repr(self.read_u16(TYPE_OFFSET))
-            .ok_or_else(|| anyhow::anyhow!("Invalid socket type."))
+            .ok_or_else(|| anyhow::anyhow!("invalid socket type"))
     }
 
     /// Sets the type of socket the packet is intended for.
@@ -161,16 +161,16 @@ impl Packet {
 
     /// Gets the op that the packet represents.
     pub fn get_op(&self) -> anyhow::Result<VSockOp> {
-        VSockOp::from_repr(self.read_u16(OP_OFFSET)).ok_or_else(|| anyhow::anyhow!("Invalid op."))
+        VSockOp::from_repr(self.read_u16(OP_OFFSET)).ok_or_else(|| anyhow::anyhow!("invalid op"))
     }
 
     /// Sets the op that the packet represents.
     pub fn set_op(&mut self, op: VSockOp) -> anyhow::Result<()> {
         if self.get_len() > 0 && op != VSockOp::Rw {
-            anyhow::bail!("Non-empty payloads are only allowed with data packets.");
+            anyhow::bail!("non-empty payloads are only allowed with data packets");
         }
         if self.get_len() == 0 && op == VSockOp::Rw {
-            anyhow::bail!("Empty payloads are not allowed with the RW op.");
+            anyhow::bail!("empty payloads are not allowed with the RW op");
         }
         self.write_u16(OP_OFFSET, op as u16);
         Ok(())
@@ -221,7 +221,7 @@ impl Packet {
         assert_eq!(
             len,
             self.get_payload_len(),
-            "Actual payload length does not match the packet's configured payload length."
+            "actual payload length does not match the packet's configured payload length"
         );
         &self.buffer[HEADER_SIZE..(HEADER_SIZE + len)]
     }
@@ -237,11 +237,11 @@ impl Packet {
     /// packet's op is `VSockOp::Rw`.
     fn set_payload(&mut self, data: &[u8]) -> anyhow::Result<()> {
         if self.get_op()? != VSockOp::Rw {
-            anyhow::bail!("Non-empty payloads are only allowed with data packets.");
+            anyhow::bail!("non-empty payloads are only allowed with data packets");
         }
         let len = self.get_len();
         if len as usize != data.len() {
-            anyhow::bail!("Data length does not match the packet's configured payload length.");
+            anyhow::bail!("data length does not match the packet's configured payload length");
         }
 
         self.buffer[HEADER_SIZE..(HEADER_SIZE + len as usize)].copy_from_slice(data);

@@ -189,7 +189,7 @@ public class AttestationClient {
   public void attest(ManagedChannel channel)
       throws GeneralSecurityException, IOException, InterruptedException, VerificationException {
     if (channel == null) {
-      throw new NullPointerException("Channel must not be null.");
+      throw new NullPointerException("channel must not be null");
     }
     this.channel = channel;
     stub = UnarySessionGrpc.newBlockingStub(channel);

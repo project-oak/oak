@@ -109,7 +109,7 @@ impl TryFrom<u64> for SevInfoResponse {
     fn try_from(msr_value: u64) -> Result<Self, &'static str> {
         const SEV_INFO_RESPONSE_INFO: u64 = 0x001;
         if msr_value & GHCB_INFO_MASK != SEV_INFO_RESPONSE_INFO {
-            return Err("Value is not a valid SEV information response");
+            return Err("value is not a valid SEV information response");
         }
         let max_protocol_version = (msr_value >> 48) as u16;
         let min_protocol_version = (msr_value >> 32) as u16;
@@ -179,12 +179,12 @@ impl TryFrom<u64> for CpuidResponse {
         const SEV_INFO_RESPONSE_INFO: u64 = 0x005;
         const RESERVED_MASK: u64 = 0x3FFFF000;
         if msr_value & GHCB_INFO_MASK != SEV_INFO_RESPONSE_INFO || msr_value & RESERVED_MASK != 0 {
-            return Err("Value is not a valid CPUID response");
+            return Err("value is not a valid CPUID response");
         }
         let value = (msr_value >> 32) as u32;
         const REGISTER_MASK: u64 = 0xC0000000;
         let register = CpuidRegister::from_repr(((msr_value & REGISTER_MASK) >> 30) as u8)
-            .ok_or("Invalid register")?;
+            .ok_or("invalid register")?;
         Ok(Self { value, register })
     }
 }
@@ -248,7 +248,7 @@ impl TryFrom<u64> for PreferredGhcbGpaResponse {
     fn try_from(msr_value: u64) -> Result<Self, &'static str> {
         const PREFERRED_GPA_RESPONSE_INFO: u64 = 0x011;
         if msr_value & GHCB_INFO_MASK != PREFERRED_GPA_RESPONSE_INFO {
-            return Err("Value is not a valid preferred GHCP GPA response");
+            return Err("value is not a valid preferred GHCP GPA response");
         }
         let ghcb_gpa = (msr_value & GCHP_DATA_MASK) as usize;
         Ok(Self { ghcb_gpa })
@@ -355,12 +355,12 @@ impl SnpPageStateChangeRequest {
     pub fn new(page_gpa: usize, assignment: PageAssignment) -> Result<Self, &'static str> {
         let page_gpa = page_gpa as u64;
         if page_gpa & GHCB_INFO_MASK != 0 {
-            return Err("Page must be 4KiB-aligned");
+            return Err("page must be 4KiB-aligned");
         }
         // Only 52 bits can be use for an address.
         const ADDRESS_MAX: u64 = (1 << 52) - 1;
         if page_gpa > ADDRESS_MAX {
-            return Err("Page address is too high");
+            return Err("page address is too high");
         }
         Ok(Self {
             page_gpa,
@@ -393,7 +393,7 @@ impl TryFrom<u64> for SnpPageStateChangeResponse {
         if msr_value & GHCB_INFO_MASK != SNP_PAGE_STATE_CHANGE_RESPONSE_INFO
             || msr_value & RESERVED_MASK != 0
         {
-            return Err("Value is not a valid SNP Page State Change response");
+            return Err("value is not a valid SNP Page State Change response");
         }
         let error_code = (msr_value >> 32) as u32;
         Ok(Self { error_code })
@@ -410,7 +410,7 @@ pub fn change_snp_page_state(request: SnpPageStateChangeRequest) -> Result<(), &
     let response: SnpPageStateChangeResponse = read_protocol_msr().try_into()?;
     // Ensure that the page state change was successful.
     if response.error_code != 0 {
-        return Err("Page state change failed");
+        return Err("page state change failed");
     }
     Ok(())
 }
@@ -460,10 +460,10 @@ impl TryFrom<u64> for HypervisorFeatureSupportResponse {
     fn try_from(msr_value: u64) -> Result<Self, &'static str> {
         const HYPERVISOR_FEATURE_SUPPORT_RESPONSE_INFO: u64 = 0x081;
         if msr_value & GHCB_INFO_MASK != HYPERVISOR_FEATURE_SUPPORT_RESPONSE_INFO {
-            return Err("Value is not a valid Hypervisor Feature Support response");
+            return Err("value is not a valid Hypervisor Feature Support response");
         }
         HypervisorFeatureSupportResponse::from_bits(msr_value >> 12)
-            .ok_or("Invalid Hypervisor Feature Support bitmap")
+            .ok_or("invalid Hypervisor Feature Support bitmap")
     }
 }
 

@@ -41,7 +41,7 @@ lazy_static! {
         // Our contract with the launcher requires the first serial port to be
         // available, so assuming the loader adheres to it, this is safe.
         let mut port = unsafe { SerialPort::new(COM1_BASE, port_factory) };
-        port.init().expect("Couldn't initialize logging serial port.");
+        port.init().expect("couldn't initialize logging serial port");
         AtomicRefCell::new(port)
     };
 }

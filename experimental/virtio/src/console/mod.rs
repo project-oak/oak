@@ -77,7 +77,7 @@ impl<'a, A: Allocator> Console<'a, VirtioPciTransport, A> {
         // For now we just scan the first 32 devices on PCI bus 0 to find the first one that matches
         // the vendor ID and device ID.
         let pci_device = find_device(super::PCI_VENDOR_ID, PCI_DEVICE_ID)
-            .ok_or_else(|| anyhow::anyhow!("Couldn't find a virtio console device."))?;
+            .ok_or_else(|| anyhow::anyhow!("couldn't find a virtio console device"))?;
         let transport = VirtioPciTransport::new(pci_device);
         let device = VirtioBaseDevice::new(transport);
         let mut result = Self::new(device, &translate, alloc);
@@ -148,38 +148,38 @@ where
     ) -> anyhow::Result<()> {
         self.device
             .start_init(DEVICE_ID as u32, inverse)
-            .map_err(|error| anyhow::anyhow!("Virtio error: {:?}", error))
-            .context("Couldn't initialize the PCI device.")?;
+            .map_err(|error| anyhow::anyhow!("virtio error: {:?}", error))
+            .context("couldn't initialize the PCI device")?;
         self.device
             .configure_queue(
                 RX_QUEUE_ID,
                 QUEUE_SIZE as u16,
                 translate(self.rx_queue.inner.get_desc_addr())
-                    .context("Failed to translate VirtAddr to PhysAddr")?,
+                    .context("couldn't translate VirtAddr to PhysAddr")?,
                 translate(self.rx_queue.inner.get_avail_addr())
-                    .context("Failed to translate VirtAddr to PhysAddr")?,
+                    .context("couldn't translate VirtAddr to PhysAddr")?,
                 translate(self.rx_queue.inner.get_used_addr())
-                    .context("Failed to translate VirtAddr to PhysAddr")?,
+                    .context("couldn't translate VirtAddr to PhysAddr")?,
             )
-            .map_err(|error| anyhow::anyhow!("Queue configuration error: {:?}", error))
-            .context("Couldn't configure the receive queue.")?;
+            .map_err(|error| anyhow::anyhow!("queue configuration error: {:?}", error))
+            .context("couldn't configure the receive queue")?;
         self.device
             .configure_queue(
                 TX_QUEUE_ID,
                 QUEUE_SIZE as u16,
                 translate(self.tx_queue.inner.get_desc_addr())
-                    .context("Failed to translate VirtAddr to PhysAddr")?,
+                    .context("couldn't translate VirtAddr to PhysAddr")?,
                 translate(self.tx_queue.inner.get_avail_addr())
-                    .context("Failed to translate VirtAddr to PhysAddr")?,
+                    .context("couldn't translate VirtAddr to PhysAddr")?,
                 translate(self.tx_queue.inner.get_used_addr())
-                    .context("Failed to translate VirtAddr to PhysAddr")?,
+                    .context("couldn't translate VirtAddr to PhysAddr")?,
             )
-            .map_err(|error| anyhow::anyhow!("Queue configuration error: {:?}", error))
-            .context("Couldn't configure the transmit queue.")?;
+            .map_err(|error| anyhow::anyhow!("queue configuration error: {:?}", error))
+            .context("couldn't configure the transmit queue")?;
         self.device
             .complete_init()
-            .map_err(|error| anyhow::anyhow!("Device activation error: {:?}", error))
-            .context("Couldn't activate the PCI device.")?;
+            .map_err(|error| anyhow::anyhow!("device activation error: {:?}", error))
+            .context("couldn't activate the PCI device")?;
 
         // Let the device know there are available buffers in the receiver queue.
         self.device.notify_queue(RX_QUEUE_ID);

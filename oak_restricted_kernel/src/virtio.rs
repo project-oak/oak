@@ -60,7 +60,7 @@ pub fn get_console_channel<'a, X: Translator, A: Allocator>(
         |paddr: PhysAddr| translator.translate_physical(paddr),
         alloc,
     )
-    .expect("Couldn't configure PCI virtio console device.");
+    .expect("couldn't configure PCI virtio console device");
     info!("Console device status: {}", console.get_status());
     Channel { inner: console }
 }
@@ -75,10 +75,10 @@ pub fn get_vsock_channel<'a, X: Translator, A: Allocator>(
         |paddr: PhysAddr| translator.translate_physical(paddr),
         alloc,
     )
-    .expect("Couldn't configure PCI virtio vsock device.");
+    .expect("couldn't configure PCI virtio vsock device");
     info!("Socket device status: {}", vsock.get_status());
     let listener = virtio::vsock::socket::SocketListener::new(vsock, VSOCK_PORT);
     Channel {
-        inner: listener.accept().expect("Couldn't accept connection."),
+        inner: listener.accept().expect("couldn't accept connection"),
     }
 }

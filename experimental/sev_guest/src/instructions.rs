@@ -91,7 +91,7 @@ pub fn pvalidate(
         }
     } else {
         Err(InstructionError::from_repr(result)
-            .expect("Invalid return value from PVALIDATE instruction."))
+            .expect("invalid return value from PVALIDATE instruction"))
     }
 }
 
@@ -175,7 +175,7 @@ pub fn rmpadjust(
         Ok(())
     } else {
         Err(InstructionError::from_repr(result as u32)
-            .expect("Invalid return value from RMPADJUST instruction."))
+            .expect("invalid return value from RMPADJUST instruction"))
     }
 }
 

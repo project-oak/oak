@@ -93,13 +93,13 @@ impl SecretsPage {
     /// the reserved bytes are all zero.
     pub fn validate(&self) -> Result<(), &'static str> {
         if !(SECRETS_PAGE_MIN_VERSION..=SECRETS_PAGE_MAX_VERSION).contains(&self.version) {
-            return Err("Invalid version");
+            return Err("invalid version");
         }
         if self.get_imi_en().is_none() {
-            return Err("Invalid value for imi_en");
+            return Err("invalid value for imi_en");
         }
         if self._reserved != 0 {
-            return Err("Nonzero value in _reserved");
+            return Err("nonzero value in _reserved");
         }
         Ok(())
     }

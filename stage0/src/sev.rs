@@ -63,13 +63,13 @@ pub fn init_ghcb(snp: bool, encrypted: u64) -> &'static Spinlock<GhcbProtocol<'s
     // SNP requires extra handling beyond just removing the encrypted bit.
     if snp {
         let request = SnpPageStateChangeRequest::new(ghcb_addr as usize, PageAssignment::Shared)
-            .expect("Invalid address for GHCB location");
-        change_snp_page_state(request).expect("Could not change SNP state for GHCB");
+            .expect("invalid address for GHCB location");
+        change_snp_page_state(request).expect("couldn't change SNP state for GHCB");
 
         let ghcb_location_request = RegisterGhcbGpaRequest::new(ghcb_addr as usize)
-            .expect("Invalid address for GHCB location");
+            .expect("invalid address for GHCB location");
         register_ghcb_location(ghcb_location_request)
-            .expect("Couldn't register the GHCB address with the hypervisor");
+            .expect("couldn't register the GHCB address with the hypervisor");
     }
 
     let ghcb = unsafe { GHCB.write(Ghcb::new()) };
@@ -81,7 +81,7 @@ pub fn init_ghcb(snp: bool, encrypted: u64) -> &'static Spinlock<GhcbProtocol<'s
         })))
         .is_err()
     {
-        panic!("Failed to initialize GHCB wrapper");
+        panic!("couldn't initialize GHCB wrapper");
     }
     GHCB_WRAPPER.get().unwrap()
 }
@@ -91,8 +91,8 @@ pub fn deinit_ghcb(snp: bool, encrypted: u64) {
 
     if snp {
         let request = SnpPageStateChangeRequest::new(ghcb_addr as usize, PageAssignment::Private)
-            .expect("Invalid address for GHCB location");
-        change_snp_page_state(request).expect("Could not change SNP state for GHCB");
+            .expect("invalid address for GHCB location");
+        change_snp_page_state(request).expect("couldn't change SNP state for GHCB");
     }
 
     let pd = get_pd(encrypted);
@@ -172,7 +172,7 @@ pub fn validate_memory(zero_page: &BootParams, encrypted: u64) {
                 })
                 .find(|result| result.is_err())
             {
-                panic!("Unexpected error: {:?}", err);
+                panic!("unexpected error: {:?}", err);
             }
 
             page_table.zero();

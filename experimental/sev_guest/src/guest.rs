@@ -156,28 +156,28 @@ impl GuestMessageHeader {
         if self.get_algorithm().is_none()
             || self.auth_header.algorithm == AeadAlgorithm::Invalid as u8
         {
-            return Err("Invalid AEAD algorithm");
+            return Err("invalid AEAD algorithm");
         }
         if self.get_message_type().is_none()
             || self.auth_header.message_type == MessageType::Invalid as u8
         {
-            return Err("Invalid message type");
+            return Err("invalid message type");
         }
         if self.auth_header.header_version != CURRENT_HEADER_VERSION {
-            return Err("Invalid header version");
+            return Err("invalid header version");
         }
         if self.auth_header.message_version != CURRENT_MESSAGE_VERSION {
-            return Err("Invalid message version");
+            return Err("invalid message version");
         }
         // For now we always assume we use VMPCK_0 to encrypt all messages.
         if self.auth_header.message_vmpck != 0 {
-            return Err("Invalid message VMPCK");
+            return Err("invalid message VMPCK");
         }
         if self.auth_header.header_size != size_of::<Self>() as u16 {
-            return Err("Invalid header size");
+            return Err("invalid header size");
         }
         if self.auth_header.message_size as usize > MAX_PAYLOAD_SIZE {
-            return Err("Invalid message size");
+            return Err("invalid message size");
         }
         Ok(())
     }
@@ -311,13 +311,13 @@ impl AttestationResponse {
     /// report format are all valid.
     pub fn validate(&self) -> Result<(), &'static str> {
         if self._reserved.iter().any(|&value| value != 0) {
-            return Err("Nonzero value in _reserved");
+            return Err("nonzero value in _reserved");
         }
         if self.get_status().is_none() {
-            return Err("Invalid status");
+            return Err("invalid status");
         }
         if self.report_size != size_of::<AttestationReport>() as u32 {
-            return Err("Invalid report size");
+            return Err("invalid report size");
         }
         self.report.validate()
     }
@@ -459,25 +459,25 @@ impl AttestationReportData {
         self.reported_tcb.validate()?;
         self.committed_tcb.validate()?;
         if self._reserved_0.iter().any(|&value| value != 0) {
-            return Err("Nonzero value in _reserved_0");
+            return Err("nonzero value in _reserved_0");
         }
         if self._reserved_1 != 0 {
-            return Err("Nonzero value in _reserved_1");
+            return Err("nonzero value in _reserved_1");
         }
         if self._reserved_2 != 0 {
-            return Err("Nonzero value in _reserved_2");
+            return Err("nonzero value in _reserved_2");
         }
         if self._reserved_3.iter().any(|&value| value != 0) {
-            return Err("Nonzero value in _reserved_3");
+            return Err("nonzero value in _reserved_3");
         }
         if self.signature_algo != SigningAlgorithm::EcdsaP384Sha384 as u32 {
-            return Err("Invalid signature algorithm");
+            return Err("invalid signature algorithm");
         }
         if self.get_platform_info().is_none() {
-            return Err("Invalid platform info");
+            return Err("invalid platform info");
         }
         if self.get_author_key_en().is_none() {
-            return Err("Invalid value for author_key_en");
+            return Err("invalid value for author_key_en");
         }
         Ok(())
     }
@@ -523,10 +523,10 @@ impl GuestPolicy {
     /// Checks that the flags are valid and the reserved bytes are all zero.
     pub fn validate(&self) -> Result<(), &'static str> {
         if self._reserved != 0 {
-            return Err("Nonzero value in _reserved");
+            return Err("nonzero value in _reserved");
         }
         if self.get_flags().is_none() {
-            return Err("Invalid flags");
+            return Err("invalid flags");
         }
         Ok(())
     }
@@ -556,7 +556,7 @@ impl TcbVersion {
     /// Checks that the reserved bytes are all zero.
     pub fn validate(&self) -> Result<(), &'static str> {
         if self._reserved.iter().any(|&value| value != 0) {
-            return Err("Nonzero value in _reserved");
+            return Err("nonzero value in _reserved");
         }
         Ok(())
     }
@@ -619,7 +619,7 @@ impl EcdsaSignature {
     /// Checks that the reserved bytes are all zero.
     pub fn validate_format(&self) -> Result<(), &'static str> {
         if self._reserved.iter().any(|&value| value != 0) {
-            return Err("Nonzero value in _reserved");
+            return Err("nonzero value in _reserved");
         }
         Ok(())
     }

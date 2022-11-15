@@ -129,7 +129,7 @@ impl RequestHelper {
         let response_public_key_handle = self
             .private_key_handle
             .public()
-            .map_err(|error| anyhow!("Couldn't get public key: {}", error))?;
+            .map_err(|error| anyhow!("couldn't get public key: {}", error))?;
         let response_public_key = serialize_public_key(&response_public_key_handle)?;
 
         Ok(EncryptedRequest {

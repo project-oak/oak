@@ -38,14 +38,14 @@ pub fn get_attestation(report_data: [u8; REPORT_DATA_SIZE]) -> anyhow::Result<At
     let mut guard = GUEST_MESSAGE_ENCRYPTOR.lock();
     let encryptor = guard
         .as_mut()
-        .ok_or_else(|| anyhow::anyhow!("Guest message encryptor is not initialized."))?;
+        .ok_or_else(|| anyhow::anyhow!("guest message encryptor is not initialized"))?;
 
     let mut report_request = AttestationRequest::new();
     report_request.report_data = report_data;
 
     let alloc = GUEST_HOST_HEAP
         .get()
-        .ok_or_else(|| anyhow::anyhow!("Guest-host heap is not initialized."))?;
+        .ok_or_else(|| anyhow::anyhow!("guest-host heap is not initialized"))?;
 
     let mut request_message = Box::new_in(GuestMessage::new(), alloc);
     encryptor
@@ -55,17 +55,17 @@ pub fn get_attestation(report_data: [u8; REPORT_DATA_SIZE]) -> anyhow::Result<At
 
     let translator = ADDRESS_TRANSLATOR
         .get()
-        .ok_or_else(|| anyhow::anyhow!("Address translator is not initialized."))?;
+        .ok_or_else(|| anyhow::anyhow!("address translator is not initialized"))?;
     let request_address = translator
         .translate_virtual(VirtAddr::from_ptr(
             request_message.as_ref() as *const GuestMessage
         ))
-        .ok_or_else(|| anyhow::anyhow!("Couldn't translate request address."))?;
+        .ok_or_else(|| anyhow::anyhow!("couldn't translate request address"))?;
     let response_address = translator
         .translate_virtual(VirtAddr::from_ptr(
             response_message.as_ref() as *const GuestMessage
         ))
-        .ok_or_else(|| anyhow::anyhow!("Couldn't translate response address."))?;
+        .ok_or_else(|| anyhow::anyhow!("couldn't translate response address"))?;
 
     GHCB_PROTOCOL
         .lock()
@@ -80,7 +80,7 @@ pub fn get_attestation(report_data: [u8; REPORT_DATA_SIZE]) -> anyhow::Result<At
         .validate()
         .map_err(anyhow::Error::msg)?;
     if attestation_response.status != ReportStatus::Success as u32 {
-        anyhow::bail!("Report request failed due to invalid parameters.");
+        anyhow::bail!("report request failed due to invalid parameters");
     }
     Ok(attestation_response.report)
 }

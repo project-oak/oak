@@ -154,7 +154,7 @@ impl FwCfg {
         if let Some(file) = entry {
             self.read_file(file, object.as_bytes_mut())
         } else {
-            Err("Could not find requested file")
+            Err("couldn't find requested file")
         }
     }
 

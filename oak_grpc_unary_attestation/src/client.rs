@@ -29,7 +29,7 @@ pub struct UnaryGrpcClient {
 impl UnaryGrpcClient {
     pub async fn create(uri: &str) -> anyhow::Result<Self> {
         let channel = Channel::from_shared(uri.to_string())
-            .context("Couldn't create gRPC channel")?
+            .context("couldn't create gRPC channel")?
             .connect()
             .await?;
         let inner = UnarySessionClient::new(channel);
@@ -49,7 +49,7 @@ impl AttestationTransport for UnaryGrpcClient {
                 session_id: session_id.to_vec(),
             })
             .await
-            .context("Couldn't send message")?
+            .context("couldn't send message")?
             .into_inner()
             .body;
 

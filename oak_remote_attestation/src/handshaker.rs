@@ -114,7 +114,7 @@ impl<G: AttestationGenerator + Clone, V: AttestationVerifier> ClientHandshaker<G
             behavior,
             state: ClientHandshakerState::Initializing,
             transcript: Transcript::new(),
-            transcript_signer: Signer::create().context("Couldn't create signer")?,
+            transcript_signer: Signer::create().context("couldn't create signer")?,
         })
     }
 
@@ -129,33 +129,33 @@ impl<G: AttestationGenerator + Clone, V: AttestationVerifier> ClientHandshaker<G
 
     fn next_step_util(&mut self, message: &[u8]) -> anyhow::Result<Option<Vec<u8>>> {
         let deserialized_message =
-            deserialize_message(message).context("Couldn't deserialize message")?;
+            deserialize_message(message).context("couldn't deserialize message")?;
         match deserialized_message {
             MessageWrapper::ServerIdentity(server_identity) => {
                 match core::mem::take(&mut self.state) {
                     ClientHandshakerState::ExpectingServerIdentity(key_negotiator) => {
                         let client_identity = self
                             .process_server_identity(server_identity, key_negotiator)
-                            .context("Couldn't process server identity message")?;
+                            .context("couldn't process server identity message")?;
                         let serialized_client_identity = client_identity
                             .serialize()
-                            .context("Couldn't serialize client identity message")?;
+                            .context("couldn't serialize client identity message")?;
                         Ok(Some(serialized_client_identity))
                     }
                     ClientHandshakerState::Aborted => {
-                        Err(anyhow!("Remote attestation handshake is aborted",))
+                        Err(anyhow!("remote attestation handshake is aborted",))
                     }
                     ClientHandshakerState::MessageProcessing => Err(anyhow!(
-                        "Cannot process new messages while in the MessageProcessing state",
+                        "cannot process new messages while in the MessageProcessing state",
                     )),
                     _ => Err(anyhow!(
-                        "Incorrect handshake message received, in state {:?}, found ServerIdentity",
+                        "incorrect handshake message received, in state {:?}, found ServerIdentity",
                         self.state
                     )),
                 }
             }
             unsupported_message => Err(anyhow!(
-                "Receiving {:?} is not supported by the client handshaker",
+                "receiving {:?} is not supported by the client handshaker",
                 unsupported_message
             )),
         }
@@ -172,7 +172,7 @@ impl<G: AttestationGenerator + Clone, V: AttestationVerifier> ClientHandshaker<G
     pub fn get_encryptor(self) -> anyhow::Result<Encryptor> {
         match self.state {
             ClientHandshakerState::Completed(encryptor) => Ok(Encryptor { encryptor }),
-            _ => Err(anyhow!("Handshake is not complete")),
+            _ => Err(anyhow!("handshake is not complete")),
         }
     }
 
@@ -192,26 +192,26 @@ impl<G: AttestationGenerator + Clone, V: AttestationVerifier> ClientHandshaker<G
         match self.state {
             ClientHandshakerState::Initializing => {
                 let key_negotiator = KeyNegotiator::create(KeyNegotiatorType::Client)
-                    .context("Couldn't create key negotiator")?;
+                    .context("couldn't create key negotiator")?;
 
                 // Create client hello message.
                 let client_hello =
-                    ClientHello::new(get_random().context("Couldn't generate random array")?);
+                    ClientHello::new(get_random().context("couldn't generate random array")?);
 
                 // Update current transcript.
                 self.transcript
                     .append(&client_hello)
-                    .context("Couldn't append client hello to the transcript")?;
+                    .context("couldn't append client hello to the transcript")?;
 
                 let serialized_client_hello = client_hello
                     .serialize()
-                    .context("Couldn't serialize client hello message")?;
+                    .context("couldn't serialize client hello message")?;
 
                 self.state = ClientHandshakerState::ExpectingServerIdentity(key_negotiator);
                 Ok(serialized_client_hello)
             }
             _ => Err(anyhow!(
-                "Client hello message can't be created in {:?} state, needed Initializing",
+                "client hello message can't be created in {:?} state, needed Initializing",
                 self.state
             )),
         }
@@ -238,7 +238,7 @@ impl<G: AttestationGenerator + Clone, V: AttestationVerifier> ClientHandshaker<G
         server_identity_no_signature.clear_transcript_signature();
         self.transcript
             .append(&server_identity_no_signature)
-            .context("Couldn't append server identity to the transcript")?;
+            .context("couldn't append server identity to the transcript")?;
         let server_signing_public_key = &server_identity.signing_public_key;
         let transcript_signature_verifier = SignatureVerifier::new(server_signing_public_key)?;
         transcript_signature_verifier
@@ -246,7 +246,7 @@ impl<G: AttestationGenerator + Clone, V: AttestationVerifier> ClientHandshaker<G
                 &self.transcript.get_sha256(),
                 &server_identity.transcript_signature,
             )
-            .context("Couldn't verify server transcript")?;
+            .context("couldn't verify server transcript")?;
 
         let expected_attested_data = attestation_data(
             &server_identity.ephemeral_public_key,
@@ -262,7 +262,7 @@ impl<G: AttestationGenerator + Clone, V: AttestationVerifier> ClientHandshaker<G
         // Create client identity message.
         let ephemeral_public_key = key_negotiator
             .public_key()
-            .context("Couldn't get ephemeral public key")?;
+            .context("couldn't get ephemeral public key")?;
 
         let attested_data =
             attestation_data(&ephemeral_public_key, &self.transcript_signer.public_key()?);
@@ -270,13 +270,13 @@ impl<G: AttestationGenerator + Clone, V: AttestationVerifier> ClientHandshaker<G
             .behavior
             .generator
             .generate_attestation(&attested_data)
-            .context("Couldnt' create attestation report")?;
+            .context("couldnt' create attestation report")?;
 
         let mut client_identity = ClientIdentity::new(
             ephemeral_public_key,
             self.transcript_signer
                 .public_key()
-                .context("Couldn't get signing public key")?,
+                .context("couldn't get signing public key")?,
             attestation_report,
         );
 
@@ -284,19 +284,19 @@ impl<G: AttestationGenerator + Clone, V: AttestationVerifier> ClientHandshaker<G
         // Transcript doesn't include transcript signature from the client identity message.
         self.transcript
             .append(&client_identity)
-            .context("Couldn't append client identity to transcript")?;
+            .context("couldn't append client identity to transcript")?;
 
         // Add transcript signature to the client identity message.
         let transcript_signature = self
             .transcript_signer
             .sign(&self.transcript.get_sha256())
-            .context("Couldn't create transcript signature")?;
+            .context("couldn't create transcript signature")?;
         client_identity.set_transcript_signature(&transcript_signature);
 
         // Agree on session keys and create an encryptor.
         let encryptor = key_negotiator
             .create_encryptor(&server_identity.ephemeral_public_key)
-            .context("Couldn't derive session key")?;
+            .context("couldn't derive session key")?;
         self.state = ClientHandshakerState::Completed(encryptor);
 
         Ok(client_identity)
@@ -343,26 +343,26 @@ impl<G: AttestationGenerator + Clone, V: AttestationVerifier> ServerHandshaker<G
 
     fn next_step_util(&mut self, message: &[u8]) -> anyhow::Result<Option<Vec<u8>>> {
         let deserialized_message =
-            deserialize_message(message).context("Couldn't deserialize message")?;
+            deserialize_message(message).context("couldn't deserialize message")?;
         match deserialized_message {
             MessageWrapper::ClientHello(client_hello) => match &self.state {
                 ServerHandshakerState::ExpectingClientHello => {
                     let server_identity = self
                         .process_client_hello(client_hello)
-                        .context("Couldn't process client hello message")?;
+                        .context("couldn't process client hello message")?;
                     let serialized_server_identity = server_identity
                         .serialize()
-                        .context("Couldn't serialize server identity message")?;
+                        .context("couldn't serialize server identity message")?;
                     Ok(Some(serialized_server_identity))
                 }
                 ServerHandshakerState::Aborted => {
-                    Err(anyhow!("Remote attestation handshake is aborted",))
+                    Err(anyhow!("remote attestation handshake is aborted",))
                 }
                 ServerHandshakerState::MessageProcessing => Err(anyhow!(
-                    "Cannot process new messages while in the MessageProcessing state",
+                    "cannot process new messages while in the MessageProcessing state",
                 )),
                 _ => Err(anyhow!(
-                    "Incorrect handshake message received, in state {:?}, found ClientHello",
+                    "incorrect handshake message received, in state {:?}, found ClientHello",
                     self.state
                 )),
             },
@@ -370,20 +370,20 @@ impl<G: AttestationGenerator + Clone, V: AttestationVerifier> ServerHandshaker<G
                 match core::mem::take(&mut self.state) {
                     ServerHandshakerState::ExpectingClientIdentity(key_negotiator) => {
                         self.process_client_identity(client_identity, key_negotiator)
-                            .context("Couldn't process client identity message")?;
+                            .context("couldn't process client identity message")?;
                         Ok(None)
                     }
                     ServerHandshakerState::MessageProcessing => Err(anyhow!(
-                        "Cannot process new messages while in the MessageProcessing state",
+                        "cannot process new messages while in the MessageProcessing state",
                     )),
                     _ => Err(anyhow!(
-                        "Incorrect handshake message received, in state {:?}, found ClientIdentity",
+                        "incorrect handshake message received, in state {:?}, found ClientIdentity",
                         self.state
                     )),
                 }
             }
             unsupported_message => Err(anyhow!(
-                "Receiving {:?} is not supported by the server handshaker",
+                "receiving {:?} is not supported by the server handshaker",
                 unsupported_message
             )),
         }
@@ -400,7 +400,7 @@ impl<G: AttestationGenerator + Clone, V: AttestationVerifier> ServerHandshaker<G
     pub fn get_encryptor(self) -> anyhow::Result<Encryptor> {
         match self.state {
             ServerHandshakerState::Completed(encryptor) => Ok(Encryptor { encryptor }),
-            _ => Err(anyhow!("Handshake is not complete")),
+            _ => Err(anyhow!("handshake is not complete")),
         }
     }
 
@@ -418,10 +418,10 @@ impl<G: AttestationGenerator + Clone, V: AttestationVerifier> ServerHandshaker<G
     ) -> anyhow::Result<ServerIdentity> {
         // Create server identity message.
         let key_negotiator = KeyNegotiator::create(KeyNegotiatorType::Server)
-            .context("Couldn't create key negotiator")?;
+            .context("couldn't create key negotiator")?;
         let ephemeral_public_key = key_negotiator
             .public_key()
-            .context("Couldn't get ephemeral public key")?;
+            .context("couldn't get ephemeral public key")?;
 
         let attestation_data =
             attestation_data(&ephemeral_public_key, &self.transcript_signer.public_key()?);
@@ -432,10 +432,10 @@ impl<G: AttestationGenerator + Clone, V: AttestationVerifier> ServerHandshaker<G
 
         let mut server_identity = ServerIdentity::new(
             ephemeral_public_key,
-            get_random().context("Couldn't generate random array")?,
+            get_random().context("couldn't generate random array")?,
             self.transcript_signer
                 .public_key()
-                .context("Couldn't get singing public key")?,
+                .context("couldn't get singing public key")?,
             attestation_report,
         );
 
@@ -443,16 +443,16 @@ impl<G: AttestationGenerator + Clone, V: AttestationVerifier> ServerHandshaker<G
         // Transcript doesn't include transcript signature from the server identity message.
         self.transcript
             .append(&client_hello)
-            .context("Couldn't append client hello to the transcript")?;
+            .context("couldn't append client hello to the transcript")?;
         self.transcript
             .append(&server_identity)
-            .context("Couldn't append server identity to the transcript")?;
+            .context("couldn't append server identity to the transcript")?;
 
         // Add transcript signature to the server identity message.
         let transcript_signature = self
             .transcript_signer
             .sign(&self.transcript.get_sha256())
-            .context("Couldn't create transcript signature")?;
+            .context("couldn't create transcript signature")?;
         server_identity.set_transcript_signature(&transcript_signature);
 
         self.state = ServerHandshakerState::ExpectingClientIdentity(key_negotiator);
@@ -476,7 +476,7 @@ impl<G: AttestationGenerator + Clone, V: AttestationVerifier> ServerHandshaker<G
         client_identity_no_signature.clear_transcript_signature();
         self.transcript
             .append(&client_identity_no_signature)
-            .context("Couldn't append client identity to the transcript")?;
+            .context("couldn't append client identity to the transcript")?;
         let client_signing_public_key = &client_identity.signing_public_key;
 
         // TODO(#2918): Remove this check when the Java client generates a non-empty signature, and
@@ -492,7 +492,7 @@ impl<G: AttestationGenerator + Clone, V: AttestationVerifier> ServerHandshaker<G
                     &self.transcript.get_sha256(),
                     &client_identity.transcript_signature,
                 )
-                .context("Couldn't verify client transcript")?;
+                .context("couldn't verify client transcript")?;
         }
 
         let expected_attested_data = attestation_data(
@@ -509,7 +509,7 @@ impl<G: AttestationGenerator + Clone, V: AttestationVerifier> ServerHandshaker<G
         // Agree on session keys and create an encryptor.
         let encryptor = key_negotiator
             .create_encryptor(&client_identity.ephemeral_public_key)
-            .context("Couldn't derive session key")?;
+            .context("couldn't derive session key")?;
         self.state = ServerHandshakerState::Completed(encryptor);
 
         Ok(())
@@ -529,14 +529,14 @@ impl Encryptor {
 
     pub fn decrypt(&mut self, message: &[u8]) -> anyhow::Result<Vec<u8>> {
         let deserialized_message =
-            deserialize_message(message).context("Couldn't deserialize message")?;
+            deserialize_message(message).context("couldn't deserialize message")?;
         match deserialized_message {
             MessageWrapper::EncryptedData(data) => self
                 .encryptor
                 .decrypt(&data)
-                .context("Couldn't decrypt message"),
+                .context("couldn't decrypt message"),
             incorrect_message => Err(anyhow!(
-                "Incorrect protocol message received, in state EncryptedData, found {:?}",
+                "incorrect protocol message received, in state EncryptedData, found {:?}",
                 incorrect_message
             )),
         }
@@ -546,10 +546,10 @@ impl Encryptor {
         let encrypted_message = self
             .encryptor
             .encrypt(message)
-            .context("Couldn't encrypt message")?;
+            .context("couldn't encrypt message")?;
         let serialized_message = encrypted_message
             .serialize()
-            .context("Couldn't serialize encrypted data message")?;
+            .context("couldn't serialize encrypted data message")?;
         Ok(serialized_message)
     }
 }
@@ -665,7 +665,7 @@ impl Transcript {
 
     /// Appends a serialized `message` to the end of [`Transcript::value`].
     pub fn append<M: Serializable>(&mut self, message: &M) -> anyhow::Result<()> {
-        let bytes = message.serialize().context("Couldn't serialize message")?;
+        let bytes = message.serialize().context("couldn't serialize message")?;
         self.value.extend(bytes);
         Ok(())
     }

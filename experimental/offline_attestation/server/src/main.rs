@@ -56,7 +56,7 @@ async fn main() -> anyhow::Result<()> {
     let private_key_handle = Arc::new(generate_private_key()?);
     let public_key_handle = private_key_handle
         .public()
-        .map_err(|error| anyhow!("Couldn't get public key: {}", error))?;
+        .map_err(|error| anyhow!("couldn't get public key: {}", error))?;
 
     let attestation_report = generate_attestation_report(&public_key_handle)?;
 

@@ -72,7 +72,7 @@ async fn handler(requests: GrpcInvocations<HelloWorld>) {
                 }
                 // ...
             }
-    }).await.expect("Error handling request");
+    }).await.expect("error handling request");
 }
 ```
 

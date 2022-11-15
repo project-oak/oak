@@ -61,7 +61,7 @@ async fn main() -> anyhow::Result<()> {
     let address = opt
         .listen_address
         .parse()
-        .context("Couldn't parse address")?;
+        .context("couldn't parse address")?;
 
     if opt.use_grpc {
         start_grpc_backend(address).await
@@ -77,7 +77,7 @@ async fn start_http_backend(address: SocketAddr) -> anyhow::Result<()> {
 
     tokio::select!(
         result = server => {
-            result.context("Couldn't run server")?;
+            result.context("couldn't run server")?;
         },
         () = tokio::signal::ctrl_c().map(|r| r.unwrap()) => {
             info!("Stopping the backend server");
@@ -127,7 +127,7 @@ async fn start_grpc_backend(address: SocketAddr) -> anyhow::Result<()> {
 
     tokio::select!(
         result = server => {
-            result.context("Couldn't run server")?;
+            result.context("couldn't run server")?;
         },
         () = tokio::signal::ctrl_c().map(|r| r.unwrap()) => {
             info!("Stopping the backend server");

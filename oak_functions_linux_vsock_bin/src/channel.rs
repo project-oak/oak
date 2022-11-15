@@ -62,7 +62,7 @@ where
             let mut size_buffer: [u8; size_of::<u64>()] = [0; size_of::<u64>()];
             self.stream.read(&mut size_buffer).map_err(|error| {
                 anyhow!(
-                    "Couldn't read Protobuf message size from stream: {:?}",
+                    "couldn't read Protobuf message size from stream: {:?}",
                     error
                 )
             })?;
@@ -72,20 +72,20 @@ where
                 // Read Protobuf message.
                 let mut message_buffer: Vec<u8> = vec![0; size];
                 self.stream.read(&mut message_buffer).map_err(|error| {
-                    anyhow!("Couldn't read Protobuf message from stream: {:?}", error)
+                    anyhow!("couldn't read Protobuf message from stream: {:?}", error)
                 })?;
 
                 let message = Request::decode(&*message_buffer)
-                    .map_err(|error| anyhow!("Couldn't decode Protobuf message: {:?}", error))?;
+                    .map_err(|error| anyhow!("couldn't decode Protobuf message: {:?}", error))?;
                 self.read_buffer_producer.push_slice(&message.data);
             } else {
-                return Err(anyhow!("Message size is 0"));
+                return Err(anyhow!("message size is 0"));
             }
         }
 
         self.read_buffer_consumer
             .read_exact(data)
-            .map_err(|error| anyhow!("Couldn't read from buffer: {:?}", error))
+            .map_err(|error| anyhow!("couldn't read from buffer: {:?}", error))
     }
 }
 
@@ -101,23 +101,23 @@ where
         let mut message_buffer = vec![];
         message
             .encode(&mut message_buffer)
-            .map_err(|error| anyhow!("Couldn't encode proto message: {:?}", error))?;
+            .map_err(|error| anyhow!("couldn't encode proto message: {:?}", error))?;
 
         // Write Protobuf message size.
         let size_buffer: [u8; size_of::<u64>()] = (message_buffer.len() as u64).to_ne_bytes();
         self.stream
             .write_all(&size_buffer)
-            .map_err(|error| anyhow!("Couldn't write into stream: {:?}", error))?;
+            .map_err(|error| anyhow!("couldn't write into stream: {:?}", error))?;
 
         // Write Protobuf message.
         self.stream
             .write_all(&message_buffer)
-            .map_err(|error| anyhow!("Couldn't write into stream: {:?}", error))
+            .map_err(|error| anyhow!("couldn't write into stream: {:?}", error))
     }
 
     fn flush(&mut self) -> anyhow::Result<()> {
         self.stream
             .flush()
-            .map_err(|error| anyhow!("Couldn't flush stream: {:?}", error))
+            .map_err(|error| anyhow!("couldn't flush stream: {:?}", error))
     }
 }

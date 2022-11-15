@@ -55,7 +55,7 @@ pub extern "C" fn heap_alloc(size: usize) -> *mut c_void {
     // This should never panic since we checked that the size is non-zero and calculated a valid
     // alignment.
     let layout = Layout::from_size_align(size, calculate_alignment(size))
-        .expect("Invalid alignment calculated.");
+        .expect("invalid alignment calculated");
 
     // We use the global allocator directly (rather than using e.g. `Vec<u8>`) so that we have the
     // required control over the alignment of the allocated memory.
@@ -95,7 +95,7 @@ pub extern "C" fn heap_free(ptr: *mut c_void) {
         .lock()
         .borrow_mut()
         .remove(&key)
-        .expect("Invalid memory region pointer. It was either already freed or not allocated.");
+        .expect("invalid memory region pointer: it was either already freed or not allocated");
 
     // Safety: we have validated that we previously allocated the memory, found the layout that was
     // used to allocate it, and it was not yet freed.

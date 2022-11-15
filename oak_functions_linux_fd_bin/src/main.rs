@@ -64,5 +64,5 @@ fn main() -> ! {
         channel,
         oak_functions_freestanding::schema::TrustedRuntime::serve(runtime),
     )
-    .expect("Runtime encountered an unrecoverable error");
+    .expect("runtime encountered an unrecoverable error");
 }

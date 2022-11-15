@@ -33,7 +33,7 @@ lazy_static! {
         manifest_path.push("Cargo.toml");
 
         oak_functions_test_utils::compile_rust_wasm(manifest_path.to_str().unwrap(), false)
-            .expect("Could not read Wasm module")
+            .expect("couldn't read Wasm module")
     };
     static ref TESTING_WASM_MODULE_BYTES: Vec<u8> = {
         let mut manifest_path = PATH_TO_MODULES.clone();
@@ -41,7 +41,7 @@ lazy_static! {
         manifest_path.push("Cargo.toml");
 
         oak_functions_test_utils::compile_rust_wasm(manifest_path.to_str().unwrap(), false)
-            .expect("Could not read Wasm module")
+            .expect("couldn't read Wasm module")
     };
 }
 
@@ -50,10 +50,10 @@ async fn test_read_write() {
     let logger = oak_functions_freestanding::StandaloneLogger {};
     let lookup_data_manager = Arc::new(LookupDataManager::for_test(HashMap::new(), logger.clone()));
     let lookup_factory = LookupFactory::new_boxed_extension_factory(lookup_data_manager)
-        .expect("could not create LookupFactory");
+        .expect("couldn't create LookupFactory");
 
     let wasm_handler = WasmHandler::create(&LOOKUP_WASM_MODULE_BYTES, vec![lookup_factory], logger)
-        .expect("Could not instantiate WasmHandler.");
+        .expect("couldn't instantiate WasmHandler");
 
     let request = Request {
         body: b"ReadWrite".to_vec(),
@@ -67,10 +67,10 @@ async fn test_double_read() {
     let logger = oak_functions_freestanding::StandaloneLogger {};
     let lookup_data_manager = Arc::new(LookupDataManager::for_test(HashMap::new(), logger.clone()));
     let lookup_factory = LookupFactory::new_boxed_extension_factory(lookup_data_manager)
-        .expect("could not create LookupFactory");
+        .expect("couldn't create LookupFactory");
 
     let wasm_handler = WasmHandler::create(&LOOKUP_WASM_MODULE_BYTES, vec![lookup_factory], logger)
-        .expect("Could not instantiate WasmHandler.");
+        .expect("couldn't instantiate WasmHandler");
 
     let request = Request {
         body: b"DoubleRead".to_vec(),
@@ -84,10 +84,10 @@ async fn test_double_write() {
     let logger = oak_functions_freestanding::StandaloneLogger {};
     let lookup_data_manager = Arc::new(LookupDataManager::for_test(HashMap::new(), logger.clone()));
     let lookup_factory = LookupFactory::new_boxed_extension_factory(lookup_data_manager)
-        .expect("could not create LookupFactory");
+        .expect("couldn't create LookupFactory");
 
     let wasm_handler = WasmHandler::create(&LOOKUP_WASM_MODULE_BYTES, vec![lookup_factory], logger)
-        .expect("Could not instantiate WasmHandler.");
+        .expect("couldn't instantiate WasmHandler");
 
     let request = Request {
         body: b"DoubleWrite".to_vec(),
@@ -101,17 +101,17 @@ async fn test_write_log() {
     let logger = oak_functions_freestanding::StandaloneLogger {};
     let lookup_data_manager = Arc::new(LookupDataManager::for_test(HashMap::new(), logger.clone()));
     let lookup_factory = LookupFactory::new_boxed_extension_factory(lookup_data_manager)
-        .expect("could not create LookupFactory");
+        .expect("couldn't create LookupFactory");
     let workload_logging_factory =
         WorkloadLoggingFactory::new_boxed_extension_factory(logger.clone())
-            .expect("could not create WorkloadLoggingFactory");
+            .expect("couldn't create WorkloadLoggingFactory");
 
     let wasm_handler = WasmHandler::create(
         &LOOKUP_WASM_MODULE_BYTES,
         vec![lookup_factory, workload_logging_factory],
         logger,
     )
-    .expect("Could not instantiate WasmHandler.");
+    .expect("couldn't instantiate WasmHandler");
 
     let request = Request {
         body: b"WriteLog".to_vec(),
@@ -128,10 +128,10 @@ async fn test_storage_get_item() {
     let logger = oak_functions_freestanding::StandaloneLogger {};
     let lookup_data_manager = Arc::new(LookupDataManager::for_test(entries, logger.clone()));
     let lookup_factory = LookupFactory::new_boxed_extension_factory(lookup_data_manager)
-        .expect("could not create LookupFactory");
+        .expect("couldn't create LookupFactory");
 
     let wasm_handler = WasmHandler::create(&LOOKUP_WASM_MODULE_BYTES, vec![lookup_factory], logger)
-        .expect("Could not instantiate WasmHandler.");
+        .expect("couldn't instantiate WasmHandler");
 
     let request = Request {
         body: b"StorageGet".to_vec(),
@@ -148,10 +148,10 @@ async fn test_storage_get_item_not_found() {
     let logger = oak_functions_freestanding::StandaloneLogger {};
     let lookup_data_manager = Arc::new(LookupDataManager::for_test(entries, logger.clone()));
     let lookup_factory = LookupFactory::new_boxed_extension_factory(lookup_data_manager)
-        .expect("could not create LookupFactory");
+        .expect("couldn't create LookupFactory");
 
     let wasm_handler = WasmHandler::create(&LOOKUP_WASM_MODULE_BYTES, vec![lookup_factory], logger)
-        .expect("Could not instantiate WasmHandler.");
+        .expect("couldn't instantiate WasmHandler");
 
     let request = Request {
         body: b"StorageGetItemNotFound".to_vec(),
@@ -169,11 +169,11 @@ async fn test_echo() {
         oak_functions_testing_extension::TestingFactory::new_boxed_extension_factory(
             logger.clone(),
         )
-        .expect("Fail to create testing extension factory.");
+        .expect("couldn't create testing extension factory");
 
     let wasm_handler =
         WasmHandler::create(&TESTING_WASM_MODULE_BYTES, vec![testing_factory], logger)
-            .expect("Could not instantiate WasmHandler.");
+            .expect("couldn't instantiate WasmHandler");
 
     let request = Request {
         body: message_to_echo.as_bytes().to_vec(),
@@ -195,11 +195,11 @@ async fn test_blackhole() {
         oak_functions_testing_extension::TestingFactory::new_boxed_extension_factory(
             logger.clone(),
         )
-        .expect("Fail to create testing extension factory.");
+        .expect("couldn't create testing extension factory");
 
     let wasm_handler =
         WasmHandler::create(&TESTING_WASM_MODULE_BYTES, vec![testing_factory], logger)
-            .expect("Could not instantiate WasmHandler.");
+            .expect("couldn't instantiate WasmHandler");
 
     let request = Request {
         body: message_to_blackhole.as_bytes().to_vec(),

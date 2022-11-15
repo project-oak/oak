@@ -91,7 +91,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tokio::spawn(async {
         tokio::signal::ctrl_c()
             .await
-            .expect("could not wait for signal");
+            .expect("couldn't wait for signal");
         cleanup();
         std::process::exit(-1);
     });
@@ -152,7 +152,7 @@ fn cleanup() {
     );
     for pid in PROCESSES
         .lock()
-        .expect("could not acquire processes lock")
+        .expect("couldn't acquire processes lock")
         .iter()
     {
         // We intentionally don't print anything here as it may obscure more interesting
@@ -209,7 +209,7 @@ pub fn run_fuzz_targets_in_crate(path: &Path, opt: &RunCargoFuzz) -> Step {
     fuzz_path.pop();
 
     let cargo_manifest: CargoManifest = toml::from_str(&read_file(path))
-        .unwrap_or_else(|err| panic!("could not parse cargo manifest file {:?}: {}", path, err));
+        .unwrap_or_else(|err| panic!("couldn't parse cargo manifest file {:?}: {}", path, err));
 
     Step::Multiple {
         name: "run cargo-fuzz".to_owned(),
@@ -297,9 +297,9 @@ fn run_completion(completion: &Completion) -> Step {
 fn run_ci() -> Step {
     // parse cmds for ./scripts/xtask from ci.yaml to keep them in sync
     let path_to_ci_yaml = ".github/workflows/ci.yaml";
-    let file = std::fs::File::open(path_to_ci_yaml).expect("could not open file");
+    let file = std::fs::File::open(path_to_ci_yaml).expect("couldn't open file");
     let contents: serde_yaml::Value =
-        serde_yaml::from_reader(file).expect("could not read file contents");
+        serde_yaml::from_reader(file).expect("couldn't read file contents");
     let mut ci_cmds = contents["jobs"]["xtask"]["strategy"]["matrix"]["cmd"]
         .as_sequence()
         .unwrap()

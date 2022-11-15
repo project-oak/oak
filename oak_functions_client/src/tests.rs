@@ -39,12 +39,12 @@ fn test_verify_rekor_log_entry() {
     // Public key of the Rekor instance hosted by sigstore.dev. It is downloaded from https://rekor.sigstore.dev/api/v1/log/publicKey.
     let rekor_pubkey_path = "testdata/rekor_public_key.pem";
 
-    let endorsement_bytes = fs::read(endorsement_path).expect("Couldn't read endorsement file.");
-    let log_entry_bytes = fs::read(log_entry_path).expect("Couldn't read log entry file.");
+    let endorsement_bytes = fs::read(endorsement_path).expect("couldn't read endorsement file");
+    let log_entry_bytes = fs::read(log_entry_path).expect("couldn't read log entry file");
     let rekor_pem_bytes =
-        fs::read(rekor_pubkey_path).expect("Couldn't read Rekor's public key file.");
+        fs::read(rekor_pubkey_path).expect("couldn't read Rekor's public key file");
     let pubkey_pem_bytes =
-        fs::read(pubkey_path).expect("Couldn't read product team's public key file.");
+        fs::read(pubkey_path).expect("couldn't read product team's public key file");
 
     let result = verify_rekor_log_entry(
         &log_entry_bytes,
@@ -58,7 +58,7 @@ fn test_verify_rekor_log_entry() {
 #[test]
 fn test_unmarshal_pem_public_key() {
     let pubkey_path = "testdata/rekor_public_key.pem";
-    let pem_bytes = fs::read(pubkey_path).expect("Couldn't read Rekor's public key file.");
+    let pem_bytes = fs::read(pubkey_path).expect("couldn't read Rekor's public key file");
 
     let key = unmarshal_pem_to_p256_public_key(&pem_bytes);
     assert!(key.is_ok());
@@ -69,8 +69,8 @@ fn test_verify_rekor_signature() {
     let entry_path = "testdata/logentry.json";
     let pubkey_path = "testdata/rekor_public_key.pem";
 
-    let log_entry_bytes = fs::read(entry_path).expect("Couldn't read Rekor log entry.");
-    let pem_bytes = fs::read(pubkey_path).expect("Couldn't read Rekor's public key file.");
+    let log_entry_bytes = fs::read(entry_path).expect("couldn't read Rekor log entry");
+    let pem_bytes = fs::read(pubkey_path).expect("couldn't read Rekor's public key file");
 
     let result = verify_rekor_signature(&log_entry_bytes, &pem_bytes);
 

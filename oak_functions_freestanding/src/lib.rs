@@ -92,7 +92,7 @@ impl schema::TrustedRuntime for RuntimeImplementation {
                 .map_err(|err| {
                     oak_idl::Status::new_with_message(
                         oak_idl::StatusCode::Internal,
-                        format!("could not initialize Wasm handler: {:?}", err),
+                        format!("couldn't initialize Wasm handler: {:?}", err),
                     )
                 })?;
                 let attestation_handler = Box::new(
@@ -103,7 +103,7 @@ impl schema::TrustedRuntime for RuntimeImplementation {
                     .map_err(|err| {
                         oak_idl::Status::new_with_message(
                             oak_idl::StatusCode::Internal,
-                            format!("could not create attestation handler: {:?}", err),
+                            format!("couldn't create attestation handler: {:?}", err),
                         )
                     })?,
                 );

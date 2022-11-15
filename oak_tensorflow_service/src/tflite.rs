@@ -120,7 +120,7 @@ impl TfliteModel {
         log!(Level::Info, "Running TFLite inference");
         let output_buffer_len = self
             .output_buffer_len
-            .context("Running inference on a non-initialized TensorFlow model")?;
+            .context("running inference on a non-initialized TensorFlow model")?;
 
         let input_bytes_len = input_bytes.len();
         let mut output_buffer = vec![0; output_buffer_len];
@@ -140,7 +140,7 @@ impl TfliteModel {
             // Panicing since if the output bytes length is bigger than the output buffer length,
             // then there is a potential for memory corruption and we can't rely on any of the Rust
             // memory safety assumptions.
-            panic!("Output bytes length is bigger than the output buffer length");
+            panic!("output bytes length is bigger than the output buffer length");
         }
     }
 }

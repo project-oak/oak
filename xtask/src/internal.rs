@@ -139,15 +139,15 @@ impl std::str::FromStr for Scope {
                 Some(groups) => {
                     let commits_count = groups
                         .get(1)
-                        .ok_or(format!("Failed to parse commits {}", scope))?
+                        .ok_or(format!("couldn't parse commits {}", scope))?
                         .as_str()
                         .to_string();
                     let count = commits_count
                         .parse::<u8>()
-                        .map_err(|err| format!("Could not parse to u8 {:?}", err))?;
+                        .map_err(|err| format!("couldn't parse to u8 {:?}", err))?;
                     Ok(Self::Commits(count))
                 }
-                None => Err(format!("Failed to parse scope {}", scope)),
+                None => Err(format!("couldn't parse scope {}", scope)),
             },
         }
     }
@@ -191,7 +191,7 @@ impl std::str::FromStr for ServerVariant {
         match variant {
             "base" => Ok(ServerVariant::Base),
             _ => Err(format!(
-                "Failed to parse functions server variant {}",
+                "couldn't parse functions server variant {}",
                 variant
             )),
         }
@@ -658,7 +658,7 @@ pub async fn run_step(context: &Context, step: Step, mut run_status: Status) -> 
                 let mut buf = Vec::new();
                 io.read_to_end(&mut buf)
                     .await
-                    .expect("could not read from future");
+                    .expect("couldn't read from future");
                 buf
             }
 
@@ -673,10 +673,10 @@ pub async fn run_step(context: &Context, step: Step, mut run_status: Status) -> 
 
             let stdout = background_stdout_future
                 .await
-                .expect("could not read stdout");
+                .expect("couldn't read stdout");
             let stderr = background_stderr_future
                 .await
-                .expect("could not read stderr");
+                .expect("couldn't read stderr");
 
             let logs = format_logs(&stdout, &stderr);
 
@@ -809,12 +809,12 @@ impl Runnable for Cmd {
                 .stdout(stdout)
                 .stderr(stderr)
                 .spawn()
-                .unwrap_or_else(|err| panic!("could not spawn command: {:?}: {}", cmd, err));
+                .unwrap_or_else(|err| panic!("couldn't spawn command: {:?}: {}", cmd, err));
 
             if let Some(pid) = child.id() {
                 crate::PROCESSES
                     .lock()
-                    .expect("could not acquire processes lock")
+                    .expect("couldn't acquire processes lock")
                     .push(pid as i32);
             }
 
@@ -832,8 +832,8 @@ pub fn process_gone(raw_pid: i32) -> bool {
         .stdout(std::process::Stdio::null())
         .stderr(std::process::Stdio::null())
         .spawn()
-        .unwrap_or_else(|err| panic!("could not spawn command: {:?}: {}", cmd, err));
-    let output = child.wait().expect("could not get exit status");
+        .unwrap_or_else(|err| panic!("couldn't spawn command: {:?}: {}", cmd, err));
+    let output = child.wait().expect("couldn't get exit status");
     // ps -p has success exit code if the pid exists.
     !output.success()
 }
@@ -883,7 +883,7 @@ impl Running for RunningCmd {
             .child
             .wait_with_output()
             .await
-            .expect("could not get exit status");
+            .expect("couldn't get exit status");
         let logs = format_logs(&output.stdout, &output.stderr);
         if output.status.success() {
             SingleStatusResult {
@@ -904,13 +904,13 @@ fn format_logs(stdout: &[u8], stderr: &[u8]) -> String {
     if !stdout.is_empty() {
         logs += &format!(
             "════╡ stdout ╞════\n{}",
-            std::str::from_utf8(stdout).expect("could not parse stdout as UTF8")
+            std::str::from_utf8(stdout).expect("couldn't parse stdout as UTF8")
         );
     }
     if !stderr.is_empty() {
         logs += &format!(
             "════╡ stderr ╞════\n{}",
-            std::str::from_utf8(stderr).expect("could not parse stderr as UTF8")
+            std::str::from_utf8(stderr).expect("couldn't parse stderr as UTF8")
         );
     }
     logs

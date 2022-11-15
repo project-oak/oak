@@ -41,16 +41,16 @@ fn start_echo_server(mut channel: Box<dyn Channel>) -> ! {
     loop {
         let bytes = {
             let mut bytes: Vec<u8> = vec![0; MESSAGE_SIZE];
-            channel.read(&mut bytes).expect("Couldn't read bytes");
+            channel.read(&mut bytes).expect("couldn't read bytes");
             bytes
         };
-        channel.write(&bytes).expect("Couldn't write bytes");
+        channel.write(&bytes).expect("couldn't write bytes");
     }
 }
 
 #[alloc_error_handler]
 fn out_of_memory(layout: ::core::alloc::Layout) -> ! {
-    panic!("Error allocating memory: {:#?}", layout);
+    panic!("error allocating memory: {:#?}", layout);
 }
 
 #[panic_handler]

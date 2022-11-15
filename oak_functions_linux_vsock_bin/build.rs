@@ -19,5 +19,5 @@ fn main() {
         &["oak_functions_linux_vsock_bin/proto/runtime.proto"],
         &[".."],
     )
-    .expect("Proto compilation failed");
+    .expect("proto compilation failed");
 }

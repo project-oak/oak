@@ -189,15 +189,15 @@ impl<S: PageSize, const N: usize> FrameDeallocator<S> for BitmapAllocator<S, N> 
     unsafe fn deallocate_frame(&mut self, frame: PhysFrame<S>) {
         if let Some(frame_idx) = self.frame_idx(frame) {
             if !self.valid[frame_idx] {
-                panic!("Frame {:?} is not valid in this allocator", frame);
+                panic!("frame {:?} is not valid in this allocator", frame);
             }
             if !self.allocated[frame_idx] {
-                panic!("Frame {:?} was not allocated in this allocator", frame);
+                panic!("frame {:?} was not allocated in this allocator", frame);
             }
             self.allocated.set(frame_idx, false);
         } else {
             panic!(
-                "Can't deallocate frame that's outside our range; our range: {:?}, frame: {:?}",
+                "can't deallocate frame that's outside our range; our range: {:?}, frame: {:?}",
                 self.range, frame
             );
         }

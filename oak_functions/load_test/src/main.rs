@@ -27,7 +27,7 @@ const TOTAL_REQUESTS: usize = 50;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    let mut client = Client::new(URL).await.context("Could not create client")?;
+    let mut client = Client::new(URL).await.context("couldn't create client")?;
 
     let mut latencies_millis = Vec::<f64>::with_capacity(TOTAL_REQUESTS);
 
@@ -36,7 +36,7 @@ async fn main() -> anyhow::Result<()> {
         let response = client
             .invoke(REQUEST)
             .await
-            .context("Could not invoke Oak Functions instance")?;
+            .context("couldn't invoke Oak Functions instance")?;
         let elapsed_millis = start.elapsed().as_millis();
         latencies_millis.push(elapsed_millis as f64);
         println!(

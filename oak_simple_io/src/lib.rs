@@ -85,14 +85,14 @@ impl<'a, A: Allocator> SimpleIo<'a, A> {
         write_address(
             &io_port_factory,
             translate(VirtAddr::from_ptr(output_buffer.as_ptr()))
-                .ok_or("Failed to translate VirtAddr to PhysAddr")?,
+                .ok_or("couldn't translate VirtAddr to PhysAddr")?,
             output.buffer_msb_port,
             output.buffer_lsb_port,
         )?;
         write_address(
             &io_port_factory,
             translate(VirtAddr::from_ptr(input_buffer.as_ptr()))
-                .ok_or("Failed to translate VirtAddr to PhysAddr")?,
+                .ok_or("couldn't translate VirtAddr to PhysAddr")?,
             input.buffer_msb_port,
             input.buffer_lsb_port,
         )?;
@@ -136,7 +136,7 @@ impl<'a, A: Allocator> SimpleIo<'a, A> {
         // implementation. This is probably not recoverable, so panic.
         assert!(
             length <= INPUT_BUFFER_LENGTH,
-            "Invalid simple IO input message length."
+            "invalid simple IO input message length."
         );
         let mut result = VecDeque::with_capacity(length);
         result.extend(&self.input_buffer[..length]);

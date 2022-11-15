@@ -40,7 +40,7 @@ pub fn parse_lookup_entries<B: prost::bytes::Buf>(
     while lookup_data_buffer.has_remaining() {
         let entry =
             oak_functions_abi::proto::Entry::decode_length_delimited(&mut lookup_data_buffer)
-                .context("could not decode entry")?;
+                .context("couldn't decode entry")?;
         entries.insert(entry.key, entry.value);
     }
     Ok(entries)
@@ -52,12 +52,12 @@ fn main() -> anyhow::Result<()> {
 
     // Read lookup data file.
     info!("Checking lookup data file format: {}", opt.file_path);
-    let file = File::open(opt.file_path).context("could not open file")?;
+    let file = File::open(opt.file_path).context("couldn't open file")?;
     let mut reader = BufReader::new(file);
     let mut buffer = Vec::new();
     reader.read_to_end(&mut buffer)?;
     let entries =
-        parse_lookup_entries(&mut buffer.as_ref()).context("could not parse lookup data")?;
+        parse_lookup_entries(&mut buffer.as_ref()).context("couldn't parse lookup data")?;
 
     // Parse lookup data entries.
     debug!("Parsed entries:");
@@ -66,20 +66,20 @@ fn main() -> anyhow::Result<()> {
     for entry in entries {
         if entry.0.len() == LOCATION_SIZE {
             let location = location_from_bytes(&entry.0)
-                .with_context(|| format!("could not parse location {:?}", &entry.0))?;
+                .with_context(|| format!("couldn't parse location {:?}", &entry.0))?;
             weather_locations.insert(entry.0);
 
             debug!("- {{{:?}: {:?}}} # Location", location, entry.1.to_vec());
         } else {
             let cell_id = cell_id_from_bytes(&entry.0)
-                .with_context(|| format!("could not parse cell ID {:?}", &entry.0))?;
+                .with_context(|| format!("couldn't parse cell ID {:?}", &entry.0))?;
             assert_eq!(cell_id.level(), S2_DEFAULT_LEVEL as u64);
 
             let mut locations = vec![];
             for chunk in entry.1.chunks(LOCATION_SIZE) {
                 let location = location_from_bytes(chunk).with_context(|| {
                     format!(
-                        "could not parse location {:?} corresponding to the cell ID {:?}",
+                        "couldn't parse location {:?} corresponding to the cell ID {:?}",
                         chunk, cell_id
                     )
                 })?;
@@ -96,7 +96,7 @@ fn main() -> anyhow::Result<()> {
         let extra_locations: HashSet<_> = weather_locations.difference(&cell_locations).collect();
         if !extra_locations.is_empty() {
             anyhow::bail!(format!(
-                "Locations are not presented in Cell IDs: {:?}",
+                "locations are not presented in Cell IDs: {:?}",
                 extra_locations
             ));
         }
@@ -105,7 +105,7 @@ fn main() -> anyhow::Result<()> {
             cell_locations.difference(&weather_locations).collect();
         if !extra_locations_in_cells.is_empty() {
             anyhow::bail!(format!(
-                "Locations from Cell IDs do not have individual data entries: {:?}",
+                "locations from Cell IDs do not have individual data entries: {:?}",
                 extra_locations
             ));
         }

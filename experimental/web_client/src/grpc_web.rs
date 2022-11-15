@@ -27,13 +27,13 @@ pub async fn grpc_web_unary<A: prost::Message, B: Default + prost::Message>(
     uri: &str,
     message: A,
 ) -> anyhow::Result<B> {
-    let request_bytes = encode_body(message).context("failed to encode message")?;
+    let request_bytes = encode_body(message).context("couldn't encode message")?;
     let response_bytes = send(uri, request_bytes)
         .await
-        .context("failed to send message")?;
+        .context("couldn't send message")?;
     let reply = decode_body::<B>(response_bytes)
         .await
-        .context("failed to decode message")?;
+        .context("couldn't decode message")?;
     Ok(reply)
 }
 
@@ -50,10 +50,10 @@ async fn send(uri: &str, request_bytes: bytes::Bytes) -> anyhow::Result<bytes::B
         .body(request_bytes)
         .send()
         .await
-        .map_err(|error| anyhow!("Couldn't get response {:?}", error))?
+        .map_err(|error| anyhow!("couldn't get response {:?}", error))?
         .bytes()
         .await
-        .map_err(|error| anyhow!("Couldn't get response bytes {:?}", error))?;
+        .map_err(|error| anyhow!("couldn't get response bytes {:?}", error))?;
     Ok(response)
 }
 
@@ -74,7 +74,7 @@ where
 
     // write the message
     msg.encode(&mut buf)
-        .map_err(|error| anyhow!("Couldn't encode message {:?}", error))?;
+        .map_err(|error| anyhow!("couldn't encode message {:?}", error))?;
 
     // now we know the size of encoded message and can write the
     // header
@@ -101,7 +101,7 @@ where
 
     let len = body.get_u32();
     let msg = T::decode(&mut body.split_to(len as usize))
-        .map_err(|error| anyhow!("Couldn't decode message {:?}", error))?;
+        .map_err(|error| anyhow!("couldn't decode message {:?}", error))?;
 
     Ok(msg)
 }

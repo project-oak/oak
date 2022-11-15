@@ -47,7 +47,7 @@ lazy_static! {
             PortFactoryWrapper::new_raw()
         };
         let mut port = unsafe { SerialPort::new(COM1_BASE, factory) };
-        port.init().expect("Couldn't initialize serial port");
+        port.init().expect("couldn't initialize serial port");
         Spinlock::new(port)
     };
 }

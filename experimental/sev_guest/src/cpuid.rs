@@ -94,10 +94,10 @@ impl CpuidPage {
     /// all zero.
     pub fn validate(&self) -> Result<(), &'static str> {
         if self.count as usize > CPUID_COUNT_MAX {
-            return Err("Invalid count");
+            return Err("invalid count");
         }
         if self._reserved.iter().any(|&value| value != 0) {
-            return Err("Nonzero value in _reserved");
+            return Err("nonzero value in _reserved");
         }
         Ok(())
     }

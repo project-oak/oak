@@ -83,7 +83,7 @@ where
                     break;
                 } else {
                     anyhow::bail!(
-                        "Invalid response to connection request: {}",
+                        "invalid response to connection request: {}",
                         packet.get_op()?
                     );
                 }
@@ -128,7 +128,7 @@ where
                     peer_buffer_size = packet.get_buf_alloc();
                     break;
                 } else {
-                    anyhow::bail!("Invalid connection request: {}", packet.get_op()?);
+                    anyhow::bail!("invalid connection request: {}", packet.get_op()?);
                 }
             }
         }
@@ -202,7 +202,7 @@ where
                 self.config.host_port,
                 VSockOp::Shutdown,
             )
-            .expect("Could not create control packet.");
+            .expect("couldn't create control packet");
             // Notify the host that we will not send or receive any more data packets.
             packet.set_flags(VSockFlags::all());
             self.config.vsock.write_packet(&mut packet);
@@ -230,19 +230,19 @@ where
         // For now we panic if we are disconnected.
         assert!(
             self.connection_state == ConnectionState::Connected,
-            "Stream disconnected."
+            "stream disconnected"
         );
         let data_len = data.len();
         assert!(
             data_len <= MAX_PAYLOAD_SIZE,
-            "The data is too large for a single packet. Len: {}, Max: {}",
+            "the data is too large for a single packet - len: {}, max: {}",
             data.len(),
             MAX_PAYLOAD_SIZE
         );
 
         let data_len = Wrapping(data_len as u32);
         if data_len > self.peer_buffer_size - (self.sent_bytes - self.peer_processed_bytes) {
-            anyhow::bail!("Peer's stream buffer is full.");
+            anyhow::bail!("peer's stream buffer is full");
         }
 
         self.sent_bytes += data_len;
@@ -264,7 +264,7 @@ where
         // For now we panic if we are disconnected.
         assert!(
             self.connection_state == ConnectionState::Connected,
-            "Stream disconnected."
+            "stream disconnected"
         );
         let src_port = self.config.host_port;
         let dst_port = self.config.local_port;
@@ -276,17 +276,17 @@ where
             self.peer_buffer_size = Wrapping(packet.get_buf_alloc());
             self.peer_processed_bytes = Wrapping(packet.get_fwd_cnt());
             // For now we panic if we receive an invalid op.
-            match packet.get_op().expect("Invalid packet received on stream.") {
+            match packet.get_op().expect("invalid packet received on stream") {
                 VSockOp::CreditRequest => {
                     self.send_control_packet(VSockOp::CreditUpdate)
-                        .expect("Could not create control packet.");
+                        .expect("couldn't create control packet");
                 }
                 VSockOp::CreditUpdate => {
                     // We already updated our flow-control tracking data, so do nothing.
                 }
                 VSockOp::Request | VSockOp::Response => {
                     // For now we panic if we receive an invalid op.
-                    panic!("Invalid packet received on stream.");
+                    panic!("invalid packet received on stream");
                 }
                 VSockOp::Rst => {
                     self.connection_state = ConnectionState::Disconnected;
@@ -294,7 +294,7 @@ where
                 }
                 VSockOp::Shutdown => {
                     self.send_control_packet(VSockOp::Rst)
-                        .expect("Could not create control packet.");
+                        .expect("couldn't create control packet");
                     self.connection_state = ConnectionState::Disconnected;
                     return None;
                 }
@@ -348,7 +348,7 @@ where
 
         if self.must_send_credit_update() {
             self.send_control_packet(VSockOp::CreditUpdate)
-                .map_err(|error| anyhow::anyhow!("Could not create control packet: {:?}", error))?;
+                .map_err(|error| anyhow::anyhow!("couldn't create control packet: {:?}", error))?;
         }
 
         Ok(())

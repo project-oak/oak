@@ -80,11 +80,11 @@ impl AeadEncryptor {
     /// Encrypts `data` using `AeadEncryptor::encryption_key`.
     pub fn encrypt(&mut self, data: &[u8]) -> anyhow::Result<EncryptedData> {
         // Generate a random nonce.
-        let nonce = Self::generate_nonce().context("Couldn't generate nonce")?;
+        let nonce = Self::generate_nonce().context("couldn't generate nonce")?;
 
         // Bind [`AeadEncryptor::key`] to a `nonce`.
         let unbound_sealing_key = aead::UnboundKey::new(AEAD_ALGORITHM, &self.encryption_key.0)
-            .map_err(|error| anyhow!("Couldn't create sealing key: {:?}", error))?;
+            .map_err(|error| anyhow!("couldn't create sealing key: {:?}", error))?;
         let mut sealing_key =
             ring::aead::SealingKey::new(unbound_sealing_key, OneNonceSequence::new(nonce));
 
@@ -96,7 +96,7 @@ impl AeadEncryptor {
             // And the nonce is authenticated by the AEAD algorithm itself.
             // https://datatracker.ietf.org/doc/html/rfc5116#section-2.1
             .seal_in_place_append_tag(aead::Aad::empty(), &mut encrypted_data)
-            .map_err(|error| anyhow!("Couldn't encrypt data: {:?}", error))?;
+            .map_err(|error| anyhow!("couldn't encrypt data: {:?}", error))?;
 
         Ok(EncryptedData::new(nonce, encrypted_data))
     }
@@ -119,7 +119,7 @@ impl AeadEncryptor {
             // And the nonce is authenticated by the AEAD algorithm itself.
             // https://datatracker.ietf.org/doc/html/rfc5116#section-2.1
             .open_in_place(aead::Aad::empty(), &mut decrypted_data)
-            .map_err(|error| anyhow!("Couldn't decrypt data: {:?}", error))?;
+            .map_err(|error| anyhow!("couldn't decrypt data: {:?}", error))?;
         Ok(decrypted_data.to_vec())
     }
 
@@ -158,7 +158,7 @@ impl KeyNegotiator {
     pub fn create(type_: KeyNegotiatorType) -> anyhow::Result<Self> {
         let rng = ring::rand::SystemRandom::new();
         let private_key = agreement::EphemeralPrivateKey::generate(KEY_AGREEMENT_ALGORITHM, &rng)
-            .map_err(|error| anyhow!("Couldn't generate private key: {:?}", error))?;
+            .map_err(|error| anyhow!("couldn't generate private key: {:?}", error))?;
         Ok(Self { type_, private_key })
     }
 
@@ -166,7 +166,7 @@ impl KeyNegotiator {
         let public_key = self
             .private_key
             .compute_public_key()
-            .map_err(|error| anyhow!("Couldn't get public key: {:?}", error))?
+            .map_err(|error| anyhow!("couldn't get public key: {:?}", error))?
             .as_ref()
             .to_vec();
         public_key
@@ -174,7 +174,7 @@ impl KeyNegotiator {
             .try_into()
             .map_err(anyhow::Error::msg)
             .context(format!(
-                "Incorrect public key length, expected {}, found {}",
+                "incorrect public key length, expected {}, found {}",
                 KEY_AGREEMENT_ALGORITHM_KEY_LENGTH,
                 public_key.len()
             ))
@@ -196,7 +196,7 @@ impl KeyNegotiator {
     ) -> anyhow::Result<AeadEncryptor> {
         let (encryption_key, decryption_key) = self
             .derive_session_keys(peer_public_key)
-            .context("Couldn't derive session keys")?;
+            .context("couldn't derive session keys")?;
         let encryptor = AeadEncryptor::new(encryption_key, decryption_key);
         Ok(encryptor)
     }
@@ -208,17 +208,17 @@ impl KeyNegotiator {
         peer_public_key: &[u8; KEY_AGREEMENT_ALGORITHM_KEY_LENGTH],
     ) -> anyhow::Result<(EncryptionKey, DecryptionKey)> {
         let type_ = self.type_.clone();
-        let self_public_key = self.public_key().context("Couldn't get self public key")?;
+        let self_public_key = self.public_key().context("couldn't get self public key")?;
         agreement::agree_ephemeral(
             self.private_key,
             &agreement::UnparsedPublicKey::new(KEY_AGREEMENT_ALGORITHM, peer_public_key),
-            anyhow!("Couldn't derive session keys"),
+            anyhow!("couldn't derive session keys"),
             |key_material| -> anyhow::Result<(EncryptionKey, DecryptionKey)> {
                 let key_material = key_material
                     .try_into()
                     .map_err(anyhow::Error::msg)
                     .context(format!(
-                        "Incorrect key material length, expected {}, found {}",
+                        "incorrect key material length, expected {}, found {}",
                         KEY_AGREEMENT_ALGORITHM_KEY_LENGTH,
                         key_material.len()
                     ))?;
@@ -233,7 +233,7 @@ impl KeyNegotiator {
                                 &self_public_key,
                                 &peer_public_key,
                             )
-                            .context("Couldn't derive decryption key")?,
+                            .context("couldn't derive decryption key")?,
                         );
                         let decryption_key = DecryptionKey(
                             Self::key_derivation_function(
@@ -242,7 +242,7 @@ impl KeyNegotiator {
                                 &self_public_key,
                                 &peer_public_key,
                             )
-                            .context("Couldn't derive encryption key")?,
+                            .context("couldn't derive encryption key")?,
                         );
                         Ok((encryption_key, decryption_key))
                     }
@@ -255,7 +255,7 @@ impl KeyNegotiator {
                                 &peer_public_key,
                                 &self_public_key,
                             )
-                            .context("Couldn't derive decryption key")?,
+                            .context("couldn't derive decryption key")?,
                         );
                         let decryption_key = DecryptionKey(
                             Self::key_derivation_function(
@@ -264,7 +264,7 @@ impl KeyNegotiator {
                                 &peer_public_key,
                                 &self_public_key,
                             )
-                            .context("Couldn't derive encryption key")?,
+                            .context("couldn't derive encryption key")?,
                         );
                         Ok((encryption_key, decryption_key))
                     }
@@ -272,7 +272,7 @@ impl KeyNegotiator {
             },
         )
         .map_err(anyhow::Error::msg)
-        .context("Couldn't derive session keys")
+        .context("couldn't derive session keys")
     }
 
     /// Derives a session key from `key_material` using HKDF.
@@ -300,12 +300,12 @@ impl KeyNegotiator {
         let mut session_key: [u8; AEAD_ALGORITHM_KEY_LENGTH] = Default::default();
         let output_key_material = kdf
             .expand(&info, AEAD_ALGORITHM)
-            .map_err(|error| anyhow!("Couldn't run HKDF-Expand operation : {:?}", error))?;
+            .map_err(|error| anyhow!("couldn't run HKDF-Expand operation : {:?}", error))?;
         output_key_material
             .fill(&mut session_key)
             .map_err(|error| {
                 anyhow!(
-                    "Couldn't get the output of the HKDF-Expand operation: {:?}",
+                    "couldn't get the output of the HKDF-Expand operation: {:?}",
                     error
                 )
             })?;
@@ -322,9 +322,9 @@ impl Signer {
     pub fn create() -> anyhow::Result<Self> {
         let rng = ring::rand::SystemRandom::new();
         let key_pair_pkcs8 = EcdsaKeyPair::generate_pkcs8(SIGNING_ALGORITHM, &rng)
-            .map_err(|error| anyhow!("Couldn't generate PKCS#8 key pair: {:?}", error))?;
+            .map_err(|error| anyhow!("couldn't generate PKCS#8 key pair: {:?}", error))?;
         let key_pair = EcdsaKeyPair::from_pkcs8(SIGNING_ALGORITHM, key_pair_pkcs8.as_ref())
-            .map_err(|error| anyhow!("Couldn't parse generated key pair: {:?}", error))?;
+            .map_err(|error| anyhow!("couldn't parse generated key pair: {:?}", error))?;
 
         Ok(Self { key_pair })
     }
@@ -336,7 +336,7 @@ impl Signer {
             .try_into()
             .map_err(anyhow::Error::msg)
             .context(format!(
-                "Incorrect public key length, expected {}, found {}",
+                "incorrect public key length, expected {}, found {}",
                 SIGNING_ALGORITHM_KEY_LENGTH,
                 public_key.len()
             ))
@@ -347,7 +347,7 @@ impl Signer {
         let signature = self
             .key_pair
             .sign(&rng, input)
-            .map_err(|error| anyhow!("Couldn't sign input: {:?}", error))?
+            .map_err(|error| anyhow!("couldn't sign input: {:?}", error))?
             .as_ref()
             .to_vec();
         signature
@@ -355,7 +355,7 @@ impl Signer {
             .try_into()
             .map_err(anyhow::Error::msg)
             .context(format!(
-                "Incorrect signature length, expected {}, found {}",
+                "incorrect signature length, expected {}, found {}",
                 SIGNATURE_LENGTH,
                 signature.len()
             ))
@@ -379,7 +379,7 @@ impl SignatureVerifier {
             ring::signature::UnparsedPublicKey::new(VERIFICATION_ALGORITHM, &self.public_key_bytes);
         public_key
             .verify(input, signature)
-            .map_err(|error| anyhow!("Signature verification failed: {:?}", error))?;
+            .map_err(|error| anyhow!("signature verification failed: {:?}", error))?;
         Ok(())
     }
 }
@@ -389,7 +389,7 @@ pub fn get_sha256(input: &[u8]) -> [u8; SHA256_HASH_LENGTH] {
     digest(&SHA256, input)
         .as_ref()
         .try_into()
-        .expect("Incorrect SHA-256 hash length")
+        .expect("incorrect SHA-256 hash length")
 }
 
 /// Generates a random vector of `size` bytes.
@@ -397,6 +397,6 @@ pub fn get_random<const L: usize>() -> anyhow::Result<[u8; L]> {
     let mut result: [u8; L] = [Default::default(); L];
     let rng = SystemRandom::new();
     rng.fill(&mut result[..])
-        .map_err(|error| anyhow!("Couldn't create random value: {:?}", error))?;
+        .map_err(|error| anyhow!("couldn't create random value: {:?}", error))?;
     Ok(result)
 }

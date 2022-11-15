@@ -21,10 +21,10 @@ use std::{
 };
 
 pub fn read_file(path: &Path) -> String {
-    let mut file = std::fs::File::open(path).expect("could not open file");
+    let mut file = std::fs::File::open(path).expect("couldn't open file");
     let mut contents = String::new();
     file.read_to_string(&mut contents)
-        .expect("could not read file contents");
+        .expect("couldn't read file contents");
     contents
 }
 
@@ -40,7 +40,7 @@ pub fn source_files() -> impl Iterator<Item = PathBuf> {
 
 pub fn file_contains(path: &Path, pattern: &str) -> bool {
     if path.is_file() {
-        let mut file = std::fs::File::open(path).expect("could not open file");
+        let mut file = std::fs::File::open(path).expect("couldn't open file");
         let mut contents = String::new();
         // Content may be non-UTF-8, in which case we just return false.
         if file.read_to_string(&mut contents).is_ok() {
@@ -166,7 +166,7 @@ pub fn is_typescript_file(path: &Path) -> bool {
 
 pub fn is_shell_script(path: &Path) -> bool {
     if path.is_file() {
-        let mut file = std::fs::File::open(path).expect("could not open file");
+        let mut file = std::fs::File::open(path).expect("couldn't open file");
         let mut contents = String::new();
         match file.read_to_string(&mut contents) {
             Ok(_size) => contents.starts_with("#!"),

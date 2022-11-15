@@ -130,7 +130,7 @@ pub fn start_kernel(info: &BootParams) -> Box<dyn Channel> {
             // when SEV-SNP is active. Panicking is OK at this point, because these pages are
             // required to support the full features and we don't want to run without them.
             init_snp_pages(
-                snp_pages.expect("Missing SNP CPUID and secrets pages."),
+                snp_pages.expect("missing SNP CPUID and secrets pages"),
                 &mapper,
             );
             snp::init_guest_message_encryptor();
@@ -155,7 +155,7 @@ pub fn start_kernel(info: &BootParams) -> Box<dyn Channel> {
         // TODO(#3414): Use the GHCB protocol when it is available.
         for frame in guest_host_frames {
             change_snp_state_for_frame(&frame, PageAssignment::Shared)
-                .expect("Could not change SNP state for frame.");
+                .expect("couldn't change SNP state for frame");
         }
     }
 
@@ -166,11 +166,11 @@ pub fn start_kernel(info: &BootParams) -> Box<dyn Channel> {
         .set(unsafe { memory::init_guest_host_heap(guest_host_pages, &mut mapper) }.unwrap())
         .is_err()
     {
-        panic!("Could not initialize the guest-host heap.");
+        panic!("couldn't initialize the guest-host heap");
     }
 
     if ADDRESS_TRANSLATOR.set(mapper).is_err() {
-        panic!("Could not initialize the address translator.");
+        panic!("couldn't initialize the address translator");
     }
     let mapper = ADDRESS_TRANSLATOR.get().unwrap();
 
@@ -190,9 +190,9 @@ pub fn start_kernel(info: &BootParams) -> Box<dyn Channel> {
         // For now we just generate a sample attestation report and log the value.
         // TODO(#2842): Use attestation report in attestation behaviour.
         let report =
-            attestation::get_attestation([42; 64]).expect("Couldn't generate attestation report.");
+            attestation::get_attestation([42; 64]).expect("couldn't generate attestation report");
         info!("Attestation: {:?}", report);
-        report.validate().expect("Attestation report is invalid");
+        report.validate().expect("attestation report is invalid");
     }
 
     get_channel(

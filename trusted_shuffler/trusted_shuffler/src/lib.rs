@@ -165,7 +165,7 @@ impl TrustedShuffler {
             let mut requests_to_shuffle = self
                 .requests_to_shuffle
                 .lock()
-                .map_err(|error| anyhow!("Couldn't lock current messages mutex: {:?}", error))?;
+                .map_err(|error| anyhow!("couldn't lock current messages mutex: {:?}", error))?;
 
             let request = RequestMessage {
                 index: requests_to_shuffle.len(),
@@ -192,7 +192,7 @@ impl TrustedShuffler {
             }
         }
 
-        response_receiver.await.context("Couldn't receive response")
+        response_receiver.await.context("couldn't receive response")
     }
 
     // Lexicographically sorts requests and sends them to the backend using the
@@ -239,7 +239,7 @@ impl TrustedShuffler {
             .await
             .into_iter()
             .collect::<Result<Vec<_>, _>>()
-            .context("Couldn't send responses")?;
+            .context("couldn't send responses")?;
 
         Self::shuffle_responses(responses)
     }
@@ -259,7 +259,7 @@ impl TrustedShuffler {
                  }| {
                     response_sender
                         .send(data)
-                        .map_err(|_data| anyhow!("Couldn't send response"))
+                        .map_err(|_data| anyhow!("couldn't send response"))
                 },
             )
             .collect::<Result<Vec<_>, _>>()
