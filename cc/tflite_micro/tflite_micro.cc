@@ -46,6 +46,8 @@ int tflite_init(
     const uint8_t* model_bytes_ptr, size_t model_bytes_len,
     uint8_t* tensor_arena_bytes_ptr, size_t tensor_arena_bytes_len,
     size_t* output_buffer_len_ptr) {
+  MicroPrintf("Running tflite_init");
+
   if (!model_bytes_ptr
     || !model_bytes_len
     || !tensor_arena_bytes_ptr
@@ -99,12 +101,15 @@ int tflite_init(
   // which will be passed in at tflite_run(..., output_bytes_ptr, ...).
   *output_buffer_len_ptr = output_size;
 
+  MicroPrintf("tflite_init success");
   return 0;
 }
 
 int tflite_run(
     const uint8_t* input_bytes_ptr, size_t input_bytes_len,
-    uint8_t* output_bytes_ptr, size_t* output_bytes_len_ptr) { 
+    uint8_t* output_bytes_ptr, size_t* output_bytes_len_ptr) {
+  MicroPrintf("Running tflite_run");
+
   if (!input_bytes_ptr
     || !input_bytes_len
     || !output_bytes_ptr
@@ -141,5 +146,6 @@ int tflite_run(
 
   *output_bytes_len_ptr = output_size;
 
+  MicroPrintf("tflite_run success");
   return 0;
 }

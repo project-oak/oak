@@ -26,11 +26,11 @@ pub unsafe extern "C" fn oak_log_debug(message_ptr: *const core::ffi::c_char, me
     let message_bytes =
         unsafe { alloc::slice::from_raw_parts(message_ptr as *const u8, message_len) };
     if let Ok(message_string) = core::str::from_utf8(message_bytes) {
-        log!(Level::Debug, "{}", message_string);
+        log!(Level::Debug, "tflite_micro: {}", message_string);
     } else {
         log!(
             Level::Debug,
-            "Couldn't parse a UTF-8 string: {:?}",
+            "tflite_micro: Couldn't parse a UTF-8 string: {:?}",
             message_bytes
         );
     }
@@ -98,7 +98,8 @@ impl TfliteModel {
         let model_bytes_len = model_bytes.len();
         let tensor_arena_len = self.tensor_arena.len();
         let mut output_buffer_len = 0usize;
-        let _ = unsafe {
+
+        let result_code = unsafe {
             tflite_init(
                 model_bytes.as_ptr(),
                 model_bytes_len,
@@ -107,13 +108,16 @@ impl TfliteModel {
                 &mut output_buffer_len,
             )
         };
-        self.output_buffer_len = Some(output_buffer_len);
-
-        log!(
-            Level::Info,
-            "TFLite model has been successfully initialized"
-        );
-        Ok(())
+        if result_code == 0 {
+            self.output_buffer_len = Some(output_buffer_len);
+            log!(
+                Level::Info,
+                "TFLite model has been successfully initialized"
+            );
+            Ok(())
+        } else {
+            Err(anyhow!("Failed to initialize TFLite model, code: {}", result_code))
+        }
     }
 
     pub fn run(&mut self, input_bytes: &[u8]) -> anyhow::Result<Vec<u8>> {
@@ -125,7 +129,8 @@ impl TfliteModel {
         let input_bytes_len = input_bytes.len();
         let mut output_buffer = vec![0; output_buffer_len];
         let mut output_bytes_len = 0usize;
-        let _ = unsafe {
+
+        let result_code = unsafe {
             tflite_run(
                 input_bytes.as_ptr(),
                 input_bytes_len,
@@ -133,14 +138,18 @@ impl TfliteModel {
                 &mut output_bytes_len,
             )
         };
-        if output_bytes_len <= output_buffer_len {
-            log!(Level::Info, "TFLite inference has run successfully");
-            Ok(output_buffer[..output_bytes_len].to_vec())
+        if result_code == 0 {
+            if output_bytes_len <= output_buffer_len {
+                log!(Level::Info, "TFLite inference has run successfully");
+                Ok(output_buffer[..output_bytes_len].to_vec())
+            } else {
+                // Panicking since if the output bytes length is bigger than the output buffer
+                // length, then there is a potential for memory corruption and we can't rely on any
+                // of the Rust memory safety assumptions.
+                panic!("Output bytes length is bigger than the output buffer length");
+            }
         } else {
-            // Panicing since if the output bytes length is bigger than the output buffer length,
-            // then there is a potential for memory corruption and we can't rely on any of the Rust
-            // memory safety assumptions.
-            panic!("output bytes length is bigger than the output buffer length");
+            Err(anyhow!("Failed to run TFLite inference, code: {}", result_code))
         }
     }
 }
