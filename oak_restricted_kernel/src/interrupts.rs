@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-use crate::shutdown;
+use crate::{shutdown, snp::CPUID_PAGE};
 use core::{arch::asm, ops::Deref};
 use lazy_static::lazy_static;
 use log::error;
@@ -134,15 +134,40 @@ mutable_interrupt_handler_with_error_code!(
     ) {
         match error_code {
             0x72 => {
-                if stack_frame.rcx != 0 {
-                    error!("KERNEL PANIC: CPUID SUB-LEAF REQUESTED");
-                    error!("Instruction pointer: {:#016x}", stack_frame.rip.as_u64());
-                    error!("RAX: {:#016x}", stack_frame.rax);
-                    error!("RCX: {:#016x}", stack_frame.rcx);
-                    shutdown::shutdown();
+                if let Some(cpuid_page) = CPUID_PAGE.get() {
+                    let target = stack_frame.into();
+                    let count = cpuid_page.count as usize;
+                    if let Some(found) = cpuid_page.cpuid_data[0..count]
+                        .iter()
+                        .find(|item| item.input == target)
+                    {
+                        stack_frame.rax = found.output.eax as u64;
+                        stack_frame.rbx = found.output.ebx as u64;
+                        stack_frame.rcx = found.output.ecx as u64;
+                        stack_frame.rdx = found.output.edx as u64;
+                    } else {
+                        // For now we just log the error so that we can see when this happens.
+                        // TODO(#3470): Improve handling of incorrect/missing CPUID requests.
+                        error!("KERNEL PANIC: REQUESTED CPUID NOT PRESENT IN CPUID PAGE");
+                        error!("Instruction pointer: {:#016x}", stack_frame.rip.as_u64());
+                        error!("RAX: {:#016x}", stack_frame.rax);
+                        error!("RCX: {:#016x}", stack_frame.rcx);
+                        shutdown::shutdown();
+                    }
+                } else {
+                    let leaf = stack_frame.rax as u32;
+                    // The MSR protocol does not support sub-leaf requests or leaf 0x0000_000D.
+                    // See section 2.3.1 in <https://developer.amd.com/wp-content/resources/56421.pdf>
+                    // TODO(#3470): Improve handling of incorrect/missing CPUID requests.
+                    if stack_frame.rcx != 0 || leaf == 0x0000_000D {
+                        error!("KERNEL PANIC: CPUID SUB-LEAF OR INVALID LEAD REQUESTED");
+                        error!("Instruction pointer: {:#016x}", stack_frame.rip.as_u64());
+                        error!("RAX: {:#016x}", stack_frame.rax);
+                        error!("RCX: {:#016x}", stack_frame.rcx);
+                        shutdown::shutdown();
+                    }
+                    get_cpuid_for_vc_exception(leaf, stack_frame).expect("error reading CPUID");
                 }
-                let leaf = stack_frame.rax as u32;
-                get_cpuid_for_vc_exception(leaf, stack_frame).expect("error reading CPUID");
                 // CPUID instruction is 2 bytes long, so we advance the instruction pointer by 2.
                 stack_frame.rip += 2u64;
             }
