@@ -52,11 +52,11 @@ impl Args {
 pub fn init_args(args: &CStr) -> core::result::Result<Args, &str> {
     let args = args
         .to_str()
-        .map_err(|core::str::Utf8Error { .. }| "Kernel arguments are not valid UTF-8")?;
+        .map_err(|core::str::Utf8Error { .. }| "kernel arguments are not valid UTF-8")?;
     // Safety: this is called once early in the initialization process from a single thread, so
     // there will not be any concurrent writes.
     unsafe { ARGS.try_push_str(args) }
-        .map_err(|arrayvec::CapacityError { .. }| "Kernel arguments too long")?;
+        .map_err(|arrayvec::CapacityError { .. }| "kernel arguments too long")?;
     // Safety: we've just populated ARGS, successfully, in the line just above.
     Ok(Args {
         args: LazyCell::new(|| split_args(unsafe { ARGS.as_str() })),

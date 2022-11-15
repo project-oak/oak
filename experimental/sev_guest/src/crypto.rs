@@ -63,7 +63,7 @@ impl GuestMessageEncryptor {
         initial_sequence_number: u64,
     ) -> Result<Self, &'static str> {
         Ok(Self {
-            cipher: Aes256Gcm::new_from_slice(key).map_err(|_| "Invalid key length")?,
+            cipher: Aes256Gcm::new_from_slice(key).map_err(|_| "invalid key length")?,
             sequence_number: initial_sequence_number,
         })
     }
@@ -94,7 +94,7 @@ impl GuestMessageEncryptor {
         let auth_tag = self
             .cipher
             .encrypt_in_place_detached(nonce, associated_data, buffer)
-            .map_err(|aes_gcm::Error| "Message encryption failed")?;
+            .map_err(|aes_gcm::Error| "message encryption failed")?;
         // Only write the payload once we are sure the encryption succeeded.
         destination.payload[0..message_size].copy_from_slice(buffer);
         destination.header.auth_tag[0..auth_tag.len()].copy_from_slice(auth_tag.as_slice());
@@ -134,7 +134,7 @@ impl GuestMessageEncryptor {
         let tag = Tag::from_slice(&source.header.auth_tag[0..size_of::<Tag>()]);
         self.cipher
             .decrypt_in_place_detached(nonce, associated_data, buffer, tag)
-            .map_err(|aes_gcm::Error| "Couldn't decrypt message")?;
+            .map_err(|aes_gcm::Error| "couldn't decrypt message")?;
         self.sequence_number += 1;
         Ok(result)
     }

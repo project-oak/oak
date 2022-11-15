@@ -248,7 +248,7 @@ impl TryFrom<u64> for PreferredGhcbGpaResponse {
     fn try_from(msr_value: u64) -> Result<Self, &'static str> {
         const PREFERRED_GPA_RESPONSE_INFO: u64 = 0x011;
         if msr_value & GHCB_INFO_MASK != PREFERRED_GPA_RESPONSE_INFO {
-            return Err("Vvlue is not a valid preferred GHCP GPA response");
+            return Err("value is not a valid preferred GHCP GPA response");
         }
         let ghcb_gpa = (msr_value & GCHP_DATA_MASK) as usize;
         Ok(Self { ghcb_gpa })

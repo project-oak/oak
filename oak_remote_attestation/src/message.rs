@@ -474,7 +474,7 @@ fn get_vec(source: &mut &[u8]) -> anyhow::Result<Vec<u8>> {
     let length = source.get_u64_le();
     if length > source.remaining() as u64 {
         bail!(
-            "nvalid vector serialization: required length is {} but only {} bytes provided",
+            "invalid vector serialization: required length is {} but only {} bytes provided",
             length,
             source.remaining()
         )
