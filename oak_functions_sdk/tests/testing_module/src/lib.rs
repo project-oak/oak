@@ -21,34 +21,34 @@ use oak_functions_abi::{TestingRequest, TestingResponse};
 #[cfg_attr(not(test), no_mangle)]
 pub extern "C" fn main() {
     // Read the message to echo from the request.
-    let request = oak_functions_sdk::read_request().expect("failed to read request body");
-    let request = String::from_utf8(request).expect("failed to parse request");
+    let request = oak_functions_sdk::read_request().expect("couldn't read request body");
+    let request = String::from_utf8(request).expect("couldn't parse request");
 
     match request.as_str() {
         "ECHO" => {
             // Serialize a EchoRequest. Note that the message to echo is the request itself.
             let echo_request = bincode::serialize(&TestingRequest::Echo(request))
-                .expect("failed to serialize testing message");
+                .expect("couldn't serialize testing message");
             // We invoke the Testing extension with an EchoRequest.
             let serialized_echo_response =
-                oak_functions_sdk::testing(&echo_request).expect("failed to invoke testing");
+                oak_functions_sdk::testing(&echo_request).expect("couldn't invoke testing");
 
             let echo_response = bincode::deserialize(&serialized_echo_response)
-                .expect("failed to deserialize testing message");
+                .expect("couldn't deserialize testing message");
 
             let TestingResponse::Echo(response_body) = echo_response;
 
             oak_functions_sdk::write_response(response_body.as_bytes())
-                .expect("failed to write response body");
+                .expect("couldn't write response body");
         }
         "BLACKHOLE" => {
             // Keep in sync with test_blackhole in
             // `workspace/oak_functions/sdk/oak_functions/tests/integration_test.rs`.
             let blackhole_request = bincode::serialize(&TestingRequest::Blackhole(request))
-                .expect("failed to serialize testing message");
+                .expect("couldn't serialize testing message");
 
             let blackhole_response =
-                oak_functions_sdk::testing(&blackhole_request).expect("failed to invoke testing");
+                oak_functions_sdk::testing(&blackhole_request).expect("couldn't invoke testing");
             // We expect an empty response, because blackhole does not give back a result.
             assert!(blackhole_response.is_empty());
 
@@ -56,7 +56,7 @@ pub extern "C" fn main() {
             // us to distinguish from a failure in the Wasm module, where also an
             // empty response would be sent.
             oak_functions_sdk::write_response("Blackholed".as_bytes())
-                .expect("failed to write response body");
+                .expect("couldn't write response body");
         }
         _ => panic!("request not recognized"),
     }

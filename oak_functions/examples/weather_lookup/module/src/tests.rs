@@ -80,14 +80,9 @@ async fn test_server() {
         // A bit further from key_0.
         let response = make_request(server_port, br#"{"lat":51.4,"lng":-0.6}"#).await;
         assert_eq!(
-        <<<<<<< HEAD
-                    r#"could not find location within cutoff"#,
-                    std::str::from_utf8(&response).unwrap()
-        =======
-                    r#"couldn't find location within cutoff"#,
-                    std::str::from_utf8(response.body().unwrap()).unwrap()
-        >>>>>>> e16cb33c (Make errors more consistent)
-                );
+            r#"couldn't find location within cutoff"#,
+            std::str::from_utf8(&response).unwrap()
+        );
     }
     {
         // Close to key_1.

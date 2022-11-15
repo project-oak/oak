@@ -217,7 +217,7 @@ pub fn verify_rekor_signature(
         &signature_bundle.canonicalized,
         pem_encoded_public_key_bytes,
     )
-    .context("failed to verify signedEntryTimestamp of the Rekor LogEntry")
+    .context("couldn't verify signedEntryTimestamp of the Rekor LogEntry")
 }
 
 /// Verifies the signature in the `body` over the `contents_bytes`, using the public key in
@@ -258,7 +258,7 @@ pub fn verify_rekor_body(
     // Check that the public key in the body matches the given public key. This in fact checks the
     // consistency of the Rekor LogEntry, and we expect these public keys to always be the same.
     let public_key_bytes = base64::decode(body.spec.signature.public_key.content.as_bytes())
-        .expect("failed to base64-decode the public key bytes in the Rekor LogEntry body");
+        .expect("couldn't base64-decode the public key bytes in the Rekor LogEntry body");
     if compare_keys(&public_key_bytes, pem_encoded_public_key_bytes)? != Ordering::Equal {
         anyhow::bail!(
             "the given public key is different from the public key in the rekor entry: {:?} vs. {:?}",
@@ -272,7 +272,7 @@ pub fn verify_rekor_body(
         contents_bytes,
         pem_encoded_public_key_bytes,
     )
-    .context("failed to verify signature over the endorsement file")
+    .context("couldn't verify signature over the endorsement file")
 }
 
 /// Verifies the given base64-encoded signature over the given data bytes, using the given
@@ -289,7 +289,7 @@ pub fn verify_signature(
     let key = unmarshal_pem_to_p256_public_key(pem_encoded_public_key_bytes)?;
 
     key.verify(content_bytes, &signature)
-        .context("failed to verify signature")
+        .context("couldn't verify signature")
 }
 
 /// Parses a PEM-encoded x509/PKIX public key into a `p256::ecdsa::VerifyingKey`.

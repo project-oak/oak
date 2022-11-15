@@ -27,13 +27,13 @@ pub async fn grpc_web_unary<A: prost::Message, B: Default + prost::Message>(
     uri: &str,
     message: A,
 ) -> anyhow::Result<B> {
-    let request_bytes = encode_body(message).context("failed to encode message")?;
+    let request_bytes = encode_body(message).context("couldn't encode message")?;
     let response_bytes = send(uri, request_bytes)
         .await
-        .context("failed to send message")?;
+        .context("couldn't send message")?;
     let reply = decode_body::<B>(response_bytes)
         .await
-        .context("failed to decode message")?;
+        .context("couldn't decode message")?;
     Ok(reply)
 }
 

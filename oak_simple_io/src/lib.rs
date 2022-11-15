@@ -85,14 +85,14 @@ impl<'a, A: Allocator> SimpleIo<'a, A> {
         write_address(
             &io_port_factory,
             translate(VirtAddr::from_ptr(output_buffer.as_ptr()))
-                .ok_or("failed to translate VirtAddr to PhysAddr")?,
+                .ok_or("couldn't translate VirtAddr to PhysAddr")?,
             output.buffer_msb_port,
             output.buffer_lsb_port,
         )?;
         write_address(
             &io_port_factory,
             translate(VirtAddr::from_ptr(input_buffer.as_ptr()))
-                .ok_or("failed to translate VirtAddr to PhysAddr")?,
+                .ok_or("couldn't translate VirtAddr to PhysAddr")?,
             input.buffer_msb_port,
             input.buffer_lsb_port,
         )?;

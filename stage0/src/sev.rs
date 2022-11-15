@@ -81,7 +81,7 @@ pub fn init_ghcb(snp: bool, encrypted: u64) -> &'static Spinlock<GhcbProtocol<'s
         })))
         .is_err()
     {
-        panic!("failed to initialize GHCB wrapper");
+        panic!("couldn't initialize GHCB wrapper");
     }
     GHCB_WRAPPER.get().unwrap()
 }

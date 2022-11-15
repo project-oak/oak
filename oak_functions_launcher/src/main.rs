@@ -102,7 +102,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let mut reader = BufReader::new(console_receiver);
 
             let mut line = String::new();
-            while reader.read_line(&mut line).expect("failed to read line") > 0 {
+            while reader.read_line(&mut line).expect("couldn't read line") > 0 {
                 log::info!("console: {:?}", line);
                 line.clear();
             }
@@ -127,15 +127,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 tokio::time::interval(std::time::Duration::from_millis(1000 * 60 * 10));
             loop {
                 let lookup_data =
-                    lookup::load_lookup_data(&cli.lookup_data).expect("failed to load lookup data");
+                    lookup::load_lookup_data(&cli.lookup_data).expect("couldn't load lookup data");
                 let encoded_lookup_data =
-                    lookup::encode_lookup_data(lookup_data).expect("failed to encode lookup data");
+                    lookup::encode_lookup_data(lookup_data).expect("couldn't encode lookup data");
 
                 if let Err(err) = runtime_client
                     .update_lookup_data(&encoded_lookup_data)
                     .await
                 {
-                    panic!("failed to send lookup data: {:?}", err)
+                    panic!("couldn't send lookup data: {:?}", err)
                 }
 
                 interval.tick().await;
@@ -162,7 +162,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .initialize(&request)
         .await
         .flatten()
-        .expect("failed to initialize the runtime");
+        .expect("couldn't initialize the runtime");
 
     let public_key_info = result.public_key_info.expect("no public key info returned");
     log::info!(

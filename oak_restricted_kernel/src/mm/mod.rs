@@ -306,12 +306,12 @@ pub fn init_paging<A: FrameAllocator<Size4KiB>>(
             &mut page_table,
             frame_allocator,
         )
-        .map_err(|_| "failed to set up paging for physical memory")?;
+        .map_err(|_| "couldn't set up paging for physical memory")?;
 
         // Mapping for the kernel itself in the upper -2G of memory, based on the mappings (and
         // permissions) in the program header.
         page_tables::create_kernel_map(program_headers, &mut page_table, frame_allocator)
-            .map_err(|_| "failed to set up paging for the kernel")?;
+            .map_err(|_| "couldn't set up paging for the kernel")?;
     }
 
     // Safety: the new page tables keep the identity mapping at -2GB intact, so it's safe to load

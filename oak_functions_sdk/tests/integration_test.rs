@@ -169,7 +169,7 @@ async fn test_echo() {
         oak_functions_testing_extension::TestingFactory::new_boxed_extension_factory(
             logger.clone(),
         )
-        .expect("failed to create testing extension factory");
+        .expect("couldn't create testing extension factory");
 
     let wasm_handler =
         WasmHandler::create(&TESTING_WASM_MODULE_BYTES, vec![testing_factory], logger)
@@ -195,7 +195,7 @@ async fn test_blackhole() {
         oak_functions_testing_extension::TestingFactory::new_boxed_extension_factory(
             logger.clone(),
         )
-        .expect("failed to create testing extension factory");
+        .expect("couldn't create testing extension factory");
 
     let wasm_handler =
         WasmHandler::create(&TESTING_WASM_MODULE_BYTES, vec![testing_factory], logger)

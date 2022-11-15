@@ -210,11 +210,11 @@ where
                 EVENT_QUEUE_ID,
                 QUEUE_SIZE as u16,
                 translate(self.event_queue.inner.get_desc_addr())
-                    .context("failed to translate VirtAddr to PhysAddr")?,
+                    .context("couldn't translate VirtAddr to PhysAddr")?,
                 translate(self.event_queue.inner.get_avail_addr())
-                    .context("failed to translate VirtAddr to PhysAddr")?,
+                    .context("couldn't translate VirtAddr to PhysAddr")?,
                 translate(self.event_queue.inner.get_used_addr())
-                    .context("failed to translate VirtAddr to PhysAddr")?,
+                    .context("couldn't translate VirtAddr to PhysAddr")?,
             )
             .map_err(|error| anyhow::anyhow!("queue configuration error: {:?}", error))
             .context("couldn't configure the event queue")?;
@@ -223,11 +223,11 @@ where
                 RX_QUEUE_ID,
                 QUEUE_SIZE as u16,
                 translate(self.rx_queue.inner.get_desc_addr())
-                    .context("failed to translate VirtAddr to PhysAddr")?,
+                    .context("couldn't translate VirtAddr to PhysAddr")?,
                 translate(self.rx_queue.inner.get_avail_addr())
-                    .context("failed to translate VirtAddr to PhysAddr")?,
+                    .context("couldn't translate VirtAddr to PhysAddr")?,
                 translate(self.rx_queue.inner.get_used_addr())
-                    .context("failed to translate VirtAddr to PhysAddr")?,
+                    .context("couldn't translate VirtAddr to PhysAddr")?,
             )
             .map_err(|error| anyhow::anyhow!("queue configuration error: {:?}", error))
             .context("couldn't configure the receive queue")?;
@@ -236,11 +236,11 @@ where
                 TX_QUEUE_ID,
                 QUEUE_SIZE as u16,
                 translate(self.tx_queue.inner.get_desc_addr())
-                    .context("failed to translate VirtAddr to PhysAddr")?,
+                    .context("couldn't translate VirtAddr to PhysAddr")?,
                 translate(self.tx_queue.inner.get_avail_addr())
-                    .context("failed to translate VirtAddr to PhysAddr")?,
+                    .context("couldn't translate VirtAddr to PhysAddr")?,
                 translate(self.tx_queue.inner.get_used_addr())
-                    .context("failed to translate VirtAddr to PhysAddr")?,
+                    .context("couldn't translate VirtAddr to PhysAddr")?,
             )
             .map_err(|error| anyhow::anyhow!("queue configuration error: {:?}", error))
             .context("couldn't configure the transmit queue")?;

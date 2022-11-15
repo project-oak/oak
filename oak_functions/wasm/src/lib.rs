@@ -93,7 +93,7 @@ where
             module,
             &wasmi::ImportsBuilder::new().with_resolver("oak_functions", &abi),
         )
-        .map_err(|err| anyhow::anyhow!("failed to instantiate Wasm module: {:?}", err))?
+        .map_err(|err| anyhow::anyhow!("couldn't instantiate Wasm module: {:?}", err))?
         .assert_no_start();
 
         check_export_function_signature(
@@ -277,7 +277,7 @@ where
         response_len_ptr: AbiPointer,
     ) -> Result<(), OakStatus> {
         let handle: ExtensionHandle = ExtensionHandle::from_i32(handle).ok_or_else(|| {
-            self.log_error(&format!("failed to convert handle {:?} from i32", handle));
+            self.log_error(&format!("couldn't convert handle {:?} from i32", handle));
             OakStatus::ErrInvalidHandle
         })?;
 

@@ -139,7 +139,7 @@ impl std::str::FromStr for Scope {
                 Some(groups) => {
                     let commits_count = groups
                         .get(1)
-                        .ok_or(format!("failed to parse commits {}", scope))?
+                        .ok_or(format!("couldn't parse commits {}", scope))?
                         .as_str()
                         .to_string();
                     let count = commits_count
@@ -147,7 +147,7 @@ impl std::str::FromStr for Scope {
                         .map_err(|err| format!("couldn't parse to u8 {:?}", err))?;
                     Ok(Self::Commits(count))
                 }
-                None => Err(format!("failed to parse scope {}", scope)),
+                None => Err(format!("couldn't parse scope {}", scope)),
             },
         }
     }
@@ -191,7 +191,7 @@ impl std::str::FromStr for ServerVariant {
         match variant {
             "base" => Ok(ServerVariant::Base),
             _ => Err(format!(
-                "Failed to parse functions server variant {}",
+                "couldn't parse functions server variant {}",
                 variant
             )),
         }

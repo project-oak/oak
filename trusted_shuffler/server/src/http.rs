@@ -43,7 +43,7 @@ impl RequestHandler for HttpRequestHandler {
         // The following does not work, because &self would need 'static life time.
         // let parts = request.uri().into_parts();
         // parts.authority = Some(Authority::from_static(&self.backend_url));
-        // let new_uri = Uri::from_parts(parts).expect("Failed to create new URI");
+        // let new_uri = Uri::from_parts(parts).expect("couldn't create new URI");
         let path = request.uri().path();
         // And extend the URL to the backend.
         let new_uri = format!("{}{}", self.backend_url, path)
@@ -92,7 +92,7 @@ impl HyperRequestWrapper {
         let (parts, body) = self.0.into_parts();
         let body = hyper::body::to_bytes(body)
             .await
-            .context("failed to read request body")?;
+            .context("couldn't read request body")?;
         log::debug!("Body {:?}", body);
 
         let uri = parts.uri.clone();
@@ -125,7 +125,7 @@ impl HyperRequestWrapper {
             .method(Method::POST)
             .version(http::Version::HTTP_2)
             .body(body)
-            .context("failed to convert a plaintext Trusted Shuffler request to a hyper request")?;
+            .context("couldn't convert a plaintext Trusted Shuffler request to a hyper request")?;
 
         let headers = hyper_request.headers_mut();
 
@@ -179,18 +179,18 @@ impl HyperResponseWrapper {
         sender
             .send_data(encrypted_response.body)
             .await
-            .context("failed to build body from data of encrypted Trusted Shuffler response")?;
+            .context("couldn't build body from data of encrypted Trusted Shuffler response")?;
         sender
             .send_trailers(encrypted_response.trailers)
             .await
             .context(
-                "failed to build build body from trailers of encrypted Trusted Shuffler response",
+                "couldn't build build body from trailers of encrypted Trusted Shuffler response",
             )?;
 
         let mut hyper_response = Response::builder()
             .version(http::Version::HTTP_2)
             .body(body)
-            .context("failed to convert encrypted Trusted Shuffler response to hyper response")?;
+            .context("couldn't convert encrypted Trusted Shuffler response to hyper response")?;
 
         let headers = hyper_response.headers_mut();
 

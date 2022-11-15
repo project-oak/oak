@@ -160,7 +160,7 @@ fn test_invoke_extension() {
     // Assumes we have a Testing extension in our test wasm_state.
     let message = "Hello!".to_owned();
     let request = bincode::serialize(&TestingRequest::Echo(message.clone()))
-        .expect("failed to serialize request");
+        .expect("couldn't serialize request");
 
     // Guess some memory addresses in linear Wasm memory to write the request to.
     let request_ptr: AbiPointer = 100;
@@ -181,7 +181,7 @@ fn test_invoke_extension() {
     assert!(result.is_ok());
 
     let expected_response =
-        bincode::serialize(&TestingResponse::Echo(message)).expect("failed to serialize response");
+        bincode::serialize(&TestingResponse::Echo(message)).expect("couldn't serialize response");
 
     // Get response_len from response_len_ptr.
     let response_len: AbiPointerOffset = wasm_state
