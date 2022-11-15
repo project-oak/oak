@@ -27,6 +27,7 @@ java_binary(
     deps = [
         "//java/src/main/java/com/google/oak/functions/client",
         "//java/src/main/java/com/google/oak/functions/client:client_noninteractive",
+        "//oak_remote_attestation_noninteractive/proto:oak_session_noninteractive_v1_java_grpc",
         "@com_google_protobuf//:protobuf_java",
         "@com_google_protobuf//:protobuf_java_util",
         "@io_grpc_grpc_java//api",

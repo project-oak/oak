@@ -27,6 +27,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import oak.session.noninteractive.v1.StreamingSessionGrpc;
 
 public class Main {
   private static Logger logger = Logger.getLogger(Main.class.getName());
@@ -43,12 +44,12 @@ public class Main {
     builder = AttestationClient.addApiKey(builder, EMPTY_API_KEY);
     ManagedChannel channel = builder.build();
 
-    // Attest a gRPC channel.
-    AttestationClientNoninteractive client = new AttestationClientNoninteractive(channel);
+    // Create gRPC client stub.
+    StreamingSessionGrpc.StreamingSessionStub client = StreamingSessionGrpc.newStub(channel);
 
     // Test request coordinates are defined in `oak_functions/lookup_data_generator/src/data.rs`.
     byte[] requestBody = "{\"lat\":0,\"lng\":0}".getBytes(UTF_8);
-    byte[] response = client.send(requestBody);
+    byte[] response = AttestationClientNoninteractive.invoke(client::stream, requestBody);
     String decodedResponse = new String(response, StandardCharsets.UTF_8);
 
     if (decodedResponse.matches(EXPECTED_RESPONSE_PATTERN)) {
