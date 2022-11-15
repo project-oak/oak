@@ -20,41 +20,13 @@
 extern crate alloc;
 
 use core::assert_matches::assert_matches;
-use oak_functions_freestanding::{
-    schema,
-    schema::{TrustedRuntime, TrustedRuntimeServer},
-    RuntimeImplementation,
-};
+use oak_functions_freestanding::{schema, schema::TrustedRuntime, RuntimeImplementation};
 use oak_remote_attestation_amd::PlaceholderAmdAttestationGenerator;
-use oak_remote_attestation_sessions_client::AttestationTransport;
 use std::sync::Arc;
 
 const MOCK_CONSTANT_RESPONSE_SIZE: u32 = 1024;
 const LOOKUP_TEST_KEY: &[u8] = b"test_key";
 const LOOKUP_TEST_VALUE: &[u8] = b"test_value";
-
-/// Simple remote attestation client to perform handshakes with the runtime, which is a prerequisite
-/// for interacting with the business logic running in the runtime.
-struct TestUserClient {
-    inner: schema::TrustedRuntimeClient<TrustedRuntimeServer<RuntimeImplementation>>,
-}
-
-#[async_trait::async_trait(?Send)]
-impl AttestationTransport for TestUserClient {
-    async fn message(
-        &mut self,
-        _session_id: oak_remote_attestation_sessions::SessionId,
-        body: Vec<u8>,
-    ) -> anyhow::Result<Vec<u8>> {
-        let request = schema::UserRequest { body };
-        let response = self
-            .inner
-            .handle_user_request(&request)
-            .unwrap()
-            .map_err(|err| anyhow::anyhow!("couldn't handle user request: {:?}", err))?;
-        Ok(response.body)
-    }
-}
 
 #[test]
 fn it_should_not_handle_user_requests_before_initialization() {
