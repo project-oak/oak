@@ -21,7 +21,8 @@ use serde::{Deserialize, Serialize};
 pub use tink_core::keyset::Handle;
 pub use tink_hybrid::init;
 
-const ENCRYPTION_CONTEXT: &[u8] = b"Offline Attestation v0.1";
+/// The fixed context info that will be used when encrypting the response.
+pub const RESPONSE_CONTEXT_INFO: &[u8] = b"Offline Attestation v0.1 Response";
 
 /// An encrypted request sent from the client to the server.
 #[derive(Deserialize, Serialize)]
@@ -106,13 +107,21 @@ impl PublicKeyInfo {
 /// Encrypts the clear text `data` using Tink hybrid encryption.
 ///
 /// The `public_key_handle` must represent a public key suitable for hybrid encryption. The
-/// encrypted data can only be decrypted using the correcposing private key associated with this
+/// encrypted data can only be decrypted using the corresponding private key associated with this
 /// public key.
-pub fn encrypt(public_key_handle: &Handle, data: &[u8]) -> anyhow::Result<Vec<u8>> {
+///
+/// The `context_info` will be bound to the encrypted data to ensure its integrity. For the client
+/// request this must be the public key that will be used for encrypting the response to ensure that
+/// the public key cannot be modified.
+pub fn encrypt(
+    public_key_handle: &Handle,
+    data: &[u8],
+    context_info: &[u8],
+) -> anyhow::Result<Vec<u8>> {
     let encryptor = tink_hybrid::new_encrypt(public_key_handle)
         .map_err(|error| anyhow!("couldn't create hybrid encryptor: {}", error))?;
     encryptor
-        .encrypt(data, ENCRYPTION_CONTEXT)
+        .encrypt(data, context_info)
         .map_err(|error| anyhow!("couldn't encrypt data: {}", error))
 }
 
@@ -120,11 +129,17 @@ pub fn encrypt(public_key_handle: &Handle, data: &[u8]) -> anyhow::Result<Vec<u8
 ///
 /// The `private_key_handle` must represent a private key suitable for hybrid encryption. The
 /// decryption will only succeed if the ciphertext was created using the corresponding public key.
-pub fn decrypt(private_key_handle: &Handle, ciphertext: &[u8]) -> anyhow::Result<Vec<u8>> {
+///
+/// The `context_info` will be validated as part of decryption.
+pub fn decrypt(
+    private_key_handle: &Handle,
+    ciphertext: &[u8],
+    context_info: &[u8],
+) -> anyhow::Result<Vec<u8>> {
     let decryptor = tink_hybrid::new_decrypt(private_key_handle)
         .map_err(|error| anyhow!("couldn't create hybrid decryptor: {}", error))?;
     decryptor
-        .decrypt(ciphertext, ENCRYPTION_CONTEXT)
+        .decrypt(ciphertext, context_info)
         .map_err(|error| anyhow!("couldn't decrypt ciphertext: {}", error))
 }
 
