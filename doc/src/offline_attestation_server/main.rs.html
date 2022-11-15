@@ -142,6 +142,14 @@
 <span id="142">142</span>
 <span id="143">143</span>
 <span id="144">144</span>
+<span id="145">145</span>
+<span id="146">146</span>
+<span id="147">147</span>
+<span id="148">148</span>
+<span id="149">149</span>
+<span id="150">150</span>
+<span id="151">151</span>
+<span id="152">152</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -166,7 +174,7 @@
 <span class="kw">use </span>log::{debug, info};
 <span class="kw">use </span>offline_attestation_shared::{
     decrypt, encrypt, generate_private_key, AttestationReport, EncryptedRequest, EncryptedResponse,
-    Handle, PublicKeyInfo,
+    Handle, PublicKeyInfo, RESPONSE_CONTEXT_INFO,
 };
 <span class="kw">use </span>std::{
     net::{Ipv6Addr, SocketAddr},
@@ -261,11 +269,19 @@
         </span>);
 
         <span class="comment">// Decrypt the ciphertext.
-        </span><span class="kw">let </span>clear_text = decrypt(private_key_handle.as_ref(), <span class="kw-2">&amp;</span>encrypted_request.ciphertext)<span class="question-mark">?</span>;
+        </span><span class="kw">let </span>clear_text = decrypt(
+            private_key_handle.as_ref(),
+            <span class="kw-2">&amp;</span>encrypted_request.ciphertext,
+            <span class="kw-2">&amp;</span>encrypted_request.response_public_key,
+        )<span class="question-mark">?</span>;
         <span class="macro">info!</span>(<span class="string">&quot;Received cleartext: {:?}&quot;</span>, clear_text);
         <span class="comment">// For now we just echo it back, so encrypt the same clear text with the client&#39;s public
         // key.
-        </span><span class="kw">let </span>ciphertext = encrypt(<span class="kw-2">&amp;</span>encrypted_request.get_public_key_handle()<span class="question-mark">?</span>, <span class="kw-2">&amp;</span>clear_text)<span class="question-mark">?</span>;
+        </span><span class="kw">let </span>ciphertext = encrypt(
+            <span class="kw-2">&amp;</span>encrypted_request.get_public_key_handle()<span class="question-mark">?</span>,
+            <span class="kw-2">&amp;</span>clear_text,
+            RESPONSE_CONTEXT_INFO,
+        )<span class="question-mark">?</span>;
         <span class="kw">let </span>response = EncryptedResponse { ciphertext };
 
         <span class="macro">debug!</span>(

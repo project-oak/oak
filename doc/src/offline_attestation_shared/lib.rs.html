@@ -170,6 +170,21 @@
 <span id="170">170</span>
 <span id="171">171</span>
 <span id="172">172</span>
+<span id="173">173</span>
+<span id="174">174</span>
+<span id="175">175</span>
+<span id="176">176</span>
+<span id="177">177</span>
+<span id="178">178</span>
+<span id="179">179</span>
+<span id="180">180</span>
+<span id="181">181</span>
+<span id="182">182</span>
+<span id="183">183</span>
+<span id="184">184</span>
+<span id="185">185</span>
+<span id="186">186</span>
+<span id="187">187</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -193,7 +208,8 @@
 <span class="kw">pub use </span>tink_core::keyset::Handle;
 <span class="kw">pub use </span>tink_hybrid::init;
 
-<span class="kw">const </span>ENCRYPTION_CONTEXT: <span class="kw-2">&amp;</span>[u8] = <span class="string">b&quot;Offline Attestation v0.1&quot;</span>;
+<span class="doccomment">/// The fixed context info that will be used when encrypting the response.
+</span><span class="kw">pub const </span>RESPONSE_CONTEXT_INFO: <span class="kw-2">&amp;</span>[u8] = <span class="string">b&quot;Offline Attestation v0.1 Response&quot;</span>;
 
 <span class="doccomment">/// An encrypted request sent from the client to the server.
 </span><span class="attribute">#[derive(Deserialize, Serialize)]
@@ -278,13 +294,21 @@
 <span class="doccomment">/// Encrypts the clear text `data` using Tink hybrid encryption.
 ///
 /// The `public_key_handle` must represent a public key suitable for hybrid encryption. The
-/// encrypted data can only be decrypted using the correcposing private key associated with this
+/// encrypted data can only be decrypted using the corresponding private key associated with this
 /// public key.
-</span><span class="kw">pub fn </span>encrypt(public_key_handle: <span class="kw-2">&amp;</span>Handle, data: <span class="kw-2">&amp;</span>[u8]) -&gt; anyhow::Result&lt;Vec&lt;u8&gt;&gt; {
+///
+/// The `context_info` will be bound to the encrypted data to ensure its integrity. For the client
+/// request this must be the public key that will be used for encrypting the response to ensure that
+/// the public key cannot be modified.
+</span><span class="kw">pub fn </span>encrypt(
+    public_key_handle: <span class="kw-2">&amp;</span>Handle,
+    data: <span class="kw-2">&amp;</span>[u8],
+    context_info: <span class="kw-2">&amp;</span>[u8],
+) -&gt; anyhow::Result&lt;Vec&lt;u8&gt;&gt; {
     <span class="kw">let </span>encryptor = tink_hybrid::new_encrypt(public_key_handle)
         .map_err(|error| <span class="macro">anyhow!</span>(<span class="string">&quot;couldn&#39;t create hybrid encryptor: {}&quot;</span>, error))<span class="question-mark">?</span>;
     encryptor
-        .encrypt(data, ENCRYPTION_CONTEXT)
+        .encrypt(data, context_info)
         .map_err(|error| <span class="macro">anyhow!</span>(<span class="string">&quot;couldn&#39;t encrypt data: {}&quot;</span>, error))
 }
 
@@ -292,11 +316,17 @@
 ///
 /// The `private_key_handle` must represent a private key suitable for hybrid encryption. The
 /// decryption will only succeed if the ciphertext was created using the corresponding public key.
-</span><span class="kw">pub fn </span>decrypt(private_key_handle: <span class="kw-2">&amp;</span>Handle, ciphertext: <span class="kw-2">&amp;</span>[u8]) -&gt; anyhow::Result&lt;Vec&lt;u8&gt;&gt; {
+///
+/// The `context_info` will be validated as part of decryption.
+</span><span class="kw">pub fn </span>decrypt(
+    private_key_handle: <span class="kw-2">&amp;</span>Handle,
+    ciphertext: <span class="kw-2">&amp;</span>[u8],
+    context_info: <span class="kw-2">&amp;</span>[u8],
+) -&gt; anyhow::Result&lt;Vec&lt;u8&gt;&gt; {
     <span class="kw">let </span>decryptor = tink_hybrid::new_decrypt(private_key_handle)
         .map_err(|error| <span class="macro">anyhow!</span>(<span class="string">&quot;couldn&#39;t create hybrid decryptor: {}&quot;</span>, error))<span class="question-mark">?</span>;
     decryptor
-        .decrypt(ciphertext, ENCRYPTION_CONTEXT)
+        .decrypt(ciphertext, context_info)
         .map_err(|error| <span class="macro">anyhow!</span>(<span class="string">&quot;couldn&#39;t decrypt ciphertext: {}&quot;</span>, error))
 }
 

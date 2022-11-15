@@ -143,6 +143,14 @@
 <span id="143">143</span>
 <span id="144">144</span>
 <span id="145">145</span>
+<span id="146">146</span>
+<span id="147">147</span>
+<span id="148">148</span>
+<span id="149">149</span>
+<span id="150">150</span>
+<span id="151">151</span>
+<span id="152">152</span>
+<span id="153">153</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -164,7 +172,7 @@
 <span class="kw">use </span>log::{debug, info};
 <span class="kw">use </span>offline_attestation_shared::{
     decrypt, encrypt, generate_private_key, serialize_public_key, EncryptedRequest,
-    EncryptedResponse, Handle, PublicKeyInfo,
+    EncryptedResponse, Handle, PublicKeyInfo, RESPONSE_CONTEXT_INFO,
 };
 <span class="kw">use </span>url::Url;
 
@@ -266,9 +274,6 @@
 
     <span class="doccomment">/// Generates an encrypted request to send to the server.
     </span><span class="kw">fn </span>generate_encrypted_request(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; anyhow::Result&lt;EncryptedRequest&gt; {
-        <span class="comment">// Encrypt the message with the server&#39;s public key.
-        </span><span class="kw">let </span>ciphertext = encrypt(<span class="kw-2">&amp;</span><span class="self">self</span>.server_public_key_handle, <span class="kw-2">&amp;</span><span class="self">self</span>.message)<span class="question-mark">?</span>;
-
         <span class="comment">// Get the public key for the current private key so that the server can use it for
         // encrypting the response.
         </span><span class="kw">let </span>response_public_key_handle = <span class="self">self
@@ -276,6 +281,13 @@
             .public()
             .map_err(|error| <span class="macro">anyhow!</span>(<span class="string">&quot;couldn&#39;t get public key: {}&quot;</span>, error))<span class="question-mark">?</span>;
         <span class="kw">let </span>response_public_key = serialize_public_key(<span class="kw-2">&amp;</span>response_public_key_handle)<span class="question-mark">?</span>;
+
+        <span class="comment">// Encrypt the message with the server&#39;s public key.
+        </span><span class="kw">let </span>ciphertext = encrypt(
+            <span class="kw-2">&amp;</span><span class="self">self</span>.server_public_key_handle,
+            <span class="kw-2">&amp;</span><span class="self">self</span>.message,
+            <span class="kw-2">&amp;</span>response_public_key,
+        )<span class="question-mark">?</span>;
 
         <span class="prelude-val">Ok</span>(EncryptedRequest {
             ciphertext,
@@ -285,7 +297,11 @@
 
     <span class="doccomment">/// Consumes the helper and decrypts the encrypted response from the server.
     </span><span class="kw">fn </span>decrypt_response(<span class="self">self</span>, encrypted_response: EncryptedResponse) -&gt; anyhow::Result&lt;Vec&lt;u8&gt;&gt; {
-        decrypt(<span class="kw-2">&amp;</span><span class="self">self</span>.private_key_handle, <span class="kw-2">&amp;</span>encrypted_response.ciphertext)
+        decrypt(
+            <span class="kw-2">&amp;</span><span class="self">self</span>.private_key_handle,
+            <span class="kw-2">&amp;</span>encrypted_response.ciphertext,
+            RESPONSE_CONTEXT_INFO,
+        )
     }
 }
 </code></pre></div>
