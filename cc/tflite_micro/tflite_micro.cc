@@ -17,8 +17,8 @@
 #include "tflite_micro.h"
 
 #include "tensorflow/lite/micro/all_ops_resolver.h"
-#include "tensorflow/lite/micro/micro_error_reporter.h"
 #include "tensorflow/lite/micro/micro_allocator.h"
+#include "tensorflow/lite/micro/micro_error_reporter.h"
 #include "tensorflow/lite/micro/micro_interpreter.h"
 #include "tensorflow/lite/schema/schema_generated.h"
 
@@ -32,26 +32,20 @@ TfLiteTensor* inputs[MAX_TENSORS] = {nullptr};
 TfLiteTensor* outputs[MAX_TENSORS] = {nullptr};
 size_t input_size = 0;
 size_t output_size = 0;
-}
+}  // namespace
 
-const TfLiteTensor* tflite_get_input_tensor(int id) {
-    return inputs[id];
-}
+const TfLiteTensor* tflite_get_input_tensor(int id) { return inputs[id]; }
 
-const TfLiteTensor* tflite_get_output_tensor(int id) {
-    return outputs[id];
-}
+const TfLiteTensor* tflite_get_output_tensor(int id) { return outputs[id]; }
 
-int tflite_init(
-    const uint8_t* model_bytes_ptr, size_t model_bytes_len,
-    uint8_t* tensor_arena_bytes_ptr, size_t tensor_arena_bytes_len,
-    size_t* output_buffer_len_ptr) {
-  if (!model_bytes_ptr
-    || !model_bytes_len
-    || !tensor_arena_bytes_ptr
-    || !tensor_arena_bytes_len
-    || !output_buffer_len_ptr) {
-    MicroPrintf("tflite_init: Invalid parameters\n");
+int tflite_init(const uint8_t* model_bytes_ptr, size_t model_bytes_len,
+                uint8_t* tensor_arena_bytes_ptr, size_t tensor_arena_bytes_len,
+                size_t* output_buffer_len_ptr) {
+  MicroPrintf("Running tflite_init");
+
+  if (!model_bytes_ptr || !model_bytes_len || !tensor_arena_bytes_ptr || !tensor_arena_bytes_len ||
+      !output_buffer_len_ptr) {
+    MicroPrintf("invalid parameters for tflite_init");
     return -1;
   }
 
@@ -64,22 +58,21 @@ int tflite_init(
   static tflite::AllOpsResolver resolver;
 
   // Build an interpreter to run the model with.
-  static tflite::MicroInterpreter static_interpreter(
-      model, resolver, tensor_arena_bytes_ptr, tensor_arena_bytes_len);
+  static tflite::MicroInterpreter static_interpreter(model, resolver, tensor_arena_bytes_ptr,
+                                                     tensor_arena_bytes_len);
   interpreter = &static_interpreter;
 
   // Allocate memory from the tensor_arena for the model's tensors.
   TfLiteStatus allocate_status = interpreter->AllocateTensors();
   if (allocate_status != kTfLiteOk) {
-    MicroPrintf("AllocateTensors() failed");
+    MicroPrintf("couldn't run AllocateTensors()");
     return -1;
   }
 
-  if (interpreter->inputs_size() > MAX_TENSORS
-    || interpreter->outputs_size() > MAX_TENSORS) {
-    MicroPrintf(
-      "input_tensors: %d, output_tensors: %d, max input/output tensors: %d",
-      interpreter->inputs_size(), interpreter->outputs_size(), MAX_TENSORS);
+  if (interpreter->inputs_size() > MAX_TENSORS || interpreter->outputs_size() > MAX_TENSORS) {
+    MicroPrintf("tensor number exceeded: input_tensors: "
+                "%d, output_tensors: %d, max input/output tensors: %d",
+                interpreter->inputs_size(), interpreter->outputs_size(), MAX_TENSORS);
     return -1;
   }
 
@@ -99,24 +92,22 @@ int tflite_init(
   // which will be passed in at tflite_run(..., output_bytes_ptr, ...).
   *output_buffer_len_ptr = output_size;
 
+  MicroPrintf("Successful tflite_init");
   return 0;
 }
 
-int tflite_run(
-    const uint8_t* input_bytes_ptr, size_t input_bytes_len,
-    uint8_t* output_bytes_ptr, size_t* output_bytes_len_ptr) { 
-  if (!input_bytes_ptr
-    || !input_bytes_len
-    || !output_bytes_ptr
-    || !output_bytes_len_ptr) {
-    MicroPrintf("tflite_run: Invalid parameters\n");
+int tflite_run(const uint8_t* input_bytes_ptr, size_t input_bytes_len, uint8_t* output_bytes_ptr,
+               size_t* output_bytes_len_ptr) {
+  MicroPrintf("Running tflite_run");
+
+  if (!input_bytes_ptr || !input_bytes_len || !output_bytes_ptr || !output_bytes_len_ptr) {
+    MicroPrintf("invalid parameters for tflite_run");
     return -1;
   }
 
   if (input_bytes_len != input_size) {
-    MicroPrintf("Expected input len: %d bytes but got %d bytes\n",
-                input_size,
-                input_bytes_len);
+    MicroPrintf("incorrect input length: expected %d bytes but got %d bytes\n",
+                input_size, input_bytes_len);
     return -1;
   }
 
@@ -129,7 +120,7 @@ int tflite_run(
   // Run inference, and report any error
   TfLiteStatus invoke_status = interpreter->Invoke();
   if (invoke_status != kTfLiteOk) {
-    MicroPrintf("Invoke failed, err: %d\n", invoke_status);
+    MicroPrintf("couldn't run Invoke(), err: %d\n", invoke_status);
     return -1;
   }
 
@@ -141,5 +132,6 @@ int tflite_run(
 
   *output_bytes_len_ptr = output_size;
 
+  MicroPrintf("Successful tflite_run");
   return 0;
 }
