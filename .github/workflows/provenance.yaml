@@ -37,6 +37,13 @@ jobs:
       # Allow the job to add a comment to the PR.
       pull-requests: write
 
+    # We use the same job template, to generate provenances for multiple binaries.
+    strategy:
+      fail-fast: false
+      matrix:
+        buildconfig:
+          - buildconfigs/oak_functions_freestanding_bin.toml
+
     steps:
       - name: Mount main branch
         uses: actions/checkout@v3
