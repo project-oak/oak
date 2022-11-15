@@ -17,6 +17,7 @@
 //! This module contains structs that can be used to interpret the contents of the CPUID page that
 //! is provisioned into the VM guest memory during SEV-SNP startup.
 
+use crate::interrupts::MutableInterruptStackFrame;
 use zerocopy::FromBytes;
 
 /// The maximum number of CPUID functions that can be included in the page.
@@ -31,9 +32,9 @@ pub const CPUID_PAGE_SIZE: usize = 4096;
 #[derive(Debug, FromBytes)]
 pub struct CpuidFunction {
     /// The input values when CPUID was invoked.
-    input: CpuidInput,
+    pub input: CpuidInput,
     /// The resulting register values when CPUID was invoked.
-    output: CpuidOutput,
+    pub output: CpuidOutput,
     _reserved: u64,
 }
 
@@ -41,7 +42,7 @@ static_assertions::assert_eq_size!(CpuidFunction, [u8; 48]);
 
 /// The required input valus for invoking CPUID.
 #[repr(C)]
-#[derive(Debug, FromBytes)]
+#[derive(Debug, FromBytes, PartialEq, Eq)]
 pub struct CpuidInput {
     /// The input value of the EAX register, which represents the CPUID leaf.
     pub eax: u32,
@@ -56,6 +57,31 @@ pub struct CpuidInput {
     /// Only required when a request for CPUID 0x0000_000D is made and the guest supports the XSS
     /// MSR. Must be zero otherwise.
     pub xss: u64,
+}
+
+impl From<&mut MutableInterruptStackFrame> for CpuidInput {
+    fn from(value: &mut MutableInterruptStackFrame) -> Self {
+        let eax = value.rax as u32;
+        let ecx = value.rcx as u32;
+        // We only set the value of XCR0 for CPUID 0x0000_000D.
+        // See table 6 in <https://developer.amd.com/wp-content/resources/56421.pdf>.
+        let xcr0 = if eax == 0xD {
+            x86_64::registers::xcontrol::XCr0::read_raw()
+        } else {
+            0
+        };
+        // We ignore XSS for now and always set it to 0, as it is only relevant for CPUID
+        // 0x0000_000D, if the guest supports the IA32_XSS MSR and the guest uses XSAVES and
+        // XRSTORS.
+        let xss = 0;
+
+        Self {
+            eax,
+            ecx,
+            xcr0,
+            xss,
+        }
+    }
 }
 
 /// The resulting register values after invoking CPUID.
