@@ -80,7 +80,8 @@ data appropriately and not leak the private key from the enclave.
 Once the client has the server's public key it encrypts the request. The client
 also generates its own asymmetric key-pair and includes the public key in the
 request. This provides a mechansim for the server to encrypt the response back
-to the client.
+to the client. The public key is bound to the encrypted payload as context info
+to prevent tampering.
 
 When the client receives the encrypted response from the server it decrypts it
 using is private key and processes the cleartext content.

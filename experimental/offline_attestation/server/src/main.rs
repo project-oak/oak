@@ -22,7 +22,7 @@ use clap::Parser;
 use log::{debug, info};
 use offline_attestation_shared::{
     decrypt, encrypt, generate_private_key, AttestationReport, EncryptedRequest, EncryptedResponse,
-    Handle, PublicKeyInfo,
+    Handle, PublicKeyInfo, RESPONSE_CONTEXT_INFO,
 };
 use std::{
     net::{Ipv6Addr, SocketAddr},
@@ -117,11 +117,19 @@ fn handle(encrypted_request: EncryptedRequest, private_key_handle: Arc<Handle>) 
         );
 
         // Decrypt the ciphertext.
-        let clear_text = decrypt(private_key_handle.as_ref(), &encrypted_request.ciphertext)?;
+        let clear_text = decrypt(
+            private_key_handle.as_ref(),
+            &encrypted_request.ciphertext,
+            &encrypted_request.response_public_key,
+        )?;
         info!("Received cleartext: {:?}", clear_text);
         // For now we just echo it back, so encrypt the same clear text with the client's public
         // key.
-        let ciphertext = encrypt(&encrypted_request.get_public_key_handle()?, &clear_text)?;
+        let ciphertext = encrypt(
+            &encrypted_request.get_public_key_handle()?,
+            &clear_text,
+            RESPONSE_CONTEXT_INFO,
+        )?;
         let response = EncryptedResponse { ciphertext };
 
         debug!(

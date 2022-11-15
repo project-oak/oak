@@ -19,7 +19,7 @@ use clap::Parser;
 use log::{debug, info};
 use offline_attestation_shared::{
     decrypt, encrypt, generate_private_key, serialize_public_key, EncryptedRequest,
-    EncryptedResponse, Handle, PublicKeyInfo,
+    EncryptedResponse, Handle, PublicKeyInfo, RESPONSE_CONTEXT_INFO,
 };
 use url::Url;
 
@@ -121,9 +121,6 @@ impl RequestHelper {
 
     /// Generates an encrypted request to send to the server.
     fn generate_encrypted_request(&self) -> anyhow::Result<EncryptedRequest> {
-        // Encrypt the message with the server's public key.
-        let ciphertext = encrypt(&self.server_public_key_handle, &self.message)?;
-
         // Get the public key for the current private key so that the server can use it for
         // encrypting the response.
         let response_public_key_handle = self
@@ -131,6 +128,13 @@ impl RequestHelper {
             .public()
             .map_err(|error| anyhow!("couldn't get public key: {}", error))?;
         let response_public_key = serialize_public_key(&response_public_key_handle)?;
+
+        // Encrypt the message with the server's public key.
+        let ciphertext = encrypt(
+            &self.server_public_key_handle,
+            &self.message,
+            &response_public_key,
+        )?;
 
         Ok(EncryptedRequest {
             ciphertext,
@@ -140,6 +144,10 @@ impl RequestHelper {
 
     /// Consumes the helper and decrypts the encrypted response from the server.
     fn decrypt_response(self, encrypted_response: EncryptedResponse) -> anyhow::Result<Vec<u8>> {
-        decrypt(&self.private_key_handle, &encrypted_response.ciphertext)
+        decrypt(
+            &self.private_key_handle,
+            &encrypted_response.ciphertext,
+            RESPONSE_CONTEXT_INFO,
+        )
     }
 }
