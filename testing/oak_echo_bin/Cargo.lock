@@ -433,12 +433,12 @@ dependencies = [
  "oak_linux_boot_params",
  "oak_simple_io",
  "rust-hypervisor-firmware-virtio",
- "sev_guest",
+ "oak_sev_guest",
  "sev_serial",
  "spinning_top",
  "static_assertions",
  "strum",
- "virtio",
+ "oak_virtio",
  "x86_64",
  "zerocopy",
 ]
@@ -448,7 +448,7 @@ name = "oak_simple_io"
 version = "0.1.0"
 dependencies = [
  "bitflags",
- "sev_guest",
+ "oak_sev_guest",
  "x86_64",
 ]
 
@@ -645,7 +645,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "sev_guest"
+name = "oak_sev_guest"
 version = "0.1.0"
 dependencies = [
  "aes-gcm",
@@ -663,7 +663,7 @@ dependencies = [
 name = "sev_serial"
 version = "0.1.0"
 dependencies = [
- "sev_guest",
+ "oak_sev_guest",
  "x86_64",
 ]
 
@@ -798,7 +798,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "49874b5167b65d7193b8aba1567f5c7d93d001cafc34600cee003eda787e483f"
 
 [[package]]
-name = "virtio"
+name = "oak_virtio"
 version = "0.1.0"
 dependencies = [
  "anyhow",

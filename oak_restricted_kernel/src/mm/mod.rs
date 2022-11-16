@@ -18,7 +18,7 @@ use self::encrypted_mapper::{EncryptedPageTable, MemoryEncryption, PhysOffset};
 use goblin::{elf32::program_header::PT_LOAD, elf64::program_header::ProgramHeader};
 use log::info;
 use oak_linux_boot_params::{BootE820Entry, E820EntryType};
-use sev_guest::msr::{get_sev_status, SevStatus};
+use oak_sev_guest::msr::{get_sev_status, SevStatus};
 use x86_64::{
     addr::{align_down, align_up},
     registers::{

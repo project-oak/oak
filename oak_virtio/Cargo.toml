@@ -1,5 +1,5 @@
 [package]
-name = "virtio"
+name = "oak_virtio"
 version = "0.1.0"
 authors = ["Conrad Grobler <grobler@google.com>"]
 edition = "2021"

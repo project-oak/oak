@@ -15,7 +15,7 @@
 //
 
 use core::{cmp::min, ffi::CStr};
-use sev_guest::io::{IoPortFactory, PortFactoryWrapper, PortReader, PortWrapper, PortWriter};
+use oak_sev_guest::io::{IoPortFactory, PortFactoryWrapper, PortReader, PortWrapper, PortWriter};
 use zerocopy::{AsBytes, FromBytes};
 
 // See https://www.qemu.org/docs/master/specs/fw_cfg.html for documentation about the various data structures and constants.

@@ -25,7 +25,7 @@ use core::{
     panic::PanicInfo,
 };
 use goblin::elf::header;
-use sev_guest::io::PortFactoryWrapper;
+use oak_sev_guest::io::PortFactoryWrapper;
 use x86_64::{
     instructions::{hlt, interrupts::int3, segmentation::Segment, tlb},
     registers::{
@@ -60,9 +60,9 @@ static mut BOOT_PDPT: MaybeUninit<PageTable> = MaybeUninit::uninit();
 #[link_section = ".boot.pd"]
 static mut BOOT_PD: MaybeUninit<PageTable> = MaybeUninit::uninit();
 #[link_section = ".boot.secrets"]
-static mut SEV_SECRETS: MaybeUninit<sev_guest::secrets::SecretsPage> = MaybeUninit::uninit();
+static mut SEV_SECRETS: MaybeUninit<oak_sev_guest::secrets::SecretsPage> = MaybeUninit::uninit();
 #[link_section = ".boot.cpuid"]
-static mut SEV_CPUID: MaybeUninit<sev_guest::cpuid::CpuidPage> = MaybeUninit::uninit();
+static mut SEV_CPUID: MaybeUninit<oak_sev_guest::cpuid::CpuidPage> = MaybeUninit::uninit();
 
 #[link_section = ".boot"]
 static mut CC_BLOB_SEV_INFO: MaybeUninit<oak_linux_boot_params::CCBlobSevInfo> =
@@ -145,10 +145,11 @@ pub unsafe fn jump_to_kernel(entry_point: VirtAddr, zero_page: usize) -> ! {
 pub extern "C" fn rust64_start(encrypted: u64) -> ! {
     let (es, snp) = if encrypted > 0 {
         // We're under some form of memory encryption, thus it's safe to access the SEV_STATUS MSR.
-        let status = sev_guest::msr::get_sev_status().unwrap_or(sev_guest::msr::SevStatus::empty());
+        let status =
+            oak_sev_guest::msr::get_sev_status().unwrap_or(oak_sev_guest::msr::SevStatus::empty());
         (
-            status.contains(sev_guest::msr::SevStatus::SEV_ES_ENABLED),
-            status.contains(sev_guest::msr::SevStatus::SNP_ACTIVE),
+            status.contains(oak_sev_guest::msr::SevStatus::SEV_ES_ENABLED),
+            status.contains(oak_sev_guest::msr::SevStatus::SNP_ACTIVE),
         )
     } else {
         (false, false)
@@ -253,9 +254,9 @@ pub extern "C" fn rust64_start(encrypted: u64) -> ! {
         cc_blob.magic = oak_linux_boot_params::CC_BLOB_SEV_INFO_MAGIC;
         cc_blob.version = 1;
         cc_blob.secrets_phys = unsafe { SEV_SECRETS.as_ptr() } as usize;
-        cc_blob.secrets_len = size_of::<sev_guest::secrets::SecretsPage>() as u32;
+        cc_blob.secrets_len = size_of::<oak_sev_guest::secrets::SecretsPage>() as u32;
         cc_blob.cpuid_phys = unsafe { SEV_CPUID.as_ptr() } as usize;
-        cc_blob.cpuid_len = size_of::<sev_guest::cpuid::CpuidPage>() as u32;
+        cc_blob.cpuid_len = size_of::<oak_sev_guest::cpuid::CpuidPage>() as u32;
 
         // Put our header as the first element in the linked list.
         setup_data.header.next = zero_page.hdr.setup_data;

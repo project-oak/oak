@@ -14,7 +14,7 @@ goblin = { version = "*", default-features = false, features = ["elf64"] }
 log = "*"
 oak_core = { path = "../oak_core", default-features = false }
 oak_linux_boot_params = { path = "../linux_boot_params" }
-sev_guest = { path = "../sev_guest" }
+oak_sev_guest = { path = "../oak_sev_guest" }
 sev_serial = { path = "../sev_serial" }
 spinning_top = "*"
 static_assertions = "*"

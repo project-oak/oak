@@ -239,7 +239,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d29ab0c6d3fc0ee92fe66e2d99f700eab17a8d57d1c1d3b748380fb20baa78cd"
 
 [[package]]
-name = "sev_guest"
+name = "oak_sev_guest"
 version = "0.1.0"
 dependencies = [
  "aes-gcm",
@@ -257,7 +257,7 @@ dependencies = [
 name = "sev_serial"
 version = "0.1.0"
 dependencies = [
- "sev_guest",
+ "oak_sev_guest",
  "x86_64",
 ]
 
@@ -269,7 +269,7 @@ dependencies = [
  "lock_api",
  "log",
  "oak_linux_boot_params",
- "sev_guest",
+ "oak_sev_guest",
  "sev_serial",
  "spinning_top",
  "x86_64",

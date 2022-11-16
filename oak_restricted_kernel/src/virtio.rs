@@ -31,7 +31,7 @@ pub struct Channel<T> {
 
 impl<T> Read for Channel<T>
 where
-    T: virtio::Read,
+    T: oak_virtio::Read,
 {
     fn read(&mut self, data: &mut [u8]) -> anyhow::Result<()> {
         self.inner.read(data)
@@ -40,7 +40,7 @@ where
 
 impl<T> Write for Channel<T>
 where
-    T: virtio::Write,
+    T: oak_virtio::Write,
 {
     fn write(&mut self, data: &[u8]) -> anyhow::Result<()> {
         self.inner.write(data)
@@ -54,8 +54,8 @@ where
 pub fn get_console_channel<'a, X: Translator, A: Allocator>(
     translator: &X,
     alloc: &'a A,
-) -> Channel<virtio::console::Console<'a, VirtioPciTransport, A>> {
-    let console = virtio::console::Console::find_and_configure_device(
+) -> Channel<oak_virtio::console::Console<'a, VirtioPciTransport, A>> {
+    let console = oak_virtio::console::Console::find_and_configure_device(
         |vaddr: VirtAddr| translator.translate_virtual(vaddr),
         |paddr: PhysAddr| translator.translate_physical(paddr),
         alloc,
@@ -69,15 +69,15 @@ pub fn get_console_channel<'a, X: Translator, A: Allocator>(
 pub fn get_vsock_channel<'a, X: Translator, A: Allocator>(
     translator: &X,
     alloc: &'a A,
-) -> Channel<virtio::vsock::socket::Socket<'a, VirtioPciTransport, A>> {
-    let vsock = virtio::vsock::VSock::find_and_configure_device(
+) -> Channel<oak_virtio::vsock::socket::Socket<'a, VirtioPciTransport, A>> {
+    let vsock = oak_virtio::vsock::VSock::find_and_configure_device(
         |vaddr: VirtAddr| translator.translate_virtual(vaddr),
         |paddr: PhysAddr| translator.translate_physical(paddr),
         alloc,
     )
     .expect("couldn't configure PCI virtio vsock device");
     info!("Socket device status: {}", vsock.get_status());
-    let listener = virtio::vsock::socket::SocketListener::new(vsock, VSOCK_PORT);
+    let listener = oak_virtio::vsock::socket::SocketListener::new(vsock, VSOCK_PORT);
     Channel {
         inner: listener.accept().expect("couldn't accept connection"),
     }

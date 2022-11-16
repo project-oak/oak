@@ -22,7 +22,7 @@
 use core::{arch::asm, panic::PanicInfo};
 use lazy_static::lazy_static;
 use oak_linux_boot_params::{BootParams, CCBlobSevInfo, CCSetupData, SetupDataType};
-use sev_guest::{
+use oak_sev_guest::{
     cpuid::CpuidPage,
     msr::{get_sev_status, SevStatus},
     secrets::SecretsPage,

@@ -43,7 +43,7 @@ members = [
   "oak_remote_attestation_sessions_client",
   "oak_restricted_kernel",
   "oak_tensorflow_service",
-  "sev_guest",
+  "oak_sev_guest",
   "sev_serial",
   "oak_simple_io",
   "testing/oak_echo_service",
@@ -52,7 +52,7 @@ members = [
   "trusted_shuffler/common",
   "trusted_shuffler/server",
   "trusted_shuffler/trusted_shuffler",
-  "virtio",
+  "oak_virtio",
   "xtask",
 ]
 exclude = [

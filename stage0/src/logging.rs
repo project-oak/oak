@@ -15,7 +15,7 @@
 //
 
 use core::{fmt::Write, ops::DerefMut};
-use sev_guest::io::PortFactoryWrapper;
+use oak_sev_guest::io::PortFactoryWrapper;
 use sev_serial::SerialPort;
 use spinning_top::Spinlock;
 

@@ -18,7 +18,7 @@ use crate::mm::Translator;
 use core::{panic, slice::from_raw_parts};
 use oak_core::sync::OnceCell;
 use oak_linux_boot_params::{BootParams, CCBlobSevInfo, CCSetupData, SetupDataType};
-use sev_guest::{cpuid::CpuidPage, crypto::GuestMessageEncryptor, secrets::SecretsPage};
+use oak_sev_guest::{cpuid::CpuidPage, crypto::GuestMessageEncryptor, secrets::SecretsPage};
 use spinning_top::{const_spinlock, Spinlock};
 use x86_64::{
     structures::paging::{PageSize, Size4KiB},
