@@ -752,7 +752,6 @@
 <span id="752">752</span>
 <span id="753">753</span>
 <span id="754">754</span>
-<span id="755">755</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2020 The Project Oak Authors
 //
@@ -1019,7 +1018,6 @@
             run_check_license(<span class="kw-2">&amp;</span>modified_files),
             run_check_build_licenses(<span class="kw-2">&amp;</span>modified_files),
             run_check_todo(<span class="kw-2">&amp;</span>modified_files),
-            run_clang_format(FormatMode::Check),
             run_buildifier(FormatMode::Check),
             run_prettier(FormatMode::Check),
             run_markdownlint(FormatMode::Check),
