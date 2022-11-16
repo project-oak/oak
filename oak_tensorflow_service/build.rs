@@ -64,9 +64,9 @@ fn build_bazel_target(target_dir: &str, target: &str) -> PathBuf {
     }
     let dependency_paths = from_utf8(&output.stdout)
         .expect("couldn't parse bazel query output")
-        .split("\n")
+        .split('\n')
         .into_iter()
-        .map(|build_target| build_target_to_path(build_target))
+        .map(build_target_to_path)
         .collect::<Vec<_>>();
 
     // Rerun `build.rs` next time one of the dependencies has been updated.
@@ -96,7 +96,7 @@ fn build_target_to_path(target: &str) -> PathBuf {
         .into_iter()
         .last()
         .expect("couldn't remove bazel build target prefix")
-        .replace(":", "");
+        .replace(':', "/");
     return [env!("WORKSPACE_ROOT"), &file_path].iter().collect();
 }
 
