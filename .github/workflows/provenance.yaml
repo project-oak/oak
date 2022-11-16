@@ -86,6 +86,7 @@ jobs:
 
       # Also post a reply on the PR thread with the sha256sum of the DSSE artifact.
       - name: Post SHA256 digest of the DSSE Artifact (post-merge only)
+        if: github.event_name == 'push'
         uses: actions/github-script@v6
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
