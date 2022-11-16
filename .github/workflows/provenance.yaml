@@ -20,7 +20,8 @@ jobs:
     uses: ./.github/workflows/reusable_provenance.yaml
     with:
       build-config-path: './buildconfigs/oak_functions_freestanding_bin.toml'
-    secrets: inherit
+    secrets:
+      ENT_API_KEY: ${{ secrets.ENT_API_KEY }}
 
   # TODO(#3428): To make it work with the matrix strategy, we most likely need
   # the reusable workflow to write its output to some file that we can then
