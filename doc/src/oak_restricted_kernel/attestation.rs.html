@@ -105,10 +105,10 @@
     GUEST_HOST_HEAP,
 };
 <span class="kw">use </span>alloc::boxed::Box;
-<span class="kw">pub use </span>sev_guest::guest::{
+<span class="kw">pub use </span>oak_sev_guest::guest::{
     AttestationReport, AttestationReportData, AuthorKey, EcdsaSignature, GuestPolicy, TcbVersion,
 };
-<span class="kw">use </span>sev_guest::guest::{AttestationRequest, AttestationResponse, GuestMessage, ReportStatus};
+<span class="kw">use </span>oak_sev_guest::guest::{AttestationRequest, AttestationResponse, GuestMessage, ReportStatus};
 <span class="kw">use </span>x86_64::VirtAddr;
 
 <span class="comment">// The number of custom bytes that can be included in the attestation report.
