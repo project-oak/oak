@@ -107,7 +107,7 @@ int tflite_run(const uint8_t* input_bytes_ptr, size_t input_bytes_len, uint8_t* 
   }
 
   if (input_bytes_len != input_size) {
-    MicroPrintf("incorrect input length: expected %d bytes but got %d bytes\n", input_size,
+    MicroPrintf("incorrect input length: expected %d bytes but got %d bytes", input_size,
                 input_bytes_len);
     return -1;
   }
@@ -121,7 +121,7 @@ int tflite_run(const uint8_t* input_bytes_ptr, size_t input_bytes_len, uint8_t* 
   // Run inference, and report any error
   TfLiteStatus invoke_status = interpreter->Invoke();
   if (invoke_status != kTfLiteOk) {
-    MicroPrintf("couldn't run Invoke(), err: %d\n", invoke_status);
+    MicroPrintf("couldn't run Invoke(), err: %d", invoke_status);
     return -1;
   }
 
