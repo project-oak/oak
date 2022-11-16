@@ -4,8 +4,6 @@ members = [
   "experimental/offline_attestation/client",
   "experimental/offline_attestation/server",
   "experimental/offline_attestation/shared",
-  "experimental/sev_guest",
-  "experimental/virtio",
   "experimental/vsock/echo",
   "experimental/web_client",
   "linux_boot_params",
@@ -45,6 +43,7 @@ members = [
   "oak_remote_attestation_sessions_client",
   "oak_restricted_kernel",
   "oak_tensorflow_service",
+  "sev_guest",
   "sev_serial",
   "oak_simple_io",
   "testing/oak_echo_service",
@@ -53,6 +52,7 @@ members = [
   "trusted_shuffler/common",
   "trusted_shuffler/server",
   "trusted_shuffler/trusted_shuffler",
+  "virtio",
   "xtask",
 ]
 exclude = [
