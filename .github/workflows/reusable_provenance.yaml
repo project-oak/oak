@@ -29,12 +29,6 @@ jobs:
       filename: ${{ steps.filename.outputs.filename }}
     runs-on: ubuntu-20.04
 
-    permissions:
-      # Allow the job to update the repo with the latest provenance info and index.
-      contents: write
-      # Allow the job to add a comment to the PR.
-      pull-requests: write
-
     steps:
       - name: Mount main branch
         uses: actions/checkout@v3
@@ -146,12 +140,6 @@ jobs:
     outputs:
       provenance_digest: ${{ steps.ent_upload.outputs.provenance_digest }}
     runs-on: ubuntu-20.04
-
-    permissions:
-      # Allow the job to update the repo with the latest provenances and index.
-      contents: write
-      # Allow the job to add a comment to the PR.
-      pull-requests: write
 
     steps:
       - name: Download the DSSE document
