@@ -14,12 +14,11 @@
  * limitations under the License.
  */
 
-#include "output_handler.h"
-#include "tflite_micro.h"
-
-#include "testing/tflite_micro/hello_world/hello_world_model_data.h"
-
 #include <stdint.h>
+
+#include "output_handler.h"
+#include "testing/tflite_micro/hello_world/hello_world_model_data.h"
+#include "tflite_micro.h"
 
 namespace {
 // This constant represents the range of x values our model was trained on,
@@ -41,15 +40,12 @@ constexpr int kTensorArenaSize = 2048;
 uint8_t tensor_arena[kTensorArenaSize];
 
 int inference_count = 0;
-}
+}  // namespace
 
 int main(int argc, char* argv[]) {
   size_t output_buffer_len = 0;
-  if (tflite_init(g_hello_world_model_data,
-                  g_hello_world_model_data_size,
-                  tensor_arena,
-                  kTensorArenaSize,
-                  &output_buffer_len) == 0) {
+  if (tflite_init(g_hello_world_model_data, g_hello_world_model_data_size, tensor_arena,
+                  kTensorArenaSize, &output_buffer_len) == 0) {
     int8_t output = 0;
     size_t output_len = 0;
     while (sizeof(output) == output_buffer_len) {
@@ -57,27 +53,22 @@ int main(int argc, char* argv[]) {
       // inference_count to the number of inferences per cycle to determine
       // our position within the range of possible x values the model was
       // trained on, and use this to calculate a value.
-      float position = static_cast<float>(inference_count) /
-                       static_cast<float>(kInferencesPerCycle);
+      float position =
+          static_cast<float>(inference_count) / static_cast<float>(kInferencesPerCycle);
       float x = position * kXrange;
 
       // Quantize the input from floating-point to integer
       auto input_tensor = tflite_get_input_tensor(0);
-      int8_t x_quantized =
-          x / input_tensor->params.scale + input_tensor->params.zero_point;
+      int8_t x_quantized = x / input_tensor->params.scale + input_tensor->params.zero_point;
 
-      if (tflite_run(reinterpret_cast<const uint8_t*>(&x_quantized),
-                     sizeof(x_quantized),
-                     reinterpret_cast<uint8_t*>(&output),
-                     &output_len) != 0) {
+      if (tflite_run(reinterpret_cast<const uint8_t*>(&x_quantized), sizeof(x_quantized),
+                     reinterpret_cast<uint8_t*>(&output), &output_len) != 0) {
         break;
       }
 
       // Dequantize the output from integer to floating-point
       auto output_tensor = tflite_get_output_tensor(0);
-      float y =
-          (output - output_tensor->params.zero_point)
-          * output_tensor->params.scale;
+      float y = (output - output_tensor->params.zero_point) * output_tensor->params.scale;
 
       HandleOutput(x, y);
 

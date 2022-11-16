@@ -70,9 +70,10 @@ int tflite_init(const uint8_t* model_bytes_ptr, size_t model_bytes_len,
   }
 
   if (interpreter->inputs_size() > MAX_TENSORS || interpreter->outputs_size() > MAX_TENSORS) {
-    MicroPrintf("tensor number exceeded: input_tensors: "
-                "%d, output_tensors: %d, max input/output tensors: %d",
-                interpreter->inputs_size(), interpreter->outputs_size(), MAX_TENSORS);
+    MicroPrintf(
+        "tensor number exceeded: input_tensors: "
+        "%d, output_tensors: %d, max input/output tensors: %d",
+        interpreter->inputs_size(), interpreter->outputs_size(), MAX_TENSORS);
     return -1;
   }
 
@@ -106,8 +107,8 @@ int tflite_run(const uint8_t* input_bytes_ptr, size_t input_bytes_len, uint8_t* 
   }
 
   if (input_bytes_len != input_size) {
-    MicroPrintf("incorrect input length: expected %d bytes but got %d bytes\n",
-                input_size, input_bytes_len);
+    MicroPrintf("incorrect input length: expected %d bytes but got %d bytes\n", input_size,
+                input_bytes_len);
     return -1;
   }
 

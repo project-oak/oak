@@ -25,18 +25,15 @@ extern "C" {
 // flexbuffers::Reference::AsUInt64() in TFLM.
 int* __errno_location() {
   // Oak supports only single-threading for the moment
-  // hence one errno singleton instance is used. 
+  // hence one errno singleton instance is used.
   static int errno = 0;
   return &errno;
 }
 
 // Used in flatbuffers and gemmlowp/fixedpoint headers
 // when optimization is disabled (--define no_opt=1).
-void __assert_fail(
-    const char* assertion,
-    const char* file,
-    unsigned int line,
-    const char* function) {
+void __assert_fail(const char* assertion, const char* file, unsigned int line,
+                   const char* function) {
   MicroPrintf("%s in %s:%d %s", assertion, file, line, function);
 }
 
@@ -45,13 +42,12 @@ void abort() {
   MicroPrintf("Aborting...");
 
   // abort is a 'noreturn' function.
-  while (1);
+  while (1)
+    ;
 }
 
 // *NOT* used when linking to Oak Kernel/Runtime since
 // this function is simply used to build a freestanding
 // program binary runnable and debuggable locally.
-int atexit(void (*)()) {
-  return 0;
-}
+int atexit(void (*)()) { return 0; }
 }

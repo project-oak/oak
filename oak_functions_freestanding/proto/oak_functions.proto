@@ -19,44 +19,44 @@ syntax = "proto3";
 package oak.functions;
 
 service TrustedRuntime {
-    // method_id: 0
-    rpc HandleUserRequest(UserRequest) returns (UserRequestResponse);
-    // method_id: 1
-    rpc Initialize(Initialization) returns (InitializeResponse);
-    // Replaces the existing lookup data with the new value.
-    // method_id: 2
-    rpc UpdateLookupData(LookupData) returns (Empty);
+  // method_id: 0
+  rpc HandleUserRequest(UserRequest) returns (UserRequestResponse);
+  // method_id: 1
+  rpc Initialize(Initialization) returns (InitializeResponse);
+  // Replaces the existing lookup data with the new value.
+  // method_id: 2
+  rpc UpdateLookupData(LookupData) returns (Empty);
 }
 
 message UserRequest {
-    bytes body = 1;
+  bytes body = 1;
 }
 
 message UserRequestResponse {
-    bytes body = 1;
+  bytes body = 1;
 }
 
 message Initialization {
-    bytes wasm_module = 1;
-    uint32 constant_response_size = 2;
+  bytes wasm_module = 1;
+  uint32 constant_response_size = 2;
 }
 
 message InitializeResponse {
-    PublicKeyInfo public_key_info = 1;
+  PublicKeyInfo public_key_info = 1;
 }
 
 message PublicKeyInfo {
-    bytes public_key = 1;
-    bytes attestation = 2;
+  bytes public_key = 1;
+  bytes attestation = 2;
 }
 
 message LookupDataEntry {
-    bytes key = 1;
-    bytes value = 2;
+  bytes key = 1;
+  bytes value = 2;
 }
 
 message LookupData {
-    repeated LookupDataEntry items = 1;
+  repeated LookupDataEntry items = 1;
 }
 
 message Empty {}
