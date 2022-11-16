@@ -18,7 +18,7 @@ use crate::{shutdown, snp::CPUID_PAGE};
 use core::{arch::asm, ops::Deref};
 use lazy_static::lazy_static;
 use log::error;
-use sev_guest::{
+use oak_sev_guest::{
     interrupts::{mutable_interrupt_handler_with_error_code, MutableInterruptStackFrame},
     msr::get_cpuid_for_vc_exception,
 };

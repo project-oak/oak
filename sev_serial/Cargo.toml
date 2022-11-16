@@ -6,5 +6,5 @@ edition = "2021"
 license = "Apache-2.0"
 
 [dependencies]
-sev_guest = { path = "../experimental/sev_guest" }
+oak_sev_guest = { path = "../oak_sev_guest" }
 x86_64 = "*"

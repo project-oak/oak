@@ -16,7 +16,7 @@
 
 use core::fmt::Write;
 use lazy_static::lazy_static;
-use sev_guest::{
+use oak_sev_guest::{
     ghcb::{Ghcb, GhcbProtocol},
     io::PortFactoryWrapper,
     msr::{get_sev_status, SevStatus},

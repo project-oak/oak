@@ -19,10 +19,10 @@ use crate::{
     GUEST_HOST_HEAP,
 };
 use alloc::boxed::Box;
-pub use sev_guest::guest::{
+pub use oak_sev_guest::guest::{
     AttestationReport, AttestationReportData, AuthorKey, EcdsaSignature, GuestPolicy, TcbVersion,
 };
-use sev_guest::guest::{AttestationRequest, AttestationResponse, GuestMessage, ReportStatus};
+use oak_sev_guest::guest::{AttestationRequest, AttestationResponse, GuestMessage, ReportStatus};
 use x86_64::VirtAddr;
 
 // The number of custom bytes that can be included in the attestation report.

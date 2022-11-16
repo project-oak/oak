@@ -18,7 +18,7 @@ use atomic_refcell::AtomicRefCell;
 use core::fmt::Write;
 use lazy_static::lazy_static;
 use log::info;
-use sev_guest::{
+use oak_sev_guest::{
     io::PortFactoryWrapper,
     msr::{get_sev_status, SevStatus},
 };

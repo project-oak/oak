@@ -72,7 +72,7 @@ use mm::encrypted_mapper::{EncryptedPageTable, PhysOffset};
 use oak_channel::Channel;
 use oak_core::sync::OnceCell;
 use oak_linux_boot_params::BootParams;
-use sev_guest::msr::{change_snp_state_for_frame, get_sev_status, PageAssignment, SevStatus};
+use oak_sev_guest::msr::{change_snp_state_for_frame, get_sev_status, PageAssignment, SevStatus};
 use strum::{EnumIter, EnumString, IntoEnumIterator};
 use x86_64::{
     structures::paging::{MappedPageTable, Page, Size2MiB},

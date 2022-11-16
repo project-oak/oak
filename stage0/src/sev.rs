@@ -17,7 +17,7 @@
 use core::mem::MaybeUninit;
 use oak_core::sync::OnceCell;
 use oak_linux_boot_params::{BootParams, E820EntryType};
-use sev_guest::{
+use oak_sev_guest::{
     ghcb::{Ghcb, GhcbProtocol},
     instructions::{pvalidate, InstructionError, PageSize as SevPageSize, Validation},
     msr::{
