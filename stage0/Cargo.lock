@@ -199,6 +199,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "oak_sev_guest"
+version = "0.1.0"
+dependencies = [
+ "aes-gcm",
+ "bitflags",
+ "lock_api",
+ "snafu",
+ "spinning_top",
+ "static_assertions",
+ "strum",
+ "x86_64",
+ "zerocopy",
+]
+
+[[package]]
 name = "oak_stage0"
 version = "0.1.0"
 dependencies = [
@@ -273,21 +288,6 @@ name = "scroll"
 version = "0.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "04c565b551bafbef4157586fa379538366e4385d42082f255bfd96e4fe8519da"
-
-[[package]]
-name = "oak_sev_guest"
-version = "0.1.0"
-dependencies = [
- "aes-gcm",
- "bitflags",
- "lock_api",
- "snafu",
- "spinning_top",
- "static_assertions",
- "strum",
- "x86_64",
- "zerocopy",
-]
 
 [[package]]
 name = "sev_serial"
