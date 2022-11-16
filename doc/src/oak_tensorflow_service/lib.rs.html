@@ -90,11 +90,11 @@
 <span class="kw">mod </span>tflite;
 
 <span class="attribute">#[derive(Default)]
-</span><span class="kw">pub struct </span>TensorflowServiceImpl {
+</span><span class="kw">pub struct </span>TensorflowService {
     tflite_model: tflite::TfliteModel,
 }
 
-<span class="kw">impl </span>TensorflowServiceImpl {
+<span class="kw">impl </span>TensorflowService {
     <span class="kw">pub fn </span>new() -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
             tflite_model: tflite::TfliteModel::new(),
@@ -102,7 +102,7 @@
     }
 }
 
-<span class="kw">impl </span>schema::TensorflowService <span class="kw">for </span>TensorflowServiceImpl {
+<span class="kw">impl </span>schema::Tensorflow <span class="kw">for </span>TensorflowService {
     <span class="kw">fn </span>initialize(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
         initialization: <span class="kw-2">&amp;</span>schema::InitializeRequest,

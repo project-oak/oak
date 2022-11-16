@@ -152,14 +152,14 @@
         <span class="kw">let </span><span class="prelude-val">Some</span>(request_wrapper::Request::InvokeRequest(invoke_request)) = request.request <span class="kw">else </span>{
             <span class="kw">return </span><span class="prelude-val">Err</span>(tonic::Status::invalid_argument(<span class="string">&quot;request wrapper must have invoke_request field set&quot;</span>));
         };
-        <span class="kw">let </span>encoded_request = schema::UserRequest {
+        <span class="kw">let </span>encoded_request = schema::InvokeRequest {
             body: invoke_request.encrypted_body,
         };
 
-        <span class="kw">let </span><span class="kw-2">mut </span>client = schema::TrustedRuntimeAsyncClient::new(<span class="self">self</span>.connector_handle.clone());
+        <span class="kw">let </span><span class="kw-2">mut </span>client = schema::OakFunctionsAsyncClient::new(<span class="self">self</span>.connector_handle.clone());
 
         <span class="kw">let </span>response = client
-            .handle_user_request(<span class="kw-2">&amp;</span>encoded_request)
+            .invoke(<span class="kw-2">&amp;</span>encoded_request)
             .<span class="kw">await
             </span>.flatten()
             .map_err(|err| {

@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":[["schema",""]],"struct":[["TensorflowServiceImpl",""]]};
+window.SIDEBAR_ITEMS = {"mod":[["schema",""]],"struct":[["TensorflowService",""]]};

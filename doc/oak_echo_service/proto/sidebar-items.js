@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":[["EchoRequest",""],["EchoResponse",""],["EchoServiceAsyncClient",""],["EchoServiceClient",""],["EchoServiceServer",""]],"trait":[["EchoService",""]]};
+window.SIDEBAR_ITEMS = {"struct":[["EchoAsyncClient",""],["EchoClient",""],["EchoRequest",""],["EchoResponse",""],["EchoServer",""]],"trait":[["Echo",""]]};

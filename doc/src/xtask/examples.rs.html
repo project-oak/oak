@@ -743,7 +743,6 @@
 <span id="743">743</span>
 <span id="744">744</span>
 <span id="745">745</span>
-<span id="746">746</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2021 The Project Oak Authors
 //
@@ -1215,10 +1214,9 @@
                 server.constant_response_size_bytes
             ),
             <span class="macro">format!</span>(<span class="string">&quot;--lookup-data={}&quot;</span>, server.lookup_data),
-            <span class="comment">// Run the &quot;trusted&quot; runtime binary as a native Linux process, connecting over a file
-            // descriptor.
+            <span class="comment">// Run the enclave binary as a native Linux process, connecting over a file descriptor.
             </span><span class="string">&quot;native&quot;</span>.to_string(),
-            <span class="string">&quot;--app-binary=target/x86_64-unknown-linux-musl/release/oak_functions_linux_fd_bin&quot;
+            <span class="string">&quot;--enclave-binary=target/x86_64-unknown-linux-musl/release/oak_functions_linux_fd_bin&quot;
                 </span>.to_string(),
         ],
     )

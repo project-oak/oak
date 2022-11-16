@@ -108,15 +108,15 @@
     path::PathBuf,
 };
 
-<span class="doccomment">/// Parameters used for launching the runtime as a native binary
+<span class="doccomment">/// Parameters used for launching the enclave as a native binary
 </span><span class="attribute">#[derive(Parser, Clone, Debug, PartialEq)]
 </span><span class="kw">pub struct </span>Params {
-    <span class="doccomment">/// Path to the runtime binary
+    <span class="doccomment">/// Path to the enclave binary.
     </span><span class="attribute">#[arg(long, value_parser = path_exists)]
-    </span><span class="kw">pub </span>app_binary: PathBuf,
+    </span><span class="kw">pub </span>enclave_binary: PathBuf,
 }
 
-<span class="doccomment">/// An instance of the runtime running directly as a linux binary
+<span class="doccomment">/// An instance of the enclave running directly as a linux binary
 </span><span class="kw">pub struct </span>Instance {
     comms_host: UnixStream,
     instance: tokio::process::Child,
@@ -126,7 +126,7 @@
     <span class="kw">pub fn </span>start(params: Params) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>&gt; {
         <span class="kw">let </span>(comms_guest, comms_host) = UnixStream::pair()<span class="question-mark">?</span>;
 
-        <span class="kw">let </span><span class="kw-2">mut </span>cmd = tokio::process::Command::new(params.app_binary);
+        <span class="kw">let </span><span class="kw-2">mut </span>cmd = tokio::process::Command::new(params.enclave_binary);
 
         <span class="comment">// Print any logs &amp; errors
         </span>cmd.stdout(std::process::Stdio::inherit());

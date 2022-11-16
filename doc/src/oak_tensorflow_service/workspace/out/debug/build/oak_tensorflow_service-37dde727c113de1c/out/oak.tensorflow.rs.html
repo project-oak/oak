@@ -150,11 +150,11 @@
 }
 
 <span class="attribute">#[derive(Clone)]
-</span><span class="kw">pub struct </span>TensorflowServiceServer&lt;S&gt; {
+</span><span class="kw">pub struct </span>TensorflowServer&lt;S&gt; {
     service: S
 }
 
-<span class="kw">impl </span>&lt;S: TensorflowService&gt; ::oak_idl::Transport <span class="kw">for </span>TensorflowServiceServer&lt;S&gt; {
+<span class="kw">impl </span>&lt;S: Tensorflow&gt; ::oak_idl::Transport <span class="kw">for </span>TensorflowServer&lt;S&gt; {
     <span class="kw">fn </span>invoke(<span class="kw-2">&amp;mut </span><span class="self">self</span>, request_bytes: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;::prost::alloc::vec::Vec&lt;u8&gt;, !&gt; {
         <span class="kw">let </span>response_bytes = <span class="self">self
             </span>.invoke_inner(request_bytes)
@@ -167,7 +167,7 @@
     }
 }
 
-<span class="kw">impl </span>&lt;S: TensorflowService&gt; TensorflowServiceServer&lt;S&gt; {
+<span class="kw">impl </span>&lt;S: Tensorflow&gt; TensorflowServer&lt;S&gt; {
     <span class="kw">fn </span>invoke_inner(<span class="kw-2">&amp;mut </span><span class="self">self</span>, request_bytes: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;::prost::alloc::vec::Vec&lt;u8&gt;, ::oak_idl::Status&gt; {
         <span class="kw">let </span>request = ::oak_idl::Request::decode(request_bytes).map_err(|err| {
             ::oak_idl::Status::new_with_message(
@@ -205,19 +205,19 @@
     }
 }
 
-<span class="kw">pub trait </span>TensorflowService: Sized {
+<span class="kw">pub trait </span>Tensorflow: Sized {
     <span class="kw">fn </span>initialize(<span class="kw-2">&amp;mut </span><span class="self">self</span>, request: <span class="kw-2">&amp;</span>InitializeRequest) -&gt; <span class="prelude-ty">Result</span>&lt;InitializeResponse, ::oak_idl::Status&gt;;
     <span class="kw">fn </span>invoke(<span class="kw-2">&amp;mut </span><span class="self">self</span>, request: <span class="kw-2">&amp;</span>InvokeRequest) -&gt; <span class="prelude-ty">Result</span>&lt;InvokeResponse, ::oak_idl::Status&gt;;
-    <span class="kw">fn </span>serve(<span class="self">self</span>) -&gt; TensorflowServiceServer&lt;<span class="self">Self</span>&gt; {
-        TensorflowServiceServer { service : <span class="self">self </span>}
+    <span class="kw">fn </span>serve(<span class="self">self</span>) -&gt; TensorflowServer&lt;<span class="self">Self</span>&gt; {
+        TensorflowServer { service : <span class="self">self </span>}
     }
 }
 
-<span class="kw">pub struct </span>TensorflowServiceClient&lt;T: ::oak_idl::Transport&gt; {
+<span class="kw">pub struct </span>TensorflowClient&lt;T: ::oak_idl::Transport&gt; {
     transport: T
 }
 
-<span class="kw">impl </span>&lt;T: ::oak_idl::Transport&gt; TensorflowServiceClient&lt;T&gt; {
+<span class="kw">impl </span>&lt;T: ::oak_idl::Transport&gt; TensorflowClient&lt;T&gt; {
     <span class="kw">pub fn </span>new(transport: T) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
             transport
@@ -231,11 +231,11 @@
     }
 }
 
-<span class="kw">pub struct </span>TensorflowServiceAsyncClient&lt;T: ::oak_idl::AsyncTransport&gt; {
+<span class="kw">pub struct </span>TensorflowAsyncClient&lt;T: ::oak_idl::AsyncTransport&gt; {
     transport: T
 }
 
-<span class="kw">impl </span>&lt;T: ::oak_idl::AsyncTransport&gt; TensorflowServiceAsyncClient&lt;T&gt; {
+<span class="kw">impl </span>&lt;T: ::oak_idl::AsyncTransport&gt; TensorflowAsyncClient&lt;T&gt; {
     <span class="kw">pub fn </span>new(transport: T) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
             transport

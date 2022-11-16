@@ -188,10 +188,6 @@
 <span id="188">188</span>
 <span id="189">189</span>
 <span id="190">190</span>
-<span id="191">191</span>
-<span id="192">192</span>
-<span id="193">193</span>
-<span id="194">194</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -236,9 +232,9 @@
 
 <span class="attribute">#[derive(clap::Subcommand, Clone, Debug, PartialEq)]
 </span><span class="kw">enum </span>Mode {
-    <span class="doccomment">/// Launch runtime in crosvm
+    <span class="doccomment">/// Launch enclave in crosvm
     </span>Crosvm(crosvm::Params),
-    <span class="doccomment">/// Launch a runtime binary directly as a child process
+    <span class="doccomment">/// Launch an enclave binary directly as a child process
     </span>Native(native::Params),
 }
 
@@ -248,15 +244,14 @@
     </span><span class="attribute">#[command(subcommand)]
     </span>mode: Mode,
 
-    <span class="doccomment">/// Consistent response size that the runtime should apply
+    <span class="doccomment">/// Consistent response size that the enclave should apply
     </span><span class="attribute">#[arg(long, default_value = <span class="string">&quot;1024&quot;</span>)]
     </span>constant_response_size: u32,
 
     <span class="attribute">#[arg(long, default_value = <span class="string">&quot;8080&quot;</span>)]
     </span>port: u16,
 
-    <span class="doccomment">/// Path to a Wasm file to be loaded into the trusted runtime and executed by it per
-    /// invocation. See the documentation for details on its ABI. Ref: &lt;https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md&gt;
+    <span class="doccomment">/// Path to a Wasm file to be loaded into the enclave and executed by it per invocation. See the documentation for details on its ABI. Ref: &lt;https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md&gt;
     </span><span class="attribute">#[arg(
         long,
         value_parser = path_exists,
@@ -315,7 +310,7 @@
 
     <span class="comment">// Spawn task to load &amp; periodically refresh lookup data.
     </span>{
-        <span class="kw">let </span><span class="kw-2">mut </span>runtime_client = schema::TrustedRuntimeAsyncClient::new(connector_handle.clone());
+        <span class="kw">let </span><span class="kw-2">mut </span>client = schema::OakFunctionsAsyncClient::new(connector_handle.clone());
         tokio::spawn(<span class="kw">async move </span>{
             <span class="kw">let </span><span class="kw-2">mut </span>interval =
                 tokio::time::interval(std::time::Duration::from_millis(<span class="number">1000 </span>* <span class="number">60 </span>* <span class="number">10</span>));
@@ -325,10 +320,7 @@
                 <span class="kw">let </span>encoded_lookup_data =
                     lookup::encode_lookup_data(lookup_data).expect(<span class="string">&quot;couldn&#39;t encode lookup data&quot;</span>);
 
-                <span class="kw">if let </span><span class="prelude-val">Err</span>(err) = runtime_client
-                    .update_lookup_data(<span class="kw-2">&amp;</span>encoded_lookup_data)
-                    .<span class="kw">await
-                </span>{
+                <span class="kw">if let </span><span class="prelude-val">Err</span>(err) = client.update_lookup_data(<span class="kw-2">&amp;</span>encoded_lookup_data).<span class="kw">await </span>{
                     <span class="macro">panic!</span>(<span class="string">&quot;couldn&#39;t send lookup data: {:?}&quot;</span>, err)
                 }
 
@@ -346,17 +338,17 @@
         wasm_bytes.len()
     );
 
-    <span class="kw">let </span>request = schema::Initialization {
+    <span class="kw">let </span>request = schema::InitializeRequest {
         wasm_module: wasm_bytes,
         constant_response_size: cli.constant_response_size,
     };
 
-    <span class="kw">let </span><span class="kw-2">mut </span>client = schema::TrustedRuntimeAsyncClient::new(connector_handle.clone());
+    <span class="kw">let </span><span class="kw-2">mut </span>client = schema::OakFunctionsAsyncClient::new(connector_handle.clone());
     <span class="kw">let </span>result = client
         .initialize(<span class="kw-2">&amp;</span>request)
         .<span class="kw">await
         </span>.flatten()
-        .expect(<span class="string">&quot;couldn&#39;t initialize the runtime&quot;</span>);
+        .expect(<span class="string">&quot;couldn&#39;t initialize the service&quot;</span>);
 
     <span class="kw">let </span>public_key_info = result.public_key_info.expect(<span class="string">&quot;no public key info returned&quot;</span>);
     <span class="macro">log::info!</span>(

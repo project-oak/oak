@@ -178,9 +178,9 @@
     </span><span class="attribute">#[arg(long, value_parser = path_exists)]
     </span><span class="kw">pub </span>vmm_binary: PathBuf,
 
-    <span class="doccomment">/// Path to the binary to load into the VM.
+    <span class="doccomment">/// Path to the enclave binary to load into the VM.
     </span><span class="attribute">#[arg(long, value_parser = path_exists)]
-    </span><span class="kw">pub </span>app_binary: PathBuf,
+    </span><span class="kw">pub </span>enclave_binary: PathBuf,
 
     <span class="doccomment">/// Port to use for debugging with gdb
     </span><span class="attribute">#[arg(long = <span class="string">&quot;gdb&quot;</span>)]
@@ -222,7 +222,7 @@
             </span>cmd.args([<span class="string">&quot;--gdb&quot;</span>, <span class="macro">format!</span>(<span class="string">&quot;{}&quot;</span>, gdb_port).as_str()]);
         }
 
-        cmd.arg(params.app_binary);
+        cmd.arg(params.enclave_binary);
 
         <span class="macro">info!</span>(<span class="string">&quot;Executing: {:?}&quot;</span>, cmd);
 

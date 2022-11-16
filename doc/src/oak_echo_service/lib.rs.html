@@ -44,8 +44,6 @@
 <span id="44">44</span>
 <span id="45">45</span>
 <span id="46">46</span>
-<span id="47">47</span>
-<span id="48">48</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -75,12 +73,10 @@
     <span class="macro">include!</span>(<span class="macro">concat!</span>(<span class="macro">env!</span>(<span class="string">&quot;OUT_DIR&quot;</span>), <span class="string">&quot;/oak.echo.rs&quot;</span>));
 }
 
-<span class="kw">pub use </span>proto::EchoService;
-
 <span class="attribute">#[derive(Default)]
-</span><span class="kw">pub struct </span>EchoServiceImpl {}
+</span><span class="kw">pub struct </span>EchoService;
 
-<span class="kw">impl </span>proto::EchoService <span class="kw">for </span>EchoServiceImpl {
+<span class="kw">impl </span>proto::Echo <span class="kw">for </span>EchoService {
     <span class="kw">fn </span>echo(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
         request: <span class="kw-2">&amp;</span>proto::EchoRequest,

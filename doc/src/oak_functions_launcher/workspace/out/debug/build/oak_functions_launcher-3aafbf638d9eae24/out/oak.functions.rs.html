@@ -161,17 +161,7 @@
 <span id="161">161</span>
 <span id="162">162</span>
 </pre><pre class="rust"><code><span class="attribute">#[derive(Clone, PartialEq, ::prost::Message)]
-</span><span class="kw">pub struct </span>UserRequest {
-    <span class="attribute">#[prost(bytes=<span class="string">&quot;vec&quot;</span>, tag=<span class="string">&quot;1&quot;</span>)]
-    </span><span class="kw">pub </span>body: ::prost::alloc::vec::Vec&lt;u8&gt;,
-}
-<span class="attribute">#[derive(Clone, PartialEq, ::prost::Message)]
-</span><span class="kw">pub struct </span>UserRequestResponse {
-    <span class="attribute">#[prost(bytes=<span class="string">&quot;vec&quot;</span>, tag=<span class="string">&quot;1&quot;</span>)]
-    </span><span class="kw">pub </span>body: ::prost::alloc::vec::Vec&lt;u8&gt;,
-}
-<span class="attribute">#[derive(Clone, PartialEq, ::prost::Message)]
-</span><span class="kw">pub struct </span>Initialization {
+</span><span class="kw">pub struct </span>InitializeRequest {
     <span class="attribute">#[prost(bytes=<span class="string">&quot;vec&quot;</span>, tag=<span class="string">&quot;1&quot;</span>)]
     </span><span class="kw">pub </span>wasm_module: ::prost::alloc::vec::Vec&lt;u8&gt;,
     <span class="attribute">#[prost(uint32, tag=<span class="string">&quot;2&quot;</span>)]
@@ -190,6 +180,16 @@
     </span><span class="kw">pub </span>attestation: ::prost::alloc::vec::Vec&lt;u8&gt;,
 }
 <span class="attribute">#[derive(Clone, PartialEq, ::prost::Message)]
+</span><span class="kw">pub struct </span>InvokeRequest {
+    <span class="attribute">#[prost(bytes=<span class="string">&quot;vec&quot;</span>, tag=<span class="string">&quot;1&quot;</span>)]
+    </span><span class="kw">pub </span>body: ::prost::alloc::vec::Vec&lt;u8&gt;,
+}
+<span class="attribute">#[derive(Clone, PartialEq, ::prost::Message)]
+</span><span class="kw">pub struct </span>InvokeResponse {
+    <span class="attribute">#[prost(bytes=<span class="string">&quot;vec&quot;</span>, tag=<span class="string">&quot;1&quot;</span>)]
+    </span><span class="kw">pub </span>body: ::prost::alloc::vec::Vec&lt;u8&gt;,
+}
+<span class="attribute">#[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>LookupDataEntry {
     <span class="attribute">#[prost(bytes=<span class="string">&quot;vec&quot;</span>, tag=<span class="string">&quot;1&quot;</span>)]
     </span><span class="kw">pub </span>key: ::prost::alloc::vec::Vec&lt;u8&gt;,
@@ -206,11 +206,11 @@
 }
 
 <span class="attribute">#[derive(Clone)]
-</span><span class="kw">pub struct </span>TrustedRuntimeServer&lt;S&gt; {
+</span><span class="kw">pub struct </span>OakFunctionsServer&lt;S&gt; {
     service: S
 }
 
-<span class="kw">impl </span>&lt;S: TrustedRuntime&gt; ::oak_idl::Transport <span class="kw">for </span>TrustedRuntimeServer&lt;S&gt; {
+<span class="kw">impl </span>&lt;S: OakFunctions&gt; ::oak_idl::Transport <span class="kw">for </span>OakFunctionsServer&lt;S&gt; {
     <span class="kw">fn </span>invoke(<span class="kw-2">&amp;mut </span><span class="self">self</span>, request_bytes: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;::prost::alloc::vec::Vec&lt;u8&gt;, !&gt; {
         <span class="kw">let </span>response_bytes = <span class="self">self
             </span>.invoke_inner(request_bytes)
@@ -223,7 +223,7 @@
     }
 }
 
-<span class="kw">impl </span>&lt;S: TrustedRuntime&gt; TrustedRuntimeServer&lt;S&gt; {
+<span class="kw">impl </span>&lt;S: OakFunctions&gt; OakFunctionsServer&lt;S&gt; {
     <span class="kw">fn </span>invoke_inner(<span class="kw-2">&amp;mut </span><span class="self">self</span>, request_bytes: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;::prost::alloc::vec::Vec&lt;u8&gt;, ::oak_idl::Status&gt; {
         <span class="kw">let </span>request = ::oak_idl::Request::decode(request_bytes).map_err(|err| {
             ::oak_idl::Status::new_with_message(
@@ -233,24 +233,24 @@
         })<span class="question-mark">?</span>;
         <span class="kw">match </span>request.method_id {
             <span class="number">0 </span>=&gt; {
-                <span class="kw">let </span>request = UserRequest::decode(request.body.as_ref()).map_err(|err| {
-                    ::oak_idl::Status::new_with_message(
-                        ::oak_idl::StatusCode::Internal,
-                        <span class="macro">::oak_idl::format!</span>(<span class="string">&quot;Service failed to deserialize the request: {:?}&quot;</span>, err)
-                    )
-                })<span class="question-mark">?</span>;
-                <span class="kw">let </span>response = <span class="self">self</span>.service.handle_user_request(<span class="kw-2">&amp;</span>request)<span class="question-mark">?</span>;
-                <span class="kw">let </span>response_body = response.encode_to_vec();
-                <span class="prelude-val">Ok</span>(response_body)
-            }
-            <span class="number">1 </span>=&gt; {
-                <span class="kw">let </span>request = Initialization::decode(request.body.as_ref()).map_err(|err| {
+                <span class="kw">let </span>request = InitializeRequest::decode(request.body.as_ref()).map_err(|err| {
                     ::oak_idl::Status::new_with_message(
                         ::oak_idl::StatusCode::Internal,
                         <span class="macro">::oak_idl::format!</span>(<span class="string">&quot;Service failed to deserialize the request: {:?}&quot;</span>, err)
                     )
                 })<span class="question-mark">?</span>;
                 <span class="kw">let </span>response = <span class="self">self</span>.service.initialize(<span class="kw-2">&amp;</span>request)<span class="question-mark">?</span>;
+                <span class="kw">let </span>response_body = response.encode_to_vec();
+                <span class="prelude-val">Ok</span>(response_body)
+            }
+            <span class="number">1 </span>=&gt; {
+                <span class="kw">let </span>request = InvokeRequest::decode(request.body.as_ref()).map_err(|err| {
+                    ::oak_idl::Status::new_with_message(
+                        ::oak_idl::StatusCode::Internal,
+                        <span class="macro">::oak_idl::format!</span>(<span class="string">&quot;Service failed to deserialize the request: {:?}&quot;</span>, err)
+                    )
+                })<span class="question-mark">?</span>;
+                <span class="kw">let </span>response = <span class="self">self</span>.service.invoke(<span class="kw-2">&amp;</span>request)<span class="question-mark">?</span>;
                 <span class="kw">let </span>response_body = response.encode_to_vec();
                 <span class="prelude-val">Ok</span>(response_body)
             }
@@ -272,29 +272,29 @@
     }
 }
 
-<span class="kw">pub trait </span>TrustedRuntime: Sized {
-    <span class="kw">fn </span>handle_user_request(<span class="kw-2">&amp;mut </span><span class="self">self</span>, request: <span class="kw-2">&amp;</span>UserRequest) -&gt; <span class="prelude-ty">Result</span>&lt;UserRequestResponse, ::oak_idl::Status&gt;;
-    <span class="kw">fn </span>initialize(<span class="kw-2">&amp;mut </span><span class="self">self</span>, request: <span class="kw-2">&amp;</span>Initialization) -&gt; <span class="prelude-ty">Result</span>&lt;InitializeResponse, ::oak_idl::Status&gt;;
+<span class="kw">pub trait </span>OakFunctions: Sized {
+    <span class="kw">fn </span>initialize(<span class="kw-2">&amp;mut </span><span class="self">self</span>, request: <span class="kw-2">&amp;</span>InitializeRequest) -&gt; <span class="prelude-ty">Result</span>&lt;InitializeResponse, ::oak_idl::Status&gt;;
+    <span class="kw">fn </span>invoke(<span class="kw-2">&amp;mut </span><span class="self">self</span>, request: <span class="kw-2">&amp;</span>InvokeRequest) -&gt; <span class="prelude-ty">Result</span>&lt;InvokeResponse, ::oak_idl::Status&gt;;
     <span class="kw">fn </span>update_lookup_data(<span class="kw-2">&amp;mut </span><span class="self">self</span>, request: <span class="kw-2">&amp;</span>LookupData) -&gt; <span class="prelude-ty">Result</span>&lt;Empty, ::oak_idl::Status&gt;;
-    <span class="kw">fn </span>serve(<span class="self">self</span>) -&gt; TrustedRuntimeServer&lt;<span class="self">Self</span>&gt; {
-        TrustedRuntimeServer { service : <span class="self">self </span>}
+    <span class="kw">fn </span>serve(<span class="self">self</span>) -&gt; OakFunctionsServer&lt;<span class="self">Self</span>&gt; {
+        OakFunctionsServer { service : <span class="self">self </span>}
     }
 }
 
-<span class="kw">pub struct </span>TrustedRuntimeClient&lt;T: ::oak_idl::Transport&gt; {
+<span class="kw">pub struct </span>OakFunctionsClient&lt;T: ::oak_idl::Transport&gt; {
     transport: T
 }
 
-<span class="kw">impl </span>&lt;T: ::oak_idl::Transport&gt; TrustedRuntimeClient&lt;T&gt; {
+<span class="kw">impl </span>&lt;T: ::oak_idl::Transport&gt; OakFunctionsClient&lt;T&gt; {
     <span class="kw">pub fn </span>new(transport: T) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
             transport
         }
     }
-    <span class="kw">pub fn </span>handle_user_request(<span class="kw-2">&amp;mut </span><span class="self">self</span>, request: <span class="kw-2">&amp;</span>UserRequest) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Result</span>&lt;UserRequestResponse, ::oak_idl::Status&gt;, T::Error&gt; {
+    <span class="kw">pub fn </span>initialize(<span class="kw-2">&amp;mut </span><span class="self">self</span>, request: <span class="kw-2">&amp;</span>InitializeRequest) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Result</span>&lt;InitializeResponse, ::oak_idl::Status&gt;, T::Error&gt; {
         ::oak_idl::client_invoke(<span class="kw-2">&amp;mut </span><span class="self">self</span>.transport, <span class="number">0</span>, request)
     }
-    <span class="kw">pub fn </span>initialize(<span class="kw-2">&amp;mut </span><span class="self">self</span>, request: <span class="kw-2">&amp;</span>Initialization) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Result</span>&lt;InitializeResponse, ::oak_idl::Status&gt;, T::Error&gt; {
+    <span class="kw">pub fn </span>invoke(<span class="kw-2">&amp;mut </span><span class="self">self</span>, request: <span class="kw-2">&amp;</span>InvokeRequest) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Result</span>&lt;InvokeResponse, ::oak_idl::Status&gt;, T::Error&gt; {
         ::oak_idl::client_invoke(<span class="kw-2">&amp;mut </span><span class="self">self</span>.transport, <span class="number">1</span>, request)
     }
     <span class="kw">pub fn </span>update_lookup_data(<span class="kw-2">&amp;mut </span><span class="self">self</span>, request: <span class="kw-2">&amp;</span>LookupData) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Result</span>&lt;Empty, ::oak_idl::Status&gt;, T::Error&gt; {
@@ -302,20 +302,20 @@
     }
 }
 
-<span class="kw">pub struct </span>TrustedRuntimeAsyncClient&lt;T: ::oak_idl::AsyncTransport&gt; {
+<span class="kw">pub struct </span>OakFunctionsAsyncClient&lt;T: ::oak_idl::AsyncTransport&gt; {
     transport: T
 }
 
-<span class="kw">impl </span>&lt;T: ::oak_idl::AsyncTransport&gt; TrustedRuntimeAsyncClient&lt;T&gt; {
+<span class="kw">impl </span>&lt;T: ::oak_idl::AsyncTransport&gt; OakFunctionsAsyncClient&lt;T&gt; {
     <span class="kw">pub fn </span>new(transport: T) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
             transport
         }
     }
-    <span class="kw">pub async fn </span>handle_user_request(<span class="kw-2">&amp;mut </span><span class="self">self</span>, request: <span class="kw-2">&amp;</span>UserRequest) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Result</span>&lt;UserRequestResponse, ::oak_idl::Status&gt;, T::Error&gt; {
+    <span class="kw">pub async fn </span>initialize(<span class="kw-2">&amp;mut </span><span class="self">self</span>, request: <span class="kw-2">&amp;</span>InitializeRequest) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Result</span>&lt;InitializeResponse, ::oak_idl::Status&gt;, T::Error&gt; {
         ::oak_idl::async_client_invoke(<span class="kw-2">&amp;mut </span><span class="self">self</span>.transport, <span class="number">0</span>, request).<span class="kw">await
     </span>}
-    <span class="kw">pub async fn </span>initialize(<span class="kw-2">&amp;mut </span><span class="self">self</span>, request: <span class="kw-2">&amp;</span>Initialization) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Result</span>&lt;InitializeResponse, ::oak_idl::Status&gt;, T::Error&gt; {
+    <span class="kw">pub async fn </span>invoke(<span class="kw-2">&amp;mut </span><span class="self">self</span>, request: <span class="kw-2">&amp;</span>InvokeRequest) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Result</span>&lt;InvokeResponse, ::oak_idl::Status&gt;, T::Error&gt; {
         ::oak_idl::async_client_invoke(<span class="kw-2">&amp;mut </span><span class="self">self</span>.transport, <span class="number">1</span>, request).<span class="kw">await
     </span>}
     <span class="kw">pub async fn </span>update_lookup_data(<span class="kw-2">&amp;mut </span><span class="self">self</span>, request: <span class="kw-2">&amp;</span>LookupData) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Result</span>&lt;Empty, ::oak_idl::Status&gt;, T::Error&gt; {

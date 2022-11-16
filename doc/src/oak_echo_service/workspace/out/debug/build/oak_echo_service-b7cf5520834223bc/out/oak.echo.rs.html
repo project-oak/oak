@@ -102,11 +102,11 @@
 }
 
 <span class="attribute">#[derive(Clone)]
-</span><span class="kw">pub struct </span>EchoServiceServer&lt;S&gt; {
+</span><span class="kw">pub struct </span>EchoServer&lt;S&gt; {
     service: S
 }
 
-<span class="kw">impl </span>&lt;S: EchoService&gt; ::oak_idl::Transport <span class="kw">for </span>EchoServiceServer&lt;S&gt; {
+<span class="kw">impl </span>&lt;S: Echo&gt; ::oak_idl::Transport <span class="kw">for </span>EchoServer&lt;S&gt; {
     <span class="kw">fn </span>invoke(<span class="kw-2">&amp;mut </span><span class="self">self</span>, request_bytes: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;::prost::alloc::vec::Vec&lt;u8&gt;, !&gt; {
         <span class="kw">let </span>response_bytes = <span class="self">self
             </span>.invoke_inner(request_bytes)
@@ -119,7 +119,7 @@
     }
 }
 
-<span class="kw">impl </span>&lt;S: EchoService&gt; EchoServiceServer&lt;S&gt; {
+<span class="kw">impl </span>&lt;S: Echo&gt; EchoServer&lt;S&gt; {
     <span class="kw">fn </span>invoke_inner(<span class="kw-2">&amp;mut </span><span class="self">self</span>, request_bytes: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;::prost::alloc::vec::Vec&lt;u8&gt;, ::oak_idl::Status&gt; {
         <span class="kw">let </span>request = ::oak_idl::Request::decode(request_bytes).map_err(|err| {
             ::oak_idl::Status::new_with_message(
@@ -146,18 +146,18 @@
     }
 }
 
-<span class="kw">pub trait </span>EchoService: Sized {
+<span class="kw">pub trait </span>Echo: Sized {
     <span class="kw">fn </span>echo(<span class="kw-2">&amp;mut </span><span class="self">self</span>, request: <span class="kw-2">&amp;</span>EchoRequest) -&gt; <span class="prelude-ty">Result</span>&lt;EchoResponse, ::oak_idl::Status&gt;;
-    <span class="kw">fn </span>serve(<span class="self">self</span>) -&gt; EchoServiceServer&lt;<span class="self">Self</span>&gt; {
-        EchoServiceServer { service : <span class="self">self </span>}
+    <span class="kw">fn </span>serve(<span class="self">self</span>) -&gt; EchoServer&lt;<span class="self">Self</span>&gt; {
+        EchoServer { service : <span class="self">self </span>}
     }
 }
 
-<span class="kw">pub struct </span>EchoServiceClient&lt;T: ::oak_idl::Transport&gt; {
+<span class="kw">pub struct </span>EchoClient&lt;T: ::oak_idl::Transport&gt; {
     transport: T
 }
 
-<span class="kw">impl </span>&lt;T: ::oak_idl::Transport&gt; EchoServiceClient&lt;T&gt; {
+<span class="kw">impl </span>&lt;T: ::oak_idl::Transport&gt; EchoClient&lt;T&gt; {
     <span class="kw">pub fn </span>new(transport: T) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
             transport
@@ -168,11 +168,11 @@
     }
 }
 
-<span class="kw">pub struct </span>EchoServiceAsyncClient&lt;T: ::oak_idl::AsyncTransport&gt; {
+<span class="kw">pub struct </span>EchoAsyncClient&lt;T: ::oak_idl::AsyncTransport&gt; {
     transport: T
 }
 
-<span class="kw">impl </span>&lt;T: ::oak_idl::AsyncTransport&gt; EchoServiceAsyncClient&lt;T&gt; {
+<span class="kw">impl </span>&lt;T: ::oak_idl::AsyncTransport&gt; EchoAsyncClient&lt;T&gt; {
     <span class="kw">pub fn </span>new(transport: T) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
             transport

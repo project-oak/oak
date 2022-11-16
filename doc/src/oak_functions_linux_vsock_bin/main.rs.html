@@ -152,13 +152,13 @@
     );
 
     <span class="kw">let </span>channel = Box::new(Channel::new(stream));
-    <span class="kw">let </span>runtime =
-        oak_functions_freestanding::RuntimeImplementation::new(Arc::new(EmptyAttestationGenerator));
+    <span class="kw">let </span>service =
+        oak_functions_freestanding::OakFunctionsService::new(Arc::new(EmptyAttestationGenerator));
     oak_channel::server::start_blocking_server(
         channel,
-        oak_functions_freestanding::schema::TrustedRuntime::serve(runtime),
+        oak_functions_freestanding::schema::OakFunctions::serve(service),
     )
-    .expect(<span class="string">&quot;runtime encountered an unrecoverable error&quot;</span>);
+    .expect(<span class="string">&quot;server encountered an unrecoverable error&quot;</span>);
 }
 </code></pre></div>
 </section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="oak_functions_linux_vsock_bin" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (81f391930 2022-10-09)" ></div></body></html>

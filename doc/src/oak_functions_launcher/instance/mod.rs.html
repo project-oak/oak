@@ -59,18 +59,18 @@
 <span class="kw">use </span>anyhow::Result;
 <span class="kw">use </span>async_trait::async_trait;
 
-<span class="doccomment">/// Defines the interface of a launched runtime instance. Standardizes the interface of different
-/// implementations, e.g. a VM in which the runtime is running or the runtime running directly as a
+<span class="doccomment">/// Defines the interface of a launched guest instance. Standardizes the interface of different
+/// implementations, e.g. a VM in which the guest is running or the guest running directly as a
 /// unix binary.
 </span><span class="attribute">#[async_trait]
 </span><span class="kw">pub trait </span>LaunchedInstance {
-    <span class="doccomment">/// Wait for the runtime instance process to finish.
+    <span class="doccomment">/// Wait for the guest instance process to finish.
     </span><span class="kw">async fn </span>wait(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;std::process::ExitStatus&gt;;
 
-    <span class="doccomment">/// Kill the runtime instance.
+    <span class="doccomment">/// Kill the guest instance.
     </span><span class="kw">async fn </span>kill(<span class="self">self</span>: Box&lt;<span class="self">Self</span>&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;std::process::ExitStatus&gt;;
 
-    <span class="doccomment">/// Creates a channel to communicate with the runtime instance.
+    <span class="doccomment">/// Creates a channel to communicate with the guest instance.
     ///
     /// Since different VMMs might use different comms channels, we leave it up to the VMM to create
     /// the channel rather than passing it in as part of the parameters.

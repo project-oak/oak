@@ -162,6 +162,8 @@
 <span id="162">162</span>
 <span id="163">163</span>
 <span id="164">164</span>
+<span id="165">165</span>
+<span id="166">166</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2020 The Project Oak Authors
 //
@@ -178,8 +180,7 @@
 // limitations under the License.
 //
 
-</span><span class="doccomment">//! Functionality for testing variants of the baremetal-compatible runtime exposed by the
-//! launcher.
+</span><span class="doccomment">//! Functionality for testing variants of the freestanding enclave binary exposed by the launcher.
 
 </span><span class="kw">const </span>CLIENT_PATH: <span class="kw-2">&amp;</span>str = <span class="string">&quot;./target/debug/oak_functions_client&quot;</span>;
 <span class="kw">const </span>WASM_PATH: <span class="kw-2">&amp;</span>str = <span class="string">&quot;./oak_functions_launcher/key_value_lookup.wasm&quot;</span>;
@@ -197,28 +198,28 @@
 }
 
 <span class="kw">impl </span>LauncherMode {
-    <span class="doccomment">/// Get the crate name of respective runtime variant
-    </span><span class="kw">pub fn </span>runtime_crate_name(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str {
+    <span class="doccomment">/// Get the crate name of respective enclave binary variant
+    </span><span class="kw">pub fn </span>enclave_crate_name(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str {
         <span class="kw">match </span><span class="self">self </span>{
             LauncherMode::Crosvm =&gt; <span class="string">&quot;oak_functions_freestanding_bin&quot;</span>,
             LauncherMode::Native =&gt; <span class="string">&quot;oak_functions_linux_fd_bin&quot;</span>,
         }
     }
 
-    <span class="doccomment">/// Get the path to the respective binary variant that should be launched
-    </span><span class="kw">pub fn </span>runtime_crate_path(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String {
-        <span class="macro">format!</span>(<span class="string">&quot;./{}&quot;</span>, <span class="self">self</span>.runtime_crate_name())
+    <span class="doccomment">/// Get the path to the respective enclave binary variant that should be launched
+    </span><span class="kw">pub fn </span>enclave_crate_path(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String {
+        <span class="macro">format!</span>(<span class="string">&quot;./{}&quot;</span>, <span class="self">self</span>.enclave_crate_name())
     }
 
-    <span class="doccomment">/// Get the path to the respective runtime variant that should be launched
-    </span><span class="kw">pub fn </span>runtime_binary_path(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String {
+    <span class="doccomment">/// Get the path to the respective enclave binary variant that should be launched
+    </span><span class="kw">pub fn </span>enclave_binary_path(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String {
         <span class="kw">match </span><span class="self">self </span>{
             LauncherMode::Crosvm =&gt; <span class="macro">format!</span>(
                 <span class="string">&quot;{}/target/x86_64-unknown-none/debug/{}&quot;</span>,
-                <span class="self">self</span>.runtime_crate_path(),
-                <span class="self">self</span>.runtime_crate_name()
+                <span class="self">self</span>.enclave_crate_path(),
+                <span class="self">self</span>.enclave_crate_name()
             ),
-            LauncherMode::Native =&gt; <span class="macro">format!</span>(<span class="string">&quot;./target/debug/{}&quot;</span>, <span class="self">self</span>.runtime_crate_name()),
+            LauncherMode::Native =&gt; <span class="macro">format!</span>(<span class="string">&quot;./target/debug/{}&quot;</span>, <span class="self">self</span>.enclave_crate_name()),
         }
     }
 
@@ -227,12 +228,12 @@
         <span class="kw">match </span><span class="self">self </span>{
             LauncherMode::Crosvm =&gt; <span class="macro">vec!</span>[
                 <span class="string">&quot;crosvm&quot;</span>.to_string(),
-                <span class="macro">format!</span>(<span class="string">&quot;--app-binary={}&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.runtime_binary_path()),
+                <span class="macro">format!</span>(<span class="string">&quot;--enclave-binary={}&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.enclave_binary_path()),
                 <span class="macro">format!</span>(<span class="string">&quot;--vmm-binary={}&quot;</span>, <span class="string">&quot;/usr/local/cargo/bin/crosvm&quot;</span>),
             ],
             LauncherMode::Native =&gt; <span class="macro">vec!</span>[
                 <span class="string">&quot;native&quot;</span>.to_string(),
-                <span class="macro">format!</span>(<span class="string">&quot;--app-binary={}&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.runtime_binary_path()),
+                <span class="macro">format!</span>(<span class="string">&quot;--enclave-binary={}&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.enclave_binary_path()),
             ],
         }
     }
@@ -243,7 +244,7 @@
         name: <span class="string">&quot;Build baremetal variants&quot;</span>.to_string(),
         steps: LauncherMode::iter()
             .filter(|v| option_covers_variant(opt, v))
-            .map(|v| build_released_binary(<span class="kw-2">&amp;</span>v.to_string(), <span class="kw-2">&amp;</span>v.runtime_crate_path()))
+            .map(|v| build_released_binary(<span class="kw-2">&amp;</span>v.to_string(), <span class="kw-2">&amp;</span>v.enclave_crate_path()))
             .collect(),
     }
 }
@@ -267,7 +268,7 @@
 
 <span class="kw">pub fn </span>run_launcher_test() -&gt; Step {
     Step::Multiple {
-        name: <span class="string">&quot;End-to-end tests for the launcher and runtime&quot;</span>.to_string(),
+        name: <span class="string">&quot;End-to-end tests for the launcher and enclave binary&quot;</span>.to_string(),
         steps: LauncherMode::iter().map(run_variant).collect(),
     }
 }
@@ -277,7 +278,10 @@
         name: <span class="macro">format!</span>(<span class="string">&quot;run {} variant&quot;</span>, variant),
         steps: <span class="macro">vec!</span>[
             build_binary(<span class="string">&quot;build Oak Functions loader&quot;</span>, <span class="string">&quot;./oak_functions_launcher&quot;</span>),
-            build_binary(<span class="string">&quot;build Oak Functions binary&quot;</span>, <span class="kw-2">&amp;</span>variant.runtime_crate_path()),
+            build_binary(
+                <span class="string">&quot;build Oak Functions enclave binary&quot;</span>,
+                <span class="kw-2">&amp;</span>variant.enclave_crate_path(),
+            ),
             Step::WithBackground {
                 name: <span class="string">&quot;background loader&quot;</span>.to_string(),
                 background: run_launcher(variant),
