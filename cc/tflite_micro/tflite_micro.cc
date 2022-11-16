@@ -107,8 +107,8 @@ int tflite_run(const uint8_t* input_bytes_ptr, size_t input_bytes_len, uint8_t* 
   }
 
   if (input_bytes_len != input_size) {
-    MicroPrintf("incorrect input length: expected %d bytes but got %d bytes",
-                input_size, input_bytes_len);
+    MicroPrintf("incorrect input length: expected %d bytes but got %d bytes", input_size,
+                input_bytes_len);
     return -1;
   }
 
