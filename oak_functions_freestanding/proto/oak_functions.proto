@@ -18,25 +18,21 @@ syntax = "proto3";
 
 package oak.functions;
 
-service TrustedRuntime {
+service OakFunctions {
+  // Initializes the service and remote attestation keys.
   // method_id: 0
-  rpc HandleUserRequest(UserRequest) returns (UserRequestResponse);
+  rpc Initialize(InitializeRequest) returns (InitializeResponse);
+
+  // Handles an invocation coming from a client.
   // method_id: 1
-  rpc Initialize(Initialization) returns (InitializeResponse);
+  rpc Invoke(InvokeRequest) returns (InvokeResponse);
+
   // Replaces the existing lookup data with the new value.
   // method_id: 2
   rpc UpdateLookupData(LookupData) returns (Empty);
 }
 
-message UserRequest {
-  bytes body = 1;
-}
-
-message UserRequestResponse {
-  bytes body = 1;
-}
-
-message Initialization {
+message InitializeRequest {
   bytes wasm_module = 1;
   uint32 constant_response_size = 2;
 }
@@ -48,6 +44,14 @@ message InitializeResponse {
 message PublicKeyInfo {
   bytes public_key = 1;
   bytes attestation = 2;
+}
+
+message InvokeRequest {
+  bytes body = 1;
+}
+
+message InvokeResponse {
+  bytes body = 1;
 }
 
 message LookupDataEntry {

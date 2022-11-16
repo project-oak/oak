@@ -469,10 +469,9 @@ fn run_oak_functions_server(server: &Server) -> Box<dyn Runnable> {
                 server.constant_response_size_bytes
             ),
             format!("--lookup-data={}", server.lookup_data),
-            // Run the "trusted" runtime binary as a native Linux process, connecting over a file
-            // descriptor.
+            // Run the enclave binary as a native Linux process, connecting over a file descriptor.
             "native".to_string(),
-            "--app-binary=target/x86_64-unknown-linux-musl/release/oak_functions_linux_fd_bin"
+            "--enclave-binary=target/x86_64-unknown-linux-musl/release/oak_functions_linux_fd_bin"
                 .to_string(),
         ],
     )

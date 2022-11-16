@@ -26,15 +26,15 @@ use std::{
     path::PathBuf,
 };
 
-/// Parameters used for launching the runtime as a native binary
+/// Parameters used for launching the enclave as a native binary
 #[derive(Parser, Clone, Debug, PartialEq)]
 pub struct Params {
-    /// Path to the runtime binary
+    /// Path to the enclave binary.
     #[arg(long, value_parser = path_exists)]
-    pub app_binary: PathBuf,
+    pub enclave_binary: PathBuf,
 }
 
-/// An instance of the runtime running directly as a linux binary
+/// An instance of the enclave running directly as a linux binary
 pub struct Instance {
     comms_host: UnixStream,
     instance: tokio::process::Child,
@@ -44,7 +44,7 @@ impl Instance {
     pub fn start(params: Params) -> Result<Self> {
         let (comms_guest, comms_host) = UnixStream::pair()?;
 
-        let mut cmd = tokio::process::Command::new(params.app_binary);
+        let mut cmd = tokio::process::Command::new(params.enclave_binary);
 
         // Print any logs & errors
         cmd.stdout(std::process::Stdio::inherit());

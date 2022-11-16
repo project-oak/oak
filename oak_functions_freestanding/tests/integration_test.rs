@@ -20,7 +20,10 @@
 extern crate alloc;
 
 use core::assert_matches::assert_matches;
-use oak_functions_freestanding::{schema, schema::TrustedRuntime, RuntimeImplementation};
+use oak_functions_freestanding::{
+    schema::{self, OakFunctions},
+    OakFunctionsService,
+};
 use oak_remote_attestation_amd::PlaceholderAmdAttestationGenerator;
 use std::sync::Arc;
 
@@ -30,13 +33,13 @@ const LOOKUP_TEST_VALUE: &[u8] = b"test_value";
 
 #[test]
 fn it_should_not_handle_user_requests_before_initialization() {
-    let runtime = RuntimeImplementation::new(Arc::new(PlaceholderAmdAttestationGenerator));
-    let mut client = schema::TrustedRuntimeClient::new(TrustedRuntime::serve(runtime));
+    let service = OakFunctionsService::new(Arc::new(PlaceholderAmdAttestationGenerator));
+    let mut client = schema::OakFunctionsClient::new(OakFunctions::serve(service));
 
-    let request = schema::UserRequest {
+    let request = schema::InvokeRequest {
         body: vec![1, 2, 3],
     };
-    let result = client.handle_user_request(&request).into_ok();
+    let result = client.invoke(&request).into_ok();
 
     assert_matches!(
         result,
@@ -49,34 +52,34 @@ fn it_should_not_handle_user_requests_before_initialization() {
 
 #[test]
 fn it_should_handle_user_requests_after_initialization() {
-    let runtime = RuntimeImplementation::new(Arc::new(PlaceholderAmdAttestationGenerator));
-    let mut client = schema::TrustedRuntimeClient::new(TrustedRuntime::serve(runtime));
+    let service = OakFunctionsService::new(Arc::new(PlaceholderAmdAttestationGenerator));
+    let mut client = schema::OakFunctionsClient::new(OakFunctions::serve(service));
 
     let wasm_path = oak_functions_test_utils::build_rust_crate_wasm("echo").unwrap();
     let wasm_bytes = std::fs::read(wasm_path).unwrap();
-    let request = schema::Initialization {
+    let request = schema::InitializeRequest {
         wasm_module: wasm_bytes,
         constant_response_size: MOCK_CONSTANT_RESPONSE_SIZE,
     };
 
     client.initialize(&request).into_ok().unwrap();
 
-    let request = schema::UserRequest {
+    let request = schema::InvokeRequest {
         body: vec![1, 2, 3],
     };
-    let result = client.handle_user_request(&request).into_ok();
+    let result = client.invoke(&request).into_ok();
 
     assert!(result.is_ok());
 }
 
 #[test]
 fn it_should_only_initialize_once() {
-    let runtime = RuntimeImplementation::new(Arc::new(PlaceholderAmdAttestationGenerator));
-    let mut client = schema::TrustedRuntimeClient::new(TrustedRuntime::serve(runtime));
+    let service = OakFunctionsService::new(Arc::new(PlaceholderAmdAttestationGenerator));
+    let mut client = schema::OakFunctionsClient::new(OakFunctions::serve(service));
 
     let wasm_path = oak_functions_test_utils::build_rust_crate_wasm("echo").unwrap();
     let wasm_bytes = std::fs::read(wasm_path).unwrap();
-    let request = schema::Initialization {
+    let request = schema::InitializeRequest {
         wasm_module: wasm_bytes,
         constant_response_size: MOCK_CONSTANT_RESPONSE_SIZE,
     };
@@ -95,12 +98,12 @@ fn it_should_only_initialize_once() {
 
 #[tokio::test]
 async fn it_should_support_lookup_data() {
-    let runtime = RuntimeImplementation::new(Arc::new(PlaceholderAmdAttestationGenerator));
-    let mut client = schema::TrustedRuntimeClient::new(TrustedRuntime::serve(runtime));
+    let service = OakFunctionsService::new(Arc::new(PlaceholderAmdAttestationGenerator));
+    let mut client = schema::OakFunctionsClient::new(OakFunctions::serve(service));
 
     let wasm_path = oak_functions_test_utils::build_rust_crate_wasm("key_value_lookup").unwrap();
     let wasm_bytes = std::fs::read(wasm_path).unwrap();
-    let request = schema::Initialization {
+    let request = schema::InitializeRequest {
         wasm_module: wasm_bytes,
         constant_response_size: MOCK_CONSTANT_RESPONSE_SIZE,
     };
@@ -116,7 +119,7 @@ async fn it_should_support_lookup_data() {
     client.update_lookup_data(&request).into_ok().unwrap();
 
     let lookup_response = client
-        .handle_user_request(&schema::UserRequest {
+        .invoke(&schema::InvokeRequest {
             body: LOOKUP_TEST_KEY.to_vec(),
         })
         .into_ok()

@@ -52,14 +52,14 @@ impl oak_remote_attestation_noninteractive::proto::streaming_session_server::Str
         let Some(request_wrapper::Request::InvokeRequest(invoke_request)) = request.request else {
             return Err(tonic::Status::invalid_argument("request wrapper must have invoke_request field set"));
         };
-        let encoded_request = schema::UserRequest {
+        let encoded_request = schema::InvokeRequest {
             body: invoke_request.encrypted_body,
         };
 
-        let mut client = schema::TrustedRuntimeAsyncClient::new(self.connector_handle.clone());
+        let mut client = schema::OakFunctionsAsyncClient::new(self.connector_handle.clone());
 
         let response = client
-            .handle_user_request(&encoded_request)
+            .invoke(&encoded_request)
             .await
             .flatten()
             .map_err(|err| {

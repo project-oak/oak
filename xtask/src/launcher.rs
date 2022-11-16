@@ -14,8 +14,7 @@
 // limitations under the License.
 //
 
-//! Functionality for testing variants of the baremetal-compatible runtime exposed by the
-//! launcher.
+//! Functionality for testing variants of the freestanding enclave binary exposed by the launcher.
 
 const CLIENT_PATH: &str = "./target/debug/oak_functions_client";
 const WASM_PATH: &str = "./oak_functions_launcher/key_value_lookup.wasm";
@@ -33,28 +32,28 @@ pub enum LauncherMode {
 }
 
 impl LauncherMode {
-    /// Get the crate name of respective runtime variant
-    pub fn runtime_crate_name(&self) -> &'static str {
+    /// Get the crate name of respective enclave binary variant
+    pub fn enclave_crate_name(&self) -> &'static str {
         match self {
             LauncherMode::Crosvm => "oak_functions_freestanding_bin",
             LauncherMode::Native => "oak_functions_linux_fd_bin",
         }
     }
 
-    /// Get the path to the respective binary variant that should be launched
-    pub fn runtime_crate_path(&self) -> String {
-        format!("./{}", self.runtime_crate_name())
+    /// Get the path to the respective enclave binary variant that should be launched
+    pub fn enclave_crate_path(&self) -> String {
+        format!("./{}", self.enclave_crate_name())
     }
 
-    /// Get the path to the respective runtime variant that should be launched
-    pub fn runtime_binary_path(&self) -> String {
+    /// Get the path to the respective enclave binary variant that should be launched
+    pub fn enclave_binary_path(&self) -> String {
         match self {
             LauncherMode::Crosvm => format!(
                 "{}/target/x86_64-unknown-none/debug/{}",
-                self.runtime_crate_path(),
-                self.runtime_crate_name()
+                self.enclave_crate_path(),
+                self.enclave_crate_name()
             ),
-            LauncherMode::Native => format!("./target/debug/{}", self.runtime_crate_name()),
+            LauncherMode::Native => format!("./target/debug/{}", self.enclave_crate_name()),
         }
     }
 
@@ -63,12 +62,12 @@ impl LauncherMode {
         match self {
             LauncherMode::Crosvm => vec![
                 "crosvm".to_string(),
-                format!("--app-binary={}", &self.runtime_binary_path()),
+                format!("--enclave-binary={}", &self.enclave_binary_path()),
                 format!("--vmm-binary={}", "/usr/local/cargo/bin/crosvm"),
             ],
             LauncherMode::Native => vec![
                 "native".to_string(),
-                format!("--app-binary={}", &self.runtime_binary_path()),
+                format!("--enclave-binary={}", &self.enclave_binary_path()),
             ],
         }
     }
@@ -79,7 +78,7 @@ pub fn build_baremetal_variants(opt: &BuildBaremetalVariantsOpt) -> Step {
         name: "Build baremetal variants".to_string(),
         steps: LauncherMode::iter()
             .filter(|v| option_covers_variant(opt, v))
-            .map(|v| build_released_binary(&v.to_string(), &v.runtime_crate_path()))
+            .map(|v| build_released_binary(&v.to_string(), &v.enclave_crate_path()))
             .collect(),
     }
 }
@@ -103,7 +102,7 @@ fn build_released_binary(name: &str, directory: &str) -> Step {
 
 pub fn run_launcher_test() -> Step {
     Step::Multiple {
-        name: "End-to-end tests for the launcher and runtime".to_string(),
+        name: "End-to-end tests for the launcher and enclave binary".to_string(),
         steps: LauncherMode::iter().map(run_variant).collect(),
     }
 }
@@ -113,7 +112,10 @@ fn run_variant(variant: LauncherMode) -> Step {
         name: format!("run {} variant", variant),
         steps: vec![
             build_binary("build Oak Functions loader", "./oak_functions_launcher"),
-            build_binary("build Oak Functions binary", &variant.runtime_crate_path()),
+            build_binary(
+                "build Oak Functions enclave binary",
+                &variant.enclave_crate_path(),
+            ),
             Step::WithBackground {
                 name: "background loader".to_string(),
                 background: run_launcher(variant),

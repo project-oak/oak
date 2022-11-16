@@ -26,7 +26,7 @@ message EchoResponse {
   bytes body = 1;
 }
 
-service EchoService {
+service Echo {
   // method_id: 1988
   rpc Echo(EchoRequest) returns (EchoResponse);
 }

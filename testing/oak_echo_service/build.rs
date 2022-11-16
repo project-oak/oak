@@ -15,5 +15,5 @@
 //
 
 fn main() {
-    oak_idl_build::compile(&["proto/oak_echo_service.proto"], &["."]);
+    oak_idl_build::compile(&["proto/oak_echo.proto"], &["."]);
 }

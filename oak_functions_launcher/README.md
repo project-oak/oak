@@ -17,7 +17,7 @@ The Oak Functions binary may be loaded in crosvm via
     --lookup-data=oak_functions_launcher/mock_lookup_data \
     crosvm \
     --vmm-binary=/usr/local/cargo/bin/crosvm \
-    --app-binary=oak_functions_freestanding_bin/target/x86_64-unknown-none/debug/oak_functions_freestanding_bin
+    --enclave-binary=oak_functions_freestanding_bin/target/x86_64-unknown-none/debug/oak_functions_freestanding_bin
 ```
 
 See also the See the task integration at `xtask/src/vm.rs`. Additional
@@ -31,5 +31,5 @@ cargo build --package=oak_functions_linux_fd_bin \
     --wasm=oak_functions_launcher/key_value_lookup.wasm \
     --lookup-data=oak_functions_launcher/mock_lookup_data \
     native \
-    --app-binary=target/debug/oak_functions_linux_fd_bin
+    --enclave-binary=target/debug/oak_functions_linux_fd_bin
 ```

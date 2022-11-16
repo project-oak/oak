@@ -43,13 +43,13 @@ enum InitializationState {
     Initialized(Box<dyn AttestationHandler>),
 }
 
-pub struct RuntimeImplementation {
+pub struct OakFunctionsService {
     attestation_generator: Arc<dyn AttestationGenerator>,
     initialization_state: InitializationState,
     lookup_data_manager: Arc<LookupDataManager<logger::StandaloneLogger>>,
 }
 
-impl RuntimeImplementation {
+impl OakFunctionsService {
     pub fn new(attestation_generator: Arc<dyn AttestationGenerator>) -> Self {
         Self {
             attestation_generator,
@@ -71,10 +71,10 @@ impl<L: oak_logger::OakLogger> Handler for WasmHandler<L> {
     }
 }
 
-impl schema::TrustedRuntime for RuntimeImplementation {
+impl schema::OakFunctions for OakFunctionsService {
     fn initialize(
         &mut self,
-        initialization: &schema::Initialization,
+        initialization: &schema::InitializeRequest,
     ) -> Result<schema::InitializeResponse, oak_idl::Status> {
         match &mut self.initialization_state {
             InitializationState::Initialized(_attestation_handler) => {
@@ -119,10 +119,10 @@ impl schema::TrustedRuntime for RuntimeImplementation {
         }
     }
 
-    fn handle_user_request(
+    fn invoke(
         &mut self,
-        request_message: &schema::UserRequest,
-    ) -> Result<schema::UserRequestResponse, oak_idl::Status> {
+        request_message: &schema::InvokeRequest,
+    ) -> Result<schema::InvokeResponse, oak_idl::Status> {
         match &mut self.initialization_state {
             InitializationState::Uninitialized => Err(oak_idl::Status::new_with_message(
                 oak_idl::StatusCode::FailedPrecondition,
@@ -138,7 +138,7 @@ impl schema::TrustedRuntime for RuntimeImplementation {
                                 format!("{:?}", err),
                             )
                         })?;
-                Ok(schema::UserRequestResponse { body: response })
+                Ok(schema::InvokeResponse { body: response })
             }
         }
     }

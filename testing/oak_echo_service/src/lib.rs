@@ -27,12 +27,10 @@ pub mod proto {
     include!(concat!(env!("OUT_DIR"), "/oak.echo.rs"));
 }
 
-pub use proto::EchoService;
-
 #[derive(Default)]
-pub struct EchoServiceImpl {}
+pub struct EchoService;
 
-impl proto::EchoService for EchoServiceImpl {
+impl proto::Echo for EchoService {
     fn echo(
         &mut self,
         request: &proto::EchoRequest,

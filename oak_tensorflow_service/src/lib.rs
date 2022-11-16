@@ -27,11 +27,11 @@ pub mod schema {
 mod tflite;
 
 #[derive(Default)]
-pub struct TensorflowServiceImpl {
+pub struct TensorflowService {
     tflite_model: tflite::TfliteModel,
 }
 
-impl TensorflowServiceImpl {
+impl TensorflowService {
     pub fn new() -> Self {
         Self {
             tflite_model: tflite::TfliteModel::new(),
@@ -39,7 +39,7 @@ impl TensorflowServiceImpl {
     }
 }
 
-impl schema::TensorflowService for TensorflowServiceImpl {
+impl schema::Tensorflow for TensorflowService {
     fn initialize(
         &mut self,
         initialization: &schema::InitializeRequest,

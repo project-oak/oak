@@ -34,8 +34,8 @@ pub extern "C" fn rust64_start(_rdi: u64, rsi: &BootParams) -> ! {
 }
 
 fn start_server(channel: Box<dyn Channel>) -> ! {
-    let service_impl = oak_tensorflow_service::TensorflowServiceImpl::new();
-    let server = oak_tensorflow_service::schema::TensorflowService::serve(service_impl);
+    let service = oak_tensorflow_service::TensorflowService::new();
+    let server = oak_tensorflow_service::schema::Tensorflow::serve(service);
     oak_channel::server::start_blocking_server(channel, server)
         .expect("server encountered an unrecoverable error")
 }
