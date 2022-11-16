@@ -73,6 +73,10 @@ const TENSOR_ARENA_SIZE: usize = 1024 * 1024 * 1024;
 #[derive(Default)]
 pub struct TfliteModel {
     tensor_arena: Vec<u8>,
+    /// TFLite model binary representation.
+    /// Rust needs to keep ownership of the model, because the C++ code just uses it as a
+    /// reference.
+    model_bytes: Vec<u8>,
     /// Defines a output buffer length that should be preallocated before calling `tflite_run`.
     /// This value is only initialized after `initialize` function because TFLite should return the
     /// `output_buffer_len`.
@@ -82,9 +86,9 @@ pub struct TfliteModel {
 
 impl TfliteModel {
     pub fn new() -> Self {
-        let tensor_arena = vec![0; TENSOR_ARENA_SIZE];
         Self {
-            tensor_arena,
+            tensor_arena: vec![0; TENSOR_ARENA_SIZE],
+            model_bytes: vec![],
             output_buffer_len: None,
         }
     }
@@ -95,16 +99,16 @@ impl TfliteModel {
             return Err(anyhow!("TFLite model has already been initialized"));
         }
 
-        let model_bytes_len = model_bytes.len();
-        let tensor_arena_len = self.tensor_arena.len();
-        let mut output_buffer_len = 0usize;
+        // Save a copy of the TFLite model.
+        self.model_bytes = model_bytes.to_vec();
 
+        let mut output_buffer_len = 0usize;
         let result_code = unsafe {
             tflite_init(
-                model_bytes.as_ptr(),
-                model_bytes_len,
+                self.model_bytes.as_ptr(),
+                self.model_bytes.len(),
                 self.tensor_arena.as_mut_ptr(),
-                tensor_arena_len,
+                self.tensor_arena.len(),
                 &mut output_buffer_len,
             )
         };
@@ -129,14 +133,12 @@ impl TfliteModel {
             .output_buffer_len
             .context("running inference on a non-initialized TensorFlow model")?;
 
-        let input_bytes_len = input_bytes.len();
         let mut output_buffer = vec![0; output_buffer_len];
         let mut output_bytes_len = 0usize;
-
         let result_code = unsafe {
             tflite_run(
                 input_bytes.as_ptr(),
-                input_bytes_len,
+                input_bytes.len(),
                 output_buffer.as_mut_ptr(),
                 &mut output_bytes_len,
             )
