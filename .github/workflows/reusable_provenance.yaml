@@ -12,8 +12,9 @@ on:
     outputs:
       artifact_digest:
         description:
-          'Base64-encoded digest of the artifact, including its name.'
-        value: ${{ jobs.build_binary.outputs.hashes }}
+          'Base64-encoded string containing the sha256 digest and name of the
+          artifact.'
+        value: ${{ jobs.build_binary.outputs.digest }}
       provenance_digest:
         description: 'SHA256 digest of the provenance.'
         value: ${{ jobs.upload_provenance.outputs.provenance_digest }}
@@ -25,7 +26,7 @@ on:
 jobs:
   build_binary:
     outputs:
-      hashes: ${{ steps.hash.outputs.hashes }}
+      digest: ${{ steps.hash.outputs.digest }}
       filename: ${{ steps.filename.outputs.filename }}
     runs-on: ubuntu-20.04
 
@@ -111,7 +112,7 @@ jobs:
           cd $(dirname ${{ steps.artifact_path.outputs.artifact_path }})
           # sha256sum generates sha256 hash for the target binary.
           # base64 --wrap=0 disables line wrapping, and encodes to base64 and outputs on a single line.
-          echo "hashes=$(sha256sum $(basename ${{ steps.artifact_path.outputs.artifact_path }}) | base64 --wrap=0)" >> $GITHUB_OUTPUT
+          echo "digest=$(sha256sum $(basename ${{ steps.artifact_path.outputs.artifact_path }}) | base64 --wrap=0)" >> $GITHUB_OUTPUT
 
   # This job calls the generic SLSA workflow to generate provenance.
   # See https://github.com/slsa-framework/slsa-github-generator/blob/main/internal/builders/generic/README.md
@@ -124,7 +125,7 @@ jobs:
       contents: write
     uses: slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@v1.2.1
     with:
-      base64-subjects: '${{ needs.build_binary.outputs.hashes }}'
+      base64-subjects: '${{ needs.build_binary.outputs.digest }}'
       # Set a custom name for the provenance attestation.
       attestation-name: '${{ needs.filename.outputs.filename }}.intoto.jsonl'
       # Upload the provenance.
