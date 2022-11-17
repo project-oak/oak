@@ -159,6 +159,8 @@
 <span id="159">159</span>
 <span id="160">160</span>
 <span id="161">161</span>
+<span id="162">162</span>
+<span id="163">163</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -234,6 +236,10 @@
 <span class="attribute">#[derive(Default)]
 </span><span class="kw">pub struct </span>TfliteModel {
     tensor_arena: Vec&lt;u8&gt;,
+    <span class="doccomment">/// TFLite model binary representation.
+    /// Rust needs to keep ownership of the model, because the C++ code just uses it as a
+    /// reference.
+    </span>model_bytes: Vec&lt;u8&gt;,
     <span class="doccomment">/// Defines a output buffer length that should be preallocated before calling `tflite_run`.
     /// This value is only initialized after `initialize` function because TFLite should return the
     /// `output_buffer_len`.
@@ -243,9 +249,9 @@
 
 <span class="kw">impl </span>TfliteModel {
     <span class="kw">pub fn </span>new() -&gt; <span class="self">Self </span>{
-        <span class="kw">let </span>tensor_arena = <span class="macro">vec!</span>[<span class="number">0</span>; TENSOR_ARENA_SIZE];
         <span class="self">Self </span>{
-            tensor_arena,
+            tensor_arena: <span class="macro">vec!</span>[<span class="number">0</span>; TENSOR_ARENA_SIZE],
+            model_bytes: <span class="macro">vec!</span>[],
             output_buffer_len: <span class="prelude-val">None</span>,
         }
     }
@@ -256,16 +262,16 @@
             <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">&quot;TFLite model has already been initialized&quot;</span>));
         }
 
-        <span class="kw">let </span>model_bytes_len = model_bytes.len();
-        <span class="kw">let </span>tensor_arena_len = <span class="self">self</span>.tensor_arena.len();
-        <span class="kw">let </span><span class="kw-2">mut </span>output_buffer_len = <span class="number">0usize</span>;
+        <span class="comment">// Save a copy of the TFLite model.
+        </span><span class="self">self</span>.model_bytes = model_bytes.to_vec();
 
+        <span class="kw">let </span><span class="kw-2">mut </span>output_buffer_len = <span class="number">0usize</span>;
         <span class="kw">let </span>result_code = <span class="kw">unsafe </span>{
             tflite_init(
-                model_bytes.as_ptr(),
-                model_bytes_len,
+                <span class="self">self</span>.model_bytes.as_ptr(),
+                <span class="self">self</span>.model_bytes.len(),
                 <span class="self">self</span>.tensor_arena.as_mut_ptr(),
-                tensor_arena_len,
+                <span class="self">self</span>.tensor_arena.len(),
                 <span class="kw-2">&amp;mut </span>output_buffer_len,
             )
         };
@@ -290,14 +296,12 @@
             </span>.output_buffer_len
             .context(<span class="string">&quot;running inference on a non-initialized TensorFlow model&quot;</span>)<span class="question-mark">?</span>;
 
-        <span class="kw">let </span>input_bytes_len = input_bytes.len();
         <span class="kw">let </span><span class="kw-2">mut </span>output_buffer = <span class="macro">vec!</span>[<span class="number">0</span>; output_buffer_len];
         <span class="kw">let </span><span class="kw-2">mut </span>output_bytes_len = <span class="number">0usize</span>;
-
         <span class="kw">let </span>result_code = <span class="kw">unsafe </span>{
             tflite_run(
                 input_bytes.as_ptr(),
-                input_bytes_len,
+                input_bytes.len(),
                 output_buffer.as_mut_ptr(),
                 <span class="kw-2">&amp;mut </span>output_bytes_len,
             )
