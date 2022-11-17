@@ -47,6 +47,11 @@ cc_library(
     ],
 )
 
+cc_library(
+    name = "testdata",
+    hdrs = ["testdata.c"],
+)
+
 # Freestanding executable running on host for debugging
 # i.e. model input, output, ops and pipeline via gdb/lldb.
 cc_binary(
@@ -55,6 +60,7 @@ cc_binary(
     copts = oak_copts(),
     linkopts = ["-nostdlib"],
     deps = [
+        ":testdata",
         ":transformer_expression_model",
         "//cc/tflite_micro:hdrs",
         "//cc/tflite_micro:tflite_micro_generic",
