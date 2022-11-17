@@ -31,6 +31,7 @@ pub mod interrupts;
 pub mod io;
 pub mod msr;
 pub mod secrets;
+pub mod vmsa;
 
 // TODO(#3394): Move to a shared crate.
 /// Memory address translation functions.
