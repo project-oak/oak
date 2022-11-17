@@ -1,9 +1,11 @@
 name: Build Reproducibility Index
 description: 'Updates the reproducibility index for the given path.'
 inputs:
-  OAK_FUNCTIONS_FREESTANDING_BIN_PATH:
+  base64_digest:
     required: true
-    description: 'Path to the oak_functions_freestanding_bin binary.'
+    description:
+      'Base64-encoded string containing the name and sha256 digest of a file to
+      include in the reproducibility index.'
   GITHUB_TOKEN:
     description:
       'The GitHub token of the GitHub repository. Must be provided for push

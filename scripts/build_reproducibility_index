@@ -16,6 +16,11 @@ readonly REPRODUCIBLE_ARTIFACTS=( "$@" )
 # Index file containing hashes of the reproducible artifacts, alongside their file names.
 readonly REPRODUCIBILITY_INDEX='./reproducibility_index'
 
-# Generate the index file by computing the hashes of the artifacts.
-# The index file must be checked in, and
-sha256sum "${REPRODUCIBLE_ARTIFACTS[@]}" | tee "${REPRODUCIBILITY_INDEX}"
+# Wipe out everything in the reproducibility index.
+echo "" | tee "${REPRODUCIBILITY_INDEX}"
+
+# Regenerate the index file by appending to it decoded base64 digests of the artifacts.
+for encoded in "${REPRODUCIBLE_ARTIFACTS[@]}"
+do
+    echo "${encoded}" | base64 -d | tee -a "${REPRODUCIBILITY_INDEX}"
+done
