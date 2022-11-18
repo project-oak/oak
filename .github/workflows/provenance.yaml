@@ -32,4 +32,3 @@ jobs:
       build-config-path: ${{ matrix.buildconfig }}
     secrets:
       ENT_API_KEY: ${{ secrets.ENT_API_KEY }}
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
