@@ -22,6 +22,8 @@ on:
     secrets:
       ENT_API_KEY:
         required: true
+      GITHUB_TOKEN:
+        required: true
 
 jobs:
   build_binary:
@@ -170,3 +172,63 @@ jobs:
         id: ent_upload
         run: |
           echo "provenance_digest=$(ent put ${{ needs.filename.outputs.filename }}.intoto.jsonl)" >> $GITHUB_OUTPUT
+
+  # Publishes a comment containing the digests of the generated artifact and its provenance.
+  publish_comments:
+    runs-on: ubuntu-20.04
+    needs: [upload_provenance, build_binary]
+
+    permissions:
+      # Allow the job to update the repo with the latest provenance info and index.
+      contents: write
+      # Allow the job to add a comment to the PR.
+      pull-requests: write
+
+    steps:
+      - name: Add artifact digest and name to the binary_digest file.
+        run: |
+          echo -e "Artifact digest and name:\n\n\`\`\`" >> ./comment
+          echo "${{ needs.build_binary.outputs.digest }}" | base64 -d | tee -a ./comment
+          echo -e "\`\`\`" >> ./comment
+
+      - name: Add the provenance digest to the provenance_digest file.
+        run: |
+          echo -e "\n\nProvenance digest:\n\n\`\`\`" >> ./comment
+          echo ${{ needs.upload_provenance.outputs.provenance_digest }} | tee -a ./comment
+          echo -e "\`\`\`" >> ./comment
+
+      # Print the generated comment containing the sha256 digests of the binary and its provenance.
+      - name: Print comment (pre-merge only for test)
+        if: github.event_name != 'push'
+        run: |
+          head ./provenance_digest
+
+      # Post a comment on the PR containing the sha256 digests of the binary and its provenance.
+      - name: Post a comment (post-merge only)
+        if: github.event_name == 'push'
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs').promises;
+            const comment_contents = await fs.readFile('./comment');
+
+            const opts = await github.rest.repos.listPullRequestsAssociatedWithCommit({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              commit_sha: context.sha
+            });
+            // See:
+            // - https://octokit.github.io/rest.js/v17#previews
+            // - https://developer.github.com/v3/repos/commits/#list-pull-requests-associated-with-commit
+            opts.mediaType = {
+                previews: ['groot']
+            };
+
+            const issues = await github.paginate(opts);
+
+            await github.rest.issues.createComment({
+              issue_number: issues[0].number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `${comment_contents}`});
