@@ -35,15 +35,33 @@ Apply the lldb configuration to `.vscode/launch.json`
 }
 ```
 
-Set breakpoint to `return 0` at main.cpp and press F5 to start debugger that
-stops execution at the configured breakpoint.
+Set breakpoint to `the line of code after tflite_run(...)` at main.cpp and press
+F5 to start debugger that stops execution at the configured breakpoint.
 
 Check the raw `float` content of `output` variable at `VARIABLES` window.
 
 Notes:
 
-- `input` is set to `{"I", "love", "you"}` by default, change it accordingly to
-  examine model outputs.
 - Optionally add `--define=no_opt=1` to bazel build command to prevent compiler
   optimizations such as changing or reordering control flows, etc if you'd like
   breakdowns taking effects at the exact code lines you set.
+
+## Validate Model Outputs
+
+The freestanding binary would iterate all test sets at
+[testdata.c](https://github.com/project-oak/oak/blob/main/testing/tflite_micro/transformer_expression/testdata.c).
+
+If N-th set of test data failed validation (which means model output is
+inaccurate), N would be return from the main(). Simply reading the return value
+from the shell can tell which test set failed validation.
+
+A script is provided to build, run and validate model outputs of a Linux
+freestanding binary, simply execute:
+
+```bash
+testing/tflite_micro/transformer_expression/test.sh
+```
+
+If all data sets passed validation, a `PASSED` will be shown on the console.
+Otherwise, an error or failure reason i.e. N-th data set failed validation will
+be shown instead.

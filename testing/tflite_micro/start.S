@@ -34,8 +34,8 @@ _start:
 	call main
 
 	/* Gracefully shut freestanding binary program down on Linux. */
+	mov %eax,%edi
 	mov $SYS_exit,%eax
-	xor %edi,%edi
 	syscall
 
 	.data
