@@ -13,108 +13,22 @@ on:
 
 jobs:
   build_binary:
+    # We use the same job template to generate provenances for multiple binaries.
+    strategy:
+      fail-fast: false
+      matrix:
+        buildconfig:
+          - buildconfigs/oak_functions_freestanding_bin.toml
+
     permissions:
       actions: read
       id-token: write
-      contents: write
-    uses: ./.github/workflows/reusable_provenance.yaml
-    with:
-      build-config-path: './buildconfigs/oak_functions_freestanding_bin.toml'
-    secrets:
-      ENT_API_KEY: ${{ secrets.ENT_API_KEY }}
-
-  # TODO(#3428): To make it work with the matrix strategy, we most likely need
-  # the reusable workflow to write its output to some file that we can then
-  # load here, extract all the digests and merge them to files that can be
-  # written as comments on the PR.
-  publish_comments:
-    runs-on: ubuntu-20.04
-    needs: [build_binary]
-
-    permissions:
       # Allow the job to update the repo with the latest provenance info and index.
       contents: write
       # Allow the job to add a comment to the PR.
       pull-requests: write
-
-    steps:
-      - name: Mount main branch
-        uses: actions/checkout@v3
-
-      - name: Git setup
-        run: |
-          git config --global user.email "actions@github.com"
-          git config --global user.name "GitHub Actions"
-      # Copied from https://github.com/jens-maus/RaspberryMatic/blob/ea6b8ce0dd2d53ea88b2766ba8d7f8e1d667281f/.github/workflows/ci.yml#L34-L40
-      - name: free disk space
-        run: |
-          df --human-readable
-          sudo swapoff --all
-          sudo rm --force /swapfile
-          sudo apt clean
-          docker rmi $(docker image ls --all --quiet)
-          df --human-readable
-      - name: Docker pull
-        timeout-minutes: 10
-        run: |
-          ./scripts/docker_pull
-          df --human-readable
-
-      # Build reproducibility index on `push` events.
-      - name: Build reproducibility index
-        if: github.event_name == 'push'
-        uses: ./.github/actions/reproducibility_index
-        with:
-          OAK_FUNCTIONS_FREESTANDING_BIN_PATH:
-            ${{ needs.build_binary.outputs.artifact_digest }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      # Build reproducibility index on non-`push` events. This is similar to the previous step,
-      # but does not pass in the GITHUB_TOKEN, which is not available on forks / PRs).
-      - name: Build reproducibility index
-        if: github.event_name != 'push'
-        uses: ./.github/actions/reproducibility_index
-        with:
-          OAK_FUNCTIONS_FREESTANDING_BIN_PATH:
-            ${{ needs.build_binary.outputs.artifact_digest }}
-
-      # TODO(#3428): For the parameterized workflow we cannot use the output
-      # from the previous workflow, but must read the digests from an uploaded artifact.
-      - name: Write digest to file
-        run: |
-          echo ${{ needs.build_binary.outputs.provenance_digest }} | tee -a ./digest
-
-      # Also post a reply on the PR thread with the sha256sum of the DSSE artifact.
-      - name: Post SHA256 digest of the DSSE Artifact (post-merge only)
-        if: github.event_name == 'push'
-        uses: actions/github-script@v6
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const fs = require('fs').promises;
-            const digest_line = await fs.readFile('./digest');
-
-            const opts = await github.rest.repos.listPullRequestsAssociatedWithCommit({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              commit_sha: context.sha
-            });
-            // See:
-            // - https://octokit.github.io/rest.js/v17#previews
-            // - https://developer.github.com/v3/repos/commits/#list-pull-requests-associated-with-commit
-            opts.mediaType = {
-                previews: ['groot']
-            };
-
-            const issues = await github.paginate(opts);
-
-            await github.rest.issues.createComment({
-              issue_number: issues[0].number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: `SHA256 digest of the signed provenance uploaded to Ent as a DSSE document:
-
-            \`\`\`
-            ${digest_line}
-            \`\`\`
-            `});
+    uses: ./.github/workflows/reusable_provenance.yaml
+    with:
+      build-config-path: ${{ matrix.buildconfig }}
+    secrets:
+      ENT_API_KEY: ${{ secrets.ENT_API_KEY }}

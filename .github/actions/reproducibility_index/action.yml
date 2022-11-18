@@ -1,7 +1,7 @@
 name: Build Reproducibility Index
 description: 'Updates the reproducibility index for the given path.'
 inputs:
-  base64_digest:
+  BASE64_DIGEST:
     required: true
     description:
       'Base64-encoded string containing the name and sha256 digest of a file to
@@ -25,7 +25,7 @@ runs:
     - name: Generate Reproducibility Index
       shell: bash
       run: |
-        ./scripts/docker_run ./scripts/build_reproducibility_index ${{ inputs.OAK_FUNCTIONS_FREESTANDING_BIN_PATH }}
+        ./scripts/docker_run ./scripts/build_reproducibility_index ${{ inputs.BASE64_DIGEST }}
 
     # Remove all files from the "out" folder.
     - name: Clear "out" folder
