@@ -36,7 +36,7 @@ var sourcesIndex = JSON.parse('{\
 "oak_remote_attestation_sessions":["",[],["lib.rs"]],\
 "oak_remote_attestation_sessions_client":["",[],["lib.rs"]],\
 "oak_restricted_kernel":["",[["boot",[],["mod.rs"]],["mm",[],["bitmap_frame_allocator.rs","encrypted_mapper.rs","frame_allocator.rs","mod.rs","page_tables.rs"]]],["args.rs","attestation.rs","avx.rs","descriptors.rs","elf.rs","ghcb.rs","interrupts.rs","lib.rs","libm.rs","logging.rs","memory.rs","shutdown.rs","snp.rs","virtio.rs"]],\
-"oak_sev_guest":["",[],["cpuid.rs","crypto.rs","ghcb.rs","guest.rs","instructions.rs","interrupts.rs","io.rs","lib.rs","msr.rs","secrets.rs"]],\
+"oak_sev_guest":["",[],["cpuid.rs","crypto.rs","ghcb.rs","guest.rs","instructions.rs","interrupts.rs","io.rs","lib.rs","msr.rs","secrets.rs","vmsa.rs"]],\
 "oak_simple_io":["",[],["lib.rs"]],\
 "oak_tensorflow_service":["",[],["lib.rs","tflite.rs"]],\
 "oak_virtio":["",[["console",[],["mod.rs"]],["queue",[],["mod.rs","virtq.rs"]],["vsock",[["socket",[],["mod.rs"]]],["mod.rs","packet.rs"]]],["lib.rs"]],\
