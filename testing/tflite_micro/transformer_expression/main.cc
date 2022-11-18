@@ -22,10 +22,11 @@
 
 namespace {
 enum {
-  kErrorRun = -2,
-  kErrorInit = -1,
   kSuccess = 0,
   kInAccurateAtBase = 1,
+  kErrorBase = 200,
+  kErrorInit = kErrorBase + 1,
+  kErrorRun = kErrorBase + 2,
 };
 
 constexpr struct TestData {
