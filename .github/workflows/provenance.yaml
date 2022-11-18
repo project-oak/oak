@@ -72,8 +72,7 @@ jobs:
         if: github.event_name == 'push'
         uses: ./.github/actions/reproducibility_index
         with:
-          OAK_FUNCTIONS_FREESTANDING_BIN_PATH:
-            ${{ needs.build_binary.outputs.artifact_digest }}
+          BASE64_DIGEST: ${{ needs.build_binary.outputs.artifact_digest }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       # Build reproducibility index on non-`push` events. This is similar to the previous step,
@@ -82,8 +81,7 @@ jobs:
         if: github.event_name != 'push'
         uses: ./.github/actions/reproducibility_index
         with:
-          OAK_FUNCTIONS_FREESTANDING_BIN_PATH:
-            ${{ needs.build_binary.outputs.artifact_digest }}
+          BASE64_DIGEST: ${{ needs.build_binary.outputs.artifact_digest }}
 
       # TODO(#3428): For the parameterized workflow we cannot use the output
       # from the previous workflow, but must read the digests from an uploaded artifact.
