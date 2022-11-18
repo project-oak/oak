@@ -2,14 +2,55 @@
 
 ## Per-commit build and provenance generation
 
-Every time a pull-request is merged to `main` the
-`oak_functions_freestanding_bin` binary is built and uploaded to `ent`.
-Similarly, a
+Every time a pull-request is merged to `main` the binaries specified in
+`.github/workflows/provenance.yaml` are built and uploaded to `ent`. Moreover,
+for each binary, a
 [signed SLSA3+ provenance](https://github.com/slsa-framework/slsa-github-generator/blob/04f1fe0c7b7902c9a95f4c7eef2dc04cf0f8e6a7/internal/builders/generic/README.md)
-is generated for it and uploaded to `ent` as a
+is generated and uploaded to `ent` as a
 [DSSE document](https://github.com/secure-systems-lab/dsse/blob/master/protocol.md).
-The signed provenance is also uploaded to the public instance of Rekor hosted by
-Sigstore at https://rekor.sigstore.dev, and can be downloaded from it.
+The signed provenances are also uploaded to the public instance of Rekor hosted
+by Sigstore at https://rekor.sigstore.dev, and can be downloaded from it.
+
+## Including a new binary in provenance generation
+
+To include a new binary in this build and release process, a buildconfig file
+must be provided, and added to the provenance generation workflow.
+
+### Step 1: Add a new buildconfig file
+
+A buildconfig is a `.toml` file containing three fields:
+
+- `repo`: URI of the Oak GitHub repo (i.e.,
+  "https://github.com/project-oak/oak")
+- `command`: The command for building the binary that will be passed to
+  `docker run`. It must be specified as an array.
+- `output_path`: The path of the generated binary file, relative to the root of
+  the Git repository.
+
+The `output_path` must be the last line of the `.toml` file, so that the
+provenance generation workflow can retrieve the path. For an example see
+`./buildconfigs/oak_functions_freestanding_bin.toml`.
+
+You need to add the config file to the `./buildconfigs` folder.
+
+### Step 2: Add the buildconfig to the provenance generation workflow
+
+The provenance generation workflow uses a matrix strategy to parameterize
+provenance generation. To include a new file, you need to add the path to the
+new buildconfig file to `.github/workflows/provenance.yaml` as a new value for
+the matrix variable `buildconfig`:
+
+```yaml
+jobs:
+  build_binary:
+    # We use the same job template to generate provenances for multiple binaries.
+    strategy:
+      fail-fast: false
+      matrix:
+        buildconfig:
+          - buildconfigs/oak_functions_freestanding_bin.toml
+          - buildconfigs/<name_of_the_new_buildconfig_file>
+```
 
 ## Retrieving a previously-built binary and its provenance
 
@@ -22,10 +63,12 @@ section describes how to obtain the binary and its provenance to use with the
 [these instructions (currently WIP)](https://github.com/project-oak/transparent-release/tree/main/cmd).
 
 Once you merge a pull-request to `main`, all CI steps are executed on branch
-`main`, and two automated comments are added to the pull-request containing the
-SHA256 digests of the `oak_functions_freestanding_bin` binary and its
-provenance. We will use these digests to download the binary and its provenance
-from `ent`.
+`main`, and an automated comment is added to the pull-request for each
+buildconfig (and built binary). The comment contains the SHA256 digests of the
+binary and its provenance. We will use these digests to download a binary and
+its provenance from `ent`.
+
+TODO: Update the following after #3473 is merged.
 
 For instance the following are the auto-generated comments posted on
 [PR #3399](https://github.com/project-oak/oak/pull/3399). The
@@ -195,6 +238,6 @@ Body: {
 
 In this case, the provenance is in the `Attestation` field. The response in this
 case does not contain the verification, because `rekor-cli` already verifies the
-LogEntry and its inclusion in Rekor. Howevre, it contains other details,
+LogEntry and its inclusion in Rekor. However, it contains other details,
 including the `Body.IntotoObj` object. The `payloadHash` in this object is the
 SHA256 hash of the provenance.
