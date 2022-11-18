@@ -299,10 +299,13 @@ impl Vmsa {
     ///
     /// The current implementation tries to match the state of a new vCPU on QEMU running with KVM.
     ///
+    /// The value of RDX depends on the family, model and stepping of the CPU and can be calculated
+    /// using `calculate_rdx_from_fms`.
+    ///
     /// For reference see <https://github.com/qemu/qemu/blob/master/target/i386/cpu.h>,
     /// <https://github.com/qemu/qemu/blob/master/target/i386/cpu.c> and
     /// <https://github.com/qemu/qemu/blob/master/target/i386/kvm.c>.
-    pub fn new_vcpu_boot() -> Self {
+    pub fn new_vcpu_boot(rdx: u64) -> Self {
         Self {
             cs: SegmentRegister {
                 selector: 0xf000,
@@ -362,6 +365,7 @@ impl Vmsa {
             g_pat: 0x0007040600070406,
             rflags: 0x2,
             rip: 0xfff0,
+            rdx,
 
             ..Default::default()
         }
@@ -493,6 +497,39 @@ impl Default for Vmsa {
             ic_ibs_extd_ctl: 0,
         }
     }
+}
+
+/// When the CPU is reset, the value of RDX is set to the same value that would be returned in EAX
+/// when calling CPUID for leaf 1.
+///
+/// See <https://en.wikipedia.org/wiki/CPUID#EAX=1:_Processor_Info_and_Feature_Bits>.
+pub fn calculate_rdx_from_fms(family: u8, model: u8, stepping: u8) -> u64 {
+    const STEPPING_MASK: u8 = 0xF;
+    const MODEL_MASK: u8 = 0xF;
+    const FAMILY_MAX: u8 = 0xF;
+    const EXTENDED_MODEL_MASK: u8 = 0xF0;
+    const MODEL_SHIFT: usize = 4;
+    const FAMILY_SHIFT: usize = 8;
+    const EXTENDED_MODEL_SHIFT: usize = 12;
+    const EXTENDED_FAMILY_SHIFT: usize = 20;
+
+    let stepping = (stepping & STEPPING_MASK) as u64;
+
+    let model = if family == 6 || family == 15 {
+        ((model & MODEL_MASK) as u64) << MODEL_SHIFT
+            | (((model & EXTENDED_MODEL_MASK) as u64) << EXTENDED_MODEL_SHIFT)
+    } else {
+        ((model & MODEL_MASK) as u64) << MODEL_SHIFT
+    };
+
+    let family = if family > FAMILY_MAX {
+        (FAMILY_MAX as u64) << FAMILY_SHIFT
+            | (((family - FAMILY_MAX) as u64) << EXTENDED_FAMILY_SHIFT)
+    } else {
+        (family as u64) << FAMILY_SHIFT
+    };
+
+    model | stepping | family
 }
 
 /// Representation of a segment register in 64-bit mode.
