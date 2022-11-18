@@ -306,33 +306,33 @@ impl Vmsa {
         Self {
             cs: SegmentRegister {
                 selector: 0xf000,
-                attributes: 0x9b,
+                attributes: 0x9b, // (P|S|CS|R|A)
                 limit: 0xffff,
                 base: 0xffff0000,
             },
             ds: SegmentRegister {
                 limit: 0xffff,
-                attributes: 0x93,
+                attributes: 0x93, // (P|S|W|A)
                 ..Default::default()
             },
             es: SegmentRegister {
                 limit: 0xffff,
-                attributes: 0x93,
+                attributes: 0x93, // (P|S|W|A)
                 ..Default::default()
             },
             fs: SegmentRegister {
                 limit: 0xffff,
-                attributes: 0x93,
+                attributes: 0x93, // (P|S|W|A)
                 ..Default::default()
             },
             gs: SegmentRegister {
                 limit: 0xffff,
-                attributes: 0x93,
+                attributes: 0x93, // (P|S|W|A)
                 ..Default::default()
             },
             ss: SegmentRegister {
                 limit: 0xffff,
-                attributes: 0x93,
+                attributes: 0x93, // (P|S|W|A)
                 ..Default::default()
             },
             gdtr: SegmentRegister {
@@ -345,12 +345,12 @@ impl Vmsa {
             },
             ldtr: SegmentRegister {
                 limit: 0xffff,
-                attributes: 0x82,
+                attributes: 0x82, // (P|LDT)
                 ..Default::default()
             },
             tr: SegmentRegister {
                 limit: 0xffff,
-                attributes: 0x8b,
+                attributes: 0x8b, // (P|"Busy 32-bit TSS")
                 ..Default::default()
             },
             dr6: 0xffff0ff0,
@@ -503,7 +503,9 @@ impl Default for Vmsa {
 pub struct SegmentRegister {
     /// The segment selector.
     pub selector: u16,
-    /// The segment attributes.
+    /// The segment attributes. The meaning of the attribute bits is register-dependent.
+    ///
+    /// See section 4.7 in <https://www.amd.com/system/files/TechDocs/24593.pdf>.
     pub attributes: u16,
     /// The segment limit.
     pub limit: u32,
