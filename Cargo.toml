@@ -47,6 +47,7 @@ members = [
   "oak_tensorflow_service",
   "oak_virtio",
   "sev_serial",
+  "snp_measurement",
   "testing/oak_echo_service",
   "trusted_shuffler/backend",
   "trusted_shuffler/client",
