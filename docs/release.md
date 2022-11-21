@@ -68,49 +68,58 @@ buildconfig (and built binary). The comment contains the SHA256 digests of the
 binary and its provenance. We will use these digests to download a binary and
 its provenance from `ent`.
 
-TODO: Update the following after #3473 is merged.
-
-For instance the following are the auto-generated comments posted on
-[PR #3399](https://github.com/project-oak/oak/pull/3399). The
-[first comment](https://github.com/project-oak/oak/pull/3399#issuecomment-1294834494)
-contains the digest of the `oak_functions_freestanding_bin` binary:
+For instance the following is the
+[auto-generated comment](https://github.com/project-oak/oak/pull/3473#issuecomment-1320306415)
+posted on [PR #3473](https://github.com/project-oak/oak/pull/3473).
 
 ```bash
-b78336fe0d0d736ae6d5ecdbce1934aa92e3c02a43ad01533bff41468c200f05  ./oak_functions_freestanding_bin/target/x86_64-unknown-none/release/oak_functions_freestanding_bin
+
+Artifact digest and name:
+
+ccf7bc7d07dc7f74dffa5485dc795e90bb1deec27286c65debca878226eeb16a  oak_functions_freestanding_bin
+
+Provenance digest:
+
+sha256:729291baba0ec2bb6eff7528e8aa0d0dd1fbfaccd3c59219174b182fe1f8e5ff ↑ [ent-store]
 ```
 
-The
-[second comment](https://github.com/project-oak/oak/pull/3399#issuecomment-1294837399)
-contains the digest of the signed provenance:
+The comment contains the SHA256 digest of the binary
+(`oak_functions_freestanding_bin`):
 
-```bash
-sha256:cdbabdee36d4820eb97cc2ca62c5f9668342758cfb5605c76b09d1cb4a52e1d2 ↑ [ent-store]
+```text
+ccf7bc7d07dc7f74dffa5485dc795e90bb1deec27286c65debca878226eeb16a
+```
+
+and the digest of the signed provenance generated for the binary:
+
+```text
+sha256:729291baba0ec2bb6eff7528e8aa0d0dd1fbfaccd3c59219174b182fe1f8e5ff
 ```
 
 ### Step 1: Download the binary
 
-With the SHA256 digest of the binary from the first comment
-(`b78336fe0d0d736ae6d5ecdbce1934aa92e3c02a43ad01533bff41468c200f05`), you can
+With the SHA256 digest of the binary
+(`ccf7bc7d07dc7f74dffa5485dc795e90bb1deec27286c65debca878226eeb16a`), you can
 download the binary from `ent`, with the following command using the
 [ent HTTP API](https://github.com/google/ent#raw-http-api):
 
 ```bash
-$ curl --output oak_functions_freestanding_bin_from_ent  https://ent-server-62sa4xcfia-ew.a.run.app/raw/sha256:b78336fe0d0d736ae6d5ecdbce1934aa92e3c02a43ad01533bff41468c200f05
+$ curl --output oak_functions_freestanding_bin_from_ent  https://ent-server-62sa4xcfia-ew.a.run.app/raw/sha256:ccf7bc7d07dc7f74dffa5485dc795e90bb1deec27286c65debca878226eeb16a
   % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
                                  Dload  Upload   Total   Spent    Left  Speed
-100 2340k    0 2340k    0     0  1263k      0 --:--:--  0:00:01 --:--:-- 1263k
+100 2298k    0 2298k    0     0  3541k      0 --:--:-- --:--:-- --:--:-- 3541k
 ```
 
 ### Step 2: Download the signed provenance
 
-Similarly, you can use the SHA256 digest of the provenance from the second
-comment to download the provenance from `ent`:
+Similarly, you can use the SHA256 digest of the provenance to download the
+provenance from `ent`:
 
 ```bash
-$ curl --output oak_functions_freestanding_provenance.jsonl  https://ent-server-62sa4xcfia-ew.a.run.app/raw/sha256:cdbabdee36d4820eb97cc2ca62c5f9668342758cfb5605c76b09d1cb4a52e1d2
+$ curl --output oak_functions_freestanding_provenance.jsonl  https://ent-server-62sa4xcfia-ew.a.run.app/raw/sha256:729291baba0ec2bb6eff7528e8aa0d0dd1fbfaccd3c59219174b182fe1f8e5ff
   % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
                                  Dload  Upload   Total   Spent    Left  Speed
-100 15150    0 15150    0     0  35777      0 --:--:-- --:--:-- --:--:-- 35900
+100 14548    0 14548    0     0  33443      0 --:--:-- --:--:-- --:--:-- 33443
 ```
 
 The downloaded file is a DSSE document similar to the following:
@@ -122,8 +131,8 @@ The downloaded file is a DSSE document similar to the following:
   "signatures": [
     {
       "keyid": "",
-      "sig": "MEUCIQC+EPMtG0mK8R75DR4+qkvneNKOZZ+aXZfcGF0kbmNQ0AIgDXrr7vuSp3cqfR0FAm10j81nA4amBeLJaFMyeAgo4xk=",
-      "cert": "-----BEGIN CERTIFICATE-----\nMIIDvDCCA0KgAwIBAgIUNPUebYs8sHuMCFKpluSBjmuZaD8wCgYIKoZIzj0EAwMw\nNzEVMBMGA1UEChMMc2lnc3RvcmUuZGV2MR4wHAYDVQQDExVzaWdzdG9yZS1pbnRl\ncm1lZGlhdGUwHhcNMjIxMDI4MTAzODQ0WhcNMjIxMDI4MTA0ODQ0WjAAMFkwEwYH\nKoZIzj0CAQYIKoZIzj0DAQcDQgAECajzJ3reeI/WoEGEodIU5d0Ml7Nranr692Kb\n5PegQHTlni2Mhau+2k8kmgX00LnTQb/4r3H5gqSKIw+kn8faIqOCAmEwggJdMA4G\nA1UdDwEB/wQEAwIHgDATBgNVHSUEDDAKBggrBgEFBQcDAzAdBgNVHQ4EFgQURwti\nk7Q/gfNGVivunJ8TkEKi8B4wHwYDVR0jBBgwFoAU39Ppz1YkEZb5qNjpKFWixi4Y\nZD8wgYQGA1UdEQEB/wR6MHiGdmh0dHBzOi8vZ2l0aHViLmNvbS9zbHNhLWZyYW1l\nd29yay9zbHNhLWdpdGh1Yi1nZW5lcmF0b3IvLmdpdGh1Yi93b3JrZmxvd3MvZ2Vu\nZXJhdG9yX2dlbmVyaWNfc2xzYTMueW1sQHJlZnMvdGFncy92MS4yLjEwOQYKKwYB\nBAGDvzABAQQraHR0cHM6Ly90b2tlbi5hY3Rpb25zLmdpdGh1YnVzZXJjb250ZW50\nLmNvbTASBgorBgEEAYO/MAECBARwdXNoMDYGCisGAQQBg78wAQMEKDZlNGJjOGVh\nYjAzYzM5NWNlMTM1Zjk5ZDg0NGMxY2E5ZTdhMGJlMjgwHgYKKwYBBAGDvzABBAQQ\nQnVpbGQgUHJvdmVuYW5jZTAdBgorBgEEAYO/MAEFBA9wcm9qZWN0LW9hay9vYWsw\nHQYKKwYBBAGDvzABBgQPcmVmcy9oZWFkcy9tYWluMIGJBgorBgEEAdZ5AgQCBHsE\neQB3AHUACGCS8ChS/2hF0dFrJ4ScRWcYrBY9wzjSbea8IgY2b3IAAAGEHiw0FAAA\nBAMARjBEAiAfmI+rhpUIRH4BaqDcFrxpO2xFBOmc32XSRxjyINjgNwIgcEhVUt6S\n9r0X81PqlwJq67CK5h6nSOu/HMNJW0VtZo8wCgYIKoZIzj0EAwMDaAAwZQIxAJIG\n7zbfAXwbwycMamAnvEX45rjj/xPXy/f6KcDiTQL47i1juLV9jj9o1HNG6pOFaQIw\nefKBOgY1qioq70mi+5J332KpkykCQEzYREUWiqR4fcw6cFxc0i6P7RvtR4LeQD2h\n-----END CERTIFICATE-----\n"
+      "sig": "MEYCIQCc1e4EXohTqYrIQbaKCm8we5gPO+3pmVIeeThY+qNC9wIhANFgNrLDuzKGy3+YxiRfUbNN/CxeDkmSIcz4Qk2ILbdL",
+      "cert": "-----BEGIN CERTIFICATE-----\nMIIDwTCCA0egAwIBAgIUccFLTQVvODK/jdhVS+Osx5ACYuUwCgYIKoZIzj0EAwMw\nNzEVMBMGA1UEChMMc2lnc3RvcmUuZGV2MR4wHAYDVQQDExVzaWdzdG9yZS1pbnRl\ncm1lZGlhdGUwHhcNMjIxMTE4MTcxNjIxWhcNMjIxMTE4MTcyNjIxWjAAMFkwEwYH\nKoZIzj0CAQYIKoZIzj0DAQcDQgAEDM4CDZI1aXFFjBg5wLZITyV0tFIE/uQ6Z9qr\n4Y0FPhiktSxPo4pX2x/cUV8224zZ9Z16ZQKRCDOsKHup9njRqKOCAmYwggJiMA4G\nA1UdDwEB/wQEAwIHgDATBgNVHSUEDDAKBggrBgEFBQcDAzAdBgNVHQ4EFgQUWui+\n2jN0g/mZcPTk8i9l+dF9yzswHwYDVR0jBBgwFoAU39Ppz1YkEZb5qNjpKFWixi4Y\nZD8wgYQGA1UdEQEB/wR6MHiGdmh0dHBzOi8vZ2l0aHViLmNvbS9zbHNhLWZyYW1l\nd29yay9zbHNhLWdpdGh1Yi1nZW5lcmF0b3IvLmdpdGh1Yi93b3JrZmxvd3MvZ2Vu\nZXJhdG9yX2dlbmVyaWNfc2xzYTMueW1sQHJlZnMvdGFncy92MS4yLjEwOQYKKwYB\nBAGDvzABAQQraHR0cHM6Ly90b2tlbi5hY3Rpb25zLmdpdGh1YnVzZXJjb250ZW50\nLmNvbTASBgorBgEEAYO/MAECBARwdXNoMDYGCisGAQQBg78wAQMEKDM5ODEwNDdk\nYjhmOWY2MTM1NWFiOTMwNTRmYTAzOWM5MDcwOTRjYzUwIwYKKwYBBAGDvzABBAQV\nQnVpbGQgQWxsIFByb3ZlbmFuY2VzMB0GCisGAQQBg78wAQUED3Byb2plY3Qtb2Fr\nL29hazAdBgorBgEEAYO/MAEGBA9yZWZzL2hlYWRzL21haW4wgYkGCisGAQQB1nkC\nBAIEewR5AHcAdQDdPTBqxscRMmMZHhyZZzcCokpeuN48rf+HinKALynujgAAAYSL\nvcnfAAAEAwBGMEQCIBvMe9yLyRdVN7vm7L4rR9Cf83TjhsoFSnJl/Iq9gVKlAiB+\nqYu+C05lLt428acwDQCqylgC/VRO1kCi6amKpTiW3DAKBggqhkjOPQQDAwNoADBl\nAjEAm+7l/o3H0YWEK/3Wx3dWVVQaMGSAQt/n+qRRgEdbknriu06SmAcOr+pjezGh\n2lbtAjAQxnun57zv3K6E1DI2tH5qI5S0YBN42gkiPi9ioEz85O+rve5zF9/Nmsch\nTKTaxCw=\n-----END CERTIFICATE-----\n"
     }
   ]
 }
@@ -159,10 +168,10 @@ The following is the command you can use together with the SHA256 digest of the
 binary from the earlier steps to retrieve the UUID of the LogEntry:
 
 ```bash
-$ rekor-cli search --sha b78336fe0d0d736ae6d5ecdbce1934aa92e3c02a43ad01533bff41468c200f05
+$ rekor-cli search --sha ccf7bc7d07dc7f74dffa5485dc795e90bb1deec27286c65debca878226eeb16a
 Found matching entries (listed by UUID):
-24296fb24b8ad77a930a23813ed81831e97480dad2378ee84d9da23e9906e1e624ddfcde3d366835
-24296fb24b8ad77adbf05f042039ff160593bd693f4414ec25d8cd79b44abd97e7bf809b5b391fc8
+24296fb24b8ad77aefea290b5d85e9487fbfbac8a2a03e2f315818088b6868160a9c6e6219ccbf2c
+24296fb24b8ad77a80749c88e748a38199301c06daba6eeb4e242dcc5839fc45c7b52de6f40d1cb4
 ```
 
 Usually there is only one entry, but it is possible to get multiple entries.
@@ -171,9 +180,9 @@ Alternatively, you can use the SHA1 Git commit hash to find the same LogEntry.
 You can find the commit hash on the pull-request on GitHub.
 
 ```bash
-$ rekor-cli search --sha 6e4bc8eab03c395ce135f99d844c1ca9e7a0be28
+$ rekor-cli search --sha 3981047db8f9f61355ab93054fa039c907094cc5
 Found matching entries (listed by UUID):
-24296fb24b8ad77a930a23813ed81831e97480dad2378ee84d9da23e9906e1e624ddfcde3d366835
+24296fb24b8ad77a80749c88e748a38199301c06daba6eeb4e242dcc5839fc45c7b52de6f40d1cb4
 ```
 
 #### Download the LogEntry using Rekor HTTP API
@@ -182,10 +191,10 @@ Now that you have the UUID of the Rekor LogEntry, you can use the Rekor HTTP API
 to download the LogEntry:
 
 ```bash
-$ curl --output signed-provenance-entry https://rekor.sigstore.dev/api/v1/log/entries/24296fb24b8ad77a930a23813ed81831e97480dad2378ee84d9da23e9906e1e624ddfcde3d366835
+$ curl --output signed-provenance-entry https://rekor.sigstore.dev/api/v1/log/entries/24296fb24b8ad77a80749c88e748a38199301c06daba6eeb4e242dcc5839fc45c7b52de6f40d1cb4
   % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
                                  Dload  Upload   Total   Spent    Left  Speed
-100 18313    0 18313    0     0  30135      0 --:--:-- --:--:-- --:--:-- 30169
+100 17654    0 17654    0     0  27763      0 --:--:-- --:--:-- --:--:-- 27757
 ```
 
 The downloaded file is a JSON document. In addition to the inclusion proof
@@ -197,7 +206,7 @@ LogEntry using the following command:
 
 ```bash
 $ jq .[].attestation.data signed-provenance-entry | tr --delete '"' | base64 --decode
-{"_type":"https://in-toto.io/Statement/v0.1","predicateType":"https://slsa.dev/provenance/v0.2","subject":[{"name":"oak_functions_freestanding_bin","digest":{"sha256":"b78336fe0d0d736ae6d5ecdbce1934aa92e3c02a43ad01533bff41468c200f05"}}],"predicate":{"builder":{"id":"https://github.com/slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@refs/tags/v1.2.1"},"buildType":"https://github.com/slsa-framework/slsa-github-generator/generic@v1","invocation":{"configSource":{"uri":"git+https://github.com/project-oak/oak@refs/heads/main","digest":{"sha1":"6e4bc8eab03c395ce135f99d844c1ca9e7a0be28"},"entryPoint":".github/workflows/provenance.yaml"},"parameters":{},"environment":{ "/* GitHub context */" }},"metadata":{"buildInvocationID":"3344664625-1","completeness":{"parameters":true,"environment":false,"materials":false},"reproducible":false},"materials":[{"uri":"git+https://github.com/project-oak/oak@refs/heads/main","digest":{"sha1":"6e4bc8eab03c395ce135f99d844c1ca9e7a0be28"}}]}}
+{"_type":"https://in-toto.io/Statement/v0.1","predicateType":"https://slsa.dev/provenance/v0.2","subject":[{"name":"oak_functions_freestanding_bin","digest":{"sha256":"ccf7bc7d07dc7f74dffa5485dc795e90bb1deec27286c65debca878226eeb16a"}}],"predicate":{"builder":{"id":"https://github.com/slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@refs/tags/v1.2.1"},"buildType":"https://github.com/slsa-framework/slsa-github-generator/generic@v1","invocation":{"configSource":{"uri":"git+https://github.com/project-oak/oak@refs/heads/main","digest":{"sha1":"3981047db8f9f61355ab93054fa039c907094cc5"},"entryPoint":".github/workflows/provenance.yaml"},"parameters":{},"environment":{"/* GitHub context */"}},"metadata":{"buildInvocationID":"3498762287-1","completeness":{"parameters":true,"environment":false,"materials":false},"reproducible":false},"materials":[{"uri":"git+https://github.com/project-oak/oak@refs/heads/main","digest":{"sha1":"3981047db8f9f61355ab93054fa039c907094cc5"}}]}}
 ```
 
 Optional: Verify that this is the same as the provenance (i.e., payload) in the
@@ -213,25 +222,25 @@ If you are interested in exploring the details of the LogEntry, you can use
 of the LogEntry:
 
 ```bash
-$ rekor-cli get --uuid 24296fb24b8ad77a930a23813ed81831e97480dad2378ee84d9da23e9906e1e624ddfcde3d366835
+$ $ rekor-cli get --uuid 24296fb24b8ad77a80749c88e748a38199301c06daba6eeb4e242dcc5839fc45c7b52de6f40d1cb4
 LogID: c0d23d6ad406973f9559f3ba2d1ca01f84147d8ffc5b8445c224f98b9591801d
-Attestation: {"_type":"https://in-toto.io/Statement/v0.1","predicateType":"https://slsa.dev/provenance/v0.2","subject":[{"name":"oak_functions_freestanding_bin","digest":{"sha256":"b78336fe0d0d736ae6d5ecdbce1934aa92e3c02a43ad01533bff41468c200f05"}}],"predicate":{"builder":{"id":"https://github.com/slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@refs/tags/v1.2.1"},"buildType":"https://github.com/slsa-framework/slsa-github-generator/generic@v1","invocation":{"configSource":{"uri":"git+https://github.com/project-oak/oak@refs/heads/main","digest":{"sha1":"6e4bc8eab03c395ce135f99d844c1ca9e7a0be28"},"entryPoint":".github/workflows/provenance.yaml"},"parameters":{},"environment":{ "/* GitHub context */" }},"metadata":{"buildInvocationID":"3344664625-1","completeness":{"parameters":true,"environment":false,"materials":false},"reproducible":false},"materials":[{"uri":"git+https://github.com/project-oak/oak@refs/heads/main","digest":{"sha1":"6e4bc8eab03c395ce135f99d844c1ca9e7a0be28"}}]}}
-Index: 6037020
-IntegratedTime: 2022-10-28T10:38:44Z
-UUID: 24296fb24b8ad77a930a23813ed81831e97480dad2378ee84d9da23e9906e1e624ddfcde3d366835
+Attestation: {"_type":"https://in-toto.io/Statement/v0.1","predicateType":"https://slsa.dev/provenance/v0.2","subject":[{"name":"oak_functions_freestanding_bin","digest":{"sha256":"ccf7bc7d07dc7f74dffa5485dc795e90bb1deec27286c65debca878226eeb16a"}}],"predicate":{"builder":{"id":"https://github.com/slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@refs/tags/v1.2.1"},"buildType":"https://github.com/slsa-framework/slsa-github-generator/generic@v1","invocation":{"configSource":{"uri":"git+https://github.com/project-oak/oak@refs/heads/main","digest":{"sha1":"3981047db8f9f61355ab93054fa039c907094cc5"},"entryPoint":".github/workflows/provenance.yaml"},"parameters":{},"environment":{"/* GitHub context */"}},"metadata":{"buildInvocationID":"3498762287-1","completeness":{"parameters":true,"environment":false,"materials":false},"reproducible":false},"materials":[{"uri":"git+https://github.com/project-oak/oak@refs/heads/main","digest":{"sha1":"3981047db8f9f61355ab93054fa039c907094cc5"}}]}}
+Index: 7359481
+IntegratedTime: 2022-11-18T17:16:22Z
+UUID: 24296fb24b8ad77a80749c88e748a38199301c06daba6eeb4e242dcc5839fc45c7b52de6f40d1cb4
 Body: {
   "IntotoObj": {
     "content": {
       "hash": {
         "algorithm": "sha256",
-        "value": "cdbabdee36d4820eb97cc2ca62c5f9668342758cfb5605c76b09d1cb4a52e1d2"
+        "value": "729291baba0ec2bb6eff7528e8aa0d0dd1fbfaccd3c59219174b182fe1f8e5ff"
       },
       "payloadHash": {
         "algorithm": "sha256",
-        "value": "2b0e53da53bbf1bc2405e724f3f99c756a72f314966a38cebac469c397ea51d7"
+        "value": "92139853842fa8cc1a82f463f35f976f57e5b0f828f7fc968b1dcdd12b0b6355"
       }
     },
-    "publicKey": "LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUR2RENDQTBLZ0F3SUJBZ0lVTlBVZWJZczhzSHVNQ0ZLcGx1U0JqbXVaYUQ4d0NnWUlLb1pJemowRUF3TXcKTnpFVk1CTUdBMVVFQ2hNTWMybG5jM1J2Y21VdVpHVjJNUjR3SEFZRFZRUURFeFZ6YVdkemRHOXlaUzFwYm5SbApjbTFsWkdsaGRHVXdIaGNOTWpJeE1ESTRNVEF6T0RRMFdoY05Nakl4TURJNE1UQTBPRFEwV2pBQU1Ga3dFd1lICktvWkl6ajBDQVFZSUtvWkl6ajBEQVFjRFFnQUVDYWp6SjNyZWVJL1dvRUdFb2RJVTVkME1sN05yYW5yNjkyS2IKNVBlZ1FIVGxuaTJNaGF1KzJrOGttZ1gwMExuVFFiLzRyM0g1Z3FTS0l3K2tuOGZhSXFPQ0FtRXdnZ0pkTUE0RwpBMVVkRHdFQi93UUVBd0lIZ0RBVEJnTlZIU1VFRERBS0JnZ3JCZ0VGQlFjREF6QWRCZ05WSFE0RUZnUVVSd3RpCms3US9nZk5HVml2dW5KOFRrRUtpOEI0d0h3WURWUjBqQkJnd0ZvQVUzOVBwejFZa0VaYjVxTmpwS0ZXaXhpNFkKWkQ4d2dZUUdBMVVkRVFFQi93UjZNSGlHZG1oMGRIQnpPaTh2WjJsMGFIVmlMbU52YlM5emJITmhMV1p5WVcxbApkMjl5YXk5emJITmhMV2RwZEdoMVlpMW5aVzVsY21GMGIzSXZMbWRwZEdoMVlpOTNiM0pyWm14dmQzTXZaMlZ1ClpYSmhkRzl5WDJkbGJtVnlhV05mYzJ4ellUTXVlVzFzUUhKbFpuTXZkR0ZuY3k5Mk1TNHlMakV3T1FZS0t3WUIKQkFHRHZ6QUJBUVFyYUhSMGNITTZMeTkwYjJ0bGJpNWhZM1JwYjI1ekxtZHBkR2gxWW5WelpYSmpiMjUwWlc1MApMbU52YlRBU0Jnb3JCZ0VFQVlPL01BRUNCQVJ3ZFhOb01EWUdDaXNHQVFRQmc3OHdBUU1FS0RabE5HSmpPR1ZoCllqQXpZek01TldObE1UTTFaams1WkRnME5HTXhZMkU1WlRkaE1HSmxNamd3SGdZS0t3WUJCQUdEdnpBQkJBUVEKUW5WcGJHUWdVSEp2ZG1WdVlXNWpaVEFkQmdvckJnRUVBWU8vTUFFRkJBOXdjbTlxWldOMExXOWhheTl2WVdzdwpIUVlLS3dZQkJBR0R2ekFCQmdRUGNtVm1jeTlvWldGa2N5OXRZV2x1TUlHSkJnb3JCZ0VFQWRaNUFnUUNCSHNFCmVRQjNBSFVBQ0dDUzhDaFMvMmhGMGRGcko0U2NSV2NZckJZOXd6alNiZWE4SWdZMmIzSUFBQUdFSGl3MEZBQUEKQkFNQVJqQkVBaUFmbUkrcmhwVUlSSDRCYXFEY0ZyeHBPMnhGQk9tYzMyWFNSeGp5SU5qZ053SWdjRWhWVXQ2Uwo5cjBYODFQcWx3SnE2N0NLNWg2blNPdS9ITU5KVzBWdFpvOHdDZ1lJS29aSXpqMEVBd01EYUFBd1pRSXhBSklHCjd6YmZBWHdid3ljTWFtQW52RVg0NXJqai94UFh5L2Y2S2NEaVRRTDQ3aTFqdUxWOWpqOW8xSE5HNnBPRmFRSXcKZWZLQk9nWTFxaW9xNzBtaSs1SjMzMktwa3lrQ1FFellSRVVXaXFSNGZjdzZjRnhjMGk2UDdSdnRSNExlUUQyaAotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0tCg=="
+    "publicKey": "LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUR3VENDQTBlZ0F3SUJBZ0lVY2NGTFRRVnZPREsvamRoVlMrT3N4NUFDWXVVd0NnWUlLb1pJemowRUF3TXcKTnpFVk1CTUdBMVVFQ2hNTWMybG5jM1J2Y21VdVpHVjJNUjR3SEFZRFZRUURFeFZ6YVdkemRHOXlaUzFwYm5SbApjbTFsWkdsaGRHVXdIaGNOTWpJeE1URTRNVGN4TmpJeFdoY05Nakl4TVRFNE1UY3lOakl4V2pBQU1Ga3dFd1lICktvWkl6ajBDQVFZSUtvWkl6ajBEQVFjRFFnQUVETTRDRFpJMWFYRkZqQmc1d0xaSVR5VjB0RklFL3VRNlo5cXIKNFkwRlBoaWt0U3hQbzRwWDJ4L2NVVjgyMjR6WjlaMTZaUUtSQ0RPc0tIdXA5bmpScUtPQ0FtWXdnZ0ppTUE0RwpBMVVkRHdFQi93UUVBd0lIZ0RBVEJnTlZIU1VFRERBS0JnZ3JCZ0VGQlFjREF6QWRCZ05WSFE0RUZnUVVXdWkrCjJqTjBnL21aY1BUazhpOWwrZEY5eXpzd0h3WURWUjBqQkJnd0ZvQVUzOVBwejFZa0VaYjVxTmpwS0ZXaXhpNFkKWkQ4d2dZUUdBMVVkRVFFQi93UjZNSGlHZG1oMGRIQnpPaTh2WjJsMGFIVmlMbU52YlM5emJITmhMV1p5WVcxbApkMjl5YXk5emJITmhMV2RwZEdoMVlpMW5aVzVsY21GMGIzSXZMbWRwZEdoMVlpOTNiM0pyWm14dmQzTXZaMlZ1ClpYSmhkRzl5WDJkbGJtVnlhV05mYzJ4ellUTXVlVzFzUUhKbFpuTXZkR0ZuY3k5Mk1TNHlMakV3T1FZS0t3WUIKQkFHRHZ6QUJBUVFyYUhSMGNITTZMeTkwYjJ0bGJpNWhZM1JwYjI1ekxtZHBkR2gxWW5WelpYSmpiMjUwWlc1MApMbU52YlRBU0Jnb3JCZ0VFQVlPL01BRUNCQVJ3ZFhOb01EWUdDaXNHQVFRQmc3OHdBUU1FS0RNNU9ERXdORGRrCllqaG1PV1kyTVRNMU5XRmlPVE13TlRSbVlUQXpPV001TURjd09UUmpZelV3SXdZS0t3WUJCQUdEdnpBQkJBUVYKUW5WcGJHUWdRV3hzSUZCeWIzWmxibUZ1WTJWek1CMEdDaXNHQVFRQmc3OHdBUVVFRDNCeWIycGxZM1F0YjJGcgpMMjloYXpBZEJnb3JCZ0VFQVlPL01BRUdCQTl5WldaekwyaGxZV1J6TDIxaGFXNHdnWWtHQ2lzR0FRUUIxbmtDCkJBSUVld1I1QUhjQWRRRGRQVEJxeHNjUk1tTVpIaHlaWnpjQ29rcGV1TjQ4cmYrSGluS0FMeW51amdBQUFZU0wKdmNuZkFBQUVBd0JHTUVRQ0lCdk1lOXlMeVJkVk43dm03TDRyUjlDZjgzVGpoc29GU25KbC9JcTlnVktsQWlCKwpxWXUrQzA1bEx0NDI4YWN3RFFDcXlsZ0MvVlJPMWtDaTZhbUtwVGlXM0RBS0JnZ3Foa2pPUFFRREF3Tm9BREJsCkFqRUFtKzdsL28zSDBZV0VLLzNXeDNkV1ZWUWFNR1NBUXQvbitxUlJnRWRia25yaXUwNlNtQWNPcitwamV6R2gKMmxidEFqQVF4bnVuNTd6djNLNkUxREkydEg1cUk1UzBZQk40MmdraVBpOWlvRXo4NU8rcnZlNXpGOS9ObXNjaApUS1RheEN3PQotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0tCg=="
   }
 }
 ```
