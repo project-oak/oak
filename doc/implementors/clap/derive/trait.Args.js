@@ -5,6 +5,7 @@
 "oak_functions_linux_vsock_bin":[["impl Args for <a class=\"struct\" href=\"oak_functions_linux_vsock_bin/struct.Opt.html\" title=\"struct oak_functions_linux_vsock_bin::Opt\">Opt</a>"]],
 "offline_attestation_client":[["impl Args for <a class=\"struct\" href=\"offline_attestation_client/struct.Opt.html\" title=\"struct offline_attestation_client::Opt\">Opt</a>"]],
 "offline_attestation_server":[["impl Args for <a class=\"struct\" href=\"offline_attestation_server/struct.Opt.html\" title=\"struct offline_attestation_server::Opt\">Opt</a>"]],
+"snp_measurement":[["impl Args for <a class=\"struct\" href=\"snp_measurement/struct.Cli.html\" title=\"struct snp_measurement::Cli\">Cli</a>"]],
 "trusted_shuffler_backend":[["impl Args for <a class=\"struct\" href=\"trusted_shuffler_backend/struct.Opt.html\" title=\"struct trusted_shuffler_backend::Opt\">Opt</a>"]],
 "trusted_shuffler_client":[["impl Args for <a class=\"struct\" href=\"trusted_shuffler_client/struct.Opt.html\" title=\"struct trusted_shuffler_client::Opt\">Opt</a>"]],
 "trusted_shuffler_server":[["impl Args for <a class=\"struct\" href=\"trusted_shuffler_server/struct.Opt.html\" title=\"struct trusted_shuffler_server::Opt\">Opt</a>"]],

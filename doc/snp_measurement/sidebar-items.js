@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":[["DEFAULT_STAGE0_ROM","The default workspace-relative path to the Stage 0 firmware ROM image."]],"fn":[["main",""]],"mod":[["page",""],["stage0",""]],"struct":[["Cli",""]]};
