@@ -93,6 +93,7 @@ impl PageInfo {
         self.page_type = PageType::Vmsa;
         self.gpa = start_address.as_u64();
         self.set_contents_from_page_bytes(vmsa.as_bytes());
+        self.update_current_digest();
     }
 
     /// Sets the `contents` field based to the SHA-384 digest of the byte contents of a 4KiB memory
