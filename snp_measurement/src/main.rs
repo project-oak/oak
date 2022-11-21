@@ -17,12 +17,10 @@
 mod page;
 mod stage0;
 
+use crate::stage0::load_stage0;
 use clap::Parser;
 use page::PageInfo;
-use stage0::FIRMWARE_TOP;
 use std::path::PathBuf;
-
-use crate::stage0::load_stage0;
 
 /// The default workspace-relative path to the Stage 0 firmware ROM image.
 const DEFAULT_STAGE0_ROM: &str = "stage0/target/x86_64-unknown-none/release/stage0.bin";
@@ -46,10 +44,13 @@ fn main() -> anyhow::Result<()> {
     env_logger::init();
     let cli = Cli::parse();
 
-    let stage0_bytes = load_stage0(cli.stage0_path())?;
+    let stage0 = load_stage0(cli.stage0_path())?;
 
     let mut page_info = PageInfo::new();
-    page_info.update_from_data(&stage0_bytes, FIRMWARE_TOP - stage0_bytes.len());
+    // Add the Stage 0 firmware ROM image.
+    page_info.update_from_data(stage0.rom_bytes(), stage0.start_address);
+    // Add the legacy boot shadow of the Stage 0 firmware ROM image.
+    page_info.update_from_data(stage0.legacy_shadow_bytes(), stage0.legacy_start_address);
 
     // TODO(#3486): Also include enclave binary, SNP-specific pages and the VMSA in the measurement.
 
