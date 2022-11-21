@@ -16,8 +16,12 @@
 
 mod page;
 mod stage0;
+mod vmsa;
 
-use crate::stage0::load_stage0;
+use crate::{
+    stage0::load_stage0,
+    vmsa::{get_boot_vmsa, VMSA_ADDRESS},
+};
 use clap::Parser;
 use page::PageInfo;
 use std::path::PathBuf;
@@ -52,7 +56,10 @@ fn main() -> anyhow::Result<()> {
     // Add the legacy boot shadow of the Stage 0 firmware ROM image.
     page_info.update_from_data(stage0.legacy_shadow_bytes(), stage0.legacy_start_address);
 
-    // TODO(#3486): Also include enclave binary, SNP-specific pages and the VMSA in the measurement.
+    // TODO(#3486): Also include the enclave binary and SNP-specific pages.
+
+    // For now we assume there will only be one vCPU in the VM.
+    page_info.update_from_vmsa(&get_boot_vmsa(), VMSA_ADDRESS);
 
     println!(
         "Attestation Measurement: {}",
