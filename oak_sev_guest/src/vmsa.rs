@@ -35,6 +35,15 @@ pub struct VmsaPage {
 
 static_assertions::assert_eq_size!(VmsaPage, [u8; VMSA_PAGE_SIZE]);
 
+impl VmsaPage {
+    pub fn new(vmsa: Vmsa) -> Self {
+        Self {
+            vmsa,
+            _reserved: [0u8; VMSA_PAGE_SIZE - VMSA_SIZE],
+        }
+    }
+}
+
 impl Default for VmsaPage {
     fn default() -> Self {
         // We cannot derive Default because Default is only implemented for fixed-size arrays up to

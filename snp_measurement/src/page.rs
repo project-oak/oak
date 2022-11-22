@@ -14,6 +14,7 @@
 // limitations under the License.
 //
 
+use oak_sev_guest::vmsa::VmsaPage;
 use sha2::{Digest, Sha384};
 use strum::FromRepr;
 use x86_64::{
@@ -80,16 +81,29 @@ impl PageInfo {
         self.page_type = PageType::Normal;
         let mut address = start_address;
         for chunk in data.chunks(Size4KiB::SIZE as usize) {
-            let mut content_hasher = Sha384::new();
-            content_hasher.update(chunk);
-            let content_hash = content_hasher.finalize();
-            self.contents[..].copy_from_slice(&content_hash);
-
             self.gpa = address.as_u64();
             address += Size4KiB::SIZE;
-
+            self.set_contents_from_page_bytes(chunk);
             self.update_current_digest();
         }
+    }
+
+    /// Updates the current measurement digest from a VMSA page.
+    pub fn update_from_vmsa(&mut self, vmsa: &VmsaPage, start_address: PhysAddr) {
+        self.page_type = PageType::Vmsa;
+        self.gpa = start_address.as_u64();
+        self.set_contents_from_page_bytes(vmsa.as_bytes());
+        self.update_current_digest();
+    }
+
+    /// Sets the `contents` field based to the SHA-384 digest of the byte contents of a 4KiB memory
+    /// page.
+    fn set_contents_from_page_bytes(&mut self, page_bytes: &[u8]) {
+        assert_eq!(page_bytes.len() as u64, Size4KiB::SIZE);
+        let mut contents_hasher = Sha384::new();
+        contents_hasher.update(page_bytes);
+        let contents_digest = contents_hasher.finalize();
+        self.contents[..].copy_from_slice(&contents_digest);
     }
 
     /// Calculates the SHA-384 digest of the struct's memory and updates `digest_cur` to the new
