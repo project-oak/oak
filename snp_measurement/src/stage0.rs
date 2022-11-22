@@ -160,6 +160,7 @@ impl Stage0Info {
             }
             entry_end = content_start;
         }
+        assert_eq!(entry_end, 0, "malformed GUID table contents");
         result
     }
 
