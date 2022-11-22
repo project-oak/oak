@@ -35,6 +35,7 @@
 #![feature(naked_functions)]
 #![feature(once_cell)]
 
+mod acpi;
 mod args;
 pub mod attestation;
 mod avx;
@@ -76,7 +77,7 @@ use oak_sev_guest::msr::{change_snp_state_for_frame, get_sev_status, PageAssignm
 use strum::{EnumIter, EnumString, IntoEnumIterator};
 use x86_64::{
     structures::paging::{MappedPageTable, Page, Size2MiB},
-    VirtAddr,
+    PhysAddr, VirtAddr,
 };
 
 /// The allocator for allocating space in the memory area that is shared with the hypervisor.
@@ -119,7 +120,18 @@ pub fn start_kernel(info: &BootParams) -> Box<dyn Channel> {
     // Physical frame allocator: support up to 128 GiB of memory, for now.
     let mut frame_allocator = mm::init::<1024>(info.e820_table(), program_headers);
 
+    // Note: `info` will not be valid after calling this!
     let mut mapper = mm::init_paging(&mut frame_allocator, program_headers).unwrap();
+
+    // Re-map boot params to the new virtual address.
+    // Safety: we know we're addressing valid memory that contains the correct data structure, as
+    // we're just translating addresses differently due to the new page tables.
+    let info = unsafe {
+        &*mapper
+            .translate_physical(PhysAddr::new(info as *const _ as u64))
+            .unwrap()
+            .as_ptr()
+    };
 
     if sev_status.contains(SevStatus::SEV_ES_ENABLED) {
         // Now that the page tables have been updated, we have to re-share the GHCB with the
@@ -185,6 +197,12 @@ pub fn start_kernel(info: &BootParams) -> Box<dyn Channel> {
             .unwrap(),
     ))
     .unwrap();
+
+    // Init ACPI, if available.
+    match acpi::Acpi::new(info) {
+        Err(ref err) => log::warn!("Failed to load ACPI tables: {}", err),
+        Ok(ref mut acpi) => acpi.devices().unwrap(),
+    };
 
     if sev_status.contains(SevStatus::SNP_ACTIVE) {
         // For now we just generate a sample attestation report and log the value.
