@@ -551,6 +551,15 @@
 <span id="551">551</span>
 <span id="552">552</span>
 <span id="553">553</span>
+<span id="554">554</span>
+<span id="555">555</span>
+<span id="556">556</span>
+<span id="557">557</span>
+<span id="558">558</span>
+<span id="559">559</span>
+<span id="560">560</span>
+<span id="561">561</span>
+<span id="562">562</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -587,6 +596,15 @@
 }
 
 <span class="macro">static_assertions::assert_eq_size!</span>(VmsaPage, [u8; VMSA_PAGE_SIZE]);
+
+<span class="kw">impl </span>VmsaPage {
+    <span class="kw">pub fn </span>new(vmsa: Vmsa) -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{
+            vmsa,
+            _reserved: [<span class="number">0u8</span>; VMSA_PAGE_SIZE - VMSA_SIZE],
+        }
+    }
+}
 
 <span class="kw">impl </span>Default <span class="kw">for </span>VmsaPage {
     <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{

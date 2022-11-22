@@ -44,7 +44,7 @@ var sourcesIndex = JSON.parse('{\
 "offline_attestation_server":["",[],["main.rs"]],\
 "offline_attestation_shared":["",[],["lib.rs"]],\
 "sev_serial":["",[],["lib.rs"]],\
-"snp_measurement":["",[],["main.rs","page.rs","stage0.rs"]],\
+"snp_measurement":["",[],["main.rs","page.rs","stage0.rs","vmsa.rs"]],\
 "trusted_shuffler":["",[],["lib.rs"]],\
 "trusted_shuffler_backend":["",[],["main.rs"]],\
 "trusted_shuffler_client":["",[],["main.rs"]],\
