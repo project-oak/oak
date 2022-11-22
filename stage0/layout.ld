@@ -117,7 +117,17 @@ SECTIONS {
         . = ALIGN(4K);
     } > ram_low
 
-    ASSERT(. < 640K, "Boot data structures overflow low memory")
+    /* EBDA - Extended BIOS Data Area; 128K of memory between [512K, 640K). The RSDP must be within
+     * the first KiB of the EBDA.
+     */
+    .ebda 0x80000 (NOLOAD) : {
+        /* Ensure RSDP is always first in the EBDA. */
+        KEEP(*(.ebda.rsdp))
+        . = ALIGN(1K);
+        *(.ebda .ebda.*)
+    } > ram_low
+    
+    ASSERT(. <= 0xA0000, "EBDA overflow")
 
     . = ORIGIN(bios);
 

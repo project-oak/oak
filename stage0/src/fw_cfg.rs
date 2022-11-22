@@ -32,7 +32,7 @@ enum FwCfgItems {
 
 /// an individual file entry, 64 bytes total
 #[repr(C)]
-#[derive(Debug, AsBytes, FromBytes)]
+#[derive(AsBytes, FromBytes)]
 pub struct DirEntry {
     /// size of referenced fw_cfg item, big-endian
     size: u32,
@@ -69,6 +69,19 @@ impl DirEntry {
     }
 }
 
+impl core::fmt::Debug for DirEntry {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.debug_struct("DirEntry")
+            .field("name", &self.name())
+            .field("size", &self.size())
+            .field("select", &self.selector())
+            .finish()
+    }
+}
+
+/// Wrapper for the QEMU Firmware Configuration device.
+///
+/// See <https://www.qemu.org/docs/master/specs/fw_cfg.html> for more details.
 pub struct FwCfg {
     selector: PortWrapper<u16>,
     data: PortWrapper<u8>,
@@ -130,6 +143,11 @@ impl FwCfg {
         })
     }
 
+    pub fn find(&mut self, name: &CStr) -> Option<DirEntry> {
+        // Safety: this is safe as we don't leak the iterator.
+        unsafe { self.dir() }.find(|file| file.name() == name)
+    }
+
     /// Reads the contents of a file to a predetermined struct.
     /// Returns the number of bytes read.
     ///
@@ -152,17 +170,17 @@ impl FwCfg {
             break;
         }
         if let Some(file) = entry {
-            self.read_file(file, object.as_bytes_mut())
+            self.read_file(&file, object.as_bytes_mut())
         } else {
             Err("couldn't find requested file")
         }
     }
 
-    /// Reads contents of a file; returns the number of bytes acrually read.
+    /// Reads contents of a file; returns the number of bytes actrually read.
     ///
     /// The buffer `buf` will be filled to capacity if the file is larger;
     /// if it is shorter, the trailing bytes will not be touched.
-    pub fn read_file(&mut self, file: DirEntry, buf: &mut [u8]) -> Result<usize, &'static str> {
+    pub fn read_file(&mut self, file: &DirEntry, buf: &mut [u8]) -> Result<usize, &'static str> {
         self.write_selector(file.selector())?;
         let len = min(buf.len(), file.size());
         self.read_buf(&mut buf[..len])?;
