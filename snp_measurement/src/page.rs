@@ -14,6 +14,7 @@
 // limitations under the License.
 //
 
+use log::debug;
 use oak_sev_guest::vmsa::VmsaPage;
 use sha2::{Digest, Sha384};
 use strum::FromRepr;
@@ -94,6 +95,25 @@ impl PageInfo {
         self.gpa = start_address.as_u64();
         self.set_contents_from_page_bytes(vmsa.as_bytes());
         self.update_current_digest();
+    }
+
+    /// Updates the current measurement digest for a SEV-SNP-specific page.
+    ///
+    /// Measurement of these pages do not include a measurement of the content, only the metadata.
+    pub fn update_from_snp_page(&mut self, page_type: PageType, start_address: PhysAddr) {
+        debug!(
+            "Updating measurement with {:?} page at address {:#018x}",
+            page_type, start_address
+        );
+        match page_type {
+            PageType::Cpuid | PageType::Secrets | PageType::Unmeasured | PageType::Zero => {
+                self.page_type = page_type;
+                self.gpa = start_address.as_u64();
+                self.contents.fill(0);
+                self.update_current_digest();
+            }
+            _ => panic!("Unexpected page type {:?}", page_type),
+        }
     }
 
     /// Sets the `contents` field based to the SHA-384 digest of the byte contents of a 4KiB memory
