@@ -225,6 +225,7 @@ dependencies = [
  "sev_serial",
  "spinning_top",
  "static_assertions",
+ "strum",
  "x86_64",
  "zerocopy",
 ]

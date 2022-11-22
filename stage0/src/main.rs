@@ -43,6 +43,7 @@ use x86_64::{
     PhysAddr, VirtAddr,
 };
 
+mod acpi;
 mod asm;
 mod fw_cfg;
 mod logging;
@@ -172,7 +173,7 @@ pub extern "C" fn rust64_start(encrypted: u64) -> ! {
     log::info!("starting...");
 
     // Safety: we assume there won't be any other hardware devices using the fw_cfg IO ports.
-    let fwcfg = unsafe {
+    let mut fwcfg = unsafe {
         fw_cfg::FwCfg::new(match ghcb_protocol {
             Some(protocol) => PortFactoryWrapper::new_ghcb(protocol),
             None => PortFactoryWrapper::new_raw(),
@@ -181,8 +182,8 @@ pub extern "C" fn rust64_start(encrypted: u64) -> ! {
 
     // Safety: If we don't have a fw_cfg device available, we assume the VMM has filled in the zero
     // page for us. If the device is available, we zero out the page and fill it in ourselves.
-    let zero_page = if let Ok(mut fwcfg) = fwcfg {
-        zero_page::init_zero_page(&mut fwcfg)
+    let zero_page = if let Ok(ref mut fwcfg) = fwcfg {
+        zero_page::init_zero_page(fwcfg)
     } else {
         unsafe { zero_page::get_zero_page() }
     };
@@ -282,6 +283,10 @@ pub extern "C" fn rust64_start(encrypted: u64) -> ! {
     {
         // Looks like we have a valid ELF header at 0x200000. Trust its entry point.
         entry = VirtAddr::new(header.e_entry);
+    }
+
+    if let Ok(ref mut fwcfg) = fwcfg {
+        acpi::build_acpi_tables(fwcfg).unwrap();
     }
 
     log::info!("jumping to kernel at {:#018x}", entry.as_u64());
