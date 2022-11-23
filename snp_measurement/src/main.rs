@@ -14,11 +14,13 @@
 // limitations under the License.
 //
 
+mod elf;
 mod page;
 mod stage0;
 mod vmsa;
 
 use crate::{
+    elf::load_elf_segments,
     stage0::load_stage0,
     vmsa::{get_boot_vmsa, VMSA_ADDRESS},
 };
@@ -29,11 +31,16 @@ use std::path::PathBuf;
 /// The default workspace-relative path to the Stage 0 firmware ROM image.
 const DEFAULT_STAGE0_ROM: &str = "stage0/target/x86_64-unknown-none/release/stage0.bin";
 
+/// The default workspace-relative path to the release Oak Functions enclave binary.
+const DEFAULT_ENCLAVE_BINARY: &str = "oak_functions_freestanding_bin/target/x86_64-unknown-none/release/oak_functions_freestanding_bin";
+
 #[derive(Parser, Clone)]
 #[command(about = "Oak SEV-SNP Measurement Calculator")]
 struct Cli {
     #[arg(long, help = "The location of the Stage 0 firmware ROM image")]
     stage0_rom: Option<PathBuf>,
+    #[arg(long, help = "The location of the enclave binary")]
+    enclave_binary: Option<PathBuf>,
 }
 
 impl Cli {
@@ -41,6 +48,12 @@ impl Cli {
         self.stage0_rom
             .clone()
             .unwrap_or_else(|| format!("{}/{}", env!("WORKSPACE_ROOT"), DEFAULT_STAGE0_ROM).into())
+    }
+
+    fn enclave_binary_path(&self) -> PathBuf {
+        self.stage0_rom.clone().unwrap_or_else(|| {
+            format!("{}/{}", env!("WORKSPACE_ROOT"), DEFAULT_ENCLAVE_BINARY).into()
+        })
     }
 }
 
@@ -56,7 +69,10 @@ fn main() -> anyhow::Result<()> {
     // Add the legacy boot shadow of the Stage 0 firmware ROM image.
     page_info.update_from_data(stage0.legacy_shadow_bytes(), stage0.legacy_start_address);
 
-    // TODO(#3486): Also include the enclave binary.
+    // Add all non-zero loadable segments from the enclave binary.
+    for memory_segment in load_elf_segments(cli.enclave_binary_path())? {
+        page_info.update_from_data(&memory_segment.data, memory_segment.start_address);
+    }
 
     for snp_page in stage0.get_snp_pages() {
         // For now we expect each entry to cover only one page.
