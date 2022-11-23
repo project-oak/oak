@@ -56,7 +56,16 @@ fn main() -> anyhow::Result<()> {
     // Add the legacy boot shadow of the Stage 0 firmware ROM image.
     page_info.update_from_data(stage0.legacy_shadow_bytes(), stage0.legacy_start_address);
 
-    // TODO(#3486): Also include the enclave binary and SNP-specific pages.
+    // TODO(#3486): Also include the enclave binary.
+
+    for snp_page in stage0.get_snp_pages() {
+        // For now we expect each entry to cover only one page.
+        assert_eq!(
+            snp_page.page_count, 1,
+            "invalid page for for SNP-specific page"
+        );
+        page_info.update_from_snp_page(snp_page.page_type, snp_page.start_address);
+    }
 
     // For now we assume there will only be one vCPU in the VM.
     page_info.update_from_vmsa(&get_boot_vmsa(), VMSA_ADDRESS);
