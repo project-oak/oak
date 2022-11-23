@@ -35,7 +35,7 @@ var sourcesIndex = JSON.parse('{\
 "oak_remote_attestation_noninteractive":["",[],["client.rs","lib.rs"]],\
 "oak_remote_attestation_sessions":["",[],["lib.rs"]],\
 "oak_remote_attestation_sessions_client":["",[],["lib.rs"]],\
-"oak_restricted_kernel":["",[["boot",[],["mod.rs"]],["mm",[],["bitmap_frame_allocator.rs","encrypted_mapper.rs","frame_allocator.rs","mod.rs","page_tables.rs"]]],["args.rs","attestation.rs","avx.rs","descriptors.rs","elf.rs","ghcb.rs","interrupts.rs","lib.rs","libm.rs","logging.rs","memory.rs","shutdown.rs","snp.rs","virtio.rs"]],\
+"oak_restricted_kernel":["",[["boot",[],["mod.rs"]],["mm",[],["bitmap_frame_allocator.rs","encrypted_mapper.rs","frame_allocator.rs","mod.rs","page_tables.rs"]]],["acpi.rs","args.rs","attestation.rs","avx.rs","descriptors.rs","elf.rs","ghcb.rs","interrupts.rs","lib.rs","libm.rs","logging.rs","memory.rs","shutdown.rs","snp.rs","virtio.rs"]],\
 "oak_sev_guest":["",[],["cpuid.rs","crypto.rs","ghcb.rs","guest.rs","instructions.rs","interrupts.rs","io.rs","lib.rs","msr.rs","secrets.rs","vmsa.rs"]],\
 "oak_simple_io":["",[],["lib.rs"]],\
 "oak_tensorflow_service":["",[],["lib.rs","tflite.rs"]],\
@@ -44,7 +44,7 @@ var sourcesIndex = JSON.parse('{\
 "offline_attestation_server":["",[],["main.rs"]],\
 "offline_attestation_shared":["",[],["lib.rs"]],\
 "sev_serial":["",[],["lib.rs"]],\
-"snp_measurement":["",[],["main.rs","page.rs","stage0.rs","vmsa.rs"]],\
+"snp_measurement":["",[],["elf.rs","main.rs","page.rs","stage0.rs","vmsa.rs"]],\
 "trusted_shuffler":["",[],["lib.rs"]],\
 "trusted_shuffler_backend":["",[],["main.rs"]],\
 "trusted_shuffler_client":["",[],["main.rs"]],\

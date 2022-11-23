@@ -251,6 +251,24 @@
 <span id="251">251</span>
 <span id="252">252</span>
 <span id="253">253</span>
+<span id="254">254</span>
+<span id="255">255</span>
+<span id="256">256</span>
+<span id="257">257</span>
+<span id="258">258</span>
+<span id="259">259</span>
+<span id="260">260</span>
+<span id="261">261</span>
+<span id="262">262</span>
+<span id="263">263</span>
+<span id="264">264</span>
+<span id="265">265</span>
+<span id="266">266</span>
+<span id="267">267</span>
+<span id="268">268</span>
+<span id="269">269</span>
+<span id="270">270</span>
+<span id="271">271</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -288,7 +306,8 @@
 #![feature(naked_functions)]
 #![feature(once_cell)]
 
-</span><span class="kw">mod </span>args;
+</span><span class="kw">mod </span>acpi;
+<span class="kw">mod </span>args;
 <span class="kw">pub mod </span>attestation;
 <span class="kw">mod </span>avx;
 <span class="kw">mod </span>boot;
@@ -329,7 +348,7 @@
 <span class="kw">use </span>strum::{EnumIter, EnumString, IntoEnumIterator};
 <span class="kw">use </span>x86_64::{
     structures::paging::{MappedPageTable, Page, Size2MiB},
-    VirtAddr,
+    PhysAddr, VirtAddr,
 };
 
 <span class="doccomment">/// The allocator for allocating space in the memory area that is shared with the hypervisor.
@@ -372,7 +391,18 @@
     <span class="comment">// Physical frame allocator: support up to 128 GiB of memory, for now.
     </span><span class="kw">let </span><span class="kw-2">mut </span>frame_allocator = mm::init::&lt;<span class="number">1024</span>&gt;(info.e820_table(), program_headers);
 
-    <span class="kw">let </span><span class="kw-2">mut </span>mapper = mm::init_paging(<span class="kw-2">&amp;mut </span>frame_allocator, program_headers).unwrap();
+    <span class="comment">// Note: `info` will not be valid after calling this!
+    </span><span class="kw">let </span><span class="kw-2">mut </span>mapper = mm::init_paging(<span class="kw-2">&amp;mut </span>frame_allocator, program_headers).unwrap();
+
+    <span class="comment">// Re-map boot params to the new virtual address.
+    // Safety: we know we&#39;re addressing valid memory that contains the correct data structure, as
+    // we&#39;re just translating addresses differently due to the new page tables.
+    </span><span class="kw">let </span>info = <span class="kw">unsafe </span>{
+        <span class="kw-2">&amp;*</span>mapper
+            .translate_physical(PhysAddr::new(info <span class="kw">as </span><span class="kw-2">*const </span><span class="kw">_ as </span>u64))
+            .unwrap()
+            .as_ptr()
+    };
 
     <span class="kw">if </span>sev_status.contains(SevStatus::SEV_ES_ENABLED) {
         <span class="comment">// Now that the page tables have been updated, we have to re-share the GHCB with the
@@ -438,6 +468,12 @@
             .unwrap(),
     ))
     .unwrap();
+
+    <span class="comment">// Init ACPI, if available.
+    </span><span class="kw">match </span>acpi::Acpi::new(info) {
+        <span class="prelude-val">Err</span>(<span class="kw-2">ref </span>err) =&gt; <span class="macro">log::warn!</span>(<span class="string">&quot;Failed to load ACPI tables: {}&quot;</span>, err),
+        <span class="prelude-val">Ok</span>(<span class="kw-2">ref mut </span>acpi) =&gt; acpi.devices().unwrap(),
+    };
 
     <span class="kw">if </span>sev_status.contains(SevStatus::SNP_ACTIVE) {
         <span class="comment">// For now we just generate a sample attestation report and log the value.

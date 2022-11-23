@@ -174,6 +174,34 @@
 <span id="174">174</span>
 <span id="175">175</span>
 <span id="176">176</span>
+<span id="177">177</span>
+<span id="178">178</span>
+<span id="179">179</span>
+<span id="180">180</span>
+<span id="181">181</span>
+<span id="182">182</span>
+<span id="183">183</span>
+<span id="184">184</span>
+<span id="185">185</span>
+<span id="186">186</span>
+<span id="187">187</span>
+<span id="188">188</span>
+<span id="189">189</span>
+<span id="190">190</span>
+<span id="191">191</span>
+<span id="192">192</span>
+<span id="193">193</span>
+<span id="194">194</span>
+<span id="195">195</span>
+<span id="196">196</span>
+<span id="197">197</span>
+<span id="198">198</span>
+<span id="199">199</span>
+<span id="200">200</span>
+<span id="201">201</span>
+<span id="202">202</span>
+<span id="203">203</span>
+<span id="204">204</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -190,7 +218,7 @@
 // limitations under the License.
 //
 
-</span><span class="kw">use </span>log::debug;
+</span><span class="kw">use </span>log::{debug, trace};
 <span class="kw">use </span>oak_sev_guest::vmsa::VmsaPage;
 <span class="kw">use </span>sha2::{Digest, Sha384};
 <span class="kw">use </span>strum::FromRepr;
@@ -255,6 +283,16 @@
     ///
     /// The current digest is updated separately for each 4KiB page.
     </span><span class="kw">pub fn </span>update_from_data(<span class="kw-2">&amp;mut </span><span class="self">self</span>, data: <span class="kw-2">&amp;</span>[u8], start_address: PhysAddr) {
+        <span class="macro">debug!</span>(
+            <span class="string">&quot;Updating measurement with {} bytes starting at address {:#018x}&quot;</span>,
+            data.len(),
+            start_address
+        );
+        <span class="macro">assert_eq!</span>(
+            start_address,
+            start_address.align_down(Size4KiB::SIZE),
+            <span class="string">&quot;data start address is not 4KiB-aligned.&quot;
+        </span>);
         <span class="self">self</span>.page_type = PageType::Normal;
         <span class="kw">let </span><span class="kw-2">mut </span>address = start_address;
         <span class="kw">for </span>chunk <span class="kw">in </span>data.chunks(Size4KiB::SIZE <span class="kw">as </span>usize) {
@@ -267,6 +305,10 @@
 
     <span class="doccomment">/// Updates the current measurement digest from a VMSA page.
     </span><span class="kw">pub fn </span>update_from_vmsa(<span class="kw-2">&amp;mut </span><span class="self">self</span>, vmsa: <span class="kw-2">&amp;</span>VmsaPage, start_address: PhysAddr) {
+        <span class="macro">debug!</span>(
+            <span class="string">&quot;Updating measurement with VMSA at address {:#018x}&quot;</span>,
+            start_address
+        );
         <span class="self">self</span>.page_type = PageType::Vmsa;
         <span class="self">self</span>.gpa = start_address.as_u64();
         <span class="self">self</span>.set_contents_from_page_bytes(vmsa.as_bytes());
@@ -294,10 +336,24 @@
 
     <span class="doccomment">/// Sets the `contents` field based to the SHA-384 digest of the byte contents of a 4KiB memory
     /// page.
+    ///
+    /// If fewer than 4KiB of data is received the page is padded with zeros to fill the entire 4KiB
+    /// area.
     </span><span class="kw">fn </span>set_contents_from_page_bytes(<span class="kw-2">&amp;mut </span><span class="self">self</span>, page_bytes: <span class="kw-2">&amp;</span>[u8]) {
-        <span class="macro">assert_eq!</span>(page_bytes.len() <span class="kw">as </span>u64, Size4KiB::SIZE);
+        <span class="kw">let </span>byte_count = page_bytes.len();
+        <span class="macro">assert!</span>(
+            byte_count &lt;= Size4KiB::SIZE <span class="kw">as </span>usize,
+            <span class="string">&quot;too many bytes in page&quot;
+        </span>);
         <span class="kw">let </span><span class="kw-2">mut </span>contents_hasher = Sha384::new();
-        contents_hasher.update(page_bytes);
+        <span class="kw">if </span>byte_count == Size4KiB::SIZE <span class="kw">as </span>usize {
+            contents_hasher.update(page_bytes);
+        } <span class="kw">else </span>{
+            <span class="macro">trace!</span>(<span class="string">&quot;Only {} bytes in page, padding with zeros&quot;</span>, byte_count);
+            <span class="kw">let </span><span class="kw-2">mut </span>padded_page = <span class="macro">vec!</span>[<span class="number">0</span>; Size4KiB::SIZE <span class="kw">as </span>usize];
+            padded_page[..byte_count].copy_from_slice(page_bytes);
+            contents_hasher.update(<span class="kw-2">&amp;</span>padded_page);
+        }
         <span class="kw">let </span>contents_digest = contents_hasher.finalize();
         <span class="self">self</span>.contents[..].copy_from_slice(<span class="kw-2">&amp;</span>contents_digest);
     }
