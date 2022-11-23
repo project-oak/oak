@@ -154,6 +154,26 @@
 <span id="154">154</span>
 <span id="155">155</span>
 <span id="156">156</span>
+<span id="157">157</span>
+<span id="158">158</span>
+<span id="159">159</span>
+<span id="160">160</span>
+<span id="161">161</span>
+<span id="162">162</span>
+<span id="163">163</span>
+<span id="164">164</span>
+<span id="165">165</span>
+<span id="166">166</span>
+<span id="167">167</span>
+<span id="168">168</span>
+<span id="169">169</span>
+<span id="170">170</span>
+<span id="171">171</span>
+<span id="172">172</span>
+<span id="173">173</span>
+<span id="174">174</span>
+<span id="175">175</span>
+<span id="176">176</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -170,7 +190,8 @@
 // limitations under the License.
 //
 
-</span><span class="kw">use </span>oak_sev_guest::vmsa::VmsaPage;
+</span><span class="kw">use </span>log::debug;
+<span class="kw">use </span>oak_sev_guest::vmsa::VmsaPage;
 <span class="kw">use </span>sha2::{Digest, Sha384};
 <span class="kw">use </span>strum::FromRepr;
 <span class="kw">use </span>x86_64::{
@@ -250,6 +271,25 @@
         <span class="self">self</span>.gpa = start_address.as_u64();
         <span class="self">self</span>.set_contents_from_page_bytes(vmsa.as_bytes());
         <span class="self">self</span>.update_current_digest();
+    }
+
+    <span class="doccomment">/// Updates the current measurement digest for a SEV-SNP-specific page.
+    ///
+    /// Measurement of these pages do not include a measurement of the content, only the metadata.
+    </span><span class="kw">pub fn </span>update_from_snp_page(<span class="kw-2">&amp;mut </span><span class="self">self</span>, page_type: PageType, start_address: PhysAddr) {
+        <span class="macro">debug!</span>(
+            <span class="string">&quot;Updating measurement with {:?} page at address {:#018x}&quot;</span>,
+            page_type, start_address
+        );
+        <span class="kw">match </span>page_type {
+            PageType::Cpuid | PageType::Secrets | PageType::Unmeasured | PageType::Zero =&gt; {
+                <span class="self">self</span>.page_type = page_type;
+                <span class="self">self</span>.gpa = start_address.as_u64();
+                <span class="self">self</span>.contents.fill(<span class="number">0</span>);
+                <span class="self">self</span>.update_current_digest();
+            }
+            <span class="kw">_ </span>=&gt; <span class="macro">panic!</span>(<span class="string">&quot;Unexpected page type {:?}&quot;</span>, page_type),
+        }
     }
 
     <span class="doccomment">/// Sets the `contents` field based to the SHA-384 digest of the byte contents of a 4KiB memory

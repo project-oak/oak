@@ -67,6 +67,15 @@
 <span id="67">67</span>
 <span id="68">68</span>
 <span id="69">69</span>
+<span id="70">70</span>
+<span id="71">71</span>
+<span id="72">72</span>
+<span id="73">73</span>
+<span id="74">74</span>
+<span id="75">75</span>
+<span id="76">76</span>
+<span id="77">77</span>
+<span id="78">78</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -125,9 +134,18 @@
     <span class="comment">// Add the legacy boot shadow of the Stage 0 firmware ROM image.
     </span>page_info.update_from_data(stage0.legacy_shadow_bytes(), stage0.legacy_start_address);
 
-    <span class="comment">// TODO(#3486): Also include the enclave binary and SNP-specific pages.
+    <span class="comment">// TODO(#3486): Also include the enclave binary.
 
-    // For now we assume there will only be one vCPU in the VM.
+    </span><span class="kw">for </span>snp_page <span class="kw">in </span>stage0.get_snp_pages() {
+        <span class="comment">// For now we expect each entry to cover only one page.
+        </span><span class="macro">assert_eq!</span>(
+            snp_page.page_count, <span class="number">1</span>,
+            <span class="string">&quot;invalid page for for SNP-specific page&quot;
+        </span>);
+        page_info.update_from_snp_page(snp_page.page_type, snp_page.start_address);
+    }
+
+    <span class="comment">// For now we assume there will only be one vCPU in the VM.
     </span>page_info.update_from_vmsa(<span class="kw-2">&amp;</span>get_boot_vmsa(), VMSA_ADDRESS);
 
     <span class="macro">println!</span>(
