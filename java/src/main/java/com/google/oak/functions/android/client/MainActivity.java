@@ -26,8 +26,8 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
 import com.google.common.base.VerifyException;
-import com.google.oak.functions.client.ApiKeyInterceptor;
-import com.google.oak.functions.client.AttestationClientNoninteractive;
+import com.google.oak.client.ApiKeyInterceptor;
+import com.google.oak.client.OakGrpcClient;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import java.net.URL;
@@ -79,7 +79,7 @@ public class MainActivity extends Activity {
 
       // Create gRPC client stub.
       StreamingSessionGrpc.StreamingSessionStub client = StreamingSessionGrpc.newStub(channel);
-      byte[] response = AttestationClientNoninteractive.invoke(client::stream, request);
+      byte[] response = OakGrpcClient.invoke(client::stream, request);
       String decodedResponse = new String(response, StandardCharsets.UTF_8);
 
       Log.v("Oak", "Received response: " + decodedResponse);

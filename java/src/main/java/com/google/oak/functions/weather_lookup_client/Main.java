@@ -18,8 +18,8 @@ package com.google.oak.functions.weather_lookup_client;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 
-import com.google.oak.functions.client.ApiKeyInterceptor;
-import com.google.oak.functions.client.AttestationClientNoninteractive;
+import com.google.oak.client.ApiKeyInterceptor;
+import com.google.oak.client.OakGrpcClient;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import java.net.URL;
@@ -49,7 +49,7 @@ public class Main {
 
     // Test request coordinates are defined in `oak_functions/lookup_data_generator/src/data.rs`.
     byte[] requestBody = "{\"lat\":0,\"lng\":0}".getBytes(UTF_8);
-    byte[] response = AttestationClientNoninteractive.invoke(client::stream, requestBody);
+    byte[] response = OakGrpcClient.invoke(client::stream, requestBody);
     String decodedResponse = new String(response, StandardCharsets.UTF_8);
 
     if (decodedResponse.matches(EXPECTED_RESPONSE_PATTERN)) {

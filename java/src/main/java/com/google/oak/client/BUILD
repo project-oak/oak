@@ -23,10 +23,34 @@ package(
 
 java_library(
     name = "client",
-    srcs = glob(["*.java"]),
+    srcs = [
+        "AeadEncryptor.java",
+        "Encryptor.java",
+        "OakClient.java",
+        "RpcClient.java",
+    ],
     deps = [
         "//java/src/main/java/com/google/oak/evidence",
         "//java/src/main/java/com/google/oak/remote_attestation",
         "//java/src/main/java/com/google/oak/util",
+    ],
+)
+
+java_library(
+    name = "oak_grpc_client",
+    srcs = ["OakGrpcClient.java"],
+    deps = [
+        "//oak_remote_attestation_noninteractive/proto:oak_session_noninteractive_v1_java_proto",
+        "@com_google_protobuf//:protobuf_javalite",
+        "@io_grpc_grpc_java//api",
+        "@io_grpc_grpc_java//stub",
+    ],
+)
+
+java_library(
+    name = "api_key_interceptor",
+    srcs = ["ApiKeyInterceptor.java"],
+    deps = [
+        "@io_grpc_grpc_java//api",
     ],
 )

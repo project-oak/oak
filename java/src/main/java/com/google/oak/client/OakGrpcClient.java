@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-package com.google.oak.functions.client;
+package com.google.oak.client;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.concurrent.TimeUnit.SECONDS;
@@ -34,10 +34,9 @@ import oak.session.noninteractive.v1.InvokeResponse;
 import oak.session.noninteractive.v1.RequestWrapper;
 import oak.session.noninteractive.v1.ResponseWrapper;
 
-/** Client with remote attestation support for sending requests to an Oak Functions application. */
-public class AttestationClientNoninteractive {
-  private static final Logger logger =
-      Logger.getLogger(AttestationClientNoninteractive.class.getName());
+/** Client with remote attestation support for sending requests to an Oak application over gRPC. */
+public class OakGrpcClient {
+  private static final Logger logger = Logger.getLogger(OakGrpcClient.class.getName());
 
   // Invoke the provided method by fetching and verifying the attested enclave public key, and then
   // using it to encrypt the request body.
