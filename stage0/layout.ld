@@ -311,7 +311,7 @@ SECTIONS {
      * Unfortunately it doesn't look like `SIZEOF()` works here, so we have to keep track of the data
      * structure size by hand to ensure that it ends at the correct location in memory.
      */
-    .guid_tables TOP - 0x20 - (16 + 3*12 + 2*22 + 18) : {
+    .guid_tables TOP - 0x20 - (16 + 4*12 + 2*22 + 18) : {
         /* SEV metadata. This data structure is not part of the GUIDed tables, but it makes sense to have
          * them together at the end of the file, thus we put them in the .guid_tables section along with
          * the GUIDed tables themselves. The data structure is defined in the EDK2 source:
@@ -330,7 +330,11 @@ SECTIONS {
          * https://github.com/tianocore/edk2/blob/c05a218a9758225ddf94eedb365633f2154551da/OvmfPkg/OvmfPkgX64.fdf
          * Thankfully none of these clashed with existing data structures that we're setting up.
          */
-        /* Unmeasured page location */
+        /* Unmeasured page location for the boot parameters page */
+        LONG(ADDR(.boot.zero_page))
+        LONG(SIZEOF(.boot.zero_page))
+        LONG(SEV_SECTION_UNMEASURED)
+        /* Unmeasured page location for the GHCB page */
         LONG(ADDR(.boot.ghcb))
         LONG(SIZEOF(.boot.ghcb))
         LONG(SEV_SECTION_UNMEASURED)
