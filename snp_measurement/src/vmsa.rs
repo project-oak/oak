@@ -42,11 +42,15 @@ pub const VMSA_ADDRESS: PhysAddr = PhysAddr::new((1 << 48) - Size4KiB::SIZE);
 
 /// Gets the initial VMSA for the vCPU that is used to boot the VM.
 pub fn get_boot_vmsa() -> VmsaPage {
-    let result = VmsaPage::new(Vmsa::new_vcpu_boot(calculate_rdx_from_fms(
+    let mut result = VmsaPage::new(Vmsa::new_vcpu_boot(calculate_rdx_from_fms(
         CPU_FAMILY,
         CPU_MODEL,
         CPU_STEPPING,
     )));
+    // We expect a slightly different initial state to use for the measurement.
+    result.vmsa.g_pat = 0x00070106;
+    result.vmsa.sev_features = 0x00000001;
+
     trace!("Boot VMSA: {:?}", result);
     result
 }
