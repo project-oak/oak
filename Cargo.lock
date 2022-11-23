@@ -4132,6 +4132,7 @@ dependencies = [
  "anyhow",
  "clap",
  "env_logger 0.8.4",
+ "goblin",
  "hex",
  "log",
  "oak_sev_guest",

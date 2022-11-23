@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-use log::debug;
+use log::{debug, trace};
 use oak_sev_guest::vmsa::VmsaPage;
 use sha2::{Digest, Sha384};
 use strum::FromRepr;
@@ -79,6 +79,16 @@ impl PageInfo {
     ///
     /// The current digest is updated separately for each 4KiB page.
     pub fn update_from_data(&mut self, data: &[u8], start_address: PhysAddr) {
+        debug!(
+            "Updating measurement with {} bytes starting at address {:#018x}",
+            data.len(),
+            start_address
+        );
+        assert_eq!(
+            start_address,
+            start_address.align_down(Size4KiB::SIZE),
+            "data start address is not 4KiB-aligned."
+        );
         self.page_type = PageType::Normal;
         let mut address = start_address;
         for chunk in data.chunks(Size4KiB::SIZE as usize) {
@@ -91,6 +101,10 @@ impl PageInfo {
 
     /// Updates the current measurement digest from a VMSA page.
     pub fn update_from_vmsa(&mut self, vmsa: &VmsaPage, start_address: PhysAddr) {
+        debug!(
+            "Updating measurement with VMSA at address {:#018x}",
+            start_address
+        );
         self.page_type = PageType::Vmsa;
         self.gpa = start_address.as_u64();
         self.set_contents_from_page_bytes(vmsa.as_bytes());
@@ -118,10 +132,24 @@ impl PageInfo {
 
     /// Sets the `contents` field based to the SHA-384 digest of the byte contents of a 4KiB memory
     /// page.
+    ///
+    /// If fewer than 4KiB of data is received the page is padded with zeros to fill the entire 4KiB
+    /// area.
     fn set_contents_from_page_bytes(&mut self, page_bytes: &[u8]) {
-        assert_eq!(page_bytes.len() as u64, Size4KiB::SIZE);
+        let byte_count = page_bytes.len();
+        assert!(
+            byte_count <= Size4KiB::SIZE as usize,
+            "too many bytes in page"
+        );
         let mut contents_hasher = Sha384::new();
-        contents_hasher.update(page_bytes);
+        if byte_count == Size4KiB::SIZE as usize {
+            contents_hasher.update(page_bytes);
+        } else {
+            trace!("Only {} bytes in page, padding with zeros", byte_count);
+            let mut padded_page = vec![0; Size4KiB::SIZE as usize];
+            padded_page[..byte_count].copy_from_slice(page_bytes);
+            contents_hasher.update(&padded_page);
+        }
         let contents_digest = contents_hasher.finalize();
         self.contents[..].copy_from_slice(&contents_digest);
     }
