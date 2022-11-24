@@ -62,6 +62,7 @@ mod virtio;
 extern crate alloc;
 
 use crate::{
+    acpi::Acpi,
     mm::Translator,
     snp::{get_snp_page_addresses, init_snp_pages},
 };
@@ -199,9 +200,15 @@ pub fn start_kernel(info: &BootParams) -> Box<dyn Channel> {
     .unwrap();
 
     // Init ACPI, if available.
-    match acpi::Acpi::new(info) {
-        Err(ref err) => log::warn!("Failed to load ACPI tables: {}", err),
-        Ok(ref mut acpi) => acpi.devices().unwrap(),
+    let mut acpi = match acpi::Acpi::new(info) {
+        Err(ref err) => {
+            log::warn!("Failed to load ACPI tables: {}", err);
+            None
+        }
+        Ok(mut acpi) => {
+            acpi.devices().unwrap();
+            Some(acpi)
+        }
     };
 
     if sev_status.contains(SevStatus::SNP_ACTIVE) {
@@ -218,6 +225,7 @@ pub fn start_kernel(info: &BootParams) -> Box<dyn Channel> {
         mapper,
         GUEST_HOST_HEAP.get().unwrap(),
         sev_status,
+        acpi.as_mut(),
     )
 }
 
@@ -240,6 +248,7 @@ fn get_channel<'a, X: Translator, A: Allocator + Sync>(
     mapper: &X,
     alloc: &'a A,
     sev_status: SevStatus,
+    acpi: Option<&mut Acpi>,
 ) -> Box<dyn Channel + 'a> {
     // If we weren't told which channel to use, arbitrarily pick the first one in the `ChannelType`
     // enum. Depending on features that are enabled, this means that the enum acts as kind of a
@@ -251,7 +260,12 @@ fn get_channel<'a, X: Translator, A: Allocator + Sync>(
 
     match chan_type {
         #[cfg(feature = "virtio_console_channel")]
-        ChannelType::VirtioConsole => Box::new(virtio::get_console_channel(mapper, alloc)),
+        ChannelType::VirtioConsole => Box::new(virtio::get_console_channel(
+            mapper,
+            acpi.expect("ACPI tables not available")
+                .find_virtio_devices()
+                .unwrap(),
+        )),
         #[cfg(feature = "vsock_channel")]
         ChannelType::VirtioVsock => Box::new(virtio::get_vsock_channel(mapper, alloc)),
         #[cfg(feature = "serial_channel")]
