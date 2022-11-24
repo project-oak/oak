@@ -136,7 +136,7 @@ where
     ) -> anyhow::Result<Self> {
         let engine = wasmi::Engine::default();
         let module = wasmi::Module::new(&engine, &wasm_module_bytes[..])
-            .map_err(|err| anyhow::anyhow!("could not load module from buffer: {:?}", err))?;
+            .map_err(|err| anyhow::anyhow!("couldn't load module from buffer: {:?}", err))?;
 
         let user_state = UserState::init(request_bytes, extensions);
 
@@ -233,7 +233,7 @@ where
             // TODO(mschett): Check whether I give the right func_type for main.
             wasmi::FuncType::new([], []),
         )
-        .context("could not validate `main` export")?;
+        .context("couldn't validate `main` export")?;
 
         // Check that the instance exports "alloc".
         check_export_func_type(
@@ -243,16 +243,16 @@ where
             // TODO(mschett): Check whether I give the right func_type for alloc.
             wasmi::FuncType::new([ValueType::I32], [ValueType::I32]),
         )
-        .context("could not validate `alloc` export")?;
+        .context("couldn't validate `alloc` export")?;
 
         // Make sure that non-empty `memory` is attached to the instance. Fail early if
         // `memory` is not available.
         instance
             .get_export(&store, "memory")
-            .ok_or(anyhow::anyhow!("could not find Wasm `memory` export"))?
+            .ok_or(anyhow::anyhow!("couldn't find Wasm `memory` export"))?
             .into_memory()
             .ok_or(anyhow::anyhow!(
-                "could not interpret Wasm `memory` export as memory"
+                "couldn't interpret Wasm `memory` export as memory"
             ))?;
 
         let wasm_state = Self {
@@ -617,9 +617,9 @@ fn check_export_func_type(
 ) -> anyhow::Result<()> {
     let export_func_type = instance
         .get_export(store, export_name)
-        .context("could not find Wasm export")?
+        .context("couldn't find Wasm export")?
         .into_func()
-        .context("could not interpret Wasm export as function")?
+        .context("couldn't interpret Wasm export as function")?
         .func_type(store);
     if export_func_type != expected_func_type {
         anyhow::bail!(
