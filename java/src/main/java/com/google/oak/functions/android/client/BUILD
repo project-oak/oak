@@ -27,8 +27,8 @@ android_library(
     manifest = "AndroidManifest.xml",
     resource_files = glob(["res/**"]),
     deps = [
-        "//java/src/main/java/com/google/oak/functions/client:api_key_interceptor",
-        "//java/src/main/java/com/google/oak/functions/client:client_noninteractive",
+        "//java/src/main/java/com/google/oak/client:api_key_interceptor",
+        "//java/src/main/java/com/google/oak/client:oak_grpc_client",
         "//oak_remote_attestation_noninteractive/proto:oak_session_noninteractive_v1_java_grpc",
         "@com_google_guava_guava",
         "@com_google_protobuf//:protobuf_javalite",

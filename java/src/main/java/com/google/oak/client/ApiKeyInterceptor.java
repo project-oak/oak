@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-package com.google.oak.functions.client;
+package com.google.oak.client;
 
 import io.grpc.CallOptions;
 import io.grpc.Channel;
