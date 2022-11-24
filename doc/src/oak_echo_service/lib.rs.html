@@ -82,7 +82,7 @@
         request: <span class="kw-2">&amp;</span>proto::EchoRequest,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;proto::EchoResponse, oak_idl::Status&gt; {
         <span class="kw">let </span>request_body: <span class="kw-2">&amp;</span>[u8] = request.body.as_ref();
-        <span class="macro">info!</span>(<span class="string">&quot;Received a request: {:?}&quot;</span>, request_body);
+        <span class="macro">info!</span>(<span class="string">&quot;Received a request, size: {}&quot;</span>, request_body.len());
         <span class="kw">let </span>response_body = request_body;
 
         <span class="prelude-val">Ok</span>(proto::EchoResponse {
