@@ -16,8 +16,6 @@
 
 //! Wasm business logic provider based on [Wasmi](https://github.com/paritytech/wasmi).
 
-// TODO(mschett): Remove allowing dead code.
-#![allow(dead_code)]
 #![no_std]
 
 extern crate alloc;
@@ -42,12 +40,6 @@ use wasmi::{core::ValueType, AsContext, AsContextMut, Func, MemoryType, Store};
 
 const MAIN_FUNCTION_NAME: &str = "main";
 const ALLOC_FUNCTION_NAME: &str = "alloc";
-
-/// Wasm host function index numbers for `wasmi` to map import names with. This numbering is not
-/// exposed to the Wasm client. See <https://docs.rs/wasmi/0.6.2/wasmi/trait.Externals.html>
-const READ_REQUEST: usize = 0;
-const WRITE_RESPONSE: usize = 1;
-const INVOKE: usize = 4;
 
 // Type aliases for positions and offsets in Wasm linear memory. Any future 64-bit version
 // of Wasm would use different types.
@@ -698,51 +690,6 @@ where
 
         Ok(wasm_state.get_response_bytes())
     }
-}
-
-/// A resolver function, mapping `oak_functions` host function names to an index and a type
-/// signature.
-fn oak_functions_resolve_func(field_name: &str) -> Option<(usize, wasmi::FuncType)> {
-    // The types in the signatures correspond to the parameters from
-    // oak_functions_abi/src/lib.rs
-    let (index, expected_signature) = match field_name {
-        "read_request" => (
-            READ_REQUEST,
-            wasmi::FuncType::new(
-                [
-                    ABI_USIZE, // buf_ptr_ptr
-                    ABI_USIZE, // buf_len_ptr
-                ],
-                [ValueType::I32],
-            ),
-        ),
-        "write_response" => (
-            WRITE_RESPONSE,
-            wasmi::FuncType::new(
-                [
-                    ABI_USIZE, // buf_ptr
-                    ABI_USIZE, // buf_len
-                ],
-                [ValueType::I32],
-            ),
-        ),
-        "invoke" => (
-            INVOKE,
-            wasmi::FuncType::new(
-                [
-                    ABI_USIZE, // handle
-                    ABI_USIZE, // request_ptr
-                    ABI_USIZE, // request_len
-                    ABI_USIZE, // response_ptr_ptr
-                    ABI_USIZE, // response_len_ptr
-                ],
-                [ValueType::I32],
-            ),
-        ),
-        _ => return None,
-    };
-
-    Some((index, expected_signature))
 }
 
 /// A helper function to move between our specific result type `Result<(), OakStatus>` and the
