@@ -36,7 +36,7 @@ impl proto::Echo for EchoService {
         request: &proto::EchoRequest,
     ) -> Result<proto::EchoResponse, oak_idl::Status> {
         let request_body: &[u8] = request.body.as_ref();
-        info!("Received a request: {:?}", request_body);
+        info!("Received a request, size: {}", request_body.len());
         let response_body = request_body;
 
         Ok(proto::EchoResponse {
