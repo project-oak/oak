@@ -50,6 +50,10 @@
 <span id="50">50</span>
 <span id="51">51</span>
 <span id="52">52</span>
+<span id="53">53</span>
+<span id="54">54</span>
+<span id="55">55</span>
+<span id="56">56</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -94,11 +98,15 @@
 
 <span class="doccomment">/// Gets the initial VMSA for the vCPU that is used to boot the VM.
 </span><span class="kw">pub fn </span>get_boot_vmsa() -&gt; VmsaPage {
-    <span class="kw">let </span>result = VmsaPage::new(Vmsa::new_vcpu_boot(calculate_rdx_from_fms(
+    <span class="kw">let </span><span class="kw-2">mut </span>result = VmsaPage::new(Vmsa::new_vcpu_boot(calculate_rdx_from_fms(
         CPU_FAMILY,
         CPU_MODEL,
         CPU_STEPPING,
     )));
+    <span class="comment">// We expect a slightly different initial state to use for the measurement.
+    </span>result.vmsa.g_pat = <span class="number">0x00070106</span>;
+    result.vmsa.sev_features = <span class="number">0x00000001</span>;
+
     <span class="macro">trace!</span>(<span class="string">&quot;Boot VMSA: {:?}&quot;</span>, result);
     result
 }
