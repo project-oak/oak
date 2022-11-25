@@ -20,12 +20,14 @@
 #![feature(async_closure)]
 
 use libfuzzer_sys::fuzz_target;
-use oak_remote_attestation::crypto::get_sha256;
+use sha2::{Digest, Sha256};
 
 // A fake fuzz target that computes the SHA256 digest of the input, and checks that it does not
 // start with `000` zeros. This fuzz target is intentionally designed to fail.
 fuzz_target!(|data: &[u8]| {
-    let digest_bytes = get_sha256(data);
+    let mut hasher = Sha256::new();
+    hasher.update(data);
+    let digest_bytes: [u8; 32] = hasher.finalize().into();
     let digest_hex = hex::encode(digest_bytes);
     assert!(!digest_hex.starts_with("000"));
 });
