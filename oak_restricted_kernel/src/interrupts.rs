@@ -183,5 +183,5 @@ pub fn init_idt() {
     if IDT.set(idt).is_err() {
         panic!("idt is already initialized");
     }
-    IDT.get_unwrapped().load();
+    IDT.get().unwrap().load();
 }

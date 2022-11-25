@@ -59,7 +59,7 @@ pub fn init_gdt() {
         panic!("gdt is already initialized");
     }
 
-    let descriptors = DESCRIPTORS.get_unwrapped();
+    let descriptors = DESCRIPTORS.get().unwrap();
     descriptors.gdt.load();
 
     // Safety: it's safe to load these segments as we've initialized the GDT just above.

@@ -52,7 +52,9 @@ static_assertions::assert_eq_size!(GhcbAlignmentWrapper, [u8; Size2MiB::SIZE as 
 static mut GHCB_WRAPPER: GhcbAlignmentWrapper = GhcbAlignmentWrapper { ghcb: Ghcb::new() };
 
 pub fn get_ghcb_port_factory() -> PortFactoryWrapper {
-    PortFactoryWrapper::Ghcb(GhcbIoFactory::new(GHCB_PROTOCOL.get_unwrapped()))
+    PortFactoryWrapper::Ghcb(GhcbIoFactory::new(
+        GHCB_PROTOCOL.get().expect("ghcb not initialized"),
+    ))
 }
 
 pub static GHCB_PROTOCOL: OnceCell<Spinlock<GhcbProtocol<'static, Ghcb>>> = OnceCell::new();
