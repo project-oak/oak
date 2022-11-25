@@ -18,13 +18,12 @@ use crate::mm::{
     encrypted_mapper::{EncryptedPageTable, MemoryEncryption, PhysOffset},
     Mapper, PageTableFlags, Translator, ENCRYPTED_BIT_POSITION,
 };
-use lazy_static::lazy_static;
+use oak_core::sync::OnceCell;
 use oak_sev_guest::{
     ghcb::{Ghcb, GhcbProtocol},
     io::{GhcbIoFactory, PortFactoryWrapper},
     msr::{
-        change_snp_state_for_frame, get_sev_status, register_ghcb_location, PageAssignment,
-        RegisterGhcbGpaRequest, SevStatus,
+        change_snp_state_for_frame, register_ghcb_location, PageAssignment, RegisterGhcbGpaRequest,
     },
 };
 use spinning_top::Spinlock;
@@ -53,15 +52,19 @@ static_assertions::assert_eq_size!(GhcbAlignmentWrapper, [u8; Size2MiB::SIZE as 
 static mut GHCB_WRAPPER: GhcbAlignmentWrapper = GhcbAlignmentWrapper { ghcb: Ghcb::new() };
 
 pub fn get_ghcb_port_factory() -> PortFactoryWrapper {
-    PortFactoryWrapper::Ghcb(GhcbIoFactory::new(&GHCB_PROTOCOL))
+    PortFactoryWrapper::Ghcb(GhcbIoFactory::new(GHCB_PROTOCOL.get_unwrapped()))
 }
 
-// TODO(#3403): Stop initializing lazily once we have an equivalent to `std::sync::OnceLock`.
-lazy_static! {
-    pub static ref GHCB_PROTOCOL: Spinlock<GhcbProtocol<'static, Ghcb>> = {
-        let sev_status = get_sev_status().unwrap_or(SevStatus::empty());
-        Spinlock::new(init_ghcb_early(sev_status.contains(SevStatus::SNP_ACTIVE)))
-    };
+pub static GHCB_PROTOCOL: OnceCell<Spinlock<GhcbProtocol<'static, Ghcb>>> = OnceCell::new();
+
+/// Initializes the GHCB.
+///
+/// Will panic if the GHCB has already been initalized.
+pub fn init(snp_enabled: bool) {
+    let ghcb_protocol = init_ghcb_early(snp_enabled);
+    if GHCB_PROTOCOL.set(Spinlock::new(ghcb_protocol)).is_err() {
+        panic!("ghcb already initialized");
+    }
 }
 
 /// Shares the page containing the GHCB with the hypervisor again.

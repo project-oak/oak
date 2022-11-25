@@ -40,6 +40,14 @@ impl<T> OnceCell<T> {
         }
     }
 
+    /// Gets an unwrapped reference to the inner value.
+    ///
+    /// Will panic if the cell has not been initialized.
+    pub fn get_unwrapped(&self) -> &T {
+        self.get().expect("cell not initialized")
+    }
+
+    /// Gets a reference to the inner value if the cell has been initialized.
     pub fn get(&self) -> Option<&T> {
         if !self.initialized.load(Ordering::Acquire) {
             return None;
@@ -50,6 +58,10 @@ impl<T> OnceCell<T> {
         Some(unsafe { (*self.value.get()).assume_init_ref() })
     }
 
+    /// Sets the inner value of the cell if it has not been initialized.
+    ///
+    /// If it has been initialized the inner value is not updated and the passed-in value is
+    /// returned in the error.
     pub fn set(&self, value: T) -> Result<(), T> {
         // Do an initial check to see whether the value has been initialized.
         if !self.initialized.load(Ordering::Acquire) {

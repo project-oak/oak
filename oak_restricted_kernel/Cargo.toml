@@ -27,7 +27,6 @@ goblin = { version = "*", default-features = false, features = [
   "endian_fd"
 ] }
 hashbrown = { version = "*", optional = true }
-lazy_static = { version = "*", features = ["spin_no_std"] }
 linked_list_allocator = { version = "*", features = ["alloc_ref"] }
 log = "*"
 libc = { version = "*", optional = true }

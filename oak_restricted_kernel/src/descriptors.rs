@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-use lazy_static::lazy_static;
+use oak_core::sync::OnceCell;
 use x86_64::{
     instructions::tables::load_tss,
     registers::segmentation::*,
@@ -33,39 +33,43 @@ struct Descriptors {
     tss_selector: SegmentSelector,
 }
 
-lazy_static! {
-    static ref TSS: TaskStateSegment = TaskStateSegment::new();
-    static ref DESCRIPTORS: Descriptors = {
-        let mut descriptors = Descriptors {
-            gdt: GlobalDescriptorTable::new(),
-            kernel_cs_selector: SegmentSelector::NULL,
-            kernel_ds_selector: SegmentSelector::NULL,
-            user_cs_selector: SegmentSelector::NULL,
-            user_ds_selector: SegmentSelector::NULL,
-            tss_selector: SegmentSelector::NULL,
-        };
-        descriptors.kernel_cs_selector =
-            descriptors.gdt.add_entry(Descriptor::kernel_code_segment());
-        descriptors.kernel_ds_selector =
-            descriptors.gdt.add_entry(Descriptor::kernel_data_segment());
-        descriptors.user_cs_selector = descriptors.gdt.add_entry(Descriptor::user_code_segment());
-        descriptors.user_ds_selector = descriptors.gdt.add_entry(Descriptor::user_data_segment());
-        descriptors.tss_selector = descriptors.gdt.add_entry(Descriptor::tss_segment(&TSS));
-        descriptors
-    };
-}
+static TSS: TaskStateSegment = TaskStateSegment::new();
+static DESCRIPTORS: OnceCell<Descriptors> = OnceCell::new();
 
+/// Initializes the Global Descriptor Table.
+///
+/// This function will panic if the GDT is already initialized.
 pub fn init_gdt() {
-    DESCRIPTORS.gdt.load();
+    let mut descriptors = Descriptors {
+        gdt: GlobalDescriptorTable::new(),
+        kernel_cs_selector: SegmentSelector::NULL,
+        kernel_ds_selector: SegmentSelector::NULL,
+        user_cs_selector: SegmentSelector::NULL,
+        user_ds_selector: SegmentSelector::NULL,
+        tss_selector: SegmentSelector::NULL,
+    };
+    descriptors.kernel_cs_selector = descriptors.gdt.add_entry(Descriptor::kernel_code_segment());
+    descriptors.kernel_ds_selector = descriptors.gdt.add_entry(Descriptor::kernel_data_segment());
+    descriptors.user_cs_selector = descriptors.gdt.add_entry(Descriptor::user_code_segment());
+    descriptors.user_ds_selector = descriptors.gdt.add_entry(Descriptor::user_data_segment());
+    descriptors.tss_selector = descriptors.gdt.add_entry(Descriptor::tss_segment(&TSS));
+
+    // Make sure the GDT was not previously initialized.
+    if DESCRIPTORS.set(descriptors).is_err() {
+        panic!("gdt is already initialized");
+    }
+
+    let descriptors = DESCRIPTORS.get_unwrapped();
+    descriptors.gdt.load();
 
     // Safety: it's safe to load these segments as we've initialized the GDT just above.
     unsafe {
-        CS::set_reg(DESCRIPTORS.kernel_cs_selector);
-        DS::set_reg(DESCRIPTORS.kernel_ds_selector);
-        ES::set_reg(DESCRIPTORS.kernel_ds_selector);
-        FS::set_reg(DESCRIPTORS.kernel_ds_selector);
-        GS::set_reg(DESCRIPTORS.kernel_ds_selector);
-        SS::set_reg(DESCRIPTORS.kernel_ds_selector);
-        load_tss(DESCRIPTORS.tss_selector);
+        CS::set_reg(descriptors.kernel_cs_selector);
+        DS::set_reg(descriptors.kernel_ds_selector);
+        ES::set_reg(descriptors.kernel_ds_selector);
+        FS::set_reg(descriptors.kernel_ds_selector);
+        GS::set_reg(descriptors.kernel_ds_selector);
+        SS::set_reg(descriptors.kernel_ds_selector);
+        load_tss(descriptors.tss_selector);
     }
 }
