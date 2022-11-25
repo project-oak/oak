@@ -68,6 +68,8 @@ pub fn get_attestation(report_data: [u8; REPORT_DATA_SIZE]) -> anyhow::Result<At
         .ok_or_else(|| anyhow::anyhow!("couldn't translate response address"))?;
 
     GHCB_PROTOCOL
+        .get()
+        .expect("ghcb not initialized")
         .lock()
         .do_guest_message_request(request_address, response_address)
         .map_err(anyhow::Error::msg)?;

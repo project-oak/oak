@@ -93,7 +93,12 @@ pub fn start_kernel(info: &BootParams) -> Box<dyn Channel> {
     descriptors::init_gdt();
     interrupts::init_idt();
     let sev_status = get_sev_status().unwrap_or(SevStatus::empty());
-    logging::init_logging();
+    let sev_es_enabled = sev_status.contains(SevStatus::SEV_ES_ENABLED);
+    let sev_snp_enabled = sev_status.contains(SevStatus::SNP_ACTIVE);
+    if sev_es_enabled {
+        ghcb::init(sev_snp_enabled);
+    }
+    logging::init_logging(sev_es_enabled);
 
     // We need to be done with the boot info struct before intializing memory. For example, the
     // multiboot protocol explicitly states data can be placed anywhere in memory; therefore, it's
@@ -105,7 +110,7 @@ pub fn start_kernel(info: &BootParams) -> Box<dyn Channel> {
 
     let protocol = info.protocol();
     info!("Boot protocol:  {}", protocol);
-    let snp_pages = if sev_status.contains(SevStatus::SNP_ACTIVE) {
+    let snp_pages = if sev_snp_enabled {
         // We have to get the physical addresses of the CPUID pages now while the identity mapping
         // is still in place, but we can only initialize the instances after the new page
         // mappings have been set up.
@@ -133,11 +138,11 @@ pub fn start_kernel(info: &BootParams) -> Box<dyn Channel> {
             .as_ptr()
     };
 
-    if sev_status.contains(SevStatus::SEV_ES_ENABLED) {
+    if sev_es_enabled {
         // Now that the page tables have been updated, we have to re-share the GHCB with the
         // hypervisor.
         ghcb::reshare_ghcb(&mut mapper);
-        if sev_status.contains(SevStatus::SNP_ACTIVE) {
+        if sev_snp_enabled {
             // We must also initialise the CPUID and secrets pages and the guest message encryptor
             // when SEV-SNP is active. Panicking is OK at this point, because these pages are
             // required to support the full features and we don't want to run without them.
@@ -161,9 +166,9 @@ pub fn start_kernel(info: &BootParams) -> Box<dyn Channel> {
             .unwrap(),
     );
 
-    // If we are running on SNP we have to mark the frames as shared in the RMP. It is OK to crash
-    // if we cannot mark the pages as shared in the RMP.
-    if sev_status.contains(SevStatus::SNP_ACTIVE) {
+    // If we are running on SNP we have to mark the guest-host frames as shared in the RMP. It is OK
+    // to crash if we cannot mark the pages as shared in the RMP.
+    if sev_snp_enabled {
         // TODO(#3414): Use the GHCB protocol when it is available.
         for frame in guest_host_frames {
             change_snp_state_for_frame(&frame, PageAssignment::Shared)
@@ -204,7 +209,7 @@ pub fn start_kernel(info: &BootParams) -> Box<dyn Channel> {
         Ok(ref mut acpi) => acpi.devices().unwrap(),
     };
 
-    if sev_status.contains(SevStatus::SNP_ACTIVE) {
+    if sev_snp_enabled {
         // For now we just generate a sample attestation report and log the value.
         // TODO(#2842): Use attestation report in attestation behaviour.
         let report =

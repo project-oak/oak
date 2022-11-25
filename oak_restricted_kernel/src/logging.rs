@@ -14,37 +14,18 @@
 // limitations under the License.
 //
 
-use atomic_refcell::AtomicRefCell;
 use core::fmt::Write;
-use lazy_static::lazy_static;
 use log::info;
-use oak_sev_guest::{
-    io::PortFactoryWrapper,
-    msr::{get_sev_status, SevStatus},
-};
+use oak_sev_guest::io::PortFactoryWrapper;
 use sev_serial::SerialPort;
+use spinning_top::{const_spinlock, Spinlock};
 
 extern crate log;
 
 // Base I/O port for the first serial port in the system (colloquially known as COM1)
-static COM1_BASE: u16 = 0x3f8;
+const COM1_BASE: u16 = 0x3f8;
 
-// TODO(#3403): Stop initializing lazily once we have an equivalent to `std::sync::OnceLock`.
-lazy_static! {
-    pub(crate) static ref SERIAL1: AtomicRefCell<SerialPort> = {
-        let sev_status = get_sev_status().unwrap_or(SevStatus::empty());
-        let port_factory = if sev_status.contains(SevStatus::SEV_ES_ENABLED) {
-            crate::ghcb::get_ghcb_port_factory()
-        } else {
-            PortFactoryWrapper::new_raw()
-        };
-        // Our contract with the launcher requires the first serial port to be
-        // available, so assuming the loader adheres to it, this is safe.
-        let mut port = unsafe { SerialPort::new(COM1_BASE, port_factory) };
-        port.init().expect("couldn't initialize logging serial port");
-        AtomicRefCell::new(port)
-    };
-}
+pub static SERIAL1: Spinlock<Option<SerialPort>> = const_spinlock(None);
 
 struct Logger {}
 
@@ -55,7 +36,7 @@ impl log::Log for Logger {
 
     fn log(&self, record: &log::Record) {
         writeln!(
-            SERIAL1.borrow_mut(),
+            SERIAL1.lock().as_mut().unwrap(),
             "{}: {}",
             record.level(),
             record.args()
@@ -70,7 +51,22 @@ impl log::Log for Logger {
 
 static LOGGER: Logger = Logger {};
 
-pub fn init_logging() {
+pub fn init_logging(sev_es_enabled: bool) {
+    let port_factory = if sev_es_enabled {
+        crate::ghcb::get_ghcb_port_factory()
+    } else {
+        PortFactoryWrapper::new_raw()
+    };
+    // Our contract with the launcher requires the first serial port to be
+    // available, so assuming the loader adheres to it, this is safe.
+    let mut port = unsafe { SerialPort::new(COM1_BASE, port_factory) };
+    port.init()
+        .expect("couldn't initialize logging serial port");
+
+    if SERIAL1.lock().replace(port).is_some() {
+        panic!("serial port 1 is already initialized");
+    }
+
     log::set_logger(&LOGGER).unwrap();
     log::set_max_level(log::LevelFilter::Debug);
     // Log a message to ensure the serial logging channel is intialized.

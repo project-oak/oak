@@ -119,7 +119,9 @@ pub unsafe extern "C" fn write_console(ptr: *const u8, size: usize) -> isize {
     }
 
     let bytes = core::slice::from_raw_parts(ptr, size);
-    let mut serial = SERIAL1.borrow_mut();
+    let mut guard = SERIAL1.lock();
+    let serial = guard.as_mut().unwrap();
+
     for byte in bytes {
         if serial.send(*byte).is_err() {
             return -1;

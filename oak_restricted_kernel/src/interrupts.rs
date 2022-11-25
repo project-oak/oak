@@ -16,8 +16,8 @@
 
 use crate::{shutdown, snp::CPUID_PAGE};
 use core::{arch::asm, ops::Deref};
-use lazy_static::lazy_static;
 use log::error;
+use oak_core::sync::OnceCell;
 use oak_sev_guest::{
     interrupts::{mutable_interrupt_handler_with_error_code, MutableInterruptStackFrame},
     msr::get_cpuid_for_vc_exception,
@@ -28,24 +28,7 @@ use x86_64::{
     VirtAddr,
 };
 
-lazy_static! {
-    static ref IDT: InterruptDescriptorTable = {
-        let mut idt = InterruptDescriptorTable::new();
-        idt.breakpoint.set_handler_fn(breakpoint_handler);                             // vector 3
-        idt.double_fault.set_handler_fn(double_fault_handler);                         // vector 8
-        idt.general_protection_fault.set_handler_fn(general_protection_fault_handler); // vector 13
-        idt.page_fault.set_handler_fn(page_fault_handler);                             // vector 14
-
-        let vc_handler_address =
-            VirtAddr::new(vmm_communication_exception_handler as usize as u64);
-        // Safety: we are passing a valid address of a function with the correct signature.
-        unsafe {
-            idt.vmm_communication_exception.set_handler_addr(vc_handler_address);      // vector 29
-        }
-
-        idt
-    };
-}
+static IDT: OnceCell<InterruptDescriptorTable> = OnceCell::new();
 
 #[naked]
 extern "x86-interrupt" fn general_protection_fault_handler(_: InterruptStackFrame, _: u64) {
@@ -182,5 +165,23 @@ mutable_interrupt_handler_with_error_code!(
 );
 
 pub fn init_idt() {
-    IDT.load();
+    let mut idt = InterruptDescriptorTable::new();
+    idt.breakpoint.set_handler_fn(breakpoint_handler); // vector 3
+    idt.double_fault.set_handler_fn(double_fault_handler); // vector 8
+    idt.general_protection_fault
+        .set_handler_fn(general_protection_fault_handler); // vector 13
+    idt.page_fault.set_handler_fn(page_fault_handler); // vector 14
+
+    let vc_handler_address = VirtAddr::new(vmm_communication_exception_handler as usize as u64);
+    // Safety: we are passing a valid address of a function with the correct signature.
+    unsafe {
+        idt.vmm_communication_exception
+            .set_handler_addr(vc_handler_address); // vector 29
+    }
+
+    // Make sure the IDT was not previously initialized.
+    if IDT.set(idt).is_err() {
+        panic!("idt is already initialized");
+    }
+    IDT.get().unwrap().load();
 }
