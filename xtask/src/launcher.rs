@@ -62,7 +62,7 @@ impl LauncherMode {
         match self {
             LauncherMode::Virtual => vec![
                 "virtual".to_string(),
-                format!("--enclave-binary={}", &self.runtime_binary_path()),
+                format!("--enclave-binary={}", &self.enclave_binary_path()),
                 format!("--vmm-binary={}", "/usr/bin/qemu-system-x86_64"),
                 format!(
                     "--bios-binary={}",
