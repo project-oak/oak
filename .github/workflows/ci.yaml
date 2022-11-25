@@ -24,8 +24,8 @@ jobs:
         cmd:
           # format tries to format all the source files, and relies on the git diff step to determine whether anything was missed.
           - format
-          # check-format checks for additional issues (e.g. missing license headers) that format does not enforce.
-          - check-format
+          # lint checks for additional issues (e.g. missing license headers) that format does not enforce.
+          - lint
           - run-cargo-deny
           - run-cargo-udeps
           - build-oak-functions-server-variants

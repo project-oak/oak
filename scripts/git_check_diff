@@ -5,7 +5,9 @@ readonly SCRIPTS_DIR="$(dirname "$0")"
 source "$SCRIPTS_DIR/common"
 
 # Check that any generated files match those that are checked in.
-if [[ $(git status --short) ]]; then
-    # One or more files are either modified or newly generated, exit with an error code
+if [[ $(git status --porcelain) ]]; then
+    # One or more files are either modified or newly generated; print the full git diff and exit with an error code
+    git status
+    git diff
     exit 1
 fi

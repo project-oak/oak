@@ -60,7 +60,7 @@ pub enum Command {
     BuildOakFunctionsExample(RunOakExamplesOpt),
     BuildOakFunctionsServerVariants(BuildServerOpt),
     Format,
-    CheckFormat,
+    Lint,
     RunTests,
     RunCargoClippy,
     RunCargoTests(RunTestsOpt),
