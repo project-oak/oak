@@ -75,8 +75,8 @@ impl Instance {
         // If the VM restarts, don't restart it (we're not expecting any restarts so any restart
         // should be treated as a failure)
         cmd.arg("-no-reboot");
-        // Use the `microvm` machine as the basis, and enable PCIe as we need vhost-vsock-pci.
-        cmd.args(["-machine", "microvm,pcie=on"]);
+        // Use the `microvm` machine as the basis, and ensure ACPI is enabled.
+        cmd.args(["-machine", "microvm,acpi=on"]);
         // Route first serial port to console.
         cmd.args([
             "-chardev",
