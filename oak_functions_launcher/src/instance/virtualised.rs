@@ -67,7 +67,7 @@ impl Instance {
         // Needed to expose advanced CPU features. Specifically RDRAND which is required for remote
         // attestation.
         cmd.arg("-enable-kvm");
-        cmd.args(&["-cpu", "IvyBridge-IBRS,enforce"]);
+        cmd.args(["-cpu", "IvyBridge-IBRS,enforce"]);
 
         // Disable a bunch of hardware we don't need.
         cmd.arg("-nodefaults");
@@ -78,7 +78,7 @@ impl Instance {
         // Use the `microvm` machine as the basis, and enable PCIe as we need vhost-vsock-pci.
         cmd.args(["-machine", "microvm,pcie=on"]);
         // Route first serial port to console.
-        cmd.args(&[
+        cmd.args([
             "-chardev",
             format!("socket,id=consock,fd={}", console.as_raw_fd()).as_str(),
         ]);
