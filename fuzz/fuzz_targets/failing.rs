@@ -13,6 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// TODO(#3503): This target is temporary. Remove the file once we have enough data.
 //! This is an intentionally failing fuzz target for testing.
 
 #![no_main]

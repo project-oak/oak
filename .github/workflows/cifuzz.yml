@@ -15,6 +15,7 @@ jobs:
         uses: google/oss-fuzz/infra/cifuzz/actions/build_fuzzers@master
         with:
           oss-fuzz-project-name: 'oak'
+          # TODO(#3503): Change to false.
           dry-run: true
           language: rust
       - name: Run Fuzzers
@@ -22,6 +23,7 @@ jobs:
         with:
           oss-fuzz-project-name: 'oak'
           fuzz-seconds: 600
+          # TODO(#3503): Change to false.
           dry-run: true
       - name: Upload Crash
         uses: actions/upload-artifact@v1
