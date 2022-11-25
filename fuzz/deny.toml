@@ -10,10 +10,6 @@ vulnerability = "deny"
 unmaintained = "deny"
 yanked = "deny"
 notice = "deny"
-ignore = [
-  # TODO(#3131): Remove when no longer required.
-  "RUSTSEC-2020-0159",
-]
 
 [bans]
 multiple-versions = "allow"
@@ -26,10 +22,5 @@ unknown-git = "allow"
 # List of allowed licenses.
 # For more detailed information see http://go/thirdpartylicenses.
 [licenses]
-allow = ["Apache-2.0", "ISC", "MIT", "MPL-2.0", "OpenSSL", "Zlib"]
+allow = ["Apache-2.0", "MIT"]
 copyleft = "deny"
-
-[[licenses.clarify]]
-name = "ring"
-expression = "MIT AND ISC AND OpenSSL"
-license-files = [{ path = "LICENSE", hash = 3171872035 }]
