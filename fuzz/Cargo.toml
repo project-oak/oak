@@ -11,8 +11,12 @@ cargo-fuzz = true
 [dependencies]
 anyhow = "*"
 arbitrary = { version = "1", features = ["derive"] }
+hex = "*"
 libfuzzer-sys = "*"
 oak_functions_abi = { path = "../oak_functions_abi" }
+oak_remote_attestation = { path = "../oak_remote_attestation", features = [
+  "ring-crypto"
+] }
 
 [build-dependencies]
 prost-build = "*"
@@ -25,5 +29,11 @@ members = ["."]
 [[bin]]
 name = "apply_policy"
 path = "fuzz_targets/apply_policy.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "failing"
+path = "fuzz_targets/failing.rs"
 test = false
 doc = false
